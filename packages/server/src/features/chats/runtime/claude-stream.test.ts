@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import {
+  CLAUDE_LOGIN_HINT,
   createClaudeTurnParser,
   type ClaudeStreamEvent,
 } from "./claude-stream.ts"
@@ -180,8 +181,8 @@ describe("createClaudeTurnParser", () => {
     ])
     const settled = events.at(-1)
     expect(settled).toMatchObject({ type: "result", state: "error" })
-    expect(settled?.type === "result" ? settled.errorMessage : "").toContain(
-      "logged out"
+    expect(settled?.type === "result" ? settled.errorMessage : "").toBe(
+      CLAUDE_LOGIN_HINT
     )
     // The login prompt must not stand as the assistant's reply.
     expect(parser.text()).toBe("")

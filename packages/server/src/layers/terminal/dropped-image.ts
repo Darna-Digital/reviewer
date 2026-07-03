@@ -22,7 +22,10 @@ const IMAGE_EXTS = new Set([
  * if it's too large or not a recognised image. Best-effort: any fs error yields
  * null so a bad drop never breaks the session.
  */
-export const saveDroppedImage = (name: unknown, data: unknown): string | null => {
+export const saveDroppedImage = (
+  name: unknown,
+  data: unknown
+): string | null => {
   if (typeof data !== "string" || data.length === 0) return null
   const rawName = typeof name === "string" ? name : ""
   const ext = extname(rawName).toLowerCase()
