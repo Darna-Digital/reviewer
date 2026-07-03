@@ -42,14 +42,46 @@ const AUTH_ERROR_PATTERN =
 export const isClaudeAuthError = (text: string | null): boolean =>
   text !== null && AUTH_ERROR_PATTERN.test(text)
 
-/** What the chat shows instead of the CLI's bare logged-out reply. */
-export const CLAUDE_LOGIN_HINT =
-  "Claude Code is logged out on this machine (its OAuth token expired or " +
-  "was revoked). Open a Claude Code terminal thread (or any terminal), run " +
-  "`claude` and then `/login`, and send your message again. To stop this " +
-  "recurring, run `claude setup-token` once and export the result as " +
-  "CLAUDE_CODE_OAUTH_TOKEN in your shell profile — a long-lived credential " +
-  "meant for non-interactive use like these chats."
+/**
+ * What the chat shows instead of the CLI's bare logged-out reply. Rendered as
+ * plain text with whitespace preserved (no markdown), so this is laid out with
+ * real line breaks. In-depth on purpose: the durable fix has a shell-file
+ * gotcha (login vs. interactive rc files) that bites people who put the export
+ * in ~/.zshrc and see no change — because we launch the CLI through a login,
+ * non-interactive shell (see providers.ts), which never sources ~/.zshrc.
+ */
+export const CLAUDE_LOGIN_HINT = [
+  "Claude Code can't authenticate on this machine, so the turn was rejected.",
+  "",
+  "What happened: these chats run the `claude` CLI non-interactively (in `-p` " +
+    "mode), so it can't open its own /login flow. When the credential it needs " +
+    "is missing, expired, or revoked, it replies with a login prompt instead of " +
+    "an answer — that's what this turn hit.",
+  "",
+  "Why: the OAuth token minted by an interactive `/login` eventually expires or " +
+    "gets revoked, and there's no fallback credential for non-interactive runs " +
+    "like this one.",
+  "",
+  "Fix (quick): open a terminal (or a Claude Code terminal thread), run " +
+    "`claude`, then `/login`, and send your message again. This refreshes the " +
+    "interactive token but will lapse again later.",
+  "",
+  "Fix (durable): create a long-lived token meant for non-interactive use —",
+  "  1. Run `claude setup-token` once and copy the token it prints " +
+    "(it only prints it; it is not stored for you).",
+  "  2. Export it as CLAUDE_CODE_OAUTH_TOKEN from a shell startup file.",
+  "",
+  "Gotcha: put the export in a file your LOGIN shell reads, because we launch " +
+    "the CLI through a login, non-interactive shell. On zsh that's ~/.zshenv " +
+    "(or ~/.zprofile) — NOT ~/.zshrc, which is only read by interactive shells. " +
+    "On bash use ~/.bash_profile or ~/.profile, not ~/.bashrc. Putting it in " +
+    "~/.zshrc is the usual reason it works when you type `claude` yourself but " +
+    "not here.",
+  "",
+  "Verify it's wired up: `zsh -lc 'echo ${CLAUDE_CODE_OAUTH_TOKEN:+present}'` " +
+    "should print `present`. New turns pick it up automatically — no restart " +
+    "needed, since each turn is a fresh login shell.",
+].join("\n")
 
 /**
  * A one-line human summary of a tool call. Common Claude tools carry their

@@ -50,6 +50,34 @@ function WorkingDots() {
   )
 }
 
+/**
+ * A failed turn's error. The lead paragraph (up to the first blank line) shows
+ * inline; any remaining detail — long remediation like the logged-out hint —
+ * collapses behind a native "Details" disclosure so the chip stays compact.
+ */
+function TurnError({ message }: { message: string }) {
+  const [summary, ...rest] = message.split(/\n\n+/)
+  const details = rest.join("\n\n").trim()
+  return (
+    <div className="flex max-w-3xl items-start gap-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+      <IconAlertCircle className="mt-0.5 size-3.5 shrink-0" />
+      <div className="min-w-0 flex-1">
+        <span className="break-words whitespace-pre-wrap">{summary}</span>
+        {details.length > 0 && (
+          <details className="mt-1">
+            <summary className="cursor-pointer select-none opacity-80 hover:opacity-100">
+              Details
+            </summary>
+            <span className="mt-1 block break-words whitespace-pre-wrap opacity-90">
+              {details}
+            </span>
+          </details>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function MessagesTimeline({ chat }: { chat: Chat }) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pinnedToBottom = useRef(true)
@@ -123,12 +151,7 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
     >
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-6 py-6">
         {chat.messages.map(renderMessage)}
-        {turnError !== null && (
-          <div className="flex max-w-3xl items-start gap-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-            <IconAlertCircle className="mt-0.5 size-3.5 shrink-0" />
-            <span className="break-words whitespace-pre-wrap">{turnError}</span>
-          </div>
-        )}
+        {turnError !== null && <TurnError message={turnError} />}
       </div>
     </div>
   )
