@@ -47,6 +47,17 @@ export type ChatTurnState = typeof ChatTurnState.Type
 export const ChatRole = Schema.Literals(["user", "assistant"])
 export type ChatRole = typeof ChatRole.Type
 
+/** An image the user attached to a prompt, kept for the timeline preview. The
+ * full-resolution bytes are handed to the agent as a temp file at send time and
+ * are not persisted — only this lightweight thumbnail is. */
+export const ChatAttachment = Schema.Struct({
+  /** Original filename, used as the preview's alt/label. */
+  name: Schema.String,
+  /** A small `data:` URL thumbnail rendered in the message. */
+  thumbnail: Schema.String,
+})
+export type ChatAttachment = typeof ChatAttachment.Type
+
 export const ChatMessage = Schema.Struct({
   id: Schema.String,
   role: ChatRole,
@@ -58,6 +69,8 @@ export const ChatMessage = Schema.Struct({
   /** True while the assistant is still producing this message. */
   streaming: Schema.Boolean,
   createdAt: Schema.String,
+  /** Images the user attached to this prompt (user messages only). */
+  attachments: Schema.optionalKey(Schema.Array(ChatAttachment)),
 })
 export type ChatMessage = typeof ChatMessage.Type
 

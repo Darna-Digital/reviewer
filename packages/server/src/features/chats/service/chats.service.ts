@@ -17,10 +17,16 @@ import {
 } from "../repository/chats.repository.ts"
 import { ChatRuntime } from "../runtime/chats.runtime.service.ts"
 import type { Chat, ChatModelCatalog } from "../schema/chats.schema.model.ts"
+import type { ChatImageUpload } from "../schema/chats.schema.requests.ts"
 
 export interface ChatsServiceShape extends ChatsRepo {
-  /** Start a turn with `text`; blank input is a no-op returning the chat. */
-  readonly send: (id: string, text: string) => Effect.Effect<Chat, ChatsFailure>
+  /** Start a turn with `text` and any attached `images`; a blank prompt with
+   * no images is a no-op returning the chat. */
+  readonly send: (
+    id: string,
+    text: string,
+    images: ReadonlyArray<ChatImageUpload>
+  ) => Effect.Effect<Chat, ChatsFailure>
   /** Interrupt the running turn; `ran` is false when nothing was running. */
   readonly stop: (
     id: string
@@ -37,15 +43,16 @@ export const make = Effect.gen(function* () {
   const repo = yield* ChatsRepository
   const runtime = yield* ChatRuntime
 
-  const send: ChatsServiceShape["send"] = (id, text) =>
+  const send: ChatsServiceShape["send"] = (id, text, images) =>
     Effect.gen(function* () {
       const prompt = text.trim()
       const chat = yield* repo.get(id)
-      if (prompt.length === 0) return chat
+      // An image-only message (blank prompt) is still a real turn.
+      if (prompt.length === 0 && images.length === 0) return chat
       if (yield* runtime.isRunning(id)) {
         return yield* Effect.fail(new ChatBusy({ chatId: id }))
       }
-      const result = yield* runtime.start(id, prompt)
+      const result = yield* runtime.start(id, prompt, images)
       if (!result.ok) {
         return yield* Effect.fail(
           result.reason === "busy"

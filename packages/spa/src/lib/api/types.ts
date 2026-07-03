@@ -9,6 +9,11 @@ type Json<R> = R extends { content: { "application/json": infer J } }
   ? J
   : never
 type Ok<Op> = Op extends { responses: { 200: infer R } } ? Json<R> : never
+type Body<Op> = Op extends {
+  requestBody: { content: { "application/json": infer B } }
+}
+  ? B
+  : never
 
 export type WorkspaceInfo = Ok<paths["/api/workspace"]["get"]>
 export type BrowsePayload = Ok<paths["/api/fs/browse"]["get"]>
@@ -47,6 +52,12 @@ export type ChatSummary = Ok<paths["/api/chats"]["get"]>[number]
 export type Chat = Ok<paths["/api/chats/{id}"]["get"]>
 export type ChatMessage = Chat["messages"][number]
 export type ChatActivity = Chat["activities"][number]
+/** An image kept on a sent message for its timeline preview. */
+export type ChatAttachment = NonNullable<ChatMessage["attachments"]>[number]
+/** An image uploaded with a prompt (the send endpoint's request body item). */
+export type ChatImageUpload = NonNullable<
+  Body<paths["/api/chats/{id}/messages"]["post"]>["images"]
+>[number]
 export type ChatTurn = NonNullable<Chat["latestTurn"]>
 export type ChatTurnState = ChatTurn["state"]
 /** Which agent backs a chat (only Claude Code streams today). */

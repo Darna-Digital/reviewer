@@ -17,7 +17,17 @@ describe("createChatsFunctions", () => {
     const result = await fns.start(settings, "main", "  hey  ")
     expect(result).not.toBeNull()
     expect(calls.create).toEqual([{ ...settings, branch: "main" }])
-    expect(calls.send).toEqual([{ id: "c-1", text: "hey" }])
+    expect(calls.send).toEqual([{ id: "c-1", text: "hey", images: [] }])
+  })
+
+  it("start with only an image (blank prompt) still creates and sends", async () => {
+    const { deps, calls } = mockChatsDependencies()
+    const fns = createChatsFunctions(deps)
+    const image = { name: "a.png", data: "abc", thumbnail: "data:image/png,x" }
+    const result = await fns.start(settings, "main", "   ", [image])
+    expect(result).not.toBeNull()
+    expect(calls.create).toEqual([{ ...settings, branch: "main" }])
+    expect(calls.send).toEqual([{ id: "c-1", text: "", images: [image] }])
   })
 
   it("start with a blank prompt creates nothing", async () => {
@@ -42,7 +52,9 @@ describe("createChatsFunctions", () => {
     expect(calls.create).toEqual([
       { ...settings, branch: "feature", title: "Fix review comments" },
     ])
-    expect(calls.send).toEqual([{ id: "c-1", text: "address these comments" }])
+    expect(calls.send).toEqual([
+      { id: "c-1", text: "address these comments", images: [] },
+    ])
   })
 
   it("startWithTitle drops blank titles and blank prompts", async () => {
@@ -53,7 +65,7 @@ describe("createChatsFunctions", () => {
     expect(blank).toBeNull()
     expect(untitled).not.toBeNull()
     expect(calls.create).toEqual([{ ...settings, branch: "main" }])
-    expect(calls.send).toEqual([{ id: "c-1", text: "go" }])
+    expect(calls.send).toEqual([{ id: "c-1", text: "go", images: [] }])
   })
 
   it("send trims and skips blank prompts", async () => {
@@ -61,7 +73,7 @@ describe("createChatsFunctions", () => {
     const fns = createChatsFunctions(deps)
     await fns.send("c-9", "  fix the bug  ")
     expect(await fns.send("c-9", " \n ")).toBeNull()
-    expect(calls.send).toEqual([{ id: "c-9", text: "fix the bug" }])
+    expect(calls.send).toEqual([{ id: "c-9", text: "fix the bug", images: [] }])
   })
 
   it("rename trims the title and drops a blank rename", async () => {

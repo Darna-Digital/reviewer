@@ -35,9 +35,9 @@ describe("ChatsService", () => {
     return Effect.gen(function* () {
       const chats = yield* ChatsService
       const created = yield* chats.create(newChat)
-      yield* chats.send(created.id, "  explain this repo  ")
+      yield* chats.send(created.id, "  explain this repo  ", [])
       expect(runtime.calls.start).toEqual([
-        { chatId: created.id, text: "explain this repo" },
+        { chatId: created.id, text: "explain this repo", images: [] },
       ])
     }).pipe(Effect.provide(layer))
   })
@@ -47,11 +47,31 @@ describe("ChatsService", () => {
     return Effect.gen(function* () {
       const chats = yield* ChatsService
       const created = yield* chats.create(newChat)
-      const result = yield* chats.send(created.id, "   ")
+      const result = yield* chats.send(created.id, "   ", [])
       expect(result.id).toBe(created.id)
       expect(runtime.calls.start).toHaveLength(0)
     }).pipe(Effect.provide(layer))
   })
+
+  it.effect(
+    "send with only an image (blank prompt) still starts a turn",
+    () => {
+      const { layer, runtime } = ChatsMemory()
+      const image = {
+        name: "shot.png",
+        data: "aGVsbG8=",
+        thumbnail: "data:image/png;base64,abc",
+      }
+      return Effect.gen(function* () {
+        const chats = yield* ChatsService
+        const created = yield* chats.create(newChat)
+        yield* chats.send(created.id, "   ", [image])
+        expect(runtime.calls.start).toEqual([
+          { chatId: created.id, text: "", images: [image] },
+        ])
+      }).pipe(Effect.provide(layer))
+    }
+  )
 
   it.effect("send fails with ChatBusy while a turn is running", () => {
     const { layer, runtime } = ChatsMemory()
@@ -59,7 +79,7 @@ describe("ChatsService", () => {
       const chats = yield* ChatsService
       const created = yield* chats.create(newChat)
       runtime.state.running.add(created.id)
-      const failure = yield* Effect.flip(chats.send(created.id, "again"))
+      const failure = yield* Effect.flip(chats.send(created.id, "again", []))
       expect(failure._tag).toBe("ChatBusy")
       expect(runtime.calls.start).toHaveLength(0)
     }).pipe(Effect.provide(layer))
@@ -71,7 +91,7 @@ describe("ChatsService", () => {
       const chats = yield* ChatsService
       const created = yield* chats.create(newChat)
       runtime.state.startResult = { ok: false, reason: "busy" }
-      const failure = yield* Effect.flip(chats.send(created.id, "go"))
+      const failure = yield* Effect.flip(chats.send(created.id, "go", []))
       expect(failure._tag).toBe("ChatBusy")
     }).pipe(Effect.provide(layer))
   })
@@ -80,7 +100,7 @@ describe("ChatsService", () => {
     const { layer } = ChatsMemory()
     return Effect.gen(function* () {
       const chats = yield* ChatsService
-      const failure = yield* Effect.flip(chats.send("nope", "hello"))
+      const failure = yield* Effect.flip(chats.send("nope", "hello", []))
       expect(failure._tag).toBe("NotFound")
     }).pipe(Effect.provide(layer))
   })

@@ -40,7 +40,9 @@ export const ChatsController = HttpApiBuilder.group(Api, "chats", (handlers) =>
       )
     )
     .handle("send", ({ params, payload }) =>
-      Effect.flatMap(ChatsService, (s) => s.send(params.id, payload.text))
+      Effect.flatMap(ChatsService, (s) =>
+        s.send(params.id, payload.text, payload.images ?? [])
+      )
     )
     .handle("stop", ({ params }) =>
       // ok:false = nothing was running (already settled) — not an error.

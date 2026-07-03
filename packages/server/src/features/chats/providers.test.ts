@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   CHAT_MODEL_CATALOG,
   chatTurnProgram,
+  withAttachedImages,
   withHistory,
 } from "./providers.ts"
 import type { Chat, ChatMessage } from "./schema/chats.schema.model.ts"
@@ -132,6 +133,28 @@ describe("withHistory", () => {
     )
     expect(out).toContain("User: hi")
     expect(out).not.toContain("Assistant:")
+  })
+})
+
+describe("withAttachedImages", () => {
+  it("returns the prompt unchanged when there are no images", () => {
+    expect(withAttachedImages("look at this", [])).toBe("look at this")
+  })
+
+  it("appends image reference lines after the prompt", () => {
+    const out = withAttachedImages("compare these", [
+      "/tmp/a.png",
+      "/tmp/b.jpg",
+    ])
+    expect(out).toBe(
+      "compare these\n\n[Attached image: /tmp/a.png]\n[Attached image: /tmp/b.jpg]"
+    )
+  })
+
+  it("uses only the reference lines for an image-only (blank) prompt", () => {
+    expect(withAttachedImages("   ", ["/tmp/a.png"])).toBe(
+      "[Attached image: /tmp/a.png]"
+    )
   })
 })
 

@@ -3,7 +3,11 @@ import { useMemo } from "react"
 import { fetchClient } from "@/lib/api/client"
 import type { Chat, ChatSummary } from "@/lib/api/types"
 import { createChatsFunctions } from "../functions/chats.functions"
-import type { ChatSettings, ChatsFunctions } from "../entity/chats.interfaces"
+import type {
+  ChatImage,
+  ChatSettings,
+  ChatsFunctions,
+} from "../entity/chats.interfaces"
 
 const fail = (error: unknown, fallback: string): never => {
   throw new Error((error as { reason?: string })?.reason ?? fallback)
@@ -25,10 +29,10 @@ export function useChatsActions() {
             if (error) return fail(error, "failed to create chat")
             return data
           },
-          send: async (id, text) => {
+          send: async (id, text, images) => {
             const { data, error } = await fetchClient.POST(
               "/api/chats/{id}/messages",
-              { params: { path: { id } }, body: { text } }
+              { params: { path: { id } }, body: { text, images: [...images] } }
             )
             if (error) return fail(error, "failed to send message")
             return data
@@ -82,8 +86,13 @@ export function useChatsActions() {
   }
 
   return {
-    start: async (settings: ChatSettings, branch: string, text: string) => {
-      const started = await fns.start(settings, branch, text)
+    start: async (
+      settings: ChatSettings,
+      branch: string,
+      text: string,
+      images: ReadonlyArray<ChatImage> = []
+    ) => {
+      const started = await fns.start(settings, branch, text, images)
       if (started !== null) {
         prependChat(started)
         invalidate()
@@ -94,17 +103,28 @@ export function useChatsActions() {
       settings: ChatSettings,
       branch: string,
       title: string,
-      text: string
+      text: string,
+      images: ReadonlyArray<ChatImage> = []
     ) => {
-      const started = await fns.startWithTitle(settings, branch, title, text)
+      const started = await fns.startWithTitle(
+        settings,
+        branch,
+        title,
+        text,
+        images
+      )
       if (started !== null) {
         prependChat(started)
         invalidate()
       }
       return started
     },
-    send: async (id: string, text: string) => {
-      const sent = await fns.send(id, text)
+    send: async (
+      id: string,
+      text: string,
+      images: ReadonlyArray<ChatImage> = []
+    ) => {
+      const sent = await fns.send(id, text, images)
       if (sent !== null) invalidate()
       return sent
     },

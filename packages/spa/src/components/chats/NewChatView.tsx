@@ -7,7 +7,10 @@ import { useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
 import { toast } from "sonner"
 import { useChatsActions } from "@/features/chats/adapters/chats.hook.adapter"
-import type { ChatSettings } from "@/features/chats/entity/chats.interfaces"
+import type {
+  ChatImage,
+  ChatSettings,
+} from "@/features/chats/entity/chats.interfaces"
 import { useChatModels, useRepo } from "@/lib/queries"
 import { ChatComposer } from "./ChatComposer"
 import { CheckoutFooter } from "./CheckoutFooter"
@@ -28,12 +31,13 @@ export function NewChatView() {
     mode: overrides.mode ?? defaults?.mode ?? "build",
   }
 
-  const send = async (text: string) => {
+  const send = async (text: string, images: ReadonlyArray<ChatImage>) => {
     try {
       const started = await actions.start(
         settings,
         repo.data?.currentBranch ?? "",
-        text
+        text,
+        images
       )
       if (started !== null) {
         void navigate({

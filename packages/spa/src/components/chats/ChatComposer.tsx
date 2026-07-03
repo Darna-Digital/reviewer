@@ -11,9 +11,12 @@ import {
   IconLock,
   IconLockOpen,
   IconMap,
+  IconPhotoPlus,
   IconPlayerStopFilled,
+  IconX,
 } from "@tabler/icons-react"
 import { useRef, useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -30,6 +33,14 @@ import type {
 } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 import type { ChatSettings } from "@/features/chats/entity/chats.interfaces"
+import {
+  isImageFile,
+  MAX_IMAGE_BYTES,
+  readImageAttachment,
+  toImagePayload,
+  type ChatImagePayload,
+  type ComposerAttachment,
+} from "./attachments"
 import { ModelPicker } from "./ModelPicker"
 
 const EFFORTS: Array<{ value: ChatEffort; label: string; hint: string }> = [
@@ -122,23 +133,57 @@ export function ChatComposer({
   onSettingsChange: (patch: Partial<ChatSettings>) => void
   catalog: ChatModelCatalog | undefined
   /** Resolves once the send is accepted; the draft clears only on success. */
-  onSend: (text: string) => Promise<void>
+  onSend: (
+    text: string,
+    images: ReadonlyArray<ChatImagePayload>
+  ) => Promise<void>
   running: boolean
   onStop?: () => void
   placeholder?: string
 }) {
   const [text, setText] = useState("")
   const [sending, setSending] = useState(false)
+  const [attachments, setAttachments] = useState<ComposerAttachment[]>([])
+  const [dragging, setDragging] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  // dragenter/dragleave fire per descendant, so count depth to know when the
+  // pointer has truly left the composer (matches lib/terminal/image-drop.ts).
+  const dragDepth = useRef(0)
 
-  const canSend = !running && !sending && text.trim().length > 0
+  const canSend =
+    !running && !sending && (text.trim().length > 0 || attachments.length > 0)
+
+  const addFiles = async (files: ReadonlyArray<File>) => {
+    const images = files.filter(isImageFile)
+    if (images.length === 0) {
+      if (files.length > 0) toast.error("Only image files can be attached")
+      return
+    }
+    for (const file of images) {
+      if (file.size > MAX_IMAGE_BYTES) {
+        toast.error(`${file.name || "image"} is too large (max 15 MB)`)
+        continue
+      }
+      try {
+        const attachment = await readImageAttachment(file)
+        setAttachments((prev) => [...prev, attachment])
+      } catch {
+        toast.error(`Could not read ${file.name || "image"}`)
+      }
+    }
+  }
+
+  const removeAttachment = (id: string) =>
+    setAttachments((prev) => prev.filter((a) => a.id !== id))
 
   const submit = async () => {
     if (!canSend) return
     setSending(true)
     try {
-      await onSend(text)
+      await onSend(text, attachments.map(toImagePayload))
       setText("")
+      setAttachments([])
     } finally {
       setSending(false)
       textareaRef.current?.focus()
@@ -146,12 +191,83 @@ export function ChatComposer({
   }
 
   return (
-    <div className="rounded-2xl border bg-background shadow-sm focus-within:border-ring/60">
+    <div
+      className={cn(
+        "relative rounded-2xl border bg-background shadow-sm focus-within:border-ring/60",
+        dragging && "border-primary"
+      )}
+      onDragEnter={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return
+        e.preventDefault()
+        dragDepth.current += 1
+        setDragging(true)
+      }}
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = "copy"
+      }}
+      onDragLeave={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return
+        dragDepth.current = Math.max(0, dragDepth.current - 1)
+        if (dragDepth.current === 0) setDragging(false)
+      }}
+      onDrop={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return
+        e.preventDefault()
+        dragDepth.current = 0
+        setDragging(false)
+        void addFiles(Array.from(e.dataTransfer.files))
+      }}
+    >
+      {attachments.length > 0 && (
+        <div className="flex flex-wrap gap-2 px-3 pt-3">
+          {attachments.map((attachment) => (
+            <div
+              key={attachment.id}
+              className="group relative size-16 overflow-hidden rounded-lg border bg-muted"
+            >
+              <img
+                src={attachment.thumbnail}
+                alt={attachment.name}
+                title={attachment.name}
+                className="size-full object-cover"
+              />
+              <button
+                type="button"
+                aria-label={`Remove ${attachment.name}`}
+                onClick={() => removeAttachment(attachment.id)}
+                className="absolute top-0.5 right-0.5 flex size-5 items-center justify-center rounded-full bg-background/80 text-foreground opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background focus-visible:opacity-100"
+              >
+                <IconX className="size-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          void addFiles(Array.from(e.target.files ?? []))
+          e.target.value = ""
+        }}
+      />
       <textarea
         ref={textareaRef}
         autoFocus
         value={text}
         onChange={(e) => setText(e.target.value)}
+        onPaste={(e) => {
+          const files = Array.from(e.clipboardData.files)
+          if (files.some(isImageFile)) {
+            e.preventDefault()
+            void addFiles(files)
+          }
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault()
@@ -162,7 +278,22 @@ export function ChatComposer({
         placeholder={placeholder ?? "Ask anything about this repository…"}
         className="max-h-60 min-h-20 w-full resize-none bg-transparent px-4 pt-3 text-sm outline-none placeholder:text-muted-foreground"
       />
+      {dragging && (
+        <div className="pointer-events-none absolute inset-1 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-primary bg-primary/10 text-sm font-medium text-foreground">
+          Drop images to attach them
+        </div>
+      )}
       <div className="flex items-center gap-1 px-2 pb-2">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="size-7"
+          aria-label="Attach images"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <IconPhotoPlus className="size-4 text-muted-foreground" />
+        </Button>
+        <Separator orientation="vertical" className="mx-0.5 h-4" />
         <ModelPicker
           catalog={catalog}
           model={settings.model}

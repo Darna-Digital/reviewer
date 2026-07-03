@@ -4,20 +4,21 @@ import type {
 } from "../entity/chats.interfaces"
 
 export function createChatsFunctions(d: ChatsDependencies): ChatsFunctions {
-  const send: ChatsFunctions["send"] = async (id, text) => {
+  const send: ChatsFunctions["send"] = async (id, text, images = []) => {
     const prompt = text.trim()
-    if (prompt.length === 0) return null
-    return d.sideEffects.send(id, prompt)
+    if (prompt.length === 0 && images.length === 0) return null
+    return d.sideEffects.send(id, prompt, images)
   }
 
   const start = async (
     settings: Parameters<ChatsFunctions["start"]>[0],
     branch: string,
     text: string,
+    images: Parameters<ChatsFunctions["start"]>[3] = [],
     title?: string
   ) => {
     const prompt = text.trim()
-    if (prompt.length === 0) return null
+    if (prompt.length === 0 && images.length === 0) return null
     const trimmedTitle = title?.trim()
     // Create-on-first-message (t3code's draft promotion): assignment flows pass
     // a title, while regular chats let the server name the chat from the prompt.
@@ -28,13 +29,14 @@ export function createChatsFunctions(d: ChatsDependencies): ChatsFunctions {
         ? { title: trimmedTitle }
         : {}),
     })
-    return d.sideEffects.send(created.id, prompt)
+    return d.sideEffects.send(created.id, prompt, images)
   }
 
   return {
-    start: (settings, branch, text) => start(settings, branch, text),
-    startWithTitle: (settings, branch, title, text) =>
-      start(settings, branch, text, title),
+    start: (settings, branch, text, images) =>
+      start(settings, branch, text, images),
+    startWithTitle: (settings, branch, title, text, images) =>
+      start(settings, branch, text, images, title),
     send,
     updateSettings: (id, patch) => d.sideEffects.update(id, patch),
     rename: async (id, title) => {

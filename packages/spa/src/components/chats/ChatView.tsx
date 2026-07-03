@@ -6,7 +6,10 @@
 import { toast } from "sonner"
 import { useChatStream } from "@/features/chats/adapters/chats.stream.adapter"
 import { useChatsActions } from "@/features/chats/adapters/chats.hook.adapter"
-import type { ChatSettings } from "@/features/chats/entity/chats.interfaces"
+import type {
+  ChatImage,
+  ChatSettings,
+} from "@/features/chats/entity/chats.interfaces"
 import { isChatRunning } from "@/features/chats/functions/chats.reducer"
 import { useChatModels } from "@/lib/queries"
 import { ChatComposer } from "./ChatComposer"
@@ -43,9 +46,9 @@ export function ChatView({ chatId }: { chatId: string }) {
     mode: chat.mode,
   }
 
-  const send = async (text: string) => {
+  const send = async (text: string, images: ReadonlyArray<ChatImage>) => {
     try {
-      await actions.send(chat.id, text)
+      await actions.send(chat.id, text, images)
     } catch (sendError) {
       toast.error(
         sendError instanceof Error ? sendError.message : "failed to send"

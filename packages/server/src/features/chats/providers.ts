@@ -190,6 +190,22 @@ export const withHistory = (
 }
 
 /**
+ * Append attached image paths to the prompt so the agent reads them — the same
+ * mechanism the terminal threads use (a dropped image becomes a temp-file path
+ * handed to the CLI). Every supported CLI reads a local image referenced by its
+ * absolute path. No images → the prompt is returned unchanged; an image-only
+ * message (blank prompt) becomes just the reference lines.
+ */
+export const withAttachedImages = (
+  prompt: string,
+  imagePaths: ReadonlyArray<string>
+): string => {
+  if (imagePaths.length === 0) return prompt
+  const refs = imagePaths.map((path) => `[Attached image: ${path}]`).join("\n")
+  return prompt.trim().length > 0 ? `${prompt}\n\n${refs}` : refs
+}
+
+/**
  * Build the streaming one-turn invocation for `chat`. The prompt goes through
  * stdin (never argv, so its size and content can't break the command line);
  * stdout is parsed by the chat runtime with the provider's parser.

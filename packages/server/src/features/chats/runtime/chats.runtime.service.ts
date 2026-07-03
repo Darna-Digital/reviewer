@@ -7,6 +7,7 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import { getCurrentRepo } from "../../../layers/workspace/current-repo.ts"
+import type { ChatImageUpload } from "../schema/chats.schema.requests.ts"
 import {
   broadcastChatSnapshot,
   isTurnRunning,
@@ -22,7 +23,8 @@ export interface ChatRuntimeShape {
    * callers have already validated the chat exists there). */
   readonly start: (
     chatId: string,
-    text: string
+    text: string,
+    images: ReadonlyArray<ChatImageUpload>
   ) => Effect.Effect<StartTurnResult>
   readonly stop: (chatId: string) => Effect.Effect<boolean>
   /** Full teardown (process + sockets) for a deleted chat. */
@@ -39,11 +41,11 @@ export class ChatRuntime extends Context.Service<
 export const liveLayer: Layer.Layer<ChatRuntime> = Layer.succeed(ChatRuntime)(
   ChatRuntime.of({
     isRunning: (chatId) => Effect.sync(() => isTurnRunning(chatId)),
-    start: (chatId, text) =>
+    start: (chatId, text, images) =>
       Effect.sync(() => {
         const repoPath = getCurrentRepo()
         if (repoPath === null) return { ok: false, reason: "not-found" }
-        return startChatTurn(repoPath, chatId, text)
+        return startChatTurn(repoPath, chatId, text, images)
       }),
     stop: (chatId) => Effect.sync(() => stopChatTurn(chatId)),
     kill: (chatId) => Effect.sync(() => killChatRuntime(chatId)),
@@ -58,7 +60,11 @@ export const liveLayer: Layer.Layer<ChatRuntime> = Layer.succeed(ChatRuntime)(
 export interface MemoryChatRuntime {
   readonly layer: Layer.Layer<ChatRuntime>
   readonly calls: {
-    readonly start: Array<{ chatId: string; text: string }>
+    readonly start: Array<{
+      chatId: string
+      text: string
+      images: ReadonlyArray<ChatImageUpload>
+    }>
     readonly stop: string[]
     readonly kill: string[]
     readonly broadcastSnapshot: string[]
@@ -82,9 +88,9 @@ export const memoryChatRuntime = (): MemoryChatRuntime => {
   const layer = Layer.succeed(ChatRuntime)(
     ChatRuntime.of({
       isRunning: (chatId) => Effect.sync(() => state.running.has(chatId)),
-      start: (chatId, text) =>
+      start: (chatId, text, images) =>
         Effect.sync(() => {
-          calls.start.push({ chatId, text })
+          calls.start.push({ chatId, text, images })
           return state.startResult
         }),
       stop: (chatId) =>

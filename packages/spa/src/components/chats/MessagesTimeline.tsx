@@ -65,7 +65,7 @@ function TurnError({ message }: { message: string }) {
         <span className="break-words whitespace-pre-wrap">{summary}</span>
         {details.length > 0 && (
           <details className="mt-1">
-            <summary className="cursor-pointer select-none opacity-80 hover:opacity-100">
+            <summary className="cursor-pointer opacity-80 select-none hover:opacity-100">
               Details
             </summary>
             <span className="mt-1 block break-words whitespace-pre-wrap opacity-90">
@@ -109,12 +109,30 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
 
   const renderMessage = (message: ChatMessage) => {
     if (message.role === "user") {
+      const attachments = message.attachments ?? []
       return (
         <div
           key={message.id}
-          className="ml-auto max-w-[75%] rounded-2xl bg-muted px-4 py-2 text-sm whitespace-pre-wrap"
+          className="ml-auto flex max-w-[75%] flex-col items-end gap-1.5"
         >
-          {message.text}
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap justify-end gap-1.5">
+              {attachments.map((attachment, i) => (
+                <img
+                  key={`${attachment.name}-${i}`}
+                  src={attachment.thumbnail}
+                  alt={attachment.name}
+                  title={attachment.name}
+                  className="size-28 rounded-lg border object-cover"
+                />
+              ))}
+            </div>
+          )}
+          {message.text.length > 0 && (
+            <div className="rounded-2xl bg-muted px-4 py-2 text-sm whitespace-pre-wrap">
+              {message.text}
+            </div>
+          )}
         </div>
       )
     }

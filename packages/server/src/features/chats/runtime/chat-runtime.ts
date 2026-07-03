@@ -23,18 +23,22 @@ import { randomUUID } from "node:crypto"
 import type { IncomingMessage } from "node:http"
 import type { WebSocket } from "ws"
 import { recentAgentSessions } from "../../../layers/terminal/agent-session-capture.ts"
+import { saveDroppedImage } from "../../../layers/terminal/dropped-image.ts"
 import { getCurrentRepo } from "../../../layers/workspace/current-repo.ts"
 import {
   chatTurnProgram,
+  withAttachedImages,
   withHistory,
   type ChatTurnSession,
 } from "../providers.ts"
 import type {
   Chat,
   ChatActivity,
+  ChatAttachment,
   ChatMessage,
   ChatTurn,
 } from "../schema/chats.schema.model.ts"
+import type { ChatImageUpload } from "../schema/chats.schema.requests.ts"
 import {
   appendActivity,
   appendTurnStart,
@@ -265,11 +269,23 @@ export interface StartTurnResult {
 export const startChatTurn = (
   repoPath: string,
   chatId: string,
-  text: string
+  text: string,
+  images: ReadonlyArray<ChatImageUpload> = []
 ): StartTurnResult => {
   if (liveTurns.has(chatId)) return { ok: false, reason: "busy" }
   const chat = findChat(repoPath, chatId)
   if (chat === undefined) return { ok: false, reason: "not-found" }
+
+  // Decode each uploaded image to a temp file the CLI can read; keep only the
+  // ones that saved. The lightweight thumbnail rides along on the message.
+  const saved = images.flatMap((image) => {
+    const path = saveDroppedImage(image.name, image.data)
+    return path === null ? [] : [{ image, path }]
+  })
+  const attachments: ReadonlyArray<ChatAttachment> = saved.map(({ image }) => ({
+    name: image.name,
+    thumbnail: image.thumbnail,
+  }))
 
   const now = new Date().toISOString()
   const turnId = nextChatId("turn")
@@ -280,6 +296,7 @@ export const startChatTurn = (
     turnId,
     streaming: false,
     createdAt: now,
+    ...(attachments.length > 0 ? { attachments } : {}),
   }
   const assistantMessage: ChatMessage = {
     id: nextChatId("m"),
@@ -306,8 +323,15 @@ export const startChatTurn = (
       : { id: chat.sessionId, resume: chat.sessionId !== null }
   // Resuming a native session carries the history already; a fresh one (e.g.
   // just after switching the chat's agent) doesn't, so replay the transcript
-  // into the prompt. The persisted user message keeps the raw text.
-  const prompt = session.resume ? text : withHistory(chat.messages, text)
+  // into the prompt. The persisted user message keeps the raw text; the CLI
+  // prompt gains the attached image paths so the agent can read them.
+  const withImages = withAttachedImages(
+    text,
+    saved.map(({ path }) => path)
+  )
+  const prompt = session.resume
+    ? withImages
+    : withHistory(chat.messages, withImages)
   const program = chatTurnProgram(chat, prompt, session)
   const started = appendTurnStart(repoPath, chatId, {
     turn,

@@ -1,6 +1,6 @@
 /** Mock dependencies + fixtures for the chats feature tests. */
 import type { Chat, ChatActivity, ChatMessage, ChatTurn } from "@/lib/api/types"
-import type { ChatsDependencies } from "../entity/chats.interfaces"
+import type { ChatImage, ChatsDependencies } from "../entity/chats.interfaces"
 
 export const chat = (overrides: Partial<Chat> = {}): Chat => ({
   id: "c-1",
@@ -55,7 +55,7 @@ export const turn = (overrides: Partial<ChatTurn> = {}): ChatTurn => ({
 
 export interface ChatsCalls {
   create: Array<Parameters<ChatsDependencies["sideEffects"]["create"]>[0]>
-  send: Array<{ id: string; text: string }>
+  send: Array<{ id: string; text: string; images: ReadonlyArray<ChatImage> }>
   update: Array<{
     id: string
     input: Parameters<ChatsDependencies["sideEffects"]["update"]>[1]
@@ -82,8 +82,8 @@ export function mockChatsDependencies(): {
         calls.create.push(input)
         return chat({ id: `c-${calls.create.length}` })
       },
-      send: async (id, text) => {
-        calls.send.push({ id, text })
+      send: async (id, text, images) => {
+        calls.send.push({ id, text, images })
         return chat({ id })
       },
       update: async (id, input) => {

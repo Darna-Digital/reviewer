@@ -9,10 +9,14 @@ import type {
   ChatAccess,
   ChatActivity,
   ChatEffort,
+  ChatImageUpload,
   ChatMode,
   ChatProviderKind,
   ChatTurn,
 } from "@/lib/api/types"
+
+/** Images sent with a prompt (server type ChatImageUpload). */
+export type ChatImage = ChatImageUpload
 
 /** The composer's settings for a chat (what the picker/menus edit). */
 export interface ChatSettings {
@@ -55,7 +59,11 @@ export interface ChatsDependencies {
       mode: ChatMode
       branch?: string
     }) => Promise<Chat>
-    readonly send: (id: string, text: string) => Promise<Chat>
+    readonly send: (
+      id: string,
+      text: string,
+      images: ReadonlyArray<ChatImage>
+    ) => Promise<Chat>
     readonly update: (
       id: string,
       input: Partial<ChatSettings> & { title?: string }
@@ -67,21 +75,28 @@ export interface ChatsDependencies {
 
 export interface ChatsFunctions {
   /** The new-thread flow: create a chat with `settings` and immediately send
-   * the first prompt. Returns null (no-op) when the prompt is blank. */
+   * the first prompt (and any images). Returns null (no-op) when the prompt is
+   * blank and no images are attached. */
   readonly start: (
     settings: ChatSettings,
     branch: string,
-    text: string
+    text: string,
+    images?: ReadonlyArray<ChatImage>
   ) => Promise<Chat | null>
   /** Create a titled chat, then immediately send the first prompt. */
   readonly startWithTitle: (
     settings: ChatSettings,
     branch: string,
     title: string,
-    text: string
+    text: string,
+    images?: ReadonlyArray<ChatImage>
   ) => Promise<Chat | null>
-  /** Send a prompt; returns null (no-op) when it is blank. */
-  readonly send: (id: string, text: string) => Promise<Chat | null>
+  /** Send a prompt (and any images); returns null (no-op) when both are empty. */
+  readonly send: (
+    id: string,
+    text: string,
+    images?: ReadonlyArray<ChatImage>
+  ) => Promise<Chat | null>
   /** Patch composer settings on an existing chat. */
   readonly updateSettings: (
     id: string,
