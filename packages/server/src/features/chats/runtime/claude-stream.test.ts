@@ -171,6 +171,31 @@ describe("createClaudeTurnParser", () => {
     expect(parser.text()).toBe("final answer")
   })
 
+  it("turns a logged-out reply into an auth error, never a message", () => {
+    // The CLI reports the login prompt as its *result text*, sometimes with
+    // is_error=false — it must settle as a failed turn with the login hint.
+    const parser = createClaudeTurnParser()
+    const events = push(parser, [
+      result({ is_error: false, result: "Not logged in · Please run /login" }),
+    ])
+    const settled = events.at(-1)
+    expect(settled).toMatchObject({ type: "result", state: "error" })
+    expect(settled?.type === "result" ? settled.errorMessage : "").toContain(
+      "logged out"
+    )
+    // The login prompt must not stand as the assistant's reply.
+    expect(parser.text()).toBe("")
+  })
+
+  it("clears a streamed login prompt from the reply text", () => {
+    const parser = createClaudeTurnParser()
+    push(parser, [
+      textDelta("Invalid API key · Please run /login"),
+      result({ is_error: true, result: "Invalid API key · Please run /login" }),
+    ])
+    expect(parser.text()).toBe("")
+  })
+
   it("maps an error result to an error state with its message", () => {
     const parser = createClaudeTurnParser()
     const events = push(parser, [

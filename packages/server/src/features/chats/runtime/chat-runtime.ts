@@ -43,6 +43,7 @@ import {
   nextChatId,
   saveSessionId,
 } from "../store.ts"
+import { CLAUDE_LOGIN_HINT, isClaudeAuthError } from "./claude-stream.ts"
 import {
   createTurnParser,
   type TurnEvent,
@@ -208,11 +209,19 @@ const finalizeTurn = (live: LiveTurn, exitCode: number | null): void => {
         ? "completed"
         : "error"
   const stderrTail = live.stderr.trim().slice(-500)
-  const errorMessage =
+  const rawError =
     state === "error"
       ? (live.result?.errorMessage ??
         (stderrTail.length > 0 ? stderrTail : `agent exited (${exitCode})`))
       : null
+  // A logged-out Claude can also die with the login prompt on stderr (no
+  // result line at all) — surface the same actionable hint either way.
+  const errorMessage =
+    rawError !== null &&
+    live.provider === "claude" &&
+    isClaudeAuthError(rawError)
+      ? CLAUDE_LOGIN_HINT
+      : rawError
   const endedAt = new Date().toISOString()
   const text = live.parser.text()
 

@@ -30,6 +30,28 @@ const asString = (value: unknown): string | null =>
   typeof value === "string" ? value : null
 
 /**
+ * The CLI's logged-out / expired-credential replies. In `-p` mode Claude
+ * can't open its /login flow, so an expired or revoked OAuth token surfaces
+ * as reply text like "Not logged in · Please run /login" or "Invalid API
+ * key · Please run /login" — which would otherwise land in the conversation
+ * as if the assistant said it.
+ */
+const AUTH_ERROR_PATTERN =
+  /not logged in|please run \/login|invalid api key|oauth token (has )?(expired|been revoked)|authentication[_ ]error/i
+
+export const isClaudeAuthError = (text: string | null): boolean =>
+  text !== null && AUTH_ERROR_PATTERN.test(text)
+
+/** What the chat shows instead of the CLI's bare logged-out reply. */
+export const CLAUDE_LOGIN_HINT =
+  "Claude Code is logged out on this machine (its OAuth token expired or " +
+  "was revoked). Open a Claude Code terminal thread (or any terminal), run " +
+  "`claude` and then `/login`, and send your message again. To stop this " +
+  "recurring, run `claude setup-token` once and export the result as " +
+  "CLAUDE_CODE_OAUTH_TOKEN in your shell profile — a long-lived credential " +
+  "meant for non-interactive use like these chats."
+
+/**
  * A one-line human summary of a tool call. Common Claude tools carry their
  * most telling field (Bash command, file path); anything else shows its name.
  */
@@ -188,8 +210,17 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
         return onUserMessage(parsed["message"])
       case "result": {
         settled = true
-        const failed = parsed["is_error"] === true
         const resultText = asString(parsed["result"])
+        // A logged-out CLI reports the login prompt as its reply (sometimes
+        // even with is_error=false) — always a failed turn, never a message.
+        const authFailed =
+          isClaudeAuthError(resultText) || isClaudeAuthError(buffer)
+        const failed = parsed["is_error"] === true || authFailed
+        // Don't leave "Please run /login" standing as the assistant's reply —
+        // the turn error (with the login hint) is the whole story.
+        if (authFailed && isClaudeAuthError(buffer) && buffer.length < 200) {
+          buffer = ""
+        }
         // A successful result carries the final text — authoritative when
         // nothing streamed (e.g. partials disabled and no assistant line).
         if (!failed && buffer.length === 0 && resultText !== null) {
@@ -200,7 +231,9 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
             type: "result",
             state: failed ? "error" : "completed",
             errorMessage: failed
-              ? (resultText ?? asString(parsed["subtype"]) ?? "turn failed")
+              ? authFailed
+                ? CLAUDE_LOGIN_HINT
+                : (resultText ?? asString(parsed["subtype"]) ?? "turn failed")
               : null,
             totalCostUsd:
               typeof parsed["total_cost_usd"] === "number"
