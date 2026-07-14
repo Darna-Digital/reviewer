@@ -1,9 +1,11 @@
 import type {
   DiffLineAnnotation,
   FileDiffMetadata,
+  Hunk,
   SelectedLineRange,
 } from "@pierre/diffs"
 import { FileDiff } from "@pierre/diffs/react"
+import { IconArrowBackUp } from "@tabler/icons-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,6 +28,7 @@ type AnnotationMeta =
       readonly comments: ReadonlyArray<ReviewComment>
     }
   | { readonly kind: "draft" }
+  | { readonly kind: "hunk"; readonly hunkIndex: number }
 
 interface DiffPaneProps {
   files: ReadonlyArray<FileDiffMetadata>
@@ -41,6 +44,12 @@ interface DiffPaneProps {
   onDraftOpen: (draft: DraftLocation) => void
   onDraftCancel: () => void
   onEditFile: (path: string) => void
+  /** Discard a file's worktree changes (revert to HEAD). Only wired in commit
+   * mode, where the diff is the working tree; absent means no discard control. */
+  onDiscardFile?: (path: string) => void
+  /** Discard a single hunk of a file's worktree diff. Only wired in commit mode;
+   * absent means no per-hunk discard control is rendered. */
+  onDiscardHunk?: (path: string, hunkIndex: number) => void
   onCommentSubmit: (location: DraftLocation, body: string) => Promise<void>
   onCommentDelete: (comment: ReviewComment) => Promise<void>
   onCommentReply: (comment: ReviewComment, body: string) => Promise<void>
@@ -61,6 +70,33 @@ const emptyHint = (target: DiffTarget): string => {
 
 const THEMES = { light: "github-light", dark: "github-dark" } as const
 
+/**
+ * Where a hunk's discard control anchors: the line just above the hunk's first
+ * *changed* line (annotations render below their anchor, so this lands the
+ * control directly above the change — not on the leading context, and not
+ * splitting the change). Falls back to the first changed line when the change
+ * opens the hunk with no leading context.
+ */
+const hunkChangeAnchor = (
+  hunk: Hunk
+): { side: CommentSide; lineNumber: number } => {
+  let addition = hunk.additionStart
+  let deletion = hunk.deletionStart
+  let sawContext = false
+  for (const block of hunk.hunkContent) {
+    if (block.type === "context") {
+      addition += block.lines
+      deletion += block.lines
+      sawContext = true
+      continue
+    }
+    return block.additions > 0
+      ? { side: "additions", lineNumber: sawContext ? addition - 1 : addition }
+      : { side: "deletions", lineNumber: sawContext ? deletion - 1 : deletion }
+  }
+  return { side: "additions", lineNumber: hunk.additionStart }
+}
+
 interface FileDiffSectionProps {
   file: FileDiffMetadata
   theme: Theme
@@ -71,6 +107,8 @@ interface FileDiffSectionProps {
   onDraftOpen: (draft: DraftLocation) => void
   onDraftCancel: () => void
   onEditFile: (path: string) => void
+  onDiscardFile?: (path: string) => void
+  onDiscardHunk?: (path: string, hunkIndex: number) => void
   onCommentSubmit: (location: DraftLocation, body: string) => Promise<void>
   onCommentDelete: (comment: ReviewComment) => Promise<void>
   onCommentReply: (comment: ReviewComment, body: string) => Promise<void>
@@ -86,6 +124,8 @@ function FileDiffSection({
   onDraftOpen,
   onDraftCancel,
   onEditFile,
+  onDiscardFile,
+  onDiscardHunk,
   onCommentSubmit,
   onCommentDelete,
   onCommentReply,
@@ -130,22 +170,69 @@ function FileDiffSection({
               lineNumber: props.lineNumber,
             }),
         }}
-        renderHeaderMetadata={(meta) =>
-          meta.type === "deleted" ? null : (
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => onEditFile(meta.name)}
-            >
-              Edit
-            </Button>
-          )
-        }
+        renderHeaderMetadata={(meta) => (
+          <div className="flex items-center gap-1">
+            {onDiscardFile !== undefined && (
+              // Revert this file to HEAD. Available for every change type
+              // (a deletion is restored, an addition removed).
+              <Button
+                variant="ghost"
+                size="xs"
+                className="gap-1 text-muted-foreground hover:text-destructive"
+                title={`Discard changes in ${meta.name}`}
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Discard all changes in ${meta.name}?\n\nThis reverts the file to the last commit and cannot be undone.`
+                    )
+                  )
+                    onDiscardFile(meta.name)
+                }}
+              >
+                <IconArrowBackUp className="size-3.5" />
+                Discard
+              </Button>
+            )}
+            {meta.type !== "deleted" && (
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => onEditFile(meta.name)}
+              >
+                Edit
+              </Button>
+            )}
+          </div>
+        )}
         lineAnnotations={
           annotations as Array<DiffLineAnnotation<AnnotationMeta>>
         }
         renderAnnotation={(annotation) => {
           const meta = annotation.metadata
+          if (meta.kind === "hunk") {
+            // A quiet, icon-only revert affordance in the spirit of JetBrains'
+            // gutter change markers — right-aligned, minimal vertical footprint.
+            return (
+              <div className="flex justify-end px-1 py-px">
+                <button
+                  type="button"
+                  title="Discard hunk"
+                  aria-label="Discard hunk"
+                  className="-my-0.5 flex size-5 items-center justify-center rounded text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Discard this change?\n\nThis reverts just this hunk in the working tree and cannot be undone."
+                      )
+                    )
+                      onDiscardHunk?.(file.name, meta.hunkIndex)
+                  }}
+                >
+                  <IconArrowBackUp className="size-3.5" />
+                </button>
+              </div>
+            )
+          }
           if (meta.kind === "draft") {
             return (
               <DraftCard
@@ -195,6 +282,8 @@ export function DiffPane({
   onDraftOpen,
   onDraftCancel,
   onEditFile,
+  onDiscardFile,
+  onDiscardHunk,
   onCommentSubmit,
   onCommentDelete,
   onCommentReply,
@@ -320,8 +409,25 @@ export function DiffPane({
       })
       result.set(draft.filePath, arr)
     }
+    // Anchor a "Discard hunk" control at the start of each hunk. Only in commit
+    // mode (onDiscardHunk provided); hunk order here matches the server's
+    // `git diff HEAD -- <path>`, so the index round-trips to the discard call.
+    if (onDiscardHunk !== undefined) {
+      for (const file of files) {
+        const arr = result.get(file.name) ?? []
+        file.hunks.forEach((hunk, hunkIndex) => {
+          const anchor = hunkChangeAnchor(hunk)
+          arr.push({
+            side: anchor.side,
+            lineNumber: anchor.lineNumber,
+            metadata: { kind: "hunk", hunkIndex },
+          })
+        })
+        result.set(file.name, arr)
+      }
+    }
     return result
-  }, [comments, draft])
+  }, [comments, draft, files, onDiscardHunk])
 
   if (loading) {
     return (
@@ -363,6 +469,8 @@ export function DiffPane({
           onDraftOpen={onDraftOpen}
           onDraftCancel={onDraftCancel}
           onEditFile={onEditFile}
+          onDiscardFile={onDiscardFile}
+          onDiscardHunk={onDiscardHunk}
           onCommentSubmit={onCommentSubmit}
           onCommentDelete={onCommentDelete}
           onCommentReply={onCommentReply}

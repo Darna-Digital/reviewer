@@ -30,6 +30,21 @@ export const CommitBody = Schema.Struct({
   paths: Schema.optionalKey(Schema.Array(Schema.String)),
 })
 
+/** Discard the worktree changes for the given paths (revert them to HEAD). */
+export const Discard = Schema.Struct({
+  paths: Schema.Array(Schema.String),
+})
+
+/**
+ * Discard a single hunk of a file's worktree diff. `hunkIndex` is zero-based in
+ * the order the hunks appear in `git diff HEAD -- <path>`, which matches the
+ * order the client renders them.
+ */
+export const DiscardHunk = Schema.Struct({
+  path: Schema.String,
+  hunkIndex: Schema.Int,
+})
+
 export const Merge = Schema.Struct({ branch: Schema.String })
 export const Rebase = Schema.Struct({ onto: Schema.String })
 

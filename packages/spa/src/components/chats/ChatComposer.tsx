@@ -275,14 +275,20 @@ export function ChatComposer({
           model={settings.model}
           onSelect={(model, provider) => onSettingsChange({ model, provider })}
         />
-        <Separator orientation="vertical" className="mx-0.5 h-2.5" />
+        <Separator
+          orientation="vertical"
+          className="mx-0.5 h-4 self-center data-vertical:self-center"
+        />
         <SelectorMenu
           options={EFFORTS}
           value={settings.effort}
           onSelect={(effort) => onSettingsChange({ effort })}
           ariaLabel="Reasoning effort"
         />
-        <Separator orientation="vertical" className="mx-0.5 h-2.5" />
+        <Separator
+          orientation="vertical"
+          className="mx-0.5 h-4 self-center data-vertical:self-center"
+        />
         <SelectorMenu
           options={ACCESS}
           value={settings.access}
@@ -296,7 +302,10 @@ export function ChatComposer({
           }
           ariaLabel="Access level"
         />
-        <Separator orientation="vertical" className="mx-0.5 h-2.5" />
+        <Separator
+          orientation="vertical"
+          className="mx-0.5 h-4 self-center data-vertical:self-center"
+        />
         <SelectorMenu
           options={MODES}
           value={settings.mode}
@@ -310,7 +319,10 @@ export function ChatComposer({
           }
           ariaLabel="Agent mode"
         />
-        <Separator orientation="vertical" className="mx-0.5 h-2.5" />
+        <Separator
+          orientation="vertical"
+          className="mx-0.5 h-4 self-center data-vertical:self-center"
+        />
         <Button
           size="icon"
           variant="ghost"

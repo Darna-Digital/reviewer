@@ -643,6 +643,14 @@ export function AppShell() {
         onDraftOpen={setDraft}
         onDraftCancel={() => setDraft(null)}
         onEditFile={(p) => openFile(p, true)}
+        onDiscardFile={
+          mode === "commit" ? (p) => void git.discard([p]) : undefined
+        }
+        onDiscardHunk={
+          mode === "commit"
+            ? (p, hunkIndex) => void git.discardHunk(p, hunkIndex)
+            : undefined
+        }
         onCommentSubmit={submitComment}
         onCommentDelete={deleteComment}
         onCommentReply={replyComment}

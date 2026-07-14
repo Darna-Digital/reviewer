@@ -20,6 +20,8 @@ const gitWith = (diff: string, branch = "main") =>
         run: (...args) =>
           Effect.succeed(args[0] === "rev-parse" ? branch : diff),
         runVerbose: () => Effect.succeed(""),
+        runTolerant: (...args) =>
+          Effect.succeed(args[0] === "rev-parse" ? branch : diff),
         lines: () => Effect.succeed([]),
       })
     )

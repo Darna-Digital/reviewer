@@ -53,6 +53,16 @@ export const RepoController = HttpApiBuilder.group(Api, "repo", (handlers) =>
         s.commit(payload.message, payload.paths ?? [])
       ).pipe(Effect.map((sha) => ({ sha })))
     )
+    .handle("discard", ({ payload }) =>
+      Effect.flatMap(RepoService, (s) => s.discard(payload.paths)).pipe(
+        Effect.as(ok)
+      )
+    )
+    .handle("discardHunk", ({ payload }) =>
+      Effect.flatMap(RepoService, (s) =>
+        s.discardHunk(payload.path, payload.hunkIndex)
+      ).pipe(Effect.as(ok))
+    )
     .handle("push", () =>
       Effect.flatMap(RepoService, (s) => s.push).pipe(
         Effect.map((output) => ({ output }))

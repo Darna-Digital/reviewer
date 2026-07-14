@@ -25,6 +25,8 @@ import {
   CreateBranch,
   DeleteBranch,
   DiffQuery,
+  Discard,
+  DiscardHunk,
   LogQueryParams,
   Merge,
   Rebase,
@@ -94,6 +96,20 @@ export class RepoApi extends HttpApiGroup.make("repo")
     HttpApiEndpoint.post("commit", "/commit", {
       payload: CommitBody,
       success: CommitResult,
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("discard", "/discard", {
+      payload: Discard,
+      success: Ok,
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("discardHunk", "/discard-hunk", {
+      payload: DiscardHunk,
+      success: Ok,
       error: gitError,
     })
   )

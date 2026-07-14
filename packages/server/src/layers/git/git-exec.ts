@@ -122,12 +122,15 @@ export const make = Effect.gen(function* () {
       )
     )
 
+  const runTolerant: GitExecShape["runTolerant"] = (...args) =>
+    spawn(args).pipe(Effect.map(({ stdout }) => stdout))
+
   const lines: GitExecShape["lines"] = (...args) =>
     run(...args).pipe(
       Effect.map((out) => out.split("\n").filter((line) => line.length > 0))
     )
 
-  return GitExec.of({ run, runVerbose, lines })
+  return GitExec.of({ run, runVerbose, runTolerant, lines })
 })
 
 export const layer: Layer.Layer<

@@ -90,6 +90,36 @@ export function useGitActions() {
       }
     },
 
+    /**
+     * Discard the worktree changes for the given paths, reverting them to HEAD
+     * (modifications and deletions are restored; new files are removed). This is
+     * irreversible — callers should confirm before invoking.
+     */
+    discard: (paths: ReadonlyArray<string>) =>
+      fns.runOp(
+        paths.length === 1
+          ? `Discarded changes in ${paths[0]}`
+          : `Discarded changes in ${paths.length} files`,
+        () =>
+          unwrap(
+            fetchClient.POST("/api/discard", { body: { paths: [...paths] } })
+          )
+      ),
+
+    /**
+     * Discard a single hunk of a file's worktree diff, reverting just that
+     * change. `hunkIndex` is zero-based in the order the diff renders its hunks.
+     * Irreversible — callers should confirm before invoking.
+     */
+    discardHunk: (path: string, hunkIndex: number) =>
+      fns.runOp(`Discarded a change in ${path}`, () =>
+        unwrap(
+          fetchClient.POST("/api/discard-hunk", {
+            body: { path, hunkIndex },
+          })
+        )
+      ),
+
     checkout: (branch: string) =>
       fns.runOp(`Checked out ${branch}`, () =>
         unwrap(fetchClient.POST("/api/checkout", { body: { branch } }))

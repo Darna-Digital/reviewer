@@ -73,6 +73,8 @@ export const makeMemoryRepoRepository = (seed: MemoryRepoSeed = {}) =>
       checkout: () => Effect.void,
       createBranch: () => Effect.void,
       commit: () => Effect.succeed("newsha1"),
+      discard: () => Effect.void,
+      discardHunk: () => Effect.void,
       push: Effect.succeed("pushed"),
       pull: Effect.succeed("pulled"),
       fetch: Effect.succeed("fetched"),

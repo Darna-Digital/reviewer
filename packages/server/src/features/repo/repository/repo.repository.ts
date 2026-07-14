@@ -45,6 +45,18 @@ export interface RepoRepo {
     message: string,
     paths: ReadonlyArray<string>
   ) => Effect.Effect<string, GitFailure>
+  /** Discard the worktree changes for the given paths, reverting them to HEAD. */
+  readonly discard: (
+    paths: ReadonlyArray<string>
+  ) => Effect.Effect<void, GitFailure>
+  /**
+   * Discard a single hunk of a file's worktree diff, reverting just that change.
+   * `hunkIndex` is zero-based in `git diff HEAD -- <path>` hunk order.
+   */
+  readonly discardHunk: (
+    path: string,
+    hunkIndex: number
+  ) => Effect.Effect<void, GitFailure>
   readonly push: Effect.Effect<string, GitFailure>
   readonly pull: Effect.Effect<string, GitFailure>
   readonly fetch: Effect.Effect<string, GitFailure>

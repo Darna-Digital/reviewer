@@ -12,7 +12,6 @@ import type {
   ChatSettings,
 } from "@/features/chats/entity/chats.interfaces"
 import { useChatModels, useRepo } from "@/lib/queries"
-import { BranchBadge } from "./BranchBadge"
 import { ChatComposer } from "./ChatComposer"
 
 export function NewChatView() {
@@ -55,10 +54,6 @@ export function NewChatView() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex h-11 shrink-0 items-center justify-between gap-3 border-b px-4">
-        <span className="text-sm font-medium">New thread</span>
-        <BranchBadge />
-      </header>
       <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 text-center">
         <p className="text-sm font-medium">Start a conversation</p>
         <p className="text-sm text-muted-foreground">

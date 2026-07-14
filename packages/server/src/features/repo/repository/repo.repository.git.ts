@@ -5,6 +5,7 @@
  */
 import * as Effect from "effect/Effect"
 import * as FileSystem from "effect/FileSystem"
+import { GitError } from "../../../layers/errors.ts"
 import { GitExec, type GitFailure } from "../../../layers/git/git-exec.ts"
 import type {
   BranchInfo,
@@ -65,6 +66,44 @@ const parseStatusLine = (line: string): GitStatusEntry | null => {
                 : null
   return status === null ? null : { path, status }
 }
+
+/**
+ * Split a single file's unified diff into its file header (the `diff --git`,
+ * `index`, `---`, `+++` lines) and its hunk blocks (each `@@ … @@` group and its
+ * body). Body lines are prefixed with a space/`+`/`-`/`\`, so only a real hunk
+ * header ever starts a new block. Used to reconstruct a one-hunk patch that
+ * `git apply --reverse` can undo in isolation.
+ */
+export const splitDiffIntoHunks = (
+  patch: string
+): { header: string; hunks: ReadonlyArray<string> } => {
+  const lines = patch.split("\n")
+  const firstHunk = lines.findIndex((line) => line.startsWith("@@"))
+  if (firstHunk < 0) return { header: patch, hunks: [] }
+  const header = lines.slice(0, firstHunk).join("\n")
+  const hunks: Array<string> = []
+  let current: Array<string> = []
+  for (const line of lines.slice(firstHunk)) {
+    if (line.startsWith("@@")) {
+      if (current.length > 0) hunks.push(current.join("\n"))
+      current = [line]
+    } else {
+      current.push(line)
+    }
+  }
+  if (current.length > 0) hunks.push(current.join("\n"))
+  return { header, hunks }
+}
+
+/** Fold a filesystem error into a GitError so it stays on the git failure channel. */
+const fsToGitError =
+  (args: ReadonlyArray<string>) =>
+  (error: unknown): GitError =>
+    new GitError({
+      args,
+      exitCode: -1,
+      stderr: error instanceof Error ? error.message : String(error),
+    })
 
 const parseGitHubRemote = (
   url: string
@@ -436,6 +475,58 @@ export const makeGitRepoRepository = Effect.gen(function* () {
       return yield* headShortSha
     })
 
+  // Discard a single path's worktree changes. If the path exists at HEAD we
+  // restore both index and worktree to the committed version (reverting
+  // modifications, un-deleting deletions, and unstaging). Otherwise it is a new
+  // file: unstage it if it was added, then delete it from disk. Per-path Git
+  // errors are swallowed so one bad pathspec can't abort the rest of the batch.
+  const discardOne = (path: string): Effect.Effect<void, GitFailure> =>
+    Effect.gen(function* () {
+      const inHead = yield* run("cat-file", "-e", `HEAD:${path}`).pipe(
+        Effect.as(true),
+        Effect.catchTag("GitError", () => Effect.succeed(false))
+      )
+      if (inHead) {
+        yield* run("checkout", "HEAD", "--", path)
+        return
+      }
+      // A new file: unstage it if it was added, then remove it from disk.
+      yield* run("reset", "-q", "HEAD", "--", path).pipe(
+        Effect.catchTag("GitError", () => Effect.void)
+      )
+      yield* run("clean", "-fdq", "--", path).pipe(
+        Effect.catchTag("GitError", () => Effect.void)
+      )
+    })
+
+  const discard: RepoRepo["discard"] = (paths) =>
+    Effect.forEach(paths, discardOne, { discard: true })
+
+  // Revert a single hunk: regenerate the file's HEAD diff, isolate the target
+  // hunk, and reverse-apply just that one to the working tree. `git apply` reads
+  // the patch from a file (GitExec has no stdin), so it goes through a scoped
+  // temp file. `--recount` lets git re-derive the hunk's line counts, tolerating
+  // the offsets that come from lifting one hunk out of a multi-hunk diff.
+  const discardHunk: RepoRepo["discardHunk"] = (path, hunkIndex) =>
+    Effect.gen(function* () {
+      const patch = yield* run("diff", "HEAD", "--", path)
+      const { header, hunks } = splitDiffIntoHunks(patch)
+      const hunk = hunks[hunkIndex]
+      if (header.length === 0 || hunk === undefined) return
+      const single = `${header}\n${hunk}\n`
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const tmp = yield* fs
+            .makeTempFileScoped({ prefix: "byconvo-hunk-" })
+            .pipe(Effect.mapError(fsToGitError(["apply", "--reverse"])))
+          yield* fs
+            .writeFileString(tmp, single)
+            .pipe(Effect.mapError(fsToGitError(["apply", "--reverse"])))
+          yield* run("apply", "--reverse", "--recount", tmp)
+        })
+      )
+    })
+
   const push: RepoRepo["push"] = Effect.gen(function* () {
     const upstream = yield* run(
       "rev-parse",
@@ -653,6 +744,8 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     checkout,
     createBranch,
     commit,
+    discard,
+    discardHunk,
     push,
     pull,
     fetch,
