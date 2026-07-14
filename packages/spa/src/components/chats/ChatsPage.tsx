@@ -264,7 +264,7 @@ export function ChatsPage() {
       to="/chats/$chatId"
       params={{ chatId: c.id }}
       className={cn(
-        "group/row flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted/60",
+        "group/row mb-0.5 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted/60",
         c.id === chatId && "bg-muted"
       )}
     >
@@ -362,7 +362,7 @@ export function ChatsPage() {
             variant="ghost"
             className="size-7 shrink-0"
             aria-label="New thread"
-            onClick={() => void navigate({ to: "/chats" })}
+            onClick={() => void navigate({ to: "/chats", search: { new: true } })}
           >
             <IconPlus className="size-4" />
           </Button>

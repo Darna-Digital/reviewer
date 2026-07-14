@@ -163,7 +163,7 @@ export function DocsPage() {
                 type="button"
                 onClick={() => setSelectedId(d.id)}
                 className={cn(
-                  "flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
+                  "mb-0.5 flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
                   d.id === selectedId && "bg-muted"
                 )}
               >

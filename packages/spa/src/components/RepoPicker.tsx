@@ -123,7 +123,7 @@ export function RepoPicker({
               return (
                 <button
                   key={recent}
-                  className="flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                  className="mb-0.5 flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
                   onClick={() => void choose(recent)}
                 >
                   <Avatar name={name} className="size-5 text-[10px]" />
@@ -165,7 +165,7 @@ export function RepoPicker({
             )}
             {data?.parent != null && (
               <button
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
+                className="mb-0.5 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted"
                 onClick={() => setPath(data.parent)}
               >
                 <IconArrowUp className="size-4 shrink-0 text-muted-foreground" />
@@ -184,7 +184,7 @@ export function RepoPicker({
             {entries.map((entry) => (
               <div
                 key={entry.path}
-                className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
+                className="mb-0.5 flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
               >
                 <button
                   className="flex min-w-0 flex-1 items-center gap-2 text-left"

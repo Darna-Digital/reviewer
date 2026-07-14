@@ -9,6 +9,11 @@ import { IconArrowBackUp } from "@tabler/icons-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
   CommentThread,
   DraftCard,
   type DraftLocation,
@@ -212,24 +217,34 @@ function FileDiffSection({
           if (meta.kind === "hunk") {
             // A quiet, icon-only revert affordance in the spirit of JetBrains'
             // gutter change markers — right-aligned, minimal vertical footprint.
+            // The icon alone is ambiguous, so a tooltip spells out the action.
             return (
-              <div className="flex justify-end px-1 py-px">
-                <button
-                  type="button"
-                  title="Discard hunk"
-                  aria-label="Discard hunk"
-                  className="-my-0.5 flex size-5 items-center justify-center rounded text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "Discard this change?\n\nThis reverts just this hunk in the working tree and cannot be undone."
-                      )
-                    )
-                      onDiscardHunk?.(file.name, meta.hunkIndex)
-                  }}
-                >
-                  <IconArrowBackUp className="size-3.5" />
-                </button>
+              // em units so the control scales with the diff's own font size.
+              <div className="flex justify-end px-[0.6em] py-[0.2em]">
+                <Tooltip>
+                  <TooltipTrigger
+                    aria-label="Discard hunk"
+                    className="flex items-center justify-center rounded p-[0.3em] text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                    render={
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              "Discard this change?\n\nThis reverts just this hunk in the working tree and cannot be undone."
+                            )
+                          )
+                            onDiscardHunk?.(file.name, meta.hunkIndex)
+                        }}
+                      />
+                    }
+                  >
+                    <IconArrowBackUp className="size-[1.3em]" />
+                  </TooltipTrigger>
+                  <TooltipContent side="left">
+                    Discard this change — revert the hunk to the last commit
+                  </TooltipContent>
+                </Tooltip>
               </div>
             )
           }

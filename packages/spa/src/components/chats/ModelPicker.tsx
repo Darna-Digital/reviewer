@@ -183,7 +183,7 @@ export function ModelPicker({
                   <div
                     key={m.id}
                     className={cn(
-                      "group/model flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted",
+                      "group/model mb-0.5 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted",
                       m.id === model && "bg-muted/60"
                     )}
                     onClick={() => pick(m)}

@@ -184,7 +184,7 @@ export function LocalDevPage() {
               <div
                 key={c.id}
                 className={cn(
-                  "group/row flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted",
+                  "group/row mb-0.5 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted",
                   c.id === activeId && "bg-muted"
                 )}
                 onClick={() => setActiveId(c.id)}
