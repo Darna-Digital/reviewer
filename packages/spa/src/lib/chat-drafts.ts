@@ -55,7 +55,9 @@ export function setDraft(key: string, text: string): void {
 }
 
 /** The draft text for `key` and a stable setter, updating live across mounts. */
-export function useDraft(key: string): readonly [string, (text: string) => void] {
+export function useDraft(
+  key: string
+): readonly [string, (text: string) => void] {
   const text = useSyncExternalStore(
     (cb) => {
       listeners.add(cb)

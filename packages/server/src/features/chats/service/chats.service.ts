@@ -55,7 +55,9 @@ export const make = Effect.gen(function* () {
       if (yield* runtime.isRunning(id)) {
         const queued = yield* runtime.queue(id, prompt, images)
         if (!queued.ok) {
-          return yield* Effect.fail(new NotFound({ reason: `chat ${id} not found` }))
+          return yield* Effect.fail(
+            new NotFound({ reason: `chat ${id} not found` })
+          )
         }
         return yield* repo.get(id)
       }
