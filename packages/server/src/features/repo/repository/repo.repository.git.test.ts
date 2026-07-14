@@ -47,6 +47,23 @@ describe("splitDiffIntoHunks", () => {
     expect(hunks[0]).toContain("@@ not a header")
   })
 
+  it("drops the trailing blank line real `git diff` output leaves on the last hunk", () => {
+    // `git diff` ends with a newline, so splitting on "\n" yields an empty final
+    // element. It must not attach to the last hunk, or the reconstructed
+    // one-hunk patch gains a blank line and `git apply` rejects it.
+    const patch =
+      [HEADER, "@@ -34,3 +34,3 @@", " a", "-old", "+new", " b"].join("\n") +
+      "\n"
+
+    const { hunks } = splitDiffIntoHunks(patch)
+
+    expect(hunks).toHaveLength(1)
+    expect(hunks[0]).toBe(
+      ["@@ -34,3 +34,3 @@", " a", "-old", "+new", " b"].join("\n")
+    )
+    expect(hunks[0].endsWith("\n")).toBe(false)
+  })
+
   it("returns no hunks for a diff without any (e.g. binary files)", () => {
     const patch = [
       "diff --git a/logo.png b/logo.png",

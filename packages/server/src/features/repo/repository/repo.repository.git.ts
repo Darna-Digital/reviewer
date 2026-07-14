@@ -73,6 +73,12 @@ const parseStatusLine = (line: string): GitStatusEntry | null => {
  * body). Body lines are prefixed with a space/`+`/`-`/`\`, so only a real hunk
  * header ever starts a new block. Used to reconstruct a one-hunk patch that
  * `git apply --reverse` can undo in isolation.
+ *
+ * `git diff` output ends with a trailing newline, so splitting on "\n" leaves an
+ * empty final element that would otherwise attach to the last hunk as a blank
+ * line — enough to make `git apply` reject the reconstructed patch. Each hunk is
+ * therefore right-trimmed of empty lines (real body lines are never empty; they
+ * always carry a prefix), and callers add exactly one trailing newline back.
  */
 export const splitDiffIntoHunks = (
   patch: string
@@ -83,15 +89,21 @@ export const splitDiffIntoHunks = (
   const header = lines.slice(0, firstHunk).join("\n")
   const hunks: Array<string> = []
   let current: Array<string> = []
+  const flush = () => {
+    while (current.length > 0 && current[current.length - 1] === "") {
+      current.pop()
+    }
+    if (current.length > 0) hunks.push(current.join("\n"))
+  }
   for (const line of lines.slice(firstHunk)) {
     if (line.startsWith("@@")) {
-      if (current.length > 0) hunks.push(current.join("\n"))
+      flush()
       current = [line]
     } else {
       current.push(line)
     }
   }
-  if (current.length > 0) hunks.push(current.join("\n"))
+  flush()
   return { header, hunks }
 }
 
@@ -503,10 +515,9 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     Effect.forEach(paths, discardOne, { discard: true })
 
   // Revert a single hunk: regenerate the file's HEAD diff, isolate the target
-  // hunk, and reverse-apply just that one to the working tree. `git apply` reads
-  // the patch from a file (GitExec has no stdin), so it goes through a scoped
-  // temp file. `--recount` lets git re-derive the hunk's line counts, tolerating
-  // the offsets that come from lifting one hunk out of a multi-hunk diff.
+  // hunk (verbatim, so its `@@` line counts stay correct), and reverse-apply just
+  // that one to the working tree. `git apply` reads the patch from a file
+  // (GitExec has no stdin), so it goes through a scoped temp file.
   const discardHunk: RepoRepo["discardHunk"] = (path, hunkIndex) =>
     Effect.gen(function* () {
       const patch = yield* run("diff", "HEAD", "--", path)
@@ -522,7 +533,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
           yield* fs
             .writeFileString(tmp, single)
             .pipe(Effect.mapError(fsToGitError(["apply", "--reverse"])))
-          yield* run("apply", "--reverse", "--recount", tmp)
+          yield* run("apply", "--reverse", tmp)
         })
       )
     })
