@@ -228,14 +228,9 @@ function FileDiffSection({
                     render={
                       <button
                         type="button"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              "Discard this change?\n\nThis reverts just this hunk in the working tree and cannot be undone."
-                            )
-                          )
-                            onDiscardHunk?.(file.name, meta.hunkIndex)
-                        }}
+                        onClick={() =>
+                          onDiscardHunk?.(file.name, meta.hunkIndex)
+                        }
                       />
                     }
                   >

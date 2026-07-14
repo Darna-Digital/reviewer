@@ -362,7 +362,9 @@ export function ChatsPage() {
             variant="ghost"
             className="size-7 shrink-0"
             aria-label="New thread"
-            onClick={() => void navigate({ to: "/chats", search: { new: true } })}
+            onClick={() =>
+              void navigate({ to: "/chats", search: { new: true } })
+            }
           >
             <IconPlus className="size-4" />
           </Button>
