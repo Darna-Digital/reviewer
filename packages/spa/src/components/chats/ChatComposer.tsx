@@ -30,6 +30,7 @@ import type {
   ChatMode,
   ChatModelCatalog,
 } from "@/lib/api/types"
+import { useDraft } from "@/lib/chat-drafts"
 import { cn } from "@/lib/utils"
 import type { ChatSettings } from "@/features/chats/entity/chats.interfaces"
 import { AttachmentChip, AttachmentGrid } from "./ImageAttachments"
@@ -128,6 +129,7 @@ export function ChatComposer({
   running,
   onStop,
   placeholder,
+  draftKey,
 }: {
   settings: ChatSettings
   onSettingsChange: (patch: Partial<ChatSettings>) => void
@@ -140,8 +142,12 @@ export function ChatComposer({
   running: boolean
   onStop?: () => void
   placeholder?: string
+  /** Stable id the draft is persisted under so it survives navigation. */
+  draftKey: string
 }) {
-  const [text, setText] = useState("")
+  // The prompt lives in the shared draft store (keyed per chat) rather than
+  // local state, so leaving and returning to a thread keeps what you typed.
+  const [text, setText] = useDraft(draftKey)
   const [sending, setSending] = useState(false)
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([])
   const [dragging, setDragging] = useState(false)
@@ -151,8 +157,9 @@ export function ChatComposer({
   // pointer has truly left the composer (matches lib/terminal/image-drop.ts).
   const dragDepth = useRef(0)
 
-  const canSend =
-    !running && !sending && (text.trim().length > 0 || attachments.length > 0)
+  // A send while a turn is running is accepted, not blocked: the server appends
+  // the message to the thread and the agent picks it up when the turn settles.
+  const canSend = !sending && (text.trim().length > 0 || attachments.length > 0)
 
   const addFiles = async (files: ReadonlyArray<File>) => {
     const images = files.filter(isImageFile)
@@ -177,6 +184,8 @@ export function ChatComposer({
   const removeAttachment = (id: string) =>
     setAttachments((prev) => prev.filter((a) => a.id !== id))
 
+  // Deliver the draft. Clears it on success; keeps it on failure so the user
+  // can retry — the caller has already surfaced a toast.
   const submit = async () => {
     if (!canSend) return
     setSending(true)
@@ -184,6 +193,8 @@ export function ChatComposer({
       await onSend(text, attachments.map(toImagePayload))
       setText("")
       setAttachments([])
+    } catch {
+      // keep the draft for a manual retry
     } finally {
       setSending(false)
       textareaRef.current?.focus()
@@ -333,7 +344,7 @@ export function ChatComposer({
           <IconPhotoPlus className="size-4 text-muted-foreground" />
         </Button>
         <div className="flex-1" />
-        {running && onStop !== undefined ? (
+        {running && onStop !== undefined && (
           <Button
             size="icon"
             className="size-7 rounded-full"
@@ -343,17 +354,16 @@ export function ChatComposer({
           >
             <IconPlayerStopFilled className="size-3.5" />
           </Button>
-        ) : (
-          <Button
-            size="icon"
-            className="size-7 rounded-full"
-            aria-label="Send message"
-            disabled={!canSend}
-            onClick={() => void submit()}
-          >
-            <IconArrowUp className="size-4" />
-          </Button>
         )}
+        <Button
+          size="icon"
+          className="size-7 rounded-full"
+          aria-label="Send message"
+          disabled={!canSend}
+          onClick={() => void submit()}
+        >
+          <IconArrowUp className="size-4" />
+        </Button>
       </div>
     </div>
   )

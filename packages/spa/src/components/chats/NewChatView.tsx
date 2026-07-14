@@ -11,6 +11,7 @@ import type {
   ChatImage,
   ChatSettings,
 } from "@/features/chats/entity/chats.interfaces"
+import { NEW_CHAT_DRAFT } from "@/lib/chat-drafts"
 import { useChatModels, useRepo } from "@/lib/queries"
 import { ChatComposer } from "./ChatComposer"
 
@@ -62,6 +63,7 @@ export function NewChatView() {
       </div>
       <div className="mx-auto w-full max-w-3xl px-6 pb-4">
         <ChatComposer
+          draftKey={NEW_CHAT_DRAFT}
           settings={settings}
           onSettingsChange={(patch) =>
             setOverrides((prev) => ({ ...prev, ...patch }))

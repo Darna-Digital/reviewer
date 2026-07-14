@@ -71,6 +71,10 @@ export const ChatMessage = Schema.Struct({
   createdAt: Schema.String,
   /** Images the user attached to this prompt (user messages only). */
   attachments: Schema.optionalKey(Schema.Array(ChatAttachment)),
+  /** A user message sent while a turn was running: persisted immediately for
+   * the timeline, then consumed by the next turn once the current one settles.
+   * Absent/false once a turn has picked it up. */
+  pending: Schema.optionalKey(Schema.Boolean),
 })
 export type ChatMessage = typeof ChatMessage.Type
 

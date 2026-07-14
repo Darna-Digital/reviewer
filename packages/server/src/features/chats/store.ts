@@ -120,6 +120,45 @@ export const appendTurnStart = (
     latestTurn: input.turn,
   }))
 
+/** Append a user message queued while a turn was running. It shows in the
+ * timeline immediately (marked pending) and is picked up by the next turn. */
+export const appendPendingMessage = (
+  repoPath: string,
+  chatId: string,
+  userMessage: ChatMessage
+): Chat | undefined =>
+  patchChat(repoPath, chatId, (chat) => ({
+    ...chat,
+    updatedAt: userMessage.createdAt,
+    messages: [...chat.messages, userMessage],
+  }))
+
+/** Start a turn that consumes already-persisted pending messages: attach them
+ * to the new turn (clearing their pending flag) and add the streaming assistant
+ * placeholder. No new user message is created — the prompts already exist. */
+export const startPendingTurn = (
+  repoPath: string,
+  chatId: string,
+  input: {
+    readonly turn: ChatTurn
+    readonly assistantMessage: ChatMessage
+    readonly consumeIds: ReadonlyArray<string>
+  }
+): Chat | undefined =>
+  patchChat(repoPath, chatId, (chat) => ({
+    ...chat,
+    updatedAt: input.turn.startedAt,
+    messages: [
+      ...chat.messages.map((m) =>
+        input.consumeIds.includes(m.id)
+          ? { ...m, pending: false, turnId: input.turn.id }
+          : m
+      ),
+      input.assistantMessage,
+    ],
+    latestTurn: input.turn,
+  }))
+
 export const appendActivity = (
   repoPath: string,
   chatId: string,

@@ -49,8 +49,15 @@ export const make = Effect.gen(function* () {
       const chat = yield* repo.get(id)
       // An image-only message (blank prompt) is still a real turn.
       if (prompt.length === 0 && images.length === 0) return chat
+      // A send during a running turn can't interrupt it (turns are one-shot
+      // CLI runs), so queue it: it's appended to the thread now and the turn's
+      // completion starts a follow-up that picks it up.
       if (yield* runtime.isRunning(id)) {
-        return yield* Effect.fail(new ChatBusy({ chatId: id }))
+        const queued = yield* runtime.queue(id, prompt, images)
+        if (!queued.ok) {
+          return yield* Effect.fail(new NotFound({ reason: `chat ${id} not found` }))
+        }
+        return yield* repo.get(id)
       }
       const result = yield* runtime.start(id, prompt, images)
       if (!result.ok) {

@@ -73,15 +73,20 @@ describe("ChatsService", () => {
     }
   )
 
-  it.effect("send fails with ChatBusy while a turn is running", () => {
+  it.effect("send while a turn is running queues the message", () => {
     const { layer, runtime } = ChatsMemory()
     return Effect.gen(function* () {
       const chats = yield* ChatsService
       const created = yield* chats.create(newChat)
       runtime.state.running.add(created.id)
-      const failure = yield* Effect.flip(chats.send(created.id, "again", []))
-      expect(failure._tag).toBe("ChatBusy")
+      const result = yield* chats.send(created.id, "  again  ", [])
+      // No new turn is started — the message is handed to the queue instead,
+      // trimmed like a normal send.
+      expect(result.id).toBe(created.id)
       expect(runtime.calls.start).toHaveLength(0)
+      expect(runtime.calls.queue).toEqual([
+        { chatId: created.id, text: "again", images: [] },
+      ])
     }).pipe(Effect.provide(layer))
   })
 

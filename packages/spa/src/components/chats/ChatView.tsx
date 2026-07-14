@@ -77,6 +77,7 @@ export function ChatView({ chatId }: { chatId: string }) {
       )}
       <div className="mx-auto w-full max-w-3xl px-2 pb-4">
         <ChatComposer
+          draftKey={chat.id}
           settings={settings}
           onSettingsChange={changeSettings}
           catalog={models.data}

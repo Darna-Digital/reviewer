@@ -10,6 +10,7 @@ import type {
   ChatActivity,
   ChatEffort,
   ChatImageUpload,
+  ChatMessage,
   ChatMode,
   ChatProviderKind,
   ChatTurn,
@@ -34,6 +35,7 @@ export interface ChatSettings {
  */
 export type ChatWireEvent =
   | { readonly type: "turn-started"; readonly chat: Chat }
+  | { readonly type: "message-appended"; readonly message: ChatMessage }
   | {
       readonly type: "delta"
       readonly messageId: string

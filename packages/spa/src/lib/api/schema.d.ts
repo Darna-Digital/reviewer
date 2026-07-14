@@ -3452,6 +3452,7 @@ export interface operations {
                                 name: string;
                                 thumbnail: string;
                             }[];
+                            pending?: boolean;
                         }[];
                         activities: {
                             id: string;
@@ -3617,6 +3618,7 @@ export interface operations {
                                 name: string;
                                 thumbnail: string;
                             }[];
+                            pending?: boolean;
                         }[];
                         activities: {
                             id: string;
@@ -3780,6 +3782,7 @@ export interface operations {
                                 name: string;
                                 thumbnail: string;
                             }[];
+                            pending?: boolean;
                         }[];
                         activities: {
                             id: string;
@@ -3888,6 +3891,7 @@ export interface operations {
                                 name: string;
                                 thumbnail: string;
                             }[];
+                            pending?: boolean;
                         }[];
                         activities: {
                             id: string;

@@ -41,11 +41,13 @@ import type {
 import type { ChatImageUpload } from "../schema/chats.schema.requests.ts"
 import {
   appendActivity,
+  appendPendingMessage,
   appendTurnStart,
   completeTurn,
   findChat,
   nextChatId,
   saveSessionId,
+  startPendingTurn,
 } from "../store.ts"
 import { CLAUDE_LOGIN_HINT, isClaudeAuthError } from "./claude-stream.ts"
 import {
@@ -77,6 +79,10 @@ interface LiveTurn {
 const liveTurns = new Map<string, LiveTurn>()
 /** Sockets watching a chat (with or without a running turn), by chat id. */
 const watchers = new Map<string, Set<WebSocket>>()
+/** Temp image paths for messages queued while a turn ran, by message id. The
+ * decoded bytes aren't persisted, so we hold the paths until the next turn
+ * consumes them (best-effort — lost on restart, leaving a text-only prompt). */
+const pendingImagePaths = new Map<string, ReadonlyArray<string>>()
 
 const send = (ws: WebSocket, message: unknown) => {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(message))
@@ -254,6 +260,8 @@ const finalizeTurn = (live: LiveTurn, exitCode: number | null): void => {
     messageId: live.assistantMessageId,
     text,
   })
+  // Pick up anything the user queued while this turn was running.
+  flushPending(live.repoPath, live.chatId)
 }
 
 export interface StartTurnResult {
@@ -261,60 +269,37 @@ export interface StartTurnResult {
   readonly reason?: "busy" | "not-found"
 }
 
-/**
- * Start a turn: persist the user message + a streaming assistant placeholder,
- * spawn the agent, and stream. Returns synchronously once the process is
- * launched; progress flows over the chat WebSocket.
- */
-export const startChatTurn = (
-  repoPath: string,
-  chatId: string,
-  text: string,
-  images: ReadonlyArray<ChatImageUpload> = []
-): StartTurnResult => {
-  if (liveTurns.has(chatId)) return { ok: false, reason: "busy" }
-  const chat = findChat(repoPath, chatId)
-  if (chat === undefined) return { ok: false, reason: "not-found" }
-
-  // Decode each uploaded image to a temp file the CLI can read; keep only the
-  // ones that saved. The lightweight thumbnail rides along on the message.
-  const saved = images.flatMap((image) => {
+/** Decode each uploaded image to a temp file the CLI can read; keep only the
+ * ones that saved. The lightweight thumbnail rides along on the message. */
+const saveImages = (
+  images: ReadonlyArray<ChatImageUpload>
+): ReadonlyArray<{ image: ChatImageUpload; path: string }> =>
+  images.flatMap((image) => {
     const path = saveDroppedImage(image.name, image.data)
     return path === null ? [] : [{ image, path }]
   })
-  const attachments: ReadonlyArray<ChatAttachment> = saved.map(({ image }) => ({
-    name: image.name,
-    thumbnail: image.thumbnail,
-  }))
 
-  const now = new Date().toISOString()
-  const turnId = nextChatId("turn")
-  const userMessage: ChatMessage = {
-    id: nextChatId("m"),
-    role: "user",
-    text,
-    turnId,
-    streaming: false,
-    createdAt: now,
-    ...(attachments.length > 0 ? { attachments } : {}),
-  }
-  const assistantMessage: ChatMessage = {
-    id: nextChatId("m"),
-    role: "assistant",
-    text: "",
-    turnId,
-    streaming: true,
-    createdAt: now,
-  }
-  const turn: ChatTurn = {
-    id: turnId,
-    state: "running",
-    startedAt: now,
-    endedAt: null,
-    errorMessage: null,
-    totalCostUsd: null,
-  }
+const imageAttachments = (
+  saved: ReadonlyArray<{ image: ChatImageUpload; path: string }>
+): ReadonlyArray<ChatAttachment> =>
+  saved.map(({ image }) => ({ name: image.name, thumbnail: image.thumbnail }))
 
+/**
+ * Spawn the agent for an already-persisted turn (assistant placeholder + turn
+ * are in `started`) and stream its output. Shared by the two ways a turn
+ * begins: an immediate send and the flush of messages queued during a turn.
+ */
+const launchTurn = (input: {
+  repoPath: string
+  chat: Chat
+  started: Chat
+  turnId: string
+  assistantMessageId: string
+  promptText: string
+  imagePaths: ReadonlyArray<string>
+  historyMessages?: ReadonlyArray<ChatMessage>
+}): void => {
+  const { repoPath, chat, started, turnId, assistantMessageId } = input
   // Claude lets us mint the session id up-front; codex/opencode mint their
   // own, so a fresh chat launches without one and the id is captured later.
   const session: ChatTurnSession =
@@ -325,36 +310,27 @@ export const startChatTurn = (
   // just after switching the chat's agent) doesn't, so replay the transcript
   // into the prompt. The persisted user message keeps the raw text; the CLI
   // prompt gains the attached image paths so the agent can read them.
-  const withImages = withAttachedImages(
-    text,
-    saved.map(({ path }) => path)
-  )
+  const withImages = withAttachedImages(input.promptText, [...input.imagePaths])
   const prompt = session.resume
     ? withImages
-    : withHistory(chat.messages, withImages)
+    : withHistory(input.historyMessages ?? chat.messages, withImages)
   const program = chatTurnProgram(chat, prompt, session)
-  const started = appendTurnStart(repoPath, chatId, {
-    turn,
-    userMessage,
-    assistantMessage,
-  })
-  if (started === undefined) return { ok: false, reason: "not-found" }
 
   const child = spawn(program.file, [...program.args], {
     cwd: repoPath,
     env: {
       ...process.env,
       ...program.env,
-      BYCONVO_CHAT_ID: chatId,
+      BYCONVO_CHAT_ID: chat.id,
       BYCONVO_API: `http://localhost:${process.env["BYCONVO_PORT"] ?? 41811}`,
     },
     stdio: ["pipe", "pipe", "pipe"],
   })
 
   const live: LiveTurn = {
-    chatId,
+    chatId: chat.id,
     turnId,
-    assistantMessageId: assistantMessage.id,
+    assistantMessageId,
     repoPath,
     provider: chat.provider,
     startedAtMs: Date.now(),
@@ -365,8 +341,8 @@ export const startChatTurn = (
     interrupted: false,
     finalized: false,
   }
-  liveTurns.set(chatId, live)
-  broadcast(chatId, { type: "turn-started", chat: started })
+  liveTurns.set(chat.id, live)
+  broadcast(chat.id, { type: "turn-started", chat: started })
 
   child.stdin?.write(program.stdin)
   child.stdin?.end()
@@ -404,8 +380,174 @@ export const startChatTurn = (
     }
     finalizeTurn(live, code)
   })
+}
 
+/**
+ * Start a turn: persist the user message + a streaming assistant placeholder,
+ * spawn the agent, and stream. Returns synchronously once the process is
+ * launched; progress flows over the chat WebSocket.
+ */
+export const startChatTurn = (
+  repoPath: string,
+  chatId: string,
+  text: string,
+  images: ReadonlyArray<ChatImageUpload> = []
+): StartTurnResult => {
+  if (liveTurns.has(chatId)) return { ok: false, reason: "busy" }
+  const chat = findChat(repoPath, chatId)
+  if (chat === undefined) return { ok: false, reason: "not-found" }
+
+  const saved = saveImages(images)
+  const attachments = imageAttachments(saved)
+  const now = new Date().toISOString()
+  const turnId = nextChatId("turn")
+  const userMessage: ChatMessage = {
+    id: nextChatId("m"),
+    role: "user",
+    text,
+    turnId,
+    streaming: false,
+    createdAt: now,
+    ...(attachments.length > 0 ? { attachments } : {}),
+  }
+  const assistantMessage: ChatMessage = {
+    id: nextChatId("m"),
+    role: "assistant",
+    text: "",
+    turnId,
+    streaming: true,
+    createdAt: now,
+  }
+  const turn: ChatTurn = {
+    id: turnId,
+    state: "running",
+    startedAt: now,
+    endedAt: null,
+    errorMessage: null,
+    totalCostUsd: null,
+  }
+  const started = appendTurnStart(repoPath, chatId, {
+    turn,
+    userMessage,
+    assistantMessage,
+  })
+  if (started === undefined) return { ok: false, reason: "not-found" }
+
+  launchTurn({
+    repoPath,
+    chat,
+    started,
+    turnId,
+    assistantMessageId: assistantMessage.id,
+    promptText: text,
+    imagePaths: saved.map(({ path }) => path),
+  })
   return { ok: true }
+}
+
+/**
+ * Queue a message sent while a turn is running: persist it to the thread now
+ * (marked pending, shown live) and let the current turn's completion pick it
+ * up. No process is spawned here — flushPending() starts the follow-up turn.
+ */
+export const queueChatTurn = (
+  repoPath: string,
+  chatId: string,
+  text: string,
+  images: ReadonlyArray<ChatImageUpload> = []
+): StartTurnResult => {
+  const chat = findChat(repoPath, chatId)
+  if (chat === undefined) return { ok: false, reason: "not-found" }
+
+  const saved = saveImages(images)
+  const attachments = imageAttachments(saved)
+  const now = new Date().toISOString()
+  // A distinct future turn id so this queued prompt never collides with the
+  // live turn's activities before it's consumed.
+  const userMessage: ChatMessage = {
+    id: nextChatId("m"),
+    role: "user",
+    text,
+    turnId: nextChatId("turn"),
+    streaming: false,
+    createdAt: now,
+    pending: true,
+    ...(attachments.length > 0 ? { attachments } : {}),
+  }
+  const updated = appendPendingMessage(repoPath, chatId, userMessage)
+  if (updated === undefined) return { ok: false, reason: "not-found" }
+  if (saved.length > 0) {
+    pendingImagePaths.set(
+      userMessage.id,
+      saved.map(({ path }) => path)
+    )
+  }
+  broadcast(chatId, { type: "message-appended", message: userMessage })
+  return { ok: true }
+}
+
+/**
+ * Start a follow-up turn from any messages queued during the turn that just
+ * settled. A no-op when nothing is pending or a turn is (already) running.
+ * Called when a turn finalizes and when a socket attaches (to recover pending
+ * left by a server restart).
+ */
+const flushPending = (repoPath: string, chatId: string): void => {
+  if (liveTurns.has(chatId)) return
+  const chat = findChat(repoPath, chatId)
+  if (chat === undefined) return
+  const queued = chat.messages.filter(
+    (m) => m.role === "user" && m.pending === true
+  )
+  if (queued.length === 0) return
+
+  // Combine the queued prompts into one follow-up turn (the bubbles stay
+  // separate in the timeline; the agent sees them together).
+  const promptText = queued
+    .map((m) => m.text)
+    .join("\n\n")
+    .trim()
+  const imagePaths = queued.flatMap((m) => pendingImagePaths.get(m.id) ?? [])
+  const consumeIds = queued.map((m) => m.id)
+
+  const now = new Date().toISOString()
+  const turnId = nextChatId("turn")
+  const assistantMessage: ChatMessage = {
+    id: nextChatId("m"),
+    role: "assistant",
+    text: "",
+    turnId,
+    streaming: true,
+    createdAt: now,
+  }
+  const turn: ChatTurn = {
+    id: turnId,
+    state: "running",
+    startedAt: now,
+    endedAt: null,
+    errorMessage: null,
+    totalCostUsd: null,
+  }
+  const started = startPendingTurn(repoPath, chatId, {
+    turn,
+    assistantMessage,
+    consumeIds,
+  })
+  if (started === undefined) return
+  for (const id of consumeIds) pendingImagePaths.delete(id)
+
+  launchTurn({
+    repoPath,
+    chat,
+    started,
+    turnId,
+    assistantMessageId: assistantMessage.id,
+    promptText,
+    imagePaths,
+    historyMessages: chat.messages.filter(
+      (m) => !(m.role === "user" && m.pending === true)
+    ),
+  })
 }
 
 /** Interrupt a running turn. Returns false when nothing was running. */
@@ -482,6 +624,9 @@ export const startChatStream = (
     sockets.delete(ws)
     if (sockets.size === 0) watchers.delete(chatId)
   })
+  // A restart can leave queued messages with no turn to pick them up (the
+  // in-flight turn was settled as interrupted on snapshot). Start them now.
+  flushPending(repoPath, chatId)
 }
 
 /** Test seam: reset all in-memory runtime state. */
@@ -489,4 +634,5 @@ export const resetChatRuntime = (): void => {
   for (const chatId of [...liveTurns.keys()]) stopChatTurn(chatId)
   liveTurns.clear()
   watchers.clear()
+  pendingImagePaths.clear()
 }

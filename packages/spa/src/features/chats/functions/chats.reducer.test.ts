@@ -21,6 +21,26 @@ describe("applyChatEvent", () => {
     expect(isChatRunning(next)).toBe(true)
   })
 
+  it("message-appended adds queued user messages once", () => {
+    let state = streamingChat()
+    const queued = message({
+      id: "m-q",
+      role: "user",
+      text: "next",
+      streaming: false,
+      pending: true,
+    })
+    state = applyChatEvent(state, {
+      type: "message-appended",
+      message: queued,
+    })!
+    state = applyChatEvent(state, {
+      type: "message-appended",
+      message: queued,
+    })!
+    expect(state.messages.map((m) => m.id)).toEqual(["m-u", "m-a", "m-q"])
+  })
+
   it("delta appends to the right message only", () => {
     let state = streamingChat()
     state = applyChatEvent(state, {

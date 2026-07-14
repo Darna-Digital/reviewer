@@ -16,6 +16,13 @@ export function applyChatEvent(
       // The server sends the full updated chat (new user message + streaming
       // assistant placeholder, possibly a new title) — adopt it wholesale.
       return event.chat
+    case "message-appended": {
+      // A message queued while a turn runs — append it (deduped: a reconnect
+      // can replay one already in the snapshot).
+      if (chat === null) return chat
+      if (chat.messages.some((m) => m.id === event.message.id)) return chat
+      return { ...chat, messages: [...chat.messages, event.message] }
+    }
     case "delta": {
       if (chat === null) return chat
       return {

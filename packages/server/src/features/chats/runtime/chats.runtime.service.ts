@@ -12,6 +12,7 @@ import {
   broadcastChatSnapshot,
   isTurnRunning,
   killChatRuntime,
+  queueChatTurn,
   startChatTurn,
   stopChatTurn,
   type StartTurnResult,
@@ -22,6 +23,12 @@ export interface ChatRuntimeShape {
   /** Start a turn in the currently selected repo (resolved by the runtime —
    * callers have already validated the chat exists there). */
   readonly start: (
+    chatId: string,
+    text: string,
+    images: ReadonlyArray<ChatImageUpload>
+  ) => Effect.Effect<StartTurnResult>
+  /** Queue a message while a turn is running; the next turn picks it up. */
+  readonly queue: (
     chatId: string,
     text: string,
     images: ReadonlyArray<ChatImageUpload>
@@ -47,6 +54,12 @@ export const liveLayer: Layer.Layer<ChatRuntime> = Layer.succeed(ChatRuntime)(
         if (repoPath === null) return { ok: false, reason: "not-found" }
         return startChatTurn(repoPath, chatId, text, images)
       }),
+    queue: (chatId, text, images) =>
+      Effect.sync(() => {
+        const repoPath = getCurrentRepo()
+        if (repoPath === null) return { ok: false, reason: "not-found" }
+        return queueChatTurn(repoPath, chatId, text, images)
+      }),
     stop: (chatId) => Effect.sync(() => stopChatTurn(chatId)),
     kill: (chatId) => Effect.sync(() => killChatRuntime(chatId)),
     broadcastSnapshot: (chatId) =>
@@ -65,6 +78,11 @@ export interface MemoryChatRuntime {
       text: string
       images: ReadonlyArray<ChatImageUpload>
     }>
+    readonly queue: Array<{
+      chatId: string
+      text: string
+      images: ReadonlyArray<ChatImageUpload>
+    }>
     readonly stop: string[]
     readonly kill: string[]
     readonly broadcastSnapshot: string[]
@@ -77,6 +95,7 @@ export interface MemoryChatRuntime {
 export const memoryChatRuntime = (): MemoryChatRuntime => {
   const calls: MemoryChatRuntime["calls"] = {
     start: [],
+    queue: [],
     stop: [],
     kill: [],
     broadcastSnapshot: [],
@@ -91,6 +110,11 @@ export const memoryChatRuntime = (): MemoryChatRuntime => {
       start: (chatId, text, images) =>
         Effect.sync(() => {
           calls.start.push({ chatId, text, images })
+          return state.startResult
+        }),
+      queue: (chatId, text, images) =>
+        Effect.sync(() => {
+          calls.queue.push({ chatId, text, images })
           return state.startResult
         }),
       stop: (chatId) =>
