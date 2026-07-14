@@ -6,10 +6,11 @@ description: Fetch the local code-review comments left in the byconvo tool and i
 ## What this does
 
 The byconvo tool lets a human leave inline review comments on files (like GitHub
-code review), saved locally in the selected repository's `.byconvo/comments.db`
-(SQLite). The byconvo server exposes them over HTTP. This skill walks you through
-fetching those comments, implementing each one in the code, and deleting it once
-done so it isn't applied twice.
+code review) — on the working tree, on a specific commit, or on a commit range.
+They're saved locally in the selected repository's `.byconvo/comments.json`. The
+byconvo server exposes them over HTTP. This skill walks you through fetching those
+comments, implementing each one in the code, and **resolving** it — which in
+byconvo means deleting it via the API — once done so it isn't applied twice.
 
 Only **local** comments (`"source": "local"`) are yours to implement. Comments with
 `"source": "github"` come live from a GitHub PR — leave them alone.
@@ -22,7 +23,9 @@ the repo you're working in (it's seeded from `BYCONVO_REPO` / the cwd the server
 was started in). Interactive docs: `http://localhost:41811/api/docs`.
 
 - `GET /api/comments` → array of comments
-- `DELETE /api/comments/:id` → `{ "ok": true }` (removes one comment)
+- `DELETE /api/comments/:id` → `{ "ok": true }` (fully removes one comment).
+  Deleting **is** how a comment is resolved in byconvo — there is no separate
+  "resolved" flag; a resolved comment is a deleted one.
 
 A comment looks like:
 
@@ -47,8 +50,10 @@ Field meaning:
   code (right side; this is the usual case), `"deletions"` = the old/removed code
   (left side).
 - `body` — the reviewer's instruction. **This is the change to make.**
-- `target` — which diff it was left on (`"worktree"`, a commit, a range, etc.);
-  informational.
+- `target` — which diff the comment was left on: `"worktree"` for the working
+  tree, `"commit-<sha>"` for a comment left in the commit view, or `"<base>...<head>"`
+  for a range. Informational — you resolve every local comment the same way
+  regardless of its target.
 
 ## Workflow
 
@@ -66,12 +71,14 @@ Field meaning:
    instruction. If a comment is genuinely ambiguous or conflicts with another,
    ask the user instead of guessing — don't silently skip it.
 
-4. **Mark it done** only after the change is in place, by deleting it:
+4. **Resolve it** only after the change is in place, by deleting it via the API —
+   this fully removes the comment (byconvo has no separate "resolved" state):
    ```bash
    curl -s -X DELETE http://localhost:41811/api/comments/<id>
    ```
-   Delete each comment individually as you finish it, so a half-finished run still
-   reflects real progress.
+   Do this for each comment individually, immediately after you finish implementing
+   it — not in a batch at the end. That way a half-finished run still reflects real
+   progress, and no comment gets applied twice.
 
 5. **Verify** once all comments are handled: run the project's typecheck/tests
    (`pnpm typecheck`, `pnpm --filter @byconvo/server test`, etc.) and report what
@@ -79,7 +86,8 @@ Field meaning:
 
 ## Notes
 
-- Never delete a comment you didn't implement — deletion is the "resolved" signal.
+- Never delete a comment you didn't implement — deletion is the "resolved" signal,
+  and it's irreversible (the comment is gone for good, not archived).
 - If you can't implement a comment, leave it in place and tell the user why.
-- Comments persist in SQLite per-repo, so they survive restarts; only your DELETE
-  removes them.
+- Comments persist in `.byconvo/comments.json` per-repo, so they survive restarts;
+  only your DELETE removes them.

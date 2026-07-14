@@ -13,7 +13,6 @@ import {
   IconMap,
   IconPhotoPlus,
   IconPlayerStopFilled,
-  IconX,
 } from "@tabler/icons-react"
 import { useRef, useState } from "react"
 import { toast } from "sonner"
@@ -33,6 +32,7 @@ import type {
 } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 import type { ChatSettings } from "@/features/chats/entity/chats.interfaces"
+import { AttachmentChip, AttachmentGrid } from "./ImageAttachments"
 import {
   isImageFile,
   MAX_IMAGE_BYTES,
@@ -221,29 +221,15 @@ export function ChatComposer({
       }}
     >
       {attachments.length > 0 && (
-        <div className="flex flex-wrap gap-2 px-3 pt-3">
+        <AttachmentGrid className="px-3 pt-3">
           {attachments.map((attachment) => (
-            <div
+            <AttachmentChip
               key={attachment.id}
-              className="group relative size-16 overflow-hidden rounded-lg border bg-muted"
-            >
-              <img
-                src={attachment.thumbnail}
-                alt={attachment.name}
-                title={attachment.name}
-                className="size-full object-cover"
-              />
-              <button
-                type="button"
-                aria-label={`Remove ${attachment.name}`}
-                onClick={() => removeAttachment(attachment.id)}
-                className="absolute top-0.5 right-0.5 flex size-5 items-center justify-center rounded-full bg-background/80 text-foreground opacity-0 shadow-sm transition group-hover:opacity-100 hover:bg-background focus-visible:opacity-100"
-              >
-                <IconX className="size-3.5" />
-              </button>
-            </div>
+              attachment={attachment}
+              onRemove={() => removeAttachment(attachment.id)}
+            />
           ))}
-        </div>
+        </AttachmentGrid>
       )}
       <input
         ref={fileInputRef}
@@ -284,29 +270,19 @@ export function ChatComposer({
         </div>
       )}
       <div className="flex items-center gap-1 px-2 pb-2">
-        <Button
-          size="icon"
-          variant="ghost"
-          className="size-7"
-          aria-label="Attach images"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <IconPhotoPlus className="size-4 text-muted-foreground" />
-        </Button>
-        <Separator orientation="vertical" className="mx-0.5 h-4" />
         <ModelPicker
           catalog={catalog}
           model={settings.model}
           onSelect={(model, provider) => onSettingsChange({ model, provider })}
         />
-        <Separator orientation="vertical" className="mx-0.5 h-4" />
+        <Separator orientation="vertical" className="mx-0.5 h-2.5" />
         <SelectorMenu
           options={EFFORTS}
           value={settings.effort}
           onSelect={(effort) => onSettingsChange({ effort })}
           ariaLabel="Reasoning effort"
         />
-        <Separator orientation="vertical" className="mx-0.5 h-4" />
+        <Separator orientation="vertical" className="mx-0.5 h-2.5" />
         <SelectorMenu
           options={ACCESS}
           value={settings.access}
@@ -320,7 +296,7 @@ export function ChatComposer({
           }
           ariaLabel="Access level"
         />
-        <Separator orientation="vertical" className="mx-0.5 h-4" />
+        <Separator orientation="vertical" className="mx-0.5 h-2.5" />
         <SelectorMenu
           options={MODES}
           value={settings.mode}
@@ -334,6 +310,16 @@ export function ChatComposer({
           }
           ariaLabel="Agent mode"
         />
+        <Separator orientation="vertical" className="mx-0.5 h-2.5" />
+        <Button
+          size="icon"
+          variant="ghost"
+          className="size-7"
+          aria-label="Attach images"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <IconPhotoPlus className="size-4 text-muted-foreground" />
+        </Button>
         <div className="flex-1" />
         {running && onStop !== undefined ? (
           <Button

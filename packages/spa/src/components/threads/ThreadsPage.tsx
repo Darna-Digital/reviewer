@@ -52,7 +52,7 @@ function NewTerminalMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={trigger} />
-      <DropdownMenuContent align="end" className="min-w-56">
+      <DropdownMenuContent align="end" className="w-auto min-w-56">
         {AGENTS.map((agent) => {
           const Icon = agentIcon(agent.kind)
           return (

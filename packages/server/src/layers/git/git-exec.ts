@@ -23,6 +23,15 @@ export interface GitExecShape {
   readonly runVerbose: (
     ...args: ReadonlyArray<string>
   ) => Effect.Effect<string, GitFailure>
+  /**
+   * Run git, returning stdout even on a non-zero exit — for commands that use
+   * the exit code to report state rather than failure (e.g. `diff --no-index`
+   * exits 1 when the two inputs differ). Still fails with GitError on spawn/IO
+   * errors.
+   */
+  readonly runTolerant: (
+    ...args: ReadonlyArray<string>
+  ) => Effect.Effect<string, GitFailure>
   /** `run` split into non-empty lines. */
   readonly lines: (
     ...args: ReadonlyArray<string>

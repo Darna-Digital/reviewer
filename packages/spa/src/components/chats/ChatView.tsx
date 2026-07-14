@@ -12,8 +12,8 @@ import type {
 } from "@/features/chats/entity/chats.interfaces"
 import { isChatRunning } from "@/features/chats/functions/chats.reducer"
 import { useChatModels } from "@/lib/queries"
+import { BranchBadge } from "./BranchBadge"
 import { ChatComposer } from "./ChatComposer"
-import { CheckoutFooter } from "./CheckoutFooter"
 import { MessagesTimeline } from "./MessagesTimeline"
 
 export function ChatView({ chatId }: { chatId: string }) {
@@ -69,8 +69,9 @@ export function ChatView({ chatId }: { chatId: string }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex h-10 shrink-0 items-center px-4">
+      <header className="flex h-11 shrink-0 items-center justify-between gap-3 border-b px-4">
         <span className="truncate text-sm font-medium">{chat.title}</span>
+        <BranchBadge branch={chat.branch} />
       </header>
       {chat.messages.length === 0 ? (
         <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
@@ -79,7 +80,7 @@ export function ChatView({ chatId }: { chatId: string }) {
       ) : (
         <MessagesTimeline chat={chat} />
       )}
-      <div className="mx-auto w-full max-w-3xl px-6 pb-4">
+      <div className="mx-auto w-full max-w-3xl px-2 pb-4">
         <ChatComposer
           settings={settings}
           onSettingsChange={changeSettings}
@@ -91,7 +92,6 @@ export function ChatView({ chatId }: { chatId: string }) {
           }}
           placeholder="Ask for follow-up changes or attach images…"
         />
-        <CheckoutFooter branch={chat.branch} />
       </div>
     </div>
   )

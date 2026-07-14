@@ -306,6 +306,12 @@ export function AppShell() {
         buildReviewAssignmentPrompt(visibleComments)
       )
       if (started === null) return
+      // Handing the comments off to an agent resolves them: their text now lives
+      // in the chat prompt, so clear the local ones (remove() ignores GitHub
+      // comments) instead of leaving them lingering in the diff.
+      await Promise.all(
+        visibleComments.map((comment) => comments.remove(comment))
+      )
       toast.success(
         `Started ${agent} on ${visibleComments.length} comment${plural}`
       )

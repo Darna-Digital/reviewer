@@ -7,13 +7,17 @@
 import {
   IconAlertCircle,
   IconBrain,
+  IconChevronDown,
+  IconChevronUp,
   IconPlayerStopFilled,
   IconTool,
 } from "@tabler/icons-react"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import type { Chat, ChatActivity, ChatMessage } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
+import { AttachmentGrid, AttachmentPreview } from "./ImageAttachments"
 import { ChatMarkdown } from "./ChatMarkdown"
+import { Message, MessageBubble } from "./Message"
 
 function ActivityRow({ activity }: { activity: ChatActivity }) {
   const Icon =
@@ -32,6 +36,54 @@ function ActivityRow({ activity }: { activity: ChatActivity }) {
     >
       <Icon className="size-3.5 shrink-0" />
       <span className="truncate">{activity.summary}</span>
+    </div>
+  )
+}
+
+/** How many leading steps a long work log shows before collapsing. */
+const COLLAPSED_STEPS = 4
+
+/**
+ * A turn's work log (tool calls + thinking). Long logs collapse to the first
+ * few steps — the bottom edge fades out to hint at more — with a toggle below,
+ * so a research-heavy turn doesn't push the actual reply off-screen.
+ */
+function WorkLog({ activities }: { activities: ChatActivity[] }) {
+  const [expanded, setExpanded] = useState(false)
+  const collapsible = activities.length > COLLAPSED_STEPS + 1
+  const collapsed = collapsible && !expanded
+  const visible = collapsed ? activities.slice(0, COLLAPSED_STEPS) : activities
+  return (
+    <div className="mb-1.5 border-l pl-3">
+      <div
+        className={cn(
+          collapsed &&
+            "[mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
+        )}
+      >
+        {visible.map((a) => (
+          <ActivityRow key={a.id} activity={a} />
+        ))}
+      </div>
+      {collapsible && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="flex items-center gap-1 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          {expanded ? (
+            <>
+              <IconChevronUp className="size-3.5" />
+              Show less
+            </>
+          ) : (
+            <>
+              <IconChevronDown className="size-3.5" />
+              Show {activities.length - COLLAPSED_STEPS} more steps
+            </>
+          )}
+        </button>
+      )}
     </div>
   )
 }
@@ -111,53 +163,43 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
     if (message.role === "user") {
       const attachments = message.attachments ?? []
       return (
-        <div
-          key={message.id}
-          className="ml-auto flex max-w-[75%] flex-col items-end gap-1.5"
-        >
-          {attachments.length > 0 && (
-            <div className="flex flex-wrap justify-end gap-1.5">
-              {attachments.map((attachment, i) => (
-                <img
-                  key={`${attachment.name}-${i}`}
-                  src={attachment.thumbnail}
-                  alt={attachment.name}
-                  title={attachment.name}
-                  className="size-28 rounded-lg border object-cover"
-                />
-              ))}
-            </div>
-          )}
-          {message.text.length > 0 && (
-            <div className="rounded-2xl bg-muted px-4 py-2 text-sm whitespace-pre-wrap">
-              {message.text}
-            </div>
-          )}
-        </div>
+        <Message key={message.id} align="end">
+          <div className="flex max-w-[80%] flex-col items-end gap-2">
+            {attachments.length > 0 && (
+              <AttachmentGrid className="justify-end">
+                {attachments.map((attachment, i) => (
+                  <AttachmentPreview
+                    key={`${attachment.name}-${i}`}
+                    attachment={attachment}
+                  />
+                ))}
+              </AttachmentGrid>
+            )}
+            {message.text.length > 0 && (
+              <MessageBubble>{message.text}</MessageBubble>
+            )}
+          </div>
+        </Message>
       )
     }
     const work = activitiesByTurn.get(message.turnId) ?? []
     const streaming = message.streaming && running
     return (
-      <div key={message.id} className="flex max-w-3xl flex-col">
-        {work.length > 0 && (
-          <div className="mb-1 border-l pl-3">
-            {work.map((a) => (
-              <ActivityRow key={a.id} activity={a} />
-            ))}
-          </div>
-        )}
-        {message.text.length > 0 ? (
-          <ChatMarkdown text={message.text} />
-        ) : streaming ? null : message.streaming ? (
-          // A streaming message whose turn is gone (interrupted/server died).
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <IconPlayerStopFilled className="size-3.5" /> Stopped before
-            replying.
-          </div>
-        ) : null}
-        {streaming && <WorkingDots />}
-      </div>
+      <Message key={message.id} align="start">
+        <div className="flex w-full min-w-0 flex-col">
+          {work.length > 0 && <WorkLog activities={work} />}
+          {message.text.length > 0 ? (
+            <ChatMarkdown text={message.text} />
+          ) : streaming ? null : message.streaming ? (
+            // A streaming message whose turn is gone (interrupted/server died).
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <IconPlayerStopFilled className="size-3.5" /> Stopped before
+              replying.
+            </div>
+          ) : null}
+          {streaming && <WorkingDots />}
+        </div>
+      </Message>
     )
   }
 
@@ -167,7 +209,7 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
       onScroll={onScroll}
       className="min-h-0 flex-1 overflow-y-auto"
     >
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-6 py-6">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6">
         {chat.messages.map(renderMessage)}
         {turnError !== null && <TurnError message={turnError} />}
       </div>
