@@ -6,7 +6,7 @@
  * dropdown. Dismissable; it re-appears when you leave more.
  */
 import { IconChevronDown, IconSearch, IconX } from "@tabler/icons-react"
-import { useMemo, useState } from "react"
+import { useLayoutEffect, useMemo, useRef, useState } from "react"
 import { agentIcon } from "@/components/threads/agent-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +15,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { isChatProviderKind } from "@/features/chats/functions/chat-assignment.functions"
 import { AGENTS, agentLabel } from "@/features/threads/entity/agents"
 import type { ChatProviderKind, ChatSummary } from "@/lib/api/types"
@@ -68,10 +73,10 @@ export function ReviewAssignBar({
   const sessions = useMemo(
     () =>
       chats.filter(
-        (c) =>
+        (chat) =>
           q === "" ||
-          c.title.toLowerCase().includes(q) ||
-          c.branch.toLowerCase().includes(q)
+          chat.title.toLowerCase().includes(q) ||
+          chat.branch.toLowerCase().includes(q)
       ),
     [chats, q]
   )
@@ -163,28 +168,16 @@ export function ReviewAssignBar({
                   Sessions
                 </div>
               )}
-              {sessions.map((c) => {
-                const Icon = agentIcon(c.provider)
-                const active =
-                  target.kind === "existing" && target.chatId === c.id
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => pick({ kind: "existing", chatId: c.id })}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted",
-                      active && "bg-muted"
-                    )}
-                  >
-                    <Icon className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="min-w-0 flex-1 truncate">{c.title}</span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
-                      {c.branch}
-                    </span>
-                  </button>
-                )
-              })}
+              {sessions.map((chat) => (
+                <SessionRow
+                  key={chat.id}
+                  chat={chat}
+                  active={
+                    target.kind === "existing" && target.chatId === chat.id
+                  }
+                  onSelect={() => pick({ kind: "existing", chatId: chat.id })}
+                />
+              ))}
               {agents.length === 0 && sessions.length === 0 && (
                 <div className="px-2 py-6 text-center text-sm text-muted-foreground">
                   No matches
@@ -217,5 +210,68 @@ export function ReviewAssignBar({
         </Button>
       </div>
     </div>
+  )
+}
+
+/**
+ * A session row in the picker. When its title is clipped, hovering reveals the
+ * full text in a tooltip (JetBrains-style) — but only when it actually overflows,
+ * so short titles don't get a redundant bubble.
+ */
+function SessionRow({
+  chat,
+  active,
+  onSelect,
+}: {
+  chat: ChatSummary
+  active: boolean
+  onSelect: () => void
+}) {
+  const titleRef = useRef<HTMLSpanElement>(null)
+  const [clipped, setClipped] = useState(false)
+
+  useLayoutEffect(() => {
+    const el = titleRef.current
+    setClipped(el !== null && el.scrollWidth > el.clientWidth)
+  }, [chat.title])
+
+  const Icon = agentIcon(chat.provider)
+  const className = cn(
+    "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted",
+    active && "bg-muted"
+  )
+  const inner = (
+    <>
+      <Icon className="size-4 shrink-0 text-muted-foreground" />
+      <span ref={titleRef} className="min-w-0 flex-1 truncate">
+        {chat.title}
+      </span>
+      <span className="shrink-0 text-xs text-muted-foreground">
+        {chat.branch}
+      </span>
+    </>
+  )
+
+  if (!clipped) {
+    return (
+      <button type="button" onClick={onSelect} className={className}>
+        {inner}
+      </button>
+    )
+  }
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button type="button" onClick={onSelect} className={className} />
+        }
+      >
+        {inner}
+      </TooltipTrigger>
+      <TooltipContent side="right" align="center">
+        {chat.title}
+      </TooltipContent>
+    </Tooltip>
   )
 }

@@ -133,6 +133,7 @@ function TurnError({ message }: { message: string }) {
 export function MessagesTimeline({ chat }: { chat: Chat }) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pinnedToBottom = useRef(true)
+  const lastUserMessageId = useRef<string | null>(null)
 
   // Track whether the reader is at the bottom; only then auto-follow.
   const onScroll = () => {
@@ -143,7 +144,21 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
   }
   useEffect(() => {
     const el = scrollRef.current
-    if (el !== null && pinnedToBottom.current) el.scrollTop = el.scrollHeight
+    if (el === null) return
+    // When the reader sends a new message, always jump to the bottom so they
+    // can see their own question — even if they'd scrolled up beforehand.
+    let latestUserMessageId: string | null = null
+    for (const m of chat.messages) {
+      if (m.role === "user") latestUserMessageId = m.id
+    }
+    const sentNewMessage =
+      latestUserMessageId !== null &&
+      latestUserMessageId !== lastUserMessageId.current
+    if (latestUserMessageId !== null) {
+      lastUserMessageId.current = latestUserMessageId
+    }
+    if (sentNewMessage) pinnedToBottom.current = true
+    if (pinnedToBottom.current) el.scrollTop = el.scrollHeight
   }, [chat])
 
   const activitiesByTurn = new Map<string, ChatActivity[]>()

@@ -4,6 +4,12 @@ import { EditorProvider, File } from "@pierre/diffs/react"
 import { IconX } from "@tabler/icons-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
+import {
+  deleteLinesEdits,
+  duplicateLinesEdits,
+  lineCommentToken,
+  toggleLineCommentEdits,
+} from "@/components/editor/editorCommands"
 import { THEMES, useLangReady } from "@/components/editor/highlighter"
 import { Button } from "@/components/ui/button"
 import { fetchClient } from "@/lib/api/client"
@@ -27,12 +33,20 @@ export function CodeEditor({ path, theme, onClose, onSaved }: CodeEditorProps) {
   // contents here (via onChange) so Save can persist without re-reading the DOM.
   const valueRef = useRef("")
   const originalRef = useRef("")
+  const saveRef = useRef<() => void>(() => {})
+  const focusedRef = useRef(false)
 
   // One editor instance for the lifetime of this component. `File` attaches it
   // (editor.edit) when `contentEditable` is set and the editor is in context.
   const editor = useMemo(() => new Editor<undefined>(), [])
   useEffect(() => {
     editor.setOptions({
+      onFocus: () => {
+        focusedRef.current = true
+      },
+      onBlur: () => {
+        focusedRef.current = false
+      },
       onChange: (file: FileContents) => {
         valueRef.current = file.contents
         setDirty(file.contents !== originalRef.current)
@@ -70,17 +84,70 @@ export function CodeEditor({ path, theme, onClose, onSaved }: CodeEditorProps) {
       setSaving(false)
     }
   }, [path, dirty, onSaved])
+  saveRef.current = () => void save()
+
+  // Editor commands pierre doesn't provide, driven through `applyEdits` over the
+  // lines touched by the current selection(s).
+  const runCommand = useCallback(
+    (kind: "toggle" | "duplicate" | "delete") => {
+      const state = editor.getState()
+      const selections = state.selections ?? []
+      if (selections.length === 0) return
+      const lines = state.file.contents.split("\n")
+      const targeted = new Set<number>()
+      for (const sel of selections) {
+        const lo = Math.min(sel.start.line, sel.end.line)
+        const hiRaw = Math.max(sel.start.line, sel.end.line)
+        // A selection ending at column 0 doesn't include that trailing line.
+        const hi = sel.end.character === 0 && hiRaw > lo ? hiRaw - 1 : hiRaw
+        for (let n = lo; n <= hi && n < lines.length; n++) targeted.add(n)
+      }
+      const lineNums = [...targeted].sort((a, b) => a - b)
+      if (lineNums.length === 0) return
+
+      let edits
+      if (kind === "toggle") {
+        const token = lineCommentToken(path)
+        if (token === null) return
+        edits = toggleLineCommentEdits(lines, lineNums, token)
+      } else if (kind === "duplicate") {
+        edits = duplicateLinesEdits(lines, lineNums)
+      } else {
+        edits = deleteLinesEdits(lines, lineNums)
+      }
+      if (edits.length > 0) editor.applyEdits(edits, true)
+    },
+    [editor, path]
+  )
 
   useEffect(() => {
+    // Capture phase so our shortcuts win over the editor's own key handling.
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+      if (!(event.metaKey || event.ctrlKey)) return
+      const key = event.key.toLowerCase()
+      if (key === "s") {
         event.preventDefault()
-        void save()
+        saveRef.current()
+        return
+      }
+      if (!focusedRef.current) return
+      if (key === "/") {
+        event.preventDefault()
+        event.stopPropagation()
+        runCommand("toggle")
+      } else if (event.shiftKey && key === "d") {
+        event.preventDefault()
+        event.stopPropagation()
+        runCommand("duplicate")
+      } else if (event.shiftKey && key === "k") {
+        event.preventDefault()
+        event.stopPropagation()
+        runCommand("delete")
       }
     }
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [save])
+    window.addEventListener("keydown", onKeyDown, true)
+    return () => window.removeEventListener("keydown", onKeyDown, true)
+  }, [runCommand])
 
   if (loaded.isPending || !langReady) {
     return (

@@ -239,13 +239,18 @@ export const makeGitRepoRepository = Effect.gen(function* () {
   const files: RepoRepo["files"] = Effect.gen(function* () {
     const tracked = yield* lines("ls-files")
     const untracked = yield* lines("ls-files", "--others", "--exclude-standard")
+    const envFiles = yield* lines(
+      "ls-files",
+      "--others",
+      "--",
+      ":(glob)**/.env*",
+      ":(exclude,glob)**/node_modules/**"
+    )
     const statusLines = yield* lines("status", "--porcelain")
     const gitStatus = statusLines
       .map(parseStatusLine)
       .filter((entry): entry is GitStatusEntry => entry !== null)
-    // `git ls-files` lists an unmerged (conflicted) file once per index stage,
-    // so dedupe before the tree consumes these — it requires unique paths.
-    const paths = [...new Set([...tracked, ...untracked])]
+    const paths = [...new Set([...tracked, ...untracked, ...envFiles])]
     return { paths, gitStatus }
   })
 

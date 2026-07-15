@@ -186,6 +186,29 @@
   text-decoration: underline;
 }
 
+/* GFM tables (remark-gfm emits real <table> markup). Wide tables scroll
+   horizontally rather than forcing the chat/comment column to overflow. */
+.markdown table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.markdown :where(th, td) {
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+}
+.markdown th {
+  background: var(--muted);
+  font-weight: 600;
+}
+.markdown tbody tr:nth-child(even) {
+  background: color-mix(in oklch, var(--muted) 45%, transparent);
+}
+
 /* highlight.js token colours for fenced code blocks (rehype-highlight adds the
    `hljs-*` classes but ships no theme). Palette = GitHub light/dark, swapped by
    the app's `.dark` class so comment code matches the rest of the UI. */
