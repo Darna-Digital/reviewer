@@ -108,28 +108,22 @@ export function LogFilters({
           if (value !== null) onRefChange(value)
         }}
       >
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <ComboboxTrigger
-                size="sm"
-                className="w-48 text-xs"
-                aria-label="Branch"
-              >
-                <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
-                <ComboboxValue />
-              </ComboboxTrigger>
-            }
-          />
-          <TooltipContent side="right">{refName}</TooltipContent>
-        </Tooltip>
+        <ComboboxTrigger size="sm" className="w-48 text-xs" aria-label="Branch">
+          <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
+          <ComboboxValue />
+        </ComboboxTrigger>
         <ComboboxContent>
           <ComboboxInput placeholder="Search branches…" />
           <ComboboxEmpty>No branches found.</ComboboxEmpty>
           <ComboboxList>
             {(name: string) => (
               <ComboboxItem key={name} value={name}>
-                <span className="truncate">{name}</span>
+                <Tooltip>
+                  <TooltipTrigger render={<span className="truncate" />}>
+                    {name}
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{name}</TooltipContent>
+                </Tooltip>
               </ComboboxItem>
             )}
           </ComboboxList>
