@@ -10,6 +10,7 @@
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
 import { useState } from "react"
 import { BranchSwitcher } from "@/components/layout/BranchSwitcher"
+import { GitBottomDock } from "@/components/layout/GitBottomDock"
 import { ModeRail } from "@/components/layout/ModeRail"
 import { RepoPicker } from "@/components/RepoPicker"
 import { useGitActions } from "@/features/git-actions/adapters/git-actions.hook.adapter"
@@ -21,6 +22,7 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries"
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
 
 const modeForPath = (pathname: string): AppMode =>
@@ -42,6 +44,7 @@ export function WorkspaceShell() {
   const branches = useBranches()
   const remoteBranches = useRemoteBranches()
   const git = useGitActions()
+  const prefs = useUiPrefs()
   const [pickerOpen, setPickerOpen] = useState(false)
 
   const mode = modeForPath(pathname)
@@ -50,7 +53,14 @@ export function WorkspaceShell() {
 
   return (
     <div className="flex h-svh w-full overflow-hidden text-foreground">
-      <ModeRail mode={mode} hasGitHub={hasGitHub} />
+      <ModeRail
+        mode={mode}
+        hasGitHub={hasGitHub}
+        bottomVisible={prefs.bottomVisible}
+        onBottomToggle={() =>
+          setUiPrefs({ bottomVisible: !prefs.bottomVisible })
+        }
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar — repo picker + branch switcher, like the git-review shell.
             In desktop it doubles as the draggable title bar (clusters opt out). */}
@@ -93,16 +103,19 @@ export function WorkspaceShell() {
           )}
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
-          {current === null ? (
-            <div className="flex h-full flex-col items-center justify-center gap-1 text-sm">
-              <div className="font-medium">No repository selected</div>
-              <div className="text-muted-foreground">
-                Open one from the repo picker above to use this workspace.
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {current === null ? (
+              <div className="flex h-full flex-col items-center justify-center gap-1 text-sm">
+                <div className="font-medium">No repository selected</div>
+                <div className="text-muted-foreground">
+                  Open one from the repo picker above to use this workspace.
+                </div>
               </div>
-            </div>
-          ) : (
-            <Outlet />
-          )}
+            ) : (
+              <Outlet />
+            )}
+          </div>
+          {current !== null && <GitBottomDock />}
         </div>
       </div>
     </div>

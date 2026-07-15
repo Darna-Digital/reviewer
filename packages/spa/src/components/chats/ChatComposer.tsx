@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils"
 import type { ChatSettings } from "@/features/chats/entity/chats.interfaces"
 import { AttachmentChip, AttachmentGrid } from "./ImageAttachments"
 import {
+  attachmentSource,
   isImageFile,
   MAX_IMAGE_BYTES,
   readImageAttachment,
@@ -236,7 +237,10 @@ export function ChatComposer({
           {attachments.map((attachment) => (
             <AttachmentChip
               key={attachment.id}
-              attachment={attachment}
+              attachment={{
+                ...attachment,
+                source: attachmentSource(attachment),
+              }}
               onRemove={() => removeAttachment(attachment.id)}
             />
           ))}

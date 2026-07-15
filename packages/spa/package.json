@@ -41,6 +41,7 @@
     "openapi-fetch": "^0.17.0",
     "openapi-react-query": "^0.5.4",
     "react": "^19.2.6",
+    "react-day-picker": "^10.0.1",
     "react-dom": "^19.2.6",
     "react-markdown": "^10.1.0",
     "react-resizable-panels": "^4.11.2",

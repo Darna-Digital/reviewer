@@ -10,8 +10,13 @@
 /** Reject anything larger than this before reading it into memory. */
 export const MAX_IMAGE_BYTES = 15 * 1024 * 1024
 
-/** Longest edge of the generated preview thumbnail, in pixels. */
-const THUMBNAIL_MAX_EDGE = 512
+/**
+ * Longest edge of the generated preview thumbnail, in pixels. Large enough to
+ * stay crisp in the enlarged lightbox — a sent message keeps only this
+ * thumbnail (the full-resolution `data` is not persisted), so it doubles as the
+ * preview source there.
+ */
+const THUMBNAIL_MAX_EDGE = 1600
 
 /** What the agent receives + what the message keeps for its preview. */
 export interface ChatImagePayload {
@@ -25,7 +30,13 @@ export interface ChatImagePayload {
 /** A pending attachment held by the composer before it is sent. */
 export interface ComposerAttachment extends ChatImagePayload {
   readonly id: string
+  /** MIME type of the source file, used to rebuild a full-res preview URL. */
+  readonly mimeType: string
 }
+
+/** A full-resolution `data:` URL for previewing a pending attachment. */
+export const attachmentSource = (a: ComposerAttachment): string =>
+  `data:${a.mimeType};base64,${a.data}`
 
 export const isImageFile = (file: File): boolean =>
   file.type.startsWith("image/")
@@ -87,6 +98,7 @@ export const readImageAttachment = async (
   return {
     id: crypto.randomUUID(),
     name: file.name || "image",
+    mimeType: file.type || "image/png",
     data: stripDataUrlPrefix(dataUrl),
     thumbnail,
   }
