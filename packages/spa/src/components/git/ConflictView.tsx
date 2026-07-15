@@ -1,18 +1,9 @@
-import { langs, type LanguageName } from "@uiw/codemirror-extensions-langs"
-import { githubDark, githubLight } from "@uiw/codemirror-theme-github"
-import { EditorState } from "@codemirror/state"
-import CodeMirror, {
-  EditorView,
-  Prec,
-  type Extension,
-} from "@uiw/react-codemirror"
+import { UnresolvedFile } from "@pierre/diffs/react"
 import { IconPencil, IconX } from "@tabler/icons-react"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
+import { THEMES, useLangReady } from "@/components/editor/highlighter"
 import { Button } from "@/components/ui/button"
-import { useConflictsFunctions } from "@/features/conflicts/adapters/conflicts.hook.adapter"
-import { mergeConflictExtension } from "@/components/git/mergeConflictExtension"
 import { useFile } from "@/lib/queries"
-import { cn } from "@/lib/utils"
 import type { Theme } from "@/lib/ui-prefs"
 
 interface ConflictViewProps {
@@ -27,44 +18,74 @@ interface ConflictViewProps {
   onClose: () => void
 }
 
-const MONO =
-  '"SF Mono", Monaco, Consolas, "Ubuntu Mono", "Liberation Mono", "Courier New", monospace'
+// Git conflict markers. Matched line-exact or with a trailing label
+// (`<<<<<<< HEAD`), mirroring how git writes them.
+const OURS = "<<<<<<<"
+const BASE = "|||||||"
+const SEP = "======="
+const THEIRS = ">>>>>>>"
+const isMarker = (line: string, marker: string): boolean =>
+  line === marker || line.startsWith(`${marker} `)
 
-// Match the plain-editor surface (see CodeEditor.tsx) so the merge columns read
-// like the rest of the app rather than the bundled github theme's own canvas.
-const surface = (theme: Theme): Extension =>
-  Prec.highest(
-    EditorView.theme(
-      {
-        "&": { backgroundColor: "var(--background)", height: "100%" },
-        ".cm-content": { fontFamily: MONO },
-        ".cm-scroller": {
-          fontFamily: MONO,
-          fontSize: "13px",
-          lineHeight: "20px",
-        },
-        ".cm-gutters": { backgroundColor: "var(--background)", border: "none" },
-      },
-      { dark: theme === "dark" }
-    )
-  )
+type Resolution = "current" | "incoming" | "both"
 
-const EXT_ALIAS: Record<string, LanguageName> = { yml: "yaml", htm: "html" }
+/** How many unresolved conflict blocks remain in the buffer. */
+const countConflicts = (contents: string): number =>
+  contents.split("\n").filter((l) => isMarker(l, OURS)).length
 
-const languageExt = (path: string): Extension | null => {
-  const ext = path.split(".").at(-1)?.toLowerCase()
-  if (ext === undefined) return null
-  const name = EXT_ALIAS[ext] ?? (ext as LanguageName)
-  const loader = langs[name]
-  return typeof loader === "function" ? loader() : null
+/**
+ * Replace the `targetIndex`-th conflict block with the chosen side, dropping the
+ * markers (and the diff3 base section). Returns the buffer unchanged if the
+ * block is malformed. Line semantics match how the file is split (`\n`).
+ */
+function resolveConflictInText(
+  contents: string,
+  targetIndex: number,
+  resolution: Resolution
+): string {
+  const lines = contents.split("\n")
+  let index = -1
+  for (let start = 0; start < lines.length; start++) {
+    if (!isMarker(lines[start], OURS)) continue
+    index++
+    if (index !== targetIndex) continue
+
+    let baseAt = -1
+    let sepAt = -1
+    let endAt = -1
+    for (let j = start + 1; j < lines.length; j++) {
+      if (baseAt === -1 && isMarker(lines[j], BASE)) baseAt = j
+      else if (sepAt === -1 && isMarker(lines[j], SEP)) sepAt = j
+      else if (isMarker(lines[j], THEIRS)) {
+        endAt = j
+        break
+      }
+    }
+    if (sepAt === -1 || endAt === -1) return contents
+
+    const ours = lines.slice(start + 1, baseAt === -1 ? sepAt : baseAt)
+    const theirs = lines.slice(sepAt + 1, endAt)
+    const replacement =
+      resolution === "current"
+        ? ours
+        : resolution === "incoming"
+          ? theirs
+          : [...ours, ...theirs]
+    return [
+      ...lines.slice(0, start),
+      ...replacement,
+      ...lines.slice(endAt + 1),
+    ].join("\n")
+  }
+  return contents
 }
 
 /**
- * JetBrains-style three-pane merge editor: read-only Ours and Theirs on the
- * sides, an editable Result in the middle. The Result is seeded with the
- * conflicted file (markers and all); each conflict carries an inline accept
- * toolbar (see `mergeConflictExtension`) and the whole buffer stays freely
- * editable. "Mark resolved" writes the Result once no markers remain.
+ * Merge resolver built on Pierre's `UnresolvedFile`: the conflicted file renders
+ * as a unified current/incoming diff with a per-conflict accept toolbar. Each
+ * accept rewrites the buffer (dropping that block's markers) and re-renders;
+ * "Mark resolved" persists once no markers remain. Freeform fixes are delegated
+ * to the full editor via "Edit"; whole-file resolution to "Use ours/theirs".
  */
 export function ConflictView({
   path,
@@ -75,44 +96,23 @@ export function ConflictView({
   onClose,
 }: ConflictViewProps) {
   const file = useFile(path)
-  const conflicts = useConflictsFunctions()
+  const langReady = useLangReady(path)
   const [result, setResult] = useState<string | null>(null)
 
   const original = file.data?.contents ?? null
 
-  // Seed (and re-seed on file change) the editable Result with the conflicted
+  // Seed (and re-seed on file change) the working buffer with the conflicted
   // file. Re-keyed by path so switching files resets cleanly.
   useEffect(() => {
     setResult(original)
   }, [original])
 
-  const sides = useMemo(() => {
-    if (original === null) return { ours: "", theirs: "" }
-    const regions = conflicts.parse(original)
-    return {
-      ours: conflicts.reconstruct(regions, "ours"),
-      theirs: conflicts.reconstruct(regions, "theirs"),
-    }
-  }, [original, conflicts])
+  const resolveAt = (conflictIndex: number, resolution: Resolution) =>
+    setResult((cur) =>
+      cur === null ? cur : resolveConflictInText(cur, conflictIndex, resolution)
+    )
 
-  const remaining = useMemo(
-    () =>
-      result === null ? 0 : conflicts.conflicts(conflicts.parse(result)).length,
-    [result, conflicts]
-  )
-
-  const lang = useMemo(() => languageExt(path), [path])
-  const themeExt = theme === "dark" ? githubDark : githubLight
-  const readOnlyExtensions = useMemo<Array<Extension>>(() => {
-    const base = [themeExt, surface(theme), EditorState.readOnly.of(true)]
-    return lang === null ? base : [lang, ...base]
-  }, [lang, themeExt, theme])
-  const editorExtensions = useMemo<Array<Extension>>(() => {
-    const base = [themeExt, surface(theme), mergeConflictExtension]
-    return lang === null ? base : [lang, ...base]
-  }, [lang, themeExt, theme])
-
-  if (file.isPending || result === null) {
+  if (file.isPending || result === null || !langReady) {
     return (
       <div className="p-8 text-sm text-muted-foreground">Loading {path}…</div>
     )
@@ -123,6 +123,7 @@ export function ConflictView({
     )
   }
 
+  const remaining = countConflicts(result)
   const resolved = remaining === 0
 
   return (
@@ -173,71 +174,46 @@ export function ConflictView({
         </div>
       </div>
 
-      {/* Three panes: Ours | Result (editable) | Theirs */}
-      <div className="flex min-h-0 flex-1">
-        <Pane label="Ours (current)" tone="ours">
-          <CodeMirror
-            value={sides.ours}
-            theme="none"
-            editable={false}
-            extensions={readOnlyExtensions}
-            height="100%"
-            style={{ height: "100%" }}
-          />
-        </Pane>
-        <Pane label="Result (editable)" tone="result">
-          <CodeMirror
-            value={result}
-            theme="none"
-            extensions={editorExtensions}
-            height="100%"
-            style={{ height: "100%" }}
-            onChange={setResult}
-          />
-        </Pane>
-        <Pane label="Theirs (incoming)" tone="theirs" last>
-          <CodeMirror
-            value={sides.theirs}
-            theme="none"
-            editable={false}
-            extensions={readOnlyExtensions}
-            height="100%"
-            style={{ height: "100%" }}
-          />
-        </Pane>
+      {/* The scroll container stays mounted across re-keys of the inner
+          UnresolvedFile, so scroll position survives each accept. */}
+      <div className="min-h-0 flex-1 overflow-auto">
+        <UnresolvedFile
+          key={remaining}
+          file={{ name: path, contents: result }}
+          disableWorkerPool
+          options={{
+            theme: THEMES,
+            themeType: theme,
+            overflow: "wrap",
+            stickyHeader: false,
+          }}
+          renderMergeConflictUtility={(action) => (
+            <div className="flex items-center gap-1.5 px-3 py-1.5">
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() => resolveAt(action.conflictIndex, "current")}
+              >
+                Accept ours
+              </Button>
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() => resolveAt(action.conflictIndex, "both")}
+              >
+                Accept both
+              </Button>
+              <Button
+                size="xs"
+                variant="outline"
+                onClick={() => resolveAt(action.conflictIndex, "incoming")}
+              >
+                Accept theirs
+              </Button>
+            </div>
+          )}
+        />
       </div>
-    </div>
-  )
-}
-
-const TONES = {
-  ours: "bg-sky-500/10 text-sky-700 dark:text-sky-300",
-  result: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
-  theirs: "bg-violet-500/10 text-violet-700 dark:text-violet-300",
-} as const
-
-function Pane({
-  label,
-  tone,
-  last = false,
-  children,
-}: {
-  label: string
-  tone: keyof typeof TONES
-  last?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <div className={cn("flex min-w-0 flex-1 flex-col", !last && "border-r")}>
-      <div
-        className={cn(
-          "shrink-0 border-b px-3 py-1 text-xs font-medium",
-          TONES[tone]
-        )}
-      >
-        {label}
-      </div>
-      <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
     </div>
   )
 }

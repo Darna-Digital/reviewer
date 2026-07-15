@@ -1,22 +1,24 @@
 /**
  * ReviewAssignBar — a Figma-style floating bottom bar that appears while you have
  * local review comments (left in the commit/PR diff or a code view). It lets you
- * pick an agent and hand the comments off to it: a new chat is started with the
- * comments as its prompt. Dismissable; it re-appears when you leave more.
+ * pick a target and hand the comments off: either start a fresh chat with a chosen
+ * agent, or attach them to an existing session (chat) picked from a searchable
+ * dropdown. Dismissable; it re-appears when you leave more.
  */
-import { IconX } from "@tabler/icons-react"
-import { useState } from "react"
+import { IconChevronDown, IconSearch, IconX } from "@tabler/icons-react"
+import { useMemo, useState } from "react"
 import { agentIcon } from "@/components/threads/agent-icons"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select"
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { isChatProviderKind } from "@/features/chats/functions/chat-assignment.functions"
 import { AGENTS, agentLabel } from "@/features/threads/entity/agents"
-import type { ChatProviderKind } from "@/lib/api/types"
+import type { ChatProviderKind, ChatSummary } from "@/lib/api/types"
+import { cn } from "@/lib/utils"
 
 /** Agent CLIs that can be assigned to chat flows (excludes the plain shell). */
 const ASSIGNABLE: ReadonlyArray<{
@@ -33,29 +35,70 @@ const ASSIGNABLE: ReadonlyArray<{
   } => isChatProviderKind(agent.kind)
 )
 
+/** Where the review comments get handed off. */
+export type AssignTarget =
+  | { kind: "new"; agent: ChatProviderKind }
+  | { kind: "existing"; chatId: string }
+
 export function ReviewAssignBar({
   count,
+  chats,
   onAssign,
   onDismiss,
 }: {
   count: number
-  onAssign: (agent: ChatProviderKind) => Promise<void> | void
+  chats: ReadonlyArray<ChatSummary>
+  onAssign: (target: AssignTarget) => Promise<void> | void
   onDismiss: () => void
 }) {
-  const [agent, setAgent] = useState<ChatProviderKind>("claude")
+  const [target, setTarget] = useState<AssignTarget>({
+    kind: "new",
+    agent: "claude",
+  })
+  const [query, setQuery] = useState("")
+  const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
-  const AgentIcon = agentIcon(agent)
 
-  const changeAgent = (value: ChatProviderKind | null) => {
-    if (value === null) return
-    setAgent(value)
+  const q = query.trim().toLowerCase()
+  const agents = useMemo(
+    () =>
+      ASSIGNABLE.filter((a) => q === "" || a.label.toLowerCase().includes(q)),
+    [q]
+  )
+  const sessions = useMemo(
+    () =>
+      chats.filter(
+        (c) =>
+          q === "" ||
+          c.title.toLowerCase().includes(q) ||
+          c.branch.toLowerCase().includes(q)
+      ),
+    [chats, q]
+  )
+
+  const selectedChat =
+    target.kind === "existing"
+      ? (chats.find((c) => c.id === target.chatId) ?? null)
+      : null
+  const TargetIcon = agentIcon(
+    target.kind === "new" ? target.agent : (selectedChat?.provider ?? "claude")
+  )
+  const targetLabel =
+    target.kind === "new"
+      ? `New ${agentLabel(target.agent)} chat`
+      : (selectedChat?.title ?? "Session")
+
+  const pick = (next: AssignTarget) => {
+    setTarget(next)
+    setQuery("")
+    setOpen(false)
   }
 
   const assign = async () => {
     if (busy) return
     setBusy(true)
     try {
-      await onAssign(agent)
+      await onAssign(target)
     } finally {
       setBusy(false)
     }
@@ -71,35 +114,97 @@ export function ReviewAssignBar({
           </span>
         </span>
         <div className="h-5 w-px bg-border" />
-        <Select value={agent} onValueChange={changeAgent}>
-          <SelectTrigger
-            size="sm"
-            className="h-8 w-auto min-w-32 gap-1.5 rounded-full border-0 bg-transparent shadow-none hover:bg-muted"
-            aria-label="Agent"
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger
+            className="flex h-8 w-auto max-w-56 min-w-40 items-center gap-1.5 rounded-full px-3 text-sm hover:bg-muted"
+            aria-label="Assign target"
           >
-            <AgentIcon className="size-4 shrink-0 text-muted-foreground" />
-            <span className="truncate">{agentLabel(agent)}</span>
-          </SelectTrigger>
-          <SelectContent align="end">
-            {ASSIGNABLE.map((a) => {
-              const Icon = agentIcon(a.kind)
-              return (
-                <SelectItem key={a.kind} value={a.kind}>
-                  <Icon className="size-4 shrink-0 text-muted-foreground" />
-                  {a.label}
-                </SelectItem>
-              )
-            })}
-          </SelectContent>
-        </Select>
+            <TargetIcon className="size-4 shrink-0 text-muted-foreground" />
+            <span className="truncate">{targetLabel}</span>
+            <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 gap-0 p-0">
+            <div className="flex items-center gap-2 border-b px-3">
+              <IconSearch className="size-4 shrink-0 text-muted-foreground" />
+              <Input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search sessions…"
+                className="h-9 rounded-none border-0 bg-transparent px-0 focus-visible:ring-0"
+              />
+            </div>
+            <div className="max-h-64 overflow-y-auto p-1">
+              {agents.length > 0 && (
+                <div className="px-2 pt-1.5 pb-1 text-xs text-muted-foreground">
+                  New chat
+                </div>
+              )}
+              {agents.map((a) => {
+                const Icon = agentIcon(a.kind)
+                const active = target.kind === "new" && target.agent === a.kind
+                return (
+                  <button
+                    key={a.kind}
+                    type="button"
+                    onClick={() => pick({ kind: "new", agent: a.kind })}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted",
+                      active && "bg-muted"
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate">{a.label}</span>
+                  </button>
+                )
+              })}
+              {sessions.length > 0 && (
+                <div className="px-2 pt-2 pb-1 text-xs text-muted-foreground">
+                  Sessions
+                </div>
+              )}
+              {sessions.map((c) => {
+                const Icon = agentIcon(c.provider)
+                const active =
+                  target.kind === "existing" && target.chatId === c.id
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => pick({ kind: "existing", chatId: c.id })}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted",
+                      active && "bg-muted"
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate">{c.title}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {c.branch}
+                    </span>
+                  </button>
+                )
+              })}
+              {agents.length === 0 && sessions.length === 0 && (
+                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                  No matches
+                </div>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
         <Button
           size="sm"
           className="rounded-full"
           disabled={busy}
           onClick={() => void assign()}
         >
-          <AgentIcon className="size-4" />
-          {busy ? "Starting…" : "Assign to fix"}
+          <TargetIcon className="size-4" />
+          {busy
+            ? "Starting…"
+            : target.kind === "new"
+              ? "Assign to fix"
+              : "Send to session"}
         </Button>
         <Button
           size="icon"

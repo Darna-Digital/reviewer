@@ -31,7 +31,10 @@ import { toast } from "sonner"
 import { CommandMenu, type Command } from "@/components/CommandMenu"
 import { CommitPanel } from "@/components/CommitPanel"
 import { RepoList } from "@/components/RepoList"
-import { ReviewAssignBar } from "@/components/ReviewAssignBar"
+import {
+  ReviewAssignBar,
+  type AssignTarget,
+} from "@/components/ReviewAssignBar"
 import { DiffPane, type DraftLocation } from "@/components/diff/DiffPane"
 import { CodeEditor } from "@/components/editor/CodeEditor"
 import { CodeView } from "@/components/editor/CodeView"
@@ -56,7 +59,6 @@ import {
   diffTargetKey,
   emptyLogQuery,
   type AppMode,
-  type ChatProviderKind,
   type DiffTarget,
   type LogQuery,
   type ReviewComment,
@@ -64,6 +66,7 @@ import {
 import {
   useBranches,
   useChatModels,
+  useChats,
   useComments,
   useDiffText,
   useFiles,
@@ -112,6 +115,7 @@ export function AppShell() {
   const workspace = useWorkspace()
   const repo = useRepo()
   const chatModels = useChatModels()
+  const chats = useChats()
   const files = useFiles()
   const branches = useBranches()
   const remoteBranches = useRemoteBranches()
@@ -295,33 +299,39 @@ export function AppShell() {
     reviewCountRef.current = visibleComments.length
   }, [visibleComments.length])
 
-  const assignReviewToAgent = async (agent: ChatProviderKind) => {
+  const assignReview = async (dest: AssignTarget) => {
     if (visibleComments.length === 0) return
-    const plural = visibleComments.length === 1 ? "" : "s"
+    const count = visibleComments.length
+    const plural = count === 1 ? "" : "s"
+    const prompt = buildReviewAssignmentPrompt(visibleComments)
     try {
-      const started = await chatActions.startWithTitle(
-        buildChatAssignmentSettings(agent, chatModels.data),
-        repo.data?.currentBranch ?? "",
-        buildReviewAssignmentTitle(visibleComments.length),
-        buildReviewAssignmentPrompt(visibleComments)
-      )
-      if (started === null) return
-      // Handing the comments off to an agent resolves them: their text now lives
-      // in the chat prompt, so clear the local ones (remove() ignores GitHub
-      // comments) instead of leaving them lingering in the diff.
+      // New chat: start a titled one seeded with the comments. Existing session:
+      // send the comments as a message into that chat.
+      let chatId: string | null
+      if (dest.kind === "new") {
+        const started = await chatActions.startWithTitle(
+          buildChatAssignmentSettings(dest.agent, chatModels.data),
+          repo.data?.currentBranch ?? "",
+          buildReviewAssignmentTitle(count),
+          prompt
+        )
+        chatId = started?.id ?? null
+      } else {
+        const sent = await chatActions.send(dest.chatId, prompt)
+        chatId = sent !== null ? dest.chatId : null
+      }
+      if (chatId === null) return
+      // Handing the comments off resolves them: their text now lives in the chat,
+      // so clear the local ones (remove() ignores GitHub comments) instead of
+      // leaving them lingering in the diff.
       await Promise.all(
         visibleComments.map((comment) => comments.remove(comment))
       )
-      toast.success(
-        `Started ${agent} on ${visibleComments.length} comment${plural}`
-      )
-      void navigate({
-        to: "/chats/$chatId",
-        params: { chatId: started.id },
-      })
+      toast.success(`Assigned ${count} comment${plural}`)
+      void navigate({ to: "/chats/$chatId", params: { chatId } })
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "could not start agent"
+        error instanceof Error ? error.message : "could not assign comments"
       )
     }
   }
@@ -689,7 +699,8 @@ export function AppShell() {
       {visibleComments.length > 0 && !assignBarDismissed && (
         <ReviewAssignBar
           count={visibleComments.length}
-          onAssign={assignReviewToAgent}
+          chats={chats.data ?? []}
+          onAssign={assignReview}
           onDismiss={() => setAssignBarDismissed(true)}
         />
       )}

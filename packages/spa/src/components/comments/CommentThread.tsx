@@ -79,12 +79,6 @@ export function CommentComposer({
       />
       {error !== null && <p className="text-xs text-destructive">{error}</p>}
       <div className="flex items-center justify-end gap-2">
-        <span className="mr-auto text-xs text-muted-foreground">
-          <kbd className="rounded-sm border bg-muted px-1 py-0.5 font-mono text-[10px]">
-            ⌘↵
-          </kbd>{" "}
-          to submit
-        </span>
         <Button variant="ghost" size="sm" onClick={onCancel}>
           Cancel
         </Button>

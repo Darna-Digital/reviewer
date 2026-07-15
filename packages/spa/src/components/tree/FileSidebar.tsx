@@ -15,6 +15,22 @@ interface FileSidebarProps {
   footer?: ReactNode
 }
 
+// Inset each row's hover/selection background vertically so a highlighted row
+// reads as a separate rounded pill instead of colliding edge-to-edge with the
+// pill above/below it. The tree is virtualized with a fixed row height, so we
+// can't add real spacing between rows (it would desync scroll math); instead we
+// keep the row exactly `--trees-row-height` tall (box-sizing: border-box) and
+// carve the gap out of it with a transparent block border, clipping the
+// background to the padding box so it doesn't paint under that border.
+// Injected into the tree's shadow root via the `@layer unsafe` override layer.
+const TREE_UNSAFE_CSS = `
+  [data-type='item'] {
+    box-sizing: border-box;
+    border-block: 2px solid transparent;
+    background-clip: padding-box;
+  }
+`
+
 // FileSidebar is only mounted in the git-review modes; the workspace modes
 // (threads/docs/tasks) have their own pages, so a partial map + fallback.
 const HEADER_TITLE: Partial<Record<AppMode, string>> = {
@@ -77,6 +93,7 @@ export function FileSidebar({
     initialSelectedPaths: selectedFile !== null ? [selectedFile] : undefined,
     flattenEmptyDirectories: true,
     search: true,
+    unsafeCSS: TREE_UNSAFE_CSS,
     gitStatus: [...gitStatus],
     onSelectionChange: (selectedPaths) => {
       if (syncingSelectionRef.current) return

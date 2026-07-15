@@ -1,29 +1,17 @@
-import {
-  getFiletypeFromFileName,
-  getHighlighterOptions,
-  type LineAnnotation,
-  preloadHighlighter,
-} from "@pierre/diffs"
+import { type LineAnnotation } from "@pierre/diffs"
 import { File } from "@pierre/diffs/react"
 import { IconX } from "@tabler/icons-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo } from "react"
 import {
   CommentThread,
   DraftCard,
   type DraftLocation,
 } from "@/components/comments/CommentThread"
+import { THEMES, useLangReady } from "@/components/editor/highlighter"
 import { Button } from "@/components/ui/button"
 import { useFile } from "@/lib/queries"
 import type { ReviewComment } from "@/lib/api/types"
 import type { Theme } from "@/lib/ui-prefs"
-
-const THEMES = { light: "github-light", dark: "github-dark" } as const
-
-// Languages whose Shiki grammar has finished loading into the shared
-// highlighter. The highlighter only reliably highlights a file when its
-// language is already attached at mount time, so we preload per language and
-// remember what's ready to avoid re-gating on repeat visits.
-const readyLangs = new Set<string>()
 
 // Comments on a plain (non-diff) file are always anchored to the current
 // content, i.e. the "additions" side of an eventual worktree diff.
@@ -63,32 +51,9 @@ export function CodeView({
   onCommentDelete,
 }: CodeViewProps) {
   const file = useFile(path)
-  const lang = getFiletypeFromFileName(path)
-  const [langReady, setLangReady] = useState(() => readyLangs.has(lang))
+  const langReady = useLangReady(path)
   const commentsEnabled =
     onCommentSubmit !== undefined && onCommentDelete !== undefined
-
-  // Ensure the file's language grammar is attached before mounting `File`;
-  // otherwise it renders unhighlighted and won't re-highlight in place when the
-  // grammar later loads (it only highlights cleanly on a fresh mount).
-  useEffect(() => {
-    if (readyLangs.has(lang)) {
-      setLangReady(true)
-      return
-    }
-    setLangReady(false)
-    let cancelled = false
-    const done = () => {
-      readyLangs.add(lang)
-      if (!cancelled) setLangReady(true)
-    }
-    void preloadHighlighter(
-      getHighlighterOptions(lang, { theme: THEMES })
-    ).then(done, done)
-    return () => {
-      cancelled = true
-    }
-  }, [lang])
 
   // Group this file's comments (and the open draft) into per-line annotations.
   const annotations = useMemo<Array<LineAnnotation<AnnotationMeta>>>(() => {
