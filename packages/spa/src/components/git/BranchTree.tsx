@@ -193,7 +193,11 @@ export function BranchTree({
   )
 
   return (
-    <div role="tree" aria-label="Branches" className="py-1 text-sm select-none">
+    <div
+      role="tree"
+      aria-label="Branches"
+      className="flex flex-col gap-1 py-1 text-sm select-none"
+    >
       {currentBranch !== null && (
         <button
           type="button"
