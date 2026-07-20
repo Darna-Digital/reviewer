@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useChatsActions } from "@/features/chats/adapters/chats.hook.adapter"
+import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import {
   buildChatAssignmentSettings,
   buildTaskAssignmentPrompt,
@@ -47,9 +47,9 @@ import {
   isChatProviderKind,
   mentionedChatProvider,
   trailingAgentMention,
-} from "@/features/chats/functions/chat-assignment.functions"
-import { useTasksActions } from "@/features/tasks/adapters/tasks.hook.adapter"
-import { AGENTS } from "@/features/threads/entity/agents"
+} from "@/interactions/chats/functions/chat-assignment.functions"
+import { useTasksActions } from "@/interactions/tasks/adapters/tasks.hook.adapter"
+import { AGENTS } from "@/interactions/threads/entity/agents"
 import type { ChatProviderKind, TasksCard, TasksColumn } from "@/lib/api/types"
 import { useChatModels, useRepo, useTasks } from "@/lib/queries"
 import { timeAgo } from "@/lib/relative-time"

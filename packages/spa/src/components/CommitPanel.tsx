@@ -11,7 +11,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { AGENTS, agentLabel } from "@/features/threads/entity/agents"
+import { AGENTS, agentLabel } from "@/interactions/threads/entity/agents"
 import type { GitFileStatus, GitStatusEntry } from "@/lib/api/types"
 import { setUiPrefs, useUiPrefs, type CommitAgent } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"

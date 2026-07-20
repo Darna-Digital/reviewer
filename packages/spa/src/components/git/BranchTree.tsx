@@ -8,8 +8,8 @@ import { useRef, useState } from "react"
 import type {
   BranchLeaf,
   BranchTreeItem,
-} from "@/features/branch-tree/entity/branch-tree.interfaces"
-import { useBranchTree } from "@/features/branch-tree/adapters/branch-tree.hook.adapter"
+} from "@/interactions/branch-tree/entity/branch-tree.interfaces"
+import { useBranchTree } from "@/interactions/branch-tree/adapters/branch-tree.hook.adapter"
 import type { BranchInfo, RemoteBranchInfo } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 

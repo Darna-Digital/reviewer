@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
-import { createCommitDetailsFunctions } from "@/features/commit-details/functions/commit-details.functions"
+import { createCommitDetailsFunctions } from "@/interactions/commit-details/functions/commit-details.functions"
 import { useCommitDetail } from "@/lib/queries"
 import { cn } from "@/lib/utils"
 

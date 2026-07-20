@@ -27,7 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { useLocalDevActions } from "@/features/local-dev/adapters/local-dev.hook.adapter"
+import { useLocalDevActions } from "@/interactions/local-dev/adapters/local-dev.hook.adapter"
 import type { DevCommandView } from "@/lib/api/types"
 import { useDevCommands } from "@/lib/queries"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"

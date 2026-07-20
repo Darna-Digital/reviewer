@@ -4,13 +4,13 @@
  * sends/stops/settings go through the REST actions and come back as events.
  */
 import { toast } from "sonner"
-import { useChatStream } from "@/features/chats/adapters/chats.stream.adapter"
-import { useChatsActions } from "@/features/chats/adapters/chats.hook.adapter"
+import { useChatStream } from "@/interactions/chats/adapters/chats.stream.adapter"
+import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import type {
   ChatImage,
   ChatSettings,
-} from "@/features/chats/entity/chats.interfaces"
-import { isChatRunning } from "@/features/chats/functions/chats.reducer"
+} from "@/interactions/chats/entity/chats.interfaces"
+import { isChatRunning } from "@/interactions/chats/functions/chats.reducer"
 import { useChatModels } from "@/lib/queries"
 import { ChatComposer } from "./ChatComposer"
 import { MessagesTimeline } from "./MessagesTimeline"

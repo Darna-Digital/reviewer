@@ -13,7 +13,7 @@ import { BranchSwitcher } from "@/components/layout/BranchSwitcher"
 import { GitBottomDock } from "@/components/layout/GitBottomDock"
 import { ModeRail } from "@/components/layout/ModeRail"
 import { RepoPicker } from "@/components/RepoPicker"
-import { useGitActions } from "@/features/git-actions/adapters/git-actions.hook.adapter"
+import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import { isDesktop } from "@/lib/desktop"
 import type { AppMode } from "@/lib/api/types"
 import {

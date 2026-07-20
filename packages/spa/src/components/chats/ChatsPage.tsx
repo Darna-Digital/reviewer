@@ -31,7 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { useChatsActions } from "@/features/chats/adapters/chats.hook.adapter"
+import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import type { ChatSummary } from "@/lib/api/types"
 import { useBranches, useChats, useRepo } from "@/lib/queries"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"

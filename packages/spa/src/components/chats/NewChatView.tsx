@@ -6,11 +6,11 @@
 import { useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
 import { toast } from "sonner"
-import { useChatsActions } from "@/features/chats/adapters/chats.hook.adapter"
+import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import type {
   ChatImage,
   ChatSettings,
-} from "@/features/chats/entity/chats.interfaces"
+} from "@/interactions/chats/entity/chats.interfaces"
 import { NEW_CHAT_DRAFT } from "@/lib/chat-drafts"
 import { useChatModels, useRepo } from "@/lib/queries"
 import { ChatComposer } from "./ChatComposer"

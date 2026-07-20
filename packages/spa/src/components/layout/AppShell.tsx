@@ -45,15 +45,15 @@ import { ModeRail } from "@/components/layout/ModeRail"
 import { ResizeHandle } from "@/components/layout/ResizeHandle"
 import { TopBar } from "@/components/layout/TopBar"
 import { FileSidebar } from "@/components/tree/FileSidebar"
-import { useChatsActions } from "@/features/chats/adapters/chats.hook.adapter"
+import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import {
   buildChatAssignmentSettings,
   buildReviewAssignmentPrompt,
   buildReviewAssignmentTitle,
-} from "@/features/chats/functions/chat-assignment.functions"
-import { useCommentsActions } from "@/features/comments/adapters/comments.hook.adapter"
-import { useDiffFunctions } from "@/features/diff/adapters/diff.hook.adapter"
-import { useGitActions } from "@/features/git-actions/adapters/git-actions.hook.adapter"
+} from "@/interactions/chats/functions/chat-assignment.functions"
+import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter"
+import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter"
+import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import { fetchClient } from "@/lib/api/client"
 import {
   diffTargetKey,

@@ -20,8 +20,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { isChatProviderKind } from "@/features/chats/functions/chat-assignment.functions"
-import { AGENTS, agentLabel } from "@/features/threads/entity/agents"
+import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignment.functions"
+import { AGENTS, agentLabel } from "@/interactions/threads/entity/agents"
 import type { ChatProviderKind, ChatSummary } from "@/lib/api/types"
 import { cn } from "@/lib/utils"
 

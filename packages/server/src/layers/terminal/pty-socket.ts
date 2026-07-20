@@ -44,7 +44,7 @@ import {
 import {
   CHAT_STREAM_PATH,
   startChatStream,
-} from "../../features/chats/runtime/chat-runtime.ts"
+} from "../../runtime/chat-runtime.ts"
 import { getCurrentRepo } from "../workspace/current-repo.ts"
 import { recentAgentSessions } from "./agent-session-capture.ts"
 import { DEV_PTY_PATH, startDevSession } from "./dev-process-manager.ts"

@@ -32,7 +32,7 @@ import type {
 } from "@/lib/api/types"
 import { useDraft } from "@/lib/chat-drafts"
 import { cn } from "@/lib/utils"
-import type { ChatSettings } from "@/features/chats/entity/chats.interfaces"
+import type { ChatSettings } from "@/interactions/chats/entity/chats.interfaces"
 import { AttachmentChip, AttachmentGrid } from "./ImageAttachments"
 import {
   attachmentSource,
