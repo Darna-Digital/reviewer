@@ -4,7 +4,7 @@ import { mkdtempSync, rmSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { afterAll, describe, expect } from "vitest"
 import { memoryLayer } from "../../../layers/workspace/workspace-context.ts"
-import { CommentsRepository } from "./comments.repository.ts"
+import { CommentsRepository } from "@byconvo/core/comments"
 import { makeFileCommentsRepository } from "./comments.repository.file.ts"
 
 // A real temp repo root: the file store writes `.byconvo/comments.json` here.

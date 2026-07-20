@@ -1,10 +1,6 @@
 /** HTTP endpoints for repository selection, directory browsing and file IO. */
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
-import {
-  InvalidRepo,
-  NoRepoSelected,
-  StorageError,
-} from "../../../layers/errors.ts"
+import { InvalidRepo, NoRepoSelected, StorageError } from "@byconvo/core/errors"
 import {
   BrowsePayload,
   FileContent,
@@ -15,7 +11,7 @@ import {
   RenameFile,
   SetWorkspace,
   WriteFile,
-} from "@byconvo/models/workspace"
+} from "@byconvo/core/workspace"
 
 export class WorkspaceApi extends HttpApiGroup.make("workspace")
   .add(

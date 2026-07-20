@@ -1,10 +1,6 @@
 import * as Schema from "effect/Schema"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
-import {
-  NoRepoSelected,
-  NotFound,
-  StorageError,
-} from "../../../layers/errors.ts"
+import { NoRepoSelected, NotFound, StorageError } from "@byconvo/core/errors"
 import {
   Doc,
   DocSummary,
@@ -12,7 +8,7 @@ import {
   DocIdParam,
   NewDoc,
   UpdateDoc,
-} from "@byconvo/models/docs"
+} from "@byconvo/core/docs"
 
 const errors = [NoRepoSelected, NotFound, StorageError] as const
 

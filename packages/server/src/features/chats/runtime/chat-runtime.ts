@@ -39,7 +39,8 @@ import type {
   ChatMessage,
   ChatTurn,
   ChatWireEvent,
-} from "@byconvo/models/chats"
+  StartTurnResult,
+} from "@byconvo/core/chats"
 import {
   appendActivity,
   appendPendingMessage,
@@ -263,11 +264,6 @@ const finalizeTurn = (live: LiveTurn, exitCode: number | null): void => {
   })
   // Pick up anything the user queued while this turn was running.
   flushPending(live.repoPath, live.chatId)
-}
-
-export interface StartTurnResult {
-  readonly ok: boolean
-  readonly reason?: "busy" | "not-found"
 }
 
 /** Decode each uploaded image to a temp file the CLI can read; keep only the

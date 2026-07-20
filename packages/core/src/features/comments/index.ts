@@ -1,0 +1,5 @@
+export * from "./comments.schema.ts"
+export * from "./comments.repository.ts"
+export * from "./comments.repository.memory.ts"
+export * from "./comments.service.ts"
+export * from "./comments.layer.memory.ts"

@@ -14,16 +14,15 @@ import {
   Chat,
   type ChatActivity,
   type ChatMessage,
-  type ChatSummary,
   type ChatTurn,
-} from "@byconvo/models/chats"
+  DEFAULT_CHAT_TITLE,
+  titleFromPrompt,
+} from "@byconvo/core/chats"
 
 const ChatsFile = Schema.Array(Chat)
 const decodeChatsFile = Schema.decodeUnknownSync(ChatsFile)
 
 const chatsPath = (repoPath: string) => `${repoPath}/.byconvo/chats.json`
-
-export const DEFAULT_CHAT_TITLE = "New thread"
 
 // Module-scoped so ids stay unique across per-request repository instances.
 let counter = 0
@@ -72,28 +71,6 @@ export const patchChat = (
     chats.map((c) => (c.id === id ? updated : c))
   )
   return updated
-}
-
-export const summarizeChat = (chat: Chat): ChatSummary => {
-  const last = chat.messages.at(-1)
-  return {
-    id: chat.id,
-    title: chat.title,
-    provider: chat.provider,
-    model: chat.model,
-    branch: chat.branch,
-    createdAt: chat.createdAt,
-    updatedAt: chat.updatedAt,
-    messageCount: chat.messages.length,
-    lastMessage: last !== undefined ? last.text.slice(0, 120) : null,
-    turnState: chat.latestTurn?.state ?? null,
-  }
-}
-
-/** A chat title from the first prompt: its first line, truncated. */
-export const titleFromPrompt = (text: string): string => {
-  const line = text.trim().split("\n", 1)[0] ?? ""
-  return line.length > 60 ? `${line.slice(0, 59)}…` : line
 }
 
 // --- Turn-progress mutations (used by the runtime while a turn streams) -----

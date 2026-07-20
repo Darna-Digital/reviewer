@@ -5,17 +5,21 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { NotFound, StorageError } from "../../../layers/errors.ts"
+import { NotFound, StorageError } from "@byconvo/core/errors"
 import { WorkspaceContext } from "../../../layers/workspace/workspace-context.ts"
-import { Card, Column, DEFAULT_COLUMNS } from "@byconvo/models/tasks"
-import type { Comment } from "@byconvo/models/tasks"
-import { normalizePrefix } from "../tasks.ts"
+import {
+  Card,
+  Column,
+  DEFAULT_COLUMNS,
+  normalizePrefix,
+} from "@byconvo/core/tasks"
 import type {
+  Comment,
   CreateCardInput,
   TasksRepo,
   UpdateCardInput,
   UpdateColumnInput,
-} from "./tasks.repository.ts"
+} from "@byconvo/core/tasks"
 
 const DEFAULT_PREFIX = "T"
 

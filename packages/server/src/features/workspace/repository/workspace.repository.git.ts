@@ -9,11 +9,7 @@ import type { PlatformError } from "effect/PlatformError"
 import { ChildProcessSpawner } from "effect/unstable/process"
 import { homedir } from "node:os"
 import { resolve as pathResolve } from "node:path"
-import {
-  InvalidRepo,
-  NoRepoSelected,
-  StorageError,
-} from "../../../layers/errors.ts"
+import { InvalidRepo, NoRepoSelected, StorageError } from "@byconvo/core/errors"
 import {
   resolveWorkspace,
   WorkspaceContext,
@@ -23,8 +19,8 @@ import type {
   BrowsePayload,
   RepoEntry,
   WorkspaceInfo,
-} from "@byconvo/models/workspace"
-import type { WorkspaceRepo } from "./workspace.repository.ts"
+  WorkspaceRepo,
+} from "@byconvo/core/workspace"
 
 const toStorageError = (error: PlatformError) =>
   new StorageError({ reason: error.message })

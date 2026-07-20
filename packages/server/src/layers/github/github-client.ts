@@ -9,7 +9,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { GitHubError } from "../errors.ts"
+import { GitHubError } from "@byconvo/core/errors"
 import { GitExec } from "../git/git-exec.ts"
 
 const API = "https://api.github.com"

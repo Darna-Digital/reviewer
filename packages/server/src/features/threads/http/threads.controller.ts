@@ -2,7 +2,7 @@ import * as Effect from "effect/Effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../../../api.ts"
 import { killPtySession } from "../../../layers/terminal/pty-socket.ts"
-import { ThreadsService } from "../service/threads.service.ts"
+import { ThreadsService } from "@byconvo/core/threads"
 
 const ok = { ok: true } as const
 

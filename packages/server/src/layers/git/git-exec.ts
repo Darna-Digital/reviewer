@@ -4,43 +4,23 @@
  * top of `run` / `runVerbose` / `lines` exactly as the darna-stack DB
  * repositories build on `RawSql`.
  */
-import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Stream from "effect/Stream"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { GitError, NoRepoSelected } from "../errors.ts"
+import { GitError, NoRepoSelected } from "@byconvo/core/errors"
+import {
+  GitExec,
+  type GitExecShape,
+  type GitFailure,
+} from "@byconvo/core/git-exec"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 
-export type GitFailure = GitError | NoRepoSelected
-
-export interface GitExecShape {
-  /** Run a git command, returning stdout; fails with GitError on non-zero exit. */
-  readonly run: (
-    ...args: ReadonlyArray<string>
-  ) => Effect.Effect<string, GitFailure>
-  /** Like `run` but folds stderr into the result — for push/pull progress. */
-  readonly runVerbose: (
-    ...args: ReadonlyArray<string>
-  ) => Effect.Effect<string, GitFailure>
-  /**
-   * Run git, returning stdout even on a non-zero exit — for commands that use
-   * the exit code to report state rather than failure (e.g. `diff --no-index`
-   * exits 1 when the two inputs differ). Still fails with GitError on spawn/IO
-   * errors.
-   */
-  readonly runTolerant: (
-    ...args: ReadonlyArray<string>
-  ) => Effect.Effect<string, GitFailure>
-  /** `run` split into non-empty lines. */
-  readonly lines: (
-    ...args: ReadonlyArray<string>
-  ) => Effect.Effect<ReadonlyArray<string>, GitFailure>
-}
-
-export class GitExec extends Context.Service<GitExec, GitExecShape>()(
-  "GitExec"
-) {}
+export {
+  GitExec,
+  type GitExecShape,
+  type GitFailure,
+} from "@byconvo/core/git-exec"
 
 export const make = Effect.gen(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner

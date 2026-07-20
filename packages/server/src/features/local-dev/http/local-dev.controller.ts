@@ -4,8 +4,8 @@ import { Api } from "../../../api.ts"
 import { WorkspaceContext } from "../../../layers/workspace/workspace-context.ts"
 import type { DevRunStatus } from "../../../layers/terminal/dev-process-manager.ts"
 import { DevRuntime } from "../runtime/local-dev.runtime.ts"
-import type { DevCommand, DevCommandView } from "@byconvo/models/local-dev"
-import { LocalDevService } from "../service/local-dev.service.ts"
+import type { DevCommand, DevCommandView } from "@byconvo/core/local-dev"
+import { LocalDevService } from "@byconvo/core/local-dev"
 
 const ok = { ok: true } as const
 

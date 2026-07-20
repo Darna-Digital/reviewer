@@ -6,16 +6,18 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { NotFound, StorageError } from "../../../layers/errors.ts"
+import { NotFound, StorageError } from "@byconvo/core/errors"
 import { TerminalExec } from "../../../layers/terminal/terminal-exec.ts"
 import { WorkspaceContext } from "../../../layers/workspace/workspace-context.ts"
-import { agentCommand, agentDefaultTitle } from "../agents.ts"
-import { Thread, type ThreadEntry } from "@byconvo/models/threads"
-import type {
-  CreateThreadInput,
-  RenameThreadInput,
-  ThreadsRepo,
-} from "./threads.repository.ts"
+import {
+  agentCommand,
+  agentDefaultTitle,
+  Thread,
+  type CreateThreadInput,
+  type RenameThreadInput,
+  type ThreadEntry,
+  type ThreadsRepo,
+} from "@byconvo/core/threads"
 
 const ThreadsFile = Schema.Array(Thread)
 

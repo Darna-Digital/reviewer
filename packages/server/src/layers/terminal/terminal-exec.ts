@@ -18,34 +18,24 @@
  * captured in the result so the caller can show them. Only a genuine spawn/IO
  * failure (no shell on PATH) fails the effect with TerminalError.
  */
-import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Stream from "effect/Stream"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { TerminalError } from "../errors.ts"
+import { TerminalError } from "@byconvo/core/errors"
+import {
+  TerminalExec,
+  type TerminalExecShape,
+  type TerminalResult,
+} from "@byconvo/core/terminal-exec"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 
-export interface TerminalResult {
-  readonly stdout: string
-  readonly stderr: string
-  readonly exitCode: number
-}
-
-export interface TerminalExecShape {
-  /**
-   * Run `command` through the platform shell in the selected repo (or the
-   * server cwd when none is selected) and capture stdout/stderr/exit code.
-   */
-  readonly run: (
-    command: string
-  ) => Effect.Effect<TerminalResult, TerminalError>
-}
-
-export class TerminalExec extends Context.Service<
+export {
+  memoryLayer,
   TerminalExec,
-  TerminalExecShape
->()("TerminalExec") {}
+  type TerminalExecShape,
+  type TerminalResult,
+} from "@byconvo/core/terminal-exec"
 
 export const make = Effect.gen(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
@@ -98,15 +88,3 @@ export const layer: Layer.Layer<
   never,
   ChildProcessSpawner.ChildProcessSpawner | WorkspaceContext
 > = Layer.effect(TerminalExec)(make)
-
-/** Test seam: echoes the command back as stdout, never spawning a real shell. */
-export const memoryLayer = (
-  result: (command: string) => TerminalResult = (command) => ({
-    stdout: command,
-    stderr: "",
-    exitCode: 0,
-  })
-): Layer.Layer<TerminalExec> =>
-  Layer.succeed(TerminalExec)(
-    TerminalExec.of({ run: (c) => Effect.succeed(result(c)) })
-  )

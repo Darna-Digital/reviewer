@@ -1,7 +1,10 @@
 import * as Layer from "effect/Layer"
-import { CommentsRepository } from "../repository/comments.repository.ts"
+import {
+  CommentsRepository,
+  CommentsService,
+  make,
+} from "@byconvo/core/comments"
 import { makeFileCommentsRepository } from "../repository/comments.repository.file.ts"
-import { CommentsService, make } from "../service/comments.service.ts"
 
 export const CommentsLive = Layer.effect(CommentsService)(make).pipe(
   Layer.provide(Layer.effect(CommentsRepository)(makeFileCommentsRepository))

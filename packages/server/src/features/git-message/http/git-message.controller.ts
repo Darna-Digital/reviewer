@@ -4,7 +4,7 @@ import { Api } from "../../../api.ts"
 import {
   DEFAULT_COMMIT_AGENT,
   GitMessageService,
-} from "../service/git-message.service.ts"
+} from "@byconvo/core/git-message"
 
 export const GitMessageController = HttpApiBuilder.group(
   Api,

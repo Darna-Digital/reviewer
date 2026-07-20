@@ -1,5 +1,5 @@
 import * as Layer from "effect/Layer"
-import { GitMessageService, make } from "../service/git-message.service.ts"
+import { GitMessageService, make } from "@byconvo/core/git-message"
 
 // GitExec and TerminalExec are global singletons (InfraLive), so the live
 // service needs no extra wiring of its own.

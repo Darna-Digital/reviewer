@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest"
 import {
-  CHAT_MODEL_CATALOG,
   chatTurnProgram,
   withAttachedImages,
   withHistory,
 } from "./providers.ts"
-import type { Chat, ChatMessage } from "@byconvo/models/chats"
+import { CHAT_MODEL_CATALOG } from "@byconvo/core/chats"
+import type { Chat, ChatMessage } from "@byconvo/core/chats"
 
 const msg = (
   role: ChatMessage["role"],

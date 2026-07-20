@@ -6,14 +6,14 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { NotFound, StorageError } from "../../../layers/errors.ts"
+import { NotFound, StorageError } from "@byconvo/core/errors"
 import { WorkspaceContext } from "../../../layers/workspace/workspace-context.ts"
-import { DevCommand } from "@byconvo/models/local-dev"
+import { DevCommand } from "@byconvo/core/local-dev"
 import type {
   CreateDevCommandInput,
   DevCommandsRepo,
   UpdateDevCommandInput,
-} from "./local-dev.repository.ts"
+} from "@byconvo/core/local-dev"
 
 const DevCommandsFile = Schema.Array(DevCommand)
 

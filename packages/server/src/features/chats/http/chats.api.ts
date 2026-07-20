@@ -6,7 +6,7 @@ import {
   NotFound,
   StorageError,
   TerminalError,
-} from "../../../layers/errors.ts"
+} from "@byconvo/core/errors"
 import {
   Chat,
   ChatModelCatalog,
@@ -16,7 +16,7 @@ import {
   NewChat,
   SendChatMessage,
   UpdateChat,
-} from "@byconvo/models/chats"
+} from "@byconvo/core/chats"
 
 const errors = [
   NoRepoSelected,

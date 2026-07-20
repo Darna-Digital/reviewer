@@ -1,4 +1,4 @@
-import type { PullRequestInfo } from "@byconvo/models/github"
+import type { PullRequestInfo } from "@byconvo/core/github"
 
 export type {
   BrowseEntry,
@@ -6,7 +6,7 @@ export type {
   FileContent,
   RepoEntry,
   WorkspaceInfo,
-} from "@byconvo/models/workspace"
+} from "@byconvo/core/workspace"
 export type {
   BranchInfo,
   CommitDetail,
@@ -23,15 +23,15 @@ export type {
   RemoteBranchInfo,
   RepoInfo,
   RepoStatus,
-} from "@byconvo/models/repo"
-export type { CommentSide, ReviewComment } from "@byconvo/models/comments"
-export type { PullRequestInfo } from "@byconvo/models/github"
+} from "@byconvo/core/repo"
+export type { CommentSide, ReviewComment } from "@byconvo/core/comments"
+export type { PullRequestInfo } from "@byconvo/core/github"
 export type {
   AgentKind,
   Thread,
   ThreadEntry,
   ThreadSummary,
-} from "@byconvo/models/threads"
+} from "@byconvo/core/threads"
 export type {
   Chat,
   ChatAccess,
@@ -49,20 +49,18 @@ export type {
   ChatTurn,
   ChatTurnState,
   ChatWireEvent,
-} from "@byconvo/models/chats"
-export type { Doc, DocSummary } from "@byconvo/models/docs"
+} from "@byconvo/core/chats"
+export type { Doc, DocSummary } from "@byconvo/core/docs"
 export type {
   Board as TasksBoard,
   Card as TasksCard,
   TasksColumn,
-} from "@byconvo/models/tasks"
+} from "@byconvo/core/tasks"
 export type {
   DevCommand,
   DevCommandStatus,
   DevCommandView,
-} from "@byconvo/models/local-dev"
-
-/** Log-filter state shared by the toolbar and the route search params. */
+} from "@byconvo/core/local-dev"
 export interface LogQuery {
   readonly author: string | null
   readonly grep: string | null
@@ -72,7 +70,6 @@ export interface LogQuery {
   readonly before: string | null
   readonly path: string | null
 }
-
 export const emptyLogQuery: LogQuery = {
   author: null,
   grep: null,
@@ -82,12 +79,6 @@ export const emptyLogQuery: LogQuery = {
   before: null,
   path: null,
 }
-
-/**
- * The top-level IDE modes (also the top-level route segments). The first three
- * are the git-review modes (rendered by AppShell); threads/docs/tasks are the
- * workspace modes (rendered by WorkspaceShell).
- */
 export type AppMode =
   | "commit"
   | "review"
@@ -97,14 +88,24 @@ export type AppMode =
   | "docs"
   | "tasks"
   | "local-dev"
-
-/** What the center pane is currently diffing. */
 export type DiffTarget =
-  | { readonly kind: "worktree" }
-  | { readonly kind: "range"; readonly base: string; readonly head: string }
-  | { readonly kind: "commit"; readonly sha: string; readonly shortSha: string }
-  | { readonly kind: "pull"; readonly pull: PullRequestInfo }
-
+  | {
+      readonly kind: "worktree"
+    }
+  | {
+      readonly kind: "range"
+      readonly base: string
+      readonly head: string
+    }
+  | {
+      readonly kind: "commit"
+      readonly sha: string
+      readonly shortSha: string
+    }
+  | {
+      readonly kind: "pull"
+      readonly pull: PullRequestInfo
+    }
 export const diffTargetKey = (target: DiffTarget): string => {
   switch (target.kind) {
     case "worktree":

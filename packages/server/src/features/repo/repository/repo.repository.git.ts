@@ -5,7 +5,7 @@
  */
 import * as Effect from "effect/Effect"
 import * as FileSystem from "effect/FileSystem"
-import { GitError } from "../../../layers/errors.ts"
+import { GitError } from "@byconvo/core/errors"
 import { GitExec, type GitFailure } from "../../../layers/git/git-exec.ts"
 import type {
   BranchInfo,
@@ -19,8 +19,8 @@ import type {
   MergeState,
   RemoteBranchInfo,
   RepoStatus,
-} from "@byconvo/models/repo"
-import type { RepoRepo } from "./repo.repository.ts"
+  RepoRepo,
+} from "@byconvo/core/repo"
 
 /** Map a porcelain v2 unmerged `XY` field to a conflict kind. */
 const conflictKindFromXY = (xy: string): ConflictKind => {

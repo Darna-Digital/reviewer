@@ -5,7 +5,7 @@ import {
   NotFound,
   StorageError,
   TerminalError,
-} from "../../../layers/errors.ts"
+} from "@byconvo/core/errors"
 import {
   Ok,
   Thread,
@@ -15,7 +15,7 @@ import {
   RenameThread,
   RunCommand,
   ThreadIdParam,
-} from "@byconvo/models/threads"
+} from "@byconvo/core/threads"
 
 const errors = [NoRepoSelected, NotFound, StorageError, TerminalError] as const
 
