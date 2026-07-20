@@ -116,7 +116,8 @@ export function toggleLineCommentEdits(
         const l = lines[n]
         const indent = indentOf(l)
         // Drop the token plus one following space, when present.
-        const len = l[indent + token.length] === " " ? token.length + 1 : token.length
+        const len =
+          l[indent + token.length] === " " ? token.length + 1 : token.length
         return {
           range: {
             start: { line: n, character: indent },

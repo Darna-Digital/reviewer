@@ -5,8 +5,8 @@
 import * as Effect from "effect/Effect"
 import { GitHubError } from "../../../layers/errors.ts"
 import { GitHubClient } from "../../../layers/github/github-client.ts"
-import type { ReviewComment } from "../../comments/schema/comments.schema.model.ts"
-import type { PullRequestInfo } from "../schema/github.schema.model.ts"
+import type { ReviewComment } from "@byconvo/models/comments"
+import type { PullRequestInfo } from "@byconvo/models/github"
 import type { GitHubRepo } from "./github.repository.ts"
 
 export const makeGitHubRepository = Effect.gen(function* () {

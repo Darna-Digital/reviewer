@@ -12,13 +12,11 @@ import {
   ChatModelCatalog,
   ChatSummary,
   Ok,
-} from "../schema/chats.schema.model.ts"
-import {
   ChatIdParam,
   NewChat,
   SendChatMessage,
   UpdateChat,
-} from "../schema/chats.schema.requests.ts"
+} from "@byconvo/models/chats"
 
 const errors = [
   NoRepoSelected,

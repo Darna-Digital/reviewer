@@ -8,7 +8,7 @@ import type {
   MergeState,
   RepoInfo,
   RepoStatus,
-} from "../schema/repo.schema.model.ts"
+} from "@byconvo/models/repo"
 import type { RepoRepo } from "./repo.repository.ts"
 
 export interface MemoryRepoSeed {

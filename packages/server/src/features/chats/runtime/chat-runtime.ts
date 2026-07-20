@@ -35,10 +35,11 @@ import type {
   Chat,
   ChatActivity,
   ChatAttachment,
+  ChatImageUpload,
   ChatMessage,
   ChatTurn,
-} from "../schema/chats.schema.model.ts"
-import type { ChatImageUpload } from "../schema/chats.schema.requests.ts"
+  ChatWireEvent,
+} from "@byconvo/models/chats"
 import {
   appendActivity,
   appendPendingMessage,
@@ -88,7 +89,7 @@ const send = (ws: WebSocket, message: unknown) => {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(message))
 }
 
-const broadcast = (chatId: string, event: unknown) => {
+const broadcast = (chatId: string, event: ChatWireEvent) => {
   const sockets = watchers.get(chatId)
   if (sockets === undefined) return
   for (const ws of sockets) send(ws, { event })

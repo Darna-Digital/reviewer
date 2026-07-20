@@ -3,7 +3,7 @@
  * "DAR-123", "implement task DAR-123", or a title, into the matching card.
  * Pure and dependency-free so it's unit-tested directly.
  */
-import type { Card } from "./schema/tasks.schema.model.ts"
+import type { Card } from "@byconvo/models/tasks"
 
 /** A task key embedded in a phrase, e.g. the "DAR-123" in "do task DAR-123". */
 const KEY_IN_TEXT = /[a-z][a-z0-9]*-\d+/i

@@ -16,8 +16,11 @@ import {
   type ChatsRepo,
 } from "../repository/chats.repository.ts"
 import { ChatRuntime } from "../runtime/chats.runtime.service.ts"
-import type { Chat, ChatModelCatalog } from "../schema/chats.schema.model.ts"
-import type { ChatImageUpload } from "../schema/chats.schema.requests.ts"
+import type {
+  Chat,
+  ChatModelCatalog,
+  ChatImageUpload,
+} from "@byconvo/models/chats"
 
 export interface ChatsServiceShape extends ChatsRepo {
   /** Start a turn with `text` and any attached `images`; a blank prompt with

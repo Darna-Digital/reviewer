@@ -7,8 +7,8 @@ import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { NotFound, StorageError } from "../../../layers/errors.ts"
 import { WorkspaceContext } from "../../../layers/workspace/workspace-context.ts"
-import { Card, Column, DEFAULT_COLUMNS } from "../schema/tasks.schema.model.ts"
-import type { Comment } from "../schema/tasks.schema.model.ts"
+import { Card, Column, DEFAULT_COLUMNS } from "@byconvo/models/tasks"
+import type { Comment } from "@byconvo/models/tasks"
 import { normalizePrefix } from "../tasks.ts"
 import type {
   CreateCardInput,

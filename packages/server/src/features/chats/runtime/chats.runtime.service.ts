@@ -7,7 +7,7 @@ import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import { getCurrentRepo } from "../../../layers/workspace/current-repo.ts"
-import type { ChatImageUpload } from "../schema/chats.schema.requests.ts"
+import type { ChatImageUpload } from "@byconvo/models/chats"
 import {
   broadcastChatSnapshot,
   isTurnRunning,

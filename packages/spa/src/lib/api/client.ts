@@ -1,13 +1,13 @@
 /**
- * Typesafe API client — the SPA's only door to the server. Built from the
- * server's OpenAPI document (see `pnpm gen:api` → `schema.d.ts`) with
- * `openapi-fetch` + `openapi-react-query`, exactly like the darna-stack
- * web-client. `api` exposes typed `useQuery` / `useMutation` / `queryOptions`
- * bound to TanStack Query; `fetchClient` is the raw typed fetch for loaders.
+ * Typesafe API client — the SPA's only door to the server. Typed by the
+ * `ApiPaths` contract from `@byconvo/models` with `openapi-fetch` +
+ * `openapi-react-query`, exactly like the darna-stack web-client. `api`
+ * exposes typed `useQuery` / `useMutation` / `queryOptions` bound to TanStack
+ * Query; `fetchClient` is the raw typed fetch for loaders.
  */
 import createFetchClient from "openapi-fetch"
 import createQueryClient from "openapi-react-query"
-import type { paths } from "./schema"
+import type { ApiPaths } from "@byconvo/models/api"
 
 type ByconvoWindow = Window & {
   byconvo?: {
@@ -24,7 +24,7 @@ const desktopApiBaseUrl =
  * Browser/dev stays same-origin through Vite's proxy. Packaged Electron loads
  * from file://, so the preload bridge supplies the local API server origin.
  */
-export const fetchClient = createFetchClient<paths>({
+export const fetchClient = createFetchClient<ApiPaths>({
   baseUrl: desktopApiBaseUrl ?? "",
 })
 

@@ -1,7 +1,7 @@
 /** In-memory comment store for tests. */
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
-import type { ReviewComment } from "../schema/comments.schema.model.ts"
+import type { ReviewComment } from "@byconvo/models/comments"
 import type { CommentsRepo } from "./comments.repository.ts"
 
 export const makeMemoryCommentsRepository = (

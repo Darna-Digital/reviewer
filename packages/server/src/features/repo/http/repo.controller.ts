@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../../../api.ts"
-import type { LogQuery } from "../schema/repo.schema.requests.ts"
+import type { LogQuery } from "@byconvo/models/repo"
 import { RepoService } from "../service/repo.service.ts"
 
 const ok = { ok: true } as const

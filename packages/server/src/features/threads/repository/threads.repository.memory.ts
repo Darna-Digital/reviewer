@@ -4,7 +4,7 @@ import * as Ref from "effect/Ref"
 import { NotFound } from "../../../layers/errors.ts"
 import { TerminalExec } from "../../../layers/terminal/terminal-exec.ts"
 import { agentCommand, agentDefaultTitle } from "../agents.ts"
-import type { Thread, ThreadEntry } from "../schema/threads.schema.model.ts"
+import type { Thread, ThreadEntry } from "@byconvo/models/threads"
 import type {
   CreateThreadInput,
   RenameThreadInput,

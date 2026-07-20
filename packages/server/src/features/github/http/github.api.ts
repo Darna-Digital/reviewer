@@ -1,14 +1,15 @@
 import * as Schema from "effect/Schema"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import { GitHubError } from "../../../layers/errors.ts"
-import { ReviewComment } from "../../comments/schema/comments.schema.model.ts"
-import { DiffText, PullRequestInfo } from "../schema/github.schema.model.ts"
+import { ReviewComment } from "@byconvo/models/comments"
 import {
+  DiffText,
+  PullRequestInfo,
   PrComment,
   PrReply,
   PullNumberParam,
   PullReplyParams,
-} from "../schema/github.schema.requests.ts"
+} from "@byconvo/models/github"
 
 export class GitHubApi extends HttpApiGroup.make("github")
   .add(

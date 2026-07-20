@@ -2,7 +2,7 @@
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
 import { NotFound } from "../../../layers/errors.ts"
-import type { Chat } from "../schema/chats.schema.model.ts"
+import type { Chat } from "@byconvo/models/chats"
 import { DEFAULT_CHAT_TITLE, summarizeChat } from "../store.ts"
 import type {
   ChatsRepo,

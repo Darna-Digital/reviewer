@@ -6,7 +6,7 @@ import type {
   NotFound,
   StorageError,
 } from "../../../layers/errors.ts"
-import type { Doc, DocSummary } from "../schema/docs.schema.model.ts"
+import type { Doc, DocSummary } from "@byconvo/models/docs"
 
 export type DocsFailure = NoRepoSelected | NotFound | StorageError
 

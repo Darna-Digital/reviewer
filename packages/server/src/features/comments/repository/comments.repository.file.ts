@@ -7,7 +7,7 @@ import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { StorageError } from "../../../layers/errors.ts"
 import { WorkspaceContext } from "../../../layers/workspace/workspace-context.ts"
-import { ReviewComment } from "../schema/comments.schema.model.ts"
+import { ReviewComment } from "@byconvo/models/comments"
 import type { CommentsRepo } from "./comments.repository.ts"
 
 const CommentsFile = Schema.Array(ReviewComment)

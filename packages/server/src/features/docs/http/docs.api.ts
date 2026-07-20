@@ -5,12 +5,14 @@ import {
   NotFound,
   StorageError,
 } from "../../../layers/errors.ts"
-import { Doc, DocSummary, Ok } from "../schema/docs.schema.model.ts"
 import {
+  Doc,
+  DocSummary,
+  Ok,
   DocIdParam,
   NewDoc,
   UpdateDoc,
-} from "../schema/docs.schema.requests.ts"
+} from "@byconvo/models/docs"
 
 const errors = [NoRepoSelected, NotFound, StorageError] as const
 

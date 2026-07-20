@@ -3,7 +3,7 @@ import { Effect } from "effect"
 import { describe, expect } from "vitest"
 import { ChatsMemory } from "../layer/chats.layer.memory.ts"
 import { CHAT_MODEL_CATALOG } from "../providers.ts"
-import type { Chat } from "../schema/chats.schema.model.ts"
+import type { Chat } from "@byconvo/models/chats"
 import { ChatsService } from "./chats.service.ts"
 
 const newChat = {

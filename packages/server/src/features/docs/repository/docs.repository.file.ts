@@ -16,7 +16,7 @@ import {
 } from "node:fs"
 import { NotFound, StorageError } from "../../../layers/errors.ts"
 import { WorkspaceContext } from "../../../layers/workspace/workspace-context.ts"
-import type { Doc } from "../schema/docs.schema.model.ts"
+import type { Doc } from "@byconvo/models/docs"
 import type { DocsRepo } from "./docs.repository.ts"
 
 const docsDir = (repoPath: string) => `${repoPath}/.byconvo/docs`

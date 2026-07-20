@@ -5,7 +5,7 @@ import {
   withAttachedImages,
   withHistory,
 } from "./providers.ts"
-import type { Chat, ChatMessage } from "./schema/chats.schema.model.ts"
+import type { Chat, ChatMessage } from "@byconvo/models/chats"
 
 const msg = (
   role: ChatMessage["role"],

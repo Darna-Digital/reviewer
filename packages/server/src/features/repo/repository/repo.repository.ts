@@ -12,8 +12,8 @@ import type {
   RemoteBranchInfo,
   RepoInfo,
   RepoStatus,
-} from "../schema/repo.schema.model.ts"
-import type { LogQuery } from "../schema/repo.schema.requests.ts"
+  LogQuery,
+} from "@byconvo/models/repo"
 
 export interface RepoRepo {
   readonly info: Effect.Effect<RepoInfo, GitFailure>

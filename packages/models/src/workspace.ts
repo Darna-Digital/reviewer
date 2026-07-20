@@ -46,3 +46,31 @@ export type FileContent = typeof FileContent.Type
 /** Generic acknowledgement for mutating endpoints that return no body. */
 export const Ok = Schema.Struct({ ok: Schema.Boolean })
 export type Ok = typeof Ok.Type
+
+export const SetWorkspace = Schema.Struct({
+  path: Schema.String,
+})
+export type SetWorkspace = typeof SetWorkspace.Type
+
+export const WriteFile = Schema.Struct({
+  path: Schema.String,
+  contents: Schema.String,
+})
+export type WriteFile = typeof WriteFile.Type
+
+export const RenameFile = Schema.Struct({
+  from: Schema.String,
+  to: Schema.String,
+})
+export type RenameFile = typeof RenameFile.Type
+
+/** `?path=` is optional for browse (defaults to home), required for file ops. */
+export const BrowseQuery = Schema.Struct({
+  path: Schema.optionalKey(Schema.String),
+})
+export type BrowseQuery = typeof BrowseQuery.Type
+
+export const PathQuery = Schema.Struct({
+  path: Schema.String,
+})
+export type PathQuery = typeof PathQuery.Type

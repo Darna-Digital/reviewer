@@ -1,7 +1,7 @@
 import { it } from "@effect/vitest"
 import { Effect } from "effect"
 import { describe, expect } from "vitest"
-import type { PullRequestInfo } from "../schema/github.schema.model.ts"
+import type { PullRequestInfo } from "@byconvo/models/github"
 import { GitHubMemory } from "../layer/github.layer.memory.ts"
 import { GitHubService } from "./github.service.ts"
 

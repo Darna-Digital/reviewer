@@ -10,14 +10,12 @@ import {
   FileContent,
   Ok,
   WorkspaceInfo,
-} from "../schema/workspace.schema.model.ts"
-import {
   BrowseQuery,
   PathQuery,
   RenameFile,
   SetWorkspace,
   WriteFile,
-} from "../schema/workspace.schema.requests.ts"
+} from "@byconvo/models/workspace"
 
 export class WorkspaceApi extends HttpApiGroup.make("workspace")
   .add(

@@ -10,8 +10,6 @@ import {
   Card,
   CommentResolution,
   Ok,
-} from "../schema/tasks.schema.model.ts"
-import {
   CardCommentParams,
   CardIdParam,
   ColumnIdParam,
@@ -23,7 +21,7 @@ import {
   TaskRefParam,
   UpdateCard,
   UpdateColumn,
-} from "../schema/tasks.schema.requests.ts"
+} from "@byconvo/models/tasks"
 
 const errors = [NoRepoSelected, NotFound, StorageError] as const
 

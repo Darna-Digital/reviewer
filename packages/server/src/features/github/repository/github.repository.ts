@@ -2,12 +2,12 @@
 import * as Context from "effect/Context"
 import type * as Effect from "effect/Effect"
 import type { GitHubError } from "../../../layers/errors.ts"
-import type { ReviewComment } from "../../comments/schema/comments.schema.model.ts"
-import type { PullRequestInfo } from "../schema/github.schema.model.ts"
+import type { ReviewComment } from "@byconvo/models/comments"
 import type {
+  PullRequestInfo,
   PrCommentInput,
   PrReplyInput,
-} from "../schema/github.schema.requests.ts"
+} from "@byconvo/models/github"
 
 export interface GitHubRepo {
   readonly pulls: Effect.Effect<ReadonlyArray<PullRequestInfo>, GitHubError>

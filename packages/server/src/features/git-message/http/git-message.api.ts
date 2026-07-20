@@ -5,8 +5,7 @@ import {
   NoRepoSelected,
   TerminalError,
 } from "../../../layers/errors.ts"
-import { GeneratedMessage } from "../schema/git-message.schema.model.ts"
-import { GenerateBody } from "../schema/git-message.schema.requests.ts"
+import { GeneratedMessage, GenerateBody } from "@byconvo/models/git-message"
 
 export class GitMessageApi extends HttpApiGroup.make("gitMessage").add(
   HttpApiEndpoint.post("generate", "/git-message/generate", {

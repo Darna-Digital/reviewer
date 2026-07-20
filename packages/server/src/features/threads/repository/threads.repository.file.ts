@@ -10,7 +10,7 @@ import { NotFound, StorageError } from "../../../layers/errors.ts"
 import { TerminalExec } from "../../../layers/terminal/terminal-exec.ts"
 import { WorkspaceContext } from "../../../layers/workspace/workspace-context.ts"
 import { agentCommand, agentDefaultTitle } from "../agents.ts"
-import { Thread, type ThreadEntry } from "../schema/threads.schema.model.ts"
+import { Thread, type ThreadEntry } from "@byconvo/models/threads"
 import type {
   CreateThreadInput,
   RenameThreadInput,

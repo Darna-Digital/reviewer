@@ -41,7 +41,7 @@ import {
   agentSessionArgs,
   type PtyProgram,
 } from "../../features/threads/agents.ts"
-import type { AgentKind } from "../../features/threads/schema/threads.schema.model.ts"
+import type { AgentKind } from "@byconvo/models/threads"
 import {
   CHAT_STREAM_PATH,
   startChatStream,

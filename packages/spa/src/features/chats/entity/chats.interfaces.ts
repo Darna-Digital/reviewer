@@ -7,14 +7,13 @@
 import type {
   Chat,
   ChatAccess,
-  ChatActivity,
   ChatEffort,
   ChatImageUpload,
-  ChatMessage,
   ChatMode,
   ChatProviderKind,
-  ChatTurn,
 } from "@/lib/api/types"
+
+export type { ChatWireEvent } from "@/lib/api/types"
 
 /** Images sent with a prompt (server type ChatImageUpload). */
 export type ChatImage = ChatImageUpload
@@ -27,27 +26,6 @@ export interface ChatSettings {
   readonly access: ChatAccess
   readonly mode: ChatMode
 }
-
-/**
- * Events pushed over the chat WebSocket after the initial `{snapshot}`.
- * Mirrors the server's wire protocol (features/chats/runtime/chat-runtime.ts);
- * the WS never appears in the OpenAPI schema, so the shape is declared here.
- */
-export type ChatWireEvent =
-  | { readonly type: "turn-started"; readonly chat: Chat }
-  | { readonly type: "message-appended"; readonly message: ChatMessage }
-  | {
-      readonly type: "delta"
-      readonly messageId: string
-      readonly text: string
-    }
-  | { readonly type: "activity"; readonly activity: ChatActivity }
-  | {
-      readonly type: "turn-completed"
-      readonly turn: ChatTurn
-      readonly messageId: string
-      readonly text: string
-    }
 
 export interface ChatsDependencies {
   data: Record<string, never>

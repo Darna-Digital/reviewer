@@ -9,12 +9,10 @@ import {
   DevCommand,
   DevCommandView,
   Ok,
-} from "../schema/local-dev.schema.model.ts"
-import {
   DevCommandIdParam,
   NewDevCommand,
   UpdateDevCommand,
-} from "../schema/local-dev.schema.requests.ts"
+} from "@byconvo/models/local-dev"
 
 const errors = [NoRepoSelected, NotFound, StorageError] as const
 

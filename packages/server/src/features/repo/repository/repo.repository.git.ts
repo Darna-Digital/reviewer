@@ -19,7 +19,7 @@ import type {
   MergeState,
   RemoteBranchInfo,
   RepoStatus,
-} from "../schema/repo.schema.model.ts"
+} from "@byconvo/models/repo"
 import type { RepoRepo } from "./repo.repository.ts"
 
 /** Map a porcelain v2 unmerged `XY` field to a conflict kind. */

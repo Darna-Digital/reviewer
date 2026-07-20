@@ -3,7 +3,7 @@ import { memoryLayer as terminalMemoryLayer } from "../../../layers/terminal/ter
 import { ThreadsRepository } from "../repository/threads.repository.ts"
 import { makeMemoryThreadsRepository } from "../repository/threads.repository.memory.ts"
 import { ThreadsService, make } from "../service/threads.service.ts"
-import type { Thread } from "../schema/threads.schema.model.ts"
+import type { Thread } from "@byconvo/models/threads"
 
 export const ThreadsMemory = (seed: ReadonlyArray<Thread> = []) =>
   Layer.effect(ThreadsService)(make).pipe(

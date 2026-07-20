@@ -15,7 +15,7 @@ import type {
   ChatMode,
   ChatProviderKind,
   ChatSummary,
-} from "../schema/chats.schema.model.ts"
+} from "@byconvo/models/chats"
 
 export interface CreateChatInput {
   readonly title: string

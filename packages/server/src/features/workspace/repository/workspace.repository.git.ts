@@ -23,7 +23,7 @@ import type {
   BrowsePayload,
   RepoEntry,
   WorkspaceInfo,
-} from "../schema/workspace.schema.model.ts"
+} from "@byconvo/models/workspace"
 import type { WorkspaceRepo } from "./workspace.repository.ts"
 
 const toStorageError = (error: PlatformError) =>

@@ -7,7 +7,7 @@ import type {
   NotFound,
   StorageError,
 } from "../../../layers/errors.ts"
-import type { DevCommand } from "../schema/local-dev.schema.model.ts"
+import type { DevCommand } from "@byconvo/models/local-dev"
 
 export interface CreateDevCommandInput {
   readonly name: string

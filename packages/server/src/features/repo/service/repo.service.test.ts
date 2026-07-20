@@ -2,8 +2,7 @@ import { it } from "@effect/vitest"
 import { Effect } from "effect"
 import { describe, expect } from "vitest"
 import { RepoMemory } from "../layer/repo.layer.memory.ts"
-import type { BranchInfo, CommitInfo } from "../schema/repo.schema.model.ts"
-import type { LogQuery } from "../schema/repo.schema.requests.ts"
+import type { BranchInfo, CommitInfo, LogQuery } from "@byconvo/models/repo"
 import { RepoService } from "./repo.service.ts"
 
 const baseQuery: LogQuery = {

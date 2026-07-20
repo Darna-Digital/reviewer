@@ -2,7 +2,7 @@
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
 import { NotFound } from "../../../layers/errors.ts"
-import type { Doc } from "../schema/docs.schema.model.ts"
+import type { Doc } from "@byconvo/models/docs"
 import type { DocsRepo } from "./docs.repository.ts"
 
 const NOW = "2026-01-01T00:00:00.000Z"

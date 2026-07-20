@@ -1,7 +1,7 @@
 /** In-memory GitHub repository for tests — no network. */
 import * as Effect from "effect/Effect"
-import type { ReviewComment } from "../../comments/schema/comments.schema.model.ts"
-import type { PullRequestInfo } from "../schema/github.schema.model.ts"
+import type { ReviewComment } from "@byconvo/models/comments"
+import type { PullRequestInfo } from "@byconvo/models/github"
 import type { GitHubRepo } from "./github.repository.ts"
 
 export interface MemoryGitHubSeed {

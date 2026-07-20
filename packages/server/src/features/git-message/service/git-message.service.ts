@@ -12,7 +12,7 @@ import { TerminalError } from "../../../layers/errors.ts"
 import type { GitFailure } from "../../../layers/git/git-exec.ts"
 import { GitExec } from "../../../layers/git/git-exec.ts"
 import { TerminalExec } from "../../../layers/terminal/terminal-exec.ts"
-import type { CommitAgent } from "../schema/git-message.schema.requests.ts"
+import type { CommitAgent } from "@byconvo/models/git-message"
 
 /** Cap the diff so the prompt stays small and the call returns quickly. */
 const MAX_DIFF_CHARS = 16_000

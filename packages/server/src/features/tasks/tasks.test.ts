@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { Card } from "./schema/tasks.schema.model.ts"
+import type { Card } from "@byconvo/models/tasks"
 import { normalizePrefix, resolveTask } from "./tasks.ts"
 
 const card = (over: Partial<Card>): Card => ({

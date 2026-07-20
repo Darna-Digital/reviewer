@@ -1,5 +1,9 @@
-/** Request payloads for the git-message endpoints. */
+/** git-message domain schemas — the AI-drafted commit message. */
 import * as Schema from "effect/Schema"
+
+/** An AI-generated commit message (from a local agent CLI). */
+export const GeneratedMessage = Schema.Struct({ message: Schema.String })
+export type GeneratedMessage = typeof GeneratedMessage.Type
 
 /**
  * Which locally installed agent CLI drafts the message. Mirrors the threads
@@ -13,3 +17,4 @@ export const GenerateBody = Schema.Struct({
   paths: Schema.optionalKey(Schema.Array(Schema.String)),
   agent: Schema.optionalKey(CommitAgent),
 })
+export type GenerateBody = typeof GenerateBody.Type

@@ -2,7 +2,7 @@
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
 import { NoRepoSelected, StorageError } from "../../../layers/errors.ts"
-import type { WorkspaceInfo } from "../schema/workspace.schema.model.ts"
+import type { WorkspaceInfo } from "@byconvo/models/workspace"
 import type { WorkspaceRepo } from "./workspace.repository.ts"
 
 export interface MemoryWorkspaceSeed {

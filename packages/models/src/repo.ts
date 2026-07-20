@@ -1,6 +1,6 @@
 /**
  * Git domain schemas — repo info, file status, branches, commits, the
- * status-bar snapshot. Effect Schema port of the old `core/domain.ts`.
+ * status-bar snapshot.
  */
 import * as Schema from "effect/Schema"
 
@@ -24,6 +24,7 @@ export const GitHubRemote = Schema.Struct({
   owner: Schema.String,
   repo: Schema.String,
 })
+export type GitHubRemote = typeof GitHubRemote.Type
 
 export const RepoInfo = Schema.Struct({
   root: Schema.String,
@@ -111,12 +112,15 @@ export type RepoStatus = typeof RepoStatus.Type
 
 /** Output of a porcelain command (push/pull/fetch/merge/rebase). */
 export const CommandOutput = Schema.Struct({ output: Schema.String })
+export type CommandOutput = typeof CommandOutput.Type
 
 /** Result of a commit — the new short sha. */
 export const CommitResult = Schema.Struct({ sha: Schema.String })
+export type CommitResult = typeof CommitResult.Type
 
 /** Raw unified diff text. */
 export const DiffText = Schema.String
+export type DiffText = typeof DiffText.Type
 
 export const Ok = Schema.Struct({ ok: Schema.Boolean })
 
@@ -138,18 +142,21 @@ export const ConflictedFile = Schema.Struct({
 })
 export type ConflictedFile = typeof ConflictedFile.Type
 
+export const MergeOperation = Schema.Literals([
+  "merge",
+  "rebase",
+  "cherry-pick",
+  "revert",
+  "none",
+])
+export type MergeOperation = typeof MergeOperation.Type
+
 /**
  * The in-progress merge/rebase/etc. operation, with the files still conflicted.
  * `operation` is `"none"` when the worktree is not mid-operation.
  */
 export const MergeState = Schema.Struct({
-  operation: Schema.Literals([
-    "merge",
-    "rebase",
-    "cherry-pick",
-    "revert",
-    "none",
-  ]),
+  operation: MergeOperation,
   /** The ref/commit being brought in (the "theirs" side), if known. */
   incoming: Schema.NullOr(Schema.String),
   /** The branch the operation is replaying onto (the "ours" side), if known. */
@@ -166,3 +173,104 @@ export const ConflictBlobs = Schema.Struct({
   theirs: Schema.String,
 })
 export type ConflictBlobs = typeof ConflictBlobs.Type
+
+/** `git log` filters as they arrive on the query string (all optional). */
+export const LogQueryParams = Schema.Struct({
+  ref: Schema.optionalKey(Schema.String),
+  limit: Schema.optionalKey(Schema.String),
+  author: Schema.optionalKey(Schema.String),
+  grep: Schema.optionalKey(Schema.String),
+  regex: Schema.optionalKey(Schema.String),
+  case: Schema.optionalKey(Schema.String),
+  after: Schema.optionalKey(Schema.String),
+  before: Schema.optionalKey(Schema.String),
+  path: Schema.optionalKey(Schema.String),
+})
+export type LogQueryParams = typeof LogQueryParams.Type
+
+/** Selects which diff to render: a commit, a range, or (neither) the worktree. */
+export const DiffQuery = Schema.Struct({
+  commit: Schema.optionalKey(Schema.String),
+  base: Schema.optionalKey(Schema.String),
+  head: Schema.optionalKey(Schema.String),
+})
+export type DiffQuery = typeof DiffQuery.Type
+
+export const CommitParam = Schema.Struct({ sha: Schema.String })
+
+export const Checkout = Schema.Struct({ branch: Schema.String })
+export type Checkout = typeof Checkout.Type
+
+export const CommitBody = Schema.Struct({
+  message: Schema.String,
+  paths: Schema.optionalKey(Schema.Array(Schema.String)),
+})
+export type CommitBody = typeof CommitBody.Type
+
+/** Discard the worktree changes for the given paths (revert them to HEAD). */
+export const Discard = Schema.Struct({
+  paths: Schema.Array(Schema.String),
+})
+export type Discard = typeof Discard.Type
+
+/**
+ * Discard a single hunk of a file's worktree diff. `hunkIndex` is zero-based in
+ * the order the hunks appear in `git diff HEAD -- <path>`, which matches the
+ * order the client renders them.
+ */
+export const DiscardHunk = Schema.Struct({
+  path: Schema.String,
+  hunkIndex: Schema.Int,
+})
+export type DiscardHunk = typeof DiscardHunk.Type
+
+export const Merge = Schema.Struct({ branch: Schema.String })
+export type Merge = typeof Merge.Type
+
+export const Rebase = Schema.Struct({ onto: Schema.String })
+export type Rebase = typeof Rebase.Type
+
+/** Selects a conflicted file (query param for fetching its index stages). */
+export const ConflictParam = Schema.Struct({ path: Schema.String })
+export type ConflictParam = typeof ConflictParam.Type
+
+/**
+ * Resolve a conflicted file. `ours`/`theirs` check out that side; `content`
+ * stages whatever the client has already written to disk (see PUT /api/file).
+ */
+export const ResolveConflict = Schema.Struct({
+  path: Schema.String,
+  resolution: Schema.Literals(["ours", "theirs", "content"]),
+})
+export type ResolveConflict = typeof ResolveConflict.Type
+
+export const CreateBranch = Schema.Struct({
+  name: Schema.String,
+  startPoint: Schema.optionalKey(Schema.String),
+})
+export type CreateBranch = typeof CreateBranch.Type
+
+export const RenameBranch = Schema.Struct({
+  from: Schema.String,
+  to: Schema.String,
+})
+export type RenameBranch = typeof RenameBranch.Type
+
+export const DeleteBranch = Schema.Struct({
+  name: Schema.String,
+  force: Schema.optionalKey(Schema.Boolean),
+})
+export type DeleteBranch = typeof DeleteBranch.Type
+
+/** The structured log query the repository consumes (built from LogQueryParams). */
+export interface LogQuery {
+  readonly ref: string
+  readonly limit: number
+  readonly author: string | null
+  readonly grep: string | null
+  readonly regex: boolean
+  readonly caseSensitive: boolean
+  readonly after: string | null
+  readonly before: string | null
+  readonly path: string | null
+}

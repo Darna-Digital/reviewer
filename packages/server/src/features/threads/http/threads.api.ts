@@ -11,13 +11,11 @@ import {
   Thread,
   ThreadEntry,
   ThreadSummary,
-} from "../schema/threads.schema.model.ts"
-import {
   NewThread,
   RenameThread,
   RunCommand,
   ThreadIdParam,
-} from "../schema/threads.schema.requests.ts"
+} from "@byconvo/models/threads"
 
 const errors = [NoRepoSelected, NotFound, StorageError, TerminalError] as const
 

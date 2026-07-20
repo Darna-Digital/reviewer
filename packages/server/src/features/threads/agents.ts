@@ -4,7 +4,7 @@
  * borrowed from the developer's own install (like GitExec/ClaudeExec) and run in
  * one-shot/non-interactive mode so their output can be captured as a thread entry.
  */
-import type { AgentKind } from "./schema/threads.schema.model.ts"
+import type { AgentKind } from "@byconvo/models/threads"
 
 /** Every agent kind, for runtime validation outside the schema layer. */
 export const AGENT_KINDS = [

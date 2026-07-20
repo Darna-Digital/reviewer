@@ -6,7 +6,7 @@
 import * as Effect from "effect/Effect"
 import { NotFound, StorageError } from "../../../layers/errors.ts"
 import { WorkspaceContext } from "../../../layers/workspace/workspace-context.ts"
-import type { Chat } from "../schema/chats.schema.model.ts"
+import type { Chat } from "@byconvo/models/chats"
 import {
   DEFAULT_CHAT_TITLE,
   nextChatId,

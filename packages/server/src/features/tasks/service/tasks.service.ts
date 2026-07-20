@@ -6,7 +6,7 @@ import {
   type TasksFailure,
   type TasksRepo,
 } from "../repository/tasks.repository.ts"
-import type { Card, CommentResolution } from "../schema/tasks.schema.model.ts"
+import type { Card, CommentResolution } from "@byconvo/models/tasks"
 import { resolveTask } from "../tasks.ts"
 
 export interface TasksServiceShape extends TasksRepo {

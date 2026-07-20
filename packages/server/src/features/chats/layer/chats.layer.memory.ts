@@ -6,7 +6,7 @@ import {
   type MemoryChatRuntime,
 } from "../runtime/chats.runtime.service.ts"
 import { ChatsService, make } from "../service/chats.service.ts"
-import type { Chat } from "../schema/chats.schema.model.ts"
+import type { Chat } from "@byconvo/models/chats"
 
 /** The memory service layer plus the runtime recorder, for assertions. */
 export const ChatsMemory = (seed: ReadonlyArray<Chat> = []) => {

@@ -70,7 +70,7 @@ export function AttachmentChip({
         onClick={() => setOpen(true)}
         aria-label={`View ${attachment.name}`}
         title={attachment.name}
-        className="size-full outline-none transition hover:brightness-95 focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:ring-inset"
+        className="size-full transition outline-none hover:brightness-95 focus-visible:ring-3 focus-visible:ring-ring/30 focus-visible:ring-inset"
       >
         <img
           src={attachment.thumbnail}

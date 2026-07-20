@@ -12,7 +12,7 @@ import type {
   Thread,
   ThreadEntry,
   ThreadSummary,
-} from "../schema/threads.schema.model.ts"
+} from "@byconvo/models/threads"
 
 export interface CreateThreadInput {
   readonly title: string

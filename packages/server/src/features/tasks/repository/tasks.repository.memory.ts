@@ -2,11 +2,7 @@
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
 import { NotFound, StorageError } from "../../../layers/errors.ts"
-import {
-  type Card,
-  type Column,
-  DEFAULT_COLUMNS,
-} from "../schema/tasks.schema.model.ts"
+import { type Card, type Column, DEFAULT_COLUMNS } from "@byconvo/models/tasks"
 import { normalizePrefix } from "../tasks.ts"
 import type {
   CreateCardInput,

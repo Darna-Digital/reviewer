@@ -22,3 +22,15 @@ export const Doc = Schema.Struct({
 export type Doc = typeof Doc.Type
 
 export const Ok = Schema.Struct({ ok: Schema.Boolean })
+
+export const NewDoc = Schema.Struct({
+  title: Schema.String,
+})
+export type NewDoc = typeof NewDoc.Type
+
+export const UpdateDoc = Schema.Struct({
+  content: Schema.String,
+})
+export type UpdateDoc = typeof UpdateDoc.Type
+
+export const DocIdParam = Schema.Struct({ id: Schema.String })

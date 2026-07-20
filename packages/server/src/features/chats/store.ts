@@ -16,7 +16,7 @@ import {
   type ChatMessage,
   type ChatSummary,
   type ChatTurn,
-} from "./schema/chats.schema.model.ts"
+} from "@byconvo/models/chats"
 
 const ChatsFile = Schema.Array(Chat)
 const decodeChatsFile = Schema.decodeUnknownSync(ChatsFile)

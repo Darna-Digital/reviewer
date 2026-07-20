@@ -10,7 +10,7 @@ import type {
   BrowsePayload,
   FileContent,
   WorkspaceInfo,
-} from "../schema/workspace.schema.model.ts"
+} from "@byconvo/models/workspace"
 
 export interface WorkspaceRepo {
   readonly info: Effect.Effect<WorkspaceInfo, StorageError>

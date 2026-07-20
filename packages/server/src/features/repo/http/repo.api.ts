@@ -16,8 +16,6 @@ import {
   RemoteBranchInfo,
   RepoInfo,
   RepoStatus,
-} from "../schema/repo.schema.model.ts"
-import {
   Checkout,
   CommitBody,
   CommitParam,
@@ -32,7 +30,7 @@ import {
   Rebase,
   RenameBranch,
   ResolveConflict,
-} from "../schema/repo.schema.requests.ts"
+} from "@byconvo/models/repo"
 
 const gitError = [GitError, NoRepoSelected] as const
 

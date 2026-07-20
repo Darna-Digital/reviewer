@@ -6,7 +6,7 @@ import type {
   NotFound,
   StorageError,
 } from "../../../layers/errors.ts"
-import type { Board, Card, TasksColumn } from "../schema/tasks.schema.model.ts"
+import type { Board, Card, TasksColumn } from "@byconvo/models/tasks"
 
 export interface CreateCardInput {
   readonly title: string

@@ -2,10 +2,7 @@
 import * as Context from "effect/Context"
 import type * as Effect from "effect/Effect"
 import type { NoRepoSelected, StorageError } from "../../../layers/errors.ts"
-import type {
-  CommentSide,
-  ReviewComment,
-} from "../schema/comments.schema.model.ts"
+import type { CommentSide, ReviewComment } from "@byconvo/models/comments"
 
 export interface AddCommentInput {
   readonly filePath: string

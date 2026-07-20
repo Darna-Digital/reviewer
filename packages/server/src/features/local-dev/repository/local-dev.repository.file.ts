@@ -8,7 +8,7 @@ import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { NotFound, StorageError } from "../../../layers/errors.ts"
 import { WorkspaceContext } from "../../../layers/workspace/workspace-context.ts"
-import { DevCommand } from "../schema/local-dev.schema.model.ts"
+import { DevCommand } from "@byconvo/models/local-dev"
 import type {
   CreateDevCommandInput,
   DevCommandsRepo,

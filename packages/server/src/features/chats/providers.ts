@@ -14,7 +14,7 @@ import type {
   ChatMessage,
   ChatModelCatalog,
   ChatProviderKind,
-} from "./schema/chats.schema.model.ts"
+} from "@byconvo/models/chats"
 
 export const CHAT_PROVIDER_KINDS = [
   "claude",

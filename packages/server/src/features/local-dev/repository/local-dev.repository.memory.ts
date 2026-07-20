@@ -2,7 +2,7 @@
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
 import { NotFound } from "../../../layers/errors.ts"
-import type { DevCommand } from "../schema/local-dev.schema.model.ts"
+import type { DevCommand } from "@byconvo/models/local-dev"
 import type {
   CreateDevCommandInput,
   DevCommandsRepo,

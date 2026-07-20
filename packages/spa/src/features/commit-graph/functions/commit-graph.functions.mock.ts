@@ -16,13 +16,12 @@ export const createCommitGraphDependenciesMock = (
 export const fakeCommit = (
   sha: string,
   parents: ReadonlyArray<string> = []
-): CommitInfo =>
-  ({
-    sha,
-    shortSha: sha.slice(0, 7),
-    author: "tester",
-    authoredAt: "",
-    subject: sha,
-    refs: [],
-    parents,
-  }) as unknown as CommitInfo
+): CommitInfo => ({
+  sha,
+  shortSha: sha.slice(0, 7),
+  author: "tester",
+  authoredAt: "",
+  subject: sha,
+  refs: [],
+  parents,
+})
