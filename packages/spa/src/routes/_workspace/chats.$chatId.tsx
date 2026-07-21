@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { ChatView } from "@/components/chats/ChatView"
+import { ChatView } from "@/interactions/chats/components/chat-view"
 
 export const Route = createFileRoute("/_workspace/chats/$chatId")({
   component: ChatRoute,

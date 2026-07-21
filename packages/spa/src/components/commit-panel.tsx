@@ -1,0 +1,277 @@
+import { IconLoader2, IconSparkles } from "@tabler/icons-react"
+import { useMemo, useState } from "react"
+import { ResizeHandle } from "@/components/layout/resize-handle"
+import { agentIcon } from "@/interactions/threads/components/agent-icons"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents"
+import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo"
+import { setUiPrefs, useUiPrefs, type CommitAgent } from "@/lib/ui-prefs"
+import { cn } from "@/lib/utils"
+
+/** Agents that can draft a message — every kind except the plain terminal. */
+const COMMIT_AGENTS = AGENTS.filter((a) => a.kind !== "terminal")
+
+interface CommitPanelProps {
+  changes: ReadonlyArray<GitStatusEntry>
+  busy: boolean
+  onCommit: (
+    message: string,
+    paths: ReadonlyArray<string>,
+    andPush: boolean
+  ) => Promise<unknown>
+  /** Draft a commit message for the chosen paths with the chosen agent CLI. */
+  onGenerate?: (
+    paths: ReadonlyArray<string>,
+    agent: CommitAgent
+  ) => Promise<string | null>
+}
+
+const STATUS_COLOR: Record<GitFileStatus, string> = {
+  added: "text-emerald-600 dark:text-emerald-400",
+  modified: "text-amber-600 dark:text-amber-400",
+  deleted: "text-destructive",
+  renamed: "text-violet-600 dark:text-violet-400",
+  untracked: "text-sky-600 dark:text-sky-400",
+  ignored: "text-muted-foreground",
+}
+
+const STATUS_LETTER: Record<GitFileStatus, string> = {
+  added: "A",
+  modified: "M",
+  deleted: "D",
+  renamed: "R",
+  untracked: "U",
+  ignored: "I",
+}
+
+export function CommitPanel({
+  changes,
+  busy,
+  onCommit,
+  onGenerate,
+}: CommitPanelProps) {
+  const { commitFilesHeight, commitMessageHeight, commitAgent } = useUiPrefs()
+  // Live heights for smooth dragging; committed back to prefs on release.
+  const [filesHeight, setFilesHeight] = useState(commitFilesHeight)
+  const [messageHeight, setMessageHeight] = useState(commitMessageHeight)
+  const [message, setMessage] = useState("")
+  const [generating, setGenerating] = useState(false)
+  // Which action is in flight, so its button can show a spinner.
+  const [pending, setPending] = useState<"commit" | "push" | null>(null)
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set(changes.map((c) => c.path))
+  )
+
+  // Keep the selection in sync as the change set shifts.
+  const paths = useMemo(() => changes.map((c) => c.path).join("\n"), [changes])
+  useMemo(() => {
+    setSelected((prev) => {
+      const next = new Set<string>()
+      for (const c of changes) if (prev.has(c.path)) next.add(c.path)
+      // Newly appeared files default to selected.
+      for (const c of changes)
+        if (!prev.has(c.path) && prev.size === 0) next.add(c.path)
+      return next.size === 0 && changes.length > 0
+        ? new Set(changes.map((c) => c.path))
+        : next
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paths])
+
+  const toggle = (path: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(path)) next.delete(path)
+      else next.add(path)
+      return next
+    })
+
+  const chosen = changes.filter((c) => selected.has(c.path)).map((c) => c.path)
+  const canCommit =
+    message.trim().length > 0 &&
+    chosen.length > 0 &&
+    !busy &&
+    !generating &&
+    pending === null
+  const canGenerate =
+    onGenerate !== undefined &&
+    chosen.length > 0 &&
+    !generating &&
+    !busy &&
+    pending === null
+
+  const commit = async (andPush: boolean) => {
+    if (!canCommit) return
+    setPending(andPush ? "push" : "commit")
+    try {
+      const ok = await onCommit(message.trim(), chosen, andPush)
+      if (ok !== false) setMessage("")
+    } finally {
+      setPending(null)
+    }
+  }
+
+  const generate = async () => {
+    if (!canGenerate || onGenerate === undefined) return
+    setGenerating(true)
+    try {
+      const generated = await onGenerate(chosen, commitAgent)
+      if (generated !== null && generated.length > 0) setMessage(generated)
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  const AgentGlyph = agentIcon(commitAgent)
+
+  return (
+    <div className="flex shrink-0 flex-col border-t">
+      {/* Drag the top edge to grow/shrink the changed-files list. The handle
+          straddles the panel's top border (negative margin), so dragging up
+          expands the list into the tree above it. */}
+      <ResizeHandle
+        orientation="row"
+        value={filesHeight}
+        min={80}
+        max={() => Math.max(120, window.innerHeight - 320)}
+        direction={-1}
+        onResize={setFilesHeight}
+        onResizeEnd={(h) => setUiPrefs({ commitFilesHeight: h })}
+        label="Resize changed files"
+      />
+      <div
+        className="scroll-thin overflow-y-auto px-3 pt-2"
+        style={{ height: filesHeight }}
+      >
+        {changes.map((c) => (
+          <label
+            key={c.path}
+            className="flex cursor-pointer items-center gap-2 rounded-sm px-1 py-0.5 text-xs hover:bg-muted"
+          >
+            <Checkbox
+              checked={selected.has(c.path)}
+              onCheckedChange={() => toggle(c.path)}
+              className="size-3.5"
+            />
+            <span
+              className={cn(
+                "w-3 font-mono font-medium",
+                STATUS_COLOR[c.status]
+              )}
+            >
+              {STATUS_LETTER[c.status]}
+            </span>
+            <span className="truncate">{c.path}</span>
+          </label>
+        ))}
+      </div>
+      {/* Drag the message box's top border to grow/shrink the composer. */}
+      <ResizeHandle
+        orientation="row"
+        value={messageHeight}
+        min={48}
+        max={() => Math.max(80, window.innerHeight - 360)}
+        direction={-1}
+        onResize={setMessageHeight}
+        onResizeEnd={(h) => setUiPrefs({ commitMessageHeight: h })}
+        label="Resize commit message"
+      />
+      {/* pb-2.5 vertically centres the commit button box on the rail's bottom
+          icon (its hover box, not the glyph): the rail icon button is 8px off
+          the viewport bottom and taller than our sm button, so matching its
+          centre -- not its bottom edge -- is what visually lines them up. */}
+      <div className="flex flex-col gap-2 border-t px-3 pt-3 pb-2.5">
+        <div className="relative">
+          <Textarea
+            value={message}
+            placeholder="Commit message..."
+            wrap="off"
+            className="resize-none pr-40 text-sm"
+            style={{ height: messageHeight }}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter")
+                void commit(false)
+            }}
+          />
+          {onGenerate !== undefined && (
+            <div className="absolute right-1.5 bottom-1.5 flex items-center gap-1">
+              {/* Pick which local agent CLI drafts the message. */}
+              <Select
+                value={commitAgent}
+                onValueChange={(v) => v && setUiPrefs({ commitAgent: v })}
+              >
+                <SelectTrigger
+                  size="sm"
+                  className="h-6 w-auto gap-1 rounded-md border-0 bg-transparent px-1.5 text-xs text-muted-foreground shadow-none hover:bg-muted"
+                  aria-label="Commit message agent"
+                  title={`Draft with ${agentLabel(commitAgent)}`}
+                >
+                  <AgentGlyph className="size-3.5 shrink-0" />
+                </SelectTrigger>
+                <SelectContent align="end">
+                  {COMMIT_AGENTS.map((a) => {
+                    const Icon = agentIcon(a.kind)
+                    return (
+                      <SelectItem key={a.kind} value={a.kind}>
+                        <Icon className="size-4 shrink-0 text-muted-foreground" />
+                        {a.label}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-6 gap-1 px-2 text-xs text-muted-foreground"
+                disabled={!canGenerate}
+                title={`Generate a commit message with ${agentLabel(commitAgent)}`}
+                onClick={() => void generate()}
+              >
+                {generating ? (
+                  <IconLoader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <IconSparkles className="size-3.5" />
+                )}
+                {generating ? "Generating..." : "Generate"}
+              </Button>
+            </div>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            disabled={!canCommit}
+            onClick={() => void commit(false)}
+          >
+            {pending === "commit" && (
+              <IconLoader2 className="size-4 animate-spin" />
+            )}
+            Commit
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={!canCommit}
+            onClick={() => void commit(true)}
+          >
+            {pending === "push" && (
+              <IconLoader2 className="size-4 animate-spin" />
+            )}
+            Commit & push
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}

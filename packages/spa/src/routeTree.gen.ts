@@ -9,29 +9,29 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
-import { Route as WorkspaceThreadsRouteImport } from './routes/_workspace/threads'
-import { Route as WorkspaceTasksRouteImport } from './routes/_workspace/tasks'
-import { Route as WorkspaceLocalDevRouteImport } from './routes/_workspace/local-dev'
-import { Route as WorkspaceDocsRouteImport } from './routes/_workspace/docs'
-import { Route as WorkspaceChatsRouteImport } from './routes/_workspace/chats'
 import { Route as AppCommitRouteImport } from './routes/_app/commit'
-import { Route as WorkspaceChatsIndexRouteImport } from './routes/_workspace/chats.index'
-import { Route as AppReviewIndexRouteImport } from './routes/_app/review/index'
+import { Route as WorkspaceChatsRouteImport } from './routes/_workspace/chats'
+import { Route as WorkspaceDocsRouteImport } from './routes/_workspace/docs'
+import { Route as WorkspaceLocalDevRouteImport } from './routes/_workspace/local-dev'
+import { Route as WorkspaceTasksRouteImport } from './routes/_workspace/tasks'
+import { Route as WorkspaceThreadsRouteImport } from './routes/_workspace/threads'
 import { Route as AppBrowseIndexRouteImport } from './routes/_app/browse/index'
-import { Route as WorkspaceChatsChatIdRouteImport } from './routes/_workspace/chats.$chatId'
-import { Route as AppReviewPullRouteImport } from './routes/_app/review/$pull'
 import { Route as AppBrowseRangeRouteImport } from './routes/_app/browse/range'
+import { Route as AppReviewIndexRouteImport } from './routes/_app/review/index'
+import { Route as AppReviewPullRouteImport } from './routes/_app/review/$pull'
+import { Route as WorkspaceChatsIndexRouteImport } from './routes/_workspace/chats.index'
+import { Route as WorkspaceChatsChatIdRouteImport } from './routes/_workspace/chats.$chatId'
 import { Route as AppBrowseCommitShaRouteImport } from './routes/_app/browse/commit.$sha'
 
-const WorkspaceRoute = WorkspaceRouteImport.update({
-  id: '/_workspace',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/_workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -39,19 +39,14 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
-const WorkspaceThreadsRoute = WorkspaceThreadsRouteImport.update({
-  id: '/threads',
-  path: '/threads',
-  getParentRoute: () => WorkspaceRoute,
+const AppCommitRoute = AppCommitRouteImport.update({
+  id: '/commit',
+  path: '/commit',
+  getParentRoute: () => AppRoute,
 } as any)
-const WorkspaceTasksRoute = WorkspaceTasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceLocalDevRoute = WorkspaceLocalDevRouteImport.update({
-  id: '/local-dev',
-  path: '/local-dev',
+const WorkspaceChatsRoute = WorkspaceChatsRouteImport.update({
+  id: '/chats',
+  path: '/chats',
   getParentRoute: () => WorkspaceRoute,
 } as any)
 const WorkspaceDocsRoute = WorkspaceDocsRouteImport.update({
@@ -59,14 +54,39 @@ const WorkspaceDocsRoute = WorkspaceDocsRouteImport.update({
   path: '/docs',
   getParentRoute: () => WorkspaceRoute,
 } as any)
-const WorkspaceChatsRoute = WorkspaceChatsRouteImport.update({
-  id: '/chats',
-  path: '/chats',
+const WorkspaceLocalDevRoute = WorkspaceLocalDevRouteImport.update({
+  id: '/local-dev',
+  path: '/local-dev',
   getParentRoute: () => WorkspaceRoute,
 } as any)
-const AppCommitRoute = AppCommitRouteImport.update({
-  id: '/commit',
-  path: '/commit',
+const WorkspaceTasksRoute = WorkspaceTasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceThreadsRoute = WorkspaceThreadsRouteImport.update({
+  id: '/threads',
+  path: '/threads',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const AppBrowseIndexRoute = AppBrowseIndexRouteImport.update({
+  id: '/browse/',
+  path: '/browse/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBrowseRangeRoute = AppBrowseRangeRouteImport.update({
+  id: '/browse/range',
+  path: '/browse/range',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReviewIndexRoute = AppReviewIndexRouteImport.update({
+  id: '/review/',
+  path: '/review/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReviewPullRoute = AppReviewPullRouteImport.update({
+  id: '/review/$pull',
+  path: '/review/$pull',
   getParentRoute: () => AppRoute,
 } as any)
 const WorkspaceChatsIndexRoute = WorkspaceChatsIndexRouteImport.update({
@@ -74,30 +94,10 @@ const WorkspaceChatsIndexRoute = WorkspaceChatsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => WorkspaceChatsRoute,
 } as any)
-const AppReviewIndexRoute = AppReviewIndexRouteImport.update({
-  id: '/review/',
-  path: '/review/',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppBrowseIndexRoute = AppBrowseIndexRouteImport.update({
-  id: '/browse/',
-  path: '/browse/',
-  getParentRoute: () => AppRoute,
-} as any)
 const WorkspaceChatsChatIdRoute = WorkspaceChatsChatIdRouteImport.update({
   id: '/$chatId',
   path: '/$chatId',
   getParentRoute: () => WorkspaceChatsRoute,
-} as any)
-const AppReviewPullRoute = AppReviewPullRouteImport.update({
-  id: '/review/$pull',
-  path: '/review/$pull',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppBrowseRangeRoute = AppBrowseRangeRouteImport.update({
-  id: '/browse/range',
-  path: '/browse/range',
-  getParentRoute: () => AppRoute,
 } as any)
 const AppBrowseCommitShaRoute = AppBrowseCommitShaRouteImport.update({
   id: '/browse/commit/$sha',
@@ -214,18 +214,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/_workspace': {
-      id: '/_workspace'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof WorkspaceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_app': {
       id: '/_app'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_workspace': {
+      id: '/_workspace'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof WorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -235,25 +235,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_workspace/threads': {
-      id: '/_workspace/threads'
-      path: '/threads'
-      fullPath: '/threads'
-      preLoaderRoute: typeof WorkspaceThreadsRouteImport
-      parentRoute: typeof WorkspaceRoute
+    '/_app/commit': {
+      id: '/_app/commit'
+      path: '/commit'
+      fullPath: '/commit'
+      preLoaderRoute: typeof AppCommitRouteImport
+      parentRoute: typeof AppRoute
     }
-    '/_workspace/tasks': {
-      id: '/_workspace/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof WorkspaceTasksRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/_workspace/local-dev': {
-      id: '/_workspace/local-dev'
-      path: '/local-dev'
-      fullPath: '/local-dev'
-      preLoaderRoute: typeof WorkspaceLocalDevRouteImport
+    '/_workspace/chats': {
+      id: '/_workspace/chats'
+      path: '/chats'
+      fullPath: '/chats'
+      preLoaderRoute: typeof WorkspaceChatsRouteImport
       parentRoute: typeof WorkspaceRoute
     }
     '/_workspace/docs': {
@@ -263,18 +256,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceDocsRouteImport
       parentRoute: typeof WorkspaceRoute
     }
-    '/_workspace/chats': {
-      id: '/_workspace/chats'
-      path: '/chats'
-      fullPath: '/chats'
-      preLoaderRoute: typeof WorkspaceChatsRouteImport
+    '/_workspace/local-dev': {
+      id: '/_workspace/local-dev'
+      path: '/local-dev'
+      fullPath: '/local-dev'
+      preLoaderRoute: typeof WorkspaceLocalDevRouteImport
       parentRoute: typeof WorkspaceRoute
     }
-    '/_app/commit': {
-      id: '/_app/commit'
-      path: '/commit'
-      fullPath: '/commit'
-      preLoaderRoute: typeof AppCommitRouteImport
+    '/_workspace/tasks': {
+      id: '/_workspace/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof WorkspaceTasksRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/threads': {
+      id: '/_workspace/threads'
+      path: '/threads'
+      fullPath: '/threads'
+      preLoaderRoute: typeof WorkspaceThreadsRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_app/browse/': {
+      id: '/_app/browse/'
+      path: '/browse'
+      fullPath: '/browse/'
+      preLoaderRoute: typeof AppBrowseIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/browse/range': {
+      id: '/_app/browse/range'
+      path: '/browse/range'
+      fullPath: '/browse/range'
+      preLoaderRoute: typeof AppBrowseRangeRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/review/': {
+      id: '/_app/review/'
+      path: '/review'
+      fullPath: '/review/'
+      preLoaderRoute: typeof AppReviewIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/review/$pull': {
+      id: '/_app/review/$pull'
+      path: '/review/$pull'
+      fullPath: '/review/$pull'
+      preLoaderRoute: typeof AppReviewPullRouteImport
       parentRoute: typeof AppRoute
     }
     '/_workspace/chats/': {
@@ -284,40 +312,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceChatsIndexRouteImport
       parentRoute: typeof WorkspaceChatsRoute
     }
-    '/_app/review/': {
-      id: '/_app/review/'
-      path: '/review'
-      fullPath: '/review/'
-      preLoaderRoute: typeof AppReviewIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/browse/': {
-      id: '/_app/browse/'
-      path: '/browse'
-      fullPath: '/browse/'
-      preLoaderRoute: typeof AppBrowseIndexRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_workspace/chats/$chatId': {
       id: '/_workspace/chats/$chatId'
       path: '/$chatId'
       fullPath: '/chats/$chatId'
       preLoaderRoute: typeof WorkspaceChatsChatIdRouteImport
       parentRoute: typeof WorkspaceChatsRoute
-    }
-    '/_app/review/$pull': {
-      id: '/_app/review/$pull'
-      path: '/review/$pull'
-      fullPath: '/review/$pull'
-      preLoaderRoute: typeof AppReviewPullRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/browse/range': {
-      id: '/_app/browse/range'
-      path: '/browse/range'
-      fullPath: '/browse/range'
-      preLoaderRoute: typeof AppBrowseRangeRouteImport
-      parentRoute: typeof AppRoute
     }
     '/_app/browse/commit/$sha': {
       id: '/_app/browse/commit/$sha'
