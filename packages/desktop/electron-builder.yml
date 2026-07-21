@@ -30,7 +30,7 @@ files:
     to: renderer
     filter:
       - "**/*"
-  - from: ../server/dist
+  - from: ../client-server/dist
     to: server
     filter:
       - "**/*"

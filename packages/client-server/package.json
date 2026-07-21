@@ -1,9 +1,9 @@
 {
-  "name": "@byconvo/server",
+  "name": "@byconvo/client-server",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "byconvo server — Effect backend (darna-stack pattern), git/filesystem-backed",
+  "description": "byconvo client-server — an API server embedded on the client machine; Effect backend (darna-stack pattern), git/filesystem-backed",
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "start": "tsx src/main.ts",

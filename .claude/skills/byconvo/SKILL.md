@@ -81,7 +81,7 @@ Field meaning:
    progress, and no comment gets applied twice.
 
 5. **Verify** once all comments are handled: run the project's typecheck/tests
-   (`pnpm typecheck`, `pnpm --filter @byconvo/server test`, etc.) and report what
+   (`pnpm typecheck`, `pnpm --filter @byconvo/client-server test`, etc.) and report what
    you changed, file by file, with each comment's `body` you addressed.
 
 ## Notes
