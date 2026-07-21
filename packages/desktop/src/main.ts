@@ -54,7 +54,7 @@ const rendererRoot = app.isPackaged
 const rendererIndex = join(rendererRoot, "_shell.html");
 const bundledServerEntry = app.isPackaged
   ? join(packagedAppRoot, "server", "main.cjs")
-  : resolve(repoRoot, "packages", "client-server", "dist", "main.cjs");
+  : resolve(repoRoot, "packages", "embedded-server", "dist", "main.cjs");
 const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
 // The Byconvo brand logo, used for the window and the macOS dock icon so the
@@ -141,7 +141,7 @@ async function ensureServer(): Promise<void> {
   }
 
   serverProcess = isDev
-    ? spawn(pnpmBin, ["--filter", "@byconvo/client-server", "start"], {
+    ? spawn(pnpmBin, ["--filter", "@byconvo/embedded-server", "start"], {
         cwd: serverCwd,
         env: { ...process.env, BYCONVO_PORT: String(serverPort) },
         stdio: "inherit",

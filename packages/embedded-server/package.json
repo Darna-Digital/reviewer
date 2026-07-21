@@ -1,9 +1,9 @@
 {
-  "name": "@byconvo/client-server",
+  "name": "@byconvo/embedded-server",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "byconvo client-server — an API server embedded on the client machine; Effect backend (darna-stack pattern), git/filesystem-backed",
+  "description": "byconvo embedded-server — an API server embedded alongside the app (desktop, or bundled with a host); Effect backend (darna-stack pattern), git/filesystem-backed",
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "start": "tsx src/main.ts",

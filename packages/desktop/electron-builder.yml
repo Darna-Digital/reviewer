@@ -30,7 +30,7 @@ files:
     to: renderer
     filter:
       - "**/*"
-  - from: ../client-server/dist
+  - from: ../embedded-server/dist
     to: server
     filter:
       - "**/*"
