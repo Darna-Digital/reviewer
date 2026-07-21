@@ -25,12 +25,8 @@ import { BranchSwitcher } from "@/components/layout/BranchSwitcher"
 import { RepoPicker } from "@/components/RepoPicker"
 import { cn } from "@/lib/utils"
 import { isDesktop } from "@/lib/desktop"
-import type {
-  BranchInfo,
-  RemoteBranchInfo,
-  RepoInfo,
-  WorkspaceInfo,
-} from "@/lib/api/types"
+import type { WorkspaceInfo } from "@byconvo/core/workspace"
+import type { BranchInfo, RemoteBranchInfo, RepoInfo } from "@byconvo/core/repo"
 import type { DiffStyle, ThemePref } from "@/lib/ui-prefs"
 
 interface TopBarProps {

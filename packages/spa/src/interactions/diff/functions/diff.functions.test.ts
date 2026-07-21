@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest"
-import type {
-  GitStatusEntry,
-  PullRequestInfo,
-  ReviewComment,
-} from "@/lib/api/types"
+import type { GitStatusEntry } from "@byconvo/core/repo"
+import type { ReviewComment } from "@byconvo/core/comments"
+import type { PullRequestInfo } from "@byconvo/core/github"
 import { createDiffFunctions } from "./diff.functions"
 import { createDiffDependenciesMock } from "./diff.functions.mock"
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import type { PullRequestInfo, ReviewComment } from "@/lib/api/types"
+import type { ReviewComment } from "@byconvo/core/comments"
+import type { PullRequestInfo } from "@byconvo/core/github"
 import { createCommentsFunctions } from "./comments.functions"
 import { createCommentsDependenciesMock } from "./comments.functions.mock"
 

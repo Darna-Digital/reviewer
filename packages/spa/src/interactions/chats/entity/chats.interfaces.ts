@@ -11,9 +11,9 @@ import type {
   ChatImageUpload,
   ChatMode,
   ChatProviderKind,
-} from "@/lib/api/types"
+} from "@byconvo/core/chats"
 
-export type { ChatWireEvent } from "@/lib/api/types"
+export type { ChatWireEvent } from "@byconvo/core/chats"
 
 /** Images sent with a prompt (server type ChatImageUpload). */
 export type ChatImage = ChatImageUpload

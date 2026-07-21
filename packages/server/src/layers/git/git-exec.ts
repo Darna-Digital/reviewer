@@ -13,14 +13,14 @@ import {
   GitExec,
   type GitExecShape,
   type GitFailure,
-} from "@byconvo/core/git-exec"
+} from "@byconvo/core/ports/git-exec"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 
 export {
   GitExec,
   type GitExecShape,
   type GitFailure,
-} from "@byconvo/core/git-exec"
+} from "@byconvo/core/ports/git-exec"
 
 export const make = Effect.gen(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner

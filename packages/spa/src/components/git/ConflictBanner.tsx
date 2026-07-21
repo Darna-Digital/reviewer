@@ -6,7 +6,7 @@ import {
 } from "@tabler/icons-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { MergeState } from "@/lib/api/types"
+import type { MergeState } from "@byconvo/core/repo"
 
 interface ConflictBannerProps {
   state: MergeState

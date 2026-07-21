@@ -1,7 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { fetchClient } from "@/lib/api/client"
-import type { TasksBoard, TasksCard, TasksColumn } from "@/lib/api/types"
+import type {
+  Board as TasksBoard,
+  Card as TasksCard,
+  TasksColumn,
+} from "@byconvo/core/tasks"
 import { createTasksFunctions } from "../functions/tasks.functions"
 import type { TasksFunctions } from "../entity/tasks.interfaces"
 

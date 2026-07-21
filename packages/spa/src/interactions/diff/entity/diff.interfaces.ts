@@ -5,14 +5,10 @@
  * effect so the functions stay testable without the real renderer.
  */
 import type { FileDiffMetadata } from "@pierre/diffs"
-import type {
-  AppMode,
-  DiffTarget,
-  GitFileStatus,
-  GitStatusEntry,
-  PullRequestInfo,
-  ReviewComment,
-} from "@/lib/api/types"
+import type { AppMode, DiffTarget } from "@/lib/api/types"
+import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo"
+import type { ReviewComment } from "@byconvo/core/comments"
+import type { PullRequestInfo } from "@byconvo/core/github"
 
 /** What the user has navigated to — the route state, normalised. */
 export interface DiffSelection {

@@ -1,4 +1,4 @@
-import type { AgentKind, Thread, ThreadEntry } from "@/lib/api/types"
+import type { AgentKind, Thread, ThreadEntry } from "@byconvo/core/threads"
 import type { ThreadsDependencies } from "../entity/threads.interfaces"
 
 const thread = (over: Partial<Thread> = {}): Thread => ({

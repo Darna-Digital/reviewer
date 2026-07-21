@@ -3,13 +3,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { BranchTree } from "@/components/git/BranchTree"
 import { CommitHistory } from "@/components/git/CommitHistory"
 import { cn } from "@/lib/utils"
+import type { LogQuery } from "@/lib/api/types"
 import type {
   BranchInfo,
   CommitInfo,
-  LogQuery,
-  PullRequestInfo,
   RemoteBranchInfo,
-} from "@/lib/api/types"
+} from "@byconvo/core/repo"
+import type { PullRequestInfo } from "@byconvo/core/github"
 
 type BottomTab = "branches" | "history" | "pulls"
 

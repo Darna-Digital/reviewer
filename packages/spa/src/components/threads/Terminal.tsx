@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from "react"
 import { ptySocketUrl } from "@/lib/api/client"
 import { attachImageDrop } from "@/lib/terminal/image-drop"
 import { mountTerminal, type TerminalTheme } from "@/lib/terminal/xterm-engine"
-import type { AgentKind } from "@/lib/api/types"
+import type { AgentKind } from "@byconvo/core/threads"
 import "@xterm/xterm/css/xterm.css"
 
 type Theme = TerminalTheme

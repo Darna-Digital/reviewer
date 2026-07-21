@@ -22,7 +22,8 @@ import {
   DiffConnectors,
   connectorGutterCSS,
 } from "@/components/diff/DiffConnectors"
-import type { CommentSide, DiffTarget, ReviewComment } from "@/lib/api/types"
+import type { DiffTarget } from "@/lib/api/types"
+import type { CommentSide, ReviewComment } from "@byconvo/core/comments"
 import type { DiffStyle, Theme } from "@/lib/ui-prefs"
 
 export type { DraftLocation }

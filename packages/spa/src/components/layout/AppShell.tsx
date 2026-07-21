@@ -61,8 +61,8 @@ import {
   type AppMode,
   type DiffTarget,
   type LogQuery,
-  type ReviewComment,
 } from "@/lib/api/types"
+import type { ReviewComment } from "@byconvo/core/comments"
 import {
   useBranches,
   useChatModels,

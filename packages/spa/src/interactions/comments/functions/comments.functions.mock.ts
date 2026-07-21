@@ -1,5 +1,5 @@
 import { vi } from "vitest"
-import type { ReviewComment } from "@/lib/api/types"
+import type { ReviewComment } from "@byconvo/core/comments"
 import type { CommentsDependencies } from "../entity/comments.interfaces"
 
 const comment = (over: Partial<ReviewComment>): ReviewComment => ({

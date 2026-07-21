@@ -5,7 +5,7 @@
  * and a free-text query filters leaves. The tree shaping is pure; favourite
  * persistence (localStorage) is the only side effect and lives in the adapter.
  */
-import type { BranchInfo, RemoteBranchInfo } from "@/lib/api/types"
+import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo"
 
 export interface BranchLeaf {
   readonly kind: "branch"

@@ -4,12 +4,9 @@
  * anchored to its parent line is real business logic, so it lives here behind
  * injected side effects (the API mutations).
  */
-import type {
-  AppMode,
-  CommentSide,
-  PullRequestInfo,
-  ReviewComment,
-} from "@/lib/api/types"
+import type { AppMode } from "@/lib/api/types"
+import type { CommentSide, ReviewComment } from "@byconvo/core/comments"
+import type { PullRequestInfo } from "@byconvo/core/github"
 
 export interface DraftLocation {
   readonly filePath: string

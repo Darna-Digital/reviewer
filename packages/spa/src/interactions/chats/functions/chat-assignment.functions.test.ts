@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest"
-import type {
-  ChatModelCatalog,
-  ReviewComment,
-  TasksCard,
-} from "@/lib/api/types"
+import type { ReviewComment } from "@byconvo/core/comments"
+import type { ChatModelCatalog } from "@byconvo/core/chats"
+import type { Card as TasksCard } from "@byconvo/core/tasks"
 import {
   buildChatAssignmentSettings,
   buildReviewAssignmentPrompt,

@@ -10,7 +10,7 @@ import type {
   BranchTreeItem,
 } from "@/interactions/branch-tree/entity/branch-tree.interfaces"
 import { useBranchTree } from "@/interactions/branch-tree/adapters/branch-tree.hook.adapter"
-import type { BranchInfo, RemoteBranchInfo } from "@/lib/api/types"
+import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo"
 import { cn } from "@/lib/utils"
 
 interface BranchTreeProps {

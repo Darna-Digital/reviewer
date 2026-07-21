@@ -4,7 +4,7 @@
  * streaming behaviour (delta append, activity dedupe, turn settle) is
  * unit-testable without a socket.
  */
-import type { Chat } from "@/lib/api/types"
+import type { Chat } from "@byconvo/core/chats"
 import type { ChatWireEvent } from "../entity/chats.interfaces"
 
 export function applyChatEvent(

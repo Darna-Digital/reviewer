@@ -13,7 +13,7 @@ import {
   IconTool,
 } from "@tabler/icons-react"
 import { useEffect, useRef, useState } from "react"
-import type { Chat, ChatActivity, ChatMessage } from "@/lib/api/types"
+import type { Chat, ChatActivity, ChatMessage } from "@byconvo/core/chats"
 import { cn } from "@/lib/utils"
 import { AttachmentGrid, AttachmentPreview } from "./ImageAttachments"
 import { ChatMarkdown } from "./ChatMarkdown"

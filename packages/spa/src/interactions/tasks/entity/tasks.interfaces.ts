@@ -4,7 +4,11 @@
  * new sort order). Grouping/move are real, board-shaped logic, so they live
  * here as pure functions over injected data + API side effects.
  */
-import type { TasksBoard, TasksCard, TasksColumn } from "@/lib/api/types"
+import type {
+  Board as TasksBoard,
+  Card as TasksCard,
+  TasksColumn,
+} from "@byconvo/core/tasks"
 
 export interface ColumnGroup {
   /** The column (status) id. */

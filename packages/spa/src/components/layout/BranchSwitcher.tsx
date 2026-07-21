@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import type { BranchInfo, RemoteBranchInfo } from "@/lib/api/types"
+import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo"
 
 interface BranchSwitcherProps {
   current: string | null

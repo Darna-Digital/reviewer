@@ -1,4 +1,4 @@
-import type { BranchInfo, RemoteBranchInfo } from "@/lib/api/types"
+import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo"
 import type { BranchTreeDependencies } from "../entity/branch-tree.interfaces"
 
 export const createBranchTreeDependenciesMock = (): BranchTreeDependencies => ({

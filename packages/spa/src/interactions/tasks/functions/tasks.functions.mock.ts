@@ -1,4 +1,8 @@
-import type { TasksBoard, TasksCard, TasksColumn } from "@/lib/api/types"
+import type {
+  Board as TasksBoard,
+  Card as TasksCard,
+  TasksColumn,
+} from "@byconvo/core/tasks"
 import type { TasksDependencies } from "../entity/tasks.interfaces"
 
 export const card = (over: Partial<TasksCard> = {}): TasksCard => ({
