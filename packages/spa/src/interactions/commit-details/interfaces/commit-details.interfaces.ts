@@ -4,7 +4,7 @@
  * chains collapse to `a/b/c`, folders carry a descendant count). Pure: the
  * commit data is fetched by the panel; this layer only shapes it for display.
  */
-import type { CommitFileChange, GitFileStatus } from "@byconvo/core/repo"
+import type { CommitFileChange, GitFileStatus } from "@byconvo/core"
 
 export interface DetailFolderRow {
   readonly kind: "folder"

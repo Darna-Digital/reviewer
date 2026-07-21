@@ -1,4 +1,4 @@
-import type { Card as TasksCard } from "@byconvo/core/tasks"
+import type { Card as TasksCard } from "@byconvo/core"
 import type {
   ColumnGroup,
   TasksDependencies,

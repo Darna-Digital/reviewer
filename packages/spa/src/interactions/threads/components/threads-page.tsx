@@ -33,7 +33,7 @@ import {
 } from "@/interactions/threads/components/terminal"
 import { useThreadsActions } from "@/interactions/threads/adapters/threads.hook.adapter"
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents"
-import type { AgentKind, ThreadSummary } from "@byconvo/core/threads"
+import type { AgentKind, ThreadSummary } from "@byconvo/core"
 import { useBranches, useRepo, useTasks, useThreads } from "@/lib/queries"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"

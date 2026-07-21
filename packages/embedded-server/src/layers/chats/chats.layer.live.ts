@@ -1,9 +1,9 @@
 import * as Layer from "effect/Layer"
-import { ChatsRepository, ChatsService, make } from "@byconvo/core/chats"
+import { ChatsRepository, ChatsService, makeChatsService } from "@byconvo/core"
 import { makeFileChatsRepository } from "./chats.repository.file.ts"
 import { liveLayer as chatRuntimeLive } from "./chats.runtime.service.ts"
 
-export const ChatsLive = Layer.effect(ChatsService)(make).pipe(
+export const ChatsLive = Layer.effect(ChatsService)(makeChatsService).pipe(
   Layer.provide(Layer.effect(ChatsRepository)(makeFileChatsRepository)),
   Layer.provide(chatRuntimeLive)
 )

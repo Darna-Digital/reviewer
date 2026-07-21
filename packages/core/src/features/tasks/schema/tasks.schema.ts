@@ -2,13 +2,13 @@ import * as Schema from "effect/Schema"
 
 export const TasksColumn = Schema.String
 export type TasksColumn = typeof TasksColumn.Type
-export const Comment = Schema.Struct({
+export const TaskComment = Schema.Struct({
   id: Schema.String,
   body: Schema.String,
   parentId: Schema.NullOr(Schema.String),
   createdAt: Schema.String,
 })
-export type Comment = typeof Comment.Type
+export type TaskComment = typeof TaskComment.Type
 export const Column = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -27,7 +27,7 @@ export const Card = Schema.Struct({
   description: Schema.String,
   column: TasksColumn,
   order: Schema.Number,
-  comments: Schema.Array(Comment),
+  comments: Schema.Array(TaskComment),
   createdAt: Schema.String,
   updatedAt: Schema.String,
 })
@@ -38,11 +38,11 @@ export const Board = Schema.Struct({
   prefix: Schema.String,
 })
 export type Board = typeof Board.Type
-export const CommentResolution = Schema.Struct({
+export const TaskCommentResolution = Schema.Struct({
   card: Card,
-  comment: Comment,
+  comment: TaskComment,
 })
-export type CommentResolution = typeof CommentResolution.Type
+export type TaskCommentResolution = typeof TaskCommentResolution.Type
 export const NewCard = Schema.Struct({
   title: Schema.String,
   description: Schema.optionalKey(Schema.String),
@@ -68,12 +68,12 @@ export const UpdateColumn = Schema.Struct({
 })
 export type UpdateColumn = typeof UpdateColumn.Type
 export const ColumnIdParam = Schema.Struct({ id: Schema.String })
-export const NewComment = Schema.Struct({
+export const NewTaskComment = Schema.Struct({
   body: Schema.String,
   parentId: Schema.optionalKey(Schema.String),
 })
-export type NewComment = typeof NewComment.Type
-export const CommentIdParam = Schema.Struct({ commentId: Schema.String })
+export type NewTaskComment = typeof NewTaskComment.Type
+export const TaskCommentIdParam = Schema.Struct({ commentId: Schema.String })
 export const CardCommentParams = Schema.Struct({
   id: Schema.String,
   commentId: Schema.String,

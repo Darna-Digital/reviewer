@@ -1,10 +1,7 @@
 import * as Effect from "effect/Effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../../api.ts"
-import {
-  DEFAULT_COMMIT_AGENT,
-  GitMessageService,
-} from "@byconvo/core/git-message"
+import { DEFAULT_COMMIT_AGENT, GitMessageService } from "@byconvo/core"
 
 export const GitMessageHandler = HttpApiBuilder.group(
   Api,

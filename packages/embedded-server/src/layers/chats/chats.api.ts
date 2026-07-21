@@ -1,13 +1,10 @@
 import * as Schema from "effect/Schema"
-import { Ok } from "@byconvo/core/shared"
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import {
+  Ok,
   NoRepoSelected,
   NotFound,
   StorageError,
   TerminalError,
-} from "@byconvo/core/errors"
-import {
   ChatBusy,
   Chat,
   ChatModelCatalog,
@@ -16,7 +13,8 @@ import {
   NewChat,
   SendChatMessage,
   UpdateChat,
-} from "@byconvo/core/chats"
+} from "@byconvo/core"
+import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 
 const errors = [
   NoRepoSelected,

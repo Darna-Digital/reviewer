@@ -1,8 +1,3 @@
-/**
- * The byconvo HTTP API — every feature group mounted under `/api`. This is the
- * single registry the controllers attach their handlers to, mirroring the
- * darna-stack `api.ts`.
- */
 import { HttpApi } from "effect/unstable/httpapi"
 import { ChatsApi } from "./layers/chats/chats.api.ts"
 import { CommentsApi } from "./layers/comments/comments.api.ts"

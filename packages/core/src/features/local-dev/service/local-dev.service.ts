@@ -10,7 +10,7 @@ export class LocalDevService extends Context.Service<
   LocalDevService,
   DevCommandsServiceShape
 >()("LocalDevService") {}
-export const make = Effect.gen(function* () {
+export const makeLocalDevService = Effect.gen(function* () {
   const repo = yield* DevCommandsRepository
   return LocalDevService.of(repo)
 })

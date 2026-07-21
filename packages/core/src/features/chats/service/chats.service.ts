@@ -33,7 +33,7 @@ export class ChatsService extends Context.Service<
   ChatsService,
   ChatsServiceShape
 >()("ChatsService") {}
-export const make = Effect.gen(function* () {
+export const makeChatsService = Effect.gen(function* () {
   const repo = yield* ChatsRepository
   const runtime = yield* ChatRuntime
   const send: ChatsServiceShape["send"] = (id, text, images) =>

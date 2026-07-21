@@ -18,7 +18,7 @@ import { AuthorAvatar } from "@/interactions/comments/components/author-avatar"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { timeAgo } from "@/lib/relative-time"
-import type { CommentSide, ReviewComment } from "@byconvo/core/comments"
+import type { CommentSide, ReviewComment } from "@byconvo/core"
 
 /** Where a draft (or new) comment is anchored. */
 export interface DraftLocation {

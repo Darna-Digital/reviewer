@@ -1,6 +1,6 @@
 import { IconGitBranch } from "@tabler/icons-react"
 import { repoAvatar } from "@/lib/repo-avatar"
-import type { RepoEntry } from "@byconvo/core/workspace"
+import type { RepoEntry } from "@byconvo/core"
 
 interface RepoListProps {
   folder: string

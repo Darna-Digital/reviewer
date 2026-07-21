@@ -4,7 +4,7 @@
  * text deltas, generic activities, a native session id, one terminal result.
  * The chat runtime is provider-blind past this seam.
  */
-import type { ChatProviderKind } from "@byconvo/core/chats"
+import type { ChatProviderKind } from "@byconvo/core"
 import { createClaudeTurnParser } from "./claude-stream.ts"
 import { createCodexTurnParser } from "./codex-stream.ts"
 import { createOpencodeTurnParser } from "./opencode-stream.ts"

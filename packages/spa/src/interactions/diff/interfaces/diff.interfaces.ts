@@ -6,9 +6,12 @@
  */
 import type { FileDiffMetadata } from "@pierre/diffs"
 import type { AppMode, DiffTarget } from "@/lib/api/types"
-import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo"
-import type { ReviewComment } from "@byconvo/core/comments"
-import type { PullRequestInfo } from "@byconvo/core/github"
+import type {
+  GitFileStatus,
+  GitStatusEntry,
+  ReviewComment,
+  PullRequestInfo,
+} from "@byconvo/core"
 
 /** What the user has navigated to — the route state, normalised. */
 export interface DiffSelection {

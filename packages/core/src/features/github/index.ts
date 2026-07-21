@@ -1,6 +1,0 @@
-export * from "./schema/github.schema.ts"
-export * from "./repository/github.repository.ts"
-export * from "./repository/github.repository.memory.ts"
-export * from "./service/github.service.ts"
-export * from "./layer/github.layer.memory.ts"
-export * from "./errors.ts"

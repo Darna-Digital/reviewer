@@ -10,7 +10,7 @@ export class CommentsService extends Context.Service<
   CommentsService,
   CommentsServiceShape
 >()("CommentsService") {}
-export const make = Effect.gen(function* () {
+export const makeCommentsService = Effect.gen(function* () {
   const repo = yield* CommentsRepository
   return CommentsService.of(repo)
 })

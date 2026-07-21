@@ -8,7 +8,7 @@ import type {
   Board as TasksBoard,
   Card as TasksCard,
   TasksColumn,
-} from "@byconvo/core/tasks"
+} from "@byconvo/core"
 
 export interface ColumnGroup {
   /** The column (status) id. */

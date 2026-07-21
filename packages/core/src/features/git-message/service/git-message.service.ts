@@ -58,7 +58,7 @@ export class GitMessageService extends Context.Service<
   GitMessageService,
   GitMessageServiceShape
 >()("GitMessageService") {}
-export const make = Effect.gen(function* () {
+export const makeGitMessageService = Effect.gen(function* () {
   const { lines, run } = yield* GitExec
   const terminal = yield* TerminalExec
   const generate: GitMessageServiceShape["generate"] = (paths, agent) =>

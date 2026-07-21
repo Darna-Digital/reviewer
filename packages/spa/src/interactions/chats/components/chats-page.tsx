@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
-import type { ChatSummary } from "@byconvo/core/chats"
+import type { ChatSummary } from "@byconvo/core"
 import { useBranches, useChats, useRepo } from "@/lib/queries"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"

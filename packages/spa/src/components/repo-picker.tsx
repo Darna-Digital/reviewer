@@ -18,8 +18,7 @@ import {
 } from "@/components/ui/popover"
 import { isDesktop, openDesktopDirectory } from "@/lib/desktop"
 import { repoAvatar } from "@/lib/repo-avatar"
-import type { WorkspaceInfo } from "@byconvo/core/workspace"
-import type { RepoInfo } from "@byconvo/core/repo"
+import type { WorkspaceInfo, RepoInfo } from "@byconvo/core"
 
 interface RepoPickerProps {
   repo: RepoInfo | null

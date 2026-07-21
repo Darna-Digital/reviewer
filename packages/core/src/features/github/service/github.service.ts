@@ -10,7 +10,7 @@ export class GitHubService extends Context.Service<
   GitHubService,
   GitHubServiceShape
 >()("GitHubService") {}
-export const make = Effect.gen(function* () {
+export const makeGitHubService = Effect.gen(function* () {
   const repo = yield* GitHubRepository
   return GitHubService.of(repo)
 })

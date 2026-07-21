@@ -17,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core/chats"
+import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
 import { ProviderIcon } from "./provider-icons"

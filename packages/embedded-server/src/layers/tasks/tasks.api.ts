@@ -1,23 +1,25 @@
 import * as Schema from "effect/Schema"
-import { Ok } from "@byconvo/core/shared"
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
-import { NoRepoSelected, NotFound, StorageError } from "@byconvo/core/errors"
 import {
+  Ok,
+  NoRepoSelected,
+  NotFound,
+  StorageError,
   Board,
   Card,
-  CommentResolution,
+  TaskCommentResolution,
   CardCommentParams,
   CardIdParam,
   ColumnIdParam,
-  CommentIdParam,
+  TaskCommentIdParam,
   NewCard,
   NewColumn,
-  NewComment,
+  NewTaskComment,
   SetPrefix,
   TaskRefParam,
   UpdateCard,
   UpdateColumn,
-} from "@byconvo/core/tasks"
+} from "@byconvo/core"
+import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 
 const errors = [NoRepoSelected, NotFound, StorageError] as const
 
@@ -101,7 +103,7 @@ export class TasksApi extends HttpApiGroup.make("tasks")
   .add(
     HttpApiEndpoint.post("addComment", "/tasks/cards/:id/comments", {
       params: CardIdParam,
-      payload: NewComment,
+      payload: NewTaskComment,
       success: Card,
       error: errors,
     })
@@ -119,8 +121,8 @@ export class TasksApi extends HttpApiGroup.make("tasks")
   )
   .add(
     HttpApiEndpoint.get("resolveComment", "/tasks/comments/:commentId", {
-      params: CommentIdParam,
-      success: CommentResolution,
+      params: TaskCommentIdParam,
+      success: TaskCommentResolution,
       error: errors,
     })
   ) {}

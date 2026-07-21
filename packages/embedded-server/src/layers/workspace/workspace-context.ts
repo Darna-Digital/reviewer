@@ -18,8 +18,7 @@ import * as Stream from "effect/Stream"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { homedir } from "node:os"
 import { resolve as pathResolve } from "node:path"
-import { NoRepoSelected } from "@byconvo/core/errors"
-import { InvalidRepo } from "@byconvo/core/workspace"
+import { NoRepoSelected, InvalidRepo } from "@byconvo/core"
 import { getCurrentRepo, setCurrentRepo } from "./current-repo.ts"
 
 export interface WorkspaceContextShape {

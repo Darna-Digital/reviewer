@@ -1,6 +1,9 @@
-import type { ReviewComment } from "@byconvo/core/comments"
-import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core/chats"
-import type { Card as TasksCard } from "@byconvo/core/tasks"
+import type {
+  ReviewComment,
+  ChatModelCatalog,
+  ChatProviderKind,
+  Card as TasksCard,
+} from "@byconvo/core"
 import type { ChatSettings } from "../interfaces/chats.interfaces"
 
 export const ASSIGNABLE_CHAT_PROVIDERS = [

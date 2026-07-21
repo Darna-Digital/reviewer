@@ -35,7 +35,7 @@ import type { Duplex } from "node:stream"
 import type { IPty } from "node-pty"
 import type * as NodePtyModule from "node-pty"
 import { WebSocketServer, type WebSocket } from "ws"
-import { AGENT_KINDS, type AgentKind } from "@byconvo/core/threads"
+import { AGENT_KINDS, type AgentKind } from "@byconvo/core"
 import {
   agentPtyProgram,
   agentSessionArgs,

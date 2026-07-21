@@ -1,11 +1,13 @@
 import * as Layer from "effect/Layer"
 import {
   WorkspaceRepository,
-  make,
+  makeWorkspaceService,
   WorkspaceService,
-} from "@byconvo/core/workspace"
+} from "@byconvo/core"
 import { makeGitWorkspaceRepository } from "./workspace.repository.git.ts"
 
-export const WorkspaceLive = Layer.effect(WorkspaceService)(make).pipe(
+export const WorkspaceLive = Layer.effect(WorkspaceService)(
+  makeWorkspaceService
+).pipe(
   Layer.provide(Layer.effect(WorkspaceRepository)(makeGitWorkspaceRepository))
 )

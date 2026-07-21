@@ -1,11 +1,14 @@
 import * as Layer from "effect/Layer"
 import { CommentsRepository } from "../repository/comments.repository.ts"
 import { makeMemoryCommentsRepository } from "../repository/comments.repository.memory.ts"
-import { CommentsService, make } from "../service/comments.service.ts"
+import {
+  CommentsService,
+  makeCommentsService,
+} from "../service/comments.service.ts"
 import type { ReviewComment } from "../schema/comments.schema.ts"
 
 export const CommentsMemory = (seed: ReadonlyArray<ReviewComment> = []) =>
-  Layer.effect(CommentsService)(make).pipe(
+  Layer.effect(CommentsService)(makeCommentsService).pipe(
     Layer.provide(
       Layer.effect(CommentsRepository)(makeMemoryCommentsRepository(seed))
     )

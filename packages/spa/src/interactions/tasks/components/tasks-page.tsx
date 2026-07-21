@@ -50,8 +50,11 @@ import {
 } from "@/interactions/chats/functions/chat-assignment.functions"
 import { useTasksActions } from "@/interactions/tasks/adapters/tasks.hook.adapter"
 import { AGENTS } from "@/interactions/threads/interfaces/agents"
-import type { ChatProviderKind } from "@byconvo/core/chats"
-import type { Card as TasksCard, TasksColumn } from "@byconvo/core/tasks"
+import type {
+  ChatProviderKind,
+  Card as TasksCard,
+  TasksColumn,
+} from "@byconvo/core"
 import { useChatModels, useRepo, useTasks } from "@/lib/queries"
 import { timeAgo } from "@/lib/relative-time"
 import { cn } from "@/lib/utils"
@@ -747,7 +750,7 @@ export function TasksPage() {
                   placeholder={
                     replyTo !== null
                       ? "Write a reply… (@agent to assign)"
-                      : "Comment… (@agent to assign)"
+                      : "TaskComment… (@agent to assign)"
                   }
                   onChange={(e) => onCommentChange(e.target.value)}
                   onKeyDown={(e) => {

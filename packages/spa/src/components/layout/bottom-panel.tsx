@@ -8,8 +8,8 @@ import type {
   BranchInfo,
   CommitInfo,
   RemoteBranchInfo,
-} from "@byconvo/core/repo"
-import type { PullRequestInfo } from "@byconvo/core/github"
+  PullRequestInfo,
+} from "@byconvo/core"
 
 type BottomTab = "branches" | "history" | "pulls"
 

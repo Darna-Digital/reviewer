@@ -29,7 +29,7 @@ import type {
   ChatEffort,
   ChatMode,
   ChatModelCatalog,
-} from "@byconvo/core/chats"
+} from "@byconvo/core"
 import { useDraft } from "@/lib/chat-drafts"
 import { cn } from "@/lib/utils"
 import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces"

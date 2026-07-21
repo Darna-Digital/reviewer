@@ -1,5 +1,0 @@
-export * from "./schema/repo.schema.ts"
-export * from "./repository/repo.repository.ts"
-export * from "./repository/repo.repository.memory.ts"
-export * from "./service/repo.service.ts"
-export * from "./layer/repo.layer.memory.ts"

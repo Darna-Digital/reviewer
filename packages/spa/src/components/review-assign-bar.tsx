@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/tooltip"
 import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignment.functions"
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents"
-import type { ChatProviderKind, ChatSummary } from "@byconvo/core/chats"
+import type { ChatProviderKind, ChatSummary } from "@byconvo/core"
 import { cn } from "@/lib/utils"
 
 /** Agent CLIs that can be assigned to chat flows (excludes the plain shell). */

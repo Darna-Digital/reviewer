@@ -3,10 +3,9 @@
  * onto the shared `GitHubClient` (owner/repo resolution + REST helpers).
  */
 import * as Effect from "effect/Effect"
-import { GitHubError } from "@byconvo/core/github"
+import { GitHubError } from "@byconvo/core"
 import { GitHubClient } from "./github-client.ts"
-import type { ReviewComment } from "@byconvo/core/comments"
-import type { PullRequestInfo, GitHubRepo } from "@byconvo/core/github"
+import type { ReviewComment, PullRequestInfo, GitHubRepo } from "@byconvo/core"
 
 export const makeGitHubRepository = Effect.gen(function* () {
   const gh = yield* GitHubClient

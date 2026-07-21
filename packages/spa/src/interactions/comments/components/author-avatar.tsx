@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react"
 import { repoAvatar } from "@/lib/repo-avatar"
 import { cn } from "@/lib/utils"
-import type { ReviewComment } from "@byconvo/core/comments"
+import type { ReviewComment } from "@byconvo/core"
 
 export function AuthorAvatar({
   author,

@@ -3,7 +3,7 @@
  * in the sidebar/header. Mirrors the server's agent set; the server owns how
  * each agent's input is turned into a command.
  */
-import type { AgentKind } from "@byconvo/core/threads"
+import type { AgentKind } from "@byconvo/core"
 
 export const AGENTS: ReadonlyArray<{
   kind: AgentKind

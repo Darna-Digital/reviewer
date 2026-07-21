@@ -10,7 +10,7 @@ export class ThreadsService extends Context.Service<
   ThreadsService,
   ThreadsServiceShape
 >()("ThreadsService") {}
-export const make = Effect.gen(function* () {
+export const makeThreadsService = Effect.gen(function* () {
   const repo = yield* ThreadsRepository
   return ThreadsService.of(repo)
 })

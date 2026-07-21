@@ -10,7 +10,7 @@ import {
 import { THEMES, useLangReady } from "@/components/editor/highlighter"
 import { Button } from "@/components/ui/button"
 import { useFile } from "@/lib/queries"
-import type { ReviewComment } from "@byconvo/core/comments"
+import type { ReviewComment } from "@byconvo/core"
 import type { Theme } from "@/lib/ui-prefs"
 
 // Comments on a plain (non-diff) file are always anchored to the current

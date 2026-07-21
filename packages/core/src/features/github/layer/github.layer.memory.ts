@@ -4,10 +4,10 @@ import {
   makeMemoryGitHubRepository,
   type MemoryGitHubSeed,
 } from "../repository/github.repository.memory.ts"
-import { GitHubService, make } from "../service/github.service.ts"
+import { GitHubService, makeGitHubService } from "../service/github.service.ts"
 
 export const GitHubMemory = (seed: MemoryGitHubSeed = {}) =>
-  Layer.effect(GitHubService)(make).pipe(
+  Layer.effect(GitHubService)(makeGitHubService).pipe(
     Layer.provide(
       Layer.effect(GitHubRepository)(makeMemoryGitHubRepository(seed))
     )

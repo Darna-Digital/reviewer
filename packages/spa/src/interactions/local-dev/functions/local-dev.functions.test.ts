@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import type { DevCommand } from "@byconvo/core/local-dev"
+import type { DevCommand } from "@byconvo/core"
 import type { LocalDevDependencies } from "../interfaces/local-dev.interfaces"
 import { createLocalDevFunctions } from "./local-dev.functions"
 

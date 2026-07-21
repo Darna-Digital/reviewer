@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../../api.ts"
-import { DocsService } from "@byconvo/core/docs"
+import { DocsService } from "@byconvo/core"
 
 const ok = { ok: true } as const
 

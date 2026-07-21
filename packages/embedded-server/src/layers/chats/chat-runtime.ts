@@ -40,7 +40,7 @@ import type {
   ChatTurn,
   ChatWireEvent,
   StartTurnResult,
-} from "@byconvo/core/chats"
+} from "@byconvo/core"
 import {
   appendActivity,
   appendPendingMessage,

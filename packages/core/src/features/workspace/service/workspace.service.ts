@@ -10,7 +10,7 @@ export class WorkspaceService extends Context.Service<
   WorkspaceService,
   WorkspaceServiceShape
 >()("WorkspaceService") {}
-export const make = Effect.gen(function* () {
+export const makeWorkspaceService = Effect.gen(function* () {
   const repo = yield* WorkspaceRepository
   return WorkspaceService.of(repo)
 })

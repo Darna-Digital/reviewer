@@ -8,19 +8,11 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Stream from "effect/Stream"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { GitError, NoRepoSelected } from "@byconvo/core/errors"
-import {
-  GitExec,
-  type GitExecShape,
-  type GitFailure,
-} from "@byconvo/core/ports/git-exec"
+import { GitError, NoRepoSelected } from "@byconvo/core"
+import { GitExec, type GitExecShape, type GitFailure } from "@byconvo/core"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 
-export {
-  GitExec,
-  type GitExecShape,
-  type GitFailure,
-} from "@byconvo/core/ports/git-exec"
+export { GitExec, type GitExecShape, type GitFailure } from "@byconvo/core"
 
 export const make = Effect.gen(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner

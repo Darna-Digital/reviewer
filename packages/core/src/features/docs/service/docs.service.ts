@@ -7,7 +7,7 @@ export class DocsService extends Context.Service<
   DocsService,
   DocsServiceShape
 >()("DocsService") {}
-export const make = Effect.gen(function* () {
+export const makeDocsService = Effect.gen(function* () {
   const repo = yield* DocsRepository
   return DocsService.of(repo)
 })

@@ -5,21 +5,22 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { NotFound, StorageError } from "@byconvo/core/errors"
-import { WorkspaceContext } from "../workspace/workspace-context.ts"
 import {
+  NotFound,
+  StorageError,
   Card,
   Column,
   DEFAULT_COLUMNS,
   normalizePrefix,
-} from "@byconvo/core/tasks"
+} from "@byconvo/core"
+import { WorkspaceContext } from "../workspace/workspace-context.ts"
 import type {
-  Comment,
+  TaskComment,
   CreateCardInput,
   TasksRepo,
   UpdateCardInput,
   UpdateColumnInput,
-} from "@byconvo/core/tasks"
+} from "@byconvo/core"
 
 const DEFAULT_PREFIX = "T"
 
@@ -273,7 +274,7 @@ export const makeFileTasksRepository = Effect.gen(function* () {
         throw new NotFound({ reason: `card ${cardId} not found` })
       }
       const now = new Date().toISOString()
-      const comment: Comment = {
+      const comment: TaskComment = {
         id: nextCommentId(),
         body: body.trim(),
         parentId,

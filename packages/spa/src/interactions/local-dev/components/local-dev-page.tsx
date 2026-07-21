@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { useLocalDevActions } from "@/interactions/local-dev/adapters/local-dev.hook.adapter"
-import type { DevCommandView } from "@byconvo/core/local-dev"
+import type { DevCommandView } from "@byconvo/core"
 import { useDevCommands } from "@/lib/queries"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"

@@ -6,7 +6,7 @@ import {
   type TasksFailure,
   type TasksRepo,
 } from "../repository/tasks.repository.ts"
-import type { Card, CommentResolution } from "../schema/tasks.schema.ts"
+import type { Card, TaskCommentResolution } from "../schema/tasks.schema.ts"
 import { resolveTask } from "../functions/tasks.functions.ts"
 
 export interface TasksServiceShape extends TasksRepo {
@@ -14,13 +14,13 @@ export interface TasksServiceShape extends TasksRepo {
   readonly resolveTask: (ref: string) => Effect.Effect<Card, TasksFailure>
   readonly resolveComment: (
     commentId: string
-  ) => Effect.Effect<CommentResolution, TasksFailure>
+  ) => Effect.Effect<TaskCommentResolution, TasksFailure>
 }
 export class TasksService extends Context.Service<
   TasksService,
   TasksServiceShape
 >()("TasksService") {}
-export const make = Effect.gen(function* () {
+export const makeTasksService = Effect.gen(function* () {
   const repo = yield* TasksRepository
   const listTasks = Effect.map(repo.board, (board) => board.cards)
   const resolve: TasksServiceShape["resolveTask"] = (ref) =>

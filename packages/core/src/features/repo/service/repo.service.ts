@@ -7,7 +7,7 @@ export class RepoService extends Context.Service<
   RepoService,
   RepoServiceShape
 >()("RepoService") {}
-export const make = Effect.gen(function* () {
+export const makeRepoService = Effect.gen(function* () {
   const repo = yield* RepoRepository
   return RepoService.of(repo)
 })

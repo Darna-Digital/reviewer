@@ -6,7 +6,7 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { NotFound, StorageError } from "@byconvo/core/errors"
+import { NotFound, StorageError } from "@byconvo/core"
 import { TerminalExec } from "../terminal/terminal-exec.ts"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 import {
@@ -17,7 +17,7 @@ import {
   type RenameThreadInput,
   type ThreadEntry,
   type ThreadsRepo,
-} from "@byconvo/core/threads"
+} from "@byconvo/core"
 
 const ThreadsFile = Schema.Array(Thread)
 

@@ -6,7 +6,7 @@
  * decides muted vs. foreground.
  */
 import { agentIcon } from "@/interactions/threads/components/agent-icons"
-import type { ChatProviderKind } from "@byconvo/core/chats"
+import type { ChatProviderKind } from "@byconvo/core"
 
 export function ProviderIcon({
   provider,

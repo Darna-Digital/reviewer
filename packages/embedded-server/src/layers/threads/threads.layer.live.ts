@@ -1,7 +1,13 @@
 import * as Layer from "effect/Layer"
-import { ThreadsRepository, ThreadsService, make } from "@byconvo/core/threads"
+import {
+  ThreadsRepository,
+  ThreadsService,
+  makeThreadsService,
+} from "@byconvo/core"
 import { makeFileThreadsRepository } from "./threads.repository.file.ts"
 
-export const ThreadsLive = Layer.effect(ThreadsService)(make).pipe(
+export const ThreadsLive = Layer.effect(ThreadsService)(
+  makeThreadsService
+).pipe(
   Layer.provide(Layer.effect(ThreadsRepository)(makeFileThreadsRepository))
 )

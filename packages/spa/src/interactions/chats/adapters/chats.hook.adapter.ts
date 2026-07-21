@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { fetchClient } from "@/lib/api/client"
-import type { Chat, ChatSummary } from "@byconvo/core/chats"
+import type { Chat, ChatSummary } from "@byconvo/core"
 import { createChatsFunctions } from "../functions/chats.functions"
 import type {
   ChatImage,
