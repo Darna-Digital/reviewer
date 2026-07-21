@@ -3,7 +3,7 @@ import {
   WorkspaceRepository,
   makeWorkspaceService,
   WorkspaceService,
-} from "@byconvo/core"
+} from "@byconvo/core/workspace"
 import { makeGitWorkspaceRepository } from "./workspace.repository.git.ts"
 
 export const WorkspaceLive = Layer.effect(WorkspaceService)(

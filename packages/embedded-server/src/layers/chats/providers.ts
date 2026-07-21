@@ -9,7 +9,7 @@
  *   codex    `codex exec --json` — JSONL item/turn events
  *   opencode `opencode run` — plain text streamed as it prints
  */
-import type { Chat, ChatMessage } from "@byconvo/core"
+import type { Chat, ChatMessage } from "@byconvo/core/chats"
 
 export interface ChatTurnProgram {
   readonly file: string

@@ -3,7 +3,7 @@ import {
   CommentsRepository,
   CommentsService,
   makeCommentsService,
-} from "@byconvo/core"
+} from "@byconvo/core/comments"
 import { makeFileCommentsRepository } from "./comments.repository.file.ts"
 
 export const CommentsLive = Layer.effect(CommentsService)(

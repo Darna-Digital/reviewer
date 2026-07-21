@@ -1,4 +1,4 @@
-import type { CommitFileChange, GitFileStatus } from "@byconvo/core"
+import type { CommitFileChange, GitFileStatus } from "@byconvo/core/repo"
 import type { CommitDetailsDependencies } from "../interfaces/commit-details.interfaces"
 
 export const createCommitDetailsDependenciesMock =

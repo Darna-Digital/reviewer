@@ -3,7 +3,7 @@ import {
   DevCommandsRepository,
   LocalDevService,
   makeLocalDevService,
-} from "@byconvo/core"
+} from "@byconvo/core/local-dev"
 import { makeFileDevCommandsRepository } from "./local-dev.repository.file.ts"
 
 export const LocalDevLive = Layer.effect(LocalDevService)(

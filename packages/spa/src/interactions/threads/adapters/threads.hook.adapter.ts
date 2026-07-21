@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { fetchClient } from "@/lib/api/client"
-import type { AgentKind, Thread, ThreadSummary } from "@byconvo/core"
+import type { AgentKind, Thread, ThreadSummary } from "@byconvo/core/threads"
 import { createThreadsFunctions } from "../functions/threads.functions"
 import type { ThreadsFunctions } from "../interfaces/threads.interfaces"
 

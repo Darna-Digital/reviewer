@@ -14,9 +14,9 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs"
-import { NotFound, StorageError } from "@byconvo/core"
+import { NotFound, StorageError } from "@byconvo/core/errors"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
-import type { Doc, DocsRepo } from "@byconvo/core"
+import type { Doc, DocsRepo } from "@byconvo/core/docs"
 
 const docsDir = (repoPath: string) => `${repoPath}/.byconvo/docs`
 const docPath = (repoPath: string, id: string) =>

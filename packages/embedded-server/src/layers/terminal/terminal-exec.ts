@@ -22,12 +22,12 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Stream from "effect/Stream"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { TerminalError } from "@byconvo/core"
+import { TerminalError } from "@byconvo/core/errors"
 import {
   TerminalExec,
   type TerminalExecShape,
   type TerminalResult,
-} from "@byconvo/core"
+} from "@byconvo/core/ports/terminal-exec"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 
 export {
@@ -35,7 +35,7 @@ export {
   TerminalExec,
   type TerminalExecShape,
   type TerminalResult,
-} from "@byconvo/core"
+} from "@byconvo/core/ports/terminal-exec"
 
 export const make = Effect.gen(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner

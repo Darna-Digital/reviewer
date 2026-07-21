@@ -1,4 +1,4 @@
-import type { CommitInfo } from "@byconvo/core"
+import type { CommitInfo } from "@byconvo/core/repo"
 import { DEFAULT_GRAPH_CONFIG } from "../interfaces/commit-graph.interfaces"
 import type {
   CommitGraphConfig,

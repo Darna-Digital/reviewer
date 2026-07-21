@@ -4,7 +4,7 @@
  * The algorithm is pure: lane colours and cell geometry are injected as `data`
  * so the same logic drives rendering and tests without touching the DOM.
  */
-import type { CommitInfo } from "@byconvo/core"
+import type { CommitInfo } from "@byconvo/core/repo"
 
 /** A lane that is "reserved" for the next commit it expects to reach. */
 export interface Lane {

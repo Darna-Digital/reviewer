@@ -2,7 +2,7 @@ import type {
   Board as TasksBoard,
   Card as TasksCard,
   TasksColumn,
-} from "@byconvo/core"
+} from "@byconvo/core/tasks"
 import type { TasksDependencies } from "../interfaces/tasks.interfaces"
 
 export const card = (over: Partial<TasksCard> = {}): TasksCard => ({

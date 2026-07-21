@@ -1,10 +1,12 @@
 import * as Schema from "effect/Schema"
 import {
-  Ok,
   NoRepoSelected,
   NotFound,
   StorageError,
   TerminalError,
+} from "@byconvo/core/errors"
+import { Ok } from "@byconvo/core/shared"
+import {
   Thread,
   ThreadEntry,
   ThreadSummary,
@@ -12,7 +14,7 @@ import {
   RenameThread,
   RunCommand,
   ThreadIdParam,
-} from "@byconvo/core"
+} from "@byconvo/core/threads"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 
 const errors = [NoRepoSelected, NotFound, StorageError, TerminalError] as const

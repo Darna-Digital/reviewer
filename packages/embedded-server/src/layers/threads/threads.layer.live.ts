@@ -3,7 +3,7 @@ import {
   ThreadsRepository,
   ThreadsService,
   makeThreadsService,
-} from "@byconvo/core"
+} from "@byconvo/core/threads"
 import { makeFileThreadsRepository } from "./threads.repository.file.ts"
 
 export const ThreadsLive = Layer.effect(ThreadsService)(

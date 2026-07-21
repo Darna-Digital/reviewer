@@ -2,7 +2,7 @@ import { FileTree, useFileTree } from "@pierre/trees/react"
 import type { ReactNode } from "react"
 import { useEffect, useRef } from "react"
 import type { AppMode } from "@/lib/api/types"
-import type { GitStatusEntry } from "@byconvo/core"
+import type { GitStatusEntry } from "@byconvo/core/repo"
 
 interface FileSidebarProps {
   mode: AppMode

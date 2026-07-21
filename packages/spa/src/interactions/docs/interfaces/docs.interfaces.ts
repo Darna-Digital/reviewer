@@ -4,7 +4,7 @@
  * behind injected API side effects to keep the page component declarative and
  * the rules unit-testable.
  */
-import type { Doc } from "@byconvo/core"
+import type { Doc } from "@byconvo/core/docs"
 
 export interface DocsDependencies {
   data: Record<string, never>

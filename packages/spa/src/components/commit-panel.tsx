@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents"
-import type { GitFileStatus, GitStatusEntry } from "@byconvo/core"
+import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo"
 import { setUiPrefs, useUiPrefs, type CommitAgent } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
 

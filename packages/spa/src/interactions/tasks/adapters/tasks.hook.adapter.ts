@@ -5,7 +5,7 @@ import type {
   Board as TasksBoard,
   Card as TasksCard,
   TasksColumn,
-} from "@byconvo/core"
+} from "@byconvo/core/tasks"
 import { createTasksFunctions } from "../functions/tasks.functions"
 import type { TasksFunctions } from "../interfaces/tasks.interfaces"
 

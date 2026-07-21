@@ -1,5 +1,10 @@
 /** Mock dependencies + fixtures for the chats feature tests. */
-import type { Chat, ChatActivity, ChatMessage, ChatTurn } from "@byconvo/core"
+import type {
+  Chat,
+  ChatActivity,
+  ChatMessage,
+  ChatTurn,
+} from "@byconvo/core/chats"
 import type {
   ChatImage,
   ChatsDependencies,

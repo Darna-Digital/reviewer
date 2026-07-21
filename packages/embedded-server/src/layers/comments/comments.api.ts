@@ -1,12 +1,11 @@
 import * as Schema from "effect/Schema"
 import {
-  Ok,
-  NoRepoSelected,
-  StorageError,
   ReviewComment,
   CommentIdParam,
   NewComment,
-} from "@byconvo/core"
+} from "@byconvo/core/comments"
+import { NoRepoSelected, StorageError } from "@byconvo/core/errors"
+import { Ok } from "@byconvo/core/shared"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 
 const storeError = [NoRepoSelected, StorageError] as const

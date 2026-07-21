@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../../api.ts"
-import { GitProviderError, GitProvider } from "@byconvo/core"
+import { GitProviderError, GitProvider } from "@byconvo/core/ports/git-provider"
 
 const pullNumber = (raw: string): Effect.Effect<number, GitProviderError> =>
   Number.isInteger(Number(raw))

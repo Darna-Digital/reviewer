@@ -4,12 +4,12 @@ import { BranchTree } from "@/components/git/branch-tree"
 import { CommitHistory } from "@/components/git/commit-history"
 import { cn } from "@/lib/utils"
 import type { LogQuery } from "@/lib/api/types"
+import type { PullRequestInfo } from "@byconvo/core/ports/git-provider"
 import type {
   BranchInfo,
   CommitInfo,
   RemoteBranchInfo,
-  PullRequestInfo,
-} from "@byconvo/core"
+} from "@byconvo/core/repo"
 
 type BottomTab = "branches" | "history" | "pulls"
 

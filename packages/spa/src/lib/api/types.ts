@@ -1,4 +1,4 @@
-import type { PullRequestInfo } from "@byconvo/core"
+import type { PullRequestInfo } from "@byconvo/core/ports/git-provider"
 
 export interface LogQuery {
   readonly author: string | null

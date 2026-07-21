@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../../api.ts"
-import { CHAT_MODEL_CATALOG, ChatsService } from "@byconvo/core"
+import { CHAT_MODEL_CATALOG, ChatsService } from "@byconvo/core/chats"
 
 const ok = { ok: true } as const
 const defaults = CHAT_MODEL_CATALOG.defaults

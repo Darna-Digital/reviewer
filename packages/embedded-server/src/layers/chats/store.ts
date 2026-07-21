@@ -17,7 +17,7 @@ import {
   type ChatTurn,
   DEFAULT_CHAT_TITLE,
   titleFromPrompt,
-} from "@byconvo/core"
+} from "@byconvo/core/chats"
 
 const ChatsFile = Schema.Array(Chat)
 const decodeChatsFile = Schema.decodeUnknownSync(ChatsFile)

@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
-import { ChatRuntime } from "@byconvo/core"
+import { ChatRuntime } from "@byconvo/core/chats"
 import { getCurrentRepo } from "../workspace/current-repo.ts"
 import {
   broadcastChatSnapshot,

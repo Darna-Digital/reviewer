@@ -1,4 +1,4 @@
-import type { Doc } from "@byconvo/core"
+import type { Doc } from "@byconvo/core/docs"
 import type { DocsDependencies } from "../interfaces/docs.interfaces"
 
 const doc = (over: Partial<Doc> = {}): Doc => ({

@@ -5,14 +5,13 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { NotFound, StorageError } from "@byconvo/core/errors"
 import {
-  NotFound,
-  StorageError,
   Card,
   Column,
   DEFAULT_COLUMNS,
   normalizePrefix,
-} from "@byconvo/core"
+} from "@byconvo/core/tasks"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 import type {
   TaskComment,
@@ -20,7 +19,7 @@ import type {
   TasksRepo,
   UpdateCardInput,
   UpdateColumnInput,
-} from "@byconvo/core"
+} from "@byconvo/core/tasks"
 
 const DEFAULT_PREFIX = "T"
 

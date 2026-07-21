@@ -5,7 +5,10 @@
   "type": "module",
   "description": "byconvo infra-agnostic core — feature schemas, services, and in-memory repositories shared by the server and the SPA",
   "exports": {
-    ".": "./src/index.ts"
+    "./ports/*": "./src/ports/*.ts",
+    "./errors": "./src/errors.ts",
+    "./shared": "./src/shared.ts",
+    "./*": "./src/features/*/index.ts"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json --noEmit",

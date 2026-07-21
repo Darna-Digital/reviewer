@@ -5,9 +5,10 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { StorageError, ReviewComment } from "@byconvo/core"
+import { ReviewComment } from "@byconvo/core/comments"
+import { StorageError } from "@byconvo/core/errors"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
-import type { CommentsRepo } from "@byconvo/core"
+import type { CommentsRepo } from "@byconvo/core/comments"
 
 const CommentsFile = Schema.Array(ReviewComment)
 

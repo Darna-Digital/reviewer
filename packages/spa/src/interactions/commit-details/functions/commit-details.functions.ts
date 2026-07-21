@@ -1,4 +1,4 @@
-import type { CommitFileChange } from "@byconvo/core"
+import type { CommitFileChange } from "@byconvo/core/repo"
 import { STATUS_LETTER } from "../interfaces/commit-details.interfaces"
 import type {
   CommitDetailsDependencies,

@@ -5,7 +5,8 @@
  * injected side effects (the API mutations).
  */
 import type { AppMode } from "@/lib/api/types"
-import type { CommentSide, ReviewComment, PullRequestInfo } from "@byconvo/core"
+import type { CommentSide, ReviewComment } from "@byconvo/core/comments"
+import type { PullRequestInfo } from "@byconvo/core/ports/git-provider"
 
 export interface DraftLocation {
   readonly filePath: string

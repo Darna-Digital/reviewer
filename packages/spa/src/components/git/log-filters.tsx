@@ -29,7 +29,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import type { LogQuery } from "@/lib/api/types"
-import type { BranchInfo } from "@byconvo/core"
+import type { BranchInfo } from "@byconvo/core/repo"
 import { cn } from "@/lib/utils"
 
 /** Parse a `YYYY-MM-DD` string as a local date (no timezone shift). */

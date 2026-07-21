@@ -4,19 +4,15 @@
  * plain-fs store the turn runtime also writes through.
  */
 import * as Effect from "effect/Effect"
-import {
-  NotFound,
-  StorageError,
-  DEFAULT_CHAT_TITLE,
-  summarizeChat,
-} from "@byconvo/core"
+import { DEFAULT_CHAT_TITLE, summarizeChat } from "@byconvo/core/chats"
+import { NotFound, StorageError } from "@byconvo/core/errors"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 import type {
   Chat,
   ChatsRepo,
   CreateChatInput,
   UpdateChatInput,
-} from "@byconvo/core"
+} from "@byconvo/core/chats"
 import { nextChatId, readChats, writeChats } from "./store.ts"
 
 export const makeFileChatsRepository = Effect.gen(function* () {

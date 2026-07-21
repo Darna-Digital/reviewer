@@ -1,8 +1,8 @@
 import * as Effect from "effect/Effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../../api.ts"
-import type { LogQuery } from "@byconvo/core"
-import { RepoService } from "@byconvo/core"
+import type { LogQuery } from "@byconvo/core/repo"
+import { RepoService } from "@byconvo/core/repo"
 
 const ok = { ok: true } as const
 const trimmed = (value: string | undefined): string | null =>
