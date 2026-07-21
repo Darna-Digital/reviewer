@@ -1,0 +1,32 @@
+{
+  "name": "@byconvo/core",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "byconvo infra-agnostic core — feature schemas, services, and in-memory repositories shared by the server and the SPA",
+  "exports": {
+    "./ports/*": "./src/ports/*.ts",
+    "./shared": "./src/shared.ts",
+    "./*": "./src/features/*/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\""
+  },
+  "dependencies": {
+    "effect": "4.0.0-beta.74"
+  },
+  "devDependencies": {
+    "@byconvo/lint": "workspace:*",
+    "@effect/vitest": "4.0.0-beta.74",
+    "eslint": "^9",
+    "prettier": "^3.8.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.0.0"
+  }
+}

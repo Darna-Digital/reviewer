@@ -8,7 +8,7 @@ on:
       - "pnpm-lock.yaml"
       - "pnpm-workspace.yaml"
       - "packages/desktop/**"
-      - "packages/server/**"
+      - "packages/embedded-server/**"
       - "packages/spa/**"
   workflow_dispatch:
 

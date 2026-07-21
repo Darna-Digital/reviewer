@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
-import { NewChatView } from "@/components/chats/NewChatView"
+import { NewChatView } from "@/interactions/chats/components/new-chat-view"
 import { api } from "@/lib/api/client"
 
 /** Whether to force the new-thread composer instead of resuming a chat. */

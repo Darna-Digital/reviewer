@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { WorkspaceShell } from "@/components/layout/WorkspaceShell"
+import { WorkspaceShell } from "@/components/layout/workspace-shell"
 
 /**
  * Pathless layout for the workspace feature pages (threads, docs, tasks). It

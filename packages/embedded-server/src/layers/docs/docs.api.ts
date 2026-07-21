@@ -1,0 +1,54 @@
+import * as Schema from "effect/Schema"
+import {
+  Doc,
+  DocSummary,
+  DocIdParam,
+  NewDoc,
+  UpdateDoc,
+} from "@byconvo/core/docs"
+import {
+  NoRepoSelected,
+  NotFound,
+  StorageError,
+  Ok,
+} from "@byconvo/core/shared"
+import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
+
+const errors = [NoRepoSelected, NotFound, StorageError] as const
+
+export class DocsApi extends HttpApiGroup.make("docs")
+  .add(
+    HttpApiEndpoint.get("list", "/docs", {
+      success: Schema.Array(DocSummary),
+      error: errors,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("create", "/docs", {
+      payload: NewDoc,
+      success: Doc,
+      error: errors,
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("get", "/docs/:id", {
+      params: DocIdParam,
+      success: Doc,
+      error: errors,
+    })
+  )
+  .add(
+    HttpApiEndpoint.make("PUT")("update", "/docs/:id", {
+      params: DocIdParam,
+      payload: UpdateDoc,
+      success: Doc,
+      error: errors,
+    })
+  )
+  .add(
+    HttpApiEndpoint.make("DELETE")("remove", "/docs/:id", {
+      params: DocIdParam,
+      success: Ok,
+      error: errors,
+    })
+  ) {}

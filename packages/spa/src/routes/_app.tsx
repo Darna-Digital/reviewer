@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router"
-import { AppShell } from "@/components/layout/AppShell"
+import { AppShell } from "@/components/layout/app-shell"
 
 /** Cross-mode view state lives in typed search params (no `useState` soup). */
 export interface AppSearch {

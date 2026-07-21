@@ -1,0 +1,214 @@
+import { useQueryClient } from "@tanstack/react-query"
+import { useCallback, useMemo } from "react"
+import { toast } from "sonner"
+import { fetchClient } from "@/lib/api/client"
+import type { CommitAgent } from "@/lib/ui-prefs"
+import { createGitActionsFunctions } from "../functions/git-actions.functions"
+import {
+  errorText,
+  type NoticeKind,
+} from "../interfaces/git-actions.interfaces"
+
+const unwrap = async <T>(
+  p: Promise<{ data?: T; error?: unknown }>
+): Promise<T> => {
+  const { data, error } = await p
+  if (error) {
+    const e = error as { message?: string; reason?: string; stderr?: string }
+    const stderr = e.stderr?.trim()
+    throw new Error(
+      e.message ??
+        e.reason ??
+        (stderr !== undefined && stderr.length > 0 ? stderr : undefined) ??
+        "request failed"
+    )
+  }
+  return data as T
+}
+
+/**
+ * All imperative git actions, wired to the typed API, sonner toasts and
+ * TanStack Query invalidation. Components call these; the pure flow logic
+ * (commit→push messaging, op notices) lives in the functions layer.
+ */
+export function useGitActions() {
+  const queryClient = useQueryClient()
+
+  const notify = useCallback(
+    (kind: NoticeKind, text: string) =>
+      kind === "ok" ? toast.success(text) : toast.error(text),
+    []
+  )
+  const refresh = useCallback(() => {
+    void queryClient.invalidateQueries()
+  }, [queryClient])
+
+  const fns = useMemo(
+    () =>
+      createGitActionsFunctions({
+        data: {},
+        sideEffects: {
+          commit: (message, paths) =>
+            unwrap(
+              fetchClient.POST("/api/commit", {
+                body: { message, paths: [...paths] },
+              })
+            ),
+          push: () => unwrap(fetchClient.POST("/api/push", {})),
+          notify,
+          refresh,
+        },
+      }),
+    [notify, refresh]
+  )
+
+  const post =
+    <T>(p: Promise<{ data?: T; error?: unknown }>) =>
+    () =>
+      unwrap(p)
+
+  return {
+    commitChanges: fns.commitChanges,
+
+    /**
+     * Ask a locally installed agent CLI (claude/opencode/codex) to draft a
+     * commit message for the selected paths. Returns the message, or null when
+     * generation failed (the error is surfaced as a toast so callers can simply
+     * ignore the null).
+     */
+    generateCommitMessage: async (
+      paths: ReadonlyArray<string>,
+      agent: CommitAgent
+    ): Promise<string | null> => {
+      try {
+        const { message } = await unwrap(
+          fetchClient.POST("/api/git-message/generate", {
+            body: { paths: [...paths], agent },
+          })
+        )
+        return message
+      } catch (cause) {
+        notify("err", errorText(cause))
+        return null
+      }
+    },
+
+    /**
+     * Discard the worktree changes for the given paths, reverting them to HEAD
+     * (modifications and deletions are restored; new files are removed). This is
+     * irreversible — callers should confirm before invoking.
+     */
+    discard: (paths: ReadonlyArray<string>) =>
+      fns.runOp(
+        paths.length === 1
+          ? `Discarded changes in ${paths[0]}`
+          : `Discarded changes in ${paths.length} files`,
+        () =>
+          unwrap(
+            fetchClient.POST("/api/discard", { body: { paths: [...paths] } })
+          )
+      ),
+
+    /**
+     * Discard a single hunk of a file's worktree diff, reverting just that
+     * change. `hunkIndex` is zero-based in the order the diff renders its hunks.
+     * Irreversible — callers should confirm before invoking.
+     */
+    discardHunk: (path: string, hunkIndex: number) =>
+      fns.runOp(`Discarded a change in ${path}`, () =>
+        unwrap(
+          fetchClient.POST("/api/discard-hunk", {
+            body: { path, hunkIndex },
+          })
+        )
+      ),
+
+    checkout: (branch: string) =>
+      fns.runOp(`Checked out ${branch}`, () =>
+        unwrap(fetchClient.POST("/api/checkout", { body: { branch } }))
+      ),
+
+    checkoutAndUpdate: async (branch: string) => {
+      try {
+        await unwrap(fetchClient.POST("/api/checkout", { body: { branch } }))
+        const { output } = await unwrap(fetchClient.POST("/api/pull", {}))
+        notify(
+          "ok",
+          output.length > 0 ? output : `Checked out and updated ${branch}`
+        )
+        refresh()
+      } catch (cause) {
+        notify("err", errorText(cause))
+      }
+    },
+
+    createBranch: (name: string, startPoint: string | null) =>
+      fns.runOp(`Created branch ${name}`, () =>
+        unwrap(
+          fetchClient.POST("/api/branch", {
+            body: { name, startPoint: startPoint ?? undefined },
+          })
+        )
+      ),
+
+    renameBranch: (from: string, to: string) =>
+      fns.runOp(`Renamed ${from} → ${to}`, () =>
+        unwrap(fetchClient.POST("/api/branch/rename", { body: { from, to } }))
+      ),
+
+    deleteBranch: (name: string) =>
+      fns.runOp(`Deleted ${name}`, () =>
+        unwrap(fetchClient.POST("/api/branch/delete", { body: { name } }))
+      ),
+
+    merge: (branch: string) =>
+      fns.runOp(
+        `Merged ${branch}`,
+        post(fetchClient.POST("/api/merge", { body: { branch } }))
+      ),
+
+    rebase: (onto: string) =>
+      fns.runOp(
+        `Rebased onto ${onto}`,
+        post(fetchClient.POST("/api/rebase", { body: { onto } }))
+      ),
+
+    fetch: () => fns.runOp("Fetched", post(fetchClient.POST("/api/fetch", {}))),
+    push: () => fns.runOp("Pushed", post(fetchClient.POST("/api/push", {}))),
+    pull: () => fns.runOp("Pulled", post(fetchClient.POST("/api/pull", {}))),
+
+    // --- conflicts -----------------------------------------------------------
+    /** Resolve a conflicted file by taking one whole side. */
+    resolveConflict: (path: string, resolution: "ours" | "theirs") =>
+      fns.runOp(`Resolved ${path}`, () =>
+        unwrap(
+          fetchClient.POST("/api/conflicts/resolve", {
+            body: { path, resolution },
+          })
+        )
+      ),
+
+    /** Write the user-merged content, then stage it as resolved. */
+    resolveConflictWithContent: async (path: string, contents: string) => {
+      try {
+        await unwrap(fetchClient.PUT("/api/file", { body: { path, contents } }))
+        await unwrap(
+          fetchClient.POST("/api/conflicts/resolve", {
+            body: { path, resolution: "content" },
+          })
+        )
+        notify("ok", `Resolved ${path}`)
+        refresh()
+      } catch (cause) {
+        notify("err", errorText(cause))
+      }
+    },
+
+    abortMerge: () =>
+      fns.runOp("Aborted", post(fetchClient.POST("/api/merge/abort", {}))),
+    continueMerge: () =>
+      fns.runOp("Continued", post(fetchClient.POST("/api/merge/continue", {}))),
+
+    refresh,
+  }
+}
