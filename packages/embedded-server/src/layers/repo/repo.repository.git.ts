@@ -5,7 +5,7 @@
  */
 import * as Effect from "effect/Effect"
 import * as FileSystem from "effect/FileSystem"
-import { GitError } from "@byconvo/core/errors"
+import { GitError } from "@byconvo/core/ports/git-exec"
 import { GitExec, type GitFailure } from "../git/git-exec.ts"
 import type {
   BranchInfo,

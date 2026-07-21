@@ -8,8 +8,9 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Stream from "effect/Stream"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { GitError, NoRepoSelected } from "@byconvo/core/errors"
+import { NoRepoSelected } from "@byconvo/core/shared"
 import {
+  GitError,
   GitExec,
   type GitExecShape,
   type GitFailure,

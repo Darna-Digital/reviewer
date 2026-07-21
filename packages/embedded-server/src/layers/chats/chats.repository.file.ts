@@ -5,7 +5,7 @@
  */
 import * as Effect from "effect/Effect"
 import { DEFAULT_CHAT_TITLE, summarizeChat } from "@byconvo/core/chats"
-import { NotFound, StorageError } from "@byconvo/core/errors"
+import { NotFound, StorageError } from "@byconvo/core/shared"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 import type {
   Chat,

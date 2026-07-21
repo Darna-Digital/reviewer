@@ -6,7 +6,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { ReviewComment } from "@byconvo/core/comments"
-import { StorageError } from "@byconvo/core/errors"
+import { StorageError } from "@byconvo/core/shared"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 import type { CommentsRepo } from "@byconvo/core/comments"
 

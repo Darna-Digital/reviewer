@@ -1,11 +1,7 @@
 import * as Context from "effect/Context"
 import type * as Effect from "effect/Effect"
-import type {
-  NoRepoSelected,
-  NotFound,
-  StorageError,
-  TerminalError,
-} from "../../../errors.ts"
+import type { NoRepoSelected, NotFound, StorageError } from "../../../shared.ts"
+import type { TerminalError } from "../../../ports/terminal-exec.ts"
 import type { ChatBusy } from "../errors.ts"
 import type {
   Chat,

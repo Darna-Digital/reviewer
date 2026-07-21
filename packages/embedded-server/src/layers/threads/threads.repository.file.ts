@@ -6,7 +6,7 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { NotFound, StorageError } from "@byconvo/core/errors"
+import { NotFound, StorageError } from "@byconvo/core/shared"
 import { TerminalExec } from "../terminal/terminal-exec.ts"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 import {

@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
-import { NotFound } from "../../../errors.ts"
+import { NotFound } from "../../../shared.ts"
 import type { Chat } from "../schema/chats.schema.ts"
 import {
   DEFAULT_CHAT_TITLE,

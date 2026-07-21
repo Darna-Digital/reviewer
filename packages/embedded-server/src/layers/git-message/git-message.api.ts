@@ -1,6 +1,8 @@
 /** HTTP endpoint for AI commit-message drafting. */
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
-import { GitError, NoRepoSelected, TerminalError } from "@byconvo/core/errors"
+import { GitError } from "@byconvo/core/ports/git-exec"
+import { TerminalError } from "@byconvo/core/ports/terminal-exec"
+import { NoRepoSelected } from "@byconvo/core/shared"
 import { GeneratedMessage, GenerateBody } from "@byconvo/core/git-message"
 
 export class GitMessageApi extends HttpApiGroup.make("gitMessage").add(

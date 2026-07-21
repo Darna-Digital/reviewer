@@ -1,7 +1,17 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
-import type { TerminalError } from "../errors.ts"
+import * as Schema from "effect/Schema"
+
+export class TerminalError extends Schema.TaggedErrorClass<TerminalError>()(
+  "TerminalError",
+  { reason: Schema.String },
+  { httpApiStatus: 500 }
+) {
+  override get message(): string {
+    return this.reason
+  }
+}
 
 export interface TerminalResult {
   readonly stdout: string

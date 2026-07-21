@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
-import { NotFound } from "../../../errors.ts"
+import { NotFound } from "../../../shared.ts"
 import type { DevCommand } from "../schema/local-dev.schema.ts"
 import type {
   CreateDevCommandInput,

@@ -5,7 +5,7 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { NotFound, StorageError } from "@byconvo/core/errors"
+import { NotFound, StorageError } from "@byconvo/core/shared"
 import {
   Card,
   Column,

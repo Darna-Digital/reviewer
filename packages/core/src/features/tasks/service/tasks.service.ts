@@ -1,6 +1,6 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
-import { NotFound } from "../../../errors.ts"
+import { NotFound } from "../../../shared.ts"
 import {
   TasksRepository,
   type TasksFailure,

@@ -1,10 +1,9 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import { agentCommand } from "../../threads/functions/agents.ts"
-import { TerminalError } from "../../../errors.ts"
 import type { GitFailure } from "../../../ports/git-exec.ts"
 import { GitExec } from "../../../ports/git-exec.ts"
-import { TerminalExec } from "../../../ports/terminal-exec.ts"
+import { TerminalError, TerminalExec } from "../../../ports/terminal-exec.ts"
 import type { CommitAgent } from "../schema/git-message.schema.ts"
 
 const MAX_DIFF_CHARS = 16000

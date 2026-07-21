@@ -14,7 +14,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs"
-import { NotFound, StorageError } from "@byconvo/core/errors"
+import { NotFound, StorageError } from "@byconvo/core/shared"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 import type { Doc, DocsRepo } from "@byconvo/core/docs"
 

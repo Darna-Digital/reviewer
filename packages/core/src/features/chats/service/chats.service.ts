@@ -1,6 +1,6 @@
 import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
-import { NotFound } from "../../../errors.ts"
+import { NotFound } from "../../../shared.ts"
 import { ChatBusy } from "../errors.ts"
 import { CHAT_MODEL_CATALOG } from "../functions/chats.catalog.ts"
 import {

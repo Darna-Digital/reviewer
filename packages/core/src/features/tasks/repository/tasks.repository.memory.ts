@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
-import { NotFound, StorageError } from "../../../errors.ts"
+import { NotFound, StorageError } from "../../../shared.ts"
 import {
   type Card,
   type Column,

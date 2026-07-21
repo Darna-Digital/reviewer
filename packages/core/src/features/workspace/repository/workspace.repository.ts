@@ -1,6 +1,6 @@
 import * as Context from "effect/Context"
 import type * as Effect from "effect/Effect"
-import type { NoRepoSelected, StorageError } from "../../../errors.ts"
+import type { NoRepoSelected, StorageError } from "../../../shared.ts"
 import type { InvalidRepo } from "../errors.ts"
 import type {
   BrowsePayload,

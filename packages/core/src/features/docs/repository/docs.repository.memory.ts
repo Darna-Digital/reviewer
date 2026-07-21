@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
-import { NotFound } from "../../../errors.ts"
+import { NotFound } from "../../../shared.ts"
 import type { Doc } from "../schema/docs.schema.ts"
 import type { DocsRepo } from "./docs.repository.ts"
 

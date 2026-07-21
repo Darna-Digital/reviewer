@@ -1,6 +1,6 @@
 import * as Context from "effect/Context"
 import type * as Effect from "effect/Effect"
-import type { NoRepoSelected, NotFound, StorageError } from "../../../errors.ts"
+import type { NoRepoSelected, NotFound, StorageError } from "../../../shared.ts"
 import type { Board, Card, TasksColumn } from "../schema/tasks.schema.ts"
 
 export interface CreateCardInput {

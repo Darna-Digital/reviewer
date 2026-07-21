@@ -1,7 +1,8 @@
 /** HTTP endpoints for git: repo info, files, branches, log, diff, commit, sync. */
 import * as Schema from "effect/Schema"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
-import { GitError, NoRepoSelected } from "@byconvo/core/errors"
+import { GitError } from "@byconvo/core/ports/git-exec"
+import { NoRepoSelected, DiffText, Ok } from "@byconvo/core/shared"
 import {
   BranchInfo,
   CommandOutput,
@@ -29,7 +30,6 @@ import {
   RenameBranch,
   ResolveConflict,
 } from "@byconvo/core/repo"
-import { DiffText, Ok } from "@byconvo/core/shared"
 
 const gitError = [GitError, NoRepoSelected] as const
 

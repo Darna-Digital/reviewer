@@ -22,8 +22,8 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Stream from "effect/Stream"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { TerminalError } from "@byconvo/core/errors"
 import {
+  TerminalError,
   TerminalExec,
   type TerminalExecShape,
   type TerminalResult,

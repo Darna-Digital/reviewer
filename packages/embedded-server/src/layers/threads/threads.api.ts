@@ -1,11 +1,11 @@
 import * as Schema from "effect/Schema"
+import { TerminalError } from "@byconvo/core/ports/terminal-exec"
 import {
   NoRepoSelected,
   NotFound,
+  Ok,
   StorageError,
-  TerminalError,
-} from "@byconvo/core/errors"
-import { Ok } from "@byconvo/core/shared"
+} from "@byconvo/core/shared"
 import {
   Thread,
   ThreadEntry,

@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
-import { NotFound } from "../../../errors.ts"
+import { NotFound } from "../../../shared.ts"
 import { TerminalExec } from "../../../ports/terminal-exec.ts"
 import { agentCommand, agentDefaultTitle } from "../functions/agents.ts"
 import type { Thread, ThreadEntry } from "../schema/threads.schema.ts"

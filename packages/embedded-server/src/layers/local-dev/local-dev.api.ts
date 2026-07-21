@@ -1,5 +1,10 @@
 import * as Schema from "effect/Schema"
-import { NoRepoSelected, NotFound, StorageError } from "@byconvo/core/errors"
+import {
+  NoRepoSelected,
+  NotFound,
+  StorageError,
+  Ok,
+} from "@byconvo/core/shared"
 import {
   DevCommand,
   DevCommandView,
@@ -7,7 +12,6 @@ import {
   NewDevCommand,
   UpdateDevCommand,
 } from "@byconvo/core/local-dev"
-import { Ok } from "@byconvo/core/shared"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 
 const errors = [NoRepoSelected, NotFound, StorageError] as const
