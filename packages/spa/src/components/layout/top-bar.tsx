@@ -21,8 +21,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { BranchSwitcher } from "@/components/layout/BranchSwitcher"
-import { RepoPicker } from "@/components/RepoPicker"
+import { BranchSwitcher } from "@/components/layout/branch-switcher"
+import { RepoPicker } from "@/components/repo-picker"
 import { cn } from "@/lib/utils"
 import { isDesktop } from "@/lib/desktop"
 import type { WorkspaceInfo } from "@byconvo/core/workspace"

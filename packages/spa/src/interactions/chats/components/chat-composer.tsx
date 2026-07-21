@@ -33,7 +33,7 @@ import type {
 import { useDraft } from "@/lib/chat-drafts"
 import { cn } from "@/lib/utils"
 import type { ChatSettings } from "@/interactions/chats/entity/chats.interfaces"
-import { AttachmentChip, AttachmentGrid } from "./ImageAttachments"
+import { AttachmentChip, AttachmentGrid } from "./image-attachments"
 import {
   attachmentSource,
   isImageFile,
@@ -43,7 +43,7 @@ import {
   type ChatImagePayload,
   type ComposerAttachment,
 } from "./attachments"
-import { ModelPicker } from "./ModelPicker"
+import { ModelPicker } from "./model-picker"
 
 const EFFORTS: Array<{ value: ChatEffort; label: string; hint: string }> = [
   { value: "low", label: "Low", hint: "Fast, minimal reasoning" },

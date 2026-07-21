@@ -6,7 +6,7 @@ import {
   CommentThread,
   DraftCard,
   type DraftLocation,
-} from "@/components/comments/CommentThread"
+} from "@/interactions/comments/components/comment-thread"
 import { THEMES, useLangReady } from "@/components/editor/highlighter"
 import { Button } from "@/components/ui/button"
 import { useFile } from "@/lib/queries"

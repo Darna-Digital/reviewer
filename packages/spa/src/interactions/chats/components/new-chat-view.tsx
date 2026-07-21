@@ -13,7 +13,7 @@ import type {
 } from "@/interactions/chats/entity/chats.interfaces"
 import { NEW_CHAT_DRAFT } from "@/lib/chat-drafts"
 import { useChatModels, useRepo } from "@/lib/queries"
-import { ChatComposer } from "./ChatComposer"
+import { ChatComposer } from "./chat-composer"
 
 export function NewChatView() {
   const models = useChatModels()

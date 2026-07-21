@@ -15,8 +15,8 @@ import {
 } from "@tabler/icons-react"
 import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
-import { ResizeHandle } from "@/components/layout/ResizeHandle"
-import { DevTerminal } from "@/components/local-dev/DevTerminal"
+import { ResizeHandle } from "@/components/layout/resize-handle"
+import { DevTerminal } from "@/interactions/local-dev/components/dev-terminal"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,

@@ -15,9 +15,9 @@ import {
 import { useEffect, useRef, useState } from "react"
 import type { Chat, ChatActivity, ChatMessage } from "@byconvo/core/chats"
 import { cn } from "@/lib/utils"
-import { AttachmentGrid, AttachmentPreview } from "./ImageAttachments"
-import { ChatMarkdown } from "./ChatMarkdown"
-import { Message, MessageBubble } from "./Message"
+import { AttachmentGrid, AttachmentPreview } from "./image-attachments"
+import { ChatMarkdown } from "./chat-markdown"
+import { Message, MessageBubble } from "./message"
 
 function ActivityRow({ activity }: { activity: ChatActivity }) {
   const Icon =

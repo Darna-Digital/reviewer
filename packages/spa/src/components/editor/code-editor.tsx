@@ -9,7 +9,7 @@ import {
   duplicateLinesEdits,
   lineCommentToken,
   toggleLineCommentEdits,
-} from "@/components/editor/editorCommands"
+} from "@/components/editor/editor-commands"
 import { THEMES, useLangReady } from "@/components/editor/highlighter"
 import { Button } from "@/components/ui/button"
 import { fetchClient } from "@/lib/api/client"

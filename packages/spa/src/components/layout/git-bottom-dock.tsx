@@ -11,8 +11,8 @@
  */
 import { useNavigate, useParams } from "@tanstack/react-router"
 import { useState } from "react"
-import { BottomPanel } from "@/components/layout/BottomPanel"
-import { ResizeHandle } from "@/components/layout/ResizeHandle"
+import { BottomPanel } from "@/components/layout/bottom-panel"
+import { ResizeHandle } from "@/components/layout/resize-handle"
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import { emptyLogQuery, type LogQuery } from "@/lib/api/types"
 import {

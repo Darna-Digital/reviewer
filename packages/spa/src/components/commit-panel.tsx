@@ -1,7 +1,7 @@
 import { IconLoader2, IconSparkles } from "@tabler/icons-react"
 import { useMemo, useState } from "react"
-import { ResizeHandle } from "@/components/layout/ResizeHandle"
-import { agentIcon } from "@/components/threads/agent-icons"
+import { ResizeHandle } from "@/components/layout/resize-handle"
+import { agentIcon } from "@/interactions/threads/components/agent-icons"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {

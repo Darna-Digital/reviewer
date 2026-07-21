@@ -28,23 +28,26 @@ import {
 } from "@tanstack/react-router"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
-import { CommandMenu, type Command } from "@/components/CommandMenu"
-import { CommitPanel } from "@/components/CommitPanel"
-import { RepoList } from "@/components/RepoList"
+import { CommandMenu, type Command } from "@/components/command-menu"
+import { CommitPanel } from "@/components/commit-panel"
+import { RepoList } from "@/components/repo-list"
 import {
   ReviewAssignBar,
   type AssignTarget,
-} from "@/components/ReviewAssignBar"
-import { DiffPane, type DraftLocation } from "@/components/diff/DiffPane"
-import { CodeEditor } from "@/components/editor/CodeEditor"
-import { CodeView } from "@/components/editor/CodeView"
-import { ConflictBanner } from "@/components/git/ConflictBanner"
-import { ConflictView } from "@/components/git/ConflictView"
-import { BottomPanel } from "@/components/layout/BottomPanel"
-import { ModeRail } from "@/components/layout/ModeRail"
-import { ResizeHandle } from "@/components/layout/ResizeHandle"
-import { TopBar } from "@/components/layout/TopBar"
-import { FileSidebar } from "@/components/tree/FileSidebar"
+} from "@/components/review-assign-bar"
+import {
+  DiffPane,
+  type DraftLocation,
+} from "@/interactions/diff/components/diff-pane"
+import { CodeEditor } from "@/components/editor/code-editor"
+import { CodeView } from "@/components/editor/code-view"
+import { ConflictBanner } from "@/components/git/conflict-banner"
+import { ConflictView } from "@/components/git/conflict-view"
+import { BottomPanel } from "@/components/layout/bottom-panel"
+import { ModeRail } from "@/components/layout/mode-rail"
+import { ResizeHandle } from "@/components/layout/resize-handle"
+import { TopBar } from "@/components/layout/top-bar"
+import { FileSidebar } from "@/components/tree/file-sidebar"
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import {
   buildChatAssignmentSettings,

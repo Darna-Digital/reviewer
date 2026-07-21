@@ -18,7 +18,7 @@ import {
 import { useNavigate } from "@tanstack/react-router"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
-import { agentIcon } from "@/components/threads/agent-icons"
+import { agentIcon } from "@/interactions/threads/components/agent-icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {

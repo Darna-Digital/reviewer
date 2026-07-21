@@ -7,7 +7,7 @@
  */
 import { IconChevronDown, IconSearch, IconX } from "@tabler/icons-react"
 import { useLayoutEffect, useMemo, useRef, useState } from "react"
-import { agentIcon } from "@/components/threads/agent-icons"
+import { agentIcon } from "@/interactions/threads/components/agent-icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {

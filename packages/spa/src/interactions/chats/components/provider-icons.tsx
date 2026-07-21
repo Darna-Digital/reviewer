@@ -5,7 +5,7 @@
  * `agentIcon` is the single source. Monochrome via `currentColor`, so context
  * decides muted vs. foreground.
  */
-import { agentIcon } from "@/components/threads/agent-icons"
+import { agentIcon } from "@/interactions/threads/components/agent-icons"
 import type { ChatProviderKind } from "@byconvo/core/chats"
 
 export function ProviderIcon({

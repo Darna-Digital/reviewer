@@ -12,8 +12,8 @@ import type {
 } from "@/interactions/chats/entity/chats.interfaces"
 import { isChatRunning } from "@/interactions/chats/functions/chats.reducer"
 import { useChatModels } from "@/lib/queries"
-import { ChatComposer } from "./ChatComposer"
-import { MessagesTimeline } from "./MessagesTimeline"
+import { ChatComposer } from "./chat-composer"
+import { MessagesTimeline } from "./messages-timeline"
 
 export function ChatView({ chatId }: { chatId: string }) {
   const { chat, error } = useChatStream(chatId)

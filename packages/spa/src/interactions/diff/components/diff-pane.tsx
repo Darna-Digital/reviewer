@@ -17,11 +17,11 @@ import {
   CommentThread,
   DraftCard,
   type DraftLocation,
-} from "@/components/comments/CommentThread"
+} from "@/interactions/comments/components/comment-thread"
 import {
   DiffConnectors,
   connectorGutterCSS,
-} from "@/components/diff/DiffConnectors"
+} from "@/interactions/diff/components/diff-connectors"
 import type { DiffTarget } from "@/lib/api/types"
 import type { CommentSide, ReviewComment } from "@byconvo/core/comments"
 import type { DiffStyle, Theme } from "@/lib/ui-prefs"

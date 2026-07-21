@@ -25,9 +25,12 @@ import {
   SelectItem,
   SelectTrigger,
 } from "@/components/ui/select"
-import { ResizeHandle } from "@/components/layout/ResizeHandle"
-import { agentIcon } from "@/components/threads/agent-icons"
-import { Terminal, disposeLiveTerminal } from "@/components/threads/Terminal"
+import { ResizeHandle } from "@/components/layout/resize-handle"
+import { agentIcon } from "@/interactions/threads/components/agent-icons"
+import {
+  Terminal,
+  disposeLiveTerminal,
+} from "@/interactions/threads/components/terminal"
 import { useThreadsActions } from "@/interactions/threads/adapters/threads.hook.adapter"
 import { AGENTS, agentLabel } from "@/interactions/threads/entity/agents"
 import type { AgentKind, ThreadSummary } from "@byconvo/core/threads"

@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BranchTree } from "@/components/git/BranchTree"
-import { CommitHistory } from "@/components/git/CommitHistory"
+import { BranchTree } from "@/components/git/branch-tree"
+import { CommitHistory } from "@/components/git/commit-history"
 import { cn } from "@/lib/utils"
 import type { LogQuery } from "@/lib/api/types"
 import type {

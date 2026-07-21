@@ -18,7 +18,7 @@ import {
 import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
-import { ResizeHandle } from "@/components/layout/ResizeHandle"
+import { ResizeHandle } from "@/components/layout/resize-handle"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,

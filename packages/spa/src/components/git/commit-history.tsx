@@ -5,9 +5,9 @@ import { DEFAULT_GRAPH_CONFIG } from "@/interactions/commit-graph/entity/commit-
 import type { LogQuery } from "@/lib/api/types"
 import type { BranchInfo, CommitInfo } from "@byconvo/core/repo"
 import { cn } from "@/lib/utils"
-import { CommitDetailsPanel } from "./CommitDetailsPanel"
-import { GraphCell } from "./CommitGraph"
-import { LogFilters } from "./LogFilters"
+import { CommitDetailsPanel } from "./commit-details-panel"
+import { GraphCell } from "./commit-graph"
+import { LogFilters } from "./log-filters"
 
 interface CommitHistoryProps {
   refName: string

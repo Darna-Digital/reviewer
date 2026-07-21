@@ -5,7 +5,7 @@ import {
   duplicateLinesEdits,
   lineCommentToken,
   toggleLineCommentEdits,
-} from "./editorCommands"
+} from "./editor-commands"
 
 // Apply line/character TextEdits (sorted bottom-up, non-overlapping) to text.
 function apply(text: string, edits: TextEdit[]): string {
