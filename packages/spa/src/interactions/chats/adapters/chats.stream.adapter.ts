@@ -10,7 +10,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { chatStreamUrl } from "@/lib/api/client"
 import type { Chat } from "@byconvo/core/chats"
-import type { ChatWireEvent } from "../entity/chats.interfaces"
+import type { ChatWireEvent } from "../interfaces/chats.interfaces"
 import { applyChatEvent } from "../functions/chats.reducer"
 
 interface ChatStreamState {

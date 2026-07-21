@@ -4,7 +4,7 @@ import type {
   BranchTreeDependencies,
   BranchTreeFunctions,
   BranchTreeItem,
-} from "../entity/branch-tree.interfaces"
+} from "../interfaces/branch-tree.interfaces"
 
 interface MutableFolder {
   kind: "folder"

@@ -3,7 +3,7 @@ import type {
   CommitGraphConfig,
   CommitGraphFunctions,
   GraphRow,
-} from "@/interactions/commit-graph/entity/commit-graph.interfaces"
+} from "@/interactions/commit-graph/interfaces/commit-graph.interfaces"
 
 interface GraphCellProps {
   row: GraphRow

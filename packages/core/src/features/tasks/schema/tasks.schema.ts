@@ -43,7 +43,6 @@ export const CommentResolution = Schema.Struct({
   comment: Comment,
 })
 export type CommentResolution = typeof CommentResolution.Type
-export const Ok = Schema.Struct({ ok: Schema.Boolean })
 export const NewCard = Schema.Struct({
   title: Schema.String,
   description: Schema.optionalKey(Schema.String),

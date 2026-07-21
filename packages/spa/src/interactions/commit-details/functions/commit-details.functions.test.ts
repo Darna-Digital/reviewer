@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import type {
   DetailFileRow,
   DetailFolderRow,
-} from "../entity/commit-details.interfaces"
+} from "../interfaces/commit-details.interfaces"
 import { createCommitDetailsFunctions } from "./commit-details.functions"
 import {
   createCommitDetailsDependenciesMock,

@@ -108,7 +108,6 @@ export const ChatModelCatalog = Schema.Struct({
   }),
 })
 export type ChatModelCatalog = typeof ChatModelCatalog.Type
-export const Ok = Schema.Struct({ ok: Schema.Boolean })
 export const NewChat = Schema.Struct({
   title: Schema.optionalKey(Schema.String),
   provider: Schema.optionalKey(ChatProviderKind),

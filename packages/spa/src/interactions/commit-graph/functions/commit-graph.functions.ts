@@ -3,7 +3,7 @@ import type {
   CommitGraphFunctions,
   CommitGraphLayout,
   Lane,
-} from "../entity/commit-graph.interfaces"
+} from "../interfaces/commit-graph.interfaces"
 
 export function createCommitGraphFunctions(
   d: CommitGraphDependencies

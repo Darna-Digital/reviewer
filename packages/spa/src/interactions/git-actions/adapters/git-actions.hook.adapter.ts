@@ -4,7 +4,10 @@ import { toast } from "sonner"
 import { fetchClient } from "@/lib/api/client"
 import type { CommitAgent } from "@/lib/ui-prefs"
 import { createGitActionsFunctions } from "../functions/git-actions.functions"
-import { errorText, type NoticeKind } from "../entity/git-actions.interfaces"
+import {
+  errorText,
+  type NoticeKind,
+} from "../interfaces/git-actions.interfaces"
 
 const unwrap = async <T>(
   p: Promise<{ data?: T; error?: unknown }>

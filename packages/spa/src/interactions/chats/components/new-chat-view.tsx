@@ -10,7 +10,7 @@ import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapte
 import type {
   ChatImage,
   ChatSettings,
-} from "@/interactions/chats/entity/chats.interfaces"
+} from "@/interactions/chats/interfaces/chats.interfaces"
 import { NEW_CHAT_DRAFT } from "@/lib/chat-drafts"
 import { useChatModels, useRepo } from "@/lib/queries"
 import { ChatComposer } from "./chat-composer"

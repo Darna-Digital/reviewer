@@ -5,7 +5,7 @@
  * unit-testable without a socket.
  */
 import type { Chat } from "@byconvo/core/chats"
-import type { ChatWireEvent } from "../entity/chats.interfaces"
+import type { ChatWireEvent } from "../interfaces/chats.interfaces"
 
 export function applyChatEvent(
   chat: Chat | null,

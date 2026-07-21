@@ -4,7 +4,7 @@ import {
   type DiffDependencies,
   type DiffFunctions,
   type TreeInputs,
-} from "../entity/diff.interfaces"
+} from "../interfaces/diff.interfaces"
 
 export function createDiffFunctions(d: DiffDependencies): DiffFunctions {
   const isInternalPath: DiffFunctions["isInternalPath"] = (path) =>

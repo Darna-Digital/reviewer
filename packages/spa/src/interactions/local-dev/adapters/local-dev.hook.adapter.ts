@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { fetchClient } from "@/lib/api/client"
 import { createLocalDevFunctions } from "../functions/local-dev.functions"
-import type { LocalDevFunctions } from "../entity/local-dev.interfaces"
+import type { LocalDevFunctions } from "../interfaces/local-dev.interfaces"
 
 const fail = (error: unknown, fallback: string): never => {
   throw new Error((error as { reason?: string })?.reason ?? fallback)

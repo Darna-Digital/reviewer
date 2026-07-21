@@ -1,4 +1,7 @@
-import type { DocsDependencies, DocsFunctions } from "../entity/docs.interfaces"
+import type {
+  DocsDependencies,
+  DocsFunctions,
+} from "../interfaces/docs.interfaces"
 
 export function createDocsFunctions(d: DocsDependencies): DocsFunctions {
   const create: DocsFunctions["create"] = async (title) => {

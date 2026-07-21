@@ -1,4 +1,5 @@
 import * as Schema from "effect/Schema"
+import { Ok } from "@byconvo/core/shared"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import {
   NoRepoSelected,
@@ -11,7 +12,6 @@ import {
   Chat,
   ChatModelCatalog,
   ChatSummary,
-  Ok,
   ChatIdParam,
   NewChat,
   SendChatMessage,

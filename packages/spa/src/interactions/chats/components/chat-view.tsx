@@ -9,7 +9,7 @@ import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapte
 import type {
   ChatImage,
   ChatSettings,
-} from "@/interactions/chats/entity/chats.interfaces"
+} from "@/interactions/chats/interfaces/chats.interfaces"
 import { isChatRunning } from "@/interactions/chats/functions/chats.reducer"
 import { useChatModels } from "@/lib/queries"
 import { ChatComposer } from "./chat-composer"

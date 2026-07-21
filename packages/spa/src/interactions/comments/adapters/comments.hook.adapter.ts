@@ -7,7 +7,7 @@ import type {
   CommentsFunctions,
   DraftLocation,
   SubmitContext,
-} from "../entity/comments.interfaces"
+} from "../interfaces/comments.interfaces"
 
 /** Wires the real API mutations + TanStack Query cache into the comment logic. */
 export function useCommentsActions() {

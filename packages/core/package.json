@@ -7,6 +7,7 @@
   "exports": {
     "./ports/*": "./src/ports/*.ts",
     "./errors": "./src/errors.ts",
+    "./shared": "./src/shared/index.ts",
     "./*": "./src/features/*/index.ts"
   },
   "scripts": {

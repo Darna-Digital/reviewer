@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 import type { DevCommand } from "@byconvo/core/local-dev"
-import type { LocalDevDependencies } from "../entity/local-dev.interfaces"
+import type { LocalDevDependencies } from "../interfaces/local-dev.interfaces"
 import { createLocalDevFunctions } from "./local-dev.functions"
 
 const command = (over: Partial<DevCommand> = {}): DevCommand => ({

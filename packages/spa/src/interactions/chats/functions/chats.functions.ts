@@ -1,7 +1,7 @@
 import type {
   ChatsDependencies,
   ChatsFunctions,
-} from "../entity/chats.interfaces"
+} from "../interfaces/chats.interfaces"
 
 export function createChatsFunctions(d: ChatsDependencies): ChatsFunctions {
   const send: ChatsFunctions["send"] = async (id, text, images = []) => {

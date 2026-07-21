@@ -13,7 +13,6 @@ export const Doc = Schema.Struct({
   updatedAt: Schema.String,
 })
 export type Doc = typeof Doc.Type
-export const Ok = Schema.Struct({ ok: Schema.Boolean })
 export const NewDoc = Schema.Struct({
   title: Schema.String,
 })

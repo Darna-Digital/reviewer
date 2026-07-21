@@ -24,7 +24,6 @@ export const DevCommandView = Schema.Struct({
   exitCode: Schema.NullOr(Schema.Number),
 })
 export type DevCommandView = typeof DevCommandView.Type
-export const Ok = Schema.Struct({ ok: Schema.Boolean })
 export const NewDevCommand = Schema.Struct({
   name: Schema.String,
   command: Schema.String,

@@ -3,7 +3,7 @@ import type {
   Card as TasksCard,
   TasksColumn,
 } from "@byconvo/core/tasks"
-import type { TasksDependencies } from "../entity/tasks.interfaces"
+import type { TasksDependencies } from "../interfaces/tasks.interfaces"
 
 export const card = (over: Partial<TasksCard> = {}): TasksCard => ({
   id: "card-1",

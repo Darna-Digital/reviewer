@@ -1,7 +1,7 @@
 import type {
   LocalDevDependencies,
   LocalDevFunctions,
-} from "../entity/local-dev.interfaces"
+} from "../interfaces/local-dev.interfaces"
 
 export function createLocalDevFunctions(
   d: LocalDevDependencies

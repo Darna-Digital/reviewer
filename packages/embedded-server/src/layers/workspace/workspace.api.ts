@@ -1,11 +1,11 @@
 /** HTTP endpoints for repository selection, directory browsing and file IO. */
+import { Ok } from "@byconvo/core/shared"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import { NoRepoSelected, StorageError } from "@byconvo/core/errors"
 import {
   InvalidRepo,
   BrowsePayload,
   FileContent,
-  Ok,
   WorkspaceInfo,
   BrowseQuery,
   PathQuery,

@@ -1,7 +1,7 @@
 import type {
   CommentsDependencies,
   CommentsFunctions,
-} from "../entity/comments.interfaces"
+} from "../interfaces/comments.interfaces"
 
 export function createCommentsFunctions(
   d: CommentsDependencies

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest"
-import type { BranchFolder, BranchLeaf } from "../entity/branch-tree.interfaces"
+import type {
+  BranchFolder,
+  BranchLeaf,
+} from "../interfaces/branch-tree.interfaces"
 import { createBranchTreeFunctions } from "./branch-tree.functions"
 import {
   createBranchTreeDependenciesMock,

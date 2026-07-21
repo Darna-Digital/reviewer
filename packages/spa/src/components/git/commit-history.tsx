@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { useCommitGraph } from "@/interactions/commit-graph/adapters/commit-graph.hook.adapter"
-import { DEFAULT_GRAPH_CONFIG } from "@/interactions/commit-graph/entity/commit-graph.interfaces"
+import { DEFAULT_GRAPH_CONFIG } from "@/interactions/commit-graph/interfaces/commit-graph.interfaces"
 import type { LogQuery } from "@/lib/api/types"
 import type { BranchInfo, CommitInfo } from "@byconvo/core/repo"
 import { cn } from "@/lib/utils"

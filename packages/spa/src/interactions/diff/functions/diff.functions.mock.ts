@@ -1,6 +1,6 @@
 import { vi } from "vitest"
 import type { FileDiffMetadata } from "@pierre/diffs"
-import type { DiffDependencies } from "../entity/diff.interfaces"
+import type { DiffDependencies } from "../interfaces/diff.interfaces"
 
 /** A tiny parsePatch stub: one file per `+++ b/<name>` header line. */
 const fakeParse = (diffText: string): ReadonlyArray<FileDiffMetadata> =>

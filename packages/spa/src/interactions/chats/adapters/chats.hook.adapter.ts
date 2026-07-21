@@ -7,7 +7,7 @@ import type {
   ChatImage,
   ChatSettings,
   ChatsFunctions,
-} from "../entity/chats.interfaces"
+} from "../interfaces/chats.interfaces"
 
 const fail = (error: unknown, fallback: string): never => {
   throw new Error((error as { reason?: string })?.reason ?? fallback)

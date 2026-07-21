@@ -1,10 +1,10 @@
 import type { CommitFileChange } from "@byconvo/core/repo"
-import { STATUS_LETTER } from "../entity/commit-details.interfaces"
+import { STATUS_LETTER } from "../interfaces/commit-details.interfaces"
 import type {
   CommitDetailsDependencies,
   CommitDetailsFunctions,
   DetailRow,
-} from "../entity/commit-details.interfaces"
+} from "../interfaces/commit-details.interfaces"
 
 interface FileNode {
   name: string

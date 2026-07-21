@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 import { fetchClient } from "@/lib/api/client"
 import { createDocsFunctions } from "../functions/docs.functions"
-import type { DocsFunctions } from "../entity/docs.interfaces"
+import type { DocsFunctions } from "../interfaces/docs.interfaces"
 
 const fail = (error: unknown, fallback: string): never => {
   throw new Error((error as { reason?: string })?.reason ?? fallback)

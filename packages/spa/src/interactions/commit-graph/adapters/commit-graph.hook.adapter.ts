@@ -1,10 +1,10 @@
 import { useMemo } from "react"
 import type { CommitInfo } from "@byconvo/core/repo"
-import { DEFAULT_GRAPH_CONFIG } from "../entity/commit-graph.interfaces"
+import { DEFAULT_GRAPH_CONFIG } from "../interfaces/commit-graph.interfaces"
 import type {
   CommitGraphConfig,
   CommitGraphLayout,
-} from "../entity/commit-graph.interfaces"
+} from "../interfaces/commit-graph.interfaces"
 import { createCommitGraphFunctions } from "../functions/commit-graph.functions"
 
 /** The pure graph functions, memoised over the (static) config. */

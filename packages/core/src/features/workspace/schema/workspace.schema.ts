@@ -31,8 +31,6 @@ export const FileContent = Schema.Struct({
   contents: Schema.String,
 })
 export type FileContent = typeof FileContent.Type
-export const Ok = Schema.Struct({ ok: Schema.Boolean })
-export type Ok = typeof Ok.Type
 export const SetWorkspace = Schema.Struct({
   path: Schema.String,
 })

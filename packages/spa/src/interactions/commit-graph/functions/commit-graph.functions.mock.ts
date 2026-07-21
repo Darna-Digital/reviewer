@@ -1,9 +1,9 @@
 import type { CommitInfo } from "@byconvo/core/repo"
-import { DEFAULT_GRAPH_CONFIG } from "../entity/commit-graph.interfaces"
+import { DEFAULT_GRAPH_CONFIG } from "../interfaces/commit-graph.interfaces"
 import type {
   CommitGraphConfig,
   CommitGraphDependencies,
-} from "../entity/commit-graph.interfaces"
+} from "../interfaces/commit-graph.interfaces"
 
 export const createCommitGraphDependenciesMock = (
   overrides?: Partial<CommitGraphConfig>

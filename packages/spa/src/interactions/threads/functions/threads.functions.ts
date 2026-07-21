@@ -1,7 +1,7 @@
 import type {
   ThreadsDependencies,
   ThreadsFunctions,
-} from "../entity/threads.interfaces"
+} from "../interfaces/threads.interfaces"
 
 export function createThreadsFunctions(
   d: ThreadsDependencies

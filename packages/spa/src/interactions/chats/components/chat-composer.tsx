@@ -32,7 +32,7 @@ import type {
 } from "@byconvo/core/chats"
 import { useDraft } from "@/lib/chat-drafts"
 import { cn } from "@/lib/utils"
-import type { ChatSettings } from "@/interactions/chats/entity/chats.interfaces"
+import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces"
 import { AttachmentChip, AttachmentGrid } from "./image-attachments"
 import {
   attachmentSource,

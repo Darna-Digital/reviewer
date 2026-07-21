@@ -7,7 +7,7 @@ import type {
   TasksColumn,
 } from "@byconvo/core/tasks"
 import { createTasksFunctions } from "../functions/tasks.functions"
-import type { TasksFunctions } from "../entity/tasks.interfaces"
+import type { TasksFunctions } from "../interfaces/tasks.interfaces"
 
 const fail = (error: unknown, fallback: string): never => {
   throw new Error((error as { reason?: string })?.reason ?? fallback)

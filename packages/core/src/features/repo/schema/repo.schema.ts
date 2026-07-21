@@ -99,9 +99,6 @@ export const CommandOutput = Schema.Struct({ output: Schema.String })
 export type CommandOutput = typeof CommandOutput.Type
 export const CommitResult = Schema.Struct({ sha: Schema.String })
 export type CommitResult = typeof CommitResult.Type
-export const DiffText = Schema.String
-export type DiffText = typeof DiffText.Type
-export const Ok = Schema.Struct({ ok: Schema.Boolean })
 export const ConflictKind = Schema.Literals([
   "both-modified",
   "both-added",

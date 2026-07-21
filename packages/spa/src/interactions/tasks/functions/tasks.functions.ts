@@ -3,7 +3,7 @@ import type {
   ColumnGroup,
   TasksDependencies,
   TasksFunctions,
-} from "../entity/tasks.interfaces"
+} from "../interfaces/tasks.interfaces"
 
 export function createTasksFunctions(d: TasksDependencies): TasksFunctions {
   const allCards = (): ReadonlyArray<TasksCard> => d.data.board?.cards ?? []

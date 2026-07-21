@@ -1,4 +1,5 @@
 /** HTTP endpoints for git: repo info, files, branches, log, diff, commit, sync. */
+import { DiffText, Ok } from "@byconvo/core/shared"
 import * as Schema from "effect/Schema"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import { GitError, NoRepoSelected } from "@byconvo/core/errors"
@@ -9,10 +10,8 @@ import {
   CommitInfo,
   CommitResult,
   ConflictBlobs,
-  DiffText,
   FilesPayload,
   MergeState,
-  Ok,
   RemoteBranchInfo,
   RepoInfo,
   RepoStatus,

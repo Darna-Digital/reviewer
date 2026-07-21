@@ -49,7 +49,7 @@ import {
   trailingAgentMention,
 } from "@/interactions/chats/functions/chat-assignment.functions"
 import { useTasksActions } from "@/interactions/tasks/adapters/tasks.hook.adapter"
-import { AGENTS } from "@/interactions/threads/entity/agents"
+import { AGENTS } from "@/interactions/threads/interfaces/agents"
 import type { ChatProviderKind } from "@byconvo/core/chats"
 import type { Card as TasksCard, TasksColumn } from "@byconvo/core/tasks"
 import { useChatModels, useRepo, useTasks } from "@/lib/queries"

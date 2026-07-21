@@ -5,7 +5,10 @@ import type {
   ChatMessage,
   ChatTurn,
 } from "@byconvo/core/chats"
-import type { ChatImage, ChatsDependencies } from "../entity/chats.interfaces"
+import type {
+  ChatImage,
+  ChatsDependencies,
+} from "../interfaces/chats.interfaces"
 
 export const chat = (overrides: Partial<Chat> = {}): Chat => ({
   id: "c-1",

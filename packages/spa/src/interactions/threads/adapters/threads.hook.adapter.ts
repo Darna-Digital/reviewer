@@ -3,7 +3,7 @@ import { useMemo } from "react"
 import { fetchClient } from "@/lib/api/client"
 import type { AgentKind, Thread, ThreadSummary } from "@byconvo/core/threads"
 import { createThreadsFunctions } from "../functions/threads.functions"
-import type { ThreadsFunctions } from "../entity/threads.interfaces"
+import type { ThreadsFunctions } from "../interfaces/threads.interfaces"
 
 const fail = (error: unknown, fallback: string): never => {
   throw new Error((error as { reason?: string })?.reason ?? fallback)

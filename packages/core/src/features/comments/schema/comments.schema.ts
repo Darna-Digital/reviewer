@@ -16,7 +16,6 @@ export const ReviewComment = Schema.Struct({
   source: CommentSource,
 })
 export type ReviewComment = typeof ReviewComment.Type
-export const Ok = Schema.Struct({ ok: Schema.Boolean })
 export const NewComment = Schema.Struct({
   filePath: Schema.String,
   side: CommentSide,

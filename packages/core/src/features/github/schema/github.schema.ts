@@ -13,7 +13,6 @@ export const PullRequestInfo = Schema.Struct({
   updatedAt: Schema.String,
 })
 export type PullRequestInfo = typeof PullRequestInfo.Type
-export const DiffText = Schema.String
 export const PullNumberParam = Schema.Struct({ number: Schema.String })
 export const PullReplyParams = Schema.Struct({
   number: Schema.String,

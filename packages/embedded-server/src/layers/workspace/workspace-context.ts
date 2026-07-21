@@ -20,7 +20,7 @@ import { homedir } from "node:os"
 import { resolve as pathResolve } from "node:path"
 import { NoRepoSelected } from "@byconvo/core/errors"
 import { InvalidRepo } from "@byconvo/core/workspace"
-import { setCurrentRepo } from "./current-repo.ts"
+import { getCurrentRepo, setCurrentRepo } from "./current-repo.ts"
 
 export interface WorkspaceContextShape {
   /** The selected repo root, or fail with NoRepoSelected when none is set. */
@@ -151,14 +151,16 @@ export const make = (initial: InitialSelection | null) =>
         : null
 
     const initialCurrent = explicitValid ?? persistedValid ?? fallbackValid
-    const currentRef = yield* Ref.make<string | null>(initialCurrent)
     const recentsRef = yield* Ref.make<ReadonlyArray<string>>(persisted.recents)
-    // Keep the non-Effect snapshot (read by the PTY socket) in sync.
+    // `current-repo.ts` is the single store for the selection: an Effect Ref
+    // couldn't be read by the PTY socket / chat runtime, which run outside the
+    // Effect runtime, so those (and this service) share the one module snapshot.
     setCurrentRepo(initialCurrent)
+
+    const current: Effect.Effect<string | null> = Effect.sync(getCurrentRepo)
 
     const select: WorkspaceContextShape["select"] = (root) =>
       Effect.gen(function* () {
-        yield* Ref.set(currentRef, root)
         setCurrentRepo(root)
         const recents = yield* Ref.updateAndGet(recentsRef, (existing) =>
           [root, ...existing.filter((entry) => entry !== root)].slice(
@@ -171,13 +173,13 @@ export const make = (initial: InitialSelection | null) =>
 
     return WorkspaceContext.of({
       home: homedir(),
-      current: Ref.get(currentRef),
+      current,
       recents: Ref.get(recentsRef),
-      requireCurrent: Ref.get(currentRef).pipe(
-        Effect.flatMap((current) =>
-          current === null
+      requireCurrent: current.pipe(
+        Effect.flatMap((selected) =>
+          selected === null
             ? Effect.fail(new NoRepoSelected())
-            : Effect.succeed(current)
+            : Effect.succeed(selected)
         )
       ),
       select,

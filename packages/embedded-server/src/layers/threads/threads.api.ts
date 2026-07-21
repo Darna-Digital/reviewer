@@ -1,4 +1,5 @@
 import * as Schema from "effect/Schema"
+import { Ok } from "@byconvo/core/shared"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import {
   NoRepoSelected,
@@ -7,7 +8,6 @@ import {
   TerminalError,
 } from "@byconvo/core/errors"
 import {
-  Ok,
   Thread,
   ThreadEntry,
   ThreadSummary,

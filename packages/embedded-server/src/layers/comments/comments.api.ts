@@ -1,8 +1,8 @@
 import * as Schema from "effect/Schema"
+import { Ok } from "@byconvo/core/shared"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import { NoRepoSelected, StorageError } from "@byconvo/core/errors"
 import {
-  Ok,
   ReviewComment,
   CommentIdParam,
   NewComment,

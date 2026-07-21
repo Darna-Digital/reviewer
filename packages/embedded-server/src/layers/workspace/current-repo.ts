@@ -1,11 +1,12 @@
 /**
- * A plain module-level snapshot of the currently selected repository root.
+ * The single store for the currently selected repository root, held at module
+ * level so it can be read both inside and outside the Effect runtime.
  *
- * The WorkspaceContext Effect service is the source of truth, but the live PTY
- * WebSocket handler runs outside the Effect runtime (it is wired straight onto
- * the Node HTTP server's `upgrade` event), so it needs a non-Effect way to read
- * the current repo to use as the terminal's working directory. WorkspaceContext
- * keeps this snapshot in sync on boot and on every `select`.
+ * The live PTY WebSocket handler and chat runtime run outside Effect (wired
+ * straight onto the Node HTTP server's `upgrade` event / spawned processes), so
+ * an Effect Ref wouldn't be reachable from them. WorkspaceContext therefore owns
+ * no separate copy: it reads and writes the selection through here (on boot and
+ * on every `select`), and everything else reads it here too.
  */
 let currentRepo: string | null = null
 

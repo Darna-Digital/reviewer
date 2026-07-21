@@ -41,7 +41,6 @@ export const ThreadSummary = Schema.Struct({
   lastCommand: Schema.NullOr(Schema.String),
 })
 export type ThreadSummary = typeof ThreadSummary.Type
-export const Ok = Schema.Struct({ ok: Schema.Boolean })
 export const NewThread = Schema.Struct({
   title: Schema.optionalKey(Schema.String),
   agent: Schema.optionalKey(AgentKind),

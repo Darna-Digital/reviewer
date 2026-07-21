@@ -1,8 +1,8 @@
 import * as Schema from "effect/Schema"
+import { DiffText } from "@byconvo/core/shared"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import {
   GitHubError,
-  DiffText,
   PullRequestInfo,
   PrComment,
   PrReply,

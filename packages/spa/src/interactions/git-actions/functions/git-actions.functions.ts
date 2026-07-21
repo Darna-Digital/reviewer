@@ -2,7 +2,7 @@ import {
   errorText,
   type GitActionsDependencies,
   type GitActionsFunctions,
-} from "../entity/git-actions.interfaces"
+} from "../interfaces/git-actions.interfaces"
 
 export function createGitActionsFunctions(
   d: GitActionsDependencies
