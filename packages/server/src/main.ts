@@ -17,27 +17,27 @@ import { FetchHttpClient, HttpRouter } from "effect/unstable/http"
 import { HttpApiBuilder, HttpApiScalar } from "effect/unstable/httpapi"
 import { createServer } from "node:http"
 import { Api } from "./api.ts"
-import { ChatsController } from "./controllers/chats.controller.ts"
-import { ChatsLive } from "./layers/chats.layer.live.ts"
-import { CommentsController } from "./controllers/comments.controller.ts"
-import { CommentsLive } from "./layers/comments.layer.live.ts"
-import { DocsController } from "./controllers/docs.controller.ts"
-import { DocsLive } from "./layers/docs.layer.live.ts"
-import { GitMessageController } from "./controllers/git-message.controller.ts"
-import { GitMessageLive } from "./layers/git-message.layer.live.ts"
-import { GitHubController } from "./controllers/github.controller.ts"
-import { GitHubLive } from "./layers/github.layer.live.ts"
-import { TasksController } from "./controllers/tasks.controller.ts"
-import { TasksLive } from "./layers/tasks.layer.live.ts"
-import { LocalDevController } from "./controllers/local-dev.controller.ts"
-import { LocalDevLive } from "./layers/local-dev.layer.live.ts"
-import { DevRuntimeLive } from "./runtime/local-dev.runtime.ts"
-import { RepoController } from "./controllers/repo.controller.ts"
-import { RepoLive } from "./layers/repo.layer.live.ts"
-import { ThreadsController } from "./controllers/threads.controller.ts"
-import { ThreadsLive } from "./layers/threads.layer.live.ts"
-import { WorkspaceController } from "./controllers/workspace.controller.ts"
-import { WorkspaceLive } from "./layers/workspace.layer.live.ts"
+import { ChatsHandler } from "./layers/chats/chats.handler.ts"
+import { ChatsLive } from "./layers/chats/chats.layer.live.ts"
+import { CommentsHandler } from "./layers/comments/comments.handler.ts"
+import { CommentsLive } from "./layers/comments/comments.layer.live.ts"
+import { DocsHandler } from "./layers/docs/docs.handler.ts"
+import { DocsLive } from "./layers/docs/docs.layer.live.ts"
+import { GitMessageHandler } from "./layers/git-message/git-message.handler.ts"
+import { GitMessageLive } from "./layers/git-message/git-message.layer.live.ts"
+import { GitHubHandler } from "./layers/github/github.handler.ts"
+import { GitHubLive } from "./layers/github/github.layer.live.ts"
+import { TasksHandler } from "./layers/tasks/tasks.handler.ts"
+import { TasksLive } from "./layers/tasks/tasks.layer.live.ts"
+import { LocalDevHandler } from "./layers/local-dev/local-dev.handler.ts"
+import { LocalDevLive } from "./layers/local-dev/local-dev.layer.live.ts"
+import { DevRuntimeLive } from "./layers/local-dev/local-dev.runtime.ts"
+import { RepoHandler } from "./layers/repo/repo.handler.ts"
+import { RepoLive } from "./layers/repo/repo.layer.live.ts"
+import { ThreadsHandler } from "./layers/threads/threads.handler.ts"
+import { ThreadsLive } from "./layers/threads/threads.layer.live.ts"
+import { WorkspaceHandler } from "./layers/workspace/workspace.handler.ts"
+import { WorkspaceLive } from "./layers/workspace/workspace.layer.live.ts"
 import { layer as gitExecLayer } from "./layers/git/git-exec.ts"
 import { layer as gitHubClientLayer } from "./layers/github/github-client.ts"
 import { attachPtyServer } from "./layers/terminal/pty-socket.ts"
@@ -64,16 +64,16 @@ const ApiLive = Layer.mergeAll(
   HttpApiBuilder.layer(Api, { openapiPath: "/api/openapi.json" }),
   HttpApiScalar.layer(Api, { path: "/api/reference" })
 ).pipe(
-  Layer.provide(WorkspaceController),
-  Layer.provide(RepoController),
-  Layer.provide(CommentsController),
-  Layer.provide(GitHubController),
-  Layer.provide(GitMessageController),
-  Layer.provide(ThreadsController),
-  Layer.provide(ChatsController),
-  Layer.provide(DocsController),
-  Layer.provide(TasksController),
-  Layer.provide(LocalDevController)
+  Layer.provide(WorkspaceHandler),
+  Layer.provide(RepoHandler),
+  Layer.provide(CommentsHandler),
+  Layer.provide(GitHubHandler),
+  Layer.provide(GitMessageHandler),
+  Layer.provide(ThreadsHandler),
+  Layer.provide(ChatsHandler),
+  Layer.provide(DocsHandler),
+  Layer.provide(TasksHandler),
+  Layer.provide(LocalDevHandler)
 )
 
 /** Stateless feature services, resolved per request. */

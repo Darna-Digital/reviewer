@@ -4,16 +4,16 @@
  * darna-stack `api.ts`.
  */
 import { HttpApi } from "effect/unstable/httpapi"
-import { ChatsApi } from "./http/chats.api.ts"
-import { CommentsApi } from "./http/comments.api.ts"
-import { DocsApi } from "./http/docs.api.ts"
-import { GitMessageApi } from "./http/git-message.api.ts"
-import { GitHubApi } from "./http/github.api.ts"
-import { TasksApi } from "./http/tasks.api.ts"
-import { LocalDevApi } from "./http/local-dev.api.ts"
-import { RepoApi } from "./http/repo.api.ts"
-import { ThreadsApi } from "./http/threads.api.ts"
-import { WorkspaceApi } from "./http/workspace.api.ts"
+import { ChatsApi } from "./layers/chats/chats.api.ts"
+import { CommentsApi } from "./layers/comments/comments.api.ts"
+import { DocsApi } from "./layers/docs/docs.api.ts"
+import { GitMessageApi } from "./layers/git-message/git-message.api.ts"
+import { GitHubApi } from "./layers/github/github.api.ts"
+import { TasksApi } from "./layers/tasks/tasks.api.ts"
+import { LocalDevApi } from "./layers/local-dev/local-dev.api.ts"
+import { RepoApi } from "./layers/repo/repo.api.ts"
+import { ThreadsApi } from "./layers/threads/threads.api.ts"
+import { WorkspaceApi } from "./layers/workspace/workspace.api.ts"
 
 export class Api extends HttpApi.make("byconvo")
   .add(WorkspaceApi)

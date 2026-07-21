@@ -41,10 +41,7 @@ import {
   agentSessionArgs,
   type PtyProgram,
 } from "./agent-pty.ts"
-import {
-  CHAT_STREAM_PATH,
-  startChatStream,
-} from "../../runtime/chat-runtime.ts"
+import { CHAT_STREAM_PATH, startChatStream } from "../chats/chat-runtime.ts"
 import { getCurrentRepo } from "../workspace/current-repo.ts"
 import { recentAgentSessions } from "./agent-session-capture.ts"
 import { DEV_PTY_PATH, startDevSession } from "./dev-process-manager.ts"
