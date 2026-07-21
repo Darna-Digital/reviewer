@@ -32,8 +32,8 @@ import type { IncomingMessage, Server } from "node:http"
 import { tmpdir } from "node:os"
 import { dirname, extname, join } from "node:path"
 import type { Duplex } from "node:stream"
-import type { IPty } from "node-pty"
-import type * as NodePtyModule from "node-pty"
+import type { IPty } from "@lydell/node-pty"
+import type * as NodePtyModule from "@lydell/node-pty"
 import { WebSocketServer, type WebSocket } from "ws"
 import { AGENT_KINDS, type AgentKind } from "@byconvo/core/threads"
 import {
@@ -73,7 +73,8 @@ let ptyModule: NodePty | null | undefined
  */
 const ensureSpawnHelperExecutable = (moduleEntry: string): void => {
   if (process.platform === "win32") return
-  // Climb from the resolved entry (…/node-pty/lib/index.js) to the package root.
+  const arch = `${process.platform}-${process.arch}`
+  // Climb from the resolved entry to the main package root (dir with package.json).
   let root = dirname(moduleEntry)
   for (let i = 0; i < 6 && !existsSync(join(root, "package.json")); i++) {
     const parent = dirname(root)
@@ -81,13 +82,14 @@ const ensureSpawnHelperExecutable = (moduleEntry: string): void => {
     root = parent
   }
   const helpers = [
+    // @lydell/node-pty keeps the prebuilt binary and spawn-helper in a sibling
+    // per-platform package (@lydell/node-pty-<platform>-<arch>) under the same
+    // @lydell scope dir, in dev (pnpm) and in the packaged app alike. Only macOS
+    // ships a spawn-helper; on other platforms this path simply won't exist.
+    join(dirname(root), `node-pty-${arch}`, "prebuilds", arch, "spawn-helper"),
+    // Fallbacks for a self-contained layout where the helper sits under the root.
     join(root, "build", "Release", "spawn-helper"),
-    join(
-      root,
-      "prebuilds",
-      `${process.platform}-${process.arch}`,
-      "spawn-helper"
-    ),
+    join(root, "prebuilds", arch, "spawn-helper"),
   ]
   for (const helper of helpers) {
     try {
@@ -106,9 +108,10 @@ const loadNodePty = (): NodePty | null => {
   // (only in the packaged path, where the server shares Electron's Node ABI), so
   // resolution doesn't depend on walking up through the asar. Fall back to a
   // bare specifier for dev / standalone, where node-pty is in node_modules.
-  const candidates = [process.env["BYCONVO_NODE_PTY"], "node-pty"].filter(
-    (c): c is string => typeof c === "string" && c.length > 0
-  )
+  const candidates = [
+    process.env["BYCONVO_NODE_PTY"],
+    "@lydell/node-pty",
+  ].filter((c): c is string => typeof c === "string" && c.length > 0)
   for (const candidate of candidates) {
     try {
       ptyModule = requireFn(candidate) as NodePty

@@ -3,16 +3,16 @@ productName: Byconvo
 artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 asar: true
 
-# Rebuild native production deps (node-pty) for Electron's Node ABI at package
-# time. The bundled server runs under Electron's Node (ELECTRON_RUN_AS_NODE),
-# whose ABI differs from system Node, so node-pty must be the right build — just
-# like in dev, where it's the system-Node build in the server's node_modules.
-npmRebuild: true
-# Native modules can't be dlopen'd from inside the asar, so keep node-pty
-# (and any other .node) unpacked next to it.
+# @lydell/node-pty ships prebuilt, ABI-stable (N-API) binaries per platform, so
+# no native rebuild is needed at package time — the matching prebuilt loads under
+# Electron's Node (ELECTRON_RUN_AS_NODE) as-is, on both arm64 and x64.
+npmRebuild: false
+# Native modules can't be dlopen'd from inside the asar, so keep the pty binary
+# (and any other .node) unpacked next to it. The prebuilt and its spawn-helper
+# live in the per-platform @lydell/node-pty-<os>-<arch> package.
 asarUnpack:
   - "**/*.node"
-  - "**/node_modules/node-pty/**"
+  - "**/node_modules/@lydell/**"
 
 directories:
   output: dist-packaged
@@ -34,16 +34,34 @@ files:
     to: server
     filter:
       - "**/*"
-  # Production dependencies (node-pty + its deps). electron-builder prunes this
-  # to the production dependency tree, so devDeps (electron, etc.) are skipped.
+  # Production dependencies (@lydell/node-pty + its platform binary packages,
+  # electron-updater). electron-builder prunes this to the production dependency
+  # tree, so devDeps (electron, etc.) are skipped.
   - "node_modules/**/*"
   - package.json
 
 mac:
   category: public.app-category.developer-tools
-  identity: null
   icon: assets/byconvo.icns
+  # Gatekeeper requires distributed apps to be signed with a Developer ID
+  # certificate and notarized by Apple. `identity` is left unset so
+  # electron-builder auto-discovers the "Developer ID Application" cert imported
+  # into the keychain by CI; hardenedRuntime + entitlements are prerequisites for
+  # notarization, which runs automatically via the APPLE_API_* env vars.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: assets/entitlements.plist
+  entitlementsInherit: assets/entitlements.plist
+  notarize: true
+  # dmg for first install; zip is what electron-updater downloads to self-update.
   target:
     - dmg
+    - zip
 
-publish: null
+# electron-updater reads this from the baked-in app-update.yml to find new
+# releases. The GitHub Release must carry the .zip, its .blockmap, and
+# latest-mac.yml — all produced by the release workflow.
+publish:
+  provider: github
+  owner: darna-digital
+  repo: byconvo

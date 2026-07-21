@@ -1,11 +1,25 @@
 packages:
   - packages/*
 
+# Package a single macOS build for both architectures from one runner. pnpm only
+# installs optional platform binaries matching the host by default; listing both
+# darwin CPUs here pulls the @lydell/node-pty-darwin-{arm64,x64} prebuilts on any
+# host so `electron-builder --mac --arm64 --x64` can assemble both apps (and a
+# single latest-mac.yml) without a per-arch runner matrix. `current` keeps the
+# host's own platform for local dev.
+supportedArchitectures:
+  os:
+    - current
+    - darwin
+  cpu:
+    - current
+    - arm64
+    - x64
+
 allowBuilds:
   better-sqlite3: false
   electron: true
   electron-winstaller: true
   esbuild: true
   msgpackr-extract: true
-  node-pty: true
   unrs-resolver: true

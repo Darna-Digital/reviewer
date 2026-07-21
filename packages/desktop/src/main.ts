@@ -23,6 +23,7 @@ import {
   protocol,
   shell,
 } from "electron";
+import { autoUpdater } from "electron-updater";
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -254,6 +255,18 @@ app.whenReady().then(async () => {
   } catch (cause) {
     console.error("failed to start byconvo desktop:", cause);
     app.quit();
+  }
+
+  // Check GitHub Releases for a newer signed build, download it in the
+  // background, and install on quit (with a native "restart to update" prompt).
+  // Only meaningful in a packaged, signed build — Squirrel.Mac refuses to apply
+  // an update to an app whose signature it can't verify — so this no-ops in dev
+  // and unsigned local packages. Failures (offline, no release yet) are logged
+  // and swallowed so a bad update check never blocks startup.
+  if (app.isPackaged) {
+    autoUpdater
+      .checkForUpdatesAndNotify()
+      .catch((cause) => console.error("update check failed:", cause));
   }
 
   app.on("activate", () => {
