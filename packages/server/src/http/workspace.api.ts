@@ -1,7 +1,8 @@
 /** HTTP endpoints for repository selection, directory browsing and file IO. */
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
-import { InvalidRepo, NoRepoSelected, StorageError } from "@byconvo/core/errors"
+import { NoRepoSelected, StorageError } from "@byconvo/core/errors"
 import {
+  InvalidRepo,
   BrowsePayload,
   FileContent,
   Ok,

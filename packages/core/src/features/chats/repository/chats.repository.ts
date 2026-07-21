@@ -1,12 +1,12 @@
 import * as Context from "effect/Context"
 import type * as Effect from "effect/Effect"
 import type {
-  ChatBusy,
   NoRepoSelected,
   NotFound,
   StorageError,
   TerminalError,
 } from "../../../errors.ts"
+import type { ChatBusy } from "../errors.ts"
 import type {
   Chat,
   ChatAccess,

@@ -1,13 +1,13 @@
 import * as Schema from "effect/Schema"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 import {
-  ChatBusy,
   NoRepoSelected,
   NotFound,
   StorageError,
   TerminalError,
 } from "@byconvo/core/errors"
 import {
+  ChatBusy,
   Chat,
   ChatModelCatalog,
   ChatSummary,

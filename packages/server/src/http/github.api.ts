@@ -1,8 +1,7 @@
 import * as Schema from "effect/Schema"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
-import { GitHubError } from "@byconvo/core/errors"
-import { ReviewComment } from "@byconvo/core/comments"
 import {
+  GitHubError,
   DiffText,
   PullRequestInfo,
   PrComment,
@@ -10,6 +9,7 @@ import {
   PullNumberParam,
   PullReplyParams,
 } from "@byconvo/core/github"
+import { ReviewComment } from "@byconvo/core/comments"
 
 export class GitHubApi extends HttpApiGroup.make("github")
   .add(

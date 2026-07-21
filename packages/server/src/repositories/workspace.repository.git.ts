@@ -9,7 +9,8 @@ import type { PlatformError } from "effect/PlatformError"
 import { ChildProcessSpawner } from "effect/unstable/process"
 import { homedir } from "node:os"
 import { resolve as pathResolve } from "node:path"
-import { InvalidRepo, NoRepoSelected, StorageError } from "@byconvo/core/errors"
+import { NoRepoSelected, StorageError } from "@byconvo/core/errors"
+import { InvalidRepo } from "@byconvo/core/workspace"
 import {
   resolveWorkspace,
   WorkspaceContext,

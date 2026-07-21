@@ -1,6 +1,6 @@
 import * as Context from "effect/Context"
 import type * as Effect from "effect/Effect"
-import type { GitHubError } from "../../../errors.ts"
+import type { GitHubError } from "../errors.ts"
 import type { ReviewComment } from "../../comments/schema/comments.schema.ts"
 import type {
   PullRequestInfo,
