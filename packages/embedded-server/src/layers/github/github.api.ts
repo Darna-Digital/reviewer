@@ -1,7 +1,7 @@
 import * as Schema from "effect/Schema"
 import {
   DiffText,
-  GitHubError,
+  GitProviderError,
   PullRequestInfo,
   PrComment,
   PrReply,
@@ -15,21 +15,21 @@ export class GitHubApi extends HttpApiGroup.make("github")
   .add(
     HttpApiEndpoint.get("pulls", "/github/pulls", {
       success: Schema.Array(PullRequestInfo),
-      error: GitHubError,
+      error: GitProviderError,
     })
   )
   .add(
     HttpApiEndpoint.get("pullDiff", "/github/pulls/:number/diff", {
       params: PullNumberParam,
       success: DiffText,
-      error: GitHubError,
+      error: GitProviderError,
     })
   )
   .add(
     HttpApiEndpoint.get("pullComments", "/github/pulls/:number/comments", {
       params: PullNumberParam,
       success: Schema.Array(ReviewComment),
-      error: GitHubError,
+      error: GitProviderError,
     })
   )
   .add(
@@ -40,7 +40,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
         params: PullNumberParam,
         payload: PrComment,
         success: ReviewComment,
-        error: GitHubError,
+        error: GitProviderError,
       }
     )
   )
@@ -52,7 +52,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
         params: PullReplyParams,
         payload: PrReply,
         success: ReviewComment,
-        error: GitHubError,
+        error: GitProviderError,
       }
     )
   ) {}

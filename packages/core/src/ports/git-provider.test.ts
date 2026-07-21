@@ -1,9 +1,11 @@
 import { it } from "@effect/vitest"
 import { Effect } from "effect"
 import { describe, expect } from "vitest"
-import type { PullRequestInfo } from "../schema/github.schema.ts"
-import { GitHubMemory } from "../layer/github.layer.memory.ts"
-import { GitHubService } from "./github.service.ts"
+import {
+  GitProvider,
+  GitProviderMemory,
+  type PullRequestInfo,
+} from "./git-provider.ts"
 
 const pr = (number: number, title: string): PullRequestInfo => ({
   number,
@@ -15,17 +17,19 @@ const pr = (number: number, title: string): PullRequestInfo => ({
   url: `https://github.com/x/y/pull/${number}`,
   updatedAt: "2026-01-01T00:00:00Z",
 })
-describe("GitHubService", () => {
+describe("GitProvider", () => {
   it.effect("lists open pulls", () =>
     Effect.gen(function* () {
-      const gh = yield* GitHubService
+      const gh = yield* GitProvider
       const pulls = yield* gh.pulls
       expect(pulls.map((p) => p.number)).toEqual([1, 2])
-    }).pipe(Effect.provide(GitHubMemory({ pulls: [pr(1, "a"), pr(2, "b")] })))
+    }).pipe(
+      Effect.provide(GitProviderMemory({ pulls: [pr(1, "a"), pr(2, "b")] }))
+    )
   )
   it.effect("creates a PR comment with source=github", () =>
     Effect.gen(function* () {
-      const gh = yield* GitHubService
+      const gh = yield* GitProvider
       const created = yield* gh.createPullComment({
         pullNumber: 3,
         filePath: "src/a.ts",
@@ -35,6 +39,6 @@ describe("GitHubService", () => {
       })
       expect(created.source).toBe("github")
       expect(created.target).toBe("pr-3")
-    }).pipe(Effect.provide(GitHubMemory()))
+    }).pipe(Effect.provide(GitProviderMemory()))
   )
 })

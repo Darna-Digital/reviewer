@@ -1029,8 +1029,8 @@ export interface components {
             exitCode: number;
             stderr: string;
         };
-        GitHubError: {
-            _tag: "GitHubError";
+        GitProviderError: {
+            _tag: "GitProviderError";
             reason: string;
         };
         TerminalError: {
@@ -2584,7 +2584,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitHubError"];
+                    "application/json": components["schemas"]["GitProviderError"];
                 };
             };
         };
@@ -2613,7 +2613,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitHubError"];
+                    "application/json": components["schemas"]["GitProviderError"];
                 };
             };
         };
@@ -2652,7 +2652,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitHubError"];
+                    "application/json": components["schemas"]["GitProviderError"];
                 };
             };
         };
@@ -2700,7 +2700,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitHubError"];
+                    "application/json": components["schemas"]["GitProviderError"];
                 };
             };
         };
@@ -2746,7 +2746,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GitHubError"];
+                    "application/json": components["schemas"]["GitProviderError"];
                 };
             };
         };

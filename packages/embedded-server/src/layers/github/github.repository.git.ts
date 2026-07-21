@@ -3,14 +3,18 @@
  * onto the shared `GitHubClient` (owner/repo resolution + REST helpers).
  */
 import * as Effect from "effect/Effect"
-import { GitHubError } from "@byconvo/core"
+import { GitProviderError } from "@byconvo/core"
 import { GitHubClient } from "./github-client.ts"
-import type { ReviewComment, PullRequestInfo, GitHubRepo } from "@byconvo/core"
+import type {
+  ReviewComment,
+  PullRequestInfo,
+  GitProviderShape,
+} from "@byconvo/core"
 
-export const makeGitHubRepository = Effect.gen(function* () {
+export const makeGitHubProvider = Effect.gen(function* () {
   const gh = yield* GitHubClient
 
-  const pulls: GitHubRepo["pulls"] = Effect.gen(function* () {
+  const pulls: GitProviderShape["pulls"] = Effect.gen(function* () {
     const { owner, repo } = yield* gh.repo
     const data = (yield* gh.getJson(
       `/repos/${owner}/${repo}/pulls?state=open&per_page=50`
@@ -30,7 +34,7 @@ export const makeGitHubRepository = Effect.gen(function* () {
     )
   })
 
-  const pullDiff: GitHubRepo["pullDiff"] = (pullNumber) =>
+  const pullDiff: GitProviderShape["pullDiff"] = (pullNumber) =>
     Effect.gen(function* () {
       const { owner, repo } = yield* gh.repo
       return yield* gh.getText(
@@ -39,7 +43,7 @@ export const makeGitHubRepository = Effect.gen(function* () {
       )
     })
 
-  const pullComments: GitHubRepo["pullComments"] = (pullNumber) =>
+  const pullComments: GitProviderShape["pullComments"] = (pullNumber) =>
     Effect.gen(function* () {
       const { owner, repo } = yield* gh.repo
       const data = (yield* gh.getJson(
@@ -68,7 +72,7 @@ export const makeGitHubRepository = Effect.gen(function* () {
       })
     })
 
-  const createPullComment: GitHubRepo["createPullComment"] = (input) =>
+  const createPullComment: GitProviderShape["createPullComment"] = (input) =>
     Effect.gen(function* () {
       const { owner, repo } = yield* gh.repo
       const prData = (yield* gh.getJson(
@@ -77,7 +81,7 @@ export const makeGitHubRepository = Effect.gen(function* () {
       const headSha = prData?.head?.sha
       if (typeof headSha !== "string") {
         return yield* Effect.fail(
-          new GitHubError({ reason: "could not resolve PR head sha" })
+          new GitProviderError({ reason: "could not resolve PR head sha" })
         )
       }
       const created = (yield* gh.postJson(
@@ -103,7 +107,7 @@ export const makeGitHubRepository = Effect.gen(function* () {
       } satisfies ReviewComment
     })
 
-  const replyToPullComment: GitHubRepo["replyToPullComment"] = (input) =>
+  const replyToPullComment: GitProviderShape["replyToPullComment"] = (input) =>
     Effect.gen(function* () {
       const { owner, repo } = yield* gh.repo
       const created = (yield* gh.postJson(
@@ -129,5 +133,5 @@ export const makeGitHubRepository = Effect.gen(function* () {
     pullComments,
     createPullComment,
     replyToPullComment,
-  } satisfies GitHubRepo
+  } satisfies GitProviderShape
 })

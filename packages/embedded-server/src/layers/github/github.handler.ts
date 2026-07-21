@@ -1,34 +1,32 @@
 import * as Effect from "effect/Effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../../api.ts"
-import { GitHubError, GitHubService } from "@byconvo/core"
+import { GitProviderError, GitProvider } from "@byconvo/core"
 
-const pullNumber = (raw: string): Effect.Effect<number, GitHubError> =>
+const pullNumber = (raw: string): Effect.Effect<number, GitProviderError> =>
   Number.isInteger(Number(raw))
     ? Effect.succeed(Number(raw))
-    : Effect.fail(new GitHubError({ reason: `invalid PR number: ${raw}` }))
+    : Effect.fail(new GitProviderError({ reason: `invalid PR number: ${raw}` }))
 
 export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
   handlers
-    .handle("pulls", () => Effect.flatMap(GitHubService, (s) => s.pulls))
+    .handle("pulls", () => Effect.flatMap(GitProvider, (s) => s.pulls))
     .handle("pullDiff", ({ params }) =>
       pullNumber(params.number).pipe(
-        Effect.flatMap((n) =>
-          Effect.flatMap(GitHubService, (s) => s.pullDiff(n))
-        )
+        Effect.flatMap((n) => Effect.flatMap(GitProvider, (s) => s.pullDiff(n)))
       )
     )
     .handle("pullComments", ({ params }) =>
       pullNumber(params.number).pipe(
         Effect.flatMap((n) =>
-          Effect.flatMap(GitHubService, (s) => s.pullComments(n))
+          Effect.flatMap(GitProvider, (s) => s.pullComments(n))
         )
       )
     )
     .handle("createPullComment", ({ params, payload }) =>
       pullNumber(params.number).pipe(
         Effect.flatMap((n) =>
-          Effect.flatMap(GitHubService, (s) =>
+          Effect.flatMap(GitProvider, (s) =>
             s.createPullComment({
               pullNumber: n,
               filePath: payload.filePath,
@@ -45,7 +43,7 @@ export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
         Effect.flatMap((n) =>
           pullNumber(params.commentId).pipe(
             Effect.flatMap((commentId) =>
-              Effect.flatMap(GitHubService, (s) =>
+              Effect.flatMap(GitProvider, (s) =>
                 s.replyToPullComment({
                   pullNumber: n,
                   commentId,

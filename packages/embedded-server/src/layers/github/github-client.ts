@@ -9,7 +9,7 @@ import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { GitHubError } from "@byconvo/core"
+import { GitProviderError } from "@byconvo/core"
 import { GitExec } from "../git/git-exec.ts"
 
 const API = "https://api.github.com"
@@ -21,16 +21,16 @@ export interface GitHubRepo {
 
 export interface GitHubClientShape {
   /** owner/repo for `origin`, or fail when it is not a GitHub remote. */
-  readonly repo: Effect.Effect<GitHubRepo, GitHubError>
-  readonly getJson: (path: string) => Effect.Effect<unknown, GitHubError>
+  readonly repo: Effect.Effect<GitHubRepo, GitProviderError>
+  readonly getJson: (path: string) => Effect.Effect<unknown, GitProviderError>
   readonly getText: (
     path: string,
     accept: string
-  ) => Effect.Effect<string, GitHubError>
+  ) => Effect.Effect<string, GitProviderError>
   readonly postJson: (
     path: string,
     body: unknown
-  ) => Effect.Effect<unknown, GitHubError>
+  ) => Effect.Effect<unknown, GitProviderError>
 }
 
 export class GitHubClient extends Context.Service<
@@ -80,12 +80,14 @@ export const make = Effect.gen(function* () {
   const repo: GitHubClientShape["repo"] = git
     .run("remote", "get-url", "origin")
     .pipe(
-      Effect.mapError((error) => new GitHubError({ reason: error.message })),
+      Effect.mapError(
+        (error) => new GitProviderError({ reason: error.message })
+      ),
       Effect.flatMap((out) => {
         const parsed = parseGitHubRemote(out.trim())
         return parsed === null
           ? Effect.fail(
-              new GitHubError({ reason: "origin is not a GitHub remote" })
+              new GitProviderError({ reason: "origin is not a GitHub remote" })
             )
           : Effect.succeed(parsed)
       })
@@ -107,18 +109,22 @@ export const make = Effect.gen(function* () {
           HttpClientRequest.get(`${API}${path}`, { headers: requestHeaders })
         )
         .pipe(
-          Effect.mapError((error) => new GitHubError({ reason: String(error) }))
+          Effect.mapError(
+            (error) => new GitProviderError({ reason: String(error) })
+          )
         )
       if (response.status >= 400) {
         const body = yield* response.text.pipe(Effect.orElseSucceed(() => ""))
         return yield* Effect.fail(
-          new GitHubError({
+          new GitProviderError({
             reason: `GitHub responded ${response.status}: ${body}`,
           })
         )
       }
       return yield* response.json.pipe(
-        Effect.mapError((error) => new GitHubError({ reason: String(error) }))
+        Effect.mapError(
+          (error) => new GitProviderError({ reason: String(error) })
+        )
       )
     })
 
@@ -130,12 +136,14 @@ export const make = Effect.gen(function* () {
           HttpClientRequest.get(`${API}${path}`, { headers: requestHeaders })
         )
         .pipe(
-          Effect.mapError((error) => new GitHubError({ reason: String(error) }))
+          Effect.mapError(
+            (error) => new GitProviderError({ reason: String(error) })
+          )
         )
       const body = yield* response.text.pipe(Effect.orElseSucceed(() => ""))
       if (response.status >= 400) {
         return yield* Effect.fail(
-          new GitHubError({
+          new GitProviderError({
             reason: `GitHub responded ${response.status}: ${body}`,
           })
         )
@@ -156,18 +164,22 @@ export const make = Effect.gen(function* () {
           )
         )
         .pipe(
-          Effect.mapError((error) => new GitHubError({ reason: String(error) }))
+          Effect.mapError(
+            (error) => new GitProviderError({ reason: String(error) })
+          )
         )
       if (response.status >= 400) {
         const text = yield* response.text.pipe(Effect.orElseSucceed(() => ""))
         return yield* Effect.fail(
-          new GitHubError({
+          new GitProviderError({
             reason: `GitHub responded ${response.status}: ${text}`,
           })
         )
       }
       return yield* response.json.pipe(
-        Effect.mapError((error) => new GitHubError({ reason: String(error) }))
+        Effect.mapError(
+          (error) => new GitProviderError({ reason: String(error) })
+        )
       )
     })
 
