@@ -37,12 +37,26 @@ protocol.registerSchemesAsPrivileged([
   },
 ]);
 
+// Beta and production installs coexist on one machine (distinct appId +
+// product name → separate app bundles and userData dirs). Beta builds carry a
+// `-beta.N` version suffix, so key the identity and the local server port off
+// that: without it, both channels would default to the same port and running
+// them at once would cross-wire — the renderer, the spawned server, and the
+// reachability checks all target this port.
+const isBeta = app.getVersion().includes("-beta.");
+
 // Branding: the product name shown in the macOS menu bar, dock, and window
 // title. Set before the app is ready so it replaces Electron's default name.
-app.setName("Byconvo");
+app.setName(isBeta ? "Byconvo Beta" : "Byconvo");
 
 const isDev = process.env["BYCONVO_DESKTOP_DEV"] === "1";
-const serverPort = Number(process.env["BYCONVO_PORT"] ?? 41811);
+const serverPort = Number(
+  process.env["BYCONVO_PORT"] ?? (isBeta ? 41821 : 41811),
+);
+// Propagate the resolved port so the preload/renderer (which reads
+// BYCONVO_PORT) and the spawned server agree on it, even when it wasn't set
+// from the outside.
+process.env["BYCONVO_PORT"] = String(serverPort);
 const serverUrl = `http://localhost:${serverPort}`;
 const spaUrl = process.env["BYCONVO_DEV_URL"] ?? "http://localhost:41812";
 

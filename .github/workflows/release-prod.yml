@@ -1,0 +1,113 @@
+name: release-prod
+
+# Production channel. A push to `master` publishes the version in
+# packages/desktop/package.json to darna-digital/byconvo — but only if that
+# version has not already been released. Bumping the version is therefore the
+# deliberate "ship it" signal; merges that don't change the version are no-ops.
+# Published releases are picked up by the "Byconvo" app's auto-updater.
+#
+# Secrets used (GITHUB_TOKEN is built in — publishing is to this same repo):
+#   APPLE_CERTIFICATE           base64 of the Developer ID Application .p12
+#   APPLE_CERTIFICATE_PASSWORD  password for that .p12
+#   APPLE_API_KEY               base64 of the App Store Connect API .p8 key
+#   APPLE_API_KEY_ID            the key's ID
+#   APPLE_API_ISSUER            the key's issuer ID
+#
+# Until the Apple secrets are set this still runs: it builds an unsigned app and
+# uploads it as a workflow artifact instead of signing and publishing.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: release-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    env:
+      HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE != '' }}
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Resolve version and skip if already released
+        id: v
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=$(node -p "require('./packages/desktop/package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if gh release view "v$VERSION" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::v$VERSION is already released — nothing to publish."
+          else
+            echo "release=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Publishing v$VERSION."
+          fi
+
+      - uses: pnpm/action-setup@v4.1.0
+        if: steps.v.outputs.release == 'true'
+
+      - uses: actions/setup-node@v4.4.0
+        if: steps.v.outputs.release == 'true'
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - name: Import signing certificate
+        if: steps.v.outputs.release == 'true' && env.HAS_SIGNING == 'true'
+        uses: apple-actions/import-codesign-certs@8f3fb608891dd2244cdab3d69cd68c0d37a7fe93
+        with:
+          keychain: build
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+
+      - name: Write App Store Connect API key
+        if: steps.v.outputs.release == 'true' && env.HAS_SIGNING == 'true'
+        run: echo "${{ secrets.APPLE_API_KEY }}" | base64 --decode > "$RUNNER_TEMP/apple-api-key.p8"
+
+      - name: Install dependencies
+        if: steps.v.outputs.release == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build renderer, server, and main process
+        if: steps.v.outputs.release == 'true'
+        run: pnpm build:desktop
+
+      - name: Package, sign, notarize, and publish
+        if: steps.v.outputs.release == 'true' && env.HAS_SIGNING == 'true'
+        run: >
+          pnpm --filter @byconvo/desktop exec electron-builder
+          --mac --arm64 --x64
+          --config electron-builder.config.js
+          --publish always
+        env:
+          BYCONVO_CHANNEL: prod
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          APPLE_API_KEY: ${{ runner.temp }}/apple-api-key.p8
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+
+      - name: Package unsigned (no signing secrets configured)
+        if: steps.v.outputs.release == 'true' && env.HAS_SIGNING != 'true'
+        run: >
+          pnpm --filter @byconvo/desktop exec electron-builder
+          --mac --arm64 --x64
+          --config electron-builder.config.js
+          -c.mac.identity=null -c.mac.notarize=false
+          --publish never
+        env:
+          BYCONVO_CHANNEL: prod
+
+      - name: Upload unsigned build
+        if: steps.v.outputs.release == 'true' && env.HAS_SIGNING != 'true'
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: byconvo-desktop-prod-unsigned
+          path: packages/desktop/dist-packaged/**
