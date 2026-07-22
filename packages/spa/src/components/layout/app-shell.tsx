@@ -30,6 +30,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { CommandMenu, type Command } from "@/components/command-menu"
 import { CommitPanel } from "@/components/commit-panel"
+import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool"
 import { RepoList } from "@/components/repo-list"
 import {
   ReviewAssignBar,
@@ -691,195 +692,201 @@ export function AppShell() {
   }
 
   return (
-    <div className="flex h-svh w-full overflow-hidden text-foreground">
-      <CommandMenu
-        open={commandOpen}
-        onOpenChange={setCommandOpen}
-        commands={commands}
-        files={allPaths}
-        onOpenFile={(path) => openFile(path, false)}
-      />
-      {visibleComments.length > 0 && !assignBarDismissed && (
-        <ReviewAssignBar
-          count={visibleComments.length}
-          chats={chats.data ?? []}
-          onAssign={assignReview}
-          onDismiss={() => setAssignBarDismissed(true)}
+    // One Shiki worker pool shared by every diff/file surface below (diff
+    // pane, file viewer, editor, conflict view) — see DiffWorkerPoolProvider.
+    <DiffWorkerPoolProvider>
+      <div className="flex h-svh w-full overflow-hidden text-foreground">
+        <CommandMenu
+          open={commandOpen}
+          onOpenChange={setCommandOpen}
+          commands={commands}
+          files={allPaths}
+          onOpenFile={(path) => openFile(path, false)}
         />
-      )}
-      <ModeRail
-        mode={mode}
-        hasGitHub={hasGitHub}
-        bottomVisible={prefs.bottomVisible}
-        onBottomToggle={() =>
-          setUiPrefs({ bottomVisible: !prefs.bottomVisible })
-        }
-        onModeSelect={(m) => {
-          if (m === "review") {
-            setUiPrefs({ bottomVisible: true })
-            setBottomTab("pulls")
+        {visibleComments.length > 0 && !assignBarDismissed && (
+          <ReviewAssignBar
+            count={visibleComments.length}
+            chats={chats.data ?? []}
+            onAssign={assignReview}
+            onDismiss={() => setAssignBarDismissed(true)}
+          />
+        )}
+        <ModeRail
+          mode={mode}
+          hasGitHub={hasGitHub}
+          bottomVisible={prefs.bottomVisible}
+          onBottomToggle={() =>
+            setUiPrefs({ bottomVisible: !prefs.bottomVisible })
           }
-        }}
-      />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar
-          repo={repo.data ?? null}
-          workspace={workspace.data}
-          branches={branches.data ?? []}
-          remoteBranches={remoteBranches.data ?? []}
-          contextLabel={contextLabel}
-          diffStyle={prefs.diffStyle}
-          themePref={prefs.theme}
-          showDiffStyleToggle={
-            editing === null && viewing === null && target !== null
-          }
-          busy={false}
-          pickerOpen={pickerOpen}
-          onPickerOpenChange={setPickerOpen}
-          onThemeChange={(theme) => setUiPrefs({ theme })}
-          onDiffStyleChange={(diffStyle) => setUiPrefs({ diffStyle })}
-          onCheckout={(b) => {
-            void git.checkout(b)
-            void navigate({ to: "/commit" })
+          onModeSelect={(m) => {
+            if (m === "review") {
+              setUiPrefs({ bottomVisible: true })
+              setBottomTab("pulls")
+            }
           }}
-          onCheckoutAndUpdate={(b) => {
-            void git.checkoutAndUpdate(b)
-            void navigate({ to: "/commit" })
-          }}
-          onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
-          onCompare={(base, head) =>
-            void navigate({ to: "/browse/range", search: { base, head } })
-          }
-          onMerge={(b) => void git.merge(b)}
-          onRebase={(o) => void git.rebase(o)}
-          onRenameBranch={(from, to) => void git.renameBranch(from, to)}
-          onDeleteBranch={(name) => void git.deleteBranch(name)}
-          onFetch={() => void git.fetch()}
-          onPush={() => void git.push()}
-          onPull={() => void git.pull()}
-          onRefresh={git.refresh}
         />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar
+            repo={repo.data ?? null}
+            workspace={workspace.data}
+            branches={branches.data ?? []}
+            remoteBranches={remoteBranches.data ?? []}
+            contextLabel={contextLabel}
+            diffStyle={prefs.diffStyle}
+            themePref={prefs.theme}
+            showDiffStyleToggle={
+              editing === null && viewing === null && target !== null
+            }
+            busy={false}
+            pickerOpen={pickerOpen}
+            onPickerOpenChange={setPickerOpen}
+            onThemeChange={(theme) => setUiPrefs({ theme })}
+            onDiffStyleChange={(diffStyle) => setUiPrefs({ diffStyle })}
+            onCheckout={(b) => {
+              void git.checkout(b)
+              void navigate({ to: "/commit" })
+            }}
+            onCheckoutAndUpdate={(b) => {
+              void git.checkoutAndUpdate(b)
+              void navigate({ to: "/commit" })
+            }}
+            onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
+            onCompare={(base, head) =>
+              void navigate({ to: "/browse/range", search: { base, head } })
+            }
+            onMerge={(b) => void git.merge(b)}
+            onRebase={(o) => void git.rebase(o)}
+            onRenameBranch={(from, to) => void git.renameBranch(from, to)}
+            onDeleteBranch={(name) => void git.deleteBranch(name)}
+            onFetch={() => void git.fetch()}
+            onPush={() => void git.push()}
+            onPull={() => void git.pull()}
+            onRefresh={git.refresh}
+          />
 
-        {/* Everything below the title bar sits in a panel whose left border +
+          {/* Everything below the title bar sits in a panel whose left border +
             rounded top-left form the rail divider, so it curves in right above
             the file list while the title-bar strip stays clean. */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
-          <div className="flex min-h-0 flex-1">
-            <div
-              className="shrink-0 overflow-hidden border-r"
-              style={{ width: sidebarWidth }}
-            >
-              <FileSidebar
-                key={mode}
-                mode={mode}
-                paths={treePaths}
-                gitStatus={treeGitStatus}
-                selectedFile={
-                  mode === "browse"
-                    ? (viewing ?? editing)
-                    : (search.path ?? null)
-                }
-                onFileSelect={onFileSelect}
-                onDeletePath={mode === "review" ? undefined : deletePath}
-                onRenamePath={mode === "review" ? undefined : renamePath}
-                footer={
-                  mode === "commit" && changedFiles.length > 0 ? (
-                    <CommitPanel
-                      changes={changedFiles}
-                      busy={false}
-                      onCommit={(m, p, push) => git.commitChanges(m, p, push)}
-                      onGenerate={(p, agent) =>
-                        git.generateCommitMessage(p, agent)
-                      }
-                    />
-                  ) : undefined
-                }
-              />
-            </div>
-            <ResizeHandle
-              orientation="col"
-              value={sidebarWidth}
-              min={180}
-              max={() => Math.max(240, window.innerWidth - 400)}
-              onResize={setSidebarWidth}
-              onResizeEnd={(w) => setUiPrefs({ sidebarWidth: w })}
-              label="Resize sidebar"
-            />
-            <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-              {mode === "commit" &&
-                mergeState.data != null &&
-                mergeState.data.operation !== "none" && (
-                  <ConflictBanner
-                    state={mergeState.data}
-                    selectedPath={search.path ?? null}
-                    onSelectFile={openConflict}
-                    onAbort={() => void git.abortMerge()}
-                    onContinue={() => void git.continueMerge()}
-                  />
-                )}
-              <div className="min-h-0 flex-1 overflow-hidden">
-                {renderCenter()}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
+            <div className="flex min-h-0 flex-1">
+              <div
+                className="shrink-0 overflow-hidden border-r"
+                style={{ width: sidebarWidth }}
+              >
+                <FileSidebar
+                  key={mode}
+                  mode={mode}
+                  paths={treePaths}
+                  gitStatus={treeGitStatus}
+                  selectedFile={
+                    mode === "browse"
+                      ? (viewing ?? editing)
+                      : (search.path ?? null)
+                  }
+                  onFileSelect={onFileSelect}
+                  onDeletePath={mode === "review" ? undefined : deletePath}
+                  onRenamePath={mode === "review" ? undefined : renamePath}
+                  footer={
+                    mode === "commit" && changedFiles.length > 0 ? (
+                      <CommitPanel
+                        changes={changedFiles}
+                        busy={false}
+                        onCommit={(m, p, push) => git.commitChanges(m, p, push)}
+                        onGenerate={(p, agent) =>
+                          git.generateCommitMessage(p, agent)
+                        }
+                      />
+                    ) : undefined
+                  }
+                />
               </div>
-            </main>
-          </div>
-          {prefs.bottomVisible && (
-            <ResizeHandle
-              orientation="row"
-              value={bottomHeight}
-              min={120}
-              max={() => Math.max(160, window.innerHeight - 200)}
-              direction={-1}
-              onResize={setBottomHeight}
-              onResizeEnd={(h) => setUiPrefs({ bottomHeight: h })}
-              label="Resize bottom panel"
-            />
-          )}
-          {prefs.bottomVisible && (
-            <div
-              className="shrink-0 overflow-hidden border-t"
-              style={{ height: bottomHeight }}
-            >
-              <BottomPanel
-                tab={bottomTab}
-                onTabChange={setBottomTab}
-                hasGitHub={hasGitHub}
-                branches={branches.data ?? []}
-                remoteBranches={remoteBranches.data ?? []}
-                currentBranch={repo.data?.currentBranch ?? null}
-                commits={log.data ?? []}
-                commitsLoading={log.isPending}
-                pulls={pulls.data ?? []}
-                pullsError={pulls.error ? "Could not load pull requests" : null}
-                logRef={logRef ?? repo.data?.currentBranch ?? null}
-                logFilters={logFilters}
-                selectedCommitSha={
-                  browse?.kind === "commit" ? browse.sha : null
-                }
-                selectedPullNumber={selectedPull?.number ?? null}
-                onLogRefChange={setLogRef}
-                onLogFiltersChange={setLogFilters}
-                onBranchCheckout={(b) => {
-                  void git.checkout(b)
-                  void navigate({ to: "/commit" })
-                }}
-                onSelectCommit={(c) =>
-                  void navigate({
-                    to: "/browse/commit/$sha",
-                    params: { sha: c.sha },
-                  })
-                }
-                onSelectCommitFile={(p) => openFile(p, false)}
-                onSelectPull={(p) =>
-                  void navigate({
-                    to: "/review/$pull",
-                    params: { pull: String(p.number) },
-                  })
-                }
+              <ResizeHandle
+                orientation="col"
+                value={sidebarWidth}
+                min={180}
+                max={() => Math.max(240, window.innerWidth - 400)}
+                onResize={setSidebarWidth}
+                onResizeEnd={(w) => setUiPrefs({ sidebarWidth: w })}
+                label="Resize sidebar"
               />
+              <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+                {mode === "commit" &&
+                  mergeState.data != null &&
+                  mergeState.data.operation !== "none" && (
+                    <ConflictBanner
+                      state={mergeState.data}
+                      selectedPath={search.path ?? null}
+                      onSelectFile={openConflict}
+                      onAbort={() => void git.abortMerge()}
+                      onContinue={() => void git.continueMerge()}
+                    />
+                  )}
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  {renderCenter()}
+                </div>
+              </main>
             </div>
-          )}
+            {prefs.bottomVisible && (
+              <ResizeHandle
+                orientation="row"
+                value={bottomHeight}
+                min={120}
+                max={() => Math.max(160, window.innerHeight - 200)}
+                direction={-1}
+                onResize={setBottomHeight}
+                onResizeEnd={(h) => setUiPrefs({ bottomHeight: h })}
+                label="Resize bottom panel"
+              />
+            )}
+            {prefs.bottomVisible && (
+              <div
+                className="shrink-0 overflow-hidden border-t"
+                style={{ height: bottomHeight }}
+              >
+                <BottomPanel
+                  tab={bottomTab}
+                  onTabChange={setBottomTab}
+                  hasGitHub={hasGitHub}
+                  branches={branches.data ?? []}
+                  remoteBranches={remoteBranches.data ?? []}
+                  currentBranch={repo.data?.currentBranch ?? null}
+                  commits={log.data ?? []}
+                  commitsLoading={log.isPending}
+                  pulls={pulls.data ?? []}
+                  pullsError={
+                    pulls.error ? "Could not load pull requests" : null
+                  }
+                  logRef={logRef ?? repo.data?.currentBranch ?? null}
+                  logFilters={logFilters}
+                  selectedCommitSha={
+                    browse?.kind === "commit" ? browse.sha : null
+                  }
+                  selectedPullNumber={selectedPull?.number ?? null}
+                  onLogRefChange={setLogRef}
+                  onLogFiltersChange={setLogFilters}
+                  onBranchCheckout={(b) => {
+                    void git.checkout(b)
+                    void navigate({ to: "/commit" })
+                  }}
+                  onSelectCommit={(c) =>
+                    void navigate({
+                      to: "/browse/commit/$sha",
+                      params: { sha: c.sha },
+                    })
+                  }
+                  onSelectCommitFile={(p) => openFile(p, false)}
+                  onSelectPull={(p) =>
+                    void navigate({
+                      to: "/review/$pull",
+                      params: { pull: String(p.number) },
+                    })
+                  }
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </DiffWorkerPoolProvider>
   )
 }
