@@ -178,8 +178,13 @@ export function DiffConnectors({
       } catch {
         geo = null
       }
+      // The signature must cover ribbon *positions*, not just their count:
+      // under virtualization the mounted row window shifts with scroll, moving
+      // ribbons even when their number stays the same.
       const sig = geo
-        ? `${geo.width}|${geo.stripLeft}|${geo.stripRight}|${geo.ribbons.length}`
+        ? `${geo.width}|${geo.stripLeft}|${geo.stripRight}|${geo.ribbons
+            .map((r) => `${r.kind}${r.leftTop | 0},${r.rightTop | 0}`)
+            .join(";")}`
         : "∅"
       if (sig !== prevSig) {
         setGeometry(geo)

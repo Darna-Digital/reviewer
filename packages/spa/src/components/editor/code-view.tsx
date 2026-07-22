@@ -1,5 +1,5 @@
 import { type LineAnnotation } from "@pierre/diffs"
-import { File } from "@pierre/diffs/react"
+import { File, Virtualizer } from "@pierre/diffs/react"
 import { IconX } from "@tabler/icons-react"
 import { useMemo } from "react"
 import {
@@ -85,7 +85,9 @@ export function CodeView({
   }
 
   return (
-    <div className="h-full overflow-auto">
+    // Virtualizer windows the file: only the viewport (±overscan) worth of
+    // lines is materialized in the DOM, so large files open instantly.
+    <Virtualizer className="h-full overflow-auto">
       <section className="diff-file" data-file-anchor={path}>
         {/* Remount per file: the underlying File instance doesn't re-highlight
             when only its `file` prop changes, so navigating between files would
@@ -93,7 +95,6 @@ export function CodeView({
         <File<AnnotationMeta>
           key={path}
           file={{ name: path, contents: file.data.contents }}
-          disableWorkerPool
           options={{
             theme: THEMES,
             themeType: theme,
@@ -177,6 +178,6 @@ export function CodeView({
           )}
         />
       </section>
-    </div>
+    </Virtualizer>
   )
 }

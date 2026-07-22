@@ -169,7 +169,6 @@ export function CodeEditor({ path, theme, onClose, onSaved }: CodeEditorProps) {
             key={path}
             file={{ name: path, contents: loaded.data.contents }}
             contentEditable
-            disableWorkerPool
             options={{
               theme: THEMES,
               themeType: theme,
