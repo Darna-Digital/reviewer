@@ -4,7 +4,7 @@ import type {
   Hunk,
   SelectedLineRange,
 } from "@pierre/diffs"
-import { FileDiff } from "@pierre/diffs/react"
+import { FileDiff, Virtualizer } from "@pierre/diffs/react"
 import { IconArrowBackUp } from "@tabler/icons-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -151,7 +151,6 @@ function FileDiffSection({
     >
       <FileDiff<AnnotationMeta>
         fileDiff={file}
-        disableWorkerPool
         selectedLines={selectedLines}
         options={{
           theme: THEMES,
@@ -317,8 +316,10 @@ export function DiffPane({
   //    the target if no frame has run.
   useEffect(() => {
     if (selectedFile === null) return
-    const container = containerRef.current
-    if (container == null) return
+    // The scrolling element is the Virtualizer's own root div (it must own the
+    // scroll to window rendering), which is the wrapper's only child.
+    const container = containerRef.current?.firstElementChild
+    if (!(container instanceof HTMLElement)) return
 
     let active = true
     let raf = 0
@@ -458,35 +459,41 @@ export function DiffPane({
   }
 
   return (
-    <div ref={containerRef} className="diff-pane h-full overflow-auto">
-      {files.map((file) => (
-        <FileDiffSection
-          key={`${target.kind}-${file.prevName ?? ""}-${file.name}`}
-          file={file}
-          theme={theme}
-          diffStyle={diffStyle}
-          connectorsEnabled={connectorsEnabled}
-          annotations={annotationsByFile.get(file.name) ?? []}
-          selectedLines={
-            draft !== null && draft.filePath === file.name
-              ? {
-                  start: draft.lineNumber,
-                  end: draft.lineNumber,
-                  side: draft.side,
-                  endSide: draft.side,
-                }
-              : null
-          }
-          onDraftOpen={onDraftOpen}
-          onDraftCancel={onDraftCancel}
-          onEditFile={onEditFile}
-          onDiscardFile={onDiscardFile}
-          onDiscardHunk={onDiscardHunk}
-          onCommentSubmit={onCommentSubmit}
-          onCommentDelete={onCommentDelete}
-          onCommentReply={onCommentReply}
-        />
-      ))}
+    // Virtualizer windows each FileDiff (only the ~viewport ±1000px slice of
+    // lines gets DOM; IntersectionObserver wakes files as they approach), so
+    // it must be the scroll container — the wrapper div only carries the ref
+    // for the scroll-to-file animation above.
+    <div ref={containerRef} className="h-full">
+      <Virtualizer className="diff-pane h-full overflow-auto">
+        {files.map((file) => (
+          <FileDiffSection
+            key={`${target.kind}-${file.prevName ?? ""}-${file.name}`}
+            file={file}
+            theme={theme}
+            diffStyle={diffStyle}
+            connectorsEnabled={connectorsEnabled}
+            annotations={annotationsByFile.get(file.name) ?? []}
+            selectedLines={
+              draft !== null && draft.filePath === file.name
+                ? {
+                    start: draft.lineNumber,
+                    end: draft.lineNumber,
+                    side: draft.side,
+                    endSide: draft.side,
+                  }
+                : null
+            }
+            onDraftOpen={onDraftOpen}
+            onDraftCancel={onDraftCancel}
+            onEditFile={onEditFile}
+            onDiscardFile={onDiscardFile}
+            onDiscardHunk={onDiscardHunk}
+            onCommentSubmit={onCommentSubmit}
+            onCommentDelete={onCommentDelete}
+            onCommentReply={onCommentReply}
+          />
+        ))}
+      </Virtualizer>
     </div>
   )
 }
