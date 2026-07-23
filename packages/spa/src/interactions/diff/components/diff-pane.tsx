@@ -13,6 +13,7 @@ import {
   IconArrowsMinimize,
 } from "@tabler/icons-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
@@ -391,39 +392,58 @@ export function DiffPane({
 
   // Fetch both full sides of a file so @pierre/diffs can render the unchanged
   // regions (per-hunk expansion and the "full file" view). Throwing is the
-  // loader's "not available" signal — the library logs it and simply keeps the
-  // collapsed, hunks-only rendering (e.g. a PR whose commits aren't fetched).
+  // loader's "not available" signal — the library keeps the collapsed,
+  // hunks-only rendering — so on failure we also toast (a silent no-op click
+  // reads as a broken button) and flip the file back to collapsed, keeping the
+  // header toggle truthful. Typical failures: a server build without
+  // /api/diff-file, or a PR whose commits haven't been fetched yet.
   const loadDiffFiles = useCallback(
     async (file: FileDiffMetadata): Promise<FileDiffLoadedFiles> => {
-      const { data, error: fetchError } = await fetchClient.GET(
-        "/api/diff-file",
-        {
-          params: {
-            query: {
-              ...diffFileTargetQuery(target),
-              path: file.name,
-              ...(file.prevName != null ? { prevPath: file.prevName } : {}),
+      try {
+        const { data, error: fetchError } = await fetchClient.GET(
+          "/api/diff-file",
+          {
+            params: {
+              query: {
+                ...diffFileTargetQuery(target),
+                path: file.name,
+                ...(file.prevName != null ? { prevPath: file.prevName } : {}),
+              },
             },
+          }
+        )
+        if (fetchError !== undefined || data === undefined)
+          throw new Error(`Could not load contents for ${file.name}`)
+        if (data.newContents === null)
+          throw new Error(`No diff contents available for ${file.name}`)
+        const newFile = { name: file.name, contents: data.newContents }
+        if (file.type === "rename-pure") return { oldFile: null, newFile }
+        if (data.oldContents === null)
+          throw new Error(`No previous contents available for ${file.name}`)
+        return {
+          oldFile: {
+            name: file.prevName ?? file.name,
+            contents: data.oldContents,
           },
+          newFile,
         }
-      )
-      if (fetchError !== undefined || data === undefined)
-        throw new Error(`Could not load contents for ${file.name}`)
-      if (data.newContents === null)
-        throw new Error(`No diff contents available for ${file.name}`)
-      const newFile = { name: file.name, contents: data.newContents }
-      if (file.type === "rename-pure") return { oldFile: null, newFile }
-      if (data.oldContents === null)
-        throw new Error(`No previous contents available for ${file.name}`)
-      return {
-        oldFile: {
-          name: file.prevName ?? file.name,
-          contents: data.oldContents,
-        },
-        newFile,
+      } catch (error) {
+        toast.error(`Couldn't load the rest of ${file.name}`, {
+          description:
+            target.kind === "pull"
+              ? "The pull request's commits may not be fetched locally yet — try Fetch, then expand again."
+              : "The server couldn't provide this file's full contents.",
+        })
+        setExpansion((prev) => {
+          if (prev.key !== targetKey || !prev.files.has(file.name)) return prev
+          const files = new Set(prev.files)
+          files.delete(file.name)
+          return { key: targetKey, files }
+        })
+        throw error
       }
     },
-    [target]
+    [target, targetKey]
   )
 
   // Animate the selected file's diff to the top of the pane. Hard-won details:
