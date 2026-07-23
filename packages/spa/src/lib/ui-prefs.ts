@@ -18,8 +18,6 @@ export interface UiPrefs {
   resolvedTheme: Theme
   diffStyle: DiffStyle
   connectors: boolean
-  /** Render whole files in the diff pane instead of collapsing unchanged lines. */
-  expandUnchanged: boolean
   bottomVisible: boolean
   /** Drag-resizable left sidebar width, in px. */
   sidebarWidth: number
@@ -53,7 +51,6 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   theme: "system",
   diffStyle: "split",
   connectors: true,
-  expandUnchanged: false,
   bottomVisible: true,
   sidebarWidth: 288,
   workspaceSidebarWidth: 256,
@@ -95,7 +92,6 @@ function persist() {
       theme,
       diffStyle,
       connectors,
-      expandUnchanged,
       bottomVisible,
       sidebarWidth,
       workspaceSidebarWidth,
@@ -111,7 +107,6 @@ function persist() {
         theme,
         diffStyle,
         connectors,
-        expandUnchanged,
         bottomVisible,
         sidebarWidth,
         workspaceSidebarWidth,

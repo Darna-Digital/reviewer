@@ -7,7 +7,11 @@ import type {
   SelectedLineRange,
 } from "@pierre/diffs"
 import { FileDiff, Virtualizer } from "@pierre/diffs/react"
-import { IconArrowBackUp } from "@tabler/icons-react"
+import {
+  IconArrowBackUp,
+  IconArrowsMaximize,
+  IconArrowsMinimize,
+} from "@tabler/icons-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,7 +29,7 @@ import {
   connectorGutterCSS,
 } from "@/interactions/diff/components/diff-connectors"
 import { fetchClient } from "@/lib/api/client"
-import type { DiffTarget } from "@/lib/api/types"
+import { diffTargetKey, type DiffTarget } from "@/lib/api/types"
 import type { CommentSide, ReviewComment } from "@byconvo/core/comments"
 import type { DiffStyle, Theme } from "@/lib/ui-prefs"
 
@@ -44,8 +48,6 @@ interface DiffPaneProps {
   theme: Theme
   diffStyle: DiffStyle
   connectors: boolean
-  /** Render whole files (all unchanged lines expanded) instead of hunks. */
-  expandUnchanged: boolean
   loading: boolean
   error: string | null
   target: DiffTarget
@@ -138,7 +140,9 @@ interface FileDiffSectionProps {
   theme: Theme
   diffStyle: DiffStyle
   connectorsEnabled: boolean
+  /** Render this file whole (all unchanged lines expanded) instead of hunks. */
   expandUnchanged: boolean
+  onToggleExpandUnchanged: () => void
   loadDiffFiles: FileDiffContentsLoader
   annotations: ReadonlyArray<DiffLineAnnotation<AnnotationMeta>>
   selectedLines: SelectedLineRange | null
@@ -158,6 +162,7 @@ function FileDiffSection({
   diffStyle,
   connectorsEnabled,
   expandUnchanged,
+  onToggleExpandUnchanged,
   loadDiffFiles,
   annotations,
   selectedLines,
@@ -216,6 +221,29 @@ function FileDiffSection({
         }}
         renderHeaderMetadata={(meta) => (
           <div className="flex items-center gap-1">
+            {/* New/deleted files already carry their whole content in the
+             * patch, so there is nothing extra to expand. */}
+            {meta.type !== "new" && meta.type !== "deleted" && (
+              <Button
+                variant="ghost"
+                size="xs"
+                className="gap-1 text-muted-foreground"
+                aria-pressed={expandUnchanged}
+                title={
+                  expandUnchanged
+                    ? `Collapse ${meta.name} to its changed lines`
+                    : `Show all of ${meta.name}`
+                }
+                onClick={onToggleExpandUnchanged}
+              >
+                {expandUnchanged ? (
+                  <IconArrowsMinimize className="size-3.5" />
+                ) : (
+                  <IconArrowsMaximize className="size-3.5" />
+                )}
+                {expandUnchanged ? "Changes only" : "Full file"}
+              </Button>
+            )}
             {onDiscardFile !== undefined && (
               // Revert this file to HEAD. Available for every change type
               // (a deletion is restored, an addition removed).
@@ -322,7 +350,6 @@ export function DiffPane({
   theme,
   diffStyle,
   connectors,
-  expandUnchanged,
   loading,
   error,
   target,
@@ -340,6 +367,27 @@ export function DiffPane({
 }: DiffPaneProps) {
   const connectorsEnabled = connectors && diffStyle === "split"
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Per-file "show the whole file" choices, scoped to the current target: the
+  // stored key invalidates the set when the user navigates to another diff, so
+  // stale expansions never leak across targets (no effect/reset dance needed).
+  const targetKey = diffTargetKey(target)
+  const [expansion, setExpansion] = useState<{
+    key: string
+    files: ReadonlySet<string>
+  }>({ key: targetKey, files: new Set() })
+  const expandedFiles =
+    expansion.key === targetKey ? expansion.files : new Set<string>()
+  const toggleExpanded = useCallback(
+    (name: string) =>
+      setExpansion((prev) => {
+        const next = new Set(prev.key === targetKey ? prev.files : [])
+        if (next.has(name)) next.delete(name)
+        else next.add(name)
+        return { key: targetKey, files: next }
+      }),
+    [targetKey]
+  )
 
   // Fetch both full sides of a file so @pierre/diffs can render the unchanged
   // regions (per-hunk expansion and the "full file" view). Throwing is the
@@ -549,7 +597,8 @@ export function DiffPane({
             theme={theme}
             diffStyle={diffStyle}
             connectorsEnabled={connectorsEnabled}
-            expandUnchanged={expandUnchanged}
+            expandUnchanged={expandedFiles.has(file.name)}
+            onToggleExpandUnchanged={() => toggleExpanded(file.name)}
             loadDiffFiles={loadDiffFiles}
             annotations={annotationsByFile.get(file.name) ?? []}
             selectedLines={

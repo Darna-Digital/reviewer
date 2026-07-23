@@ -1,7 +1,6 @@
 import {
   IconColumns,
   IconBaselineDensityMedium,
-  IconArrowsMaximize,
   IconRefresh,
   IconArrowsDownUp,
   IconCloudUpload,
@@ -39,13 +38,11 @@ interface TopBarProps {
   diffStyle: DiffStyle
   themePref: ThemePref
   showDiffStyleToggle: boolean
-  expandUnchanged: boolean
   busy: boolean
   pickerOpen: boolean
   onPickerOpenChange: (open: boolean) => void
   onThemeChange: (theme: ThemePref) => void
   onDiffStyleChange: (style: DiffStyle) => void
-  onExpandUnchangedChange: (expand: boolean) => void
   onCheckout: (branch: string) => void
   onCheckoutAndUpdate: (branch: string) => void
   onCreateBranch: (name: string, startPoint: string | null) => void
@@ -105,7 +102,6 @@ export function TopBar(props: TopBarProps) {
     remoteBranches,
     diffStyle,
     showDiffStyleToggle,
-    expandUnchanged,
     busy,
     themePref,
   } = props
@@ -176,30 +172,6 @@ export function TopBar(props: TopBarProps) {
               <IconBaselineDensityMedium />
             </Button>
           </div>
-        )}
-        {showDiffStyleToggle && (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant={expandUnchanged ? "secondary" : "ghost"}
-                  size="icon-sm"
-                  onClick={() =>
-                    props.onExpandUnchangedChange(!expandUnchanged)
-                  }
-                  aria-label="Show full files"
-                  aria-pressed={expandUnchanged}
-                />
-              }
-            >
-              <IconArrowsMaximize className="size-4" />
-            </TooltipTrigger>
-            <TooltipContent>
-              {expandUnchanged
-                ? "Collapse to changed lines"
-                : "Show full files"}
-            </TooltipContent>
-          </Tooltip>
         )}
         {repo !== null && (
           <>

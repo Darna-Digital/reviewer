@@ -7,7 +7,6 @@
  */
 import {
   IconArrowDown,
-  IconArrowsMaximize,
   IconArrowUp,
   IconCloudDownload,
   IconColumns2,
@@ -549,16 +548,6 @@ export function AppShell() {
           }),
       },
       {
-        id: "view-full-files",
-        label: prefs.expandUnchanged
-          ? "Collapse Diffs to Changed Lines"
-          : "Show Full Files in Diffs",
-        group: "View",
-        icon: IconArrowsMaximize,
-        keywords: "expand unchanged context whole file full diff",
-        run: () => setUiPrefs({ expandUnchanged: !prefs.expandUnchanged }),
-      },
-      {
         id: "view-bottom-panel",
         label: prefs.bottomVisible ? "Hide Bottom Panel" : "Show Bottom Panel",
         group: "View",
@@ -582,7 +571,6 @@ export function AppShell() {
     hasGitHub,
     prefs.theme,
     prefs.diffStyle,
-    prefs.expandUnchanged,
     prefs.bottomVisible,
     repo.data?.currentBranch,
   ])
@@ -660,7 +648,6 @@ export function AppShell() {
         theme={prefs.resolvedTheme}
         diffStyle={prefs.diffStyle}
         connectors={prefs.connectors}
-        expandUnchanged={prefs.expandUnchanged}
         loading={diff.isPending}
         error={diff.error ? "Could not load diff" : null}
         target={target}
@@ -750,15 +737,11 @@ export function AppShell() {
             showDiffStyleToggle={
               editing === null && viewing === null && target !== null
             }
-            expandUnchanged={prefs.expandUnchanged}
             busy={false}
             pickerOpen={pickerOpen}
             onPickerOpenChange={setPickerOpen}
             onThemeChange={(theme) => setUiPrefs({ theme })}
             onDiffStyleChange={(diffStyle) => setUiPrefs({ diffStyle })}
-            onExpandUnchangedChange={(expandUnchanged) =>
-              setUiPrefs({ expandUnchanged })
-            }
             onCheckout={(b) => {
               void git.checkout(b)
               void navigate({ to: "/commit" })
