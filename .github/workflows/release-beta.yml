@@ -48,14 +48,30 @@ jobs:
       - name: Build renderer, server, and main process
         run: pnpm build:desktop
 
-      - name: Package (unsigned) and publish to byconvo-beta
+      - name: Package (unsigned, both arches)
         run: >
           pnpm --filter @byconvo/desktop exec electron-builder
           --mac --arm64 --x64
           --config electron-builder.config.js
           -c.extraMetadata.version=${{ steps.v.outputs.version }}
           -c.mac.identity=null -c.mac.notarize=false
-          --publish always
+          --publish never
         env:
           BYCONVO_CHANNEL: beta
+
+      # Publish with the gh CLI rather than electron-builder's own publisher:
+      # the build runs in this repo but the release lives in byconvo-beta, and
+      # electron-builder anchors the tag to a commit from *this* checkout that
+      # doesn't exist there. `gh release create --target main` anchors the tag to
+      # byconvo-beta's own default branch, which is the valid reference.
+      - name: Publish unsigned build to byconvo-beta
+        env:
           GH_TOKEN: ${{ secrets.BETA_GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.v.outputs.version }}" \
+            packages/desktop/dist-packaged/*.dmg \
+            --repo darna-digital/byconvo-beta \
+            --target main \
+            --title "Byconvo Beta v${{ steps.v.outputs.version }}" \
+            --notes "Automated unsigned beta build. On first launch, right-click the app and choose Open (Gatekeeper flags unsigned apps)." \
+            --prerelease
