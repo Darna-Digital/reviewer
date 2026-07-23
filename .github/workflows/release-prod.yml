@@ -2,19 +2,20 @@ name: release-prod
 
 # Production channel. A push to `master` publishes the version in
 # packages/desktop/package.json to darna-digital/byconvo — but only if that
-# version has not already been released. Bumping the version is therefore the
-# deliberate "ship it" signal; merges that don't change the version are no-ops.
-# Published releases are picked up by the "Byconvo" app's auto-updater.
+# version has not already been released. Bumping the version is the deliberate
+# "ship it" signal; merges that don't change the version are no-ops.
 #
-# Secrets used (GITHUB_TOKEN is built in — publishing is to this same repo):
+# Production builds are ALWAYS signed and notarized: if the Apple secrets are
+# missing the signing step fails the run rather than shipping an unsigned build
+# to real users. The published release (dmg + zip + blockmap + latest-mac.yml)
+# is what the "Byconvo" app's auto-updater consumes.
+#
+# Secrets (GITHUB_TOKEN is built in — publishing is to this same repo):
 #   APPLE_CERTIFICATE           base64 of the Developer ID Application .p12
 #   APPLE_CERTIFICATE_PASSWORD  password for that .p12
 #   APPLE_API_KEY               base64 of the App Store Connect API .p8 key
 #   APPLE_API_KEY_ID            the key's ID
 #   APPLE_API_ISSUER            the key's issuer ID
-#
-# Until the Apple secrets are set this still runs: it builds an unsigned app and
-# uploads it as a workflow artifact instead of signing and publishing.
 
 on:
   push:
@@ -31,8 +32,6 @@ permissions:
 jobs:
   release:
     runs-on: macos-14
-    env:
-      HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE != '' }}
     steps:
       - uses: actions/checkout@v4.2.2
 
@@ -61,7 +60,7 @@ jobs:
           cache: pnpm
 
       - name: Import signing certificate
-        if: steps.v.outputs.release == 'true' && env.HAS_SIGNING == 'true'
+        if: steps.v.outputs.release == 'true'
         uses: apple-actions/import-codesign-certs@8f3fb608891dd2244cdab3d69cd68c0d37a7fe93
         with:
           keychain: build
@@ -69,7 +68,7 @@ jobs:
           p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
 
       - name: Write App Store Connect API key
-        if: steps.v.outputs.release == 'true' && env.HAS_SIGNING == 'true'
+        if: steps.v.outputs.release == 'true'
         run: echo "${{ secrets.APPLE_API_KEY }}" | base64 --decode > "$RUNNER_TEMP/apple-api-key.p8"
 
       - name: Install dependencies
@@ -81,7 +80,7 @@ jobs:
         run: pnpm build:desktop
 
       - name: Package, sign, notarize, and publish
-        if: steps.v.outputs.release == 'true' && env.HAS_SIGNING == 'true'
+        if: steps.v.outputs.release == 'true'
         run: >
           pnpm --filter @byconvo/desktop exec electron-builder
           --mac --arm64 --x64
@@ -93,21 +92,6 @@ jobs:
           APPLE_API_KEY: ${{ runner.temp }}/apple-api-key.p8
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-
-      - name: Package unsigned (no signing secrets configured)
-        if: steps.v.outputs.release == 'true' && env.HAS_SIGNING != 'true'
-        run: >
-          pnpm --filter @byconvo/desktop exec electron-builder
-          --mac --arm64 --x64
-          --config electron-builder.config.js
-          -c.mac.identity=null -c.mac.notarize=false
-          --publish never
-        env:
-          BYCONVO_CHANNEL: prod
-
-      - name: Upload unsigned build
-        if: steps.v.outputs.release == 'true' && env.HAS_SIGNING != 'true'
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: byconvo-desktop-prod-unsigned
-          path: packages/desktop/dist-packaged/**
+          # Verbose output so signing and (especially) the slow, Apple-side
+          # notarization step stream progress instead of sitting silent.
+          DEBUG: electron-builder
