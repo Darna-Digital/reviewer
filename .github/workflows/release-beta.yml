@@ -1,21 +1,18 @@
 name: release-beta
 
-# Beta channel. Every push to `staging` publishes a prerelease
-# (X.Y.Z-beta.<run>) to the darna-digital/byconvo-beta repository, which the
-# "Byconvo Beta" app auto-updates from. The base X.Y.Z comes from
-# packages/desktop/package.json; the run number keeps each build newer than the
-# last.
+# Beta channel. Every push to `staging` builds a full both-arch prerelease
+# (X.Y.Z-beta.<run>) and publishes it to the darna-digital/byconvo-beta
+# repository. The base X.Y.Z comes from packages/desktop/package.json; the run
+# number keeps each build newer than the last.
+#
+# Beta builds are intentionally NOT signed or notarized — that is reserved for
+# the production channel on `master`. As a result a beta build cannot
+# auto-update (macOS only applies signed updates) and Gatekeeper flags it on
+# first launch: testers download the latest build from byconvo-beta and
+# right-click -> Open once. Auto-update is a production-only feature.
 #
 # Secrets used:
-#   BETA_GITHUB_TOKEN           PAT with contents:write on darna-digital/byconvo-beta
-#   APPLE_CERTIFICATE           base64 of the Developer ID Application .p12
-#   APPLE_CERTIFICATE_PASSWORD  password for that .p12
-#   APPLE_API_KEY               base64 of the App Store Connect API .p8 key
-#   APPLE_API_KEY_ID            the key's ID
-#   APPLE_API_ISSUER            the key's issuer ID
-#
-# Until the Apple secrets are set this still runs: it builds an unsigned app and
-# uploads it as a workflow artifact instead of signing and publishing.
+#   BETA_GITHUB_TOKEN  PAT with contents:write on darna-digital/byconvo-beta
 
 on:
   push:
@@ -29,8 +26,6 @@ concurrency:
 jobs:
   release:
     runs-on: macos-14
-    env:
-      HAS_SIGNING: ${{ secrets.APPLE_CERTIFICATE != '' }}
     steps:
       - uses: actions/checkout@v4.2.2
 
@@ -47,54 +42,20 @@ jobs:
           BASE=$(node -p "require('./packages/desktop/package.json').version")
           echo "version=${BASE}-beta.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
-      - name: Import signing certificate
-        if: env.HAS_SIGNING == 'true'
-        uses: apple-actions/import-codesign-certs@8f3fb608891dd2244cdab3d69cd68c0d37a7fe93
-        with:
-          keychain: build
-          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE }}
-          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-
-      - name: Write App Store Connect API key
-        if: env.HAS_SIGNING == 'true'
-        run: echo "${{ secrets.APPLE_API_KEY }}" | base64 --decode > "$RUNNER_TEMP/apple-api-key.p8"
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build renderer, server, and main process
         run: pnpm build:desktop
 
-      - name: Package, sign, notarize, and publish to byconvo-beta
-        if: env.HAS_SIGNING == 'true'
-        run: >
-          pnpm --filter @byconvo/desktop exec electron-builder
-          --mac --arm64 --x64
-          --config electron-builder.config.js
-          -c.extraMetadata.version=${{ steps.v.outputs.version }}
-          --publish always
-        env:
-          BYCONVO_CHANNEL: beta
-          GH_TOKEN: ${{ secrets.BETA_GITHUB_TOKEN }}
-          APPLE_API_KEY: ${{ runner.temp }}/apple-api-key.p8
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-
-      - name: Package unsigned (no signing secrets configured)
-        if: env.HAS_SIGNING != 'true'
+      - name: Package (unsigned) and publish to byconvo-beta
         run: >
           pnpm --filter @byconvo/desktop exec electron-builder
           --mac --arm64 --x64
           --config electron-builder.config.js
           -c.extraMetadata.version=${{ steps.v.outputs.version }}
           -c.mac.identity=null -c.mac.notarize=false
-          --publish never
+          --publish always
         env:
           BYCONVO_CHANNEL: beta
-
-      - name: Upload unsigned build
-        if: env.HAS_SIGNING != 'true'
-        uses: actions/upload-artifact@v4.6.2
-        with:
-          name: byconvo-desktop-beta-unsigned
-          path: packages/desktop/dist-packaged/**
+          GH_TOKEN: ${{ secrets.BETA_GITHUB_TOKEN }}
