@@ -180,7 +180,6 @@ export function ConflictView({
         <UnresolvedFile
           key={remaining}
           file={{ name: path, contents: result }}
-          disableWorkerPool
           options={{
             theme: THEMES,
             themeType: theme,
