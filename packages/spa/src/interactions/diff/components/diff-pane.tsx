@@ -1,5 +1,7 @@
 import type {
   DiffLineAnnotation,
+  FileDiffContentsLoader,
+  FileDiffLoadedFiles,
   FileDiffMetadata,
   Hunk,
   SelectedLineRange,
@@ -22,6 +24,7 @@ import {
   DiffConnectors,
   connectorGutterCSS,
 } from "@/interactions/diff/components/diff-connectors"
+import { fetchClient } from "@/lib/api/client"
 import type { DiffTarget } from "@/lib/api/types"
 import type { CommentSide, ReviewComment } from "@byconvo/core/comments"
 import type { DiffStyle, Theme } from "@/lib/ui-prefs"
@@ -41,6 +44,8 @@ interface DiffPaneProps {
   theme: Theme
   diffStyle: DiffStyle
   connectors: boolean
+  /** Render whole files (all unchanged lines expanded) instead of hunks. */
+  expandUnchanged: boolean
   loading: boolean
   error: string | null
   target: DiffTarget
@@ -77,6 +82,31 @@ const emptyHint = (target: DiffTarget): string => {
 const THEMES = { light: "github-light", dark: "github-dark" } as const
 
 /**
+ * The `/api/diff-file` params that pin both sides of `target`, so expanded
+ * context comes from the same refs the diff was generated from. A pull is
+ * served best-effort from the local clone: GitHub's PR diff is
+ * merge-base(base, head) → head, which resolves once the PR's commits have
+ * been fetched (and fails harmlessly — see loader below — when they haven't).
+ */
+const diffFileTargetQuery = (
+  target: DiffTarget
+): { commit?: string; base?: string; head?: string } => {
+  switch (target.kind) {
+    case "worktree":
+      return {}
+    case "commit":
+      return { commit: target.sha }
+    case "range":
+      return { base: target.base, head: target.head }
+    case "pull":
+      return {
+        base: `origin/${target.pull.baseRef}`,
+        head: target.pull.headSha,
+      }
+  }
+}
+
+/**
  * Where a hunk's discard control anchors: the line just above the hunk's first
  * *changed* line (annotations render below their anchor, so this lands the
  * control directly above the change — not on the leading context, and not
@@ -108,6 +138,8 @@ interface FileDiffSectionProps {
   theme: Theme
   diffStyle: DiffStyle
   connectorsEnabled: boolean
+  expandUnchanged: boolean
+  loadDiffFiles: FileDiffContentsLoader
   annotations: ReadonlyArray<DiffLineAnnotation<AnnotationMeta>>
   selectedLines: SelectedLineRange | null
   onDraftOpen: (draft: DraftLocation) => void
@@ -125,6 +157,8 @@ function FileDiffSection({
   theme,
   diffStyle,
   connectorsEnabled,
+  expandUnchanged,
+  loadDiffFiles,
   annotations,
   selectedLines,
   onDraftOpen,
@@ -159,6 +193,11 @@ function FileDiffSection({
           lineDiffType: "word",
           overflow: diffStyle === "split" ? "scroll" : "wrap",
           stickyHeader: false,
+          // Full-file support: the loader hydrates the unchanged regions of a
+          // patch-parsed diff, which both makes the hunk separators expandable
+          // and lets expandUnchanged render the whole file.
+          loadDiffFiles,
+          expandUnchanged,
           enableGutterUtility: true,
           unsafeCSS: connectorsEnabled ? connectorGutterCSS : undefined,
           onPostRender: connectorsEnabled ? onPostRender : undefined,
@@ -283,6 +322,7 @@ export function DiffPane({
   theme,
   diffStyle,
   connectors,
+  expandUnchanged,
   loading,
   error,
   target,
@@ -300,6 +340,43 @@ export function DiffPane({
 }: DiffPaneProps) {
   const connectorsEnabled = connectors && diffStyle === "split"
   const containerRef = useRef<HTMLDivElement>(null)
+
+  // Fetch both full sides of a file so @pierre/diffs can render the unchanged
+  // regions (per-hunk expansion and the "full file" view). Throwing is the
+  // loader's "not available" signal — the library logs it and simply keeps the
+  // collapsed, hunks-only rendering (e.g. a PR whose commits aren't fetched).
+  const loadDiffFiles = useCallback(
+    async (file: FileDiffMetadata): Promise<FileDiffLoadedFiles> => {
+      const { data, error: fetchError } = await fetchClient.GET(
+        "/api/diff-file",
+        {
+          params: {
+            query: {
+              ...diffFileTargetQuery(target),
+              path: file.name,
+              ...(file.prevName != null ? { prevPath: file.prevName } : {}),
+            },
+          },
+        }
+      )
+      if (fetchError !== undefined || data === undefined)
+        throw new Error(`Could not load contents for ${file.name}`)
+      if (data.newContents === null)
+        throw new Error(`No diff contents available for ${file.name}`)
+      const newFile = { name: file.name, contents: data.newContents }
+      if (file.type === "rename-pure") return { oldFile: null, newFile }
+      if (data.oldContents === null)
+        throw new Error(`No previous contents available for ${file.name}`)
+      return {
+        oldFile: {
+          name: file.prevName ?? file.name,
+          contents: data.oldContents,
+        },
+        newFile,
+      }
+    },
+    [target]
+  )
 
   // Animate the selected file's diff to the top of the pane. Hard-won details:
   //  - Native smooth scrolling (`scrollIntoView`/`scrollTo({behavior:"smooth"})`,
@@ -472,6 +549,8 @@ export function DiffPane({
             theme={theme}
             diffStyle={diffStyle}
             connectorsEnabled={connectorsEnabled}
+            expandUnchanged={expandUnchanged}
+            loadDiffFiles={loadDiffFiles}
             annotations={annotationsByFile.get(file.name) ?? []}
             selectedLines={
               draft !== null && draft.filePath === file.name

@@ -21,6 +21,8 @@ import {
   ConflictParam,
   CreateBranch,
   DeleteBranch,
+  DiffFileContents,
+  DiffFileQuery,
   DiffQuery,
   Discard,
   DiscardHunk,
@@ -79,6 +81,13 @@ export class RepoApi extends HttpApiGroup.make("repo")
     HttpApiEndpoint.get("diff", "/diff", {
       query: DiffQuery,
       success: DiffText,
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("diffFile", "/diff-file", {
+      query: DiffFileQuery,
+      success: DiffFileContents,
       error: gitError,
     })
   )
