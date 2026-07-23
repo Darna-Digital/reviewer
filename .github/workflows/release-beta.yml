@@ -71,6 +71,9 @@ jobs:
           --publish never
         env:
           BYCONVO_CHANNEL: beta
+          # Verbose electron-builder output so the packaging/signing step streams
+          # progress (each binary as it's signed) instead of sitting silent.
+          DEBUG: electron-builder
 
       # Publish with the gh CLI rather than electron-builder's own publisher:
       # the build runs in this repo but the release lives in byconvo-beta, and
