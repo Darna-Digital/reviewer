@@ -1,9 +1,10 @@
 name: check
 
+# Runs on PRs for validation, and is called by the release workflows
+# (staging/master) as a gating job before they sign and publish.
 on:
-  push:
-    branches: [master]
   pull_request:
+  workflow_call:
 
 jobs:
   check:

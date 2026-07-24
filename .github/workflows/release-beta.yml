@@ -26,7 +26,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Lint / format / test first; the release only runs if this passes.
+  check:
+    uses: ./.github/workflows/check.yml
+
   release:
+    needs: check
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4.2.2
