@@ -1,21 +1,23 @@
 name: release-prod
 
 # Production channel. A push to `master` publishes the version in
-# packages/desktop/package.json to darna-digital/byconvo — but only if that
-# version has not already been released. Bumping the version is the deliberate
-# "ship it" signal; merges that don't change the version are no-ops.
+# packages/desktop/package.json to darna-digital/byconvo — but only once that
+# version has a COMPLETE release (one carrying latest-mac.yml, the auto-update
+# manifest). Bumping the version is the "ship it" signal; other merges are
+# no-ops, and a half-finished release from a failed run is repaired rather than
+# skipped.
 #
-# Production builds are ALWAYS signed and notarized: if the Apple secrets are
-# missing the signing step fails the run rather than shipping an unsigned build
-# to real users. The published release (dmg + zip + blockmap + latest-mac.yml)
-# is what the "Byconvo" app's auto-updater consumes.
+# Publishing is done with the gh CLI, not electron-builder's own publisher:
+# electron-builder's multi-arch publish races on release creation (one arch
+# wins, the other's duplicate create fails with "must have a valid tag"),
+# leaving an incomplete release. Building with --publish never and then a single
+# `gh release create` avoids the race and anchors the tag correctly. The app
+# still learns where to check for updates from the publish block baked into
+# app-update.yml by electron-builder.config.js.
 #
 # Secrets (GITHUB_TOKEN is built in — publishing is to this same repo):
-#   APPLE_CERTIFICATE           base64 of the Developer ID Application .p12
-#   APPLE_CERTIFICATE_PASSWORD  password for that .p12
-#   APPLE_API_KEY               base64 of the App Store Connect API .p8 key
-#   APPLE_API_KEY_ID            the key's ID
-#   APPLE_API_ISSUER            the key's issuer ID
+#   APPLE_CERTIFICATE / APPLE_CERTIFICATE_PASSWORD  Developer ID .p12 (base64) + password
+#   APPLE_API_KEY / APPLE_API_KEY_ID / APPLE_API_ISSUER  App Store Connect API key for notarization
 
 on:
   push:
@@ -35,16 +37,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4.2.2
 
-      - name: Resolve version and skip if already released
+      - name: Resolve version and decide whether to release
         id: v
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION=$(node -p "require('./packages/desktop/package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if gh release view "v$VERSION" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+          # A version counts as released only if it has a COMPLETE release —
+          # one whose assets include latest-mac.yml. A missing release, or a
+          # partial one from a failed run, is (re)built and repaired.
+          if gh release view "v$VERSION" --repo "${{ github.repository }}" \
+               --json assets --jq '.assets[].name' 2>/dev/null | grep -qx 'latest-mac.yml'; then
             echo "release=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::v$VERSION is already released — nothing to publish."
+            echo "::notice::v$VERSION already has a complete release — nothing to do."
           else
             echo "release=true" >> "$GITHUB_OUTPUT"
             echo "::notice::Publishing v$VERSION."
@@ -79,19 +85,46 @@ jobs:
         if: steps.v.outputs.release == 'true'
         run: pnpm build:desktop
 
-      - name: Package, sign, notarize, and publish
+      # Sign + notarize both arches and generate the update artifacts (dmg, zip,
+      # blockmap, latest-mac.yml) into dist-packaged. --publish never: gh does the
+      # publishing below.
+      - name: Package, sign, and notarize
         if: steps.v.outputs.release == 'true'
         run: >
           pnpm --filter @byconvo/desktop exec electron-builder
           --mac --arm64 --x64
           --config electron-builder.config.js
-          --publish always
+          --publish never
         env:
           BYCONVO_CHANNEL: prod
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           APPLE_API_KEY: ${{ runner.temp }}/apple-api-key.p8
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-          # Verbose output so signing and (especially) the slow, Apple-side
-          # notarization step stream progress instead of sitting silent.
+          # Stream signing + notarization progress instead of a silent spinner.
           DEBUG: electron-builder
+
+      - name: Verify update manifest and artifacts exist
+        if: steps.v.outputs.release == 'true'
+        run: |
+          ls -la packages/desktop/dist-packaged/
+          test -f packages/desktop/dist-packaged/latest-mac.yml \
+            || { echo "::error::latest-mac.yml was not generated — auto-update would break"; exit 1; }
+
+      - name: Publish to byconvo
+        if: steps.v.outputs.release == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Remove any incomplete release + tag left by a failed prior run so the
+          # create below starts clean.
+          gh release delete "v${{ steps.v.outputs.version }}" \
+            --repo "${{ github.repository }}" --yes --cleanup-tag || true
+          gh release create "v${{ steps.v.outputs.version }}" \
+            packages/desktop/dist-packaged/*.dmg \
+            packages/desktop/dist-packaged/*.zip \
+            packages/desktop/dist-packaged/*.blockmap \
+            packages/desktop/dist-packaged/latest-mac.yml \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "Byconvo v${{ steps.v.outputs.version }}" \
+            --notes "Signed and notarized production release. macOS auto-updates from here."
