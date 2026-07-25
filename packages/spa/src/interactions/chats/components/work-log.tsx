@@ -212,7 +212,9 @@ export function WorkLog({
             open && "rotate-90"
           )}
         />
-        <span className={cn(failures > 0 && "text-destructive")}>{summary}</span>
+        <span className={cn(failures > 0 && "text-destructive")}>
+          {summary}
+        </span>
       </button>
       <div
         className={cn(

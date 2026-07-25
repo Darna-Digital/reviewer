@@ -158,9 +158,7 @@ export function SidebarFilterMenu({
                     )
                     if (items.length === 0) return
                     const item =
-                      e.key === "ArrowDown"
-                        ? items[0]
-                        : items[items.length - 1]
+                      e.key === "ArrowDown" ? items[0] : items[items.length - 1]
                     item.focus()
                     return
                   }

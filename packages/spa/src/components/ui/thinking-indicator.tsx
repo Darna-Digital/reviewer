@@ -109,7 +109,7 @@ export function ThinkingIndicator({
         )}
         <span
           key={word}
-          className="col-start-1 row-start-1 truncate shimmer-text animate-in fade-in slide-in-from-bottom-1 duration-200 motion-reduce:animate-none"
+          className="shimmer-text col-start-1 row-start-1 animate-in truncate duration-200 fade-in slide-in-from-bottom-1 motion-reduce:animate-none"
         >
           {word}
         </span>

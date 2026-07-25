@@ -721,10 +721,7 @@ export function AppShell() {
             onDismiss={() => setAssignBarDismissed(true)}
           />
         )}
-        <ModeRail
-          mode={mode}
-          hasGitHub={hasGitHub}
-        />
+        <ModeRail mode={mode} hasGitHub={hasGitHub} />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar
             repo={repo.data ?? null}

@@ -248,7 +248,8 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
       for (const block of message["content"]) {
         if (!isRecord(block) || block["type"] !== "thinking") continue
         const reasoning = asString(block["thinking"])
-        if (reasoning !== null && reasoning.length > 0) thinking.text = reasoning
+        if (reasoning !== null && reasoning.length > 0)
+          thinking.text = reasoning
       }
     }
     // A complete assistant message also closes a thinking block whose

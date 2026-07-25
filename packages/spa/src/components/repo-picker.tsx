@@ -127,9 +127,7 @@ export function RepoPicker({
     if (q.length === 0) return recents
     return recents.filter((recent) => {
       const name = recent.split("/").at(-1) ?? recent
-      return (
-        name.toLowerCase().includes(q) || recent.toLowerCase().includes(q)
-      )
+      return name.toLowerCase().includes(q) || recent.toLowerCase().includes(q)
     })
   }, [query, recents])
 

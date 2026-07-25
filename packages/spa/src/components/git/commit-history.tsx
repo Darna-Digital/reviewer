@@ -102,74 +102,67 @@ export function CommitHistory({
       />
 
       <div className="flex min-h-0 flex-1">
-        <ScrollArea
-          className="min-h-0 flex-1"
-          viewportClassName="scroll-fade"
-        >
-          <ul
-            role="listbox"
-            aria-label="Commits"
-            aria-busy={loading}
-          >
-          {commits.map((commit, index) => {
-            const row = layout.rows[index]
-            const selected = selectedCommitSha === commit.sha
-            const active = effectiveActive === commit.sha
-            return (
-              <li key={commit.sha} role="option" aria-selected={selected}>
-                <div
-                  tabIndex={active ? 0 : -1}
-                  ref={(el) => {
-                    if (el) rowRefs.current.set(commit.sha, el)
-                    else rowRefs.current.delete(commit.sha)
-                  }}
-                  className={cn(
-                    "flex cursor-pointer items-center gap-2 px-2 text-sm outline-none",
-                    "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
-                    selected && "bg-accent text-accent-foreground"
-                  )}
-                  style={{ height: DEFAULT_GRAPH_CONFIG.rowHeight }}
-                  onFocus={() => setActiveSha(commit.sha)}
-                  onClick={() => onSelectCommit(commit)}
-                  onKeyDown={(e) => onKeyDown(e, commit)}
-                >
-                  <GraphCell
-                    row={row}
-                    width={layout.width}
-                    functions={functions}
-                    config={DEFAULT_GRAPH_CONFIG}
-                  />
-                  {commit.refs.length > 0 && (
-                    <span className="flex shrink-0 gap-1">
-                      {commit.refs.slice(0, 3).map((ref) => (
-                        <Badge
-                          key={ref}
-                          variant="secondary"
-                          className="px-1 py-0 text-[10px] font-normal"
-                        >
-                          {ref}
-                        </Badge>
-                      ))}
+        <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
+          <ul role="listbox" aria-label="Commits" aria-busy={loading}>
+            {commits.map((commit, index) => {
+              const row = layout.rows[index]
+              const selected = selectedCommitSha === commit.sha
+              const active = effectiveActive === commit.sha
+              return (
+                <li key={commit.sha} role="option" aria-selected={selected}>
+                  <div
+                    tabIndex={active ? 0 : -1}
+                    ref={(el) => {
+                      if (el) rowRefs.current.set(commit.sha, el)
+                      else rowRefs.current.delete(commit.sha)
+                    }}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2 px-2 text-sm outline-none",
+                      "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
+                      selected && "bg-accent text-accent-foreground"
+                    )}
+                    style={{ height: DEFAULT_GRAPH_CONFIG.rowHeight }}
+                    onFocus={() => setActiveSha(commit.sha)}
+                    onClick={() => onSelectCommit(commit)}
+                    onKeyDown={(e) => onKeyDown(e, commit)}
+                  >
+                    <GraphCell
+                      row={row}
+                      width={layout.width}
+                      functions={functions}
+                      config={DEFAULT_GRAPH_CONFIG}
+                    />
+                    {commit.refs.length > 0 && (
+                      <span className="flex shrink-0 gap-1">
+                        {commit.refs.slice(0, 3).map((ref) => (
+                          <Badge
+                            key={ref}
+                            variant="secondary"
+                            className="px-1 py-0 text-[10px] font-normal"
+                          >
+                            {ref}
+                          </Badge>
+                        ))}
+                      </span>
+                    )}
+                    <span className="truncate">{commit.subject}</span>
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                      {commit.author}
                     </span>
-                  )}
-                  <span className="truncate">{commit.subject}</span>
-                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                    {commit.author}
-                  </span>
-                  <span className="shrink-0 text-xs text-muted-foreground">
-                    {formatDate(commit.authoredAt)}
-                  </span>
-                </div>
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      {formatDate(commit.authoredAt)}
+                    </span>
+                  </div>
+                </li>
+              )
+            })}
+            {commits.length === 0 && (
+              <li className="p-3 text-sm text-muted-foreground">
+                {loading
+                  ? "Loading commits…"
+                  : "No commits match the current filters."}
               </li>
-            )
-          })}
-          {commits.length === 0 && (
-            <li className="p-3 text-sm text-muted-foreground">
-              {loading
-                ? "Loading commits…"
-                : "No commits match the current filters."}
-            </li>
-          )}
+            )}
           </ul>
         </ScrollArea>
 

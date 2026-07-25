@@ -140,10 +140,7 @@ export function ReviewAssignBar({
                 className="h-auto rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
               />
             </div>
-            <ScrollArea
-              className="max-h-64"
-              viewportClassName="scroll-fade"
-            >
+            <ScrollArea className="max-h-64" viewportClassName="scroll-fade">
               {agents.length > 0 && (
                 <div className="px-2 pt-1 pb-0.5 text-xs text-muted-foreground">
                   New chat

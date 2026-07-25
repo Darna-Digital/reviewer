@@ -141,8 +141,7 @@ export function ModeRail({ mode, hasGitHub }: ModeRailProps) {
   const gitActive =
     prefs.bottomVisible &&
     (prefs.bottomTab === "branches" || prefs.bottomTab === "history")
-  const servicesActive =
-    prefs.bottomVisible && prefs.bottomTab === "services"
+  const servicesActive = prefs.bottomVisible && prefs.bottomTab === "services"
   const threadsActive = prefs.bottomVisible && prefs.bottomTab === "threads"
 
   const renderMode = ({ mode: m, to, label, icon: Icon }: ModeDef) => (

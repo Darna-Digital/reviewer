@@ -153,7 +153,12 @@ describe("createClaudeTurnParser", () => {
     const parser = createClaudeTurnParser()
     const events = push(parser, [
       assistantMessage([
-        { type: "tool_use", id: "tu-9", name: "Read", input: { file_path: "a.ts" } },
+        {
+          type: "tool_use",
+          id: "tu-9",
+          name: "Read",
+          input: { file_path: "a.ts" },
+        },
       ]),
       line({
         type: "user",

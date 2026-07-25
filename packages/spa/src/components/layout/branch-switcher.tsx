@@ -348,11 +348,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-72">
                   {repoActions.map(({ label, run, icon: Icon }) => (
-                    <DropdownMenuItem
-                      key={label}
-                      disabled={busy}
-                      onClick={run}
-                    >
+                    <DropdownMenuItem key={label} disabled={busy} onClick={run}>
                       <Icon className="size-3.5 text-muted-foreground" />
                       {label}
                     </DropdownMenuItem>

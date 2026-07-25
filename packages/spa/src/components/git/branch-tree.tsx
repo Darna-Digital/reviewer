@@ -218,9 +218,7 @@ export function BranchTree({
           fav && "text-amber-500 opacity-100 hover:text-amber-600"
         )}
         aria-label={
-          fav
-            ? `Unfavorite ${branch.fullName}`
-            : `Favorite ${branch.fullName}`
+          fav ? `Unfavorite ${branch.fullName}` : `Favorite ${branch.fullName}`
         }
         aria-pressed={fav}
         title={fav ? "Remove from favorites" : "Add to favorites"}
@@ -278,7 +276,9 @@ export function BranchTree({
             <span className="rounded bg-background px-1 py-0.5 font-mono text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
               HEAD
             </span>
-            <span className="min-w-0 truncate font-medium">{currentBranch}</span>
+            <span className="min-w-0 truncate font-medium">
+              {currentBranch}
+            </span>
           </button>
         </div>
       )}
@@ -287,7 +287,9 @@ export function BranchTree({
         const active = effectiveActive === row.id
         const prev = navRows[index - 1]
         const sectionStart =
-          row.kind === "section" && prev !== undefined && prev.kind !== "section"
+          row.kind === "section" &&
+          prev !== undefined &&
+          prev.kind !== "section"
 
         if (row.kind === "section") {
           return (
@@ -375,7 +377,7 @@ export function BranchTree({
             )}
             <div className="ml-auto flex shrink-0 items-center gap-0.5">
               {(branch.behind > 0 || branch.ahead > 0) && (
-                <span className="tabular-nums text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground tabular-nums">
                   {branch.behind > 0 && (
                     <span title={`${branch.behind} incoming`}>
                       ↓{branch.behind}

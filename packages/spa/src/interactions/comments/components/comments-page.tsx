@@ -212,67 +212,67 @@ function CommentDetail({
         viewportClassName="scroll-fade p-4"
       >
         <div className="space-y-4">
-        <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
+          <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
 
-        <div className="space-y-1.5 border-t pt-3">
-          <Field label="Author">{comment.author}</Field>
-          {code !== undefined && (
-            <>
-              <Field label="File">
-                <code className="font-mono">
-                  {code.filePath}:{code.lineNumber}
-                </code>
-              </Field>
-              <Field label="Side">{code.side}</Field>
-              <Field label="Target">
-                <code className="font-mono">{code.target}</code>
-              </Field>
-            </>
-          )}
-          {visual !== undefined && (
-            <>
-              <Field label="Page">
-                <a
-                  href={visual.pageUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 underline underline-offset-2"
-                >
-                  {visual.pageUrl}
-                  <IconExternalLink className="size-3" />
-                </a>
-              </Field>
-              <Field label="Element">
-                <code className="font-mono">{visual.label}</code>
-              </Field>
-              <Field label="Selector">
-                <code className="font-mono">{visual.selector}</code>
-              </Field>
-              {visual.sourceFile !== undefined && (
-                <Field label="Source">
+          <div className="space-y-1.5 border-t pt-3">
+            <Field label="Author">{comment.author}</Field>
+            {code !== undefined && (
+              <>
+                <Field label="File">
                   <code className="font-mono">
-                    {visual.sourceFile}
-                    {visual.sourceLine === undefined
-                      ? ""
-                      : `:${visual.sourceLine}`}
+                    {code.filePath}:{code.lineNumber}
                   </code>
                 </Field>
-              )}
-              <Field label="Viewport">
-                {visual.viewport.width} × {visual.viewport.height}
-              </Field>
-            </>
-          )}
-        </div>
-
-        {visual !== undefined && (
-          <div className="border-t pt-3">
-            <p className="mb-1.5 text-xs text-muted-foreground">Markup</p>
-            <pre className="overflow-x-auto rounded-md bg-muted p-2.5 font-mono text-xs">
-              {visual.elementHtml}
-            </pre>
+                <Field label="Side">{code.side}</Field>
+                <Field label="Target">
+                  <code className="font-mono">{code.target}</code>
+                </Field>
+              </>
+            )}
+            {visual !== undefined && (
+              <>
+                <Field label="Page">
+                  <a
+                    href={visual.pageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 underline underline-offset-2"
+                  >
+                    {visual.pageUrl}
+                    <IconExternalLink className="size-3" />
+                  </a>
+                </Field>
+                <Field label="Element">
+                  <code className="font-mono">{visual.label}</code>
+                </Field>
+                <Field label="Selector">
+                  <code className="font-mono">{visual.selector}</code>
+                </Field>
+                {visual.sourceFile !== undefined && (
+                  <Field label="Source">
+                    <code className="font-mono">
+                      {visual.sourceFile}
+                      {visual.sourceLine === undefined
+                        ? ""
+                        : `:${visual.sourceLine}`}
+                    </code>
+                  </Field>
+                )}
+                <Field label="Viewport">
+                  {visual.viewport.width} × {visual.viewport.height}
+                </Field>
+              </>
+            )}
           </div>
-        )}
+
+          {visual !== undefined && (
+            <div className="border-t pt-3">
+              <p className="mb-1.5 text-xs text-muted-foreground">Markup</p>
+              <pre className="overflow-x-auto rounded-md bg-muted p-2.5 font-mono text-xs">
+                {visual.elementHtml}
+              </pre>
+            </div>
+          )}
         </div>
       </ScrollArea>
     </div>

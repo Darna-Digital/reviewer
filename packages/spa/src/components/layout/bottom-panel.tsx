@@ -6,10 +6,7 @@ import {
 } from "@tabler/icons-react"
 import { BranchTree } from "@/components/git/branch-tree"
 import { CommitHistory } from "@/components/git/commit-history"
-import {
-  TabsSubtle,
-  TabsSubtleItem,
-} from "@/components/ui/tabs-subtle"
+import { TabsSubtle, TabsSubtleItem } from "@/components/ui/tabs-subtle"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { LocalDevPage } from "@/interactions/local-dev/components/local-dev-page"
 import { ThreadsPage } from "@/interactions/threads/components/threads-page"

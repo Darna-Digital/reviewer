@@ -118,7 +118,12 @@ export class Picker {
     this.launcherHint.textContent = pickMode.launcherHint("idle")
 
     const toggle = el("button", "toggle")
-    toggle.append(dot, this.launcherLabel, this.launcherCount, this.launcherHint)
+    toggle.append(
+      dot,
+      this.launcherLabel,
+      this.launcherCount,
+      this.launcherHint
+    )
     toggle.setAttribute("aria-label", "Toggle comment mode")
     toggle.addEventListener("click", () => this.dispatch("toggle"))
 
@@ -161,7 +166,9 @@ export class Picker {
     this.launcher.dataset["placement"] = this.placement
     for (const option of this.settings.querySelectorAll(".settings-option")) {
       const node = option as HTMLElement
-      node.dataset["active"] = String(node.dataset["placement"] === this.placement)
+      node.dataset["active"] = String(
+        node.dataset["placement"] === this.placement
+      )
     }
   }
 

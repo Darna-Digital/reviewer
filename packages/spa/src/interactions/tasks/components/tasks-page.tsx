@@ -422,231 +422,233 @@ export function TasksPage() {
         viewportClassName="scroll-fade p-4"
       >
         <div className="flex gap-3">
-        {groups.map((group) => (
-          <div
-            key={group.key}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={() => void drop(group.key)}
-            className="flex w-72 shrink-0 flex-col rounded-lg border bg-muted/30"
-          >
-            <div className="flex items-center gap-1 px-3 py-2">
-              {renamingColumn === group.key ? (
-                <Input
-                  autoFocus
-                  value={columnDraft}
-                  className="h-6 flex-1"
-                  onChange={(e) => setColumnDraft(e.target.value)}
-                  onBlur={() => void commitColumnRename()}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault()
-                      void commitColumnRename()
-                    } else if (e.key === "Escape") setRenamingColumn(null)
-                  }}
-                />
-              ) : (
-                <>
-                  <span
-                    className="flex-1 truncate text-sm font-medium"
-                    onDoubleClick={() => {
-                      setRenamingColumn(group.key)
-                      setColumnDraft(group.title)
-                    }}
-                    title="Double-click to rename"
-                  >
-                    {group.title}
-                  </span>
-                  <Badge variant="secondary">{group.cards.length}</Badge>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-6"
-                          aria-label="Column options"
-                        >
-                          <IconDots className="size-4" />
-                        </Button>
-                      }
-                    />
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setRenamingColumn(group.key)
-                          setColumnDraft(group.title)
-                        }}
-                      >
-                        <IconPencil className="size-4" /> Rename
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => void moveColumn(group.key, -1)}
-                      >
-                        <IconChevronLeft className="size-4" /> Move left
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => void moveColumn(group.key, 1)}
-                      >
-                        <IconChevronRight className="size-4" /> Move right
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() =>
-                          void deleteColumn(group.key, group.title)
-                        }
-                      >
-                        <IconTrash className="size-4" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
-              )}
-            </div>
-
-            <ScrollArea
-              className="min-h-0 flex-1"
-              viewportClassName="scroll-fade px-2 pb-2"
+          {groups.map((group) => (
+            <div
+              key={group.key}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={() => void drop(group.key)}
+              className="flex w-72 shrink-0 flex-col rounded-lg border bg-muted/30"
             >
-              <div className="flex flex-col gap-2">
-              {group.cards.map((card) => (
-                <div
-                  key={card.id}
-                  draggable
-                  onDragStart={() => setDragId(card.id)}
-                  onDragEnd={() => setDragId(null)}
-                  onDoubleClick={() => openCard(card)}
-                  className={cn(
-                    "group/card cursor-grab rounded-md border bg-background p-2 shadow-xs active:cursor-grabbing",
-                    dragId === card.id && "opacity-50"
-                  )}
-                >
-                  <div className="flex items-start gap-2">
-                    <Badge variant="outline" className="shrink-0">
-                      {card.key}
-                    </Badge>
-                    <span className="min-w-0 flex-1 text-sm">{card.title}</span>
-                    <button
-                      type="button"
-                      aria-label="Delete card"
-                      onClick={() => void removeCard(card.id)}
-                      className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/card:opacity-100 hover:text-destructive"
-                    >
-                      <IconTrash className="size-3.5" />
-                    </button>
-                  </div>
-                  {card.description.length > 0 && (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {card.description}
-                    </p>
-                  )}
-                </div>
-              ))}
-
-              {addingTo === group.key ? (
-                <div className="flex flex-col gap-1.5 rounded-md border bg-background p-2">
+              <div className="flex items-center gap-1 px-3 py-2">
+                {renamingColumn === group.key ? (
                   <Input
                     autoFocus
-                    value={newTitle}
-                    placeholder="Card title…"
-                    onChange={(e) => setNewTitle(e.target.value)}
+                    value={columnDraft}
+                    className="h-6 flex-1"
+                    onChange={(e) => setColumnDraft(e.target.value)}
+                    onBlur={() => void commitColumnRename()}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
                         e.preventDefault()
-                        void addCard(group.key)
-                      } else if (e.key === "Escape") {
-                        setAddingTo(null)
-                        setNewTitle("")
-                      }
+                        void commitColumnRename()
+                      } else if (e.key === "Escape") setRenamingColumn(null)
                     }}
                   />
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      disabled={newTitle.trim().length === 0}
-                      onClick={() => void addCard(group.key)}
+                ) : (
+                  <>
+                    <span
+                      className="flex-1 truncate text-sm font-medium"
+                      onDoubleClick={() => {
+                        setRenamingColumn(group.key)
+                        setColumnDraft(group.title)
+                      }}
+                      title="Double-click to rename"
                     >
-                      Add
-                    </Button>
+                      {group.title}
+                    </span>
+                    <Badge variant="secondary">{group.cards.length}</Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-6"
+                            aria-label="Column options"
+                          >
+                            <IconDots className="size-4" />
+                          </Button>
+                        }
+                      />
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setRenamingColumn(group.key)
+                            setColumnDraft(group.title)
+                          }}
+                        >
+                          <IconPencil className="size-4" /> Rename
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => void moveColumn(group.key, -1)}
+                        >
+                          <IconChevronLeft className="size-4" /> Move left
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => void moveColumn(group.key, 1)}
+                        >
+                          <IconChevronRight className="size-4" /> Move right
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          variant="destructive"
+                          onClick={() =>
+                            void deleteColumn(group.key, group.title)
+                          }
+                        >
+                          <IconTrash className="size-4" /> Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                )}
+              </div>
+
+              <ScrollArea
+                className="min-h-0 flex-1"
+                viewportClassName="scroll-fade px-2 pb-2"
+              >
+                <div className="flex flex-col gap-2">
+                  {group.cards.map((card) => (
+                    <div
+                      key={card.id}
+                      draggable
+                      onDragStart={() => setDragId(card.id)}
+                      onDragEnd={() => setDragId(null)}
+                      onDoubleClick={() => openCard(card)}
+                      className={cn(
+                        "group/card cursor-grab rounded-md border bg-background p-2 shadow-xs active:cursor-grabbing",
+                        dragId === card.id && "opacity-50"
+                      )}
+                    >
+                      <div className="flex items-start gap-2">
+                        <Badge variant="outline" className="shrink-0">
+                          {card.key}
+                        </Badge>
+                        <span className="min-w-0 flex-1 text-sm">
+                          {card.title}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label="Delete card"
+                          onClick={() => void removeCard(card.id)}
+                          className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/card:opacity-100 hover:text-destructive"
+                        >
+                          <IconTrash className="size-3.5" />
+                        </button>
+                      </div>
+                      {card.description.length > 0 && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {card.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+
+                  {addingTo === group.key ? (
+                    <div className="flex flex-col gap-1.5 rounded-md border bg-background p-2">
+                      <Input
+                        autoFocus
+                        value={newTitle}
+                        placeholder="Card title…"
+                        onChange={(e) => setNewTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault()
+                            void addCard(group.key)
+                          } else if (e.key === "Escape") {
+                            setAddingTo(null)
+                            setNewTitle("")
+                          }
+                        }}
+                      />
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          disabled={newTitle.trim().length === 0}
+                          onClick={() => void addCard(group.key)}
+                        >
+                          Add
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setAddingTo(null)
+                            setNewTitle("")
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
                     <Button
-                      size="sm"
                       variant="ghost"
+                      size="sm"
+                      className="justify-start text-muted-foreground"
                       onClick={() => {
-                        setAddingTo(null)
+                        setAddingTo(group.key)
                         setNewTitle("")
                       }}
                     >
-                      Cancel
+                      <IconPlus className="size-4" /> Add card
                     </Button>
-                  </div>
+                  )}
                 </div>
-              ) : (
+              </ScrollArea>
+            </div>
+          ))}
+
+          {addingColumn ? (
+            <div className="flex w-72 shrink-0 flex-col gap-1.5 self-start rounded-lg border bg-muted/30 p-2">
+              <Input
+                autoFocus
+                value={newColumnName}
+                placeholder="Column name…"
+                onChange={(e) => setNewColumnName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault()
+                    void addColumn()
+                  } else if (e.key === "Escape") {
+                    setAddingColumn(false)
+                    setNewColumnName("")
+                  }
+                }}
+              />
+              <div className="flex gap-1">
                 <Button
-                  variant="ghost"
                   size="sm"
-                  className="justify-start text-muted-foreground"
+                  disabled={newColumnName.trim().length === 0}
+                  onClick={() => void addColumn()}
+                >
+                  Add
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
                   onClick={() => {
-                    setAddingTo(group.key)
-                    setNewTitle("")
+                    setAddingColumn(false)
+                    setNewColumnName("")
                   }}
                 >
-                  <IconPlus className="size-4" /> Add card
+                  Cancel
                 </Button>
-              )}
               </div>
-            </ScrollArea>
-          </div>
-        ))}
-
-        {addingColumn ? (
-          <div className="flex w-72 shrink-0 flex-col gap-1.5 self-start rounded-lg border bg-muted/30 p-2">
-            <Input
-              autoFocus
-              value={newColumnName}
-              placeholder="Column name…"
-              onChange={(e) => setNewColumnName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  void addColumn()
-                } else if (e.key === "Escape") {
-                  setAddingColumn(false)
-                  setNewColumnName("")
-                }
-              }}
-            />
-            <div className="flex gap-1">
-              <Button
-                size="sm"
-                disabled={newColumnName.trim().length === 0}
-                onClick={() => void addColumn()}
-              >
-                Add
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setAddingColumn(false)
-                  setNewColumnName("")
-                }}
-              >
-                Cancel
-              </Button>
             </div>
-          </div>
-        ) : (
-          <Button
-            variant="ghost"
-            className="h-9 w-44 shrink-0 justify-start self-start text-muted-foreground"
-            onClick={() => {
-              setAddingColumn(true)
-              setNewColumnName("")
-            }}
-          >
-            <IconPlus className="size-4" /> Add column
-          </Button>
-        )}
+          ) : (
+            <Button
+              variant="ghost"
+              className="h-9 w-44 shrink-0 justify-start self-start text-muted-foreground"
+              onClick={() => {
+                setAddingColumn(true)
+                setNewColumnName("")
+              }}
+            >
+              <IconPlus className="size-4" /> Add column
+            </Button>
+          )}
         </div>
       </ScrollArea>
 
@@ -698,15 +700,15 @@ export function TasksPage() {
                   viewportClassName="scroll-fade"
                 >
                   <ul className="flex flex-col gap-2">
-                  {editingLive.comments
-                    .filter((c) => c.parentId === null)
-                    .flatMap((top) => [
-                      top,
-                      ...editingLive.comments.filter(
-                        (c) => c.parentId === top.id
-                      ),
-                    ])
-                    .map((c) => renderComment(c, c.parentId !== null))}
+                    {editingLive.comments
+                      .filter((c) => c.parentId === null)
+                      .flatMap((top) => [
+                        top,
+                        ...editingLive.comments.filter(
+                          (c) => c.parentId === top.id
+                        ),
+                      ])
+                      .map((c) => renderComment(c, c.parentId !== null))}
                   </ul>
                 </ScrollArea>
               ) : (

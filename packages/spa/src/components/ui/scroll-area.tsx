@@ -13,27 +13,27 @@ import {
   type ComponentRef,
   type Ref,
   type UIEventHandler,
-} from "react";
-import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
-import { cn } from "@/lib/utils";
-import { useShape } from "@/lib/shape-context";
-import { useTouchPrimary } from "@/hooks/use-touch-primary";
+} from "react"
+import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area"
+import { cn } from "@/lib/utils"
+import { useShape } from "@/lib/shape-context"
+import { useTouchPrimary } from "@/hooks/use-touch-primary"
 
 // On touch-primary devices the Base UI machinery is skipped entirely in
 // favour of native overflow scrolling (better physics, momentum,
 // rubber-banding); the context lets the exported ScrollBar no-op there.
-const ScrollAreaContext = createContext<boolean>(false);
+const ScrollAreaContext = createContext<boolean>(false)
 
-type Orientation = "vertical" | "horizontal" | "both";
+type Orientation = "vertical" | "horizontal" | "both"
 
 interface ScrollAreaProps extends ComponentPropsWithoutRef<"div"> {
-  viewportClassName?: string;
+  viewportClassName?: string
   /** Ref to the scrolling viewport — needed for programmatic scroll. */
-  viewportRef?: Ref<HTMLDivElement>;
+  viewportRef?: Ref<HTMLDivElement>
   /** Scroll listener on the viewport (not the outer container). */
-  onViewportScroll?: UIEventHandler<HTMLDivElement>;
+  onViewportScroll?: UIEventHandler<HTMLDivElement>
   /** Which axes get scrollbars. Defaults to `"vertical"`. */
-  orientation?: Orientation;
+  orientation?: Orientation
 }
 
 const ScrollArea = forwardRef<
@@ -52,7 +52,7 @@ const ScrollArea = forwardRef<
     },
     ref
   ) => {
-    const isTouch = useTouchPrimary();
+    const isTouch = useTouchPrimary()
 
     return (
       <ScrollAreaContext.Provider value={isTouch}>
@@ -100,26 +100,30 @@ const ScrollArea = forwardRef<
                 {children}
               </ScrollAreaPrimitive.Content>
             </ScrollAreaPrimitive.Viewport>
-            {orientation !== "horizontal" && <ScrollBar orientation="vertical" />}
-            {orientation !== "vertical" && <ScrollBar orientation="horizontal" />}
+            {orientation !== "horizontal" && (
+              <ScrollBar orientation="vertical" />
+            )}
+            {orientation !== "vertical" && (
+              <ScrollBar orientation="horizontal" />
+            )}
             {orientation === "both" && <ScrollAreaPrimitive.Corner />}
           </ScrollAreaPrimitive.Root>
         )}
       </ScrollAreaContext.Provider>
-    );
+    )
   }
-);
+)
 
-ScrollArea.displayName = "ScrollArea";
+ScrollArea.displayName = "ScrollArea"
 
 const ScrollBar = forwardRef<
   ComponentRef<typeof ScrollAreaPrimitive.Scrollbar>,
   ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Scrollbar>
 >(({ className, orientation = "vertical", ...props }, ref) => {
-  const isTouch = useContext(ScrollAreaContext);
-  const shape = useShape();
+  const isTouch = useContext(ScrollAreaContext)
+  const shape = useShape()
 
-  if (isTouch) return null;
+  if (isTouch) return null
 
   return (
     <ScrollAreaPrimitive.Scrollbar
@@ -139,7 +143,7 @@ const ScrollBar = forwardRef<
         // Show immediately; on hide, wait out the 150ms thumb shrink before
         // fading so the thumb visibly narrows back first instead of the fade
         // masking it.
-        "opacity-0 transition-opacity duration-120 ease-out delay-160",
+        "opacity-0 transition-opacity delay-160 duration-120 ease-out",
         "data-[hovering]:duration-160 data-[scrolling]:duration-160",
         "data-[hovering]:opacity-100 data-[scrolling]:opacity-100",
         "data-[hovering]:delay-0 data-[scrolling]:delay-0",
@@ -160,16 +164,16 @@ const ScrollBar = forwardRef<
           // -translate nudges the thumb 2px off the container edge; the track
           // (and its 10px hit target) stays flush so edge-throws still land.
           orientation === "vertical" &&
-            "mx-auto my-1 w-1 -translate-x-0.5 h-[var(--scroll-area-thumb-height)] group-hover/scrollbar:w-1.5",
+            "mx-auto my-1 h-[var(--scroll-area-thumb-height)] w-1 -translate-x-0.5 group-hover/scrollbar:w-1.5",
           orientation === "horizontal" &&
-            "my-auto mx-1 h-1 -translate-y-0.5 w-[var(--scroll-area-thumb-width)] group-hover/scrollbar:h-1.5"
+            "mx-1 my-auto h-1 w-[var(--scroll-area-thumb-width)] -translate-y-0.5 group-hover/scrollbar:h-1.5"
         )}
       />
     </ScrollAreaPrimitive.Scrollbar>
-  );
-});
+  )
+})
 
-ScrollBar.displayName = "ScrollBar";
+ScrollBar.displayName = "ScrollBar"
 
-export { ScrollArea, ScrollBar };
-export type { ScrollAreaProps };
+export { ScrollArea, ScrollBar }
+export type { ScrollAreaProps }

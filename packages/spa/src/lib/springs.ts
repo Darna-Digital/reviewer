@@ -31,7 +31,7 @@ export const spring = {
     bounce: 0.12,
     exit: { duration: 0.16 },
   },
-} as const;
+} as const
 
 // Fallback delay (ms) for deferred-unmount timers that guard an exit tween:
 // popups keep their portal mounted until onAnimationComplete fires, but a
@@ -39,5 +39,4 @@ export const spring = {
 // after the tier's exit duration plus a safety buffer. Deriving it here keeps
 // the timers in step with the tokens above.
 export const exitFallbackMs = (tier: { exit: { duration: number } }) =>
-  Math.round(tier.exit.duration * 1000) + 100;
-
+  Math.round(tier.exit.duration * 1000) + 100

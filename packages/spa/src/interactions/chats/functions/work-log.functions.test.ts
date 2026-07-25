@@ -146,7 +146,9 @@ describe("toWorkSteps", () => {
       [activity({ kind: "error", tone: "error", summary: "sandbox denied" })],
       true
     )
-    expect(steps).toMatchObject([{ status: "failed", summary: "sandbox denied" }])
+    expect(steps).toMatchObject([
+      { status: "failed", summary: "sandbox denied" },
+    ])
   })
 })
 

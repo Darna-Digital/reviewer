@@ -87,7 +87,7 @@ export function CodeView({
   return (
     // Virtualizer windows the file: only the viewport (±overscan) worth of
     // lines is materialized in the DOM, so large files open instantly.
-    <Virtualizer className="h-full scroll-fade overflow-auto">
+    <Virtualizer className="scroll-fade h-full overflow-auto">
       <section className="diff-file" data-file-anchor={path}>
         {/* Remount per file: the underlying File instance doesn't re-highlight
             when only its `file` prop changes, so navigating between files would

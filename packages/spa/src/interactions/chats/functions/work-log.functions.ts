@@ -80,7 +80,8 @@ export function toWorkSteps(
   for (const activity of activities) {
     if (CLOSING_KINDS.has(activity.kind)) {
       const open = openStepFor(activity)
-      const failed = activity.kind === "tool.failed" || activity.tone === "error"
+      const failed =
+        activity.kind === "tool.failed" || activity.tone === "error"
       if (open === undefined) {
         // A completion with nothing to close (a reconnect that replayed only
         // the tail, or a provider that reports the end and not the start).
@@ -119,7 +120,11 @@ export function toWorkSteps(
         label: labelFrom(activity),
         summary: activity.summary,
         // A one-off activity (codex's `error`) is already over when it arrives.
-        status: opening ? "running" : activity.tone === "error" ? "failed" : "done",
+        status: opening
+          ? "running"
+          : activity.tone === "error"
+            ? "failed"
+            : "done",
         thinking: activity.kind === "thinking",
         input: activity.detail,
         output: null,
@@ -131,7 +136,9 @@ export function toWorkSteps(
   }
 
   return steps.map(({ step }) =>
-    step.status === "running" && !turnRunning ? { ...step, status: "done" } : step
+    step.status === "running" && !turnRunning
+      ? { ...step, status: "done" }
+      : step
   )
 }
 

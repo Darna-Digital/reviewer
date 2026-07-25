@@ -253,7 +253,7 @@ export function LocalDevPage() {
                     removeCommand(c.id)
                   }}
                 >
-                <IconTrash className="size-3.5" />
+                  <IconTrash className="size-3.5" />
                 </button>
               </div>
             ))

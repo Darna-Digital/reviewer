@@ -121,9 +121,9 @@ describe("settleStaleTurns", () => {
       }),
     ])
     settleStaleTurns(repoDir, () => false, "server stopped")
-    expect(
-      readChats(repoDir)[0]?.messages.every((m) => !m.streaming)
-    ).toBe(true)
+    expect(readChats(repoDir)[0]?.messages.every((m) => !m.streaming)).toBe(
+      true
+    )
   })
 
   it("repairs chats across the whole file in one pass", () => {

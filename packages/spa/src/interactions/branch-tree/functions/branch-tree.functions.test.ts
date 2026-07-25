@@ -55,10 +55,7 @@ describe("buildTrees", () => {
       favorites: new Set(["task/a", "origin/feature"]),
       query: "",
     })
-    expect(favorites.map((f) => f.label)).toEqual([
-      "origin/feature",
-      "task/a",
-    ])
+    expect(favorites.map((f) => f.label)).toEqual(["origin/feature", "task/a"])
   })
 
   it("omits favourites that do not match the query", () => {
