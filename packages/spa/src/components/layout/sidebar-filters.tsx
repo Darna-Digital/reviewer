@@ -23,7 +23,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   DATE_FILTERS,
   dateFilterLabel,
@@ -124,17 +123,17 @@ export function SidebarFilterMenu({
           </Button>
         }
       />
-      <DropdownMenuContent align="end" className="w-72">
+      <DropdownMenuContent align="end" className="w-72 max-w-72 min-w-0">
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <IconGitBranch className="size-4" />
-            <span>Branch</span>
-            <span className="ml-auto max-w-28 truncate text-xs text-muted-foreground">
+            <IconGitBranch className="size-4 shrink-0" />
+            <span className="shrink-0">Branch</span>
+            <span className="ml-auto min-w-0 truncate text-xs text-muted-foreground">
               {branchSummary}
             </span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-72">
-            <div className="flex items-center gap-2 border-b px-2.5 py-2">
+          <DropdownMenuSubContent>
+            <div className="flex min-w-0 items-center gap-2 border-b px-2.5 py-2">
               <IconSearch className="size-4 shrink-0 text-muted-foreground" />
               <input
                 autoFocus
@@ -164,13 +163,12 @@ export function SidebarFilterMenu({
                   }
                   e.stopPropagation()
                 }}
-                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
             </div>
-            <ScrollArea
-              className="max-h-64"
-              viewportClassName="scroll-fade p-1"
-            >
+            {/* Native overflow (not ScrollArea) so intrinsic content width
+                can't blow past the popup and defeat truncate on long labels. */}
+            <div className="scroll-fade max-h-64 min-w-0 overflow-x-hidden overflow-y-auto p-1">
               {!showAll && shownBranches.length === 0 ? (
                 <p className="px-2.5 py-4 text-center text-xs text-muted-foreground">
                   No branches match.
@@ -187,23 +185,23 @@ export function SidebarFilterMenu({
                   )}
                   {shownBranches.map((b) => (
                     <DropdownMenuRadioItem key={b} value={b}>
-                      <span className="truncate">{branchLabel(b)}</span>
+                      {branchLabel(b)}
                     </DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>
               )}
-            </ScrollArea>
+            </div>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <IconClock className="size-4" />
-            <span>Time</span>
-            <span className="ml-auto max-w-28 truncate text-xs text-muted-foreground">
+            <IconClock className="size-4 shrink-0" />
+            <span className="shrink-0">Time</span>
+            <span className="ml-auto min-w-0 truncate text-xs text-muted-foreground">
               {dateSummary}
             </span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-72">
+          <DropdownMenuSubContent>
             <DropdownMenuRadioGroup
               value={dateValue}
               onValueChange={(v) => onDateChange(v as DateFilter)}

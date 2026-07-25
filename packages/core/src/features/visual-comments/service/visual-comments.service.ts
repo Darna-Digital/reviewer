@@ -48,6 +48,10 @@ export interface VisualCommentsServiceShape {
   readonly add: (
     input: NewVisualComment
   ) => Effect.Effect<VisualComment, VisualCommentsFailure | EmptyCommentBody>
+  readonly update: (
+    id: string,
+    body: string
+  ) => Effect.Effect<VisualComment, VisualCommentsFailure | EmptyCommentBody>
   readonly remove: VisualCommentsRepo["remove"]
 }
 
@@ -65,6 +69,11 @@ export const makeVisualCommentsService = Effect.gen(function* () {
       return normalized.body.length === 0
         ? Effect.fail(new EmptyCommentBody())
         : repo.add(normalized)
+    },
+    update: (id, body) => {
+      const trimmed = body.trim()
+      if (trimmed.length === 0) return Effect.fail(new EmptyCommentBody())
+      return repo.update(id, { body: trimmed })
     },
     remove: repo.remove,
   })

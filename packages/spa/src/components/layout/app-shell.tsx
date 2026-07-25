@@ -442,6 +442,9 @@ export function AppShell() {
   const deleteComment = async (comment: ReviewComment) => {
     await comments.remove(comment)
   }
+  const editComment = async (comment: ReviewComment, body: string) => {
+    await comments.update(comment, body)
+  }
   const replyComment = async (comment: ReviewComment, body: string) => {
     await comments.reply(selectedPull, comment, body)
     void pullComments.refetch()
@@ -619,6 +622,7 @@ export function AppShell() {
           onDraftCancel={() => setDraft(null)}
           onCommentSubmit={submitFileComment}
           onCommentDelete={deleteComment}
+          onCommentEdit={editComment}
         />
       )
     }
@@ -677,6 +681,7 @@ export function AppShell() {
         }
         onCommentSubmit={submitComment}
         onCommentDelete={deleteComment}
+        onCommentEdit={editComment}
         onCommentReply={replyComment}
       />
     )

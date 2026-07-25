@@ -39,6 +39,12 @@ const visualComment: VisualComment = {
 
 const removeVisual = vi.fn(() => Promise.resolve())
 const removeCode = vi.fn(() => Promise.resolve(true))
+const updateVisual = vi.fn((_id: string, body: string) =>
+  Promise.resolve({ ...visualComment, body })
+)
+const updateCode = vi.fn((_comment: ReviewComment, body: string) =>
+  Promise.resolve({ ...codeComment, body })
+)
 const startWithTitle = vi.fn(
   (_settings: unknown, _branch: string, _title: string, _prompt: string) =>
     Promise.resolve({ id: "chat-1" })
@@ -56,11 +62,16 @@ vi.mock("@/lib/queries", () => ({
   useRepo: () => ({ data: { currentBranch: "main" } }),
 }))
 vi.mock("@/interactions/comments/adapters/comments.hook.adapter", () => ({
-  useCommentsActions: () => ({ remove: removeCode }),
+  useCommentsActions: () => ({ remove: removeCode, update: updateCode }),
 }))
 vi.mock(
   "@/interactions/comments/adapters/visual-comments.hook.adapter",
-  () => ({ useVisualCommentsActions: () => ({ remove: removeVisual }) })
+  () => ({
+    useVisualCommentsActions: () => ({
+      remove: removeVisual,
+      update: updateVisual,
+    }),
+  })
 )
 vi.mock("@/interactions/chats/adapters/chats.hook.adapter", () => ({
   useChatsActions: () => ({ startWithTitle, send }),
@@ -68,6 +79,18 @@ vi.mock("@/interactions/chats/adapters/chats.hook.adapter", () => ({
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof RouterModule>()),
   useNavigate: () => navigate,
+  Link: ({
+    children,
+    ...props
+  }: {
+    children?: React.ReactNode
+    to?: string
+    className?: string
+  }) => (
+    <a href={props.to ?? "#"} className={props.className}>
+      {children}
+    </a>
+  ),
 }))
 
 // jsdom has no matchMedia, and `ui-prefs` reads the system theme on import.
@@ -134,6 +157,10 @@ describe("CommentsPage", () => {
         selector: "code",
       })
     ).toBeDefined()
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/commit",
+      search: { path: "packages/spa/src/lib/date-filter.ts" },
+    })
   })
 
   it("filters the list down by a free-text search", async () => {
@@ -219,6 +246,23 @@ describe("CommentsPage", () => {
     await user.click(screen.getByRole("button", { name: "Resolve" }))
     expect(removeCode).toHaveBeenCalledWith(
       expect.objectContaining({ id: "c-1" })
+    )
+  })
+
+  it("saves an edited code comment body", async () => {
+    const user = userEvent.setup()
+    render(<CommentsPage />)
+
+    await user.click(screen.getByText("Add a 90-day window too"))
+    await user.click(screen.getByRole("button", { name: "Edit" }))
+    const box = screen.getByPlaceholderText("Edit comment…")
+    await user.clear(box)
+    await user.type(box, "Add a 180-day window too")
+    await user.click(screen.getByRole("button", { name: "Save" }))
+
+    expect(updateCode).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "c-1" }),
+      "Add a 180-day window too"
     )
   })
 })

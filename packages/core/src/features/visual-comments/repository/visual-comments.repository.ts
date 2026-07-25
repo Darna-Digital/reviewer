@@ -1,12 +1,19 @@
 import * as Context from "effect/Context"
 import type * as Effect from "effect/Effect"
-import type { NoRepoSelected, StorageError } from "../../../shared.ts"
+import type {
+  NoRepoSelected,
+  NotFound,
+  StorageError,
+} from "../../../shared.ts"
 import type {
   AddVisualComment,
   VisualComment,
 } from "../schema/visual-comments.schema.ts"
 
-export type VisualCommentsFailure = NoRepoSelected | StorageError
+export interface UpdateVisualCommentInput {
+  readonly body: string
+}
+export type VisualCommentsFailure = NoRepoSelected | NotFound | StorageError
 export interface VisualCommentsRepo {
   readonly list: Effect.Effect<
     ReadonlyArray<VisualComment>,
@@ -14,6 +21,10 @@ export interface VisualCommentsRepo {
   >
   readonly add: (
     input: AddVisualComment
+  ) => Effect.Effect<VisualComment, VisualCommentsFailure>
+  readonly update: (
+    id: string,
+    input: UpdateVisualCommentInput
   ) => Effect.Effect<VisualComment, VisualCommentsFailure>
   readonly remove: (id: string) => Effect.Effect<void, VisualCommentsFailure>
 }

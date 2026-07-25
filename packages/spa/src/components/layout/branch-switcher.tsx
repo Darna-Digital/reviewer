@@ -16,6 +16,7 @@ import {
   IconCloudDownload,
   IconFolder,
   IconGitBranch,
+  IconPlus,
   IconSearch,
   IconStarFilled,
 } from "@tabler/icons-react"
@@ -197,7 +198,8 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         </DropdownMenuItem>
       )}
       <DropdownMenuItem onClick={() => newBranch(t.ref, t.display)}>
-        New Branch from ‘{t.display}’…
+        <IconPlus className="size-3.5 text-muted-foreground" />
+        New Branch from ‘{t.display}’
       </DropdownMenuItem>
       {!t.isCurrent && (
         <>
@@ -359,7 +361,8 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
 
             {showNew && (
               <DropdownMenuItem onClick={() => newBranch(null, "")}>
-                New Branch…
+                <IconPlus className="size-3.5 text-muted-foreground" />
+                New Branch
               </DropdownMenuItem>
             )}
             {showNew && <DropdownMenuSeparator />}

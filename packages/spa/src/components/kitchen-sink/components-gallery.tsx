@@ -39,6 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { Kbd, KbdGroup } from "@/components/ui/kbd"
 import {
   Popover,
   PopoverContent,
@@ -569,6 +570,22 @@ export function ComponentsGallery() {
                 Hover me
               </TooltipTrigger>
               <TooltipContent>Fetch and prune remote branches</TooltipContent>
+            </Tooltip>
+          </Specimen>
+
+          <Specimen label="Tooltip + shortcut">
+            <Tooltip>
+              <TooltipTrigger render={<Button variant="outline" />}>
+                Inbox
+              </TooltipTrigger>
+              <TooltipContent>
+                Go to inbox
+                <KbdGroup>
+                  <Kbd>G</Kbd>
+                  then
+                  <Kbd>I</Kbd>
+                </KbdGroup>
+              </TooltipContent>
             </Tooltip>
           </Specimen>
 

@@ -51,6 +51,11 @@ export type VisualComment = typeof VisualComment.Type
 
 export const VisualCommentIdParam = Schema.Struct({ id: Schema.String })
 
+export const UpdateVisualComment = Schema.Struct({
+  body: Schema.String,
+})
+export type UpdateVisualComment = typeof UpdateVisualComment.Type
+
 export class EmptyCommentBody extends Schema.TaggedErrorClass<EmptyCommentBody>()(
   "EmptyCommentBody",
   {},

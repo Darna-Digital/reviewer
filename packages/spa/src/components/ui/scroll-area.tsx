@@ -70,7 +70,7 @@ const ScrollArea = forwardRef<
               data-slot="scroll-area-viewport"
               className={cn(
                 "size-full rounded-[inherit]",
-                orientation === "vertical" && "overflow-y-auto",
+                orientation === "vertical" && "overflow-x-hidden overflow-y-auto",
                 orientation === "horizontal" && "overflow-x-auto",
                 orientation === "both" && "overflow-auto",
                 viewportClassName
@@ -91,12 +91,27 @@ const ScrollArea = forwardRef<
             <ScrollAreaPrimitive.Viewport
               ref={viewportRef}
               data-slot="scroll-area-viewport"
-              className={cn("size-full rounded-[inherit]", viewportClassName)}
+              className={cn(
+                "size-full rounded-[inherit]",
+                // Vertical lists must not scroll sideways — Base UI's Content
+                // defaults to min-width: fit-content, which would otherwise let
+                // long labels expand the viewport and defeat truncate.
+                orientation === "vertical" && "overflow-x-hidden",
+                viewportClassName
+              )}
               onScroll={onViewportScroll}
             >
               {/* Content gives Base UI an intrinsic size to measure
-                  horizontal overflow against. */}
-              <ScrollAreaPrimitive.Content>
+                  horizontal overflow against. For vertical-only areas we
+                  override fit-content so rows can shrink and ellipsize. */}
+              <ScrollAreaPrimitive.Content
+                className={
+                  orientation === "vertical" ? "min-w-0 w-full" : undefined
+                }
+                style={
+                  orientation === "vertical" ? { minWidth: 0 } : undefined
+                }
+              >
                 {children}
               </ScrollAreaPrimitive.Content>
             </ScrollAreaPrimitive.Viewport>

@@ -38,6 +38,7 @@ import {
   type KindFilter,
   type UnifiedComment,
 } from "@/interactions/comments/functions/comment-list.functions"
+import { CommentComposer } from "@/interactions/comments/components/comment-thread"
 import {
   ReviewAssignBar,
   type AssignTarget,
@@ -187,11 +188,19 @@ function Field({
 function CommentDetail({
   comment,
   onResolve,
+  onSave,
 }: {
   comment: UnifiedComment
   onResolve: () => void
+  onSave: (body: string) => Promise<void>
 }) {
   const { visual, code } = comment
+  const [editing, setEditing] = useState(false)
+
+  useEffect(() => {
+    setEditing(false)
+  }, [comment.id])
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex shrink-0 items-center gap-2 border-b px-4 py-2.5">
@@ -203,6 +212,16 @@ function CommentDetail({
         <span className="ml-auto shrink-0 text-xs text-muted-foreground">
           {relativeTime(comment.createdAt)}
         </span>
+        {!editing && (
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-7"
+            onClick={() => setEditing(true)}
+          >
+            Edit
+          </Button>
+        )}
         <Button size="sm" variant="outline" className="h-7" onClick={onResolve}>
           Resolve
         </Button>
@@ -212,7 +231,20 @@ function CommentDetail({
         viewportClassName="scroll-fade p-4"
       >
         <div className="space-y-4">
-          <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
+          {editing ? (
+            <CommentComposer
+              initialBody={comment.body}
+              submitLabel="Save"
+              placeholder="Edit comment…"
+              onCancel={() => setEditing(false)}
+              onSubmit={async (body) => {
+                await onSave(body)
+                setEditing(false)
+              }}
+            />
+          ) : (
+            <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
+          )}
 
           <div className="space-y-1.5 border-t pt-3">
             <Field label="Author">{comment.author}</Field>
@@ -236,21 +268,21 @@ function CommentDetail({
                     href={visual.pageUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1 underline underline-offset-2"
+                    className="inline-flex min-w-0 max-w-full items-center gap-1 break-all underline underline-offset-2"
                   >
-                    {visual.pageUrl}
-                    <IconExternalLink className="size-3" />
+                    <span className="min-w-0">{visual.pageUrl}</span>
+                    <IconExternalLink className="size-3 shrink-0" />
                   </a>
                 </Field>
                 <Field label="Element">
-                  <code className="font-mono">{visual.label}</code>
+                  <code className="font-mono break-all">{visual.label}</code>
                 </Field>
                 <Field label="Selector">
-                  <code className="font-mono">{visual.selector}</code>
+                  <code className="font-mono break-all">{visual.selector}</code>
                 </Field>
                 {visual.sourceFile !== undefined && (
                   <Field label="Source">
-                    <code className="font-mono">
+                    <code className="font-mono break-all">
                       {visual.sourceFile}
                       {visual.sourceLine === undefined
                         ? ""
@@ -266,9 +298,9 @@ function CommentDetail({
           </div>
 
           {visual !== undefined && (
-            <div className="border-t pt-3">
+            <div className="min-w-0 border-t pt-3">
               <p className="mb-1.5 text-xs text-muted-foreground">Markup</p>
-              <pre className="overflow-x-auto rounded-md bg-muted p-2.5 font-mono text-xs">
+              <pre className="max-w-full overflow-x-hidden rounded-md bg-muted p-2.5 font-mono text-xs break-all whitespace-pre-wrap">
                 {visual.elementHtml}
               </pre>
             </div>
@@ -365,11 +397,55 @@ export function CommentsPage() {
     }
   }
 
+  const save = async (comment: UnifiedComment, body: string) => {
+    if (comment.visual !== undefined) {
+      await visualActions.update(comment.id, body)
+      return
+    }
+    if (comment.code !== undefined) {
+      await commentActions.update(comment.code, body)
+    }
+  }
+
+  const openComment = (comment: UnifiedComment) => {
+    setSelectedId(comment.id)
+    if (comment.code === undefined) return
+    const { filePath, target } = comment.code
+    if (target === "worktree") {
+      void navigate({ to: "/commit", search: { path: filePath } })
+      return
+    }
+    if (target.startsWith("commit-")) {
+      void navigate({
+        to: "/browse/commit/$sha",
+        params: { sha: target.slice("commit-".length) },
+        search: { path: filePath },
+      })
+      return
+    }
+    if (target.includes("...")) {
+      const [base, head] = target.split("...")
+      if (base === undefined || head === undefined) return
+      void navigate({
+        to: "/browse/range",
+        search: { path: filePath, base, head },
+      })
+      return
+    }
+    if (target.startsWith("pr-")) {
+      void navigate({
+        to: "/review/$pull",
+        params: { pull: target.slice("pr-".length) },
+        search: { path: filePath },
+      })
+    }
+  }
+
   const renderRow = (comment: UnifiedComment) => (
     <button
       key={comment.id}
       type="button"
-      onClick={() => setSelectedId(comment.id)}
+      onClick={() => openComment(comment)}
       className={cn(
         "group/row mb-0.5 flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted/60",
         comment.id === selectedId && "bg-muted"
@@ -499,6 +575,16 @@ export function CommentsPage() {
           <CommentDetail
             comment={selected}
             onResolve={() => void resolve(selected)}
+            onSave={async (body) => {
+              try {
+                await save(selected, body)
+              } catch (error) {
+                toast.error(
+                  error instanceof Error ? error.message : "save failed"
+                )
+                throw error
+              }
+            }}
           />
         )}
       </section>

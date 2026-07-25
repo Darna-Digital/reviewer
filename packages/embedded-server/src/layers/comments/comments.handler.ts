@@ -26,6 +26,11 @@ export const CommentsHandler = HttpApiBuilder.group(
           })
         )
       )
+      .handle("update", ({ params, payload }) =>
+        Effect.flatMap(CommentsService, (s) =>
+          s.update(params.id, { body: payload.body })
+        )
+      )
       .handle("remove", ({ params }) =>
         Effect.flatMap(CommentsService, (s) => s.remove(params.id)).pipe(
           Effect.as(ok)

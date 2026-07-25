@@ -71,6 +71,35 @@ describe("remove", () => {
   })
 })
 
+describe("update", () => {
+  it("updates local comments", async () => {
+    const deps = createCommentsDependenciesMock()
+    const fns = createCommentsFunctions(deps)
+    const updated = await fns.update(
+      { id: "c-1", source: "local" } as ReviewComment,
+      "revised"
+    )
+    expect(updated).not.toBeNull()
+    expect(updated!.body).toBe("revised")
+    expect(deps.sideEffects.updateLocalComment).toHaveBeenCalledWith(
+      "c-1",
+      "revised"
+    )
+  })
+
+  it("refuses to update GitHub comments", async () => {
+    const deps = createCommentsDependenciesMock()
+    const fns = createCommentsFunctions(deps)
+    expect(
+      await fns.update(
+        { id: "gh-1", source: "github" } as ReviewComment,
+        "nope"
+      )
+    ).toBeNull()
+    expect(deps.sideEffects.updateLocalComment).not.toHaveBeenCalled()
+  })
+})
+
 describe("reply", () => {
   it("anchors the reply to the parent comment's line", async () => {
     const deps = createCommentsDependenciesMock()

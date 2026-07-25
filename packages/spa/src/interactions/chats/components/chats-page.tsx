@@ -126,14 +126,14 @@ export function ChatsPage() {
       to="/chats/$chatId"
       params={{ chatId: c.id }}
       className={cn(
-        "group/row mb-0.5 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted/60",
+        "group/row mb-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 text-left hover:bg-muted/60",
         c.id === chatId && "bg-muted"
       )}
     >
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="flex min-w-0 items-center gap-1.5">
           <TurnStateDot state={c.turnState} />
-          <span className="truncate text-sm">{c.title}</span>
+          <span className="min-w-0 flex-1 truncate text-sm">{c.title}</span>
         </div>
         {c.lastMessage !== null && c.lastMessage.length > 0 && (
           <div className="truncate text-xs text-muted-foreground">
@@ -194,7 +194,7 @@ export function ChatsPage() {
         </div>
         <ScrollArea
           className="min-h-0 flex-1"
-          viewportClassName="scroll-fade px-1 py-2"
+          viewportClassName="scroll-fade overflow-x-hidden px-1 py-2"
         >
           {summaries.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">

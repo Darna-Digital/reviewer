@@ -36,6 +36,7 @@ interface CodeViewProps {
   onDraftCancel?: () => void
   onCommentSubmit?: (location: DraftLocation, body: string) => Promise<void>
   onCommentDelete?: (comment: ReviewComment) => Promise<void>
+  onCommentEdit?: (comment: ReviewComment, body: string) => Promise<void>
 }
 
 export function CodeView({
@@ -49,6 +50,7 @@ export function CodeView({
   onDraftCancel,
   onCommentSubmit,
   onCommentDelete,
+  onCommentEdit,
 }: CodeViewProps) {
   const file = useFile(path)
   const langReady = useLangReady(path)
@@ -152,6 +154,7 @@ export function CodeView({
                     <CommentThread
                       comments={meta.comments}
                       onDelete={onCommentDelete}
+                      onEdit={onCommentEdit}
                     />
                   )
                 }

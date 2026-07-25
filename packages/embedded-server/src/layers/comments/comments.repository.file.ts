@@ -6,7 +6,7 @@ import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { ReviewComment } from "@byconvo/core/comments"
-import { StorageError } from "@byconvo/core/shared"
+import { NotFound, StorageError } from "@byconvo/core/shared"
 import { WorkspaceContext } from "../workspace/workspace-context.ts"
 import type { CommentsRepo } from "@byconvo/core/comments"
 
@@ -48,10 +48,13 @@ export const makeFileCommentsRepository = Effect.gen(function* () {
     Effect.flatMap(ctx.requireCurrent, (repoPath) =>
       Effect.try({
         try: () => f(repoPath),
+        // A thrown NotFound is a real 404, not a storage failure — preserve it.
         catch: (error) =>
-          new StorageError({
-            reason: error instanceof Error ? error.message : String(error),
-          }),
+          error instanceof NotFound
+            ? error
+            : new StorageError({
+                reason: error instanceof Error ? error.message : String(error),
+              }),
       })
     )
 
@@ -74,6 +77,21 @@ export const makeFileCommentsRepository = Effect.gen(function* () {
       return created
     })
 
+  const update: CommentsRepo["update"] = (id, input) =>
+    withFile((repoPath) => {
+      const all = readComments(repoPath)
+      const existing = all.find((comment) => comment.id === id)
+      if (existing === undefined) {
+        throw new NotFound({ reason: `comment ${id} not found` })
+      }
+      const updated: ReviewComment = { ...existing, body: input.body }
+      writeComments(
+        repoPath,
+        all.map((comment) => (comment.id === id ? updated : comment))
+      )
+      return updated
+    })
+
   const remove: CommentsRepo["remove"] = (id) =>
     withFile((repoPath) => {
       writeComments(
@@ -82,5 +100,5 @@ export const makeFileCommentsRepository = Effect.gen(function* () {
       )
     })
 
-  return { list, add, remove } satisfies CommentsRepo
+  return { list, add, update, remove } satisfies CommentsRepo
 })

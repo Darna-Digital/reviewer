@@ -273,12 +273,11 @@ export function BranchTree({
             }}
             title="Current branch"
           >
-            <span className="rounded bg-background px-1 py-0.5 font-mono text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
-              HEAD
-            </span>
+            <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="min-w-0 truncate font-medium">
               {currentBranch}
             </span>
+            <span className="shrink-0 text-xs text-muted-foreground">HEAD</span>
           </button>
         </div>
       )}
@@ -371,9 +370,7 @@ export function BranchTree({
               {branch.label}
             </span>
             {branch.isCurrent && (
-              <span className="rounded bg-background px-1 py-0.5 font-mono text-[10px] tracking-wide text-muted-foreground uppercase">
-                HEAD
-              </span>
+              <span className="shrink-0 text-xs text-muted-foreground">HEAD</span>
             )}
             <div className="ml-auto flex shrink-0 items-center gap-0.5">
               {(branch.behind > 0 || branch.ahead > 0) && (

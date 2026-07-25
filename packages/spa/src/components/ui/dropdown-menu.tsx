@@ -129,8 +129,10 @@ function DropdownMenuSubTrigger({
       )}
       {...props}
     >
-      {children}
-      <IconChevronRight className="ml-auto size-3.5 text-muted-foreground" />
+      {/* Flex-1 wrapper so an `ml-auto` summary sits flush against the
+          chevron instead of sharing free space with a second `ml-auto`. */}
+      <span className="flex min-w-0 flex-1 items-center gap-2">{children}</span>
+      <IconChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
     </MenuPrimitive.SubmenuTrigger>
   )
 }
@@ -146,7 +148,9 @@ function DropdownMenuSubContent({
   return (
     <DropdownMenuContent
       data-slot="dropdown-menu-sub-content"
-      className={cn("min-w-72", className)}
+      // Cap width so long labels can't grow the popup past `w-*` callers;
+      // truncation on items then ellipsizes instead of overscrolling.
+      className={cn("w-72 max-w-72 min-w-0", className)}
       align={align}
       alignOffset={alignOffset}
       side={side}
@@ -207,9 +211,15 @@ function DropdownMenuRadioItem({
     <MenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
-      className={cn(menuItem, "pr-8 data-inset:pl-7", className)}
+      className={cn(
+        menuItem,
+        "w-full min-w-0 pr-8 data-inset:pl-7",
+        className
+      )}
       {...props}
     >
+      {/* Truncate on the text node — `truncate` on a flex parent does nothing. */}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
       <span
         className="pointer-events-none absolute right-2 flex items-center justify-center"
         data-slot="dropdown-menu-radio-item-indicator"
@@ -218,7 +228,6 @@ function DropdownMenuRadioItem({
           <IconCheck />
         </MenuPrimitive.RadioItemIndicator>
       </span>
-      {children}
     </MenuPrimitive.RadioItem>
   )
 }

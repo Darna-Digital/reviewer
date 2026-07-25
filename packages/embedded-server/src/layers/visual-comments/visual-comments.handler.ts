@@ -18,6 +18,11 @@ export const VisualCommentsHandler = HttpApiBuilder.group(
       .handle("add", ({ payload }) =>
         Effect.flatMap(VisualCommentsService, (s) => s.add(payload))
       )
+      .handle("update", ({ params, payload }) =>
+        Effect.flatMap(VisualCommentsService, (s) =>
+          s.update(params.id, payload.body)
+        )
+      )
       .handle("remove", ({ params }) =>
         Effect.flatMap(VisualCommentsService, (s) => s.remove(params.id)).pipe(
           Effect.as(ok)

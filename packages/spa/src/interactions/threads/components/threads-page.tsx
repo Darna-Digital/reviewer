@@ -4,9 +4,11 @@
  * the right shows the one selected thread's live terminal with a toolbar
  * (title + rename).
  *
- * Backgrounded terminals keep running: every visited thread's terminal
- * stays mounted (just hidden) so its PTY session survives switching, and a
- * hidden terminal that emits a bell shows an activity dot in the sidebar.
+ * The sidebar filters the list by branch (grouped like agent chats, defaulting
+ * to the current checkout), a time window, and a free-text search over titles
+ * and last commands. Backgrounded terminals keep running: every visited
+ * thread's terminal stays mounted (just hidden) so its PTY session survives
+ * switching, and a hidden terminal that emits a bell shows an activity dot.
  */
 import { IconGitBranch, IconPencil, IconPlus, IconX } from "@tabler/icons-react"
 import { useEffect, useMemo, useState } from "react"
@@ -20,14 +22,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-} from "@/components/ui/select"
 import { ResizeHandle } from "@/components/layout/resize-handle"
-import { ALL_BRANCHES, branchLabel } from "@/components/layout/sidebar-filters"
+import {
+  ALL_BRANCHES,
+  branchLabel,
+  SidebarFilterMenu,
+  SidebarSearch,
+} from "@/components/layout/sidebar-filters"
 import { agentIcon } from "@/interactions/threads/components/agent-icons"
 import {
   Terminal,
@@ -36,6 +37,7 @@ import {
 import { useThreadsActions } from "@/interactions/threads/adapters/threads.hook.adapter"
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents"
 import type { AgentKind, ThreadSummary } from "@byconvo/core/threads"
+import { dateCutoff, type DateFilter } from "@/lib/date-filter"
 import { useBranches, useRepo, useThreads } from "@/lib/queries"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
@@ -90,6 +92,8 @@ export function ThreadsPage() {
   const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth)
   // Branch the sidebar is filtered to (null → follow the current branch).
   const [branchFilter, setBranchFilter] = useState<string | null>(null)
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all")
+  const [search, setSearch] = useState("")
   const activeBranch = branchFilter ?? (currentBranch || ALL_BRANCHES)
   // New threads land in the filtered branch (or the current branch under "All").
   const newThreadBranch =
@@ -106,18 +110,39 @@ export function ThreadsPage() {
     )
   }, [currentBranch, localBranches, summaries])
 
+  // Threads surviving the date + search filters (branch is applied via grouping).
+  const filtered = useMemo(() => {
+    const cutoff = dateCutoff(dateFilter)
+    const q = search.trim().toLowerCase()
+    return summaries.filter((t) => {
+      if (cutoff > 0 && Date.parse(t.updatedAt) < cutoff) return false
+      if (q.length > 0) {
+        const haystack =
+          `${t.title}\n${t.lastCommand ?? ""}\n${agentLabel(t.agent)}`.toLowerCase()
+        if (!haystack.includes(q)) return false
+      }
+      return true
+    })
+  }, [summaries, dateFilter, search])
+
   // Threads grouped under their branch, in the same order as the filter.
   const groups = useMemo(() => {
-    const present = [...new Set(summaries.map((t) => t.branch))].sort((a, b) =>
+    const present = [...new Set(filtered.map((t) => t.branch))].sort((a, b) =>
       a === currentBranch ? -1 : b === currentBranch ? 1 : a.localeCompare(b)
     )
     const branchesToShow =
       activeBranch === ALL_BRANCHES ? present : [activeBranch]
     return branchesToShow.map((branch) => ({
       branch,
-      threads: summaries.filter((t) => t.branch === branch),
+      threads: filtered.filter((t) => t.branch === branch),
     }))
-  }, [summaries, activeBranch, currentBranch])
+  }, [filtered, activeBranch, currentBranch])
+
+  const hasMatches = groups.some((g) => g.threads.length > 0)
+  const filtersActive =
+    activeBranch !== ALL_BRANCHES ||
+    dateFilter !== "all" ||
+    search.trim().length > 0
 
   const [activeId, setActiveId] = useState<string | null>(null)
   // Threads whose terminal has been mounted (and kept alive) — we never
@@ -186,7 +211,7 @@ export function ThreadsPage() {
       <div
         key={t.id}
         className={cn(
-          "group/row mb-0.5 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted",
+          "group/row mb-0.5 flex min-w-0 cursor-pointer items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 text-sm hover:bg-muted",
           t.id === activeId && "bg-muted"
         )}
         onClick={() => setActiveId(t.id)}
@@ -198,7 +223,7 @@ export function ThreadsPage() {
           <Input
             autoFocus
             value={renaming.draft}
-            className="h-6 flex-1"
+            className="h-6 min-w-0 flex-1"
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => setRenaming({ id: t.id, draft: e.target.value })}
             onBlur={() => void commitRename()}
@@ -210,7 +235,7 @@ export function ThreadsPage() {
             }}
           />
         ) : (
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 overflow-hidden">
             <div className="truncate font-medium">{t.title}</div>
             <div className="truncate text-xs text-muted-foreground">
               {subtitleOf(t)}
@@ -250,34 +275,25 @@ export function ThreadsPage() {
         className="flex shrink-0 flex-col border-r"
         style={{ width: sidebarWidth }}
       >
-        <div className="flex items-center gap-1.5 px-2 py-2">
-          {/* Branch filter — groups threads by branch, defaulting to the
-              current branch. New threads are created in the selected branch. */}
-          <Select
-            value={activeBranch}
-            onValueChange={(v) => setBranchFilter(v)}
-          >
-            <SelectTrigger
-              size="sm"
-              className="h-7 min-w-0 flex-1 gap-1.5"
-              aria-label="Filter threads by branch"
-            >
-              <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
-              <span className="truncate">
-                {activeBranch === ALL_BRANCHES
-                  ? "All branches"
-                  : branchLabel(activeBranch)}
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_BRANCHES}>All branches</SelectItem>
-              {filterBranches.map((b) => (
-                <SelectItem key={b} value={b}>
-                  {b}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-1.5 border-b p-2">
+          <SidebarSearch
+            label="Search terminals"
+            placeholder="Search terminals…"
+            value={search}
+            onChange={setSearch}
+          />
+          {/* Filters — branch (groups threads, defaulting to the current
+              checkout; new terminals land in the selected branch) and time
+              window, combined behind one dropdown. */}
+          <SidebarFilterMenu
+            label="Filter terminals"
+            branchValue={activeBranch}
+            branches={filterBranches}
+            onBranchChange={setBranchFilter}
+            dateValue={dateFilter}
+            onDateChange={setDateFilter}
+            active={filtersActive}
+          />
           <NewTerminalMenu
             onPick={(a) => void createThread(a)}
             trigger={
@@ -294,17 +310,32 @@ export function ThreadsPage() {
         </div>
         <ScrollArea
           className="min-h-0 flex-1"
-          viewportClassName="scroll-fade px-1 pb-2"
+          viewportClassName="scroll-fade overflow-x-hidden px-1 py-2"
         >
           {summaries.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
               No terminals yet. Start one from the + menu.
             </p>
-          ) : groups.every((g) => g.threads.length === 0) ? (
-            <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No terminals in {branchLabel(activeBranch)} yet. Start one from
-              the + menu.
-            </p>
+          ) : !hasMatches ? (
+            <div className="flex flex-col items-center gap-2 px-3 py-6 text-center">
+              <p className="text-xs text-muted-foreground">
+                No terminals match these filters.
+              </p>
+              {filtersActive && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    setBranchFilter(ALL_BRANCHES)
+                    setDateFilter("all")
+                    setSearch("")
+                  }}
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
           ) : activeBranch === ALL_BRANCHES ? (
             // Grouped under branch headers when viewing all branches.
             groups

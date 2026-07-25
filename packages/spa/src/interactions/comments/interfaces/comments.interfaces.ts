@@ -39,6 +39,10 @@ export interface CommentsDependencies {
         body: string
       }
     ) => Promise<ReviewComment>
+    readonly updateLocalComment: (
+      id: string,
+      body: string
+    ) => Promise<ReviewComment>
     readonly deleteComment: (id: string) => Promise<void>
     readonly replyPullComment: (
       pullNumber: number,
@@ -55,6 +59,11 @@ export interface CommentsFunctions {
     location: DraftLocation,
     body: string
   ) => Promise<ReviewComment>
+  /** Update a local comment's body; returns the updated comment, or null if not local. */
+  readonly update: (
+    comment: ReviewComment,
+    body: string
+  ) => Promise<ReviewComment | null>
   /** Delete a comment — only local comments are deletable; returns true if removed. */
   readonly remove: (comment: ReviewComment) => Promise<boolean>
   /** Reply to a GitHub PR comment, anchored to its parent's line. */

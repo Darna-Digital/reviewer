@@ -1,8 +1,9 @@
 import * as Schema from "effect/Schema"
-import { NoRepoSelected, Ok, StorageError } from "@byconvo/core/shared"
+import { NoRepoSelected, NotFound, Ok, StorageError } from "@byconvo/core/shared"
 import {
   EmptyCommentBody,
   NewVisualComment,
+  UpdateVisualComment,
   VisualComment,
   VisualCommentIdParam,
 } from "@byconvo/core/visual-comments"
@@ -13,6 +14,7 @@ import {
 } from "effect/unstable/httpapi"
 
 const errors = [NoRepoSelected, StorageError] as const
+const mutateErrors = [NoRepoSelected, NotFound, StorageError] as const
 
 const JavaScript = Schema.String.pipe(
   HttpApiSchema.asText({ contentType: "application/javascript; charset=utf-8" })
@@ -35,6 +37,14 @@ export class VisualCommentsApi extends HttpApiGroup.make("visualComments")
       payload: NewVisualComment,
       success: VisualComment,
       error: [...errors, EmptyCommentBody],
+    })
+  )
+  .add(
+    HttpApiEndpoint.make("PATCH")("update", "/visual-comments/:id", {
+      params: VisualCommentIdParam,
+      payload: UpdateVisualComment,
+      success: VisualComment,
+      error: [...mutateErrors, EmptyCommentBody],
     })
   )
   .add(

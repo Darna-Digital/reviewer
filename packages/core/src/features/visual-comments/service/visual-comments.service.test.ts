@@ -115,4 +115,26 @@ describe("VisualCommentsService", () => {
       expect(yield* comments.list).toHaveLength(0)
     }).pipe(Effect.provide(VisualCommentsMemory()))
   )
+
+  it.effect("update rewrites the body", () =>
+    Effect.gen(function* () {
+      const comments = yield* VisualCommentsService
+      const created = yield* comments.add(input())
+      const updated = yield* comments.update(created.id, "revised")
+
+      expect(updated.body).toBe("revised")
+      expect((yield* comments.list)[0]?.body).toBe("revised")
+    }).pipe(Effect.provide(VisualCommentsMemory()))
+  )
+
+  it.effect("update rejects a body that is only whitespace", () =>
+    Effect.gen(function* () {
+      const comments = yield* VisualCommentsService
+      const created = yield* comments.add(input())
+      const result = yield* Effect.exit(comments.update(created.id, "   "))
+
+      expect(result._tag).toBe("Failure")
+      expect((yield* comments.list)[0]?.body).toBe("make this primary")
+    }).pipe(Effect.provide(VisualCommentsMemory()))
+  )
 })

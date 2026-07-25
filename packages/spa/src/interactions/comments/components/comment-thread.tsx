@@ -36,14 +36,16 @@ export function CommentComposer({
   autoFocus = true,
   submitLabel = "Comment",
   placeholder = "Leave a comment…",
+  initialBody = "",
 }: {
   onCancel: () => void
   onSubmit: (body: string) => Promise<void>
   autoFocus?: boolean
   submitLabel?: string
   placeholder?: string
+  initialBody?: string
 }) {
-  const [body, setBody] = useState("")
+  const [body, setBody] = useState(initialBody)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const ref = useRef<HTMLTextAreaElement>(null)
@@ -94,7 +96,37 @@ export function CommentComposer({
   )
 }
 
-function CommentCard({ comment }: { comment: ReviewComment }) {
+function CommentCard({
+  comment,
+  editing,
+  onEdit,
+  onCancelEdit,
+}: {
+  comment: ReviewComment
+  editing: boolean
+  onEdit?: (body: string) => Promise<void>
+  onCancelEdit?: () => void
+}) {
+  if (editing && onEdit !== undefined && onCancelEdit !== undefined) {
+    return (
+      <div className="flex gap-3">
+        <AuthorAvatar author={comment.author} source={comment.source} />
+        <div className="min-w-0 flex-1">
+          <CommentComposer
+            initialBody={comment.body}
+            submitLabel="Save"
+            placeholder="Edit comment…"
+            onCancel={onCancelEdit}
+            onSubmit={async (body) => {
+              await onEdit(body)
+              onCancelEdit()
+            }}
+          />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex gap-3">
       <AuthorAvatar author={comment.author} source={comment.source} />
@@ -157,19 +189,29 @@ function ThreadAction({
 export function CommentThread({
   comments,
   onDelete,
+  onEdit,
   onReply,
 }: {
   comments: ReadonlyArray<ReviewComment>
   onDelete: (c: ReviewComment) => Promise<void>
+  onEdit?: (c: ReviewComment, body: string) => Promise<void>
   onReply?: (c: ReviewComment, body: string) => Promise<void>
 }) {
   const [replying, setReplying] = useState(false)
   const [resolving, setResolving] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   const lastGithub = [...comments].reverse().find((c) => c.source === "github")
   const localComments = comments.filter((c) => c.source === "local")
+  const editableComment =
+    onEdit === undefined
+      ? undefined
+      : localComments.find((c) => c.id === editingId) ?? localComments[0]
+  const canEdit = editableComment !== undefined && onEdit !== undefined
   const canReply = onReply !== undefined && lastGithub !== undefined
   const canResolve = localComments.length > 0
+  const showActions =
+    !replying && editingId === null && (canEdit || canReply || canResolve)
 
   const resolve = async () => {
     if (resolving) return
@@ -186,7 +228,16 @@ export function CommentThread({
       <div className="flex flex-col gap-4">
         {comments.map((comment, i) => (
           <div key={comment.id} className={i === 0 ? undefined : REPLY_INDENT}>
-            <CommentCard comment={comment} />
+            <CommentCard
+              comment={comment}
+              editing={editingId === comment.id}
+              onCancelEdit={() => setEditingId(null)}
+              onEdit={
+                onEdit === undefined
+                  ? undefined
+                  : (body) => onEdit(comment, body)
+              }
+            />
           </div>
         ))}
       </div>
@@ -203,8 +254,13 @@ export function CommentThread({
             }}
           />
         ) : (
-          (canReply || canResolve) && (
+          showActions && (
             <div className="flex items-center gap-4">
+              {canEdit && editableComment !== undefined && (
+                <ThreadAction onClick={() => setEditingId(editableComment.id)}>
+                  Edit
+                </ThreadAction>
+              )}
               {canReply && (
                 <ThreadAction
                   onClick={() => setReplying(true)}
