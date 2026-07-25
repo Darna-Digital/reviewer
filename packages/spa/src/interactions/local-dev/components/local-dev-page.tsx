@@ -315,7 +315,7 @@ export function LocalDevPage() {
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 text-emerald-600 hover:text-emerald-600"
+                    className="h-7"
                     onClick={() => run(active.id)}
                   >
                     <IconPlayerPlayFilled className="size-4" /> Run
@@ -343,11 +343,7 @@ export function LocalDevPage() {
               {active.status === "stopped" ? (
                 <div className="flex h-full flex-col items-center justify-center gap-2 text-sm">
                   <div className="text-muted-foreground">Not running</div>
-                  <Button
-                    size="sm"
-                    className="text-emerald-50"
-                    onClick={() => run(active.id)}
-                  >
+                  <Button size="sm" onClick={() => run(active.id)}>
                     <IconPlayerPlayFilled className="size-4" /> Run
                   </Button>
                 </div>
