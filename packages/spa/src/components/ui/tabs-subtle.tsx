@@ -136,7 +136,7 @@ const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
               ref={(node: HTMLDivElement | null) => {
                 containerRef.current = node;
                 if (typeof ref === "function") ref(node);
-                else if (ref) (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+                else if (ref) ref.current = node;
               }}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
@@ -153,7 +153,7 @@ const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
                 }
               }}
               onBlur={(e: React.FocusEvent<HTMLDivElement>) => {
-                if (containerRef.current?.contains(e.relatedTarget as Node)) return;
+                if (containerRef.current?.contains(e.relatedTarget)) return;
                 setFocusedIndex(null);
                 if (isMouseInside.current) return;
                 setHoveredIndex(null);
@@ -302,7 +302,7 @@ const TabsSubtleItem = forwardRef<HTMLButtonElement, TabsSubtleItemProps>(
           const button = node as HTMLButtonElement | null;
           internalRef.current = button;
           if (typeof ref === "function") ref(button);
-          else if (ref) (ref as React.MutableRefObject<HTMLButtonElement | null>).current = button;
+          else if (ref) ref.current = button;
         }}
         value={index}
         data-proximity-index={index}
