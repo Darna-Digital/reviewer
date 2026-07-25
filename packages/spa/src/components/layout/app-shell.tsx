@@ -792,9 +792,7 @@ export function AppShell() {
                         })
                       }
                       className={
-                        selectedPull === null
-                          ? "flex-1"
-                          : "shrink-0 border-b"
+                        selectedPull === null ? "flex-1" : "shrink-0 border-b"
                       }
                       style={
                         selectedPull === null
