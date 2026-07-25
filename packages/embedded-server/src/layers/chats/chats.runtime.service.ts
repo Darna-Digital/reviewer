@@ -7,6 +7,7 @@ import {
   isTurnRunning,
   killChatRuntime,
   queueChatTurn,
+  repairStaleTurns,
   startChatTurn,
   stopChatTurn,
 } from "./chat-runtime.ts"
@@ -33,5 +34,9 @@ export const liveLayer: Layer.Layer<ChatRuntime> = Layer.succeed(ChatRuntime)(
         const repoPath = getCurrentRepo()
         if (repoPath !== null) broadcastChatSnapshot(repoPath, chatId)
       }),
+    repairStale: Effect.sync(() => {
+      const repoPath = getCurrentRepo()
+      if (repoPath !== null) repairStaleTurns(repoPath)
+    }),
   })
 )

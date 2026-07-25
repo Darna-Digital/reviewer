@@ -18,6 +18,10 @@ export type TurnEvent =
       readonly tone: "info" | "tool" | "error"
       readonly summary: string
       readonly detail: string | null
+      /** Provider tool-call id, so the completion can be matched to its start. */
+      readonly callId?: string
+      /** The bare tool name, when the activity is a tool call. */
+      readonly label?: string
     }
   | {
       readonly type: "result"

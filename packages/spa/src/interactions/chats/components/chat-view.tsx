@@ -3,6 +3,7 @@
  * the chat WebSocket (snapshot + streamed events through the pure reducer);
  * sends/stops/settings go through the REST actions and come back as events.
  */
+import { IconPlugConnectedX } from "@tabler/icons-react"
 import { toast } from "sonner"
 import { useChatStream } from "@/interactions/chats/adapters/chats.stream.adapter"
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
@@ -16,7 +17,7 @@ import { ChatComposer } from "./chat-composer"
 import { MessagesTimeline } from "./messages-timeline"
 
 export function ChatView({ chatId }: { chatId: string }) {
-  const { chat, error } = useChatStream(chatId)
+  const { chat, error, status } = useChatStream(chatId)
   const models = useChatModels()
   const actions = useChatsActions()
 
@@ -68,14 +69,24 @@ export function ChatView({ chatId }: { chatId: string }) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
+      {/* Streamed text keeps rendering from the last snapshot while this shows,
+          so say the connection dropped rather than let a stalled reply read as
+          an agent that simply stopped talking. The turn itself keeps running on
+          the server; reconnecting replays a fresh snapshot. */}
+      {status === "reconnecting" && (
+        <div className="flex items-center justify-center gap-1.5 border-b border-warning/30 bg-warning/10 py-1 text-xs text-warning-foreground">
+          <IconPlugConnectedX className="size-3.5" />
+          Connection lost — reconnecting…
+        </div>
+      )}
       {chat.messages.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+        <div className="flex min-h-0 flex-1 items-center justify-center text-sm text-muted-foreground">
           Send a message to start the conversation.
         </div>
       ) : (
         <MessagesTimeline chat={chat} />
       )}
-      <div className="mx-auto w-full max-w-3xl px-2 pb-4">
+      <div className="mx-auto w-full max-w-3xl shrink-0 px-2 pb-4">
         <ChatComposer
           draftKey={chat.id}
           settings={settings}

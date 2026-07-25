@@ -8,6 +8,7 @@ import {
   IconMessageDots,
   IconMessages,
   IconPlayerPlay,
+  IconSettings,
   IconTerminal2,
 } from "@tabler/icons-react"
 import { Link } from "@tanstack/react-router"
@@ -27,7 +28,6 @@ interface ModeRailProps {
   /** Bottom panel toggle is only meaningful in the git-review shell. */
   bottomVisible?: boolean
   onBottomToggle?: () => void
-  onModeSelect?: (mode: AppMode) => void
 }
 
 interface ModeDef {
@@ -137,16 +137,9 @@ export function ModeRail({
   hasGitHub,
   bottomVisible,
   onBottomToggle,
-  onModeSelect,
 }: ModeRailProps) {
   const renderMode = ({ mode: m, to, label, icon: Icon }: ModeDef) => (
-    <RailButton
-      key={m}
-      to={to}
-      label={label}
-      active={mode === m}
-      onClick={() => onModeSelect?.(m)}
-    >
+    <RailButton key={m} to={to} label={label} active={mode === m}>
       <Icon className="size-5" />
     </RailButton>
   )
@@ -167,8 +160,8 @@ export function ModeRail({
       )}
       <div className="my-1 h-px w-6 bg-border" />
       {WORKSPACE_MODES.map(renderMode)}
-      {onBottomToggle && (
-        <div className="mt-auto flex flex-col items-center gap-1">
+      <div className="mt-auto flex flex-col items-center gap-1">
+        {onBottomToggle && (
           <RailButton
             label="Toggle bottom panel"
             active={bottomVisible}
@@ -176,8 +169,15 @@ export function ModeRail({
           >
             <IconGitFork className="size-5" />
           </RailButton>
-        </div>
-      )}
+        )}
+        <RailButton
+          to="/settings"
+          label="Settings"
+          active={mode === "settings"}
+        >
+          <IconSettings className="size-5" />
+        </RailButton>
+      </div>
     </nav>
   )
 }

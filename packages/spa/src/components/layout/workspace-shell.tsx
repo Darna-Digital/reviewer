@@ -1,11 +1,10 @@
 /**
  * WorkspaceShell — the layout for the workspace feature pages (threads, docs,
- * tasks). It mirrors AppShell's frame (mode rail + a rounded, bordered content
- * panel) and shares the git-review top bar's left cluster — the repo picker and
- * branch switcher — so the open repository is visible and switchable here too
- * (threads/docs/tasks are all scoped to it). The git-diff/theme controls on the
- * right of AppShell's bar don't apply to these pages, so they're omitted. Each
- * feature page renders its own header and body into the `<Outlet />`.
+ * tasks/settings). It mirrors AppShell's frame (mode rail + a rounded, bordered
+ * content panel) and shares the git-review top bar's left cluster — the repo
+ * picker and branch switcher — so the open repository is visible and switchable
+ * here too. Each feature page renders its own header and body into the
+ * `<Outlet />`.
  */
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
 import { useState } from "react"
@@ -28,15 +27,17 @@ import { cn } from "@/lib/utils"
 const modeForPath = (pathname: string): AppMode =>
   pathname.startsWith("/chats")
     ? "chats"
-    : pathname.startsWith("/docs")
-      ? "docs"
-      : pathname.startsWith("/tasks")
-        ? "tasks"
-        : pathname.startsWith("/comments")
-          ? "comments"
-          : pathname.startsWith("/local-dev")
-            ? "local-dev"
-            : "threads"
+    : pathname.startsWith("/settings")
+      ? "settings"
+      : pathname.startsWith("/docs")
+        ? "docs"
+        : pathname.startsWith("/tasks")
+          ? "tasks"
+          : pathname.startsWith("/comments")
+            ? "comments"
+            : pathname.startsWith("/local-dev")
+              ? "local-dev"
+              : "threads"
 
 export function WorkspaceShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -52,6 +53,7 @@ export function WorkspaceShell() {
   const mode = modeForPath(pathname)
   const hasGitHub = repo.data?.github != null
   const current = workspace.data?.current ?? null
+  const isSettings = mode === "settings"
 
   return (
     <div className="flex h-svh w-full overflow-hidden text-foreground">
@@ -99,6 +101,7 @@ export function WorkspaceShell() {
                 onRenameBranch={(from, to) => void git.renameBranch(from, to)}
                 onDeleteBranch={(name) => void git.deleteBranch(name)}
                 onFetch={() => void git.fetch()}
+                onPull={() => void git.pull()}
                 onPush={() => void git.push()}
               />
             </div>
@@ -106,7 +109,7 @@ export function WorkspaceShell() {
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {current === null ? (
+            {current === null && !isSettings ? (
               <div className="flex h-full flex-col items-center justify-center gap-1 text-sm">
                 <div className="font-medium">No repository selected</div>
                 <div className="text-muted-foreground">
@@ -117,7 +120,7 @@ export function WorkspaceShell() {
               <Outlet />
             )}
           </div>
-          {current !== null && <GitBottomDock />}
+          {current !== null && !isSettings && <GitBottomDock />}
         </div>
       </div>
     </div>

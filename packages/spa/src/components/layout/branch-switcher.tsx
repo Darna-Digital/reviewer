@@ -3,11 +3,12 @@
  * `GitWidget` to the shadcn (base-ui) `DropdownMenu` primitives. It keeps the
  * JetBrains-style feature set: a filter box, collapsible Recent / Local /
  * Remote sections, folder grouping by the first path segment, ahead/behind and
- * upstream badges, and a per-branch action submenu (checkout, compare, merge,
- * rebase, rename, delete, …).
+ * upstream badges, repo-level fetch/pull/push, and a per-branch action submenu
+ * (checkout, compare, merge, rebase, rename, delete, …).
  */
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
+  IconBrandGit,
   IconChevronDown,
   IconChevronRight,
   IconFolder,
@@ -51,6 +52,7 @@ interface BranchSwitcherProps {
   onMerge: (branch: string) => void
   onRebase: (onto: string) => void
   onFetch: () => void
+  onPull: () => void
   onPush: () => void
   onRenameBranch: (from: string, to: string) => void
   onDeleteBranch: (name: string) => void
@@ -81,6 +83,9 @@ interface BranchTarget {
   readonly isCurrent: boolean
   readonly isRemote: boolean
 }
+
+/** Submenu holding the repo-wide remote operations, not the branch-scoped ones. */
+const REPO_ACTIONS_LABEL = "Git"
 
 /** Split "task/BMB-1" → ["task", "BMB-1"]; "main" → [null, "main"]. */
 const splitFolder = (name: string): [string | null, string] => {
@@ -172,6 +177,11 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
 
   const showNew = matches("New Branch")
   const showRevision = matches("Checkout Tag or Revision")
+  const repoActions = [
+    { label: "Fetch", run: props.onFetch },
+    { label: "Pull", run: props.onPull },
+    { label: "Push", run: props.onPush },
+  ].filter((a) => matches(REPO_ACTIONS_LABEL) || matches(a.label))
 
   const newBranch = (startPoint: string | null, label: string) =>
     setPrompt({ kind: "create", startPoint, label })
@@ -333,6 +343,29 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           </div>
 
           <div className="p-1">
+            {repoActions.length > 0 && (
+              <>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <IconBrandGit className="size-3.5 text-muted-foreground" />
+                    <span>{REPO_ACTIONS_LABEL}</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="w-40">
+                    {repoActions.map(({ label, run }) => (
+                      <DropdownMenuItem
+                        key={label}
+                        disabled={busy}
+                        onClick={run}
+                      >
+                        {label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
+                <DropdownMenuSeparator />
+              </>
+            )}
+
             {showNew && (
               <DropdownMenuItem onClick={() => newBranch(null, "")}>
                 New Branch…

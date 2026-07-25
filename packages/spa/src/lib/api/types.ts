@@ -30,6 +30,7 @@ export type AppMode =
   | "tasks"
   | "comments"
   | "local-dev"
+  | "settings"
 
 export type DiffTarget =
   | { readonly kind: "worktree" }

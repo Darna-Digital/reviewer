@@ -26,6 +26,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select"
 import { ResizeHandle } from "@/components/layout/resize-handle"
+import { ALL_BRANCHES, branchLabel } from "@/components/layout/sidebar-filters"
 import { agentIcon } from "@/interactions/threads/components/agent-icons"
 import {
   Terminal,
@@ -39,11 +40,6 @@ import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
 
 const NO_TASK = "__none__"
-const ALL_BRANCHES = "__all__"
-
-/** Display label for a thread's branch ("" → unscoped threads). */
-const branchLabel = (branch: string) =>
-  branch.length > 0 ? branch : "No branch"
 
 function NewTerminalMenu({
   onPick,
