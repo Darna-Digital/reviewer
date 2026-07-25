@@ -2,6 +2,11 @@ import { IconColumns, IconBaselineDensityMedium } from "@tabler/icons-react"
 import { Button } from "@/components/ui/button"
 import { BranchSwitcher } from "@/components/layout/branch-switcher"
 import { RepoPicker } from "@/components/repo-picker"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { isDesktop } from "@/lib/desktop"
 import type { BranchInfo, RemoteBranchInfo, RepoInfo } from "@byconvo/core/repo"
@@ -91,22 +96,36 @@ export function TopBar(props: TopBarProps) {
       <div className="ml-auto flex items-center gap-1 [-webkit-app-region:no-drag]">
         {showDiffStyleToggle && (
           <div className="flex items-center rounded-md border p-0.5">
-            <Button
-              variant={diffStyle === "split" ? "secondary" : "ghost"}
-              size="icon-xs"
-              onClick={() => props.onDiffStyleChange("split")}
-              aria-label="Split diff"
-            >
-              <IconColumns />
-            </Button>
-            <Button
-              variant={diffStyle === "unified" ? "secondary" : "ghost"}
-              size="icon-xs"
-              onClick={() => props.onDiffStyleChange("unified")}
-              aria-label="Unified diff"
-            >
-              <IconBaselineDensityMedium />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant={diffStyle === "split" ? "secondary" : "ghost"}
+                    size="icon-xs"
+                    onClick={() => props.onDiffStyleChange("split")}
+                    aria-label="Split diff"
+                  />
+                }
+              >
+                <IconColumns />
+              </TooltipTrigger>
+              <TooltipContent>Split diff</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant={diffStyle === "unified" ? "secondary" : "ghost"}
+                    size="icon-xs"
+                    onClick={() => props.onDiffStyleChange("unified")}
+                    aria-label="Unified diff"
+                  />
+                }
+              >
+                <IconBaselineDensityMedium />
+              </TooltipTrigger>
+              <TooltipContent>Unified diff</TooltipContent>
+            </Tooltip>
           </div>
         )}
       </div>

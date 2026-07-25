@@ -464,7 +464,7 @@ export function DiffPane({
     // it must be the scroll container — the wrapper div only carries the ref
     // for the scroll-to-file animation above.
     <div ref={containerRef} className="h-full">
-      <Virtualizer className="diff-pane h-full overflow-auto">
+      <Virtualizer className="diff-pane h-full scroll-fade overflow-auto">
         {files.map((file) => (
           <FileDiffSection
             key={`${target.kind}-${file.prevName ?? ""}-${file.name}`}

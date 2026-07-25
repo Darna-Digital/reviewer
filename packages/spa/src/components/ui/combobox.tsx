@@ -1,7 +1,6 @@
 import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox"
 import { IconCheck, IconSearch, IconSelector } from "@tabler/icons-react"
 
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 
 /**
@@ -65,7 +64,9 @@ function ComboboxContent({
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"
           className={cn(
-            "z-50 flex max-h-(--available-height) w-(--anchor-width) min-w-56 origin-(--transform-origin) flex-col overflow-hidden rounded-xl bg-popover p-1 text-popover-foreground shadow-[0_8px_30px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.04] duration-100 outline-none dark:shadow-[0_8px_30px_rgba(0,0,0,0.45)] dark:ring-white/[0.06] data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98]",
+            // Match Select: grow with content, never shrink below the trigger.
+            // A fixed `w-(--anchor-width)` clipped long labels (branch names).
+            "z-50 flex max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) flex-col overflow-hidden rounded-xl bg-popover p-1 text-popover-foreground shadow-[0_8px_30px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.04] duration-100 outline-none dark:shadow-[0_8px_30px_rgba(0,0,0,0.45)] dark:ring-white/[0.06] data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98]",
             className
           )}
           {...props}
@@ -95,13 +96,16 @@ function ComboboxInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
 
 function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
   return (
-    <ScrollArea className="max-h-64" viewportClassName="scroll-fade">
-      <ComboboxPrimitive.List
-        data-slot="combobox-list"
-        className={cn(className)}
-        {...props}
-      />
-    </ScrollArea>
+    <ComboboxPrimitive.List
+      data-slot="combobox-list"
+      className={cn(
+        // Native overflow (not ScrollArea) so intrinsic content width can't
+        // blow past the popup and defeat `truncate` on long labels.
+        "max-h-64 min-w-0 overflow-x-hidden overflow-y-auto outline-none",
+        className
+      )}
+      {...props}
+    />
   )
 }
 
@@ -127,14 +131,13 @@ function ComboboxItem({
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
       className={cn(
-        "relative flex w-full cursor-default items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
+        "relative flex w-full min-w-0 cursor-default items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
         className
       )}
       {...props}
     >
-      <span className="flex min-w-0 flex-1 items-center gap-2 truncate">
-        {children}
-      </span>
+      {/* Truncate on the text node — `truncate` on a flex parent does nothing. */}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
       <span className="pointer-events-none absolute right-2 flex items-center justify-center">
         <ComboboxPrimitive.ItemIndicator>
           <IconCheck className="size-4" />

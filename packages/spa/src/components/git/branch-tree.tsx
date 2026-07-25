@@ -42,10 +42,6 @@ type NavRow =
     }
   | { kind: "branch"; id: string; item: BranchLeaf; depth: number }
 
-const indent = (depth: number): React.CSSProperties => ({
-  paddingLeft: 8 + (depth - 1) * 14,
-})
-
 export function BranchTree({
   branches,
   remoteBranches,
@@ -176,11 +172,12 @@ export function BranchTree({
     else rows.current.delete(id)
   }
 
-  const rowClass = (active: boolean) =>
+  const rowClass = (active: boolean, selected = false) =>
     cn(
-      "flex h-7 w-full items-center gap-1.5 rounded-md pr-2 text-left text-sm outline-none",
-      "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50",
-      active && "ring-2 ring-ring/40"
+      "flex h-7 w-full min-w-0 items-center gap-1.5 rounded-md px-2 text-left text-sm outline-none",
+      "hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50",
+      active && "ring-2 ring-ring/40",
+      selected && "bg-muted text-foreground"
     )
 
   const chevron = (open: boolean) => (
@@ -192,47 +189,62 @@ export function BranchTree({
     />
   )
 
+  const depthStyle = (depth: number): React.CSSProperties => ({
+    // Nested folders step in from the row's own px-2; keep the math in rem.
+    ["--indent" as string]: `${0.5 + (depth - 1) * 0.875}rem`,
+  })
+
   return (
     <div
       role="tree"
       aria-label="Branches"
-      className="flex flex-col gap-1 py-1 text-sm select-none"
+      className="flex flex-col gap-0.5 px-1.5 py-2 text-sm select-none"
     >
       {currentBranch !== null && (
-        <button
-          type="button"
-          role="treeitem"
-          aria-level={1}
-          aria-selected={selectedRef === currentBranch}
-          tabIndex={effectiveActive === "__head" ? 0 : -1}
-          ref={setRef("__head")}
-          className={cn(
-            rowClass(effectiveActive === "__head"),
-            "gap-2 pl-2",
-            selectedRef === currentBranch && "bg-accent text-accent-foreground"
-          )}
-          onFocus={() => setActiveId("__head")}
-          onClick={() => onSelect(currentBranch)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault()
-              onSelect(currentBranch)
-            } else if (e.key === "ArrowDown") {
-              e.preventDefault()
-              move(1)
-            }
-          }}
-          title="Current branch"
-        >
-          <span className="rounded bg-muted px-1 py-0.5 text-[10px] font-medium text-muted-foreground">
-            HEAD
-          </span>
-          <span className="truncate font-medium">{currentBranch}</span>
-        </button>
+        <div className="mb-1.5">
+          <button
+            type="button"
+            role="treeitem"
+            aria-level={1}
+            aria-selected={selectedRef === currentBranch}
+            tabIndex={effectiveActive === "__head" ? 0 : -1}
+            ref={setRef("__head")}
+            className={cn(
+              rowClass(
+                effectiveActive === "__head",
+                selectedRef === currentBranch
+              ),
+              "gap-2"
+            )}
+            onFocus={() => setActiveId("__head")}
+            onClick={() => onSelect(currentBranch)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                onSelect(currentBranch)
+                return
+              }
+              if (e.key === "ArrowDown") {
+                e.preventDefault()
+                move(1)
+              }
+            }}
+            title="Current branch"
+          >
+            <span className="rounded bg-background px-1 py-0.5 font-mono text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+              HEAD
+            </span>
+            <span className="min-w-0 truncate font-medium">{currentBranch}</span>
+          </button>
+        </div>
       )}
 
-      {navRows.map((row) => {
+      {navRows.map((row, index) => {
         const active = effectiveActive === row.id
+        const prev = navRows[index - 1]
+        const sectionStart =
+          row.kind === "section" && prev !== undefined && prev.kind !== "section"
+
         if (row.kind === "section") {
           return (
             <button
@@ -244,8 +256,11 @@ export function BranchTree({
               tabIndex={active ? 0 : -1}
               ref={setRef(row.id)}
               className={cn(
-                rowClass(active),
-                "pl-2 font-medium text-muted-foreground"
+                "flex h-7 w-full items-center gap-1.5 rounded-md px-2 text-left outline-none",
+                "text-[11px] font-medium text-muted-foreground",
+                "hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/50",
+                active && "ring-2 ring-ring/40",
+                sectionStart && "mt-1.5"
               )}
               onFocus={() => setActiveId(row.id)}
               onClick={() => toggleFolder(row.sectionId)}
@@ -266,14 +281,14 @@ export function BranchTree({
               aria-expanded={row.expanded}
               tabIndex={active ? 0 : -1}
               ref={setRef(row.id)}
-              className={rowClass(active)}
-              style={indent(row.depth)}
+              className={cn(rowClass(active), "pl-(--indent)")}
+              style={depthStyle(row.depth)}
               onFocus={() => setActiveId(row.id)}
               onClick={() => toggleFolder(row.path)}
               onKeyDown={(e) => onKeyDown(e, row)}
             >
               {chevron(row.expanded)}
-              <span className="truncate text-muted-foreground">
+              <span className="min-w-0 truncate text-muted-foreground">
                 {row.label}
               </span>
             </button>
@@ -291,11 +306,10 @@ export function BranchTree({
             tabIndex={active ? 0 : -1}
             ref={setRef(row.id)}
             className={cn(
-              rowClass(active),
-              "group cursor-pointer",
-              selected && "bg-accent text-accent-foreground"
+              rowClass(active, selected),
+              "group cursor-pointer pl-(--indent)"
             )}
-            style={indent(row.depth)}
+            style={depthStyle(row.depth)}
             onFocus={() => setActiveId(row.id)}
             onClick={() => onSelect(branch.fullName)}
             onDoubleClick={() => onCheckout(branch.fullName)}
@@ -327,16 +341,21 @@ export function BranchTree({
               )}
             </button>
             <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className={cn("truncate", branch.isCurrent && "font-medium")}>
+            <span
+              className={cn(
+                "min-w-0 truncate",
+                branch.isCurrent && "font-medium"
+              )}
+            >
               {branch.label}
             </span>
             {branch.isCurrent && (
-              <span className="ml-1 rounded bg-muted px-1 py-0.5 text-[10px] text-muted-foreground">
+              <span className="rounded bg-background px-1 py-0.5 font-mono text-[10px] tracking-wide text-muted-foreground uppercase">
                 HEAD
               </span>
             )}
             {(branch.behind > 0 || branch.ahead > 0) && (
-              <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+              <span className="ml-auto shrink-0 tabular-nums text-xs text-muted-foreground">
                 {branch.behind > 0 && (
                   <span title={`${branch.behind} incoming`}>
                     ↓{branch.behind}
