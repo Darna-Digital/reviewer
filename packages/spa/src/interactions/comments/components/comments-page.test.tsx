@@ -249,6 +249,19 @@ describe("CommentsPage", () => {
     )
   })
 
+  it("resolves a comment straight from its list row", async () => {
+    const user = userEvent.setup()
+    render(<CommentsPage />)
+
+    const [firstRowResolve] = screen.getAllByRole("button", {
+      name: "Resolve comment",
+    })
+    await user.click(firstRowResolve)
+
+    expect(removeVisual).toHaveBeenCalledWith("v-1")
+    expect(removeCode).not.toHaveBeenCalled()
+  })
+
   it("saves an edited code comment body", async () => {
     const user = userEvent.setup()
     render(<CommentsPage />)

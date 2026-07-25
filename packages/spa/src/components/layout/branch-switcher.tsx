@@ -337,6 +337,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleBranchSearchKeyDown}
               placeholder="Search branches"
+              aria-label="Search branches"
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>

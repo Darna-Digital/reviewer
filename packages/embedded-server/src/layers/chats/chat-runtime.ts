@@ -165,9 +165,9 @@ const flushText = (live: LiveTurn): void => {
   }
   const text = live.parser.text()
   if (text === live.flushedText) return
-  live.flushedText = text
   try {
     saveStreamingText(live.repoPath, live.chatId, live.assistantMessageId, text)
+    live.flushedText = text
   } catch {
     // A checkpoint is best-effort; the turn's final write is what must land.
   }
@@ -216,6 +216,13 @@ onCurrentRepoChange((next) => {
 process.once("exit", () => {
   for (const live of liveTurns.values()) flushText(live)
 })
+
+// `exit` does not fire for an unhandled SIGTERM/SIGINT — the way this server
+// is actually stopped — so those signals route through process.exit to reach
+// the flush above.
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.once(signal, () => process.exit(0))
+}
 
 /**
  * The chat as a client should first see it: the persisted state with the

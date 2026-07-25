@@ -1,5 +1,6 @@
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
+import { randomUUID } from "node:crypto"
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import { VisualComment } from "@byconvo/core/visual-comments"
 import { NotFound, StorageError } from "@byconvo/core/shared"
@@ -34,10 +35,6 @@ const writeVisualComments = (
   )
 }
 
-// Module-scoped so ids stay unique even though the repository is built per
-// request (a request-scoped closure counter would reset and could collide).
-let counter = 0
-
 export const makeFileVisualCommentsRepository = Effect.gen(function* () {
   const ctx = yield* WorkspaceContext
 
@@ -63,10 +60,9 @@ export const makeFileVisualCommentsRepository = Effect.gen(function* () {
 
   const add: VisualCommentsRepo["add"] = (input) =>
     withFile((repoPath) => {
-      counter += 1
       const created: VisualComment = {
         ...input,
-        id: `v-${Date.now().toString(36)}-${counter}`,
+        id: `v-${randomUUID()}`,
         createdAt: new Date().toISOString(),
       }
       writeVisualComments(repoPath, [...readVisualComments(repoPath), created])

@@ -896,6 +896,7 @@ export function AppShell() {
             >
               <BottomPanel
                 tab={prefs.bottomTab}
+                active={prefs.bottomVisible}
                 onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
                 branches={branches.data ?? []}
                 remoteBranches={remoteBranches.data ?? []}

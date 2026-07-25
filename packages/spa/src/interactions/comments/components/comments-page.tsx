@@ -442,37 +442,35 @@ export function CommentsPage() {
   }
 
   const renderRow = (comment: UnifiedComment) => (
-    <button
-      key={comment.id}
-      type="button"
-      onClick={() => openComment(comment)}
-      className={cn(
-        "group/row mb-0.5 flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted/60",
-        comment.id === selectedId && "bg-muted"
-      )}
-    >
-      <KindIcon
-        kind={comment.kind}
-        className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-      />
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm">{comment.body}</div>
-        <div className="truncate font-mono text-xs text-muted-foreground">
-          {comment.anchor}
+    <div key={comment.id} className="group/row relative mb-0.5">
+      <button
+        type="button"
+        onClick={() => openComment(comment)}
+        className={cn(
+          "flex w-full items-start gap-2 rounded-md px-2 py-1.5 pr-8 text-left hover:bg-muted/60",
+          comment.id === selectedId && "bg-muted"
+        )}
+      >
+        <KindIcon
+          kind={comment.kind}
+          className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm">{comment.body}</div>
+          <div className="truncate font-mono text-xs text-muted-foreground">
+            {comment.anchor}
+          </div>
         </div>
-      </div>
-      <span
-        className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive"
+      </button>
+      <button
+        type="button"
         aria-label="Resolve comment"
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          void resolve(comment)
-        }}
+        className="absolute top-2 right-2.5 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100"
+        onClick={() => void resolve(comment)}
       >
         <IconX className="size-3.5" />
-      </span>
-    </button>
+      </button>
+    </div>
   )
 
   return (

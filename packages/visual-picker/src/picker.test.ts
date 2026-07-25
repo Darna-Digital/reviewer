@@ -245,6 +245,82 @@ describe("picking", () => {
   })
 })
 
+describe("pins", () => {
+  const comment = {
+    id: "v-1",
+    body: "Make this primary",
+    author: "you",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    pageUrl: "http://localhost/",
+    pageTitle: "app",
+    route: location.pathname,
+    selector: "#save",
+    label: 'button#save "Save changes"',
+    tagName: "button",
+    elementText: "Save changes",
+    elementHtml: "<button>Save changes</button>",
+    rect: { x: 0, y: 0, width: 10, height: 10 },
+    viewport: { width: 1024, height: 768 },
+  }
+
+  beforeEach(async () => {
+    document.getElementById(HOST)?.remove()
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: string, init?: RequestInit) => {
+        posted.push({
+          url,
+          method: init?.method ?? "GET",
+          body: init?.body === undefined ? null : JSON.parse(String(init.body)),
+        })
+        const payload = init?.method === undefined ? [comment] : { ok: true }
+        return Promise.resolve(
+          new Response(JSON.stringify(payload), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          })
+        )
+      })
+    )
+    mount()
+    await flush()
+  })
+
+  it("renders each comment as a focusable button named after its body", () => {
+    const pin = query(".pin") as HTMLButtonElement
+    expect(pin.tagName).toBe("BUTTON")
+    expect(pin.getAttribute("aria-label")).toBe("Comment 1: Make this primary")
+    expect(pin.textContent).toBe("1")
+  })
+
+  it("opens the comment card from a pin and resolves it", async () => {
+    ;(query(".pin") as HTMLElement).click()
+
+    const card = query(".card") as HTMLElement
+    expect(card.hidden).toBe(false)
+    expect(card.textContent).toContain("Make this primary")
+
+    const resolve = card.querySelector("button") as HTMLButtonElement
+    expect(shadow().activeElement).toBe(resolve)
+    resolve.click()
+    await flush()
+
+    const deleted = posted.find((call) => call.method === "DELETE")
+    expect(deleted?.url).toContain("/api/visual-comments/v-1")
+    expect(card.hidden).toBe(true)
+  })
+
+  it("closes an open card with Escape without leaving pins behind", () => {
+    ;(query(".pin") as HTMLElement).click()
+    expect((query(".card") as HTMLElement).hidden).toBe(false)
+
+    pressEscape()
+
+    expect((query(".card") as HTMLElement).hidden).toBe(true)
+    expect(query(".pin")).not.toBeNull()
+  })
+})
+
 describe("saving", () => {
   const compose = (body: string) => {
     const target = document.getElementById("save")!

@@ -76,9 +76,11 @@ export class Picker {
   private readonly textarea = el("textarea")
   private readonly saveButton = el("button")
   private readonly launcher = el("div", "launcher")
+  private readonly launcherToggle = el("button", "toggle")
   private readonly launcherLabel = el("span", "toggle-label")
   private readonly launcherHint = el("kbd")
   private readonly launcherCount = el("span", "count")
+  private readonly settingsButton = el("button", "gear")
   private readonly settings = el("div", "settings")
   private readonly pinLayer = el("div")
   private readonly card = el("div", "card")
@@ -117,28 +119,39 @@ export class Picker {
     this.launcherLabel.textContent = pickMode.launcherLabel("idle")
     this.launcherHint.textContent = pickMode.launcherHint("idle")
 
-    const toggle = el("button", "toggle")
-    toggle.append(
+    this.launcherToggle.type = "button"
+    this.launcherToggle.append(
       dot,
       this.launcherLabel,
       this.launcherCount,
       this.launcherHint
     )
-    toggle.setAttribute("aria-label", "Toggle comment mode")
-    toggle.addEventListener("click", () => this.dispatch("toggle"))
+    this.launcherToggle.setAttribute("aria-label", "Toggle comment mode")
+    this.launcherToggle.setAttribute("aria-pressed", "false")
+    this.launcherToggle.addEventListener("click", () => this.dispatch("toggle"))
 
-    const gear = el("button", "gear")
-    gear.innerHTML = GEAR_ICON
-    gear.setAttribute("aria-label", "Picker settings")
-    gear.addEventListener("click", (event) => {
+    this.settingsButton.type = "button"
+    this.settingsButton.innerHTML = GEAR_ICON
+    this.settingsButton.setAttribute("aria-label", "Picker settings")
+    this.settingsButton.setAttribute("aria-haspopup", "true")
+    this.settingsButton.addEventListener("click", (event) => {
       event.stopPropagation()
-      this.settings.hidden = !this.settings.hidden
+      this.setSettingsOpen(this.settings.hidden === true)
     })
 
     this.buildSettings()
-    this.launcher.append(toggle, gear, this.settings)
+    this.launcher.append(
+      this.launcherToggle,
+      this.settingsButton,
+      this.settings
+    )
     this.applyPlacement()
     return this.launcher
+  }
+
+  private setSettingsOpen(open: boolean) {
+    this.settings.hidden = !open
+    this.settingsButton.setAttribute("aria-expanded", String(open))
   }
 
   private buildSettings() {
@@ -148,6 +161,7 @@ export class Picker {
 
     for (const option of PLACEMENTS) {
       const button = el("button", "settings-option")
+      button.type = "button"
       button.textContent = option.label
       button.dataset["placement"] = option.value
       button.addEventListener("click", (event) => {
@@ -155,11 +169,11 @@ export class Picker {
         this.placement = option.value
         savePlacement(option.value)
         this.applyPlacement()
-        this.settings.hidden = true
+        this.setSettingsOpen(false)
       })
       this.settings.append(button)
     }
-    this.settings.hidden = true
+    this.setSettingsOpen(false)
   }
 
   private applyPlacement() {
@@ -177,10 +191,12 @@ export class Picker {
     const actions = el("div", "actions")
     const hint = el("span", "hint")
     hint.textContent = "⌘↵ save · Esc cancel · ⇧click menus"
+    this.saveButton.type = "button"
     this.saveButton.textContent = "Comment"
     actions.append(hint, this.saveButton)
 
     this.textarea.placeholder = "Describe the change you want here…"
+    this.textarea.setAttribute("aria-label", "Comment")
     this.composer.append(target, this.textarea, actions)
 
     this.saveButton.addEventListener("click", () => void this.save())
@@ -213,6 +229,14 @@ export class Picker {
     }
 
     if (event.key !== "Escape") return
+    if (!this.settings.hidden) {
+      this.setSettingsOpen(false)
+      return
+    }
+    if (this.openCardId !== null) {
+      this.closeCard()
+      return
+    }
     if (this.mode === "idle") return
     event.preventDefault()
     this.dispatch("escape")
@@ -230,7 +254,7 @@ export class Picker {
   private readonly onClick = (event: MouseEvent) => {
     const target = event.target
     const isHost = target === this.host
-    if (!isHost) this.settings.hidden = true
+    if (!isHost) this.setSettingsOpen(false)
 
     const intent = resolveClickIntent({
       mode: this.mode,
@@ -304,6 +328,7 @@ export class Picker {
   private setMode(mode: Mode) {
     this.mode = mode
     this.launcher.dataset["active"] = String(mode !== "idle")
+    this.launcherToggle.setAttribute("aria-pressed", String(mode !== "idle"))
     this.launcherLabel.textContent = pickMode.launcherLabel(mode)
     this.launcherHint.textContent = pickMode.launcherHint(mode)
     document.documentElement.style.cursor =
@@ -397,7 +422,9 @@ export class Picker {
     here.forEach((comment, index) => {
       let pin = this.pins.get(comment.id)
       if (pin === undefined) {
-        pin = el("div", "pin")
+        const button = el("button", "pin")
+        button.type = "button"
+        pin = button
         pin.addEventListener("click", (event) => {
           event.stopPropagation()
           this.toggleCard(comment)
@@ -407,6 +434,7 @@ export class Picker {
       }
       pin.textContent = String(index + 1)
       pin.title = comment.body
+      pin.setAttribute("aria-label", `Comment ${index + 1}: ${comment.body}`)
     })
 
     this.syncPins()
@@ -468,6 +496,7 @@ export class Picker {
 
     const actions = el("div", "actions")
     const remove = el("button", "ghost")
+    remove.type = "button"
     remove.textContent = "Resolve"
     remove.addEventListener("click", () => void this.resolve(comment.id))
     actions.append(remove)
@@ -475,8 +504,10 @@ export class Picker {
     this.card.replaceChildren(meta, body, actions)
     this.card.hidden = false
     const anchor = element ?? this.pins.get(comment.id)
-    if (anchor == null) return
-    place(this.card, anchor.getBoundingClientRect(), { preferBelow: true })
+    if (anchor != null) {
+      place(this.card, anchor.getBoundingClientRect(), { preferBelow: true })
+    }
+    remove.focus()
   }
 
   private closeCard() {
@@ -496,6 +527,7 @@ export class Picker {
 
   private toast(message: string) {
     const node = el("div", "toast")
+    node.setAttribute("role", "status")
     node.textContent = message
     this.root.append(node)
     setTimeout(() => node.remove(), 2600)

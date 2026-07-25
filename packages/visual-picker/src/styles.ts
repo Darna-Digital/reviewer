@@ -131,6 +131,10 @@ export const styles = `
     cursor: pointer;
   }
   button:hover { filter: brightness(1.12); }
+  button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
   button:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
   button.ghost {
     background: transparent;
@@ -145,6 +149,7 @@ export const styles = `
     place-items: center;
     width: 22px;
     height: 22px;
+    padding: 0;
     border: 1.5px solid rgba(255, 255, 255, 0.9);
     border-radius: 50% 50% 50% 2px;
     background: var(--accent);
