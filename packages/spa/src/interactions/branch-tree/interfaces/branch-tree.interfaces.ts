@@ -38,6 +38,8 @@ export interface BranchTreeInput {
 export interface BranchTrees {
   readonly local: ReadonlyArray<BranchTreeItem>
   readonly remote: ReadonlyArray<BranchTreeItem>
+  /** Flat favourited leaves (full names), shown in their own section. */
+  readonly favorites: ReadonlyArray<BranchLeaf>
 }
 
 /** A flattened, render-ready row honouring the current folder-expansion state. */

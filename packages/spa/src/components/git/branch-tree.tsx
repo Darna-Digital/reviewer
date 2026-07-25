@@ -56,7 +56,11 @@ export function BranchTree({
   const [activeId, setActiveId] = useState<string | null>(null)
   const rows = useRef(new Map<string, HTMLElement>())
 
-  const { local, remote } = functions.buildTrees({
+  const {
+    local,
+    remote,
+    favorites: favoriteLeaves,
+  } = functions.buildTrees({
     branches,
     remoteBranches,
     favorites,
@@ -84,19 +88,24 @@ export function BranchTree({
     })
     if (!open) return
     for (const row of functions.flatten(items, isOpen, 2)) {
+      // Prefix with section so favourites + local don't share React/focus keys.
+      const id = `${sectionId}:${row.key}`
       navRows.push(
         row.item.kind === "folder"
           ? {
               kind: "folder",
-              id: row.key,
+              id,
               path: row.item.path,
               label: row.item.label,
               depth: row.depth,
               expanded: row.expanded,
             }
-          : { kind: "branch", id: row.key, item: row.item, depth: row.depth }
+          : { kind: "branch", id, item: row.item, depth: row.depth }
       )
     }
+  }
+  if (favoriteLeaves.length > 0) {
+    pushSection("__favorites", "Favorites", favoriteLeaves)
   }
   pushSection("__local", "Local", local)
   if (remote.length > 0) pushSection("__remote", "Remote", remote)
@@ -194,11 +203,46 @@ export function BranchTree({
     ["--indent" as string]: `${0.5 + (depth - 1) * 0.875}rem`,
   })
 
+  const favoriteButton = (branch: BranchLeaf) => {
+    const fav = favorites.has(branch.fullName)
+    return (
+      <button
+        type="button"
+        tabIndex={-1}
+        className={cn(
+          "shrink-0 rounded-md p-1 text-muted-foreground",
+          // Stay invisible until the row is hovered — trailing placement means
+          // it never shoves the branch icon / label around.
+          "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
+          "hover:bg-muted hover:text-amber-500",
+          fav && "text-amber-500 opacity-100 hover:text-amber-600"
+        )}
+        aria-label={
+          fav
+            ? `Unfavorite ${branch.fullName}`
+            : `Favorite ${branch.fullName}`
+        }
+        aria-pressed={fav}
+        title={fav ? "Remove from favorites" : "Add to favorites"}
+        onClick={(e) => {
+          e.stopPropagation()
+          toggleFavorite(branch.fullName)
+        }}
+      >
+        {fav ? (
+          <IconStarFilled className="size-3.5" />
+        ) : (
+          <IconStar className="size-3.5" />
+        )}
+      </button>
+    )
+  }
+
   return (
     <div
       role="tree"
       aria-label="Branches"
-      className="flex flex-col gap-0.5 px-1.5 py-2 text-sm select-none"
+      className="flex flex-col gap-1 px-1.5 py-2 text-sm select-none"
     >
       {currentBranch !== null && (
         <div className="mb-1.5">
@@ -260,7 +304,7 @@ export function BranchTree({
                 "text-[11px] font-medium text-muted-foreground",
                 "hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-ring/50",
                 active && "ring-2 ring-ring/40",
-                sectionStart && "mt-1.5"
+                sectionStart && "mt-2"
               )}
               onFocus={() => setActiveId(row.id)}
               onClick={() => toggleFolder(row.sectionId)}
@@ -295,7 +339,6 @@ export function BranchTree({
           )
         }
         const branch = row.item
-        const fav = favorites.has(branch.fullName)
         const selected = selectedRef === branch.fullName
         return (
           <div
@@ -316,30 +359,6 @@ export function BranchTree({
             onKeyDown={(e) => onKeyDown(e, row)}
             title={`${branch.fullName}\nDouble-click to check out`}
           >
-            <button
-              type="button"
-              tabIndex={-1}
-              className={cn(
-                "shrink-0 rounded p-0.5 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100",
-                fav && "text-amber-500 opacity-100"
-              )}
-              aria-label={
-                fav
-                  ? `Unfavorite ${branch.fullName}`
-                  : `Favorite ${branch.fullName}`
-              }
-              aria-pressed={fav}
-              onClick={(e) => {
-                e.stopPropagation()
-                toggleFavorite(branch.fullName)
-              }}
-            >
-              {fav ? (
-                <IconStarFilled className="size-3" />
-              ) : (
-                <IconStar className="size-3" />
-              )}
-            </button>
             <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
             <span
               className={cn(
@@ -354,21 +373,24 @@ export function BranchTree({
                 HEAD
               </span>
             )}
-            {(branch.behind > 0 || branch.ahead > 0) && (
-              <span className="ml-auto shrink-0 tabular-nums text-xs text-muted-foreground">
-                {branch.behind > 0 && (
-                  <span title={`${branch.behind} incoming`}>
-                    ↓{branch.behind}
-                  </span>
-                )}
-                {branch.ahead > 0 && (
-                  <span title={`${branch.ahead} outgoing`}>
-                    {" "}
-                    ↑{branch.ahead}
-                  </span>
-                )}
-              </span>
-            )}
+            <div className="ml-auto flex shrink-0 items-center gap-0.5">
+              {(branch.behind > 0 || branch.ahead > 0) && (
+                <span className="tabular-nums text-xs text-muted-foreground">
+                  {branch.behind > 0 && (
+                    <span title={`${branch.behind} incoming`}>
+                      ↓{branch.behind}
+                    </span>
+                  )}
+                  {branch.ahead > 0 && (
+                    <span title={`${branch.ahead} outgoing`}>
+                      {" "}
+                      ↑{branch.ahead}
+                    </span>
+                  )}
+                </span>
+              )}
+              {favoriteButton(branch)}
+            </div>
           </div>
         )
       })}
