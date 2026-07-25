@@ -20,6 +20,7 @@ export const CHAT_MODEL_CATALOG: ChatModelCatalog = {
       label: "Claude",
       models: [
         { id: "claude-fable-5", label: "Claude Fable 5" },
+        { id: "claude-opus-5", label: "Claude Opus 5" },
         { id: "claude-opus-4-8", label: "Claude Opus 4.8" },
         { id: "claude-sonnet-5", label: "Claude Sonnet 5" },
         { id: "claude-haiku-4-5", label: "Claude Haiku 4.5" },
@@ -48,7 +49,7 @@ export const CHAT_MODEL_CATALOG: ChatModelCatalog = {
   ],
   defaults: {
     provider: "claude",
-    model: "claude-opus-4-8",
+    model: "claude-opus-5",
     effort: "high",
     access: "fullAccess",
     mode: "build",
