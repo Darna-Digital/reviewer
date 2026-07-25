@@ -75,7 +75,6 @@ type BranchPrompt =
       readonly label: string
     }
   | { readonly kind: "rename"; readonly from: string }
-  | { readonly kind: "revision" }
   | { readonly kind: "delete"; readonly name: string }
 
 /** A branch the action submenu operates on, normalised across local/remote. */
@@ -180,7 +179,6 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
   const remoteCount = remoteGroups.reduce((n, g) => n + g.items.length, 0)
 
   const showNew = matches("New Branch")
-  const showRevision = matches("Checkout Tag or Revision")
   const repoActions = [
     { label: "Fetch", run: props.onFetch, icon: IconCloudDownload },
     { label: "Pull", run: props.onPull, icon: IconArrowDown },
@@ -189,7 +187,6 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
 
   const newBranch = (startPoint: string | null, label: string) =>
     setPrompt({ kind: "create", startPoint, label })
-  const checkoutRevision = () => setPrompt({ kind: "revision" })
 
   /** The JetBrains-style action list for one branch. */
   const renderActions = (t: BranchTarget) => (
@@ -369,12 +366,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
                 New Branch…
               </DropdownMenuItem>
             )}
-            {showRevision && (
-              <DropdownMenuItem onClick={checkoutRevision}>
-                Checkout Tag or Revision…
-              </DropdownMenuItem>
-            )}
-            {(showNew || showRevision) && <DropdownMenuSeparator />}
+            {showNew && <DropdownMenuSeparator />}
 
             <Section
               title="Recent"
@@ -439,7 +431,6 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         onClose={() => setPrompt(null)}
         onCreateBranch={props.onCreateBranch}
         onRenameBranch={props.onRenameBranch}
-        onCheckout={props.onCheckout}
         onDeleteBranch={props.onDeleteBranch}
       />
     </>
@@ -448,7 +439,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
 
 /**
  * The shadcn dialog that backs every branch action needing input — create,
- * "new branch from", checkout revision, rename — plus the delete confirmation.
+ * "new branch from", rename — plus the delete confirmation.
  * Keyed by the prompt so the text field resets to the right default each time.
  */
 function BranchPromptDialog({
@@ -456,14 +447,12 @@ function BranchPromptDialog({
   onClose,
   onCreateBranch,
   onRenameBranch,
-  onCheckout,
   onDeleteBranch,
 }: {
   prompt: BranchPrompt | null
   onClose: () => void
   onCreateBranch: (name: string, startPoint: string | null) => void
   onRenameBranch: (from: string, to: string) => void
-  onCheckout: (ref: string) => void
   onDeleteBranch: (name: string) => void
 }) {
   return (
@@ -482,11 +471,13 @@ function BranchPromptDialog({
             key={prompt.kind === "rename" ? prompt.from : prompt.kind}
             prompt={prompt}
             onSubmit={(value) => {
-              if (prompt.kind === "create")
+              if (prompt.kind === "create") {
                 onCreateBranch(value, prompt.startPoint)
-              else if (prompt.kind === "rename") {
-                if (value !== prompt.from) onRenameBranch(prompt.from, value)
-              } else onCheckout(value)
+                onClose()
+                return
+              }
+              if (prompt.kind === "rename" && value !== prompt.from)
+                onRenameBranch(prompt.from, value)
               onClose()
             }}
           />
@@ -519,13 +510,6 @@ const PROMPT_COPY = (prompt: BranchPrompt) => {
         label: "New name",
         action: "Rename",
         initial: prompt.from,
-      }
-    case "revision":
-      return {
-        title: "Checkout tag or revision",
-        label: "Branch, tag, or revision",
-        action: "Checkout",
-        initial: "",
       }
     default:
       return { title: "", label: "", action: "", initial: "" }
