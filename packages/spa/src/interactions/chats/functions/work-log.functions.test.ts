@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import type { ChatActivity } from "@byconvo/core/chats"
-import { activeWorkStep, toWorkSteps } from "./work-log.functions"
+import { activeWorkStep, elapsedMs, toWorkSteps } from "./work-log.functions"
 
 let seq = 0
 const activity = (input: Partial<ChatActivity>): ChatActivity => {
@@ -89,6 +89,24 @@ describe("toWorkSteps", () => {
     ])
     // The label falls out of the summary when the provider sends none.
     expect(steps[0]?.label).toBe("Command")
+    // ...and so does the detail shown beside it.
+    expect(steps[0]?.detail).toBe("ls")
+    expect(steps[1]?.detail).toBe("pwd")
+  })
+
+  it("never closes an id-less thinking block with a tool completion", () => {
+    const steps = toWorkSteps(
+      [
+        activity({ kind: "thinking", tone: "info", summary: "Thinking" }),
+        activity({ kind: "tool.started", summary: "Command — ls" }),
+        activity({ kind: "tool.completed", summary: "Command finished" }),
+      ],
+      true
+    )
+    expect(steps.map((s) => [s.thinking, s.status])).toEqual([
+      [true, "running"],
+      [false, "done"],
+    ])
   })
 
   it("settles steps left open when the turn is no longer running", () => {
@@ -149,6 +167,42 @@ describe("toWorkSteps", () => {
     expect(steps).toMatchObject([
       { status: "failed", summary: "sandbox denied" },
     ])
+  })
+})
+
+describe("elapsedMs", () => {
+  it("spans first start to last settle, not the sum of overlapping calls", () => {
+    const steps = toWorkSteps(
+      [
+        activity({
+          kind: "tool.started",
+          callId: "a",
+          createdAt: "2026-07-25T12:00:00.000Z",
+        }),
+        activity({
+          kind: "tool.started",
+          callId: "b",
+          createdAt: "2026-07-25T12:00:01.000Z",
+        }),
+        activity({
+          kind: "tool.completed",
+          callId: "a",
+          createdAt: "2026-07-25T12:00:04.000Z",
+        }),
+        activity({
+          kind: "tool.completed",
+          callId: "b",
+          createdAt: "2026-07-25T12:00:05.000Z",
+        }),
+      ],
+      false
+    )
+    // Summing durations would say 8s; the turn actually took 5s.
+    expect(elapsedMs(steps)).toBe(5000)
+  })
+
+  it("is null when there are no steps", () => {
+    expect(elapsedMs([])).toBeNull()
   })
 })
 

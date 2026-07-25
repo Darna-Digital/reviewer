@@ -18,8 +18,9 @@ import {
   HttpApiSchema,
 } from "effect/unstable/httpapi"
 
-const errors = [NoRepoSelected, StorageError] as const
-const mutateErrors = [NoRepoSelected, NotFound, StorageError] as const
+// The repository types every operation with the same failure union
+// (VisualCommentsFailure), so each endpoint declares all three.
+const errors = [NoRepoSelected, NotFound, StorageError] as const
 
 const JavaScript = Schema.String.pipe(
   HttpApiSchema.asText({ contentType: "application/javascript; charset=utf-8" })
@@ -49,7 +50,7 @@ export class VisualCommentsApi extends HttpApiGroup.make("visualComments")
       params: VisualCommentIdParam,
       payload: UpdateVisualComment,
       success: VisualComment,
-      error: [...mutateErrors, EmptyCommentBody],
+      error: [...errors, EmptyCommentBody],
     })
   )
   .add(

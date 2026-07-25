@@ -80,6 +80,7 @@ export function PullRequestList({
         "mb-0.5 flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left hover:bg-muted/60",
         p.number === selectedNumber && "bg-muted"
       )}
+      aria-current={p.number === selectedNumber ? "true" : undefined}
       onClick={() => onSelect(p)}
     >
       <div className="min-w-0 flex-1">

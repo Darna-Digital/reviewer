@@ -24,7 +24,7 @@ import {
 } from "@tabler/icons-react"
 import { useState } from "react"
 import { cn } from "@/lib/utils"
-import type { WorkStep } from "../functions/work-log.functions"
+import { elapsedMs, type WorkStep } from "../functions/work-log.functions"
 
 const TOOL_ICONS: ReadonlyArray<[RegExp, typeof IconTool]> = [
   [/^bash|^command|shell|terminal/i, IconTerminal2],
@@ -48,13 +48,6 @@ const formatDuration = (ms: number): string =>
     : ms < 60_000
       ? `${(ms / 1000).toFixed(ms < 10_000 ? 1 : 0)}s`
       : `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`
-
-/** The part of a summary after the tool name, which the label already shows. */
-const detailOf = (step: WorkStep): string | null => {
-  const [, ...rest] = step.summary.split(" — ")
-  const tail = rest.join(" — ")
-  return tail.length > 0 ? tail : null
-}
 
 function StatusIcon({ status }: { status: WorkStep["status"] }) {
   if (status === "failed") {
@@ -88,11 +81,10 @@ function WorkStepRow({ step, last }: { step: WorkStep; last: boolean }) {
   const [open, setOpen] = useState(false)
   const Icon = stepIcon(step)
   const expandable = step.input !== null || step.output !== null
-  const tail = detailOf(step)
+  const tail = step.detail
 
   return (
     <div className="flex gap-2">
-      {/* Icon column, with a connector line running down to the next step. */}
       <div className="flex w-3.5 shrink-0 flex-col items-center">
         <Icon
           className={cn(
@@ -189,10 +181,10 @@ export function WorkLog({
   const open = override ?? running
 
   const failures = steps.filter((s) => s.status === "failed").length
-  const elapsed = steps.reduce((total, s) => total + (s.durationMs ?? 0), 0)
+  const elapsed = elapsedMs(steps)
   const summary = [
     `${steps.length} ${steps.length === 1 ? "step" : "steps"}`,
-    elapsed >= 1000 ? formatDuration(elapsed) : null,
+    elapsed !== null && elapsed >= 1000 ? formatDuration(elapsed) : null,
     failures > 0 ? `${failures} failed` : null,
   ]
     .filter((part) => part !== null)

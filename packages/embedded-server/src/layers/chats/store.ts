@@ -8,7 +8,13 @@
  * as a turn streams. Keeping every mutation here means there is exactly one
  * shape of the file, whichever side writes.
  */
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs"
+import {
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import * as Schema from "effect/Schema"
 import {
   Chat,
@@ -57,8 +63,13 @@ export const writeChats = (
   mkdirSync(`${repoPath}/.byconvo`, { recursive: true })
   const target = chatsPath(repoPath)
   const temp = `${target}.${process.pid}.tmp`
-  writeFileSync(temp, `${JSON.stringify(chats, null, 2)}\n`)
-  renameSync(temp, target)
+  try {
+    writeFileSync(temp, `${JSON.stringify(chats, null, 2)}\n`)
+    renameSync(temp, target)
+  } catch (error) {
+    rmSync(temp, { force: true })
+    throw error
+  }
 }
 
 export const findChat = (repoPath: string, id: string): Chat | undefined =>

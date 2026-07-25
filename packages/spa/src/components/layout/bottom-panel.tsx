@@ -17,6 +17,7 @@ import type {
   CommitInfo,
   RemoteBranchInfo,
 } from "@byconvo/core/repo"
+import { useState } from "react"
 import { cn } from "@/lib/utils"
 
 const TABS: ReadonlyArray<{
@@ -32,6 +33,8 @@ const TABS: ReadonlyArray<{
 
 interface BottomPanelProps {
   tab: BottomTab
+  /** Whether the dock is expanded. While collapsed, no new panel mounts. */
+  active: boolean
   onTabChange: (tab: BottomTab) => void
   branches: ReadonlyArray<BranchInfo>
   remoteBranches: ReadonlyArray<RemoteBranchInfo>
@@ -53,6 +56,15 @@ export function BottomPanel(props: BottomPanelProps) {
     0,
     TABS.findIndex((t) => t.id === props.tab)
   )
+
+  // Services and Threads own live terminals, so once opened they stay mounted
+  // while hidden. Until first opened they cost nothing.
+  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<BottomTab>>(
+    () => new Set(props.active ? [props.tab] : [])
+  )
+  if (props.active && !visitedTabs.has(props.tab)) {
+    setVisitedTabs(new Set(visitedTabs).add(props.tab))
+  }
 
   // Picking a branch from the tree sets the history ref and jumps to History.
   const selectRef = (ref: string) => {
@@ -94,14 +106,16 @@ export function BottomPanel(props: BottomPanelProps) {
         )}
         viewportClassName="scroll-fade"
       >
-        <BranchTree
-          branches={props.branches}
-          remoteBranches={props.remoteBranches}
-          currentBranch={props.currentBranch}
-          selectedRef={props.logRef}
-          onSelect={selectRef}
-          onCheckout={props.onBranchCheckout}
-        />
+        {props.active && props.tab === "branches" && (
+          <BranchTree
+            branches={props.branches}
+            remoteBranches={props.remoteBranches}
+            currentBranch={props.currentBranch}
+            selectedRef={props.logRef}
+            onSelect={selectRef}
+            onCheckout={props.onBranchCheckout}
+          />
+        )}
       </ScrollArea>
 
       <div
@@ -114,21 +128,22 @@ export function BottomPanel(props: BottomPanelProps) {
           props.tab !== "history" && "hidden"
         )}
       >
-        <CommitHistory
-          refName={props.logRef ?? props.currentBranch ?? "HEAD"}
-          branches={props.branches}
-          commits={props.commits}
-          query={props.logFilters}
-          loading={props.commitsLoading}
-          selectedCommitSha={props.selectedCommitSha}
-          onRefChange={props.onLogRefChange}
-          onQueryChange={props.onLogFiltersChange}
-          onSelectCommit={props.onSelectCommit}
-          onSelectCommitFile={props.onSelectCommitFile}
-        />
+        {props.active && props.tab === "history" && (
+          <CommitHistory
+            refName={props.logRef ?? props.currentBranch ?? "HEAD"}
+            branches={props.branches}
+            commits={props.commits}
+            query={props.logFilters}
+            loading={props.commitsLoading}
+            selectedCommitSha={props.selectedCommitSha}
+            onRefChange={props.onLogRefChange}
+            onQueryChange={props.onLogFiltersChange}
+            onSelectCommit={props.onSelectCommit}
+            onSelectCommitFile={props.onSelectCommitFile}
+          />
+        )}
       </div>
 
-      {/* Services + Threads keep terminals mounted while inactive. */}
       <div
         id="bottom-dock-panel-2"
         role="tabpanel"
@@ -139,7 +154,7 @@ export function BottomPanel(props: BottomPanelProps) {
           props.tab !== "services" && "hidden"
         )}
       >
-        <LocalDevPage />
+        {visitedTabs.has("services") && <LocalDevPage />}
       </div>
 
       <div
@@ -152,7 +167,7 @@ export function BottomPanel(props: BottomPanelProps) {
           props.tab !== "threads" && "hidden"
         )}
       >
-        <ThreadsPage />
+        {visitedTabs.has("threads") && <ThreadsPage />}
       </div>
     </div>
   )

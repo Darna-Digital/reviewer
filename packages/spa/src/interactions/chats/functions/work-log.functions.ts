@@ -18,6 +18,9 @@ export interface WorkStep {
   readonly id: string
   readonly label: string
   readonly summary: string
+  /** The part of the summary after the tool name, which the label already
+   * shows — `"Bash — pnpm test"` → `"pnpm test"`. */
+  readonly detail: string | null
   readonly status: WorkStepStatus
   readonly thinking: boolean
   /** The call's arguments, from the activity that opened it. */
@@ -40,6 +43,11 @@ const CLOSING_KINDS = new Set([
  * skip this; codex only ever encodes the tool in the summary's first clause. */
 const labelFrom = (activity: ChatActivity): string =>
   activity.label ?? activity.summary.split(" — ")[0] ?? activity.summary
+
+const detailFrom = (activity: ChatActivity): string | null => {
+  const tail = activity.summary.split(" — ").slice(1).join(" — ")
+  return tail.length > 0 ? tail : null
+}
 
 const durationBetween = (startedAt: string, endedAt: string): number | null => {
   const ms = Date.parse(endedAt) - Date.parse(startedAt)
@@ -65,15 +73,20 @@ export function toWorkSteps(
 
   /** The still-open step a closing activity belongs to. Providers that send a
    * call id (claude, whose tools can overlap) match on it; those that don't
-   * (codex, strictly sequential) close the oldest open id-less step. */
+   * (codex, strictly sequential) close the oldest open id-less step of the
+   * same kind, so a tool completion can never settle a thinking block. */
   const openStepFor = (activity: ChatActivity): MutableStep | undefined => {
     if (activity.callId !== undefined) {
       return steps.find(
         (s) => s.callId === activity.callId && s.step.status === "running"
       )
     }
+    const closesThinking = activity.kind === "thinking.completed"
     return steps.find(
-      (s) => s.callId === undefined && s.step.status === "running"
+      (s) =>
+        s.callId === undefined &&
+        s.step.status === "running" &&
+        s.step.thinking === closesThinking
     )
   }
 
@@ -91,6 +104,7 @@ export function toWorkSteps(
             id: activity.id,
             label: labelFrom(activity),
             summary: activity.summary,
+            detail: detailFrom(activity),
             status: failed ? "failed" : "done",
             thinking: activity.kind === "thinking.completed",
             input: null,
@@ -119,6 +133,7 @@ export function toWorkSteps(
         id: activity.id,
         label: labelFrom(activity),
         summary: activity.summary,
+        detail: detailFrom(activity),
         // A one-off activity (codex's `error`) is already over when it arrives.
         status: opening
           ? "running"
@@ -151,4 +166,25 @@ export const activeWorkStep = (
     if (step !== undefined && step.status === "running") return step
   }
   return undefined
+}
+
+/**
+ * Wall-clock span of the whole turn, first start to last settle. Summing the
+ * steps' own durations would double-count overlapping tool calls and miss the
+ * gaps between them.
+ */
+export const elapsedMs = (steps: ReadonlyArray<WorkStep>): number | null => {
+  let first: number | null = null
+  let last: number | null = null
+  for (const step of steps) {
+    const startedAt = Date.parse(step.startedAt)
+    const endedAt = Date.parse(step.endedAt ?? step.startedAt)
+    if (Number.isFinite(startedAt) && (first === null || startedAt < first)) {
+      first = startedAt
+    }
+    if (Number.isFinite(endedAt) && (last === null || endedAt > last)) {
+      last = endedAt
+    }
+  }
+  return first === null || last === null || last < first ? null : last - first
 }
