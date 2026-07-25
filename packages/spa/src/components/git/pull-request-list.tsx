@@ -4,7 +4,7 @@
  * branch + time filter menu, and rows grouped under the branch each PR targets.
  */
 import { IconGitBranch } from "@tabler/icons-react"
-import { useMemo, useState } from "react"
+import { useMemo, useState, type CSSProperties } from "react"
 import {
   ALL_BRANCHES,
   branchLabel,
@@ -23,6 +23,7 @@ interface PullRequestListProps {
   selectedNumber: number | null
   onSelect: (pull: PullRequestInfo) => void
   className?: string
+  style?: CSSProperties
 }
 
 export function PullRequestList({
@@ -31,6 +32,7 @@ export function PullRequestList({
   selectedNumber,
   onSelect,
   className,
+  style,
 }: PullRequestListProps) {
   const [baseFilter, setBaseFilter] = useState(ALL_BRANCHES)
   const [dateFilter, setDateFilter] = useState<DateFilter>("all")
@@ -95,7 +97,7 @@ export function PullRequestList({
   )
 
   return (
-    <aside className={cn("flex min-h-0 flex-col", className)}>
+    <aside className={cn("flex min-h-0 flex-col", className)} style={style}>
       <div className="flex items-center gap-1.5 border-b p-2">
         <SidebarSearch
           label="Search pull requests"

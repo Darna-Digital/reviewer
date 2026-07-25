@@ -193,6 +193,9 @@ export function AppShell() {
   // the persisted prefs so they survive reloads. See `ResizeHandle`.
   const [sidebarWidth, setSidebarWidth] = useState(prefs.sidebarWidth)
   const [bottomHeight, setBottomHeight] = useState(prefs.bottomHeight)
+  const [reviewPullsHeight, setReviewPullsHeight] = useState(
+    prefs.reviewPullsHeight
+  )
 
   const isFolder =
     workspace.data?.current != null && workspace.data.isGitRepo === false
@@ -775,22 +778,44 @@ export function AppShell() {
                 style={{ width: sidebarWidth }}
               >
                 {mode === "review" && (
-                  <PullRequestList
-                    pulls={pulls.data ?? []}
-                    error={pulls.error ? "Could not load pull requests" : null}
-                    selectedNumber={selectedPull?.number ?? null}
-                    onSelect={(p) =>
-                      void navigate({
-                        to: "/review/$pull",
-                        params: { pull: String(p.number) },
-                      })
-                    }
-                    className={
-                      selectedPull === null
-                        ? "flex-1"
-                        : "max-h-[45%] shrink-0 border-b"
-                    }
-                  />
+                  <>
+                    <PullRequestList
+                      pulls={pulls.data ?? []}
+                      error={
+                        pulls.error ? "Could not load pull requests" : null
+                      }
+                      selectedNumber={selectedPull?.number ?? null}
+                      onSelect={(p) =>
+                        void navigate({
+                          to: "/review/$pull",
+                          params: { pull: String(p.number) },
+                        })
+                      }
+                      className={
+                        selectedPull === null
+                          ? "flex-1"
+                          : "shrink-0 border-b"
+                      }
+                      style={
+                        selectedPull === null
+                          ? undefined
+                          : { height: reviewPullsHeight }
+                      }
+                    />
+                    {selectedPull !== null && (
+                      <ResizeHandle
+                        orientation="row"
+                        value={reviewPullsHeight}
+                        min={80}
+                        max={() => Math.max(120, window.innerHeight - 320)}
+                        onResize={setReviewPullsHeight}
+                        onResizeEnd={(h) =>
+                          setUiPrefs({ reviewPullsHeight: h })
+                        }
+                        label="Resize pull request list"
+                      />
+                    )}
+                  </>
                 )}
                 {(mode !== "review" || selectedPull !== null) && (
                   <div className="min-h-0 flex-1 overflow-hidden">
