@@ -7,23 +7,20 @@ import {
   type RefObject,
   type SetStateAction,
 } from "react"
+import {
+  containerGeometryOf,
+  itemIndexAtPointer,
+  layoutRectOf,
+  sameLayoutRects,
+  toViewportRect,
+  type LayoutRect,
+  type ProximityAxis,
+} from "./proximity-geometry"
 
-export interface ItemRect {
-  top: number
-  height: number
-  left: number
-  width: number
-}
+export type ItemRect = LayoutRect
 
 interface UseProximityHoverOptions {
-  /**
-   * Which direction to resolve the nearest item along.
-   *   "y"  — vertical lists (default): closest by top/height
-   *   "x"  — horizontal strips: closest by left/width
-   *   "xy" — 2-D grids: closest card across both rows AND columns,
-   *          measured by Euclidean distance to each item's center
-   */
-  axis?: "x" | "y" | "xy"
+  axis?: ProximityAxis
 }
 
 interface UseProximityHoverReturn {
@@ -50,193 +47,58 @@ export function useProximityHover<T extends HTMLElement>(
   const [itemRects, setItemRects] = useState<ItemRect[]>([])
   const itemRectsRef = useRef<ItemRect[]>([])
   const sessionRef = useRef(0)
-  const rafIdRef = useRef<number | null>(null)
-  const remeasureRafIdRef = useRef<number | null>(null)
+  const trackPointerFrame = useRef<number | null>(null)
+  const remeasureFrame = useRef<number | null>(null)
 
   const measureItems = useCallback(() => {
-    const container = containerRef.current
-    if (!container) return
+    if (containerRef.current === null) return
     const rects: ItemRect[] = []
     itemsRef.current.forEach((element, index) => {
-      // Use offset* instead of getBoundingClientRect so measurements are
-      // unaffected by CSS transforms (e.g. scaleY animation on the parent
-      // motion.div). offsetTop/offsetLeft are layout values relative to the
-      // offsetParent (the scroll container), matching the coordinate space
-      // used by `position: absolute` children.
-      rects[index] = {
-        top: element.offsetTop,
-        height: element.offsetHeight,
-        left: element.offsetLeft,
-        width: element.offsetWidth,
-      }
+      rects[index] = layoutRectOf(element)
     })
-    // Skip the state update when nothing moved (a cheap top/left/width/height
-    // compare) so redundant remeasures don't churn re-renders.
-    const prev = itemRectsRef.current
-    let changed = prev.length !== rects.length
-    for (let i = 0; !changed && i < rects.length; i++) {
-      const p = prev[i]
-      const r = rects[i]
-      if (p === r) continue // both undefined (sparse slot)
-      changed =
-        !p ||
-        !r ||
-        p.top !== r.top ||
-        p.left !== r.left ||
-        p.width !== r.width ||
-        p.height !== r.height
-    }
-    if (!changed) return
+    if (sameLayoutRects(itemRectsRef.current, rects)) return
     itemRectsRef.current = rects
     setItemRects(rects)
   }, [containerRef])
 
+  const scheduleRemeasure = useCallback(() => {
+    if (remeasureFrame.current !== null) {
+      cancelAnimationFrame(remeasureFrame.current)
+    }
+    remeasureFrame.current = requestAnimationFrame(() => {
+      remeasureFrame.current = null
+      measureItems()
+    })
+  }, [measureItems])
+
   const registerItem = useCallback(
     (index: number, element: HTMLElement | null) => {
-      if (element) {
-        itemsRef.current.set(index, element)
-      } else {
+      if (element === null) {
         itemsRef.current.delete(index)
+      } else {
+        itemsRef.current.set(index, element)
       }
-      // Coalesce rapid register/unregister calls (e.g. when an AnimatePresence
-      // remounts a list of rows) into a single remeasure on the next frame,
-      // so consumers don't have to manually call measureItems after the
-      // container's children swap.
-      if (remeasureRafIdRef.current !== null) {
-        cancelAnimationFrame(remeasureRafIdRef.current)
-      }
-      remeasureRafIdRef.current = requestAnimationFrame(() => {
-        remeasureRafIdRef.current = null
-        measureItems()
-      })
+      scheduleRemeasure()
     },
-    [measureItems]
+    [scheduleRemeasure]
   )
 
   const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      const mouseX = e.clientX
-      const mouseY = e.clientY
+    (event: React.MouseEvent) => {
+      const pointer = { x: event.clientX, y: event.clientY }
 
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current)
+      if (trackPointerFrame.current !== null) {
+        cancelAnimationFrame(trackPointerFrame.current)
       }
-
-      rafIdRef.current = requestAnimationFrame(() => {
-        rafIdRef.current = null
+      trackPointerFrame.current = requestAnimationFrame(() => {
+        trackPointerFrame.current = null
         const container = containerRef.current
-        if (!container) return
-
-        const containerRect = container.getBoundingClientRect()
-
-        // ── 2-D grid path ──────────────────────────────────────────
-        // When items wrap into rows and columns, a single-axis nearest
-        // pick can't tell which card the cursor is closest to. Resolve
-        // by Euclidean distance to each item's center, and prefer any
-        // item the cursor is actually inside (point-in-rect).
-        if (axis === "xy") {
-          let closestIndex: number | null = null
-          let closestDistance = Infinity
-          let containingIndex: number | null = null
-
-          const rects = itemRectsRef.current
-          const scrollX = container.scrollLeft
-          const scrollY = container.scrollTop
-          const borderX = container.clientLeft
-          const borderY = container.clientTop
-          // Map layout coords into visual/viewport space, accounting for any
-          // cumulative ancestor transform: scale (see the single-axis note
-          // below). X and Y scale independently.
-          const scaleX =
-            container.offsetWidth > 0
-              ? containerRect.width / container.offsetWidth
-              : 1
-          const scaleY =
-            container.offsetHeight > 0
-              ? containerRect.height / container.offsetHeight
-              : 1
-
-          for (let index = 0; index < rects.length; index++) {
-            const r = rects[index]
-            if (!r) continue
-
-            const left =
-              containerRect.left + (borderX + r.left - scrollX) * scaleX
-            const top = containerRect.top + (borderY + r.top - scrollY) * scaleY
-            const width = r.width * scaleX
-            const height = r.height * scaleY
-
-            if (
-              mouseX >= left &&
-              mouseX <= left + width &&
-              mouseY >= top &&
-              mouseY <= top + height
-            ) {
-              containingIndex = index
-            }
-
-            const dx = mouseX - (left + width / 2)
-            const dy = mouseY - (top + height / 2)
-            const distance = Math.hypot(dx, dy)
-
-            if (distance < closestDistance) {
-              closestDistance = distance
-              closestIndex = index
-            }
-          }
-
-          setActiveIndex(containingIndex ?? closestIndex)
-          return
-        }
-
-        const mousePos = axis === "x" ? mouseX : mouseY
-
-        let closestIndex: number | null = null
-        let closestDistance = Infinity
-        let containingIndex: number | null = null
-
-        const rects = itemRectsRef.current
-        // Convert content-relative rects to viewport coords using live scroll
-        const scrollOffset =
-          axis === "x" ? container.scrollLeft : container.scrollTop
-        const borderOffset =
-          axis === "x" ? container.clientLeft : container.clientTop
-        const containerEdge =
-          axis === "x" ? containerRect.left : containerRect.top
-        // Item rects are layout values (offset*); the container's bounding rect
-        // reflects any cumulative ancestor transform: scale. Compute the scale
-        // factor so we can map layout coords into the same visual viewport
-        // space the mouse cursor lives in.
-        const layoutSize =
-          axis === "x" ? container.offsetWidth : container.offsetHeight
-        const visualSize =
-          axis === "x" ? containerRect.width : containerRect.height
-        const scale = layoutSize > 0 ? visualSize / layoutSize : 1
-
-        for (let index = 0; index < rects.length; index++) {
-          const r = rects[index]
-          if (!r) continue
-
-          const contentPos = axis === "x" ? r.left : r.top
-          const itemStart =
-            containerEdge + (borderOffset + contentPos - scrollOffset) * scale
-          const itemSize = (axis === "x" ? r.width : r.height) * scale
-          const itemEnd = itemStart + itemSize
-
-          if (mousePos >= itemStart && mousePos <= itemEnd) {
-            containingIndex = index
-          }
-
-          const itemCenter = itemStart + itemSize / 2
-          const distance = Math.abs(mousePos - itemCenter)
-
-          if (distance < closestDistance) {
-            closestDistance = distance
-            closestIndex = index
-          }
-        }
-
-        setActiveIndex(containingIndex ?? closestIndex)
+        if (container === null) return
+        const geometry = containerGeometryOf(container)
+        const rects = itemRectsRef.current.map((rect) =>
+          rect === undefined ? undefined : toViewportRect(rect, geometry)
+        )
+        setActiveIndex(itemIndexAtPointer(pointer, rects, axis))
       })
     },
     [axis, containerRef]
@@ -247,43 +109,32 @@ export function useProximityHover<T extends HTMLElement>(
   }, [])
 
   const handleMouseLeave = useCallback(() => {
-    if (rafIdRef.current !== null) {
-      cancelAnimationFrame(rafIdRef.current)
-      rafIdRef.current = null
+    if (trackPointerFrame.current !== null) {
+      cancelAnimationFrame(trackPointerFrame.current)
+      trackPointerFrame.current = null
     }
     setActiveIndex(null)
   }, [])
 
-  // Remeasure when the container resizes — a reflow moves items even though
-  // the registered set is unchanged, which would otherwise leave itemRects
-  // stale. Coalesced through the same rAF as register/unregister.
   useEffect(() => {
     const container = containerRef.current
-    if (!container || typeof ResizeObserver === "undefined") return
-    const ro = new ResizeObserver(() => {
-      if (remeasureRafIdRef.current !== null) {
-        cancelAnimationFrame(remeasureRafIdRef.current)
-      }
-      remeasureRafIdRef.current = requestAnimationFrame(() => {
-        remeasureRafIdRef.current = null
-        measureItems()
-      })
-    })
-    ro.observe(container)
-    return () => ro.disconnect()
-  }, [containerRef, measureItems])
+    if (container === null || typeof ResizeObserver === "undefined") return
+    const observer = new ResizeObserver(scheduleRemeasure)
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [containerRef, scheduleRemeasure])
 
-  // Clean up rAF on unmount
-  useEffect(() => {
-    return () => {
-      if (rafIdRef.current !== null) {
-        cancelAnimationFrame(rafIdRef.current)
+  useEffect(
+    () => () => {
+      if (trackPointerFrame.current !== null) {
+        cancelAnimationFrame(trackPointerFrame.current)
       }
-      if (remeasureRafIdRef.current !== null) {
-        cancelAnimationFrame(remeasureRafIdRef.current)
+      if (remeasureFrame.current !== null) {
+        cancelAnimationFrame(remeasureFrame.current)
       }
-    }
-  }, [])
+    },
+    []
+  )
 
   return {
     activeIndex,
@@ -300,10 +151,6 @@ export function useProximityHover<T extends HTMLElement>(
   }
 }
 
-/**
- * Hook for child items to register themselves with the proximity hover system.
- * Call in useEffect with the item's ref and index.
- */
 export function useRegisterProximityItem(
   registerItem: (index: number, element: HTMLElement | null) => void,
   index: number,

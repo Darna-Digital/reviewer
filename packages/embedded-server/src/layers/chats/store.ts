@@ -8,6 +8,7 @@
  * as a turn streams. Keeping every mutation here means there is exactly one
  * shape of the file, whichever side writes.
  */
+import { randomUUID } from "node:crypto"
 import {
   mkdirSync,
   readFileSync,
@@ -30,12 +31,8 @@ const decodeChatsFile = Schema.decodeUnknownSync(ChatsFile)
 
 const chatsPath = (repoPath: string) => `${repoPath}/.byconvo/chats.json`
 
-// Module-scoped so ids stay unique across per-request repository instances.
-let counter = 0
-export const nextChatId = (prefix: string): string => {
-  counter += 1
-  return `${prefix}-${Date.now().toString(36)}-${counter}`
-}
+export const nextChatId = (prefix: string): string =>
+  `${prefix}-${randomUUID()}`
 
 export const readChats = (repoPath: string): ReadonlyArray<Chat> => {
   try {
@@ -50,11 +47,9 @@ export const readChats = (repoPath: string): ReadonlyArray<Chat> => {
 }
 
 /**
- * Write the whole file atomically. A turn rewrites this file on every activity
- * and every text flush, so a crash mid-write is not a rare case — and a torn
- * `chats.json` fails `decodeChatsFile` for *every* chat, not just the one being
- * written. Writing a sibling temp file and renaming it makes the swap atomic on
- * POSIX, so a reader only ever sees a complete file.
+ * A torn `chats.json` fails to decode for *every* chat, and a streaming turn
+ * rewrites this file constantly — so readers only ever see a whole file:
+ * written beside the target, then swapped in by an atomic rename.
  */
 export const writeChats = (
   repoPath: string,
@@ -62,12 +57,12 @@ export const writeChats = (
 ): void => {
   mkdirSync(`${repoPath}/.byconvo`, { recursive: true })
   const target = chatsPath(repoPath)
-  const temp = `${target}.${process.pid}.tmp`
+  const beside = `${target}.${process.pid}.tmp`
   try {
-    writeFileSync(temp, `${JSON.stringify(chats, null, 2)}\n`)
-    renameSync(temp, target)
+    writeFileSync(beside, `${JSON.stringify(chats, null, 2)}\n`)
+    renameSync(beside, target)
   } catch (error) {
-    rmSync(temp, { force: true })
+    rmSync(beside, { force: true })
     throw error
   }
 }
@@ -96,6 +91,12 @@ export const patchChat = (
 
 // --- Turn-progress mutations (used by the runtime while a turn streams) -----
 
+const titleFromFirstPrompt = (current: string, prompt: string): string => {
+  if (current !== DEFAULT_CHAT_TITLE) return current
+  const seeded = titleFromPrompt(prompt)
+  return seeded.length > 0 ? seeded : current
+}
+
 export const appendTurnStart = (
   repoPath: string,
   chatId: string,
@@ -107,12 +108,7 @@ export const appendTurnStart = (
 ): Chat | undefined =>
   patchChat(repoPath, chatId, (chat) => ({
     ...chat,
-    // Name the chat after its first prompt (like t3code's title seed).
-    title:
-      chat.title === DEFAULT_CHAT_TITLE &&
-      titleFromPrompt(input.userMessage.text).length > 0
-        ? titleFromPrompt(input.userMessage.text)
-        : chat.title,
+    title: titleFromFirstPrompt(chat.title, input.userMessage.text),
     updatedAt: input.turn.startedAt,
     messages: [...chat.messages, input.userMessage, input.assistantMessage],
     latestTurn: input.turn,
@@ -168,9 +164,8 @@ export const appendActivity = (
     activities: [...chat.activities, activity],
   }))
 
-/** Persist the assistant text streamed so far, leaving the message streaming.
- * Without this the reply only exists in the parser's closure, so a crash or a
- * kill mid-turn loses every token the user already watched arrive. */
+/** Until this lands, the reply exists only in the parser's closure — a crash
+ * loses every token the user already watched arrive. */
 export const saveStreamingText = (
   repoPath: string,
   chatId: string,
@@ -184,14 +179,30 @@ export const saveStreamingText = (
     ),
   }))
 
+const asInterrupted = (
+  chat: Chat,
+  endedAt: string,
+  errorMessage: string
+): Chat =>
+  chat.latestTurn === null
+    ? chat
+    : {
+        ...chat,
+        messages: chat.messages.map((message) =>
+          message.streaming ? { ...message, streaming: false } : message
+        ),
+        latestTurn: {
+          ...chat.latestTurn,
+          state: "interrupted" as const,
+          endedAt,
+          errorMessage,
+        },
+      }
+
 /**
- * Settle every turn the file still calls "running" that no live process backs —
- * the residue of a server crash, a kill, or a quit mid-turn. Whatever text had
- * been flushed stays as the reply; the turn becomes `interrupted` so the
- * sidebar, the composer and the Stop button stop believing work is in flight.
- *
- * Runs over the whole file in one pass (and one write) rather than per-chat on
- * socket attach, so a chat the user never reopens is repaired too.
+ * Whatever text was flushed stays as the reply; the turn becomes `interrupted`
+ * so the sidebar, the composer and the Stop button stop believing work is in
+ * flight. One pass over the whole file repairs chats the user never reopens.
  */
 export const settleStaleTurns = (
   repoPath: string,
@@ -199,31 +210,19 @@ export const settleStaleTurns = (
   errorMessage: string
 ): ReadonlyArray<string> => {
   const chats = readChats(repoPath)
-  const stale = chats.filter(
-    (c) => c.latestTurn?.state === "running" && !isLive(c.id)
+  const staleIds = new Set(
+    chats
+      .filter(
+        (chat) => chat.latestTurn?.state === "running" && !isLive(chat.id)
+      )
+      .map((chat) => chat.id)
   )
-  if (stale.length === 0) return []
+  if (staleIds.size === 0) return []
   const endedAt = new Date().toISOString()
-  const staleIds = new Set(stale.map((c) => c.id))
   writeChats(
     repoPath,
     chats.map((chat) =>
-      staleIds.has(chat.id) && chat.latestTurn !== null
-        ? {
-            ...chat,
-            // Every orphaned placeholder settles, not just the last one — two
-            // can pile up when a crash is followed by another turn starting.
-            messages: chat.messages.map((m) =>
-              m.streaming ? { ...m, streaming: false } : m
-            ),
-            latestTurn: {
-              ...chat.latestTurn,
-              state: "interrupted" as const,
-              endedAt,
-              errorMessage,
-            },
-          }
-        : chat
+      staleIds.has(chat.id) ? asInterrupted(chat, endedAt, errorMessage) : chat
     )
   )
   return [...staleIds]

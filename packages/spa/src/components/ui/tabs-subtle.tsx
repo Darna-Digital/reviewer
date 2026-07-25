@@ -35,6 +35,14 @@ interface TabsSubtleContextValue {
 
 const TabsSubtleContext = createContext<TabsSubtleContextValue | null>(null)
 
+/** Without the padding, `overflow-x-auto` clips the ring's 2px outset. */
+const ROOM_FOR_THE_OUTSET_FOCUS_RING = "-mx-1 -my-1 px-1 py-1"
+
+/** Weight is off-limits for the active state: changing `wght` reflows glyph
+ * advance widths and shoves neighbouring tabs. */
+const ACTIVE_TAB_TEXT = "text-foreground"
+const INACTIVE_TAB_TEXT = "text-muted-foreground"
+
 function useTabsSubtle() {
   const ctx = useContext(TabsSubtleContext)
   if (!ctx) throw new Error("useTabsSubtle must be used within a TabsSubtle")
@@ -79,7 +87,6 @@ const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
       measureItems: measureTabs,
     } = useProximityHover(containerRef, { axis: "x" })
 
-    // Track tab elements locally so we can observe their individual resizes
     const tabElementsRef = useRef(new Map<number, HTMLElement>())
     const registerTab = useCallback(
       (index: number, element: HTMLElement | null) => {
@@ -97,16 +104,16 @@ const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
       measureTabs()
     }, [measureTabs, children])
 
-    // Observe individual tab buttons for resize (label expand/collapse in activeLabel mode)
+    // A tab resizes on its own when `activeLabel` expands or collapses its
+    // label, which the container's own resize never sees.
     useEffect(() => {
-      const elements = tabElementsRef.current
-      if (elements.size === 0) return
-      const ro = new ResizeObserver(() => measureTabs())
-      elements.forEach((el) => ro.observe(el))
-      return () => ro.disconnect()
+      const tabs = tabElementsRef.current
+      if (tabs.size === 0) return
+      const observer = new ResizeObserver(() => measureTabs())
+      tabs.forEach((tab) => observer.observe(tab))
+      return () => observer.disconnect()
     }, [measureTabs, children])
 
-    // Wrap handlers to track isMouseInside
     const handleMouseMove = useCallback(
       (e: React.MouseEvent) => {
         isMouseInside.current = true
@@ -138,17 +145,15 @@ const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
           activeLabel,
         }}
       >
-        {/* Root is merged into List via `render` so a single <div> is emitted,
-            matching the previous DOM structure. Base UI owns role="tablist",
-            roving tabindex, and Arrow/Home/End keyboard navigation.
-            `activateOnFocus={false}` keeps manual activation: arrows move
-            focus, Enter/Space selects. */}
         <Tabs.Root
           value={selectedIndex}
           onValueChange={(value) => {
             if (typeof value === "number") onSelect(value)
           }}
           render={
+            // Rendered as the List so one <div> carries both; Base UI owns
+            // role="tablist", roving tabindex and arrow keys, and manual
+            // activation means arrows move focus while Enter/Space selects.
             <Tabs.List
               activateOnFocus={false}
               ref={(node: HTMLDivElement | null) => {
@@ -179,9 +184,8 @@ const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
                 setHoveredIndex(null)
               }}
               className={cn(
-                // -mx-1 px-1 / -my-1 py-1 give the 2px-outset focus ring room
-                // to draw without being clipped by overflow-x-auto
-                "relative -mx-1 -my-1 flex max-w-full [scrollbar-width:none] items-center gap-0.5 overflow-x-auto px-1 py-1 select-none [&::-webkit-scrollbar]:hidden",
+                "relative flex max-w-full [scrollbar-width:none] items-center gap-0.5 overflow-x-auto select-none [&::-webkit-scrollbar]:hidden",
+                ROOM_FOR_THE_OUTSET_FOCUS_RING,
                 className
               )}
               {...props}
@@ -311,13 +315,11 @@ const TabsSubtleItem = forwardRef<HTMLButtonElement, TabsSubtleItemProps>(
     const collapseLabel = activeLabel && !!Icon
     const showLabel = !collapseLabel || isSelected
 
-    // Active state is color + icon stroke + the sliding pill — never weight.
-    // Changing wght reflows glyph advance widths and shoves neighboring tabs.
     const labelContent = (
       <span
         className={cn(
           "text-[13px] whitespace-nowrap transition-colors duration-[80ms] [text-box:trim-both_cap_alphabetic]",
-          isActive ? "text-foreground" : "text-muted-foreground"
+          isActive ? ACTIVE_TAB_TEXT : INACTIVE_TAB_TEXT
         )}
       >
         {label}
@@ -325,10 +327,6 @@ const TabsSubtleItem = forwardRef<HTMLButtonElement, TabsSubtleItemProps>(
     )
 
     return (
-      // Base UI Tab renders a native <button type="button"> and wires
-      // role="tab", aria-selected, roving tabindex, and activation for us.
-      // id/aria-controls are only overridden when an idPrefix is supplied so
-      // externally rendered TabsSubtlePanel elements stay linked.
       <Tabs.Tab
         ref={(node: HTMLElement | null) => {
           const button = node as HTMLButtonElement | null
@@ -342,9 +340,8 @@ const TabsSubtleItem = forwardRef<HTMLButtonElement, TabsSubtleItemProps>(
         aria-controls={idPrefix ? `${idPrefix}-panel-${index}` : undefined}
         aria-label={collapseLabel && !showLabel ? label : undefined}
         className={cn(
-          // Fixed heights (was py-2 around a 19.5px line box ≈ 35.5px) so the
-          // text-box trim on the label doesn't shrink the tab. Keep shorter
-          // than the dock header so the pill doesn't touch the border edge.
+          // A fixed height keeps the label's text-box trim from shrinking the
+          // tab, and stays under the dock header so the pill clears its border.
           "relative z-10 flex h-7 cursor-pointer items-center border-none bg-transparent px-2.5 outline-none",
           !collapseLabel && "gap-1.5",
           shape.bg,
@@ -358,7 +355,7 @@ const TabsSubtleItem = forwardRef<HTMLButtonElement, TabsSubtleItemProps>(
             stroke={isActive ? 2 : 1.5}
             className={cn(
               "shrink-0 transition-[color,stroke-width] duration-[80ms]",
-              isActive ? "text-foreground" : "text-muted-foreground"
+              isActive ? ACTIVE_TAB_TEXT : INACTIVE_TAB_TEXT
             )}
           />
         )}
@@ -397,9 +394,9 @@ interface TabsSubtlePanelProps extends HTMLAttributes<HTMLDivElement> {
   children: ReactNode
 }
 
-// Rendered outside <TabsSubtle> at every call site, so it cannot use Base UI's
-// Tabs.Panel (which requires the Tabs.Root context). It stays a plain tabpanel
-// linked to its tab through the shared idPrefix.
+/** Every call site renders this outside `<TabsSubtle>`, beyond the reach of
+ * `Tabs.Root`'s context — so it is a plain tabpanel linked by `idPrefix`
+ * rather than Base UI's `Tabs.Panel`. */
 const TabsSubtlePanel = forwardRef<HTMLDivElement, TabsSubtlePanelProps>(
   ({ index, selectedIndex, idPrefix, children, className, ...props }, ref) => {
     const isSelected = selectedIndex === index

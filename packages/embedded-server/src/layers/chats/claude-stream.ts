@@ -155,6 +155,21 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
   /** Thinking already announced for the current assistant message. */
   let announcedThinking = false
 
+  /** The CLI redacts `thinking` on both the deltas and the complete block, so
+   * today this finds nothing; a CLI that stops redacting starts showing
+   * reasoning with no change here. */
+  const adoptUnredactedReasoning = (message: unknown): void => {
+    if (thinking === null || !isRecord(message)) return
+    if (!Array.isArray(message["content"])) return
+    for (const block of message["content"]) {
+      if (!isRecord(block) || block["type"] !== "thinking") continue
+      const reasoning = asString(block["thinking"])
+      if (reasoning !== null && reasoning.length > 0) thinking.text = reasoning
+    }
+  }
+
+  /** Also closes a block whose `content_block_stop` never arrived — partials
+   * disabled, or a truncated run. */
   const settleThinking = (): ClaudeStreamEvent[] => {
     if (thinking === null) return []
     const { callId, text } = thinking
@@ -236,24 +251,7 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
   }
 
   const onAssistantMessage = (message: unknown): ClaudeStreamEvent[] => {
-    // The complete thinking block arrives here, ahead of its
-    // content_block_stop. Its `thinking` field is redacted like the deltas', so
-    // in practice this finds nothing — it is read anyway so that a CLI which
-    // stops redacting starts showing reasoning without a change here.
-    if (
-      thinking !== null &&
-      isRecord(message) &&
-      Array.isArray(message["content"])
-    ) {
-      for (const block of message["content"]) {
-        if (!isRecord(block) || block["type"] !== "thinking") continue
-        const reasoning = asString(block["thinking"])
-        if (reasoning !== null && reasoning.length > 0)
-          thinking.text = reasoning
-      }
-    }
-    // A complete assistant message also closes a thinking block whose
-    // content_block_stop never arrived (partials disabled, or a truncated run).
+    adoptUnredactedReasoning(message)
     const events: ClaudeStreamEvent[] = settleThinking()
     if (!isRecord(message) || !Array.isArray(message["content"])) return events
     for (const block of message["content"]) {
