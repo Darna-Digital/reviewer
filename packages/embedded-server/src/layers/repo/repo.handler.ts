@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { Api } from "../../api.ts"
-import type { LogQuery } from "@byconvo/core/repo"
+import type { DiffFileTarget, LogQuery } from "@byconvo/core/repo"
 import { RepoService } from "@byconvo/core/repo"
 
 const ok = { ok: true } as const
@@ -41,6 +41,17 @@ export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
           return s.rangeDiff(query.base, query.head)
         }
         return s.worktreeDiff
+      })
+    )
+    .handle("diffFile", ({ query }) =>
+      Effect.flatMap(RepoService, (s) => {
+        const target: DiffFileTarget =
+          query.commit !== undefined
+            ? { kind: "commit", sha: query.commit }
+            : query.base !== undefined && query.head !== undefined
+              ? { kind: "range", base: query.base, head: query.head }
+              : { kind: "worktree" }
+        return s.diffFileContents(target, query.path, query.prevPath ?? null)
       })
     )
     .handle("checkout", ({ payload }) =>

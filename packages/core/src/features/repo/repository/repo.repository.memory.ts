@@ -66,6 +66,8 @@ export const makeMemoryRepoRepository = (seed: MemoryRepoSeed = {}) =>
       worktreeDiff: Effect.succeed(seed.diff ?? ""),
       rangeDiff: () => Effect.succeed(seed.diff ?? ""),
       commitDiff: () => Effect.succeed(seed.diff ?? ""),
+      diffFileContents: () =>
+        Effect.succeed({ oldContents: null, newContents: null }),
       checkout: () => Effect.void,
       createBranch: () => Effect.void,
       commit: () => Effect.succeed("newsha1"),

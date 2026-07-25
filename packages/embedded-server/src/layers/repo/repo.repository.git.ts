@@ -475,6 +475,53 @@ export const makeGitRepoRepository = Effect.gen(function* () {
   const commitDiff: RepoRepo["commitDiff"] = (sha) =>
     run("show", "--format=", "--patch", sha)
 
+  // One side of a diff as a full file. Missing blobs (added/deleted files,
+  // unfetched refs, a root commit's parent) resolve to null instead of failing
+  // — the client treats a null side as "can't expand this file".
+  const showFile = (ref: string, path: string) =>
+    run("show", `${ref}:${path}`).pipe(
+      Effect.map((contents): string | null => contents),
+      Effect.catchTag("GitError", () => Effect.succeed(null))
+    )
+
+  const diffFileContents: RepoRepo["diffFileContents"] = (
+    target,
+    path,
+    prevPath
+  ) =>
+    Effect.gen(function* () {
+      const oldPath = prevPath ?? path
+      switch (target.kind) {
+        case "worktree": {
+          // Old side is HEAD (what `git diff HEAD` diffs against); new side is
+          // the file as it sits on disk.
+          const oldContents = yield* showFile("HEAD", oldPath)
+          const root = (yield* run("rev-parse", "--show-toplevel")).trim()
+          const newContents = yield* fs
+            .readFileString(`${root}/${path}`)
+            .pipe(Effect.catch(() => Effect.succeed<string | null>(null)))
+          return { oldContents, newContents }
+        }
+        case "commit": {
+          const oldContents = yield* showFile(`${target.sha}^`, oldPath)
+          const newContents = yield* showFile(target.sha, path)
+          return { oldContents, newContents }
+        }
+        case "range": {
+          // `rangeDiff` uses the three-dot form, whose old side is the merge
+          // base — resolve the same commit so line numbers line up.
+          const mergeBase = (yield* run(
+            "merge-base",
+            target.base,
+            target.head
+          )).trim()
+          const oldContents = yield* showFile(mergeBase, oldPath)
+          const newContents = yield* showFile(target.head, path)
+          return { oldContents, newContents }
+        }
+      }
+    })
+
   const checkout: RepoRepo["checkout"] = (branch) =>
     run("checkout", branch).pipe(Effect.asVoid)
 
@@ -765,6 +812,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     worktreeDiff,
     rangeDiff,
     commitDiff,
+    diffFileContents,
     checkout,
     createBranch,
     commit,

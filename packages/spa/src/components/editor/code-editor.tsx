@@ -164,11 +164,18 @@ export function CodeEditor({ path, theme, onClose, onSaved }: CodeEditorProps) {
     <div className="h-full overflow-auto">
       <section className="diff-file" data-file-anchor={path}>
         <EditorProvider editor={editor}>
-          {/* Remount per file so the editor reseeds from the new contents. */}
+          {/* Remount per file so the editor reseeds from the new contents.
+              disableWorkerPool: the editable view snapshots the rendered code
+              when the editor attaches, so an async worker highlight that lands
+              after attach never reaches it — first open would stay uncolored
+              whenever the pool's AST cache misses (e.g. straight from the diff
+              pane). useLangReady has already primed the main-thread
+              highlighter, which colors the first paint synchronously. */}
           <File
             key={path}
             file={{ name: path, contents: loaded.data.contents }}
             contentEditable
+            disableWorkerPool
             options={{
               theme: THEMES,
               themeType: theme,

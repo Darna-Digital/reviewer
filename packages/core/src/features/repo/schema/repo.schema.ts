@@ -154,6 +154,19 @@ export const DiffQuery = Schema.Struct({
   head: Schema.optionalKey(Schema.String),
 })
 export type DiffQuery = typeof DiffQuery.Type
+export const DiffFileQuery = Schema.Struct({
+  path: Schema.String,
+  prevPath: Schema.optionalKey(Schema.String),
+  commit: Schema.optionalKey(Schema.String),
+  base: Schema.optionalKey(Schema.String),
+  head: Schema.optionalKey(Schema.String),
+})
+export type DiffFileQuery = typeof DiffFileQuery.Type
+export const DiffFileContents = Schema.Struct({
+  oldContents: Schema.NullOr(Schema.String),
+  newContents: Schema.NullOr(Schema.String),
+})
+export type DiffFileContents = typeof DiffFileContents.Type
 export const CommitParam = Schema.Struct({ sha: Schema.String })
 export const Checkout = Schema.Struct({ branch: Schema.String })
 export type Checkout = typeof Checkout.Type
@@ -197,6 +210,16 @@ export const DeleteBranch = Schema.Struct({
   force: Schema.optionalKey(Schema.Boolean),
 })
 export type DeleteBranch = typeof DeleteBranch.Type
+/**
+ * Which diff a full-file-contents lookup belongs to — mirrors the `/diff`
+ * query, so both sides of the file resolve against the same refs the diff
+ * itself was generated from.
+ */
+export type DiffFileTarget =
+  | { readonly kind: "worktree" }
+  | { readonly kind: "commit"; readonly sha: string }
+  | { readonly kind: "range"; readonly base: string; readonly head: string }
+
 export interface LogQuery {
   readonly ref: string
   readonly limit: number

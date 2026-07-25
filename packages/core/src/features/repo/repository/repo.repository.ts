@@ -6,6 +6,8 @@ import type {
   CommitDetail,
   CommitInfo,
   ConflictBlobs,
+  DiffFileContents,
+  DiffFileTarget,
   FilesPayload,
   MergeState,
   RemoteBranchInfo,
@@ -35,6 +37,11 @@ export interface RepoRepo {
     head: string
   ) => Effect.Effect<string, GitFailure>
   readonly commitDiff: (sha: string) => Effect.Effect<string, GitFailure>
+  readonly diffFileContents: (
+    target: DiffFileTarget,
+    path: string,
+    prevPath: string | null
+  ) => Effect.Effect<DiffFileContents, GitFailure>
   readonly checkout: (branch: string) => Effect.Effect<void, GitFailure>
   readonly createBranch: (
     name: string,
