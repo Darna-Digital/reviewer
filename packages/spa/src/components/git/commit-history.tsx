@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useCommitGraph } from "@/interactions/commit-graph/adapters/commit-graph.hook.adapter"
 import { DEFAULT_GRAPH_CONFIG } from "@/interactions/commit-graph/interfaces/commit-graph.interfaces"
 import type { LogQuery } from "@/lib/api/types"
@@ -101,12 +102,15 @@ export function CommitHistory({
       />
 
       <div className="flex min-h-0 flex-1">
-        <ul
-          role="listbox"
-          aria-label="Commits"
-          aria-busy={loading}
-          className="min-h-0 flex-1 overflow-auto"
+        <ScrollArea
+          className="min-h-0 flex-1"
+          viewportClassName="scroll-fade"
         >
+          <ul
+            role="listbox"
+            aria-label="Commits"
+            aria-busy={loading}
+          >
           {commits.map((commit, index) => {
             const row = layout.rows[index]
             const selected = selectedCommitSha === commit.sha
@@ -166,7 +170,8 @@ export function CommitHistory({
                 : "No commits match the current filters."}
             </li>
           )}
-        </ul>
+          </ul>
+        </ScrollArea>
 
         {selectedCommitSha !== null && (
           <div className="w-80 shrink-0 overflow-hidden border-l">

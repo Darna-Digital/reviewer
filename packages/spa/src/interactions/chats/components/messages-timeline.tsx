@@ -8,6 +8,7 @@ import { IconAlertCircle, IconPlayerStopFilled } from "@tabler/icons-react"
 import { useEffect, useRef } from "react"
 import type { Chat, ChatActivity, ChatMessage } from "@byconvo/core/chats"
 import { ThinkingIndicator } from "@/components/ui/thinking-indicator"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { activeWorkStep, toWorkSteps } from "../functions/work-log.functions"
 import { AttachmentGrid, AttachmentPreview } from "./image-attachments"
 import { ChatMarkdown } from "./chat-markdown"
@@ -142,15 +143,16 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
   }
 
   return (
-    <div
-      ref={scrollRef}
-      onScroll={onScroll}
-      className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+    <ScrollArea
+      viewportRef={scrollRef}
+      onViewportScroll={onScroll}
+      className="min-h-0 flex-1"
+      viewportClassName="scroll-fade overscroll-contain"
     >
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6">
         {chat.messages.map(renderMessage)}
         {turnError !== null && <TurnError message={turnError} />}
       </div>
-    </div>
+    </ScrollArea>
   )
 }

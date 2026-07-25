@@ -1,4 +1,5 @@
 import { IconGitBranch } from "@tabler/icons-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { repoAvatar } from "@/lib/repo-avatar"
 import type { RepoEntry } from "@byconvo/core/workspace"
 
@@ -10,7 +11,8 @@ interface RepoListProps {
 
 export function RepoList({ folder, repos, onOpen }: RepoListProps) {
   return (
-    <div className="mx-auto flex h-full max-w-2xl flex-col gap-3 overflow-auto p-8">
+    <ScrollArea className="h-full" viewportClassName="scroll-fade">
+      <div className="mx-auto flex max-w-2xl flex-col gap-3 p-8">
       <div>
         <h2 className="text-base font-medium">{folder.split("/").at(-1)}</h2>
         <p className="text-sm text-muted-foreground">
@@ -43,6 +45,7 @@ export function RepoList({ folder, repos, onOpen }: RepoListProps) {
           )
         })}
       </ul>
-    </div>
+      </div>
+    </ScrollArea>
   )
 }

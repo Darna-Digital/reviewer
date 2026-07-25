@@ -201,7 +201,7 @@ export function Patterns() {
         </Subsection>
 
         <Subsection title="Table">
-          <div className="-mx-4 -my-2 overflow-x-auto whitespace-nowrap sm:-mx-6 lg:mx-0">
+          <div className="-mx-4 -my-2 scroll-fade-x overflow-x-auto whitespace-nowrap sm:-mx-6 lg:mx-0">
             <div className="inline-block min-w-full px-4 py-2 align-middle sm:px-6 lg:px-0">
               <table className="w-full text-left">
                 <thead>

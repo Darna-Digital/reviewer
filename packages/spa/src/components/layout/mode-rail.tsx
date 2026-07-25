@@ -6,8 +6,8 @@ import {
   IconGitPullRequest,
   IconListCheck,
   IconMessageDots,
-  IconMessages,
   IconPlayerPlay,
+  IconSend,
   IconSettings,
   IconTerminal2,
 } from "@tabler/icons-react"
@@ -21,13 +21,16 @@ import {
 import { cn } from "@/lib/utils"
 import { isDesktop } from "@/lib/desktop"
 import type { AppMode } from "@/lib/api/types"
+import {
+  openBottomTab,
+  setUiPrefs,
+  useUiPrefs,
+  type BottomTab,
+} from "@/lib/ui-prefs"
 
 interface ModeRailProps {
   mode: AppMode
   hasGitHub: boolean
-  /** Bottom panel toggle is only meaningful in the git-review shell. */
-  bottomVisible?: boolean
-  onBottomToggle?: () => void
 }
 
 interface ModeDef {
@@ -40,6 +43,12 @@ interface ModeDef {
 // The git-review modes (rendered by AppShell).
 const GIT_MODES: ModeDef[] = [
   {
+    mode: "browse",
+    to: "/browse",
+    label: "Browse the project",
+    icon: IconFolders,
+  },
+  {
     mode: "commit",
     to: "/commit",
     label: "Commit — local changes",
@@ -51,34 +60,16 @@ const GIT_MODES: ModeDef[] = [
     label: "Pull requests",
     icon: IconGitPullRequest,
   },
-  {
-    mode: "browse",
-    to: "/browse",
-    label: "Browse the project",
-    icon: IconFolders,
-  },
 ]
 
-// The workspace modes (rendered by WorkspaceShell).
-const WORKSPACE_MODES: ModeDef[] = [
+// Conversation surfaces — agent threads + comments share a rail group,
+// separated from docs/tasks by their own divider.
+const WORKSPACE_CONVERSATION: ModeDef[] = [
   {
     mode: "chats",
     to: "/chats",
     label: "Agent threads",
-    icon: IconMessages,
-  },
-  {
-    mode: "threads",
-    to: "/threads",
-    label: "Terminal threads",
-    icon: IconTerminal2,
-  },
-  { mode: "docs", to: "/docs", label: "Docs & plans", icon: IconFileText },
-  {
-    mode: "tasks",
-    to: "/tasks",
-    label: "Tasks",
-    icon: IconListCheck,
+    icon: IconSend,
   },
   {
     mode: "comments",
@@ -86,11 +77,15 @@ const WORKSPACE_MODES: ModeDef[] = [
     label: "Comments — code & visual",
     icon: IconMessageDots,
   },
+]
+
+const WORKSPACE_PRIMARY: ModeDef[] = [
+  { mode: "docs", to: "/docs", label: "Docs & plans", icon: IconFileText },
   {
-    mode: "local-dev",
-    to: "/local-dev",
-    label: "Local dev",
-    icon: IconPlayerPlay,
+    mode: "tasks",
+    to: "/tasks",
+    label: "Tasks",
+    icon: IconListCheck,
   },
 ]
 
@@ -132,17 +127,32 @@ function RailButton({
   )
 }
 
-export function ModeRail({
-  mode,
-  hasGitHub,
-  bottomVisible,
-  onBottomToggle,
-}: ModeRailProps) {
+/** Show a bottom-dock tab, or hide the dock if that tab is already active. */
+function toggleBottomTab(tab: BottomTab, current: BottomTab, visible: boolean) {
+  if (visible && current === tab) {
+    setUiPrefs({ bottomVisible: false })
+    return
+  }
+  openBottomTab(tab)
+}
+
+export function ModeRail({ mode, hasGitHub }: ModeRailProps) {
+  const prefs = useUiPrefs()
+  const gitActive =
+    prefs.bottomVisible &&
+    (prefs.bottomTab === "branches" || prefs.bottomTab === "history")
+  const servicesActive =
+    prefs.bottomVisible && prefs.bottomTab === "services"
+  const threadsActive = prefs.bottomVisible && prefs.bottomTab === "threads"
+
   const renderMode = ({ mode: m, to, label, icon: Icon }: ModeDef) => (
     <RailButton key={m} to={to} label={label} active={mode === m}>
       <Icon className="size-5" />
     </RailButton>
   )
+
+  const gitModes = GIT_MODES.filter((m) => m.mode !== "review" || hasGitHub)
+  const [firstGit, ...restGit] = gitModes
 
   return (
     <nav
@@ -152,24 +162,58 @@ export function ModeRail({
         // top-left. Reserve a draggable title-bar strip above the buttons (the
         // height of the top bar) so they clear the lights; empty strip drags the
         // window, the buttons opt back out via [-webkit-app-region:no-drag].
-        isDesktop ? "pt-10 [-webkit-app-region:drag]" : "pt-2"
+        isDesktop && "pt-10 [-webkit-app-region:drag]"
       )}
     >
-      {GIT_MODES.filter((m) => m.mode !== "review" || hasGitHub).map(
-        renderMode
-      )}
+      {/* First mode sits in an h-10 slot so it shares the top-bar row with the
+          repo picker (web). On desktop the pt-10 spacer already clears that row. */}
+      {firstGit &&
+        (isDesktop ? (
+          renderMode(firstGit)
+        ) : (
+          <div className="flex h-10 w-full shrink-0 items-center justify-center">
+            {renderMode(firstGit)}
+          </div>
+        ))}
+      {restGit.map(renderMode)}
       <div className="my-1 h-px w-6 bg-border" />
-      {WORKSPACE_MODES.map(renderMode)}
+      {WORKSPACE_CONVERSATION.map(renderMode)}
+      <div className="my-1 h-px w-6 bg-border" />
+      {WORKSPACE_PRIMARY.map(renderMode)}
       <div className="mt-auto flex flex-col items-center gap-1">
-        {onBottomToggle && (
-          <RailButton
-            label="Toggle bottom panel"
-            active={bottomVisible}
-            onClick={onBottomToggle}
-          >
-            <IconGitFork className="size-5" />
-          </RailButton>
-        )}
+        <RailButton
+          label="Branches & History"
+          active={gitActive}
+          onClick={() => {
+            const gitTab =
+              prefs.bottomTab === "history" ? "history" : "branches"
+            if (prefs.bottomVisible && gitActive) {
+              setUiPrefs({ bottomVisible: false })
+              return
+            }
+            openBottomTab(gitTab)
+          }}
+        >
+          <IconGitFork className="size-5" />
+        </RailButton>
+        <RailButton
+          label="Services"
+          active={servicesActive}
+          onClick={() =>
+            toggleBottomTab("services", prefs.bottomTab, prefs.bottomVisible)
+          }
+        >
+          <IconPlayerPlay className="size-5" />
+        </RailButton>
+        <RailButton
+          label="Terminal threads"
+          active={threadsActive}
+          onClick={() =>
+            toggleBottomTab("threads", prefs.bottomTab, prefs.bottomVisible)
+          }
+        >
+          <IconTerminal2 className="size-5" />
+        </RailButton>
         <RailButton
           to="/settings"
           label="Settings"

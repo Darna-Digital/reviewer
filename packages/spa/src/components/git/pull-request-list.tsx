@@ -12,6 +12,7 @@ import {
   SidebarSearch,
 } from "@/components/layout/sidebar-filters"
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { dateCutoff, type DateFilter } from "@/lib/date-filter"
 import { cn } from "@/lib/utils"
 import type { PullRequestInfo } from "@byconvo/core/ports/git-provider"
@@ -112,7 +113,10 @@ export function PullRequestList({
           active={filtersActive}
         />
       </div>
-      <div className="min-h-0 flex-1 overflow-auto px-1 py-2">
+      <ScrollArea
+        className="min-h-0 flex-1"
+        viewportClassName="scroll-fade px-1 py-2"
+      >
         {error !== null ? (
           <p className="px-3 py-6 text-center text-xs text-destructive">
             {error}
@@ -158,7 +162,7 @@ export function PullRequestList({
         ) : (
           groups[0]?.pulls.map(renderRow)
         )}
-      </div>
+      </ScrollArea>
     </aside>
   )
 }

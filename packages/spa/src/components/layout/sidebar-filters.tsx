@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   DATE_FILTERS,
   dateFilterLabel,
@@ -118,24 +119,24 @@ export function SidebarFilterMenu({
           >
             <IconAdjustmentsHorizontal className="size-4" />
             {active && (
-              <span className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" />
+              <span className="absolute top-1 right-1 size-1.5 rounded-full bg-brand-500" />
             )}
           </Button>
         }
       />
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-72">
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <IconGitBranch className="size-4" />
             <span>Branch</span>
-            <span className="ml-auto max-w-[88px] truncate text-xs text-muted-foreground">
+            <span className="ml-auto max-w-28 truncate text-xs text-muted-foreground">
               {branchSummary}
             </span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-56 p-1">
-            <div className="relative p-1">
-              <IconSearch className="pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
+          <DropdownMenuSubContent className="w-72">
+            <div className="flex items-center gap-2 border-b px-2.5 py-2">
+              <IconSearch className="size-4 shrink-0 text-muted-foreground" />
+              <input
                 autoFocus
                 aria-label="Search branches"
                 placeholder="Search branches…"
@@ -144,15 +145,36 @@ export function SidebarFilterMenu({
                 // Keep typing in the input rather than the menu's typeahead,
                 // but still let Escape close and arrows move into the list.
                 onKeyDown={(e) => {
-                  if (!["Escape", "ArrowDown", "ArrowUp"].includes(e.key))
+                  if (e.key === "Escape") return
+                  if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault()
                     e.stopPropagation()
+                    const popup = e.currentTarget.closest(
+                      '[data-slot="dropdown-menu-sub-content"], [data-slot="dropdown-menu-content"]'
+                    )
+                    if (!(popup instanceof HTMLElement)) return
+                    const items = popup.querySelectorAll<HTMLElement>(
+                      '[data-slot="dropdown-menu-radio-item"]:not([data-disabled])'
+                    )
+                    if (items.length === 0) return
+                    const item =
+                      e.key === "ArrowDown"
+                        ? items[0]
+                        : items[items.length - 1]
+                    item.focus()
+                    return
+                  }
+                  e.stopPropagation()
                 }}
-                className="h-7 rounded-md pl-8"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
             </div>
-            <div className="mt-1 max-h-64 overflow-y-auto">
+            <ScrollArea
+              className="max-h-64"
+              viewportClassName="scroll-fade p-1"
+            >
               {!showAll && shownBranches.length === 0 ? (
-                <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+                <p className="px-2.5 py-4 text-center text-xs text-muted-foreground">
                   No branches match.
                 </p>
               ) : (
@@ -172,18 +194,18 @@ export function SidebarFilterMenu({
                   ))}
                 </DropdownMenuRadioGroup>
               )}
-            </div>
+            </ScrollArea>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <IconClock className="size-4" />
             <span>Time</span>
-            <span className="ml-auto max-w-[88px] truncate text-xs text-muted-foreground">
+            <span className="ml-auto max-w-28 truncate text-xs text-muted-foreground">
               {dateSummary}
             </span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-40">
+          <DropdownMenuSubContent className="w-72">
             <DropdownMenuRadioGroup
               value={dateValue}
               onValueChange={(v) => onDateChange(v as DateFilter)}

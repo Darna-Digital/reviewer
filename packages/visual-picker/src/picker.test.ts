@@ -20,12 +20,17 @@ const armPicker = () =>
     new KeyboardEvent("keydown", { key: "c", altKey: true, bubbles: true })
   )
 
+const pressEscape = () =>
+  document.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+  )
+
 const hover = (target: Element) =>
   target.dispatchEvent(new MouseEvent("mousemove", { bubbles: true }))
 
-const click = (target: Element) =>
+const click = (target: Element, init: MouseEventInit = {}) =>
   target.dispatchEvent(
-    new MouseEvent("click", { bubbles: true, cancelable: true })
+    new MouseEvent("click", { bubbles: true, cancelable: true, ...init })
   )
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -39,6 +44,8 @@ beforeEach(async () => {
   document.body.innerHTML = `
     <main>
       <button id="save" class="btn btn-primary">Save changes</button>
+      <button id="menu" aria-haspopup="menu">Open menu</button>
+      <div id="menu-item" role="menuitem">Rename</div>
     </main>`
   vi.stubGlobal(
     "fetch",
@@ -116,6 +123,58 @@ describe("placement", () => {
   })
 })
 
+describe("entering and leaving comment mode", () => {
+  const launcher = () => query(".launcher") as HTMLElement
+  const label = () => query(".toggle-label") as HTMLElement
+  const hint = () => query("kbd") as HTMLElement
+
+  it("labels the launcher Comment / ⌥C while idle", () => {
+    expect(label().textContent).toBe("Comment")
+    expect(hint().textContent).toBe("⌥C")
+    expect(launcher().dataset["active"]).toBe("false")
+  })
+
+  it("arms via ⌥C and shows Stop / Esc", () => {
+    armPicker()
+
+    expect(launcher().dataset["active"]).toBe("true")
+    expect(label().textContent).toBe("Stop")
+    expect(hint().textContent).toBe("Esc")
+  })
+
+  it("leaves picking with Escape", () => {
+    armPicker()
+    pressEscape()
+
+    expect(launcher().dataset["active"]).toBe("false")
+    expect(label().textContent).toBe("Comment")
+  })
+
+  it("steps composing → picking → idle on Escape", () => {
+    const target = document.getElementById("save")!
+    armPicker()
+    hover(target)
+    click(target)
+    expect((query(".composer") as HTMLElement).hidden).toBe(false)
+
+    pressEscape()
+    expect((query(".composer") as HTMLElement).hidden).toBe(true)
+    expect(launcher().dataset["active"]).toBe("true")
+
+    pressEscape()
+    expect(launcher().dataset["active"]).toBe("false")
+  })
+
+  it("toggles off via the launcher button", () => {
+    armPicker()
+    ;(query(".toggle") as HTMLElement).dispatchEvent(
+      new MouseEvent("click", { bubbles: true })
+    )
+
+    expect(launcher().dataset["active"]).toBe("false")
+  })
+})
+
 describe("picking", () => {
   it("stays dormant until armed", () => {
     hover(document.getElementById("save")!)
@@ -141,6 +200,45 @@ describe("picking", () => {
     armPicker()
     hover(target)
     click(target)
+
+    expect(appHandler).not.toHaveBeenCalled()
+    expect((query(".composer") as HTMLElement).hidden).toBe(false)
+  })
+
+  it("lets dropdown triggers open so their contents can be commented on", () => {
+    const trigger = document.getElementById("menu")!
+    const appHandler = vi.fn()
+    trigger.addEventListener("click", appHandler)
+
+    armPicker()
+    hover(trigger)
+    click(trigger)
+
+    expect(appHandler).toHaveBeenCalled()
+    expect((query(".composer") as HTMLElement).hidden).toBe(true)
+  })
+
+  it("picks items inside an open menu", () => {
+    const item = document.getElementById("menu-item")!
+    const appHandler = vi.fn()
+    item.addEventListener("click", appHandler)
+
+    armPicker()
+    hover(item)
+    click(item)
+
+    expect(appHandler).not.toHaveBeenCalled()
+    expect((query(".composer") as HTMLElement).hidden).toBe(false)
+  })
+
+  it("force-picks a dropdown trigger with shift-click", () => {
+    const trigger = document.getElementById("menu")!
+    const appHandler = vi.fn()
+    trigger.addEventListener("click", appHandler)
+
+    armPicker()
+    hover(trigger)
+    click(trigger, { shiftKey: true })
 
     expect(appHandler).not.toHaveBeenCalled()
     expect((query(".composer") as HTMLElement).hidden).toBe(false)
@@ -188,5 +286,29 @@ describe("saving", () => {
     await flush()
 
     expect(posted.filter((call) => call.method === "POST")).toHaveLength(0)
+  })
+
+  it("saves a comment anchored to a menu item", async () => {
+    const item = document.getElementById("menu-item")!
+    armPicker()
+    hover(item)
+    click(item)
+    const textarea = query("textarea") as HTMLTextAreaElement
+    textarea.value = "Rename should be clearer"
+    textarea.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Enter",
+        metaKey: true,
+        bubbles: true,
+      })
+    )
+    await flush()
+
+    const post = posted.find((call) => call.method === "POST")
+    expect(post!.body).toMatchObject({
+      body: "Rename should be clearer",
+      tagName: "div",
+      elementText: "Rename",
+    })
   })
 })

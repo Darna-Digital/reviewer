@@ -9,6 +9,7 @@ import {
 } from "@tabler/icons-react"
 import type { ComponentType, ReactNode } from "react"
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
 import {
   setUiPrefs,
@@ -99,8 +100,9 @@ export function SettingsPage() {
       <header className="flex h-11 shrink-0 items-center border-b px-4">
         <h1 className="text-sm font-medium">Settings</h1>
       </header>
-      <main className="min-h-0 flex-1 overflow-auto">
-        <div className="mx-auto w-full max-w-3xl py-4">
+      <main className="min-h-0 flex-1">
+        <ScrollArea className="h-full" viewportClassName="scroll-fade">
+          <div className="mx-auto w-full max-w-3xl py-4">
           <section className="border-y">
             <SettingRow
               title="Theme"
@@ -168,7 +170,8 @@ export function SettingsPage() {
               </label>
             </SettingRow>
           </section>
-        </div>
+          </div>
+        </ScrollArea>
       </main>
     </div>
   )

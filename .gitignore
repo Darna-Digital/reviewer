@@ -8,3 +8,4 @@ dist-packaged/
 .idea
 /_shell.html
 packages/visual-picker/src/bundle.generated.ts
+.pnpm-store/

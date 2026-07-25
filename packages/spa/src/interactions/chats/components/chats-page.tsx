@@ -19,6 +19,7 @@ import {
   SidebarSearch,
 } from "@/components/layout/sidebar-filters"
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import type { ChatSummary } from "@byconvo/core/chats"
 import { dateCutoff, type DateFilter } from "@/lib/date-filter"
@@ -32,9 +33,9 @@ function TurnStateDot({ state }: { state: ChatSummary["turnState"] }) {
     <span
       className={cn(
         "size-1.5 shrink-0 rounded-full",
-        state === "running" && "animate-pulse bg-primary",
+        state === "running" && "animate-pulse bg-brand-500",
         state === "error" && "bg-destructive",
-        state === "interrupted" && "bg-muted-foreground"
+        state === "interrupted" && "bg-brand-500"
       )}
       aria-label={`turn ${state}`}
     />
@@ -191,7 +192,10 @@ export function ChatsPage() {
             <IconPlus className="size-4" />
           </Button>
         </div>
-        <div className="min-h-0 flex-1 overflow-auto px-1 py-2">
+        <ScrollArea
+          className="min-h-0 flex-1"
+          viewportClassName="scroll-fade px-1 py-2"
+        >
           {summaries.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
               No threads yet. Send a message to start one.
@@ -238,7 +242,7 @@ export function ChatsPage() {
             // A single branch is selected — the filter is the header.
             groups[0]?.chats.map(renderRow)
           )}
-        </div>
+        </ScrollArea>
       </aside>
       <ResizeHandle
         orientation="col"

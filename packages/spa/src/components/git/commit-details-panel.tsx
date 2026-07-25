@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { createCommitDetailsFunctions } from "@/interactions/commit-details/functions/commit-details.functions"
 import { useCommitDetail } from "@/lib/queries"
 import { cn } from "@/lib/utils"
@@ -62,7 +63,11 @@ export function CommitDetailsPanel({
   const rows = fns.buildRows(data.files)
 
   return (
-    <div className="flex h-full flex-col gap-3 overflow-auto p-3 text-sm">
+    <ScrollArea
+      className="h-full"
+      viewportClassName="scroll-fade p-3 text-sm"
+    >
+      <div className="flex flex-col gap-3">
       <div>
         <div className="font-medium">{data.subject}</div>
         {data.body.length > 0 && (
@@ -144,6 +149,7 @@ export function CommitDetailsPanel({
           {data.containingBranches.join(", ")}
         </div>
       )}
-    </div>
+      </div>
+    </ScrollArea>
   )
 }

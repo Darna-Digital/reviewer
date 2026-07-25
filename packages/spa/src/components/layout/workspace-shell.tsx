@@ -1,10 +1,10 @@
 /**
- * WorkspaceShell — the layout for the workspace feature pages (threads, docs,
+ * WorkspaceShell — the layout for the workspace feature pages (chats, docs,
  * tasks/settings). It mirrors AppShell's frame (mode rail + a rounded, bordered
  * content panel) and shares the git-review top bar's left cluster — the repo
  * picker and branch switcher — so the open repository is visible and switchable
  * here too. Each feature page renders its own header and body into the
- * `<Outlet />`.
+ * `<Outlet />`. Services and terminal threads live in the shared bottom dock.
  */
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
 import { useState } from "react"
@@ -21,7 +21,6 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
 
 const modeForPath = (pathname: string): AppMode =>
@@ -35,9 +34,7 @@ const modeForPath = (pathname: string): AppMode =>
           ? "tasks"
           : pathname.startsWith("/comments")
             ? "comments"
-            : pathname.startsWith("/local-dev")
-              ? "local-dev"
-              : "threads"
+            : "chats"
 
 export function WorkspaceShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -47,7 +44,6 @@ export function WorkspaceShell() {
   const branches = useBranches()
   const remoteBranches = useRemoteBranches()
   const git = useGitActions()
-  const prefs = useUiPrefs()
   const [pickerOpen, setPickerOpen] = useState(false)
 
   const mode = modeForPath(pathname)
@@ -57,14 +53,7 @@ export function WorkspaceShell() {
 
   return (
     <div className="flex h-svh w-full overflow-hidden text-foreground">
-      <ModeRail
-        mode={mode}
-        hasGitHub={hasGitHub}
-        bottomVisible={prefs.bottomVisible}
-        onBottomToggle={() =>
-          setUiPrefs({ bottomVisible: !prefs.bottomVisible })
-        }
-      />
+      <ModeRail mode={mode} hasGitHub={hasGitHub} />
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar — repo picker + branch switcher, like the git-review shell.
             In desktop it doubles as the draggable title bar (clusters opt out). */}

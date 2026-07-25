@@ -8,9 +8,12 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
-  IconBrandGit,
+  IconArrowDown,
+  IconArrowUp,
   IconChevronDown,
   IconChevronRight,
+  IconCloud,
+  IconCloudDownload,
   IconFolder,
   IconGitBranch,
   IconSearch,
@@ -37,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { handleBranchSearchKeyDown } from "@/components/layout/branch-search-keydown"
 import { cn } from "@/lib/utils"
 import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo"
 
@@ -178,9 +182,9 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
   const showNew = matches("New Branch")
   const showRevision = matches("Checkout Tag or Revision")
   const repoActions = [
-    { label: "Fetch", run: props.onFetch },
-    { label: "Pull", run: props.onPull },
-    { label: "Push", run: props.onPush },
+    { label: "Fetch", run: props.onFetch, icon: IconCloudDownload },
+    { label: "Pull", run: props.onPull, icon: IconArrowDown },
+    { label: "Push", run: props.onPush, icon: IconArrowUp },
   ].filter((a) => matches(REPO_ACTIONS_LABEL) || matches(a.label))
 
   const newBranch = (startPoint: string | null, label: string) =>
@@ -271,7 +275,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
             </span>
           )}
         </DropdownMenuSubTrigger>
-        <DropdownMenuSubContent className="w-64">
+        <DropdownMenuSubContent className="w-72">
           {renderActions({
             display: branch.name,
             ref: branch.name,
@@ -292,7 +296,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           {branch.remote}
         </span>
       </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="w-64">
+      <DropdownMenuSubContent className="w-72">
         {renderActions({
           display: branch.name,
           ref: branch.shortName,
@@ -326,44 +330,38 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           className="max-h-[70vh] w-72 overflow-auto p-0"
         >
           {/* Filter box — a plain row, not a menu item, so typing never navigates. */}
-          <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-popover px-2 py-1.5">
-            <IconSearch className="size-3.5 shrink-0 text-muted-foreground" />
+          <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-popover px-2.5 py-2">
+            <IconSearch className="size-4 shrink-0 text-muted-foreground" />
             <input
               ref={searchRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                // Let Escape bubble to dismiss the menu; swallow everything else
-                // so base-ui's typeahead/arrow navigation doesn't hijack typing.
-                if (e.key !== "Escape") e.stopPropagation()
-              }}
-              placeholder="Search for branches and actions"
+              onKeyDown={handleBranchSearchKeyDown}
+              placeholder="Search branches"
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
 
           <div className="p-1">
             {repoActions.length > 0 && (
-              <>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <IconBrandGit className="size-3.5 text-muted-foreground" />
-                    <span>{REPO_ACTIONS_LABEL}</span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-40">
-                    {repoActions.map(({ label, run }) => (
-                      <DropdownMenuItem
-                        key={label}
-                        disabled={busy}
-                        onClick={run}
-                      >
-                        {label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-                <DropdownMenuSeparator />
-              </>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <IconCloud className="size-3.5 text-muted-foreground" />
+                  <span>{REPO_ACTIONS_LABEL}</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-72">
+                  {repoActions.map(({ label, run, icon: Icon }) => (
+                    <DropdownMenuItem
+                      key={label}
+                      disabled={busy}
+                      onClick={run}
+                    >
+                      <Icon className="size-3.5 text-muted-foreground" />
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
             )}
 
             {showNew && (

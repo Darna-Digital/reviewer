@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useLocalDevActions } from "@/interactions/local-dev/adapters/local-dev.hook.adapter"
 import type { DevCommandView } from "@byconvo/core/local-dev"
 import { useDevCommands } from "@/lib/queries"
@@ -138,7 +139,7 @@ export function LocalDevPage() {
         style={{ width: sidebarWidth }}
       >
         <div className="flex items-center justify-between gap-1 px-3 py-2">
-          <span className="text-sm font-medium">Local dev</span>
+          <span className="text-sm font-medium">Services</span>
           <div className="flex items-center gap-0.5">
             <Button
               size="icon"
@@ -174,7 +175,10 @@ export function LocalDevPage() {
             </Button>
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-auto px-1 pb-2">
+        <ScrollArea
+          className="min-h-0 flex-1"
+          viewportClassName="scroll-fade px-1 pb-2"
+        >
           {items.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
               No dev commands yet. Add one with the + button.
@@ -249,12 +253,12 @@ export function LocalDevPage() {
                     removeCommand(c.id)
                   }}
                 >
-                  <IconTrash className="size-3.5" />
+                <IconTrash className="size-3.5" />
                 </button>
               </div>
             ))
           )}
-        </div>
+        </ScrollArea>
       </aside>
       <ResizeHandle
         orientation="col"

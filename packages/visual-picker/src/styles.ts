@@ -7,7 +7,12 @@ export const styles = `
     pointer-events: none;
     font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
       system-ui, sans-serif;
-    --accent: #7c5cff;
+    --accent: oklch(0.69 0.16 265.2);
+    --accent-soft: oklch(0.69 0.16 265.2 / 0.12);
+    --accent-mid: oklch(0.69 0.16 265.2 / 0.2);
+    --accent-ring: oklch(0.69 0.16 265.2 / 0.25);
+    --accent-glow: oklch(0.69 0.16 265.2 / 0.4);
+    --accent-fill: oklch(0.69 0.16 265.2 / 0.22);
     --surface: rgba(18, 18, 23, 0.92);
     --border: rgba(255, 255, 255, 0.12);
     --text: #f4f4f6;
@@ -20,7 +25,7 @@ export const styles = `
     position: absolute;
     border: 1.5px solid var(--accent);
     border-radius: 3px;
-    background: rgba(124, 92, 255, 0.12);
+    background: var(--accent-soft);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) inset;
     transition: transform 90ms cubic-bezier(0.2, 0.8, 0.2, 1),
       width 90ms cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -28,7 +33,7 @@ export const styles = `
     pointer-events: none;
   }
   .highlight[data-locked="true"] {
-    background: rgba(124, 92, 255, 0.2);
+    background: var(--accent-mid);
     border-width: 2px;
   }
 
@@ -103,7 +108,7 @@ export const styles = `
   .composer textarea:focus {
     outline: none;
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.25);
+    box-shadow: 0 0 0 3px var(--accent-ring);
   }
   .composer textarea::placeholder { color: var(--muted); }
   .composer .actions {
@@ -199,7 +204,7 @@ export const styles = `
   .launcher[data-active="true"] { opacity: 1; }
   .launcher[data-active="true"] {
     border-color: var(--accent);
-    box-shadow: 0 8px 28px rgba(124, 92, 255, 0.4);
+    box-shadow: 0 8px 28px var(--accent-glow);
   }
   .launcher[data-placement="bottom-left"] { left: 16px; bottom: 16px; }
   .launcher[data-placement="bottom-right"] { right: 16px; bottom: 16px; }
@@ -293,7 +298,7 @@ export const styles = `
   }
   .settings-option:hover { background: rgba(255, 255, 255, 0.08); filter: none; }
   .settings-option[data-active="true"] {
-    background: rgba(124, 92, 255, 0.22);
+    background: var(--accent-fill);
     color: var(--text);
   }
 

@@ -15,9 +15,11 @@ import {
   IconGitCommit,
   IconGitPullRequest,
   IconLayoutBottombarExpand,
+  IconPlayerPlay,
   IconRefresh,
   IconRepeat,
   IconSettings,
+  IconTerminal2,
 } from "@tabler/icons-react"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -83,7 +85,8 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
+import { openBottomTab, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
+import { cn } from "@/lib/utils"
 
 type Search = {
   base?: string
@@ -181,10 +184,6 @@ export function AppShell() {
   // The branch whose history the bottom panel shows; falls back to HEAD.
   const [logRef, setLogRef] = useState<string | null>(null)
   const log = useLog(logRef ?? repo.data?.currentBranch ?? null, logFilters)
-
-  const [bottomTab, setBottomTab] = useState<"branches" | "history">(
-    mode === "browse" ? "history" : "branches"
-  )
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
@@ -548,8 +547,24 @@ export function AppShell() {
         label: prefs.bottomVisible ? "Hide Bottom Panel" : "Show Bottom Panel",
         group: "View",
         icon: IconLayoutBottombarExpand,
-        keywords: "branches history toggle",
+        keywords: "branches history services threads toggle",
         run: () => setUiPrefs({ bottomVisible: !prefs.bottomVisible }),
+      },
+      {
+        id: "view-services",
+        label: "Open Services",
+        group: "View",
+        icon: IconPlayerPlay,
+        keywords: "local dev commands run configurations",
+        run: () => openBottomTab("services"),
+      },
+      {
+        id: "view-threads",
+        label: "Open Terminal Threads",
+        group: "View",
+        icon: IconTerminal2,
+        keywords: "terminal shell agent cli",
+        run: () => openBottomTab("threads"),
       },
       {
         id: "repo-switch",
@@ -709,10 +724,6 @@ export function AppShell() {
         <ModeRail
           mode={mode}
           hasGitHub={hasGitHub}
-          bottomVisible={prefs.bottomVisible}
-          onBottomToggle={() =>
-            setUiPrefs({ bottomVisible: !prefs.bottomVisible })
-          }
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar
@@ -850,40 +861,42 @@ export function AppShell() {
                 label="Resize bottom panel"
               />
             )}
-            {prefs.bottomVisible && (
-              <div
-                className="shrink-0 overflow-hidden border-t"
-                style={{ height: bottomHeight }}
-              >
-                <BottomPanel
-                  tab={bottomTab}
-                  onTabChange={setBottomTab}
-                  branches={branches.data ?? []}
-                  remoteBranches={remoteBranches.data ?? []}
-                  currentBranch={repo.data?.currentBranch ?? null}
-                  commits={log.data ?? []}
-                  commitsLoading={log.isPending}
-                  logRef={logRef ?? repo.data?.currentBranch ?? null}
-                  logFilters={logFilters}
-                  selectedCommitSha={
-                    browse?.kind === "commit" ? browse.sha : null
-                  }
-                  onLogRefChange={setLogRef}
-                  onLogFiltersChange={setLogFilters}
-                  onBranchCheckout={(b) => {
-                    void git.checkout(b)
-                    void navigate({ to: "/commit" })
-                  }}
-                  onSelectCommit={(c) =>
-                    void navigate({
-                      to: "/browse/commit/$sha",
-                      params: { sha: c.sha },
-                    })
-                  }
-                  onSelectCommitFile={(p) => openFile(p, false)}
-                />
-              </div>
-            )}
+            <div
+              className={cn(
+                "shrink-0 overflow-hidden border-t",
+                !prefs.bottomVisible && "hidden"
+              )}
+              style={{ height: bottomHeight }}
+              hidden={!prefs.bottomVisible}
+            >
+              <BottomPanel
+                tab={prefs.bottomTab}
+                onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
+                branches={branches.data ?? []}
+                remoteBranches={remoteBranches.data ?? []}
+                currentBranch={repo.data?.currentBranch ?? null}
+                commits={log.data ?? []}
+                commitsLoading={log.isPending}
+                logRef={logRef ?? repo.data?.currentBranch ?? null}
+                logFilters={logFilters}
+                selectedCommitSha={
+                  browse?.kind === "commit" ? browse.sha : null
+                }
+                onLogRefChange={setLogRef}
+                onLogFiltersChange={setLogFilters}
+                onBranchCheckout={(b) => {
+                  void git.checkout(b)
+                  void navigate({ to: "/commit" })
+                }}
+                onSelectCommit={(c) =>
+                  void navigate({
+                    to: "/browse/commit/$sha",
+                    params: { sha: c.sha },
+                  })
+                }
+                onSelectCommitFile={(p) => openFile(p, false)}
+              />
+            </div>
           </div>
         </div>
       </div>

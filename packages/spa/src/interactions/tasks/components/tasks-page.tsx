@@ -38,6 +38,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import {
@@ -415,7 +416,12 @@ export function TasksPage() {
         </label>
       </header>
 
-      <div className="flex min-h-0 flex-1 gap-3 overflow-auto p-4">
+      <ScrollArea
+        className="min-h-0 flex-1"
+        orientation="both"
+        viewportClassName="scroll-fade p-4"
+      >
+        <div className="flex gap-3">
         {groups.map((group) => (
           <div
             key={group.key}
@@ -498,7 +504,11 @@ export function TasksPage() {
               )}
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto px-2 pb-2">
+            <ScrollArea
+              className="min-h-0 flex-1"
+              viewportClassName="scroll-fade px-2 pb-2"
+            >
+              <div className="flex flex-col gap-2">
               {group.cards.map((card) => (
                 <div
                   key={card.id}
@@ -583,7 +593,8 @@ export function TasksPage() {
                   <IconPlus className="size-4" /> Add card
                 </Button>
               )}
-            </div>
+              </div>
+            </ScrollArea>
           </div>
         ))}
 
@@ -636,7 +647,8 @@ export function TasksPage() {
             <IconPlus className="size-4" /> Add column
           </Button>
         )}
-      </div>
+        </div>
+      </ScrollArea>
 
       <Dialog
         open={editing !== null}
@@ -681,7 +693,11 @@ export function TasksPage() {
                 Comments
               </div>
               {editingLive !== null && editingLive.comments.length > 0 ? (
-                <ul className="flex max-h-56 flex-col gap-2 overflow-auto">
+                <ScrollArea
+                  className="max-h-56"
+                  viewportClassName="scroll-fade"
+                >
+                  <ul className="flex flex-col gap-2">
                   {editingLive.comments
                     .filter((c) => c.parentId === null)
                     .flatMap((top) => [
@@ -691,7 +707,8 @@ export function TasksPage() {
                       ),
                     ])
                     .map((c) => renderComment(c, c.parentId !== null))}
-                </ul>
+                  </ul>
+                </ScrollArea>
               ) : (
                 <p className="text-xs text-muted-foreground">
                   No comments yet. Reply or @-mention an agent (e.g. @claude) to

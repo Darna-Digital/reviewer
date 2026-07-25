@@ -28,12 +28,12 @@ const ROLE_TOKENS = [
   {
     token: "brand-500",
     swatch: "bg-brand-500",
-    role: "The accent itself. Rings, dots, active marks.",
+    role: "Small accents only — filter dots, links, status marks.",
   },
   {
     token: "accent",
     swatch: "bg-accent",
-    role: "Selected rows and menu highlights",
+    role: "Selected rows and menu highlights (gray)",
   },
   {
     token: "success",

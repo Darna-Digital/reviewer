@@ -25,11 +25,9 @@ export type AppMode =
   | "review"
   | "browse"
   | "chats"
-  | "threads"
   | "docs"
   | "tasks"
   | "comments"
-  | "local-dev"
   | "settings"
 
 export type DiffTarget =

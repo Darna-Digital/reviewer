@@ -6,6 +6,13 @@ import {
   savePlacement,
   type Placement,
 } from "./placement.ts"
+import type { Mode } from "./pick-mode/entity/pick-mode.interfaces.ts"
+import {
+  createPickModeFunctions,
+  isOverlayTrigger,
+  reduceMode,
+  resolveClickIntent,
+} from "./pick-mode/functions/pick-mode.functions.ts"
 import { styles } from "./styles.ts"
 import type { PickedElement, VisualComment } from "./types.ts"
 
@@ -15,7 +22,7 @@ const HOST_ID = "byconvo-visual-picker"
 const BADGE_GAP = 8
 const EDGE = 12
 
-type Mode = "idle" | "picking" | "composing"
+const pickMode = createPickModeFunctions({ data: {}, sideEffects: {} })
 
 const el = <K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -26,6 +33,19 @@ const el = <K extends keyof HTMLElementTagNameMap>(
   return node
 }
 
+const panelTop = (
+  preferBelow: boolean,
+  above: number,
+  below: number,
+  fitsAbove: boolean,
+  fitsBelow: boolean
+) => {
+  if (preferBelow && fitsBelow) return below
+  if (fitsAbove) return above
+  if (fitsBelow) return below
+  return EDGE
+}
+
 const place = (
   panel: HTMLElement,
   anchor: DOMRect,
@@ -34,16 +54,13 @@ const place = (
   const { width, height } = panel.getBoundingClientRect()
   const above = anchor.top - height - BADGE_GAP
   const below = anchor.bottom + BADGE_GAP
-  const fitsAbove = above >= EDGE
-  const fitsBelow = below + height <= window.innerHeight - EDGE
-  const top =
-    preferBelow && fitsBelow
-      ? below
-      : fitsAbove
-        ? above
-        : fitsBelow
-          ? below
-          : EDGE
+  const top = panelTop(
+    preferBelow,
+    above,
+    below,
+    above >= EDGE,
+    below + height <= window.innerHeight - EDGE
+  )
   const left = Math.min(
     Math.max(anchor.left, EDGE),
     window.innerWidth - width - EDGE
@@ -59,6 +76,8 @@ export class Picker {
   private readonly textarea = el("textarea")
   private readonly saveButton = el("button")
   private readonly launcher = el("div", "launcher")
+  private readonly launcherLabel = el("span", "toggle-label")
+  private readonly launcherHint = el("kbd")
   private readonly launcherCount = el("span", "count")
   private readonly settings = el("div", "settings")
   private readonly pinLayer = el("div")
@@ -95,17 +114,13 @@ export class Picker {
 
   private buildLauncher() {
     const dot = el("span", "dot")
-    const label = el("span")
-    label.textContent = "byconvo"
-    const hint = el("kbd")
-    hint.textContent = "⌥C"
+    this.launcherLabel.textContent = pickMode.launcherLabel("idle")
+    this.launcherHint.textContent = pickMode.launcherHint("idle")
 
     const toggle = el("button", "toggle")
-    toggle.append(dot, label, this.launcherCount, hint)
-    toggle.setAttribute("aria-label", "Toggle byconvo picker")
-    toggle.addEventListener("click", () => {
-      this.setMode(this.mode === "picking" ? "idle" : "picking")
-    })
+    toggle.append(dot, this.launcherLabel, this.launcherCount, this.launcherHint)
+    toggle.setAttribute("aria-label", "Toggle comment mode")
+    toggle.addEventListener("click", () => this.dispatch("toggle"))
 
     const gear = el("button", "gear")
     gear.innerHTML = GEAR_ICON
@@ -145,10 +160,8 @@ export class Picker {
   private applyPlacement() {
     this.launcher.dataset["placement"] = this.placement
     for (const option of this.settings.querySelectorAll(".settings-option")) {
-      const value = (option as HTMLElement).dataset["placement"]
-      ;(option as HTMLElement).dataset["active"] = String(
-        value === this.placement
-      )
+      const node = option as HTMLElement
+      node.dataset["active"] = String(node.dataset["placement"] === this.placement)
     }
   }
 
@@ -156,7 +169,7 @@ export class Picker {
     const target = el("span", "target")
     const actions = el("div", "actions")
     const hint = el("span", "hint")
-    hint.textContent = "⌘↵ to save · Esc to cancel"
+    hint.textContent = "⌘↵ save · Esc cancel · ⇧click menus"
     this.saveButton.textContent = "Comment"
     actions.append(hint, this.saveButton)
 
@@ -168,10 +181,6 @@ export class Picker {
       if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
         void this.save()
-      }
-      if (event.key === "Escape") {
-        event.preventDefault()
-        this.setMode("picking")
       }
       event.stopPropagation()
     })
@@ -185,16 +194,21 @@ export class Picker {
     window.addEventListener("resize", this.queueSync)
   }
 
+  private dispatch(event: Parameters<typeof reduceMode>[1]) {
+    this.setMode(reduceMode(this.mode, event))
+  }
+
   private readonly onKeyDown = (event: KeyboardEvent) => {
     if (event.altKey && (event.key === "c" || event.code === "KeyC")) {
       event.preventDefault()
-      this.setMode(this.mode === "idle" ? "picking" : "idle")
+      this.dispatch("toggle")
       return
     }
-    if (event.key === "Escape" && this.mode !== "idle") {
-      event.preventDefault()
-      this.setMode("idle")
-    }
+
+    if (event.key !== "Escape") return
+    if (this.mode === "idle") return
+    event.preventDefault()
+    this.dispatch("escape")
   }
 
   private readonly onMouseMove = (event: MouseEvent) => {
@@ -207,16 +221,26 @@ export class Picker {
   }
 
   private readonly onClick = (event: MouseEvent) => {
-    const clickedOutsideOverlay = event.target !== this.host
-    if (clickedOutsideOverlay) this.settings.hidden = true
-    if (this.mode !== "picking") return
     const target = event.target
-    if (!(target instanceof Element) || target === this.host) return
+    const isHost = target === this.host
+    if (!isHost) this.settings.hidden = true
+
+    const intent = resolveClickIntent({
+      mode: this.mode,
+      isHost,
+      shiftKey: event.shiftKey,
+      isOverlayTrigger:
+        target instanceof Element && !isHost && isOverlayTrigger(target),
+    })
+
+    if (intent === "ignore" || intent === "pass") return
+    if (!(target instanceof Element)) return
+
     event.preventDefault()
     event.stopPropagation()
     this.picked = describe(target)
     this.hovered = target
-    this.setMode("composing")
+    this.dispatch("pick")
   }
 
   private renderHover(element: Element) {
@@ -233,11 +257,13 @@ export class Picker {
     const tag = el("span", "tag")
     tag.textContent = element.tagName.toLowerCase()
     node.append(tag)
+
     if (element.id.length > 0) {
       const id = el("span", "id")
       id.textContent = `#${element.id}`
       node.append(id)
     }
+
     const classes = Array.from(element.classList).slice(0, 3)
     if (classes.length > 0) {
       const cls = el("span", "cls")
@@ -247,7 +273,6 @@ export class Picker {
 
     const size = el("span", "dim")
     size.textContent = `${Math.round(rect.width)} × ${Math.round(rect.height)}`
-
     this.badge.replaceChildren(node, el("span", "sep"), size)
 
     const { sourceFile, sourceLine, componentName } = sourceLocationOf(element)
@@ -256,6 +281,7 @@ export class Picker {
       component.textContent = `<${componentName}>`
       this.badge.append(el("span", "sep"), component)
     }
+
     if (sourceFile !== undefined) {
       const src = el("span", "src")
       const file = sourceFile.split("/").slice(-2).join("/")
@@ -271,6 +297,8 @@ export class Picker {
   private setMode(mode: Mode) {
     this.mode = mode
     this.launcher.dataset["active"] = String(mode !== "idle")
+    this.launcherLabel.textContent = pickMode.launcherLabel(mode)
+    this.launcherHint.textContent = pickMode.launcherHint(mode)
     document.documentElement.style.cursor =
       mode === "picking" ? "crosshair" : ""
 
@@ -322,7 +350,7 @@ export class Picker {
         viewport: { width: window.innerWidth, height: window.innerHeight },
         ...this.picked,
       })
-      this.setMode("picking")
+      this.dispatch("saved")
       await this.refresh()
       this.toast("Comment saved to byconvo")
     } catch (error) {
@@ -354,10 +382,9 @@ export class Picker {
 
     const live = new Set(here.map((c) => c.id))
     for (const [id, pin] of this.pins) {
-      if (!live.has(id)) {
-        pin.remove()
-        this.pins.delete(id)
-      }
+      if (live.has(id)) continue
+      pin.remove()
+      this.pins.delete(id)
     }
 
     here.forEach((comment, index) => {
@@ -408,14 +435,13 @@ export class Picker {
         rect.top - 8
       )}px)`
     }
-    if (this.openCardId !== null) {
-      const comment = this.comments.find((c) => c.id === this.openCardId)
-      const anchor =
-        comment === undefined ? null : resolveSelector(comment.selector)
-      if (anchor !== null) {
-        place(this.card, anchor.getBoundingClientRect(), { preferBelow: true })
-      }
-    }
+
+    if (this.openCardId === null) return
+    const comment = this.comments.find((c) => c.id === this.openCardId)
+    const anchor =
+      comment === undefined ? null : resolveSelector(comment.selector)
+    if (anchor === null) return
+    place(this.card, anchor.getBoundingClientRect(), { preferBelow: true })
   }
 
   private toggleCard(comment: VisualComment) {
@@ -442,9 +468,8 @@ export class Picker {
     this.card.replaceChildren(meta, body, actions)
     this.card.hidden = false
     const anchor = element ?? this.pins.get(comment.id)
-    if (anchor != null) {
-      place(this.card, anchor.getBoundingClientRect(), { preferBelow: true })
-    }
+    if (anchor == null) return
+    place(this.card, anchor.getBoundingClientRect(), { preferBelow: true })
   }
 
   private closeCard() {

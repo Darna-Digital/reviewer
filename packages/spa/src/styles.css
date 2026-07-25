@@ -66,8 +66,10 @@
 
 /* The baby-blue accent ramp, anchored at brand-500 = oklch(0.69 0.16 265.2).
    Absolute values — both themes pick rungs from it rather than redefining it,
-   so a swatch named brand-500 is the same ink everywhere. Primary stays
-   neutral (near-black / near-white); this ramp is the only hue in the system. */
+   so a swatch named brand-500 is the same ink everywhere.
+
+   Surfaces stay gray (chroma 0). Brand is only for small accents: filter dots,
+   links, status marks — never wash into muted/accent/sidebar highlights. */
 :root {
   --brand-50: oklch(0.977 0.012 265.2);
   --brand-100: oklch(0.951 0.029 265.2);
@@ -84,85 +86,87 @@
 
 :root {
   --background: oklch(1 0 0);
-  --foreground: oklch(0.205 0.008 265.2);
+  --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.205 0.008 265.2);
+  --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.205 0.008 265.2);
+  --popover-foreground: oklch(0.145 0 0);
+  /* Filled actions stay near-black — never the baby-blue. */
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
-  /* The accent as ink on a light surface — links and text-only accent states
-     need more depth than brand-500 to stay readable. */
+  /* Brand as ink on light surfaces — links need more depth than brand-500. */
   --link: var(--brand-700);
-  --secondary: oklch(0.968 0.005 265.2);
-  --secondary-foreground: oklch(0.245 0.01 265.2);
-  --muted: oklch(0.968 0.005 265.2);
-  --muted-foreground: oklch(0.548 0.014 265.2);
-  /* The highlight surface for selected rows and menu items. A tint of the
-     accent rather than the accent itself, so item text stays readable. */
-  --accent: oklch(0.955 0.022 265.2);
-  --accent-foreground: var(--brand-800);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  /* Selected rows / menu highlights — gray, same family as muted. */
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.585 0.21 25);
   --success: oklch(0.58 0.13 155);
   --success-foreground: oklch(1 0 0);
   --warning: oklch(0.72 0.15 75);
   --warning-foreground: oklch(0.28 0.06 75);
-  --border: oklch(0.919 0.006 265.2);
-  --input: oklch(0.944 0.006 265.2);
-  --ring: var(--brand-500);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
   --chart-1: var(--brand-500);
   --chart-2: var(--brand-300);
   --chart-3: var(--brand-700);
   --chart-4: oklch(0.72 0.115 205);
   --chart-5: oklch(0.66 0.13 305);
   --radius: 0.625rem;
-  --sidebar: oklch(0.982 0.004 265.2);
-  --sidebar-foreground: oklch(0.205 0.008 265.2);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.955 0.022 265.2);
-  --sidebar-accent-foreground: var(--brand-800);
-  --sidebar-border: oklch(0.919 0.006 265.2);
-  --sidebar-ring: var(--brand-500);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+  /* RGB channel triple for overlay tints (scroll thumbs, menu hover ramps). */
+  --overlay: 0 0 0;
 }
 
 .dark {
-  --background: oklch(0.209 0.008 265.2);
-  --foreground: oklch(0.968 0.004 265.2);
-  --card: oklch(0.24 0.01 265.2);
-  --card-foreground: oklch(0.968 0.004 265.2);
-  --popover: oklch(0.24 0.01 265.2);
-  --popover-foreground: oklch(0.968 0.004 265.2);
+  --background: oklch(0.209 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
   --link: var(--brand-300);
-  --secondary: oklch(0.278 0.011 265.2);
-  --secondary-foreground: oklch(0.968 0.004 265.2);
-  --muted: oklch(0.278 0.011 265.2);
-  --muted-foreground: oklch(0.705 0.014 265.2);
-  --accent: oklch(0.318 0.038 265.2);
-  --accent-foreground: var(--brand-200);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.7 0.175 22);
   --success: oklch(0.72 0.14 158);
   --success-foreground: oklch(0.22 0.05 158);
   --warning: oklch(0.8 0.14 78);
   --warning-foreground: oklch(0.26 0.06 78);
-  --border: oklch(1 0 0 / 11%);
-  --input: oklch(1 0 0 / 13%);
-  --ring: var(--brand-500);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
   --chart-1: var(--brand-400);
   --chart-2: var(--brand-200);
   --chart-3: var(--brand-600);
   --chart-4: oklch(0.76 0.11 205);
   --chart-5: oklch(0.72 0.12 305);
-  --sidebar: oklch(0.225 0.009 265.2);
-  --sidebar-foreground: oklch(0.968 0.004 265.2);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.922 0 0);
   --sidebar-primary-foreground: oklch(0.205 0 0);
-  --sidebar-accent: oklch(0.318 0.038 265.2);
-  --sidebar-accent-foreground: var(--brand-200);
-  --sidebar-border: oklch(1 0 0 / 11%);
-  --sidebar-ring: var(--brand-500);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+  --overlay: 255 255 255;
 }
 
 @layer base {
@@ -460,34 +464,163 @@ file-tree-container {
   color-scheme: dark;
 }
 
-/* Clean, minimal scrollbars app-wide — a thin rounded thumb that only firms up
-   on hover, instead of the chunky default native block. Applies to every scroll
-   area without an opt-in class; `.scroll-thin` stays as an explicit alias for
-   existing call sites. */
-*,
-.scroll-thin {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+/* Native scrollbars for leftover overflow containers + the touch-primary
+   ScrollArea fallback. Matches the Fluid Functionalism thumb ramp so custom
+   and native scroll affordances share one look. Fine pointers only — touch
+   keeps the platform scrollbar. */
+@media (pointer: fine) {
+  *,
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--overlay) / 0.08) transparent;
+  }
+  *::-webkit-scrollbar,
+  .scroll-thin::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-corner,
+  *::-webkit-scrollbar-track,
+  .scroll-thin::-webkit-scrollbar-corner,
+  .scroll-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb,
+  .scroll-thin::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--overlay) / 0.08);
+    background-clip: content-box;
+    border: 3px solid transparent;
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:vertical,
+  .scroll-thin::-webkit-scrollbar-thumb:vertical {
+    border-left-width: 1px;
+    border-right-width: 5px;
+  }
+  *::-webkit-scrollbar-thumb:horizontal,
+  .scroll-thin::-webkit-scrollbar-thumb:horizontal {
+    border-top-width: 1px;
+    border-bottom-width: 5px;
+  }
+  *::-webkit-scrollbar-thumb:hover,
+  .scroll-thin::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--overlay) / 0.12);
+  }
+  *::-webkit-scrollbar-thumb:active,
+  .scroll-thin::-webkit-scrollbar-thumb:active {
+    background-color: rgb(var(--overlay) / 0.16);
+  }
 }
-*::-webkit-scrollbar,
-.scroll-thin::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+
+/* shadcn scroll-fade — mask dissolves content at edges that still scroll.
+   Drop `scroll-fade` / `scroll-fade-x` on the scrolling viewport. */
+@property --sf-start {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
 }
-*::-webkit-scrollbar-track,
-.scroll-thin::-webkit-scrollbar-track {
-  background: transparent;
+@property --sf-end {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
 }
-*::-webkit-scrollbar-thumb,
-.scroll-thin::-webkit-scrollbar-thumb {
-  background-color: var(--border);
-  border-radius: 9999px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+@keyframes sf-reveal-start {
+  0% {
+    --sf-start: 1;
+  }
+  to {
+    --sf-start: 0;
+  }
 }
-*::-webkit-scrollbar-thumb:hover,
-.scroll-thin::-webkit-scrollbar-thumb:hover {
-  background-color: var(--muted-foreground);
+@keyframes sf-reveal-end {
+  0% {
+    --sf-end: 0;
+  }
+  to {
+    --sf-end: 1;
+  }
+}
+.scroll-fade,
+.scroll-fade-x {
+  --scroll-fade-size: 48px;
+}
+.scroll-fade {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--scroll-fade-size),
+    #000 calc(100% - var(--scroll-fade-size)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    #000 var(--scroll-fade-size),
+    #000 calc(100% - var(--scroll-fade-size)),
+    transparent 100%
+  );
+}
+.scroll-fade-x {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--scroll-fade-size),
+    #000 calc(100% - var(--scroll-fade-size)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 var(--scroll-fade-size),
+    #000 calc(100% - var(--scroll-fade-size)),
+    transparent 100%
+  );
+}
+@supports (animation-timeline: scroll()) {
+  .scroll-fade {
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, var(--sf-start)) 0,
+      #000 var(--scroll-fade-size),
+      #000 calc(100% - var(--scroll-fade-size)),
+      rgba(0, 0, 0, var(--sf-end)) 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, var(--sf-start)) 0,
+      #000 var(--scroll-fade-size),
+      #000 calc(100% - var(--scroll-fade-size)),
+      rgba(0, 0, 0, var(--sf-end)) 100%
+    );
+    animation:
+      sf-reveal-start linear both,
+      sf-reveal-end linear both;
+    animation-timeline: scroll(self), scroll(self);
+    animation-range-start: 0, calc(100% - var(--scroll-fade-size));
+    animation-range-end: var(--scroll-fade-size), 100%;
+  }
+  .scroll-fade-x {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      rgba(0, 0, 0, var(--sf-start)) 0,
+      #000 var(--scroll-fade-size),
+      #000 calc(100% - var(--scroll-fade-size)),
+      rgba(0, 0, 0, var(--sf-end)) 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      rgba(0, 0, 0, var(--sf-start)) 0,
+      #000 var(--scroll-fade-size),
+      #000 calc(100% - var(--scroll-fade-size)),
+      rgba(0, 0, 0, var(--sf-end)) 100%
+    );
+    animation:
+      sf-reveal-start linear both,
+      sf-reveal-end linear both;
+    animation-timeline: scroll(self inline), scroll(self inline);
+    animation-range-start: 0, calc(100% - var(--scroll-fade-size));
+    animation-range-end: var(--scroll-fade-size), 100%;
+  }
 }
 
 /* Custom drag handles for resizable panels (see ResizeHandle.tsx). The thin

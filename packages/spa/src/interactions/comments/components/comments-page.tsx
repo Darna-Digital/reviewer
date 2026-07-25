@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   KIND_FILTERS,
   applyFilters,
@@ -115,21 +116,21 @@ function FilterMenu({
           >
             <IconAdjustmentsHorizontal className="size-4" />
             {active && (
-              <span className="absolute top-1 right-1 size-1.5 rounded-full bg-primary" />
+              <span className="absolute top-1 right-1 size-1.5 rounded-full bg-brand-500" />
             )}
           </Button>
         }
       />
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-72">
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <IconFilter className="size-4" />
             <span>Kind</span>
-            <span className="ml-auto max-w-[88px] truncate text-xs text-muted-foreground">
+            <span className="ml-auto max-w-28 truncate text-xs text-muted-foreground">
               {kindSummary}
             </span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-44">
+          <DropdownMenuSubContent className="w-72">
             <DropdownMenuRadioGroup
               value={kindValue}
               onValueChange={(v) => onKindChange(v as KindFilter)}
@@ -146,11 +147,11 @@ function FilterMenu({
           <DropdownMenuSubTrigger>
             <IconClock className="size-4" />
             <span>Time</span>
-            <span className="ml-auto max-w-[88px] truncate text-xs text-muted-foreground">
+            <span className="ml-auto max-w-28 truncate text-xs text-muted-foreground">
               {dateFilterLabel(dateValue)}
             </span>
           </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-40">
+          <DropdownMenuSubContent className="w-72">
             <DropdownMenuRadioGroup
               value={dateValue}
               onValueChange={(v) => onDateChange(v as DateFilter)}
@@ -206,7 +207,11 @@ function CommentDetail({
           Resolve
         </Button>
       </header>
-      <div className="min-h-0 flex-1 space-y-4 overflow-auto p-4">
+      <ScrollArea
+        className="min-h-0 flex-1"
+        viewportClassName="scroll-fade p-4"
+      >
+        <div className="space-y-4">
         <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
 
         <div className="space-y-1.5 border-t pt-3">
@@ -268,7 +273,8 @@ function CommentDetail({
             </pre>
           </div>
         )}
-      </div>
+        </div>
+      </ScrollArea>
     </div>
   )
 }
@@ -428,7 +434,10 @@ export function CommentsPage() {
             active={filtersOn}
           />
         </div>
-        <div className="min-h-0 flex-1 overflow-auto px-1 py-2">
+        <ScrollArea
+          className="min-h-0 flex-1"
+          viewportClassName="scroll-fade px-1 py-2"
+        >
           {all.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
               No comments yet. Leave one on a diff line, or click an element in
@@ -468,7 +477,7 @@ export function CommentsPage() {
           ) : (
             filtered.map(renderRow)
           )}
-        </div>
+        </ScrollArea>
       </aside>
       <ResizeHandle
         orientation="col"

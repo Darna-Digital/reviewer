@@ -1,8 +1,8 @@
 /**
  * ThreadsPage — terminal threads. A Threads Sidebar on the left lists
  * every repo-scoped terminal (plain shell or an agent CLI); the panel body on
- * the right shows the one selected thread's live terminal with a toolbar (title
- * + rename, agent, task link, and the New-terminal/agent selector top-right).
+ * the right shows the one selected thread's live terminal with a toolbar
+ * (title + rename).
  *
  * Backgrounded terminals keep running: every visited thread's terminal
  * stays mounted (just hidden) so its PTY session survives switching, and a
@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Select,
   SelectContent,
@@ -35,11 +36,9 @@ import {
 import { useThreadsActions } from "@/interactions/threads/adapters/threads.hook.adapter"
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents"
 import type { AgentKind, ThreadSummary } from "@byconvo/core/threads"
-import { useBranches, useRepo, useTasks, useThreads } from "@/lib/queries"
+import { useBranches, useRepo, useThreads } from "@/lib/queries"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
-
-const NO_TASK = "__none__"
 
 function NewTerminalMenu({
   onPick,
@@ -76,14 +75,12 @@ function NewTerminalMenu({
 export function ThreadsPage() {
   const threads = useThreads()
   const actions = useThreadsActions()
-  const tasks = useTasks()
   const prefs = useUiPrefs()
 
   const repo = useRepo()
   const branchesQuery = useBranches()
 
   const summaries = useMemo(() => threads.data ?? [], [threads.data])
-  const cards = tasks.data?.cards ?? []
   const currentBranch = repo.data?.currentBranch ?? ""
   const localBranches = useMemo(
     () => (branchesQuery.data ?? []).map((b) => b.name),
@@ -178,9 +175,6 @@ export function ThreadsPage() {
     setRenaming(null)
     if (draft.trim().length > 0) await actions.rename(id, draft)
   }
-
-  const linkTask = (id: string, title: string, key: string) =>
-    actions.linkTask(id, title, key === NO_TASK ? null : key)
 
   // Subtitle for a sidebar row: the live process title, else last command/agent.
   const subtitleOf = (t: ThreadSummary) =>
@@ -298,7 +292,10 @@ export function ThreadsPage() {
             }
           />
         </div>
-        <div className="min-h-0 flex-1 overflow-auto px-1 pb-2">
+        <ScrollArea
+          className="min-h-0 flex-1"
+          viewportClassName="scroll-fade px-1 pb-2"
+        >
           {summaries.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
               No terminals yet. Start one from the + menu.
@@ -330,7 +327,7 @@ export function ThreadsPage() {
             // A single branch is selected — the filter is the header.
             groups[0]?.threads.map(renderRow)
           )}
-        </div>
+        </ScrollArea>
       </aside>
       <ResizeHandle
         orientation="col"
@@ -398,73 +395,6 @@ export function ThreadsPage() {
                   <IconPencil className="size-3.5 shrink-0 text-muted-foreground opacity-0 group-hover/title:opacity-100" />
                 </button>
               )}
-
-              <div className="ml-auto flex items-center gap-1.5">
-                {/* Move this thread to another branch group. */}
-                <Select
-                  value={active.branch}
-                  onValueChange={(v) =>
-                    void actions.setBranch(active.id, active.title, v ?? "")
-                  }
-                >
-                  <SelectTrigger
-                    size="sm"
-                    className="h-7 w-auto max-w-44 min-w-24 gap-1.5"
-                    aria-label="Thread branch"
-                  >
-                    <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
-                    <span className="truncate">
-                      {branchLabel(active.branch)}
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filterBranches.map((b) => (
-                      <SelectItem key={b} value={b}>
-                        {b}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={active.taskKey ?? NO_TASK}
-                  onValueChange={(v) =>
-                    void linkTask(active.id, active.title, v ?? NO_TASK)
-                  }
-                >
-                  <SelectTrigger
-                    size="sm"
-                    className="h-7 w-auto max-w-52 min-w-28"
-                  >
-                    {/* Render the label directly: base-ui's SelectValue shows
-                        the raw value until the items mount, which surfaced the
-                        "__none__" sentinel. */}
-                    <span className="truncate">
-                      {active.taskKey ?? "Link task"}
-                    </span>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NO_TASK}>No task</SelectItem>
-                    {cards.map((c) => (
-                      <SelectItem key={c.id} value={c.key}>
-                        {c.key} · {c.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <NewTerminalMenu
-                  onPick={(a) => void createThread(a)}
-                  trigger={
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="size-7"
-                      aria-label="New terminal"
-                    >
-                      <IconPlus className="size-4" />
-                    </Button>
-                  }
-                />
-              </div>
             </header>
 
             {/* Every visited terminal stays mounted; only the active one shows. */}

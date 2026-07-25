@@ -93,7 +93,7 @@ export function KitchenSinkPage() {
           </div>
           <ThemeButton />
         </div>
-        <nav className="overflow-x-auto px-4 pb-2 sm:px-6 lg:hidden">
+        <nav className="scroll-fade-x overflow-x-auto px-4 pb-2 sm:px-6 lg:hidden">
           <ul role="list" className="flex w-max gap-1">
             {SECTIONS.map(({ id, label }) => (
               <li key={id}>

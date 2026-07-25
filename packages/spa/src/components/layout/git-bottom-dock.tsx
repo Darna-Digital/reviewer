@@ -1,13 +1,14 @@
 /**
- * GitBottomDock — the self-contained git panel (Branches / History) that docks
- * at the bottom of the workspace pages, mirroring the one AppShell embeds in
- * the git-review shell. It owns its own queries, log ref and filter state, and
- * resize height so it can be dropped into any shell; branch and commit
- * selections navigate into the git-review routes.
+ * GitBottomDock — the self-contained bottom dock (Branches / History / Services
+ * / Threads) that docks at the bottom of the workspace pages, mirroring the one
+ * AppShell embeds in the git-review shell. It owns its own queries, log ref and
+ * filter state, and resize height so it can be dropped into any shell; branch
+ * and commit selections navigate into the git-review routes.
  *
- * Visibility and height are shared with AppShell's panel through `ui-prefs`, so
- * toggling the bottom panel is consistent across every page reachable from the
- * mode rail.
+ * Visibility, height, and the selected tab are shared with AppShell through
+ * `ui-prefs`, so toggling the bottom panel is consistent across every page
+ * reachable from the mode rail. The dock stays mounted (hidden) when collapsed
+ * so Services/Threads PTY sessions survive.
  */
 import { useNavigate, useParams } from "@tanstack/react-router"
 import { useState } from "react"
@@ -17,6 +18,7 @@ import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.h
 import { emptyLogQuery, type LogQuery } from "@/lib/api/types"
 import { useBranches, useLog, useRemoteBranches, useRepo } from "@/lib/queries"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
+import { cn } from "@/lib/utils"
 
 export function GitBottomDock() {
   const prefs = useUiPrefs()
@@ -28,7 +30,6 @@ export function GitBottomDock() {
   const branches = useBranches()
   const remoteBranches = useRemoteBranches()
 
-  const [tab, setTab] = useState<"branches" | "history">("branches")
   const [logRef, setLogRef] = useState<string | null>(null)
   const [logFilters, setLogFilters] = useState<LogQuery>(emptyLogQuery)
   const [bottomHeight, setBottomHeight] = useState(prefs.bottomHeight)
@@ -36,27 +37,31 @@ export function GitBottomDock() {
   const ref = logRef ?? repo.data?.currentBranch ?? null
   const log = useLog(ref, logFilters)
 
-  if (!prefs.bottomVisible) return null
-
   return (
     <>
-      <ResizeHandle
-        orientation="row"
-        value={bottomHeight}
-        min={120}
-        max={() => Math.max(160, window.innerHeight - 200)}
-        direction={-1}
-        onResize={setBottomHeight}
-        onResizeEnd={(h) => setUiPrefs({ bottomHeight: h })}
-        label="Resize bottom panel"
-      />
+      {prefs.bottomVisible && (
+        <ResizeHandle
+          orientation="row"
+          value={bottomHeight}
+          min={120}
+          max={() => Math.max(160, window.innerHeight - 200)}
+          direction={-1}
+          onResize={setBottomHeight}
+          onResizeEnd={(h) => setUiPrefs({ bottomHeight: h })}
+          label="Resize bottom panel"
+        />
+      )}
       <div
-        className="shrink-0 overflow-hidden border-t"
+        className={cn(
+          "shrink-0 overflow-hidden border-t",
+          !prefs.bottomVisible && "hidden"
+        )}
         style={{ height: bottomHeight }}
+        hidden={!prefs.bottomVisible}
       >
         <BottomPanel
-          tab={tab}
-          onTabChange={setTab}
+          tab={prefs.bottomTab}
+          onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
           branches={branches.data ?? []}
           remoteBranches={remoteBranches.data ?? []}
           currentBranch={repo.data?.currentBranch ?? null}
