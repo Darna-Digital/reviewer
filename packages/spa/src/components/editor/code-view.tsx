@@ -9,6 +9,7 @@ import {
 } from "@/interactions/comments/components/comment-thread"
 import { THEMES, useLangReady } from "@/components/editor/highlighter"
 import { Button } from "@/components/ui/button"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { useFile } from "@/lib/queries"
 import type { ReviewComment } from "@byconvo/core/comments"
 import type { Theme } from "@/lib/ui-prefs"
@@ -77,7 +78,9 @@ export function CodeView({
 
   if (file.isPending || !langReady) {
     return (
-      <div className="p-8 text-sm text-muted-foreground">Loading {path}…</div>
+      <div className="p-8">
+        <LoadingCursor label={`Loading ${path}…`} />
+      </div>
     )
   }
   if (file.error || file.data === undefined) {

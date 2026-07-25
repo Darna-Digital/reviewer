@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { api, fetchClient } from "@/lib/api/client"
 import { Button } from "@/components/ui/button"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import {
   Popover,
   PopoverContent,
@@ -246,8 +247,8 @@ export function RepoPicker({
 
             <ScrollArea className="max-h-72" viewportClassName="scroll-fade">
               {browse.isPending && (
-                <div className="px-2.5 py-3 text-sm text-muted-foreground">
-                  Loading folders…
+                <div className="px-2.5 py-3">
+                  <LoadingCursor label="Loading folders…" />
                 </div>
               )}
               {browse.error && (

@@ -12,6 +12,7 @@ import {
 } from "@/components/editor/editor-commands"
 import { THEMES, useLangReady } from "@/components/editor/highlighter"
 import { Button } from "@/components/ui/button"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { fetchClient } from "@/lib/api/client"
 import { useFile } from "@/lib/queries"
 import type { Theme } from "@/lib/ui-prefs"
@@ -151,7 +152,9 @@ export function CodeEditor({ path, theme, onClose, onSaved }: CodeEditorProps) {
 
   if (loaded.isPending || !langReady) {
     return (
-      <div className="p-8 text-sm text-muted-foreground">Loading {path}…</div>
+      <div className="p-8">
+        <LoadingCursor label={`Loading ${path}…`} />
+      </div>
     )
   }
   if (loaded.error || loaded.data === undefined) {

@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { createCommitDetailsFunctions } from "@/interactions/commit-details/functions/commit-details.functions"
 import { useCommitDetail } from "@/lib/queries"
@@ -46,8 +47,8 @@ export function CommitDetailsPanel({
   }
   if (detail.isPending) {
     return (
-      <div className="grid h-full place-items-center p-4 text-sm text-muted-foreground">
-        Loading commit…
+      <div className="grid h-full place-items-center p-4">
+        <LoadingCursor label="Loading commit…" />
       </div>
     )
   }

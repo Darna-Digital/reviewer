@@ -1,5 +1,6 @@
 import { useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useCommitGraph } from "@/interactions/commit-graph/adapters/commit-graph.hook.adapter"
 import { DEFAULT_GRAPH_CONFIG } from "@/interactions/commit-graph/interfaces/commit-graph.interfaces"
@@ -158,9 +159,11 @@ export function CommitHistory({
             })}
             {commits.length === 0 && (
               <li className="p-3 text-sm text-muted-foreground">
-                {loading
-                  ? "Loading commits…"
-                  : "No commits match the current filters."}
+                {loading ? (
+                  <LoadingCursor label="Loading commits…" />
+                ) : (
+                  "No commits match the current filters."
+                )}
               </li>
             )}
           </ul>

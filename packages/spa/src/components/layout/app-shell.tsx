@@ -784,6 +784,7 @@ export function AppShell() {
                       error={
                         pulls.error ? "Could not load pull requests" : null
                       }
+                      loading={pulls.isPending}
                       selectedNumber={selectedPull?.number ?? null}
                       onSelect={(p) =>
                         void navigate({
@@ -822,6 +823,9 @@ export function AppShell() {
                       mode={mode}
                       paths={treePaths}
                       gitStatus={treeGitStatus}
+                      loading={
+                        mode === "review" ? diff.isPending : files.isPending
+                      }
                       selectedFile={
                         mode === "browse"
                           ? (viewing ?? editing)

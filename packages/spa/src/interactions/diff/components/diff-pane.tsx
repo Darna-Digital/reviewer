@@ -15,6 +15,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import {
   Tooltip,
   TooltipContent,
@@ -593,7 +594,9 @@ export function DiffPane({
 
   if (loading) {
     return (
-      <div className="p-8 text-sm text-muted-foreground">Loading diff…</div>
+      <div className="p-8">
+        <LoadingCursor label="Loading diff…" />
+      </div>
     )
   }
   if (error !== null) {
