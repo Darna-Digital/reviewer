@@ -33,6 +33,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import type { ChatSummary } from "@byconvo/core/chats"
+import {
+  DATE_FILTERS,
+  dateCutoff,
+  dateFilterLabel,
+  type DateFilter,
+} from "@/lib/date-filter"
 import { useBranches, useChats, useRepo } from "@/lib/queries"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
@@ -42,33 +48,6 @@ const ALL_BRANCHES = "__all__"
 /** Display label for a chat's branch ("" → unscoped chats). */
 const branchLabel = (branch: string) =>
   branch.length > 0 ? branch : "No branch"
-
-/** Time-window filter options, applied against a chat's `updatedAt`. */
-const DATE_FILTERS = [
-  { value: "all", label: "Any time" },
-  { value: "today", label: "Today" },
-  { value: "7d", label: "Past 7 days" },
-  { value: "30d", label: "Past 30 days" },
-] as const
-type DateFilter = (typeof DATE_FILTERS)[number]["value"]
-
-/** Epoch cutoff for a window; chats updated before it are hidden (0 → all). */
-const dateCutoff = (filter: DateFilter): number => {
-  const day = 86_400_000
-  switch (filter) {
-    case "today": {
-      const start = new Date()
-      start.setHours(0, 0, 0, 0)
-      return start.getTime()
-    }
-    case "7d":
-      return Date.now() - 7 * day
-    case "30d":
-      return Date.now() - 30 * day
-    default:
-      return 0
-  }
-}
 
 /**
  * A single Linear-style filter button. It opens a dropdown whose entries fan
@@ -97,8 +76,7 @@ function FilterMenu({
 
   const branchSummary =
     branchValue === ALL_BRANCHES ? "All branches" : branchLabel(branchValue)
-  const dateSummary =
-    DATE_FILTERS.find((d) => d.value === dateValue)?.label ?? "Any time"
+  const dateSummary = dateFilterLabel(dateValue)
 
   const pickBranch = (branch: string) => {
     onBranchChange(branch)

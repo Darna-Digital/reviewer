@@ -28,6 +28,7 @@ export type AppMode =
   | "threads"
   | "docs"
   | "tasks"
+  | "comments"
   | "local-dev"
 
 export type DiffTarget =

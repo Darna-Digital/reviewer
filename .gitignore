@@ -7,3 +7,4 @@ dist-packaged/
 .reviewer
 .idea
 /_shell.html
+packages/visual-picker/src/bundle.generated.ts

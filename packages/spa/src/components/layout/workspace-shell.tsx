@@ -32,9 +32,11 @@ const modeForPath = (pathname: string): AppMode =>
       ? "docs"
       : pathname.startsWith("/tasks")
         ? "tasks"
-        : pathname.startsWith("/local-dev")
-          ? "local-dev"
-          : "threads"
+        : pathname.startsWith("/comments")
+          ? "comments"
+          : pathname.startsWith("/local-dev")
+            ? "local-dev"
+            : "threads"
 
 export function WorkspaceShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })

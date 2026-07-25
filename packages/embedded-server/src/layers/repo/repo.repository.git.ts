@@ -246,7 +246,15 @@ export const makeGitRepoRepository = Effect.gen(function* () {
       ":(glob)**/.env*",
       ":(exclude,glob)**/node_modules/**"
     )
-    const statusLines = yield* lines("status", "--porcelain")
+    // `--untracked-files=all` is load-bearing: by default git collapses a
+    // wholly-untracked directory into one `?? dir/` entry, so every new file
+    // inside it would be counted as changed but never resolve to a path in the
+    // tree — the files silently vanish from the diff view.
+    const statusLines = yield* lines(
+      "status",
+      "--porcelain",
+      "--untracked-files=all"
+    )
     const gitStatus = statusLines
       .map(parseStatusLine)
       .filter((entry): entry is GitStatusEntry => entry !== null)

@@ -5,6 +5,7 @@ import {
   IconGitFork,
   IconGitPullRequest,
   IconListCheck,
+  IconMessageDots,
   IconMessages,
   IconPlayerPlay,
   IconTerminal2,
@@ -78,6 +79,12 @@ const WORKSPACE_MODES: ModeDef[] = [
     to: "/tasks",
     label: "Tasks",
     icon: IconListCheck,
+  },
+  {
+    mode: "comments",
+    to: "/comments",
+    label: "Comments — code & visual",
+    icon: IconMessageDots,
   },
   {
     mode: "local-dev",
