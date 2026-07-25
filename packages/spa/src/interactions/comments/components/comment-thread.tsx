@@ -206,7 +206,7 @@ export function CommentThread({
   const editableComment =
     onEdit === undefined
       ? undefined
-      : localComments.find((c) => c.id === editingId) ?? localComments[0]
+      : (localComments.find((c) => c.id === editingId) ?? localComments[0])
   const canEdit = editableComment !== undefined && onEdit !== undefined
   const canReply = onReply !== undefined && lastGithub !== undefined
   const canResolve = localComments.length > 0

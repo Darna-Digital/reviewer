@@ -269,7 +269,7 @@ function SessionRow({
       </PreviewCardTrigger>
       <PreviewCardContent side="right" align="start" className="p-2.5">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1 font-medium leading-snug">
+          <div className="min-w-0 flex-1 leading-snug font-medium">
             {chat.title}
           </div>
           <span className="shrink-0 text-xs text-muted-foreground">
@@ -283,7 +283,9 @@ function SessionRow({
           </div>
           <div className="flex min-w-0 items-center gap-1.5">
             <Icon className="size-3.5 shrink-0" />
-            <span className="min-w-0 truncate">{agentLabel(chat.provider)}</span>
+            <span className="min-w-0 truncate">
+              {agentLabel(chat.provider)}
+            </span>
           </div>
         </div>
       </PreviewCardContent>

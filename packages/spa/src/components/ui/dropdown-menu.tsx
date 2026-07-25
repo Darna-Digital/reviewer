@@ -211,11 +211,7 @@ function DropdownMenuRadioItem({
     <MenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
-      className={cn(
-        menuItem,
-        "w-full min-w-0 pr-8 data-inset:pl-7",
-        className
-      )}
+      className={cn(menuItem, "w-full min-w-0 pr-8 data-inset:pl-7", className)}
       {...props}
     >
       {/* Truncate on the text node — `truncate` on a flex parent does nothing. */}

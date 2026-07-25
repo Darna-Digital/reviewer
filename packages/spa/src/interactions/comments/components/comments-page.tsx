@@ -268,7 +268,7 @@ function CommentDetail({
                     href={visual.pageUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex min-w-0 max-w-full items-center gap-1 break-all underline underline-offset-2"
+                    className="inline-flex max-w-full min-w-0 items-center gap-1 break-all underline underline-offset-2"
                   >
                     <span className="min-w-0">{visual.pageUrl}</span>
                     <IconExternalLink className="size-3 shrink-0" />

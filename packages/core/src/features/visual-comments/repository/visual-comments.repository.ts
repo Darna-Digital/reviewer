@@ -1,10 +1,6 @@
 import * as Context from "effect/Context"
 import type * as Effect from "effect/Effect"
-import type {
-  NoRepoSelected,
-  NotFound,
-  StorageError,
-} from "../../../shared.ts"
+import type { NoRepoSelected, NotFound, StorageError } from "../../../shared.ts"
 import type {
   AddVisualComment,
   VisualComment,

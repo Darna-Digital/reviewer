@@ -70,7 +70,8 @@ const ScrollArea = forwardRef<
               data-slot="scroll-area-viewport"
               className={cn(
                 "size-full rounded-[inherit]",
-                orientation === "vertical" && "overflow-x-hidden overflow-y-auto",
+                orientation === "vertical" &&
+                  "overflow-x-hidden overflow-y-auto",
                 orientation === "horizontal" && "overflow-x-auto",
                 orientation === "both" && "overflow-auto",
                 viewportClassName
@@ -106,11 +107,9 @@ const ScrollArea = forwardRef<
                   override fit-content so rows can shrink and ellipsize. */}
               <ScrollAreaPrimitive.Content
                 className={
-                  orientation === "vertical" ? "min-w-0 w-full" : undefined
+                  orientation === "vertical" ? "w-full min-w-0" : undefined
                 }
-                style={
-                  orientation === "vertical" ? { minWidth: 0 } : undefined
-                }
+                style={orientation === "vertical" ? { minWidth: 0 } : undefined}
               >
                 {children}
               </ScrollAreaPrimitive.Content>

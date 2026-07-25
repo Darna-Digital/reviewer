@@ -370,7 +370,9 @@ export function BranchTree({
               {branch.label}
             </span>
             {branch.isCurrent && (
-              <span className="shrink-0 text-xs text-muted-foreground">HEAD</span>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                HEAD
+              </span>
             )}
             <div className="ml-auto flex shrink-0 items-center gap-0.5">
               {(branch.behind > 0 || branch.ahead > 0) && (
