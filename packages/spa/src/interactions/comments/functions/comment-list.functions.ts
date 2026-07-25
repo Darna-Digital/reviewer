@@ -100,3 +100,37 @@ export const groupByKind = (
       comments: comments.filter((c) => c.kind === kind),
     }))
     .filter((group) => group.comments.length > 0)
+
+const sourceRef = (comment: VisualComment) =>
+  comment.sourceLine === undefined
+    ? comment.sourceFile
+    : `${comment.sourceFile}:${comment.sourceLine}`
+
+const codeBlock = (comment: ReviewComment) =>
+  `${comment.filePath}:${comment.lineNumber} - ${comment.body}`
+
+const visualBlock = (comment: VisualComment) =>
+  [
+    `${comment.route} — ${comment.label} - ${comment.body}`,
+    comment.sourceFile === undefined ? null : `  source: ${sourceRef(comment)}`,
+    `  selector: ${comment.selector}`,
+    `  page: ${comment.pageUrl}`,
+  ]
+    .filter((line) => line !== null)
+    .join("\n")
+
+const blockFor = (comment: UnifiedComment): string => {
+  if (comment.visual !== undefined) return visualBlock(comment.visual)
+  if (comment.code !== undefined) return codeBlock(comment.code)
+  return `${comment.anchor} - ${comment.body}`
+}
+
+export const buildAssignmentPrompt = (
+  comments: ReadonlyArray<UnifiedComment>
+): string =>
+  `Address these review comments in the codebase:\n\n${comments
+    .map(blockFor)
+    .join("\n\n")}`
+
+export const buildAssignmentTitle = (count: number): string =>
+  `Fix ${count} review comment${count === 1 ? "" : "s"}`

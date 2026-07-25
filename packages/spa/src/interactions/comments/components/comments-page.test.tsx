@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import type { ReviewComment } from "@byconvo/core/comments"
 import type { VisualComment } from "@byconvo/core/visual-comments"
+import type * as RouterModule from "@tanstack/react-router"
 
 const codeComment: ReviewComment = {
   id: "c-1",
@@ -38,10 +39,21 @@ const visualComment: VisualComment = {
 
 const removeVisual = vi.fn(() => Promise.resolve())
 const removeCode = vi.fn(() => Promise.resolve(true))
+const startWithTitle = vi.fn(
+  (_settings: unknown, _branch: string, _title: string, _prompt: string) =>
+    Promise.resolve({ id: "chat-1" })
+)
+const send = vi.fn((_chatId: string, _prompt: string) =>
+  Promise.resolve({ id: "m-1" })
+)
+const navigate = vi.fn()
 
 vi.mock("@/lib/queries", () => ({
   useComments: () => ({ data: [codeComment] }),
   useVisualComments: () => ({ data: [visualComment] }),
+  useChats: () => ({ data: [] }),
+  useChatModels: () => ({ data: undefined }),
+  useRepo: () => ({ data: { currentBranch: "main" } }),
 }))
 vi.mock("@/interactions/comments/adapters/comments.hook.adapter", () => ({
   useCommentsActions: () => ({ remove: removeCode }),
@@ -50,6 +62,13 @@ vi.mock(
   "@/interactions/comments/adapters/visual-comments.hook.adapter",
   () => ({ useVisualCommentsActions: () => ({ remove: removeVisual }) })
 )
+vi.mock("@/interactions/chats/adapters/chats.hook.adapter", () => ({
+  useChatsActions: () => ({ startWithTitle, send }),
+}))
+vi.mock("@tanstack/react-router", async (importOriginal) => ({
+  ...(await importOriginal<typeof RouterModule>()),
+  useNavigate: () => navigate,
+}))
 
 // jsdom has no matchMedia, and `ui-prefs` reads the system theme on import.
 vi.stubGlobal("matchMedia", () => ({
@@ -136,6 +155,55 @@ describe("CommentsPage", () => {
 
     await user.click(screen.getByRole("button", { name: "Clear filters" }))
     expect(screen.getByText("Add a 90-day window too")).toBeDefined()
+  })
+
+  it("offers to assign the comments, counting both kinds", () => {
+    render(<CommentsPage />)
+
+    expect(screen.getByText("2")).toBeDefined()
+    expect(screen.getByRole("button", { name: /assign to fix/i })).toBeDefined()
+  })
+
+  it("seeds a new chat with both kinds and clears them once handed off", async () => {
+    const user = userEvent.setup()
+    render(<CommentsPage />)
+
+    await user.click(screen.getByRole("button", { name: /assign to fix/i }))
+
+    expect(startWithTitle).toHaveBeenCalledOnce()
+    const prompt = startWithTitle.mock.calls[0][3]
+    expect(prompt).toContain("date-filter.ts:18 - Add a 90-day window too")
+    expect(prompt).toContain("This save button should be primary")
+    expect(prompt).toContain("selector: main > button#save")
+
+    expect(removeVisual).toHaveBeenCalledWith("v-1")
+    expect(removeCode).toHaveBeenCalledOnce()
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/chats/$chatId",
+      params: { chatId: "chat-1" },
+    })
+  })
+
+  it("assigns only what the filter leaves visible", async () => {
+    const user = userEvent.setup()
+    render(<CommentsPage />)
+
+    await user.type(screen.getByLabelText("Search comments"), "90-day")
+    await user.click(screen.getByRole("button", { name: /assign to fix/i }))
+
+    const prompt = startWithTitle.mock.calls[0][3]
+    expect(prompt).toContain("Add a 90-day window too")
+    expect(prompt).not.toContain("This save button should be primary")
+    expect(removeVisual).not.toHaveBeenCalled()
+  })
+
+  it("can be dismissed", async () => {
+    const user = userEvent.setup()
+    render(<CommentsPage />)
+
+    await user.click(screen.getByRole("button", { name: "Dismiss" }))
+
+    expect(screen.queryByRole("button", { name: /assign to fix/i })).toBeNull()
   })
 
   it("routes resolve to the right store for each kind", async () => {

@@ -3,6 +3,7 @@ import type { ReviewComment } from "@byconvo/core/comments"
 import type { VisualComment } from "@byconvo/core/visual-comments"
 import {
   applyFilters,
+  buildAssignmentPrompt,
   groupByKind,
   noFilters,
   unify,
@@ -93,6 +94,50 @@ describe("applyFilters", () => {
     const old = unify([code({ createdAt: "2020-01-01T00:00:00.000Z" })], [])
 
     expect(applyFilters(old, { ...noFilters, date: "today" })).toEqual([])
+  })
+})
+
+describe("buildAssignmentPrompt", () => {
+  it("keeps the file:line form an agent already knows for code comments", () => {
+    const prompt = buildAssignmentPrompt(unify([code()], []))
+
+    expect(prompt).toContain("src/app.ts:42 - extract a helper")
+  })
+
+  it("gives a visual comment the context needed to find its source", () => {
+    const prompt = buildAssignmentPrompt(unify([], [visual()]))
+
+    expect(prompt).toContain(
+      '/settings — button#save "Save" - make this primary'
+    )
+    expect(prompt).toContain("selector: #save")
+    expect(prompt).toContain("page: http://localhost:3000/settings")
+  })
+
+  it("includes the source file when the picker captured one", () => {
+    const withSource = visual({
+      sourceFile: "src/settings-form.tsx",
+      sourceLine: 42,
+    })
+
+    expect(buildAssignmentPrompt(unify([], [withSource]))).toContain(
+      "source: src/settings-form.tsx:42"
+    )
+  })
+
+  it("omits the source line when only a file was captured", () => {
+    const fileOnly = visual({ sourceFile: "src/settings-form.tsx" })
+
+    expect(buildAssignmentPrompt(unify([], [fileOnly]))).toContain(
+      "source: src/settings-form.tsx\n"
+    )
+  })
+
+  it("carries both kinds in one prompt", () => {
+    const prompt = buildAssignmentPrompt(unify([code()], [visual()]))
+
+    expect(prompt).toContain("extract a helper")
+    expect(prompt).toContain("make this primary")
   })
 })
 

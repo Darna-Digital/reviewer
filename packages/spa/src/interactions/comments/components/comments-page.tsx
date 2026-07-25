@@ -8,7 +8,8 @@ import {
   IconSearch,
   IconX,
 } from "@tabler/icons-react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { ResizeHandle } from "@/components/layout/resize-handle"
 import { Button } from "@/components/ui/button"
@@ -26,6 +27,8 @@ import { Input } from "@/components/ui/input"
 import {
   KIND_FILTERS,
   applyFilters,
+  buildAssignmentPrompt,
+  buildAssignmentTitle,
   filtersActive as areFiltersActive,
   groupByKind,
   noFilters,
@@ -35,11 +38,23 @@ import {
   type UnifiedComment,
 } from "@/interactions/comments/functions/comment-list.functions"
 import {
+  ReviewAssignBar,
+  type AssignTarget,
+} from "@/components/review-assign-bar"
+import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
+import { buildChatAssignmentSettings } from "@/interactions/chats/functions/chat-assignment.functions"
+import {
   DATE_FILTERS,
   dateFilterLabel,
   type DateFilter,
 } from "@/lib/date-filter"
-import { useComments, useVisualComments } from "@/lib/queries"
+import {
+  useChatModels,
+  useChats,
+  useComments,
+  useRepo,
+  useVisualComments,
+} from "@/lib/queries"
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter"
 import { useVisualCommentsActions } from "@/interactions/comments/adapters/visual-comments.hook.adapter"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
@@ -263,6 +278,11 @@ export function CommentsPage() {
   const visualComments = useVisualComments()
   const commentActions = useCommentsActions()
   const visualActions = useVisualCommentsActions()
+  const chatActions = useChatsActions()
+  const chatModels = useChatModels()
+  const chats = useChats()
+  const repo = useRepo()
+  const navigate = useNavigate()
 
   const [sidebarWidth, setSidebarWidth] = useState(
     useUiPrefs().workspaceSidebarWidth
@@ -271,6 +291,7 @@ export function CommentsPage() {
   const [date, setDate] = useState<DateFilter>(noFilters.date)
   const [search, setSearch] = useState(noFilters.search)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [assignBarDismissed, setAssignBarDismissed] = useState(false)
 
   const all = useMemo(
     () => unify(codeComments.data ?? [], visualComments.data ?? []),
@@ -284,13 +305,54 @@ export function CommentsPage() {
 
   const selected = filtered.find((c) => c.id === selectedId) ?? null
 
+  useEffect(() => {
+    if (all.length > 0) setAssignBarDismissed(false)
+  }, [all.length])
+
+  const remove = async (comment: UnifiedComment) => {
+    if (comment.visual !== undefined) {
+      await visualActions.remove(comment.id)
+      return
+    }
+    if (comment.code !== undefined) await commentActions.remove(comment.code)
+  }
+
+  const assign = async (dest: AssignTarget) => {
+    if (filtered.length === 0) return
+    const assigned = filtered
+    const count = assigned.length
+    const prompt = buildAssignmentPrompt(assigned)
+    try {
+      const chatId =
+        dest.kind === "new"
+          ? ((
+              await chatActions.startWithTitle(
+                buildChatAssignmentSettings(dest.agent, chatModels.data),
+                repo.data?.currentBranch ?? "",
+                buildAssignmentTitle(count),
+                prompt
+              )
+            )?.id ?? null)
+          : (await chatActions.send(dest.chatId, prompt)) !== null
+            ? dest.chatId
+            : null
+      if (chatId === null) return
+
+      // Handing them off is what resolves them — the text now lives in the chat.
+      await Promise.all(assigned.map(remove))
+      setSelectedId(null)
+      toast.success(`Assigned ${count} comment${count === 1 ? "" : "s"}`)
+      void navigate({ to: "/chats/$chatId", params: { chatId } })
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "could not assign comments"
+      )
+    }
+  }
+
   const resolve = async (comment: UnifiedComment) => {
     try {
-      if (comment.visual !== undefined) {
-        await visualActions.remove(comment.id)
-      } else if (comment.code !== undefined) {
-        await commentActions.remove(comment.code)
-      }
+      await remove(comment)
       if (comment.id === selectedId) setSelectedId(null)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "resolve failed")
@@ -431,6 +493,14 @@ export function CommentsPage() {
           />
         )}
       </section>
+      {filtered.length > 0 && !assignBarDismissed && (
+        <ReviewAssignBar
+          count={filtered.length}
+          chats={chats.data ?? []}
+          onAssign={assign}
+          onDismiss={() => setAssignBarDismissed(true)}
+        />
+      )}
     </div>
   )
 }
