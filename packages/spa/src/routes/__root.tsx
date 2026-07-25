@@ -79,11 +79,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             ]}
           />
         )}
-        {/* byconvo's own visual-comment picker, pointed at byconvo. The path is
-            relative so the dev server's /api proxy carries it to the embedded
-            server; `import.meta.env.DEV` drops it from production builds. */}
+        {/* byconvo dogfoods its own visual-comment picker with the same
+            absolute-origin script tag any other project would add, so the
+            cross-origin path every consumer relies on is exercised here too.
+            `import.meta.env.DEV` drops it from production builds. */}
         {import.meta.env.DEV && (
-          <script defer src="/api/visual-comments/picker.js" />
+          <script
+            defer
+            src={`${import.meta.env.VITE_BYCONVO_SERVER_URL ?? "http://localhost:41811"}/api/visual-comments/picker.js`}
+          />
         )}
         <Scripts />
       </body>
