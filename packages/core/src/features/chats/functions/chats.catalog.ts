@@ -1,3 +1,12 @@
+/**
+ * The model catalog the composer's picker is built from.
+ *
+ * This is the *fallback*, not the source of truth: at runtime each provider's
+ * models are read from its own CLI (see model-discovery.ts) and these entries
+ * are replaced. They stand in only when a CLI isn't installed, is too slow, or
+ * answers in a shape we don't recognise — so they should stay roughly right,
+ * but they no longer have to be chased every time a model ships.
+ */
 import type {
   ChatModelCatalog,
   ChatProviderKind,
@@ -32,9 +41,10 @@ export const CHAT_MODEL_CATALOG: ChatModelCatalog = {
       id: "codex",
       label: "Codex",
       models: [
+        { id: "gpt-5.6-sol", label: "GPT-5.6-Sol" },
+        { id: "gpt-5.6-terra", label: "GPT-5.6-Terra" },
+        { id: "gpt-5.6-luna", label: "GPT-5.6-Luna" },
         { id: "gpt-5.5", label: "GPT-5.5" },
-        { id: "gpt-5.4", label: "GPT-5.4" },
-        { id: "gpt-5.4-mini", label: "GPT-5.4-Mini" },
       ],
     },
     {

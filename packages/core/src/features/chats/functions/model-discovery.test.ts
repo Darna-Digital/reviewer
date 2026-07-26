@@ -1,0 +1,254 @@
+import { describe, expect, it } from "vitest"
+import { CHAT_MODEL_CATALOG } from "./chats.catalog.ts"
+import {
+  mergeDiscoveredModels,
+  modelDiscoveryCommand,
+  parseDiscoveredModels,
+} from "./model-discovery.ts"
+import type { ChatModel, ChatProviderKind } from "../schema/chats.schema.ts"
+
+/**
+ * Recorded from the real CLIs (claude 2.1.220, codex 0.145.0, opencode 1.18.5)
+ * rather than written by hand, so a shape we never actually saw can't pass.
+ */
+const CLAUDE_MODEL_OUTPUT = JSON.stringify({
+  is_error: false,
+  num_turns: 0,
+  total_cost_usd: 0,
+  subtype: "success",
+  type: "result",
+  result:
+    "Current model: Sonnet 5 (default)\nUsage: /model <name>. Available: sonnet, opus, haiku, fable, best, sonnet[1m], opus[1m], fable[1m], opusplan, default, or a full model ID.",
+})
+
+const CODEX_MODELS_OUTPUT = JSON.stringify({
+  models: [
+    {
+      slug: "gpt-5.6-sol",
+      display_name: "GPT-5.6-Sol",
+      description: "Latest frontier agentic coding model.",
+      visibility: "list",
+    },
+    {
+      slug: "gpt-5.6-terra",
+      display_name: "GPT-5.6-Terra",
+      description: "Balanced agentic coding model for everyday work.",
+      visibility: "list",
+    },
+    { slug: "gpt-5.1-codex-mini", display_name: "Mini", visibility: "hide" },
+  ],
+})
+
+const OPENCODE_MODELS_OUTPUT = [
+  "opencode/big-pickle",
+  "{",
+  `  "id": "big-pickle",`,
+  `  "providerID": "opencode",`,
+  `  "name": "Big Pickle",`,
+  `  "status": "active"`,
+  "}",
+  "opencode/north-mini-code-free",
+  "{",
+  `  "id": "north-mini-code-free",`,
+  `  "providerID": "opencode",`,
+  `  "name": "North Mini Code (free)",`,
+  `  "status": "active"`,
+  "}",
+  "",
+].join("\n")
+
+const ids = (models: ReadonlyArray<ChatModel>) => models.map((m) => m.id)
+
+describe("modelDiscoveryCommand", () => {
+  it("pipes the prompt in rather than leaving a CLI on an open stdin", () => {
+    expect(modelDiscoveryCommand("claude")).toBe(
+      `printf '%s' '/model' | claude -p --output-format json`
+    )
+    expect(modelDiscoveryCommand("cursor")).toBe(
+      `printf '%s' '/model' | cursor-agent -p --output-format json`
+    )
+  })
+
+  it("asks codex and opencode for their machine-readable catalogs", () => {
+    expect(modelDiscoveryCommand("codex")).toBe("codex debug models")
+    expect(modelDiscoveryCommand("opencode")).toBe(
+      "opencode models opencode --verbose"
+    )
+  })
+})
+
+describe("parseDiscoveredModels", () => {
+  it("reads claude's aliases out of its /model sentence", () => {
+    const models = parseDiscoveredModels("claude", CLAUDE_MODEL_OUTPUT)
+    expect(ids(models)).toEqual([
+      "sonnet",
+      "opus",
+      "haiku",
+      "fable",
+      "best",
+      "sonnet[1m]",
+      "opus[1m]",
+      "fable[1m]",
+      "opusplan",
+      "default",
+    ])
+    // The sentence's closing clause names no model.
+    expect(ids(models)).not.toContain("or a full model ID")
+    expect(models[0]).toEqual({ id: "sonnet", label: "Sonnet" })
+  })
+
+  it("reads the same sentence when it arrives as plain text", () => {
+    const models = parseDiscoveredModels(
+      "claude",
+      "Usage: /model <name>. Available: opus, haiku, or a full model ID."
+    )
+    expect(ids(models)).toEqual(["opus", "haiku"])
+  })
+
+  it("keeps only the models codex lists in its own picker", () => {
+    const models = parseDiscoveredModels("codex", CODEX_MODELS_OUTPUT)
+    expect(models).toEqual([
+      { id: "gpt-5.6-sol", label: "GPT-5.6-Sol" },
+      { id: "gpt-5.6-terra", label: "GPT-5.6-Terra" },
+    ])
+  })
+
+  it("reads opencode's qualified ids, not the bare ids in its objects", () => {
+    const models = parseDiscoveredModels("opencode", OPENCODE_MODELS_OUTPUT)
+    // `--model` wants `opencode/big-pickle`; the object only holds `big-pickle`.
+    expect(models).toEqual([
+      { id: "opencode/big-pickle", label: "Big Pickle" },
+      {
+        id: "opencode/north-mini-code-free",
+        label: "North Mini Code (free)",
+      },
+    ])
+  })
+
+  it("skips a model opencode has retired", () => {
+    const retired = OPENCODE_MODELS_OUTPUT.replace(
+      `"status": "active"`,
+      `"status": "deprecated"`
+    )
+    expect(ids(parseDiscoveredModels("opencode", retired))).toEqual([
+      "opencode/north-mini-code-free",
+    ])
+  })
+
+  // Discovery runs through a login+interactive shell, so anything the
+  // developer's rc files print lands on stdout ahead of the payload. This is
+  // not hypothetical: it was `nvm\n` on the machine these fixtures came from.
+  describe("with rc-file noise on stdout", () => {
+    const noisy = (output: string) => `nvm\n${output}`
+
+    it("still reads codex's catalog", () => {
+      expect(
+        ids(parseDiscoveredModels("codex", noisy(CODEX_MODELS_OUTPUT)))
+      ).toEqual(["gpt-5.6-sol", "gpt-5.6-terra"])
+    })
+
+    it("still reads claude's aliases", () => {
+      const models = parseDiscoveredModels("claude", noisy(CLAUDE_MODEL_OUTPUT))
+      expect(ids(models)).toContain("opus")
+      expect(ids(models)).toHaveLength(10)
+    })
+
+    it("still reads opencode's models, and never as the noise line", () => {
+      const models = parseDiscoveredModels(
+        "opencode",
+        noisy(OPENCODE_MODELS_OUTPUT)
+      )
+      expect(ids(models)).toEqual([
+        "opencode/big-pickle",
+        "opencode/north-mini-code-free",
+      ])
+      expect(ids(models)).not.toContain("nvm")
+    })
+  })
+
+  it("returns nothing rather than guessing when output is unrecognisable", () => {
+    for (const provider of [
+      "claude",
+      "codex",
+      "opencode",
+      "cursor",
+    ] as const satisfies ReadonlyArray<ChatProviderKind>) {
+      expect(parseDiscoveredModels(provider, "")).toEqual([])
+      expect(
+        parseDiscoveredModels(provider, "command not found: nope\n")
+      ).toEqual([])
+      expect(parseDiscoveredModels(provider, "{ not json")).toEqual([])
+    }
+  })
+
+  it("drops anything that doesn't look like a model id", () => {
+    const models = parseDiscoveredModels(
+      "claude",
+      "Available: opus, a model you should pick, sonnet"
+    )
+    expect(ids(models)).toEqual(["opus", "sonnet"])
+  })
+})
+
+describe("mergeDiscoveredModels", () => {
+  const catalog = CHAT_MODEL_CATALOG
+  const modelsFor = (c: typeof catalog, id: ChatProviderKind) =>
+    c.providers.find((p) => p.id === id)?.models ?? []
+
+  it("leaves a provider that discovered nothing exactly as curated", () => {
+    const merged = mergeDiscoveredModels(new Map())
+    expect(merged).toEqual(catalog)
+  })
+
+  it("replaces a provider's list with what its CLI reported", () => {
+    const merged = mergeDiscoveredModels(
+      new Map([["codex", parseDiscoveredModels("codex", CODEX_MODELS_OUTPUT)]])
+    )
+    // The curated gpt-5.4 entries are gone: that CLI no longer offers them.
+    expect(ids(modelsFor(merged, "codex"))).toEqual([
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+    ])
+    // Untouched providers keep their curated entries.
+    expect(modelsFor(merged, "cursor")).toEqual(modelsFor(catalog, "cursor"))
+  })
+
+  it("prefers a curated label over one derived from the id", () => {
+    const merged = mergeDiscoveredModels(
+      new Map([
+        ["opencode", [{ id: "opencode/big-pickle", label: "big-pickle" }]],
+      ])
+    )
+    expect(modelsFor(merged, "opencode")[0]?.label).toBe("Big Pickle")
+  })
+
+  it("keeps the default model listed when the CLI never names it", () => {
+    // claude answers with aliases only, and the catalog defaults to a full id.
+    const merged = mergeDiscoveredModels(
+      new Map([
+        ["claude", parseDiscoveredModels("claude", CLAUDE_MODEL_OUTPUT)],
+      ])
+    )
+    const claude = ids(modelsFor(merged, "claude"))
+    expect(claude).toContain(catalog.defaults.model)
+    expect(claude).toContain("opus")
+    // Still labelled, not shown as a bare id.
+    expect(modelsFor(merged, "claude")[0]?.label).toBe("Claude Opus 5")
+  })
+
+  it("never leaves the default pointing at a model no provider offers", () => {
+    const merged = mergeDiscoveredModels(
+      new Map([
+        ["claude", parseDiscoveredModels("claude", CLAUDE_MODEL_OUTPUT)],
+        ["codex", parseDiscoveredModels("codex", CODEX_MODELS_OUTPUT)],
+        [
+          "opencode",
+          parseDiscoveredModels("opencode", OPENCODE_MODELS_OUTPUT),
+        ] as const,
+      ] as ReadonlyArray<readonly [ChatProviderKind, ReadonlyArray<ChatModel>]>)
+    )
+    expect(
+      merged.providers.flatMap((p) => p.models).map((m) => m.id)
+    ).toContain(merged.defaults.model)
+  })
+})

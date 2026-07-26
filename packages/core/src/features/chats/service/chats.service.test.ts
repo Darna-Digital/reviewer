@@ -1,10 +1,34 @@
 import { it } from "@effect/vitest"
 import { Effect } from "effect"
 import { describe, expect } from "vitest"
+import { memoryLayer as terminalMemory } from "../../../ports/terminal-exec.ts"
 import { ChatsMemory } from "../layer/chats.layer.memory.ts"
 import { CHAT_MODEL_CATALOG } from "../functions/chats.catalog.ts"
 import type { Chat } from "../schema/chats.schema.ts"
 import { ChatsService } from "./chats.service.ts"
+
+/**
+ * A stand-in for the agent CLIs the catalog is discovered from: codex answers
+ * with a model the curated catalog has never heard of, everything else stays
+ * quiet. `seen` records the commands, so a test can tell a cache hit from a
+ * second round of subprocesses.
+ */
+const terminalReturning = (seen: string[] = []) =>
+  terminalMemory((command) => {
+    seen.push(command)
+    const stdout = command.startsWith("codex ")
+      ? JSON.stringify({
+          models: [
+            {
+              slug: "gpt-9-turbo",
+              display_name: "GPT-9 Turbo",
+              visibility: "list",
+            },
+          ],
+        })
+      : ""
+    return { stdout, stderr: "", exitCode: 0 }
+  })
 
 const newChat = {
   title: "",
@@ -228,15 +252,68 @@ describe("ChatsService", () => {
       expect(all).toHaveLength(0)
     }).pipe(Effect.provide(layer))
   })
-  it.effect("models returns the static catalog with defaults", () => {
-    const { layer } = ChatsMemory()
+  it.effect(
+    "models falls back to the curated catalog when no CLI answers",
+    () => {
+      const { layer } = ChatsMemory()
+      return Effect.gen(function* () {
+        const chats = yield* ChatsService
+        const catalog = yield* chats.models
+        expect(catalog).toEqual(CHAT_MODEL_CATALOG)
+        expect(
+          catalog.providers.flatMap((p) => p.models).map((m) => m.id)
+        ).toContain(catalog.defaults.model)
+      }).pipe(Effect.provide(layer))
+    }
+  )
+
+  it.effect("models takes the list from the CLI when it answers", () => {
+    const { layer } = ChatsMemory([], terminalReturning())
     return Effect.gen(function* () {
       const chats = yield* ChatsService
       const catalog = yield* chats.models
-      expect(catalog).toEqual(CHAT_MODEL_CATALOG)
-      expect(
-        catalog.providers.flatMap((p) => p.models).map((m) => m.id)
-      ).toContain(catalog.defaults.model)
+      const codex = catalog.providers.find((p) => p.id === "codex")
+      // Reported by the CLI, and the curated gpt-5.4 entries are gone with it.
+      expect(codex?.models.map((m) => m.id)).toEqual(["gpt-9-turbo"])
+      expect(codex?.models[0]?.label).toBe("GPT-9 Turbo")
+      // A provider whose CLI said nothing keeps what was curated for it.
+      expect(catalog.providers.find((p) => p.id === "cursor")?.models).toEqual(
+        CHAT_MODEL_CATALOG.providers.find((p) => p.id === "cursor")?.models
+      )
     }).pipe(Effect.provide(layer))
   })
+
+  it.effect("models asks the CLIs once and then serves the cache", () => {
+    const commands: string[] = []
+    const { layer } = ChatsMemory([], terminalReturning(commands))
+    return Effect.gen(function* () {
+      const chats = yield* ChatsService
+      const first = yield* chats.models
+      const runsAfterFirstCall = commands.length
+      const second = yield* chats.models
+      expect(second).toEqual(first)
+      expect(commands.length).toBe(runsAfterFirstCall)
+      // One run per provider, no more.
+      expect(runsAfterFirstCall).toBe(CHAT_MODEL_CATALOG.providers.length)
+    }).pipe(Effect.provide(layer))
+  })
+
+  it.effect(
+    "a CLI that fails outright leaves the curated list standing",
+    () => {
+      const { layer } = ChatsMemory(
+        [],
+        terminalMemory((command) => ({
+          stdout: "",
+          stderr: "command not found",
+          exitCode: 127,
+          command,
+        }))
+      )
+      return Effect.gen(function* () {
+        const chats = yield* ChatsService
+        expect(yield* chats.models).toEqual(CHAT_MODEL_CATALOG)
+      }).pipe(Effect.provide(layer))
+    }
+  )
 })
