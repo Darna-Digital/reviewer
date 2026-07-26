@@ -207,42 +207,18 @@ export const parseDiscoveredModels = (
 }
 
 /**
- * The catalog with each provider's discovered models folded in. Discovery wins
- * on membership — it knows what this machine can actually run, and the curated
- * list goes stale — but a curated label wins over a derived one, so a model we
- * have a proper name for doesn't regress to a capitalised id.
- *
- * Two things survive discovery on purpose:
- *   - a provider that discovered nothing keeps its curated models untouched, so
- *     a missing CLI or a changed output format costs nothing;
- *   - the catalog's default model stays listed even when the CLI didn't name
- *     it. claude answers `/model` with aliases and never mentions the full id
- *     we default to, and a default that isn't in its own picker shows up as a
- *     bare id with no label.
+ * The catalog carrying each provider's discovered models. Every model a user
+ * can pick comes through here: a provider whose CLI said nothing offers
+ * nothing, which is the honest answer for an agent that isn't installed on this
+ * machine, and leaves its chats running on that CLI's own default model.
  */
 export const mergeDiscoveredModels = (
   discovered: ReadonlyMap<ChatProviderKind, ReadonlyArray<ChatModel>>,
   base: ChatModelCatalog = CHAT_MODEL_CATALOG
 ): ChatModelCatalog => ({
   ...base,
-  providers: base.providers.map((provider) => {
-    const found = discovered.get(provider.id) ?? []
-    if (found.length === 0) return provider
-    const curated = new Map(provider.models.map((m) => [m.id, m]))
-    const models = found.map((model) => ({
-      ...model,
-      label: curated.get(model.id)?.label ?? model.label,
-    }))
-    const fallbackDefault =
-      provider.id === base.defaults.provider &&
-      !models.some((m) => m.id === base.defaults.model)
-        ? [
-            curated.get(base.defaults.model) ?? {
-              id: base.defaults.model,
-              label: labelFromId(base.defaults.model),
-            },
-          ]
-        : []
-    return { ...provider, models: [...fallbackDefault, ...models] }
-  }),
+  providers: base.providers.map((provider) => ({
+    ...provider,
+    models: discovered.get(provider.id) ?? [],
+  })),
 })

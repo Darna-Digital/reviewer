@@ -60,19 +60,22 @@ export function ModelPicker({
   )
   const current = allModels.find((m) => m.id === model)
 
+  const onFavorites = rail === FAVORITES_RAIL
+  const railLabel = catalog?.providers.find((p) => p.id === rail)?.label
   const visible = useMemo(() => {
-    const inRail =
-      rail === FAVORITES_RAIL
-        ? allModels.filter((m) => favorites.includes(m.id))
-        : allModels.filter((m) => m.provider === rail)
+    const inRail = onFavorites
+      ? allModels.filter((m) => favorites.includes(m.id))
+      : allModels.filter((m) => m.provider === rail)
     // An empty favorites rail falls back to everything, so the picker never
-    // opens onto a blank list.
-    const base = inRail.length > 0 ? inRail : allModels
+    // opens onto a blank list. A provider rail must not: its models are
+    // whatever that agent's CLI reported, and showing another agent's models
+    // under it would offer a model this provider can't run.
+    const base = onFavorites && inRail.length === 0 ? allModels : inRail
     const query = search.trim().toLowerCase()
     return query.length === 0
       ? base
       : base.filter((m) => m.label.toLowerCase().includes(query))
-  }, [allModels, favorites, rail, search])
+  }, [allModels, favorites, onFavorites, rail, search])
 
   const toggleFavorite = (id: string) => {
     setUiPrefs({
@@ -178,7 +181,13 @@ export function ModelPicker({
             >
               {visible.length === 0 && (
                 <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-                  No models match.
+                  {search.trim().length > 0
+                    ? "No models match."
+                    : onFavorites
+                      ? "No models available."
+                      : // Models are read from each agent's own CLI, so an
+                        // empty provider means that CLI didn't answer.
+                        `No models reported by ${railLabel ?? "this agent"} — is its CLI installed?`}
                 </p>
               )}
               {visible.map((m, index) => {

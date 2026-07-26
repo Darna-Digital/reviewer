@@ -200,18 +200,25 @@ describe("withAttachedImages", () => {
 })
 
 describe("CHAT_MODEL_CATALOG", () => {
-  it("covers every provider and a valid default", () => {
+  it("covers every provider", () => {
     expect(CHAT_MODEL_CATALOG.providers.map((p) => p.id)).toEqual([
       ...CHAT_PROVIDER_KINDS,
     ])
-    expect(
-      CHAT_MODEL_CATALOG.providers.flatMap((p) => p.models).map((m) => m.id)
-    ).toContain(CHAT_MODEL_CATALOG.defaults.model)
   })
 
-  it("offers at least one model per provider", () => {
-    for (const provider of CHAT_MODEL_CATALOG.providers) {
-      expect(provider.models.length).toBeGreaterThan(0)
+  it("names no models — they come from the CLIs at runtime", () => {
+    expect(CHAT_MODEL_CATALOG.providers.flatMap((p) => p.models)).toEqual([])
+  })
+
+  it("defaults to no model, which every provider builds a valid turn from", () => {
+    // An empty model must mean "let the CLI decide", not an empty `--model`.
+    expect(CHAT_MODEL_CATALOG.defaults.model).toBe("")
+    for (const provider of CHAT_PROVIDER_KINDS) {
+      const program = chatTurnProgram(chat({ provider, model: "" }), "hi", {
+        id: null,
+        resume: false,
+      })
+      expect(shellCommand(program)).not.toContain("--model")
     }
   })
 })

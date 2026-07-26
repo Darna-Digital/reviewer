@@ -10,13 +10,6 @@ export const ASSIGNABLE_CHAT_PROVIDERS = [
   "cursor",
 ] as const satisfies ReadonlyArray<ChatProviderKind>
 
-const FALLBACK_MODEL_BY_PROVIDER: Record<ChatProviderKind, string> = {
-  claude: "claude-opus-5",
-  codex: "gpt-5.5",
-  opencode: "opencode/big-pickle",
-  cursor: "composer-2.5",
-}
-
 export const isChatProviderKind = (value: string): value is ChatProviderKind =>
   (ASSIGNABLE_CHAT_PROVIDERS as ReadonlyArray<string>).includes(value)
 
@@ -54,12 +47,15 @@ export const buildChatAssignmentSettings = (
   const providerDefaultModel = providerEntry?.models?.find(
     (model) => model.id === defaults?.model
   )?.id
-  const fallbackModel =
-    providerEntry?.models[0]?.id ?? FALLBACK_MODEL_BY_PROVIDER[provider]
+  // The catalog's models are whatever the provider's CLI reported, so the first
+  // is that CLI's own first choice. Nothing reported means no model at all —
+  // the chat then runs on whatever the CLI defaults to, which is a better
+  // answer than a model id we made up here.
+  const firstDiscovered = providerEntry?.models[0]?.id ?? ""
 
   return {
     provider,
-    model: providerDefaultModel ?? fallbackModel,
+    model: providerDefaultModel ?? firstDiscovered,
     effort: defaults?.effort ?? "high",
     access: defaults?.access ?? "fullAccess",
     mode: defaults?.mode ?? "build",

@@ -195,51 +195,22 @@ describe("mergeDiscoveredModels", () => {
   const modelsFor = (c: typeof catalog, id: ChatProviderKind) =>
     c.providers.find((p) => p.id === id)?.models ?? []
 
-  it("leaves a provider that discovered nothing exactly as curated", () => {
+  it("ships no models of its own to fall back on", () => {
+    // The picker is empty until the CLIs answer — by design. A list written
+    // down here would start going stale the day it was written.
+    expect(catalog.providers.flatMap((p) => p.models)).toEqual([])
+    expect(catalog.defaults.model).toBe("")
+  })
+
+  it("offers nothing for a provider whose CLI said nothing", () => {
     const merged = mergeDiscoveredModels(new Map())
     expect(merged).toEqual(catalog)
+    expect(merged.providers.flatMap((p) => p.models)).toEqual([])
   })
 
-  it("replaces a provider's list with what its CLI reported", () => {
-    const merged = mergeDiscoveredModels(
-      new Map([["codex", parseDiscoveredModels("codex", CODEX_MODELS_OUTPUT)]])
-    )
-    // The curated gpt-5.4 entries are gone: that CLI no longer offers them.
-    expect(ids(modelsFor(merged, "codex"))).toEqual([
-      "gpt-5.6-sol",
-      "gpt-5.6-terra",
-    ])
-    // Untouched providers keep their curated entries.
-    expect(modelsFor(merged, "cursor")).toEqual(modelsFor(catalog, "cursor"))
-  })
-
-  it("prefers a curated label over one derived from the id", () => {
+  it("carries exactly what each CLI reported, per provider", () => {
     const merged = mergeDiscoveredModels(
       new Map([
-        ["opencode", [{ id: "opencode/big-pickle", label: "big-pickle" }]],
-      ])
-    )
-    expect(modelsFor(merged, "opencode")[0]?.label).toBe("Big Pickle")
-  })
-
-  it("keeps the default model listed when the CLI never names it", () => {
-    // claude answers with aliases only, and the catalog defaults to a full id.
-    const merged = mergeDiscoveredModels(
-      new Map([
-        ["claude", parseDiscoveredModels("claude", CLAUDE_MODEL_OUTPUT)],
-      ])
-    )
-    const claude = ids(modelsFor(merged, "claude"))
-    expect(claude).toContain(catalog.defaults.model)
-    expect(claude).toContain("opus")
-    // Still labelled, not shown as a bare id.
-    expect(modelsFor(merged, "claude")[0]?.label).toBe("Claude Opus 5")
-  })
-
-  it("never leaves the default pointing at a model no provider offers", () => {
-    const merged = mergeDiscoveredModels(
-      new Map([
-        ["claude", parseDiscoveredModels("claude", CLAUDE_MODEL_OUTPUT)],
         ["codex", parseDiscoveredModels("codex", CODEX_MODELS_OUTPUT)],
         [
           "opencode",
@@ -247,8 +218,36 @@ describe("mergeDiscoveredModels", () => {
         ] as const,
       ] as ReadonlyArray<readonly [ChatProviderKind, ReadonlyArray<ChatModel>]>)
     )
-    expect(
-      merged.providers.flatMap((p) => p.models).map((m) => m.id)
-    ).toContain(merged.defaults.model)
+    expect(ids(modelsFor(merged, "codex"))).toEqual([
+      "gpt-5.6-sol",
+      "gpt-5.6-terra",
+    ])
+    expect(ids(modelsFor(merged, "opencode"))).toEqual([
+      "opencode/big-pickle",
+      "opencode/north-mini-code-free",
+    ])
+    // The CLI that wasn't installed contributes nothing, and nothing stands in.
+    expect(modelsFor(merged, "cursor")).toEqual([])
+  })
+
+  it("keeps the labels the CLIs gave, not ones derived from ids", () => {
+    const merged = mergeDiscoveredModels(
+      new Map([
+        ["opencode", parseDiscoveredModels("opencode", OPENCODE_MODELS_OUTPUT)],
+      ])
+    )
+    expect(modelsFor(merged, "opencode")[0]?.label).toBe("Big Pickle")
+  })
+
+  it("leaves the provider rail intact even with no models anywhere", () => {
+    // The providers are the agents byconvo can drive — that set is ours, and
+    // an agent that isn't installed should still be visible (and empty).
+    const merged = mergeDiscoveredModels(new Map())
+    expect(merged.providers.map((p) => p.id)).toEqual([
+      "claude",
+      "codex",
+      "opencode",
+      "cursor",
+    ])
   })
 })

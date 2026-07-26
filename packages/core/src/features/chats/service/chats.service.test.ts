@@ -252,20 +252,19 @@ describe("ChatsService", () => {
       expect(all).toHaveLength(0)
     }).pipe(Effect.provide(layer))
   })
-  it.effect(
-    "models falls back to the curated catalog when no CLI answers",
-    () => {
-      const { layer } = ChatsMemory()
-      return Effect.gen(function* () {
-        const chats = yield* ChatsService
-        const catalog = yield* chats.models
-        expect(catalog).toEqual(CHAT_MODEL_CATALOG)
-        expect(
-          catalog.providers.flatMap((p) => p.models).map((m) => m.id)
-        ).toContain(catalog.defaults.model)
-      }).pipe(Effect.provide(layer))
-    }
-  )
+  it.effect("models offers nothing when no CLI answers", () => {
+    const { layer } = ChatsMemory()
+    return Effect.gen(function* () {
+      const chats = yield* ChatsService
+      const catalog = yield* chats.models
+      // Empty rather than invented: a chat with no model runs on the CLI's own
+      // default, which beats offering models that may not exist.
+      expect(catalog.providers.flatMap((p) => p.models)).toEqual([])
+      expect(catalog.providers.map((p) => p.id)).toEqual(
+        CHAT_MODEL_CATALOG.providers.map((p) => p.id)
+      )
+    }).pipe(Effect.provide(layer))
+  })
 
   it.effect("models takes the list from the CLI when it answers", () => {
     const { layer } = ChatsMemory([], terminalReturning())
@@ -273,12 +272,11 @@ describe("ChatsService", () => {
       const chats = yield* ChatsService
       const catalog = yield* chats.models
       const codex = catalog.providers.find((p) => p.id === "codex")
-      // Reported by the CLI, and the curated gpt-5.4 entries are gone with it.
       expect(codex?.models.map((m) => m.id)).toEqual(["gpt-9-turbo"])
       expect(codex?.models[0]?.label).toBe("GPT-9 Turbo")
-      // A provider whose CLI said nothing keeps what was curated for it.
+      // The provider whose CLI stayed quiet offers nothing at all.
       expect(catalog.providers.find((p) => p.id === "cursor")?.models).toEqual(
-        CHAT_MODEL_CATALOG.providers.find((p) => p.id === "cursor")?.models
+        []
       )
     }).pipe(Effect.provide(layer))
   })
@@ -298,22 +296,24 @@ describe("ChatsService", () => {
     }).pipe(Effect.provide(layer))
   })
 
-  it.effect(
-    "a CLI that fails outright leaves the curated list standing",
-    () => {
-      const { layer } = ChatsMemory(
-        [],
-        terminalMemory((command) => ({
-          stdout: "",
-          stderr: "command not found",
-          exitCode: 127,
-          command,
-        }))
+  it.effect("a CLI that isn't installed contributes no models", () => {
+    const { layer } = ChatsMemory(
+      [],
+      terminalMemory((command) => ({
+        stdout: "",
+        stderr: "command not found",
+        exitCode: 127,
+        command,
+      }))
+    )
+    return Effect.gen(function* () {
+      const chats = yield* ChatsService
+      const catalog = yield* chats.models
+      expect(catalog.providers.flatMap((p) => p.models)).toEqual([])
+      // Still listed, so the picker shows the agent exists and is unavailable.
+      expect(catalog.providers).toHaveLength(
+        CHAT_MODEL_CATALOG.providers.length
       )
-      return Effect.gen(function* () {
-        const chats = yield* ChatsService
-        expect(yield* chats.models).toEqual(CHAT_MODEL_CATALOG)
-      }).pipe(Effect.provide(layer))
-    }
-  )
+    }).pipe(Effect.provide(layer))
+  })
 })
