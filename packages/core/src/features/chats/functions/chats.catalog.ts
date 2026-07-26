@@ -7,11 +7,13 @@ export const CHAT_PROVIDER_KINDS = [
   "claude",
   "codex",
   "opencode",
+  "cursor",
 ] as const satisfies ReadonlyArray<ChatProviderKind>
 export const chatProviderLabel: Record<ChatProviderKind, string> = {
   claude: "Claude",
   codex: "Codex",
   opencode: "OpenCode Zen",
+  cursor: "Cursor",
 }
 export const CHAT_MODEL_CATALOG: ChatModelCatalog = {
   providers: [
@@ -44,6 +46,21 @@ export const CHAT_MODEL_CATALOG: ChatModelCatalog = {
         { id: "opencode/claude-haiku-4-5", label: "Claude Haiku 4.5" },
         { id: "opencode/claude-opus-4-6", label: "Claude Opus 4.6" },
         { id: "opencode/claude-opus-4-5", label: "Claude Opus 4.5" },
+      ],
+    },
+    {
+      id: "cursor",
+      label: "Cursor",
+      // Cursor's own Composer line leads: they are the low-latency models the
+      // CLI is fastest with. The frontier models it also proxies are listed
+      // after. An id the catalog doesn't know still works — it is passed
+      // through to `--model` verbatim.
+      models: [
+        { id: "composer-2.5", label: "Composer 2.5" },
+        { id: "composer-2", label: "Composer 2" },
+        { id: "composer-1.5", label: "Composer 1.5" },
+        { id: "sonnet-4.7", label: "Claude Sonnet 4.7" },
+        { id: "gpt-5.5", label: "GPT-5.5" },
       ],
     },
   ],

@@ -1,6 +1,11 @@
 import * as Schema from "effect/Schema"
 
-export const ChatProviderKind = Schema.Literals(["claude", "codex", "opencode"])
+export const ChatProviderKind = Schema.Literals([
+  "claude",
+  "codex",
+  "opencode",
+  "cursor",
+])
 export type ChatProviderKind = typeof ChatProviderKind.Type
 export const ChatEffort = Schema.Literals(["low", "medium", "high"])
 export type ChatEffort = typeof ChatEffort.Type

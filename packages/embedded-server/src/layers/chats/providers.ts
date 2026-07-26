@@ -8,6 +8,7 @@
  *   claude   `claude -p --output-format stream-json` — full token streaming
  *   codex    `codex exec --json` — JSONL item/turn events
  *   opencode `opencode run` — plain text streamed as it prints
+ *   cursor   `cursor-agent -p --output-format stream-json` — token streaming
  */
 import type { Chat, ChatMessage } from "@byconvo/core/chats"
 
@@ -20,9 +21,9 @@ export interface ChatTurnProgram {
   readonly stdin: string
 }
 
-/** The chat's native session, decided by the runtime: claude ids are minted
- * by us up-front; codex/opencode mint their own (id stays null until it has
- * been captured), so only a known id can be resumed. */
+/** The chat's native session, decided by the runtime from the provider's
+ * `chatSessionOrigin`: a minted id is ours up-front; every other agent mints
+ * its own (id stays null until captured), so only a known id can be resumed. */
 export interface ChatTurnSession {
   readonly id: string | null
   readonly resume: boolean
@@ -74,6 +75,25 @@ const codexAccessArgs = (chat: Chat): ReadonlyArray<string> => {
       return ["--full-auto"]
     case "fullAccess":
       return ["--dangerously-bypass-approvals-and-sandbox"]
+  }
+}
+
+/**
+ * Cursor's one permission switch: `--force` lets the agent edit files and run
+ * commands without asking. Print mode can't ask, so without it a build turn
+ * stalls on the first write. There is no sandbox tier between "ask" and
+ * "don't ask", so acceptEdits and fullAccess land on the same flag, and plan
+ * mode — which cursor has no equivalent of — falls back to the read-only
+ * default, exactly like codex.
+ */
+const cursorAccessArgs = (chat: Chat): ReadonlyArray<string> => {
+  if (chat.mode === "plan") return []
+  switch (chat.access) {
+    case "supervised":
+      return []
+    case "acceptEdits":
+    case "fullAccess":
+      return ["--force"]
   }
 }
 
@@ -145,11 +165,11 @@ export const withAttachedImages = (
  * stdin (never argv, so its size and content can't break the command line);
  * stdout is parsed by the chat runtime with the provider's parser.
  *
- * Session continuity works like the PTY threads (threads/agents.ts):
- * claude lets us mint the id, so a fresh chat passes `--session-id` (the
- * runtime persists it once the CLI confirms it) and later turns `--resume`;
- * codex/opencode mint their own, which the runtime captures from the event
- * stream (codex) or the CLI's session files (opencode) for later resumes.
+ * Session continuity works like the PTY threads (threads/agents.ts), along the
+ * split `chatSessionOrigin` draws: claude lets us mint the id, so a fresh chat
+ * passes `--session-id` (the runtime persists it once the CLI confirms it) and
+ * later turns `--resume`; the others mint their own, which the runtime captures
+ * from the event stream (cursor, codex) or the CLI's session files (opencode).
  */
 export const chatTurnProgram = (
   chat: Chat,
@@ -208,6 +228,24 @@ export const chatTurnProgram = (
           : []),
       ]
       return { ...inLoginShell("opencode", parts), env: {}, stdin: prompt }
+    }
+    case "cursor": {
+      const parts = [
+        "cursor-agent",
+        "-p",
+        "--output-format",
+        "stream-json",
+        // Without this the stream only carries whole messages; with it the
+        // reply arrives in chunks, like claude's partial messages.
+        "--stream-partial-output",
+        ...(chat.model.length > 0 ? ["--model", chat.model] : []),
+        // No effort flag — cursor picks reasoning depth per model itself.
+        ...cursorAccessArgs(chat),
+        ...(session.resume && session.id !== null
+          ? ["--resume", session.id]
+          : []),
+      ]
+      return { ...inLoginShell("cursor-agent", parts), env: {}, stdin: prompt }
     }
   }
 }

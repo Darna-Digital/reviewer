@@ -58,6 +58,8 @@ export const agentPtyProgram = (
       return agentInShell("opencode", sessionArgs)
     case "codex":
       return agentInShell("codex", sessionArgs)
+    case "cursor":
+      return agentInShell("cursor-agent", sessionArgs)
   }
 }
 
@@ -86,5 +88,7 @@ export const agentSessionArgs = (
       return resume ? `--session ${sessionId}` : ""
     case "codex":
       return resume ? `resume ${sessionId}` : ""
+    case "cursor":
+      return resume ? `--resume ${sessionId}` : ""
   }
 }

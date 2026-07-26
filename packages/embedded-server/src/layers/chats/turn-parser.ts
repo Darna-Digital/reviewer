@@ -5,8 +5,17 @@
  * The chat runtime is provider-blind past this seam.
  */
 import type { ChatProviderKind } from "@byconvo/core/chats"
-import { createClaudeTurnParser } from "./claude-stream.ts"
+import {
+  CLAUDE_LOGIN_HINT,
+  createClaudeTurnParser,
+  isClaudeAuthError,
+} from "./claude-stream.ts"
 import { createCodexTurnParser } from "./codex-stream.ts"
+import {
+  createCursorTurnParser,
+  CURSOR_LOGIN_HINT,
+  isCursorAuthError,
+} from "./cursor-stream.ts"
 import { createOpencodeTurnParser } from "./opencode-stream.ts"
 
 export type TurnEvent =
@@ -47,5 +56,30 @@ export const createTurnParser = (provider: ChatProviderKind): TurnParser => {
       return createCodexTurnParser()
     case "opencode":
       return createOpencodeTurnParser()
+    case "cursor":
+      return createCursorTurnParser()
+  }
+}
+
+/**
+ * The actionable hint for a turn that died because its CLI isn't logged in, or
+ * null when the failure was anything else. The parsers already catch this when
+ * the CLI reports it in-stream, but a logged-out CLI can also die with the
+ * prompt on stderr and no result line at all, so the runtime runs whatever
+ * error it ended up with through here and gets the same message either way.
+ */
+export const loginHint = (
+  provider: ChatProviderKind,
+  error: string
+): string | null => {
+  switch (provider) {
+    case "claude":
+      return isClaudeAuthError(error) ? CLAUDE_LOGIN_HINT : null
+    case "cursor":
+      return isCursorAuthError(error) ? CURSOR_LOGIN_HINT : null
+    // codex and opencode fail loudly enough on their own.
+    case "codex":
+    case "opencode":
+      return null
   }
 }

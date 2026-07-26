@@ -7,12 +7,14 @@ export const ASSIGNABLE_CHAT_PROVIDERS = [
   "claude",
   "opencode",
   "codex",
+  "cursor",
 ] as const satisfies ReadonlyArray<ChatProviderKind>
 
 const FALLBACK_MODEL_BY_PROVIDER: Record<ChatProviderKind, string> = {
   claude: "claude-opus-5",
   codex: "gpt-5.5",
   opencode: "opencode/big-pickle",
+  cursor: "composer-2.5",
 }
 
 export const isChatProviderKind = (value: string): value is ChatProviderKind =>

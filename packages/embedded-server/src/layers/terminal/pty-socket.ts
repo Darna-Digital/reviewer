@@ -1,8 +1,8 @@
 /**
  * Live terminal sessions over WebSocket. Each connection to `/api/threads/pty`
  * spawns a real PTY (node-pty) running the thread's program — the login shell for
- * a plain terminal, or an agent CLI (Claude Code / opencode / Codex) in its
- * normal interactive mode — scoped to the currently selected repository. This is
+ * a plain terminal, or an agent CLI (Claude Code / opencode / Codex / Cursor) in
+ * its normal interactive mode — scoped to the currently selected repository. This is
  * the byconvo (web) equivalent of embedding a terminal like libghostty: the
  * frontend renders an xterm.js terminal and streams bytes both ways.
  *
@@ -43,7 +43,11 @@ import {
 } from "./agent-pty.ts"
 import { CHAT_STREAM_PATH, startChatStream } from "../chats/chat-runtime.ts"
 import { getCurrentRepo } from "../workspace/current-repo.ts"
-import { recentAgentSessions } from "./agent-session-capture.ts"
+import {
+  recentAgentSessions,
+  writesDiscoverableSessions,
+  type DiscoverableAgent,
+} from "./agent-session-capture.ts"
 import { DEV_PTY_PATH, startDevSession } from "./dev-process-manager.ts"
 
 const PTY_PATH = "/api/threads/pty"
@@ -340,7 +344,7 @@ const CAPTURE_MAX_MS = 30 * 60_000
 
 const startSessionCapture = (
   session: PtySession,
-  agent: "opencode" | "codex",
+  agent: DiscoverableAgent,
   cwd: string,
   id: string
 ): void => {
@@ -502,7 +506,7 @@ const startSession = (ws: WebSocket, request: IncomingMessage) => {
   // dying (server restart / app reopen). We only reach here on a fresh spawn —
   // a live re-attach returned above.
   let sessionArgs = ""
-  let captureAgent: "opencode" | "codex" | null = null
+  let captureAgent: DiscoverableAgent | null = null
   if (id !== null && id.length > 0 && agent !== "terminal") {
     const stored = readThreadAgentSessionId(cwd, id)
     if (stored !== null) {
@@ -513,10 +517,12 @@ const startSession = (ws: WebSocket, request: IncomingMessage) => {
       const uuid = randomUUID()
       sessionArgs = agentSessionArgs(agent, { sessionId: uuid, resume: false })
       patchThread(cwd, id, { agentSessionId: uuid })
-    } else {
+    } else if (writesDiscoverableSessions(agent)) {
       // opencode/codex mint their own id — start fresh, capture it afterwards.
       captureAgent = agent
     }
+    // Anything else (cursor) mints an id we can neither preset nor read back
+    // from disk, so its terminal threads simply start a fresh conversation.
   }
   // Pin Claude Code's UI theme to the terminal's, so it never renders its
   // user-message background or text (near-)black on the opposite background.

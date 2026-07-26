@@ -5,6 +5,7 @@ export const AGENT_KINDS = [
   "claude",
   "opencode",
   "codex",
+  "cursor",
 ] as const satisfies ReadonlyArray<AgentKind>
 const quote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`
 export const agentLabel: Record<AgentKind, string> = {
@@ -12,6 +13,7 @@ export const agentLabel: Record<AgentKind, string> = {
   claude: "Claude Code",
   opencode: "opencode",
   codex: "Codex",
+  cursor: "Cursor",
 }
 export const agentDefaultTitle = (agent: AgentKind): string =>
   agent === "terminal" ? "New thread" : agentLabel[agent]
@@ -25,5 +27,7 @@ export const agentCommand = (agent: AgentKind, input: string): string => {
       return `opencode run ${quote(input)}`
     case "codex":
       return `codex exec ${quote(input)}`
+    case "cursor":
+      return `cursor-agent -p ${quote(input)}`
   }
 }
