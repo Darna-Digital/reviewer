@@ -101,6 +101,11 @@ export type ChatSummary = typeof ChatSummary.Type
 export const ChatModel = Schema.Struct({
   id: Schema.String,
   label: Schema.String,
+  /** The upstream vendor behind the model, when the agent runs models it did
+   * not make — opencode brokers Bedrock, Copilot and its own hosted models
+   * through one CLI, and the picker groups them under this. Absent for agents
+   * that only offer their own models. */
+  group: Schema.optionalKey(Schema.String),
 })
 export type ChatModel = typeof ChatModel.Type
 export const ChatModelProvider = Schema.Struct({

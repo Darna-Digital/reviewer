@@ -4025,6 +4025,7 @@ export interface operations {
                             models: {
                                 id: string;
                                 label: string;
+                                group?: string;
                             }[];
                         }[];
                         defaults: {

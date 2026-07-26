@@ -38,10 +38,11 @@ export const modelDiscoveryCommand = (provider: ChatProviderKind): string => {
     case "codex":
       return `codex debug models`
     case "opencode":
-      // Scoped to opencode's own hosted models — the provider this catalog
-      // calls "OpenCode Zen". Dropping the argument would list every provider
-      // the developer has credentials for, under a label that doesn't fit.
-      return `opencode models opencode --verbose`
+      // Unscoped on purpose: opencode brokers whichever upstream providers the
+      // developer has credentials for, and all of them are runnable through
+      // `opencode run --model <provider>/<model>`. They come back grouped by
+      // vendor so the picker can show them that way.
+      return `opencode models --verbose`
     case "cursor":
       return `printf '%s' '/model' | cursor-agent -p --output-format json`
   }
@@ -84,10 +85,16 @@ const jsonObjectIn = (text: string): unknown => {
  * whitespace or punctuation beyond what real ids use is dropped.
  */
 const PLAUSIBLE_MODEL_ID =
-  /^[A-Za-z0-9][A-Za-z0-9._/-]{1,63}(\[[\dA-Za-z]+\])?$/
+  /^[A-Za-z0-9][A-Za-z0-9._:/-]{1,127}(\[[\dA-Za-z]+\])?$/
 
-/** The `provider/model` form opencode prints, and the form `--model` wants. */
-const QUALIFIED_MODEL_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][\w.-]*$/
+/**
+ * The `provider/model` form opencode prints, and the form `--model` wants.
+ * More than two segments is normal (`github-models/ai21-labs/…`), and a
+ * version suffix may carry a colon (`amazon.nova-lite-v1:0`) — both are real
+ * ids that a tighter pattern would drop on the floor.
+ */
+const QUALIFIED_MODEL_ID =
+  /^[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._:-]*)+$/
 
 /**
  * A display name for an id no CLI gave us one for: `sonnet` → `Sonnet`. Only
@@ -96,6 +103,15 @@ const QUALIFIED_MODEL_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*\/[A-Za-z0-9][\w.-]*$/
  */
 const labelFromId = (id: string): string =>
   id.length === 0 ? id : id.slice(0, 1).toUpperCase() + id.slice(1)
+
+/**
+ * A heading for an upstream vendor id: `amazon-bedrock` → `Amazon Bedrock`.
+ * Derived rather than mapped, so a vendor the developer has credentials for
+ * gets a readable heading without being known here — at the cost of the odd
+ * imperfect capitalisation, which beats a table that has to be maintained.
+ */
+const vendorLabel = (id: string): string =>
+  id.split(/[-_]/).filter(Boolean).map(labelFromId).join(" ")
 
 /**
  * Claude and cursor answer `/model` in print mode with a sentence:
@@ -145,10 +161,14 @@ const parseCodexModels = (stdout: string): ReadonlyArray<ChatModel> => {
 }
 
 /**
- * `opencode models <provider> --verbose` → an id line, then that model as
- * pretty-printed JSON, repeated. The objects are framed by a `{` and a `}`
- * alone on their lines (the id line carries the qualified `provider/model`
- * form we actually pass to `--model`, which the object itself doesn't hold).
+ * `opencode models --verbose` → an id line, then that model as pretty-printed
+ * JSON, repeated. The objects are framed by a `{` and a `}` alone on their
+ * lines (the id line carries the qualified `provider/model` form we actually
+ * pass to `--model`, which the object itself doesn't hold).
+ *
+ * Each model names the upstream vendor brokering it, which becomes its group:
+ * one opencode rail can hold its own hosted models next to Bedrock's and
+ * Copilot's, and only the grouping tells them apart.
  */
 const parseOpencodeModels = (stdout: string): ReadonlyArray<ChatModel> => {
   const models: ChatModel[] = []
@@ -182,7 +202,14 @@ const parseOpencodeModels = (stdout: string): ReadonlyArray<ChatModel> => {
     if (id === null || !PLAUSIBLE_MODEL_ID.test(id)) continue
     // A model opencode has retired can still be listed; don't offer it.
     if (parsed["status"] === "deprecated") continue
-    models.push({ id, label: asString(parsed["name"]) ?? labelFromId(id) })
+    const group = provider ?? id.split("/")[0]
+    models.push({
+      id,
+      label: asString(parsed["name"]) ?? labelFromId(id),
+      ...(group !== undefined && group.length > 0
+        ? { group: vendorLabel(group) }
+        : {}),
+    })
   }
   return models
 }

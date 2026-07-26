@@ -10,7 +10,7 @@ import {
   IconStar,
   IconStarFilled,
 } from "@tabler/icons-react"
-import { useEffect, useMemo, useState } from "react"
+import { Fragment, useEffect, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -28,6 +28,8 @@ interface PickerModel {
   readonly label: string
   readonly provider: ChatProviderKind
   readonly providerLabel: string
+  /** The upstream vendor, for agents that broker other people's models. */
+  readonly group: string | undefined
 }
 
 const FAVORITES_RAIL = "favorites"
@@ -54,6 +56,7 @@ export function ModelPicker({
           label: m.label,
           provider: p.id,
           providerLabel: p.label,
+          group: m.group,
         }))
       ),
     [catalog]
@@ -192,54 +195,64 @@ export function ModelPicker({
               )}
               {visible.map((m, index) => {
                 const starred = favorites.includes(m.id)
+                // An agent that brokers other vendors' models (opencode) sends
+                // them grouped; head each run so a long rail stays readable.
+                const startsGroup =
+                  m.group !== undefined && m.group !== visible[index - 1]?.group
                 return (
-                  <div
-                    key={m.id}
-                    className={cn(
-                      "group/model flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted",
-                      m.id === model && "bg-muted/60"
-                    )}
-                    onClick={() => pick(m)}
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 text-sm font-medium">
-                        <span className="truncate">{m.label}</span>
-                        {m.id === model && (
-                          <span className="text-primary">✓</span>
-                        )}
+                  <Fragment key={`${m.provider}:${m.id}`}>
+                    {startsGroup && (
+                      <div className="px-2 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                        {m.group}
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <ProviderIcon
-                          provider={m.provider}
-                          className="size-3"
-                        />
-                        {m.providerLabel}
-                      </div>
-                    </div>
-                    {index < 9 && (
-                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                        ⌘{index + 1}
-                      </span>
                     )}
-                    <button
-                      type="button"
-                      aria-label={starred ? "Unstar model" : "Star model"}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleFavorite(m.id)
-                      }}
+                    <div
                       className={cn(
-                        "text-muted-foreground opacity-0 transition-opacity group-hover/model:opacity-100 hover:text-foreground",
-                        starred && "opacity-100"
+                        "group/model flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted",
+                        m.id === model && "bg-muted/60"
                       )}
+                      onClick={() => pick(m)}
                     >
-                      {starred ? (
-                        <IconStarFilled className="size-3.5 text-amber-400" />
-                      ) : (
-                        <IconStar className="size-3.5" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 text-sm font-medium">
+                          <span className="truncate">{m.label}</span>
+                          {m.id === model && (
+                            <span className="text-primary">✓</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <ProviderIcon
+                            provider={m.provider}
+                            className="size-3"
+                          />
+                          {m.providerLabel}
+                        </div>
+                      </div>
+                      {index < 9 && (
+                        <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                          ⌘{index + 1}
+                        </span>
                       )}
-                    </button>
-                  </div>
+                      <button
+                        type="button"
+                        aria-label={starred ? "Unstar model" : "Star model"}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleFavorite(m.id)
+                        }}
+                        className={cn(
+                          "text-muted-foreground opacity-0 transition-opacity group-hover/model:opacity-100 hover:text-foreground",
+                          starred && "opacity-100"
+                        )}
+                      >
+                        {starred ? (
+                          <IconStarFilled className="size-3.5 text-amber-400" />
+                        ) : (
+                          <IconStar className="size-3.5" />
+                        )}
+                      </button>
+                    </div>
+                  </Fragment>
                 )
               })}
             </ScrollArea>

@@ -39,6 +39,11 @@ const CODEX_MODELS_OUTPUT = JSON.stringify({
   ],
 })
 
+/**
+ * opencode brokers several vendors at once and prints them in runs — its own
+ * hosted models, then each upstream provider the developer has credentials
+ * for. Both are represented here.
+ */
 const OPENCODE_MODELS_OUTPUT = [
   "opencode/big-pickle",
   "{",
@@ -52,6 +57,13 @@ const OPENCODE_MODELS_OUTPUT = [
   `  "id": "north-mini-code-free",`,
   `  "providerID": "opencode",`,
   `  "name": "North Mini Code (free)",`,
+  `  "status": "active"`,
+  "}",
+  "amazon-bedrock/anthropic.claude-opus-5",
+  "{",
+  `  "id": "anthropic.claude-opus-5",`,
+  `  "providerID": "amazon-bedrock",`,
+  `  "name": "Claude Opus 5",`,
   `  "status": "active"`,
   "}",
   "",
@@ -71,9 +83,8 @@ describe("modelDiscoveryCommand", () => {
 
   it("asks codex and opencode for their machine-readable catalogs", () => {
     expect(modelDiscoveryCommand("codex")).toBe("codex debug models")
-    expect(modelDiscoveryCommand("opencode")).toBe(
-      "opencode models opencode --verbose"
-    )
+    // Unscoped: every vendor opencode can broker, not just its own models.
+    expect(modelDiscoveryCommand("opencode")).toBe("opencode models --verbose")
   })
 })
 
@@ -116,13 +127,60 @@ describe("parseDiscoveredModels", () => {
   it("reads opencode's qualified ids, not the bare ids in its objects", () => {
     const models = parseDiscoveredModels("opencode", OPENCODE_MODELS_OUTPUT)
     // `--model` wants `opencode/big-pickle`; the object only holds `big-pickle`.
-    expect(models).toEqual([
-      { id: "opencode/big-pickle", label: "Big Pickle" },
-      {
-        id: "opencode/north-mini-code-free",
-        label: "North Mini Code (free)",
-      },
+    expect(ids(models)).toEqual([
+      "opencode/big-pickle",
+      "opencode/north-mini-code-free",
+      "amazon-bedrock/anthropic.claude-opus-5",
     ])
+  })
+
+  it("groups opencode's models by the vendor brokering them", () => {
+    const models = parseDiscoveredModels("opencode", OPENCODE_MODELS_OUTPUT)
+    expect(models.map((m) => m.group)).toEqual([
+      "Opencode",
+      "Opencode",
+      "Amazon Bedrock",
+    ])
+    expect(models[2]).toEqual({
+      id: "amazon-bedrock/anthropic.claude-opus-5",
+      label: "Claude Opus 5",
+      group: "Amazon Bedrock",
+    })
+  })
+
+  it("keeps ids whose shape isn't a plain slug", () => {
+    // Bedrock versions its models with a colon and github-models nests another
+    // segment; both are real ids a tighter pattern would silently drop.
+    const awkward = [
+      "amazon-bedrock/amazon.nova-lite-v1:0",
+      "{",
+      `  "id": "amazon.nova-lite-v1:0",`,
+      `  "providerID": "amazon-bedrock",`,
+      `  "name": "Nova Lite",`,
+      `  "status": "active"`,
+      "}",
+      "github-models/ai21-labs/ai21-jamba-1.5-large",
+      "{",
+      `  "id": "ai21-labs/ai21-jamba-1.5-large",`,
+      `  "providerID": "github-models",`,
+      `  "name": "AI21 Jamba 1.5 Large",`,
+      `  "status": "active"`,
+      "}",
+      "",
+    ].join("\n")
+    expect(ids(parseDiscoveredModels("opencode", awkward))).toEqual([
+      "amazon-bedrock/amazon.nova-lite-v1:0",
+      "github-models/ai21-labs/ai21-jamba-1.5-large",
+    ])
+  })
+
+  it("leaves models ungrouped for agents that only run their own", () => {
+    for (const output of [CLAUDE_MODEL_OUTPUT, CODEX_MODELS_OUTPUT] as const) {
+      const provider = output === CODEX_MODELS_OUTPUT ? "codex" : "claude"
+      for (const model of parseDiscoveredModels(provider, output)) {
+        expect(model.group).toBeUndefined()
+      }
+    }
   })
 
   it("skips a model opencode has retired", () => {
@@ -132,6 +190,7 @@ describe("parseDiscoveredModels", () => {
     )
     expect(ids(parseDiscoveredModels("opencode", retired))).toEqual([
       "opencode/north-mini-code-free",
+      "amazon-bedrock/anthropic.claude-opus-5",
     ])
   })
 
@@ -161,6 +220,7 @@ describe("parseDiscoveredModels", () => {
       expect(ids(models)).toEqual([
         "opencode/big-pickle",
         "opencode/north-mini-code-free",
+        "amazon-bedrock/anthropic.claude-opus-5",
       ])
       expect(ids(models)).not.toContain("nvm")
     })
@@ -225,7 +285,12 @@ describe("mergeDiscoveredModels", () => {
     expect(ids(modelsFor(merged, "opencode"))).toEqual([
       "opencode/big-pickle",
       "opencode/north-mini-code-free",
+      "amazon-bedrock/anthropic.claude-opus-5",
     ])
+    // One rail, several vendors — the grouping is what separates them.
+    expect(new Set(modelsFor(merged, "opencode").map((m) => m.group))).toEqual(
+      new Set(["Opencode", "Amazon Bedrock"])
+    )
     // The CLI that wasn't installed contributes nothing, and nothing stands in.
     expect(modelsFor(merged, "cursor")).toEqual([])
   })

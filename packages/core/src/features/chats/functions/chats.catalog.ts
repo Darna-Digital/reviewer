@@ -23,7 +23,10 @@ export const CHAT_PROVIDER_KINDS = [
 export const chatProviderLabel: Record<ChatProviderKind, string> = {
   claude: "Claude",
   codex: "Codex",
-  opencode: "OpenCode Zen",
+  // Not "OpenCode Zen": the rail carries every model opencode can broker —
+  // its own hosted ones and each upstream vendor the developer has credentials
+  // for — grouped by vendor inside the picker.
+  opencode: "opencode",
   cursor: "Cursor",
 }
 export const CHAT_MODEL_CATALOG: ChatModelCatalog = {
