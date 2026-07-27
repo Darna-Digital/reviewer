@@ -151,7 +151,7 @@ export function ChatRow({
         ) : (
           chat.lastMessage !== null &&
           chat.lastMessage.length > 0 && (
-            <p className="line-clamp-3 text-xs leading-relaxed text-muted-foreground break-words">
+            <p className="line-clamp-3 text-xs leading-relaxed break-words text-muted-foreground">
               {chat.lastMessage}
             </p>
           )

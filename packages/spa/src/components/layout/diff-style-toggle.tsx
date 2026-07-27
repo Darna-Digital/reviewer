@@ -9,7 +9,13 @@ import type { DiffStyle } from "@/lib/ui-prefs"
 
 type PreviewLineKind = "context" | "removed" | "added"
 
-function PreviewLine({ kind, width }: { kind: PreviewLineKind; width: string }) {
+function PreviewLine({
+  kind,
+  width,
+}: {
+  kind: PreviewLineKind
+  width: string
+}) {
   return (
     <div
       className={cn(
@@ -110,7 +116,7 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
                 aria-pressed={value === option.value}
                 onClick={() => onChange(option.value)}
                 className={cn(
-                  "relative flex size-6 items-center justify-center rounded-[6px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring/50",
+                  "relative flex size-6 items-center justify-center rounded-[6px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                   value === option.value
                     ? "text-secondary-foreground"
                     : "text-muted-foreground hover:text-foreground"
