@@ -3456,7 +3456,7 @@ export interface operations {
                 "application/json": {
                     paths?: string[];
                     /** @enum {string} */
-                    agent?: "claude" | "opencode" | "codex";
+                    agent?: "claude" | "opencode" | "codex" | "cursor";
                 };
             };
         };
@@ -3511,7 +3511,7 @@ export interface operations {
                         id: string;
                         title: string;
                         /** @enum {string} */
-                        agent: "terminal" | "claude" | "opencode" | "codex";
+                        agent: "terminal" | "claude" | "opencode" | "codex" | "cursor";
                         branch: string;
                         taskKey: string | null;
                         createdAt: string;
@@ -3562,7 +3562,7 @@ export interface operations {
                 "application/json": {
                     title?: string;
                     /** @enum {string} */
-                    agent?: "terminal" | "claude" | "opencode" | "codex";
+                    agent?: "terminal" | "claude" | "opencode" | "codex" | "cursor";
                     branch?: string;
                     taskKey?: string;
                     initialPrompt?: string;
@@ -3580,7 +3580,7 @@ export interface operations {
                         id: string;
                         title: string;
                         /** @enum {string} */
-                        agent: "terminal" | "claude" | "opencode" | "codex";
+                        agent: "terminal" | "claude" | "opencode" | "codex" | "cursor";
                         branch: string;
                         taskKey: string | null;
                         initialPrompt: string;
@@ -3648,7 +3648,7 @@ export interface operations {
                         id: string;
                         title: string;
                         /** @enum {string} */
-                        agent: "terminal" | "claude" | "opencode" | "codex";
+                        agent: "terminal" | "claude" | "opencode" | "codex" | "cursor";
                         branch: string;
                         taskKey: string | null;
                         initialPrompt: string;
@@ -3775,7 +3775,7 @@ export interface operations {
                         id: string;
                         title: string;
                         /** @enum {string} */
-                        agent: "terminal" | "claude" | "opencode" | "codex";
+                        agent: "terminal" | "claude" | "opencode" | "codex" | "cursor";
                         branch: string;
                         taskKey: string | null;
                         initialPrompt: string;
@@ -3903,7 +3903,7 @@ export interface operations {
                         id: string;
                         title: string;
                         /** @enum {string} */
-                        provider: "claude" | "codex" | "opencode";
+                        provider: "claude" | "codex" | "opencode" | "cursor";
                         model: string;
                         branch: string;
                         createdAt: string;
@@ -3955,7 +3955,7 @@ export interface operations {
                 "application/json": {
                     title?: string;
                     /** @enum {string} */
-                    provider?: "claude" | "codex" | "opencode";
+                    provider?: "claude" | "codex" | "opencode" | "cursor";
                     model?: string;
                     /** @enum {string} */
                     effort?: "low" | "medium" | "high";
@@ -3978,7 +3978,7 @@ export interface operations {
                         id: string;
                         title: string;
                         /** @enum {string} */
-                        provider: "claude" | "codex" | "opencode";
+                        provider: "claude" | "codex" | "opencode" | "cursor";
                         model: string;
                         /** @enum {string} */
                         effort: "low" | "medium" | "high";
@@ -4075,16 +4075,17 @@ export interface operations {
                     "application/json": {
                         providers: {
                             /** @enum {string} */
-                            id: "claude" | "codex" | "opencode";
+                            id: "claude" | "codex" | "opencode" | "cursor";
                             label: string;
                             models: {
                                 id: string;
                                 label: string;
+                                group?: string;
                             }[];
                         }[];
                         defaults: {
                             /** @enum {string} */
-                            provider: "claude" | "codex" | "opencode";
+                            provider: "claude" | "codex" | "opencode" | "cursor";
                             model: string;
                             /** @enum {string} */
                             effort: "low" | "medium" | "high";
@@ -4146,7 +4147,7 @@ export interface operations {
                         id: string;
                         title: string;
                         /** @enum {string} */
-                        provider: "claude" | "codex" | "opencode";
+                        provider: "claude" | "codex" | "opencode" | "cursor";
                         model: string;
                         /** @enum {string} */
                         effort: "low" | "medium" | "high";
@@ -4290,7 +4291,7 @@ export interface operations {
                 "application/json": {
                     title?: string;
                     /** @enum {string} */
-                    provider?: "claude" | "codex" | "opencode";
+                    provider?: "claude" | "codex" | "opencode" | "cursor";
                     model?: string;
                     /** @enum {string} */
                     effort?: "low" | "medium" | "high";
@@ -4312,7 +4313,7 @@ export interface operations {
                         id: string;
                         title: string;
                         /** @enum {string} */
-                        provider: "claude" | "codex" | "opencode";
+                        provider: "claude" | "codex" | "opencode" | "cursor";
                         model: string;
                         /** @enum {string} */
                         effort: "low" | "medium" | "high";
@@ -4423,7 +4424,7 @@ export interface operations {
                         id: string;
                         title: string;
                         /** @enum {string} */
-                        provider: "claude" | "codex" | "opencode";
+                        provider: "claude" | "codex" | "opencode" | "cursor";
                         model: string;
                         /** @enum {string} */
                         effort: "low" | "medium" | "high";

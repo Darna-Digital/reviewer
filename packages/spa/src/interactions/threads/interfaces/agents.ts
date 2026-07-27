@@ -14,6 +14,7 @@ export const AGENTS: ReadonlyArray<{
   { kind: "claude", label: "Claude Code", hint: "claude -p" },
   { kind: "opencode", label: "opencode", hint: "opencode run" },
   { kind: "codex", label: "Codex", hint: "codex exec" },
+  { kind: "cursor", label: "Cursor", hint: "cursor-agent" },
 ]
 
 export const agentLabel = (agent: AgentKind): string =>

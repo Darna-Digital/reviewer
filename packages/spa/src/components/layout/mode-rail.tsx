@@ -5,7 +5,7 @@ import {
   IconGitFork,
   IconGitPullRequest,
   IconListCheck,
-  IconMessageDots,
+  IconMessageCircle,
   IconPlayerPlay,
   IconSend,
   IconSettings,
@@ -75,7 +75,7 @@ const WORKSPACE_CONVERSATION: ModeDef[] = [
     mode: "comments",
     to: "/comments",
     label: "Comments — code & visual",
-    icon: IconMessageDots,
+    icon: IconMessageCircle,
   },
 ]
 

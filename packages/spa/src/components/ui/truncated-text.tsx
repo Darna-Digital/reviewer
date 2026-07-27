@@ -38,7 +38,7 @@ export function TruncatedText({
           <span
             ref={ref}
             onMouseEnter={measure}
-            className={cn("min-w-0 truncate", className)}
+            className={cn("block min-w-0 truncate", className)}
           />
         }
       >

@@ -1,10 +1,34 @@
 import { it } from "@effect/vitest"
 import { Effect } from "effect"
-import { describe, expect } from "vitest"
+import { describe, expect, vi } from "vitest"
+import { memoryLayer as terminalMemory } from "../../../ports/terminal-exec.ts"
 import { ChatsMemory } from "../layer/chats.layer.memory.ts"
 import { CHAT_MODEL_CATALOG } from "../functions/chats.catalog.ts"
 import type { Chat } from "../schema/chats.schema.ts"
 import { ChatsService } from "./chats.service.ts"
+
+/**
+ * A stand-in for the agent CLIs the catalog is discovered from: codex answers
+ * with a model the curated catalog has never heard of, everything else stays
+ * quiet. `seen` records the commands, so a test can tell a cache hit from a
+ * second round of subprocesses.
+ */
+const terminalReturning = (seen: string[] = []) =>
+  terminalMemory((command) => {
+    seen.push(command)
+    const stdout = command.startsWith("codex ")
+      ? JSON.stringify({
+          models: [
+            {
+              slug: "gpt-9-turbo",
+              display_name: "GPT-9 Turbo",
+              visibility: "list",
+            },
+          ],
+        })
+      : ""
+    return { stdout, stderr: "", exitCode: 0 }
+  })
 
 const newChat = {
   title: "",
@@ -228,15 +252,97 @@ describe("ChatsService", () => {
       expect(all).toHaveLength(0)
     }).pipe(Effect.provide(layer))
   })
-  it.effect("models returns the static catalog with defaults", () => {
+  it.effect("models offers nothing when no CLI answers", () => {
     const { layer } = ChatsMemory()
     return Effect.gen(function* () {
       const chats = yield* ChatsService
       const catalog = yield* chats.models
-      expect(catalog).toEqual(CHAT_MODEL_CATALOG)
-      expect(
-        catalog.providers.flatMap((p) => p.models).map((m) => m.id)
-      ).toContain(catalog.defaults.model)
+      // Empty rather than invented: a chat with no model runs on the CLI's own
+      // default, which beats offering models that may not exist.
+      expect(catalog.providers.flatMap((p) => p.models)).toEqual([])
+      expect(catalog.providers.map((p) => p.id)).toEqual(
+        CHAT_MODEL_CATALOG.providers.map((p) => p.id)
+      )
+    }).pipe(Effect.provide(layer))
+  })
+
+  it.effect("models takes the list from the CLI when it answers", () => {
+    const { layer } = ChatsMemory([], terminalReturning())
+    return Effect.gen(function* () {
+      const chats = yield* ChatsService
+      const catalog = yield* chats.models
+      const codex = catalog.providers.find((p) => p.id === "codex")
+      expect(codex?.models.map((m) => m.id)).toEqual(["gpt-9-turbo"])
+      expect(codex?.models[0]?.label).toBe("GPT-9 Turbo")
+      // The provider whose CLI stayed quiet offers nothing at all.
+      expect(catalog.providers.find((p) => p.id === "cursor")?.models).toEqual(
+        []
+      )
+    }).pipe(Effect.provide(layer))
+  })
+
+  it.effect("models asks the CLIs once and then serves the cache", () => {
+    const commands: string[] = []
+    const { layer } = ChatsMemory([], terminalReturning(commands))
+    return Effect.gen(function* () {
+      const chats = yield* ChatsService
+      const first = yield* chats.models
+      const runsAfterFirstCall = commands.length
+      const second = yield* chats.models
+      expect(second).toEqual(first)
+      expect(commands.length).toBe(runsAfterFirstCall)
+      // One run per provider, no more.
+      expect(runsAfterFirstCall).toBe(CHAT_MODEL_CATALOG.providers.length)
+    }).pipe(Effect.provide(layer))
+  })
+
+  it.effect(
+    "re-asks a CLI that answered with nothing, but not one that did",
+    () => {
+      const commands: string[] = []
+      const { layer } = ChatsMemory([], terminalReturning(commands))
+      const start = Date.now()
+      const clock = vi.spyOn(Date, "now").mockReturnValue(start)
+      return Effect.gen(function* () {
+        const chats = yield* ChatsService
+        yield* chats.models
+        commands.length = 0
+        // An hour is the answer's lifetime; a minute is a silence's.
+        clock.mockReturnValue(start + 5 * 60 * 1000)
+        const catalog = yield* chats.models
+        expect(commands.some((c) => c.startsWith("codex "))).toBe(false)
+        expect(commands).toHaveLength(CHAT_MODEL_CATALOG.providers.length - 1)
+        // The retry doesn't cost the answer we already have.
+        expect(
+          catalog.providers
+            .find((p) => p.id === "codex")
+            ?.models.map((m) => m.id)
+        ).toEqual(["gpt-9-turbo"])
+      }).pipe(
+        Effect.provide(layer),
+        Effect.ensuring(Effect.sync(() => clock.mockRestore()))
+      )
+    }
+  )
+
+  it.effect("a CLI that isn't installed contributes no models", () => {
+    const { layer } = ChatsMemory(
+      [],
+      terminalMemory((command) => ({
+        stdout: "",
+        stderr: "command not found",
+        exitCode: 127,
+        command,
+      }))
+    )
+    return Effect.gen(function* () {
+      const chats = yield* ChatsService
+      const catalog = yield* chats.models
+      expect(catalog.providers.flatMap((p) => p.models)).toEqual([])
+      // Still listed, so the picker shows the agent exists and is unavailable.
+      expect(catalog.providers).toHaveLength(
+        CHAT_MODEL_CATALOG.providers.length
+      )
     }).pipe(Effect.provide(layer))
   })
 })

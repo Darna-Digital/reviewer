@@ -1,3 +1,14 @@
+/**
+ * The skeleton the composer's model picker is built on: which agents byconvo
+ * can drive, and what a new chat starts as.
+ *
+ * There is deliberately no list of models here. Models come from the agent
+ * CLIs themselves (see model-discovery.ts) and nowhere else — a list written
+ * down here would start going stale the day it was written, and a stale
+ * fallback is worse than none: it offers models that no longer exist and hides
+ * ones that do. A provider whose CLI can't be reached simply has no models to
+ * offer, and a chat with no model runs on whatever that CLI defaults to.
+ */
 import type {
   ChatModelCatalog,
   ChatProviderKind,
@@ -7,49 +18,29 @@ export const CHAT_PROVIDER_KINDS = [
   "claude",
   "codex",
   "opencode",
+  "cursor",
 ] as const satisfies ReadonlyArray<ChatProviderKind>
 export const chatProviderLabel: Record<ChatProviderKind, string> = {
   claude: "Claude",
   codex: "Codex",
-  opencode: "OpenCode Zen",
+  // Not "OpenCode Zen": the rail carries every model opencode can broker —
+  // its own hosted ones and each upstream vendor the developer has credentials
+  // for — grouped by vendor inside the picker.
+  opencode: "opencode",
+  cursor: "Cursor",
 }
 export const CHAT_MODEL_CATALOG: ChatModelCatalog = {
-  providers: [
-    {
-      id: "claude",
-      label: "Claude",
-      models: [
-        { id: "claude-fable-5", label: "Claude Fable 5" },
-        { id: "claude-opus-5", label: "Claude Opus 5" },
-        { id: "claude-opus-4-8", label: "Claude Opus 4.8" },
-        { id: "claude-sonnet-5", label: "Claude Sonnet 5" },
-        { id: "claude-haiku-4-5", label: "Claude Haiku 4.5" },
-      ],
-    },
-    {
-      id: "codex",
-      label: "Codex",
-      models: [
-        { id: "gpt-5.5", label: "GPT-5.5" },
-        { id: "gpt-5.4", label: "GPT-5.4" },
-        { id: "gpt-5.4-mini", label: "GPT-5.4-Mini" },
-      ],
-    },
-    {
-      id: "opencode",
-      label: "OpenCode Zen",
-      models: [
-        { id: "opencode/big-pickle", label: "Big Pickle" },
-        { id: "opencode/claude-fable-5", label: "Claude Fable 5" },
-        { id: "opencode/claude-haiku-4-5", label: "Claude Haiku 4.5" },
-        { id: "opencode/claude-opus-4-6", label: "Claude Opus 4.6" },
-        { id: "opencode/claude-opus-4-5", label: "Claude Opus 4.5" },
-      ],
-    },
-  ],
+  providers: CHAT_PROVIDER_KINDS.map((id) => ({
+    id,
+    label: chatProviderLabel[id],
+    models: [],
+  })),
   defaults: {
     provider: "claude",
-    model: "claude-opus-5",
+    // Empty on purpose: no model is passed to the CLI until the user picks
+    // one, so a new chat runs on the agent's own current default rather than
+    // on a model id we guessed here.
+    model: "",
     effort: "high",
     access: "fullAccess",
     mode: "build",

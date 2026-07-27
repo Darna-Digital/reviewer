@@ -22,7 +22,10 @@ import { spawn, type ChildProcess } from "node:child_process"
 import { randomUUID } from "node:crypto"
 import type { IncomingMessage } from "node:http"
 import type { WebSocket } from "ws"
-import { recentAgentSessions } from "../terminal/agent-session-capture.ts"
+import {
+  recentAgentSessions,
+  writesDiscoverableSessions,
+} from "../terminal/agent-session-capture.ts"
 import { saveDroppedImage } from "../terminal/dropped-image.ts"
 import {
   getCurrentRepo,
@@ -34,6 +37,7 @@ import {
   withHistory,
   type ChatTurnSession,
 } from "./providers.ts"
+import { chatSessionOrigin } from "@byconvo/core/chats"
 import type {
   Chat,
   ChatActivity,
@@ -56,9 +60,9 @@ import {
   settleStaleTurns,
   startPendingTurn,
 } from "./store.ts"
-import { CLAUDE_LOGIN_HINT, isClaudeAuthError } from "./claude-stream.ts"
 import {
   createTurnParser,
+  loginHint,
   type TurnEvent,
   type TurnParser,
 } from "./turn-parser.ts"
@@ -324,12 +328,14 @@ const handleStreamEvent = (live: LiveTurn, event: TurnEvent): void => {
 }
 
 /**
- * opencode never reports its session id on stdout (and older codex versions
- * don't either) — recover it from the CLI's own session files, exactly like
- * the PTY threads do, so the next turn can `--session`/`resume` it.
+ * A chat whose agent never named its session on the stream is still resumable
+ * if that agent writes session files we know how to read — recover the id from
+ * them, exactly like the PTY threads do, so the next turn can
+ * `--session`/`resume` it. Anything already persisted (claude's minted id,
+ * cursor's announced one) short-circuits on the `sessionId !== null` check.
  */
 const captureMintedSession = (live: LiveTurn): void => {
-  if (live.provider === "claude") return
+  if (!writesDiscoverableSessions(live.provider)) return
   try {
     const chat = findChat(live.repoPath, live.chatId)
     if (chat === undefined || chat.sessionId !== null) return
@@ -369,14 +375,10 @@ const finalizeTurn = (live: LiveTurn, exitCode: number | null): void => {
       ? (live.result?.errorMessage ??
         (stderrTail.length > 0 ? stderrTail : `agent exited (${exitCode})`))
       : null
-  // A logged-out Claude can also die with the login prompt on stderr (no
-  // result line at all) — surface the same actionable hint either way.
+  // A logged-out CLI can also die with the login prompt on stderr (no result
+  // line at all) — surface the same actionable hint either way.
   const errorMessage =
-    rawError !== null &&
-    live.provider === "claude" &&
-    isClaudeAuthError(rawError)
-      ? CLAUDE_LOGIN_HINT
-      : rawError
+    rawError !== null ? (loginHint(live.provider, rawError) ?? rawError) : null
   const endedAt = new Date().toISOString()
   const text = live.parser.text()
 
@@ -440,10 +442,10 @@ const launchTurn = (input: {
   historyMessages?: ReadonlyArray<ChatMessage>
 }): void => {
   const { repoPath, chat, started, turnId, assistantMessageId } = input
-  // Claude lets us mint the session id up-front; codex/opencode mint their
-  // own, so a fresh chat launches without one and the id is captured later.
+  // Some agents let us mint the session id up-front; the rest mint their own,
+  // so a fresh chat launches without one and the id is captured later.
   const session: ChatTurnSession =
-    chat.provider === "claude"
+    chatSessionOrigin(chat.provider) === "minted"
       ? { id: chat.sessionId ?? randomUUID(), resume: chat.sessionId !== null }
       : { id: chat.sessionId, resume: chat.sessionId !== null }
   // Resuming a native session carries the history already; a fresh one (e.g.
