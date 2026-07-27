@@ -58,15 +58,20 @@ export const agentPtyProgram = (
       return agentInShell("opencode", sessionArgs)
     case "codex":
       return agentInShell("codex", sessionArgs)
+    case "cursor":
+      return agentInShell("cursor-agent", sessionArgs)
   }
 }
 
 /**
  * Trailing CLI args that make an agent start or resume a specific session, so a
  * thread keeps its conversation across a server restart / app reopen.
- * `sessionId` is the agent's native session id tracked on the thread:
+ * `sessionId` is the agent's native session id tracked on the thread, and how it
+ * is used follows the agent's `agentSessionOrigin`:
  *   - claude lets us choose the id, so a fresh launch passes `--session-id` and a
  *     later one `--resume`.
+ *   - cursor's chat is created before the TUI starts (see cursor-chat.ts), so
+ *     both launches `--resume` it — first an empty chat, later its history.
  *   - opencode/codex mint their own id (we capture it after the first launch);
  *     we can only resume an existing one, never force one at start.
  * Returns "" to launch the agent fresh.
@@ -86,5 +91,7 @@ export const agentSessionArgs = (
       return resume ? `--session ${sessionId}` : ""
     case "codex":
       return resume ? `resume ${sessionId}` : ""
+    case "cursor":
+      return `--resume ${sessionId}`
   }
 }

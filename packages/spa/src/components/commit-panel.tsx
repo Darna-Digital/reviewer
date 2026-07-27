@@ -12,6 +12,7 @@ import {
   SelectTrigger,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents"
 import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo"
 import { setUiPrefs, useUiPrefs, type CommitAgent } from "@/lib/ui-prefs"
@@ -170,7 +171,7 @@ export function CommitPanel({
             >
               {STATUS_LETTER[c.status]}
             </span>
-            <span className="truncate">{c.path}</span>
+            <TruncatedText text={c.path} />
           </label>
         ))}
       </ScrollArea>

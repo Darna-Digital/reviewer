@@ -72,6 +72,21 @@ describe("ThreadsService", () => {
       expect(entry.stdout).toContain("opencode run 'add a test'")
     }).pipe(Effect.provide(ThreadsMemory()))
   )
+  it.effect("cursor threads print one turn with `cursor-agent -p`", () =>
+    Effect.gen(function* () {
+      const threads = yield* ThreadsService
+      const created = yield* threads.create({
+        title: "",
+        agent: "cursor",
+        branch: "main",
+        initialPrompt: "",
+        taskKey: null,
+      })
+      expect(created.title).toBe("Cursor")
+      const entry = yield* threads.run(created.id, "rename this symbol")
+      expect(entry.stdout).toContain("cursor-agent -p 'rename this symbol'")
+    }).pipe(Effect.provide(ThreadsMemory()))
+  )
   it.effect("get fails with NotFound for an unknown id", () =>
     Effect.gen(function* () {
       const threads = yield* ThreadsService

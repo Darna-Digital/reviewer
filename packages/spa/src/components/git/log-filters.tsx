@@ -23,6 +23,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import type { LogQuery } from "@/lib/api/types"
 import type { BranchInfo } from "@byconvo/core/repo"
 import { cn } from "@/lib/utils"
@@ -113,8 +114,8 @@ export function LogFilters({
           <ComboboxEmpty>No branches found.</ComboboxEmpty>
           <ComboboxList>
             {(name: string) => (
-              <ComboboxItem key={name} value={name} title={name}>
-                {name}
+              <ComboboxItem key={name} value={name}>
+                <TruncatedText text={name} />
               </ComboboxItem>
             )}
           </ComboboxList>

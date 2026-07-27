@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import {
   DATE_FILTERS,
   dateFilterLabel,
@@ -185,7 +186,7 @@ export function SidebarFilterMenu({
                   )}
                   {shownBranches.map((b) => (
                     <DropdownMenuRadioItem key={b} value={b}>
-                      {branchLabel(b)}
+                      <TruncatedText text={branchLabel(b)} />
                     </DropdownMenuRadioItem>
                   ))}
                 </DropdownMenuRadioGroup>

@@ -9,7 +9,7 @@ export type ThemePref = "light" | "dark" | "system"
 export type Theme = "light" | "dark"
 export type DiffStyle = "split" | "unified"
 /** Agent CLIs that can draft a commit message (threads kinds minus terminal). */
-export type CommitAgent = "claude" | "opencode" | "codex"
+export type CommitAgent = "claude" | "opencode" | "codex" | "cursor"
 /** Active tab in the shared bottom dock (git + services + threads). */
 export type BottomTab = "branches" | "history" | "services" | "threads"
 

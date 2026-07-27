@@ -131,13 +131,22 @@ const recentCodex = (cwd: string, sinceMs: number): FoundSession[] => {
   return out
 }
 
+/** The agents whose on-disk session layout this module knows — the only ones
+ * {@link recentAgentSessions} can be asked about. Agents that name their
+ * session on their own event stream (cursor) never need to come here. */
+export type DiscoverableAgent = "opencode" | "codex"
+
+export const writesDiscoverableSessions = (
+  agent: string
+): agent is DiscoverableAgent => agent === "opencode" || agent === "codex"
+
 /**
  * Sessions for `agent` whose recorded cwd matches `cwd` and whose file was
  * written at/after `sinceMs` (i.e. created by the launch we're tracking). Empty
  * until the CLI has actually created its session (e.g. on first message).
  */
 export const recentAgentSessions = (
-  agent: "opencode" | "codex",
+  agent: DiscoverableAgent,
   cwd: string,
   sinceMs: number
 ): FoundSession[] =>

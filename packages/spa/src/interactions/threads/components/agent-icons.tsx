@@ -4,8 +4,9 @@
  * They're monochrome and use `currentColor`, so they inherit the surrounding
  * text color exactly like the tabler icons next to them.
  *
- * Paths: Claude and OpenAI (Codex) from simple-icons (CC0); opencode from the
- * dashboard-icons set. A plain terminal keeps the generic tabler terminal glyph.
+ * Paths: Claude, OpenAI (Codex) and Cursor from simple-icons (CC0); opencode
+ * from the dashboard-icons set. A plain terminal keeps the generic tabler
+ * terminal glyph.
  */
 import { IconTerminal2 } from "@tabler/icons-react"
 import type { ComponentType } from "react"
@@ -61,6 +62,20 @@ export function OpencodeIcon({ className }: IconProps) {
   )
 }
 
+/** Cursor's cube mark. */
+export function CursorIcon({ className }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23" />
+    </svg>
+  )
+}
+
 /** The icon component for an agent kind (terminal → the generic terminal glyph). */
 export const agentIcon = (
   agent: AgentKind
@@ -72,6 +87,8 @@ export const agentIcon = (
       return CodexIcon
     case "opencode":
       return OpencodeIcon
+    case "cursor":
+      return CursorIcon
     default:
       return IconTerminal2
   }
