@@ -225,7 +225,11 @@ export function BranchTree({
           toggleFavorite(branch.fullName)
         }}
       >
-        {fav ? <IconStarFilled className="size-3.5" /> : <IconStar className="size-3.5 opacity-60" />}
+        {fav ? (
+          <IconStarFilled className="size-3.5" />
+        ) : (
+          <IconStar className="size-3.5 opacity-60" />
+        )}
       </button>
     )
   }
