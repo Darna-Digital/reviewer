@@ -46,6 +46,18 @@ describe("FileCommentsRepository", () => {
     }).pipe(Effect.provide(FileRepo))
   )
 
+  it.effect("update rewrites the body", () =>
+    Effect.gen(function* () {
+      const repo = yield* CommentsRepository
+      const created = yield* repo.add({ ...input, body: "old" })
+      const updated = yield* repo.update(created.id, { body: "new" })
+      expect(updated.body).toBe("new")
+      expect(updated.id).toBe(created.id)
+      const all = yield* repo.list
+      expect(all.find((c) => c.id === created.id)?.body).toBe("new")
+    }).pipe(Effect.provide(FileRepo))
+  )
+
   it.effect(
     "persists across repository instances (unlike the in-memory store)",
     () =>

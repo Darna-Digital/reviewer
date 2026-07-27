@@ -102,14 +102,36 @@ const toolSummary = (name: string, input: unknown): string => {
   return name
 }
 
+/** How much of a tool's input/output the timeline keeps. Enough to read a diff
+ * or a command's output inline, still bounded so `chats.json` stays sane. */
+const DETAIL_LIMIT = 4000
+
+const truncate = (text: string): string =>
+  text.length > DETAIL_LIMIT ? `${text.slice(0, DETAIL_LIMIT)}…` : text
+
 const toolDetail = (input: unknown): string | null => {
   if (!isRecord(input) || Object.keys(input).length === 0) return null
   try {
-    const json = JSON.stringify(input)
-    return json.length > 400 ? `${json.slice(0, 399)}…` : json
+    return truncate(JSON.stringify(input, null, 2))
   } catch {
     return null
   }
+}
+
+/**
+ * A tool_result's body. The CLI sends either a bare string or Anthropic's
+ * content-block array; both collapse to the text the user would want to read.
+ */
+const resultDetail = (content: unknown): string | null => {
+  const text = asString(content)
+  if (text !== null) return text.length === 0 ? null : truncate(text)
+  if (!Array.isArray(content)) return null
+  const parts = content.flatMap((block) => {
+    if (!isRecord(block) || block["type"] !== "text") return []
+    const value = asString(block["text"])
+    return value === null || value.length === 0 ? [] : [value]
+  })
+  return parts.length === 0 ? null : truncate(parts.join("\n"))
 }
 
 export const createClaudeTurnParser = (): ClaudeTurnParser => {
@@ -123,8 +145,48 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
   let needSeparator = false
   /** tool_use id → name, to label the matching tool_result. */
   const toolNames = new Map<string, string>()
+  /** The open thinking block, if any: announced at `content_block_start` so the
+   * timeline shows it live, then settled at `content_block_stop` with the
+   * reasoning text the deltas carried. Both events share a `callId`, so the
+   * client folds them into one step exactly as it does a tool call. */
+  let thinking: { callId: string; index: number | null; text: string } | null =
+    null
+  let thinkingSeq = 0
   /** Thinking already announced for the current assistant message. */
   let announcedThinking = false
+
+  /** The CLI redacts `thinking` on both the deltas and the complete block, so
+   * today this finds nothing; a CLI that stops redacting starts showing
+   * reasoning with no change here. */
+  const adoptUnredactedReasoning = (message: unknown): void => {
+    if (thinking === null || !isRecord(message)) return
+    if (!Array.isArray(message["content"])) return
+    for (const block of message["content"]) {
+      if (!isRecord(block) || block["type"] !== "thinking") continue
+      const reasoning = asString(block["thinking"])
+      if (reasoning !== null && reasoning.length > 0) thinking.text = reasoning
+    }
+  }
+
+  /** Also closes a block whose `content_block_stop` never arrived — partials
+   * disabled, or a truncated run. */
+  const settleThinking = (): ClaudeStreamEvent[] => {
+    if (thinking === null) return []
+    const { callId, text } = thinking
+    thinking = null
+    const reasoning = text.trim()
+    return [
+      {
+        type: "activity",
+        kind: "thinking.completed",
+        tone: "info",
+        summary: "Thought",
+        detail: reasoning.length > 0 ? truncate(reasoning) : null,
+        label: "Thinking",
+        callId,
+      },
+    ]
+  }
 
   const appendText = (text: string): ClaudeStreamEvent[] => {
     if (text.length === 0) return []
@@ -144,13 +206,21 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
         !announcedThinking
       ) {
         announcedThinking = true
+        thinkingSeq += 1
+        thinking = {
+          callId: `think-${thinkingSeq}`,
+          index: typeof event["index"] === "number" ? event["index"] : null,
+          text: "",
+        }
         return [
           {
             type: "activity",
             kind: "thinking",
             tone: "info",
-            summary: "Thinking…",
+            summary: "Thinking",
             detail: null,
+            label: "Thinking",
+            callId: thinking.callId,
           },
         ]
       }
@@ -163,14 +233,27 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
         deltaChars += text.length
         return appendText(text)
       }
+      if (isRecord(delta) && delta["type"] === "thinking_delta") {
+        if (thinking !== null) {
+          thinking.text += asString(delta["thinking"]) ?? ""
+        }
+        return []
+      }
       return []
+    }
+    if (event["type"] === "content_block_stop") {
+      const closes =
+        thinking !== null &&
+        (thinking.index === null || thinking.index === event["index"])
+      return closes ? settleThinking() : []
     }
     return []
   }
 
   const onAssistantMessage = (message: unknown): ClaudeStreamEvent[] => {
-    if (!isRecord(message) || !Array.isArray(message["content"])) return []
-    const events: ClaudeStreamEvent[] = []
+    adoptUnredactedReasoning(message)
+    const events: ClaudeStreamEvent[] = settleThinking()
+    if (!isRecord(message) || !Array.isArray(message["content"])) return events
     for (const block of message["content"]) {
       if (!isRecord(block)) continue
       if (block["type"] === "tool_use") {
@@ -183,6 +266,8 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
           tone: "tool",
           summary: toolSummary(name, block["input"]),
           detail: toolDetail(block["input"]),
+          label: name,
+          ...(id.length > 0 ? { callId: id } : {}),
         })
       } else if (block["type"] === "text" && deltaChars === 0) {
         // No partials were streamed for this message (older CLI) — take the
@@ -202,14 +287,17 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
     const events: ClaudeStreamEvent[] = []
     for (const block of message["content"]) {
       if (!isRecord(block) || block["type"] !== "tool_result") continue
-      const name = toolNames.get(asString(block["tool_use_id"]) ?? "") ?? "tool"
+      const callId = asString(block["tool_use_id"]) ?? ""
+      const name = toolNames.get(callId) ?? "tool"
       const failed = block["is_error"] === true
       events.push({
         type: "activity",
         kind: failed ? "tool.failed" : "tool.completed",
         tone: failed ? "error" : "tool",
         summary: failed ? `${name} failed` : `${name} finished`,
-        detail: null,
+        detail: resultDetail(block["content"]),
+        label: name,
+        ...(callId.length > 0 ? { callId } : {}),
       })
     }
     return events

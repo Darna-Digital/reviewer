@@ -1,6 +1,7 @@
 import { FileTree, useFileTree } from "@pierre/trees/react"
 import type { ReactNode } from "react"
 import { useEffect, useRef } from "react"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import type { AppMode } from "@/lib/api/types"
 import type { GitStatusEntry } from "@byconvo/core/repo"
 
@@ -13,6 +14,7 @@ interface FileSidebarProps {
   onDeletePath?: (path: string, isDirectory: boolean) => Promise<void> | void
   onRenamePath?: (from: string, to: string) => Promise<void>
   onError?: (message: string) => void
+  loading?: boolean
   footer?: ReactNode
 }
 
@@ -66,6 +68,7 @@ export function FileSidebar({
   onDeletePath,
   onRenamePath,
   onError,
+  loading = false,
   footer,
 }: FileSidebarProps) {
   const onFileSelectRef = useRef(onFileSelect)
@@ -230,11 +233,17 @@ export function FileSidebar({
         )}
       </div>
       <div className="-mx-2 mt-2 min-h-0 flex-1 overflow-auto">
-        <FileTree
-          model={model}
-          renderContextMenu={renderContextMenu}
-          style={{ height: "100%" }}
-        />
+        {loading ? (
+          <div className="px-3 py-2">
+            <LoadingCursor label="Loading files…" />
+          </div>
+        ) : (
+          <FileTree
+            model={model}
+            renderContextMenu={renderContextMenu}
+            style={{ height: "100%" }}
+          />
+        )}
       </div>
       {footer}
     </aside>

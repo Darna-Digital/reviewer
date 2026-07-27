@@ -3,11 +3,19 @@ import {
   ReviewComment,
   CommentIdParam,
   NewComment,
+  UpdateComment,
 } from "@byconvo/core/comments"
-import { NoRepoSelected, StorageError, Ok } from "@byconvo/core/shared"
+import {
+  NoRepoSelected,
+  NotFound,
+  StorageError,
+  Ok,
+} from "@byconvo/core/shared"
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
 
-const storeError = [NoRepoSelected, StorageError] as const
+// The repository types every operation with the same failure union
+// (CommentsFailure), so each endpoint declares all three.
+const storeError = [NoRepoSelected, NotFound, StorageError] as const
 
 export class CommentsApi extends HttpApiGroup.make("comments")
   .add(
@@ -19,6 +27,14 @@ export class CommentsApi extends HttpApiGroup.make("comments")
   .add(
     HttpApiEndpoint.post("add", "/comments", {
       payload: NewComment,
+      success: ReviewComment,
+      error: storeError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.make("PATCH")("update", "/comments/:id", {
+      params: CommentIdParam,
+      payload: UpdateComment,
       success: ReviewComment,
       error: storeError,
     })

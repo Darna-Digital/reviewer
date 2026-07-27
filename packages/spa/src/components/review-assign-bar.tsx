@@ -5,10 +5,16 @@
  * agent, or attach them to an existing session (chat) picked from a searchable
  * dropdown. Dismissable; it re-appears when you leave more.
  */
-import { IconChevronDown, IconSearch, IconX } from "@tabler/icons-react"
-import { useLayoutEffect, useMemo, useRef, useState } from "react"
+import {
+  IconChevronDown,
+  IconGitBranch,
+  IconSearch,
+  IconX,
+} from "@tabler/icons-react"
+import { Link } from "@tanstack/react-router"
+import { useMemo, useState } from "react"
 import { agentIcon } from "@/interactions/threads/components/agent-icons"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Popover,
@@ -16,13 +22,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
+  PreviewCard,
+  PreviewCardContent,
+  PreviewCardTrigger,
+} from "@/components/ui/preview-card"
 import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignment.functions"
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents"
 import type { ChatProviderKind, ChatSummary } from "@byconvo/core/chats"
+import { timeAgo } from "@/lib/relative-time"
 import { cn } from "@/lib/utils"
 
 /** Agent CLIs that can be assigned to chat flows (excludes the plain shell). */
@@ -111,13 +118,19 @@ export function ReviewAssignBar({
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center">
-      <div className="pointer-events-auto flex animate-in items-center gap-2 rounded-full border bg-popover/95 py-1.5 pr-1.5 pl-4 shadow-lg ring-1 ring-foreground/5 backdrop-blur duration-150 fade-in slide-in-from-bottom-2">
-        <span className="text-sm whitespace-nowrap">
-          <span className="font-medium tabular-nums">{count}</span>{" "}
-          <span className="text-muted-foreground">
+      <div className="pointer-events-auto flex animate-in items-center gap-2 rounded-full border bg-popover/95 py-1.5 pr-1.5 pl-1.5 shadow-lg ring-1 ring-foreground/5 backdrop-blur duration-150 fade-in slide-in-from-bottom-2">
+        <Link
+          to="/comments"
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "sm" }),
+            "h-8 gap-1 rounded-full px-3"
+          )}
+        >
+          <span className="font-medium tabular-nums">{count}</span>
+          <span className="font-normal text-muted-foreground">
             {count === 1 ? "comment" : "comments"}
           </span>
-        </span>
+        </Link>
         <div className="h-5 w-px bg-border" />
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger
@@ -128,20 +141,23 @@ export function ReviewAssignBar({
             <span className="truncate">{targetLabel}</span>
             <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 gap-0 p-0">
-            <div className="flex items-center gap-2 border-b px-3">
+          <PopoverContent align="end" className="w-64 gap-0 p-1">
+            <div className="-mx-1 mb-1 flex items-center gap-2 border-b px-2.5 py-2">
               <IconSearch className="size-4 shrink-0 text-muted-foreground" />
               <Input
                 autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search sessions…"
-                className="h-9 rounded-none border-0 bg-transparent px-0 focus-visible:ring-0"
+                className="h-auto rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
               />
             </div>
-            <div className="max-h-64 overflow-y-auto p-1">
+            {/* Native overflow (not ScrollArea) so max-height actually scrolls —
+                Base UI ScrollArea's size-full viewport won't constrain under a
+                max-h parent, so content is clipped with nowhere to scroll. */}
+            <div className="scroll-fade max-h-64 min-w-0 overflow-x-hidden overflow-y-auto">
               {agents.length > 0 && (
-                <div className="px-2 pt-1.5 pb-1 text-xs text-muted-foreground">
+                <div className="px-2 pt-1 pb-0.5 text-xs text-muted-foreground">
                   New chat
                 </div>
               )}
@@ -154,7 +170,7 @@ export function ReviewAssignBar({
                     type="button"
                     onClick={() => pick({ kind: "new", agent: a.kind })}
                     className={cn(
-                      "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted",
+                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
                       active && "bg-muted"
                     )}
                   >
@@ -214,9 +230,9 @@ export function ReviewAssignBar({
 }
 
 /**
- * A session row in the picker. When its title is clipped, hovering reveals the
- * full text in a tooltip (JetBrains-style) — but only when it actually overflows,
- * so short titles don't get a redundant bubble.
+ * A session row in the picker. Hovering opens a side preview card with the full
+ * title and session metadata — same elevated panel language as the Cursor-style
+ * hover previews, rather than a tiny tooltip bubble.
  */
 function SessionRow({
   chat,
@@ -227,51 +243,52 @@ function SessionRow({
   active: boolean
   onSelect: () => void
 }) {
-  const titleRef = useRef<HTMLSpanElement>(null)
-  const [clipped, setClipped] = useState(false)
-
-  useLayoutEffect(() => {
-    const el = titleRef.current
-    setClipped(el !== null && el.scrollWidth > el.clientWidth)
-  }, [chat.title])
-
   const Icon = agentIcon(chat.provider)
-  const className = cn(
-    "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm hover:bg-muted",
-    active && "bg-muted"
-  )
-  const inner = (
-    <>
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <span ref={titleRef} className="min-w-0 flex-1 truncate">
-        {chat.title}
-      </span>
-      <span className="shrink-0 text-xs text-muted-foreground">
-        {chat.branch}
-      </span>
-    </>
-  )
-
-  if (!clipped) {
-    return (
-      <button type="button" onClick={onSelect} className={className}>
-        {inner}
-      </button>
-    )
-  }
 
   return (
-    <Tooltip>
-      <TooltipTrigger
+    <PreviewCard>
+      <PreviewCardTrigger
+        delay={400}
+        closeDelay={100}
         render={
-          <button type="button" onClick={onSelect} className={className} />
+          <button
+            type="button"
+            onClick={onSelect}
+            className={cn(
+              "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
+              active && "bg-muted"
+            )}
+          />
         }
       >
-        {inner}
-      </TooltipTrigger>
-      <TooltipContent side="right" align="center">
-        {chat.title}
-      </TooltipContent>
-    </Tooltip>
+        <Icon className="size-4 shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate">{chat.title}</span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {chat.branch}
+        </span>
+      </PreviewCardTrigger>
+      <PreviewCardContent side="right" align="start" className="p-2.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 leading-snug font-medium">
+            {chat.title}
+          </div>
+          <span className="shrink-0 text-xs text-muted-foreground">
+            {timeAgo(chat.updatedAt)}
+          </span>
+        </div>
+        <div className="flex flex-col gap-1 text-muted-foreground">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <IconGitBranch className="size-3.5 shrink-0" />
+            <span className="min-w-0 truncate">{chat.branch}</span>
+          </div>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <Icon className="size-3.5 shrink-0" />
+            <span className="min-w-0 truncate">
+              {agentLabel(chat.provider)}
+            </span>
+          </div>
+        </div>
+      </PreviewCardContent>
+    </PreviewCard>
   )
 }

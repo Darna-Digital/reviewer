@@ -10,6 +10,8 @@ export type Theme = "light" | "dark"
 export type DiffStyle = "split" | "unified"
 /** Agent CLIs that can draft a commit message (threads kinds minus terminal). */
 export type CommitAgent = "claude" | "opencode" | "codex"
+/** Active tab in the shared bottom dock (git + services + threads). */
+export type BottomTab = "branches" | "history" | "services" | "threads"
 
 export interface UiPrefs {
   /** The user's choice; "system" follows the OS. */
@@ -19,6 +21,8 @@ export interface UiPrefs {
   diffStyle: DiffStyle
   connectors: boolean
   bottomVisible: boolean
+  /** Which bottom-dock tab is selected. */
+  bottomTab: BottomTab
   /** Drag-resizable left sidebar width, in px. */
   sidebarWidth: number
   /** Drag-resizable left sidebar width for the workspace pages (threads/docs). */
@@ -29,6 +33,8 @@ export interface UiPrefs {
   commitFilesHeight: number
   /** Drag-resizable commit-message textarea height, in px. */
   commitMessageHeight: number
+  /** Drag-resizable pull-request list height in the review sidebar, in px. */
+  reviewPullsHeight: number
   /** Which agent CLI drafts commit messages via the "Generate" button. */
   commitAgent: CommitAgent
   /** Model ids starred in the chat composer's model picker. */
@@ -47,16 +53,25 @@ const systemTheme = (): Theme =>
 const resolve = (pref: ThemePref): Theme =>
   pref === "system" ? systemTheme() : pref
 
+const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
+  "branches",
+  "history",
+  "services",
+  "threads",
+]
+
 const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   theme: "system",
   diffStyle: "split",
   connectors: true,
   bottomVisible: true,
+  bottomTab: "branches",
   sidebarWidth: 288,
   workspaceSidebarWidth: 256,
   bottomHeight: 256,
   commitFilesHeight: 180,
   commitMessageHeight: 80,
+  reviewPullsHeight: 220,
   commitAgent: "claude",
   chatModelFavorites: [],
 }
@@ -71,6 +86,7 @@ function load(): UiPrefs {
     } catch {
       // ignore malformed storage
     }
+    if (!BOTTOM_TABS.includes(prefs.bottomTab)) prefs.bottomTab = "branches"
     const stored = window.localStorage.getItem(THEME_KEY)
     if (stored === "light" || stored === "dark" || stored === "system")
       prefs.theme = stored
@@ -93,11 +109,13 @@ function persist() {
       diffStyle,
       connectors,
       bottomVisible,
+      bottomTab,
       sidebarWidth,
       workspaceSidebarWidth,
       bottomHeight,
       commitFilesHeight,
       commitMessageHeight,
+      reviewPullsHeight,
       commitAgent,
       chatModelFavorites,
     } = state
@@ -108,11 +126,13 @@ function persist() {
         diffStyle,
         connectors,
         bottomVisible,
+        bottomTab,
         sidebarWidth,
         workspaceSidebarWidth,
         bottomHeight,
         commitFilesHeight,
         commitMessageHeight,
+        reviewPullsHeight,
         commitAgent,
         chatModelFavorites,
       })
@@ -140,6 +160,11 @@ export function setUiPrefs(patch: Partial<Omit<UiPrefs, "resolvedTheme">>) {
   }
   persist()
   emit()
+}
+
+/** Show the bottom dock and select a tab (Services / Threads / git). */
+export function openBottomTab(tab: BottomTab) {
+  setUiPrefs({ bottomVisible: true, bottomTab: tab })
 }
 
 const THEME_ORDER: ThemePref[] = ["light", "dark", "system"]

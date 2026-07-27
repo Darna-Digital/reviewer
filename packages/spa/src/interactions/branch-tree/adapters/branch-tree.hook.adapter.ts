@@ -25,7 +25,7 @@ export function useBranchTree() {
 
   const [favorites, setFavorites] = useState<Set<string>>(loadFavorites)
   const [expanded, setExpanded] = useState<Set<string>>(
-    () => new Set(["__local", "__remote"])
+    () => new Set(["__favorites", "__local", "__remote"])
   )
 
   const toggleFavorite = useCallback(

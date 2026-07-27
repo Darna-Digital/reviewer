@@ -24,6 +24,11 @@ export function createCommentsFunctions(
     })
   }
 
+  const update: CommentsFunctions["update"] = async (comment, body) => {
+    if (comment.source !== "local") return null
+    return d.sideEffects.updateLocalComment(comment.id, body)
+  }
+
   const remove: CommentsFunctions["remove"] = async (comment) => {
     if (comment.source !== "local") return false
     await d.sideEffects.deleteComment(comment.id)
@@ -53,5 +58,5 @@ export function createCommentsFunctions(
     }
   }
 
-  return { submit, remove, reply }
+  return { submit, update, remove, reply }
 }

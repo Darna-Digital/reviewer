@@ -1,11 +1,10 @@
 /**
- * WorkspaceShell — the layout for the workspace feature pages (threads, docs,
- * tasks). It mirrors AppShell's frame (mode rail + a rounded, bordered content
- * panel) and shares the git-review top bar's left cluster — the repo picker and
- * branch switcher — so the open repository is visible and switchable here too
- * (threads/docs/tasks are all scoped to it). The git-diff/theme controls on the
- * right of AppShell's bar don't apply to these pages, so they're omitted. Each
- * feature page renders its own header and body into the `<Outlet />`.
+ * WorkspaceShell — the layout for the workspace feature pages (chats, docs,
+ * tasks/settings). It mirrors AppShell's frame (mode rail + a rounded, bordered
+ * content panel) and shares the git-review top bar's left cluster — the repo
+ * picker and branch switcher — so the open repository is visible and switchable
+ * here too. Each feature page renders its own header and body into the
+ * `<Outlet />`. Services and terminal threads live in the shared bottom dock.
  */
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
 import { useState } from "react"
@@ -22,19 +21,20 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
 
 const modeForPath = (pathname: string): AppMode =>
   pathname.startsWith("/chats")
     ? "chats"
-    : pathname.startsWith("/docs")
-      ? "docs"
-      : pathname.startsWith("/tasks")
-        ? "tasks"
-        : pathname.startsWith("/local-dev")
-          ? "local-dev"
-          : "threads"
+    : pathname.startsWith("/settings")
+      ? "settings"
+      : pathname.startsWith("/docs")
+        ? "docs"
+        : pathname.startsWith("/tasks")
+          ? "tasks"
+          : pathname.startsWith("/comments")
+            ? "comments"
+            : "chats"
 
 export function WorkspaceShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -44,23 +44,16 @@ export function WorkspaceShell() {
   const branches = useBranches()
   const remoteBranches = useRemoteBranches()
   const git = useGitActions()
-  const prefs = useUiPrefs()
   const [pickerOpen, setPickerOpen] = useState(false)
 
   const mode = modeForPath(pathname)
   const hasGitHub = repo.data?.github != null
   const current = workspace.data?.current ?? null
+  const isSettings = mode === "settings"
 
   return (
     <div className="flex h-svh w-full overflow-hidden text-foreground">
-      <ModeRail
-        mode={mode}
-        hasGitHub={hasGitHub}
-        bottomVisible={prefs.bottomVisible}
-        onBottomToggle={() =>
-          setUiPrefs({ bottomVisible: !prefs.bottomVisible })
-        }
-      />
+      <ModeRail mode={mode} hasGitHub={hasGitHub} />
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar — repo picker + branch switcher, like the git-review shell.
             In desktop it doubles as the draggable title bar (clusters opt out). */}
@@ -97,6 +90,7 @@ export function WorkspaceShell() {
                 onRenameBranch={(from, to) => void git.renameBranch(from, to)}
                 onDeleteBranch={(name) => void git.deleteBranch(name)}
                 onFetch={() => void git.fetch()}
+                onPull={() => void git.pull()}
                 onPush={() => void git.push()}
               />
             </div>
@@ -104,7 +98,7 @@ export function WorkspaceShell() {
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            {current === null ? (
+            {current === null && !isSettings ? (
               <div className="flex h-full flex-col items-center justify-center gap-1 text-sm">
                 <div className="font-medium">No repository selected</div>
                 <div className="text-muted-foreground">
@@ -115,7 +109,7 @@ export function WorkspaceShell() {
               <Outlet />
             )}
           </div>
-          {current !== null && <GitBottomDock />}
+          {current !== null && !isSettings && <GitBottomDock />}
         </div>
       </div>
     </div>

@@ -47,7 +47,7 @@ function ComboboxTrigger({
 function ComboboxContent({
   className,
   children,
-  sideOffset = 4,
+  sideOffset = 6,
   align = "start",
   side,
   ...props
@@ -64,7 +64,9 @@ function ComboboxContent({
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"
           className={cn(
-            "z-50 flex max-h-(--available-height) w-(--anchor-width) min-w-56 origin-(--transform-origin) flex-col overflow-hidden rounded-2xl bg-popover text-popover-foreground shadow-lg ring-1 ring-foreground/5 duration-100 outline-none dark:ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            // Match Select: grow with content, never shrink below the trigger.
+            // A fixed `w-(--anchor-width)` clipped long labels (branch names).
+            "z-50 flex max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) flex-col overflow-hidden rounded-xl bg-popover p-1 text-popover-foreground shadow-[0_8px_30px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.04] duration-100 outline-none dark:shadow-[0_8px_30px_rgba(0,0,0,0.45)] dark:ring-white/[0.06] data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98]",
             className
           )}
           {...props}
@@ -78,12 +80,12 @@ function ComboboxContent({
 
 function ComboboxInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
   return (
-    <div className="flex items-center gap-2 border-b px-2.5">
-      <IconSearch className="size-3.5 shrink-0 text-muted-foreground" />
+    <div className="-mx-1 mb-1 flex items-center gap-2 border-b px-2.5 py-2">
+      <IconSearch className="size-4 shrink-0 text-muted-foreground" />
       <ComboboxPrimitive.Input
         data-slot="combobox-input"
         className={cn(
-          "h-8 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground",
+          "h-auto w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground",
           className
         )}
         {...props}
@@ -96,7 +98,12 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
   return (
     <ComboboxPrimitive.List
       data-slot="combobox-list"
-      className={cn("max-h-64 overflow-y-auto p-1", className)}
+      className={cn(
+        // Native overflow (not ScrollArea) so intrinsic content width can't
+        // blow past the popup and defeat `truncate` on long labels.
+        "max-h-64 min-w-0 overflow-x-hidden overflow-y-auto outline-none",
+        className
+      )}
       {...props}
     />
   )
@@ -124,14 +131,13 @@ function ComboboxItem({
     <ComboboxPrimitive.Item
       data-slot="combobox-item"
       className={cn(
-        "relative flex min-h-7 w-full cursor-default items-center gap-2 rounded-xl py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "relative flex w-full min-w-0 cursor-default items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
         className
       )}
       {...props}
     >
-      <span className="flex min-w-0 flex-1 items-center gap-2 truncate">
-        {children}
-      </span>
+      {/* Truncate on the text node — `truncate` on a flex parent does nothing. */}
+      <span className="min-w-0 flex-1 truncate">{children}</span>
       <span className="pointer-events-none absolute right-2 flex items-center justify-center">
         <ComboboxPrimitive.ItemIndicator>
           <IconCheck className="size-4" />

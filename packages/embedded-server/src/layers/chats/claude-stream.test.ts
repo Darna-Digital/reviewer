@@ -116,7 +116,12 @@ describe("createClaudeTurnParser", () => {
         type: "user",
         message: {
           content: [
-            { type: "tool_result", tool_use_id: "tu-1", is_error: true },
+            {
+              type: "tool_result",
+              tool_use_id: "tu-1",
+              is_error: true,
+              content: "command not found: pnpm",
+            },
           ],
         },
       }),
@@ -128,16 +133,57 @@ describe("createClaudeTurnParser", () => {
         kind: "tool.started",
         tone: "tool",
         summary: "Bash — pnpm test",
-        detail: '{"command":"pnpm test"}',
+        detail: '{\n  "command": "pnpm test"\n}',
+        label: "Bash",
+        callId: "tu-1",
       },
       {
         type: "activity",
         kind: "tool.failed",
         tone: "error",
         summary: "Bash failed",
-        detail: null,
+        detail: "command not found: pnpm",
+        label: "Bash",
+        callId: "tu-1",
       },
     ])
+  })
+
+  it("carries a tool result's content-block body back as the detail", () => {
+    const parser = createClaudeTurnParser()
+    const events = push(parser, [
+      assistantMessage([
+        {
+          type: "tool_use",
+          id: "tu-9",
+          name: "Read",
+          input: { file_path: "a.ts" },
+        },
+      ]),
+      line({
+        type: "user",
+        message: {
+          content: [
+            {
+              type: "tool_result",
+              tool_use_id: "tu-9",
+              content: [
+                { type: "text", text: "line one" },
+                { type: "text", text: "line two" },
+              ],
+            },
+          ],
+        },
+      }),
+    ])
+    const completed = events.find(
+      (e) => e.type === "activity" && e.kind === "tool.completed"
+    )
+    expect(completed).toMatchObject({
+      callId: "tu-9",
+      label: "Read",
+      detail: "line one\nline two",
+    })
   })
 
   it("announces thinking once per assistant message", () => {
@@ -152,6 +198,85 @@ describe("createClaudeTurnParser", () => {
     })
     const events = push(parser, [thinkingStart, thinkingStart])
     expect(events.filter((e) => e.type === "activity")).toHaveLength(1)
+  })
+
+  it("takes the reasoning from the assistant block, which is where the CLI puts it", () => {
+    // Recorded from `claude -p --output-format stream-json --verbose
+    // --include-partial-messages`: a thinking block streams a signature_delta
+    // and no text, and the complete block lands on the `assistant` line ahead
+    // of its content_block_stop.
+    const parser = createClaudeTurnParser()
+    const events = push(parser, [
+      line({
+        type: "stream_event",
+        event: {
+          type: "content_block_start",
+          index: 0,
+          content_block: { type: "thinking", thinking: "" },
+        },
+      }),
+      line({
+        type: "stream_event",
+        event: {
+          type: "content_block_delta",
+          index: 0,
+          delta: { type: "signature_delta", signature: "abc123" },
+        },
+      }),
+      assistantMessage([
+        { type: "thinking", thinking: "91 = 7 × 13", signature: "abc123" },
+      ]),
+      line({
+        type: "stream_event",
+        event: { type: "content_block_stop", index: 0 },
+      }),
+      textDelta("91 is not prime."),
+    ])
+    const activities = events.filter((e) => e.type === "activity")
+    expect(activities).toMatchObject([
+      { kind: "thinking", callId: "think-1" },
+      { kind: "thinking.completed", callId: "think-1", detail: "91 = 7 × 13" },
+    ])
+    // Reasoning stays out of the reply, and the reply is unaffected.
+    expect(parser.text()).toBe("91 is not prime.")
+  })
+
+  it("settles a thinking block with the reasoning text it streamed", () => {
+    const parser = createClaudeTurnParser()
+    const events = push(parser, [
+      line({
+        type: "stream_event",
+        event: {
+          type: "content_block_start",
+          index: 0,
+          content_block: { type: "thinking", thinking: "" },
+        },
+      }),
+      line({
+        type: "stream_event",
+        event: {
+          type: "content_block_delta",
+          index: 0,
+          delta: { type: "thinking_delta", thinking: "weigh the options" },
+        },
+      }),
+      line({
+        type: "stream_event",
+        event: { type: "content_block_stop", index: 0 },
+      }),
+    ])
+    const activities = events.filter((e) => e.type === "activity")
+    // Start and stop share a callId so the timeline folds them into one step.
+    expect(activities).toMatchObject([
+      { kind: "thinking", callId: "think-1", detail: null },
+      {
+        kind: "thinking.completed",
+        callId: "think-1",
+        detail: "weigh the options",
+      },
+    ])
+    // Reasoning never leaks into the assistant's reply.
+    expect(parser.text()).toBe("")
   })
 
   it("settles with cost on a successful result", () => {

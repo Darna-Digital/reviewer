@@ -42,6 +42,20 @@ export function useCommentsActions() {
               )
             return data
           },
+          updateLocalComment: async (id, body) => {
+            const { data, error } = await fetchClient.PATCH(
+              "/api/comments/{id}",
+              {
+                params: { path: { id } },
+                body: { body },
+              }
+            )
+            if (error)
+              throw new Error(
+                (error as { reason?: string }).reason ?? "failed to update"
+              )
+            return data
+          },
           deleteComment: async (id) => {
             await fetchClient.DELETE("/api/comments/{id}", {
               params: { path: { id } },
@@ -92,6 +106,11 @@ export function useCommentsActions() {
       const removed = await fns.remove(comment)
       if (removed) void invalidate("/api/comments")
       return removed
+    },
+    update: async (comment: ReviewComment, body: string) => {
+      const updated = await fns.update(comment, body)
+      if (updated !== null) void invalidate("/api/comments")
+      return updated
     },
     reply: fns.reply,
   }

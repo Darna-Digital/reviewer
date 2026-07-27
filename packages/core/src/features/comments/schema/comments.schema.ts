@@ -25,4 +25,8 @@ export const NewComment = Schema.Struct({
   target: Schema.optionalKey(Schema.String),
 })
 export type NewComment = typeof NewComment.Type
+export const UpdateComment = Schema.Struct({
+  body: Schema.String,
+})
+export type UpdateComment = typeof UpdateComment.Type
 export const CommentIdParam = Schema.Struct({ id: Schema.String })

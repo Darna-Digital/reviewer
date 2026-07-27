@@ -24,7 +24,10 @@ import type { IncomingMessage } from "node:http"
 import type { WebSocket } from "ws"
 import { recentAgentSessions } from "../terminal/agent-session-capture.ts"
 import { saveDroppedImage } from "../terminal/dropped-image.ts"
-import { getCurrentRepo } from "../workspace/current-repo.ts"
+import {
+  getCurrentRepo,
+  onCurrentRepoChange,
+} from "../workspace/current-repo.ts"
 import {
   chatTurnProgram,
   withAttachedImages,
@@ -49,6 +52,8 @@ import {
   findChat,
   nextChatId,
   saveSessionId,
+  saveStreamingText,
+  settleStaleTurns,
   startPendingTurn,
 } from "./store.ts"
 import { CLAUDE_LOGIN_HINT, isClaudeAuthError } from "./claude-stream.ts"
@@ -76,6 +81,10 @@ interface LiveTurn {
   stderr: string
   interrupted: boolean
   finalized: boolean
+  /** Assistant text already written to disk, so a flush that would rewrite the
+   * same 2 MB file with identical content is skipped. */
+  flushedText: string
+  flushTimer: ReturnType<typeof setTimeout> | null
 }
 
 const liveTurns = new Map<string, LiveTurn>()
@@ -96,7 +105,134 @@ const broadcast = (chatId: string, event: ChatWireEvent) => {
   for (const ws of sockets) send(ws, { event })
 }
 
+const answeredLastPing = new WeakMap<WebSocket, boolean>()
+const HEARTBEAT_MS = 15000
+let heartbeat: ReturnType<typeof setInterval> | null = null
+
+const ignoringAnAlreadyClosedSocket = (act: () => void) => {
+  try {
+    act()
+  } catch {
+    return
+  }
+}
+
+/**
+ * A dropped lid or a killed tunnel leaves a half-open socket that never fires
+ * `close`: the server broadcasts into a void and the client waits on a spinner
+ * it can't resolve. The protocol ping reaps silent sockets here, and the
+ * `{ping}` frame gives the browser — which can't observe protocol pongs —
+ * something to time out on and reconnect from.
+ */
+const startHeartbeat = (): void => {
+  if (heartbeat !== null) return
+  heartbeat = setInterval(() => {
+    if (watchers.size === 0) {
+      clearInterval(heartbeat ?? undefined)
+      heartbeat = null
+      return
+    }
+    for (const sockets of watchers.values()) {
+      for (const ws of sockets) {
+        if (answeredLastPing.get(ws) === false) {
+          ignoringAnAlreadyClosedSocket(() => ws.terminate())
+          continue
+        }
+        answeredLastPing.set(ws, false)
+        ignoringAnAlreadyClosedSocket(() => ws.ping())
+        send(ws, { ping: new Date().toISOString() })
+      }
+    }
+  }, HEARTBEAT_MS)
+  heartbeat.unref?.()
+}
+
 export const isTurnRunning = (chatId: string): boolean => liveTurns.has(chatId)
+
+/** A crash costs at most this much streamed text; tool boundaries also flush. */
+const AT_MOST_LOST_ON_CRASH_MS = 1500
+
+const checkpointLanded = (live: LiveTurn, text: string): boolean => {
+  try {
+    saveStreamingText(live.repoPath, live.chatId, live.assistantMessageId, text)
+    return true
+  } catch {
+    return false
+  }
+}
+
+const flushText = (live: LiveTurn): void => {
+  if (live.flushTimer !== null) {
+    clearTimeout(live.flushTimer)
+    live.flushTimer = null
+  }
+  const text = live.parser.text()
+  if (text === live.flushedText) return
+  if (checkpointLanded(live, text)) live.flushedText = text
+}
+
+/** An activity boundary closes off the text before it, and rewrites the store
+ * anyway, so the checkpoint rides along for free. */
+const flushTextCompletedBefore = (
+  live: LiveTurn,
+  activity: ChatActivity
+): void => {
+  flushText(live)
+  appendActivity(live.repoPath, live.chatId, activity)
+}
+
+const scheduleTextFlush = (live: LiveTurn): void => {
+  if (live.flushTimer !== null) return
+  live.flushTimer = setTimeout(() => {
+    live.flushTimer = null
+    if (!live.finalized) flushText(live)
+  }, AT_MOST_LOST_ON_CRASH_MS)
+}
+
+const STALE_TURN_MESSAGE = "the server stopped while this turn was running"
+
+const isBackedByALiveProcess = (chatId: string) => liveTurns.has(chatId)
+
+const settledStaleTurnsOrNoneIfUnreadable = (
+  repoPath: string
+): ReadonlyArray<string> => {
+  try {
+    return settleStaleTurns(
+      repoPath,
+      isBackedByALiveProcess,
+      STALE_TURN_MESSAGE
+    )
+  } catch {
+    return []
+  }
+}
+
+/**
+ * A turn the store still calls "running" with no process behind it spins the
+ * sidebar forever and blocks the composer. Settling the whole repo at once
+ * repairs chats the user never reopens.
+ */
+export const repairStaleTurns = (repoPath: string): void => {
+  for (const chatId of settledStaleTurnsOrNoneIfUnreadable(repoPath)) {
+    broadcastChatSnapshot(repoPath, chatId)
+  }
+}
+
+onCurrentRepoChange((next) => {
+  if (next !== null) repairStaleTurns(next)
+})
+
+const checkpointEveryLiveTurnSynchronously = () => {
+  for (const live of liveTurns.values()) flushText(live)
+}
+
+process.once("exit", checkpointEveryLiveTurnSynchronously)
+
+// `exit` is the only hook that can still write; it does not fire on its own for
+// the signals that actually stop this server, so they exit deliberately.
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.once(signal, () => process.exit(0))
+}
 
 /**
  * The chat as a client should first see it: the persisted state with the
@@ -163,6 +299,7 @@ const handleStreamEvent = (live: LiveTurn, event: TurnEvent): void => {
         messageId: live.assistantMessageId,
         text: event.text,
       })
+      scheduleTextFlush(live)
       return
     case "activity": {
       const activity: ChatActivity = {
@@ -173,8 +310,10 @@ const handleStreamEvent = (live: LiveTurn, event: TurnEvent): void => {
         summary: event.summary,
         detail: event.detail,
         createdAt: new Date().toISOString(),
+        ...(event.callId !== undefined ? { callId: event.callId } : {}),
+        ...(event.label !== undefined ? { label: event.label } : {}),
       }
-      appendActivity(live.repoPath, live.chatId, activity)
+      flushTextCompletedBefore(live, activity)
       broadcast(live.chatId, { type: "activity", activity })
       return
     }
@@ -210,6 +349,10 @@ const captureMintedSession = (live: LiveTurn): void => {
 const finalizeTurn = (live: LiveTurn, exitCode: number | null): void => {
   if (live.finalized) return
   live.finalized = true
+  if (live.flushTimer !== null) {
+    clearTimeout(live.flushTimer)
+    live.flushTimer = null
+  }
   liveTurns.delete(live.chatId)
   captureMintedSession(live)
 
@@ -337,6 +480,8 @@ const launchTurn = (input: {
     stderr: "",
     interrupted: false,
     finalized: false,
+    flushedText: "",
+    flushTimer: null,
   }
   liveTurns.set(chat.id, live)
   broadcast(chat.id, { type: "turn-started", chat: started })
@@ -480,14 +625,15 @@ export const queueChatTurn = (
     )
   }
   broadcast(chatId, { type: "message-appended", message: userMessage })
+  flushPending(repoPath, chatId)
   return { ok: true }
 }
 
 /**
  * Start a follow-up turn from any messages queued during the turn that just
- * settled. A no-op when nothing is pending or a turn is (already) running.
- * Called when a turn finalizes and when a socket attaches (to recover pending
- * left by a server restart).
+ * settled. A no-op while a turn is live, so every path that could have been
+ * the last one standing — a turn finalizing, a socket attaching after a
+ * restart, a message landing just as its turn settled — can call it freely.
  */
 const flushPending = (repoPath: string, chatId: string): void => {
   if (liveTurns.has(chatId)) return
@@ -547,23 +693,34 @@ const flushPending = (repoPath: string, chatId: string): void => {
   })
 }
 
-/** Interrupt a running turn. Returns false when nothing was running. */
+/**
+ * Interrupt a running turn. Returns false when nothing was running — in which
+ * case a chat the store still calls "running" is stale, so Stop doubles as the
+ * user's escape hatch and repairs it instead of doing nothing.
+ */
+const SIGKILL_AFTER_MS = 3000
+
+const ignoringAnAlreadyDeadChild = (act: () => void) => {
+  try {
+    act()
+  } catch {
+    return
+  }
+}
+
 export const stopChatTurn = (chatId: string): boolean => {
   const live = liveTurns.get(chatId)
-  if (live === undefined) return false
-  live.interrupted = true
-  try {
-    live.child.kill("SIGTERM")
-  } catch {
-    // already gone
+  if (live === undefined) {
+    const repoPath = getCurrentRepo()
+    if (repoPath !== null) repairStaleTurns(repoPath)
+    return false
   }
-  const hard = setTimeout(() => {
-    try {
-      live.child.kill("SIGKILL")
-    } catch {
-      // already gone
-    }
-  }, 3000)
+  live.interrupted = true
+  ignoringAnAlreadyDeadChild(() => live.child.kill("SIGTERM"))
+  const hard = setTimeout(
+    () => ignoringAnAlreadyDeadChild(() => live.child.kill("SIGKILL")),
+    SIGKILL_AFTER_MS
+  )
   live.child.once("close", () => clearTimeout(hard))
   return true
 }
@@ -575,11 +732,7 @@ export const killChatRuntime = (chatId: string): void => {
   if (sockets !== undefined) {
     watchers.delete(chatId)
     for (const ws of sockets) {
-      try {
-        ws.close()
-      } catch {
-        // already gone
-      }
+      ignoringAnAlreadyClosedSocket(() => ws.close())
     }
   }
 }
@@ -601,6 +754,7 @@ export const startChatStream = (
     ws.close()
     return
   }
+  repairStaleTurns(repoPath)
   let chat: Chat | undefined
   try {
     chat = findChat(repoPath, chatId)
@@ -617,10 +771,13 @@ export const startChatStream = (
   const sockets = watchers.get(chatId) ?? new Set<WebSocket>()
   sockets.add(ws)
   watchers.set(chatId, sockets)
+  answeredLastPing.set(ws, true)
+  ws.on("pong", () => answeredLastPing.set(ws, true))
   ws.on("close", () => {
     sockets.delete(ws)
     if (sockets.size === 0) watchers.delete(chatId)
   })
+  startHeartbeat()
   // A restart can leave queued messages with no turn to pick them up (the
   // in-flight turn was settled as interrupted on snapshot). Start them now.
   flushPending(repoPath, chatId)
@@ -632,4 +789,8 @@ export const resetChatRuntime = (): void => {
   liveTurns.clear()
   watchers.clear()
   pendingImagePaths.clear()
+  if (heartbeat !== null) {
+    clearInterval(heartbeat)
+    heartbeat = null
+  }
 }

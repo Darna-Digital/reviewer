@@ -23,11 +23,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import type { LogQuery } from "@/lib/api/types"
 import type { BranchInfo } from "@byconvo/core/repo"
 import { cn } from "@/lib/utils"
@@ -113,18 +108,13 @@ export function LogFilters({
           <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
           <ComboboxValue />
         </ComboboxTrigger>
-        <ComboboxContent>
+        <ComboboxContent className="w-72">
           <ComboboxInput placeholder="Search branches…" />
           <ComboboxEmpty>No branches found.</ComboboxEmpty>
           <ComboboxList>
             {(name: string) => (
-              <ComboboxItem key={name} value={name}>
-                <Tooltip>
-                  <TooltipTrigger render={<span className="truncate" />}>
-                    {name}
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{name}</TooltipContent>
-                </Tooltip>
+              <ComboboxItem key={name} value={name} title={name}>
+                {name}
               </ComboboxItem>
             )}
           </ComboboxList>

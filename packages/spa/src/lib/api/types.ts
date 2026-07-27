@@ -25,10 +25,10 @@ export type AppMode =
   | "review"
   | "browse"
   | "chats"
-  | "threads"
   | "docs"
   | "tasks"
-  | "local-dev"
+  | "comments"
+  | "settings"
 
 export type DiffTarget =
   | { readonly kind: "worktree" }

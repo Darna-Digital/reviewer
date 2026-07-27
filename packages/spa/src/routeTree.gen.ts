@@ -11,11 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as WorkspaceRouteImport } from './routes/_workspace'
+import { Route as KitchenSinkRouteImport } from './routes/kitchen-sink'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppCommitRouteImport } from './routes/_app/commit'
 import { Route as WorkspaceChatsRouteImport } from './routes/_workspace/chats'
+import { Route as WorkspaceCommentsRouteImport } from './routes/_workspace/comments'
 import { Route as WorkspaceDocsRouteImport } from './routes/_workspace/docs'
 import { Route as WorkspaceLocalDevRouteImport } from './routes/_workspace/local-dev'
+import { Route as WorkspaceSettingsRouteImport } from './routes/_workspace/settings'
 import { Route as WorkspaceTasksRouteImport } from './routes/_workspace/tasks'
 import { Route as WorkspaceThreadsRouteImport } from './routes/_workspace/threads'
 import { Route as AppBrowseIndexRouteImport } from './routes/_app/browse/index'
@@ -34,6 +37,11 @@ const WorkspaceRoute = WorkspaceRouteImport.update({
   id: '/_workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
+const KitchenSinkRoute = KitchenSinkRouteImport.update({
+  id: '/kitchen-sink',
+  path: '/kitchen-sink',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -49,6 +57,11 @@ const WorkspaceChatsRoute = WorkspaceChatsRouteImport.update({
   path: '/chats',
   getParentRoute: () => WorkspaceRoute,
 } as any)
+const WorkspaceCommentsRoute = WorkspaceCommentsRouteImport.update({
+  id: '/comments',
+  path: '/comments',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
 const WorkspaceDocsRoute = WorkspaceDocsRouteImport.update({
   id: '/docs',
   path: '/docs',
@@ -57,6 +70,11 @@ const WorkspaceDocsRoute = WorkspaceDocsRouteImport.update({
 const WorkspaceLocalDevRoute = WorkspaceLocalDevRouteImport.update({
   id: '/local-dev',
   path: '/local-dev',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => WorkspaceRoute,
 } as any)
 const WorkspaceTasksRoute = WorkspaceTasksRouteImport.update({
@@ -107,10 +125,13 @@ const AppBrowseCommitShaRoute = AppBrowseCommitShaRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
+  '/kitchen-sink': typeof KitchenSinkRoute
   '/commit': typeof AppCommitRoute
   '/chats': typeof WorkspaceChatsRouteWithChildren
+  '/comments': typeof WorkspaceCommentsRoute
   '/docs': typeof WorkspaceDocsRoute
   '/local-dev': typeof WorkspaceLocalDevRoute
+  '/settings': typeof WorkspaceSettingsRoute
   '/tasks': typeof WorkspaceTasksRoute
   '/threads': typeof WorkspaceThreadsRoute
   '/browse/range': typeof AppBrowseRangeRoute
@@ -123,9 +144,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
+  '/kitchen-sink': typeof KitchenSinkRoute
   '/commit': typeof AppCommitRoute
+  '/comments': typeof WorkspaceCommentsRoute
   '/docs': typeof WorkspaceDocsRoute
   '/local-dev': typeof WorkspaceLocalDevRoute
+  '/settings': typeof WorkspaceSettingsRoute
   '/tasks': typeof WorkspaceTasksRoute
   '/threads': typeof WorkspaceThreadsRoute
   '/browse/range': typeof AppBrowseRangeRoute
@@ -140,10 +164,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
   '/_workspace': typeof WorkspaceRouteWithChildren
+  '/kitchen-sink': typeof KitchenSinkRoute
   '/_app/commit': typeof AppCommitRoute
   '/_workspace/chats': typeof WorkspaceChatsRouteWithChildren
+  '/_workspace/comments': typeof WorkspaceCommentsRoute
   '/_workspace/docs': typeof WorkspaceDocsRoute
   '/_workspace/local-dev': typeof WorkspaceLocalDevRoute
+  '/_workspace/settings': typeof WorkspaceSettingsRoute
   '/_workspace/tasks': typeof WorkspaceTasksRoute
   '/_workspace/threads': typeof WorkspaceThreadsRoute
   '/_app/': typeof AppIndexRoute
@@ -159,10 +186,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/kitchen-sink'
     | '/commit'
     | '/chats'
+    | '/comments'
     | '/docs'
     | '/local-dev'
+    | '/settings'
     | '/tasks'
     | '/threads'
     | '/browse/range'
@@ -175,9 +205,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/kitchen-sink'
     | '/commit'
+    | '/comments'
     | '/docs'
     | '/local-dev'
+    | '/settings'
     | '/tasks'
     | '/threads'
     | '/browse/range'
@@ -191,10 +224,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_app'
     | '/_workspace'
+    | '/kitchen-sink'
     | '/_app/commit'
     | '/_workspace/chats'
+    | '/_workspace/comments'
     | '/_workspace/docs'
     | '/_workspace/local-dev'
+    | '/_workspace/settings'
     | '/_workspace/tasks'
     | '/_workspace/threads'
     | '/_app/'
@@ -210,6 +246,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   WorkspaceRoute: typeof WorkspaceRouteWithChildren
+  KitchenSinkRoute: typeof KitchenSinkRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -226,6 +263,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof WorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kitchen-sink': {
+      id: '/kitchen-sink'
+      path: '/kitchen-sink'
+      fullPath: '/kitchen-sink'
+      preLoaderRoute: typeof KitchenSinkRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -249,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceChatsRouteImport
       parentRoute: typeof WorkspaceRoute
     }
+    '/_workspace/comments': {
+      id: '/_workspace/comments'
+      path: '/comments'
+      fullPath: '/comments'
+      preLoaderRoute: typeof WorkspaceCommentsRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
     '/_workspace/docs': {
       id: '/_workspace/docs'
       path: '/docs'
@@ -261,6 +312,13 @@ declare module '@tanstack/react-router' {
       path: '/local-dev'
       fullPath: '/local-dev'
       preLoaderRoute: typeof WorkspaceLocalDevRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/settings': {
+      id: '/_workspace/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof WorkspaceSettingsRouteImport
       parentRoute: typeof WorkspaceRoute
     }
     '/_workspace/tasks': {
@@ -367,16 +425,20 @@ const WorkspaceChatsRouteWithChildren = WorkspaceChatsRoute._addFileChildren(
 
 interface WorkspaceRouteChildren {
   WorkspaceChatsRoute: typeof WorkspaceChatsRouteWithChildren
+  WorkspaceCommentsRoute: typeof WorkspaceCommentsRoute
   WorkspaceDocsRoute: typeof WorkspaceDocsRoute
   WorkspaceLocalDevRoute: typeof WorkspaceLocalDevRoute
+  WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
   WorkspaceTasksRoute: typeof WorkspaceTasksRoute
   WorkspaceThreadsRoute: typeof WorkspaceThreadsRoute
 }
 
 const WorkspaceRouteChildren: WorkspaceRouteChildren = {
   WorkspaceChatsRoute: WorkspaceChatsRouteWithChildren,
+  WorkspaceCommentsRoute: WorkspaceCommentsRoute,
   WorkspaceDocsRoute: WorkspaceDocsRoute,
   WorkspaceLocalDevRoute: WorkspaceLocalDevRoute,
+  WorkspaceSettingsRoute: WorkspaceSettingsRoute,
   WorkspaceTasksRoute: WorkspaceTasksRoute,
   WorkspaceThreadsRoute: WorkspaceThreadsRoute,
 }
@@ -388,6 +450,7 @@ const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   WorkspaceRoute: WorkspaceRouteWithChildren,
+  KitchenSinkRoute: KitchenSinkRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

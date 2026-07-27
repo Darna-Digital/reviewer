@@ -22,6 +22,9 @@ export interface ChatRuntimeShape {
   readonly stop: (chatId: string) => Effect.Effect<boolean>
   readonly kill: (chatId: string) => Effect.Effect<void>
   readonly broadcastSnapshot: (chatId: string) => Effect.Effect<void>
+  /** Settle turns the store still calls running that no process backs, so a
+   * crash can't leave the list showing work that will never finish. */
+  readonly repairStale: Effect.Effect<void>
 }
 export class ChatRuntime extends Context.Service<
   ChatRuntime,
@@ -43,6 +46,7 @@ export interface MemoryChatRuntime {
     readonly stop: string[]
     readonly kill: string[]
     readonly broadcastSnapshot: string[]
+    repairStale: number
   }
   readonly state: {
     running: Set<string>
@@ -56,6 +60,7 @@ export const memoryChatRuntime = (): MemoryChatRuntime => {
     stop: [],
     kill: [],
     broadcastSnapshot: [],
+    repairStale: 0,
   }
   const state: MemoryChatRuntime["state"] = {
     running: new Set(),
@@ -88,6 +93,9 @@ export const memoryChatRuntime = (): MemoryChatRuntime => {
         Effect.sync(() => {
           calls.broadcastSnapshot.push(chatId)
         }),
+      repairStale: Effect.sync(() => {
+        calls.repairStale += 1
+      }),
     })
   )
   return { layer, calls, state }

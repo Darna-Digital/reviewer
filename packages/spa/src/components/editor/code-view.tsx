@@ -9,6 +9,7 @@ import {
 } from "@/interactions/comments/components/comment-thread"
 import { THEMES, useLangReady } from "@/components/editor/highlighter"
 import { Button } from "@/components/ui/button"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { useFile } from "@/lib/queries"
 import type { ReviewComment } from "@byconvo/core/comments"
 import type { Theme } from "@/lib/ui-prefs"
@@ -36,6 +37,7 @@ interface CodeViewProps {
   onDraftCancel?: () => void
   onCommentSubmit?: (location: DraftLocation, body: string) => Promise<void>
   onCommentDelete?: (comment: ReviewComment) => Promise<void>
+  onCommentEdit?: (comment: ReviewComment, body: string) => Promise<void>
 }
 
 export function CodeView({
@@ -49,6 +51,7 @@ export function CodeView({
   onDraftCancel,
   onCommentSubmit,
   onCommentDelete,
+  onCommentEdit,
 }: CodeViewProps) {
   const file = useFile(path)
   const langReady = useLangReady(path)
@@ -75,7 +78,9 @@ export function CodeView({
 
   if (file.isPending || !langReady) {
     return (
-      <div className="p-8 text-sm text-muted-foreground">Loading {path}…</div>
+      <div className="p-8">
+        <LoadingCursor label={`Loading ${path}…`} />
+      </div>
     )
   }
   if (file.error || file.data === undefined) {
@@ -87,7 +92,7 @@ export function CodeView({
   return (
     // Virtualizer windows the file: only the viewport (±overscan) worth of
     // lines is materialized in the DOM, so large files open instantly.
-    <Virtualizer className="h-full overflow-auto">
+    <Virtualizer className="scroll-fade h-full overflow-auto">
       <section className="diff-file" data-file-anchor={path}>
         {/* Remount per file: the underlying File instance doesn't re-highlight
             when only its `file` prop changes, so navigating between files would
@@ -152,6 +157,7 @@ export function CodeView({
                     <CommentThread
                       comments={meta.comments}
                       onDelete={onCommentDelete}
+                      onEdit={onCommentEdit}
                     />
                   )
                 }

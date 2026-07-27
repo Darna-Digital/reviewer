@@ -4,6 +4,7 @@ import { ResizeHandle } from "@/components/layout/resize-handle"
 import { agentIcon } from "@/interactions/threads/components/agent-icons"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Select,
   SelectContent,
@@ -147,9 +148,9 @@ export function CommitPanel({
         onResizeEnd={(h) => setUiPrefs({ commitFilesHeight: h })}
         label="Resize changed files"
       />
-      <div
-        className="scroll-thin overflow-y-auto px-3 pt-2"
+      <ScrollArea
         style={{ height: filesHeight }}
+        viewportClassName="scroll-fade px-3 pt-2"
       >
         {changes.map((c) => (
           <label
@@ -172,7 +173,7 @@ export function CommitPanel({
             <span className="truncate">{c.path}</span>
           </label>
         ))}
-      </div>
+      </ScrollArea>
       {/* Drag the message box's top border to grow/shrink the composer. */}
       <ResizeHandle
         orientation="row"
@@ -189,7 +190,7 @@ export function CommitPanel({
           the viewport bottom and taller than our sm button, so matching its
           centre -- not its bottom edge -- is what visually lines them up. */}
       <div className="flex flex-col gap-2 border-t px-3 pt-3 pb-2.5">
-        <div className="relative">
+        <div className="group/message relative">
           <Textarea
             value={message}
             placeholder="Commit message..."
@@ -204,6 +205,27 @@ export function CommitPanel({
           />
           {onGenerate !== undefined && (
             <div className="absolute right-1.5 bottom-1.5 flex items-center gap-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className={cn(
+                  "h-6 gap-1 px-2 text-xs text-muted-foreground transition-opacity duration-150",
+                  generating
+                    ? "opacity-100"
+                    : "pointer-events-none opacity-0 group-hover/message:pointer-events-auto group-hover/message:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
+                )}
+                disabled={!canGenerate}
+                title={`Generate a commit message with ${agentLabel(commitAgent)}`}
+                onClick={() => void generate()}
+              >
+                {generating ? (
+                  <IconLoader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <IconSparkles className="size-3.5" />
+                )}
+                {generating ? "Generating..." : "Generate"}
+              </Button>
               {/* Pick which local agent CLI drafts the message. */}
               <Select
                 value={commitAgent}
@@ -229,22 +251,6 @@ export function CommitPanel({
                   })}
                 </SelectContent>
               </Select>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-6 gap-1 px-2 text-xs text-muted-foreground"
-                disabled={!canGenerate}
-                title={`Generate a commit message with ${agentLabel(commitAgent)}`}
-                onClick={() => void generate()}
-              >
-                {generating ? (
-                  <IconLoader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <IconSparkles className="size-3.5" />
-                )}
-                {generating ? "Generating..." : "Generate"}
-              </Button>
             </div>
           )}
         </div>

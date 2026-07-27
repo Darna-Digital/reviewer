@@ -12,6 +12,7 @@ import { toast } from "sonner"
 import { ResizeHandle } from "@/components/layout/resize-handle"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
 import { useDocsActions } from "@/interactions/docs/adapters/docs.hook.adapter"
 import { useDoc, useDocs } from "@/lib/queries"
@@ -150,7 +151,10 @@ export function DocsPage() {
             />
           </div>
         )}
-        <div className="min-h-0 flex-1 overflow-auto px-1 pb-2">
+        <ScrollArea
+          className="min-h-0 flex-1"
+          viewportClassName="scroll-fade px-1 pb-2"
+        >
           {summaries.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
               No plans yet. Create one — agents can read and write these
@@ -174,7 +178,7 @@ export function DocsPage() {
               </button>
             ))
           )}
-        </div>
+        </ScrollArea>
       </aside>
       <ResizeHandle
         orientation="col"
@@ -236,7 +240,10 @@ export function DocsPage() {
               </div>
             </header>
 
-            <div className="min-h-0 flex-1 overflow-auto">
+            <ScrollArea
+              className="min-h-0 flex-1"
+              viewportClassName="scroll-fade"
+            >
               {mode === "edit" ? (
                 <Textarea
                   value={draft}
@@ -255,7 +262,7 @@ export function DocsPage() {
                   </Markdown>
                 </div>
               )}
-            </div>
+            </ScrollArea>
           </>
         )}
       </section>

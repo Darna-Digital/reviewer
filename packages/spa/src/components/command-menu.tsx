@@ -17,6 +17,7 @@ import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { IconCornerDownLeft, IconFile, IconSearch } from "@tabler/icons-react"
 import { useEffect, useMemo, useRef, useState } from "react"
 import { DialogOverlay, DialogPortal } from "@/components/ui/dialog"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 
 export interface Command {
@@ -228,9 +229,10 @@ export function CommandMenu({
             />
           </div>
 
-          <div
-            ref={listRef}
-            className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-1.5"
+          <ScrollArea
+            viewportRef={listRef}
+            className="min-h-0 flex-1"
+            viewportClassName="scroll-fade overflow-x-hidden p-1.5"
           >
             {entries.length === 0 ? (
               <div className="px-3 py-6 text-center text-muted-foreground">
@@ -286,7 +288,7 @@ export function CommandMenu({
                 )
               })
             )}
-          </div>
+          </ScrollArea>
 
           <div className="flex items-center justify-between gap-2 border-t px-3 py-1.5 text-xs text-muted-foreground">
             <span>
