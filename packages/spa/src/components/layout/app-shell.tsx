@@ -70,6 +70,7 @@ import {
   type LogQuery,
 } from "@/lib/api/types"
 import type { ReviewComment } from "@byconvo/core/comments"
+import { errorReason } from "@/lib/errors"
 import {
   useBranches,
   useChatModels,
@@ -666,7 +667,9 @@ export function AppShell() {
         diffStyle={prefs.diffStyle}
         connectors={prefs.connectors}
         loading={diff.isPending}
-        error={diff.error ? "Could not load diff" : null}
+        error={
+          diff.error ? errorReason(diff.error, "Could not load diff") : null
+        }
         target={target}
         comments={visibleComments}
         draft={draft}
@@ -782,7 +785,12 @@ export function AppShell() {
                     <PullRequestList
                       pulls={pulls.data ?? []}
                       error={
-                        pulls.error ? "Could not load pull requests" : null
+                        pulls.error
+                          ? errorReason(
+                              pulls.error,
+                              "Could not load pull requests"
+                            )
+                          : null
                       }
                       loading={pulls.isPending}
                       selectedNumber={selectedPull?.number ?? null}

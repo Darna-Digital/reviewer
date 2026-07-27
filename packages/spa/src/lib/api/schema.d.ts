@@ -1115,6 +1115,7 @@ export interface components {
             /** @enum {string} */
             _tag: "GitProviderError";
             reason: string;
+            status?: number;
         };
         TerminalError: {
             /** @enum {string} */
@@ -2670,6 +2671,15 @@ export interface operations {
                     }[];
                 };
             };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
             /** @description NoRepoSelected */
             409: {
                 headers: {
@@ -2732,6 +2742,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
             /** @description NoRepoSelected */
             409: {
                 headers: {
@@ -2772,6 +2791,15 @@ export interface operations {
                     "application/json": {
                         ok: boolean;
                     };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
                 };
             };
             /** @description NoRepoSelected */
@@ -2924,6 +2952,15 @@ export interface operations {
                     }[];
                 };
             };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
             /** @description NoRepoSelected */
             409: {
                 headers: {
@@ -3014,6 +3051,15 @@ export interface operations {
                     };
                 };
             };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
             /** @description NoRepoSelected */
             409: {
                 headers: {
@@ -3063,6 +3109,15 @@ export interface operations {
                     "application/json": {
                         ok: boolean;
                     };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
                 };
             };
             /** @description NoRepoSelected */

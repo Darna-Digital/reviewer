@@ -268,9 +268,23 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
             {leaf}
           </span>
           {(branch.ahead > 0 || branch.behind > 0) && (
-            <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
-              {branch.ahead > 0 ? `↑${branch.ahead}` : ""}
-              {branch.behind > 0 ? ` ↓${branch.behind}` : ""}
+            <span className="ml-auto flex shrink-0 items-center gap-1 text-xs tabular-nums">
+              {branch.ahead > 0 && (
+                <span
+                  className="text-emerald-600 dark:text-emerald-400"
+                  title={`${branch.ahead} outgoing`}
+                >
+                  ↑{branch.ahead}
+                </span>
+              )}
+              {branch.behind > 0 && (
+                <span
+                  className="text-sky-600 dark:text-sky-400"
+                  title={`${branch.behind} incoming`}
+                >
+                  ↓{branch.behind}
+                </span>
+              )}
             </span>
           )}
         </DropdownMenuSubTrigger>
