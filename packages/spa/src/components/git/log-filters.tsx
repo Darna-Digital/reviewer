@@ -113,7 +113,7 @@ export function LogFilters({
           <ComboboxEmpty>No branches found.</ComboboxEmpty>
           <ComboboxList>
             {(name: string) => (
-              <ComboboxItem key={name} value={name} title={name}>
+              <ComboboxItem key={name} value={name}>
                 {name}
               </ComboboxItem>
             )}

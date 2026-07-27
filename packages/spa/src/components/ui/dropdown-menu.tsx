@@ -2,14 +2,17 @@ import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 
 import { cn } from "@/lib/utils"
+import {
+  ELEVATION,
+  POPUP_SHADOW,
+  SurfaceProvider,
+  useElevation,
+} from "@/lib/surface-context"
 import { IconChevronRight, IconCheck } from "@tabler/icons-react"
-
-/** Soft elevated panel — matches the Cursor-style project picker. */
-const menuSurface =
-  "rounded-xl bg-popover text-popover-foreground shadow-[0_8px_30px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.04] dark:shadow-[0_8px_30px_rgba(0,0,0,0.45)] dark:ring-white/[0.06]"
+import { TruncatedRow } from "@/components/ui/truncated-text"
 
 const menuItem =
-  "relative flex cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none focus:bg-muted focus:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground"
+  "relative flex cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none focus:bg-elevate focus:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground"
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
   return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />
@@ -29,12 +32,17 @@ function DropdownMenuContent({
   side = "bottom",
   sideOffset = 4,
   className,
+  children,
   ...props
 }: MenuPrimitive.Popup.Props &
   Pick<
     MenuPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
+  const { level, className: surface } = useElevation(
+    ELEVATION.menu,
+    POPUP_SHADOW
+  )
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
@@ -46,13 +54,16 @@ function DropdownMenuContent({
       >
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
+          data-surface={level}
           className={cn(
-            "z-50 max-h-(--available-height) min-w-72 origin-(--transform-origin) overflow-x-hidden overflow-y-auto p-1 duration-100 outline-none data-[side=bottom]:slide-in-from-top-1 data-[side=inline-end]:slide-in-from-left-1 data-[side=inline-start]:slide-in-from-right-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-[0.98]",
-            menuSurface,
+            "z-50 max-h-(--available-height) min-w-72 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl p-1 text-popover-foreground duration-100 outline-none data-[side=bottom]:slide-in-from-top-1 data-[side=inline-end]:slide-in-from-left-1 data-[side=inline-start]:slide-in-from-right-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-[0.98]",
+            surface,
             className
           )}
           {...props}
-        />
+        >
+          <SurfaceProvider value={level}>{children}</SurfaceProvider>
+        </MenuPrimitive.Popup>
       </MenuPrimitive.Positioner>
     </MenuPrimitive.Portal>
   )
@@ -86,23 +97,30 @@ function DropdownMenuItem({
   className,
   inset,
   variant = "default",
+  children,
   ...props
 }: MenuPrimitive.Item.Props & {
   inset?: boolean
   variant?: "default" | "destructive"
 }) {
   return (
-    <MenuPrimitive.Item
-      data-slot="dropdown-menu-item"
-      data-inset={inset}
-      data-variant={variant}
-      className={cn(
-        menuItem,
-        "group/dropdown-menu-item data-inset:pl-7 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:*:[svg]:text-destructive",
-        className
-      )}
-      {...props}
-    />
+    <TruncatedRow
+      render={
+        <MenuPrimitive.Item
+          data-slot="dropdown-menu-item"
+          data-inset={inset}
+          data-variant={variant}
+          className={cn(
+            menuItem,
+            "group/dropdown-menu-item data-inset:pl-7 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-[variant=destructive]:*:[svg]:text-destructive",
+            className
+          )}
+          {...props}
+        />
+      }
+    >
+      {children}
+    </TruncatedRow>
   )
 }
 
@@ -119,21 +137,27 @@ function DropdownMenuSubTrigger({
   inset?: boolean
 }) {
   return (
-    <MenuPrimitive.SubmenuTrigger
-      data-slot="dropdown-menu-sub-trigger"
-      data-inset={inset}
-      className={cn(
-        menuItem,
-        "data-inset:pl-7 data-popup-open:bg-muted data-popup-open:text-foreground data-open:bg-muted data-open:text-foreground",
-        className
-      )}
-      {...props}
+    // The submenu itself covers the space to the right, so the tooltip goes left.
+    <TruncatedRow
+      side="left"
+      render={
+        <MenuPrimitive.SubmenuTrigger
+          data-slot="dropdown-menu-sub-trigger"
+          data-inset={inset}
+          className={cn(
+            menuItem,
+            "data-inset:pl-7 data-popup-open:bg-elevate-strong data-popup-open:text-foreground data-open:bg-elevate-strong data-open:text-foreground",
+            className
+          )}
+          {...props}
+        />
+      }
     >
       {/* Flex-1 wrapper so an `ml-auto` summary sits flush against the
           chevron instead of sharing free space with a second `ml-auto`. */}
       <span className="flex min-w-0 flex-1 items-center gap-2">{children}</span>
       <IconChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-    </MenuPrimitive.SubmenuTrigger>
+    </TruncatedRow>
   )
 }
 
@@ -170,12 +194,16 @@ function DropdownMenuCheckboxItem({
   inset?: boolean
 }) {
   return (
-    <MenuPrimitive.CheckboxItem
-      data-slot="dropdown-menu-checkbox-item"
-      data-inset={inset}
-      className={cn(menuItem, "pr-8 data-inset:pl-7", className)}
-      checked={checked}
-      {...props}
+    <TruncatedRow
+      render={
+        <MenuPrimitive.CheckboxItem
+          data-slot="dropdown-menu-checkbox-item"
+          data-inset={inset}
+          className={cn(menuItem, "pr-8 data-inset:pl-7", className)}
+          checked={checked}
+          {...props}
+        />
+      }
     >
       <span
         className="pointer-events-none absolute right-2 flex items-center justify-center"
@@ -186,7 +214,7 @@ function DropdownMenuCheckboxItem({
         </MenuPrimitive.CheckboxItemIndicator>
       </span>
       {children}
-    </MenuPrimitive.CheckboxItem>
+    </TruncatedRow>
   )
 }
 
@@ -208,11 +236,19 @@ function DropdownMenuRadioItem({
   inset?: boolean
 }) {
   return (
-    <MenuPrimitive.RadioItem
-      data-slot="dropdown-menu-radio-item"
-      data-inset={inset}
-      className={cn(menuItem, "w-full min-w-0 pr-8 data-inset:pl-7", className)}
-      {...props}
+    <TruncatedRow
+      render={
+        <MenuPrimitive.RadioItem
+          data-slot="dropdown-menu-radio-item"
+          data-inset={inset}
+          className={cn(
+            menuItem,
+            "w-full min-w-0 pr-8 data-inset:pl-7",
+            className
+          )}
+          {...props}
+        />
+      }
     >
       {/* Truncate on the text node — `truncate` on a flex parent does nothing. */}
       <span className="min-w-0 flex-1 truncate">{children}</span>
@@ -224,7 +260,7 @@ function DropdownMenuRadioItem({
           <IconCheck />
         </MenuPrimitive.RadioItemIndicator>
       </span>
-    </MenuPrimitive.RadioItem>
+    </TruncatedRow>
   )
 }
 

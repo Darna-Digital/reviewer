@@ -3,6 +3,7 @@
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
 
 import { cn } from "@/lib/utils"
+import { ELEVATION, POPUP_SHADOW, useElevation } from "@/lib/surface-context"
 
 function TooltipProvider({
   delay = 0,
@@ -38,6 +39,7 @@ function TooltipContent({
     TooltipPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
+  const { className: surface } = useElevation(ELEVATION.tooltip, POPUP_SHADOW)
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Positioner
@@ -50,10 +52,10 @@ function TooltipContent({
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
           className={cn(
-            "z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-2 rounded-lg bg-popover px-2.5 py-1.5 text-xs font-medium text-popover-foreground",
-            // Light: soft lift + hairline edge. Dark: elevated muted fill + ring (no shadow).
-            "shadow-[0_4px_16px_rgba(0,0,0,0.08),0_1px_3px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.08]",
-            "dark:bg-muted dark:shadow-none dark:ring-white/12",
+            "z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-popover-foreground",
+            // Lifts a rung further than a menu: a tooltip has to stay legible
+            // over whatever popup triggered it.
+            surface,
             "has-data-[slot=kbd]:pr-1.5 has-data-[slot=kbd-group]:pr-1.5",
             "data-[side=bottom]:slide-in-from-top-1 data-[side=inline-end]:slide-in-from-left-1 data-[side=inline-start]:slide-in-from-right-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
             "data-[state=delayed-open]:animate-in data-[state=delayed-open]:fade-in-0 data-[state=delayed-open]:zoom-in-[0.98] data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98]",

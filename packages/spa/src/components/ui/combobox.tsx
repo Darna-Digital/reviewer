@@ -2,6 +2,13 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox"
 import { IconCheck, IconSearch, IconSelector } from "@tabler/icons-react"
 
 import { cn } from "@/lib/utils"
+import {
+  ELEVATION,
+  POPUP_SHADOW,
+  SurfaceProvider,
+  useElevation,
+} from "@/lib/surface-context"
+import { TruncatedRow } from "@/components/ui/truncated-text"
 
 /**
  * Combobox — a searchable single-select built on Base UI's `Combobox`, styled to
@@ -53,6 +60,10 @@ function ComboboxContent({
   ...props
 }: ComboboxPrimitive.Popup.Props &
   Pick<ComboboxPrimitive.Positioner.Props, "sideOffset" | "align" | "side">) {
+  const { level, className: surface } = useElevation(
+    ELEVATION.menu,
+    POPUP_SHADOW
+  )
   return (
     <ComboboxPrimitive.Portal>
       <ComboboxPrimitive.Positioner
@@ -63,15 +74,17 @@ function ComboboxContent({
       >
         <ComboboxPrimitive.Popup
           data-slot="combobox-content"
+          data-surface={level}
           className={cn(
             // Match Select: grow with content, never shrink below the trigger.
             // A fixed `w-(--anchor-width)` clipped long labels (branch names).
-            "z-50 flex max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) flex-col overflow-hidden rounded-xl bg-popover p-1 text-popover-foreground shadow-[0_8px_30px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.04] duration-100 outline-none dark:shadow-[0_8px_30px_rgba(0,0,0,0.45)] dark:ring-white/[0.06] data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98]",
+            "z-50 flex max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) flex-col overflow-hidden rounded-xl p-1 text-popover-foreground duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98]",
+            surface,
             className
           )}
           {...props}
         >
-          {children}
+          <SurfaceProvider value={level}>{children}</SurfaceProvider>
         </ComboboxPrimitive.Popup>
       </ComboboxPrimitive.Positioner>
     </ComboboxPrimitive.Portal>
@@ -128,13 +141,17 @@ function ComboboxItem({
   ...props
 }: ComboboxPrimitive.Item.Props) {
   return (
-    <ComboboxPrimitive.Item
-      data-slot="combobox-item"
-      className={cn(
-        "relative flex w-full min-w-0 cursor-default items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
-        className
-      )}
-      {...props}
+    <TruncatedRow
+      render={
+        <ComboboxPrimitive.Item
+          data-slot="combobox-item"
+          className={cn(
+            "relative flex w-full min-w-0 cursor-default items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
+            className
+          )}
+          {...props}
+        />
+      }
     >
       {/* Truncate on the text node — `truncate` on a flex parent does nothing. */}
       <span className="min-w-0 flex-1 truncate">{children}</span>
@@ -143,7 +160,7 @@ function ComboboxItem({
           <IconCheck className="size-4" />
         </ComboboxPrimitive.ItemIndicator>
       </span>
-    </ComboboxPrimitive.Item>
+    </TruncatedRow>
   )
 }
 

@@ -1,8 +1,8 @@
 /**
  * The composer's model picker — a popover with a provider rail on the left
- * (favorites first), a search box, and the model list with ⌘1–9 shortcuts and
- * star toggles (t3code's ProviderModelPicker, sized down to our catalog).
- * Favorites persist in ui-prefs.
+ * (favorites first), a search box, and the model list with star toggles
+ * (t3code's ProviderModelPicker, sized down to our catalog). Favorites persist
+ * in ui-prefs.
  */
 import {
   IconChevronDown,
@@ -10,7 +10,7 @@ import {
   IconStar,
   IconStarFilled,
 } from "@tabler/icons-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -18,17 +18,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { TruncatedRow } from "@/components/ui/truncated-text"
 import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core/chats"
+import {
+  type CatalogModel,
+  catalogModels,
+} from "@/interactions/chats/functions/chat-model.functions"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
 import { ProviderIcon } from "./provider-icons"
-
-interface PickerModel {
-  readonly id: string
-  readonly label: string
-  readonly provider: ChatProviderKind
-  readonly providerLabel: string
-}
 
 const FAVORITES_RAIL = "favorites"
 
@@ -46,18 +44,7 @@ export function ModelPicker({
   const [search, setSearch] = useState("")
   const favorites = useUiPrefs().chatModelFavorites
 
-  const allModels: PickerModel[] = useMemo(
-    () =>
-      (catalog?.providers ?? []).flatMap((p) =>
-        p.models.map((m) => ({
-          id: m.id,
-          label: m.label,
-          provider: p.id,
-          providerLabel: p.label,
-        }))
-      ),
-    [catalog]
-  )
+  const allModels = useMemo(() => catalogModels(catalog), [catalog])
   const current = allModels.find((m) => m.id === model)
 
   const visible = useMemo(() => {
@@ -82,27 +69,10 @@ export function ModelPicker({
     })
   }
 
-  const pick = (m: PickerModel) => {
+  const pick = (m: CatalogModel) => {
     onSelect(m.id, m.provider)
     setOpen(false)
   }
-
-  // ⌘1–9 (or Ctrl on non-mac) picks the nth visible model while open.
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return
-      const n = Number(e.key)
-      if (!Number.isInteger(n) || n < 1 || n > 9) return
-      const m = visible[n - 1]
-      if (m !== undefined) {
-        e.preventDefault()
-        pick(m)
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  })
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -181,16 +151,20 @@ export function ModelPicker({
                   No models match.
                 </p>
               )}
-              {visible.map((m, index) => {
+              {visible.map((m) => {
                 const starred = favorites.includes(m.id)
                 return (
-                  <div
+                  <TruncatedRow
                     key={m.id}
-                    className={cn(
-                      "group/model flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted",
-                      m.id === model && "bg-muted/60"
-                    )}
-                    onClick={() => pick(m)}
+                    render={
+                      <div
+                        className={cn(
+                          "group/model flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted",
+                          m.id === model && "bg-muted/60"
+                        )}
+                        onClick={() => pick(m)}
+                      />
+                    }
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 text-sm font-medium">
@@ -207,11 +181,6 @@ export function ModelPicker({
                         {m.providerLabel}
                       </div>
                     </div>
-                    {index < 9 && (
-                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                        ⌘{index + 1}
-                      </span>
-                    )}
                     <button
                       type="button"
                       aria-label={starred ? "Unstar model" : "Star model"}
@@ -230,7 +199,7 @@ export function ModelPicker({
                         <IconStar className="size-3.5" />
                       )}
                     </button>
-                  </div>
+                  </TruncatedRow>
                 )
               })}
             </ScrollArea>

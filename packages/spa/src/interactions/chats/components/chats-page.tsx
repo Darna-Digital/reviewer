@@ -7,8 +7,8 @@
  * defaulting to the current checkout), a time window, and a free-text search
  * over titles and last messages.
  */
-import { IconGitBranch, IconPlus, IconX } from "@tabler/icons-react"
-import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router"
+import { IconGitBranch, IconPlus } from "@tabler/icons-react"
+import { Outlet, useNavigate, useParams } from "@tanstack/react-router"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { ResizeHandle } from "@/components/layout/resize-handle"
@@ -21,26 +21,11 @@ import {
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
+import { ChatRow } from "@/interactions/chats/components/chat-row"
 import type { ChatSummary } from "@byconvo/core/chats"
 import { dateCutoff, type DateFilter } from "@/lib/date-filter"
 import { useBranches, useChats, useRepo } from "@/lib/queries"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
-
-function TurnStateDot({ state }: { state: ChatSummary["turnState"] }) {
-  if (state === null || state === "completed") return null
-  return (
-    <span
-      className={cn(
-        "size-1.5 shrink-0 rounded-full",
-        state === "running" && "animate-pulse bg-brand-500",
-        state === "error" && "bg-destructive",
-        state === "interrupted" && "bg-brand-500"
-      )}
-      aria-label={`turn ${state}`}
-    />
-  )
-}
 
 export function ChatsPage() {
   const chats = useChats()
@@ -121,39 +106,12 @@ export function ChatsPage() {
   }
 
   const renderRow = (c: ChatSummary) => (
-    <Link
+    <ChatRow
       key={c.id}
-      to="/chats/$chatId"
-      params={{ chatId: c.id }}
-      className={cn(
-        "group/row mb-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 text-left hover:bg-muted/60",
-        c.id === chatId && "bg-muted"
-      )}
-    >
-      <div className="min-w-0 flex-1 overflow-hidden">
-        <div className="flex min-w-0 items-center gap-1.5">
-          <TurnStateDot state={c.turnState} />
-          <span className="min-w-0 flex-1 truncate text-sm">{c.title}</span>
-        </div>
-        {c.lastMessage !== null && c.lastMessage.length > 0 && (
-          <div className="truncate text-xs text-muted-foreground">
-            {c.lastMessage}
-          </div>
-        )}
-      </div>
-      <button
-        type="button"
-        aria-label="Delete thread"
-        className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive"
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          void remove(c.id)
-        }}
-      >
-        <IconX className="size-3.5" />
-      </button>
-    </Link>
+      chat={c}
+      active={c.id === chatId}
+      onDelete={() => void remove(c.id)}
+    />
   )
 
   return (

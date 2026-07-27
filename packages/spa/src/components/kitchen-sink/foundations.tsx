@@ -4,6 +4,7 @@ import {
   SpecimenRow,
   Subsection,
 } from "@/components/kitchen-sink/kitchen-sink-primitives"
+import { surfaceClasses } from "@/lib/surface-classes"
 
 const BRAND_RAMP = [
   { step: "50", swatch: "bg-brand-50" },
@@ -76,11 +77,15 @@ const RADII = [
   { token: "rounded-full", radius: "rounded-full" },
 ]
 
-const ELEVATIONS = [
-  { token: "shadow-xs", shadow: "shadow-xs", role: "Resting controls" },
-  { token: "shadow-sm", shadow: "shadow-sm", role: "Cards that lift on hover" },
-  { token: "shadow-lg", shadow: "shadow-lg", role: "Menus and popovers" },
-  { token: "shadow-xl", shadow: "shadow-xl", role: "Dialogs" },
+const SURFACE_LADDER = [
+  { level: 1, role: "Page, sidebar" },
+  { level: 2, role: "Cards" },
+  { level: 3, role: "Menu, popover, select" },
+  { level: 4, role: "Tooltip" },
+  { level: 5, role: "Dialog; submenu of a menu" },
+  { level: 6, role: "Tooltip over a menu" },
+  { level: 7, role: "Menu inside a dialog" },
+  { level: 8, role: "Ceiling — deeper nesting clamps here" },
 ]
 
 function SwatchTile({ swatch }: { swatch: string }) {
@@ -241,7 +246,7 @@ export function Foundations() {
       <Section
         id="shape"
         title="Shape and elevation"
-        description="Corners are generous and shadows are quiet. Depth comes from a hairline ring first and a shadow only when something genuinely floats."
+        description="Corners are generous and depth is a ladder, not a shadow preset. Every popup lifts a fixed number of rungs above whatever it opened on, so a submenu still reads over its menu and a menu still reads inside a dialog."
       >
         <Subsection title="Radius">
           <SpecimenRow>
@@ -256,16 +261,16 @@ export function Foundations() {
         </Subsection>
 
         <Subsection
-          title="Elevation"
-          hint="Shadows are dropped entirely in dark mode; the ring alone separates the surface."
+          title="Surfaces"
+          hint="Light separates layers with shadow, dark with colour — a black drop shadow says nothing against a dark page. Components ask for an offset, never a level: menu +2, tooltip +3, dialog +4, counted from the surface they landed on."
         >
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {ELEVATIONS.map(({ token, shadow, role }) => (
+            {SURFACE_LADDER.map(({ level, role }) => (
               <div
-                key={token}
-                className={`flex flex-col gap-1 rounded-2xl bg-card p-4 ring-1 ring-foreground/5 dark:shadow-none ${shadow}`}
+                key={level}
+                className={`flex flex-col gap-1 rounded-2xl p-4 ${surfaceClasses(level)}`}
               >
-                <p className="font-mono text-sm sm:text-xs">{token}</p>
+                <p className="font-mono text-sm sm:text-xs">surface-{level}</p>
                 <p className="text-sm/5 text-pretty text-muted-foreground sm:text-xs/5">
                   {role}
                 </p>

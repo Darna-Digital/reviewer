@@ -1,8 +1,8 @@
 import {
-  IconBaselineDensityMedium,
-  IconColumns,
   IconDeviceDesktop,
   IconGitFork,
+  IconLayoutColumns,
+  IconLayoutRows,
   IconMoon,
   IconRoute,
   IconSun,
@@ -36,8 +36,8 @@ const DIFF_OPTIONS: {
   label: string
   icon: SettingsIcon
 }[] = [
-  { value: "split", label: "Split", icon: IconColumns },
-  { value: "unified", label: "Unified", icon: IconBaselineDensityMedium },
+  { value: "split", label: "Horizontal", icon: IconLayoutColumns },
+  { value: "unified", label: "Vertical", icon: IconLayoutRows },
 ]
 
 function SegmentedOption<T extends string>({

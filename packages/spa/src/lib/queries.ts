@@ -32,6 +32,19 @@ export const useChats = () => api.useQuery("get", "/api/chats")
 /** The static provider/model catalog behind the composer's model picker. */
 export const useChatModels = () => api.useQuery("get", "/api/chats/models")
 
+/**
+ * One chat's full record. The live view streams over a WebSocket instead; this
+ * is the cheap REST read behind the sidebar's hover preview, so it only fires
+ * once a preview card actually opens.
+ */
+export const useChatPreview = (id: string, enabled: boolean) =>
+  api.useQuery(
+    "get",
+    "/api/chats/{id}",
+    { params: { path: { id } } },
+    { enabled, staleTime: 15_000 }
+  )
+
 export const useThread = (id: string | null) =>
   api.useQuery(
     "get",

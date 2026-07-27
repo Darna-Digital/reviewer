@@ -1,7 +1,8 @@
 /**
  * The /chats index — a fresh thread. Composer settings live in local state
- * seeded from the catalog defaults; the first send creates the chat, starts
- * the turn, and navigates to the conversation (create-on-first-message).
+ * seeded from the favorite model and the catalog defaults; the first send
+ * creates the chat, starts the turn, and navigates to the conversation
+ * (create-on-first-message).
  */
 import { useNavigate } from "@tanstack/react-router"
 import { useState } from "react"
@@ -11,8 +12,10 @@ import type {
   ChatImage,
   ChatSettings,
 } from "@/interactions/chats/interfaces/chats.interfaces"
+import { preferredChatModel } from "@/interactions/chats/functions/chat-model.functions"
 import { NEW_CHAT_DRAFT } from "@/lib/chat-drafts"
 import { useChatModels, useRepo } from "@/lib/queries"
+import { useUiPrefs } from "@/lib/ui-prefs"
 import { ChatComposer } from "./chat-composer"
 
 export function NewChatView() {
@@ -22,10 +25,12 @@ export function NewChatView() {
   const navigate = useNavigate()
   const [overrides, setOverrides] = useState<Partial<ChatSettings>>({})
 
+  const favorites = useUiPrefs().chatModelFavorites
   const defaults = models.data?.defaults
+  const preferred = preferredChatModel(models.data, favorites)
   const settings: ChatSettings = {
-    provider: overrides.provider ?? defaults?.provider ?? "claude",
-    model: overrides.model ?? defaults?.model ?? "",
+    provider: overrides.provider ?? preferred?.provider ?? "claude",
+    model: overrides.model ?? preferred?.id ?? "",
     effort: overrides.effort ?? defaults?.effort ?? "high",
     access: overrides.access ?? defaults?.access ?? "fullAccess",
     mode: overrides.mode ?? defaults?.mode ?? "build",

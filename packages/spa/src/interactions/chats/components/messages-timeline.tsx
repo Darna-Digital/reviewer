@@ -5,13 +5,15 @@
  * Auto-follows the stream unless the reader has scrolled up.
  */
 import { IconAlertCircle, IconPlayerStopFilled } from "@tabler/icons-react"
-import { useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import type { Chat, ChatActivity, ChatMessage } from "@byconvo/core/chats"
 import { ThinkingIndicator } from "@/components/ui/thinking-indicator"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { toConversationSections } from "../functions/conversation-sections.functions"
 import { activeWorkStep, toWorkSteps } from "../functions/work-log.functions"
 import { AttachmentGrid, AttachmentPreview } from "./image-attachments"
 import { ChatMarkdown } from "./chat-markdown"
+import { ConversationSections } from "./conversation-sections"
 import { Message, MessageBubble } from "./message"
 import { WorkLog } from "./work-log"
 
@@ -43,10 +45,99 @@ function TurnError({ message }: { message: string }) {
   )
 }
 
+/** How far below the viewport's top edge a question has to sit before the rail
+ * counts it as the one being read. */
+const SECTION_ACTIVE_LINE = 140
+const SECTION_SCROLL_MARGIN = 24
+const SCROLL_INTERRUPTS = ["wheel", "touchstart", "pointerdown", "keydown"]
+
+/**
+ * `scroll-behavior: smooth` and `scrollTo({behavior})` are silently ignored
+ * inside the ScrollArea's overflow-hidden root on Chromium, so ease the jump
+ * ourselves — 20% of the remaining distance per frame, abandoned the moment the
+ * reader takes the scroll back.
+ */
+function easeScrollTo(viewport: HTMLElement, top: number) {
+  const target = Math.max(
+    0,
+    Math.min(top, viewport.scrollHeight - viewport.clientHeight)
+  )
+  let running = true
+  const stop = () => {
+    running = false
+    for (const type of SCROLL_INTERRUPTS) {
+      viewport.removeEventListener(type, stop)
+    }
+  }
+  for (const type of SCROLL_INTERRUPTS) {
+    viewport.addEventListener(type, stop, { passive: true })
+  }
+  const frame = () => {
+    if (!running) return
+    const delta = target - viewport.scrollTop
+    if (Math.abs(delta) <= 1) {
+      viewport.scrollTop = target
+      stop()
+      return
+    }
+    viewport.scrollTop += delta * 0.2
+    requestAnimationFrame(frame)
+  }
+  requestAnimationFrame(frame)
+}
+
 export function MessagesTimeline({ chat }: { chat: Chat }) {
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const pinnedToBottom = useRef(true)
   const lastUserMessageId = useRef<string | null>(null)
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
+
+  const sections = toConversationSections(chat.messages)
+  const sectionIds = new Set(sections.map((section) => section.id))
+  const firstSectionId = sections[0]?.id ?? null
+
+  const syncFrame = useRef(0)
+  const queueSectionSync = useCallback(() => {
+    if (syncFrame.current !== 0) return
+    syncFrame.current = requestAnimationFrame(() => {
+      syncFrame.current = 0
+      const el = scrollRef.current
+      if (el === null) return
+      const viewportTop = el.getBoundingClientRect().top
+      let current: string | null = null
+      for (const anchor of el.querySelectorAll<HTMLElement>(
+        "[data-section-id]"
+      )) {
+        if (
+          anchor.getBoundingClientRect().top - viewportTop >
+          SECTION_ACTIVE_LINE
+        ) {
+          break
+        }
+        current = anchor.dataset.sectionId ?? null
+      }
+      setActiveSectionId(current ?? firstSectionId)
+    })
+  }, [firstSectionId])
+  useEffect(() => () => cancelAnimationFrame(syncFrame.current), [])
+
+  const scrollToSection = (id: string) => {
+    const el = scrollRef.current
+    if (el === null) return
+    const anchor = el.querySelector<HTMLElement>(
+      `[data-section-id="${CSS.escape(id)}"]`
+    )
+    if (anchor === null) return
+    pinnedToBottom.current = false
+    setActiveSectionId(id)
+    easeScrollTo(
+      el,
+      anchor.getBoundingClientRect().top -
+        el.getBoundingClientRect().top +
+        el.scrollTop -
+        SECTION_SCROLL_MARGIN
+    )
+  }
 
   // Track whether the reader is at the bottom; only then auto-follow.
   const onScroll = () => {
@@ -54,6 +145,7 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
     if (el === null) return
     pinnedToBottom.current =
       el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    queueSectionSync()
   }
   useEffect(() => {
     const el = scrollRef.current
@@ -72,7 +164,8 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
     }
     if (sentNewMessage) pinnedToBottom.current = true
     if (pinnedToBottom.current) el.scrollTop = el.scrollHeight
-  }, [chat])
+    queueSectionSync()
+  }, [chat, queueSectionSync])
 
   const activitiesByTurn = new Map<string, ChatActivity[]>()
   for (const activity of chat.activities) {
@@ -92,7 +185,12 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
       const attachments = message.attachments ?? []
       return (
         <Message key={message.id} align="end">
-          <div className="flex max-w-[80%] flex-col items-end gap-2">
+          <div
+            data-section-id={
+              sectionIds.has(message.id) ? message.id : undefined
+            }
+            className="flex max-w-[80%] flex-col items-end gap-2"
+          >
             {attachments.length > 0 && (
               <AttachmentGrid className="justify-end">
                 {attachments.map((attachment, i) => (
@@ -143,16 +241,23 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
   }
 
   return (
-    <ScrollArea
-      viewportRef={scrollRef}
-      onViewportScroll={onScroll}
-      className="min-h-0 flex-1"
-      viewportClassName="scroll-fade overscroll-contain"
-    >
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6">
-        {chat.messages.map(renderMessage)}
-        {turnError !== null && <TurnError message={turnError} />}
-      </div>
-    </ScrollArea>
+    <div className="@container relative flex min-h-0 flex-1 flex-col">
+      <ScrollArea
+        viewportRef={scrollRef}
+        onViewportScroll={onScroll}
+        className="min-h-0 flex-1"
+        viewportClassName="scroll-fade overscroll-contain"
+      >
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6">
+          {chat.messages.map(renderMessage)}
+          {turnError !== null && <TurnError message={turnError} />}
+        </div>
+      </ScrollArea>
+      <ConversationSections
+        sections={sections}
+        activeId={activeSectionId}
+        onSelect={scrollToSection}
+      />
+    </div>
   )
 }

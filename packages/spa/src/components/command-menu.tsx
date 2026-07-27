@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { DialogOverlay, DialogPortal } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
+import { ELEVATION, useElevation } from "@/lib/surface-context"
 
 export interface Command {
   readonly id: string
@@ -196,15 +197,19 @@ export function CommandMenu({
     el?.scrollIntoView({ block: "nearest" })
   }, [active])
 
+  const { level, className: surface } = useElevation(ELEVATION.dialog)
+
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPortal>
         <DialogOverlay />
         <DialogPrimitive.Popup
           data-slot="command-menu"
+          data-surface={level}
           initialFocus={inputRef}
           className={cn(
-            "fixed top-[12vh] left-1/2 z-50 flex max-h-[70vh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 flex-col overflow-hidden rounded-[min(var(--radius-4xl),20px)] bg-popover text-sm text-popover-foreground shadow-xl ring-1 ring-foreground/5 duration-100 outline-none sm:max-w-xl dark:ring-foreground/10",
+            "fixed top-[12vh] left-1/2 z-50 flex max-h-[70vh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 flex-col overflow-hidden rounded-[min(var(--radius-4xl),20px)] text-sm text-popover-foreground duration-100 outline-none sm:max-w-xl",
+            surface,
             "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
           )}
         >
@@ -262,7 +267,7 @@ export function CommandMenu({
                       className={cn(
                         "flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left outline-none",
                         isActive
-                          ? "bg-accent text-accent-foreground"
+                          ? "bg-elevate-strong text-foreground"
                           : "text-foreground"
                       )}
                     >

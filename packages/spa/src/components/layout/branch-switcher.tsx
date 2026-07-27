@@ -41,9 +41,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { TruncatedText } from "@/components/ui/truncated-text"
-import { handleBranchSearchKeyDown } from "@/components/layout/branch-search-keydown"
+import { handleSearchKeyDown } from "@/components/ui/search-keydown"
 import { cn } from "@/lib/utils"
+import { useSurfaceBackground } from "@/lib/surface-context"
 import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo"
 
 interface BranchSwitcherProps {
@@ -91,6 +91,11 @@ interface BranchTarget {
 
 /** Submenu holding the repo-wide remote operations, not the branch-scoped ones. */
 const REPO_ACTIONS_LABEL = "Git"
+
+/** Branch names make these labels long; the menu item tooltips the clipped ones. */
+const ActionLabel = ({ children }: { children: React.ReactNode }) => (
+  <span className="min-w-0 flex-1 truncate">{children}</span>
+)
 
 /** Split "task/BMB-1" → ["task", "BMB-1"]; "main" → [null, "main"]. */
 const splitFolder = (name: string): [string | null, string] => {
@@ -200,7 +205,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
       )}
       <DropdownMenuItem onClick={() => newBranch(t.ref, t.display)}>
         <IconPlus className="size-3.5 text-muted-foreground" />
-        <TruncatedText text={`New Branch from ‘${t.display}’`} />
+        <ActionLabel>New Branch from ‘{t.display}’</ActionLabel>
       </DropdownMenuItem>
       {!t.isCurrent && (
         <>
@@ -209,17 +214,17 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => props.onCompare(currentName, t.ref)}>
-            <TruncatedText text={`Compare with ‘${currentName}’`} />
+            <ActionLabel>Compare with ‘{currentName}’</ActionLabel>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => props.onMerge(t.ref)}>
-            <TruncatedText
-              text={`Merge ‘${t.display}’ into ‘${currentName}’`}
-            />
+            <ActionLabel>
+              Merge ‘{t.display}’ into ‘{currentName}’
+            </ActionLabel>
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => props.onRebase(t.ref)}>
-            <TruncatedText
-              text={`Rebase ‘${currentName}’ onto ‘${t.display}’`}
-            />
+            <ActionLabel>
+              Rebase ‘{currentName}’ onto ‘{t.display}’
+            </ActionLabel>
           </DropdownMenuItem>
         </>
       )}
@@ -348,18 +353,19 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           className="max-h-[70vh] w-72 overflow-auto p-0"
         >
           {/* Filter box — a plain row, not a menu item, so typing never navigates. */}
-          <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-popover px-2.5 py-2">
+          <BranchSearchRow>
             <IconSearch className="size-4 shrink-0 text-muted-foreground" />
             <input
               ref={searchRef}
+              data-search-input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleBranchSearchKeyDown}
+              onKeyDown={handleSearchKeyDown}
               placeholder="Search branches"
               aria-label="Search branches"
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
-          </div>
+          </BranchSearchRow>
 
           <div className="p-1">
             {repoActions.length > 0 && (
@@ -605,6 +611,25 @@ function DeleteConfirm({
         </Button>
       </DialogFooter>
     </>
+  )
+}
+
+/**
+ * The pinned filter row. It scrolls under the branch list, so it has to repaint
+ * the menu's own surface — read from context rather than hardcoded, so it still
+ * matches when the menu opens at a deeper elevation (inside a dialog, say).
+ */
+function BranchSearchRow({ children }: { children: React.ReactNode }) {
+  const surface = useSurfaceBackground()
+  return (
+    <div
+      className={cn(
+        "sticky top-0 z-10 flex items-center gap-2 border-b px-2.5 py-2",
+        surface
+      )}
+    >
+      {children}
+    </div>
   )
 }
 

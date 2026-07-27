@@ -2,6 +2,13 @@ import { Select as SelectPrimitive } from "@base-ui/react/select"
 import { IconCheck, IconChevronDown, IconSelector } from "@tabler/icons-react"
 
 import { cn } from "@/lib/utils"
+import {
+  ELEVATION,
+  POPUP_SHADOW,
+  SurfaceProvider,
+  useElevation,
+} from "@/lib/surface-context"
+import { TruncatedRow } from "@/components/ui/truncated-text"
 
 function Select<TValue>(props: SelectPrimitive.Root.Props<TValue>) {
   return <SelectPrimitive.Root data-slot="select" {...props} />
@@ -46,6 +53,10 @@ function SelectContent({
   ...props
 }: SelectPrimitive.Popup.Props &
   Pick<SelectPrimitive.Positioner.Props, "sideOffset" | "align" | "side">) {
+  const { level, className: surface } = useElevation(
+    ELEVATION.menu,
+    POPUP_SHADOW
+  )
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Positioner
@@ -60,13 +71,15 @@ function SelectContent({
         </SelectPrimitive.ScrollUpArrow>
         <SelectPrimitive.Popup
           data-slot="select-content"
+          data-surface={level}
           className={cn(
-            "z-50 max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) overflow-y-auto rounded-xl bg-popover p-1 text-popover-foreground shadow-[0_8px_30px_rgba(0,0,0,0.08),0_2px_8px_rgba(0,0,0,0.04)] ring-1 ring-black/[0.04] duration-100 outline-none dark:shadow-[0_8px_30px_rgba(0,0,0,0.45)] dark:ring-white/[0.06] data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98]",
+            "z-50 max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) overflow-y-auto rounded-xl p-1 text-popover-foreground duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98]",
+            surface,
             className
           )}
           {...props}
         >
-          {children}
+          <SurfaceProvider value={level}>{children}</SurfaceProvider>
         </SelectPrimitive.Popup>
         <SelectPrimitive.ScrollDownArrow className="flex h-6 cursor-default items-center justify-center text-muted-foreground">
           <IconChevronDown />
@@ -95,23 +108,27 @@ function SelectItem({
   ...props
 }: SelectPrimitive.Item.Props) {
   return (
-    <SelectPrimitive.Item
-      data-slot="select-item"
-      className={cn(
-        "relative flex w-full cursor-default items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
-        className
-      )}
-      {...props}
+    <TruncatedRow
+      render={
+        <SelectPrimitive.Item
+          data-slot="select-item"
+          className={cn(
+            "relative flex w-full min-w-0 cursor-default items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground",
+            className
+          )}
+          {...props}
+        />
+      }
     >
       <span className="pointer-events-none absolute right-2 flex items-center justify-center">
         <SelectPrimitive.ItemIndicator>
           <IconCheck className="size-4" />
         </SelectPrimitive.ItemIndicator>
       </span>
-      <SelectPrimitive.ItemText className="flex items-center gap-2 truncate">
+      <SelectPrimitive.ItemText className="flex min-w-0 items-center gap-2 truncate">
         {children}
       </SelectPrimitive.ItemText>
-    </SelectPrimitive.Item>
+    </TruncatedRow>
   )
 }
 
