@@ -24,18 +24,26 @@ import type {
 } from "../schema/chats.schema.ts"
 
 /**
- * How long a discovered catalog is trusted. Long, because the answer only
- * changes when the developer upgrades a CLI, and every refresh costs four
- * subprocesses.
+ * How long a provider's model list is trusted. Long, because it only changes
+ * when the developer upgrades that CLI, and every refresh costs a subprocess.
  */
-const CATALOG_TTL_MS = 60 * 60 * 1000
+const MODELS_TTL_MS = 60 * 60 * 1000
 
 /**
- * How long one CLI gets to answer. A model list is never worth making the
- * composer wait: past this the curated entries stand in, and the next refresh
- * tries again.
+ * How long an *empty* answer is trusted, which is far shorter. An agent that
+ * reported nothing is usually one that was still cold or lost the race with the
+ * timeout, and remembering that for an hour turns a momentary miss into a rail
+ * the developer can only fix by restarting byconvo.
  */
-const DISCOVERY_TIMEOUT_MS = 5000
+const EMPTY_MODELS_TTL_MS = 60 * 1000
+
+/**
+ * How long one CLI gets to answer. Generous, because discovery reaches the CLI
+ * through the developer's login shell — rc files and version managers run first
+ * — and nothing waits on the result: until it lands, chats run on the agent's
+ * own default model.
+ */
+const DISCOVERY_TIMEOUT_MS = 20_000
 
 export interface ChatsServiceShape extends ChatsRepo {
   readonly send: (
@@ -62,8 +70,8 @@ export const makeChatsService = Effect.gen(function* () {
 
   /**
    * Ask one CLI what it can run. Every failure — not installed, too slow, an
-   * answer we don't recognise — is an empty list, which the merge reads as
-   * "keep this provider's curated models".
+   * answer we don't recognise — is an empty list, so one broken agent can't
+   * take the other rails down with it.
    */
   const discoverProvider = (
     provider: ChatProviderKind
@@ -81,31 +89,48 @@ export const makeChatsService = Effect.gen(function* () {
       Effect.orElseSucceed(() => [] as ReadonlyArray<ChatModel>)
     )
 
-  const discoverCatalog = Effect.map(
-    Effect.forEach(CHAT_PROVIDER_KINDS, discoverProvider, {
-      // The CLIs don't contend for anything, so the slowest one sets the pace
-      // instead of the sum of all four.
-      concurrency: "unbounded",
-    }),
-    (lists) =>
-      mergeDiscoveredModels(
-        new Map(CHAT_PROVIDER_KINDS.map((p, i) => [p, lists[i] ?? []]))
-      )
-  )
-
-  /** The last catalog we built, and when. Per server process — a restart just
+  /** What each CLI last answered, and when. Per server process — a restart just
    * means one more round of discovery. */
-  let cached: { catalog: ChatModelCatalog; atMs: number } | null = null
+  const answers = new Map<
+    ChatProviderKind,
+    { models: ReadonlyArray<ChatModel>; atMs: number }
+  >()
+
+  const remembered = (
+    provider: ChatProviderKind,
+    nowMs: number
+  ): ReadonlyArray<ChatModel> | null => {
+    const answer = answers.get(provider)
+    if (answer === undefined) return null
+    const ttl = answer.models.length > 0 ? MODELS_TTL_MS : EMPTY_MODELS_TTL_MS
+    return nowMs - answer.atMs < ttl ? answer.models : null
+  }
+
+  const modelsFor = (
+    provider: ChatProviderKind,
+    nowMs: number
+  ): Effect.Effect<ReadonlyArray<ChatModel>> => {
+    const answer = remembered(provider, nowMs)
+    if (answer !== null) return Effect.succeed(answer)
+    return Effect.map(discoverProvider(provider), (models) => {
+      answers.set(provider, { models, atMs: nowMs })
+      return models
+    })
+  }
 
   const models: ChatsServiceShape["models"] = Effect.suspend(() => {
-    const now = Date.now()
-    if (cached !== null && now - cached.atMs < CATALOG_TTL_MS) {
-      return Effect.succeed(cached.catalog)
-    }
-    return Effect.map(discoverCatalog, (catalog) => {
-      cached = { catalog, atMs: now }
-      return catalog
-    })
+    const nowMs = Date.now()
+    return Effect.map(
+      Effect.forEach(CHAT_PROVIDER_KINDS, (p) => modelsFor(p, nowMs), {
+        // The CLIs don't contend for anything, so the slowest one sets the pace
+        // instead of the sum of all four.
+        concurrency: "unbounded",
+      }),
+      (lists) =>
+        mergeDiscoveredModels(
+          new Map(CHAT_PROVIDER_KINDS.map((p, i) => [p, lists[i] ?? []]))
+        )
+    )
   })
   const send: ChatsServiceShape["send"] = (id, text, images) =>
     Effect.gen(function* () {

@@ -1,6 +1,6 @@
 import { it } from "@effect/vitest"
 import { Effect } from "effect"
-import { describe, expect } from "vitest"
+import { describe, expect, vi } from "vitest"
 import { memoryLayer as terminalMemory } from "../../../ports/terminal-exec.ts"
 import { ChatsMemory } from "../layer/chats.layer.memory.ts"
 import { CHAT_MODEL_CATALOG } from "../functions/chats.catalog.ts"
@@ -295,6 +295,35 @@ describe("ChatsService", () => {
       expect(runsAfterFirstCall).toBe(CHAT_MODEL_CATALOG.providers.length)
     }).pipe(Effect.provide(layer))
   })
+
+  it.effect(
+    "re-asks a CLI that answered with nothing, but not one that did",
+    () => {
+      const commands: string[] = []
+      const { layer } = ChatsMemory([], terminalReturning(commands))
+      const start = Date.now()
+      const clock = vi.spyOn(Date, "now").mockReturnValue(start)
+      return Effect.gen(function* () {
+        const chats = yield* ChatsService
+        yield* chats.models
+        commands.length = 0
+        // An hour is the answer's lifetime; a minute is a silence's.
+        clock.mockReturnValue(start + 5 * 60 * 1000)
+        const catalog = yield* chats.models
+        expect(commands.some((c) => c.startsWith("codex "))).toBe(false)
+        expect(commands).toHaveLength(CHAT_MODEL_CATALOG.providers.length - 1)
+        // The retry doesn't cost the answer we already have.
+        expect(
+          catalog.providers
+            .find((p) => p.id === "codex")
+            ?.models.map((m) => m.id)
+        ).toEqual(["gpt-9-turbo"])
+      }).pipe(
+        Effect.provide(layer),
+        Effect.ensuring(Effect.sync(() => clock.mockRestore()))
+      )
+    }
+  )
 
   it.effect("a CLI that isn't installed contributes no models", () => {
     const { layer } = ChatsMemory(

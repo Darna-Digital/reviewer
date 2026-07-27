@@ -8,7 +8,11 @@
  *             which entries its own UI lists.
  *   opencode  `opencode models <provider> --verbose` prints an id line then a
  *             pretty-printed JSON object per model.
- *   cursor    `/model` piped into print mode, like claude.
+ *   cursor    `cursor-agent --list-models` prints `id - Label` lines. Not
+ *             `/model` like claude: cursor-agent has no local slash commands in
+ *             print mode, so the same trick would spend a real (billed) turn
+ *             asking the model about itself, and it also refuses to run at all
+ *             in a directory the developer hasn't trusted.
  *
  * The commands are here with the parsers so the two can't drift apart, and the
  * parsers are pure so they can be tested against recorded CLI output.
@@ -44,7 +48,7 @@ export const modelDiscoveryCommand = (provider: ChatProviderKind): string => {
       // vendor so the picker can show them that way.
       return `opencode models --verbose`
     case "cursor":
-      return `printf '%s' '/model' | cursor-agent -p --output-format json`
+      return `cursor-agent --list-models`
   }
 }
 
@@ -114,7 +118,7 @@ const vendorLabel = (id: string): string =>
   id.split(/[-_]/).filter(Boolean).map(labelFromId).join(" ")
 
 /**
- * Claude and cursor answer `/model` in print mode with a sentence:
+ * Claude answers `/model` in print mode with a sentence:
  *
  *   Current model: Sonnet 5 (default)
  *   Usage: /model <name>. Available: sonnet, opus, haiku, …, or a full model ID.
@@ -142,6 +146,24 @@ const parseSlashModelOutput = (stdout: string): ReadonlyArray<ChatModel> => {
       .map((id) => ({ id, label: labelFromId(id) }))
   )
 }
+
+/**
+ * `cursor-agent --list-models` → a heading, then one `id - Label` line per
+ * model. Which one is active is marked in the label (`Composer 2.5 (current)`,
+ * `Auto (default)`); byconvo tracks the selection itself, so those markers are
+ * dropped rather than baked into a name the picker then shows forever.
+ */
+const CURSOR_ACTIVE_MARKER = /\s*\((?:default|current)\)\s*$/i
+
+const parseListModelsOutput = (stdout: string): ReadonlyArray<ChatModel> =>
+  stdout.split("\n").flatMap((line) => {
+    const match = /^\s*(\S+)\s+-\s+(.+?)\s*$/.exec(line)
+    if (match?.[1] === undefined || match[2] === undefined) return []
+    const id = match[1]
+    if (!PLAUSIBLE_MODEL_ID.test(id)) return []
+    const label = match[2].replace(CURSOR_ACTIVE_MARKER, "")
+    return [{ id, label: label.length > 0 ? label : labelFromId(id) }]
+  })
 
 /**
  * `codex debug models` → `{models:[{slug, display_name, visibility, …}]}`.
@@ -224,8 +246,9 @@ export const parseDiscoveredModels = (
 ): ReadonlyArray<ChatModel> => {
   switch (provider) {
     case "claude":
-    case "cursor":
       return parseSlashModelOutput(stdout)
+    case "cursor":
+      return parseListModelsOutput(stdout)
     case "codex":
       return parseCodexModels(stdout)
     case "opencode":

@@ -8,8 +8,9 @@ import {
 import type { ChatModel, ChatProviderKind } from "../schema/chats.schema.ts"
 
 /**
- * Recorded from the real CLIs (claude 2.1.220, codex 0.145.0, opencode 1.18.5)
- * rather than written by hand, so a shape we never actually saw can't pass.
+ * Recorded from the real CLIs (claude 2.1.220, codex 0.145.0, opencode 1.18.5,
+ * cursor-agent 2026.07.23) rather than written by hand, so a shape we never
+ * actually saw can't pass.
  */
 const CLAUDE_MODEL_OUTPUT = JSON.stringify({
   is_error: false,
@@ -69,6 +70,17 @@ const OPENCODE_MODELS_OUTPUT = [
   "",
 ].join("\n")
 
+const CURSOR_LIST_MODELS_OUTPUT = [
+  "Available models",
+  "",
+  "auto - Auto (default)",
+  "gpt-5.3-codex - Codex 5.3",
+  "composer-2.5 - Composer 2.5 (current)",
+  "claude-opus-5-thinking-high - Opus 5 1M Thinking",
+  "claude-fable-5-thinking-high - Fable 5 1M Thinking (NO ZDR)",
+  "",
+].join("\n")
+
 const ids = (models: ReadonlyArray<ChatModel>) => models.map((m) => m.id)
 
 describe("modelDiscoveryCommand", () => {
@@ -76,15 +88,17 @@ describe("modelDiscoveryCommand", () => {
     expect(modelDiscoveryCommand("claude")).toBe(
       `printf '%s' '/model' | claude -p --output-format json`
     )
-    expect(modelDiscoveryCommand("cursor")).toBe(
-      `printf '%s' '/model' | cursor-agent -p --output-format json`
-    )
   })
 
-  it("asks codex and opencode for their machine-readable catalogs", () => {
+  it("asks the others for their machine-readable catalogs", () => {
     expect(modelDiscoveryCommand("codex")).toBe("codex debug models")
     // Unscoped: every vendor opencode can broker, not just its own models.
     expect(modelDiscoveryCommand("opencode")).toBe("opencode models --verbose")
+    // Never `/model` in print mode: cursor-agent has no local slash commands,
+    // so that would spend a billed turn and still answer in prose — and it
+    // refuses to start at all in a directory the developer hasn't trusted.
+    expect(modelDiscoveryCommand("cursor")).toBe("cursor-agent --list-models")
+    expect(modelDiscoveryCommand("cursor")).not.toContain("/model")
   })
 })
 
@@ -114,6 +128,31 @@ describe("parseDiscoveredModels", () => {
       "Usage: /model <name>. Available: opus, haiku, or a full model ID."
     )
     expect(ids(models)).toEqual(["opus", "haiku"])
+  })
+
+  it("reads cursor's `id - Label` lines", () => {
+    const models = parseDiscoveredModels("cursor", CURSOR_LIST_MODELS_OUTPUT)
+    expect(ids(models)).toEqual([
+      "auto",
+      "gpt-5.3-codex",
+      "composer-2.5",
+      "claude-opus-5-thinking-high",
+      "claude-fable-5-thinking-high",
+    ])
+    // The heading is not a model, and neither is the blank line under it.
+    expect(ids(models)).not.toContain("Available")
+  })
+
+  it("drops cursor's active markers but keeps the rest of a label", () => {
+    const models = parseDiscoveredModels("cursor", CURSOR_LIST_MODELS_OUTPUT)
+    expect(models.map((m) => m.label)).toEqual([
+      "Auto",
+      "Codex 5.3",
+      "Composer 2.5",
+      "Opus 5 1M Thinking",
+      // Not a marker of what's selected — part of the model's name.
+      "Fable 5 1M Thinking (NO ZDR)",
+    ])
   })
 
   it("keeps only the models codex lists in its own picker", () => {
