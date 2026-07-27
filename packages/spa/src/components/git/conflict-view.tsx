@@ -3,6 +3,7 @@ import { IconPencil, IconX } from "@tabler/icons-react"
 import { useEffect, useState } from "react"
 import { THEMES, useLangReady } from "@/components/editor/highlighter"
 import { Button } from "@/components/ui/button"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useFile } from "@/lib/queries"
 import type { Theme } from "@/lib/ui-prefs"
@@ -115,7 +116,9 @@ export function ConflictView({
 
   if (file.isPending || result === null || !langReady) {
     return (
-      <div className="p-8 text-sm text-muted-foreground">Loading {path}…</div>
+      <div className="p-8">
+        <LoadingCursor label={`Loading ${path}…`} />
+      </div>
     )
   }
   if (file.error) {
@@ -177,7 +180,7 @@ export function ConflictView({
 
       {/* The scroll container stays mounted across re-keys of the inner
           UnresolvedFile, so scroll position survives each accept. */}
-      <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
+      <ScrollArea className="min-h-0 flex-1">
         <UnresolvedFile
           key={remaining}
           file={{ name: path, contents: result }}

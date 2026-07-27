@@ -5,6 +5,7 @@
  */
 import { IconPlugConnectedX } from "@tabler/icons-react"
 import { toast } from "sonner"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { useChatStream } from "@/interactions/chats/adapters/chats.stream.adapter"
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import type {
@@ -31,8 +32,8 @@ export function ChatView({ chatId }: { chatId: string }) {
   }
   if (chat === null) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        Loading thread…
+      <div className="flex h-full items-center justify-center">
+        <LoadingCursor label="Loading thread…" />
       </div>
     )
   }

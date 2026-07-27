@@ -12,6 +12,7 @@ import {
   SidebarSearch,
 } from "@/components/layout/sidebar-filters"
 import { Button } from "@/components/ui/button"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { dateCutoff, type DateFilter } from "@/lib/date-filter"
 import { cn } from "@/lib/utils"
@@ -20,6 +21,7 @@ import type { PullRequestInfo } from "@byconvo/core/ports/git-provider"
 interface PullRequestListProps {
   pulls: ReadonlyArray<PullRequestInfo>
   error: string | null
+  loading?: boolean
   selectedNumber: number | null
   onSelect: (pull: PullRequestInfo) => void
   className?: string
@@ -29,6 +31,7 @@ interface PullRequestListProps {
 export function PullRequestList({
   pulls,
   error,
+  loading = false,
   selectedNumber,
   onSelect,
   className,
@@ -124,6 +127,10 @@ export function PullRequestList({
           <p className="px-3 py-6 text-center text-xs text-destructive">
             {error}
           </p>
+        ) : loading ? (
+          <div className="px-3 py-2">
+            <LoadingCursor label="Loading pull requests…" />
+          </div>
         ) : pulls.length === 0 ? (
           <p className="px-3 py-6 text-center text-xs text-muted-foreground">
             No open pull requests.

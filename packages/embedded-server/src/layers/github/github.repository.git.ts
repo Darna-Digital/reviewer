@@ -5,11 +5,19 @@
 import * as Effect from "effect/Effect"
 import { GitProviderError } from "@byconvo/core/ports/git-provider"
 import { GitHubClient } from "./github-client.ts"
+import { diffFromPullFiles, parsePullFiles } from "./pull-files-diff.ts"
+import type { PullFileEntry } from "./pull-files-diff.ts"
 import type { ReviewComment } from "@byconvo/core/comments"
 import type {
   PullRequestInfo,
   GitProviderShape,
 } from "@byconvo/core/ports/git-provider"
+
+const FILES_PER_PAGE = 100
+const MAX_FILE_PAGES = 30
+
+const isDiffTooLarge = (error: GitProviderError): boolean =>
+  error.status === 406
 
 export const makeGitHubProvider = Effect.gen(function* () {
   const gh = yield* GitHubClient
@@ -34,13 +42,44 @@ export const makeGitHubProvider = Effect.gen(function* () {
     )
   })
 
+  const pullFiles = (owner: string, repo: string, pullNumber: number) =>
+    Effect.gen(function* () {
+      const entries: Array<PullFileEntry> = []
+      for (let page = 1; page <= MAX_FILE_PAGES; page++) {
+        const data = yield* gh.getJson(
+          `/repos/${owner}/${repo}/pulls/${pullNumber}/files` +
+            `?per_page=${FILES_PER_PAGE}&page=${page}`
+        )
+        const parsed = parsePullFiles(data)
+        entries.push(...parsed)
+        if (parsed.length < FILES_PER_PAGE) return entries
+      }
+      yield* Effect.logWarning(
+        `PR #${pullNumber}: stopped after ${MAX_FILE_PAGES} pages of files ` +
+          `(${entries.length} files); the diff shown is incomplete.`
+      )
+      return entries
+    })
+
   const pullDiff: GitProviderShape["pullDiff"] = (pullNumber) =>
     Effect.gen(function* () {
       const { owner, repo } = yield* gh.repo
-      return yield* gh.getText(
-        `/repos/${owner}/${repo}/pulls/${pullNumber}`,
-        "application/vnd.github.v3.diff"
-      )
+      return yield* gh
+        .getText(
+          `/repos/${owner}/${repo}/pulls/${pullNumber}`,
+          "application/vnd.github.v3.diff"
+        )
+        .pipe(
+          Effect.catchIf(isDiffTooLarge, (error) =>
+            Effect.gen(function* () {
+              yield* Effect.logInfo(
+                `PR #${pullNumber}: ${error.reason}; rebuilding the diff from paginated file patches.`
+              )
+              const files = yield* pullFiles(owner, repo, pullNumber)
+              return diffFromPullFiles(files)
+            })
+          )
+        )
     })
 
   const pullComments: GitProviderShape["pullComments"] = (pullNumber) =>

@@ -221,6 +221,28 @@
   }
 }
 
+/* --- byconvo: Linear-style loading caret ---------------------------------- */
+/* Hard on/off blink (no fade), like a terminal typing cursor. */
+@keyframes loading-cursor-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.loading-cursor {
+  animation: loading-cursor-blink 1s step-end infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-cursor {
+    animation: none;
+    opacity: 1;
+  }
+}
+
 /* --- byconvo: review-comment markdown bodies ------------------------------ */
 /* Comment bodies live in a narrow gutter, so wrap aggressively: long words,
    URLs and inline code must break rather than force the card to overflow. */

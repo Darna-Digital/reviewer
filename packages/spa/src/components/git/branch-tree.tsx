@@ -105,7 +105,7 @@ export function BranchTree({
     }
   }
   if (favoriteLeaves.length > 0) {
-    pushSection("__favorites", "Favorites", favoriteLeaves)
+    pushSection("__favorites", "Starred", favoriteLeaves)
   }
   pushSection("__local", "Local", local)
   if (remote.length > 0) pushSection("__remote", "Remote", remote)
@@ -205,23 +205,21 @@ export function BranchTree({
 
   const favoriteButton = (branch: BranchLeaf) => {
     const fav = favorites.has(branch.fullName)
+    const label = fav
+      ? `Remove ${branch.fullName} from Starred`
+      : `Add ${branch.fullName} to Starred`
     return (
       <button
         type="button"
         tabIndex={-1}
         className={cn(
-          "shrink-0 rounded-md p-1 text-muted-foreground",
-          // Stay invisible until the row is hovered — trailing placement means
-          // it never shoves the branch icon / label around.
-          "opacity-0 group-hover:opacity-100 focus-visible:opacity-100",
-          "hover:bg-muted hover:text-amber-500",
-          fav && "text-amber-500 opacity-100 hover:text-amber-600"
+          "inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors",
+          "hover:bg-muted hover:text-amber-500 focus-visible:text-amber-500",
+          fav && "text-amber-500 hover:text-amber-600"
         )}
-        aria-label={
-          fav ? `Unfavorite ${branch.fullName}` : `Favorite ${branch.fullName}`
-        }
+        aria-label={label}
         aria-pressed={fav}
-        title={fav ? "Remove from favorites" : "Add to favorites"}
+        title={label}
         onClick={(e) => {
           e.stopPropagation()
           toggleFavorite(branch.fullName)
@@ -230,7 +228,7 @@ export function BranchTree({
         {fav ? (
           <IconStarFilled className="size-3.5" />
         ) : (
-          <IconStar className="size-3.5" />
+          <IconStar className="size-3.5 opacity-60" />
         )}
       </button>
     )
@@ -376,15 +374,20 @@ export function BranchTree({
             )}
             <div className="ml-auto flex shrink-0 items-center gap-0.5">
               {(branch.behind > 0 || branch.ahead > 0) && (
-                <span className="text-xs text-muted-foreground tabular-nums">
+                <span className="flex items-center gap-1 text-xs tabular-nums">
                   {branch.behind > 0 && (
-                    <span title={`${branch.behind} incoming`}>
+                    <span
+                      className="text-sky-600 dark:text-sky-400"
+                      title={`${branch.behind} incoming`}
+                    >
                       ↓{branch.behind}
                     </span>
                   )}
                   {branch.ahead > 0 && (
-                    <span title={`${branch.ahead} outgoing`}>
-                      {" "}
+                    <span
+                      className="text-emerald-600 dark:text-emerald-400"
+                      title={`${branch.ahead} outgoing`}
+                    >
                       ↑{branch.ahead}
                     </span>
                   )}

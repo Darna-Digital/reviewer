@@ -7,7 +7,7 @@ import type { ReviewComment } from "../features/comments/schema/comments.schema.
 
 export class GitProviderError extends Schema.TaggedErrorClass<GitProviderError>()(
   "GitProviderError",
-  { reason: Schema.String },
+  { reason: Schema.String, status: Schema.optionalKey(Schema.Number) },
   { httpApiStatus: 502 }
 ) {
   override get message(): string {

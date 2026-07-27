@@ -41,6 +41,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { TruncatedText } from "@/components/ui/truncated-text"
 import { handleBranchSearchKeyDown } from "@/components/layout/branch-search-keydown"
 import { cn } from "@/lib/utils"
 import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo"
@@ -199,7 +200,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
       )}
       <DropdownMenuItem onClick={() => newBranch(t.ref, t.display)}>
         <IconPlus className="size-3.5 text-muted-foreground" />
-        New Branch from ‘{t.display}’
+        <TruncatedText text={`New Branch from ‘${t.display}’`} />
       </DropdownMenuItem>
       {!t.isCurrent && (
         <>
@@ -208,13 +209,17 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => props.onCompare(currentName, t.ref)}>
-            Compare with ‘{currentName}’
+            <TruncatedText text={`Compare with ‘${currentName}’`} />
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => props.onMerge(t.ref)}>
-            Merge ‘{t.display}’ into ‘{currentName}’
+            <TruncatedText
+              text={`Merge ‘${t.display}’ into ‘${currentName}’`}
+            />
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => props.onRebase(t.ref)}>
-            Rebase ‘{currentName}’ onto ‘{t.display}’
+            <TruncatedText
+              text={`Rebase ‘${currentName}’ onto ‘${t.display}’`}
+            />
           </DropdownMenuItem>
         </>
       )}
@@ -268,9 +273,23 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
             {leaf}
           </span>
           {(branch.ahead > 0 || branch.behind > 0) && (
-            <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
-              {branch.ahead > 0 ? `↑${branch.ahead}` : ""}
-              {branch.behind > 0 ? ` ↓${branch.behind}` : ""}
+            <span className="ml-auto flex shrink-0 items-center gap-1 text-xs tabular-nums">
+              {branch.ahead > 0 && (
+                <span
+                  className="text-emerald-600 dark:text-emerald-400"
+                  title={`${branch.ahead} outgoing`}
+                >
+                  ↑{branch.ahead}
+                </span>
+              )}
+              {branch.behind > 0 && (
+                <span
+                  className="text-sky-600 dark:text-sky-400"
+                  title={`${branch.behind} incoming`}
+                >
+                  ↓{branch.behind}
+                </span>
+              )}
             </span>
           )}
         </DropdownMenuSubTrigger>

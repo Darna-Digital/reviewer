@@ -38,6 +38,40 @@ export class GitHubClient extends Context.Service<
   GitHubClientShape
 >()("GitHubClient") {}
 
+const githubMessage = (body: string): string => {
+  try {
+    const parsed = JSON.parse(body) as { message?: unknown }
+    if (typeof parsed.message === "string" && parsed.message.length > 0)
+      return parsed.message
+  } catch {
+    /* not JSON — fall through to the raw body */
+  }
+  const trimmed = body.trim()
+  return trimmed.length > 0 ? trimmed.slice(0, 300) : "empty response body"
+}
+
+const AUTH_STATUSES = new Set([401, 403, 404])
+
+const responseError = (
+  path: string,
+  status: number,
+  body: string,
+  authenticated: boolean
+): GitProviderError =>
+  new GitProviderError({
+    status,
+    reason:
+      `GitHub responded ${status} for ${path}: ${githubMessage(body)}` +
+      (authenticated || !AUTH_STATUSES.has(status)
+        ? ""
+        : " — the request went out unauthenticated; set GITHUB_TOKEN/GH_TOKEN or run `gh auth login`"),
+  })
+
+const transportError = (path: string, error: unknown): GitProviderError =>
+  new GitProviderError({
+    reason: `GitHub request to ${path} failed: ${String(error)}`,
+  })
+
 const parseGitHubRemote = (url: string): GitHubRepo | null => {
   const match = url.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?\/?$/)
   const owner = match?.[1]
@@ -93,95 +127,56 @@ export const make = Effect.gen(function* () {
       })
     )
 
-  const headers = (accept: string) =>
-    Effect.map(resolveToken, (token) => ({
-      accept,
-      "x-github-api-version": "2022-11-28",
-      "user-agent": "bemybond.com",
-      ...(token === null ? {} : { authorization: `Bearer ${token}` }),
-    }))
+  const headers = (accept: string, token: string | null) => ({
+    accept,
+    "x-github-api-version": "2022-11-28",
+    "user-agent": "bemybond.com",
+    ...(token === null ? {} : { authorization: `Bearer ${token}` }),
+  })
 
-  const getJson: GitHubClientShape["getJson"] = (path) =>
+  const requestText = (
+    path: string,
+    accept: string,
+    request: (
+      url: string,
+      init: { headers: Record<string, string> }
+    ) => HttpClientRequest.HttpClientRequest
+  ) =>
     Effect.gen(function* () {
-      const requestHeaders = yield* headers("application/vnd.github+json")
+      const token = yield* resolveToken
       const response = yield* client
-        .execute(
-          HttpClientRequest.get(`${API}${path}`, { headers: requestHeaders })
-        )
-        .pipe(
-          Effect.mapError(
-            (error) => new GitProviderError({ reason: String(error) })
-          )
-        )
-      if (response.status >= 400) {
-        const body = yield* response.text.pipe(Effect.orElseSucceed(() => ""))
-        return yield* Effect.fail(
-          new GitProviderError({
-            reason: `GitHub responded ${response.status}: ${body}`,
-          })
-        )
-      }
-      return yield* response.json.pipe(
-        Effect.mapError(
-          (error) => new GitProviderError({ reason: String(error) })
-        )
-      )
-    })
-
-  const getText: GitHubClientShape["getText"] = (path, accept) =>
-    Effect.gen(function* () {
-      const requestHeaders = yield* headers(accept)
-      const response = yield* client
-        .execute(
-          HttpClientRequest.get(`${API}${path}`, { headers: requestHeaders })
-        )
-        .pipe(
-          Effect.mapError(
-            (error) => new GitProviderError({ reason: String(error) })
-          )
-        )
+        .execute(request(`${API}${path}`, { headers: headers(accept, token) }))
+        .pipe(Effect.mapError((error) => transportError(path, error)))
       const body = yield* response.text.pipe(Effect.orElseSucceed(() => ""))
       if (response.status >= 400) {
         return yield* Effect.fail(
-          new GitProviderError({
-            reason: `GitHub responded ${response.status}: ${body}`,
-          })
+          responseError(path, response.status, body, token !== null)
         )
       }
       return body
     })
 
-  const postJson: GitHubClientShape["postJson"] = (path, body) =>
-    Effect.gen(function* () {
-      const requestHeaders = yield* headers("application/vnd.github+json")
-      const response = yield* client
-        .execute(
-          HttpClientRequest.bodyJsonUnsafe(
-            HttpClientRequest.post(`${API}${path}`, {
-              headers: requestHeaders,
-            }),
-            body
-          )
-        )
-        .pipe(
-          Effect.mapError(
-            (error) => new GitProviderError({ reason: String(error) })
-          )
-        )
-      if (response.status >= 400) {
-        const text = yield* response.text.pipe(Effect.orElseSucceed(() => ""))
-        return yield* Effect.fail(
-          new GitProviderError({
-            reason: `GitHub responded ${response.status}: ${text}`,
-          })
-        )
-      }
-      return yield* response.json.pipe(
-        Effect.mapError(
-          (error) => new GitProviderError({ reason: String(error) })
-        )
-      )
+  const parseJson = (path: string, body: string) =>
+    Effect.try({
+      try: () => JSON.parse(body) as unknown,
+      catch: (error) =>
+        new GitProviderError({
+          reason: `GitHub sent an unreadable response for ${path}: ${String(error)}`,
+        }),
     })
+
+  const getJson: GitHubClientShape["getJson"] = (path) =>
+    requestText(path, "application/vnd.github+json", (url, init) =>
+      HttpClientRequest.get(url, init)
+    ).pipe(Effect.flatMap((body) => parseJson(path, body)))
+
+  const getText: GitHubClientShape["getText"] = (path, accept) =>
+    requestText(path, accept, (url, init) => HttpClientRequest.get(url, init))
+
+  const postJson: GitHubClientShape["postJson"] = (path, body) =>
+    requestText(path, "application/vnd.github+json", (url, init) =>
+      HttpClientRequest.bodyJsonUnsafe(HttpClientRequest.post(url, init), body)
+    ).pipe(Effect.flatMap((text) => parseJson(path, text)))
 
   return GitHubClient.of({ repo, getJson, getText, postJson })
 })
