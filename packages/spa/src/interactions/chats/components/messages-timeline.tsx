@@ -4,103 +4,16 @@
  * rendered as small collapsed rows above the reply — t3code's timeline shape.
  * Auto-follows the stream unless the reader has scrolled up.
  */
-import {
-  IconAlertCircle,
-  IconBrain,
-  IconChevronDown,
-  IconChevronUp,
-  IconPlayerStopFilled,
-  IconTool,
-} from "@tabler/icons-react"
-import { useEffect, useRef, useState } from "react"
+import { IconAlertCircle, IconPlayerStopFilled } from "@tabler/icons-react"
+import { useEffect, useRef } from "react"
 import type { Chat, ChatActivity, ChatMessage } from "@byconvo/core/chats"
-import { cn } from "@/lib/utils"
+import { ThinkingIndicator } from "@/components/ui/thinking-indicator"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { activeWorkStep, toWorkSteps } from "../functions/work-log.functions"
 import { AttachmentGrid, AttachmentPreview } from "./image-attachments"
 import { ChatMarkdown } from "./chat-markdown"
 import { Message, MessageBubble } from "./message"
-
-function ActivityRow({ activity }: { activity: ChatActivity }) {
-  const Icon =
-    activity.tone === "error"
-      ? IconAlertCircle
-      : activity.kind === "thinking"
-        ? IconBrain
-        : IconTool
-  return (
-    <div
-      className={cn(
-        "flex items-center gap-1.5 py-0.5 text-xs",
-        activity.tone === "error" ? "text-destructive" : "text-muted-foreground"
-      )}
-      title={activity.detail ?? undefined}
-    >
-      <Icon className="size-3.5 shrink-0" />
-      <span className="truncate">{activity.summary}</span>
-    </div>
-  )
-}
-
-/** How many leading steps a long work log shows before collapsing. */
-const COLLAPSED_STEPS = 4
-
-/**
- * A turn's work log (tool calls + thinking). Long logs collapse to the first
- * few steps — the bottom edge fades out to hint at more — with a toggle below,
- * so a research-heavy turn doesn't push the actual reply off-screen.
- */
-function WorkLog({ activities }: { activities: ChatActivity[] }) {
-  const [expanded, setExpanded] = useState(false)
-  const collapsible = activities.length > COLLAPSED_STEPS + 1
-  const collapsed = collapsible && !expanded
-  const visible = collapsed ? activities.slice(0, COLLAPSED_STEPS) : activities
-  return (
-    <div className="mb-1.5 border-l pl-3">
-      <div
-        className={cn(
-          collapsed &&
-            "[mask-image:linear-gradient(to_bottom,black_55%,transparent)]"
-        )}
-      >
-        {visible.map((a) => (
-          <ActivityRow key={a.id} activity={a} />
-        ))}
-      </div>
-      {collapsible && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="flex items-center gap-1 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-        >
-          {expanded ? (
-            <>
-              <IconChevronUp className="size-3.5" />
-              Show less
-            </>
-          ) : (
-            <>
-              <IconChevronDown className="size-3.5" />
-              Show {activities.length - COLLAPSED_STEPS} more steps
-            </>
-          )}
-        </button>
-      )}
-    </div>
-  )
-}
-
-function WorkingDots() {
-  return (
-    <span className="inline-flex gap-1 py-1" aria-label="Working">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="size-1.5 animate-pulse rounded-full bg-muted-foreground"
-          style={{ animationDelay: `${i * 200}ms` }}
-        />
-      ))}
-    </span>
-  )
-}
+import { WorkLog } from "./work-log"
 
 /**
  * A failed turn's error. The lead paragraph (up to the first blank line) shows
@@ -197,12 +110,18 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
         </Message>
       )
     }
-    const work = activitiesByTurn.get(message.turnId) ?? []
     const streaming = message.streaming && running
+    const steps = toWorkSteps(
+      activitiesByTurn.get(message.turnId) ?? [],
+      streaming
+    )
+    // While a tool runs, name it; while the model is generating text, there is
+    // genuinely nothing to name, so the indicator cycles instead of inventing.
+    const active = streaming ? activeWorkStep(steps) : undefined
     return (
       <Message key={message.id} align="start">
         <div className="flex w-full min-w-0 flex-col">
-          {work.length > 0 && <WorkLog activities={work} />}
+          {steps.length > 0 && <WorkLog steps={steps} running={streaming} />}
           {message.text.length > 0 ? (
             <ChatMarkdown text={message.text} />
           ) : streaming ? null : message.streaming ? (
@@ -212,22 +131,28 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
               replying.
             </div>
           ) : null}
-          {streaming && <WorkingDots />}
+          {streaming && (
+            <ThinkingIndicator
+              className="py-1"
+              {...(active !== undefined ? { label: active.summary } : {})}
+            />
+          )}
         </div>
       </Message>
     )
   }
 
   return (
-    <div
-      ref={scrollRef}
-      onScroll={onScroll}
-      className="min-h-0 flex-1 overflow-y-auto"
+    <ScrollArea
+      viewportRef={scrollRef}
+      onViewportScroll={onScroll}
+      className="min-h-0 flex-1"
+      viewportClassName="scroll-fade overscroll-contain"
     >
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6">
         {chat.messages.map(renderMessage)}
         {turnError !== null && <TurnError message={turnError} />}
       </div>
-    </div>
+    </ScrollArea>
   )
 }

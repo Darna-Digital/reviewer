@@ -15,9 +15,11 @@ import {
   IconGitCommit,
   IconGitPullRequest,
   IconLayoutBottombarExpand,
-  IconMoon,
+  IconPlayerPlay,
   IconRefresh,
   IconRepeat,
+  IconSettings,
+  IconTerminal2,
 } from "@tabler/icons-react"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -44,6 +46,7 @@ import { CodeEditor } from "@/components/editor/code-editor"
 import { CodeView } from "@/components/editor/code-view"
 import { ConflictBanner } from "@/components/git/conflict-banner"
 import { ConflictView } from "@/components/git/conflict-view"
+import { PullRequestList } from "@/components/git/pull-request-list"
 import { BottomPanel } from "@/components/layout/bottom-panel"
 import { ModeRail } from "@/components/layout/mode-rail"
 import { ResizeHandle } from "@/components/layout/resize-handle"
@@ -82,7 +85,8 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries"
-import { cycleTheme, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
+import { openBottomTab, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
+import { cn } from "@/lib/utils"
 
 type Search = {
   base?: string
@@ -161,8 +165,6 @@ export function AppShell() {
       } else if (e.key === "2") {
         if (!hasGitHub) return
         e.preventDefault()
-        setUiPrefs({ bottomVisible: true })
-        setBottomTab("pulls")
         void navigate({ to: "/review" })
       } else if (e.key === "3") {
         e.preventDefault()
@@ -183,12 +185,6 @@ export function AppShell() {
   const [logRef, setLogRef] = useState<string | null>(null)
   const log = useLog(logRef ?? repo.data?.currentBranch ?? null, logFilters)
 
-  // Which tab the bottom panel shows. Lifted here so the mode rail can both
-  // reveal the panel and jump to a tab (e.g. clicking "Pull requests").
-  const [bottomTab, setBottomTab] = useState<"branches" | "history" | "pulls">(
-    mode === "review" ? "pulls" : mode === "browse" ? "history" : "branches"
-  )
-
   const [pickerOpen, setPickerOpen] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
   const [draft, setDraft] = useState<DraftLocation | null>(null)
@@ -197,6 +193,9 @@ export function AppShell() {
   // the persisted prefs so they survive reloads. See `ResizeHandle`.
   const [sidebarWidth, setSidebarWidth] = useState(prefs.sidebarWidth)
   const [bottomHeight, setBottomHeight] = useState(prefs.bottomHeight)
+  const [reviewPullsHeight, setReviewPullsHeight] = useState(
+    prefs.reviewPullsHeight
+  )
 
   const isFolder =
     workspace.data?.current != null && workspace.data.isGitRepo === false
@@ -446,6 +445,9 @@ export function AppShell() {
   const deleteComment = async (comment: ReviewComment) => {
     await comments.remove(comment)
   }
+  const editComment = async (comment: ReviewComment, body: string) => {
+    await comments.update(comment, body)
+  }
   const replyComment = async (comment: ReviewComment, body: string) => {
     await comments.reply(selectedPull, comment, body)
     void pullComments.refetch()
@@ -527,13 +529,12 @@ export function AppShell() {
         },
       },
       {
-        id: "view-theme",
-        label: "Toggle Theme",
-        group: "View",
-        icon: IconMoon,
-        keywords: "dark light system appearance",
-        hint: prefs.theme,
-        run: () => cycleTheme(),
+        id: "go-settings",
+        label: "Open Settings",
+        group: "Navigation",
+        icon: IconSettings,
+        keywords: "theme dark light system appearance preferences",
+        run: () => void navigate({ to: "/settings" }),
       },
       {
         id: "view-diff-style",
@@ -552,8 +553,24 @@ export function AppShell() {
         label: prefs.bottomVisible ? "Hide Bottom Panel" : "Show Bottom Panel",
         group: "View",
         icon: IconLayoutBottombarExpand,
-        keywords: "branches history pulls toggle",
+        keywords: "branches history services threads toggle",
         run: () => setUiPrefs({ bottomVisible: !prefs.bottomVisible }),
+      },
+      {
+        id: "view-services",
+        label: "Open Services",
+        group: "View",
+        icon: IconPlayerPlay,
+        keywords: "local dev commands run configurations",
+        run: () => openBottomTab("services"),
+      },
+      {
+        id: "view-threads",
+        label: "Open Terminal Threads",
+        group: "View",
+        icon: IconTerminal2,
+        keywords: "terminal shell agent cli",
+        run: () => openBottomTab("threads"),
       },
       {
         id: "repo-switch",
@@ -569,7 +586,6 @@ export function AppShell() {
     navigate,
     git,
     hasGitHub,
-    prefs.theme,
     prefs.diffStyle,
     prefs.bottomVisible,
     repo.data?.currentBranch,
@@ -609,6 +625,7 @@ export function AppShell() {
           onDraftCancel={() => setDraft(null)}
           onCommentSubmit={submitFileComment}
           onCommentDelete={deleteComment}
+          onCommentEdit={editComment}
         />
       )
     }
@@ -636,7 +653,7 @@ export function AppShell() {
           <div className="font-medium">Nothing open</div>
           <div className="text-muted-foreground">
             {mode === "review"
-              ? "Pick a pull request from the panel below to review it."
+              ? "Pick a pull request from the sidebar to review it."
               : "Pick a file from the tree, or a commit from the log."}
           </div>
         </div>
@@ -667,6 +684,7 @@ export function AppShell() {
         }
         onCommentSubmit={submitComment}
         onCommentDelete={deleteComment}
+        onCommentEdit={editComment}
         onCommentReply={replyComment}
       />
     )
@@ -711,20 +729,7 @@ export function AppShell() {
             onDismiss={() => setAssignBarDismissed(true)}
           />
         )}
-        <ModeRail
-          mode={mode}
-          hasGitHub={hasGitHub}
-          bottomVisible={prefs.bottomVisible}
-          onBottomToggle={() =>
-            setUiPrefs({ bottomVisible: !prefs.bottomVisible })
-          }
-          onModeSelect={(m) => {
-            if (m === "review") {
-              setUiPrefs({ bottomVisible: true })
-              setBottomTab("pulls")
-            }
-          }}
-        />
+        <ModeRail mode={mode} hasGitHub={hasGitHub} />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar
             repo={repo.data ?? null}
@@ -733,14 +738,12 @@ export function AppShell() {
             remoteBranches={remoteBranches.data ?? []}
             contextLabel={contextLabel}
             diffStyle={prefs.diffStyle}
-            themePref={prefs.theme}
             showDiffStyleToggle={
               editing === null && viewing === null && target !== null
             }
             busy={false}
             pickerOpen={pickerOpen}
             onPickerOpenChange={setPickerOpen}
-            onThemeChange={(theme) => setUiPrefs({ theme })}
             onDiffStyleChange={(diffStyle) => setUiPrefs({ diffStyle })}
             onCheckout={(b) => {
               void git.checkout(b)
@@ -761,7 +764,6 @@ export function AppShell() {
             onFetch={() => void git.fetch()}
             onPush={() => void git.push()}
             onPull={() => void git.pull()}
-            onRefresh={git.refresh}
           />
 
           {/* Everything below the title bar sits in a panel whose left border +
@@ -769,36 +771,86 @@ export function AppShell() {
             the file list while the title-bar strip stays clean. */}
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
             <div className="flex min-h-0 flex-1">
+              {/* Review mode stacks the pull request picker above the selected
+                  PR's file tree; the other modes are just the tree. */}
               <div
-                className="shrink-0 overflow-hidden border-r"
+                className="flex shrink-0 flex-col overflow-hidden border-r"
                 style={{ width: sidebarWidth }}
               >
-                <FileSidebar
-                  key={mode}
-                  mode={mode}
-                  paths={treePaths}
-                  gitStatus={treeGitStatus}
-                  selectedFile={
-                    mode === "browse"
-                      ? (viewing ?? editing)
-                      : (search.path ?? null)
-                  }
-                  onFileSelect={onFileSelect}
-                  onDeletePath={mode === "review" ? undefined : deletePath}
-                  onRenamePath={mode === "review" ? undefined : renamePath}
-                  footer={
-                    mode === "commit" && changedFiles.length > 0 ? (
-                      <CommitPanel
-                        changes={changedFiles}
-                        busy={false}
-                        onCommit={(m, p, push) => git.commitChanges(m, p, push)}
-                        onGenerate={(p, agent) =>
-                          git.generateCommitMessage(p, agent)
+                {mode === "review" && (
+                  <>
+                    <PullRequestList
+                      pulls={pulls.data ?? []}
+                      error={
+                        pulls.error ? "Could not load pull requests" : null
+                      }
+                      loading={pulls.isPending}
+                      selectedNumber={selectedPull?.number ?? null}
+                      onSelect={(p) =>
+                        void navigate({
+                          to: "/review/$pull",
+                          params: { pull: String(p.number) },
+                        })
+                      }
+                      className={
+                        selectedPull === null ? "flex-1" : "shrink-0 border-b"
+                      }
+                      style={
+                        selectedPull === null
+                          ? undefined
+                          : { height: reviewPullsHeight }
+                      }
+                    />
+                    {selectedPull !== null && (
+                      <ResizeHandle
+                        orientation="row"
+                        value={reviewPullsHeight}
+                        min={80}
+                        max={() => Math.max(120, window.innerHeight - 320)}
+                        onResize={setReviewPullsHeight}
+                        onResizeEnd={(h) =>
+                          setUiPrefs({ reviewPullsHeight: h })
                         }
+                        label="Resize pull request list"
                       />
-                    ) : undefined
-                  }
-                />
+                    )}
+                  </>
+                )}
+                {(mode !== "review" || selectedPull !== null) && (
+                  <div className="min-h-0 flex-1 overflow-hidden">
+                    <FileSidebar
+                      key={mode}
+                      mode={mode}
+                      paths={treePaths}
+                      gitStatus={treeGitStatus}
+                      loading={
+                        mode === "review" ? diff.isPending : files.isPending
+                      }
+                      selectedFile={
+                        mode === "browse"
+                          ? (viewing ?? editing)
+                          : (search.path ?? null)
+                      }
+                      onFileSelect={onFileSelect}
+                      onDeletePath={mode === "review" ? undefined : deletePath}
+                      onRenamePath={mode === "review" ? undefined : renamePath}
+                      footer={
+                        mode === "commit" && changedFiles.length > 0 ? (
+                          <CommitPanel
+                            changes={changedFiles}
+                            busy={false}
+                            onCommit={(m, p, push) =>
+                              git.commitChanges(m, p, push)
+                            }
+                            onGenerate={(p, agent) =>
+                              git.generateCommitMessage(p, agent)
+                            }
+                          />
+                        ) : undefined
+                      }
+                    />
+                  </div>
+                )}
               </div>
               <ResizeHandle
                 orientation="col"
@@ -838,52 +890,43 @@ export function AppShell() {
                 label="Resize bottom panel"
               />
             )}
-            {prefs.bottomVisible && (
-              <div
-                className="shrink-0 overflow-hidden border-t"
-                style={{ height: bottomHeight }}
-              >
-                <BottomPanel
-                  tab={bottomTab}
-                  onTabChange={setBottomTab}
-                  hasGitHub={hasGitHub}
-                  branches={branches.data ?? []}
-                  remoteBranches={remoteBranches.data ?? []}
-                  currentBranch={repo.data?.currentBranch ?? null}
-                  commits={log.data ?? []}
-                  commitsLoading={log.isPending}
-                  pulls={pulls.data ?? []}
-                  pullsError={
-                    pulls.error ? "Could not load pull requests" : null
-                  }
-                  logRef={logRef ?? repo.data?.currentBranch ?? null}
-                  logFilters={logFilters}
-                  selectedCommitSha={
-                    browse?.kind === "commit" ? browse.sha : null
-                  }
-                  selectedPullNumber={selectedPull?.number ?? null}
-                  onLogRefChange={setLogRef}
-                  onLogFiltersChange={setLogFilters}
-                  onBranchCheckout={(b) => {
-                    void git.checkout(b)
-                    void navigate({ to: "/commit" })
-                  }}
-                  onSelectCommit={(c) =>
-                    void navigate({
-                      to: "/browse/commit/$sha",
-                      params: { sha: c.sha },
-                    })
-                  }
-                  onSelectCommitFile={(p) => openFile(p, false)}
-                  onSelectPull={(p) =>
-                    void navigate({
-                      to: "/review/$pull",
-                      params: { pull: String(p.number) },
-                    })
-                  }
-                />
-              </div>
-            )}
+            <div
+              className={cn(
+                "shrink-0 overflow-hidden border-t",
+                !prefs.bottomVisible && "hidden"
+              )}
+              style={{ height: bottomHeight }}
+              hidden={!prefs.bottomVisible}
+            >
+              <BottomPanel
+                tab={prefs.bottomTab}
+                active={prefs.bottomVisible}
+                onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
+                branches={branches.data ?? []}
+                remoteBranches={remoteBranches.data ?? []}
+                currentBranch={repo.data?.currentBranch ?? null}
+                commits={log.data ?? []}
+                commitsLoading={log.isPending}
+                logRef={logRef ?? repo.data?.currentBranch ?? null}
+                logFilters={logFilters}
+                selectedCommitSha={
+                  browse?.kind === "commit" ? browse.sha : null
+                }
+                onLogRefChange={setLogRef}
+                onLogFiltersChange={setLogFilters}
+                onBranchCheckout={(b) => {
+                  void git.checkout(b)
+                  void navigate({ to: "/commit" })
+                }}
+                onSelectCommit={(c) =>
+                  void navigate({
+                    to: "/browse/commit/$sha",
+                    params: { sha: c.sha },
+                  })
+                }
+                onSelectCommitFile={(p) => openFile(p, false)}
+              />
+            </div>
           </div>
         </div>
       </div>

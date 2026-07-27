@@ -486,6 +486,8 @@ const startSession = (ws: WebSocket, request: IncomingMessage) => {
     const existing = sessions.get(id)
     if (existing !== undefined && !existing.exited) {
       attachClient(existing, ws, cols, rows)
+      const cwd = getCurrentRepo() ?? process.cwd()
+      patchThread(cwd, id, { updatedAt: new Date().toISOString() })
       return
     }
   }
@@ -581,7 +583,10 @@ const startSession = (ws: WebSocket, request: IncomingMessage) => {
     captureTimer: null,
   }
   const persistent = id !== null && id.length > 0
-  if (persistent) sessions.set(id, session)
+  if (persistent) {
+    sessions.set(id, session)
+    patchThread(cwd, id, { updatedAt: new Date().toISOString() })
+  }
 
   // For opencode/codex we couldn't preset the session id, so discover the one
   // the CLI just minted and persist it for next time.

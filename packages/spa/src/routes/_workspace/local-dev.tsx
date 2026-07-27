@@ -1,6 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { LocalDevPage } from "@/interactions/local-dev/components/local-dev-page"
+import { createFileRoute, useNavigate } from "@tanstack/react-router"
+import { useEffect } from "react"
+import { openBottomTab } from "@/lib/ui-prefs"
 
+/** Legacy /local-dev route — opens the Services bottom-dock tab. */
 export const Route = createFileRoute("/_workspace/local-dev")({
-  component: LocalDevPage,
+  component: OpenServicesTab,
 })
+
+function OpenServicesTab() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    openBottomTab("services")
+    void navigate({ to: "/commit", replace: true })
+  }, [navigate])
+  return null
+}

@@ -45,6 +45,13 @@ export const ChatActivity = Schema.Struct({
   summary: Schema.String,
   detail: Schema.NullOr(Schema.String),
   createdAt: Schema.String,
+  /** The provider's tool-call id, pairing a `tool.started` with the
+   * `tool.completed`/`tool.failed` that settles it. Optional: activities
+   * persisted before this field existed (and non-tool activities) have none. */
+  callId: Schema.optionalKey(Schema.String),
+  /** Short label for the tool itself (`Bash`, `Read`), separate from the
+   * one-line `summary` that also carries the command or path. */
+  label: Schema.optionalKey(Schema.String),
 })
 export type ChatActivity = typeof ChatActivity.Type
 export const ChatTurn = Schema.Struct({

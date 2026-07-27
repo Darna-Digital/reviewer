@@ -32,4 +32,15 @@ describe("CommentsService", () => {
       expect(all).toHaveLength(0)
     }).pipe(Effect.provide(CommentsMemory()))
   )
+
+  it.effect("update rewrites the body", () =>
+    Effect.gen(function* () {
+      const comments = yield* CommentsService
+      const created = yield* comments.add(input)
+      const updated = yield* comments.update(created.id, { body: "revised" })
+      expect(updated.body).toBe("revised")
+      const all = yield* comments.list
+      expect(all[0]?.body).toBe("revised")
+    }).pipe(Effect.provide(CommentsMemory()))
+  )
 })

@@ -15,6 +15,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import {
   Tooltip,
   TooltipContent,
@@ -66,6 +67,7 @@ interface DiffPaneProps {
   onDiscardHunk?: (path: string, hunkIndex: number) => void
   onCommentSubmit: (location: DraftLocation, body: string) => Promise<void>
   onCommentDelete: (comment: ReviewComment) => Promise<void>
+  onCommentEdit: (comment: ReviewComment, body: string) => Promise<void>
   onCommentReply: (comment: ReviewComment, body: string) => Promise<void>
 }
 
@@ -154,6 +156,7 @@ interface FileDiffSectionProps {
   onDiscardHunk?: (path: string, hunkIndex: number) => void
   onCommentSubmit: (location: DraftLocation, body: string) => Promise<void>
   onCommentDelete: (comment: ReviewComment) => Promise<void>
+  onCommentEdit: (comment: ReviewComment, body: string) => Promise<void>
   onCommentReply: (comment: ReviewComment, body: string) => Promise<void>
 }
 
@@ -174,6 +177,7 @@ function FileDiffSection({
   onDiscardHunk,
   onCommentSubmit,
   onCommentDelete,
+  onCommentEdit,
   onCommentReply,
 }: FileDiffSectionProps) {
   // Callback-ref state (not a ref object): DiffConnectors reads the section in a
@@ -332,6 +336,7 @@ function FileDiffSection({
             <CommentThread
               comments={meta.comments}
               onDelete={onCommentDelete}
+              onEdit={onCommentEdit}
               onReply={onCommentReply}
             />
           )
@@ -364,6 +369,7 @@ export function DiffPane({
   onDiscardHunk,
   onCommentSubmit,
   onCommentDelete,
+  onCommentEdit,
   onCommentReply,
 }: DiffPaneProps) {
   const connectorsEnabled = connectors && diffStyle === "split"
@@ -588,7 +594,9 @@ export function DiffPane({
 
   if (loading) {
     return (
-      <div className="p-8 text-sm text-muted-foreground">Loading diff…</div>
+      <div className="p-8">
+        <LoadingCursor label="Loading diff…" />
+      </div>
     )
   }
   if (error !== null) {
@@ -638,6 +646,7 @@ export function DiffPane({
             onDiscardHunk={onDiscardHunk}
             onCommentSubmit={onCommentSubmit}
             onCommentDelete={onCommentDelete}
+            onCommentEdit={onCommentEdit}
             onCommentReply={onCommentReply}
           />
         ))}

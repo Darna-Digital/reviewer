@@ -513,7 +513,55 @@ export interface paths {
         delete: operations["comments.remove"];
         options?: never;
         head?: never;
+        patch: operations["comments.update"];
+        trace?: never;
+    };
+    "/api/visual-comments/picker.js": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["visualComments.picker"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/visual-comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["visualComments.list"];
+        put?: never;
+        post: operations["visualComments.add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/visual-comments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["visualComments.remove"];
+        options?: never;
+        head?: never;
+        patch: operations["visualComments.update"];
         trace?: never;
     };
     "/api/github/pulls": {
@@ -1054,6 +1102,15 @@ export interface components {
             exitCode: number;
             stderr: string;
         };
+        NotFound: {
+            /** @enum {string} */
+            _tag: "NotFound";
+            reason: string;
+        };
+        EmptyCommentBody: {
+            /** @enum {string} */
+            _tag: "EmptyCommentBody";
+        };
         GitProviderError: {
             /** @enum {string} */
             _tag: "GitProviderError";
@@ -1062,11 +1119,6 @@ export interface components {
         TerminalError: {
             /** @enum {string} */
             _tag: "TerminalError";
-            reason: string;
-        };
-        NotFound: {
-            /** @enum {string} */
-            _tag: "NotFound";
             reason: string;
         };
         ChatBusy: {
@@ -2742,6 +2794,386 @@ export interface operations {
             };
         };
     };
+    "comments.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    body: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        filePath: string;
+                        /** @enum {string} */
+                        side: "deletions" | "additions";
+                        lineNumber: number;
+                        body: string;
+                        author: string;
+                        createdAt: string;
+                        target: string;
+                        /** @enum {string} */
+                        source: "local" | "github";
+                    };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "visualComments.picker": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/javascript; charset=utf-8": string;
+                };
+            };
+        };
+    };
+    "visualComments.list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        createdAt: string;
+                        body: string;
+                        author: string;
+                        pageUrl: string;
+                        pageTitle: string;
+                        route: string;
+                        selector: string;
+                        label: string;
+                        tagName: string;
+                        elementText: string;
+                        elementHtml: string;
+                        rect: {
+                            x: number;
+                            y: number;
+                            width: number;
+                            height: number;
+                        };
+                        viewport: {
+                            width: number;
+                            height: number;
+                        };
+                        sourceFile?: string;
+                        sourceLine?: number;
+                    }[];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "visualComments.add": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    body: string;
+                    author?: string;
+                    pageUrl: string;
+                    pageTitle: string;
+                    route: string;
+                    selector: string;
+                    label: string;
+                    tagName: string;
+                    elementText: string;
+                    elementHtml: string;
+                    rect: {
+                        x: number;
+                        y: number;
+                        width: number;
+                        height: number;
+                    };
+                    viewport: {
+                        width: number;
+                        height: number;
+                    };
+                    sourceFile?: string;
+                    sourceLine?: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        createdAt: string;
+                        body: string;
+                        author: string;
+                        pageUrl: string;
+                        pageTitle: string;
+                        route: string;
+                        selector: string;
+                        label: string;
+                        tagName: string;
+                        elementText: string;
+                        elementHtml: string;
+                        rect: {
+                            x: number;
+                            y: number;
+                            width: number;
+                            height: number;
+                        };
+                        viewport: {
+                            width: number;
+                            height: number;
+                        };
+                        sourceFile?: string;
+                        sourceLine?: number;
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description EmptyCommentBody */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyCommentBody"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "visualComments.remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok: boolean;
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "visualComments.update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    body: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        createdAt: string;
+                        body: string;
+                        author: string;
+                        pageUrl: string;
+                        pageTitle: string;
+                        route: string;
+                        selector: string;
+                        label: string;
+                        tagName: string;
+                        elementText: string;
+                        elementHtml: string;
+                        rect: {
+                            x: number;
+                            y: number;
+                            width: number;
+                            height: number;
+                        };
+                        viewport: {
+                            width: number;
+                            height: number;
+                        };
+                        sourceFile?: string;
+                        sourceLine?: number;
+                    };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description EmptyCommentBody */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyCommentBody"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
     "github.pulls": {
         parameters: {
             query?: never;
@@ -3526,6 +3958,8 @@ export interface operations {
                             summary: string;
                             detail: string | null;
                             createdAt: string;
+                            callId?: string;
+                            label?: string;
                         }[];
                         latestTurn: {
                             id: string;
@@ -3692,6 +4126,8 @@ export interface operations {
                             summary: string;
                             detail: string | null;
                             createdAt: string;
+                            callId?: string;
+                            label?: string;
                         }[];
                         latestTurn: {
                             id: string;
@@ -3856,6 +4292,8 @@ export interface operations {
                             summary: string;
                             detail: string | null;
                             createdAt: string;
+                            callId?: string;
+                            label?: string;
                         }[];
                         latestTurn: {
                             id: string;
@@ -3965,6 +4403,8 @@ export interface operations {
                             summary: string;
                             detail: string | null;
                             createdAt: string;
+                            callId?: string;
+                            label?: string;
                         }[];
                         latestTurn: {
                             id: string;

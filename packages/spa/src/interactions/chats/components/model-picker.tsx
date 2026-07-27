@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core/chats"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
@@ -161,7 +162,7 @@ export function ModelPicker({
           </div>
           {/* Search + model list */}
           <div className="flex min-w-0 flex-1 flex-col">
-            <div className="flex items-center gap-2 border-b px-3 py-2">
+            <div className="flex items-center gap-2 border-b px-2.5 py-2">
               <IconSearch className="size-4 shrink-0 text-muted-foreground" />
               <input
                 autoFocus
@@ -171,7 +172,10 @@ export function ModelPicker({
                 className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
             </div>
-            <div className="max-h-80 overflow-y-auto p-1">
+            <ScrollArea
+              className="max-h-80"
+              viewportClassName="scroll-fade p-1"
+            >
               {visible.length === 0 && (
                 <p className="px-3 py-6 text-center text-xs text-muted-foreground">
                   No models match.
@@ -183,7 +187,7 @@ export function ModelPicker({
                   <div
                     key={m.id}
                     className={cn(
-                      "group/model mb-0.5 flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted",
+                      "group/model flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted",
                       m.id === model && "bg-muted/60"
                     )}
                     onClick={() => pick(m)}
@@ -229,7 +233,7 @@ export function ModelPicker({
                   </div>
                 )
               })}
-            </div>
+            </ScrollArea>
           </div>
         </div>
       </PopoverContent>

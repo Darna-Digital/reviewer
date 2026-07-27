@@ -8,7 +8,14 @@
  * as a turn streams. Keeping every mutation here means there is exactly one
  * shape of the file, whichever side writes.
  */
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { randomUUID } from "node:crypto"
+import {
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs"
 import * as Schema from "effect/Schema"
 import {
   Chat,
@@ -24,12 +31,8 @@ const decodeChatsFile = Schema.decodeUnknownSync(ChatsFile)
 
 const chatsPath = (repoPath: string) => `${repoPath}/.byconvo/chats.json`
 
-// Module-scoped so ids stay unique across per-request repository instances.
-let counter = 0
-export const nextChatId = (prefix: string): string => {
-  counter += 1
-  return `${prefix}-${Date.now().toString(36)}-${counter}`
-}
+export const nextChatId = (prefix: string): string =>
+  `${prefix}-${randomUUID()}`
 
 export const readChats = (repoPath: string): ReadonlyArray<Chat> => {
   try {
@@ -43,12 +46,25 @@ export const readChats = (repoPath: string): ReadonlyArray<Chat> => {
   }
 }
 
+/**
+ * A torn `chats.json` fails to decode for *every* chat, and a streaming turn
+ * rewrites this file constantly — so readers only ever see a whole file:
+ * written beside the target, then swapped in by an atomic rename.
+ */
 export const writeChats = (
   repoPath: string,
   chats: ReadonlyArray<Chat>
 ): void => {
   mkdirSync(`${repoPath}/.byconvo`, { recursive: true })
-  writeFileSync(chatsPath(repoPath), `${JSON.stringify(chats, null, 2)}\n`)
+  const target = chatsPath(repoPath)
+  const beside = `${target}.${process.pid}.tmp`
+  try {
+    writeFileSync(beside, `${JSON.stringify(chats, null, 2)}\n`)
+    renameSync(beside, target)
+  } catch (error) {
+    rmSync(beside, { force: true })
+    throw error
+  }
 }
 
 export const findChat = (repoPath: string, id: string): Chat | undefined =>
@@ -75,6 +91,12 @@ export const patchChat = (
 
 // --- Turn-progress mutations (used by the runtime while a turn streams) -----
 
+const titleFromFirstPrompt = (current: string, prompt: string): string => {
+  if (current !== DEFAULT_CHAT_TITLE) return current
+  const seeded = titleFromPrompt(prompt)
+  return seeded.length > 0 ? seeded : current
+}
+
 export const appendTurnStart = (
   repoPath: string,
   chatId: string,
@@ -86,12 +108,7 @@ export const appendTurnStart = (
 ): Chat | undefined =>
   patchChat(repoPath, chatId, (chat) => ({
     ...chat,
-    // Name the chat after its first prompt (like t3code's title seed).
-    title:
-      chat.title === DEFAULT_CHAT_TITLE &&
-      titleFromPrompt(input.userMessage.text).length > 0
-        ? titleFromPrompt(input.userMessage.text)
-        : chat.title,
+    title: titleFromFirstPrompt(chat.title, input.userMessage.text),
     updatedAt: input.turn.startedAt,
     messages: [...chat.messages, input.userMessage, input.assistantMessage],
     latestTurn: input.turn,
@@ -146,6 +163,70 @@ export const appendActivity = (
     updatedAt: activity.createdAt,
     activities: [...chat.activities, activity],
   }))
+
+/** Until this lands, the reply exists only in the parser's closure — a crash
+ * loses every token the user already watched arrive. */
+export const saveStreamingText = (
+  repoPath: string,
+  chatId: string,
+  messageId: string,
+  text: string
+): Chat | undefined =>
+  patchChat(repoPath, chatId, (chat) => ({
+    ...chat,
+    messages: chat.messages.map((m) =>
+      m.id === messageId ? { ...m, text } : m
+    ),
+  }))
+
+const asInterrupted = (
+  chat: Chat,
+  endedAt: string,
+  errorMessage: string
+): Chat =>
+  chat.latestTurn === null
+    ? chat
+    : {
+        ...chat,
+        messages: chat.messages.map((message) =>
+          message.streaming ? { ...message, streaming: false } : message
+        ),
+        latestTurn: {
+          ...chat.latestTurn,
+          state: "interrupted" as const,
+          endedAt,
+          errorMessage,
+        },
+      }
+
+/**
+ * Whatever text was flushed stays as the reply; the turn becomes `interrupted`
+ * so the sidebar, the composer and the Stop button stop believing work is in
+ * flight. One pass over the whole file repairs chats the user never reopens.
+ */
+export const settleStaleTurns = (
+  repoPath: string,
+  isLive: (chatId: string) => boolean,
+  errorMessage: string
+): ReadonlyArray<string> => {
+  const chats = readChats(repoPath)
+  const staleIds = new Set(
+    chats
+      .filter(
+        (chat) => chat.latestTurn?.state === "running" && !isLive(chat.id)
+      )
+      .map((chat) => chat.id)
+  )
+  if (staleIds.size === 0) return []
+  const endedAt = new Date().toISOString()
+  writeChats(
+    repoPath,
+    chats.map((chat) =>
+      staleIds.has(chat.id) ? asInterrupted(chat, endedAt, errorMessage) : chat
+    )
+  )
+  return [...staleIds]
+}
 
 export const saveSessionId = (
   repoPath: string,

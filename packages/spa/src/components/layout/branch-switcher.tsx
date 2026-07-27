@@ -3,15 +3,20 @@
  * `GitWidget` to the shadcn (base-ui) `DropdownMenu` primitives. It keeps the
  * JetBrains-style feature set: a filter box, collapsible Recent / Local /
  * Remote sections, folder grouping by the first path segment, ahead/behind and
- * upstream badges, and a per-branch action submenu (checkout, compare, merge,
- * rebase, rename, delete, …).
+ * upstream badges, repo-level fetch/pull/push, and a per-branch action submenu
+ * (checkout, compare, merge, rebase, rename, delete, …).
  */
 import { useEffect, useMemo, useRef, useState } from "react"
 import {
+  IconArrowDown,
+  IconArrowUp,
   IconChevronDown,
   IconChevronRight,
+  IconCloud,
+  IconCloudDownload,
   IconFolder,
   IconGitBranch,
+  IconPlus,
   IconSearch,
   IconStarFilled,
 } from "@tabler/icons-react"
@@ -36,6 +41,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { handleBranchSearchKeyDown } from "@/components/layout/branch-search-keydown"
 import { cn } from "@/lib/utils"
 import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo"
 
@@ -51,6 +57,7 @@ interface BranchSwitcherProps {
   onMerge: (branch: string) => void
   onRebase: (onto: string) => void
   onFetch: () => void
+  onPull: () => void
   onPush: () => void
   onRenameBranch: (from: string, to: string) => void
   onDeleteBranch: (name: string) => void
@@ -69,7 +76,6 @@ type BranchPrompt =
       readonly label: string
     }
   | { readonly kind: "rename"; readonly from: string }
-  | { readonly kind: "revision" }
   | { readonly kind: "delete"; readonly name: string }
 
 /** A branch the action submenu operates on, normalised across local/remote. */
@@ -81,6 +87,9 @@ interface BranchTarget {
   readonly isCurrent: boolean
   readonly isRemote: boolean
 }
+
+/** Submenu holding the repo-wide remote operations, not the branch-scoped ones. */
+const REPO_ACTIONS_LABEL = "Git"
 
 /** Split "task/BMB-1" → ["task", "BMB-1"]; "main" → [null, "main"]. */
 const splitFolder = (name: string): [string | null, string] => {
@@ -171,11 +180,14 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
   const remoteCount = remoteGroups.reduce((n, g) => n + g.items.length, 0)
 
   const showNew = matches("New Branch")
-  const showRevision = matches("Checkout Tag or Revision")
+  const repoActions = [
+    { label: "Fetch", run: props.onFetch, icon: IconCloudDownload },
+    { label: "Pull", run: props.onPull, icon: IconArrowDown },
+    { label: "Push", run: props.onPush, icon: IconArrowUp },
+  ].filter((a) => matches(REPO_ACTIONS_LABEL) || matches(a.label))
 
   const newBranch = (startPoint: string | null, label: string) =>
     setPrompt({ kind: "create", startPoint, label })
-  const checkoutRevision = () => setPrompt({ kind: "revision" })
 
   /** The JetBrains-style action list for one branch. */
   const renderActions = (t: BranchTarget) => (
@@ -186,7 +198,8 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         </DropdownMenuItem>
       )}
       <DropdownMenuItem onClick={() => newBranch(t.ref, t.display)}>
-        New Branch from ‘{t.display}’…
+        <IconPlus className="size-3.5 text-muted-foreground" />
+        New Branch from ‘{t.display}’
       </DropdownMenuItem>
       {!t.isCurrent && (
         <>
@@ -261,7 +274,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
             </span>
           )}
         </DropdownMenuSubTrigger>
-        <DropdownMenuSubContent className="w-64">
+        <DropdownMenuSubContent className="w-72">
           {renderActions({
             display: branch.name,
             ref: branch.name,
@@ -282,7 +295,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           {branch.remote}
         </span>
       </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="w-64">
+      <DropdownMenuSubContent className="w-72">
         {renderActions({
           display: branch.name,
           ref: branch.shortName,
@@ -316,34 +329,44 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           className="max-h-[70vh] w-72 overflow-auto p-0"
         >
           {/* Filter box — a plain row, not a menu item, so typing never navigates. */}
-          <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-popover px-2 py-1.5">
-            <IconSearch className="size-3.5 shrink-0 text-muted-foreground" />
+          <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-popover px-2.5 py-2">
+            <IconSearch className="size-4 shrink-0 text-muted-foreground" />
             <input
               ref={searchRef}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => {
-                // Let Escape bubble to dismiss the menu; swallow everything else
-                // so base-ui's typeahead/arrow navigation doesn't hijack typing.
-                if (e.key !== "Escape") e.stopPropagation()
-              }}
-              placeholder="Search for branches and actions"
+              onKeyDown={handleBranchSearchKeyDown}
+              placeholder="Search branches"
+              aria-label="Search branches"
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
 
           <div className="p-1">
+            {repoActions.length > 0 && (
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>
+                  <IconCloud className="size-3.5 text-muted-foreground" />
+                  <span>{REPO_ACTIONS_LABEL}</span>
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className="w-72">
+                  {repoActions.map(({ label, run, icon: Icon }) => (
+                    <DropdownMenuItem key={label} disabled={busy} onClick={run}>
+                      <Icon className="size-3.5 text-muted-foreground" />
+                      {label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+            )}
+
             {showNew && (
               <DropdownMenuItem onClick={() => newBranch(null, "")}>
-                New Branch…
+                <IconPlus className="size-3.5 text-muted-foreground" />
+                New Branch
               </DropdownMenuItem>
             )}
-            {showRevision && (
-              <DropdownMenuItem onClick={checkoutRevision}>
-                Checkout Tag or Revision…
-              </DropdownMenuItem>
-            )}
-            {(showNew || showRevision) && <DropdownMenuSeparator />}
+            {showNew && <DropdownMenuSeparator />}
 
             <Section
               title="Recent"
@@ -408,7 +431,6 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         onClose={() => setPrompt(null)}
         onCreateBranch={props.onCreateBranch}
         onRenameBranch={props.onRenameBranch}
-        onCheckout={props.onCheckout}
         onDeleteBranch={props.onDeleteBranch}
       />
     </>
@@ -417,7 +439,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
 
 /**
  * The shadcn dialog that backs every branch action needing input — create,
- * "new branch from", checkout revision, rename — plus the delete confirmation.
+ * "new branch from", rename — plus the delete confirmation.
  * Keyed by the prompt so the text field resets to the right default each time.
  */
 function BranchPromptDialog({
@@ -425,14 +447,12 @@ function BranchPromptDialog({
   onClose,
   onCreateBranch,
   onRenameBranch,
-  onCheckout,
   onDeleteBranch,
 }: {
   prompt: BranchPrompt | null
   onClose: () => void
   onCreateBranch: (name: string, startPoint: string | null) => void
   onRenameBranch: (from: string, to: string) => void
-  onCheckout: (ref: string) => void
   onDeleteBranch: (name: string) => void
 }) {
   return (
@@ -451,11 +471,13 @@ function BranchPromptDialog({
             key={prompt.kind === "rename" ? prompt.from : prompt.kind}
             prompt={prompt}
             onSubmit={(value) => {
-              if (prompt.kind === "create")
+              if (prompt.kind === "create") {
                 onCreateBranch(value, prompt.startPoint)
-              else if (prompt.kind === "rename") {
-                if (value !== prompt.from) onRenameBranch(prompt.from, value)
-              } else onCheckout(value)
+                onClose()
+                return
+              }
+              if (prompt.kind === "rename" && value !== prompt.from)
+                onRenameBranch(prompt.from, value)
               onClose()
             }}
           />
@@ -488,13 +510,6 @@ const PROMPT_COPY = (prompt: BranchPrompt) => {
         label: "New name",
         action: "Rename",
         initial: prompt.from,
-      }
-    case "revision":
-      return {
-        title: "Checkout tag or revision",
-        label: "Branch, tag, or revision",
-        action: "Checkout",
-        initial: "",
       }
     default:
       return { title: "", label: "", action: "", initial: "" }

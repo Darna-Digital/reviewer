@@ -83,44 +83,48 @@ export function createBranchTreeFunctions(
   }) => {
     const q = query.trim()
 
-    const local = buildLeafTree(
-      branches
-        .filter((branch) => matches(branch.name, q))
-        .map((branch) => ({
-          segments: branch.name.split("/"),
-          leaf: {
-            kind: "branch" as const,
-            label: branch.name.split("/").at(-1) ?? branch.name,
-            fullName: branch.name,
-            isCurrent: branch.isCurrent,
-            isRemote: false,
-            ahead: branch.ahead,
-            behind: branch.behind,
-          },
-        })),
-      favorites
-    )
+    const localLeaves = branches
+      .filter((branch) => matches(branch.name, q))
+      .map((branch) => ({
+        segments: branch.name.split("/"),
+        leaf: {
+          kind: "branch" as const,
+          label: branch.name.split("/").at(-1) ?? branch.name,
+          fullName: branch.name,
+          isCurrent: branch.isCurrent,
+          isRemote: false,
+          ahead: branch.ahead,
+          behind: branch.behind,
+        },
+      }))
 
+    const remoteLeaves = remoteBranches
+      .filter((branch) => matches(branch.name, q))
+      .map((branch) => ({
+        segments: branch.name.split("/"),
+        leaf: {
+          kind: "branch" as const,
+          label: branch.shortName.split("/").at(-1) ?? branch.shortName,
+          fullName: branch.name,
+          isCurrent: false,
+          isRemote: true,
+          ahead: 0,
+          behind: 0,
+        },
+      }))
+
+    const local = buildLeafTree(localLeaves, favorites)
     // Remote branches nest under their remote name (origin/…).
-    const remote = buildLeafTree(
-      remoteBranches
-        .filter((branch) => matches(branch.name, q))
-        .map((branch) => ({
-          segments: branch.name.split("/"),
-          leaf: {
-            kind: "branch" as const,
-            label: branch.shortName.split("/").at(-1) ?? branch.shortName,
-            fullName: branch.name,
-            isCurrent: false,
-            isRemote: true,
-            ahead: 0,
-            behind: 0,
-          },
-        })),
-      favorites
-    )
+    const remote = buildLeafTree(remoteLeaves, favorites)
 
-    return { local, remote }
+    // Dedicated favourites strip — full names, sorted, so starring is obvious.
+    const favoriteLeaves = [...localLeaves, ...remoteLeaves]
+      .map(({ leaf }) => leaf)
+      .filter((leaf) => favorites.has(leaf.fullName))
+      .map((leaf) => ({ ...leaf, label: leaf.fullName }))
+      .sort((a, b) => a.fullName.localeCompare(b.fullName))
+
+    return { local, remote, favorites: favoriteLeaves }
   }
 
   const flatten: BranchTreeFunctions["flatten"] = (

@@ -55,13 +55,13 @@ export function NewChatView() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex flex-1 flex-col items-center justify-center gap-1 px-6 text-center">
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 px-6 text-center">
         <p className="text-sm font-medium">Start a conversation</p>
         <p className="text-sm text-muted-foreground">
           Ask a question, describe a change, or attach an image to begin.
         </p>
       </div>
-      <div className="mx-auto w-full max-w-3xl px-6 pb-4">
+      <div className="mx-auto w-full max-w-3xl shrink-0 px-6 pb-4">
         <ChatComposer
           draftKey={NEW_CHAT_DRAFT}
           settings={settings}

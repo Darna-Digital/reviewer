@@ -1,42 +1,71 @@
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  IconGitBranch,
+  IconHistory,
+  IconPlayerPlay,
+  IconTerminal2,
+} from "@tabler/icons-react"
 import { BranchTree } from "@/components/git/branch-tree"
 import { CommitHistory } from "@/components/git/commit-history"
-import { cn } from "@/lib/utils"
+import { TabsSubtle, TabsSubtleItem } from "@/components/ui/tabs-subtle"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { LocalDevPage } from "@/interactions/local-dev/components/local-dev-page"
+import { ThreadsPage } from "@/interactions/threads/components/threads-page"
 import type { LogQuery } from "@/lib/api/types"
-import type { PullRequestInfo } from "@byconvo/core/ports/git-provider"
+import type { BottomTab } from "@/lib/ui-prefs"
 import type {
   BranchInfo,
   CommitInfo,
   RemoteBranchInfo,
 } from "@byconvo/core/repo"
+import { useState } from "react"
+import { cn } from "@/lib/utils"
 
-type BottomTab = "branches" | "history" | "pulls"
+const TABS: ReadonlyArray<{
+  id: BottomTab
+  label: string
+  icon: typeof IconGitBranch
+}> = [
+  { id: "branches", label: "Branches", icon: IconGitBranch },
+  { id: "history", label: "History", icon: IconHistory },
+  { id: "services", label: "Services", icon: IconPlayerPlay },
+  { id: "threads", label: "Terminal threads", icon: IconTerminal2 },
+]
 
 interface BottomPanelProps {
   tab: BottomTab
+  /** Whether the dock is expanded. While collapsed, no new panel mounts. */
+  active: boolean
   onTabChange: (tab: BottomTab) => void
-  hasGitHub: boolean
   branches: ReadonlyArray<BranchInfo>
   remoteBranches: ReadonlyArray<RemoteBranchInfo>
   currentBranch: string | null
   commits: ReadonlyArray<CommitInfo>
   commitsLoading: boolean
-  pulls: ReadonlyArray<PullRequestInfo>
-  pullsError: string | null
   logRef: string | null
   logFilters: LogQuery
   selectedCommitSha: string | null
-  selectedPullNumber: number | null
   onLogRefChange: (ref: string) => void
   onLogFiltersChange: (filters: LogQuery) => void
   onBranchCheckout: (name: string) => void
   onSelectCommit: (commit: CommitInfo) => void
   onSelectCommitFile: (path: string) => void
-  onSelectPull: (pull: PullRequestInfo) => void
 }
 
 export function BottomPanel(props: BottomPanelProps) {
+  const selectedIndex = Math.max(
+    0,
+    TABS.findIndex((t) => t.id === props.tab)
+  )
+
+  // Services and Threads own live terminals, so once opened they stay mounted
+  // while hidden. Until first opened they cost nothing.
+  const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<BottomTab>>(
+    () => new Set(props.active ? [props.tab] : [])
+  )
+  if (props.active && !visitedTabs.has(props.tab)) {
+    setVisitedTabs(new Set(visitedTabs).add(props.tab))
+  }
+
   // Picking a branch from the tree sets the history ref and jumps to History.
   const selectRef = (ref: string) => {
     props.onLogRefChange(ref)
@@ -44,92 +73,102 @@ export function BottomPanel(props: BottomPanelProps) {
   }
 
   return (
-    <Tabs
-      value={props.tab}
-      onValueChange={(value) => props.onTabChange(value as BottomTab)}
-      className="flex h-full flex-col gap-0"
-    >
-      <TabsList className="h-9 w-full justify-start gap-1 rounded-none border-b bg-transparent px-2">
-        <TabsTrigger value="branches" className="flex-none">
-          Branches
-        </TabsTrigger>
-        <TabsTrigger value="history" className="flex-none">
-          History
-        </TabsTrigger>
-        {props.hasGitHub && (
-          <TabsTrigger value="pulls" className="flex-none">
-            Pull requests
-          </TabsTrigger>
+    <div className="flex h-full flex-col gap-0">
+      <div className="flex h-9 shrink-0 items-center border-b px-2">
+        <TabsSubtle
+          idPrefix="bottom-dock"
+          activeLabel
+          selectedIndex={selectedIndex}
+          onSelect={(index) => {
+            const next = TABS[index]
+            if (next) props.onTabChange(next.id)
+          }}
+        >
+          {TABS.map((t, index) => (
+            <TabsSubtleItem
+              key={t.id}
+              index={index}
+              label={t.label}
+              icon={t.icon}
+            />
+          ))}
+        </TabsSubtle>
+      </div>
+
+      <ScrollArea
+        id="bottom-dock-panel-0"
+        role="tabpanel"
+        aria-labelledby="bottom-dock-tab-0"
+        hidden={props.tab !== "branches"}
+        className={cn(
+          "min-h-0 flex-1 outline-none",
+          props.tab !== "branches" && "hidden"
         )}
-      </TabsList>
-
-      <TabsContent
-        value="branches"
-        className="min-h-0 flex-1 overflow-auto p-0"
+        viewportClassName="scroll-fade"
       >
-        <BranchTree
-          branches={props.branches}
-          remoteBranches={props.remoteBranches}
-          currentBranch={props.currentBranch}
-          selectedRef={props.logRef}
-          onSelect={selectRef}
-          onCheckout={props.onBranchCheckout}
-        />
-      </TabsContent>
+        {props.active && props.tab === "branches" && (
+          <BranchTree
+            branches={props.branches}
+            remoteBranches={props.remoteBranches}
+            currentBranch={props.currentBranch}
+            selectedRef={props.logRef}
+            onSelect={selectRef}
+            onCheckout={props.onBranchCheckout}
+          />
+        )}
+      </ScrollArea>
 
-      <TabsContent
-        value="history"
-        className="min-h-0 flex-1 overflow-hidden p-0"
+      <div
+        id="bottom-dock-panel-1"
+        role="tabpanel"
+        aria-labelledby="bottom-dock-tab-1"
+        hidden={props.tab !== "history"}
+        className={cn(
+          "min-h-0 flex-1 overflow-hidden outline-none",
+          props.tab !== "history" && "hidden"
+        )}
       >
-        <CommitHistory
-          refName={props.logRef ?? props.currentBranch ?? "HEAD"}
-          branches={props.branches}
-          commits={props.commits}
-          query={props.logFilters}
-          loading={props.commitsLoading}
-          selectedCommitSha={props.selectedCommitSha}
-          onRefChange={props.onLogRefChange}
-          onQueryChange={props.onLogFiltersChange}
-          onSelectCommit={props.onSelectCommit}
-          onSelectCommitFile={props.onSelectCommitFile}
-        />
-      </TabsContent>
+        {props.active && props.tab === "history" && (
+          <CommitHistory
+            refName={props.logRef ?? props.currentBranch ?? "HEAD"}
+            branches={props.branches}
+            commits={props.commits}
+            query={props.logFilters}
+            loading={props.commitsLoading}
+            selectedCommitSha={props.selectedCommitSha}
+            onRefChange={props.onLogRefChange}
+            onQueryChange={props.onLogFiltersChange}
+            onSelectCommit={props.onSelectCommit}
+            onSelectCommitFile={props.onSelectCommitFile}
+          />
+        )}
+      </div>
 
-      {props.hasGitHub && (
-        <TabsContent value="pulls" className="min-h-0 flex-1 overflow-auto p-0">
-          {props.pullsError !== null ? (
-            <div className="p-3 text-sm text-destructive">
-              {props.pullsError}
-            </div>
-          ) : props.pulls.length === 0 ? (
-            <div className="p-3 text-sm text-muted-foreground">
-              No open pull requests.
-            </div>
-          ) : (
-            <ul className="text-sm">
-              {props.pulls.map((p) => (
-                <li
-                  key={p.number}
-                  className={cn(
-                    "flex cursor-pointer items-center gap-2 px-3 py-1.5 hover:bg-muted",
-                    props.selectedPullNumber === p.number &&
-                      "bg-accent text-accent-foreground"
-                  )}
-                  onClick={() => props.onSelectPull(p)}
-                >
-                  <Badge variant="secondary" className="font-mono">
-                    #{p.number}
-                  </Badge>
-                  <span className="truncate">{p.title}</span>
-                  <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                    {p.author} · {p.headRef}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </TabsContent>
-      )}
-    </Tabs>
+      <div
+        id="bottom-dock-panel-2"
+        role="tabpanel"
+        aria-labelledby="bottom-dock-tab-2"
+        hidden={props.tab !== "services"}
+        className={cn(
+          "min-h-0 flex-1 overflow-hidden outline-none",
+          props.tab !== "services" && "hidden"
+        )}
+      >
+        {visitedTabs.has("services") && <LocalDevPage />}
+      </div>
+
+      <div
+        id="bottom-dock-panel-3"
+        role="tabpanel"
+        aria-labelledby="bottom-dock-tab-3"
+        hidden={props.tab !== "threads"}
+        className={cn(
+          "min-h-0 flex-1 overflow-hidden outline-none",
+          props.tab !== "threads" && "hidden"
+        )}
+      >
+        {visitedTabs.has("threads") && <ThreadsPage />}
+      </div>
+    </div>
   )
 }

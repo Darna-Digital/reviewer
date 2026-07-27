@@ -36,6 +36,8 @@ import { RepoHandler } from "./layers/repo/repo.handler.ts"
 import { RepoLive } from "./layers/repo/repo.layer.live.ts"
 import { ThreadsHandler } from "./layers/threads/threads.handler.ts"
 import { ThreadsLive } from "./layers/threads/threads.layer.live.ts"
+import { VisualCommentsHandler } from "./layers/visual-comments/visual-comments.handler.ts"
+import { VisualCommentsLive } from "./layers/visual-comments/visual-comments.layer.live.ts"
 import { WorkspaceHandler } from "./layers/workspace/workspace.handler.ts"
 import { WorkspaceLive } from "./layers/workspace/workspace.layer.live.ts"
 import { layer as gitExecLayer } from "./layers/git/git-exec.ts"
@@ -73,7 +75,8 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(ChatsHandler),
   Layer.provide(DocsHandler),
   Layer.provide(TasksHandler),
-  Layer.provide(LocalDevHandler)
+  Layer.provide(LocalDevHandler),
+  Layer.provide(VisualCommentsHandler)
 )
 
 /** Stateless feature services, resolved per request. */
@@ -88,7 +91,8 @@ const RequestServices = Layer.mergeAll(
   DocsLive,
   TasksLive,
   LocalDevLive,
-  DevRuntimeLive
+  DevRuntimeLive,
+  VisualCommentsLive
 )
 
 /**

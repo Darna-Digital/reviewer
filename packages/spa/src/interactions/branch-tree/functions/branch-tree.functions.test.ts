@@ -48,6 +48,26 @@ describe("buildTrees", () => {
     ])
   })
 
+  it("lists favourites as a flat full-name strip", () => {
+    const { favorites } = fns().buildTrees({
+      branches: [fakeBranch("task/a"), fakeBranch("master")],
+      remoteBranches: [fakeRemoteBranch("origin/feature")],
+      favorites: new Set(["task/a", "origin/feature"]),
+      query: "",
+    })
+    expect(favorites.map((f) => f.label)).toEqual(["origin/feature", "task/a"])
+  })
+
+  it("omits favourites that do not match the query", () => {
+    const { favorites } = fns().buildTrees({
+      branches: [fakeBranch("task/a"), fakeBranch("master")],
+      remoteBranches: [],
+      favorites: new Set(["task/a", "master"]),
+      query: "task",
+    })
+    expect(favorites.map((f) => f.fullName)).toEqual(["task/a"])
+  })
+
   it("filters leaves by a case-insensitive query", () => {
     const { local } = fns().buildTrees({
       branches: [fakeBranch("feature/login"), fakeBranch("hotfix/crash")],
