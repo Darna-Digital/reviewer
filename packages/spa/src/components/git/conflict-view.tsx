@@ -180,7 +180,7 @@ export function ConflictView({
 
       {/* The scroll container stays mounted across re-keys of the inner
           UnresolvedFile, so scroll position survives each accept. */}
-      <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
+      <ScrollArea className="min-h-0 flex-1">
         <UnresolvedFile
           key={remaining}
           file={{ name: path, contents: result }}
