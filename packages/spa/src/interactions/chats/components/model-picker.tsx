@@ -1,8 +1,8 @@
 /**
  * The composer's model picker — a popover with a provider rail on the left
- * (favorites first), a search box, and the model list with ⌘1–9 shortcuts and
- * star toggles (t3code's ProviderModelPicker, sized down to our catalog).
- * Favorites persist in ui-prefs.
+ * (favorites first), a search box, and the model list with star toggles
+ * (t3code's ProviderModelPicker, sized down to our catalog). Favorites persist
+ * in ui-prefs.
  */
 import {
   IconChevronDown,
@@ -10,7 +10,7 @@ import {
   IconStar,
   IconStarFilled,
 } from "@tabler/icons-react"
-import { Fragment, useEffect, useMemo, useState } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -92,23 +92,6 @@ export function ModelPicker({
     onSelect(m.id, m.provider)
     setOpen(false)
   }
-
-  // ⌘1–9 (or Ctrl on non-mac) picks the nth visible model while open.
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return
-      const n = Number(e.key)
-      if (!Number.isInteger(n) || n < 1 || n > 9) return
-      const m = visible[n - 1]
-      if (m !== undefined) {
-        e.preventDefault()
-        pick(m)
-      }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  })
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -228,11 +211,6 @@ export function ModelPicker({
                           {m.providerLabel}
                         </div>
                       </div>
-                      {index < 9 && (
-                        <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
-                          ⌘{index + 1}
-                        </span>
-                      )}
                       <button
                         type="button"
                         aria-label={starred ? "Unstar model" : "Star model"}
