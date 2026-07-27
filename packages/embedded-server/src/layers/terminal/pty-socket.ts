@@ -1,8 +1,8 @@
 /**
  * Live terminal sessions over WebSocket. Each connection to `/api/threads/pty`
  * spawns a real PTY (node-pty) running the thread's program — the login shell for
- * a plain terminal, or an agent CLI (Claude Code / opencode / Codex) in its
- * normal interactive mode — scoped to the currently selected repository. This is
+ * a plain terminal, or an agent CLI (Claude Code / opencode / Codex / Cursor) in
+ * its normal interactive mode — scoped to the currently selected repository. This is
  * the byconvo (web) equivalent of embedding a terminal like libghostty: the
  * frontend renders an xterm.js terminal and streams bytes both ways.
  *
@@ -35,7 +35,11 @@ import type { Duplex } from "node:stream"
 import type { IPty } from "@lydell/node-pty"
 import type * as NodePtyModule from "@lydell/node-pty"
 import { WebSocketServer, type WebSocket } from "ws"
-import { AGENT_KINDS, type AgentKind } from "@byconvo/core/threads"
+import {
+  AGENT_KINDS,
+  agentSessionOrigin,
+  type AgentKind,
+} from "@byconvo/core/threads"
 import {
   agentPtyProgram,
   agentSessionArgs,
@@ -43,7 +47,12 @@ import {
 } from "./agent-pty.ts"
 import { CHAT_STREAM_PATH, startChatStream } from "../chats/chat-runtime.ts"
 import { getCurrentRepo } from "../workspace/current-repo.ts"
-import { recentAgentSessions } from "./agent-session-capture.ts"
+import {
+  recentAgentSessions,
+  writesDiscoverableSessions,
+  type DiscoverableAgent,
+} from "./agent-session-capture.ts"
+import { mintCursorChatId } from "./cursor-chat.ts"
 import { DEV_PTY_PATH, startDevSession } from "./dev-process-manager.ts"
 
 const PTY_PATH = "/api/threads/pty"
@@ -340,7 +349,7 @@ const CAPTURE_MAX_MS = 30 * 60_000
 
 const startSessionCapture = (
   session: PtySession,
-  agent: "opencode" | "codex",
+  agent: DiscoverableAgent,
   cwd: string,
   id: string
 ): void => {
@@ -473,7 +482,12 @@ const attachClient = (
   })
 }
 
-const startSession = (ws: WebSocket, request: IncomingMessage) => {
+/**
+ * Async only because a minted id can take a round-trip to obtain (cursor). The
+ * function still runs straight through without suspending for every other
+ * agent, and for a re-attach it returns before reaching any await at all.
+ */
+const startSession = async (ws: WebSocket, request: IncomingMessage) => {
   const url = new URL(request.url ?? "", "http://localhost")
   const id = url.searchParams.get("id")
   const agent = parseAgent(url.searchParams.get("agent"))
@@ -502,20 +516,40 @@ const startSession = (ws: WebSocket, request: IncomingMessage) => {
   // dying (server restart / app reopen). We only reach here on a fresh spawn —
   // a live re-attach returned above.
   let sessionArgs = ""
-  let captureAgent: "opencode" | "codex" | null = null
+  let captureAgent: DiscoverableAgent | null = null
   if (id !== null && id.length > 0 && agent !== "terminal") {
     const stored = readThreadAgentSessionId(cwd, id)
     if (stored !== null) {
       // Resume the session we already know about.
       sessionArgs = agentSessionArgs(agent, { sessionId: stored, resume: true })
-    } else if (agent === "claude") {
-      // Claude lets us choose the id: create it now, persist it, resume later.
-      const uuid = randomUUID()
-      sessionArgs = agentSessionArgs(agent, { sessionId: uuid, resume: false })
-      patchThread(cwd, id, { agentSessionId: uuid })
-    } else {
+    } else if (agentSessionOrigin(agent) === "minted") {
+      // The id is ours before the agent starts: settle it now and persist it,
+      // so this thread is resumable from its very first launch. Claude takes
+      // any id we choose; cursor has to be asked for one (cursor-chat.ts).
+      const minted =
+        agent === "cursor" ? await mintCursorChatId(cwd) : randomUUID()
+      if (minted !== null) {
+        sessionArgs = agentSessionArgs(agent, {
+          sessionId: minted,
+          resume: false,
+        })
+        patchThread(cwd, id, { agentSessionId: minted })
+      }
+    } else if (writesDiscoverableSessions(agent)) {
       // opencode/codex mint their own id — start fresh, capture it afterwards.
       captureAgent = agent
+    }
+  }
+
+  // Minting can take a moment, and the world may have moved on: the user closed
+  // the terminal, or a second socket for this thread got there first. Either
+  // way, spawning now would leave an orphaned PTY behind.
+  if (ws.readyState !== ws.OPEN) return
+  if (id !== null && id.length > 0) {
+    const raced = sessions.get(id)
+    if (raced !== undefined && !raced.exited) {
+      attachClient(raced, ws, cols, rows)
+      return
     }
   }
   // Pin Claude Code's UI theme to the terminal's, so it never renders its
@@ -697,9 +731,23 @@ export const attachPtyServer = (server: Server): void => {
   const dispatcher: UpgradeListener = (request, socket, head) => {
     const { pathname } = new URL(request.url ?? "", "http://localhost")
     if (pathname === PTY_PATH) {
-      wss.handleUpgrade(request, socket, head, (ws) =>
-        startSession(ws, request)
-      )
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        // startSession settles its own failures into an `{error}` frame; this
+        // catch is for the unexpected, so a throw can't become an unhandled
+        // rejection that takes the server down.
+        startSession(ws, request).catch((error: unknown) => {
+          send(ws, {
+            error: `could not start the terminal session (${
+              error instanceof Error ? error.message : String(error)
+            })`,
+          })
+          try {
+            ws.close()
+          } catch {
+            // already closed
+          }
+        })
+      })
       return
     }
     // Local Dev processes share the same upgrade dispatcher; they attach to a

@@ -10,7 +10,7 @@ import {
   IconStar,
   IconStarFilled,
 } from "@tabler/icons-react"
-import { useMemo, useState } from "react"
+import { Fragment, useMemo, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -47,19 +47,22 @@ export function ModelPicker({
   const allModels = useMemo(() => catalogModels(catalog), [catalog])
   const current = allModels.find((m) => m.id === model)
 
+  const onFavorites = rail === FAVORITES_RAIL
+  const railLabel = catalog?.providers.find((p) => p.id === rail)?.label
   const visible = useMemo(() => {
-    const inRail =
-      rail === FAVORITES_RAIL
-        ? allModels.filter((m) => favorites.includes(m.id))
-        : allModels.filter((m) => m.provider === rail)
+    const inRail = onFavorites
+      ? allModels.filter((m) => favorites.includes(m.id))
+      : allModels.filter((m) => m.provider === rail)
     // An empty favorites rail falls back to everything, so the picker never
-    // opens onto a blank list.
-    const base = inRail.length > 0 ? inRail : allModels
+    // opens onto a blank list. A provider rail must not: its models are
+    // whatever that agent's CLI reported, and showing another agent's models
+    // under it would offer a model this provider can't run.
+    const base = onFavorites && inRail.length === 0 ? allModels : inRail
     const query = search.trim().toLowerCase()
     return query.length === 0
       ? base
       : base.filter((m) => m.label.toLowerCase().includes(query))
-  }, [allModels, favorites, rail, search])
+  }, [allModels, favorites, onFavorites, rail, search])
 
   const toggleFavorite = (id: string) => {
     setUiPrefs({
@@ -148,58 +151,74 @@ export function ModelPicker({
             >
               {visible.length === 0 && (
                 <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-                  No models match.
+                  {search.trim().length > 0
+                    ? "No models match."
+                    : onFavorites
+                      ? "No models available."
+                      : // Models are read from each agent's own CLI, so an
+                        // empty provider means that CLI didn't answer.
+                        `No models reported by ${railLabel ?? "this agent"} — is its CLI installed?`}
                 </p>
               )}
-              {visible.map((m) => {
+              {visible.map((m, index) => {
                 const starred = favorites.includes(m.id)
+                // An agent that brokers other vendors' models (opencode) sends
+                // them grouped; head each run so a long rail stays readable.
+                const startsGroup =
+                  m.group !== undefined && m.group !== visible[index - 1]?.group
                 return (
-                  <TruncatedRow
-                    key={m.id}
-                    render={
-                      <div
-                        className={cn(
-                          "group/model flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted",
-                          m.id === model && "bg-muted/60"
-                        )}
-                        onClick={() => pick(m)}
-                      />
-                    }
-                  >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5 text-sm font-medium">
-                        <span className="truncate">{m.label}</span>
-                        {m.id === model && (
-                          <span className="text-primary">✓</span>
-                        )}
+                  <Fragment key={`${m.provider}:${m.id}`}>
+                    {startsGroup && (
+                      <div className="px-2 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                        {m.group}
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <ProviderIcon
-                          provider={m.provider}
-                          className="size-3"
+                    )}
+                    <TruncatedRow
+                      render={
+                        <div
+                          className={cn(
+                            "group/model flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted",
+                            m.id === model && "bg-muted/60"
+                          )}
+                          onClick={() => pick(m)}
                         />
-                        {m.providerLabel}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      aria-label={starred ? "Unstar model" : "Star model"}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleFavorite(m.id)
-                      }}
-                      className={cn(
-                        "text-muted-foreground opacity-0 transition-opacity group-hover/model:opacity-100 hover:text-foreground",
-                        starred && "opacity-100"
-                      )}
+                      }
                     >
-                      {starred ? (
-                        <IconStarFilled className="size-3.5 text-amber-400" />
-                      ) : (
-                        <IconStar className="size-3.5" />
-                      )}
-                    </button>
-                  </TruncatedRow>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 text-sm font-medium">
+                          <span className="truncate">{m.label}</span>
+                          {m.id === model && (
+                            <span className="text-primary">✓</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <ProviderIcon
+                            provider={m.provider}
+                            className="size-3"
+                          />
+                          {m.providerLabel}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={starred ? "Unstar model" : "Star model"}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          toggleFavorite(m.id)
+                        }}
+                        className={cn(
+                          "text-muted-foreground opacity-0 transition-opacity group-hover/model:opacity-100 hover:text-foreground",
+                          starred && "opacity-100"
+                        )}
+                      >
+                        {starred ? (
+                          <IconStarFilled className="size-3.5 text-amber-400" />
+                        ) : (
+                          <IconStar className="size-3.5" />
+                        )}
+                      </button>
+                    </TruncatedRow>
+                  </Fragment>
                 )
               })}
             </ScrollArea>

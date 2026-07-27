@@ -5,6 +5,8 @@ export interface CatalogModel {
   readonly label: string
   readonly provider: ChatProviderKind
   readonly providerLabel: string
+  /** The upstream vendor, for agents that broker other people's models. */
+  readonly group: string | undefined
 }
 
 export const catalogModels = (
@@ -16,6 +18,7 @@ export const catalogModels = (
       label: model.label,
       provider: provider.id,
       providerLabel: provider.label,
+      group: model.group,
     }))
   )
 

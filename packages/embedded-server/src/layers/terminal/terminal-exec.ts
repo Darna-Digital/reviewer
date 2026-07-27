@@ -11,8 +11,8 @@
  * an IDE) is launchd's minimal PATH — missing `~/.local/bin`, version managers,
  * Homebrew, `~/.bun/bin`, etc. — so an agent CLI installed there isn't found.
  * Sourcing the startup files gives the command the exact PATH the developer sees
- * in their terminal, which is what makes `claude`/`opencode`/`codex` reliable
- * here. (This mirrors how the live PTY terminals launch their programs.)
+ * in their terminal, which is what makes `claude`/`opencode`/`codex`/
+ * `cursor-agent` reliable here. (This mirrors how the live PTY terminals launch their programs.)
  *
  * A command that exits non-zero is NOT a failure — its exit code and stderr are
  * captured in the result so the caller can show them. Only a genuine spawn/IO

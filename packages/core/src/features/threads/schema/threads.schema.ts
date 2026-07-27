@@ -5,6 +5,7 @@ export const AgentKind = Schema.Literals([
   "claude",
   "opencode",
   "codex",
+  "cursor",
 ])
 export type AgentKind = typeof AgentKind.Type
 export const ThreadEntry = Schema.Struct({
