@@ -1,14 +1,10 @@
 /**
- * GitBottomDock — the self-contained bottom dock (Branches / History / Services
- * / Threads) that docks at the bottom of the workspace pages, mirroring the one
- * AppShell embeds in the git-review shell. It owns its own queries, log ref and
- * filter state, and resize height so it can be dropped into any shell; branch
- * and commit selections navigate into the git-review routes.
+ * The bottom dock for the workspace pages, mirroring the one AppShell embeds in
+ * the git-review shell. It owns its queries, log ref, filters and height so it
+ * drops into any shell; selections navigate into the git-review routes, and
+ * `ui-prefs` keeps visibility, height and tab in step with AppShell's copy.
  *
- * Visibility, height, and the selected tab are shared with AppShell through
- * `ui-prefs`, so toggling the bottom panel is consistent across every page
- * reachable from the mode rail. The dock stays mounted (hidden) when collapsed
- * so Services/Threads PTY sessions survive.
+ * It stays mounted while collapsed so Services/Threads keep their PTYs.
  */
 import { useNavigate, useParams } from "@tanstack/react-router"
 import { useState } from "react"

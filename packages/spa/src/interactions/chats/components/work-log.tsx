@@ -1,12 +1,7 @@
 /**
  * A turn's work log: one row per tool call or thinking block, each expandable
- * to the arguments it was given and the output it returned.
- *
- * Shape borrowed from fluidfunctionalism.com/docs/thinking-steps — a connector
- * line down the icon column, a shimmering label on the step in flight, and a
- * collapsible panel. The log opens itself while the turn runs (that is when the
- * detail is worth watching) and collapses to a one-line summary once it settles,
- * unless the reader has said otherwise by toggling it.
+ * to its arguments and output. Shape borrowed from
+ * fluidfunctionalism.com/docs/thinking-steps.
  */
 import {
   IconAlertCircle,
@@ -175,10 +170,9 @@ export function WorkLog({
   readonly steps: ReadonlyArray<WorkStep>
   readonly running: boolean
 }) {
-  // null = follow the turn (open while it runs); a boolean is the reader's own
-  // choice, which then sticks across the turn settling.
-  const [override, setOverride] = useState<boolean | null>(null)
-  const open = override ?? running
+  const [readerChoice, setReaderChoice] = useState<boolean | null>(null)
+  const followTheTurn = readerChoice === null
+  const open = followTheTurn ? running : readerChoice
 
   const failures = steps.filter((s) => s.status === "failed").length
   const elapsed = elapsedMs(steps)
@@ -194,7 +188,7 @@ export function WorkLog({
     <div className="mb-2">
       <button
         type="button"
-        onClick={() => setOverride(!open)}
+        onClick={() => setReaderChoice(!open)}
         aria-expanded={open}
         className="group flex cursor-pointer items-center gap-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >

@@ -59,11 +59,61 @@ interface MutableStep {
   callId: string | undefined
 }
 
+const isFailure = (activity: ChatActivity): boolean =>
+  activity.kind === "tool.failed" || activity.tone === "error"
+
+const alreadySettledOnArrival = (activity: ChatActivity): boolean =>
+  !OPENING_KINDS.has(activity.kind)
+
+const asAlreadyClosedStep = (activity: ChatActivity): MutableStep => ({
+  callId: activity.callId,
+  step: {
+    id: activity.id,
+    label: labelFrom(activity),
+    summary: activity.summary,
+    detail: detailFrom(activity),
+    status: isFailure(activity) ? "failed" : "done",
+    thinking: activity.kind === "thinking.completed",
+    input: null,
+    output: activity.detail,
+    startedAt: activity.createdAt,
+    endedAt: activity.createdAt,
+    durationMs: null,
+  },
+})
+
+const asOpeningStep = (activity: ChatActivity): MutableStep => {
+  const settled = alreadySettledOnArrival(activity)
+  return {
+    callId: activity.callId,
+    step: {
+      id: activity.id,
+      label: labelFrom(activity),
+      summary: activity.summary,
+      detail: detailFrom(activity),
+      status: !settled ? "running" : isFailure(activity) ? "failed" : "done",
+      thinking: activity.kind === "thinking",
+      input: activity.detail,
+      output: null,
+      startedAt: activity.createdAt,
+      endedAt: settled ? activity.createdAt : null,
+      durationMs: null,
+    },
+  }
+}
+
+const closedBy = (open: WorkStep, activity: ChatActivity): WorkStep => ({
+  ...open,
+  status: isFailure(activity) ? "failed" : "done",
+  output: activity.detail,
+  endedAt: activity.createdAt,
+  durationMs: durationBetween(open.startedAt, activity.createdAt),
+})
+
 /**
- * @param turnRunning whether the turn is still live. When it isn't, a step with
- * no closing activity never got one (the agent was killed, or the provider
- * simply doesn't report completions) — it is shown settled rather than left
- * spinning forever.
+ * @param turnRunning when false, a step with no closing activity never got one
+ * (the agent was killed, or the provider doesn't report completions) — it is
+ * shown settled rather than left spinning forever.
  */
 export function toWorkSteps(
   activities: ReadonlyArray<ChatActivity>,
@@ -71,10 +121,9 @@ export function toWorkSteps(
 ): ReadonlyArray<WorkStep> {
   const steps: MutableStep[] = []
 
-  /** The still-open step a closing activity belongs to. Providers that send a
-   * call id (claude, whose tools can overlap) match on it; those that don't
-   * (codex, strictly sequential) close the oldest open id-less step of the
-   * same kind, so a tool completion can never settle a thinking block. */
+  /** Providers that send a call id (claude, whose tools overlap) match on it;
+   * those that don't (codex, strictly sequential) close the oldest open step
+   * of the same kind, so a tool result can never settle a thinking block. */
   const openStepFor = (activity: ChatActivity): MutableStep | undefined => {
     if (activity.callId !== undefined) {
       return steps.find(
@@ -91,63 +140,16 @@ export function toWorkSteps(
   }
 
   for (const activity of activities) {
-    if (CLOSING_KINDS.has(activity.kind)) {
-      const open = openStepFor(activity)
-      const failed =
-        activity.kind === "tool.failed" || activity.tone === "error"
-      if (open === undefined) {
-        // A completion with nothing to close (a reconnect that replayed only
-        // the tail, or a provider that reports the end and not the start).
-        steps.push({
-          callId: activity.callId,
-          step: {
-            id: activity.id,
-            label: labelFrom(activity),
-            summary: activity.summary,
-            detail: detailFrom(activity),
-            status: failed ? "failed" : "done",
-            thinking: activity.kind === "thinking.completed",
-            input: null,
-            output: activity.detail,
-            startedAt: activity.createdAt,
-            endedAt: activity.createdAt,
-            durationMs: null,
-          },
-        })
-        continue
-      }
-      open.step = {
-        ...open.step,
-        status: failed ? "failed" : "done",
-        output: activity.detail,
-        endedAt: activity.createdAt,
-        durationMs: durationBetween(open.step.startedAt, activity.createdAt),
-      }
+    if (!CLOSING_KINDS.has(activity.kind)) {
+      steps.push(asOpeningStep(activity))
       continue
     }
-
-    const opening = OPENING_KINDS.has(activity.kind)
-    steps.push({
-      callId: activity.callId,
-      step: {
-        id: activity.id,
-        label: labelFrom(activity),
-        summary: activity.summary,
-        detail: detailFrom(activity),
-        // A one-off activity (codex's `error`) is already over when it arrives.
-        status: opening
-          ? "running"
-          : activity.tone === "error"
-            ? "failed"
-            : "done",
-        thinking: activity.kind === "thinking",
-        input: activity.detail,
-        output: null,
-        startedAt: activity.createdAt,
-        endedAt: opening ? null : activity.createdAt,
-        durationMs: null,
-      },
-    })
+    const open = openStepFor(activity)
+    if (open === undefined) {
+      steps.push(asAlreadyClosedStep(activity))
+      continue
+    }
+    open.step = closedBy(open.step, activity)
   }
 
   return steps.map(({ step }) =>
