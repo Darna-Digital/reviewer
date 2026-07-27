@@ -7,6 +7,9 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -14,6 +17,9 @@ import { TooltipProvider } from "@/components/ui/tooltip"
 afterEach(cleanup)
 
 const LONG = "task/BMB-207-a-branch-name-far-wider-than-the-menu"
+
+/** Long enough to clear the submenu's hover delay and the tooltip's wait behind it. */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 300))
 
 /** jsdom does no layout, so the label's overflow is declared rather than measured. */
 const clipLabel = () => {
@@ -36,6 +42,27 @@ const openMenu = (label: string) =>
       </DropdownMenu>
     </TooltipProvider>
   )
+
+const openMenuWithSubmenu = (label: string, submenuOpen: boolean) =>
+  render(
+    <TooltipProvider>
+      <DropdownMenu open>
+        <DropdownMenuTrigger>Branch</DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuSub open={submenuOpen}>
+            <DropdownMenuSubTrigger>
+              <span className="label truncate">{label}</span>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuItem>Checkout</DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </TooltipProvider>
+  )
+
+const tooltip = () => document.querySelector('[data-slot="tooltip-content"]')
 
 describe("dropdown item truncation", () => {
   it("keeps the item a menu item, not a bare tooltip trigger", () => {
@@ -64,7 +91,53 @@ describe("dropdown item truncation", () => {
 
     await userEvent.hover(screen.getByRole("menuitem"))
 
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    expect(document.querySelector('[data-slot="tooltip-content"]')).toBeNull()
+    await settle()
+    expect(tooltip()).toBeNull()
+  })
+
+  it("refuses to cover a submenu that is already open", async () => {
+    openMenuWithSubmenu(LONG, true)
+    clipLabel()
+
+    await userEvent.hover(screen.getByRole("menuitem", { expanded: true }))
+
+    await settle()
+    expect(tooltip()).toBeNull()
+  })
+
+  it("still explains a clipped row whose submenu is shut", async () => {
+    openMenuWithSubmenu(LONG, false)
+    clipLabel()
+
+    await userEvent.hover(screen.getByRole("menuitem"))
+
+    await waitFor(() => expect(tooltip()?.textContent).toBe(LONG))
+  })
+
+  it("steps aside when the submenu opens underneath it", async () => {
+    const { rerender } = openMenuWithSubmenu(LONG, false)
+    clipLabel()
+    await userEvent.hover(screen.getByRole("menuitem"))
+    await waitFor(() => expect(tooltip()).not.toBeNull())
+
+    rerender(
+      <TooltipProvider>
+        <DropdownMenu open>
+          <DropdownMenuTrigger>Branch</DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuSub open>
+              <DropdownMenuSubTrigger>
+                <span className="label truncate">{LONG}</span>
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent>
+                <DropdownMenuItem>Checkout</DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TooltipProvider>
+    )
+
+    await waitFor(() => expect(tooltip()).toBeNull())
   })
 })

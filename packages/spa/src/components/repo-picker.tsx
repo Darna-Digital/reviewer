@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
+  ROW_TOOLTIP_PLACEMENT,
   TruncatedText,
   truncatedTooltipClass,
   useClippedText,
@@ -129,8 +130,7 @@ function PathRow({
       </TooltipTrigger>
       {clipped && (
         <TooltipContent
-          side="right"
-          sideOffset={8}
+          {...ROW_TOOLTIP_PLACEMENT}
           className={truncatedTooltipClass}
         >
           {path}

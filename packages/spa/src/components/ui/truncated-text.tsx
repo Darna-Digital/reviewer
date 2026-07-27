@@ -8,13 +8,21 @@ import {
 } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
-type Side = "top" | "right" | "bottom" | "left"
+/**
+ * Row tooltips sit flush against the row they explain, like a submenu opening
+ * off it, but centred on it — the tooltip is taller than a row, so aligning
+ * their top edges leaves it hanging visibly low.
+ */
+export const ROW_TOOLTIP_PLACEMENT = {
+  side: "right",
+  sideOffset: 0,
+  align: "center",
+  alignOffset: 0,
+} as const
 
 interface Props {
   text: string
   className?: string
-  side?: Side
-  sideOffset?: number
 }
 
 export const truncatedTooltipClass =
@@ -54,35 +62,62 @@ export function clippedText(row: HTMLElement): string | null {
 }
 
 /**
+ * Set by a row that owns a popup — a submenu trigger — for as long as it is up.
+ * `data-popup-open` can't be used here: the tooltip stamps that on its own
+ * trigger, so a row would read its own tooltip as the popup to yield to.
+ */
+const EXPANDED = "aria-expanded"
+
+const ownsOpenPopup = (row: Element | null) =>
+  row?.getAttribute(EXPANDED) === "true"
+
+/**
  * Wraps a row in a tooltip that appears only once something inside it is
  * ellipsized, reading the label back off the DOM so rows assembled from
  * arbitrary children — menu items, options, list rows — need not name upfront
  * which of their parts might overflow. The whole row is the trigger, so a
  * clipped label can be read without aiming at the text itself.
+ *
+ * A row that opens a popup of its own never tooltips over it: the tooltip is
+ * refused while the popup is up, and steps aside if the popup opens under it.
  */
 export function TruncatedRow({
   render,
   children,
-  side = "right",
-  sideOffset = 8,
+  delay,
 }: {
   render: React.ReactElement
   children?: React.ReactNode
-  side?: Side
-  sideOffset?: number
+  delay?: number
 }) {
   // `TooltipTrigger` types its ref as a button even when `render` swaps the tag.
   const ref = useRef<HTMLButtonElement>(null)
   const [full, setFull] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
   const measure = () => {
     if (ref.current !== null) setFull(clippedText(ref.current))
   }
 
+  useEffect(() => {
+    const row = ref.current
+    if (!open || row === null) return
+    const yieldToPopup = () => {
+      if (ownsOpenPopup(row)) setOpen(false)
+    }
+    const observer = new MutationObserver(yieldToPopup)
+    observer.observe(row, { attributeFilter: [EXPANDED] })
+    return () => observer.disconnect()
+  }, [open])
+
   return (
-    <Tooltip>
+    <Tooltip
+      open={open}
+      onOpenChange={(next) => setOpen(next && !ownsOpenPopup(ref.current))}
+    >
       <TooltipTrigger
         ref={ref}
         render={render}
+        delay={delay}
         onMouseEnter={measure}
         onFocus={measure}
       >
@@ -90,8 +125,7 @@ export function TruncatedRow({
       </TooltipTrigger>
       {full !== null && (
         <TooltipContent
-          side={side}
-          sideOffset={sideOffset}
+          {...ROW_TOOLTIP_PLACEMENT}
           className={truncatedTooltipClass}
         >
           {full}
@@ -101,12 +135,7 @@ export function TruncatedRow({
   )
 }
 
-export function TruncatedText({
-  text,
-  className,
-  side = "right",
-  sideOffset = 8,
-}: Props) {
+export function TruncatedText({ text, className }: Props) {
   const { ref, clipped, measure } = useClippedText<HTMLSpanElement>(text)
 
   return (
@@ -124,8 +153,7 @@ export function TruncatedText({
       </TooltipTrigger>
       {clipped && (
         <TooltipContent
-          side={side}
-          sideOffset={sideOffset}
+          {...ROW_TOOLTIP_PLACEMENT}
           className={truncatedTooltipClass}
         >
           {text}

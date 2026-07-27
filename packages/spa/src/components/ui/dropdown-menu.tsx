@@ -11,6 +11,9 @@ import {
 import { IconChevronRight, IconCheck } from "@tabler/icons-react"
 import { TruncatedRow } from "@/components/ui/truncated-text"
 
+/** base-ui's `SubmenuTrigger.delay` default. */
+const SUBMENU_HOVER_DELAY = 100
+
 const menuItem =
   "relative flex cursor-default items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-hidden select-none focus:bg-elevate focus:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-muted-foreground"
 
@@ -137,9 +140,11 @@ function DropdownMenuSubTrigger({
   inset?: boolean
 }) {
   return (
-    // The submenu itself covers the space to the right, so the tooltip goes left.
+    // Hovering here opens the submenu after 100ms, and the two must never be up
+    // together; waiting longer than that lets the submenu win outright rather
+    // than flashing a tooltip that the submenu immediately dismisses.
     <TruncatedRow
-      side="left"
+      delay={SUBMENU_HOVER_DELAY + 50}
       render={
         <MenuPrimitive.SubmenuTrigger
           data-slot="dropdown-menu-sub-trigger"
