@@ -55,29 +55,23 @@ describe("lineCount / selectionSummary", () => {
 })
 
 describe("availableActions", () => {
-  it("offers everything a view supports, in a stable order", () => {
-    expect(
-      availableActions({ comment: true, edit: true }).map((a) => a.id)
-    ).toEqual(["comment", "edit"])
+  it("offers what the view supports", () => {
+    expect(availableActions({ comment: true }).map((a) => a.id)).toEqual([
+      "comment",
+    ])
   })
   it("drops what the view cannot do", () => {
-    expect(
-      availableActions({ comment: false, edit: true }).map((a) => a.id)
-    ).toEqual(["edit"])
-    expect(availableActions({ comment: false, edit: false })).toEqual([])
+    expect(availableActions({ comment: false })).toEqual([])
   })
   it("labels each action", () => {
-    const [comment] = availableActions({ comment: true, edit: false })
-    expect(comment).toEqual({ id: "comment", label: "Comment", shortcut: "C" })
+    const [comment] = availableActions({ comment: true })
+    expect(comment).toEqual({ id: "comment", label: "Comment", shortcut: "" })
   })
 })
 
 describe("targetLine", () => {
   it("anchors a comment to the last selected line", () => {
     expect(targetLine("comment", { start: 4, end: 9 })).toBe(9)
-  })
-  it("opens the editor at the first selected line", () => {
-    expect(targetLine("edit", { start: 4, end: 9 })).toBe(4)
   })
 })
 
@@ -88,13 +82,6 @@ describe("run", () => {
       createCodeActionsFunctions(deps).run("comment", { start: 4, end: 9 })
     ).toBe(true)
     expect(calls.comment).toEqual([9])
-    expect(calls.edit).toEqual([])
-  })
-
-  it("opens the editor at the first selected line", () => {
-    const { deps, calls } = mockCodeActionsDependencies()
-    createCodeActionsFunctions(deps).run("edit", { start: 4, end: 9 })
-    expect(calls.edit).toEqual([4])
   })
 
   it("refuses an action the view does not support", () => {

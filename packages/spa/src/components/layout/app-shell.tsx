@@ -46,7 +46,6 @@ import {
   DiffPane,
   type DraftLocation,
 } from "@/interactions/diff/components/diff-pane"
-import { CodeEditor } from "@/components/editor/code-editor"
 import { CodeView } from "@/components/editor/code-view"
 import { ConflictBanner } from "@/components/git/conflict-banner"
 import { ConflictView } from "@/components/git/conflict-view"
@@ -103,7 +102,6 @@ type Search = {
   base?: string
   head?: string
   file?: string
-  edit?: boolean
   path?: string
 }
 
@@ -366,9 +364,8 @@ export function AppShell() {
   // --- navigation helpers ----------------------------------------------------
   const setSearch = (patch: Partial<Search>) =>
     navigate({ to: ".", search: (prev: Search) => ({ ...prev, ...patch }) })
-  const openFile = (path: string, edit: boolean) =>
-    setSearch({ file: path, edit: edit || undefined })
-  const closeFile = () => setSearch({ file: undefined, edit: undefined })
+  const openFile = (path: string) => setSearch({ file: path })
+  const closeFile = () => setSearch({ file: undefined })
 
   // Go-to-definition and find-usages land here: open the file (it may already
   // be the one on screen) and ask the view to reveal the line. The counter lets
@@ -382,12 +379,7 @@ export function AppShell() {
       key: (previous?.key ?? 0) + 1,
     }))
   const openLocation = (path: string, lineNumber: number) => {
-    openFile(path, false)
-    revealLine(lineNumber)
-  }
-  /** The selection bar's Edit action: open the editor on the selected line. */
-  const editAtLine = (path: string, lineNumber: number) => {
-    openFile(path, true)
+    openFile(path)
     revealLine(lineNumber)
   }
 
@@ -399,8 +391,7 @@ export function AppShell() {
   }
 
   // --- conflict resolution ---------------------------------------------------
-  const openConflict = (path: string) =>
-    setSearch({ path, file: undefined, edit: undefined })
+  const openConflict = (path: string) => setSearch({ path, file: undefined })
   const resolveConflictSide = async (path: string, side: "ours" | "theirs") => {
     await git.resolveConflict(path, side)
     if (search.path === path) setSearch({ path: undefined })
@@ -413,7 +404,7 @@ export function AppShell() {
   const onFileSelect = (path: string | null) => {
     if (path === null) return
     if (mode === "browse") {
-      openFile(path, false)
+      openFile(path)
       return
     }
     // Commit mode: a file with no diff hunks isn't in the diff pane — either it
@@ -421,16 +412,14 @@ export function AppShell() {
     // local comments. Open it in the file viewer so its contents and comments
     // are still reachable; files that are in the diff open in the diff pane.
     if (mode === "commit" && !parsedFiles.some((f) => f.name === path)) {
-      setSearch({ file: path, edit: undefined, path })
+      setSearch({ file: path, path })
       return
     }
-    setSearch({ path, file: undefined, edit: undefined })
+    setSearch({ path, file: undefined })
   }
 
-  const editing =
-    search.file !== undefined && search.edit === true ? search.file : null
-  const viewing =
-    search.file !== undefined && search.edit !== true ? search.file : null
+  // One always-editable file view; there is no separate edit mode.
+  const viewing = search.file ?? null
 
   // Local comments anchored to the file currently open in the viewer (worktree
   // target — see CodeView). Threaded into the viewer so browse/commit comments
@@ -461,7 +450,7 @@ export function AppShell() {
         },
       ]
     }
-    const openPath = editing ?? viewing
+    const openPath = viewing
     const list: Crumb[] = []
     if (mode === "commit") {
       list.push({
@@ -732,24 +721,13 @@ export function AppShell() {
         />
       )
     }
-    if (editing !== null) {
-      return (
-        <CodeEditor
-          path={editing}
-          theme={prefs.resolvedTheme}
-          onClose={closeFile}
-          onSaved={git.refresh}
-          reveal={reveal}
-        />
-      )
-    }
     if (viewing !== null) {
       return (
         <CodeView
           path={viewing}
           theme={prefs.resolvedTheme}
-          onEdit={editAtLine}
           onClose={closeFile}
+          onSaved={git.refresh}
           onShowHistory={showFileHistory}
           onOpenLocation={openLocation}
           reveal={reveal}
@@ -776,7 +754,7 @@ export function AppShell() {
           onResolve={(merged) =>
             void resolveConflictContent(search.path!, merged)
           }
-          onEdit={(p) => openFile(p, true)}
+          onEdit={(p) => openFile(p)}
           onClose={() => setSearch({ path: undefined })}
         />
       )
@@ -809,7 +787,7 @@ export function AppShell() {
         selectedFile={search.path ?? null}
         onDraftOpen={setDraft}
         onDraftCancel={() => setDraft(null)}
-        onEditFile={(p) => openFile(p, true)}
+        onEditFile={(p) => openFile(p)}
         onShowFileHistory={showFileHistory}
         onDiscardFile={
           mode === "commit" ? (p) => void git.discard([p]) : undefined
@@ -856,7 +834,7 @@ export function AppShell() {
           onOpenChange={setCommandOpen}
           commands={commands}
           files={allPaths}
-          onOpenFile={(path) => openFile(path, false)}
+          onOpenFile={(path) => openFile(path)}
         />
         {visibleComments.length > 0 && !assignBarDismissed && (
           <ReviewAssignBar
@@ -875,9 +853,7 @@ export function AppShell() {
             remoteBranches={remoteBranches.data ?? []}
             crumbs={buildCrumbs()}
             diffStyle={prefs.diffStyle}
-            showDiffStyleToggle={
-              editing === null && viewing === null && target !== null
-            }
+            showDiffStyleToggle={viewing === null && target !== null}
             busy={false}
             pickerOpen={pickerOpen}
             onPickerOpenChange={setPickerOpen}
@@ -969,9 +945,7 @@ export function AppShell() {
                         mode === "review" ? diff.isPending : files.isPending
                       }
                       selectedFile={
-                        mode === "browse"
-                          ? (viewing ?? editing)
-                          : (search.path ?? null)
+                        mode === "browse" ? viewing : (search.path ?? null)
                       }
                       onFileSelect={onFileSelect}
                       onDeletePath={mode === "review" ? undefined : deletePath}
@@ -1056,7 +1030,7 @@ export function AppShell() {
                 selectedCommitSha={
                   browse?.kind === "commit" ? browse.sha : null
                 }
-                selectedCommitFile={viewing ?? editing}
+                selectedCommitFile={viewing}
                 onLoadMoreCommits={log.loadMore}
                 onLogRefChange={setLogRef}
                 onLogFiltersChange={setLogFilters}
@@ -1072,11 +1046,10 @@ export function AppShell() {
                       ...prev,
                       path: logFilters.path ?? undefined,
                       file: undefined,
-                      edit: undefined,
                     }),
                   })
                 }
-                onSelectCommitFile={(p) => openFile(p, false)}
+                onSelectCommitFile={(p) => openFile(p)}
               />
             </div>
           </div>

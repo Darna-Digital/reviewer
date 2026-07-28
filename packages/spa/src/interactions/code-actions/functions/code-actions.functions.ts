@@ -10,8 +10,9 @@ import type {
 
 /** Every action the bar knows about, in the order it shows them. */
 const CATALOG: ReadonlyArray<CodeAction> = [
-  { id: "comment", label: "Comment", shortcut: "C" },
-  { id: "edit", label: "Edit", shortcut: "E" },
+  // No bare-letter shortcut: the view is always editable, so a lone "C" would
+  // type a character rather than open a comment.
+  { id: "comment", label: "Comment", shortcut: "" },
 ]
 
 /**
@@ -51,13 +52,11 @@ export const availableActions = (
   CATALOG.filter((action) => capabilities[action.id])
 
 /**
- * The line an action applies to. A comment anchors to the last selected line —
- * the same line the gutter `+` used to anchor to, so existing comments keep
- * lining up — while editing jumps to the first, which is what you were looking
- * at when you selected.
+ * The line an action applies to: the last selected one, which is where the
+ * gutter `+` used to anchor, so existing comments keep lining up.
  */
-export const targetLine = (id: CodeActionId, range: LineRange): number =>
-  id === "comment" ? range.end : range.start
+export const targetLine = (_id: CodeActionId, range: LineRange): number =>
+  range.end
 
 export function createCodeActionsFunctions(
   d: CodeActionsDependencies
@@ -67,9 +66,7 @@ export function createCodeActionsFunctions(
 
   const run: CodeActionsFunctions["run"] = (id, range) => {
     if (!d.data.capabilities[id]) return false
-    const line = targetLine(id, range)
-    if (id === "comment") d.sideEffects.comment(line)
-    else d.sideEffects.edit(line)
+    d.sideEffects.comment(targetLine(id, range))
     return true
   }
 
