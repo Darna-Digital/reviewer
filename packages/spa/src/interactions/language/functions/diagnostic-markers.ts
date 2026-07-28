@@ -14,6 +14,7 @@
  */
 import type { Diagnostic } from "@byconvo/core/language"
 import type { TokenSpan } from "../interfaces/language.interfaces"
+import { codeRootOf } from "./code-root"
 import { markerForToken } from "./language.functions"
 
 /** Marks the element as carrying a diagnostic of this severity. */
@@ -31,7 +32,9 @@ const parseIndex = (value: string | null): number | null => {
 
 /** Remove every mark this module applied, leaving the DOM as it was found. */
 export const clearDiagnosticMarks = (container: HTMLElement): void => {
-  for (const element of container.querySelectorAll(MARKED_SELECTOR)) {
+  for (const element of codeRootOf(container).querySelectorAll(
+    MARKED_SELECTOR
+  )) {
     element.removeAttribute(SEVERITY_ATTRIBUTE)
     element.removeAttribute(TAG_ATTRIBUTE)
     element.removeAttribute("title")
@@ -65,7 +68,10 @@ export const paintDiagnostics = (
   }
 
   let marked = 0
-  for (const lineElement of container.querySelectorAll("[data-line]")) {
+  // The lines are inside the view's shadow root, not under the host element the
+  // render callback hands back.
+  const root = codeRootOf(container)
+  for (const lineElement of root.querySelectorAll("[data-line]")) {
     const lineNumber = parseIndex(lineElement.getAttribute("data-line"))
     if (lineNumber === null) continue
     const lineDiagnostics = byLine.get(lineNumber)

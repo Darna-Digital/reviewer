@@ -14,6 +14,16 @@ import type {
 } from "@byconvo/core/language"
 import { cn } from "@/lib/utils"
 
+/** `src/a/b.ts` -> `src/a/`, so the name can be kept while the path clips. */
+const directoryOf = (path: string) => {
+  const cut = path.lastIndexOf("/")
+  return cut === -1 ? "" : path.slice(0, cut + 1)
+}
+const basenameOf = (path: string) => {
+  const cut = path.lastIndexOf("/")
+  return cut === -1 ? path : path.slice(cut + 1)
+}
+
 const REFERENCE_KIND_LABEL = {
   definition: "declaration",
   write: "write",
@@ -39,9 +49,15 @@ function LocationRow({
         className="flex w-full items-baseline gap-2 rounded px-2 py-1 text-left text-xs hover:bg-muted"
         onClick={() => onOpen(location)}
       >
-        {/* Paths are repository-relative already, so they read as written. */}
-        <span className="max-w-[14rem] shrink-0 truncate text-muted-foreground">
-          {location.path}:{location.range.start.line + 1}
+        {/* The file name carries the information, so the directory is what
+            gets clipped — truncating from the right would hide the name. */}
+        <span className="flex max-w-[16rem] min-w-0 shrink-0 items-baseline text-muted-foreground">
+          <span className="min-w-0 truncate text-right" dir="rtl">
+            {directoryOf(location.path)}
+          </span>
+          <span className="shrink-0 text-foreground">
+            {basenameOf(location.path)}:{location.range.start.line + 1}
+          </span>
         </span>
         <span className="min-w-0 flex-1 truncate font-mono text-foreground">
           {preview}

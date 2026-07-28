@@ -10,6 +10,7 @@
  * usually not rendered yet, so an estimate gets the virtualiser to build it.
  */
 import { useEffect } from "react"
+import { queryInCode } from "../functions/code-root"
 import {
   estimateScrollTop,
   scrollTopForElement,
@@ -48,12 +49,9 @@ export function useRevealLine(
     const startedAt = performance.now()
     const cleanups: Array<() => void> = []
 
-    const lineElement = () => {
-      const element = container.querySelector(
-        `[data-line="${CSS.escape(String(line))}"]`
-      )
-      return element instanceof HTMLElement ? element : null
-    }
+    // The scroller holds the view hosts; the lines live in their shadow roots.
+    const lineElement = () =>
+      queryInCode(container, `[data-line="${CSS.escape(String(line))}"]`)
 
     const stop = () => {
       if (!active) return

@@ -174,6 +174,42 @@ describe("paintDiagnostics", () => {
   })
 })
 
+describe("paintDiagnostics across the shadow boundary", () => {
+  /**
+   * The container `onPostRender` hands back is the `<diffs-container>` host,
+   * not its shadow root — painting the host directly finds no lines at all.
+   */
+  const shadowed = () => {
+    const host = document.createElement("diffs-container")
+    // The custom element registered by `@pierre/diffs` already has one.
+    const shadow = host.shadowRoot ?? host.attachShadow({ mode: "open" })
+    shadow.append(...render(DOC).childNodes)
+    return host
+  }
+
+  it("marks tokens rendered inside the view's shadow root", () => {
+    const host = shadowed()
+    expect(host.querySelectorAll("[data-line]")).toHaveLength(0)
+    expect(
+      paintDiagnostics(host, [
+        diagnostic({ range: range(0, 6, 0, 11), severity: "error" }),
+      ])
+    ).toBe(1)
+    expect(
+      host.shadowRoot!.querySelector(`[${SEVERITY_ATTRIBUTE}]`)?.textContent
+    ).toBe("wrong")
+  })
+
+  it("clears marks inside the shadow root too", () => {
+    const host = shadowed()
+    paintDiagnostics(host, [diagnostic({ range: range(0, 6, 0, 11) })])
+    clearDiagnosticMarks(host)
+    expect(
+      host.shadowRoot!.querySelectorAll(`[${SEVERITY_ATTRIBUTE}]`)
+    ).toHaveLength(0)
+  })
+})
+
 describe("clearDiagnosticMarks", () => {
   it("restores the container it was given", () => {
     const container = render(DOC)

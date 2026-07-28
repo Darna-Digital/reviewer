@@ -36,6 +36,11 @@ const poolOptions: WorkerPoolOptions = {
 // file type, so this is a warm-up list, not a limit.
 const highlighterOptions: WorkerInitializationRenderOptions = {
   theme: THEMES,
+  // Wrap every token in its own element carrying its column. `File` derives
+  // this from its own token handlers, but a worker-rendered view cannot see
+  // them — the pool owns the render options — so the language layer's token
+  // hooks and diagnostic underlines only work if it is set here.
+  useTokenTransformer: true,
   langs: [
     "typescript",
     "tsx",

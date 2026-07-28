@@ -18,6 +18,7 @@ import {
   useLanguageActions,
 } from "../adapters/language.hook.adapter"
 import { paintDiagnostics } from "../functions/diagnostic-markers"
+import { DIAGNOSTIC_CSS } from "../functions/diagnostic-styles"
 import {
   countDiagnostics,
   groupDiagnosticsByLine,
@@ -92,6 +93,7 @@ export interface LanguageLayer {
   /** Spread into the view's `options`. */
   readonly viewOptions: {
     readonly useTokenTransformer: boolean
+    readonly unsafeCSS: string
     readonly onPostRender: (
       node: HTMLElement,
       instance: unknown,
@@ -302,6 +304,8 @@ export function useLanguageLayer({
     annotations,
     viewOptions: {
       useTokenTransformer: true,
+      // The code lives in a shadow root, so the app stylesheet cannot mark it.
+      unsafeCSS: DIAGNOSTIC_CSS,
       onPostRender,
       onTokenEnter,
       onTokenLeave,
