@@ -8,6 +8,7 @@ import { RepoService } from "./repo.service.ts"
 const baseQuery: LogQuery = {
   ref: "HEAD",
   limit: 50,
+  skip: 0,
   author: null,
   grep: null,
   regex: false,
@@ -15,6 +16,7 @@ const baseQuery: LogQuery = {
   after: null,
   before: null,
   path: null,
+  follow: false,
 }
 const commit = (sha: string): CommitInfo => ({
   sha,

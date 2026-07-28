@@ -11,6 +11,7 @@ import {
   IconArrowBackUp,
   IconArrowsMaximize,
   IconArrowsMinimize,
+  IconHistory,
 } from "@tabler/icons-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
@@ -59,6 +60,8 @@ interface DiffPaneProps {
   onDraftOpen: (draft: DraftLocation) => void
   onDraftCancel: () => void
   onEditFile: (path: string) => void
+  /** Open a file's commit history in the bottom dock. */
+  onShowFileHistory?: (path: string) => void
   /** Discard a file's worktree changes (revert to HEAD). Only wired in commit
    * mode, where the diff is the working tree; absent means no discard control. */
   onDiscardFile?: (path: string) => void
@@ -152,6 +155,7 @@ interface FileDiffSectionProps {
   onDraftOpen: (draft: DraftLocation) => void
   onDraftCancel: () => void
   onEditFile: (path: string) => void
+  onShowFileHistory?: (path: string) => void
   onDiscardFile?: (path: string) => void
   onDiscardHunk?: (path: string, hunkIndex: number) => void
   onCommentSubmit: (location: DraftLocation, body: string) => Promise<void>
@@ -173,6 +177,7 @@ function FileDiffSection({
   onDraftOpen,
   onDraftCancel,
   onEditFile,
+  onShowFileHistory,
   onDiscardFile,
   onDiscardHunk,
   onCommentSubmit,
@@ -270,6 +275,18 @@ function FileDiffSection({
                 Discard
               </Button>
             )}
+            {onShowFileHistory !== undefined && (
+              <Button
+                variant="ghost"
+                size="xs"
+                className="gap-1 text-muted-foreground"
+                title={`Show the commit history of ${meta.name}`}
+                onClick={() => onShowFileHistory(meta.name)}
+              >
+                <IconHistory className="size-3.5" />
+                History
+              </Button>
+            )}
             {meta.type !== "deleted" && (
               <Button
                 variant="ghost"
@@ -365,6 +382,7 @@ export function DiffPane({
   onDraftOpen,
   onDraftCancel,
   onEditFile,
+  onShowFileHistory,
   onDiscardFile,
   onDiscardHunk,
   onCommentSubmit,
@@ -642,6 +660,7 @@ export function DiffPane({
             onDraftOpen={onDraftOpen}
             onDraftCancel={onDraftCancel}
             onEditFile={onEditFile}
+            onShowFileHistory={onShowFileHistory}
             onDiscardFile={onDiscardFile}
             onDiscardHunk={onDiscardHunk}
             onCommentSubmit={onCommentSubmit}

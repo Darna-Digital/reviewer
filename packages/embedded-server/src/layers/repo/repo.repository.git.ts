@@ -7,6 +7,7 @@ import * as Effect from "effect/Effect"
 import * as FileSystem from "effect/FileSystem"
 import { GitError } from "@byconvo/core/ports/git-exec"
 import { GitExec, type GitFailure } from "../git/git-exec.ts"
+import { ALL_REFS } from "@byconvo/core/repo"
 import type {
   BranchInfo,
   CommitDetail,
@@ -381,6 +382,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
         `--max-count=${query.limit}`,
         `--format=${logFormat}`,
       ]
+      if (query.skip > 0) args.push(`--skip=${query.skip}`)
       if (query.author !== null) args.push(`--author=${query.author}`)
       if (query.grep !== null) {
         args.push(`--grep=${query.grep}`)
@@ -389,8 +391,13 @@ export const makeGitRepoRepository = Effect.gen(function* () {
       }
       if (query.after !== null) args.push(`--after=${query.after}`)
       if (query.before !== null) args.push(`--before=${query.before}`)
-      args.push(query.ref, "--")
-      if (query.path !== null && query.path.length > 0) args.push(query.path)
+      const path = query.path !== null && query.path.length > 0 ? query.path : null
+      // `--follow` walks a single file through its renames, but it only works
+      // against one starting ref — git rejects it alongside `--all`.
+      const follow = path !== null && query.follow && query.ref !== ALL_REFS
+      if (follow) args.push("--follow")
+      args.push(query.ref === ALL_REFS ? "--all" : query.ref, "--")
+      if (path !== null) args.push(path)
       return lines(...args)
     }).pipe(
       Effect.map((logLines) =>
@@ -435,17 +442,6 @@ export const makeGitRepoRepository = Effect.gen(function* () {
         "--name-status",
         sha
       )
-      const branchLines = yield* lines(
-        "branch",
-        "-a",
-        "--contains",
-        sha,
-        "--format=%(refname:short)"
-      ).pipe(
-        Effect.catchTag("GitError", () =>
-          Effect.succeed<ReadonlyArray<string>>([])
-        )
-      )
       return {
         sha: (full ?? sha).trim(),
         shortSha: (short ?? "").trim(),
@@ -459,9 +455,6 @@ export const makeGitRepoRepository = Effect.gen(function* () {
         files: fileLines
           .map(parseNameStatus)
           .filter((e): e is CommitFileChange => e !== null),
-        containingBranches: branchLines.filter(
-          (b) => b.length > 0 && !b.startsWith("(")
-        ),
       }
     })
 

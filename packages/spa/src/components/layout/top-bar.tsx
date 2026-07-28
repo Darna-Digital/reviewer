@@ -1,4 +1,5 @@
 import { BranchSwitcher } from "@/components/layout/branch-switcher"
+import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs"
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle"
 import { RepoPicker } from "@/components/repo-picker"
 import { cn } from "@/lib/utils"
@@ -12,7 +13,8 @@ interface TopBarProps {
   workspace: WorkspaceInfo | undefined
   branches: ReadonlyArray<BranchInfo>
   remoteBranches: ReadonlyArray<RemoteBranchInfo>
-  contextLabel: string
+  /** Where the open content sits: mode → ref/pull → commit → file. */
+  crumbs: ReadonlyArray<Crumb>
   diffStyle: DiffStyle
   showDiffStyleToggle: boolean
   busy: boolean
@@ -84,6 +86,12 @@ export function TopBar(props: TopBarProps) {
             onRenameBranch={props.onRenameBranch}
             onDeleteBranch={props.onDeleteBranch}
           />
+        </div>
+      )}
+
+      {props.crumbs.length > 0 && (
+        <div className="min-w-0 flex-1 [-webkit-app-region:no-drag]">
+          <Breadcrumbs crumbs={props.crumbs} />
         </div>
       )}
 

@@ -1,6 +1,8 @@
 import {
   IconCalendar,
+  IconFile,
   IconGitBranch,
+  IconGitFork,
   IconSearch,
   IconX,
 } from "@tabler/icons-react"
@@ -24,7 +26,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { TruncatedText } from "@/components/ui/truncated-text"
-import type { LogQuery } from "@/lib/api/types"
+import { ALL_REFS, logRefLabel, type LogQuery } from "@/lib/api/types"
+import { pathName } from "@/lib/display-path"
 import type { BranchInfo } from "@byconvo/core/repo"
 import { cn } from "@/lib/utils"
 
@@ -89,12 +92,16 @@ export function LogFilters({
     query.after !== null ||
     query.before !== null
 
-  const knownRef = branches.some((b) => b.name === refName)
-  // The searchable ref list — every local branch, plus the active ref itself
-  // when it isn't one (a detached commit, tag or remote ref driving the log).
-  const refItems = knownRef
-    ? branches.map((b) => b.name)
-    : [refName, ...branches.map((b) => b.name)]
+  const knownRef =
+    refName === ALL_REFS || branches.some((b) => b.name === refName)
+  // The searchable ref list — "All branches" (the whole graph), every local
+  // branch, plus the active ref itself when it isn't one (a detached commit,
+  // tag or remote ref driving the log).
+  const refItems = [
+    ALL_REFS,
+    ...(knownRef ? [] : [refName]),
+    ...branches.map((b) => b.name),
+  ]
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-b p-2">
@@ -106,8 +113,12 @@ export function LogFilters({
         }}
       >
         <ComboboxTrigger size="sm" className="w-48 text-xs" aria-label="Branch">
-          <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
-          <ComboboxValue />
+          {refName === ALL_REFS ? (
+            <IconGitFork className="size-3.5 shrink-0 text-muted-foreground" />
+          ) : (
+            <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
+          )}
+          <ComboboxValue>{(value: string) => logRefLabel(value)}</ComboboxValue>
         </ComboboxTrigger>
         <ComboboxContent className="w-72">
           <ComboboxInput placeholder="Search branches…" />
@@ -115,12 +126,31 @@ export function LogFilters({
           <ComboboxList>
             {(name: string) => (
               <ComboboxItem key={name} value={name}>
-                <TruncatedText text={name} />
+                <TruncatedText text={logRefLabel(name)} />
               </ComboboxItem>
             )}
           </ComboboxList>
         </ComboboxContent>
       </Combobox>
+
+      {query.path !== null && (
+        <div
+          className="flex h-7 max-w-64 shrink-0 items-center gap-1 rounded-2xl bg-input/50 pr-1 pl-2.5 text-xs"
+          title={`History of ${query.path}`}
+        >
+          <IconFile className="size-3.5 shrink-0 text-muted-foreground" />
+          <span className="truncate">{pathName(query.path)}</span>
+          <button
+            type="button"
+            aria-label="Show all files"
+            title="Show all files"
+            onClick={() => apply({ path: null, follow: false })}
+            className="flex size-5 shrink-0 items-center justify-center rounded-full text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+          >
+            <IconX className="size-3.5" />
+          </button>
+        </div>
+      )}
 
       <div className="relative flex min-w-44 flex-1 items-center">
         <IconSearch className="pointer-events-none absolute left-2 size-3.5 text-muted-foreground" />
@@ -221,6 +251,7 @@ export function LogFilters({
               after: null,
               before: null,
               path: null,
+              follow: false,
             })
           }
         >

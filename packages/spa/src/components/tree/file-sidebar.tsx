@@ -13,6 +13,8 @@ interface FileSidebarProps {
   onFileSelect: (path: string | null) => void
   onDeletePath?: (path: string, isDirectory: boolean) => Promise<void> | void
   onRenamePath?: (from: string, to: string) => Promise<void>
+  /** Open the bottom dock on this path's commit history. */
+  onShowHistory?: (path: string) => void
   onError?: (message: string) => void
   loading?: boolean
   footer?: ReactNode
@@ -67,6 +69,7 @@ export function FileSidebar({
   onFileSelect,
   onDeletePath,
   onRenamePath,
+  onShowHistory,
   onError,
   loading = false,
   footer,
@@ -184,7 +187,10 @@ export function FileSidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFile, pathsKey, model])
 
-  const hasMenu = onDeletePath !== undefined || onRenamePath !== undefined
+  const hasMenu =
+    onDeletePath !== undefined ||
+    onRenamePath !== undefined ||
+    onShowHistory !== undefined
   const renderContextMenu = hasMenu
     ? (
         item: { kind: "directory" | "file"; path: string },
@@ -194,6 +200,18 @@ export function FileSidebar({
           role="menu"
           className="min-w-36 rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-md"
         >
+          {onShowHistory !== undefined && (
+            <button
+              role="menuitem"
+              className="flex w-full items-center rounded-sm px-2 py-1 text-left hover:bg-muted"
+              onClick={() => {
+                context.close()
+                onShowHistory(item.path)
+              }}
+            >
+              Show history
+            </button>
+          )}
           {onRenamePath !== undefined && (
             <button
               role="menuitem"

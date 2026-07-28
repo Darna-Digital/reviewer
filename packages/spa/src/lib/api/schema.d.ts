@@ -1684,6 +1684,7 @@ export interface operations {
             query?: {
                 ref?: string;
                 limit?: string;
+                skip?: string;
                 author?: string;
                 grep?: string;
                 regex?: string;
@@ -1691,6 +1692,7 @@ export interface operations {
                 after?: string;
                 before?: string;
                 path?: string;
+                follow?: string;
             };
             header?: never;
             path?: never;
@@ -1768,7 +1770,6 @@ export interface operations {
                             status: "added" | "deleted" | "ignored" | "modified" | "renamed" | "untracked";
                             oldPath: string | null;
                         }[];
-                        containingBranches: string[];
                     };
                 };
             };

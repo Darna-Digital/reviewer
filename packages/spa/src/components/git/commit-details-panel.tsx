@@ -1,13 +1,17 @@
+import { IconFolder } from "@tabler/icons-react"
 import { useMemo } from "react"
 import { Badge } from "@/components/ui/badge"
 import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { createCommitDetailsFunctions } from "@/interactions/commit-details/functions/commit-details.functions"
+import { STATUS_COLOR } from "@/lib/git-status"
 import { useCommitDetail } from "@/lib/queries"
 import { cn } from "@/lib/utils"
 
 interface CommitDetailsPanelProps {
   sha: string | null
+  /** Path currently open from this commit — rendered as the selected row. */
+  selectedFile: string | null
   onSelectFile: (path: string) => void
 }
 
@@ -30,6 +34,7 @@ const indent = (depth: number): React.CSSProperties => ({
 
 export function CommitDetailsPanel({
   sha,
+  selectedFile,
   onSelectFile,
 }: CommitDetailsPanelProps) {
   const fns = useMemo(
@@ -103,17 +108,28 @@ export function CommitDetailsPanel({
               row.kind === "folder" ? (
                 <li
                   key={`d:${row.label}:${i}`}
-                  className="flex items-center gap-2 py-0.5 text-muted-foreground"
+                  className="flex items-center gap-1.5 rounded-md py-0.5 pr-2 text-xs font-medium text-muted-foreground"
                   style={indent(row.depth)}
                 >
+                  <IconFolder className="size-3.5 shrink-0 opacity-70" />
                   <span className="truncate">{row.label}</span>
-                  <span className="text-xs">{row.count}</span>
+                  <span className="ml-auto tabular-nums opacity-70">
+                    {row.count}
+                  </span>
                 </li>
               ) : (
                 <li key={`f:${row.file.path}`}>
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 rounded-md py-0.5 text-left outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50"
+                    aria-current={
+                      selectedFile === row.file.path ? "true" : undefined
+                    }
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md py-0.5 pr-2 text-left outline-none",
+                      "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
+                      selectedFile === row.file.path &&
+                        "bg-accent font-medium text-accent-foreground hover:bg-accent"
+                    )}
                     style={indent(row.depth)}
                     onClick={() => onSelectFile(row.file.path)}
                     title={
@@ -125,30 +141,26 @@ export function CommitDetailsPanel({
                     <span
                       className={cn(
                         "w-3 shrink-0 text-center font-mono text-xs",
-                        row.file.status === "added" && "text-emerald-500",
-                        row.file.status === "deleted" && "text-destructive",
-                        row.file.status === "renamed" && "text-blue-500"
+                        STATUS_COLOR[row.file.status]
                       )}
                     >
                       {fns.statusLetter(row.file.status)}
                     </span>
-                    <span className="truncate">{row.name}</span>
+                    <span
+                      className={cn(
+                        "truncate",
+                        row.file.status === "deleted" &&
+                          "text-muted-foreground line-through"
+                      )}
+                    >
+                      {row.name}
+                    </span>
                   </button>
                 </li>
               )
             )}
           </ul>
         </div>
-
-        {data.containingBranches.length > 0 && (
-          <div className="text-xs text-muted-foreground">
-            <span className="font-medium">
-              In {data.containingBranches.length}{" "}
-              {data.containingBranches.length === 1 ? "branch" : "branches"}:
-            </span>{" "}
-            {data.containingBranches.join(", ")}
-          </div>
-        )}
       </div>
     </ScrollArea>
   )

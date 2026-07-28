@@ -10,10 +10,14 @@ import {
   IconArrowUp,
   IconCloudDownload,
   IconColumns2,
+  IconFile,
   IconFolders,
   IconGitBranch,
   IconGitCommit,
+  IconGitCompare,
+  IconGitFork,
   IconGitPullRequest,
+  IconHistory,
   IconLayoutBottombarExpand,
   IconPlayerPlay,
   IconRefresh,
@@ -48,6 +52,7 @@ import { ConflictBanner } from "@/components/git/conflict-banner"
 import { ConflictView } from "@/components/git/conflict-view"
 import { PullRequestList } from "@/components/git/pull-request-list"
 import { BottomPanel } from "@/components/layout/bottom-panel"
+import type { Crumb } from "@/components/layout/breadcrumbs"
 import { ModeRail } from "@/components/layout/mode-rail"
 import { ResizeHandle } from "@/components/layout/resize-handle"
 import { TopBar } from "@/components/layout/top-bar"
@@ -63,23 +68,28 @@ import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import { fetchClient } from "@/lib/api/client"
 import {
+  ALL_REFS,
   diffTargetKey,
   emptyLogQuery,
+  fileHistoryQuery,
+  logRefLabel,
   type AppMode,
   type DiffTarget,
   type LogQuery,
 } from "@/lib/api/types"
 import type { ReviewComment } from "@byconvo/core/comments"
+import { pathName } from "@/lib/display-path"
 import { errorReason } from "@/lib/errors"
 import {
   useBranches,
   useChatModels,
   useChats,
   useComments,
+  useCommitDetail,
   useDiffText,
   useFiles,
-  useLog,
   useMergeState,
+  usePagedLog,
   usePullComments,
   usePulls,
   useRemoteBranches,
@@ -184,7 +194,10 @@ export function AppShell() {
   const [logFilters, setLogFilters] = useState<LogQuery>(emptyLogQuery)
   // The branch whose history the bottom panel shows; falls back to HEAD.
   const [logRef, setLogRef] = useState<string | null>(null)
-  const log = useLog(logRef ?? repo.data?.currentBranch ?? null, logFilters)
+  const log = usePagedLog(
+    logRef ?? repo.data?.currentBranch ?? null,
+    logFilters
+  )
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
@@ -255,6 +268,16 @@ export function AppShell() {
   const pullComments = usePullComments(
     target?.kind === "pull" ? target.pull.number : null
   )
+
+  // Opening a commit out of a file's history shows just that file's side of it,
+  // like the log's filter reads. Commits from before a rename don't carry the
+  // path, so those fall back to the whole commit.
+  const diffFiles = useMemo(() => {
+    if (logFilters.path === null || target?.kind !== "commit")
+      return parsedFiles
+    const forPath = parsedFiles.filter((f) => f.name === logFilters.path)
+    return forPath.length > 0 ? forPath : parsedFiles
+  }, [parsedFiles, logFilters.path, target?.kind])
 
   // Reset the comment draft when the diff target or the open file changes.
   useEffect(() => setDraft(null), [targetKey, search.file])
@@ -347,6 +370,13 @@ export function AppShell() {
     setSearch({ file: path, edit: edit || undefined })
   const closeFile = () => setSearch({ file: undefined, edit: undefined })
 
+  // Show one file's past: the log filters down to it (following renames) and
+  // the dock swings open on History.
+  const showFileHistory = (path: string) => {
+    setLogFilters(fileHistoryQuery(path))
+    openBottomTab("history")
+  }
+
   // --- conflict resolution ---------------------------------------------------
   const openConflict = (path: string) =>
     setSearch({ path, file: undefined, edit: undefined })
@@ -394,20 +424,98 @@ export function AppShell() {
     [localComments.data, viewing]
   )
 
-  const contextLabel = useMemo(() => {
-    if (editing !== null) return editing
-    if (viewing !== null) return viewing
-    if (isFolder)
-      return `${workspace.data?.childRepos.length ?? 0} repositories`
-    if (mode === "commit") return "Local changes"
-    if (mode === "review")
-      return selectedPull === null
-        ? "Select a pull request"
-        : `#${selectedPull.number} · ${selectedPull.title}`
-    if (browse?.kind === "commit") return `commit ${browse.shortSha}`
-    if (browse?.kind === "range") return `${browse.base} → ${browse.head}`
-    return "Select a file or commit"
-  }, [editing, viewing, isFolder, workspace.data, mode, selectedPull, browse])
+  // The commit behind a history crumb. Same query key as the details panel, so
+  // opening a commit from the log reads its subject straight from the cache.
+  const browsedCommit = useCommitDetail(
+    browse?.kind === "commit" ? browse.sha : null
+  )
+
+  const buildCrumbs = (): ReadonlyArray<Crumb> => {
+    if (isFolder) {
+      return [
+        {
+          id: "folder",
+          label: `${workspace.data?.childRepos.length ?? 0} repositories`,
+          icon: IconFolders,
+        },
+      ]
+    }
+    const openPath = editing ?? viewing
+    const list: Crumb[] = []
+    if (mode === "commit") {
+      list.push({
+        id: "commit-mode",
+        label: "Local changes",
+        icon: IconGitCommit,
+        onClick: () => void navigate({ to: "/commit" }),
+      })
+    } else if (mode === "review") {
+      list.push({
+        id: "review-mode",
+        label: "Pull requests",
+        icon: IconGitPullRequest,
+        onClick: () => void navigate({ to: "/review" }),
+      })
+      if (selectedPull !== null) {
+        list.push({
+          id: "pull",
+          label: selectedPull.title,
+          hint: `#${selectedPull.number}`,
+        })
+      }
+    } else if (browse !== null) {
+      // A commit or a range came from the log, so the trail starts at History
+      // — that's what tells this apart from plain file browsing.
+      list.push({
+        id: "history",
+        label: "History",
+        icon: IconHistory,
+        onClick: () => openBottomTab("history"),
+      })
+      const historyRef = logRef ?? repo.data?.currentBranch ?? null
+      if (browse.kind === "commit") {
+        if (historyRef !== null) {
+          list.push({
+            id: "ref",
+            label: logRefLabel(historyRef),
+            icon: historyRef === ALL_REFS ? IconGitFork : IconGitBranch,
+          })
+        }
+        // The filtered file names what the diff below shows — unless a file is
+        // open in the viewer, which ends the trail with a path of its own.
+        if (logFilters.path !== null && openPath === null) {
+          list.push({
+            id: "history-path",
+            label: pathName(logFilters.path),
+            icon: IconFile,
+            mono: true,
+          })
+        }
+        list.push({
+          id: "commit",
+          label: browsedCommit.data?.subject ?? "Commit",
+          hint: browse.shortSha,
+          onClick: () => closeFile(),
+        })
+      } else {
+        list.push({
+          id: "range",
+          label: `${browse.base} → ${browse.head}`,
+          icon: IconGitCompare,
+        })
+      }
+    } else {
+      list.push({
+        id: "browse-mode",
+        label: "Project",
+        icon: IconFolders,
+        onClick: () => void navigate({ to: "/browse" }),
+      })
+    }
+    if (openPath !== null)
+      list.push({ id: "file", label: openPath, mono: true })
+    return list
+  }
 
   // --- handlers --------------------------------------------------------------
   const deletePath = async (path: string, isDirectory: boolean) => {
@@ -620,6 +728,7 @@ export function AppShell() {
           theme={prefs.resolvedTheme}
           onEdit={(p) => openFile(p, true)}
           onClose={closeFile}
+          onShowHistory={showFileHistory}
           comments={fileComments}
           draft={draft}
           onDraftOpen={setDraft}
@@ -662,7 +771,7 @@ export function AppShell() {
     }
     return (
       <DiffPane
-        files={parsedFiles}
+        files={diffFiles}
         theme={prefs.resolvedTheme}
         diffStyle={prefs.diffStyle}
         connectors={prefs.connectors}
@@ -677,6 +786,7 @@ export function AppShell() {
         onDraftOpen={setDraft}
         onDraftCancel={() => setDraft(null)}
         onEditFile={(p) => openFile(p, true)}
+        onShowFileHistory={showFileHistory}
         onDiscardFile={
           mode === "commit" ? (p) => void git.discard([p]) : undefined
         }
@@ -739,7 +849,7 @@ export function AppShell() {
             workspace={workspace.data}
             branches={branches.data ?? []}
             remoteBranches={remoteBranches.data ?? []}
-            contextLabel={contextLabel}
+            crumbs={buildCrumbs()}
             diffStyle={prefs.diffStyle}
             showDiffStyleToggle={
               editing === null && viewing === null && target !== null
@@ -842,6 +952,7 @@ export function AppShell() {
                       onFileSelect={onFileSelect}
                       onDeletePath={mode === "review" ? undefined : deletePath}
                       onRenamePath={mode === "review" ? undefined : renamePath}
+                      onShowHistory={showFileHistory}
                       footer={
                         mode === "commit" && changedFiles.length > 0 ? (
                           <CommitPanel
@@ -913,13 +1024,16 @@ export function AppShell() {
                 branches={branches.data ?? []}
                 remoteBranches={remoteBranches.data ?? []}
                 currentBranch={repo.data?.currentBranch ?? null}
-                commits={log.data ?? []}
-                commitsLoading={log.isPending}
+                commits={log.commits}
+                commitsLoading={log.loading}
+                commitsHaveMore={log.hasMore}
                 logRef={logRef ?? repo.data?.currentBranch ?? null}
                 logFilters={logFilters}
                 selectedCommitSha={
                   browse?.kind === "commit" ? browse.sha : null
                 }
+                selectedCommitFile={viewing ?? editing}
+                onLoadMoreCommits={log.loadMore}
                 onLogRefChange={setLogRef}
                 onLogFiltersChange={setLogFilters}
                 onBranchCheckout={(b) => {
@@ -930,6 +1044,12 @@ export function AppShell() {
                   void navigate({
                     to: "/browse/commit/$sha",
                     params: { sha: c.sha },
+                    search: (prev: Search) => ({
+                      ...prev,
+                      path: logFilters.path ?? undefined,
+                      file: undefined,
+                      edit: undefined,
+                    }),
                   })
                 }
                 onSelectCommitFile={(p) => openFile(p, false)}

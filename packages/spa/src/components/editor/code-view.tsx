@@ -1,6 +1,6 @@
 import { type LineAnnotation } from "@pierre/diffs"
 import { File, Virtualizer } from "@pierre/diffs/react"
-import { IconX } from "@tabler/icons-react"
+import { IconHistory, IconX } from "@tabler/icons-react"
 import { useMemo } from "react"
 import {
   CommentThread,
@@ -30,6 +30,8 @@ interface CodeViewProps {
   theme: Theme
   onEdit: (path: string) => void
   onClose: () => void
+  /** Open this file's commit history in the bottom dock. */
+  onShowHistory?: (path: string) => void
   /** Local review comments anchored to this file (optional — omit to disable). */
   comments?: ReadonlyArray<ReviewComment>
   draft?: DraftLocation | null
@@ -45,6 +47,7 @@ export function CodeView({
   theme,
   onEdit,
   onClose,
+  onShowHistory,
   comments,
   draft = null,
   onDraftOpen,
@@ -165,6 +168,18 @@ export function CodeView({
           }
           renderHeaderMetadata={(meta) => (
             <div className="flex items-center gap-1">
+              {onShowHistory !== undefined && (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="gap-1 text-muted-foreground"
+                  title={`Show the commit history of ${meta.name}`}
+                  onClick={() => onShowHistory(meta.name)}
+                >
+                  <IconHistory className="size-3.5" />
+                  History
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="xs"

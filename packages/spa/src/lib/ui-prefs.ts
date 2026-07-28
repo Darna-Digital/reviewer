@@ -35,6 +35,8 @@ export interface UiPrefs {
   commitMessageHeight: number
   /** Drag-resizable pull-request list height in the review sidebar, in px. */
   reviewPullsHeight: number
+  /** Drag-resizable commit-details pane width in the history panel, in px. */
+  commitDetailsWidth: number
   /** Which agent CLI drafts commit messages via the "Generate" button. */
   commitAgent: CommitAgent
   /** Model ids starred in the chat composer's model picker. */
@@ -72,6 +74,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   commitFilesHeight: 180,
   commitMessageHeight: 80,
   reviewPullsHeight: 220,
+  commitDetailsWidth: 320,
   commitAgent: "claude",
   chatModelFavorites: [],
 }
@@ -116,6 +119,7 @@ function persist() {
       commitFilesHeight,
       commitMessageHeight,
       reviewPullsHeight,
+      commitDetailsWidth,
       commitAgent,
       chatModelFavorites,
     } = state
@@ -133,6 +137,7 @@ function persist() {
         commitFilesHeight,
         commitMessageHeight,
         reviewPullsHeight,
+        commitDetailsWidth,
         commitAgent,
         chatModelFavorites,
       })

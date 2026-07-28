@@ -6,13 +6,18 @@
  *
  * It stays mounted while collapsed so Services/Threads keep their PTYs.
  */
-import { useNavigate, useParams } from "@tanstack/react-router"
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router"
 import { useState } from "react"
 import { BottomPanel } from "@/components/layout/bottom-panel"
 import { ResizeHandle } from "@/components/layout/resize-handle"
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import { emptyLogQuery, type LogQuery } from "@/lib/api/types"
-import { useBranches, useLog, useRemoteBranches, useRepo } from "@/lib/queries"
+import {
+  useBranches,
+  usePagedLog,
+  useRemoteBranches,
+  useRepo,
+} from "@/lib/queries"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
 
@@ -21,6 +26,7 @@ export function GitBottomDock() {
   const navigate = useNavigate()
   const git = useGitActions()
   const params = useParams({ strict: false })
+  const search = useSearch({ strict: false })
 
   const repo = useRepo()
   const branches = useBranches()
@@ -31,7 +37,7 @@ export function GitBottomDock() {
   const [bottomHeight, setBottomHeight] = useState(prefs.bottomHeight)
 
   const ref = logRef ?? repo.data?.currentBranch ?? null
-  const log = useLog(ref, logFilters)
+  const log = usePagedLog(ref, logFilters)
 
   return (
     <>
@@ -62,11 +68,14 @@ export function GitBottomDock() {
           branches={branches.data ?? []}
           remoteBranches={remoteBranches.data ?? []}
           currentBranch={repo.data?.currentBranch ?? null}
-          commits={log.data ?? []}
-          commitsLoading={log.isPending}
+          commits={log.commits}
+          commitsLoading={log.loading}
+          commitsHaveMore={log.hasMore}
           logRef={ref}
           logFilters={logFilters}
           selectedCommitSha={params.sha ?? null}
+          selectedCommitFile={search.file ?? null}
+          onLoadMoreCommits={log.loadMore}
           onLogRefChange={setLogRef}
           onLogFiltersChange={setLogFilters}
           onBranchCheckout={(b) => {

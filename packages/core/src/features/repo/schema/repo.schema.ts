@@ -74,7 +74,6 @@ export const CommitDetail = Schema.Struct({
   refs: Schema.Array(Schema.String),
   parents: Schema.Array(Schema.String),
   files: Schema.Array(CommitFileChange),
-  containingBranches: Schema.Array(Schema.String),
 })
 export type CommitDetail = typeof CommitDetail.Type
 export const FilesPayload = Schema.Struct({
@@ -139,6 +138,7 @@ export type ConflictBlobs = typeof ConflictBlobs.Type
 export const LogQueryParams = Schema.Struct({
   ref: Schema.optionalKey(Schema.String),
   limit: Schema.optionalKey(Schema.String),
+  skip: Schema.optionalKey(Schema.String),
   author: Schema.optionalKey(Schema.String),
   grep: Schema.optionalKey(Schema.String),
   regex: Schema.optionalKey(Schema.String),
@@ -146,6 +146,7 @@ export const LogQueryParams = Schema.Struct({
   after: Schema.optionalKey(Schema.String),
   before: Schema.optionalKey(Schema.String),
   path: Schema.optionalKey(Schema.String),
+  follow: Schema.optionalKey(Schema.String),
 })
 export type LogQueryParams = typeof LogQueryParams.Type
 export const DiffQuery = Schema.Struct({
@@ -220,9 +221,18 @@ export type DiffFileTarget =
   | { readonly kind: "commit"; readonly sha: string }
   | { readonly kind: "range"; readonly base: string; readonly head: string }
 
+/**
+ * Sentinel `LogQuery.ref` asking for every ref (local, remote and tags) instead
+ * of one branch's ancestry — git's `--all`. Not a valid ref name, so it can
+ * never collide with a real branch.
+ */
+export const ALL_REFS = "@all"
+
 export interface LogQuery {
   readonly ref: string
   readonly limit: number
+  /** Commits to walk past before collecting — the page offset. */
+  readonly skip: number
   readonly author: string | null
   readonly grep: string | null
   readonly regex: boolean
@@ -230,4 +240,6 @@ export interface LogQuery {
   readonly after: string | null
   readonly before: string | null
   readonly path: string | null
+  /** Trace `path` across renames — git's `--follow`. Needs a single path. */
+  readonly follow: boolean
 }

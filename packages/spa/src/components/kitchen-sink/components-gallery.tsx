@@ -3,7 +3,6 @@ import {
   IconArrowRight,
   IconCheck,
   IconGitBranch,
-  IconLoader2,
   IconPlus,
   IconSearch,
   IconSparkles,
@@ -18,6 +17,7 @@ import {
   Subsection,
 } from "@/components/kitchen-sink/kitchen-sink-primitives"
 import { Badge } from "@/components/ui/badge"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -222,10 +222,7 @@ export function ComponentsGallery() {
             </Specimen>
             <Specimen label="busy">
               <Button variant="outline" disabled>
-                <IconLoader2
-                  data-icon="inline-start"
-                  className="animate-spin"
-                />
+                <LoadingCursor label={null} />
                 Fetching
               </Button>
             </Specimen>

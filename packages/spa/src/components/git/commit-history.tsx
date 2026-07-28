@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -6,10 +6,15 @@ import { useCommitGraph } from "@/interactions/commit-graph/adapters/commit-grap
 import { DEFAULT_GRAPH_CONFIG } from "@/interactions/commit-graph/interfaces/commit-graph.interfaces"
 import type { LogQuery } from "@/lib/api/types"
 import type { BranchInfo, CommitInfo } from "@byconvo/core/repo"
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
+import { ResizeHandle } from "@/components/layout/resize-handle"
 import { CommitDetailsPanel } from "./commit-details-panel"
 import { GraphCell } from "./commit-graph"
 import { LogFilters } from "./log-filters"
+
+/** How far ahead of the list's end the next page starts loading. */
+const LOAD_MORE_MARGIN = "600px"
 
 interface CommitHistoryProps {
   refName: string
@@ -17,7 +22,12 @@ interface CommitHistoryProps {
   commits: ReadonlyArray<CommitInfo>
   query: LogQuery
   loading: boolean
+  /** Whether the log may hold commits past the ones loaded so far. */
+  hasMore: boolean
   selectedCommitSha: string | null
+  /** File open from the selected commit, highlighted in its changed-file tree. */
+  selectedFile: string | null
+  onLoadMore: () => void
   onRefChange: (ref: string) => void
   onQueryChange: (query: LogQuery) => void
   onSelectCommit: (commit: CommitInfo) => void
@@ -37,7 +47,10 @@ export function CommitHistory({
   commits,
   query,
   loading,
+  hasMore,
   selectedCommitSha,
+  selectedFile,
+  onLoadMore,
   onRefChange,
   onQueryChange,
   onSelectCommit,
@@ -46,6 +59,33 @@ export function CommitHistory({
   const { layout, functions } = useCommitGraph(commits)
   const rowRefs = useRef(new Map<string, HTMLElement>())
   const [activeSha, setActiveSha] = useState<string | null>(null)
+  const prefs = useUiPrefs()
+  const [detailsWidth, setDetailsWidth] = useState(prefs.commitDetailsWidth)
+
+  // Nearing the end of the loaded page pulls the next one, so scrolling walks
+  // back through history instead of stopping at the first page. An observer on
+  // the trailing row does the watching: measuring the viewport from a scroll
+  // handler instead would read `scrollHeight` on every scroll event, forcing a
+  // synchronous layout of the whole list and stuttering the scroll.
+  const viewportRef = useRef<HTMLDivElement | null>(null)
+  const endRef = useRef<HTMLLIElement | null>(null)
+  const onLoadMoreRef = useRef(onLoadMore)
+  onLoadMoreRef.current = onLoadMore
+
+  useEffect(() => {
+    const end = endRef.current
+    const root = viewportRef.current
+    if (end === null || root === null) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting))
+          onLoadMoreRef.current()
+      },
+      { root, rootMargin: LOAD_MORE_MARGIN }
+    )
+    observer.observe(end)
+    return () => observer.disconnect()
+  }, [hasMore, commits.length])
 
   const effectiveActive =
     activeSha ??
@@ -103,7 +143,11 @@ export function CommitHistory({
       />
 
       <div className="flex min-h-0 flex-1">
-        <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
+        <ScrollArea
+          className="min-h-0 flex-1"
+          viewportClassName="scroll-fade"
+          viewportRef={viewportRef}
+        >
           <ul role="listbox" aria-label="Commits" aria-busy={loading}>
             {commits.map((commit, index) => {
               const row = layout.rows[index]
@@ -119,6 +163,11 @@ export function CommitHistory({
                     }}
                     className={cn(
                       "flex cursor-pointer items-center gap-2 px-2 text-sm outline-none",
+                      // The graph cell spans the full row so its lanes meet the
+                      // rows above and below; the gap between highlights is
+                      // carved out of the row instead, as a transparent block
+                      // border with the background clipped inside it.
+                      "rounded-md border-y-2 border-transparent bg-clip-padding",
                       "hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset",
                       selected && "bg-accent text-accent-foreground"
                     )}
@@ -166,16 +215,39 @@ export function CommitHistory({
                 )}
               </li>
             )}
+            {commits.length > 0 && hasMore && (
+              // Scrolling this row into view is what pulls the next page, so it
+              // is the wait itself — no button to press.
+              <li ref={endRef} className="flex items-center p-3">
+                <LoadingCursor label="Loading older commits…" />
+              </li>
+            )}
           </ul>
         </ScrollArea>
 
         {selectedCommitSha !== null && (
-          <div className="w-80 shrink-0 overflow-hidden border-l">
-            <CommitDetailsPanel
-              sha={selectedCommitSha}
-              onSelectFile={onSelectCommitFile}
+          <>
+            <ResizeHandle
+              orientation="col"
+              value={detailsWidth}
+              min={220}
+              max={() => Math.max(280, window.innerWidth - 360)}
+              direction={-1}
+              onResize={setDetailsWidth}
+              onResizeEnd={(w) => setUiPrefs({ commitDetailsWidth: w })}
+              label="Resize commit details"
             />
-          </div>
+            <div
+              className="shrink-0 overflow-hidden border-l"
+              style={{ width: detailsWidth }}
+            >
+              <CommitDetailsPanel
+                sha={selectedCommitSha}
+                selectedFile={selectedFile}
+                onSelectFile={onSelectCommitFile}
+              />
+            </div>
+          </>
         )}
       </div>
     </div>

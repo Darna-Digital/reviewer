@@ -41,9 +41,12 @@ interface BottomPanelProps {
   currentBranch: string | null
   commits: ReadonlyArray<CommitInfo>
   commitsLoading: boolean
+  commitsHaveMore: boolean
   logRef: string | null
   logFilters: LogQuery
   selectedCommitSha: string | null
+  selectedCommitFile: string | null
+  onLoadMoreCommits: () => void
   onLogRefChange: (ref: string) => void
   onLogFiltersChange: (filters: LogQuery) => void
   onBranchCheckout: (name: string) => void
@@ -135,7 +138,10 @@ export function BottomPanel(props: BottomPanelProps) {
             commits={props.commits}
             query={props.logFilters}
             loading={props.commitsLoading}
+            hasMore={props.commitsHaveMore}
             selectedCommitSha={props.selectedCommitSha}
+            selectedFile={props.selectedCommitFile}
+            onLoadMore={props.onLoadMoreCommits}
             onRefChange={props.onLogRefChange}
             onQueryChange={props.onLogFiltersChange}
             onSelectCommit={props.onSelectCommit}

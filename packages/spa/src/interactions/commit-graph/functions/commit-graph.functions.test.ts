@@ -40,6 +40,28 @@ describe("buildLayout", () => {
     expect(root.dotCol).toBeGreaterThanOrEqual(0)
   })
 
+  it("keeps a filtered log in one lane instead of stacking dead lanes", () => {
+    // One file's history: consecutive rows are rarely parent and child, and the
+    // parents they do name are not in the window.
+    const { rows, width } = fns().buildLayout([
+      fakeCommit("f3", ["x3"]),
+      fakeCommit("f2", ["x2"]),
+      fakeCommit("f1", ["x1"]),
+    ])
+    expect(width).toBe(1)
+    expect(rows.map((r) => r.dotCol)).toEqual([0, 0, 0])
+    expect(rows.flatMap((r) => r.after.filter(Boolean))).toEqual([])
+  })
+
+  it("still connects rows whose parent is in the window", () => {
+    const { rows } = fns().buildLayout([
+      fakeCommit("c", ["b"]),
+      fakeCommit("b", ["gone"]),
+    ])
+    expect(rows[0].after).toEqual([{ target: "b", color: expect.any(String) }])
+    expect(rows[1].after).toEqual([null])
+  })
+
   it("returns an empty layout for no commits", () => {
     expect(fns().buildLayout([])).toEqual({ rows: [], width: 1 })
   })

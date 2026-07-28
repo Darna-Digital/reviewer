@@ -1,9 +1,10 @@
-import { IconLoader2, IconSparkles } from "@tabler/icons-react"
+import { IconSparkles } from "@tabler/icons-react"
 import { useMemo, useState } from "react"
 import { ResizeHandle } from "@/components/layout/resize-handle"
 import { agentIcon } from "@/interactions/threads/components/agent-icons"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Select,
@@ -15,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { TruncatedText } from "@/components/ui/truncated-text"
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents"
 import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo"
+import { STATUS_COLOR } from "@/lib/git-status"
 import { setUiPrefs, useUiPrefs, type CommitAgent } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
 
@@ -34,15 +36,6 @@ interface CommitPanelProps {
     paths: ReadonlyArray<string>,
     agent: CommitAgent
   ) => Promise<string | null>
-}
-
-const STATUS_COLOR: Record<GitFileStatus, string> = {
-  added: "text-emerald-600 dark:text-emerald-400",
-  modified: "text-amber-600 dark:text-amber-400",
-  deleted: "text-destructive",
-  renamed: "text-violet-600 dark:text-violet-400",
-  untracked: "text-sky-600 dark:text-sky-400",
-  ignored: "text-muted-foreground",
 }
 
 const STATUS_LETTER: Record<GitFileStatus, string> = {
@@ -221,11 +214,11 @@ export function CommitPanel({
                 onClick={() => void generate()}
               >
                 {generating ? (
-                  <IconLoader2 className="size-3.5 animate-spin" />
+                  <LoadingCursor label={null} />
                 ) : (
                   <IconSparkles className="size-3.5" />
                 )}
-                {generating ? "Generating..." : "Generate"}
+                {generating ? "Generating…" : "Generate"}
               </Button>
               {/* Pick which local agent CLI drafts the message. */}
               <Select
@@ -262,7 +255,10 @@ export function CommitPanel({
             onClick={() => void commit(false)}
           >
             {pending === "commit" && (
-              <IconLoader2 className="size-4 animate-spin" />
+              <LoadingCursor
+                label="Committing…"
+                className="bg-primary-foreground"
+              />
             )}
             Commit
           </Button>
@@ -273,7 +269,7 @@ export function CommitPanel({
             onClick={() => void commit(true)}
           >
             {pending === "push" && (
-              <IconLoader2 className="size-4 animate-spin" />
+              <LoadingCursor label="Committing and pushing…" />
             )}
             Commit & push
           </Button>

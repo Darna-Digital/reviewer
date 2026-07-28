@@ -20,7 +20,8 @@ export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
     .handle("log", ({ query }) => {
       const q: LogQuery = {
         ref: query.ref ?? "HEAD",
-        limit: Math.min(Number(query.limit ?? 50) || 50, 200),
+        limit: Math.min(Number(query.limit ?? 150) || 150, 10_000),
+        skip: Math.max(0, Number(query.skip ?? 0) || 0),
         author: trimmed(query.author),
         grep: trimmed(query.grep),
         regex: query.regex === "1",
@@ -28,6 +29,7 @@ export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
         after: trimmed(query.after),
         before: trimmed(query.before),
         path: trimmed(query.path),
+        follow: query.follow === "1",
       }
       return Effect.flatMap(RepoService, (s) => s.log(q))
     })

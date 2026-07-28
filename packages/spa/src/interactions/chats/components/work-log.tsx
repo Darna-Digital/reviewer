@@ -18,6 +18,7 @@ import {
   IconWorld,
 } from "@tabler/icons-react"
 import { useState } from "react"
+import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { cn } from "@/lib/utils"
 import { elapsedMs, type WorkStep } from "../functions/work-log.functions"
 
@@ -52,10 +53,10 @@ function StatusIcon({ status }: { status: WorkStep["status"] }) {
     return <IconCheck className="size-3.5 shrink-0 text-muted-foreground/70" />
   }
   return (
-    <span
-      className="size-3.5 shrink-0 rounded-full border-[1.5px] border-muted-foreground/30 border-t-foreground motion-safe:animate-spin"
-      style={{ animationDuration: "700ms" }}
-    />
+    // Boxed to the width of the done/failed icons so the rows stay aligned.
+    <span className="flex size-3.5 shrink-0 items-center justify-center">
+      <LoadingCursor label="Running" />
+    </span>
   )
 }
 

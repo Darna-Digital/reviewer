@@ -70,5 +70,5 @@ export const DEFAULT_GRAPH_CONFIG: CommitGraphConfig = {
   colors: GRAPH_COLORS,
   colWidth: 14,
   dotRadius: 3.5,
-  rowHeight: 26,
+  rowHeight: 30,
 }

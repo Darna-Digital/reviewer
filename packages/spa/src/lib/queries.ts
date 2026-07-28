@@ -3,7 +3,9 @@
  * `api.queryOptions(...)`; components use these hooks. Centralising them keeps
  * query keys consistent so mutations/invalidation hit the right caches.
  */
-import { api } from "@/lib/api/client"
+import { useInfiniteQuery } from "@tanstack/react-query"
+import { useMemo } from "react"
+import { api, fetchClient } from "@/lib/api/client"
 import type { DiffTarget, LogQuery } from "@/lib/api/types"
 
 export const useWorkspace = () => api.useQuery("get", "/api/workspace")
@@ -99,12 +101,19 @@ export const usePullComments = (pullNumber: number | null) =>
     { enabled: pullNumber !== null }
   )
 
-/** Commit log for a ref with the active filters. */
-export const useLog = (ref: string | null, filters: LogQuery, limit = 80) => {
+/** How many commits one page of history holds. */
+export const LOG_PAGE_SIZE = 150
+
+const logSearchParams = (
+  ref: string | null,
+  filters: LogQuery,
+  skip: number
+): Record<string, string> => {
   const query: Record<string, string> = {
     ref: ref ?? "HEAD",
-    limit: String(limit),
+    limit: String(LOG_PAGE_SIZE),
   }
+  if (skip > 0) query["skip"] = String(skip)
   if (filters.author !== null) query["author"] = filters.author
   if (filters.grep !== null) query["grep"] = filters.grep
   if (filters.regex) query["regex"] = "1"
@@ -112,12 +121,47 @@ export const useLog = (ref: string | null, filters: LogQuery, limit = 80) => {
   if (filters.after !== null) query["after"] = filters.after
   if (filters.before !== null) query["before"] = filters.before
   if (filters.path !== null) query["path"] = filters.path
-  return api.useQuery(
-    "get",
-    "/api/log",
-    { params: { query } },
-    { enabled: ref !== null }
+  if (filters.follow) query["follow"] = "1"
+  return query
+}
+
+/**
+ * The commit log, one page at a time. Each page fetches only the commits past
+ * the ones already held (`skip`) and is appended, so scrolling back through a
+ * long history neither refetches what is on screen nor rebuilds those rows.
+ * React Query drops `fetchNextPage` calls made while a page is in flight, which
+ * is what keeps a single flick of the wheel from firing several of them.
+ */
+export const usePagedLog = (ref: string | null, filters: LogQuery) => {
+  const query = useInfiniteQuery({
+    queryKey: ["log-pages", ref, filters],
+    enabled: ref !== null,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const { data, error } = await fetchClient.GET("/api/log", {
+        params: { query: logSearchParams(ref, filters, pageParam) },
+      })
+      if (error !== undefined) throw error
+      return data ?? []
+    },
+    // A short page is the end of the history; a full one may have more behind it.
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length < LOG_PAGE_SIZE
+        ? undefined
+        : pages.reduce((count, page) => count + page.length, 0),
+  })
+
+  const commits = useMemo(
+    () => (query.data?.pages ?? []).flat(),
+    [query.data?.pages]
   )
+
+  return {
+    commits,
+    loading: query.isPending,
+    hasMore: query.hasNextPage,
+    loadMore: query.fetchNextPage,
+  }
 }
 
 /** The right diff for the current target (worktree / commit / range / PR). */

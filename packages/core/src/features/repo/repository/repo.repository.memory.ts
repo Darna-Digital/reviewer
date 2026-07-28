@@ -61,7 +61,6 @@ export const makeMemoryRepoRepository = (seed: MemoryRepoSeed = {}) =>
           refs: [],
           parents: [],
           files: [],
-          containingBranches: [],
         }),
       worktreeDiff: Effect.succeed(seed.diff ?? ""),
       rangeDiff: () => Effect.succeed(seed.diff ?? ""),
