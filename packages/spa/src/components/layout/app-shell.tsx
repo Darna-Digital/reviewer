@@ -370,6 +370,20 @@ export function AppShell() {
     setSearch({ file: path, edit: edit || undefined })
   const closeFile = () => setSearch({ file: undefined, edit: undefined })
 
+  // Go-to-definition and find-usages land here: open the file (it may already
+  // be the one on screen) and ask the view to reveal the line. The counter lets
+  // the same line be revealed twice in a row.
+  const [reveal, setReveal] = useState<{ line: number; key: number } | null>(
+    null
+  )
+  const openLocation = (path: string, lineNumber: number) => {
+    openFile(path, false)
+    setReveal((previous) => ({
+      line: lineNumber,
+      key: (previous?.key ?? 0) + 1,
+    }))
+  }
+
   // Show one file's past: the log filters down to it (following renames) and
   // the dock swings open on History.
   const showFileHistory = (path: string) => {
@@ -729,6 +743,8 @@ export function AppShell() {
           onEdit={(p) => openFile(p, true)}
           onClose={closeFile}
           onShowHistory={showFileHistory}
+          onOpenLocation={openLocation}
+          reveal={reveal}
           comments={fileComments}
           draft={draft}
           onDraftOpen={setDraft}

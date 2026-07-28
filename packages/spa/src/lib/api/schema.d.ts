@@ -804,6 +804,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/language/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["language.providers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/language/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["language.diagnostics"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/language/definition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["language.definition"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/language/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["language.references"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/language/hover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["language.hover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/board": {
         parameters: {
             query?: never;
@@ -1126,6 +1206,12 @@ export interface components {
             /** @enum {string} */
             _tag: "ChatBusy";
             chatId: string;
+        };
+        LanguageError: {
+            /** @enum {string} */
+            _tag: "LanguageError";
+            providerId: string;
+            reason: string;
         };
     };
     responses: never;
@@ -4825,6 +4911,341 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "language.providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        patterns: string[];
+                        /** @enum {string} */
+                        transport: "in-process" | "lsp-stdio";
+                        capabilities: {
+                            diagnostics: boolean;
+                            definition: boolean;
+                            references: boolean;
+                            hover: boolean;
+                        };
+                        available: boolean;
+                        detail: string;
+                    }[];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description LanguageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageError"];
+                };
+            };
+        };
+    };
+    "language.diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    path: string;
+                    contents?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        path: string;
+                        providerId: string | null;
+                        diagnostics: {
+                            range: {
+                                start: {
+                                    line: number;
+                                    character: number;
+                                };
+                                end: {
+                                    line: number;
+                                    character: number;
+                                };
+                            };
+                            /** @enum {string} */
+                            severity: "error" | "warning" | "information" | "hint";
+                            code: string | null;
+                            source: string;
+                            message: string;
+                            tags: ("unnecessary" | "deprecated")[];
+                            related: {
+                                location: {
+                                    path: string;
+                                    range: {
+                                        start: {
+                                            line: number;
+                                            character: number;
+                                        };
+                                        end: {
+                                            line: number;
+                                            character: number;
+                                        };
+                                    };
+                                };
+                                message: string;
+                            }[];
+                        }[];
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description LanguageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageError"];
+                };
+            };
+        };
+    };
+    "language.definition": {
+        parameters: {
+            query: {
+                path: string;
+                line: string;
+                character: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        providerId: string | null;
+                        origin: {
+                            start: {
+                                line: number;
+                                character: number;
+                            };
+                            end: {
+                                line: number;
+                                character: number;
+                            };
+                        } | null;
+                        targets: {
+                            location: {
+                                path: string;
+                                range: {
+                                    start: {
+                                        line: number;
+                                        character: number;
+                                    };
+                                    end: {
+                                        line: number;
+                                        character: number;
+                                    };
+                                };
+                            };
+                            name: string;
+                            kind: string;
+                            containerName: string;
+                            preview: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description LanguageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageError"];
+                };
+            };
+        };
+    };
+    "language.references": {
+        parameters: {
+            query: {
+                path: string;
+                line: string;
+                character: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        providerId: string | null;
+                        origin: {
+                            start: {
+                                line: number;
+                                character: number;
+                            };
+                            end: {
+                                line: number;
+                                character: number;
+                            };
+                        } | null;
+                        symbol: string | null;
+                        references: {
+                            location: {
+                                path: string;
+                                range: {
+                                    start: {
+                                        line: number;
+                                        character: number;
+                                    };
+                                    end: {
+                                        line: number;
+                                        character: number;
+                                    };
+                                };
+                            };
+                            /** @enum {string} */
+                            kind: "definition" | "write" | "read";
+                            preview: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description LanguageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageError"];
+                };
+            };
+        };
+    };
+    "language.hover": {
+        parameters: {
+            query: {
+                path: string;
+                line: string;
+                character: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        providerId: string | null;
+                        range: {
+                            start: {
+                                line: number;
+                                character: number;
+                            };
+                            end: {
+                                line: number;
+                                character: number;
+                            };
+                        } | null;
+                        contents: string;
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description LanguageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageError"];
                 };
             };
         };

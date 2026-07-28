@@ -27,6 +27,8 @@ import { GitMessageHandler } from "./layers/git-message/git-message.handler.ts"
 import { GitMessageLive } from "./layers/git-message/git-message.layer.live.ts"
 import { GitHubHandler } from "./layers/github/github.handler.ts"
 import { GitHubLive } from "./layers/github/github.layer.live.ts"
+import { LanguageHandler } from "./layers/language/language.handler.ts"
+import { LanguageLive } from "./layers/language/language.layer.live.ts"
 import { TasksHandler } from "./layers/tasks/tasks.handler.ts"
 import { TasksLive } from "./layers/tasks/tasks.layer.live.ts"
 import { LocalDevHandler } from "./layers/local-dev/local-dev.handler.ts"
@@ -74,6 +76,7 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(ThreadsHandler),
   Layer.provide(ChatsHandler),
   Layer.provide(DocsHandler),
+  Layer.provide(LanguageHandler),
   Layer.provide(TasksHandler),
   Layer.provide(LocalDevHandler),
   Layer.provide(VisualCommentsHandler)
@@ -89,6 +92,7 @@ const RequestServices = Layer.mergeAll(
   ThreadsLive,
   ChatsLive,
   DocsLive,
+  LanguageLive,
   TasksLive,
   LocalDevLive,
   DevRuntimeLive,
