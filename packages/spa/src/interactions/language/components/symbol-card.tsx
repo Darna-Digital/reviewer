@@ -9,11 +9,7 @@
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
 import { cn } from "@/lib/utils"
-import {
-  placeCard,
-  type Placement,
-  type Rect,
-} from "../functions/card-placement"
+import { placeCard, type Placement, type Rect } from "@/lib/floating-placement"
 
 interface SymbolCardProps {
   /** Viewport rectangle of the token the card belongs to. */

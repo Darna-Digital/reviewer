@@ -1,10 +1,11 @@
 /**
- * Where to put the floating card that a hovered or clicked token opens.
+ * Where to put a panel that floats next to something in a scrolling view — a
+ * hover card on a token, an action bar under a selection.
  *
- * Tokens sit anywhere in a scrolling code view, including hard against the
- * bottom or the right edge, so the card has to flip and clamp. Keeping that as
- * arithmetic over plain rectangles means the awkward cases can be tested
- * without a browser, and the component just applies the result.
+ * The anchor sits anywhere, including hard against the bottom or the right
+ * edge, so the panel has to flip and clamp. Keeping that as arithmetic over
+ * plain rectangles means the awkward cases can be tested without a browser, and
+ * the component just applies the result.
  */
 
 export interface Rect {

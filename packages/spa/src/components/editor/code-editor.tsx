@@ -11,6 +11,10 @@ import {
   toggleLineCommentEdits,
 } from "@/components/editor/editor-commands"
 import { THEMES, useLangReady } from "@/components/editor/highlighter"
+import {
+  useRevealLine,
+  type RevealTarget,
+} from "@/interactions/language/components/use-reveal-line"
 import { Button } from "@/components/ui/button"
 import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { fetchClient } from "@/lib/api/client"
@@ -22,10 +26,19 @@ interface CodeEditorProps {
   theme: Theme
   onClose: () => void
   onSaved: () => void
+  /** Scroll this one-based line into view and flash it, as the viewer does. */
+  reveal?: RevealTarget | null
 }
 
-export function CodeEditor({ path, theme, onClose, onSaved }: CodeEditorProps) {
+export function CodeEditor({
+  path,
+  theme,
+  onClose,
+  onSaved,
+  reveal = null,
+}: CodeEditorProps) {
   const loaded = useFile(path)
+  const scroller = useRef<HTMLDivElement>(null)
   const langReady = useLangReady(path)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -150,6 +163,13 @@ export function CodeEditor({ path, theme, onClose, onSaved }: CodeEditorProps) {
     return () => window.removeEventListener("keydown", onKeyDown, true)
   }, [runCommand])
 
+  // The editor scrolls itself, so the scroller is this component's own root.
+  useRevealLine(
+    useCallback(() => scroller.current, []),
+    reveal,
+    loaded.data === undefined ? 0 : loaded.data.contents.split("\n").length
+  )
+
   if (loaded.isPending || !langReady) {
     return (
       <div className="p-8">
@@ -164,7 +184,7 @@ export function CodeEditor({ path, theme, onClose, onSaved }: CodeEditorProps) {
   }
 
   return (
-    <div className="h-full overflow-auto">
+    <div ref={scroller} className="h-full overflow-auto">
       <section className="diff-file" data-file-anchor={path}>
         <EditorProvider editor={editor}>
           {/* Remount per file so the editor reseeds from the new contents.

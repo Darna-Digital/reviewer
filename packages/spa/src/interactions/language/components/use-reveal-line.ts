@@ -10,7 +10,7 @@
  * usually not rendered yet, so an estimate gets the virtualiser to build it.
  */
 import { useEffect } from "react"
-import { queryInCode } from "../functions/code-root"
+import { queryInCode } from "@/lib/code-root"
 import {
   estimateScrollTop,
   scrollTopForElement,
@@ -29,7 +29,8 @@ export interface RevealTarget {
 }
 
 export function useRevealLine(
-  wrapperRef: React.RefObject<HTMLDivElement | null>,
+  /** Resolves the element that owns the scroll; views nest it differently. */
+  getScroller: () => HTMLElement | null,
   target: RevealTarget | null,
   totalLines: number
 ) {
@@ -38,10 +39,8 @@ export function useRevealLine(
 
   useEffect(() => {
     if (line === null) return
-    // The scrolling element is the Virtualizer's own root div — it must own the
-    // scroll in order to window its rendering — which is the wrapper's child.
-    const container = wrapperRef.current?.firstElementChild
-    if (!(container instanceof HTMLElement)) return
+    const container = getScroller()
+    if (container === null) return
 
     let active = true
     let raf = 0
@@ -112,5 +111,5 @@ export function useRevealLine(
     raf = requestAnimationFrame(frame)
     return stop
     // `key` re-runs the effect when the same line is requested again.
-  }, [line, key, totalLines, wrapperRef])
+  }, [line, key, totalLines, getScroller])
 }

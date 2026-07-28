@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { placeCard } from "./card-placement"
+import { placeCard } from "./floating-placement"
 
 const VIEWPORT = { width: 1000, height: 600 }
 const CARD = { width: 320, height: 200 }

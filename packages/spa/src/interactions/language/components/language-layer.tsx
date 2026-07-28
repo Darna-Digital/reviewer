@@ -29,7 +29,7 @@ import type {
   NavigationOutcome,
   TokenSpan,
 } from "../interfaces/language.interfaces"
-import type { Rect } from "../functions/card-placement"
+import type { Rect } from "@/lib/floating-placement"
 import { SymbolCard } from "./symbol-card"
 import {
   CardSpinner,

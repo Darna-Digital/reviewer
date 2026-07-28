@@ -14,7 +14,7 @@
  */
 import type { Diagnostic } from "@byconvo/core/language"
 import type { TokenSpan } from "../interfaces/language.interfaces"
-import { codeRootOf } from "./code-root"
+import { codeRootOf } from "@/lib/code-root"
 import { markerForToken } from "./language.functions"
 
 /** Marks the element as carrying a diagnostic of this severity. */

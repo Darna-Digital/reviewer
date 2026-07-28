@@ -7,6 +7,7 @@ import {
   DraftCard,
   type DraftLocation,
 } from "@/interactions/comments/components/comment-thread"
+import { useSelectionActions } from "@/interactions/code-actions/components/use-selection-actions"
 import {
   DiagnosticsAnnotation,
   DiagnosticsSummary,
@@ -42,7 +43,8 @@ type AnnotationMeta =
 interface CodeViewProps {
   path: string
   theme: Theme
-  onEdit: (path: string) => void
+  /** Open the editor for `path`, revealing `lineNumber`. */
+  onEdit: (path: string, lineNumber: number) => void
   onClose: () => void
   /** Open this file's commit history in the bottom dock. */
   onShowHistory?: (path: string) => void
@@ -122,10 +124,32 @@ export function CodeView({
   // whenever either has something to show.
   const annotationsEnabled = commentsEnabled || language.annotations.length > 0
 
+  // Select lines to act on them. This is the only way in to commenting and
+  // editing now — there is no gutter button and no editor-mode toggle.
+  const selection = useSelectionActions({
+    capabilities: { comment: commentsEnabled, edit: true },
+    suspended: draft !== null && draft.filePath === path,
+    onComment: useCallback(
+      (lineNumber: number) =>
+        onDraftOpen?.({ filePath: path, side: FILE_COMMENT_SIDE, lineNumber }),
+      [onDraftOpen, path]
+    ),
+    onEdit: useCallback(
+      (lineNumber: number) => onEdit(path, lineNumber),
+      [onEdit, path]
+    ),
+    getContainer: useCallback(() => scrollWrapper.current, []),
+  })
+
   // Line count drives the first scroll estimate for a line that has not been
   // rendered yet; zero until the file loads, which simply means "start at top".
   useRevealLine(
-    scrollWrapper,
+    // The Virtualizer's own root div owns the scroll — it has to, in order to
+    // window its rendering — and it is the wrapper's only child.
+    useCallback(() => {
+      const scroller = scrollWrapper.current?.firstElementChild
+      return scroller instanceof HTMLElement ? scroller : null
+    }, []),
     reveal,
     file.data === undefined ? 0 : file.data.contents.split("\n").length
   )
@@ -162,31 +186,18 @@ export function CodeView({
               themeType: theme,
               overflow: "wrap",
               stickyHeader: false,
-              enableGutterUtility: commentsEnabled,
-              onGutterUtilityClick: commentsEnabled
-                ? (range) =>
-                    onDraftOpen?.({
-                      filePath: path,
-                      side: FILE_COMMENT_SIDE,
-                      lineNumber: range.end,
-                    })
-                : undefined,
-              onLineNumberClick: commentsEnabled
-                ? (props) =>
-                    onDraftOpen?.({
-                      filePath: path,
-                      side: FILE_COMMENT_SIDE,
-                      lineNumber: props.lineNumber,
-                    })
-                : undefined,
+              // Commenting and editing hang off the selection instead of a
+              // permanent gutter button and a header control.
+              ...selection.viewOptions,
               // Token hooks + the post-render pass that underlines problems.
               ...language.viewOptions,
             }}
+            // Controlled only while a draft is open, so it stays highlighted.
+            // Left uncontrolled otherwise: the view owns drag-selection, and
+            // writing `null` every render would wipe it as it was being made.
             selectedLines={
-              commentsEnabled
-                ? draft !== null && draft.filePath === path
-                  ? { start: draft.lineNumber, end: draft.lineNumber }
-                  : null
+              draft !== null && draft.filePath === path
+                ? { start: draft.lineNumber, end: draft.lineNumber }
                 : undefined
             }
             lineAnnotations={annotationsEnabled ? annotations : undefined}
@@ -244,13 +255,6 @@ export function CodeView({
                 )}
                 <Button
                   variant="ghost"
-                  size="xs"
-                  onClick={() => onEdit(meta.name)}
-                >
-                  Edit
-                </Button>
-                <Button
-                  variant="ghost"
                   size="icon-xs"
                   onClick={onClose}
                   aria-label="Close"
@@ -262,6 +266,7 @@ export function CodeView({
           />
         </section>
         {language.card}
+        {selection.bar}
       </Virtualizer>
     </div>
   )

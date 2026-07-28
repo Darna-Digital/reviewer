@@ -376,12 +376,19 @@ export function AppShell() {
   const [reveal, setReveal] = useState<{ line: number; key: number } | null>(
     null
   )
-  const openLocation = (path: string, lineNumber: number) => {
-    openFile(path, false)
+  const revealLine = (lineNumber: number) =>
     setReveal((previous) => ({
       line: lineNumber,
       key: (previous?.key ?? 0) + 1,
     }))
+  const openLocation = (path: string, lineNumber: number) => {
+    openFile(path, false)
+    revealLine(lineNumber)
+  }
+  /** The selection bar's Edit action: open the editor on the selected line. */
+  const editAtLine = (path: string, lineNumber: number) => {
+    openFile(path, true)
+    revealLine(lineNumber)
   }
 
   // Show one file's past: the log filters down to it (following renames) and
@@ -732,6 +739,7 @@ export function AppShell() {
           theme={prefs.resolvedTheme}
           onClose={closeFile}
           onSaved={git.refresh}
+          reveal={reveal}
         />
       )
     }
@@ -740,7 +748,7 @@ export function AppShell() {
         <CodeView
           path={viewing}
           theme={prefs.resolvedTheme}
-          onEdit={(p) => openFile(p, true)}
+          onEdit={editAtLine}
           onClose={closeFile}
           onShowHistory={showFileHistory}
           onOpenLocation={openLocation}
