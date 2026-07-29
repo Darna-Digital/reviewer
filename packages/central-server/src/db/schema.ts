@@ -25,10 +25,7 @@ import {
   unique,
   uuid,
 } from "drizzle-orm/pg-core"
-import type {
-  TaskPriority,
-  TaskStatus,
-} from "@byconvo/core/tasks"
+import type { TaskPriority, TaskStatus } from "@byconvo/core/tasks"
 import type { AccentColor } from "@byconvo/core/projects"
 import type { CommentSubject } from "@byconvo/core/workspace-comments"
 import type { MemberRole } from "@byconvo/core/identity"
@@ -314,9 +311,12 @@ export const workspaceComments = pgTable(
      */
     subjectType: text("subject_type").$type<CommentSubject>().notNull(),
     subjectId: uuid("subject_id").notNull(),
-    parentId: uuid("parent_id").references((): AnyPgColumn => workspaceComments.id, {
-      onDelete: "cascade",
-    }),
+    parentId: uuid("parent_id").references(
+      (): AnyPgColumn => workspaceComments.id,
+      {
+        onDelete: "cascade",
+      }
+    ),
     body: text("body").notNull(),
     authorId: text("author_id")
       .notNull()

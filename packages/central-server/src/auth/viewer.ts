@@ -74,7 +74,9 @@ export const resolveViewer: Effect.Effect<
   const active = session.session.activeOrganizationId ?? null
   const membership =
     (yield* membershipOf(db, session.user.id, active)) ??
-    (active === null ? undefined : yield* membershipOf(db, session.user.id, null))
+    (active === null
+      ? undefined
+      : yield* membershipOf(db, session.user.id, null))
 
   if (membership === undefined) {
     return yield* Effect.fail(

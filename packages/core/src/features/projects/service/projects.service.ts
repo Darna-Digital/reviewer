@@ -63,15 +63,11 @@ export const makeProjectsService = Effect.gen(function* () {
     Effect.map(repo.list, (existing) => {
       const normalized = normalizeProjectKey(requested ?? "")
       const base = normalized.length > 0 ? normalized : suggestProjectKey(name)
-      const taken = existing
-        .filter((p) => p.id !== excludeId)
-        .map((p) => p.key)
+      const taken = existing.filter((p) => p.id !== excludeId).map((p) => p.key)
       return uniqueProjectKey(base, taken)
     })
 
-  const requireName = (
-    name: string
-  ): Effect.Effect<string, InvalidInput> => {
+  const requireName = (name: string): Effect.Effect<string, InvalidInput> => {
     const trimmed = name.trim()
     return trimmed.length === 0
       ? Effect.fail(new InvalidInput({ reason: "a project needs a name" }))

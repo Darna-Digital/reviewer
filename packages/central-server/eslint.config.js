@@ -7,6 +7,8 @@ export default [
   {
     ignores: [
       "dist",
+      "drizzle.config.ts",
+      "drizzle",
       "eslint.config.js",
       "prettier.config.js",
       "vitest.config.ts",

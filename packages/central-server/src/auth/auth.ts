@@ -19,6 +19,7 @@ import {
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { organization } from "better-auth/plugins"
+import { eq } from "drizzle-orm"
 import { drizzle } from "drizzle-orm/node-postgres"
 import { randomUUID } from "node:crypto"
 import { Pool } from "pg"
@@ -102,6 +103,29 @@ export const auth = betterAuth({
     },
   },
   databaseHooks: {
+    session: {
+      create: {
+        /**
+         * Land every new session in an organization. The plugin only fills
+         * `activeOrganizationId` once someone explicitly switches, which leaves
+         * a freshly signed-in client with no tenant to name — the member list
+         * and the role would both read as empty until the first switch.
+         */
+        before: async (created) => {
+          const [membership] = await authDb
+            .select({ organizationId: schema.member.organizationId })
+            .from(schema.member)
+            .where(eq(schema.member.userId, created.userId))
+            .limit(1)
+          return {
+            data: {
+              ...created,
+              activeOrganizationId: membership?.organizationId ?? null,
+            },
+          }
+        },
+      },
+    },
     user: {
       create: {
         /**

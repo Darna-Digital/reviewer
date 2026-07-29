@@ -94,7 +94,9 @@ export const makeDrizzleProjectsRepository = Effect.gen(function* () {
       ).pipe(
         Effect.flatMap((rows) =>
           rows[0] === undefined
-            ? Effect.fail(new NotFound({ reason: "the project was not written" }))
+            ? Effect.fail(
+                new NotFound({ reason: "the project was not written" })
+              )
             : Effect.succeed(toProject(rows[0]))
         )
       ),

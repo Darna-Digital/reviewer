@@ -89,7 +89,8 @@ export const makeWorkspaceCommentsService = Effect.gen(function* () {
         ) {
           return yield* Effect.fail(
             new InvalidInput({
-              reason: "a reply must belong to the same task or doc as its parent",
+              reason:
+                "a reply must belong to the same task or doc as its parent",
             })
           )
         }
@@ -117,9 +118,7 @@ export const makeWorkspaceCommentsService = Effect.gen(function* () {
   const remove: WorkspaceCommentsServiceShape["remove"] = (id) =>
     Effect.gen(function* () {
       const existing = yield* repo.get(id)
-      if (
-        !canDeleteComment(viewer.role, existing.author.id, viewer.user.id)
-      ) {
+      if (!canDeleteComment(viewer.role, existing.author.id, viewer.user.id)) {
         return yield* Effect.fail(
           new Forbidden({
             reason: "only the author or an admin can delete a comment",

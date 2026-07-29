@@ -1,7 +1,11 @@
 import type { MemberRole } from "../schema/identity.schema.ts"
 
 /** Most privileged first. `rank` compares two roles without a lookup chain. */
-export const ROLE_ORDER: ReadonlyArray<MemberRole> = ["owner", "admin", "member"]
+export const ROLE_ORDER: ReadonlyArray<MemberRole> = [
+  "owner",
+  "admin",
+  "member",
+]
 
 export const ROLE_LABEL: Record<MemberRole, string> = {
   owner: "Owner",
@@ -69,5 +73,5 @@ export const initialsOf = (name: string): string =>
     .split(/\s+/)
     .filter((part) => part.length > 0)
     .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
+    .map((part) => part[0].toUpperCase())
     .join("") || "?"

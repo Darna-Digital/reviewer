@@ -2,15 +2,15 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router"
 import { useEffect } from "react"
 import { openBottomTab } from "@/lib/ui-prefs"
 
-/** Legacy /local-dev route — opens the Services bottom-dock tab. */
-export const Route = createFileRoute("/_workspace/local-dev")({
-  component: OpenServicesTab,
+/** Legacy /threads route — opens the Threads bottom-dock tab. */
+export const Route = createFileRoute("/_conversations/threads")({
+  component: OpenThreadsTab,
 })
 
-function OpenServicesTab() {
+function OpenThreadsTab() {
   const navigate = useNavigate()
   useEffect(() => {
-    openBottomTab("services")
+    openBottomTab("threads")
     void navigate({ to: "/commit", replace: true })
   }, [navigate])
   return null

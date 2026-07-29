@@ -32,12 +32,17 @@ export const normalizeProjectKey = (key: string): string =>
  * truncated ("Byconvo" → "BYC"). Falls back to "PRJ" for an empty name.
  */
 export const suggestProjectKey = (name: string): string => {
-  const words = name.trim().split(/[\s_-]+/).filter((w) => w.length > 0)
+  const words = name
+    .trim()
+    .split(/[\s_-]+/)
+    .filter((w) => w.length > 0)
   const initials = words
     .map((word) => normalizeProjectKey(word).slice(0, 1))
     .join("")
   const candidate =
-    words.length > 1 ? initials : normalizeProjectKey(words[0] ?? "").slice(0, 3)
+    words.length > 1
+      ? initials
+      : normalizeProjectKey(words[0] ?? "").slice(0, 3)
   return candidate.length > 0 ? candidate : "PRJ"
 }
 

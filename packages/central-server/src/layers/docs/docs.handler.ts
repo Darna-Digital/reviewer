@@ -20,6 +20,8 @@ export const DocsHandler = HttpApiBuilder.group(Api, "docs", (handlers) =>
       Effect.flatMap(docsService, (s) => s.update(params.id, payload))
     )
     .handle("remove", ({ params }) =>
-      Effect.flatMap(docsService, (s) => s.remove(params.id)).pipe(Effect.as(ok))
+      Effect.flatMap(docsService, (s) => s.remove(params.id)).pipe(
+        Effect.as(ok)
+      )
     )
 )

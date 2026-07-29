@@ -99,7 +99,10 @@ describe("toDocSummary", () => {
 })
 
 describe("searchDocs", () => {
-  const docs = [summary({ id: "a", title: "Migration plan" }), summary({ id: "b", title: "Roadmap" })]
+  const docs = [
+    summary({ id: "a", title: "Migration plan" }),
+    summary({ id: "b", title: "Roadmap" }),
+  ]
 
   it("returns everything for a blank query", () => {
     expect(searchDocs(docs, "  ")).toHaveLength(2)

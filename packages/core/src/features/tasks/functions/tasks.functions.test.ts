@@ -82,7 +82,10 @@ describe("positionBetween", () => {
 describe("nextPosition", () => {
   it("appends after the highest sibling", () => {
     expect(
-      nextPosition([task({ id: "a", position: 10 }), task({ id: "b", position: 30 })])
+      nextPosition([
+        task({ id: "a", position: 10 }),
+        task({ id: "b", position: 30 }),
+      ])
     ).toBe(1054)
   })
 
@@ -136,7 +139,7 @@ describe("groupByStatus", () => {
   it("buckets into board order and sorts each bucket by position", () => {
     const groups = groupByStatus(tasks)
     expect(groups.map((g) => g.status)).toEqual(["in_review", "todo"])
-    expect(groups[1]!.tasks.map((t) => t.id)).toEqual(["c", "a"])
+    expect(groups[1].tasks.map((t) => t.id)).toEqual(["c", "a"])
   })
 
   it("drops empty statuses unless asked for them", () => {
@@ -145,7 +148,7 @@ describe("groupByStatus", () => {
   })
 
   it("labels each group", () => {
-    expect(groupByStatus(tasks)[0]!.label).toBe("In Review")
+    expect(groupByStatus(tasks)[0].label).toBe("In Review")
   })
 })
 
@@ -157,8 +160,8 @@ describe("buildTaskTree", () => {
       task({ id: "grandchild", parentId: "child" }),
     ])
     expect(tree).toHaveLength(1)
-    expect(tree[0]!.children[0]!.task.id).toBe("child")
-    expect(tree[0]!.children[0]!.children[0]!.task.id).toBe("grandchild")
+    expect(tree[0].children[0].task.id).toBe("child")
+    expect(tree[0].children[0].children[0].task.id).toBe("grandchild")
   })
 
   it("promotes a task whose parent is not in the list", () => {
@@ -172,7 +175,7 @@ describe("buildTaskTree", () => {
       task({ id: "b", parentId: "root", position: 20 }),
       task({ id: "a", parentId: "root", position: 10 }),
     ])
-    expect(tree[0]!.children.map((n) => n.task.id)).toEqual(["a", "b"])
+    expect(tree[0].children.map((n) => n.task.id)).toEqual(["a", "b"])
   })
 })
 

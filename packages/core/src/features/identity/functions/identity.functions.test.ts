@@ -68,7 +68,9 @@ describe("slugifyOrganization", () => {
 
 describe("nameFromEmail", () => {
   it("humanizes the local part", () => {
-    expect(nameFromEmail("rutenis.jakas@darnadigital.com")).toBe("rutenis jakas")
+    expect(nameFromEmail("rutenis.jakas@darnadigital.com")).toBe(
+      "rutenis jakas"
+    )
   })
 
   it("falls back to the whole address when there is no local part", () => {

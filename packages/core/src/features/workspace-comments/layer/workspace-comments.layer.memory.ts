@@ -31,11 +31,13 @@ export const testViewer = (over: Partial<ViewerShape> = {}): ViewerShape => ({
   ...over,
 })
 
-export const WorkspaceCommentsMemory = (options: {
-  readonly viewer?: ViewerShape
-  readonly seed?: ReadonlyArray<WorkspaceComment>
-  readonly authors?: Readonly<Record<string, CommentAuthor>>
-} = {}) =>
+export const WorkspaceCommentsMemory = (
+  options: {
+    readonly viewer?: ViewerShape
+    readonly seed?: ReadonlyArray<WorkspaceComment>
+    readonly authors?: Readonly<Record<string, CommentAuthor>>
+  } = {}
+) =>
   Layer.effect(WorkspaceCommentsService)(makeWorkspaceCommentsService).pipe(
     Layer.provide(
       Layer.mergeAll(

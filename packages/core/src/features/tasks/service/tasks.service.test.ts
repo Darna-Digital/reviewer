@@ -51,20 +51,22 @@ describe("TasksService", () => {
     }).pipe(Effect.provide(memory))
   )
 
-  it.effect("stamps completedAt when a task closes and clears it on reopen", () =>
-    Effect.gen(function* () {
-      const tasks = yield* TasksService
-      const created = yield* tasks.create({ projectId: "p1", title: "spa" })
-      const done = yield* tasks.update(created.id, { status: "done" })
-      expect(done.completedAt).not.toBeNull()
+  it.effect(
+    "stamps completedAt when a task closes and clears it on reopen",
+    () =>
+      Effect.gen(function* () {
+        const tasks = yield* TasksService
+        const created = yield* tasks.create({ projectId: "p1", title: "spa" })
+        const done = yield* tasks.update(created.id, { status: "done" })
+        expect(done.completedAt).not.toBeNull()
 
-      // Re-saving a closed task keeps the moment it was actually finished.
-      const retitled = yield* tasks.update(done.id, { title: "spa v2" })
-      expect(retitled.completedAt).toBe(done.completedAt)
+        // Re-saving a closed task keeps the moment it was actually finished.
+        const retitled = yield* tasks.update(done.id, { title: "spa v2" })
+        expect(retitled.completedAt).toBe(done.completedAt)
 
-      const reopened = yield* tasks.update(done.id, { status: "todo" })
-      expect(reopened.completedAt).toBeNull()
-    }).pipe(Effect.provide(memory))
+        const reopened = yield* tasks.update(done.id, { status: "todo" })
+        expect(reopened.completedAt).toBeNull()
+      }).pipe(Effect.provide(memory))
   )
 
   it.effect("stamps a task created straight into a closed status", () =>

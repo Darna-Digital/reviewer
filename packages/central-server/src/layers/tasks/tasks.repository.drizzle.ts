@@ -99,7 +99,10 @@ export const makeDrizzleTasksRepository = Effect.gen(function* () {
     const rows = await d
       .select({ task: schema.tasks, projectKey: schema.projects.key })
       .from(schema.tasks)
-      .innerJoin(schema.projects, eq(schema.tasks.projectId, schema.projects.id))
+      .innerJoin(
+        schema.projects,
+        eq(schema.tasks.projectId, schema.projects.id)
+      )
       .where(where)
       .orderBy(asc(schema.tasks.position), asc(schema.tasks.number))
     const labels = await labelIdsByTask(
@@ -122,10 +125,7 @@ export const makeDrizzleTasksRepository = Effect.gen(function* () {
 
   const repo: TasksRepo = {
     listByProject: (projectId) =>
-      run(
-        "listing tasks",
-        select(mine(eq(schema.tasks.projectId, projectId)))
-      ),
+      run("listing tasks", select(mine(eq(schema.tasks.projectId, projectId)))),
 
     listAll: run("listing every task", select(mine())),
 
@@ -140,7 +140,9 @@ export const makeDrizzleTasksRepository = Effect.gen(function* () {
             // key: the row is locked for the length of the UPDATE.
             const [project] = await tx
               .update(schema.projects)
-              .set({ nextTaskNumber: sql`${schema.projects.nextTaskNumber} + 1` })
+              .set({
+                nextTaskNumber: sql`${schema.projects.nextTaskNumber} + 1`,
+              })
               .where(
                 and(
                   eq(schema.projects.id, input.projectId),

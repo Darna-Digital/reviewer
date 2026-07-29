@@ -54,7 +54,7 @@ describe("buildCommentTree", () => {
       }),
     ])
     expect(tree).toHaveLength(1)
-    expect(tree[0]!.replies.map((r) => r.comment.id)).toEqual([
+    expect(tree[0].replies.map((r) => r.comment.id)).toEqual([
       "earlier",
       "later",
     ])
@@ -66,7 +66,7 @@ describe("buildCommentTree", () => {
       comment({ id: "b", parentId: "a" }),
       comment({ id: "c", parentId: "b" }),
     ])
-    expect(tree[0]!.replies[0]!.replies[0]!.comment.id).toBe("c")
+    expect(tree[0].replies[0].replies[0].comment.id).toBe("c")
   })
 
   it("promotes a reply whose parent is missing", () => {
@@ -82,12 +82,12 @@ describe("countReplies", () => {
       comment({ id: "b", parentId: "a" }),
       comment({ id: "c", parentId: "b" }),
     ])
-    expect(countReplies(tree[0]!)).toBe(2)
+    expect(countReplies(tree[0])).toBe(2)
   })
 
   it("is zero for a leaf", () => {
     const tree = buildCommentTree([comment({ id: "a" })])
-    expect(countReplies(tree[0]!)).toBe(0)
+    expect(countReplies(tree[0])).toBe(0)
   })
 })
 

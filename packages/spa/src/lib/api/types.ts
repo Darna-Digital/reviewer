@@ -47,8 +47,6 @@ export type AppMode =
   | "review"
   | "browse"
   | "chats"
-  | "docs"
-  | "tasks"
   | "comments"
   | "settings"
 

@@ -64,13 +64,14 @@ export const makeDrizzleDocsRepository = Effect.gen(function* () {
           .where(mine(eq(schema.docs.projectId, projectId)))
           .orderBy(desc(schema.docs.updatedAt))
       ).pipe(
-        Effect.map((rows): ReadonlyArray<DocSummary> =>
-          rows.map((row) => ({
-            id: row.id,
-            projectId: row.projectId,
-            title: row.title,
-            updatedAt: row.updatedAt.toISOString(),
-          }))
+        Effect.map(
+          (rows): ReadonlyArray<DocSummary> =>
+            rows.map((row) => ({
+              id: row.id,
+              projectId: row.projectId,
+              title: row.title,
+              updatedAt: row.updatedAt.toISOString(),
+            }))
         )
       ),
 

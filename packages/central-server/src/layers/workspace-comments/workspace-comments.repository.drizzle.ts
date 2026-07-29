@@ -89,7 +89,7 @@ export const makeDrizzleWorkspaceCommentsRepository = Effect.gen(function* () {
             and(
               eq(schema.workspaceComments.subjectType, subjectType),
               eq(schema.workspaceComments.subjectId, subjectId)
-            )!
+            )
           )
         )
       ).pipe(

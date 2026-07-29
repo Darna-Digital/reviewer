@@ -33,9 +33,7 @@ export interface WorkspaceCommentsRepo {
     body: string
   ) => Effect.Effect<WorkspaceComment, WorkspaceCommentsFailure>
   /** Deletes the comment and every reply beneath it. */
-  readonly remove: (
-    id: string
-  ) => Effect.Effect<void, WorkspaceCommentsFailure>
+  readonly remove: (id: string) => Effect.Effect<void, WorkspaceCommentsFailure>
 }
 
 export class WorkspaceCommentsRepository extends Context.Service<

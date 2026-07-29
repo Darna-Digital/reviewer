@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import type { ChatModelCatalog } from "@byconvo/core/chats"
 import type { ReviewComment } from "@byconvo/core/comments"
-import type { Card as TasksCard } from "@byconvo/core/tasks"
+import type { Task } from "@byconvo/core/tasks"
 import {
   buildChatAssignmentSettings,
   buildReviewAssignmentPrompt,
@@ -41,17 +41,22 @@ const catalog: ChatModelCatalog = {
   ],
 }
 
-const card = {
-  id: "card-1",
+const task: Task = {
+  id: "task-1",
+  projectId: "project-1",
+  number: 168,
   key: "DAR-168",
   title: "Move assignment to chats",
   description: "Use chat streams for agent work.",
-  column: "todo",
-  order: 0,
-  comments: [],
+  status: "todo",
+  priority: "none",
+  parentId: null,
+  position: 1024,
+  labelIds: [],
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
-} as TasksCard
+  completedAt: null,
+}
 
 describe("chat assignment helpers", () => {
   it("detects assignable chat providers and @mentions", () => {
@@ -124,10 +129,10 @@ describe("chat assignment helpers", () => {
       instructionWithoutChatProviderMention("please @claude fix", "claude")
     ).toBe("please fix")
     expect(
-      buildTaskAssignmentTitle(card, "@codex implement the flow", "codex")
+      buildTaskAssignmentTitle(task, "@codex implement the flow", "codex")
     ).toBe("DAR-168 - implement the flow")
     expect(
-      buildTaskAssignmentPrompt(card, "@codex implement the flow", "codex")
+      buildTaskAssignmentPrompt(task, "@codex implement the flow", "codex")
     ).toBe(
       [
         "You are working on task DAR-168: Move assignment to chats.",
@@ -141,7 +146,7 @@ describe("chat assignment helpers", () => {
   })
 
   it("uses a generic task instruction when the comment only names an agent", () => {
-    expect(buildTaskAssignmentPrompt(card, "@opencode", "opencode")).toContain(
+    expect(buildTaskAssignmentPrompt(task, "@opencode", "opencode")).toContain(
       "Follow the task description and resolve this task."
     )
   })

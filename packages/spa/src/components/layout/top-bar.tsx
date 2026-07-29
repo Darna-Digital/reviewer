@@ -2,6 +2,7 @@ import { BranchSwitcher } from "@/components/layout/branch-switcher"
 import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs"
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle"
 import { RepoPicker } from "@/components/repo-picker"
+import { SurfaceSwitch } from "@/components/layout/surface-switch"
 import { cn } from "@/lib/utils"
 import { isDesktop } from "@/lib/desktop"
 import type { BranchInfo, RemoteBranchInfo, RepoInfo } from "@byconvo/core/repo"
@@ -56,6 +57,8 @@ export function TopBar(props: TopBarProps) {
         isDesktop && "pl-10 [-webkit-app-region:drag]"
       )}
     >
+      <SurfaceSwitch />
+
       {/* Repo chip — opens the recents + folder-browser dropdown */}
       <div className="[-webkit-app-region:no-drag]">
         <RepoPicker

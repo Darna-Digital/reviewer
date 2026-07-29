@@ -10,36 +10,47 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AppRouteImport } from './routes/_app'
-import { Route as WorkspaceRouteImport } from './routes/_workspace'
+import { Route as ConversationsRouteImport } from './routes/_conversations'
 import { Route as KitchenSinkRouteImport } from './routes/kitchen-sink'
+import { Route as MembersRouteImport } from './routes/members'
+import { Route as WorkspaceRouteImport } from './routes/workspace'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppCommitRouteImport } from './routes/_app/commit'
-import { Route as WorkspaceChatsRouteImport } from './routes/_workspace/chats'
-import { Route as WorkspaceCommentsRouteImport } from './routes/_workspace/comments'
-import { Route as WorkspaceDocsRouteImport } from './routes/_workspace/docs'
-import { Route as WorkspaceLocalDevRouteImport } from './routes/_workspace/local-dev'
-import { Route as WorkspaceSettingsRouteImport } from './routes/_workspace/settings'
-import { Route as WorkspaceTasksRouteImport } from './routes/_workspace/tasks'
-import { Route as WorkspaceThreadsRouteImport } from './routes/_workspace/threads'
+import { Route as ConversationsChatsRouteImport } from './routes/_conversations/chats'
+import { Route as ConversationsCommentsRouteImport } from './routes/_conversations/comments'
+import { Route as ConversationsLocalDevRouteImport } from './routes/_conversations/local-dev'
+import { Route as ConversationsSettingsRouteImport } from './routes/_conversations/settings'
+import { Route as ConversationsThreadsRouteImport } from './routes/_conversations/threads'
+import { Route as AcceptInvitationInvitationIdRouteImport } from './routes/accept-invitation.$invitationId'
 import { Route as AppBrowseIndexRouteImport } from './routes/_app/browse/index'
 import { Route as AppBrowseRangeRouteImport } from './routes/_app/browse/range'
 import { Route as AppReviewIndexRouteImport } from './routes/_app/review/index'
 import { Route as AppReviewPullRouteImport } from './routes/_app/review/$pull'
-import { Route as WorkspaceChatsIndexRouteImport } from './routes/_workspace/chats.index'
-import { Route as WorkspaceChatsChatIdRouteImport } from './routes/_workspace/chats.$chatId'
+import { Route as ConversationsChatsIndexRouteImport } from './routes/_conversations/chats.index'
+import { Route as ConversationsChatsChatIdRouteImport } from './routes/_conversations/chats.$chatId'
 import { Route as AppBrowseCommitShaRouteImport } from './routes/_app/browse/commit.$sha'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WorkspaceRoute = WorkspaceRouteImport.update({
-  id: '/_workspace',
+const ConversationsRoute = ConversationsRouteImport.update({
+  id: '/_conversations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KitchenSinkRoute = KitchenSinkRouteImport.update({
   id: '/kitchen-sink',
   path: '/kitchen-sink',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MembersRoute = MembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/workspace',
+  path: '/workspace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
@@ -52,41 +63,37 @@ const AppCommitRoute = AppCommitRouteImport.update({
   path: '/commit',
   getParentRoute: () => AppRoute,
 } as any)
-const WorkspaceChatsRoute = WorkspaceChatsRouteImport.update({
+const ConversationsChatsRoute = ConversationsChatsRouteImport.update({
   id: '/chats',
   path: '/chats',
-  getParentRoute: () => WorkspaceRoute,
+  getParentRoute: () => ConversationsRoute,
 } as any)
-const WorkspaceCommentsRoute = WorkspaceCommentsRouteImport.update({
+const ConversationsCommentsRoute = ConversationsCommentsRouteImport.update({
   id: '/comments',
   path: '/comments',
-  getParentRoute: () => WorkspaceRoute,
+  getParentRoute: () => ConversationsRoute,
 } as any)
-const WorkspaceDocsRoute = WorkspaceDocsRouteImport.update({
-  id: '/docs',
-  path: '/docs',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceLocalDevRoute = WorkspaceLocalDevRouteImport.update({
+const ConversationsLocalDevRoute = ConversationsLocalDevRouteImport.update({
   id: '/local-dev',
   path: '/local-dev',
-  getParentRoute: () => WorkspaceRoute,
+  getParentRoute: () => ConversationsRoute,
 } as any)
-const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
+const ConversationsSettingsRoute = ConversationsSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => WorkspaceRoute,
+  getParentRoute: () => ConversationsRoute,
 } as any)
-const WorkspaceTasksRoute = WorkspaceTasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceThreadsRoute = WorkspaceThreadsRouteImport.update({
+const ConversationsThreadsRoute = ConversationsThreadsRouteImport.update({
   id: '/threads',
   path: '/threads',
-  getParentRoute: () => WorkspaceRoute,
+  getParentRoute: () => ConversationsRoute,
 } as any)
+const AcceptInvitationInvitationIdRoute =
+  AcceptInvitationInvitationIdRouteImport.update({
+    id: '/accept-invitation/$invitationId',
+    path: '/accept-invitation/$invitationId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AppBrowseIndexRoute = AppBrowseIndexRouteImport.update({
   id: '/browse/',
   path: '/browse/',
@@ -107,16 +114,17 @@ const AppReviewPullRoute = AppReviewPullRouteImport.update({
   path: '/review/$pull',
   getParentRoute: () => AppRoute,
 } as any)
-const WorkspaceChatsIndexRoute = WorkspaceChatsIndexRouteImport.update({
+const ConversationsChatsIndexRoute = ConversationsChatsIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => WorkspaceChatsRoute,
+  getParentRoute: () => ConversationsChatsRoute,
 } as any)
-const WorkspaceChatsChatIdRoute = WorkspaceChatsChatIdRouteImport.update({
-  id: '/$chatId',
-  path: '/$chatId',
-  getParentRoute: () => WorkspaceChatsRoute,
-} as any)
+const ConversationsChatsChatIdRoute =
+  ConversationsChatsChatIdRouteImport.update({
+    id: '/$chatId',
+    path: '/$chatId',
+    getParentRoute: () => ConversationsChatsRoute,
+  } as any)
 const AppBrowseCommitShaRoute = AppBrowseCommitShaRouteImport.update({
   id: '/browse/commit/$sha',
   path: '/browse/commit/$sha',
@@ -126,60 +134,63 @@ const AppBrowseCommitShaRoute = AppBrowseCommitShaRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/kitchen-sink': typeof KitchenSinkRoute
+  '/members': typeof MembersRoute
+  '/workspace': typeof WorkspaceRoute
   '/commit': typeof AppCommitRoute
-  '/chats': typeof WorkspaceChatsRouteWithChildren
-  '/comments': typeof WorkspaceCommentsRoute
-  '/docs': typeof WorkspaceDocsRoute
-  '/local-dev': typeof WorkspaceLocalDevRoute
-  '/settings': typeof WorkspaceSettingsRoute
-  '/tasks': typeof WorkspaceTasksRoute
-  '/threads': typeof WorkspaceThreadsRoute
+  '/chats': typeof ConversationsChatsRouteWithChildren
+  '/comments': typeof ConversationsCommentsRoute
+  '/local-dev': typeof ConversationsLocalDevRoute
+  '/settings': typeof ConversationsSettingsRoute
+  '/threads': typeof ConversationsThreadsRoute
+  '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/browse/range': typeof AppBrowseRangeRoute
   '/review/$pull': typeof AppReviewPullRoute
-  '/chats/$chatId': typeof WorkspaceChatsChatIdRoute
+  '/chats/$chatId': typeof ConversationsChatsChatIdRoute
   '/browse/': typeof AppBrowseIndexRoute
   '/review/': typeof AppReviewIndexRoute
-  '/chats/': typeof WorkspaceChatsIndexRoute
+  '/chats/': typeof ConversationsChatsIndexRoute
   '/browse/commit/$sha': typeof AppBrowseCommitShaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/kitchen-sink': typeof KitchenSinkRoute
+  '/members': typeof MembersRoute
+  '/workspace': typeof WorkspaceRoute
   '/commit': typeof AppCommitRoute
-  '/comments': typeof WorkspaceCommentsRoute
-  '/docs': typeof WorkspaceDocsRoute
-  '/local-dev': typeof WorkspaceLocalDevRoute
-  '/settings': typeof WorkspaceSettingsRoute
-  '/tasks': typeof WorkspaceTasksRoute
-  '/threads': typeof WorkspaceThreadsRoute
+  '/comments': typeof ConversationsCommentsRoute
+  '/local-dev': typeof ConversationsLocalDevRoute
+  '/settings': typeof ConversationsSettingsRoute
+  '/threads': typeof ConversationsThreadsRoute
+  '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/browse/range': typeof AppBrowseRangeRoute
   '/review/$pull': typeof AppReviewPullRoute
-  '/chats/$chatId': typeof WorkspaceChatsChatIdRoute
+  '/chats/$chatId': typeof ConversationsChatsChatIdRoute
   '/browse': typeof AppBrowseIndexRoute
   '/review': typeof AppReviewIndexRoute
-  '/chats': typeof WorkspaceChatsIndexRoute
+  '/chats': typeof ConversationsChatsIndexRoute
   '/browse/commit/$sha': typeof AppBrowseCommitShaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_app': typeof AppRouteWithChildren
-  '/_workspace': typeof WorkspaceRouteWithChildren
+  '/_conversations': typeof ConversationsRouteWithChildren
   '/kitchen-sink': typeof KitchenSinkRoute
+  '/members': typeof MembersRoute
+  '/workspace': typeof WorkspaceRoute
   '/_app/commit': typeof AppCommitRoute
-  '/_workspace/chats': typeof WorkspaceChatsRouteWithChildren
-  '/_workspace/comments': typeof WorkspaceCommentsRoute
-  '/_workspace/docs': typeof WorkspaceDocsRoute
-  '/_workspace/local-dev': typeof WorkspaceLocalDevRoute
-  '/_workspace/settings': typeof WorkspaceSettingsRoute
-  '/_workspace/tasks': typeof WorkspaceTasksRoute
-  '/_workspace/threads': typeof WorkspaceThreadsRoute
+  '/_conversations/chats': typeof ConversationsChatsRouteWithChildren
+  '/_conversations/comments': typeof ConversationsCommentsRoute
+  '/_conversations/local-dev': typeof ConversationsLocalDevRoute
+  '/_conversations/settings': typeof ConversationsSettingsRoute
+  '/_conversations/threads': typeof ConversationsThreadsRoute
+  '/accept-invitation/$invitationId': typeof AcceptInvitationInvitationIdRoute
   '/_app/': typeof AppIndexRoute
   '/_app/browse/range': typeof AppBrowseRangeRoute
   '/_app/review/$pull': typeof AppReviewPullRoute
-  '/_workspace/chats/$chatId': typeof WorkspaceChatsChatIdRoute
+  '/_conversations/chats/$chatId': typeof ConversationsChatsChatIdRoute
   '/_app/browse/': typeof AppBrowseIndexRoute
   '/_app/review/': typeof AppReviewIndexRoute
-  '/_workspace/chats/': typeof WorkspaceChatsIndexRoute
+  '/_conversations/chats/': typeof ConversationsChatsIndexRoute
   '/_app/browse/commit/$sha': typeof AppBrowseCommitShaRoute
 }
 export interface FileRouteTypes {
@@ -187,14 +198,15 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/kitchen-sink'
+    | '/members'
+    | '/workspace'
     | '/commit'
     | '/chats'
     | '/comments'
-    | '/docs'
     | '/local-dev'
     | '/settings'
-    | '/tasks'
     | '/threads'
+    | '/accept-invitation/$invitationId'
     | '/browse/range'
     | '/review/$pull'
     | '/chats/$chatId'
@@ -206,13 +218,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/kitchen-sink'
+    | '/members'
+    | '/workspace'
     | '/commit'
     | '/comments'
-    | '/docs'
     | '/local-dev'
     | '/settings'
-    | '/tasks'
     | '/threads'
+    | '/accept-invitation/$invitationId'
     | '/browse/range'
     | '/review/$pull'
     | '/chats/$chatId'
@@ -223,30 +236,34 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_app'
-    | '/_workspace'
+    | '/_conversations'
     | '/kitchen-sink'
+    | '/members'
+    | '/workspace'
     | '/_app/commit'
-    | '/_workspace/chats'
-    | '/_workspace/comments'
-    | '/_workspace/docs'
-    | '/_workspace/local-dev'
-    | '/_workspace/settings'
-    | '/_workspace/tasks'
-    | '/_workspace/threads'
+    | '/_conversations/chats'
+    | '/_conversations/comments'
+    | '/_conversations/local-dev'
+    | '/_conversations/settings'
+    | '/_conversations/threads'
+    | '/accept-invitation/$invitationId'
     | '/_app/'
     | '/_app/browse/range'
     | '/_app/review/$pull'
-    | '/_workspace/chats/$chatId'
+    | '/_conversations/chats/$chatId'
     | '/_app/browse/'
     | '/_app/review/'
-    | '/_workspace/chats/'
+    | '/_conversations/chats/'
     | '/_app/browse/commit/$sha'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
-  WorkspaceRoute: typeof WorkspaceRouteWithChildren
+  ConversationsRoute: typeof ConversationsRouteWithChildren
   KitchenSinkRoute: typeof KitchenSinkRoute
+  MembersRoute: typeof MembersRoute
+  WorkspaceRoute: typeof WorkspaceRoute
+  AcceptInvitationInvitationIdRoute: typeof AcceptInvitationInvitationIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -258,11 +275,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_workspace': {
-      id: '/_workspace'
+    '/_conversations': {
+      id: '/_conversations'
       path: ''
       fullPath: '/'
-      preLoaderRoute: typeof WorkspaceRouteImport
+      preLoaderRoute: typeof ConversationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kitchen-sink': {
@@ -270,6 +287,20 @@ declare module '@tanstack/react-router' {
       path: '/kitchen-sink'
       fullPath: '/kitchen-sink'
       preLoaderRoute: typeof KitchenSinkRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/members': {
+      id: '/members'
+      path: '/members'
+      fullPath: '/members'
+      preLoaderRoute: typeof MembersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workspace': {
+      id: '/workspace'
+      path: '/workspace'
+      fullPath: '/workspace'
+      preLoaderRoute: typeof WorkspaceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/': {
@@ -286,54 +317,47 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCommitRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_workspace/chats': {
-      id: '/_workspace/chats'
+    '/_conversations/chats': {
+      id: '/_conversations/chats'
       path: '/chats'
       fullPath: '/chats'
-      preLoaderRoute: typeof WorkspaceChatsRouteImport
-      parentRoute: typeof WorkspaceRoute
+      preLoaderRoute: typeof ConversationsChatsRouteImport
+      parentRoute: typeof ConversationsRoute
     }
-    '/_workspace/comments': {
-      id: '/_workspace/comments'
+    '/_conversations/comments': {
+      id: '/_conversations/comments'
       path: '/comments'
       fullPath: '/comments'
-      preLoaderRoute: typeof WorkspaceCommentsRouteImport
-      parentRoute: typeof WorkspaceRoute
+      preLoaderRoute: typeof ConversationsCommentsRouteImport
+      parentRoute: typeof ConversationsRoute
     }
-    '/_workspace/docs': {
-      id: '/_workspace/docs'
-      path: '/docs'
-      fullPath: '/docs'
-      preLoaderRoute: typeof WorkspaceDocsRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/_workspace/local-dev': {
-      id: '/_workspace/local-dev'
+    '/_conversations/local-dev': {
+      id: '/_conversations/local-dev'
       path: '/local-dev'
       fullPath: '/local-dev'
-      preLoaderRoute: typeof WorkspaceLocalDevRouteImport
-      parentRoute: typeof WorkspaceRoute
+      preLoaderRoute: typeof ConversationsLocalDevRouteImport
+      parentRoute: typeof ConversationsRoute
     }
-    '/_workspace/settings': {
-      id: '/_workspace/settings'
+    '/_conversations/settings': {
+      id: '/_conversations/settings'
       path: '/settings'
       fullPath: '/settings'
-      preLoaderRoute: typeof WorkspaceSettingsRouteImport
-      parentRoute: typeof WorkspaceRoute
+      preLoaderRoute: typeof ConversationsSettingsRouteImport
+      parentRoute: typeof ConversationsRoute
     }
-    '/_workspace/tasks': {
-      id: '/_workspace/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof WorkspaceTasksRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/_workspace/threads': {
-      id: '/_workspace/threads'
+    '/_conversations/threads': {
+      id: '/_conversations/threads'
       path: '/threads'
       fullPath: '/threads'
-      preLoaderRoute: typeof WorkspaceThreadsRouteImport
-      parentRoute: typeof WorkspaceRoute
+      preLoaderRoute: typeof ConversationsThreadsRouteImport
+      parentRoute: typeof ConversationsRoute
+    }
+    '/accept-invitation/$invitationId': {
+      id: '/accept-invitation/$invitationId'
+      path: '/accept-invitation/$invitationId'
+      fullPath: '/accept-invitation/$invitationId'
+      preLoaderRoute: typeof AcceptInvitationInvitationIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/browse/': {
       id: '/_app/browse/'
@@ -363,19 +387,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppReviewPullRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_workspace/chats/': {
-      id: '/_workspace/chats/'
+    '/_conversations/chats/': {
+      id: '/_conversations/chats/'
       path: '/'
       fullPath: '/chats/'
-      preLoaderRoute: typeof WorkspaceChatsIndexRouteImport
-      parentRoute: typeof WorkspaceChatsRoute
+      preLoaderRoute: typeof ConversationsChatsIndexRouteImport
+      parentRoute: typeof ConversationsChatsRoute
     }
-    '/_workspace/chats/$chatId': {
-      id: '/_workspace/chats/$chatId'
+    '/_conversations/chats/$chatId': {
+      id: '/_conversations/chats/$chatId'
       path: '/$chatId'
       fullPath: '/chats/$chatId'
-      preLoaderRoute: typeof WorkspaceChatsChatIdRouteImport
-      parentRoute: typeof WorkspaceChatsRoute
+      preLoaderRoute: typeof ConversationsChatsChatIdRouteImport
+      parentRoute: typeof ConversationsChatsRoute
     }
     '/_app/browse/commit/$sha': {
       id: '/_app/browse/commit/$sha'
@@ -409,48 +433,46 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
-interface WorkspaceChatsRouteChildren {
-  WorkspaceChatsChatIdRoute: typeof WorkspaceChatsChatIdRoute
-  WorkspaceChatsIndexRoute: typeof WorkspaceChatsIndexRoute
+interface ConversationsChatsRouteChildren {
+  ConversationsChatsChatIdRoute: typeof ConversationsChatsChatIdRoute
+  ConversationsChatsIndexRoute: typeof ConversationsChatsIndexRoute
 }
 
-const WorkspaceChatsRouteChildren: WorkspaceChatsRouteChildren = {
-  WorkspaceChatsChatIdRoute: WorkspaceChatsChatIdRoute,
-  WorkspaceChatsIndexRoute: WorkspaceChatsIndexRoute,
+const ConversationsChatsRouteChildren: ConversationsChatsRouteChildren = {
+  ConversationsChatsChatIdRoute: ConversationsChatsChatIdRoute,
+  ConversationsChatsIndexRoute: ConversationsChatsIndexRoute,
 }
 
-const WorkspaceChatsRouteWithChildren = WorkspaceChatsRoute._addFileChildren(
-  WorkspaceChatsRouteChildren,
-)
+const ConversationsChatsRouteWithChildren =
+  ConversationsChatsRoute._addFileChildren(ConversationsChatsRouteChildren)
 
-interface WorkspaceRouteChildren {
-  WorkspaceChatsRoute: typeof WorkspaceChatsRouteWithChildren
-  WorkspaceCommentsRoute: typeof WorkspaceCommentsRoute
-  WorkspaceDocsRoute: typeof WorkspaceDocsRoute
-  WorkspaceLocalDevRoute: typeof WorkspaceLocalDevRoute
-  WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
-  WorkspaceTasksRoute: typeof WorkspaceTasksRoute
-  WorkspaceThreadsRoute: typeof WorkspaceThreadsRoute
+interface ConversationsRouteChildren {
+  ConversationsChatsRoute: typeof ConversationsChatsRouteWithChildren
+  ConversationsCommentsRoute: typeof ConversationsCommentsRoute
+  ConversationsLocalDevRoute: typeof ConversationsLocalDevRoute
+  ConversationsSettingsRoute: typeof ConversationsSettingsRoute
+  ConversationsThreadsRoute: typeof ConversationsThreadsRoute
 }
 
-const WorkspaceRouteChildren: WorkspaceRouteChildren = {
-  WorkspaceChatsRoute: WorkspaceChatsRouteWithChildren,
-  WorkspaceCommentsRoute: WorkspaceCommentsRoute,
-  WorkspaceDocsRoute: WorkspaceDocsRoute,
-  WorkspaceLocalDevRoute: WorkspaceLocalDevRoute,
-  WorkspaceSettingsRoute: WorkspaceSettingsRoute,
-  WorkspaceTasksRoute: WorkspaceTasksRoute,
-  WorkspaceThreadsRoute: WorkspaceThreadsRoute,
+const ConversationsRouteChildren: ConversationsRouteChildren = {
+  ConversationsChatsRoute: ConversationsChatsRouteWithChildren,
+  ConversationsCommentsRoute: ConversationsCommentsRoute,
+  ConversationsLocalDevRoute: ConversationsLocalDevRoute,
+  ConversationsSettingsRoute: ConversationsSettingsRoute,
+  ConversationsThreadsRoute: ConversationsThreadsRoute,
 }
 
-const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(
-  WorkspaceRouteChildren,
+const ConversationsRouteWithChildren = ConversationsRoute._addFileChildren(
+  ConversationsRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
-  WorkspaceRoute: WorkspaceRouteWithChildren,
+  ConversationsRoute: ConversationsRouteWithChildren,
   KitchenSinkRoute: KitchenSinkRoute,
+  MembersRoute: MembersRoute,
+  WorkspaceRoute: WorkspaceRoute,
+  AcceptInvitationInvitationIdRoute: AcceptInvitationInvitationIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

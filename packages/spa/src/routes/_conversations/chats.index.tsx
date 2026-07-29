@@ -7,7 +7,7 @@ export interface ChatsIndexSearch {
   new?: boolean
 }
 
-export const Route = createFileRoute("/_workspace/chats/")({
+export const Route = createFileRoute("/_conversations/chats/")({
   validateSearch: (search: Record<string, unknown>): ChatsIndexSearch => ({
     new: search["new"] === true || search["new"] === "true" ? true : undefined,
   }),

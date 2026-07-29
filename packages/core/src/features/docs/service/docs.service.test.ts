@@ -36,15 +36,17 @@ describe("DocsService", () => {
     }).pipe(Effect.provide(DocsMemory()))
   )
 
-  it.effect("editing the heading renames a doc that was never titled by hand", () =>
-    Effect.gen(function* () {
-      const docs = yield* DocsService
-      const created = yield* docs.create({ projectId: "p1", title: "Draft" })
-      const edited = yield* docs.update(created.id, {
-        content: "# Renamed\n\nstep one\n",
-      })
-      expect(edited.title).toBe("Renamed")
-    }).pipe(Effect.provide(DocsMemory()))
+  it.effect(
+    "editing the heading renames a doc that was never titled by hand",
+    () =>
+      Effect.gen(function* () {
+        const docs = yield* DocsService
+        const created = yield* docs.create({ projectId: "p1", title: "Draft" })
+        const edited = yield* docs.update(created.id, {
+          content: "# Renamed\n\nstep one\n",
+        })
+        expect(edited.title).toBe("Renamed")
+      }).pipe(Effect.provide(DocsMemory()))
   )
 
   it.effect("a hand-set title survives later body edits", () =>

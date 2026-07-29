@@ -1,11 +1,7 @@
 import * as Context from "effect/Context"
 import type * as Effect from "effect/Effect"
 import type { Conflict, NotFound, StorageError } from "../../../shared.ts"
-import type {
-  Task,
-  TaskPriority,
-  TaskStatus,
-} from "../schema/tasks.schema.ts"
+import type { Task, TaskPriority, TaskStatus } from "../schema/tasks.schema.ts"
 
 export interface CreateTaskInput {
   readonly projectId: string
@@ -41,9 +37,7 @@ export interface TasksRepo {
   /** Every task in the tenant, for cross-project reference resolution. */
   readonly listAll: Effect.Effect<ReadonlyArray<Task>, TasksFailure>
   readonly get: (id: string) => Effect.Effect<Task, TasksFailure>
-  readonly create: (
-    input: CreateTaskInput
-  ) => Effect.Effect<Task, TasksFailure>
+  readonly create: (input: CreateTaskInput) => Effect.Effect<Task, TasksFailure>
   readonly update: (
     id: string,
     input: UpdateTaskInput

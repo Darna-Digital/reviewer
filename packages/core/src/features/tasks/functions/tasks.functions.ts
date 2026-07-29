@@ -1,8 +1,4 @@
-import type {
-  Task,
-  TaskPriority,
-  TaskStatus,
-} from "../schema/tasks.schema.ts"
+import type { Task, TaskPriority, TaskStatus } from "../schema/tasks.schema.ts"
 
 /**
  * Board order, top to bottom. In-flight work first, then what is queued, then
@@ -68,7 +64,7 @@ export const parseTaskKey = (
 ): { readonly projectKey: string; readonly number: number } | null => {
   const match = /^([a-z][a-z0-9]*)-(\d+)$/i.exec(key.trim())
   if (match === null) return null
-  return { projectKey: match[1]!.toUpperCase(), number: Number(match[2]) }
+  return { projectKey: match[1].toUpperCase(), number: Number(match[2]) }
 }
 
 /** The gap left between neighbours, so ~50 inserts fit before a rebalance. */
@@ -93,7 +89,8 @@ export const positionBetween = (
 export const nextPosition = (siblings: ReadonlyArray<Task>): number =>
   positionBetween(
     siblings.reduce<number | null>(
-      (max, task) => (max === null || task.position > max ? task.position : max),
+      (max, task) =>
+        max === null || task.position > max ? task.position : max,
       null
     ),
     null
@@ -248,10 +245,11 @@ export const resolveTaskRef = (
   const titleInPhrase = tasks
     .filter(
       (t) =>
-        t.title.trim().length > 0 && lower.includes(t.title.trim().toLowerCase())
+        t.title.trim().length > 0 &&
+        lower.includes(t.title.trim().toLowerCase())
     )
     .sort((a, b) => b.title.length - a.title.length)
-  if (titleInPhrase.length > 0) return titleInPhrase[0]!
+  if (titleInPhrase.length > 0) return titleInPhrase[0]
 
   const queryInTitle = tasks
     .filter((t) => t.title.toLowerCase().includes(lower))
@@ -298,6 +296,4 @@ export const filterByLabels = (
 ): ReadonlyArray<Task> =>
   labelIds.length === 0
     ? tasks
-    : tasks.filter((task) =>
-        labelIds.every((id) => task.labelIds.includes(id))
-      )
+    : tasks.filter((task) => labelIds.every((id) => task.labelIds.includes(id)))

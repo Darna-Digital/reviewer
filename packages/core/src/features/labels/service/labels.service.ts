@@ -6,11 +6,7 @@ import {
   type LabelsFailure,
   type LabelsRepo,
 } from "../repository/labels.repository.ts"
-import type {
-  Label,
-  NewLabel,
-  UpdateLabel,
-} from "../schema/labels.schema.ts"
+import type { Label, NewLabel, UpdateLabel } from "../schema/labels.schema.ts"
 import {
   labelNamesClash,
   nextLabelColor,
@@ -67,7 +63,9 @@ export const makeLabelsService = Effect.gen(function* () {
     Effect.flatMap(repo.listByProject(projectId), (existing) =>
       existing.some((l) => l.id !== excludeId && labelNamesClash(l.name, name))
         ? Effect.fail(
-            new Conflict({ reason: `this project already has a "${name}" label` })
+            new Conflict({
+              reason: `this project already has a "${name}" label`,
+            })
           )
         : Effect.void
     )

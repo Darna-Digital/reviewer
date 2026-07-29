@@ -15,12 +15,10 @@ export const labelNamesClash = (a: string, b: string): boolean =>
  * the first one this project has not used yet, wrapping once they run out. New
  * labels look distinct without the user having to pick.
  */
-export const nextLabelColor = (
-  existing: ReadonlyArray<Label>
-): AccentColor => {
+export const nextLabelColor = (existing: ReadonlyArray<Label>): AccentColor => {
   const used = new Set(existing.map((l) => l.color))
   const free = ACCENT_COLORS.find((color) => !used.has(color))
-  return free ?? ACCENT_COLORS[existing.length % ACCENT_COLORS.length]!
+  return free ?? ACCENT_COLORS[existing.length % ACCENT_COLORS.length]
 }
 
 export const sortLabels = (

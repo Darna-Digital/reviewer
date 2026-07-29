@@ -2,9 +2,9 @@
   "name": "byconvo",
   "private": true,
   "version": "0.1.0",
-  "description": "bemybond.com — local git review tool",
+  "description": "bemybond.com \u2014 local git review tool",
   "scripts": {
-    "dev": "pnpm --parallel --filter @byconvo/embedded-server --filter spa dev",
+    "dev": "pnpm --parallel --filter @byconvo/embedded-server --filter @byconvo/central-server --filter spa dev",
     "dev:desktop": "pnpm --parallel --filter spa --filter @byconvo/desktop dev",
     "desktop": "pnpm build:desktop && pnpm --filter @byconvo/desktop start",
     "build:desktop": "pnpm --filter @byconvo/embedded-server build:bundle && pnpm --filter spa build:desktop && pnpm --filter @byconvo/desktop build",
@@ -13,7 +13,12 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r --if-present lint",
-    "format:check": "pnpm -r --if-present format:check"
+    "format:check": "pnpm -r --if-present format:check",
+    "dev:code": "pnpm --parallel --filter @byconvo/embedded-server --filter spa dev",
+    "db:up": "pnpm --filter @byconvo/central-server db:up",
+    "db:down": "pnpm --filter @byconvo/central-server db:down",
+    "db:migrate": "pnpm --filter @byconvo/central-server db:migrate",
+    "test": "pnpm -r --if-present test"
   },
   "packageManager": "pnpm@11.7.0"
 }

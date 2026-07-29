@@ -31,9 +31,7 @@ export interface TasksServiceShape {
   ) => Effect.Effect<ReadonlyArray<Task>, TasksServiceFailure>
   readonly listAll: Effect.Effect<ReadonlyArray<Task>, TasksServiceFailure>
   readonly get: (id: string) => Effect.Effect<Task, TasksServiceFailure>
-  readonly create: (
-    input: NewTask
-  ) => Effect.Effect<Task, TasksServiceFailure>
+  readonly create: (input: NewTask) => Effect.Effect<Task, TasksServiceFailure>
   readonly update: (
     id: string,
     input: UpdateTask
@@ -49,9 +47,7 @@ export interface TasksServiceShape {
   ) => Effect.Effect<Task, TasksServiceFailure>
   readonly remove: (id: string) => Effect.Effect<void, TasksServiceFailure>
   /** Resolve "BYC-224" — or a sentence containing it — to one task. */
-  readonly resolveRef: (
-    ref: string
-  ) => Effect.Effect<Task, TasksServiceFailure>
+  readonly resolveRef: (ref: string) => Effect.Effect<Task, TasksServiceFailure>
 }
 
 export class TasksService extends Context.Service<
@@ -89,9 +85,7 @@ export const makeTasksService = Effect.gen(function* () {
     excludeId: string | null
   ) =>
     Effect.map(repo.listByProject(projectId), (tasks) =>
-      sortTasks(
-        tasks.filter((t) => t.status === status && t.id !== excludeId)
-      )
+      sortTasks(tasks.filter((t) => t.status === status && t.id !== excludeId))
     )
 
   const create: TasksServiceShape["create"] = (input) =>
@@ -141,7 +135,8 @@ export const makeTasksService = Effect.gen(function* () {
         if (wouldCycle(siblings, id, input.parentId)) {
           return yield* Effect.fail(
             new InvalidInput({
-              reason: "a task cannot be a sub-task of itself or its own sub-task",
+              reason:
+                "a task cannot be a sub-task of itself or its own sub-task",
             })
           )
         }
@@ -153,9 +148,7 @@ export const makeTasksService = Effect.gen(function* () {
         input.position !== undefined
           ? input.position
           : input.status !== undefined && input.status !== existing.status
-            ? nextPosition(
-                yield* column(existing.projectId, input.status, id)
-              )
+            ? nextPosition(yield* column(existing.projectId, input.status, id))
             : undefined
 
       const stamp = yield* completionStamp(existing.status, input.status)

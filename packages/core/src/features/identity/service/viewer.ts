@@ -1,5 +1,9 @@
 import * as Context from "effect/Context"
-import type { MemberRole, Organization, SessionUser } from "../schema/identity.schema.ts"
+import type {
+  MemberRole,
+  Organization,
+  SessionUser,
+} from "../schema/identity.schema.ts"
 
 /**
  * Who a request is acting as. Provided once per request from the verified

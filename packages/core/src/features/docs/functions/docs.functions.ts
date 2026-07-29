@@ -35,7 +35,8 @@ export const sortDocs = <T extends DocSummary>(
   docs: ReadonlyArray<T>
 ): ReadonlyArray<T> =>
   [...docs].sort(
-    (a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.title.localeCompare(b.title)
+    (a, b) =>
+      b.updatedAt.localeCompare(a.updatedAt) || a.title.localeCompare(b.title)
   )
 
 export const toDocSummary = (doc: Doc): DocSummary => ({

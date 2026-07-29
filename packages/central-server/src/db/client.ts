@@ -37,7 +37,7 @@ export const layer = Layer.effect(Database)(
   Effect.gen(function* () {
     const pool = yield* Effect.acquireRelease(
       Effect.sync(() => new Pool({ connectionString: databaseUrl(), max: 10 })),
-      (pool) => Effect.promise(() => pool.end())
+      (open) => Effect.promise(() => open.end())
     )
     return drizzle(pool, { schema })
   })

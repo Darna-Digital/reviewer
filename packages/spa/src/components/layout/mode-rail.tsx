@@ -1,10 +1,8 @@
 import {
-  IconFileText,
   IconFolders,
   IconGitCommit,
   IconGitFork,
   IconGitPullRequest,
-  IconListCheck,
   IconMessageCircle,
   IconPlayerPlay,
   IconSend,
@@ -62,8 +60,8 @@ const GIT_MODES: ModeDef[] = [
   },
 ]
 
-// Conversation surfaces — agent threads + comments share a rail group,
-// separated from docs/tasks by their own divider.
+// Conversation surfaces — agent threads and comments, in their own rail group
+// below the git modes.
 const WORKSPACE_CONVERSATION: ModeDef[] = [
   {
     mode: "chats",
@@ -76,16 +74,6 @@ const WORKSPACE_CONVERSATION: ModeDef[] = [
     to: "/comments",
     label: "Comments — code & visual",
     icon: IconMessageCircle,
-  },
-]
-
-const WORKSPACE_PRIMARY: ModeDef[] = [
-  { mode: "docs", to: "/docs", label: "Docs & plans", icon: IconFileText },
-  {
-    mode: "tasks",
-    to: "/tasks",
-    label: "Tasks",
-    icon: IconListCheck,
   },
 ]
 
@@ -177,8 +165,6 @@ export function ModeRail({ mode, hasGitHub }: ModeRailProps) {
       {restGit.map(renderMode)}
       <div className="my-1 h-px w-6 bg-border" />
       {WORKSPACE_CONVERSATION.map(renderMode)}
-      <div className="my-1 h-px w-6 bg-border" />
-      {WORKSPACE_PRIMARY.map(renderMode)}
       <div className="mt-auto flex flex-col items-center gap-1">
         <RailButton
           label="Branches & History"

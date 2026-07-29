@@ -1,10 +1,11 @@
 /**
- * WorkspaceShell — the layout for the workspace feature pages (chats, docs,
- * tasks/settings). It mirrors AppShell's frame (mode rail + a rounded, bordered
- * content panel) and shares the git-review top bar's left cluster — the repo
- * picker and branch switcher — so the open repository is visible and switchable
- * here too. Each feature page renders its own header and body into the
- * `<Outlet />`. Services and terminal threads live in the shared bottom dock.
+ * ConversationShell — the layout for the code side's non-diff pages: agent
+ * chats, review comments and settings. It mirrors AppShell's frame (mode rail +
+ * a rounded, bordered content panel) and shares the git-review top bar's left
+ * cluster — the surface switch, repo picker and branch switcher — so the open
+ * repository stays visible and switchable here too. Each feature page renders
+ * its own header and body into the `<Outlet />`. Services and terminal threads
+ * live in the shared bottom dock.
  */
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
 import { useState } from "react"
@@ -12,6 +13,7 @@ import { BranchSwitcher } from "@/components/layout/branch-switcher"
 import { GitBottomDock } from "@/components/layout/git-bottom-dock"
 import { ModeRail } from "@/components/layout/mode-rail"
 import { RepoPicker } from "@/components/repo-picker"
+import { SurfaceSwitch } from "@/components/layout/surface-switch"
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import { isDesktop } from "@/lib/desktop"
 import type { AppMode } from "@/lib/api/types"
@@ -28,15 +30,11 @@ const modeForPath = (pathname: string): AppMode =>
     ? "chats"
     : pathname.startsWith("/settings")
       ? "settings"
-      : pathname.startsWith("/docs")
-        ? "docs"
-        : pathname.startsWith("/tasks")
-          ? "tasks"
-          : pathname.startsWith("/comments")
-            ? "comments"
-            : "chats"
+      : pathname.startsWith("/comments")
+        ? "comments"
+        : "chats"
 
-export function WorkspaceShell() {
+export function ConversationShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const navigate = useNavigate()
   const repo = useRepo()
@@ -63,6 +61,7 @@ export function WorkspaceShell() {
             isDesktop && "pl-10 [-webkit-app-region:drag]"
           )}
         >
+          <SurfaceSwitch />
           <div className="[-webkit-app-region:no-drag]">
             <RepoPicker
               repo={repo.data ?? null}

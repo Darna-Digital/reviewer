@@ -1,6 +1,6 @@
 import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core/chats"
 import type { ReviewComment } from "@byconvo/core/comments"
-import type { Card as TasksCard } from "@byconvo/core/tasks"
+import type { Task } from "@byconvo/core/tasks"
 import type { ChatSettings } from "../interfaces/chats.interfaces"
 
 export const ASSIGNABLE_CHAT_PROVIDERS = [
@@ -79,7 +79,7 @@ export const buildReviewAssignmentPrompt = (
 }
 
 export const buildTaskAssignmentPrompt = (
-  card: TasksCard,
+  task: Task,
   body: string,
   provider: ChatProviderKind
 ): string => {
@@ -88,24 +88,24 @@ export const buildTaskAssignmentPrompt = (
     instruction.length > 0
       ? instruction
       : "Follow the task description and resolve this task."
-  const description = card.description.trim()
+  const description = task.description.trim()
   const descriptionBlock = description.length > 0 ? `\n\n${description}` : ""
 
   return [
-    `You are working on task ${card.key}: ${card.title}.`,
+    `You are working on task ${task.key}: ${task.title}.`,
     descriptionBlock,
     `\n\nAddress this comment:\n${comment}`,
   ].join("")
 }
 
 export const buildTaskAssignmentTitle = (
-  card: TasksCard,
+  task: Task,
   body: string,
   provider: ChatProviderKind
 ): string => {
   const instruction = instructionWithoutChatProviderMention(body, provider)
   const cleanInstruction = instruction.replace(/\s+/g, " ")
   const summary =
-    cleanInstruction.length > 0 ? cleanInstruction.slice(0, 40) : card.title
-  return `${card.key} - ${summary}`
+    cleanInstruction.length > 0 ? cleanInstruction.slice(0, 40) : task.title
+  return `${task.key} - ${summary}`
 }
