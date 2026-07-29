@@ -32,7 +32,7 @@ import {
   useRouterState,
   useSearch,
 } from "@tanstack/react-router"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { CommandMenu, type Command } from "@/components/command-menu"
 import { CommitPanel } from "@/components/commit-panel"
@@ -64,6 +64,22 @@ import {
 } from "@/interactions/chats/functions/chat-assignment.functions"
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter"
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter"
+import { TabStrip } from "@/interactions/tabs/components/tab-strip"
+import {
+  scopeTabsTo,
+  updateTabs,
+  useTabs,
+} from "@/interactions/tabs/adapters/tabs.store"
+import {
+  closeAll,
+  closeOthers,
+  closeTab,
+  keepTab,
+  neighbourTab,
+  pruneTabs,
+  syncActive,
+  togglePin,
+} from "@/interactions/tabs/functions/tabs.functions"
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import { fetchClient } from "@/lib/api/client"
 import {
@@ -178,6 +194,23 @@ export function AppShell() {
       } else if (e.key === "3") {
         e.preventDefault()
         void navigate({ to: "/browse" })
+      } else if (
+        e.altKey &&
+        (e.key === "ArrowLeft" || e.key === "ArrowRight")
+      ) {
+        // Step through the open files, as Cmd/Ctrl+Alt+arrow does in VS Code.
+        // Ctrl+Tab, which JetBrains uses, is the browser's own.
+        e.preventDefault()
+        updateTabs((state) => {
+          const next = neighbourTab(state, e.key === "ArrowRight" ? 1 : -1)
+          if (next !== null) {
+            void navigate({
+              to: ".",
+              search: (prev: Search) => ({ ...prev, file: next }),
+            })
+          }
+          return state
+        })
       }
     }
     window.addEventListener("keydown", onKey)
@@ -428,6 +461,60 @@ export function AppShell() {
 
   // One always-editable file view; there is no separate edit mode.
   const viewing = search.file ?? null
+
+  // --- open-file tabs --------------------------------------------------------
+  // The strip follows the open file rather than owning it: navigation arrives
+  // from the tree, the command menu, go-to-definition and restored URLs alike.
+  const tabs = useTabs()
+  const repoRoot = repo.data?.root ?? null
+  useEffect(() => {
+    scopeTabsTo(repoRoot)
+  }, [repoRoot])
+  // Re-syncs when the repository resolves as well as when the file changes:
+  // pointing the store at a repository swaps in that repository's strip, which
+  // would otherwise drop the file already on screen.
+  useEffect(() => {
+    updateTabs((state) => syncActive(state, viewing))
+  }, [repoRoot, viewing])
+  // A strip restored from a previous session can name files that have since
+  // been deleted or renamed.
+  useEffect(() => {
+    if (allPaths.length === 0) return
+    const known = new Set(allPaths)
+    updateTabs((state) => pruneTabs(state, (path) => known.has(path)))
+  }, [allPaths])
+
+  // Only the open file has a buffer, so it is the only one that can be dirty.
+  const [dirtyFile, setDirtyFile] = useState<string | null>(null)
+  const dirtyPaths = useMemo(
+    () => new Set(dirtyFile === null ? [] : [dirtyFile]),
+    [dirtyFile]
+  )
+  const onDirtyChange = useCallback(
+    (dirty: boolean) => {
+      setDirtyFile(dirty ? (search.file ?? null) : null)
+      // Editing a file is the clearest possible statement that you are staying
+      // in it, so it stops being a preview.
+      if (dirty && search.file !== undefined) {
+        const path = search.file
+        updateTabs((state) => keepTab(state, path))
+      }
+    },
+    [search.file]
+  )
+
+  const selectTab = (path: string) => setSearch({ file: path })
+  const closeTabAt = (path: string) => {
+    updateTabs((state) => {
+      const next = closeTab(state, path)
+      // Closing the tab on screen moves the file view to its neighbour, or
+      // shuts it when the strip empties.
+      if (state.active === path) {
+        setSearch({ file: next.active ?? undefined })
+      }
+      return next
+    })
+  }
 
   // Local comments anchored to the file currently open in the viewer (worktree
   // target — see CodeView). Threaded into the viewer so browse/commit comments
@@ -736,6 +823,7 @@ export function AppShell() {
           theme={prefs.resolvedTheme}
           onClose={closeFile}
           onSaved={git.refresh}
+          onDirtyChange={onDirtyChange}
           onShowHistory={showFileHistory}
           onOpenLocation={openLocation}
           reveal={reveal}
@@ -999,8 +1087,37 @@ export function AppShell() {
                       onContinue={() => void git.continueMerge()}
                     />
                   )}
-                <div className="min-h-0 flex-1 overflow-hidden">
-                  {renderCenter()}
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <TabStrip
+                    tabs={tabs.tabs}
+                    active={tabs.active}
+                    dirty={dirtyPaths}
+                    onSelect={selectTab}
+                    onKeep={(path) =>
+                      updateTabs((state) => keepTab(state, path))
+                    }
+                    onClose={closeTabAt}
+                    onTogglePin={(path) =>
+                      updateTabs((state) => togglePin(state, path))
+                    }
+                    onCloseOthers={(path) =>
+                      updateTabs((state) => {
+                        const next = closeOthers(state, path)
+                        setSearch({ file: next.active ?? undefined })
+                        return next
+                      })
+                    }
+                    onCloseAll={() =>
+                      updateTabs((state) => {
+                        const next = closeAll(state)
+                        setSearch({ file: next.active ?? undefined })
+                        return next
+                      })
+                    }
+                  />
+                  <div className="min-h-0 flex-1 overflow-hidden">
+                    {renderCenter()}
+                  </div>
                 </div>
               </main>
             </div>

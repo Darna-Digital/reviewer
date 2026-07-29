@@ -1,7 +1,7 @@
 import { type LineAnnotation } from "@pierre/diffs"
 import { EditorProvider, File, Virtualizer } from "@pierre/diffs/react"
 import { IconHistory, IconX } from "@tabler/icons-react"
-import { useCallback, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 import {
   CommentThread,
   DraftCard,
@@ -48,6 +48,8 @@ interface CodeViewProps {
   onClose: () => void
   /** Called after the buffer is written to disk, so git state can refresh. */
   onSaved?: () => void
+  /** Whether this file has unsaved changes — the tab strip shows a marker. */
+  onDirtyChange?: (dirty: boolean) => void
   /** Open this file's commit history in the bottom dock. */
   onShowHistory?: (path: string) => void
   /**
@@ -72,6 +74,7 @@ export function CodeView({
   theme,
   onClose,
   onSaved,
+  onDirtyChange,
   onShowHistory,
   onOpenLocation,
   reveal = null,
@@ -104,6 +107,14 @@ export function CodeView({
     file.data?.contents,
     useCallback(() => onSaved?.(), [onSaved])
   )
+
+  useEffect(() => {
+    onDirtyChange?.(editing.dirty)
+  }, [editing.dirty, onDirtyChange])
+
+  // Report the file as saved when it goes away, so a stale marker cannot
+  // outlive the view that owned it.
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
 
   // The IDE layer: diagnostics, go-to-definition and find-usages, driven by
   // `@pierre/diffs` token hooks. Only active when the host can navigate.
