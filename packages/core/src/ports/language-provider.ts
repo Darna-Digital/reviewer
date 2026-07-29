@@ -17,10 +17,14 @@ import type * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 import type { NoRepoSelected } from "../shared.ts"
 import type {
+  CodeActionItem,
+  CompletionResolution,
+  CompletionResult,
   DefinitionResult,
   Diagnostic,
   HoverResult,
   Position,
+  Range,
   ReferencesResult,
   ProviderTransport,
 } from "../features/language/schema/language.schema.ts"
@@ -43,6 +47,8 @@ export interface ProviderCapabilities {
   readonly definition: boolean
   readonly references: boolean
   readonly hover: boolean
+  readonly completions: boolean
+  readonly codeActions: boolean
 }
 
 /** Whether a provider can serve a given repository right now. */
@@ -66,6 +72,22 @@ export interface DocumentRequest {
 
 export interface PositionRequest extends DocumentRequest {
   readonly position: Position
+}
+
+export interface CompletionRequest extends PositionRequest {
+  /** The identifier typed so far, used to narrow the list before it is sent. */
+  readonly prefix: string
+}
+
+export interface CompletionResolveRequest extends PositionRequest {
+  readonly label: string
+  /** Module the item would be imported from, empty when already in scope. */
+  readonly source: string
+  readonly data: string | null
+}
+
+export interface RangeRequest extends DocumentRequest {
+  readonly range: Range
 }
 
 export interface LanguageProvider {
@@ -93,6 +115,20 @@ export interface LanguageProvider {
   readonly hover: (
     request: PositionRequest
   ) => Effect.Effect<HoverResult, LanguageError>
+  readonly completions: (
+    request: CompletionRequest
+  ) => Effect.Effect<CompletionResult, LanguageError>
+  /**
+   * Fill in an item the user is about to accept: its documentation and, for an
+   * auto-import, the edits that bring the symbol into scope. Kept separate
+   * because computing it for every item in a list would be ruinous.
+   */
+  readonly resolveCompletion: (
+    request: CompletionResolveRequest
+  ) => Effect.Effect<CompletionResolution, LanguageError>
+  readonly codeActions: (
+    request: RangeRequest
+  ) => Effect.Effect<ReadonlyArray<CodeActionItem>, LanguageError>
 }
 
 /**

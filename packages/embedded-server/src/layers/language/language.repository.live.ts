@@ -9,10 +9,12 @@
 import * as Effect from "effect/Effect"
 import {
   selectProvider,
+  type CodeActionsResult,
   type DiagnosticsResult,
   type LanguageProviderInfo,
   type LanguageRepo,
   type Position,
+  type Range,
 } from "@byconvo/core/language"
 import type {
   LanguageFailure,
@@ -120,6 +122,42 @@ export const makeLiveLanguageRepository = Effect.gen(function* () {
         contents,
         (provider, request) => provider.hover(request),
         { providerId: null, range: null, contents: "" }
+      ),
+
+    completions: (path, position, prefix, contents) =>
+      withPosition(
+        resolve(path),
+        path,
+        position,
+        contents,
+        (provider, request) => provider.completions({ ...request, prefix }),
+        { providerId: null, replace: null, items: [], incomplete: false }
+      ),
+
+    resolveCompletion: (path, position, item, contents) =>
+      withPosition(
+        resolve(path),
+        path,
+        position,
+        contents,
+        (provider, request) =>
+          provider.resolveCompletion({ ...request, ...item }),
+        { detail: "", documentation: "", additionalEdits: [] }
+      ),
+
+    codeActions: (path, range, contents) =>
+      Effect.flatMap(
+        resolve(path),
+        ({
+          root,
+          provider,
+        }): Effect.Effect<CodeActionsResult, LanguageFailure> =>
+          provider === null
+            ? Effect.succeed({ providerId: null, actions: [] })
+            : Effect.map(
+                provider.codeActions({ root, path, contents, range }),
+                (actions) => ({ providerId: provider.id, actions })
+              )
       ),
   }
 

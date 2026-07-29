@@ -14,11 +14,16 @@ import {
   type PositionRequest,
 } from "@byconvo/core/ports/language-provider"
 import {
+  filterCompletions,
   offsetAt,
   previewAt,
+  type CodeActionItem,
+  type CompletionResolution,
+  type CompletionResult,
   type DefinitionResult,
   type Diagnostic,
   type HoverResult,
+  type FileEdits,
   type Location,
   type ReferencesResult,
   type SymbolReference,
@@ -35,7 +40,9 @@ import { findExecutable } from "./lsp-executable.ts"
 import {
   hoverContents,
   originSelectionRange,
+  toCompletionItems,
   toDiagnostic,
+  toFileEdits,
   toLocations,
   toRange,
   uriToPath,
@@ -56,6 +63,29 @@ const EMPTY_REFERENCES: ReferencesResult = {
   references: [],
 }
 const EMPTY_HOVER: HoverResult = { providerId: null, range: null, contents: "" }
+const EMPTY_COMPLETIONS: CompletionResult = {
+  providerId: null,
+  replace: null,
+  items: [],
+  incomplete: false,
+}
+const EMPTY_RESOLUTION: CompletionResolution = {
+  detail: "",
+  documentation: "",
+  additionalEdits: [],
+}
+
+/** Whether a published diagnostic touches the range a fix was asked for. */
+const overlapsRange = (
+  diagnostic: unknown,
+  range: { start: { line: number }; end: { line: number } }
+): boolean => {
+  if (typeof diagnostic !== "object" || diagnostic === null) return false
+  const parsed = toRange((diagnostic as { range?: unknown }).range)
+  return (
+    parsed.start.line <= range.end.line && parsed.end.line >= range.start.line
+  )
+}
 
 /** Reads target files for previews; one cache per request keeps it cheap. */
 const makeTextReader = () => {
@@ -160,6 +190,8 @@ export const makeLspProvider = (config: LspServerConfig): LanguageProvider => {
       definition: true,
       references: true,
       hover: true,
+      completions: true,
+      codeActions: true,
     },
 
     probe: () =>
@@ -320,5 +352,109 @@ export const makeLspProvider = (config: LspServerConfig): LanguageProvider => {
           contents: hoverContents(result["contents"]),
         }
       }),
+
+    completions: (request) =>
+      attempt(
+        `${providerId} completions`,
+        async (): Promise<CompletionResult> => {
+          const open = await openDocument(request)
+          if (open === null) return EMPTY_COMPLETIONS
+          const result = await open.connection.request(
+            "textDocument/completion",
+            { textDocument: { uri: open.uri }, position: request.position }
+          )
+          // A server answers with a bare list or a `CompletionList` wrapper.
+          const raw = isRecord(result) ? result["items"] : result
+          return {
+            providerId,
+            replace: {
+              start: {
+                line: request.position.line,
+                character: Math.max(
+                  0,
+                  request.position.character - request.prefix.length
+                ),
+              },
+              end: request.position,
+            },
+            items: filterCompletions(toCompletionItems(raw), request.prefix),
+            incomplete: true,
+          }
+        }
+      ),
+
+    resolveCompletion: (request) =>
+      attempt(
+        `${providerId} completion detail`,
+        async (): Promise<CompletionResolution> => {
+          const open = await openDocument(request)
+          if (open === null) return EMPTY_RESOLUTION
+          // The server round-trips its own item, so `data` goes back as it came.
+          const result = await open.connection.request(
+            "completionItem/resolve",
+            {
+              label: request.label,
+              ...(request.data === null
+                ? {}
+                : { data: JSON.parse(request.data) as unknown }),
+            }
+          )
+          if (!isRecord(result)) return EMPTY_RESOLUTION
+          const detail = result["detail"]
+          return {
+            detail: typeof detail === "string" ? detail : "",
+            documentation: hoverContents(result["documentation"]),
+            additionalEdits: toFileEdits(
+              request.root,
+              open.uri,
+              result["additionalTextEdits"]
+            ),
+          }
+        }
+      ),
+
+    codeActions: (request) =>
+      attempt(
+        `${providerId} code actions`,
+        async (): Promise<ReadonlyArray<CodeActionItem>> => {
+          const open = await openDocument(request)
+          if (open === null) return []
+          const result = await open.connection.request(
+            "textDocument/codeAction",
+            {
+              textDocument: { uri: open.uri },
+              range: request.range,
+              // Servers key their fixes off the diagnostics in range, exactly
+              // as the TypeScript provider does off error codes.
+              context: {
+                diagnostics: open.connection
+                  .diagnosticsFor(open.uri)
+                  .filter((entry) => overlapsRange(entry, request.range)),
+              },
+            }
+          )
+          const actions: Array<CodeActionItem> = []
+          for (const entry of Array.isArray(result) ? result : []) {
+            if (!isRecord(entry)) continue
+            const title = entry["title"]
+            if (typeof title !== "string") continue
+            const edit = entry["edit"]
+            const changes = isRecord(edit) ? edit["changes"] : undefined
+            const edits: Array<FileEdits> = []
+            if (isRecord(changes)) {
+              for (const [uri, list] of Object.entries(changes)) {
+                edits.push(...toFileEdits(request.root, uri, list))
+              }
+            }
+            const kind = entry["kind"]
+            actions.push({
+              title,
+              kind: typeof kind === "string" ? kind : "quickfix",
+              edits,
+            })
+          }
+          return actions
+        }
+      ),
   }
 }

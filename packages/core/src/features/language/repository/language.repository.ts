@@ -2,11 +2,15 @@ import * as Context from "effect/Context"
 import type * as Effect from "effect/Effect"
 import type { LanguageFailure } from "../../../ports/language-provider.ts"
 import type {
+  CodeActionsResult,
+  CompletionResolution,
+  CompletionResult,
   DefinitionResult,
   DiagnosticsResult,
   HoverResult,
   LanguageProviderInfo,
   Position,
+  Range,
   ReferencesResult,
 } from "../schema/language.schema.ts"
 
@@ -43,6 +47,23 @@ export interface LanguageRepo {
     position: Position,
     contents: string | null
   ) => Effect.Effect<HoverResult, LanguageFailure>
+  readonly completions: (
+    path: string,
+    position: Position,
+    prefix: string,
+    contents: string | null
+  ) => Effect.Effect<CompletionResult, LanguageFailure>
+  readonly resolveCompletion: (
+    path: string,
+    position: Position,
+    item: { label: string; source: string; data: string | null },
+    contents: string | null
+  ) => Effect.Effect<CompletionResolution, LanguageFailure>
+  readonly codeActions: (
+    path: string,
+    range: Range,
+    contents: string | null
+  ) => Effect.Effect<CodeActionsResult, LanguageFailure>
 }
 
 export class LanguageRepository extends Context.Service<

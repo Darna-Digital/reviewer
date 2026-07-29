@@ -63,6 +63,16 @@ const inert: LanguageRepo = {
       references: [],
     }),
   hover: () => Effect.succeed({ providerId: null, range: null, contents: "" }),
+  completions: () =>
+    Effect.succeed({
+      providerId: null,
+      replace: null,
+      items: [],
+      incomplete: false,
+    }),
+  resolveCompletion: () =>
+    Effect.succeed({ detail: "", documentation: "", additionalEdits: [] }),
+  codeActions: () => Effect.succeed({ providerId: null, actions: [] }),
 }
 
 const recorded: Array<string | null> = []

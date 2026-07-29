@@ -76,6 +76,25 @@ export const makeLanguageService = Effect.gen(function* () {
       requirePath(path).pipe(
         Effect.flatMap((valid) => repo.hover(valid, position, contents))
       ),
+
+    completions: (path, position, prefix, contents) =>
+      requirePath(path).pipe(
+        Effect.flatMap((valid) =>
+          repo.completions(valid, position, prefix, contents)
+        )
+      ),
+
+    resolveCompletion: (path, position, item, contents) =>
+      requirePath(path).pipe(
+        Effect.flatMap((valid) =>
+          repo.resolveCompletion(valid, position, item, contents)
+        )
+      ),
+
+    codeActions: (path, range, contents) =>
+      requirePath(path).pipe(
+        Effect.flatMap((valid) => repo.codeActions(valid, range, contents))
+      ),
   }
 
   return LanguageService.of(service)

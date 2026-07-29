@@ -62,4 +62,38 @@ export const LanguageHandler = HttpApiBuilder.group(
           )
         )
       )
+      // The remaining three are POSTs because they carry the unsaved buffer.
+      .handle("completions", ({ payload }) =>
+        Effect.flatMap(LanguageService, (s) =>
+          s.completions(
+            payload.path,
+            { line: payload.line, character: payload.character },
+            payload.prefix,
+            payload.contents ?? null
+          )
+        )
+      )
+      .handle("completionResolve", ({ payload }) =>
+        Effect.flatMap(LanguageService, (s) =>
+          s.resolveCompletion(
+            payload.path,
+            { line: payload.line, character: payload.character },
+            {
+              label: payload.label,
+              source: payload.source,
+              data: payload.data,
+            },
+            payload.contents ?? null
+          )
+        )
+      )
+      .handle("codeActions", ({ payload }) =>
+        Effect.flatMap(LanguageService, (s) =>
+          s.codeActions(
+            payload.path,
+            { start: payload.start, end: payload.end },
+            payload.contents ?? null
+          )
+        )
+      )
 )

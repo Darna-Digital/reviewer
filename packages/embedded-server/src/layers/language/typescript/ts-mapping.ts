@@ -15,6 +15,7 @@ import {
   type DiagnosticRelated,
   type DiagnosticSeverity,
   type DiagnosticTag,
+  type FileEdits,
   type Range,
   type ReferenceKind,
 } from "@byconvo/core/language"
@@ -147,3 +148,36 @@ export const hoverMarkdown = (parts: HoverParts): string => {
   if (tags.length > 0) sections.push(tags)
   return sections.join("\n\n")
 }
+
+/**
+ * TypeScript reports edits as `{ span, newText }` against a file it names
+ * absolutely. Converting them needs that file's text, which the provider reads,
+ * so this takes the pieces rather than the compiler object.
+ */
+export const toFileEdits = (
+  root: string,
+  fileName: string,
+  text: string,
+  changes: ReadonlyArray<{
+    readonly span: { readonly start: number; readonly length: number }
+    readonly newText: string
+  }>
+): FileEdits | null => {
+  const path = toRepoRelative(root, fileName)
+  if (path === null) return null
+  return {
+    path,
+    edits: changes.map((change) => ({
+      range: spanToRange(text, change.span),
+      newText: change.newText,
+    })),
+  }
+}
+
+/**
+ * Completion kinds arrive as TypeScript's `ScriptElementKind`, which is already
+ * the vocabulary LSP borrowed ("function", "method", "property"), so it passes
+ * straight through — with the leading space TypeScript puts on a few of them
+ * ("var", "let") trimmed off.
+ */
+export const completionKind = (kind: string): string => kind.trim()

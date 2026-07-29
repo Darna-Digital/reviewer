@@ -95,5 +95,13 @@ export interface LanguageFunctions {
     path: string,
     token: TokenSpan
   ) => Promise<NavigationOutcome>
+  /**
+   * Usages of the symbol, always — unlike `navigate`, which decides between
+   * jumping and listing. This is what "Find usages" asks for explicitly.
+   */
+  readonly references: (
+    path: string,
+    token: TokenSpan
+  ) => Promise<NavigationOutcome>
   readonly describe: (path: string, token: TokenSpan) => Promise<HoverResult>
 }

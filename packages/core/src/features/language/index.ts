@@ -1,3 +1,5 @@
+export * from "./functions/language.completions.ts"
+export * from "./functions/language.edits.ts"
 export * from "./functions/language.positions.ts"
 export * from "./functions/language.registry.ts"
 export * from "./functions/language.results.ts"

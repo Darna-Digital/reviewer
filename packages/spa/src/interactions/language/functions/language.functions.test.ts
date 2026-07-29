@@ -4,7 +4,7 @@ import {
   countDiagnostics,
   createLanguageFunctions,
   groupDiagnosticsByLine,
-  isNavigableToken,
+  identifierWithin,
   lineOfDiagnostic,
   markerForToken,
   positionOfToken,
@@ -38,27 +38,50 @@ describe("positionOfToken", () => {
   })
 })
 
-describe("isNavigableToken", () => {
-  it("accepts identifiers", () => {
-    expect(isNavigableToken("greet")).toBe(true)
-    expect(isNavigableToken("_private")).toBe(true)
-    expect(isNavigableToken("$el")).toBe(true)
-    expect(isNavigableToken("useState2")).toBe(true)
+describe("identifierWithin", () => {
+  const at = (tokenText: string, lineCharStart = 16) =>
+    identifierWithin({
+      lineNumber: 5,
+      lineCharStart,
+      lineCharEnd: lineCharStart + tokenText.length,
+      tokenText,
+    })
+
+  it("passes a bare identifier through unchanged", () => {
+    expect(at("greet")).toEqual(token)
   })
-  it("accepts identifiers in other scripts", () => {
-    expect(isNavigableToken("naïve")).toBe(true)
-    expect(isNavigableToken("переменная")).toBe(true)
+
+  it("skips the whitespace the highlighter folded into the span", () => {
+    expect(at(" greet", 15)).toEqual(token)
+    expect(at("\t\tgreet", 14)).toEqual(token)
   })
-  it("rejects punctuation, whitespace and literals", () => {
-    expect(isNavigableToken("(")).toBe(false)
-    expect(isNavigableToken(" ")).toBe(false)
-    expect(isNavigableToken("")).toBe(false)
-    expect(isNavigableToken("42")).toBe(false)
-    expect(isNavigableToken("=>")).toBe(false)
-    expect(isNavigableToken('"text"')).toBe(false)
+
+  it("skips leading punctuation", () => {
+    expect(at(" (greet", 14)).toEqual(token)
+    expect(at(".greet", 15)).toEqual(token)
+    expect(at("greet", 16)).toEqual(token)
   })
-  it("rejects a token with trailing punctuation", () => {
-    expect(isNavigableToken("greet(")).toBe(false)
+
+  it("stops at the punctuation after the identifier", () => {
+    expect(at(" greet.", 15)).toEqual(token)
+    expect(at("greet(", 16)).toEqual(token)
+  })
+
+  it("refuses a token with no identifier in it", () => {
+    expect(at("=>")).toBeNull()
+    expect(at("  ")).toBeNull()
+    expect(at("")).toBeNull()
+    expect(at("42")).toBeNull()
+  })
+
+  it("refuses an identifier inside a literal, which names no symbol", () => {
+    expect(at('"greet"')).toBeNull()
+    expect(at("'greet'")).toBeNull()
+    expect(at("2px")).toBeNull()
+  })
+
+  it("keeps the line the token was on", () => {
+    expect(at(" greet", 15)?.lineNumber).toBe(5)
   })
 })
 
@@ -313,5 +336,29 @@ describe("describe", () => {
     expect(calls.hover).toEqual([
       { path: "src/b.ts", position: { line: 4, character: 16 } },
     ])
+  })
+})
+
+describe("references", () => {
+  it("always lists usages, even standing on a usage", async () => {
+    const { deps, calls } = mockLanguageDependencies({
+      targets: [target()],
+      references: [reference(), reference({ kind: "definition" })],
+    })
+    const outcome = await createLanguageFunctions(deps).references(
+      "src/b.ts",
+      token
+    )
+    expect(outcome).toMatchObject({ kind: "usages", symbol: "greet" })
+    // It asks for usages directly rather than deciding via the definition.
+    expect(calls.definition).toEqual([])
+    expect(calls.references).toHaveLength(1)
+  })
+
+  it("resolves to nothing when the symbol is never used", async () => {
+    const { deps } = mockLanguageDependencies({ references: [] })
+    expect(
+      await createLanguageFunctions(deps).references("src/b.ts", token)
+    ).toEqual({ kind: "none" })
   })
 })

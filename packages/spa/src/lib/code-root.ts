@@ -44,3 +44,39 @@ export const queryInCode = (
   }
   return null
 }
+
+/**
+ * Viewport rectangle of the caret or selection inside an editable code view.
+ *
+ * The selection lives in the view's shadow root, which `document.getSelection`
+ * does not reach into — Chromium exposes `ShadowRoot.getSelection` for exactly
+ * this, and the document selection is the fallback for anywhere that does not.
+ */
+export const caretRect = (container: ParentNode): DOMRect | null => {
+  const roots = codeRootsWithin(container)
+  for (const root of roots) {
+    const selection =
+      "getSelection" in root &&
+      typeof (root as { getSelection?: unknown }).getSelection === "function"
+        ? (
+            root as unknown as { getSelection: () => Selection | null }
+          ).getSelection()
+        : null
+    const rect = rectOfSelection(selection)
+    if (rect !== null) return rect
+  }
+  return rectOfSelection(
+    typeof document === "undefined" ? null : document.getSelection()
+  )
+}
+
+const rectOfSelection = (selection: Selection | null): DOMRect | null => {
+  if (selection === null || selection.rangeCount === 0) return null
+  const range = selection.getRangeAt(0)
+  const rect = range.getBoundingClientRect()
+  // A collapsed caret between two text nodes can measure as all zeros; the
+  // client rects of the range still place it.
+  if (rect.width > 0 || rect.height > 0) return rect
+  const first = range.getClientRects()[0]
+  return first ?? null
+}

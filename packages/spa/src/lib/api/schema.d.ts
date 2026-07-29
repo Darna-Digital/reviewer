@@ -884,6 +884,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/language/completions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["language.completions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/language/completion-resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["language.completionResolve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/language/code-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["language.codeActions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/tasks/board": {
         parameters: {
             query?: never;
@@ -4941,6 +4989,8 @@ export interface operations {
                             definition: boolean;
                             references: boolean;
                             hover: boolean;
+                            completions: boolean;
+                            codeActions: boolean;
                         };
                         available: boolean;
                         detail: string;
@@ -5227,6 +5277,220 @@ export interface operations {
                             };
                         } | null;
                         contents: string;
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description LanguageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageError"];
+                };
+            };
+        };
+    };
+    "language.completions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    path: string;
+                    line: number;
+                    character: number;
+                    contents?: string;
+                    prefix: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        providerId: string | null;
+                        replace: {
+                            start: {
+                                line: number;
+                                character: number;
+                            };
+                            end: {
+                                line: number;
+                                character: number;
+                            };
+                        } | null;
+                        items: {
+                            label: string;
+                            kind: string;
+                            detail: string;
+                            insertText: string;
+                            sortText: string;
+                            source: string;
+                            data: string | null;
+                        }[];
+                        incomplete: boolean;
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description LanguageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageError"];
+                };
+            };
+        };
+    };
+    "language.completionResolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    path: string;
+                    line: number;
+                    character: number;
+                    contents?: string;
+                    label: string;
+                    source: string;
+                    data: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        detail: string;
+                        documentation: string;
+                        additionalEdits: {
+                            path: string;
+                            edits: {
+                                range: {
+                                    start: {
+                                        line: number;
+                                        character: number;
+                                    };
+                                    end: {
+                                        line: number;
+                                        character: number;
+                                    };
+                                };
+                                newText: string;
+                            }[];
+                        }[];
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description LanguageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LanguageError"];
+                };
+            };
+        };
+    };
+    "language.codeActions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    path: string;
+                    start: {
+                        line: number;
+                        character: number;
+                    };
+                    end: {
+                        line: number;
+                        character: number;
+                    };
+                    contents?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        providerId: string | null;
+                        actions: {
+                            title: string;
+                            kind: string;
+                            edits: {
+                                path: string;
+                                edits: {
+                                    range: {
+                                        start: {
+                                            line: number;
+                                            character: number;
+                                        };
+                                        end: {
+                                            line: number;
+                                            character: number;
+                                        };
+                                    };
+                                    newText: string;
+                                }[];
+                            }[];
+                        }[];
                     };
                 };
             };

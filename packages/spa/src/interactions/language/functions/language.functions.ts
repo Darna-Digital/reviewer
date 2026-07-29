@@ -58,13 +58,36 @@ export const rangeTouchesToken = (range: Range, token: TokenSpan): boolean => {
   return token.lineCharStart < to && from < token.lineCharEnd
 }
 
+const IDENTIFIER_HEAD = /^[\p{L}_$][\p{L}\p{N}_$]*/u
 /**
- * Whether a token is worth asking the language server about. Punctuation,
- * whitespace and numeric literals have no symbol behind them, and firing a
- * request for every bracket would be noise on both ends.
+ * Characters a token may carry ahead of its identifier. Deliberately excludes
+ * quotes and digits: an identifier behind one of those is inside a string or a
+ * number, where there is no symbol to ask about.
  */
-export const isNavigableToken = (tokenText: string): boolean =>
-  /^[\p{L}_$][\p{L}\p{N}_$]*$/u.test(tokenText)
+const LEADING_NOISE = /^[\s([{,;:.=<>&|?!+\-*/%~^]+/
+
+/**
+ * The identifier a rendered token stands for, positioned in the token's line.
+ *
+ * A rendered token is not a symbol. The highlighter folds leading whitespace
+ * and neighbouring punctuation into one span — `" normalizeDiagnostics"`,
+ * `" (normalized."` — so taking the span at face value aims the request at a
+ * space or a bracket, and the language server answers about nothing. This
+ * narrows the span to the identifier inside it, or rejects the token when it
+ * holds none.
+ */
+export const identifierWithin = (token: TokenSpan): TokenSpan | null => {
+  const noise = LEADING_NOISE.exec(token.tokenText)
+  const offset = noise === null ? 0 : noise[0].length
+  const match = IDENTIFIER_HEAD.exec(token.tokenText.slice(offset))
+  if (match === null) return null
+  return {
+    lineNumber: token.lineNumber,
+    lineCharStart: token.lineCharStart + offset,
+    lineCharEnd: token.lineCharStart + offset + match[0].length,
+    tokenText: match[0],
+  }
+}
 
 const bySeverity = (a: Diagnostic, b: Diagnostic) =>
   SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]
@@ -176,8 +199,18 @@ export function createLanguageFunctions(
     return { kind: "choose", targets }
   }
 
+  const references: LanguageFunctions["references"] = (path, token) =>
+    usagesAt(path, positionOfToken(token), token.tokenText)
+
   const describe: LanguageFunctions["describe"] = (path, token) =>
     d.sideEffects.hover(path, positionOfToken(token))
 
-  return { diagnosticsByLine, markerFor, counts, navigate, describe }
+  return {
+    diagnosticsByLine,
+    markerFor,
+    counts,
+    navigate,
+    references,
+    describe,
+  }
 }

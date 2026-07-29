@@ -17,10 +17,18 @@ import {
   type PositionRequest,
 } from "@byconvo/core/ports/language-provider"
 import {
+  filterCompletions,
+  identifierAt,
   offsetAt,
+  positionAt,
+  type CodeActionItem,
+  type CompletionItem,
+  type CompletionResolution,
+  type CompletionResult,
   type DefinitionResult,
   type Diagnostic,
   type DiagnosticRelated,
+  type FileEdits,
   type HoverResult,
   type Range,
   type ReferencesResult,
@@ -30,12 +38,14 @@ import {
 import { loadTypeScript } from "./ts-module.ts"
 import { projectFor, type TsProject } from "./ts-project.ts"
 import {
+  completionKind,
   hoverMarkdown,
   referenceKind,
   spanPreview,
   spanToRange,
   toAbsolute,
   toDiagnostic,
+  toFileEdits,
   toRepoRelative,
 } from "./ts-mapping.ts"
 
@@ -65,11 +75,22 @@ const unsupported: {
   readonly definition: DefinitionResult
   readonly references: ReferencesResult
   readonly hover: HoverResult
+  readonly completions: CompletionResult
+  readonly resolution: CompletionResolution
+  readonly codeActions: ReadonlyArray<CodeActionItem>
 } = {
   diagnostics: [],
   definition: { providerId: null, origin: null, targets: [] },
   references: { providerId: null, origin: null, symbol: null, references: [] },
   hover: { providerId: null, range: null, contents: "" },
+  completions: {
+    providerId: null,
+    replace: null,
+    items: [],
+    incomplete: false,
+  },
+  resolution: { detail: "", documentation: "", additionalEdits: [] },
+  codeActions: [],
 }
 
 interface OpenDocument {
@@ -216,6 +237,45 @@ const referencesOf = (
   return out
 }
 
+/** Formatting the compiler applies to the edits it generates. */
+const FORMAT_OPTIONS: TS.FormatCodeSettings = {
+  convertTabsToSpaces: true,
+  indentSize: 2,
+  tabSize: 2,
+}
+
+/**
+ * Diagnostics that mean "this name is not in scope", which is what makes an
+ * import worth offering: cannot-find-name, and its did-you-mean variants.
+ */
+const UNRESOLVED_NAME_CODES = new Set([2304, 2552, 2503, 2593, 2686])
+
+/** Preferences that turn on auto-import suggestions and snippet inserts. */
+const COMPLETION_PREFERENCES: TS.UserPreferences = {
+  includeCompletionsForModuleExports: true,
+  includeCompletionsForImportStatements: true,
+  includeCompletionsWithInsertText: true,
+  includeCompletionsWithSnippetText: false,
+}
+
+/**
+ * Collect the file changes of a code action, dropping any that fall outside the
+ * repository — the UI could not open those files to apply them.
+ */
+const editsOf = (
+  document: OpenDocument,
+  root: string,
+  changes: ReadonlyArray<TS.FileTextChanges>
+): ReadonlyArray<FileEdits> => {
+  const out: Array<FileEdits> = []
+  for (const change of changes) {
+    const text = document.project.textOf(change.fileName) ?? ""
+    const mapped = toFileEdits(root, change.fileName, text, change.textChanges)
+    if (mapped !== null) out.push(mapped)
+  }
+  return out
+}
+
 const positionOffset = (document: OpenDocument, request: PositionRequest) =>
   offsetAt(document.text, request.position)
 
@@ -229,6 +289,8 @@ export const typescriptProvider: LanguageProvider = {
     definition: true,
     references: true,
     hover: true,
+    completions: true,
+    codeActions: true,
   },
 
   probe: (root) =>
@@ -310,5 +372,161 @@ export const typescriptProvider: LanguageProvider = {
           })),
         }),
       }
+    }),
+
+  completions: (request) =>
+    attempt("typescript completions", (): CompletionResult => {
+      const document = open(request)
+      if (document === null) return unsupported.completions
+      const offset = positionOffset(document, request)
+      const answered = document.service.getCompletionsAtPosition(
+        document.fileName,
+        offset,
+        COMPLETION_PREFERENCES
+      )
+      // A position with nothing to suggest is not the same as an unsupported
+      // one: the caller shows an empty list rather than deciding the language
+      // has no provider.
+      if (answered === undefined) {
+        return {
+          providerId: TYPESCRIPT_PROVIDER_ID,
+          replace: null,
+          items: [],
+          incomplete: false,
+        }
+      }
+
+      const items: Array<CompletionItem> = answered.entries.map((entry) => ({
+        label: entry.name,
+        kind: completionKind(entry.kind),
+        detail: entry.labelDetails?.detail ?? "",
+        insertText: entry.insertText ?? entry.name,
+        sortText: entry.sortText,
+        // A `source` means the symbol is not in scope yet, so accepting it has
+        // to add an import — which `resolveCompletion` works out.
+        source: entry.source ?? "",
+        data: entry.data === undefined ? null : JSON.stringify(entry.data),
+      }))
+
+      // The compiler answers with everything in scope plus every exported
+      // symbol it could import; the prefix is what makes that a usable list.
+      const filtered = filterCompletions(items, request.prefix)
+      const start = offset - request.prefix.length
+      return {
+        providerId: TYPESCRIPT_PROVIDER_ID,
+        replace: {
+          start: positionAt(document.text, start),
+          end: positionAt(document.text, offset),
+        },
+        items: filtered,
+        incomplete: true,
+      }
+    }),
+
+  resolveCompletion: (request) =>
+    attempt("typescript completion detail", (): CompletionResolution => {
+      const document = open(request)
+      if (document === null) return unsupported.resolution
+      const offset = positionOffset(document, request)
+      const details = document.service.getCompletionEntryDetails(
+        document.fileName,
+        offset,
+        request.label,
+        FORMAT_OPTIONS,
+        request.source.length > 0 ? request.source : undefined,
+        COMPLETION_PREFERENCES,
+        request.data === null ? undefined : (JSON.parse(request.data) as never)
+      )
+      if (details === undefined) return unsupported.resolution
+      const { ts } = document
+      return {
+        detail: ts.displayPartsToString(details.displayParts),
+        documentation: ts.displayPartsToString(details.documentation),
+        additionalEdits: (details.codeActions ?? []).flatMap((action) =>
+          editsOf(document, request.root, action.changes)
+        ),
+      }
+    }),
+
+  codeActions: (request) =>
+    attempt("typescript code actions", (): ReadonlyArray<CodeActionItem> => {
+      const document = open(request)
+      if (document === null) return unsupported.codeActions
+      const start = offsetAt(document.text, request.range.start)
+      const end = offsetAt(document.text, request.range.end)
+
+      const overlapping = [
+        ...document.service.getSemanticDiagnostics(document.fileName),
+        ...document.service.getSyntacticDiagnostics(document.fileName),
+      ].filter((diagnostic) => {
+        const from = diagnostic.start ?? 0
+        const to = from + (diagnostic.length ?? 0)
+        return from <= end && to >= start
+      })
+      if (overlapping.length === 0) return unsupported.codeActions
+
+      const actions: Array<CodeActionItem> = []
+
+      // Imports come from the completion machinery rather than from
+      // `getCodeFixesAtPosition`. The fix API keys off a span whose exact
+      // shape varies with how the error was produced, whereas asking what
+      // could complete to this identifier names every module it could come
+      // from — which is also more useful, since it offers the choice.
+      const identifier = identifierAt(document.text, start)
+      const unresolved = overlapping.some((diagnostic) =>
+        UNRESOLVED_NAME_CODES.has(diagnostic.code)
+      )
+      if (identifier !== null && unresolved) {
+        const candidates = document.service.getCompletionsAtPosition(
+          document.fileName,
+          identifier.end,
+          COMPLETION_PREFERENCES
+        )
+        for (const entry of candidates?.entries ?? []) {
+          if (entry.name !== identifier.text) continue
+          if (entry.source === undefined || entry.source.length === 0) continue
+          const details = document.service.getCompletionEntryDetails(
+            document.fileName,
+            identifier.end,
+            entry.name,
+            FORMAT_OPTIONS,
+            entry.source,
+            COMPLETION_PREFERENCES,
+            entry.data
+          )
+          for (const action of details?.codeActions ?? []) {
+            actions.push({
+              title: action.description,
+              kind: "quickfix.import",
+              edits: editsOf(document, request.root, action.changes),
+            })
+          }
+        }
+      }
+
+      // Everything else the compiler offers for the diagnostics in range.
+      const fixes = document.service.getCodeFixesAtPosition(
+        document.fileName,
+        start,
+        end,
+        [...new Set(overlapping.map((diagnostic) => diagnostic.code))],
+        FORMAT_OPTIONS,
+        COMPLETION_PREFERENCES
+      )
+      for (const fix of fixes) {
+        actions.push({
+          title: fix.description,
+          kind: "quickfix",
+          edits: editsOf(document, request.root, fix.changes),
+        })
+      }
+
+      // The import path and the fix API can find the same import.
+      const seen = new Set<string>()
+      return actions.filter((action) => {
+        if (seen.has(action.title)) return false
+        seen.add(action.title)
+        return action.edits.length > 0
+      })
     }),
 }

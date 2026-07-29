@@ -8,7 +8,12 @@
  * worse than asking again.
  */
 import { useMemo } from "react"
-import type { Diagnostic, Position } from "@byconvo/core/language"
+import {
+  applyTextEdits,
+  type Diagnostic,
+  type FileEdits,
+  type Position,
+} from "@byconvo/core/language"
 import { api, fetchClient } from "@/lib/api/client"
 import { createLanguageFunctions } from "../functions/language.functions"
 import type { LanguageFunctions } from "../interfaces/language.interfaces"
@@ -97,3 +102,86 @@ export const useLanguageActions = (
       }),
     [diagnostics]
   )
+
+/** Completions at a caret, narrowed by what has been typed so far. */
+export const requestCompletions = async (
+  path: string,
+  position: Position,
+  prefix: string,
+  contents: string | null
+) => {
+  const { data, error } = await fetchClient.POST("/api/language/completions", {
+    body: {
+      path,
+      line: position.line,
+      character: position.character,
+      prefix,
+      ...(contents === null ? {} : { contents }),
+    },
+  })
+  if (error) return fail(error, "could not read completions")
+  return data
+}
+
+/** Documentation and any import edits for the item about to be accepted. */
+export const resolveCompletion = async (
+  path: string,
+  position: Position,
+  item: { label: string; source: string; data: string | null },
+  contents: string | null
+) => {
+  const { data, error } = await fetchClient.POST(
+    "/api/language/completion-resolve",
+    {
+      body: {
+        path,
+        line: position.line,
+        character: position.character,
+        label: item.label,
+        source: item.source,
+        data: item.data,
+        ...(contents === null ? {} : { contents }),
+      },
+    }
+  )
+  if (error) return fail(error, "could not resolve the completion")
+  return data
+}
+
+/** Quick fixes covering a range — import resolution among them. */
+export const requestCodeActions = async (
+  path: string,
+  range: { start: Position; end: Position },
+  contents: string | null
+) => {
+  const { data, error } = await fetchClient.POST("/api/language/code-actions", {
+    body: {
+      path,
+      start: range.start,
+      end: range.end,
+      ...(contents === null ? {} : { contents }),
+    },
+  })
+  if (error) return fail(error, "could not read quick fixes")
+  return data
+}
+
+/**
+ * Apply edits to files other than the open one, which the editor cannot reach.
+ * Read, edit, write — the same round trip the editor's own save makes.
+ */
+export const writeFileEdits = async (
+  files: ReadonlyArray<FileEdits>
+): Promise<void> => {
+  for (const file of files) {
+    const read = await fetchClient.GET("/api/file", {
+      params: { query: { path: file.path } },
+    })
+    if (read.error || read.data === undefined) continue
+    const next = applyTextEdits(read.data.contents, file.edits)
+    if (next === read.data.contents) continue
+    await fetchClient.PUT("/api/file", {
+      body: { path: file.path, contents: next },
+    })
+  }
+}

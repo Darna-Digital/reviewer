@@ -6,6 +6,12 @@
  * can key on the URL and hovering the same token twice costs nothing.
  */
 import {
+  CodeActionsPayload,
+  CodeActionsResult,
+  CompletionResolution,
+  CompletionResolvePayload,
+  CompletionResult,
+  CompletionsPayload,
   DefinitionResult,
   DiagnosticsPayload,
   DiagnosticsResult,
@@ -53,6 +59,27 @@ export class LanguageApi extends HttpApiGroup.make("language")
     HttpApiEndpoint.get("hover", "/language/hover", {
       query: PositionQuery,
       success: HoverResult,
+      error: errors,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("completions", "/language/completions", {
+      payload: CompletionsPayload,
+      success: CompletionResult,
+      error: errors,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("completionResolve", "/language/completion-resolve", {
+      payload: CompletionResolvePayload,
+      success: CompletionResolution,
+      error: errors,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("codeActions", "/language/code-actions", {
+      payload: CodeActionsPayload,
+      success: CodeActionsResult,
       error: errors,
     })
   ) {}

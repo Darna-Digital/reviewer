@@ -30,6 +30,12 @@ const DIAGNOSTICS_DEBOUNCE_MS = 600
 
 export interface FileEditing {
   readonly editor: Editor<undefined>
+  /**
+   * Subscribe to buffer changes. The editor keeps a single `onChange`, and
+   * `setOptions` merges by key — so a second feature registering its own would
+   * silently replace this one's. Everything that needs to react goes here.
+   */
+  readonly subscribe: (listener: () => void) => () => void
   readonly dirty: boolean
   readonly saving: boolean
   readonly save: () => void
@@ -58,6 +64,7 @@ export function useFileEditing(
   const saveRef = useRef<() => void>(() => {})
   const focusedRef = useRef(false)
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const listeners = useRef(new Set<() => void>())
 
   // One editor instance for the lifetime of this view. `File` attaches it
   // (editor.edit) once `contentEditable` is set and the editor is in context.
@@ -74,6 +81,7 @@ export function useFileEditing(
       onChange: (file: FileContents) => {
         valueRef.current = file.contents
         setDirty(file.contents !== originalRef.current)
+        for (const listener of listeners.current) listener()
         if (debounce.current !== null) clearTimeout(debounce.current)
         debounce.current = setTimeout(() => {
           // Analysing every keystroke would rebuild the program mid-word; a
@@ -185,8 +193,14 @@ export function useFileEditing(
     return () => window.removeEventListener("keydown", onKeyDown, true)
   }, [runCommand])
 
+  const subscribe = useCallback((listener: () => void) => {
+    listeners.current.add(listener)
+    return () => listeners.current.delete(listener)
+  }, [])
+
   return {
     editor,
+    subscribe,
     dirty,
     saving,
     save: useCallback(() => void save(), [save]),

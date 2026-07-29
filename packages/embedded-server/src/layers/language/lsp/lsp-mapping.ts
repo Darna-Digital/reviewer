@@ -9,12 +9,16 @@
  */
 import { fileURLToPath, pathToFileURL } from "node:url"
 import type {
+  CompletionItem,
   Diagnostic,
   DiagnosticSeverity,
   DiagnosticTag,
+  FileEdits,
   Position,
   Range,
+  TextEdit,
 } from "@byconvo/core/language"
+import { toRepoRelative } from "../typescript/ts-mapping.ts"
 
 const ORIGIN: Position = { line: 0, character: 0 }
 const EMPTY_RANGE: Range = { start: ORIGIN, end: ORIGIN }
@@ -167,4 +171,96 @@ export const hoverContents = (raw: unknown): string => {
       .join("\n\n")
       .trim()
   return render(raw).trim()
+}
+
+/**
+ * LSP `CompletionItemKind` is a number; the port carries a name, because the UI
+ * shows it and because the TypeScript provider already speaks in names.
+ */
+const COMPLETION_KINDS: ReadonlyArray<string> = [
+  "",
+  "text",
+  "method",
+  "function",
+  "constructor",
+  "field",
+  "variable",
+  "class",
+  "interface",
+  "module",
+  "property",
+  "unit",
+  "value",
+  "enum",
+  "keyword",
+  "snippet",
+  "color",
+  "file",
+  "reference",
+  "folder",
+  "enum-member",
+  "constant",
+  "struct",
+  "event",
+  "operator",
+  "type-parameter",
+]
+
+export const completionKindOfLsp = (raw: unknown): string =>
+  typeof raw === "number" ? (COMPLETION_KINDS[raw] ?? "") : ""
+
+/**
+ * Completion items as the port carries them. `data` is stringified because it
+ * is opaque — whatever the server needs to resolve the item later — and the
+ * wire schema keeps it a plain string rather than an anything-goes value.
+ */
+export const toCompletionItems = (
+  raw: unknown
+): ReadonlyArray<CompletionItem> => {
+  if (!Array.isArray(raw)) return []
+  const items: Array<CompletionItem> = []
+  for (const entry of raw) {
+    if (!isRecord(entry)) continue
+    const label = entry["label"]
+    if (typeof label !== "string") continue
+    const detail = entry["detail"]
+    const insertText = entry["insertText"]
+    const sortText = entry["sortText"]
+    items.push({
+      label,
+      kind: completionKindOfLsp(entry["kind"]),
+      detail: typeof detail === "string" ? detail : "",
+      insertText: typeof insertText === "string" ? insertText : label,
+      sortText: typeof sortText === "string" ? sortText : label,
+      // LSP has no "would need an import" flag; a server that adds imports does
+      // it through `additionalTextEdits` on resolve, which needs no marker.
+      source: "",
+      data: entry["data"] === undefined ? null : JSON.stringify(entry["data"]),
+    })
+  }
+  return items
+}
+
+/**
+ * `TextEdit[]` for one document URI, dropped when the file is outside the
+ * repository — the UI could not open it to apply them.
+ */
+export const toFileEdits = (
+  root: string,
+  uri: string,
+  raw: unknown
+): ReadonlyArray<FileEdits> => {
+  if (!Array.isArray(raw) || raw.length === 0) return []
+  const absolute = uriToPath(uri)
+  if (absolute === null) return []
+  const path = toRepoRelative(root, absolute)
+  if (path === null) return []
+  const edits: Array<TextEdit> = []
+  for (const entry of raw) {
+    if (!isRecord(entry)) continue
+    const newText = entry["newText"]
+    if (typeof newText !== "string") continue
+    edits.push({ range: toRange(entry["range"]), newText })
+  }
+  return edits.length === 0 ? [] : [{ path, edits }]
 }

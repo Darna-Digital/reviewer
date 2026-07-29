@@ -12,7 +12,8 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { LineAnnotation, TokenEventBase } from "@pierre/diffs"
-import type { Diagnostic, Location } from "@byconvo/core/language"
+import type { Editor } from "@pierre/diffs/editor"
+import type { Diagnostic, FileEdits, Location } from "@byconvo/core/language"
 import {
   useDiagnostics,
   useLanguageActions,
@@ -22,7 +23,7 @@ import { DIAGNOSTIC_CSS } from "../functions/diagnostic-styles"
 import {
   countDiagnostics,
   groupDiagnosticsByLine,
-  isNavigableToken,
+  identifierWithin,
 } from "../functions/language.functions"
 import type {
   DiagnosticCounts,
@@ -31,6 +32,8 @@ import type {
 } from "../interfaces/language.interfaces"
 import type { Rect } from "@/lib/floating-placement"
 import { SymbolCard } from "./symbol-card"
+import { useCompletions } from "./use-completions"
+import { useSymbolMenu } from "./use-symbol-menu"
 import {
   CardSpinner,
   HoverDocumentation,
@@ -67,16 +70,26 @@ const rectOf = (element: HTMLElement): Rect => {
   return { top, bottom, left }
 }
 
-const spanOf = (props: TokenEventBase): TokenSpan => ({
-  lineNumber: props.lineNumber,
-  lineCharStart: props.lineCharStart,
-  lineCharEnd: props.lineCharEnd,
-  tokenText: props.tokenText,
-})
+/** The symbol a token event is about, or null when it is not about one. */
+const spanOf = (props: TokenEventBase): TokenSpan | null =>
+  identifierWithin({
+    lineNumber: props.lineNumber,
+    lineCharStart: props.lineCharStart,
+    lineCharEnd: props.lineCharEnd,
+    tokenText: props.tokenText,
+  })
 
 export interface LanguageLayerOptions {
   /** Repository-relative path of the file on screen. */
   path: string
+  /** The view's editor, which owns the buffer and the caret. */
+  editor: Editor<undefined>
+  /** Buffer-change subscription owned by the editing hook. */
+  subscribe: (listener: () => void) => () => void
+  /** Resolves the element the rendered code lives under. */
+  getContainer: () => ParentNode | null
+  /** Apply edits landing in files other than the open one. */
+  onApplyForeignEdits: (edits: ReadonlyArray<FileEdits>) => void
   /** Unsaved buffer to analyse, or null to analyse the file on disk. */
   contents?: string | null
   /** Turn the whole layer off — no requests, no marks, no card. */
@@ -105,10 +118,18 @@ export interface LanguageLayer {
   }
   /** Render alongside the view. */
   readonly card: React.ReactNode
+  /** The completion list, when one is open. */
+  readonly completions: React.ReactNode
+  /** The right-click menu, when one is open. */
+  readonly menu: React.ReactNode
 }
 
 export function useLanguageLayer({
   path,
+  editor,
+  subscribe,
+  getContainer,
+  onApplyForeignEdits,
   contents = null,
   enabled = true,
   onOpenLocation,
@@ -168,9 +189,9 @@ export function useLanguageLayer({
 
   const onTokenEnter = useCallback(
     (props: TokenEventBase) => {
-      if (!isNavigableToken(props.tokenText)) return
-      clearTimers()
       const token = spanOf(props)
+      if (token === null) return
+      clearTimers()
       const anchor = rectOf(props.tokenElement)
       hoverTimer.current = setTimeout(() => {
         hoverToken.current = token
@@ -213,12 +234,12 @@ export function useLanguageLayer({
   const onTokenClick = useCallback(
     (props: TokenEventBase, event: MouseEvent) => {
       if (!(event.metaKey || event.ctrlKey)) return
-      if (!isNavigableToken(props.tokenText)) return
+      const token = spanOf(props)
+      if (token === null) return
       event.preventDefault()
       clearTimers()
       hoverToken.current = null
 
-      const token = spanOf(props)
       const anchor = rectOf(props.tokenElement)
       setCard({ kind: "busy", anchor })
       void actions
@@ -262,6 +283,60 @@ export function useLanguageLayer({
     [onOpenLocation]
   )
 
+  // Right-click: usages, definition, and the fixes at that spot.
+  const symbolMenu = useSymbolMenu({
+    editor,
+    path,
+    enabled,
+    getContainer,
+    onFindUsages: useCallback(
+      (token: TokenSpan, anchor: Rect) => {
+        setCard({ kind: "busy", anchor })
+        void actions
+          .references(path, token)
+          .then((outcome) =>
+            setCard(
+              outcome.kind === "none"
+                ? null
+                : { kind: "outcome", anchor, outcome }
+            )
+          )
+          .catch(() => setCard(null))
+      },
+      [actions, path]
+    ),
+    onGoToDefinition: useCallback(
+      (token: TokenSpan, anchor: Rect) => {
+        setCard({ kind: "busy", anchor })
+        void actions
+          .navigate(path, token)
+          .then((outcome) => {
+            if (outcome.kind === "open") {
+              setCard(null)
+              onOpenLocation(outcome.target.location)
+              return
+            }
+            setCard(
+              outcome.kind === "none"
+                ? null
+                : { kind: "outcome", anchor, outcome }
+            )
+          })
+          .catch(() => setCard(null))
+      },
+      [actions, onOpenLocation, path]
+    ),
+    onApplyForeignEdits,
+  })
+
+  const completions = useCompletions({
+    editor,
+    subscribe,
+    path,
+    enabled,
+    getContainer,
+  })
+
   const cardNode = useMemo(() => {
     if (card === null) return null
     const body =
@@ -301,6 +376,8 @@ export function useLanguageLayer({
   return {
     diagnostics,
     counts: countDiagnostics(diagnostics),
+    completions: completions.popup,
+    menu: symbolMenu.menu,
     annotations,
     viewOptions: {
       useTokenTransformer: true,

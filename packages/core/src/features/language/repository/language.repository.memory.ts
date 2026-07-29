@@ -6,9 +6,13 @@
  * TypeScript program or a language server subprocess.
  */
 import * as Effect from "effect/Effect"
+import { filterCompletions } from "../functions/language.completions.ts"
 import { previewAt } from "../functions/language.positions.ts"
 import { selectProvider } from "../functions/language.registry.ts"
 import type {
+  CodeActionItem,
+  CompletionItem,
+  CompletionResolution,
   Diagnostic,
   LanguageProviderInfo,
   Position,
@@ -25,6 +29,9 @@ export interface MemoryLanguageSeed {
   readonly targets?: Readonly<Record<string, ReadonlyArray<SymbolTarget>>>
   readonly references?: Readonly<Record<string, ReadonlyArray<SymbolReference>>>
   readonly hover?: Readonly<Record<string, string>>
+  readonly completions?: Readonly<Record<string, ReadonlyArray<CompletionItem>>>
+  readonly resolutions?: Readonly<Record<string, CompletionResolution>>
+  readonly codeActions?: Readonly<Record<string, ReadonlyArray<CodeActionItem>>>
 }
 
 const DEFAULT_PROVIDER: LanguageProviderInfo = {
@@ -37,6 +44,8 @@ const DEFAULT_PROVIDER: LanguageProviderInfo = {
     definition: true,
     references: true,
     hover: true,
+    completions: true,
+    codeActions: true,
   },
   available: true,
   detail: "",
@@ -92,6 +101,29 @@ export const makeMemoryLanguageRepository = (seed: MemoryLanguageSeed = {}) =>
           range: originAt(path, position),
           contents:
             seed.hover?.[path] ?? previewAt(files[path] ?? "", position.line),
+        }),
+
+      completions: (path, position, prefix) =>
+        Effect.succeed({
+          providerId: providerFor(path),
+          replace: originAt(path, position),
+          items: filterCompletions(seed.completions?.[path] ?? [], prefix),
+          incomplete: true,
+        }),
+
+      resolveCompletion: (_path, _position, item) =>
+        Effect.succeed(
+          seed.resolutions?.[item.label] ?? {
+            detail: "",
+            documentation: "",
+            additionalEdits: [],
+          }
+        ),
+
+      codeActions: (path) =>
+        Effect.succeed({
+          providerId: providerFor(path),
+          actions: seed.codeActions?.[path] ?? [],
         }),
     }
   })

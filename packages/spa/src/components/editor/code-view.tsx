@@ -26,7 +26,8 @@ import { Button } from "@/components/ui/button"
 import { LoadingCursor } from "@/components/ui/loading-cursor"
 import { useFile } from "@/lib/queries"
 import type { ReviewComment } from "@byconvo/core/comments"
-import type { Location } from "@byconvo/core/language"
+import type { FileEdits, Location } from "@byconvo/core/language"
+import { writeFileEdits } from "@/interactions/language/adapters/language.hook.adapter"
 import type { Theme } from "@/lib/ui-prefs"
 
 // Comments on a plain (non-diff) file are always anchored to the current
@@ -88,6 +89,14 @@ export function CodeView({
   const commentsEnabled =
     onCommentSubmit !== undefined && onCommentDelete !== undefined
 
+  // A quick fix can touch a file that is not open — an import added to a
+  // barrel, say. Those are read, edited and written back through the file API,
+  // since the editor only owns the buffer on screen.
+  const applyForeignEdits = useCallback(
+    (files: ReadonlyArray<FileEdits>) => void writeFileEdits(files),
+    []
+  )
+
   // The view is always editable — clicking anywhere places a caret, and there
   // is no mode to switch into.
   const editing = useFileEditing(
@@ -100,6 +109,10 @@ export function CodeView({
   // `@pierre/diffs` token hooks. Only active when the host can navigate.
   const language = useLanguageLayer({
     path,
+    editor: editing.editor,
+    subscribe: editing.subscribe,
+    getContainer: useCallback(() => scrollWrapper.current, []),
+    onApplyForeignEdits: applyForeignEdits,
     // Diagnostics follow what is on screen, not what is on disk.
     contents: editing.bufferForAnalysis,
     enabled: onOpenLocation !== undefined,
@@ -290,6 +303,8 @@ export function CodeView({
           </section>
         </EditorProvider>
         {language.card}
+        {language.completions}
+        {language.menu}
       </Virtualizer>
     </div>
   )

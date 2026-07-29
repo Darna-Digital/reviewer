@@ -129,6 +129,8 @@ export const ProviderCapabilitiesInfo = Schema.Struct({
   definition: Schema.Boolean,
   references: Schema.Boolean,
   hover: Schema.Boolean,
+  completions: Schema.Boolean,
+  codeActions: Schema.Boolean,
 })
 export type ProviderCapabilitiesInfo = typeof ProviderCapabilitiesInfo.Type
 
@@ -167,3 +169,113 @@ export const DiagnosticsPayload = Schema.Struct({
   contents: Schema.optionalKey(Schema.String),
 })
 export type DiagnosticsPayload = typeof DiagnosticsPayload.Type
+
+// --- Completions and code actions ------------------------------------------
+
+/** A replacement of `range` with `newText`, as LSP's `TextEdit`. */
+export const TextEdit = Schema.Struct({ range: Range, newText: Schema.String })
+export type TextEdit = typeof TextEdit.Type
+
+/** Edits against one file. Auto-imports touch a file other than the open one. */
+export const FileEdits = Schema.Struct({
+  path: Schema.String,
+  edits: Schema.Array(TextEdit),
+})
+export type FileEdits = typeof FileEdits.Type
+
+export const CompletionItem = Schema.Struct({
+  label: Schema.String,
+  /** Provider-defined kind (`method`, `function`, `keyword`, …). */
+  kind: Schema.String,
+  /** Short signature or type, when the provider offers one up front. */
+  detail: Schema.String,
+  /** Text to insert; equal to the label unless the provider says otherwise. */
+  insertText: Schema.String,
+  /** Provider ordering key; ties break on label. */
+  sortText: Schema.String,
+  /**
+   * Module an auto-import would come from, empty when the symbol is already in
+   * scope. Accepting one of these needs `resolveCompletion` for its edits.
+   */
+  source: Schema.String,
+  /** Opaque handle the provider needs to resolve the item. */
+  data: Schema.NullOr(Schema.String),
+})
+export type CompletionItem = typeof CompletionItem.Type
+
+export const CompletionResult = Schema.Struct({
+  providerId: Schema.NullOr(Schema.String),
+  /** The span an accepted item replaces — the identifier being typed. */
+  replace: Schema.NullOr(Range),
+  items: Schema.Array(CompletionItem),
+  /**
+   * True when the list was narrowed to the prefix and must be re-requested as
+   * it changes, which is LSP's `isIncomplete`.
+   */
+  incomplete: Schema.Boolean,
+})
+export type CompletionResult = typeof CompletionResult.Type
+
+export const CompletionResolution = Schema.Struct({
+  detail: Schema.String,
+  /** Markdown documentation for the item. */
+  documentation: Schema.String,
+  /** Edits to apply alongside the insertion — the added import. */
+  additionalEdits: Schema.Array(FileEdits),
+})
+export type CompletionResolution = typeof CompletionResolution.Type
+
+export const CodeActionItem = Schema.Struct({
+  title: Schema.String,
+  /** LSP code-action kind, e.g. `quickfix`. */
+  kind: Schema.String,
+  edits: Schema.Array(FileEdits),
+})
+export type CodeActionItem = typeof CodeActionItem.Type
+
+export const CodeActionsResult = Schema.Struct({
+  providerId: Schema.NullOr(Schema.String),
+  actions: Schema.Array(CodeActionItem),
+})
+export type CodeActionsResult = typeof CodeActionsResult.Type
+
+/** Body shared by the position-addressed POSTs, which carry the buffer. */
+export const PositionPayload = Schema.Struct({
+  path: Schema.String,
+  line: Schema.Int,
+  character: Schema.Int,
+  contents: Schema.optionalKey(Schema.String),
+})
+export type PositionPayload = typeof PositionPayload.Type
+
+export const CompletionsPayload = Schema.Struct({
+  path: Schema.String,
+  line: Schema.Int,
+  character: Schema.Int,
+  contents: Schema.optionalKey(Schema.String),
+  /**
+   * The identifier typed so far. Filtering server-side keeps the payload small
+   * without hiding matches, which a blind cap over thousands of symbols would.
+   */
+  prefix: Schema.String,
+})
+export type CompletionsPayload = typeof CompletionsPayload.Type
+
+export const CompletionResolvePayload = Schema.Struct({
+  path: Schema.String,
+  line: Schema.Int,
+  character: Schema.Int,
+  contents: Schema.optionalKey(Schema.String),
+  label: Schema.String,
+  source: Schema.String,
+  data: Schema.NullOr(Schema.String),
+})
+export type CompletionResolvePayload = typeof CompletionResolvePayload.Type
+
+export const CodeActionsPayload = Schema.Struct({
+  path: Schema.String,
+  start: Position,
+  end: Position,
+  contents: Schema.optionalKey(Schema.String),
+})
+export type CodeActionsPayload = typeof CodeActionsPayload.Type
