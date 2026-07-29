@@ -32,7 +32,7 @@ import {
   useRouterState,
   useSearch,
 } from "@tanstack/react-router"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { CommandMenu, type Command } from "@/components/command-menu"
 import { CommitPanel } from "@/components/commit-panel"
@@ -46,7 +46,6 @@ import {
   DiffPane,
   type DraftLocation,
 } from "@/interactions/diff/components/diff-pane"
-import { CodeEditor } from "@/components/editor/code-editor"
 import { CodeView } from "@/components/editor/code-view"
 import { ConflictBanner } from "@/components/git/conflict-banner"
 import { ConflictView } from "@/components/git/conflict-view"
@@ -65,6 +64,22 @@ import {
 } from "@/interactions/chats/functions/chat-assignment.functions"
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter"
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter"
+import { TabStrip } from "@/interactions/tabs/components/tab-strip"
+import {
+  scopeTabsTo,
+  updateTabs,
+  useTabs,
+} from "@/interactions/tabs/adapters/tabs.store"
+import {
+  closeAll,
+  closeOthers,
+  closeTab,
+  keepTab,
+  neighbourTab,
+  pruneTabs,
+  syncActive,
+  togglePin,
+} from "@/interactions/tabs/functions/tabs.functions"
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import { fetchClient } from "@/lib/api/client"
 import {
@@ -103,7 +118,6 @@ type Search = {
   base?: string
   head?: string
   file?: string
-  edit?: boolean
   path?: string
 }
 
@@ -180,6 +194,23 @@ export function AppShell() {
       } else if (e.key === "3") {
         e.preventDefault()
         void navigate({ to: "/browse" })
+      } else if (
+        e.altKey &&
+        (e.key === "ArrowLeft" || e.key === "ArrowRight")
+      ) {
+        // Step through the open files, as Cmd/Ctrl+Alt+arrow does in VS Code.
+        // Ctrl+Tab, which JetBrains uses, is the browser's own.
+        e.preventDefault()
+        updateTabs((state) => {
+          const next = neighbourTab(state, e.key === "ArrowRight" ? 1 : -1)
+          if (next !== null) {
+            void navigate({
+              to: ".",
+              search: (prev: Search) => ({ ...prev, file: next }),
+            })
+          }
+          return state
+        })
       }
     }
     window.addEventListener("keydown", onKey)
@@ -314,8 +345,16 @@ export function AppShell() {
         targetKey,
         localComments: localComments.data ?? [],
         pullComments: pullComments.data ?? [],
+        viewingFile: search.file ?? null,
       }),
-    [diffFns, target?.kind, targetKey, localComments.data, pullComments.data]
+    [
+      diffFns,
+      target?.kind,
+      targetKey,
+      localComments.data,
+      pullComments.data,
+      search.file,
+    ]
   )
 
   // --- review → agent: hand the comments in view (local + GitHub) to an agent.
@@ -366,9 +405,24 @@ export function AppShell() {
   // --- navigation helpers ----------------------------------------------------
   const setSearch = (patch: Partial<Search>) =>
     navigate({ to: ".", search: (prev: Search) => ({ ...prev, ...patch }) })
-  const openFile = (path: string, edit: boolean) =>
-    setSearch({ file: path, edit: edit || undefined })
-  const closeFile = () => setSearch({ file: undefined, edit: undefined })
+  const openFile = (path: string) => setSearch({ file: path })
+  const closeFile = () => setSearch({ file: undefined })
+
+  // Go-to-definition and find-usages land here: open the file (it may already
+  // be the one on screen) and ask the view to reveal the line. The counter lets
+  // the same line be revealed twice in a row.
+  const [reveal, setReveal] = useState<{ line: number; key: number } | null>(
+    null
+  )
+  const revealLine = (lineNumber: number) =>
+    setReveal((previous) => ({
+      line: lineNumber,
+      key: (previous?.key ?? 0) + 1,
+    }))
+  const openLocation = (path: string, lineNumber: number) => {
+    openFile(path)
+    revealLine(lineNumber)
+  }
 
   // Show one file's past: the log filters down to it (following renames) and
   // the dock swings open on History.
@@ -378,8 +432,7 @@ export function AppShell() {
   }
 
   // --- conflict resolution ---------------------------------------------------
-  const openConflict = (path: string) =>
-    setSearch({ path, file: undefined, edit: undefined })
+  const openConflict = (path: string) => setSearch({ path, file: undefined })
   const resolveConflictSide = async (path: string, side: "ours" | "theirs") => {
     await git.resolveConflict(path, side)
     if (search.path === path) setSearch({ path: undefined })
@@ -392,7 +445,7 @@ export function AppShell() {
   const onFileSelect = (path: string | null) => {
     if (path === null) return
     if (mode === "browse") {
-      openFile(path, false)
+      openFile(path)
       return
     }
     // Commit mode: a file with no diff hunks isn't in the diff pane — either it
@@ -400,16 +453,68 @@ export function AppShell() {
     // local comments. Open it in the file viewer so its contents and comments
     // are still reachable; files that are in the diff open in the diff pane.
     if (mode === "commit" && !parsedFiles.some((f) => f.name === path)) {
-      setSearch({ file: path, edit: undefined, path })
+      setSearch({ file: path, path })
       return
     }
-    setSearch({ path, file: undefined, edit: undefined })
+    setSearch({ path, file: undefined })
   }
 
-  const editing =
-    search.file !== undefined && search.edit === true ? search.file : null
-  const viewing =
-    search.file !== undefined && search.edit !== true ? search.file : null
+  // One always-editable file view; there is no separate edit mode.
+  const viewing = search.file ?? null
+
+  // --- open-file tabs --------------------------------------------------------
+  // The strip follows the open file rather than owning it: navigation arrives
+  // from the tree, the command menu, go-to-definition and restored URLs alike.
+  const tabs = useTabs()
+  const repoRoot = repo.data?.root ?? null
+  useEffect(() => {
+    scopeTabsTo(repoRoot)
+  }, [repoRoot])
+  // Re-syncs when the repository resolves as well as when the file changes:
+  // pointing the store at a repository swaps in that repository's strip, which
+  // would otherwise drop the file already on screen.
+  useEffect(() => {
+    updateTabs((state) => syncActive(state, viewing))
+  }, [repoRoot, viewing])
+  // A strip restored from a previous session can name files that have since
+  // been deleted or renamed.
+  useEffect(() => {
+    if (allPaths.length === 0) return
+    const known = new Set(allPaths)
+    updateTabs((state) => pruneTabs(state, (path) => known.has(path)))
+  }, [allPaths])
+
+  // Only the open file has a buffer, so it is the only one that can be dirty.
+  const [dirtyFile, setDirtyFile] = useState<string | null>(null)
+  const dirtyPaths = useMemo(
+    () => new Set(dirtyFile === null ? [] : [dirtyFile]),
+    [dirtyFile]
+  )
+  const onDirtyChange = useCallback(
+    (dirty: boolean) => {
+      setDirtyFile(dirty ? (search.file ?? null) : null)
+      // Editing a file is the clearest possible statement that you are staying
+      // in it, so it stops being a preview.
+      if (dirty && search.file !== undefined) {
+        const path = search.file
+        updateTabs((state) => keepTab(state, path))
+      }
+    },
+    [search.file]
+  )
+
+  const selectTab = (path: string) => setSearch({ file: path })
+  const closeTabAt = (path: string) => {
+    updateTabs((state) => {
+      const next = closeTab(state, path)
+      // Closing the tab on screen moves the file view to its neighbour, or
+      // shuts it when the strip empties.
+      if (state.active === path) {
+        setSearch({ file: next.active ?? undefined })
+      }
+      return next
+    })
+  }
 
   // Local comments anchored to the file currently open in the viewer (worktree
   // target — see CodeView). Threaded into the viewer so browse/commit comments
@@ -440,7 +545,7 @@ export function AppShell() {
         },
       ]
     }
-    const openPath = editing ?? viewing
+    const openPath = viewing
     const list: Crumb[] = []
     if (mode === "commit") {
       list.push({
@@ -711,24 +816,17 @@ export function AppShell() {
         />
       )
     }
-    if (editing !== null) {
-      return (
-        <CodeEditor
-          path={editing}
-          theme={prefs.resolvedTheme}
-          onClose={closeFile}
-          onSaved={git.refresh}
-        />
-      )
-    }
     if (viewing !== null) {
       return (
         <CodeView
           path={viewing}
           theme={prefs.resolvedTheme}
-          onEdit={(p) => openFile(p, true)}
           onClose={closeFile}
+          onSaved={git.refresh}
+          onDirtyChange={onDirtyChange}
           onShowHistory={showFileHistory}
+          onOpenLocation={openLocation}
+          reveal={reveal}
           comments={fileComments}
           draft={draft}
           onDraftOpen={setDraft}
@@ -752,7 +850,7 @@ export function AppShell() {
           onResolve={(merged) =>
             void resolveConflictContent(search.path!, merged)
           }
-          onEdit={(p) => openFile(p, true)}
+          onEdit={(p) => openFile(p)}
           onClose={() => setSearch({ path: undefined })}
         />
       )
@@ -771,6 +869,7 @@ export function AppShell() {
     }
     return (
       <DiffPane
+        onOpenLocation={openLocation}
         files={diffFiles}
         theme={prefs.resolvedTheme}
         diffStyle={prefs.diffStyle}
@@ -785,7 +884,7 @@ export function AppShell() {
         selectedFile={search.path ?? null}
         onDraftOpen={setDraft}
         onDraftCancel={() => setDraft(null)}
-        onEditFile={(p) => openFile(p, true)}
+        onEditFile={(p) => openFile(p)}
         onShowFileHistory={showFileHistory}
         onDiscardFile={
           mode === "commit" ? (p) => void git.discard([p]) : undefined
@@ -832,7 +931,7 @@ export function AppShell() {
           onOpenChange={setCommandOpen}
           commands={commands}
           files={allPaths}
-          onOpenFile={(path) => openFile(path, false)}
+          onOpenFile={(path) => openFile(path)}
         />
         {visibleComments.length > 0 && !assignBarDismissed && (
           <ReviewAssignBar
@@ -851,9 +950,7 @@ export function AppShell() {
             remoteBranches={remoteBranches.data ?? []}
             crumbs={buildCrumbs()}
             diffStyle={prefs.diffStyle}
-            showDiffStyleToggle={
-              editing === null && viewing === null && target !== null
-            }
+            showDiffStyleToggle={viewing === null && target !== null}
             busy={false}
             pickerOpen={pickerOpen}
             onPickerOpenChange={setPickerOpen}
@@ -945,9 +1042,7 @@ export function AppShell() {
                         mode === "review" ? diff.isPending : files.isPending
                       }
                       selectedFile={
-                        mode === "browse"
-                          ? (viewing ?? editing)
-                          : (search.path ?? null)
+                        mode === "browse" ? viewing : (search.path ?? null)
                       }
                       onFileSelect={onFileSelect}
                       onDeletePath={mode === "review" ? undefined : deletePath}
@@ -992,8 +1087,37 @@ export function AppShell() {
                       onContinue={() => void git.continueMerge()}
                     />
                   )}
-                <div className="min-h-0 flex-1 overflow-hidden">
-                  {renderCenter()}
+                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <TabStrip
+                    tabs={tabs.tabs}
+                    active={tabs.active}
+                    dirty={dirtyPaths}
+                    onSelect={selectTab}
+                    onKeep={(path) =>
+                      updateTabs((state) => keepTab(state, path))
+                    }
+                    onClose={closeTabAt}
+                    onTogglePin={(path) =>
+                      updateTabs((state) => togglePin(state, path))
+                    }
+                    onCloseOthers={(path) =>
+                      updateTabs((state) => {
+                        const next = closeOthers(state, path)
+                        setSearch({ file: next.active ?? undefined })
+                        return next
+                      })
+                    }
+                    onCloseAll={() =>
+                      updateTabs((state) => {
+                        const next = closeAll(state)
+                        setSearch({ file: next.active ?? undefined })
+                        return next
+                      })
+                    }
+                  />
+                  <div className="min-h-0 flex-1 overflow-hidden">
+                    {renderCenter()}
+                  </div>
                 </div>
               </main>
             </div>
@@ -1032,7 +1156,7 @@ export function AppShell() {
                 selectedCommitSha={
                   browse?.kind === "commit" ? browse.sha : null
                 }
-                selectedCommitFile={viewing ?? editing}
+                selectedCommitFile={viewing}
                 onLoadMoreCommits={log.loadMore}
                 onLogRefChange={setLogRef}
                 onLogFiltersChange={setLogFilters}
@@ -1048,11 +1172,10 @@ export function AppShell() {
                       ...prev,
                       path: logFilters.path ?? undefined,
                       file: undefined,
-                      edit: undefined,
                     }),
                   })
                 }
-                onSelectCommitFile={(p) => openFile(p, false)}
+                onSelectCommitFile={(p) => openFile(p)}
               />
             </div>
           </div>

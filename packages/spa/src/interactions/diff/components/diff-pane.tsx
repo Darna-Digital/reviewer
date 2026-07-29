@@ -31,6 +31,9 @@ import {
   DiffConnectors,
   connectorGutterCSS,
 } from "@/interactions/diff/components/diff-connectors"
+import { DiagnosticsAnnotation } from "@/interactions/language/components/diagnostics-annotation"
+import { useDiffLanguage } from "@/interactions/language/components/use-diff-language"
+import type { DiagnosticsAnnotationMeta } from "@/interactions/language/components/language-layer"
 import { fetchClient } from "@/lib/api/client"
 import { diffTargetKey, type DiffTarget } from "@/lib/api/types"
 import type { CommentSide, ReviewComment } from "@byconvo/core/comments"
@@ -45,6 +48,7 @@ type AnnotationMeta =
     }
   | { readonly kind: "draft" }
   | { readonly kind: "hunk"; readonly hunkIndex: number }
+  | DiagnosticsAnnotationMeta
 
 interface DiffPaneProps {
   files: ReadonlyArray<FileDiffMetadata>
@@ -72,6 +76,8 @@ interface DiffPaneProps {
   onCommentDelete: (comment: ReviewComment) => Promise<void>
   onCommentEdit: (comment: ReviewComment, body: string) => Promise<void>
   onCommentReply: (comment: ReviewComment, body: string) => Promise<void>
+  /** Go-to-definition and find-usages land here. */
+  onOpenLocation: (path: string, lineNumber: number) => void
 }
 
 const emptyHint = (target: DiffTarget): string => {
@@ -162,6 +168,9 @@ interface FileDiffSectionProps {
   onCommentDelete: (comment: ReviewComment) => Promise<void>
   onCommentEdit: (comment: ReviewComment, body: string) => Promise<void>
   onCommentReply: (comment: ReviewComment, body: string) => Promise<void>
+  /** Give this file the language layer — only true for a worktree diff. */
+  languageEnabled: boolean
+  onOpenLocation: (path: string, lineNumber: number) => void
 }
 
 function FileDiffSection({
@@ -184,13 +193,28 @@ function FileDiffSection({
   onCommentDelete,
   onCommentEdit,
   onCommentReply,
+  languageEnabled,
+  onOpenLocation,
 }: FileDiffSectionProps) {
   // Callback-ref state (not a ref object): DiffConnectors reads the section in a
   // layout effect, which fires bottom-up, so a child would see a parent ref as
   // null. The setter only fires on mount.
   const [sectionEl, setSectionEl] = useState<HTMLElement | null>(null)
   const recomputeConnectors = useRef<() => void>(() => {})
-  const onPostRender = useCallback(() => recomputeConnectors.current(), [])
+
+  // Hover documentation, go-to-definition and find-usages over the additions
+  // side, which for a worktree diff is the file as it is on disk.
+  const language = useDiffLanguage({
+    path: file.name,
+    section: sectionEl,
+    enabled: languageEnabled,
+    onOpenLocation,
+  })
+
+  const withDiagnostics = useMemo(
+    () => [...annotations, ...language.annotations],
+    [annotations, language.annotations]
+  )
 
   return (
     <section
@@ -214,8 +238,16 @@ function FileDiffSection({
           loadDiffFiles,
           expandUnchanged,
           enableGutterUtility: true,
-          unsafeCSS: connectorsEnabled ? connectorGutterCSS : undefined,
-          onPostRender: connectorsEnabled ? onPostRender : undefined,
+          ...language.viewOptions,
+          unsafeCSS: connectorsEnabled
+            ? `${connectorGutterCSS}\n${language.viewOptions.unsafeCSS}`
+            : language.viewOptions.unsafeCSS,
+          onPostRender: (node, instance, phase) => {
+            // Both need to know the code rendered: the connectors to measure
+            // it, the language layer to know it may start asking about it.
+            if (connectorsEnabled) recomputeConnectors.current()
+            language.viewOptions.onPostRender(node, instance, phase)
+          },
           onGutterUtilityClick: (range) =>
             onDraftOpen({
               filePath: file.name,
@@ -298,11 +330,12 @@ function FileDiffSection({
             )}
           </div>
         )}
-        lineAnnotations={
-          annotations as Array<DiffLineAnnotation<AnnotationMeta>>
-        }
+        lineAnnotations={withDiagnostics}
         renderAnnotation={(annotation) => {
           const meta = annotation.metadata
+          if (meta.kind === "diagnostics") {
+            return <DiagnosticsAnnotation diagnostics={meta.diagnostics} />
+          }
           if (meta.kind === "hunk") {
             // A quiet, icon-only revert affordance in the spirit of JetBrains'
             // gutter change markers — right-aligned, minimal vertical footprint.
@@ -364,6 +397,7 @@ function FileDiffSection({
         recomputeRef={recomputeConnectors}
         enabled={connectorsEnabled}
       />
+      {language.card}
     </section>
   )
 }
@@ -389,6 +423,7 @@ export function DiffPane({
   onCommentDelete,
   onCommentEdit,
   onCommentReply,
+  onOpenLocation,
 }: DiffPaneProps) {
   const connectorsEnabled = connectors && diffStyle === "split"
   const containerRef = useRef<HTMLDivElement>(null)
@@ -667,6 +702,8 @@ export function DiffPane({
             onCommentDelete={onCommentDelete}
             onCommentEdit={onCommentEdit}
             onCommentReply={onCommentReply}
+            languageEnabled={target.kind === "worktree"}
+            onOpenLocation={onOpenLocation}
           />
         ))}
       </Virtualizer>

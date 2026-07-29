@@ -36,11 +36,18 @@ function DropdownMenuContent({
   sideOffset = 4,
   className,
   children,
+  anchor,
   ...props
 }: MenuPrimitive.Popup.Props &
   Pick<
     MenuPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
+    | "align"
+    | "alignOffset"
+    | "side"
+    | "sideOffset"
+    // An anchor lets a menu hang off something other than a trigger — the
+    // pointer, for a context menu over a symbol in the code.
+    | "anchor"
   >) {
   const { level, className: surface } = useElevation(
     ELEVATION.menu,
@@ -54,6 +61,7 @@ function DropdownMenuContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
+        anchor={anchor}
       >
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
