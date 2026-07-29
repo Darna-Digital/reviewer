@@ -391,7 +391,8 @@ export const makeGitRepoRepository = Effect.gen(function* () {
       }
       if (query.after !== null) args.push(`--after=${query.after}`)
       if (query.before !== null) args.push(`--before=${query.before}`)
-      const path = query.path !== null && query.path.length > 0 ? query.path : null
+      const path =
+        query.path !== null && query.path.length > 0 ? query.path : null
       // `--follow` walks a single file through its renames, but it only works
       // against one starting ref — git rejects it alongside `--all`.
       const follow = path !== null && query.follow && query.ref !== ALL_REFS

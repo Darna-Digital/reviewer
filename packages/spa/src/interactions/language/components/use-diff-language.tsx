@@ -45,6 +45,12 @@ export interface DiffLanguage {
   readonly viewOptions: {
     readonly useTokenTransformer: boolean
     readonly unsafeCSS: string
+    /** Compose with the view's own: it is what says the code exists. */
+    readonly onPostRender: (
+      node: HTMLElement,
+      instance: unknown,
+      phase: "mount" | "update" | "unmount"
+    ) => void
     readonly onTokenEnter: (props: DiffTokenEventBaseProps) => void
     readonly onTokenLeave: () => void
     readonly onTokenClick: (
@@ -96,12 +102,14 @@ export function useDiffLanguage({
     ),
   })
 
-  const { onTokenEnter, onTokenLeave, onTokenClick } = layer.viewOptions
+  const { onPostRender, onTokenEnter, onTokenLeave, onTokenClick } =
+    layer.viewOptions
 
   const viewOptions = useMemo(
     () => ({
       useTokenTransformer: true,
       unsafeCSS: layer.viewOptions.unsafeCSS,
+      onPostRender,
       onTokenEnter: (props: DiffTokenEventBaseProps) => {
         if (props.side !== "additions") return
         onTokenEnter(props)
@@ -112,7 +120,13 @@ export function useDiffLanguage({
         onTokenClick(props, event)
       },
     }),
-    [layer.viewOptions.unsafeCSS, onTokenClick, onTokenEnter, onTokenLeave]
+    [
+      layer.viewOptions.unsafeCSS,
+      onPostRender,
+      onTokenClick,
+      onTokenEnter,
+      onTokenLeave,
+    ]
   )
 
   const annotations = useMemo(

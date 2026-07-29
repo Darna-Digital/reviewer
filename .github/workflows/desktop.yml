@@ -15,8 +15,57 @@ on:
 jobs:
   package-macos:
     runs-on: macos-latest
+    permissions:
+      contents: read
+      # Deleting artifacts is a write against the Actions API.
+      actions: write
     steps:
       - uses: actions/checkout@v4
+
+      # This is the only workflow that uploads anything, and every run uploads a
+      # whole packaged app, so the store fills up on its own until GitHub starts
+      # refusing new uploads ("Artifact storage quota has been hit") and the job
+      # fails on a build that succeeded. Keeping the newest few and dropping the
+      # rest bounds the total at a few builds' worth.
+      #
+      # It runs first rather than next to the upload so that a run whose build
+      # fails still frees space — which is exactly the run you get once the
+      # quota is already full.
+      - name: Prune old artifacts
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const KEEP = 3
+            const { owner, repo } = context.repo
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              { owner, repo, per_page: 100 }
+            )
+            const stale = artifacts
+              .filter((artifact) => !artifact.expired)
+              .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at))
+              .slice(KEEP)
+            const gb = (bytes) => (bytes / 1024 ** 3).toFixed(2)
+            core.info(
+              `${artifacts.length} artifacts, ${gb(artifacts.reduce((sum, a) => sum + a.size_in_bytes, 0))} GB; ` +
+                `keeping the newest ${KEEP}, deleting ${stale.length}`
+            )
+            let freed = 0
+            for (const artifact of stale) {
+              try {
+                await github.rest.actions.deleteArtifact({
+                  owner,
+                  repo,
+                  artifact_id: artifact.id,
+                })
+                freed += artifact.size_in_bytes
+              } catch (error) {
+                // One artifact that will not delete is not worth failing the
+                // build over — the upload below is what actually matters.
+                core.warning(`could not delete ${artifact.name} (${artifact.id}): ${error.message}`)
+              }
+            }
+            core.info(`freed ${gb(freed)} GB`)
 
       - uses: pnpm/action-setup@v4
 
@@ -35,3 +84,7 @@ jobs:
         with:
           name: byconvo-desktop-macos
           path: packages/desktop/dist-packaged/**
+          # A PR build is interesting for about as long as the PR is being
+          # looked at. The default is 90 days, which is what let a few hundred
+          # megabytes per run add up to the quota.
+          retention-days: 7

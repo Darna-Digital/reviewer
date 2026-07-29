@@ -11,10 +11,12 @@
  * text selection — hijacking them would make the file impossible to copy from.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import type { LineAnnotation, TokenEventBase } from "@pierre/diffs"
 import type { Editor } from "@pierre/diffs/editor"
 import type { Diagnostic, FileEdits, Location } from "@byconvo/core/language"
 import {
+  forgetHovers,
   useDiagnostics,
   useLanguageActions,
 } from "../adapters/language.hook.adapter"
@@ -154,12 +156,26 @@ export function useLanguageLayer({
   paintTokens = true,
   onOpenLocation,
 }: LanguageLayerOptions): LanguageLayer {
-  const query = useDiagnostics(enabled ? path : null, contents)
+  // Nothing is asked of the language server until the code is on screen. The
+  // first request against a repository builds a whole TypeScript program, and
+  // starting that in the same commit as the view puts it between the user and
+  // the text they asked for.
+  const [painted, setPainted] = useState(false)
+  useEffect(() => setPainted(false), [path])
+
+  const query = useDiagnostics(enabled ? path : null, contents, painted)
   const diagnostics = useMemo<ReadonlyArray<Diagnostic>>(
     () => query.data?.diagnostics ?? [],
     [query.data]
   )
   const actions = useLanguageActions(diagnostics)
+
+  // A file whose contents have moved on has different symbols at the positions
+  // the hover cache is keyed by.
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    forgetHovers(queryClient, path)
+  }, [contents, path, queryClient])
 
   const [card, setCard] = useState<CardState | null>(null)
 
@@ -192,6 +208,10 @@ export function useLanguageLayer({
         return
       }
       containerRef.current = node
+      // The code is in the DOM; let the browser put it on screen before the
+      // language server is asked anything. Flipping this synchronously would
+      // enqueue the request in the same frame as the paint it is waiting for.
+      requestAnimationFrame(() => setPainted(true))
       if (paintRef.current) paintDiagnostics(node, diagnosticsRef.current)
     },
     []

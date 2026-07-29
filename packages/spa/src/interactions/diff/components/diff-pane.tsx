@@ -201,7 +201,6 @@ function FileDiffSection({
   // null. The setter only fires on mount.
   const [sectionEl, setSectionEl] = useState<HTMLElement | null>(null)
   const recomputeConnectors = useRef<() => void>(() => {})
-  const onPostRender = useCallback(() => recomputeConnectors.current(), [])
 
   // Hover documentation, go-to-definition and find-usages over the additions
   // side, which for a worktree diff is the file as it is on disk.
@@ -243,7 +242,12 @@ function FileDiffSection({
           unsafeCSS: connectorsEnabled
             ? `${connectorGutterCSS}\n${language.viewOptions.unsafeCSS}`
             : language.viewOptions.unsafeCSS,
-          onPostRender: connectorsEnabled ? onPostRender : undefined,
+          onPostRender: (node, instance, phase) => {
+            // Both need to know the code rendered: the connectors to measure
+            // it, the language layer to know it may start asking about it.
+            if (connectorsEnabled) recomputeConnectors.current()
+            language.viewOptions.onPostRender(node, instance, phase)
+          },
           onGutterUtilityClick: (range) =>
             onDraftOpen({
               filePath: file.name,
