@@ -1,3 +1,4 @@
+export * from "./functions/docs.functions.ts"
 export * from "./layer/docs.layer.memory.ts"
 export * from "./repository/docs.repository.memory.ts"
 export * from "./repository/docs.repository.ts"

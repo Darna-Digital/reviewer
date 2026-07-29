@@ -1,0 +1,6 @@
+export * from "./functions/workspace-comments.functions.ts"
+export * from "./layer/workspace-comments.layer.memory.ts"
+export * from "./repository/workspace-comments.repository.memory.ts"
+export * from "./repository/workspace-comments.repository.ts"
+export * from "./schema/workspace-comments.schema.ts"
+export * from "./service/workspace-comments.service.ts"

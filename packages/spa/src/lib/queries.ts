@@ -24,7 +24,7 @@ export const useVisualComments = () =>
 /** The in-progress merge/rebase operation and its remaining conflicts. */
 export const useMergeState = () => api.useQuery("get", "/api/merge-state")
 
-// --- Threads / Chats / Docs / Tasks (workspace features) ------------------
+// --- Threads / Chats (conversation surfaces) -----------------------------
 
 export const useThreads = () => api.useQuery("get", "/api/threads")
 
@@ -54,18 +54,6 @@ export const useThread = (id: string | null) =>
     { params: { path: { id: id ?? "" } } },
     { enabled: id !== null }
   )
-
-export const useDocs = () => api.useQuery("get", "/api/docs")
-
-export const useDoc = (id: string | null) =>
-  api.useQuery(
-    "get",
-    "/api/docs/{id}",
-    { params: { path: { id: id ?? "" } } },
-    { enabled: id !== null }
-  )
-
-export const useTasks = () => api.useQuery("get", "/api/tasks/board")
 
 /** Saved Local Dev commands for the selected repo, with their runtime status. */
 export const useDevCommands = () =>

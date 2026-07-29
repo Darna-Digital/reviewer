@@ -21,16 +21,12 @@ import { ChatsHandler } from "./layers/chats/chats.handler.ts"
 import { ChatsLive } from "./layers/chats/chats.layer.live.ts"
 import { CommentsHandler } from "./layers/comments/comments.handler.ts"
 import { CommentsLive } from "./layers/comments/comments.layer.live.ts"
-import { DocsHandler } from "./layers/docs/docs.handler.ts"
-import { DocsLive } from "./layers/docs/docs.layer.live.ts"
 import { GitMessageHandler } from "./layers/git-message/git-message.handler.ts"
 import { GitMessageLive } from "./layers/git-message/git-message.layer.live.ts"
 import { GitHubHandler } from "./layers/github/github.handler.ts"
 import { GitHubLive } from "./layers/github/github.layer.live.ts"
 import { LanguageHandler } from "./layers/language/language.handler.ts"
 import { LanguageLive } from "./layers/language/language.layer.live.ts"
-import { TasksHandler } from "./layers/tasks/tasks.handler.ts"
-import { TasksLive } from "./layers/tasks/tasks.layer.live.ts"
 import { LocalDevHandler } from "./layers/local-dev/local-dev.handler.ts"
 import { LocalDevLive } from "./layers/local-dev/local-dev.layer.live.ts"
 import { DevRuntimeLive } from "./layers/local-dev/local-dev.runtime.ts"
@@ -61,8 +57,7 @@ const port = Number(process.env["BYCONVO_PORT"] ?? 41811)
 /**
  * The API router with every feature controller attached. The OpenAPI document
  * (consumed by the SPA's typesafe `openapi-fetch` client) is served at
- * /api/openapi.json, and a Scalar API reference at /api/reference (the /api/docs
- * path belongs to the Docs feature).
+ * /api/openapi.json, and a Scalar API reference at /api/reference.
  */
 const ApiLive = Layer.mergeAll(
   HttpApiBuilder.layer(Api, { openapiPath: "/api/openapi.json" }),
@@ -75,9 +70,7 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(GitMessageHandler),
   Layer.provide(ThreadsHandler),
   Layer.provide(ChatsHandler),
-  Layer.provide(DocsHandler),
   Layer.provide(LanguageHandler),
-  Layer.provide(TasksHandler),
   Layer.provide(LocalDevHandler),
   Layer.provide(VisualCommentsHandler)
 )
@@ -91,9 +84,7 @@ const RequestServices = Layer.mergeAll(
   GitMessageLive,
   ThreadsLive,
   ChatsLive,
-  DocsLive,
   LanguageLive,
-  TasksLive,
   LocalDevLive,
   DevRuntimeLive,
   VisualCommentsLive

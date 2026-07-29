@@ -1,80 +1,68 @@
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
 import { NotFound } from "../../../shared.ts"
+import { toDocSummary } from "../functions/docs.functions.ts"
 import type { Doc } from "../schema/docs.schema.ts"
-import type { DocsRepo } from "./docs.repository.ts"
+import type {
+  CreateDocInput,
+  DocsRepo,
+  UpdateDocInput,
+} from "./docs.repository.ts"
 
 const NOW = "2026-01-01T00:00:00.000Z"
-const slugify = (title: string) => {
-  const slug = title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60)
-  return slug.length > 0 ? slug : "doc"
-}
-const titleFromContent = (content: string, id: string) =>
-  content.match(/^#\s+(.+)$/m)?.[1].trim() ?? id
-interface Stored {
-  readonly id: string
-  readonly content: string
-}
-export const makeMemoryDocsRepository = (seed: ReadonlyArray<Stored> = []) =>
+
+export const makeMemoryDocsRepository = (seed: ReadonlyArray<Doc> = []) =>
   Effect.gen(function* () {
-    const store = yield* Ref.make<ReadonlyArray<Stored>>([...seed])
-    const toDoc = (s: Stored): Doc => ({
-      id: s.id,
-      title: titleFromContent(s.content, s.id),
-      content: s.content,
-      updatedAt: NOW,
-    })
-    const find = (all: ReadonlyArray<Stored>, id: string) => {
-      const s = all.find((d) => d.id === id)
-      return s === undefined
-        ? Effect.fail(new NotFound({ reason: `doc ${id} not found` }))
-        : Effect.succeed(s)
-    }
+    const store = yield* Ref.make<ReadonlyArray<Doc>>([...seed])
+    let counter = seed.length
+
+    const require = (id: string) =>
+      Effect.flatMap(Ref.get(store), (all) => {
+        const found = all.find((d) => d.id === id)
+        return found === undefined
+          ? Effect.fail(new NotFound({ reason: `doc ${id} not found` }))
+          : Effect.succeed(found)
+      })
+
     const repo: DocsRepo = {
-      list: Ref.get(store).pipe(
-        Effect.map((all) =>
-          all
-            .map((s) => {
-              const doc = toDoc(s)
-              return { id: doc.id, title: doc.title, updatedAt: doc.updatedAt }
-            })
-            .sort((a, b) => a.id.localeCompare(b.id))
-        )
-      ),
-      get: (id) =>
-        Effect.flatMap(Ref.get(store), (all) =>
-          Effect.map(find(all, id), toDoc)
+      listByProject: (projectId) =>
+        Effect.map(Ref.get(store), (all) =>
+          all.filter((d) => d.projectId === projectId).map(toDocSummary)
         ),
-      create: (title) =>
+      get: require,
+      create: (input: CreateDocInput) =>
         Effect.gen(function* () {
-          const all = yield* Ref.get(store)
-          let id = slugify(title)
-          let n = 1
-          while (all.some((d) => d.id === id)) {
-            n += 1
-            id = `${slugify(title)}-${n}`
+          counter += 1
+          const created: Doc = {
+            id: `doc-mem-${counter}`,
+            projectId: input.projectId,
+            title: input.title,
+            content: input.content,
+            createdAt: NOW,
+            updatedAt: NOW,
           }
-          const heading =
-            title.trim().length > 0 ? title.trim() : "Untitled plan"
-          const stored: Stored = { id, content: `# ${heading}\n\n` }
-          yield* Ref.update(store, (existing) => [...existing, stored])
-          return toDoc(stored)
+          yield* Ref.update(store, (all) => [...all, created])
+          return created
         }),
-      update: (id, content) =>
+      update: (id, input: UpdateDocInput) =>
         Effect.gen(function* () {
-          yield* find(yield* Ref.get(store), id)
-          const stored: Stored = { id, content }
+          const existing = yield* require(id)
+          const updated: Doc = {
+            ...existing,
+            title: input.title ?? existing.title,
+            content: input.content ?? existing.content,
+            updatedAt: NOW,
+          }
           yield* Ref.update(store, (all) =>
-            all.map((d) => (d.id === id ? stored : d))
+            all.map((d) => (d.id === id ? updated : d))
           )
-          return toDoc(stored)
+          return updated
         }),
       remove: (id) =>
-        Ref.update(store, (all) => all.filter((d) => d.id !== id)),
+        Effect.flatMap(require(id), () =>
+          Ref.update(store, (all) => all.filter((d) => d.id !== id))
+        ),
     }
+
     return repo
   })
