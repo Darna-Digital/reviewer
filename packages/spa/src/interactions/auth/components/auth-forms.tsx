@@ -11,7 +11,12 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
-import { requestPasswordReset, signIn, signUp } from "@/lib/central/auth-client"
+import {
+  requestPasswordReset,
+  sendVerificationEmail,
+  signIn,
+  signUp,
+} from "@/lib/central/auth-client"
 import {
   hasErrors,
   passwordStrength,
@@ -65,6 +70,7 @@ export function AuthForms() {
   const [touched, setTouched] = useState(false)
   const [busy, setBusy] = useState(false)
   const [sent, setSent] = useState<string | null>(null)
+  const [unverified, setUnverified] = useState(false)
 
   const revalidate = (next: Partial<Record<string, string>> = {}) => {
     if (!touched) return
@@ -91,6 +97,7 @@ export function AuthForms() {
     setErrors(found)
     if (hasErrors(found)) return
 
+    setUnverified(false)
     setBusy(true)
     try {
       if (mode === "reset") {
@@ -104,7 +111,13 @@ export function AuthForms() {
       }
 
       if (mode === "sign-up") {
-        const { error } = await signUp.email({ name, email, password })
+        const { error } = await signUp.email({
+          name,
+          email,
+          password,
+          // Where the verification link lands once the token is accepted.
+          callbackURL: `${window.location.origin}/workspace`,
+        })
         if (error != null) throw new Error(error.message)
         setSent(
           `Check ${email} for a confirmation link — you can sign in once the address is confirmed.`
@@ -113,11 +126,36 @@ export function AuthForms() {
       }
 
       const { error } = await signIn.email({ email, password })
+      if (error?.code === "EMAIL_NOT_VERIFIED") {
+        // A dead end otherwise: the password is right, the account exists, and
+        // the only way forward is a link that may have expired or been missed.
+        setUnverified(true)
+        return
+      }
       if (error != null) throw new Error(error.message)
       // The session hook picks the new session up; the gate swaps itself out.
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "something went wrong"
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const resendVerification = async () => {
+    setBusy(true)
+    try {
+      const { error } = await sendVerificationEmail({
+        email,
+        callbackURL: `${window.location.origin}/workspace`,
+      })
+      if (error != null) throw new Error(error.message)
+      setUnverified(false)
+      setSent(`A fresh confirmation link is on its way to ${email}.`)
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "could not send the link"
       )
     } finally {
       setBusy(false)
@@ -237,6 +275,23 @@ export function AuthForms() {
               }}
             />
           </Field>
+        )}
+
+        {unverified && (
+          <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs">
+            <p className="text-foreground">
+              This address hasn't been confirmed yet. Check your inbox for the
+              link — or get a new one.
+            </p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void resendVerification()}
+              className="mt-1.5 font-medium text-link hover:underline disabled:opacity-50"
+            >
+              Resend the confirmation link
+            </button>
+          </div>
         )}
 
         <Button type="submit" disabled={busy} className="mt-1">
