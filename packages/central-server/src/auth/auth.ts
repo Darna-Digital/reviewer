@@ -1,0 +1,146 @@
+/**
+ * better-auth, configured for this server.
+ *
+ * Sessions, email+password credentials and the organization plugin all live on
+ * the same Postgres the workspace domain uses, through the same drizzle schema
+ * — so a member row and the tasks they can see are one `JOIN` apart, and there
+ * is no second store to keep in step.
+ *
+ * The library owns `/api/auth/*` end to end; the rest of the API only ever
+ * reads the session it hands back (see `viewer.ts`).
+ */
+import {
+  invitationEmail,
+  nameFromEmail,
+  passwordResetEmail,
+  slugifyOrganization,
+  verificationEmail,
+} from "@byconvo/core/identity"
+import { betterAuth } from "better-auth"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { organization } from "better-auth/plugins"
+import { drizzle } from "drizzle-orm/node-postgres"
+import { randomUUID } from "node:crypto"
+import { Pool } from "pg"
+import { databaseUrl } from "../db/client.ts"
+import * as schema from "../db/schema.ts"
+import { sendMail } from "../mail/transport.ts"
+
+/** Where the SPA is served from — the links in emails point back at it. */
+export const appUrl = (): string =>
+  process.env["BYCONVO_APP_URL"] ?? "http://localhost:41812"
+
+export const centralServerUrl = (): string =>
+  process.env["BYCONVO_CENTRAL_URL"] ?? "http://localhost:41821"
+
+/**
+ * better-auth manages its own connection: it is not part of the Effect layer
+ * graph, and its lifetime is the process rather than a request scope.
+ */
+const authPool = new Pool({ connectionString: databaseUrl(), max: 5 })
+const authDb = drizzle(authPool, { schema })
+
+const secret = process.env["BYCONVO_AUTH_SECRET"]
+
+if (secret === undefined && process.env["NODE_ENV"] === "production") {
+  throw new Error(
+    "BYCONVO_AUTH_SECRET must be set in production — sessions signed with the development key are forgeable"
+  )
+}
+
+/**
+ * The workspace a brand-new account starts in, named after them. The slug has
+ * a short random suffix because two "Rūtenis" accounts would otherwise collide
+ * on the organization table's unique slug.
+ */
+const createPersonalOrganization = async (created: {
+  id: string
+  name: string
+  email: string
+}): Promise<void> => {
+  const displayName = created.name.trim() || nameFromEmail(created.email)
+  const organizationId = randomUUID()
+  const slug = `${slugifyOrganization(displayName)}-${randomUUID().slice(0, 6)}`
+
+  await authDb.transaction(async (tx) => {
+    await tx.insert(schema.organization).values({
+      id: organizationId,
+      name: `${displayName}'s workspace`,
+      slug,
+    })
+    await tx.insert(schema.member).values({
+      id: randomUUID(),
+      organizationId,
+      userId: created.id,
+      role: "owner",
+    })
+  })
+}
+
+export const auth = betterAuth({
+  secret: secret ?? "byconvo-development-secret-do-not-use-in-production",
+  baseURL: centralServerUrl(),
+  basePath: "/api/auth",
+  database: drizzleAdapter(authDb, { provider: "pg", schema }),
+  // The SPA runs on its own port in development and from a custom protocol in
+  // the desktop shell, so every request to this server is cross-origin.
+  trustedOrigins: [appUrl(), "http://localhost:41812", "byconvo://app"],
+  emailAndPassword: {
+    enabled: true,
+    // Signing in before confirming the address would let anyone claim someone
+    // else's email and be handed their pending invitations.
+    requireEmailVerification: true,
+    sendResetPassword: async ({ user, url }) => {
+      await sendMail(passwordResetEmail(user.email, url))
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendMail(verificationEmail(user.email, url))
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        /**
+         * Give every new account an organization of its own. Tenancy is not
+         * optional here — a user with no membership has nowhere to put a
+         * project — and asking someone to name a workspace before they have
+         * seen one is a worse first screen than renaming it later.
+         */
+        after: async (created) => {
+          await createPersonalOrganization(created)
+        },
+      },
+    },
+  },
+  session: {
+    expiresIn: 60 * 60 * 24 * 30,
+    updateAge: 60 * 60 * 24,
+  },
+  plugins: [
+    organization({
+      // Everyone lands in an organization on sign-up (see `ensureOrganization`),
+      // so the workspace is never empty and tenancy is never optional.
+      allowUserToCreateOrganization: true,
+      organizationLimit: 10,
+      creatorRole: "owner",
+      membershipLimit: 100,
+      invitationExpiresIn: 60 * 60 * 48,
+      sendInvitationEmail: async (data) => {
+        const url = `${appUrl()}/accept-invitation/${data.id}`
+        await sendMail(
+          invitationEmail(data.email, {
+            organization: data.organization.name,
+            inviter: data.inviter.user.name || data.inviter.user.email,
+            url,
+          })
+        )
+      },
+    }),
+  ],
+})
+
+export type Auth = typeof auth

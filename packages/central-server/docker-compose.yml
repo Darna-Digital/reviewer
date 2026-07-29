@@ -1,0 +1,29 @@
+# The workspace's Postgres, for local development.
+#
+#   pnpm --filter @byconvo/central-server db:up        start it
+#   pnpm --filter @byconvo/central-server db:migrate   apply migrations
+#   pnpm --filter @byconvo/central-server db:down      stop it
+#
+# The credentials match BYCONVO_DATABASE_URL's default, so a fresh checkout
+# needs no environment file to run the server.
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: byconvo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: byconvo
+      POSTGRES_PASSWORD: byconvo
+      POSTGRES_DB: byconvo
+    ports:
+      - "5432:5432"
+    volumes:
+      - byconvo-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U byconvo -d byconvo"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  byconvo-postgres:

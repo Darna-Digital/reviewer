@@ -1,0 +1,45 @@
+{
+  "name": "@byconvo/central-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "byconvo central-server — the shared, multi-tenant API behind the workspace (projects, tasks, docs, labels, comments); Effect backend on Postgres via Drizzle, with better-auth for sessions and organizations",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "build": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx src/db/migrate.ts",
+    "db:studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@byconvo/core": "workspace:*",
+    "@effect/platform-node": "4.0.0-beta.74",
+    "better-auth": "^1.6.25",
+    "drizzle-orm": "^0.45.2",
+    "effect": "4.0.0-beta.74",
+    "nodemailer": "^9.0.3",
+    "pg": "^8.22.0"
+  },
+  "devDependencies": {
+    "@byconvo/lint": "workspace:*",
+    "@effect/vitest": "4.0.0-beta.74",
+    "@types/node": "^22.15.0",
+    "@types/nodemailer": "^7.0.4",
+    "@types/pg": "^8.20.0",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9",
+    "prettier": "^3.8.3",
+    "tsx": "^4.19.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.0.0"
+  }
+}

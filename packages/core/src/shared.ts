@@ -51,6 +51,17 @@ export class Conflict extends Schema.TaggedErrorClass<Conflict>()(
   }
 }
 
+/** No usable session on the request — the client should send the user to sign in. */
+export class Unauthorized extends Schema.TaggedErrorClass<Unauthorized>()(
+  "Unauthorized",
+  { reason: Schema.String },
+  { httpApiStatus: 401 }
+) {
+  override get message(): string {
+    return this.reason
+  }
+}
+
 /**
  * The caller is signed in but not allowed to do this — editing someone else's
  * comment, or an org setting only the owner may touch. Distinct from a missing
