@@ -54,6 +54,41 @@ describe("paintDiagnostics", () => {
     expect(marked(container)).toEqual([{ text: "wrong", severity: "error" }])
   })
 
+  it("leaves the code alone for a tag spanning several lines", () => {
+    const container = render(DOC)
+    // What an unclosed brace produces: "unreachable code" over the whole rest
+    // of the file. Fading all of it reads as broken highlighting.
+    const count = paintDiagnostics(container, [
+      diagnostic({
+        range: range(0, 0, 1, 11),
+        severity: "hint",
+        tags: ["unnecessary"],
+      }),
+    ])
+    expect(count).toBe(0)
+    expect(marked(container)).toEqual([])
+  })
+
+  it("still fades a tag confined to one line", () => {
+    const container = render(DOC)
+    paintDiagnostics(container, [
+      diagnostic({
+        range: range(0, 6, 0, 11),
+        severity: "error",
+        tags: ["unnecessary"],
+      }),
+    ])
+    expect(marked(container)).toEqual([{ text: "wrong", severity: "error" }])
+  })
+
+  it("still underlines an untagged range spanning several lines", () => {
+    const container = render(DOC)
+    const count = paintDiagnostics(container, [
+      diagnostic({ range: range(0, 6, 1, 5), severity: "error" }),
+    ])
+    expect(count).toBeGreaterThan(1)
+  })
+
   it("marks every token of a multi-token range", () => {
     const container = render(DOC)
     paintDiagnostics(container, [

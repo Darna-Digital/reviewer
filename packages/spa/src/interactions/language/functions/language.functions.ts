@@ -89,6 +89,22 @@ export const identifierWithin = (token: TokenSpan): TokenSpan | null => {
   }
 }
 
+/**
+ * Whether a diagnostic should decorate the tokens it covers.
+ *
+ * A tagged diagnostic spanning several lines is a statement about a *region* —
+ * "this whole block is unreachable" — rather than about the tokens inside it.
+ * Fading every token in a forty-line block repaints half the file, which reads
+ * as the syntax highlighting having broken rather than as a hint, and a single
+ * unclosed brace mid-edit is enough to produce one. Such a diagnostic still
+ * counts, still annotates its line and still shows on hover; it just leaves the
+ * code alone. A tag confined to one line — an unused import, an unread variable
+ * — is about those tokens, and still fades them.
+ */
+export const decoratesTokens = (diagnostic: Diagnostic): boolean =>
+  diagnostic.tags.length === 0 ||
+  diagnostic.range.start.line === diagnostic.range.end.line
+
 const bySeverity = (a: Diagnostic, b: Diagnostic) =>
   SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity]
 

@@ -15,7 +15,7 @@
 import type { Diagnostic } from "@byconvo/core/language"
 import type { TokenSpan } from "../interfaces/language.interfaces"
 import { codeRootOf } from "@/lib/code-root"
-import { markerForToken } from "./language.functions"
+import { decoratesTokens, markerForToken } from "./language.functions"
 
 /** Marks the element as carrying a diagnostic of this severity. */
 export const SEVERITY_ATTRIBUTE = "data-diagnostic"
@@ -50,12 +50,14 @@ export const paintDiagnostics = (
   diagnostics: ReadonlyArray<Diagnostic>
 ): number => {
   clearDiagnosticMarks(container)
-  if (diagnostics.length === 0) return 0
+  // A whole-region hint marks its line, not every token under it.
+  const decorating = diagnostics.filter(decoratesTokens)
+  if (decorating.length === 0) return 0
 
   // Bucket by line so each line only considers its own diagnostics — a file
   // with hundreds of problems would otherwise be quadratic in tokens.
   const byLine = new Map<number, Array<Diagnostic>>()
-  for (const diagnostic of diagnostics) {
+  for (const diagnostic of decorating) {
     for (
       let line = diagnostic.range.start.line;
       line <= diagnostic.range.end.line;

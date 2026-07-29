@@ -3,6 +3,7 @@ import type { TokenSpan } from "../interfaces/language.interfaces"
 import {
   countDiagnostics,
   createLanguageFunctions,
+  decoratesTokens,
   groupDiagnosticsByLine,
   identifierWithin,
   lineOfDiagnostic,
@@ -193,6 +194,33 @@ describe("markerForToken", () => {
       token
     )
     expect(marker?.tags).toEqual(["unnecessary"])
+  })
+})
+
+describe("decoratesTokens", () => {
+  it("lets an untagged diagnostic decorate whatever it covers", () => {
+    expect(decoratesTokens(diagnostic({ range: range(0, 0, 40, 1) }))).toBe(
+      true
+    )
+  })
+  it("lets a tag confined to one line decorate its tokens", () => {
+    expect(
+      decoratesTokens(
+        diagnostic({ range: range(4, 16, 4, 21), tags: ["unnecessary"] })
+      )
+    ).toBe(true)
+  })
+  it("keeps a multi-line tag off the code", () => {
+    expect(
+      decoratesTokens(
+        diagnostic({ range: range(57, 0, 103, 1), tags: ["unnecessary"] })
+      )
+    ).toBe(false)
+    expect(
+      decoratesTokens(
+        diagnostic({ range: range(4, 0, 5, 0), tags: ["deprecated"] })
+      )
+    ).toBe(false)
   })
 })
 
