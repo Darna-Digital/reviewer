@@ -113,6 +113,11 @@ export function TruncatedRow({
     <Tooltip
       open={open}
       onOpenChange={(next) => setOpen(next && !ownsOpenPopup(ref.current))}
+      // A row with nothing clipped has no tooltip to show, and a live-but-empty
+      // tooltip is not inert: it is still a dismissable layer, so it answers the
+      // first Escape and the menu around it stays open. Every menu in the app
+      // needed two presses to close once the arrow keys had focused a row.
+      disabled={full === null}
     >
       <TooltipTrigger
         ref={ref}

@@ -30,7 +30,11 @@ import type {
   NavigationOutcome,
   TokenSpan,
 } from "../interfaces/language.interfaces"
-import type { Rect } from "@/lib/floating-placement"
+import {
+  isLiveAnchor,
+  rectAnchor,
+  type VirtualAnchor,
+} from "../functions/anchors"
 import { SymbolCard } from "./symbol-card"
 import { useCompletions } from "./use-completions"
 import { useSymbolMenu } from "./use-symbol-menu"
@@ -52,23 +56,31 @@ export interface DiagnosticsAnnotationMeta {
   readonly diagnostics: ReadonlyArray<Diagnostic>
 }
 
+/**
+ * What a card hangs off. The token element itself while it is still in the
+ * document, so the card rides along as the view scrolls; a frozen copy of its
+ * rectangle once the virtualiser has recycled it, which at least leaves the
+ * card where the user last saw it instead of in the corner of the screen.
+ */
+type CardAnchor = () => Element | VirtualAnchor
+
+const anchorFor = (element: HTMLElement): CardAnchor => {
+  const frozen = rectAnchor(element.getBoundingClientRect())
+  return () => (isLiveAnchor(element) ? element : frozen)
+}
+
 type CardState =
   | {
       readonly kind: "hover"
-      readonly anchor: Rect
+      readonly anchor: CardAnchor
       readonly contents: string | null
     }
-  | { readonly kind: "busy"; readonly anchor: Rect }
+  | { readonly kind: "busy"; readonly anchor: CardAnchor }
   | {
       readonly kind: "outcome"
-      readonly anchor: Rect
+      readonly anchor: CardAnchor
       readonly outcome: NavigationOutcome
     }
-
-const rectOf = (element: HTMLElement): Rect => {
-  const { top, bottom, left } = element.getBoundingClientRect()
-  return { top, bottom, left }
-}
 
 /** The symbol a token event is about, or null when it is not about one. */
 const spanOf = (props: TokenEventBase): TokenSpan | null =>
@@ -187,12 +199,23 @@ export function useLanguageLayer({
     setCard(null)
   }, [clearTimers])
 
+  // Documentation the pointer opened goes away when the view scrolls, as it
+  // does in an IDE. Without this it outlives whatever the pointer was over —
+  // and a card the user has stopped thinking about still covers the code and
+  // swallows the click meant for it. A card the user asked for stays open and
+  // rides along with its token instead.
+  useEffect(() => {
+    if (card?.kind !== "hover") return
+    window.addEventListener("scroll", closeCard, true)
+    return () => window.removeEventListener("scroll", closeCard, true)
+  }, [card?.kind, closeCard])
+
   const onTokenEnter = useCallback(
     (props: TokenEventBase) => {
       const token = spanOf(props)
       if (token === null) return
       clearTimers()
-      const anchor = rectOf(props.tokenElement)
+      const anchor = anchorFor(props.tokenElement)
       hoverTimer.current = setTimeout(() => {
         hoverToken.current = token
         setCard((current) =>
@@ -240,7 +263,7 @@ export function useLanguageLayer({
       clearTimers()
       hoverToken.current = null
 
-      const anchor = rectOf(props.tokenElement)
+      const anchor = anchorFor(props.tokenElement)
       setCard({ kind: "busy", anchor })
       void actions
         .navigate(path, token)
@@ -289,8 +312,10 @@ export function useLanguageLayer({
     path,
     enabled,
     getContainer,
+    onOpen: closeCard,
     onFindUsages: useCallback(
-      (token: TokenSpan, anchor: Rect) => {
+      (token: TokenSpan, at: VirtualAnchor) => {
+        const anchor: CardAnchor = () => at
         setCard({ kind: "busy", anchor })
         void actions
           .references(path, token)
@@ -306,7 +331,8 @@ export function useLanguageLayer({
       [actions, path]
     ),
     onGoToDefinition: useCallback(
-      (token: TokenSpan, anchor: Rect) => {
+      (token: TokenSpan, at: VirtualAnchor) => {
+        const anchor: CardAnchor = () => at
         setCard({ kind: "busy", anchor })
         void actions
           .navigate(path, token)
@@ -362,7 +388,9 @@ export function useLanguageLayer({
       <SymbolCard
         anchor={card.anchor}
         onClose={closeCard}
-        dismissible={card.kind === "outcome"}
+        // A card the user asked for takes focus, so its list is reachable from
+        // the keyboard. One the pointer merely passed over must not.
+        interactive={card.kind === "outcome"}
         // Keep a hover card open while the pointer travels into it, so its
         // contents can be read and selected.
         onPointerEnter={clearTimers}

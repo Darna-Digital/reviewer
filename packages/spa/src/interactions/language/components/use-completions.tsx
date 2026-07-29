@@ -15,7 +15,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Editor } from "@pierre/diffs/editor"
 import type { CompletionItem } from "@byconvo/core/language"
 import { caretRect } from "@/lib/code-root"
-import type { Rect } from "@/lib/floating-placement"
+import { rectAnchor, type VirtualAnchor } from "../functions/anchors"
 import {
   requestCompletions,
   resolveCompletion,
@@ -37,7 +37,6 @@ const DEBOUNCE_MS = 120
 
 interface OpenList {
   readonly items: ReadonlyArray<CompletionItem>
-  readonly anchor: Rect
   /** Caret the list was computed for, so a stale response can be discarded. */
   readonly line: number
   readonly character: number
@@ -117,10 +116,6 @@ export function useCompletions({
       return
     }
     accepted.current = null
-    const container = getContainer()
-    const rect = container === null ? null : caretRect(container)
-    if (rect === null) return
-
     const ticket = ++generation.current
     const prefix = prefixOf(caret)
     void requestCompletions(
@@ -137,7 +132,6 @@ export function useCompletions({
         }
         setOpen({
           items: result.items,
-          anchor: { top: rect.top, bottom: rect.bottom, left: rect.left },
           line: caret.line,
           character: caret.character,
           lineText: caret.lineText,
@@ -147,7 +141,15 @@ export function useCompletions({
       .catch(() => {
         if (ticket === generation.current) setOpen(null)
       })
-  }, [caretOf, close, enabled, getContainer, path])
+  }, [caretOf, close, enabled, path])
+
+  // Re-measured on every reposition, so the list rides along with the caret
+  // instead of being stranded where it first appeared.
+  const anchor = useCallback((): VirtualAnchor | null => {
+    const container = getContainer()
+    const rect = container === null ? null : caretRect(container)
+    return rect === null ? null : rectAnchor(rect)
+  }, [getContainer])
 
   // Re-ask whenever the buffer changes.
   useEffect(() => {
@@ -257,14 +259,15 @@ export function useCompletions({
     () =>
       open === null ? null : (
         <CompletionPopup
-          anchor={open.anchor}
+          anchor={anchor}
           items={open.items}
           selected={selected}
           onSelect={setSelected}
           onAccept={accept}
+          onClose={close}
         />
       ),
-    [accept, open, selected]
+    [accept, anchor, close, open, selected]
   )
 
   return { popup }

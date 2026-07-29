@@ -1,24 +1,33 @@
 /**
  * The completion list, floating at the caret.
  *
- * Rendered in React and positioned like the other floating surfaces rather than
- * through the editor's selection widget: that one only appears for a
- * non-collapsed selection, and a completion list belongs at a caret.
+ * On the app's popover, for the styling and dismissal every other surface gets,
+ * with two deliberate departures.
+ *
+ * It never takes focus. The user is mid-word; focus has to stay in the editor
+ * so the next keystroke lands in the buffer, which is why the list is wired up
+ * as a listbox the editor drives rather than one the user tabs into. The arrow
+ * keys, Enter and Escape are handled by the hook that owns the list.
+ *
+ * And it hangs off the caret, re-measured as the view moves, rather than off a
+ * trigger element — there is nothing in the DOM that *is* the caret.
  */
-import { useLayoutEffect, useRef, useState } from "react"
+import { useLayoutEffect, useRef } from "react"
 import type { CompletionItem } from "@byconvo/core/language"
-import { placeCard, type Placement, type Rect } from "@/lib/floating-placement"
+import { Popover, PopoverContent } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
+import type { VirtualAnchor } from "../functions/anchors"
 
 /** Rows visible before the list scrolls. */
 const VISIBLE_ROWS = 9
 
 interface CompletionPopupProps {
-  anchor: Rect
+  anchor: () => VirtualAnchor | null
   items: ReadonlyArray<CompletionItem>
   selected: number
   onSelect: (index: number) => void
   onAccept: (index: number) => void
+  onClose: () => void
 }
 
 export function CompletionPopup({
@@ -27,23 +36,9 @@ export function CompletionPopup({
   selected,
   onSelect,
   onAccept,
+  onClose,
 }: CompletionPopupProps) {
-  const ref = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
-  const [placement, setPlacement] = useState<Placement | null>(null)
-
-  useLayoutEffect(() => {
-    const element = ref.current
-    if (element === null) return
-    const { width, height } = element.getBoundingClientRect()
-    setPlacement(
-      placeCard(
-        anchor,
-        { width, height },
-        { width: window.innerWidth, height: window.innerHeight }
-      )
-    )
-  }, [anchor, items])
 
   // Keyboard navigation moves the highlight past the visible rows.
   useLayoutEffect(() => {
@@ -55,34 +50,41 @@ export function CompletionPopup({
   if (items.length === 0) return null
 
   return (
-    <div
-      ref={ref}
-      role="listbox"
-      aria-label="Completions"
-      className={cn(
-        "fixed z-50 max-w-[32rem] min-w-[18rem] overflow-hidden rounded-md",
-        "border border-border bg-popover text-popover-foreground shadow-md",
-        placement === null && "invisible"
-      )}
-      style={{ top: placement?.top ?? 0, left: placement?.left ?? 0 }}
-      // The caret must stay where it is; the editor would clear it otherwise.
-      onPointerDown={(event) => event.preventDefault()}
+    <Popover
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
+      }}
     >
-      <ul
-        ref={listRef}
-        className="overflow-y-auto py-1"
-        style={{ maxHeight: `${VISIBLE_ROWS * 1.5}rem` }}
+      <PopoverContent
+        anchor={anchor}
+        side="bottom"
+        align="start"
+        sideOffset={4}
+        collisionPadding={8}
+        // Focus belongs to the editor for as long as the user is typing.
+        initialFocus={false}
+        finalFocus={false}
+        className="w-auto max-w-[32rem] min-w-[18rem] gap-0 overflow-hidden p-0"
+        // The caret must stay where it is; the editor clears it on a press.
+        onPointerDown={(event) => event.preventDefault()}
       >
-        {items.map((item, index) => (
-          <li key={`${item.label}:${item.source}:${index}`}>
-            <button
-              type="button"
+        <ul
+          ref={listRef}
+          role="listbox"
+          aria-label="Completions"
+          className="overflow-y-auto py-1"
+          style={{ maxHeight: `${VISIBLE_ROWS * 1.5}rem` }}
+        >
+          {items.map((item, index) => (
+            <li
+              key={`${item.label}:${item.source}:${index}`}
               data-index={index}
               role="option"
               aria-selected={index === selected}
               className={cn(
-                "flex w-full items-baseline gap-2 px-2 py-1 text-left text-xs",
-                index === selected ? "bg-muted" : "hover:bg-muted/60"
+                "flex cursor-default items-baseline gap-2 px-2 py-1 text-left text-xs",
+                index === selected ? "bg-elevate" : "hover:bg-elevate/60"
               )}
               onPointerEnter={() => onSelect(index)}
               onClick={() => onAccept(index)}
@@ -99,10 +101,10 @@ export function CompletionPopup({
                   {item.source}
                 </span>
               )}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   )
 }

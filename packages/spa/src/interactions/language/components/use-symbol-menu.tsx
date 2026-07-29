@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import type { Editor } from "@pierre/diffs/editor"
 import type { CodeActionItem, FileEdits } from "@byconvo/core/language"
-import type { Rect } from "@/lib/floating-placement"
+import { pointerAnchor, type VirtualAnchor } from "../functions/anchors"
 import { requestCodeActions } from "../adapters/language.hook.adapter"
 import {
   identifierWithin,
@@ -21,7 +21,7 @@ import type { TokenSpan } from "../interfaces/language.interfaces"
 import { SymbolMenu, type SymbolMenuEntry } from "./symbol-menu"
 
 interface MenuState {
-  readonly anchor: Rect
+  readonly anchor: VirtualAnchor
   readonly token: TokenSpan
   readonly actions: ReadonlyArray<CodeActionItem>
   readonly loading: boolean
@@ -32,9 +32,15 @@ export interface SymbolMenuOptions {
   readonly path: string
   readonly enabled?: boolean
   readonly getContainer: () => ParentNode | null
+  /**
+   * The menu is opening. The pointer has been resting on the token to get here,
+   * so the hover card is usually open too — and it is a bigger surface, drawn
+   * over the same spot, which would cover the menu it is competing with.
+   */
+  readonly onOpen: () => void
   /** Show the usages of a symbol, reusing the card the click path opens. */
-  readonly onFindUsages: (token: TokenSpan, anchor: Rect) => void
-  readonly onGoToDefinition: (token: TokenSpan, anchor: Rect) => void
+  readonly onFindUsages: (token: TokenSpan, anchor: VirtualAnchor) => void
+  readonly onGoToDefinition: (token: TokenSpan, anchor: VirtualAnchor) => void
   /** Apply edits that land in files other than the open one. */
   readonly onApplyForeignEdits: (edits: ReadonlyArray<FileEdits>) => void
 }
@@ -82,6 +88,7 @@ export function useSymbolMenu({
   path,
   enabled = true,
   getContainer,
+  onOpen,
   onFindUsages,
   onGoToDefinition,
   onApplyForeignEdits,
@@ -114,11 +121,8 @@ export function useSymbolMenu({
       // The browser menu would cover ours, and there is nothing in it worth
       // keeping over a symbol.
       event.preventDefault()
-      const anchor: Rect = {
-        top: event.clientY,
-        bottom: event.clientY,
-        left: event.clientX,
-      }
+      onOpen()
+      const anchor = pointerAnchor(event.clientX, event.clientY)
       // Held by identity so a slow answer for one symbol cannot land in the
       // menu of the next one right-clicked.
       const opened: MenuState = { anchor, token, actions: [], loading: true }
@@ -151,7 +155,7 @@ export function useSymbolMenu({
     // the app keeps the browser's own menu.
     window.addEventListener("contextmenu", onContextMenu, true)
     return () => window.removeEventListener("contextmenu", onContextMenu, true)
-  }, [editor, enabled, getContainer, path])
+  }, [editor, enabled, getContainer, onOpen, path])
 
   const applyAction = useCallback(
     (action: CodeActionItem) => {

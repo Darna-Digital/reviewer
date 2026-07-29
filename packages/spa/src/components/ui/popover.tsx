@@ -24,11 +24,21 @@ function PopoverContent({
   side = "bottom",
   sideOffset = 6,
   children,
+  anchor,
+  collisionPadding,
   ...props
 }: PopoverPrimitive.Popup.Props &
   Pick<
     PopoverPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
+    | "align"
+    | "alignOffset"
+    | "side"
+    | "sideOffset"
+    // An anchor lets a popover hang off something other than a trigger — a
+    // token in the code, or the caret — which is how the editor surfaces
+    // position themselves. Base UI keeps them with it as the view scrolls.
+    | "anchor"
+    | "collisionPadding"
   >) {
   const { level, className: surface } = useElevation(
     ELEVATION.menu,
@@ -41,6 +51,8 @@ function PopoverContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
+        anchor={anchor}
+        collisionPadding={collisionPadding}
         className="isolate z-50"
       >
         <PopoverPrimitive.Popup
