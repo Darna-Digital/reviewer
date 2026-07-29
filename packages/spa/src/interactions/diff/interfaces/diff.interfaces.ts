@@ -71,6 +71,13 @@ export interface DiffFunctions {
     readonly targetKey: string
     readonly localComments: ReadonlyArray<ReviewComment>
     readonly pullComments: ReadonlyArray<ReviewComment>
+    /**
+     * The file open in the viewer, if any. The viewer anchors everything it
+     * writes to the worktree whatever the active diff target is, so its
+     * comments belong to the visible set while it is open — otherwise leaving
+     * one while browsing files puts it somewhere nothing can see it.
+     */
+    readonly viewingFile: string | null
   }) => ReadonlyArray<ReviewComment>
 }
 

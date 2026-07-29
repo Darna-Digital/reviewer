@@ -147,6 +147,7 @@ describe("visibleComments", () => {
       targetKey: "worktree",
       localComments: local,
       pullComments: [],
+      viewingFile: null,
     })
     expect(out.map((c) => c.id)).toEqual(["1"])
   })
@@ -160,6 +161,45 @@ describe("visibleComments", () => {
       targetKey: "pr-3",
       localComments: local,
       pullComments: pr,
+      viewingFile: null,
+    })
+    expect(out.map((c) => c.id)).toEqual(["pr1"])
+  })
+
+  it("counts worktree comments while a file is open in the viewer", () => {
+    // Browsing a commit, with a file open: the viewer writes worktree
+    // comments, so they have to be visible or the bar never appears.
+    const out = fns().visibleComments({
+      targetKind: "commit",
+      targetKey: "commit-x",
+      localComments: local,
+      pullComments: [],
+      viewingFile: "a",
+    })
+    expect(out.map((c) => c.id).sort()).toEqual(["1", "2"])
+  })
+
+  it("does not repeat a comment that is already on target", () => {
+    const out = fns().visibleComments({
+      targetKind: "worktree",
+      targetKey: "worktree",
+      localComments: local,
+      pullComments: [],
+      viewingFile: "a",
+    })
+    expect(out.map((c) => c.id)).toEqual(["1"])
+  })
+
+  it("still shows only the pull's own comments with a file open", () => {
+    const pr: ReviewComment[] = [
+      { ...local[0], id: "pr1", source: "github", target: "pr-3" },
+    ]
+    const out = fns().visibleComments({
+      targetKind: "pull",
+      targetKey: "pr-3",
+      localComments: local,
+      pullComments: pr,
+      viewingFile: "a",
     })
     expect(out.map((c) => c.id)).toEqual(["pr1"])
   })

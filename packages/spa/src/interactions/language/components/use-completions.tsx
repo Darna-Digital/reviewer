@@ -44,9 +44,10 @@ interface OpenList {
 }
 
 export interface CompletionsOptions {
-  readonly editor: Editor<undefined>
+  /** Null in a read-only view; the hook is disabled then. */
+  readonly editor: Editor<undefined> | null
   /** Buffer-change subscription owned by the editing hook. */
-  readonly subscribe: (listener: () => void) => () => void
+  readonly subscribe?: (listener: () => void) => () => void
   /** Repository-relative path of the open file. */
   readonly path: string
   readonly enabled?: boolean
@@ -83,6 +84,7 @@ export function useCompletions({
 
   /** The caret, or null when there is no single collapsed one. */
   const caretOf = useCallback(() => {
+    if (editor === null) return null
     const state = editor.getState()
     const selection = state.selections?.[0]
     if (selection === undefined) return null
@@ -153,7 +155,7 @@ export function useCompletions({
 
   // Re-ask whenever the buffer changes.
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled || subscribe === undefined) return
     const unsubscribe = subscribe(() => {
       if (timer.current !== null) clearTimeout(timer.current)
       timer.current = setTimeout(request, DEBOUNCE_MS)
@@ -166,7 +168,7 @@ export function useCompletions({
 
   const accept = useCallback(
     (index: number) => {
-      if (open === null) return
+      if (open === null || editor === null) return
       const item = open.items[index]
       if (item === undefined) return
       const caret = { lineText: open.lineText, character: open.character }

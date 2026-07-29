@@ -28,7 +28,8 @@ interface MenuState {
 }
 
 export interface SymbolMenuOptions {
-  readonly editor: Editor<undefined>
+  /** Null in a read-only view; the hook is disabled then. */
+  readonly editor: Editor<undefined> | null
   readonly path: string
   readonly enabled?: boolean
   readonly getContainer: () => ParentNode | null
@@ -42,7 +43,7 @@ export interface SymbolMenuOptions {
   readonly onFindUsages: (token: TokenSpan, anchor: VirtualAnchor) => void
   readonly onGoToDefinition: (token: TokenSpan, anchor: VirtualAnchor) => void
   /** Apply edits that land in files other than the open one. */
-  readonly onApplyForeignEdits: (edits: ReadonlyArray<FileEdits>) => void
+  readonly onApplyForeignEdits?: (edits: ReadonlyArray<FileEdits>) => void
 }
 
 export interface SymbolMenuHandle {
@@ -98,7 +99,7 @@ export function useSymbolMenu({
   const close = useCallback(() => setState(null), [])
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled || editor === null) return
 
     const onContextMenu = (event: MouseEvent) => {
       const element = tokenFromEvent(event, getContainer())
@@ -160,6 +161,7 @@ export function useSymbolMenu({
   const applyAction = useCallback(
     (action: CodeActionItem) => {
       close()
+      if (editor === null) return
       const here = action.edits.filter((file) => file.path === path)
       const elsewhere = action.edits.filter((file) => file.path !== path)
       if (here.length > 0) {
@@ -168,7 +170,7 @@ export function useSymbolMenu({
           true
         )
       }
-      if (elsewhere.length > 0) onApplyForeignEdits(elsewhere)
+      if (elsewhere.length > 0) onApplyForeignEdits?.(elsewhere)
     },
     [close, editor, onApplyForeignEdits, path]
   )

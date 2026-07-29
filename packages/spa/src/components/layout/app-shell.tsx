@@ -312,8 +312,16 @@ export function AppShell() {
         targetKey,
         localComments: localComments.data ?? [],
         pullComments: pullComments.data ?? [],
+        viewingFile: search.file ?? null,
       }),
-    [diffFns, target?.kind, targetKey, localComments.data, pullComments.data]
+    [
+      diffFns,
+      target?.kind,
+      targetKey,
+      localComments.data,
+      pullComments.data,
+      search.file,
+    ]
   )
 
   // --- review → agent: hand the comments in view (local + GitHub) to an agent.
@@ -773,6 +781,7 @@ export function AppShell() {
     }
     return (
       <DiffPane
+        onOpenLocation={openLocation}
         files={diffFiles}
         theme={prefs.resolvedTheme}
         diffStyle={prefs.diffStyle}

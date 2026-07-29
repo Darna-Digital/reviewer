@@ -6,6 +6,9 @@ import {
   type TreeInputs,
 } from "../interfaces/diff.interfaces"
 
+/** Where the file viewer anchors everything it writes. */
+const WORKTREE_KEY = diffTargetKey({ kind: "worktree" })
+
 export function createDiffFunctions(d: DiffDependencies): DiffFunctions {
   const isInternalPath: DiffFunctions["isInternalPath"] = (path) =>
     path === d.data.internalDir || path.startsWith(`${d.data.internalDir}/`)
@@ -87,9 +90,23 @@ export function createDiffFunctions(d: DiffDependencies): DiffFunctions {
     targetKey,
     localComments,
     pullComments,
+    viewingFile,
   }) => {
     if (targetKind === "pull") return pullComments
-    return localComments.filter((comment) => comment.target === targetKey)
+    const forTarget = localComments.filter(
+      (comment) => comment.target === targetKey
+    )
+    if (viewingFile === null) return forTarget
+    // The viewer writes worktree comments whatever the active target is, so
+    // while it is open they count too — browsing a file and leaving a note on
+    // it would otherwise file the note where nothing on screen looks for it.
+    const seen = new Set(forTarget.map((comment) => comment.id))
+    return [
+      ...forTarget,
+      ...localComments.filter(
+        (comment) => comment.target === WORKTREE_KEY && !seen.has(comment.id)
+      ),
+    ]
   }
 
   return {

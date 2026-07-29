@@ -94,14 +94,21 @@ const spanOf = (props: TokenEventBase): TokenSpan | null =>
 export interface LanguageLayerOptions {
   /** Repository-relative path of the file on screen. */
   path: string
-  /** The view's editor, which owns the buffer and the caret. */
-  editor: Editor<undefined>
+  /**
+   * The view's editor, which owns the buffer and the caret — or null for a
+   * read-only view. Without one there is nothing to type into and nothing to
+   * apply a fix to, so completions and the quick-fix menu stay off; hover and
+   * navigation are read-only questions and work either way.
+   */
+  editor: Editor<undefined> | null
   /** Buffer-change subscription owned by the editing hook. */
-  subscribe: (listener: () => void) => () => void
+  subscribe?: (listener: () => void) => () => void
   /** Resolves the element the rendered code lives under. */
   getContainer: () => ParentNode | null
   /** Apply edits landing in files other than the open one. */
-  onApplyForeignEdits: (edits: ReadonlyArray<FileEdits>) => void
+  onApplyForeignEdits?: (edits: ReadonlyArray<FileEdits>) => void
+  /** Underline the tokens diagnostics cover. Off where line numbers are ambiguous. */
+  paintTokens?: boolean
   /** Unsaved buffer to analyse, or null to analyse the file on disk. */
   contents?: string | null
   /** Turn the whole layer off — no requests, no marks, no card. */
@@ -144,6 +151,7 @@ export function useLanguageLayer({
   onApplyForeignEdits,
   contents = null,
   enabled = true,
+  paintTokens = true,
   onOpenLocation,
 }: LanguageLayerOptions): LanguageLayer {
   const query = useDiagnostics(enabled ? path : null, contents)
@@ -160,6 +168,8 @@ export function useLanguageLayer({
   const containerRef = useRef<HTMLElement | null>(null)
   const diagnosticsRef = useRef(diagnostics)
   diagnosticsRef.current = diagnostics
+  const paintRef = useRef(paintTokens)
+  paintRef.current = paintTokens
 
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -182,16 +192,16 @@ export function useLanguageLayer({
         return
       }
       containerRef.current = node
-      paintDiagnostics(node, diagnosticsRef.current)
+      if (paintRef.current) paintDiagnostics(node, diagnosticsRef.current)
     },
     []
   )
 
   useEffect(() => {
-    if (containerRef.current !== null) {
+    if (containerRef.current !== null && paintTokens) {
       paintDiagnostics(containerRef.current, diagnostics)
     }
-  }, [diagnostics])
+  }, [diagnostics, paintTokens])
 
   const closeCard = useCallback(() => {
     clearTimers()
@@ -310,7 +320,9 @@ export function useLanguageLayer({
   const symbolMenu = useSymbolMenu({
     editor,
     path,
-    enabled,
+    // Both of these need a buffer: one types into it, the other applies a fix
+    // to it. A read-only view has neither.
+    enabled: enabled && editor !== null,
     getContainer,
     onOpen: closeCard,
     onFindUsages: useCallback(
@@ -359,7 +371,7 @@ export function useLanguageLayer({
     editor,
     subscribe,
     path,
-    enabled,
+    enabled: enabled && editor !== null,
     getContainer,
   })
 
