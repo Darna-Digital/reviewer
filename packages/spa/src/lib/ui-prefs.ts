@@ -31,6 +31,8 @@ export interface UiPrefs {
   sidebarWidth: number
   /** Drag-resizable left sidebar width for the workspace pages (threads/docs). */
   workspaceSidebarWidth: number
+  /** Drag-resizable width of the inbox's message list, in px. */
+  inboxListWidth: number
   /** Drag-resizable source pane width in the SVG split view, in px. */
   svgSourceWidth: number
   /** Drag-resizable bottom panel height, in px. */
@@ -77,6 +79,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   bottomTab: "branches",
   sidebarWidth: 288,
   workspaceSidebarWidth: 256,
+  inboxListWidth: 320,
   svgSourceWidth: 420,
   bottomHeight: 256,
   commitFilesHeight: 180,
@@ -124,6 +127,7 @@ function persist() {
       bottomTab,
       sidebarWidth,
       workspaceSidebarWidth,
+      inboxListWidth,
       svgSourceWidth,
       bottomHeight,
       commitFilesHeight,
@@ -144,6 +148,7 @@ function persist() {
         bottomTab,
         sidebarWidth,
         workspaceSidebarWidth,
+        inboxListWidth,
         svgSourceWidth,
         bottomHeight,
         commitFilesHeight,

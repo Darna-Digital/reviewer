@@ -6,13 +6,12 @@ import { IconInbox, IconSend } from "@tabler/icons-react"
 import { Link } from "@tanstack/react-router"
 import { useState } from "react"
 import { Avatar } from "@/components/ui/avatar"
-import { Button, buttonVariants } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { AGENTS } from "@/interactions/collaboration/data/collaboration.mock"
 import { INBOX_ITEMS, UNREAD_COUNT } from "@/interactions/inbox/data/inbox.mock"
 import { cn } from "@/lib/utils"
 
@@ -20,8 +19,6 @@ const PREVIEW_COUNT = 4
 
 export function InboxPopover({ active }: { active: boolean }) {
   const [open, setOpen] = useState(false)
-  const [message, setMessage] = useState("")
-  const agent = AGENTS[0]
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -45,15 +42,21 @@ export function InboxPopover({ active }: { active: boolean }) {
       >
         <div className="flex h-9 items-center gap-2 border-b px-3">
           <p className="text-[13px] font-medium">Inbox</p>
-          <span className="text-xs text-muted-foreground tabular-nums">
-            {UNREAD_COUNT} unread
-          </span>
           <Link
             to="/inbox"
             onClick={() => setOpen(false)}
-            className="ml-auto text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
+            className="text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
           >
-            Open inbox
+            All messages
+          </Link>
+          <Link
+            to="/inbox"
+            search={{ compose: "chat" }}
+            onClick={() => setOpen(false)}
+            className="ml-auto flex items-center gap-1.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
+          >
+            <IconSend className="size-3.5" />
+            New message
           </Link>
         </div>
 
@@ -89,23 +92,6 @@ export function InboxPopover({ active }: { active: boolean }) {
             </li>
           ))}
         </ul>
-
-        <div className="flex items-center gap-1.5 border-t p-2">
-          <input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder={`Ask ${agent?.name ?? "an agent"} to do something`}
-            className="h-8 min-w-0 flex-1 bg-transparent px-1.5 text-[13px] outline-none placeholder:text-muted-foreground"
-          />
-          <Button
-            size="icon-sm"
-            className="rounded-full"
-            disabled={message.trim().length === 0}
-            aria-label="Send message"
-          >
-            <IconSend className="size-4" />
-          </Button>
-        </div>
       </PopoverContent>
     </Popover>
   )

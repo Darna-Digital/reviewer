@@ -13,6 +13,7 @@ import { Link, useRouterState, useSearch } from "@tanstack/react-router"
 import { useState } from "react"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { ResizeHandle } from "@/components/layout/resize-handle"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -27,7 +28,7 @@ import {
   INBOX_ITEMS,
   type InboxFilter,
 } from "@/interactions/inbox/data/inbox.mock"
-import { useUiPrefs } from "@/lib/ui-prefs"
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
 import { activeWorkMode } from "@/lib/work-mode"
 
@@ -38,10 +39,12 @@ const FILTERS: ReadonlyArray<{ value: InboxFilter; label: string }> = [
 ]
 
 export function InboxPage() {
-  const { workMode } = useUiPrefs()
+  const prefs = useUiPrefs()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
   const composing = useSearch({ strict: false }).compose === "chat"
-  const collaborating = activeWorkMode(pathname, workMode) === "collaboration"
+  const collaborating =
+    activeWorkMode(pathname, prefs.workMode) === "collaboration"
+  const [listWidth, setListWidth] = useState(prefs.inboxListWidth)
   const [filter, setFilter] = useState<InboxFilter>("all")
   const [filterOpen, setFilterOpen] = useState(false)
   const [selectedId, setSelectedId] = useState(INBOX_ITEMS[0]?.id ?? "")
@@ -56,10 +59,13 @@ export function InboxPage() {
 
   return (
     <div className="flex h-full min-h-0">
-      {collaborating && <CollaborationSidebar />}
+      {collaborating && !composing && <CollaborationSidebar />}
 
       {!composing && (
-        <div className="flex w-80 shrink-0 flex-col border-r">
+        <div
+          className="flex shrink-0 flex-col border-r"
+          style={{ width: listWidth }}
+        >
           <header className="flex h-11 shrink-0 items-center justify-between border-b px-2">
             <Popover open={filterOpen} onOpenChange={setFilterOpen}>
               <PopoverTrigger
@@ -146,6 +152,17 @@ export function InboxPage() {
             )}
           </ScrollArea>
         </div>
+      )}
+      {!composing && (
+        <ResizeHandle
+          orientation="col"
+          value={listWidth}
+          min={240}
+          max={() => Math.max(320, window.innerWidth - 480)}
+          onResize={setListWidth}
+          onResizeEnd={(w) => setUiPrefs({ inboxListWidth: w })}
+          label="Resize the message list"
+        />
       )}
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">

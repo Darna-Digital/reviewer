@@ -1,7 +1,7 @@
 /**
- * ModeSelector — the top bar's leading chip, ahead of the repo picker. It picks
- * how the app is framed (Code vs Collaboration) and routes to that mode's home;
- * the choice is remembered so the chip still reads right after a reload.
+ * ModeSelector — the title bar's leading chip. It picks how the app is framed
+ * (Code vs Collaboration) and routes to that mode's home; the choice is
+ * remembered so the chip still reads right after a reload.
  */
 import { IconCheck, IconChevronDown } from "@tabler/icons-react"
 import { useNavigate, useRouterState } from "@tanstack/react-router"
@@ -13,7 +13,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { setUiPrefs, useUiPrefs, type WorkMode } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
 import { activeWorkMode } from "@/lib/work-mode"
 
 const MODES: ReadonlyArray<{
@@ -64,9 +63,7 @@ export function ModeSelector() {
           <button
             key={m.mode}
             type="button"
-            className={cn(
-              "flex w-full items-start gap-3 rounded-lg px-2.5 py-2 text-left outline-none hover:bg-elevate focus-visible:bg-elevate"
-            )}
+            className="flex w-full items-start gap-3 rounded-lg px-2.5 py-2 text-left outline-none hover:bg-elevate focus-visible:bg-elevate"
             onClick={() => {
               setUiPrefs({ workMode: m.mode })
               setOpen(false)

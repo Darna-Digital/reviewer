@@ -1,18 +1,22 @@
 /**
- * The new-chat surface: one prompt, the agent it goes to, and the project it is
- * about. Nothing is sent yet — the composer is the prototype's front door.
+ * New message — Slack's compose window: a To field that takes members, agents
+ * and channels alike, with the message below it. Nothing sends yet.
  */
 import {
-  IconSend,
+  IconBolt,
   IconCheck,
   IconChevronDown,
-  IconCube,
+  IconHash,
   IconPaperclip,
   IconRobot,
-  IconSparkles,
+  IconSend,
+  IconShieldCheck,
+  IconTerminal2,
+  IconX,
 } from "@tabler/icons-react"
 import { Link } from "@tanstack/react-router"
-import { useState, type CSSProperties } from "react"
+import { useMemo, useState, type ReactNode } from "react"
+import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   Popover,
@@ -20,57 +24,236 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { BranchSwitcher } from "@/components/layout/branch-switcher"
+import { RepoPicker } from "@/components/repo-picker"
 import { PaneHeader } from "@/interactions/collaboration/components/pane-header"
+import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
+import {
+  useBranches,
+  useRemoteBranches,
+  useRepo,
+  useWorkspace,
+} from "@/lib/queries"
 import {
   AGENTS,
-  CHAT_PROMPTS,
-  PROJECTS,
+  CHANNELS,
+  MEMBERS,
 } from "@/interactions/collaboration/data/collaboration.mock"
 import { cn } from "@/lib/utils"
 
-const CHIP =
-  "flex h-7 min-w-0 items-center gap-1.5 rounded-full px-2.5 text-[13px] text-muted-foreground outline-none hover:bg-elevate hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+interface Recipient {
+  id: string
+  kind: "member" | "agent" | "channel"
+  name: string
+  detail: string
+}
 
-function PickerRow({
-  selected,
-  title,
-  detail,
-  mark,
+const RECIPIENTS: ReadonlyArray<Recipient> = [
+  ...MEMBERS.map((m) => ({
+    id: `member-${m.id}`,
+    kind: "member" as const,
+    name: m.name,
+    detail: m.detail,
+  })),
+  ...AGENTS.map((a) => ({
+    id: `agent-${a.id}`,
+    kind: "agent" as const,
+    name: a.name,
+    detail: a.detail,
+  })),
+  ...CHANNELS.map((c) => ({
+    id: `channel-${c.id}`,
+    kind: "channel" as const,
+    name: c.name,
+    detail: c.topic,
+  })),
+]
+
+const label = (recipient: Recipient) =>
+  recipient.kind === "channel" ? `#${recipient.name}` : recipient.name
+
+function RecipientIcon({
+  recipient,
+  className,
+}: {
+  recipient: Recipient
+  className?: string
+}) {
+  if (recipient.kind === "channel") {
+    return (
+      <IconHash
+        className={cn("size-4 shrink-0 text-muted-foreground", className)}
+      />
+    )
+  }
+  if (recipient.kind === "agent") {
+    return (
+      <span
+        className={cn(
+          "grid size-5 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground",
+          className
+        )}
+      >
+        <IconRobot className="size-3.5" />
+      </span>
+    )
+  }
+  return <Avatar name={recipient.name} className={cn("size-5", className)} />
+}
+
+function Chip({
+  recipient,
+  onRemove,
+}: {
+  recipient: Recipient
+  onRemove: () => void
+}) {
+  return (
+    <span className="flex h-6 items-center gap-1.5 rounded-md bg-muted py-1 pr-1 pl-1.5 text-[13px]">
+      <RecipientIcon recipient={recipient} className="size-4" />
+      {label(recipient)}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${recipient.name}`}
+        className="grid size-4 place-items-center rounded text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+      >
+        <IconX className="size-3" />
+      </button>
+    </span>
+  )
+}
+
+function RecipientRow({
+  recipient,
   onSelect,
 }: {
-  selected: boolean
-  title: string
-  detail: string
-  mark: React.ReactNode
+  recipient: Recipient
   onSelect: () => void
 }) {
   return (
     <button
       type="button"
       onClick={onSelect}
-      className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left outline-none hover:bg-elevate focus-visible:bg-elevate"
+      className="flex h-9 w-full items-center gap-2.5 px-3 text-left text-[13px] outline-none hover:bg-elevate focus-visible:bg-elevate"
     >
-      {mark}
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-medium">{title}</span>
-        <span className="block truncate text-xs text-muted-foreground">
-          {detail}
-        </span>
+      <RecipientIcon recipient={recipient} />
+      <span className="shrink-0 font-medium">{label(recipient)}</span>
+      <span className="min-w-0 truncate text-muted-foreground">
+        {recipient.detail}
       </span>
-      {selected && <IconCheck className="size-4 shrink-0" />}
     </button>
   )
 }
 
-export function NewChatView() {
-  const [prompt, setPrompt] = useState("")
-  const [agentId, setAgentId] = useState(AGENTS[0]?.id)
-  const [projectId, setProjectId] = useState<string | undefined>(undefined)
-  const [agentOpen, setAgentOpen] = useState(false)
-  const [projectOpen, setProjectOpen] = useState(false)
+function Group({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col">
+      <p className="px-3 pt-2 pb-1 text-xs text-muted-foreground">{title}</p>
+      {children}
+    </div>
+  )
+}
 
-  const agent = AGENTS.find((a) => a.id === agentId) ?? AGENTS[0]
-  const project = PROJECTS.find((p) => p.id === projectId)
+const CHIP =
+  "flex h-7 min-w-0 items-center gap-1.5 rounded-full px-2.5 text-[13px] text-muted-foreground outline-none hover:bg-elevate hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+
+/** How much the agent may do on its own before it comes back to ask. */
+const PERMISSIONS = [
+  { id: "ask", label: "Ask every time", detail: "Every edit and command" },
+  { id: "edits", label: "Approve edits", detail: "Commands still ask" },
+  { id: "full", label: "Full access", detail: "Edits, commands, git" },
+]
+
+const EFFORTS = [
+  { id: "high", label: "High", detail: "Slower, thinks it through" },
+  { id: "medium", label: "Medium", detail: "The usual balance" },
+  { id: "low", label: "Low", detail: "Quick passes" },
+]
+
+function ChipPicker({
+  icon,
+  value,
+  options,
+  onSelect,
+}: {
+  icon: ReactNode
+  value: string
+  options: ReadonlyArray<{ id: string; label: string; detail: string }>
+  onSelect: (id: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const selected = options.find((o) => o.id === value) ?? options[0]
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger render={<button type="button" className={CHIP} />}>
+        {icon}
+        <span className="truncate">{selected?.label}</span>
+        <IconChevronDown className="size-3.5 shrink-0" />
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-64 gap-0 p-1.5">
+        {options.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            onClick={() => {
+              onSelect(option.id)
+              setOpen(false)
+            }}
+            className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left outline-none hover:bg-elevate focus-visible:bg-elevate"
+          >
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13px] font-medium">
+                {option.label}
+              </span>
+              <span className="block truncate text-xs text-muted-foreground">
+                {option.detail}
+              </span>
+            </span>
+            {option.id === selected?.id && (
+              <IconCheck className="size-4 shrink-0" />
+            )}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+export function NewChatView() {
+  const [chosen, setChosen] = useState<ReadonlyArray<Recipient>>([])
+  const [query, setQuery] = useState("")
+  const [message, setMessage] = useState("")
+  const [permission, setPermission] = useState("edits")
+  const [effort, setEffort] = useState("high")
+  const [repoOpen, setRepoOpen] = useState(false)
+  const repo = useRepo()
+  const workspace = useWorkspace()
+  const branches = useBranches()
+  const remoteBranches = useRemoteBranches()
+  const git = useGitActions()
+
+  const matches = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return RECIPIENTS.filter(
+      (r) =>
+        !chosen.some((c) => c.id === r.id) &&
+        (q.length === 0 ||
+          r.name.toLowerCase().includes(q) ||
+          r.detail.toLowerCase().includes(q))
+    )
+  }, [chosen, query])
+
+  const add = (recipient: Recipient) => {
+    setChosen([...chosen, recipient])
+    setQuery("")
+  }
+
+  const group = (kind: Recipient["kind"]) =>
+    matches.filter((r) => r.kind === kind)
+  const toAgent = chosen.some((c) => c.kind === "agent")
+  const suggesting = query.length > 0 || chosen.length === 0
 
   return (
     <>
@@ -83,26 +266,108 @@ export function NewChatView() {
           >
             Inbox
           </Link>,
-          <span key="chat" className="font-medium">
-            New chat
+          <span key="new" className="font-medium">
+            New message
           </span>,
         ]}
-        meta={agent === undefined ? undefined : `Goes to ${agent.name}`}
       />
 
-      <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
-        <div className="mx-auto flex w-full max-w-2xl flex-col px-4 py-16">
-          <h1 className="text-center text-2xl font-semibold tracking-tight text-balance">
-            What should we work on?
-          </h1>
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex shrink-0 items-start gap-2 border-b px-4 py-2.5">
+          <span className="pt-1 text-[13px] text-muted-foreground">To:</span>
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+            {chosen.map((recipient) => (
+              <Chip
+                key={recipient.id}
+                recipient={recipient}
+                onRemove={() =>
+                  setChosen(chosen.filter((c) => c.id !== recipient.id))
+                }
+              />
+            ))}
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Backspace" && query.length === 0) {
+                  setChosen(chosen.slice(0, -1))
+                }
+                if (e.key === "Enter" && matches[0] !== undefined) {
+                  e.preventDefault()
+                  add(matches[0])
+                }
+              }}
+              placeholder={
+                chosen.length === 0
+                  ? "#a-channel, a teammate or an agent"
+                  : undefined
+              }
+              className="h-7 min-w-40 flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+        </div>
 
-          <div className="mt-8 rounded-2xl border bg-elevate">
+        {suggesting && (
+          <ScrollArea
+            className="max-h-80 shrink-0 border-b"
+            viewportClassName="scroll-fade"
+          >
+            {group("agent").length > 0 && (
+              <Group title="Agents">
+                {group("agent").map((recipient) => (
+                  <RecipientRow
+                    key={recipient.id}
+                    recipient={recipient}
+                    onSelect={() => add(recipient)}
+                  />
+                ))}
+              </Group>
+            )}
+            {group("member").length > 0 && (
+              <Group title="Members">
+                {group("member").map((recipient) => (
+                  <RecipientRow
+                    key={recipient.id}
+                    recipient={recipient}
+                    onSelect={() => add(recipient)}
+                  />
+                ))}
+              </Group>
+            )}
+            {group("channel").length > 0 && (
+              <Group title="Channels">
+                {group("channel").map((recipient) => (
+                  <RecipientRow
+                    key={recipient.id}
+                    recipient={recipient}
+                    onSelect={() => add(recipient)}
+                  />
+                ))}
+              </Group>
+            )}
+            {matches.length === 0 && (
+              <p className="px-3 py-3 text-[13px] text-muted-foreground">
+                Nobody matches that.
+              </p>
+            )}
+          </ScrollArea>
+        )}
+
+        <div className="min-h-0 flex-1" />
+
+        <div className="shrink-0 p-4">
+          <div className="rounded-xl border bg-elevate">
             <textarea
-              rows={2}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder={`Ask ${agent?.name ?? "an agent"} to do something`}
-              className="w-full resize-none bg-transparent px-4 pt-3.5 text-sm outline-none placeholder:text-muted-foreground"
+              rows={3}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={
+                chosen.length === 0
+                  ? "Write a message"
+                  : `Message ${chosen.map(label).join(", ")}`
+              }
+              className="w-full resize-none bg-transparent px-3 pt-3 text-sm outline-none placeholder:text-muted-foreground"
             />
             <div className="flex items-center gap-1 p-2">
               <Button
@@ -113,104 +378,74 @@ export function NewChatView() {
               >
                 <IconPaperclip className="size-4" />
               </Button>
-
-              <Popover open={agentOpen} onOpenChange={setAgentOpen}>
-                <PopoverTrigger
-                  render={
-                    <button type="button" className={cn(CHIP, "shrink-0")} />
-                  }
-                >
-                  <IconRobot className="size-4 shrink-0" />
-                  <span className="truncate text-foreground">
-                    {agent?.name}
-                  </span>
-                  <IconChevronDown className="size-3.5 shrink-0" />
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-72 gap-0 p-1.5">
-                  {AGENTS.map((a) => (
-                    <PickerRow
-                      key={a.id}
-                      selected={a.id === agent?.id}
-                      title={a.name}
-                      detail={a.detail}
-                      onSelect={() => {
-                        setAgentId(a.id)
-                        setAgentOpen(false)
-                      }}
-                      mark={
-                        <span
-                          className={cn(
-                            "size-2 shrink-0 rounded-full",
-                            a.online
-                              ? "bg-emerald-500"
-                              : "bg-muted-foreground/40"
-                          )}
-                        />
-                      }
-                    />
-                  ))}
-                </PopoverContent>
-              </Popover>
-
-              <Popover open={projectOpen} onOpenChange={setProjectOpen}>
-                <PopoverTrigger
-                  render={<button type="button" className={CHIP} />}
-                >
-                  <IconCube className="size-4 shrink-0" />
-                  <span className="truncate">
-                    {project?.name ?? "Choose project"}
-                  </span>
-                  <IconChevronDown className="size-3.5 shrink-0" />
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-72 gap-0 p-1.5">
-                  {PROJECTS.map((p) => (
-                    <PickerRow
-                      key={p.id}
-                      selected={p.id === project?.id}
-                      title={p.name}
-                      detail={p.summary}
-                      onSelect={() => {
-                        setProjectId(p.id)
-                        setProjectOpen(false)
-                      }}
-                      mark={
-                        <span
-                          className="size-4 shrink-0 rounded-md bg-(--mark)"
-                          style={{ "--mark": p.color } as CSSProperties}
-                        />
-                      }
-                    />
-                  ))}
-                </PopoverContent>
-              </Popover>
-
+              {toAgent && (
+                <>
+                  <ChipPicker
+                    icon={<IconShieldCheck className="size-4 shrink-0" />}
+                    value={permission}
+                    options={PERMISSIONS}
+                    onSelect={setPermission}
+                  />
+                  <ChipPicker
+                    icon={<IconBolt className="size-4 shrink-0" />}
+                    value={effort}
+                    options={EFFORTS}
+                    onSelect={setEffort}
+                  />
+                </>
+              )}
               <Button
                 size="icon-sm"
                 className="ml-auto shrink-0 rounded-full"
-                disabled={prompt.trim().length === 0}
-                aria-label="Start chat"
+                disabled={message.trim().length === 0 || chosen.length === 0}
+                aria-label="Send message"
               >
                 <IconSend className="size-4" />
               </Button>
             </div>
           </div>
 
-          <ul role="list" className="mt-6 flex flex-col">
-            {CHAT_PROMPTS.map((suggestion) => (
-              <li key={suggestion}>
-                <button
-                  type="button"
-                  onClick={() => setPrompt(suggestion)}
-                  className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2 text-left text-[13px] text-muted-foreground outline-none hover:bg-elevate hover:text-foreground focus-visible:bg-elevate"
-                >
-                  <IconSparkles className="size-4 shrink-0" />
-                  <span className="min-w-0 truncate">{suggestion}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          {/* Where the agent runs: the repository the app has open and the
+              branch it is on — the same pickers as the title bar, opening
+              upward from this bar. */}
+          {toAgent && (
+            <div className="mt-1 flex h-10 items-center gap-1 rounded-xl border px-1.5">
+              <RepoPicker
+                repo={repo.data ?? null}
+                workspace={workspace.data}
+                open={repoOpen}
+                onOpenChange={setRepoOpen}
+                onChosen={() => {}}
+                side="top"
+              />
+              {repo.data !== undefined && (
+                <BranchSwitcher
+                  current={repo.data.currentBranch ?? null}
+                  branches={branches.data ?? []}
+                  remoteBranches={remoteBranches.data ?? []}
+                  busy={false}
+                  side="top"
+                  onCheckout={(b) => void git.checkout(b)}
+                  onCheckoutAndUpdate={(b) => void git.checkoutAndUpdate(b)}
+                  onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
+                  onCompare={() => {}}
+                  onMerge={(b) => void git.merge(b)}
+                  onRebase={(o) => void git.rebase(o)}
+                  onRenameBranch={(from, to) => void git.renameBranch(from, to)}
+                  onDeleteBranch={(name) => void git.deleteBranch(name)}
+                  onFetch={() => void git.fetch()}
+                  onPull={() => void git.pull()}
+                  onPush={() => void git.push()}
+                />
+              )}
+              <span className="ml-auto flex items-center gap-1.5 pr-1.5 text-xs text-muted-foreground">
+                <IconTerminal2 className="size-4 shrink-0" />
+                Runs on this machine
+              </span>
+            </div>
+          )}
         </div>
-      </ScrollArea>
+      </div>
     </>
   )
 }
