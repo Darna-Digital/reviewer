@@ -12,7 +12,6 @@ import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { ResizeHandle } from "@/components/layout/resize-handle"
-import { SidebarNav } from "@/components/layout/sidebar-nav"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -479,7 +478,6 @@ export function CommentsPage() {
         className="flex shrink-0 flex-col border-r"
         style={{ width: sidebarWidth }}
       >
-        <SidebarNav className="shrink-0 border-b" />
         <div className="flex items-center gap-1.5 border-b p-2">
           <div className="relative min-w-0 flex-1">
             <IconSearch className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />

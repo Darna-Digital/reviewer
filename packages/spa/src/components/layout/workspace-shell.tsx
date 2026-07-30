@@ -9,6 +9,7 @@ import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
 import { useState } from "react"
 import { BranchSwitcher } from "@/components/layout/branch-switcher"
 import { GitBottomDock } from "@/components/layout/git-bottom-dock"
+import { ModeRail } from "@/components/layout/mode-rail"
 import { ModeSelector } from "@/components/layout/mode-selector"
 import { RepoPicker } from "@/components/repo-picker"
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
@@ -42,12 +43,13 @@ export function WorkspaceShell() {
 
   return (
     <div className="flex h-svh w-full overflow-hidden text-foreground">
+      {!collaborating && <ModeRail />}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* In desktop this doubles as the draggable title bar (clusters opt out). */}
         <header
           className={cn(
             "flex h-10 shrink-0 items-center gap-2 px-2",
-            isDesktop && "pl-20 [-webkit-app-region:drag]"
+            isDesktop && "pl-10 [-webkit-app-region:drag]"
           )}
         >
           <div className="[-webkit-app-region:no-drag]">

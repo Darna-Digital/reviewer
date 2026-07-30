@@ -21,7 +21,8 @@ const IMAGE_EXTENSIONS = [
   "svg",
 ]
 
-const extensionOf = (path: string) => path.split(".").at(-1)?.toLowerCase() ?? ""
+const extensionOf = (path: string) =>
+  path.split(".").at(-1)?.toLowerCase() ?? ""
 
 export const isImagePath = (path: string) =>
   IMAGE_EXTENSIONS.includes(extensionOf(path))

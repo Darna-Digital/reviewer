@@ -18,7 +18,6 @@ import {
 import { useNavigate } from "@tanstack/react-router"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
-import { NavSidebar } from "@/components/layout/sidebar-nav"
 import { agentIcon } from "@/interactions/threads/components/agent-icons"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -390,7 +389,6 @@ export function TasksPage() {
 
   return (
     <div className="flex h-full min-h-0">
-      <NavSidebar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex items-center gap-2 border-b px-4 py-2">
           <span className="text-sm font-medium">Tasks board</span>

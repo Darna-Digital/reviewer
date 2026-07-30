@@ -6,7 +6,6 @@
 import { IconChevronDown, IconDots, IconUsers } from "@tabler/icons-react"
 import { useRouterState } from "@tanstack/react-router"
 import { useState } from "react"
-import { NavSidebar } from "@/components/layout/sidebar-nav"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -50,10 +49,8 @@ export function InboxPage() {
 
   return (
     <div className="flex h-full min-h-0">
-      {activeWorkMode(pathname, workMode) === "collaboration" ? (
+      {activeWorkMode(pathname, workMode) === "collaboration" && (
         <CollaborationSidebar />
-      ) : (
-        <NavSidebar />
       )}
 
       <div className="flex w-80 shrink-0 flex-col border-r">

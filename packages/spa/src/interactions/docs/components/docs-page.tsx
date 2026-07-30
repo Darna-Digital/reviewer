@@ -10,7 +10,6 @@ import rehypeHighlight from "rehype-highlight"
 import remarkGfm from "remark-gfm"
 import { toast } from "sonner"
 import { ResizeHandle } from "@/components/layout/resize-handle"
-import { SidebarNav } from "@/components/layout/sidebar-nav"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -117,7 +116,6 @@ export function DocsPage() {
         className="flex shrink-0 flex-col border-r"
         style={{ width: sidebarWidth }}
       >
-        <SidebarNav className="shrink-0 border-b" />
         <div className="flex items-center justify-between px-3 py-2">
           <span className="text-sm font-medium">Docs &amp; plans</span>
           <Button

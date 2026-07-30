@@ -8,7 +8,6 @@ import {
   IconSun,
 } from "@tabler/icons-react"
 import type { ComponentType, ReactNode } from "react"
-import { NavSidebar } from "@/components/layout/sidebar-nav"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
@@ -98,7 +97,6 @@ export function SettingsPage() {
 
   return (
     <div className="flex h-full min-h-0">
-      <NavSidebar />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="flex h-11 shrink-0 items-center border-b px-4">
           <h1 className="text-sm font-medium">Settings</h1>

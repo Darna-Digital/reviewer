@@ -49,12 +49,12 @@ import {
 } from "@/interactions/diff/components/diff-pane"
 import { CodeView } from "@/components/editor/code-view"
 import { ImageView, isImagePath } from "@/components/editor/image-view"
+import { ModeRail } from "@/components/layout/mode-rail"
 import { ConflictBanner } from "@/components/git/conflict-banner"
 import { ConflictView } from "@/components/git/conflict-view"
 import { PullRequestList } from "@/components/git/pull-request-list"
 import { BottomPanel } from "@/components/layout/bottom-panel"
 import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs"
-import { SidebarNav } from "@/components/layout/sidebar-nav"
 import { ResizeHandle } from "@/components/layout/resize-handle"
 import { TopBar } from "@/components/layout/top-bar"
 import { FileSidebar } from "@/components/tree/file-sidebar"
@@ -113,12 +113,8 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries"
-import {
-  openBottomTab,
-  setUiPrefs,
-  toggleBottomVisible,
-  useUiPrefs,
-} from "@/lib/ui-prefs"
+import { openBottomTab, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
+import { cn } from "@/lib/utils"
 
 type Search = {
   base?: string
@@ -950,6 +946,7 @@ export function AppShell() {
             onDismiss={() => setAssignBarDismissed(true)}
           />
         )}
+        <ModeRail />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar
             repo={repo.data ?? null}
@@ -993,7 +990,6 @@ export function AppShell() {
                 className="flex shrink-0 flex-col overflow-hidden border-r"
                 style={{ width: sidebarWidth }}
               >
-                <SidebarNav className="shrink-0 border-b" />
                 {mode === "review" && (
                   <>
                     <PullRequestList
@@ -1160,14 +1156,17 @@ export function AppShell() {
               />
             )}
             <div
-              className="shrink-0 overflow-hidden border-t"
-              style={prefs.bottomVisible ? { height: bottomHeight } : undefined}
+              className={cn(
+                "shrink-0 overflow-hidden border-t",
+                !prefs.bottomVisible && "hidden"
+              )}
+              style={{ height: bottomHeight }}
+              hidden={!prefs.bottomVisible}
             >
               <BottomPanel
                 tab={prefs.bottomTab}
                 active={prefs.bottomVisible}
-                onSelectTab={openBottomTab}
-                onToggle={toggleBottomVisible}
+                onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
                 branches={branches.data ?? []}
                 remoteBranches={remoteBranches.data ?? []}
                 currentBranch={repo.data?.currentBranch ?? null}

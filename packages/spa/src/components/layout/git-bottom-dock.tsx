@@ -18,12 +18,8 @@ import {
   useRemoteBranches,
   useRepo,
 } from "@/lib/queries"
-import {
-  openBottomTab,
-  setUiPrefs,
-  toggleBottomVisible,
-  useUiPrefs,
-} from "@/lib/ui-prefs"
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
+import { cn } from "@/lib/utils"
 
 export function GitBottomDock() {
   const prefs = useUiPrefs()
@@ -58,14 +54,17 @@ export function GitBottomDock() {
         />
       )}
       <div
-        className="shrink-0 overflow-hidden border-t"
-        style={prefs.bottomVisible ? { height: bottomHeight } : undefined}
+        className={cn(
+          "shrink-0 overflow-hidden border-t",
+          !prefs.bottomVisible && "hidden"
+        )}
+        style={{ height: bottomHeight }}
+        hidden={!prefs.bottomVisible}
       >
         <BottomPanel
           tab={prefs.bottomTab}
           active={prefs.bottomVisible}
-          onSelectTab={openBottomTab}
-          onToggle={toggleBottomVisible}
+          onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
           branches={branches.data ?? []}
           remoteBranches={remoteBranches.data ?? []}
           currentBranch={repo.data?.currentBranch ?? null}
