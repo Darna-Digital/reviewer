@@ -1,20 +1,18 @@
 /**
  * WorkspaceShell — the layout for the workspace feature pages (chats, docs,
- * tasks/settings). It mirrors AppShell's frame (mode rail + a rounded, bordered
- * content panel) and shares the git-review top bar's left cluster — the repo
- * picker and branch switcher — so the open repository is visible and switchable
- * here too. Each feature page renders its own header and body into the
- * `<Outlet />`. Services and terminal threads live in the shared bottom dock.
+ * tasks/settings). It mirrors AppShell's frame (a rounded, bordered content
+ * panel over the shared bottom dock) and shares the git-review top bar's left
+ * cluster — the repo picker and branch switcher — so the open repository is
+ * visible and switchable here too. Each feature page renders its own header
+ * and body into the `<Outlet />`. Services and terminal threads live in the shared bottom dock.
  */
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
 import { useState } from "react"
 import { BranchSwitcher } from "@/components/layout/branch-switcher"
 import { GitBottomDock } from "@/components/layout/git-bottom-dock"
-import { ModeRail } from "@/components/layout/mode-rail"
 import { RepoPicker } from "@/components/repo-picker"
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import { isDesktop } from "@/lib/desktop"
-import type { AppMode } from "@/lib/api/types"
 import {
   useBranches,
   useRemoteBranches,
@@ -22,19 +20,6 @@ import {
   useWorkspace,
 } from "@/lib/queries"
 import { cn } from "@/lib/utils"
-
-const modeForPath = (pathname: string): AppMode =>
-  pathname.startsWith("/chats")
-    ? "chats"
-    : pathname.startsWith("/settings")
-      ? "settings"
-      : pathname.startsWith("/docs")
-        ? "docs"
-        : pathname.startsWith("/tasks")
-          ? "tasks"
-          : pathname.startsWith("/comments")
-            ? "comments"
-            : "chats"
 
 export function WorkspaceShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -46,21 +31,18 @@ export function WorkspaceShell() {
   const git = useGitActions()
   const [pickerOpen, setPickerOpen] = useState(false)
 
-  const mode = modeForPath(pathname)
-  const hasGitHub = repo.data?.github != null
   const current = workspace.data?.current ?? null
-  const isSettings = mode === "settings"
+  const isSettings = pathname.startsWith("/settings")
 
   return (
     <div className="flex h-svh w-full overflow-hidden text-foreground">
-      <ModeRail mode={mode} hasGitHub={hasGitHub} />
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar — repo picker + branch switcher, like the git-review shell.
             In desktop it doubles as the draggable title bar (clusters opt out). */}
         <header
           className={cn(
             "flex h-10 shrink-0 items-center gap-2 px-2",
-            isDesktop && "pl-10 [-webkit-app-region:drag]"
+            isDesktop && "pl-20 [-webkit-app-region:drag]"
           )}
         >
           <div className="[-webkit-app-region:no-drag]">
@@ -96,7 +78,7 @@ export function WorkspaceShell() {
             </div>
           )}
         </header>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-l">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {current === null && !isSettings ? (
               <div className="flex h-full flex-col items-center justify-center gap-1 text-sm">
@@ -109,7 +91,7 @@ export function WorkspaceShell() {
               <Outlet />
             )}
           </div>
-          {current !== null && !isSettings && <GitBottomDock />}
+          {current !== null && <GitBottomDock />}
         </div>
       </div>
     </div>

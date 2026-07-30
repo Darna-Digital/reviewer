@@ -50,10 +50,9 @@ export function TopBar(props: TopBarProps) {
       className={cn(
         "flex h-10 shrink-0 items-center gap-2 px-2",
         // In the desktop shell the bar doubles as the window's title bar and lets
-        // empty regions drag the window (interactive clusters opt back out below).
-        // The rail to the left reserves the bulk of the traffic-light strip; this
-        // small left pad just clears the lights' overflow past the rail's edge.
-        isDesktop && "pl-10 [-webkit-app-region:drag]"
+        // empty regions drag the window (interactive clusters opt back out
+        // below). The left pad clears the macOS traffic lights.
+        isDesktop && "pl-20 [-webkit-app-region:drag]"
       )}
     >
       {/* Repo chip — opens the recents + folder-browser dropdown */}

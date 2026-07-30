@@ -79,6 +79,11 @@ vi.mock("@/interactions/chats/adapters/chats.hook.adapter", () => ({
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof RouterModule>()),
   useNavigate: () => navigate,
+  useRouterState: ({
+    select,
+  }: {
+    select: (state: { location: { pathname: string } }) => unknown
+  }) => select({ location: { pathname: "/comments" } }),
   Link: ({
     children,
     ...props

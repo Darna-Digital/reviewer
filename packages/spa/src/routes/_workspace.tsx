@@ -3,7 +3,7 @@ import { WorkspaceShell } from "@/components/layout/workspace-shell"
 
 /**
  * Pathless layout for the workspace feature pages (threads, docs, tasks). It
- * renders the shared mode rail + frame; the matched child page fills the rest.
+ * renders the shared frame; the matched child page fills the rest.
  */
 export const Route = createFileRoute("/_workspace")({
   component: WorkspaceShell,

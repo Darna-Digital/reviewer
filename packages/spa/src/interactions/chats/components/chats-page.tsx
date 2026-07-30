@@ -12,6 +12,7 @@ import { Outlet, useNavigate, useParams } from "@tanstack/react-router"
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { ResizeHandle } from "@/components/layout/resize-handle"
+import { SidebarNav } from "@/components/layout/sidebar-nav"
 import {
   ALL_BRANCHES,
   branchLabel,
@@ -120,6 +121,7 @@ export function ChatsPage() {
         className="flex shrink-0 flex-col border-r"
         style={{ width: sidebarWidth }}
       >
+        <SidebarNav className="shrink-0 border-b" />
         <div className="flex items-center gap-1.5 border-b p-2">
           <SidebarSearch
             label="Search threads"

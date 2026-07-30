@@ -52,7 +52,7 @@ import { ConflictView } from "@/components/git/conflict-view"
 import { PullRequestList } from "@/components/git/pull-request-list"
 import { BottomPanel } from "@/components/layout/bottom-panel"
 import type { Crumb } from "@/components/layout/breadcrumbs"
-import { ModeRail } from "@/components/layout/mode-rail"
+import { SidebarNav } from "@/components/layout/sidebar-nav"
 import { ResizeHandle } from "@/components/layout/resize-handle"
 import { TopBar } from "@/components/layout/top-bar"
 import { FileSidebar } from "@/components/tree/file-sidebar"
@@ -111,8 +111,12 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries"
-import { openBottomTab, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+import {
+  openBottomTab,
+  setUiPrefs,
+  toggleBottomVisible,
+  useUiPrefs,
+} from "@/lib/ui-prefs"
 
 type Search = {
   base?: string
@@ -941,7 +945,6 @@ export function AppShell() {
             onDismiss={() => setAssignBarDismissed(true)}
           />
         )}
-        <ModeRail mode={mode} hasGitHub={hasGitHub} />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar
             repo={repo.data ?? null}
@@ -976,10 +979,9 @@ export function AppShell() {
             onPull={() => void git.pull()}
           />
 
-          {/* Everything below the title bar sits in a panel whose left border +
-            rounded top-left form the rail divider, so it curves in right above
-            the file list while the title-bar strip stays clean. */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
+          {/* Everything below the title bar sits in a bordered panel, so the
+            title-bar strip stays clean. */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-l">
             <div className="flex min-h-0 flex-1">
               {/* Review mode stacks the pull request picker above the selected
                   PR's file tree; the other modes are just the tree. */}
@@ -987,6 +989,7 @@ export function AppShell() {
                 className="flex shrink-0 flex-col overflow-hidden border-r"
                 style={{ width: sidebarWidth }}
               >
+                <SidebarNav className="shrink-0 border-b" />
                 {mode === "review" && (
                   <>
                     <PullRequestList
@@ -1134,17 +1137,14 @@ export function AppShell() {
               />
             )}
             <div
-              className={cn(
-                "shrink-0 overflow-hidden border-t",
-                !prefs.bottomVisible && "hidden"
-              )}
-              style={{ height: bottomHeight }}
-              hidden={!prefs.bottomVisible}
+              className="shrink-0 overflow-hidden border-t"
+              style={prefs.bottomVisible ? { height: bottomHeight } : undefined}
             >
               <BottomPanel
                 tab={prefs.bottomTab}
                 active={prefs.bottomVisible}
-                onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
+                onSelectTab={openBottomTab}
+                onToggle={toggleBottomVisible}
                 branches={branches.data ?? []}
                 remoteBranches={remoteBranches.data ?? []}
                 currentBranch={repo.data?.currentBranch ?? null}

@@ -36,14 +36,6 @@ const TREE_UNSAFE_CSS = `
   }
 `
 
-// FileSidebar is only mounted in the git-review modes; the workspace modes
-// (threads/docs/tasks) have their own pages, so a partial map + fallback.
-const HEADER_TITLE: Partial<Record<AppMode, string>> = {
-  commit: "Changed files",
-  review: "Files in this PR",
-  browse: "Project",
-}
-
 /**
  * Directory prefixes that must be expanded for `filePath` to be visible, e.g.
  * `"a/b/c.ts"` → `["a", "a/b"]`. Used to reveal a file in an otherwise
@@ -242,14 +234,6 @@ export function FileSidebar({
 
   return (
     <aside className="flex h-full flex-col">
-      <div className="flex h-9 shrink-0 items-center justify-between border-b px-3 text-xs text-muted-foreground">
-        <span className="font-medium">{HEADER_TITLE[mode] ?? "Files"}</span>
-        {mode !== "browse" && gitStatus.length > 0 && (
-          <span>
-            {gitStatus.length} {mode === "review" ? "files" : "changed"}
-          </span>
-        )}
-      </div>
       <div className="-mx-2 mt-2 min-h-0 flex-1 overflow-auto">
         {loading ? (
           <div className="px-3 py-2">
