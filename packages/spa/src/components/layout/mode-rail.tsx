@@ -9,6 +9,7 @@ import {
   IconGitFork,
   IconGitPullRequest,
   IconInbox,
+  IconMessageCircle,
   IconPlayerPlay,
   IconSettings,
   IconTerminal2,
@@ -46,6 +47,15 @@ const INBOX: RailLink = {
   icon: IconInbox,
   match: "/inbox",
 }
+
+const REVIEW_LINKS: RailLink[] = [
+  {
+    to: "/comments",
+    label: "Comments — code & visual",
+    icon: IconMessageCircle,
+    match: "/comments",
+  },
+]
 
 const GIT_LINKS: RailLink[] = [
   {
@@ -179,6 +189,8 @@ export function ModeRail() {
       )}
       <div className="my-1 h-px w-6 bg-border" />
       {GIT_LINKS.filter((l) => l.github !== true || hasGitHub).map(renderLink)}
+      <div className="my-1 h-px w-6 bg-border" />
+      {REVIEW_LINKS.map(renderLink)}
       <div className="mt-auto flex flex-col items-center gap-1">
         <RailButton
           label="Branches & History"

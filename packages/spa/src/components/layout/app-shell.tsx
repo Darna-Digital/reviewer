@@ -982,7 +982,7 @@ export function AppShell() {
 
           {/* Everything below the title bar sits in a bordered panel, so the
             title-bar strip stays clean. */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-l">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
             <div className="flex min-h-0 flex-1">
               {/* Review mode stacks the pull request picker above the selected
                   PR's file tree; the other modes are just the tree. */}

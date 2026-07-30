@@ -5,9 +5,11 @@
  */
 import { useSearch } from "@tanstack/react-router"
 import { ChannelView } from "@/interactions/collaboration/components/channel-view"
+import { DocsView } from "@/interactions/collaboration/components/docs-view"
 import { CollaborationSidebar } from "@/interactions/collaboration/components/collaboration-sidebar"
 import { PeopleView } from "@/interactions/collaboration/components/people-view"
 import { ProjectView } from "@/interactions/collaboration/components/project-view"
+import { TaskListView } from "@/interactions/collaboration/components/task-list-view"
 import { TaskView } from "@/interactions/collaboration/components/task-view"
 import {
   DEFAULT_ID,
@@ -34,6 +36,8 @@ export function CollaborationPage() {
   const id = search.id ?? DEFAULT_ID
 
   const project = view === "project" ? findProject(id) : undefined
+  const taskListProject = view === "tasks" ? findProject(id) : undefined
+  const docsProject = view === "docs" ? findProject(id) : undefined
   const channel = view === "channel" ? findChannel(id) : undefined
   const task = view === "task" ? findTask(id) : undefined
 
@@ -44,6 +48,10 @@ export function CollaborationPage() {
       <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {project !== undefined ? (
           <ProjectView project={project} />
+        ) : taskListProject !== undefined ? (
+          <TaskListView project={taskListProject} />
+        ) : docsProject !== undefined ? (
+          <DocsView project={docsProject} />
         ) : channel !== undefined ? (
           <ChannelView channel={channel} />
         ) : task !== undefined ? (

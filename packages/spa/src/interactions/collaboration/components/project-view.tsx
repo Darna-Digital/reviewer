@@ -97,17 +97,14 @@ export function ProjectView({ project }: { project: MockProject }) {
                       className="flex h-9 items-center gap-2.5 rounded-lg px-2 outline-none hover:bg-elevate focus-visible:ring-3 focus-visible:ring-ring/30"
                     >
                       <TaskStatusIcon status={task.status} />
+                      <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground">
+                        {task.key}
+                      </span>
                       <span className="min-w-0 flex-1 truncate text-[13px]">
                         {task.title}
                       </span>
-                      {task.subtasks.length > 0 && (
-                        <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                          {task.subtasks.filter((s) => s.done).length}/
-                          {task.subtasks.length}
-                        </span>
-                      )}
                       <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                        {task.due}
+                        {task.updated}
                       </span>
                       <AssigneeAvatar name={task.assignee} />
                     </Link>

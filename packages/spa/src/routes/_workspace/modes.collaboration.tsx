@@ -4,6 +4,8 @@ import type { CollaborationView } from "@/interactions/collaboration/data/collab
 
 const VIEWS: ReadonlyArray<CollaborationView> = [
   "project",
+  "tasks",
+  "docs",
   "channel",
   "task",
   "agents",

@@ -12,6 +12,7 @@ import { GitBottomDock } from "@/components/layout/git-bottom-dock"
 import { ModeRail } from "@/components/layout/mode-rail"
 import { ModeSelector } from "@/components/layout/mode-selector"
 import { RepoPicker } from "@/components/repo-picker"
+import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker"
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import { isDesktop } from "@/lib/desktop"
 import {
@@ -55,6 +56,11 @@ export function WorkspaceShell() {
           <div className="[-webkit-app-region:no-drag]">
             <ModeSelector />
           </div>
+          {collaborating && (
+            <div className="[-webkit-app-region:no-drag]">
+              <WorkspacePicker />
+            </div>
+          )}
           {!collaborating && (
             <div className="[-webkit-app-region:no-drag]">
               <RepoPicker
@@ -90,7 +96,7 @@ export function WorkspaceShell() {
             </div>
           )}
         </header>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t border-l">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {current === null && !isSettings ? (
               <div className="flex h-full flex-col items-center justify-center gap-1 text-sm">

@@ -3,8 +3,13 @@
  * and the selected thread. Both modes link here, so the sidebar it renders
  * follows the mode you came from.
  */
-import { IconChevronDown, IconDots, IconUsers } from "@tabler/icons-react"
-import { useRouterState } from "@tanstack/react-router"
+import {
+  IconChevronDown,
+  IconDots,
+  IconPencilPlus,
+  IconUsers,
+} from "@tabler/icons-react"
+import { Link, useRouterState } from "@tanstack/react-router"
 import { useState } from "react"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -35,6 +40,7 @@ const FILTERS: ReadonlyArray<{ value: InboxFilter; label: string }> = [
 export function InboxPage() {
   const { workMode } = useUiPrefs()
   const pathname = useRouterState({ select: (s) => s.location.pathname })
+  const collaborating = activeWorkMode(pathname, workMode) === "collaboration"
   const [filter, setFilter] = useState<InboxFilter>("all")
   const [filterOpen, setFilterOpen] = useState(false)
   const [selectedId, setSelectedId] = useState(INBOX_ITEMS[0]?.id ?? "")
@@ -49,9 +55,7 @@ export function InboxPage() {
 
   return (
     <div className="flex h-full min-h-0">
-      {activeWorkMode(pathname, workMode) === "collaboration" && (
-        <CollaborationSidebar />
-      )}
+      {collaborating && <CollaborationSidebar />}
 
       <div className="flex w-80 shrink-0 flex-col border-r">
         <header className="flex h-11 shrink-0 items-center justify-between border-b px-2">
@@ -86,14 +90,25 @@ export function InboxPage() {
           <span className="text-xs text-muted-foreground">
             {UNREAD_COUNT} unread
           </span>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            aria-label="Inbox options"
-          >
-            <IconDots className="size-4" />
-          </Button>
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label="New chat"
+              render={<Link to="/new-chat" />}
+            >
+              <IconPencilPlus className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label="Inbox options"
+            >
+              <IconDots className="size-4" />
+            </Button>
+          </div>
         </header>
 
         <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">

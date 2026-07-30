@@ -8,8 +8,10 @@
 
 export type CollaborationView =
   | "project"
-  | "channel"
+  | "tasks"
   | "task"
+  | "docs"
+  | "channel"
   | "agents"
   | "members"
 
@@ -17,21 +19,43 @@ export type TaskStatus = "todo" | "doing" | "review" | "done"
 
 export const UNASSIGNED = "Unassigned"
 
-export interface MockSubtask {
+export type TaskPriority = "urgent" | "high" | "medium" | "low" | "none"
+
+export interface MockActivity {
   id: string
-  title: string
-  done: boolean
+  kind: "created" | "priority" | "status" | "comment"
+  author: string
+  time: string
+  /** What happened, for everything but a comment. */
+  detail?: string
+  /** The comment itself. */
+  body?: string
 }
 
 export interface MockTask {
   id: string
+  /** The short key the list and the header show, e.g. BYC-224. */
+  key: string
   projectId: string
+  /** Set on a sub-issue; the list nests it under its parent. */
+  parentId?: string
   title: string
   status: TaskStatus
+  priority: TaskPriority
   assignee: string
-  due: string
-  note: string
-  subtasks: ReadonlyArray<MockSubtask>
+  labels: ReadonlyArray<string>
+  updated: string
+  description: ReadonlyArray<string>
+  activity: ReadonlyArray<MockActivity>
+}
+
+export interface MockDoc {
+  id: string
+  projectId: string
+  title: string
+  summary: string
+  author: string
+  updated: string
 }
 
 export interface MockChannel {
@@ -81,10 +105,18 @@ export const STATUS_ORDER: ReadonlyArray<TaskStatus> = [
 ]
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
-  todo: "To do",
-  doing: "In progress",
-  review: "In review",
+  todo: "Todo",
+  doing: "In Progress",
+  review: "In Review",
   done: "Done",
+}
+
+export const PRIORITY_LABEL: Record<TaskPriority, string> = {
+  urgent: "Urgent",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+  none: "No priority",
 }
 
 export const WORKSPACES: ReadonlyArray<MockWorkspace> = [
@@ -140,22 +172,11 @@ export const PROJECTS: ReadonlyArray<MockProject> = [
 
 export const CHANNELS: ReadonlyArray<MockChannel> = [
   {
-    id: "general",
-    name: "general",
-    topic: "Anything and everything",
-    unread: 0,
-  },
-  {
-    id: "releases",
-    name: "releases",
-    topic: "Ship notes and rollbacks",
-    unread: 3,
-  },
-  {
-    id: "incidents",
-    name: "incidents",
-    topic: "Pager traffic lands here",
+    id: "atlas-incidents",
+    name: "atlas-incidents",
+    topic: "Pager traffic from the pipeline",
     unread: 12,
+    projectId: "atlas",
   },
   {
     id: "atlas-dev",
@@ -172,11 +193,25 @@ export const CHANNELS: ReadonlyArray<MockChannel> = [
     projectId: "atlas",
   },
   {
+    id: "pricing-launch",
+    name: "pricing-launch",
+    topic: "Ship notes and rollbacks for the new tiers",
+    unread: 3,
+    projectId: "pricing",
+  },
+  {
     id: "pricing-copy",
     name: "pricing-copy",
     topic: "Wording for the new tiers",
     unread: 1,
     projectId: "pricing",
+  },
+  {
+    id: "onboarding-research",
+    name: "onboarding-research",
+    topic: "Session notes from the first-run study",
+    unread: 0,
+    projectId: "onboarding",
   },
   {
     id: "onboarding-design",
@@ -197,199 +232,351 @@ export const CHANNELS: ReadonlyArray<MockChannel> = [
 export const TASKS: ReadonlyArray<MockTask> = [
   {
     id: "atlas-1",
+    key: "BYC-224",
     projectId: "atlas",
-    title: "Drain the legacy queue",
-    status: "doing",
+    title: "Drain the legacy queue before the cutover",
+    status: "review",
+    priority: "urgent",
     assignee: "Theo Brandt",
-    due: "Aug 1",
-    note: "Idempotent per checkpoint id, so a second pass over the same window is a no-op.",
-    subtasks: [
-      { id: "atlas-1-a", title: "Batch by checkpoint id", done: true },
-      { id: "atlas-1-b", title: "Skip already-committed ids", done: true },
-      { id: "atlas-1-c", title: "Sequence after compaction", done: false },
+    labels: ["pipeline", "cutover"],
+    updated: "Jul 28",
+    description: [
+      "The drain is idempotent per checkpoint id, so a second pass over the same window is a no-op rather than a duplicate write.",
+      "Compaction reads the checkpoint table without a transaction, so it has to be sequenced after the drain rather than run alongside it.",
+      "Once this is green for a week the old worker can go.",
+    ],
+    activity: [
+      {
+        id: "atlas-1-a1",
+        kind: "created",
+        author: "Nadia Alvi",
+        time: "2d ago",
+        detail: "created the task",
+      },
+      {
+        id: "atlas-1-a2",
+        kind: "priority",
+        author: "Nadia Alvi",
+        time: "2d ago",
+        detail: "set priority to Urgent",
+      },
+      {
+        id: "atlas-1-a3",
+        kind: "comment",
+        author: "Theo Brandt",
+        time: "2d ago",
+        body: "Shadow run took 40 minutes for a full pass. Safe to repeat, so I am moving it to review.",
+      },
+      {
+        id: "atlas-1-a4",
+        kind: "status",
+        author: "Theo Brandt",
+        time: "2d ago",
+        detail: "moved from In Progress to In Review",
+      },
     ],
   },
   {
     id: "atlas-2",
+    key: "BYC-218",
     projectId: "atlas",
     title: "Backfill checkpoints",
-    status: "review",
+    status: "doing",
+    priority: "high",
     assignee: "Nadia Alvi",
-    due: "Aug 5",
-    note: "Runs tonight once the drain lands. Needs a dry run against last week's window first.",
-    subtasks: [
-      { id: "atlas-2-a", title: "Dry run on staging", done: true },
-      { id: "atlas-2-b", title: "Schedule the real run", done: false },
+    labels: ["pipeline"],
+    updated: "Jul 27",
+    description: [
+      "Runs tonight once the drain lands. A dry run against last week's window comes first.",
+    ],
+    activity: [
+      {
+        id: "atlas-2-a1",
+        kind: "created",
+        author: "Nadia Alvi",
+        time: "5d ago",
+        detail: "created the task",
+      },
+      {
+        id: "atlas-2-a2",
+        kind: "comment",
+        author: "Reviewer",
+        time: "1d ago",
+        body: "Dry run is clean. Nothing in the diff beyond the expected checkpoint rows.",
+      },
     ],
   },
   {
     id: "atlas-3",
+    key: "BYC-193",
     projectId: "atlas",
-    title: "Delete the old worker",
+    title: "Web infra",
     status: "todo",
+    priority: "medium",
+    assignee: "Theo Brandt",
+    labels: ["infra"],
+    updated: "Jul 22",
+    description: [
+      "Umbrella for the pieces that have to move together when the pipeline changes hosts.",
+    ],
+    activity: [],
+  },
+  {
+    id: "atlas-3-a",
+    key: "BYC-197",
+    projectId: "atlas",
+    parentId: "atlas-3",
+    title: "spa",
+    status: "todo",
+    priority: "medium",
+    assignee: "Theo Brandt",
+    labels: [],
+    updated: "Jul 22",
+    description: ["Front end deploy target and its cache headers."],
+    activity: [],
+  },
+  {
+    id: "atlas-3-b",
+    key: "BYC-196",
+    projectId: "atlas",
+    parentId: "atlas-3",
+    title: "website",
+    status: "todo",
+    priority: "low",
+    assignee: "Ines Faber",
+    labels: [],
+    updated: "Jul 22",
+    description: ["Marketing site, still on the old bucket."],
+    activity: [],
+  },
+  {
+    id: "atlas-3-c",
+    key: "BYC-195",
+    projectId: "atlas",
+    parentId: "atlas-3",
+    title: "central-server",
+    status: "todo",
+    priority: "medium",
     assignee: UNASSIGNED,
-    due: "Aug 14",
-    note: "Blocked until the backfill has been green for a week.",
-    subtasks: [],
+    labels: [],
+    updated: "Jul 22",
+    description: ["The one piece that cannot take downtime."],
+    activity: [],
   },
   {
     id: "atlas-4",
+    key: "BYC-181",
     projectId: "atlas",
     title: "Cap retry concurrency at 8",
     status: "done",
+    priority: "high",
     assignee: "Theo Brandt",
-    due: "Jul 28",
-    note: "Held the retry storm that took ingest latency over threshold on the 27th.",
-    subtasks: [{ id: "atlas-4-a", title: "Add the semaphore", done: true }],
+    labels: ["pipeline", "incident"],
+    updated: "Jul 21",
+    description: [
+      "The retry storm from the batch job was enough to push ingest latency over threshold for six minutes.",
+    ],
+    activity: [
+      {
+        id: "atlas-4-a1",
+        kind: "status",
+        author: "Theo Brandt",
+        time: "9d ago",
+        detail: "moved from In Progress to Done",
+      },
+    ],
   },
   {
     id: "pricing-1",
+    key: "BYC-212",
     projectId: "pricing",
     title: "Comparison table copy",
     status: "doing",
+    priority: "high",
     assignee: "Nadia Alvi",
-    due: "Aug 1",
-    note: "Six rows, no marketing adjectives. Sam has the plan names.",
-    subtasks: [
-      { id: "pricing-1-a", title: "Draft the rows", done: true },
-      { id: "pricing-1-b", title: "Second pass on tier names", done: false },
+    labels: ["copy"],
+    updated: "Jul 26",
+    description: [
+      "Plan names are locked: Starter, Team, Scale. The rows go in as they are, minus the adjectives.",
+    ],
+    activity: [
+      {
+        id: "pricing-1-a1",
+        kind: "created",
+        author: "Sam Okoro",
+        time: "6d ago",
+        detail: "created the task",
+      },
     ],
   },
   {
     id: "pricing-2",
+    key: "BYC-206",
     projectId: "pricing",
     title: "Annual toggle",
     status: "done",
+    priority: "medium",
     assignee: "Ines Faber",
-    due: "Jul 24",
-    note: "Ships with the discount badge on the annual side.",
-    subtasks: [],
+    labels: ["ui/ux"],
+    updated: "Jul 24",
+    description: ["Monthly and annual, with the saving shown per plan."],
+    activity: [],
   },
   {
     id: "pricing-3",
+    key: "BYC-203",
     projectId: "pricing",
-    title: "Currency switch for the EU",
+    title: "Scopes instead of task priorities",
     status: "todo",
-    assignee: "Sam Okoro",
-    due: "Aug 4",
-    note: "Euro only for now. VAT copy is legal's call.",
-    subtasks: [],
+    priority: "low",
+    assignee: UNASSIGNED,
+    labels: ["ui/ux"],
+    updated: "Jul 24",
+    description: [
+      "Priorities keep drifting. Scoping the work to a release might carry the same signal with less upkeep.",
+    ],
+    activity: [],
   },
   {
     id: "onboarding-1",
+    key: "BYC-199",
     projectId: "onboarding",
     title: "Collapse steps 3 to 6",
     status: "doing",
+    priority: "high",
     assignee: "Ines Faber",
-    due: "Aug 8",
-    note: "One screen with progressive disclosure instead of four sequential ones.",
-    subtasks: [
-      { id: "onboarding-1-a", title: "Merge the workspace steps", done: true },
-      { id: "onboarding-1-b", title: "Move invites to the end", done: false },
+    labels: ["ui/ux"],
+    updated: "Jul 25",
+    description: [
+      "Nine steps become four. Three of the old ones only ever collected something we can infer.",
+    ],
+    activity: [
+      {
+        id: "onboarding-1-a1",
+        kind: "comment",
+        author: "Sam Okoro",
+        time: "3d ago",
+        body: "Study notes back up cutting step 5 entirely — nobody read it.",
+      },
     ],
   },
   {
     id: "onboarding-2",
+    key: "BYC-192",
     projectId: "onboarding",
-    title: "Skip-for-now path",
-    status: "review",
+    title: "Auth and multitenancy",
+    status: "todo",
+    priority: "urgent",
     assignee: "Theo Brandt",
-    due: "Aug 11",
-    note: "Anyone who skips lands on an empty state that can finish setup later.",
-    subtasks: [],
+    labels: ["infra"],
+    updated: "Jul 22",
+    description: [
+      "One account can belong to several workspaces, so the first-run flow has to ask which one it is setting up.",
+    ],
+    activity: [],
   },
   {
     id: "onboarding-3",
+    key: "BYC-188",
     projectId: "onboarding",
-    title: "Rewrite the empty states",
+    title: "Skip-for-now path",
     status: "todo",
-    assignee: "Sam Okoro",
-    due: "Sep 1",
-    note: "Three options are up for review in the design channel.",
-    subtasks: [],
+    priority: "none",
+    assignee: UNASSIGNED,
+    labels: [],
+    updated: "Jul 20",
+    description: [
+      "Everything skipped has to be reachable from settings later.",
+    ],
+    activity: [],
   },
   {
     id: "mobile-1",
+    key: "BYC-184",
     projectId: "mobile",
     title: "Offline draft store",
     status: "doing",
+    priority: "medium",
     assignee: "Sam Okoro",
-    due: "Aug 20",
-    note: "Drafts survive a cold start and sync on the next foreground.",
-    subtasks: [
-      { id: "mobile-1-a", title: "Local queue", done: true },
-      { id: "mobile-1-b", title: "Conflict resolution", done: false },
+    labels: ["mobile"],
+    updated: "Jul 21",
+    description: [
+      "Drafts survive a cold start. On conflict the local copy wins and the remote one is kept as a revision.",
     ],
+    activity: [],
   },
   {
     id: "mobile-2",
+    key: "BYC-176",
     projectId: "mobile",
     title: "Push notification permissions",
     status: "todo",
+    priority: "low",
     assignee: UNASSIGNED,
-    due: "Oct 9",
-    note: "Ask on first mention, never at launch.",
-    subtasks: [],
+    labels: ["mobile"],
+    updated: "Jul 18",
+    description: ["Ask on first mention, never at launch."],
+    activity: [],
   },
 ]
 
 export const MESSAGES: Record<string, ReadonlyArray<MockMessage>> = {
-  general: [
+  "atlas-incidents": [
     {
-      id: "general-1",
+      id: "atlas-incidents-1",
       author: "Nadia Alvi",
       time: "9:12 AM",
       day: "Today",
       body: "Standup moved to 10:30 for the rest of the week.",
     },
     {
-      id: "general-2",
+      id: "atlas-incidents-2",
       author: "Theo Brandt",
       time: "9:20 AM",
       day: "Today",
       body: "Works for me. I will post notes in the thread after.",
     },
     {
-      id: "general-3",
+      id: "atlas-incidents-3",
       author: "Reviewer",
       time: "9:41 AM",
       day: "Today",
       body: "Two of yesterday's pull requests still need a second pass.",
     },
   ],
-  releases: [
+  "pricing-launch": [
     {
-      id: "releases-1",
+      id: "pricing-launch-1",
       author: "Build",
       time: "6:04 PM",
       day: "Yesterday",
       body: "v2.13.4 is out. No rollbacks queued.",
     },
     {
-      id: "releases-2",
+      id: "pricing-launch-2",
       author: "Build",
       time: "7:02 AM",
       day: "Today",
       body: "v2.14.0 is on staging. Smoke suite green in 4m12s.",
     },
     {
-      id: "releases-3",
+      id: "pricing-launch-3",
       author: "Nadia Alvi",
       time: "8:15 AM",
       day: "Today",
       body: "Holding the production push until the pricing copy lands.",
     },
   ],
-  incidents: [
+  "onboarding-research": [
     {
-      id: "incidents-1",
+      id: "onboarding-research-1",
       author: "Pager",
       time: "2:44 AM",
       day: "Today",
       body: "Ingest latency over threshold for 6 minutes. Auto-resolved.",
     },
     {
-      id: "incidents-2",
+      id: "onboarding-research-2",
       author: "Theo Brandt",
       time: "8:03 AM",
       day: "Today",
@@ -478,6 +665,50 @@ export const MESSAGES: Record<string, ReadonlyArray<MockMessage>> = {
   ],
 }
 
+export const DOCS: ReadonlyArray<MockDoc> = [
+  {
+    id: "atlas-cutover",
+    projectId: "atlas",
+    title: "Cutover runbook",
+    summary:
+      "Step-by-step for the night of the switch, with the rollback path.",
+    author: "Theo Brandt",
+    updated: "2 hours ago",
+  },
+  {
+    id: "atlas-checkpoints",
+    projectId: "atlas",
+    title: "Checkpoint format",
+    summary: "How ids are derived and why a second pass is a no-op.",
+    author: "Nadia Alvi",
+    updated: "Yesterday",
+  },
+  {
+    id: "pricing-tiers",
+    projectId: "pricing",
+    title: "Tier comparison",
+    summary: "What each plan includes, and the wording we settled on.",
+    author: "Ines Faber",
+    updated: "Jul 28",
+  },
+  {
+    id: "onboarding-flow",
+    projectId: "onboarding",
+    title: "First-run flow",
+    summary: "The four steps that replace the old nine, with the skip path.",
+    author: "Ines Faber",
+    updated: "Jul 26",
+  },
+  {
+    id: "mobile-offline",
+    projectId: "mobile",
+    title: "Offline drafts",
+    summary: "Where drafts live before they sync, and what wins on conflict.",
+    author: "Sam Okoro",
+    updated: "Jul 21",
+  },
+]
+
 export const AGENTS: ReadonlyArray<MockPerson> = [
   {
     id: "reviewer",
@@ -510,13 +741,36 @@ export const MEMBERS: ReadonlyArray<MockPerson> = [
 export const DEFAULT_VIEW: CollaborationView = "project"
 export const DEFAULT_ID = PROJECTS[0]?.id ?? ""
 
-export const TEAM_CHANNELS = CHANNELS.filter((c) => c.projectId === undefined)
+export interface MockFavorite {
+  view: CollaborationView
+  id: string
+}
+
+export const FAVORITES: ReadonlyArray<MockFavorite> = [
+  { view: "channel", id: "atlas-dev" },
+  { view: "task", id: "atlas-1" },
+  { view: "tasks", id: "pricing" },
+  { view: "project", id: "onboarding" },
+]
+
+/** Openers offered on the new-chat surface, in the order they are shown. */
+export const CHAT_PROMPTS: ReadonlyArray<string> = [
+  "Review the open pull requests on this branch",
+  "Draft release notes from the last ten commits",
+  "Plan the next task in Atlas rewrite",
+]
 
 export const projectChannels = (projectId: string) =>
   CHANNELS.filter((c) => c.projectId === projectId)
 
+export const taskChildren = (taskId: string) =>
+  TASKS.filter((t) => t.parentId === taskId)
+
 export const projectTasks = (projectId: string) =>
   TASKS.filter((t) => t.projectId === projectId)
+
+export const projectDocs = (projectId: string) =>
+  DOCS.filter((d) => d.projectId === projectId)
 
 export const findProject = (id: string) => PROJECTS.find((p) => p.id === id)
 

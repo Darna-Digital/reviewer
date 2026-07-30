@@ -6,11 +6,13 @@
  * away and back.
  */
 import {
-  IconCheck,
   IconChevronDown,
   IconChevronRight,
+  IconCircleCheck,
+  IconFileText,
   IconHash,
   IconInbox,
+  IconPencilPlus,
   IconRobot,
   IconUsers,
 } from "@tabler/icons-react"
@@ -18,33 +20,28 @@ import { Link, useRouterState } from "@tanstack/react-router"
 import { useState, type CSSProperties, type ReactNode } from "react"
 import { ResizeHandle } from "@/components/layout/resize-handle"
 import { SidebarSearch } from "@/components/layout/sidebar-filters"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
 import {
   AGENTS,
   DEFAULT_ID,
   DEFAULT_VIEW,
+  FAVORITES,
   findChannel,
+  findProject,
   findTask,
   MEMBERS,
   PROJECTS,
   projectChannels,
   projectTasks,
-  TEAM_CHANNELS,
-  WORKSPACES,
   type CollaborationView,
 } from "@/interactions/collaboration/data/collaboration.mock"
 import { UNREAD_COUNT } from "@/interactions/inbox/data/inbox.mock"
+import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
 
 const ROW =
-  "flex h-8 min-w-0 flex-1 items-center gap-2 rounded-lg pr-1.5 pl-1 text-[13px] outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+  "flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md pr-1.5 pl-1 text-[13px] outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
 
 const INDENT = ["pl-1", "pl-5", "pl-9"]
 
@@ -54,59 +51,6 @@ function UnreadCount({ count }: { count: number }) {
     <span className="ml-auto shrink-0 pl-1 text-[0.6875rem] font-medium text-foreground tabular-nums">
       {count}
     </span>
-  )
-}
-
-function WorkspacePicker() {
-  const [open, setOpen] = useState(false)
-  const [id, setId] = useState(WORKSPACES[0]?.id)
-  const selected = WORKSPACES.find((w) => w.id === id) ?? WORKSPACES[0]
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <button
-            type="button"
-            className="flex h-8 w-full items-center gap-2 rounded-lg px-1.5 text-left text-[13px] font-medium outline-none hover:bg-elevate focus-visible:ring-3 focus-visible:ring-ring/30"
-          />
-        }
-      >
-        <span
-          className="size-4 shrink-0 rounded-md bg-(--mark)"
-          style={{ "--mark": selected?.color } as CSSProperties}
-        />
-        <span className="truncate">{selected?.name}</span>
-        <IconChevronDown className="ml-auto size-3.5 shrink-0 text-muted-foreground" />
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 gap-0 p-1.5">
-        {WORKSPACES.map((w) => (
-          <button
-            key={w.id}
-            type="button"
-            onClick={() => {
-              setId(w.id)
-              setOpen(false)
-            }}
-            className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left outline-none hover:bg-elevate focus-visible:bg-elevate"
-          >
-            <span
-              className="size-5 shrink-0 rounded-md bg-(--mark)"
-              style={{ "--mark": w.color } as CSSProperties}
-            />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-[13px] font-medium">
-                {w.name}
-              </span>
-              <span className="block truncate text-xs text-muted-foreground">
-                {w.detail}
-              </span>
-            </span>
-            {w.id === selected?.id && <IconCheck className="size-4 shrink-0" />}
-          </button>
-        ))}
-      </PopoverContent>
-    </Popover>
   )
 }
 
@@ -159,7 +103,7 @@ function TreeRow({
   return (
     <div
       className={cn(
-        "group/row flex items-center gap-0.5 rounded-lg pr-1",
+        "group/row flex items-center gap-0.5 rounded-md pr-1",
         INDENT[depth],
         active ? "bg-muted" : "hover:bg-elevate"
       )}
@@ -214,7 +158,7 @@ export function CollaborationSidebar() {
 
   const activeProjectId = !onCollaboration
     ? undefined
-    : view === "project"
+    : view === "project" || view === "tasks" || view === "docs"
       ? id
       : view === "task"
         ? findTask(id)?.projectId
@@ -231,12 +175,50 @@ export function CollaborationSidebar() {
     const channels = projectChannels(project.id)
     if (!searching) return [{ project, tasks, channels }]
     if (hit(project.name)) return [{ project, tasks, channels }]
-    const matchedTasks = tasks.filter((t) => hit(t.title))
     const matchedChannels = channels.filter((c) => hit(c.name))
-    if (matchedTasks.length === 0 && matchedChannels.length === 0) return []
-    return [{ project, tasks: matchedTasks, channels: matchedChannels }]
+    if (matchedChannels.length === 0) return []
+    return [{ project, tasks, channels: matchedChannels }]
   })
-  const teamChannels = TEAM_CHANNELS.filter((c) => !searching || hit(c.name))
+
+  const favorites = FAVORITES.map((favorite) => {
+    if (favorite.view === "channel") {
+      const channel = findChannel(favorite.id)
+      return channel === undefined
+        ? null
+        : {
+            ...favorite,
+            label: channel.name,
+            icon: (
+              <IconHash className="size-4 shrink-0 text-muted-foreground" />
+            ),
+          }
+    }
+    if (favorite.view === "task") {
+      const task = findTask(favorite.id)
+      return task === undefined
+        ? null
+        : {
+            ...favorite,
+            label: task.title,
+            icon: <TaskStatusIcon status={task.status} />,
+          }
+    }
+    const project = findProject(favorite.id)
+    if (project === undefined) return null
+    return {
+      ...favorite,
+      label: favorite.view === "tasks" ? `${project.name} tasks` : project.name,
+      icon:
+        favorite.view === "tasks" ? (
+          <IconCircleCheck className="size-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <span
+            className="size-3.5 shrink-0 rounded-[0.3rem] bg-(--mark)"
+            style={{ "--mark": project.color } as CSSProperties}
+          />
+        ),
+    }
+  }).filter((f) => f !== null)
 
   const isOpen = (projectId: string) =>
     searching || (overrides[projectId] ?? projectId === activeProjectId)
@@ -250,7 +232,18 @@ export function CollaborationSidebar() {
     <>
       <aside className="flex shrink-0 flex-col border-r" style={{ width }}>
         <div className="flex flex-col gap-1 p-2">
-          <WorkspacePicker />
+          <Link
+            to="/new-chat"
+            className={cn(
+              "flex h-8 items-center gap-2 rounded-lg px-1.5 text-[13px] font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/30",
+              pathname.startsWith("/new-chat")
+                ? "bg-muted text-foreground"
+                : "text-foreground hover:bg-elevate"
+            )}
+          >
+            <IconPencilPlus className="size-4 shrink-0" />
+            New chat
+          </Link>
           <SidebarSearch
             label="Search projects, tasks and channels"
             placeholder="Search"
@@ -273,6 +266,22 @@ export function CollaborationSidebar() {
         </div>
 
         <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
+          {favorites.length > 0 && (
+            <Section title="Favorites">
+              {favorites.map((favorite) => (
+                <TreeRow
+                  key={`${favorite.view}-${favorite.id}`}
+                  depth={0}
+                  icon={favorite.icon}
+                  label={favorite.label}
+                  to="/modes/collaboration"
+                  search={{ view: favorite.view, id: favorite.id }}
+                  active={isActive(favorite.view, favorite.id)}
+                />
+              ))}
+            </Section>
+          )}
+
           <Section title="Projects">
             {branches.map(({ project, tasks, channels }) => (
               <div key={project.id} className="flex flex-col gap-px">
@@ -293,17 +302,27 @@ export function CollaborationSidebar() {
                 />
                 {isOpen(project.id) && (
                   <>
-                    {tasks.map((task) => (
-                      <TreeRow
-                        key={task.id}
-                        depth={1}
-                        icon={<TaskStatusIcon status={task.status} />}
-                        label={task.title}
-                        to="/modes/collaboration"
-                        search={{ view: "task", id: task.id }}
-                        active={isActive("task", task.id)}
-                      />
-                    ))}
+                    <TreeRow
+                      depth={1}
+                      icon={
+                        <IconCircleCheck className="size-4 shrink-0 text-muted-foreground" />
+                      }
+                      label="Tasks"
+                      to="/modes/collaboration"
+                      search={{ view: "tasks", id: project.id }}
+                      active={isActive("tasks", project.id)}
+                      trailing={<UnreadCount count={tasks.length} />}
+                    />
+                    <TreeRow
+                      depth={1}
+                      icon={
+                        <IconFileText className="size-4 shrink-0 text-muted-foreground" />
+                      }
+                      label="Docs"
+                      to="/modes/collaboration"
+                      search={{ view: "docs", id: project.id }}
+                      active={isActive("docs", project.id)}
+                    />
                     {channels.map((channel) => (
                       <TreeRow
                         key={channel.id}
@@ -325,28 +344,6 @@ export function CollaborationSidebar() {
             {branches.length === 0 && (
               <p className="px-2 py-1 text-[13px] text-muted-foreground">
                 No projects match.
-              </p>
-            )}
-          </Section>
-
-          <Section title="Channels">
-            {teamChannels.map((channel) => (
-              <TreeRow
-                key={channel.id}
-                depth={0}
-                icon={
-                  <IconHash className="size-4 shrink-0 text-muted-foreground" />
-                }
-                label={channel.name}
-                to="/modes/collaboration"
-                search={{ view: "channel", id: channel.id }}
-                active={isActive("channel", channel.id)}
-                trailing={<UnreadCount count={channel.unread} />}
-              />
-            ))}
-            {teamChannels.length === 0 && (
-              <p className="px-2 py-1 text-[13px] text-muted-foreground">
-                No channels match.
               </p>
             )}
           </Section>
