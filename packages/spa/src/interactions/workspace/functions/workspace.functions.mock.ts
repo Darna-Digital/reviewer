@@ -2,7 +2,7 @@ import type { Label } from "@byconvo/core/labels"
 import type { Task } from "@byconvo/core/tasks"
 import {
   noFilters,
-  type IssueFilters,
+  type TaskFilters,
   type WorkspaceDependencies,
 } from "../interfaces/workspace.interfaces"
 
@@ -35,7 +35,7 @@ export function mockWorkspaceDependencies(
   options: {
     tasks?: ReadonlyArray<Task>
     labels?: ReadonlyArray<Label>
-    filters?: Partial<IssueFilters>
+    filters?: Partial<TaskFilters>
     expanded?: ReadonlyArray<string>
   } = {}
 ) {

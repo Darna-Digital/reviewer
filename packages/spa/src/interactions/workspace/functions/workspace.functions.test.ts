@@ -10,7 +10,7 @@ import {
 } from "./workspace.functions.mock"
 
 describe("groups", () => {
-  it("buckets issues into board order and drops empty statuses", () => {
+  it("buckets tasks into board order and drops empty statuses", () => {
     const { deps } = mockWorkspaceDependencies({
       tasks: [
         task({ id: "a", status: "todo" }),
@@ -22,7 +22,7 @@ describe("groups", () => {
     expect(groups.map((g) => g.label)).toEqual(["In Review", "Todo"])
   })
 
-  it("nests sub-issues under their parent when expanded", () => {
+  it("nests sub-tasks under their parent when expanded", () => {
     const { deps } = mockWorkspaceDependencies({
       tasks: [
         task({ id: "root" }),
@@ -39,7 +39,7 @@ describe("groups", () => {
     expect(rows[0].expanded).toBe(true)
   })
 
-  it("hides sub-issues of a collapsed parent but still counts them", () => {
+  it("hides sub-tasks of a collapsed parent but still counts them", () => {
     const { deps } = mockWorkspaceDependencies({
       tasks: [
         task({ id: "root" }),
@@ -121,7 +121,7 @@ describe("labelsOf and childrenOf", () => {
     ).toEqual(["api", "bug"])
   })
 
-  it("lists a task's direct sub-issues, ordered", () => {
+  it("lists a task's direct sub-tasks, ordered", () => {
     const { deps } = mockWorkspaceDependencies({
       tasks: [
         task({ id: "root" }),
@@ -135,6 +135,40 @@ describe("labelsOf and childrenOf", () => {
         .childrenOf("root")
         .map((t) => t.id)
     ).toEqual(["first", "second"])
+  })
+
+  it("walks a task's parents outermost first, excluding itself", () => {
+    const { deps } = mockWorkspaceDependencies({
+      tasks: [
+        task({ id: "root" }),
+        task({ id: "mid", parentId: "root" }),
+        task({ id: "leaf", parentId: "mid" }),
+      ],
+    })
+    const fns = createWorkspaceFunctions(deps)
+    expect(fns.ancestorsOf("leaf").map((t) => t.id)).toEqual(["root", "mid"])
+    expect(fns.ancestorsOf("root")).toEqual([])
+  })
+
+  it("stops walking parents rather than looping on a cycle", () => {
+    const { deps } = mockWorkspaceDependencies({
+      tasks: [
+        task({ id: "a", parentId: "b" }),
+        task({ id: "b", parentId: "a" }),
+      ],
+    })
+    expect(
+      createWorkspaceFunctions(deps)
+        .ancestorsOf("a")
+        .map((t) => t.id)
+    ).toEqual(["b"])
+  })
+
+  it("stops at a parent that is not in the project's tasks", () => {
+    const { deps } = mockWorkspaceDependencies({
+      tasks: [task({ id: "orphan", parentId: "elsewhere" })],
+    })
+    expect(createWorkspaceFunctions(deps).ancestorsOf("orphan")).toEqual([])
   })
 })
 
@@ -183,7 +217,7 @@ describe("mutations", () => {
 describe("dropIndexWithin", () => {
   const column = [task({ id: "a" }), task({ id: "b" }), task({ id: "c" })]
 
-  it("reads the index off the column without the moved issue", () => {
+  it("reads the index off the column without the moved task", () => {
     // Dragging "a" one place down lands it between b and c — index 1 of the
     // list that no longer contains it, not index 2 of the original.
     expect(dropIndexWithin(column, "a", 1)).toBe(1)

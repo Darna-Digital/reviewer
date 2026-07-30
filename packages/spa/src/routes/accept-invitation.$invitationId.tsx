@@ -53,7 +53,7 @@ function AcceptInvitationRoute() {
         <div className="w-full max-w-sm rounded-xl border bg-surface-2 p-6 text-center shadow-surface-2">
           <h1 className="text-base font-medium">You have been invited</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Join the organization to see its projects, issues and docs.
+            Join the organization to see its projects, tasks and docs.
           </p>
           <div className="mt-5 flex justify-center gap-2">
             <Button disabled={busy} onClick={() => void respond(true)}>

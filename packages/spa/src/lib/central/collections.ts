@@ -2,13 +2,13 @@
  * The workspace's client-side store, built on TanStack DB.
  *
  * The point of it here is latency. A workspace is a lot of small edits — retitle
- * an issue, drag it to another column, tick a label — and each one used to mean
+ * a task, drag it to another column, tick a label — and each one used to mean
  * a mutation, an invalidate, a refetch and a re-render before the screen agreed
  * with the pointer. A DB collection applies the change locally the moment it is
  * made, runs the write in the background, and rolls the local change back if
  * the server refuses it. Live queries then read straight out of that store, so
  * a change shows everywhere it appears at once — the list, the detail pane, the
- * sub-issue count — without any of them re-fetching.
+ * sub-task count — without any of them re-fetching.
  *
  * Collections are keyed by what scopes them (project, or comment subject) and
  * cached, because a TanStack DB collection is a live object, not a hook result:
@@ -142,7 +142,7 @@ const makeTasksCollection = (projectId: string) =>
           await centralClient.GET("/api/tasks", {
             params: { query: { projectId } },
           }),
-          "could not load issues"
+          "could not load tasks"
         ) as Array<Task>,
       onInsert: async ({ transaction }) => {
         for (const mutation of transaction.mutations) {
@@ -159,7 +159,7 @@ const makeTasksCollection = (projectId: string) =>
                 labelIds: [...task.labelIds],
               },
             }),
-            "could not create the issue"
+            "could not create the task"
           )
         }
         // The server assigns the number, key and position, so the optimistic
@@ -184,7 +184,7 @@ const makeTasksCollection = (projectId: string) =>
                   : { labelIds: [...mutation.changes.labelIds] }),
               },
             }),
-            "could not save the issue"
+            "could not save the task"
           )
         }
       },
@@ -194,7 +194,7 @@ const makeTasksCollection = (projectId: string) =>
             await centralClient.DELETE("/api/tasks/{id}", {
               params: { path: { id: mutation.key } },
             }),
-            "could not delete the issue"
+            "could not delete the task"
           )
         }
       },

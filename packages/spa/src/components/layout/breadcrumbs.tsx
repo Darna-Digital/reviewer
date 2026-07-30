@@ -18,11 +18,17 @@ export interface Crumb {
   onClick?: () => void
 }
 
-export function Breadcrumbs({ crumbs }: { crumbs: ReadonlyArray<Crumb> }) {
+export function Breadcrumbs({
+  crumbs,
+  className,
+}: {
+  crumbs: ReadonlyArray<Crumb>
+  className?: string
+}) {
   return (
     <nav
       aria-label="Breadcrumb"
-      className="flex min-w-0 items-center gap-0.5 text-xs"
+      className={cn("flex min-w-0 items-center gap-0.5 text-xs", className)}
     >
       {crumbs.map((crumb, index) => {
         const last = index === crumbs.length - 1

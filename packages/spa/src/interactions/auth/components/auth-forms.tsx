@@ -193,7 +193,7 @@ export function AuthForms() {
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
         {mode === "sign-in" &&
-          "Projects, issues and docs, shared with your team."}
+          "Projects, tasks and docs, shared with your team."}
         {mode === "sign-up" &&
           "You'll get a workspace of your own to start in."}
         {mode === "reset" && "We'll email you a link to choose a new one."}

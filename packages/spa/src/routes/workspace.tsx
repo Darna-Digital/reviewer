@@ -22,24 +22,28 @@ import { useViewerRole } from "@/interactions/auth/adapters/auth.hook.adapter"
 interface WorkspaceSearch {
   readonly project?: string
   readonly tab?: WorkspaceTab
+  /** The open task, so its page is linkable and the back button leaves it. */
+  readonly task?: string
 }
 
 export const Route = createFileRoute("/workspace")({
   validateSearch: (search: Record<string, unknown>): WorkspaceSearch => {
     const tab = search["tab"]
     const project = search["project"]
+    const task = search["task"]
     return {
       ...(typeof project === "string" && project.length > 0 ? { project } : {}),
       ...(WORKSPACE_TABS.includes(tab as WorkspaceTab)
         ? { tab: tab as WorkspaceTab }
         : {}),
+      ...(typeof task === "string" && task.length > 0 ? { task } : {}),
     }
   },
   component: WorkspaceRoute,
 })
 
 function WorkspaceRoute() {
-  const { project, tab } = Route.useSearch()
+  const { project, tab, task } = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
   const role = useViewerRole()
 
@@ -58,12 +62,25 @@ function WorkspaceRoute() {
         <AuthGate>
           <WorkspacePage
             projectId={project ?? null}
-            tab={tab ?? "issues"}
+            tab={tab ?? "tasks"}
+            taskId={task ?? null}
             role={role}
             onNavigate={(nextProject, nextTab) =>
               void navigate({
                 search: { project: nextProject, tab: nextTab },
                 replace: true,
+              })
+            }
+            // Opening a task is a push, so Back returns to the list; the list's
+            // own project and tab changes stay a replace.
+            onOpenTask={(nextTask) =>
+              void navigate({
+                search: (current) => ({
+                  ...current,
+                  ...(nextTask === null
+                    ? { task: undefined }
+                    : { task: nextTask }),
+                }),
               })
             }
             onManageMembers={() => void navigate({ to: "/members" })}

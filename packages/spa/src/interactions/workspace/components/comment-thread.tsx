@@ -1,5 +1,5 @@
 /**
- * A threaded discussion on an issue or a doc. Replies indent once and no
+ * A threaded discussion on a task or a doc. Replies indent once and no
  * further — deeper nesting reads as a maze in a pane this narrow, so a reply to
  * a reply sits alongside its sibling and is understood from who it answers.
  */
@@ -44,7 +44,7 @@ function Avatar({ name, image }: { name: string; image: string | null }) {
   return (
     <span
       aria-hidden
-      className="flex size-6 shrink-0 items-center justify-center rounded-full bg-elevate-strong text-[10px] font-medium text-muted-foreground"
+      className="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[0.625rem] font-medium text-brand-800 dark:bg-brand-950 dark:text-brand-200"
     >
       {initialsOf(name)}
     </span>
@@ -94,7 +94,7 @@ function Composer({
           }
           if (event.key === "Escape" && onCancel) onCancel()
         }}
-        className="min-h-[72px] resize-y text-sm"
+        className="min-h-[72px] resize-y"
       />
       <div className="flex items-center gap-2">
         <Button
@@ -109,9 +109,9 @@ function Composer({
             Cancel
           </Button>
         )}
-        <span className="ml-auto text-xs text-muted-foreground">
+        <p className="ml-auto text-sm text-muted-foreground sm:text-xs">
           ⌘↵ to send
-        </span>
+        </p>
       </div>
     </div>
   )
@@ -141,27 +141,29 @@ function Comment({
   const deletable = canDelete(comment)
 
   return (
-    <div className={cn(depth > 0 && "border-l border-border/60 pl-4")}>
+    <div className={cn(depth > 0 && "border-l border-foreground/10 pl-4")}>
       <div className="group flex gap-2.5 py-2">
         <Avatar name={comment.author.name} image={comment.author.image} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-[13px] font-medium">
+            <p className="min-w-0 truncate text-base font-medium sm:text-sm">
               {comment.author.name}
-            </span>
-            <span className="text-xs text-muted-foreground">
+            </p>
+            <p className="shrink-0 text-sm text-muted-foreground sm:text-xs">
               {timeAgo(comment.createdAt)}
-            </span>
+            </p>
             {comment.edited && (
-              <span className="text-xs text-muted-foreground">edited</span>
+              <p className="shrink-0 text-sm text-muted-foreground sm:text-xs">
+                edited
+              </p>
             )}
             {(editable || deletable) && (
               <DropdownMenu>
                 <DropdownMenuTrigger
                   aria-label="Comment actions"
-                  className="ml-auto rounded p-0.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-elevate hover:text-foreground focus-visible:opacity-100"
+                  className="ml-auto flex size-6 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-elevate hover:text-foreground focus-visible:opacity-100"
                 >
-                  <IconDots className="size-3.5" />
+                  <IconDots className="size-4 shrink-0" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {editable && (
@@ -197,7 +199,7 @@ function Comment({
               />
             </div>
           ) : (
-            <p className="mt-0.5 text-sm whitespace-pre-wrap text-foreground/90">
+            <p className="mt-0.5 text-base/6 text-pretty whitespace-pre-wrap text-foreground/90 sm:text-sm/6">
               {comment.body}
             </p>
           )}
@@ -206,9 +208,9 @@ function Comment({
             <button
               type="button"
               onClick={() => setReplying((open) => !open)}
-              className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+              className="mt-1 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground sm:text-xs"
             >
-              <IconCornerDownRight className="size-3" />
+              <IconCornerDownRight className="size-4 shrink-0" />
               Reply
             </button>
           )}
@@ -264,7 +266,7 @@ export function CommentThread({
   return (
     <div className="flex flex-col gap-3">
       {isLoading ? (
-        <div className="h-12 animate-pulse rounded-md bg-elevate" />
+        <div className="h-12 animate-pulse rounded-2xl bg-elevate" />
       ) : (
         tree.map((node) => (
           <Comment

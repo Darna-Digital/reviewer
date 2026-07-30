@@ -1,5 +1,5 @@
 /**
- * `workspace` feature — the issue list's shaping rules.
+ * `workspace` feature — the task list's shaping rules.
  *
  * What the list shows is not a straight render of what the server returned: it
  * is filtered by a search box and a label picker, grouped by status, nested by
@@ -11,7 +11,7 @@
 import type { Label } from "@byconvo/core/labels"
 import type { Task, TaskStatus } from "@byconvo/core/tasks"
 
-export interface IssueFilters {
+export interface TaskFilters {
   readonly search: string
   /** Every selected label must be present (an AND filter). */
   readonly labelIds: ReadonlyArray<string>
@@ -19,35 +19,35 @@ export interface IssueFilters {
   readonly hiddenStatuses: ReadonlyArray<TaskStatus>
 }
 
-export const noFilters: IssueFilters = {
+export const noFilters: TaskFilters = {
   search: "",
   labelIds: [],
   hiddenStatuses: [],
 }
 
-/** One rendered line of the issue list, flattened out of the parent tree. */
-export interface IssueRow {
+/** One rendered line of the task list, flattened out of the parent tree. */
+export interface TaskRowModel {
   readonly task: Task
-  /** 0 at the top level; each sub-issue generation adds one. */
+  /** 0 at the top level; each sub-task generation adds one. */
   readonly depth: number
   readonly hasChildren: boolean
   readonly expanded: boolean
 }
 
-export interface IssueGroup {
+export interface TaskGroup {
   readonly status: TaskStatus
   readonly label: string
-  /** Every issue in the group, including collapsed sub-issues. */
+  /** Every task in the group, including collapsed sub-tasks. */
   readonly count: number
-  readonly rows: ReadonlyArray<IssueRow>
+  readonly rows: ReadonlyArray<TaskRowModel>
 }
 
 export interface WorkspaceDependencies {
   data: {
     readonly tasks: ReadonlyArray<Task>
     readonly labels: ReadonlyArray<Label>
-    readonly filters: IssueFilters
-    /** Ids of issues whose sub-issues are showing. */
+    readonly filters: TaskFilters
+    /** Ids of tasks whose sub-tasks are showing. */
     readonly expanded: ReadonlySet<string>
   }
   sideEffects: {
@@ -68,14 +68,19 @@ export interface WorkspaceDependencies {
 
 export interface WorkspaceFunctions {
   /** The list, as the screen renders it: filtered, grouped, nested, flat. */
-  readonly groups: () => ReadonlyArray<IssueGroup>
+  readonly groups: () => ReadonlyArray<TaskGroup>
   /** The labels behind a task's ids, in display order. */
   readonly labelsOf: (task: Task) => ReadonlyArray<Label>
-  /** Direct sub-issues of a task, ordered — for the detail pane's list. */
+  /** Direct sub-tasks of a task, ordered — for the detail page's list. */
   readonly childrenOf: (id: string) => ReadonlyArray<Task>
   /**
-   * Create an issue; resolves to false when the title is blank, so the
-   * composer can keep focus instead of clearing itself.
+   * The parents above a task, outermost first and excluding the task itself —
+   * the trail the detail page's breadcrumbs read from.
+   */
+  readonly ancestorsOf: (id: string) => ReadonlyArray<Task>
+  /**
+   * Create a task; resolves to false when the title is blank, so the composer
+   * can keep focus instead of clearing itself.
    */
   readonly create: (
     title: string,

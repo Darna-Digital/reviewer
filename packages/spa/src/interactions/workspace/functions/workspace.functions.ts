@@ -10,8 +10,8 @@ import {
   type TaskNode,
 } from "@byconvo/core/tasks"
 import type {
-  IssueGroup,
-  IssueRow,
+  TaskGroup,
+  TaskRowModel,
   WorkspaceDependencies,
   WorkspaceFunctions,
 } from "../interfaces/workspace.interfaces"
@@ -21,7 +21,7 @@ const flatten = (
   nodes: ReadonlyArray<TaskNode>,
   expanded: ReadonlySet<string>,
   depth: number,
-  rows: Array<IssueRow>
+  rows: Array<TaskRowModel>
 ): void => {
   for (const node of nodes) {
     const hasChildren = node.children.length > 0
@@ -33,7 +33,7 @@ const flatten = (
 
 /**
  * Everything in the tree, collapsed or not — a group header reading "Todo 14"
- * must not drop to 12 because someone folded a sub-issue away.
+ * must not drop to 12 because someone folded a sub-task away.
  */
 const countTree = (nodes: ReadonlyArray<TaskNode>): number =>
   nodes.reduce((total, node) => total + 1 + countTree(node.children), 0)
@@ -49,16 +49,16 @@ export function createWorkspaceFunctions(
     )
     const hidden = new Set(filters.hiddenStatuses)
 
-    const result: Array<IssueGroup> = []
+    const result: Array<TaskGroup> = []
     for (const status of STATUS_ORDER) {
       if (hidden.has(status)) continue
       const inStatus = matching.filter((task) => task.status === status)
       if (inStatus.length === 0) continue
 
-      // Nest within the status, not across it: an issue whose parent sits in
+      // Nest within the status, not across it: a task whose parent sits in
       // another column belongs at the top level of its own.
       const tree = buildTaskTree(inStatus)
-      const rows: Array<IssueRow> = []
+      const rows: Array<TaskRowModel> = []
       flatten(tree, expanded, 0, rows)
       result.push({
         status,
@@ -75,6 +75,23 @@ export function createWorkspaceFunctions(
 
   const childrenOf: WorkspaceFunctions["childrenOf"] = (id) =>
     sortTasks(d.data.tasks.filter((task) => task.parentId === id))
+
+  const ancestorsOf: WorkspaceFunctions["ancestorsOf"] = (id) => {
+    const byId = new Map(d.data.tasks.map((task) => [task.id, task]))
+    const trail: Array<Task> = []
+    // A cycle would only come from corrupt data, but walking one would hang the
+    // render, so a task already on the trail ends the walk.
+    const walked = new Set<string>([id])
+    let parentId = byId.get(id)?.parentId ?? null
+    while (parentId !== null && !walked.has(parentId)) {
+      const parent = byId.get(parentId)
+      if (parent === undefined) break
+      walked.add(parent.id)
+      trail.push(parent)
+      parentId = parent.parentId
+    }
+    return trail.reverse()
+  }
 
   const create: WorkspaceFunctions["create"] = async (
     title,
@@ -120,6 +137,7 @@ export function createWorkspaceFunctions(
     groups,
     labelsOf,
     childrenOf,
+    ancestorsOf,
     create,
     setStatus,
     setPriority,
@@ -132,8 +150,8 @@ export function createWorkspaceFunctions(
 /**
  * Where a drop lands. The list is flat, so a drag reports the row it was
  * released on; the column's own ordering is what the server needs, and the
- * moved issue has to be taken out of that ordering before its new index is
- * read off — otherwise dragging an issue one place down puts it back where it
+ * moved task has to be taken out of that ordering before its new index is
+ * read off — otherwise dragging a task one place down puts it back where it
  * started.
  */
 export const dropIndexWithin = (

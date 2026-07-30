@@ -20,7 +20,7 @@ import {
 import { createWorkspaceFunctions } from "../functions/workspace.functions"
 import {
   noFilters,
-  type IssueFilters,
+  type TaskFilters,
   type WorkspaceFunctions,
 } from "../interfaces/workspace.interfaces"
 
@@ -50,24 +50,24 @@ export function useProject(projectId: string | null) {
   return data ?? null
 }
 
-export interface WorkspaceIssuesOptions {
+export interface WorkspaceTasksOptions {
   readonly projectId: string
 }
 
 /**
- * Everything the issue list needs: the shaped groups, the filter state that
+ * Everything the task list needs: the shaped groups, the filter state that
  * shapes them, the expand/collapse state, and the mutations. One hook because
  * they are one screen — splitting them would mean threading the same filters
  * and the same collection through four call sites.
  */
-export function useWorkspaceIssues({ projectId }: WorkspaceIssuesOptions) {
+export function useWorkspaceTasks({ projectId }: WorkspaceTasksOptions) {
   const tasks = tasksCollection(projectId)
   const labels = labelsCollection(projectId)
 
-  const issues = useLiveQuery((q) => q.from({ task: tasks }), [projectId])
+  const taskRows = useLiveQuery((q) => q.from({ task: tasks }), [projectId])
   const labelRows = useLiveQuery((q) => q.from({ label: labels }), [projectId])
 
-  const [filters, setFilters] = useState<IssueFilters>(noFilters)
+  const [filters, setFilters] = useState<TaskFilters>(noFilters)
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(() => new Set())
 
   const toggleExpanded = useCallback((id: string) => {
@@ -83,7 +83,7 @@ export function useWorkspaceIssues({ projectId }: WorkspaceIssuesOptions) {
     () =>
       createWorkspaceFunctions({
         data: {
-          tasks: issues.data ?? [],
+          tasks: taskRows.data ?? [],
           labels: labelRows.data ?? [],
           filters,
           expanded,
@@ -122,7 +122,7 @@ export function useWorkspaceIssues({ projectId }: WorkspaceIssuesOptions) {
                 params: { path: { id } },
                 body: { status, index },
               }),
-              "could not move the issue"
+              "could not move the task"
             )
             await tasks.utils.refetch()
           },
@@ -131,7 +131,7 @@ export function useWorkspaceIssues({ projectId }: WorkspaceIssuesOptions) {
           },
         },
       }),
-    [issues.data, labelRows.data, filters, expanded, tasks, projectId]
+    [taskRows.data, labelRows.data, filters, expanded, tasks, projectId]
   )
 
   const guard = useCallback(
@@ -149,15 +149,16 @@ export function useWorkspaceIssues({ projectId }: WorkspaceIssuesOptions) {
 
   return {
     groups: fns.groups(),
-    tasks: issues.data ?? [],
+    tasks: taskRows.data ?? [],
     labels: labelRows.data ?? [],
-    isLoading: issues.isLoading,
+    isLoading: taskRows.isLoading,
     filters,
     setFilters,
     expanded,
     toggleExpanded,
     labelsOf: fns.labelsOf,
     childrenOf: fns.childrenOf,
+    ancestorsOf: fns.ancestorsOf,
     create: fns.create,
     setStatus: guard(fns.setStatus, "could not change the status"),
     setPriority: guard(fns.setPriority, "could not change the priority"),
@@ -168,13 +169,13 @@ export function useWorkspaceIssues({ projectId }: WorkspaceIssuesOptions) {
       })
     }, "could not save the description"),
     toggleLabel: guard(fns.toggleLabel, "could not change the labels"),
-    rename: guard(fns.rename, "could not rename the issue"),
-    remove: guard(fns.remove, "could not delete the issue"),
+    rename: guard(fns.rename, "could not rename the task"),
+    remove: guard(fns.remove, "could not delete the task"),
   }
 }
 
-/** One issue, live — the detail pane re-renders with the list, not after it. */
-export function useIssue(projectId: string, taskId: string | null) {
+/** One task, live — the detail pane re-renders with the list, not after it. */
+export function useTask(projectId: string, taskId: string | null) {
   const tasks = tasksCollection(projectId)
   const { data } = useLiveQuery(
     (q) =>
