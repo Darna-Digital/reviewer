@@ -1,5 +1,5 @@
 import {
-  IconArrowUp,
+  IconSend,
   IconAt,
   IconMoodSmile,
   IconPaperclip,
@@ -25,7 +25,7 @@ export function MessageComposer({ placeholder }: { placeholder: string }) {
             className="ml-auto rounded-full"
             aria-label="Send message"
           >
-            <IconArrowUp className="size-4" />
+            <IconSend className="size-4" />
           </Button>
         </div>
       </div>

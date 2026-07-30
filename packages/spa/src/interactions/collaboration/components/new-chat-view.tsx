@@ -3,7 +3,7 @@
  * about. Nothing is sent yet — the composer is the prototype's front door.
  */
 import {
-  IconArrowUp,
+  IconSend,
   IconCheck,
   IconChevronDown,
   IconCube,
@@ -11,6 +11,7 @@ import {
   IconRobot,
   IconSparkles,
 } from "@tabler/icons-react"
+import { Link } from "@tanstack/react-router"
 import { useState, type CSSProperties } from "react"
 import { Button } from "@/components/ui/button"
 import {
@@ -75,6 +76,13 @@ export function NewChatView() {
     <>
       <PaneHeader
         crumbs={[
+          <Link
+            key="inbox"
+            to="/inbox"
+            className="text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
+          >
+            Inbox
+          </Link>,
           <span key="chat" className="font-medium">
             New chat
           </span>,
@@ -182,7 +190,7 @@ export function NewChatView() {
                 disabled={prompt.trim().length === 0}
                 aria-label="Start chat"
               >
-                <IconArrowUp className="size-4" />
+                <IconSend className="size-4" />
               </Button>
             </div>
           </div>

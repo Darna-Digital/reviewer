@@ -11,31 +11,23 @@ import {
   IconCircleCheck,
   IconFileText,
   IconHash,
-  IconInbox,
-  IconPencilPlus,
-  IconRobot,
-  IconUsers,
 } from "@tabler/icons-react"
 import { Link, useRouterState } from "@tanstack/react-router"
 import { useState, type CSSProperties, type ReactNode } from "react"
 import { ResizeHandle } from "@/components/layout/resize-handle"
-import { SidebarSearch } from "@/components/layout/sidebar-filters"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  AGENTS,
   DEFAULT_ID,
   DEFAULT_VIEW,
   FAVORITES,
   findChannel,
   findProject,
   findTask,
-  MEMBERS,
   PROJECTS,
   projectChannels,
   projectTasks,
   type CollaborationView,
 } from "@/interactions/collaboration/data/collaboration.mock"
-import { UNREAD_COUNT } from "@/interactions/inbox/data/inbox.mock"
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
@@ -147,7 +139,6 @@ function TreeRow({
 export function CollaborationSidebar() {
   const prefs = useUiPrefs()
   const [width, setWidth] = useState(prefs.workspaceSidebarWidth)
-  const [query, setQuery] = useState("")
   const [overrides, setOverrides] = useState<Record<string, boolean>>({})
   const { pathname, search } = useRouterState({ select: (s) => s.location })
 
@@ -166,19 +157,11 @@ export function CollaborationSidebar() {
           ? findChannel(id)?.projectId
           : undefined
 
-  const q = query.trim().toLowerCase()
-  const searching = q.length > 0
-  const hit = (text: string) => text.toLowerCase().includes(q)
-
-  const branches = PROJECTS.flatMap((project) => {
-    const tasks = projectTasks(project.id).filter((t) => t.status !== "done")
-    const channels = projectChannels(project.id)
-    if (!searching) return [{ project, tasks, channels }]
-    if (hit(project.name)) return [{ project, tasks, channels }]
-    const matchedChannels = channels.filter((c) => hit(c.name))
-    if (matchedChannels.length === 0) return []
-    return [{ project, tasks, channels: matchedChannels }]
-  })
+  const branches = PROJECTS.map((project) => ({
+    project,
+    tasks: projectTasks(project.id).filter((t) => t.status !== "done"),
+    channels: projectChannels(project.id),
+  }))
 
   const favorites = FAVORITES.map((favorite) => {
     if (favorite.view === "channel") {
@@ -221,7 +204,7 @@ export function CollaborationSidebar() {
   }).filter((f) => f !== null)
 
   const isOpen = (projectId: string) =>
-    searching || (overrides[projectId] ?? projectId === activeProjectId)
+    overrides[projectId] ?? projectId === activeProjectId
   const toggle = (projectId: string) =>
     setOverrides((o) => ({ ...o, [projectId]: !isOpen(projectId) }))
 
@@ -231,40 +214,6 @@ export function CollaborationSidebar() {
   return (
     <>
       <aside className="flex shrink-0 flex-col border-r" style={{ width }}>
-        <div className="flex flex-col gap-1 p-2">
-          <Link
-            to="/new-chat"
-            className={cn(
-              "flex h-8 items-center gap-2 rounded-lg px-1.5 text-[13px] font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/30",
-              pathname.startsWith("/new-chat")
-                ? "bg-muted text-foreground"
-                : "text-foreground hover:bg-elevate"
-            )}
-          >
-            <IconPencilPlus className="size-4 shrink-0" />
-            New chat
-          </Link>
-          <SidebarSearch
-            label="Search projects, tasks and channels"
-            placeholder="Search"
-            value={query}
-            onChange={setQuery}
-          />
-          <Link
-            to="/inbox"
-            className={cn(
-              "flex h-8 items-center gap-2 rounded-lg px-1.5 text-[13px] outline-none focus-visible:ring-3 focus-visible:ring-ring/30",
-              pathname.startsWith("/inbox")
-                ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:bg-elevate hover:text-foreground"
-            )}
-          >
-            <IconInbox className="size-4 shrink-0" />
-            <span className="truncate">Inbox</span>
-            <UnreadCount count={UNREAD_COUNT} />
-          </Link>
-        </div>
-
         <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
           {favorites.length > 0 && (
             <Section title="Favorites">
@@ -348,35 +297,6 @@ export function CollaborationSidebar() {
             )}
           </Section>
         </ScrollArea>
-
-        <div className="flex flex-col gap-px border-t p-2">
-          <TreeRow
-            depth={0}
-            icon={<IconRobot className="size-4 shrink-0" />}
-            label="Agents"
-            to="/modes/collaboration"
-            search={{ view: "agents" }}
-            active={isActive("agents")}
-            trailing={
-              <span className="ml-auto shrink-0 pl-1 text-[0.6875rem] text-muted-foreground tabular-nums">
-                {AGENTS.filter((a) => a.online).length}/{AGENTS.length}
-              </span>
-            }
-          />
-          <TreeRow
-            depth={0}
-            icon={<IconUsers className="size-4 shrink-0" />}
-            label="Members"
-            to="/modes/collaboration"
-            search={{ view: "members" }}
-            active={isActive("members")}
-            trailing={
-              <span className="ml-auto shrink-0 pl-1 text-[0.6875rem] text-muted-foreground tabular-nums">
-                {MEMBERS.length}
-              </span>
-            }
-          />
-        </div>
       </aside>
 
       <ResizeHandle

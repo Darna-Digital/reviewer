@@ -4,7 +4,7 @@
  * in the list plus its arrows in the header.
  */
 import {
-  IconArrowUp,
+  IconSend,
   IconChevronDown,
   IconChevronUp,
   IconDots,
@@ -267,7 +267,7 @@ export function TaskView({ task }: { task: MockTask }) {
                   className="shrink-0 rounded-full"
                   aria-label="Send reply"
                 >
-                  <IconArrowUp className="size-4" />
+                  <IconSend className="size-4" />
                 </Button>
               </div>
             </div>

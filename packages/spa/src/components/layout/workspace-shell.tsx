@@ -12,6 +12,7 @@ import { GitBottomDock } from "@/components/layout/git-bottom-dock"
 import { ModeRail } from "@/components/layout/mode-rail"
 import { ModeSelector } from "@/components/layout/mode-selector"
 import { RepoPicker } from "@/components/repo-picker"
+import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search"
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker"
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import { isDesktop } from "@/lib/desktop"
@@ -44,7 +45,7 @@ export function WorkspaceShell() {
 
   return (
     <div className="flex h-svh w-full overflow-hidden text-foreground">
-      {!collaborating && <ModeRail />}
+      <ModeRail />
       <div className="flex min-w-0 flex-1 flex-col">
         {/* In desktop this doubles as the draggable title bar (clusters opt out). */}
         <header
@@ -57,9 +58,14 @@ export function WorkspaceShell() {
             <ModeSelector />
           </div>
           {collaborating && (
-            <div className="[-webkit-app-region:no-drag]">
-              <WorkspacePicker />
-            </div>
+            <>
+              <div className="[-webkit-app-region:no-drag]">
+                <WorkspacePicker />
+              </div>
+              <div className="[-webkit-app-region:no-drag]">
+                <CollaborationSearch />
+              </div>
+            </>
           )}
           {!collaborating && (
             <div className="[-webkit-app-region:no-drag]">

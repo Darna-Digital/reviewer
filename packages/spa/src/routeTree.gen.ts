@@ -19,7 +19,6 @@ import { Route as WorkspaceCommentsRouteImport } from './routes/_workspace/comme
 import { Route as WorkspaceDocsRouteImport } from './routes/_workspace/docs'
 import { Route as WorkspaceInboxRouteImport } from './routes/_workspace/inbox'
 import { Route as WorkspaceLocalDevRouteImport } from './routes/_workspace/local-dev'
-import { Route as WorkspaceNewChatRouteImport } from './routes/_workspace/new-chat'
 import { Route as WorkspaceSettingsRouteImport } from './routes/_workspace/settings'
 import { Route as WorkspaceTasksRouteImport } from './routes/_workspace/tasks'
 import { Route as WorkspaceThreadsRouteImport } from './routes/_workspace/threads'
@@ -78,11 +77,6 @@ const WorkspaceInboxRoute = WorkspaceInboxRouteImport.update({
 const WorkspaceLocalDevRoute = WorkspaceLocalDevRouteImport.update({
   id: '/local-dev',
   path: '/local-dev',
-  getParentRoute: () => WorkspaceRoute,
-} as any)
-const WorkspaceNewChatRoute = WorkspaceNewChatRouteImport.update({
-  id: '/new-chat',
-  path: '/new-chat',
   getParentRoute: () => WorkspaceRoute,
 } as any)
 const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
@@ -151,7 +145,6 @@ export interface FileRoutesByFullPath {
   '/docs': typeof WorkspaceDocsRoute
   '/inbox': typeof WorkspaceInboxRoute
   '/local-dev': typeof WorkspaceLocalDevRoute
-  '/new-chat': typeof WorkspaceNewChatRoute
   '/settings': typeof WorkspaceSettingsRoute
   '/tasks': typeof WorkspaceTasksRoute
   '/threads': typeof WorkspaceThreadsRoute
@@ -172,7 +165,6 @@ export interface FileRoutesByTo {
   '/docs': typeof WorkspaceDocsRoute
   '/inbox': typeof WorkspaceInboxRoute
   '/local-dev': typeof WorkspaceLocalDevRoute
-  '/new-chat': typeof WorkspaceNewChatRoute
   '/settings': typeof WorkspaceSettingsRoute
   '/tasks': typeof WorkspaceTasksRoute
   '/threads': typeof WorkspaceThreadsRoute
@@ -196,7 +188,6 @@ export interface FileRoutesById {
   '/_workspace/docs': typeof WorkspaceDocsRoute
   '/_workspace/inbox': typeof WorkspaceInboxRoute
   '/_workspace/local-dev': typeof WorkspaceLocalDevRoute
-  '/_workspace/new-chat': typeof WorkspaceNewChatRoute
   '/_workspace/settings': typeof WorkspaceSettingsRoute
   '/_workspace/tasks': typeof WorkspaceTasksRoute
   '/_workspace/threads': typeof WorkspaceThreadsRoute
@@ -221,7 +212,6 @@ export interface FileRouteTypes {
     | '/docs'
     | '/inbox'
     | '/local-dev'
-    | '/new-chat'
     | '/settings'
     | '/tasks'
     | '/threads'
@@ -242,7 +232,6 @@ export interface FileRouteTypes {
     | '/docs'
     | '/inbox'
     | '/local-dev'
-    | '/new-chat'
     | '/settings'
     | '/tasks'
     | '/threads'
@@ -265,7 +254,6 @@ export interface FileRouteTypes {
     | '/_workspace/docs'
     | '/_workspace/inbox'
     | '/_workspace/local-dev'
-    | '/_workspace/new-chat'
     | '/_workspace/settings'
     | '/_workspace/tasks'
     | '/_workspace/threads'
@@ -356,13 +344,6 @@ declare module '@tanstack/react-router' {
       path: '/local-dev'
       fullPath: '/local-dev'
       preLoaderRoute: typeof WorkspaceLocalDevRouteImport
-      parentRoute: typeof WorkspaceRoute
-    }
-    '/_workspace/new-chat': {
-      id: '/_workspace/new-chat'
-      path: '/new-chat'
-      fullPath: '/new-chat'
-      preLoaderRoute: typeof WorkspaceNewChatRouteImport
       parentRoute: typeof WorkspaceRoute
     }
     '/_workspace/settings': {
@@ -487,7 +468,6 @@ interface WorkspaceRouteChildren {
   WorkspaceDocsRoute: typeof WorkspaceDocsRoute
   WorkspaceInboxRoute: typeof WorkspaceInboxRoute
   WorkspaceLocalDevRoute: typeof WorkspaceLocalDevRoute
-  WorkspaceNewChatRoute: typeof WorkspaceNewChatRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
   WorkspaceTasksRoute: typeof WorkspaceTasksRoute
   WorkspaceThreadsRoute: typeof WorkspaceThreadsRoute
@@ -500,7 +480,6 @@ const WorkspaceRouteChildren: WorkspaceRouteChildren = {
   WorkspaceDocsRoute: WorkspaceDocsRoute,
   WorkspaceInboxRoute: WorkspaceInboxRoute,
   WorkspaceLocalDevRoute: WorkspaceLocalDevRoute,
-  WorkspaceNewChatRoute: WorkspaceNewChatRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
   WorkspaceTasksRoute: WorkspaceTasksRoute,
   WorkspaceThreadsRoute: WorkspaceThreadsRoute,
