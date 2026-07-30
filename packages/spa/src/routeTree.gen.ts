@@ -17,6 +17,7 @@ import { Route as AppCommitRouteImport } from './routes/_app/commit'
 import { Route as WorkspaceChatsRouteImport } from './routes/_workspace/chats'
 import { Route as WorkspaceCommentsRouteImport } from './routes/_workspace/comments'
 import { Route as WorkspaceDocsRouteImport } from './routes/_workspace/docs'
+import { Route as WorkspaceInboxRouteImport } from './routes/_workspace/inbox'
 import { Route as WorkspaceLocalDevRouteImport } from './routes/_workspace/local-dev'
 import { Route as WorkspaceSettingsRouteImport } from './routes/_workspace/settings'
 import { Route as WorkspaceTasksRouteImport } from './routes/_workspace/tasks'
@@ -27,6 +28,7 @@ import { Route as AppReviewIndexRouteImport } from './routes/_app/review/index'
 import { Route as AppReviewPullRouteImport } from './routes/_app/review/$pull'
 import { Route as WorkspaceChatsIndexRouteImport } from './routes/_workspace/chats.index'
 import { Route as WorkspaceChatsChatIdRouteImport } from './routes/_workspace/chats.$chatId'
+import { Route as WorkspaceModesCollaborationRouteImport } from './routes/_workspace/modes.collaboration'
 import { Route as AppBrowseCommitShaRouteImport } from './routes/_app/browse/commit.$sha'
 
 const AppRoute = AppRouteImport.update({
@@ -65,6 +67,11 @@ const WorkspaceCommentsRoute = WorkspaceCommentsRouteImport.update({
 const WorkspaceDocsRoute = WorkspaceDocsRouteImport.update({
   id: '/docs',
   path: '/docs',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const WorkspaceInboxRoute = WorkspaceInboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
   getParentRoute: () => WorkspaceRoute,
 } as any)
 const WorkspaceLocalDevRoute = WorkspaceLocalDevRouteImport.update({
@@ -117,6 +124,12 @@ const WorkspaceChatsChatIdRoute = WorkspaceChatsChatIdRouteImport.update({
   path: '/$chatId',
   getParentRoute: () => WorkspaceChatsRoute,
 } as any)
+const WorkspaceModesCollaborationRoute =
+  WorkspaceModesCollaborationRouteImport.update({
+    id: '/modes/collaboration',
+    path: '/modes/collaboration',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
 const AppBrowseCommitShaRoute = AppBrowseCommitShaRouteImport.update({
   id: '/browse/commit/$sha',
   path: '/browse/commit/$sha',
@@ -130,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/chats': typeof WorkspaceChatsRouteWithChildren
   '/comments': typeof WorkspaceCommentsRoute
   '/docs': typeof WorkspaceDocsRoute
+  '/inbox': typeof WorkspaceInboxRoute
   '/local-dev': typeof WorkspaceLocalDevRoute
   '/settings': typeof WorkspaceSettingsRoute
   '/tasks': typeof WorkspaceTasksRoute
@@ -137,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/browse/range': typeof AppBrowseRangeRoute
   '/review/$pull': typeof AppReviewPullRoute
   '/chats/$chatId': typeof WorkspaceChatsChatIdRoute
+  '/modes/collaboration': typeof WorkspaceModesCollaborationRoute
   '/browse/': typeof AppBrowseIndexRoute
   '/review/': typeof AppReviewIndexRoute
   '/chats/': typeof WorkspaceChatsIndexRoute
@@ -148,6 +163,7 @@ export interface FileRoutesByTo {
   '/commit': typeof AppCommitRoute
   '/comments': typeof WorkspaceCommentsRoute
   '/docs': typeof WorkspaceDocsRoute
+  '/inbox': typeof WorkspaceInboxRoute
   '/local-dev': typeof WorkspaceLocalDevRoute
   '/settings': typeof WorkspaceSettingsRoute
   '/tasks': typeof WorkspaceTasksRoute
@@ -155,6 +171,7 @@ export interface FileRoutesByTo {
   '/browse/range': typeof AppBrowseRangeRoute
   '/review/$pull': typeof AppReviewPullRoute
   '/chats/$chatId': typeof WorkspaceChatsChatIdRoute
+  '/modes/collaboration': typeof WorkspaceModesCollaborationRoute
   '/browse': typeof AppBrowseIndexRoute
   '/review': typeof AppReviewIndexRoute
   '/chats': typeof WorkspaceChatsIndexRoute
@@ -169,6 +186,7 @@ export interface FileRoutesById {
   '/_workspace/chats': typeof WorkspaceChatsRouteWithChildren
   '/_workspace/comments': typeof WorkspaceCommentsRoute
   '/_workspace/docs': typeof WorkspaceDocsRoute
+  '/_workspace/inbox': typeof WorkspaceInboxRoute
   '/_workspace/local-dev': typeof WorkspaceLocalDevRoute
   '/_workspace/settings': typeof WorkspaceSettingsRoute
   '/_workspace/tasks': typeof WorkspaceTasksRoute
@@ -177,6 +195,7 @@ export interface FileRoutesById {
   '/_app/browse/range': typeof AppBrowseRangeRoute
   '/_app/review/$pull': typeof AppReviewPullRoute
   '/_workspace/chats/$chatId': typeof WorkspaceChatsChatIdRoute
+  '/_workspace/modes/collaboration': typeof WorkspaceModesCollaborationRoute
   '/_app/browse/': typeof AppBrowseIndexRoute
   '/_app/review/': typeof AppReviewIndexRoute
   '/_workspace/chats/': typeof WorkspaceChatsIndexRoute
@@ -191,6 +210,7 @@ export interface FileRouteTypes {
     | '/chats'
     | '/comments'
     | '/docs'
+    | '/inbox'
     | '/local-dev'
     | '/settings'
     | '/tasks'
@@ -198,6 +218,7 @@ export interface FileRouteTypes {
     | '/browse/range'
     | '/review/$pull'
     | '/chats/$chatId'
+    | '/modes/collaboration'
     | '/browse/'
     | '/review/'
     | '/chats/'
@@ -209,6 +230,7 @@ export interface FileRouteTypes {
     | '/commit'
     | '/comments'
     | '/docs'
+    | '/inbox'
     | '/local-dev'
     | '/settings'
     | '/tasks'
@@ -216,6 +238,7 @@ export interface FileRouteTypes {
     | '/browse/range'
     | '/review/$pull'
     | '/chats/$chatId'
+    | '/modes/collaboration'
     | '/browse'
     | '/review'
     | '/chats'
@@ -229,6 +252,7 @@ export interface FileRouteTypes {
     | '/_workspace/chats'
     | '/_workspace/comments'
     | '/_workspace/docs'
+    | '/_workspace/inbox'
     | '/_workspace/local-dev'
     | '/_workspace/settings'
     | '/_workspace/tasks'
@@ -237,6 +261,7 @@ export interface FileRouteTypes {
     | '/_app/browse/range'
     | '/_app/review/$pull'
     | '/_workspace/chats/$chatId'
+    | '/_workspace/modes/collaboration'
     | '/_app/browse/'
     | '/_app/review/'
     | '/_workspace/chats/'
@@ -305,6 +330,13 @@ declare module '@tanstack/react-router' {
       path: '/docs'
       fullPath: '/docs'
       preLoaderRoute: typeof WorkspaceDocsRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/inbox': {
+      id: '/_workspace/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof WorkspaceInboxRouteImport
       parentRoute: typeof WorkspaceRoute
     }
     '/_workspace/local-dev': {
@@ -377,6 +409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceChatsChatIdRouteImport
       parentRoute: typeof WorkspaceChatsRoute
     }
+    '/_workspace/modes/collaboration': {
+      id: '/_workspace/modes/collaboration'
+      path: '/modes/collaboration'
+      fullPath: '/modes/collaboration'
+      preLoaderRoute: typeof WorkspaceModesCollaborationRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
     '/_app/browse/commit/$sha': {
       id: '/_app/browse/commit/$sha'
       path: '/browse/commit/$sha'
@@ -427,20 +466,24 @@ interface WorkspaceRouteChildren {
   WorkspaceChatsRoute: typeof WorkspaceChatsRouteWithChildren
   WorkspaceCommentsRoute: typeof WorkspaceCommentsRoute
   WorkspaceDocsRoute: typeof WorkspaceDocsRoute
+  WorkspaceInboxRoute: typeof WorkspaceInboxRoute
   WorkspaceLocalDevRoute: typeof WorkspaceLocalDevRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
   WorkspaceTasksRoute: typeof WorkspaceTasksRoute
   WorkspaceThreadsRoute: typeof WorkspaceThreadsRoute
+  WorkspaceModesCollaborationRoute: typeof WorkspaceModesCollaborationRoute
 }
 
 const WorkspaceRouteChildren: WorkspaceRouteChildren = {
   WorkspaceChatsRoute: WorkspaceChatsRouteWithChildren,
   WorkspaceCommentsRoute: WorkspaceCommentsRoute,
   WorkspaceDocsRoute: WorkspaceDocsRoute,
+  WorkspaceInboxRoute: WorkspaceInboxRoute,
   WorkspaceLocalDevRoute: WorkspaceLocalDevRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
   WorkspaceTasksRoute: WorkspaceTasksRoute,
   WorkspaceThreadsRoute: WorkspaceThreadsRoute,
+  WorkspaceModesCollaborationRoute: WorkspaceModesCollaborationRoute,
 }
 
 const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(

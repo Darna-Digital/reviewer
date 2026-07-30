@@ -323,9 +323,8 @@ export function CommentsPage() {
   const repo = useRepo()
   const navigate = useNavigate()
 
-  const [sidebarWidth, setSidebarWidth] = useState(
-    useUiPrefs().workspaceSidebarWidth
-  )
+  const prefs = useUiPrefs()
+  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth)
   const [kind, setKind] = useState<KindFilter>(noFilters.kind)
   const [date, setDate] = useState<DateFilter>(noFilters.date)
   const [search, setSearch] = useState(noFilters.search)

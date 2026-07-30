@@ -12,6 +12,8 @@ export type DiffStyle = "split" | "unified"
 export type CommitAgent = "claude" | "opencode" | "codex" | "cursor"
 /** Active tab in the shared bottom dock (git + services + threads). */
 export type BottomTab = "branches" | "history" | "services" | "threads"
+/** Which way of working the app is framed around (UI only for now). */
+export type WorkMode = "code" | "collaboration"
 
 export interface UiPrefs {
   /** The user's choice; "system" follows the OS. */
@@ -19,6 +21,8 @@ export interface UiPrefs {
   /** The concrete theme to render (system resolved against the OS). */
   resolvedTheme: Theme
   diffStyle: DiffStyle
+  /** The selected mode in the top bar's mode selector. */
+  workMode: WorkMode
   connectors: boolean
   bottomVisible: boolean
   /** Which bottom-dock tab is selected. */
@@ -27,6 +31,8 @@ export interface UiPrefs {
   sidebarWidth: number
   /** Drag-resizable left sidebar width for the workspace pages (threads/docs). */
   workspaceSidebarWidth: number
+  /** Drag-resizable source pane width in the SVG split view, in px. */
+  svgSourceWidth: number
   /** Drag-resizable bottom panel height, in px. */
   bottomHeight: number
   /** Drag-resizable changed-files list height in the commit panel, in px. */
@@ -65,11 +71,13 @@ const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
 const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   theme: "system",
   diffStyle: "split",
+  workMode: "code",
   connectors: true,
   bottomVisible: true,
   bottomTab: "branches",
   sidebarWidth: 288,
   workspaceSidebarWidth: 256,
+  svgSourceWidth: 420,
   bottomHeight: 256,
   commitFilesHeight: 180,
   commitMessageHeight: 80,
@@ -110,11 +118,13 @@ function persist() {
     const {
       theme,
       diffStyle,
+      workMode,
       connectors,
       bottomVisible,
       bottomTab,
       sidebarWidth,
       workspaceSidebarWidth,
+      svgSourceWidth,
       bottomHeight,
       commitFilesHeight,
       commitMessageHeight,
@@ -128,11 +138,13 @@ function persist() {
       JSON.stringify({
         theme,
         diffStyle,
+        workMode,
         connectors,
         bottomVisible,
         bottomTab,
         sidebarWidth,
         workspaceSidebarWidth,
+        svgSourceWidth,
         bottomHeight,
         commitFilesHeight,
         commitMessageHeight,

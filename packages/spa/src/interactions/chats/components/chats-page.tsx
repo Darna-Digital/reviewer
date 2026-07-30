@@ -33,9 +33,8 @@ export function ChatsPage() {
   const actions = useChatsActions()
   const navigate = useNavigate()
   const { chatId } = useParams({ strict: false })
-  const [sidebarWidth, setSidebarWidth] = useState(
-    useUiPrefs().workspaceSidebarWidth
-  )
+  const prefs = useUiPrefs()
+  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth)
 
   const repo = useRepo()
   const branchesQuery = useBranches()
@@ -130,7 +129,7 @@ export function ChatsPage() {
             onChange={setSearch}
           />
           {/* Filters — branch (groups chats, defaulting to the current
-              checkout) and time window, combined behind one dropdown. */}
+            checkout) and time window, combined behind one dropdown. */}
           <SidebarFilterMenu
             label="Filter threads"
             branchValue={activeBranch}

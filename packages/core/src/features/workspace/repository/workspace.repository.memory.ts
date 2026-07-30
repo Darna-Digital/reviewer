@@ -1,6 +1,7 @@
 import * as Effect from "effect/Effect"
 import * as Ref from "effect/Ref"
 import { NoRepoSelected, StorageError } from "../../../shared.ts"
+import { mediaTypeFor } from "../schema/workspace.schema.ts"
 import type { WorkspaceInfo } from "../schema/workspace.schema.ts"
 import type { WorkspaceRepo } from "./workspace.repository.ts"
 
@@ -9,6 +10,26 @@ export interface MemoryWorkspaceSeed {
   readonly recents?: ReadonlyArray<string>
   readonly files?: Record<string, string>
 }
+const BASE64_ALPHABET =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+
+/** Core stays platform-free, so the in-memory double encodes its own bytes. */
+const toBase64 = (text: string) => {
+  let out = ""
+  for (let i = 0; i < text.length; i += 3) {
+    const a = text.charCodeAt(i)
+    const b = text.charCodeAt(i + 1)
+    const c = text.charCodeAt(i + 2)
+    out += BASE64_ALPHABET[a >> 2]
+    out += BASE64_ALPHABET[((a & 3) << 4) | (Number.isNaN(b) ? 0 : b >> 4)]
+    out += Number.isNaN(b)
+      ? "="
+      : BASE64_ALPHABET[((b & 15) << 2) | (Number.isNaN(c) ? 0 : c >> 6)]
+    out += Number.isNaN(c) ? "=" : BASE64_ALPHABET[c & 63]
+  }
+  return out
+}
+
 export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
   Effect.gen(function* () {
     const currentRef = yield* Ref.make<string | null>(seed.current ?? null)
@@ -60,6 +81,21 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
             )
           }
           return { name: relPath.split("/").at(-1) ?? relPath, contents }
+        }),
+      readFileBytes: (relPath) =>
+        Effect.gen(function* () {
+          const files = yield* Ref.get(filesRef)
+          const contents = files[relPath]
+          if (contents === undefined) {
+            return yield* Effect.fail(
+              new StorageError({ reason: `no such file: ${relPath}` })
+            )
+          }
+          return {
+            name: relPath.split("/").at(-1) ?? relPath,
+            mediaType: mediaTypeFor(relPath),
+            base64: toBase64(contents),
+          }
         }),
       writeFile: (relPath, contents) =>
         Ref.update(filesRef, (files) => ({ ...files, [relPath]: contents })),

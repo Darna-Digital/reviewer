@@ -1,6 +1,5 @@
 import { type LineAnnotation } from "@pierre/diffs"
 import { EditorProvider, File, Virtualizer } from "@pierre/diffs/react"
-import { IconHistory, IconX } from "@tabler/icons-react"
 import { useCallback, useEffect, useMemo, useRef } from "react"
 import {
   CommentThread,
@@ -45,13 +44,11 @@ type AnnotationMeta =
 interface CodeViewProps {
   path: string
   theme: Theme
-  onClose: () => void
   /** Called after the buffer is written to disk, so git state can refresh. */
   onSaved?: () => void
   /** Whether this file has unsaved changes — the tab strip shows a marker. */
   onDirtyChange?: (dirty: boolean) => void
   /** Open this file's commit history in the bottom dock. */
-  onShowHistory?: (path: string) => void
   /**
    * Open another file at a line — go-to-definition and find-usages need it.
    * Omit to leave the IDE layer off.
@@ -72,10 +69,8 @@ interface CodeViewProps {
 export function CodeView({
   path,
   theme,
-  onClose,
   onSaved,
   onDirtyChange,
-  onShowHistory,
   onOpenLocation,
   reveal = null,
   comments,
@@ -276,7 +271,7 @@ export function CodeView({
                   />
                 ) : null
               }
-              renderHeaderMetadata={(meta) => (
+              renderHeaderMetadata={() => (
                 <div className="flex items-center gap-2">
                   <DiagnosticsSummary counts={language.counts} />
                   {editing.dirty && (
@@ -288,26 +283,6 @@ export function CodeView({
                       {editing.saving ? "Saving…" : "Save"}
                     </Button>
                   )}
-                  {onShowHistory !== undefined && (
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      className="gap-1 text-muted-foreground"
-                      title={`Show the commit history of ${meta.name}`}
-                      onClick={() => onShowHistory(meta.name)}
-                    >
-                      <IconHistory className="size-3.5" />
-                      History
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    onClick={onClose}
-                    aria-label="Close"
-                  >
-                    <IconX />
-                  </Button>
                 </div>
               )}
             />

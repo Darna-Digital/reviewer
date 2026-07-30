@@ -20,6 +20,9 @@ export const WorkspaceHandler = HttpApiBuilder.group(
       .handle("readFile", ({ query }) =>
         Effect.flatMap(WorkspaceService, (s) => s.readFile(query.path))
       )
+      .handle("readFileBytes", ({ query }) =>
+        Effect.flatMap(WorkspaceService, (s) => s.readFileBytes(query.path))
+      )
       .handle("writeFile", ({ payload }) =>
         Effect.flatMap(WorkspaceService, (s) =>
           s.writeFile(payload.path, payload.contents)

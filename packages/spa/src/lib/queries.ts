@@ -224,6 +224,14 @@ export const useDiffText = (target: DiffTarget | null) => {
   }
 }
 
+export const useFileBytes = (path: string | null) =>
+  api.useQuery(
+    "get",
+    "/api/file/raw",
+    { params: { query: { path: path ?? "" } } },
+    { enabled: path !== null, retry: false }
+  )
+
 export const useFile = (path: string | null) =>
   api.useQuery(
     "get",

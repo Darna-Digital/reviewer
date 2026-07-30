@@ -36,6 +36,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { CommandMenu, type Command } from "@/components/command-menu"
 import { CommitPanel } from "@/components/commit-panel"
+import { Button } from "@/components/ui/button"
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool"
 import { RepoList } from "@/components/repo-list"
 import {
@@ -47,11 +48,12 @@ import {
   type DraftLocation,
 } from "@/interactions/diff/components/diff-pane"
 import { CodeView } from "@/components/editor/code-view"
+import { ImageView, isImagePath } from "@/components/editor/image-view"
 import { ConflictBanner } from "@/components/git/conflict-banner"
 import { ConflictView } from "@/components/git/conflict-view"
 import { PullRequestList } from "@/components/git/pull-request-list"
 import { BottomPanel } from "@/components/layout/bottom-panel"
-import type { Crumb } from "@/components/layout/breadcrumbs"
+import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs"
 import { SidebarNav } from "@/components/layout/sidebar-nav"
 import { ResizeHandle } from "@/components/layout/resize-handle"
 import { TopBar } from "@/components/layout/top-bar"
@@ -820,15 +822,16 @@ export function AppShell() {
         />
       )
     }
+    if (viewing !== null && isImagePath(viewing)) {
+      return <ImageView path={viewing} theme={prefs.resolvedTheme} />
+    }
     if (viewing !== null) {
       return (
         <CodeView
           path={viewing}
           theme={prefs.resolvedTheme}
-          onClose={closeFile}
           onSaved={git.refresh}
           onDirtyChange={onDirtyChange}
-          onShowHistory={showFileHistory}
           onOpenLocation={openLocation}
           reveal={reveal}
           comments={fileComments}
@@ -925,6 +928,8 @@ export function AppShell() {
     void navigate({ to: "/commit", search: {} })
   }
 
+  const crumbs = buildCrumbs()
+
   return (
     // One Shiki worker pool shared by every diff/file surface below (diff
     // pane, file viewer, editor, conflict view) — see DiffWorkerPoolProvider.
@@ -951,7 +956,6 @@ export function AppShell() {
             workspace={workspace.data}
             branches={branches.data ?? []}
             remoteBranches={remoteBranches.data ?? []}
-            crumbs={buildCrumbs()}
             diffStyle={prefs.diffStyle}
             showDiffStyleToggle={viewing === null && target !== null}
             busy={false}
@@ -1118,6 +1122,25 @@ export function AppShell() {
                       })
                     }
                   />
+                  {/* The trail sits under the tabs, and only once it says more
+                      than which mode you are in. */}
+                  {crumbs.length > 1 && (
+                    <div className="flex h-8 shrink-0 items-center gap-2 border-b px-2">
+                      <Breadcrumbs crumbs={crumbs} />
+                      {viewing !== null && (
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="ml-auto gap-1 text-muted-foreground"
+                          title={`Show the commit history of ${viewing}`}
+                          onClick={() => showFileHistory(viewing)}
+                        >
+                          <IconHistory className="size-3.5" />
+                          History
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   <div className="min-h-0 flex-1 overflow-hidden">
                     {renderCenter()}
                   </div>

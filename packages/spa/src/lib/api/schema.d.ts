@@ -52,6 +52,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/file/raw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["workspace.readFileBytes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/file/rename": {
         parameters: {
             query?: never;
@@ -1510,6 +1526,50 @@ export interface operations {
                 content: {
                     "application/json": {
                         ok: boolean;
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "workspace.readFileBytes": {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        name: string;
+                        mediaType: string;
+                        base64: string;
                     };
                 };
             };
