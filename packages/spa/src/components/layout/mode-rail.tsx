@@ -145,56 +145,64 @@ export function ModeRail() {
   )
 
   return (
-    <nav className="flex h-full w-12 shrink-0 flex-col items-center gap-1 pb-2">
-      {/* The inbox shares its row with the toolbar's repo picker. */}
+    <nav className="flex h-full w-12 shrink-0 flex-col items-center border-r pb-2">
+      {/* The inbox shares its row with the toolbar's repo picker, and the rule
+          below it continues the panel's top border, which the two meet at the
+          rail's edge. It is a sibling rather than a `border-b`: the panel's
+          border sits *under* its own 44px header, so a border inside this row
+          would draw one pixel high and the line would step at the seam. */}
       <div className="flex h-11 w-full shrink-0 items-center justify-center">
         <InboxPopover active={pathname.startsWith(INBOX_MATCH)} />
       </div>
-      <div className="my-1 h-px w-6 bg-border" />
-      {GIT_LINKS.filter((l) => l.github !== true || hasGitHub).map(renderLink)}
-      <div className="my-1 h-px w-6 bg-border" />
-      {REVIEW_LINKS.map(renderLink)}
-      <div className="mt-auto flex flex-col items-center gap-1">
-        <RailButton
-          label="Branches & History"
-          active={gitActive}
-          onClick={() => {
-            const gitTab =
-              prefs.bottomTab === "history" ? "history" : "branches"
-            if (prefs.bottomVisible && gitActive) {
-              setUiPrefs({ bottomVisible: false })
-              return
+      <div className="h-px w-full shrink-0 bg-border" />
+      <div className="flex w-full flex-1 flex-col items-center gap-1 pt-2">
+        {GIT_LINKS.filter((l) => l.github !== true || hasGitHub).map(
+          renderLink
+        )}
+        <div className="my-1 h-px w-6 bg-border" />
+        {REVIEW_LINKS.map(renderLink)}
+        <div className="mt-auto flex flex-col items-center gap-1">
+          <RailButton
+            label="Branches & History"
+            active={gitActive}
+            onClick={() => {
+              const gitTab =
+                prefs.bottomTab === "history" ? "history" : "branches"
+              if (prefs.bottomVisible && gitActive) {
+                setUiPrefs({ bottomVisible: false })
+                return
+              }
+              openBottomTab(gitTab)
+            }}
+          >
+            <IconGitFork className="size-5" />
+          </RailButton>
+          <RailButton
+            label="Services"
+            active={servicesActive}
+            onClick={() =>
+              toggleBottomTab("services", prefs.bottomTab, prefs.bottomVisible)
             }
-            openBottomTab(gitTab)
-          }}
-        >
-          <IconGitFork className="size-5" />
-        </RailButton>
-        <RailButton
-          label="Services"
-          active={servicesActive}
-          onClick={() =>
-            toggleBottomTab("services", prefs.bottomTab, prefs.bottomVisible)
-          }
-        >
-          <IconPlayerPlay className="size-5" />
-        </RailButton>
-        <RailButton
-          label="Terminal threads"
-          active={threadsActive}
-          onClick={() =>
-            toggleBottomTab("threads", prefs.bottomTab, prefs.bottomVisible)
-          }
-        >
-          <IconTerminal2 className="size-5" />
-        </RailButton>
-        <RailButton
-          to="/settings"
-          label="Settings"
-          active={pathname.startsWith("/settings")}
-        >
-          <IconSettings className="size-5" />
-        </RailButton>
+          >
+            <IconPlayerPlay className="size-5" />
+          </RailButton>
+          <RailButton
+            label="Terminal threads"
+            active={threadsActive}
+            onClick={() =>
+              toggleBottomTab("threads", prefs.bottomTab, prefs.bottomVisible)
+            }
+          >
+            <IconTerminal2 className="size-5" />
+          </RailButton>
+          <RailButton
+            to="/settings"
+            label="Settings"
+            active={pathname.startsWith("/settings")}
+          >
+            <IconSettings className="size-5" />
+          </RailButton>
+        </div>
       </div>
     </nav>
   )
