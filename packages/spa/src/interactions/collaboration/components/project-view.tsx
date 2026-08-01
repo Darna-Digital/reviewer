@@ -1,5 +1,12 @@
-import { IconDots, IconHash } from "@tabler/icons-react"
+/**
+ * A project's overview — what state the work is in, who is on it, and the way
+ * into everything it owns. It deliberately does not re-list every task: the
+ * Tasks view does that, so this pane shows progress, the handful of tasks
+ * actually moving, and the project's docs and channels.
+ */
+import { IconArrowRight, IconDots, IconHash } from "@tabler/icons-react"
 import { Link } from "@tanstack/react-router"
+import { type CSSProperties, type ReactNode } from "react"
 import { AvatarStack } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -11,20 +18,66 @@ import {
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
 import {
   projectChannels,
+  projectDocs,
   projectTasks,
-  STATUS_LABEL,
-  STATUS_ORDER,
   UNASSIGNED,
   type MockProject,
+  type TaskStatus,
 } from "@/interactions/collaboration/data/collaboration.mock"
+
+/** Open work, most-moved first — the order "Up next" picks from. */
+const UP_NEXT_ORDER: ReadonlyArray<TaskStatus> = ["doing", "review", "todo"]
+
+const UP_NEXT_LIMIT = 5
+
+const ROW =
+  "flex h-9 items-center gap-2.5 rounded-lg px-2 outline-none hover:bg-elevate focus-visible:ring-3 focus-visible:ring-ring/30"
+
+function SectionHeading({
+  title,
+  action,
+}: {
+  title: string
+  action?: ReactNode
+}) {
+  return (
+    <div className="mt-8 flex h-6 items-center gap-3">
+      <h2 className="text-[0.8125rem] font-medium">{title}</h2>
+      {action !== undefined && <div className="ml-auto">{action}</div>}
+    </div>
+  )
+}
+
+function SeeAll({
+  label,
+  to,
+  search,
+}: {
+  label: string
+  to: string
+  search: { view: "tasks" | "docs"; id: string }
+}) {
+  return (
+    <Link
+      to={to}
+      search={search}
+      className="flex items-center gap-1 rounded-md text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+    >
+      {label}
+      <IconArrowRight className="size-3.5 shrink-0" />
+    </Link>
+  )
+}
 
 export function ProjectView({ project }: { project: MockProject }) {
   const tasks = projectTasks(project.id)
   const channels = projectChannels(project.id)
-  const groups = STATUS_ORDER.map((status) => ({
-    status,
-    items: tasks.filter((t) => t.status === status),
-  })).filter((group) => group.items.length > 0)
+  const docs = projectDocs(project.id)
+
+  const open = UP_NEXT_ORDER.flatMap((status) =>
+    tasks.filter((t) => t.status === status)
+  )
+  const upNext = open.slice(0, UP_NEXT_LIMIT)
   const people = [
     ...new Set(tasks.map((t) => t.assignee).filter((a) => a !== UNASSIGNED)),
   ]
@@ -52,84 +105,139 @@ export function ProjectView({ project }: { project: MockProject }) {
 
       <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
         <PaneBody>
-          <h1 className="text-lg font-semibold">{project.name}</h1>
-          <p className="mt-1 max-w-[70ch] text-sm text-pretty text-muted-foreground">
+          <div className="flex items-center gap-2.5">
+            <span
+              className="size-5 shrink-0 rounded-lg bg-(--mark)"
+              style={{ "--mark": project.color } as CSSProperties}
+            />
+            <h1 className="min-w-0 truncate text-lg font-semibold">
+              {project.name}
+            </h1>
+          </div>
+          <p className="mt-2 max-w-[70ch] text-base text-pretty text-muted-foreground sm:text-sm">
             {project.summary}
           </p>
 
-          <dl className="mt-5 flex flex-wrap gap-x-10 gap-y-4">
-            <div>
-              <dt className="text-xs text-muted-foreground">Lead</dt>
-              <dd className="mt-1 flex items-center gap-1.5 text-[13px] font-medium">
-                <AssigneeAvatar name={project.lead} />
-                {project.lead}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">Target</dt>
-              <dd className="mt-1 text-[13px] font-medium tabular-nums">
-                {project.target}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">Open tasks</dt>
-              <dd className="mt-1 text-[13px] font-medium tabular-nums">
-                {tasks.filter((t) => t.status !== "done").length} of{" "}
-                {tasks.length}
-              </dd>
-            </div>
-          </dl>
-
-          <h2 className="mt-8 text-[13px] font-medium">Tasks</h2>
-          {groups.map((group) => (
-            <section key={group.status} className="mt-4">
-              <div className="flex items-center gap-2 px-2 text-xs text-muted-foreground">
-                <TaskStatusIcon status={group.status} className="size-3.5" />
-                {STATUS_LABEL[group.status]}
-                <span className="tabular-nums">{group.items.length}</span>
+          {/* The pane resizes independently of the viewport, so the meta row
+              answers to its own width rather than the window's. */}
+          <div className="@container mt-6">
+            <dl className="grid grid-cols-1 gap-x-10 gap-y-4 @xs:grid-cols-3">
+              <div className="min-w-0">
+                <dt className="truncate text-xs font-medium">Lead</dt>
+                <dd className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[0.8125rem] text-muted-foreground">
+                  <AssigneeAvatar name={project.lead} />
+                  <span className="truncate">{project.lead}</span>
+                </dd>
               </div>
-              <ul role="list" className="mt-1">
-                {group.items.map((task) => (
-                  <li key={task.id}>
+              <div className="min-w-0">
+                <dt className="truncate text-xs font-medium">Target</dt>
+                <dd className="mt-1.5 text-[0.8125rem] text-muted-foreground tabular-nums">
+                  {project.target}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="truncate text-xs font-medium">Open</dt>
+                <dd className="mt-1.5 text-[0.8125rem] text-muted-foreground tabular-nums">
+                  {open.length} of {tasks.length}
+                </dd>
+              </div>
+            </dl>
+          </div>
+
+          <SectionHeading
+            title="Up next"
+            action={
+              <SeeAll
+                label={`All ${tasks.length} tasks`}
+                to="/modes/collaboration"
+                search={{ view: "tasks", id: project.id }}
+              />
+            }
+          />
+          {upNext.length > 0 ? (
+            <ul role="list" className="@container mt-1">
+              {upNext.map((task) => (
+                <li key={task.id}>
+                  <Link
+                    to="/modes/collaboration"
+                    search={{ view: "task", id: task.id }}
+                    className={ROW}
+                  >
+                    <TaskStatusIcon status={task.status} />
+                    <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground @max-xs:hidden">
+                      {task.key}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[0.8125rem]">
+                      {task.title}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums @max-sm:hidden">
+                      {task.updated}
+                    </span>
+                    <AssigneeAvatar name={task.assignee} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-1 px-2 py-3 text-[0.8125rem] text-muted-foreground">
+              Every task in this project is done.
+            </p>
+          )}
+
+          {docs.length > 0 && (
+            <>
+              <SectionHeading
+                title="Docs"
+                action={
+                  <SeeAll
+                    label="All docs"
+                    to="/modes/collaboration"
+                    search={{ view: "docs", id: project.id }}
+                  />
+                }
+              />
+              <ul role="list" className="@container mt-1">
+                {docs.map((doc) => (
+                  <li key={doc.id}>
                     <Link
                       to="/modes/collaboration"
-                      search={{ view: "task", id: task.id }}
-                      className="flex h-9 items-center gap-2.5 rounded-lg px-2 outline-none hover:bg-elevate focus-visible:ring-3 focus-visible:ring-ring/30"
+                      search={{ view: "docs", id: project.id }}
+                      className={ROW}
                     >
-                      <TaskStatusIcon status={task.status} />
-                      <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground">
-                        {task.key}
+                      <span className="shrink-0 text-[0.8125rem]">
+                        {doc.title}
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-[13px]">
-                        {task.title}
+                      <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground @max-xs:hidden">
+                        {doc.summary}
                       </span>
-                      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
-                        {task.updated}
+                      <span className="ml-auto shrink-0 text-xs text-muted-foreground @max-sm:hidden">
+                        {doc.updated}
                       </span>
-                      <AssigneeAvatar name={task.assignee} />
                     </Link>
                   </li>
                 ))}
               </ul>
-            </section>
-          ))}
+            </>
+          )}
 
-          <h2 className="mt-8 text-[13px] font-medium">Channels</h2>
-          <ul role="list" className="mt-1">
+          <SectionHeading title="Channels" />
+          <ul role="list" className="@container mt-1">
             {channels.map((channel) => (
               <li key={channel.id}>
                 <Link
                   to="/modes/collaboration"
                   search={{ view: "channel", id: channel.id }}
-                  className="flex h-9 items-center gap-2.5 rounded-lg px-2 outline-none hover:bg-elevate focus-visible:ring-3 focus-visible:ring-ring/30"
+                  className={ROW}
                 >
                   <IconHash className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="shrink-0 text-[13px]">{channel.name}</span>
-                  <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground">
+                  <span className="shrink-0 text-[0.8125rem]">
+                    {channel.name}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground @max-xs:hidden">
                     {channel.topic}
                   </span>
                   {channel.unread > 0 && (
-                    <span className="shrink-0 text-[0.6875rem] font-medium tabular-nums">
+                    <span className="ml-auto shrink-0 text-[0.6875rem] font-medium tabular-nums">
                       {channel.unread}
                     </span>
                   )}

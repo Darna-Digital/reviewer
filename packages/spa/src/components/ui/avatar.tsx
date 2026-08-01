@@ -1,23 +1,32 @@
+import type { CSSProperties } from "react"
 import { cn } from "@/lib/utils"
 
 /**
- * Initials avatar. The tint is derived from the name, so the same person keeps
- * the same colour everywhere without a stored preference.
+ * Initials on a solid colour picked from the name, so nobody has to store a
+ * picture and the same person keeps the same avatar everywhere.
+ *
+ * The palette is one fixed lightness and chroma swept across ten hues. OKLCH
+ * is perceptually uniform, so unlike an HSL ramp every hue lands at the same
+ * visual weight — no washed-out yellows beside heavy blues — and every one of
+ * them clears 4.5:1 against the white initials at any size.
  */
-const TINTS = [
-  "bg-brand-100 text-brand-800 dark:bg-brand-500/20 dark:text-brand-200",
-  "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-200",
-  "bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-200",
-  "bg-rose-100 text-rose-800 dark:bg-rose-500/20 dark:text-rose-200",
-  "bg-violet-100 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200",
-  "bg-sky-100 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200",
-]
+const LIGHTNESS = 0.48
+const CHROMA = 0.15
 
-const tintFor = (name: string) => {
-  let sum = 0
-  for (const char of name) sum += char.codePointAt(0) ?? 0
-  return TINTS[sum % TINTS.length]
+const HUES = [18, 48, 92, 145, 178, 212, 248, 278, 308, 342]
+
+/** FNV-1a — names sharing letters still land on different colours. */
+const hash = (name: string) => {
+  let value = 0x811c9dc5
+  for (let index = 0; index < name.length; index++) {
+    value ^= name.charCodeAt(index)
+    value = Math.imul(value, 0x01000193)
+  }
+  return value >>> 0
 }
+
+const colorFor = (name: string) =>
+  `oklch(${LIGHTNESS} ${CHROMA} ${HUES[hash(name) % HUES.length]})`
 
 const initials = (name: string, letters: number) =>
   name
@@ -30,6 +39,7 @@ function Avatar({
   name,
   letters = 2,
   className,
+  style,
   ...props
 }: React.ComponentProps<"span"> & { name: string; letters?: number }) {
   return (
@@ -37,10 +47,10 @@ function Avatar({
       data-slot="avatar"
       aria-hidden
       className={cn(
-        "flex size-6 shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-semibold outline-1 -outline-offset-1 outline-black/5 dark:outline-white/10",
-        tintFor(name),
+        "flex size-6 shrink-0 items-center justify-center rounded-full bg-(--avatar) text-[0.6875rem] font-semibold text-white outline-1 -outline-offset-1 outline-black/10 dark:outline-white/15",
         className
       )}
+      style={{ "--avatar": colorFor(name), ...style } as CSSProperties}
       {...props}
     >
       {initials(name, letters)}

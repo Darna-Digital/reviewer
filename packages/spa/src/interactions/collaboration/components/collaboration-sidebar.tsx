@@ -1,9 +1,12 @@
 /**
  * The collaboration mode's sidebar — collapsible sections, agents first and
  * members last, wrapped around favourites and a tree of projects that expand
- * into their tasks, docs and channels. It lives apart from the page so shared
- * surfaces (the inbox) can keep it on screen, and every row is a link so the
- * selection survives navigating away and back.
+ * into their tasks, docs and channels. Unread carries through the tree: a
+ * channel that is waiting reads at full contrast, and a collapsed project
+ * rolls its channels' counts up onto its own row so nothing waits out of
+ * sight. It lives apart from the page so shared surfaces (the inbox) can keep
+ * it on screen, and every row is a link so the selection survives navigating
+ * away and back.
  */
 import {
   IconChevronDown,
@@ -30,7 +33,11 @@ import {
   projectChannels,
   projectTasks,
   type CollaborationView,
+  type MockChannel,
+  type MockFavorite,
   type MockPerson,
+  type MockProject,
+  type MockTask,
 } from "@/interactions/collaboration/data/collaboration.mock"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
@@ -39,6 +46,31 @@ const ROW =
   "flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md pr-1.5 pl-1 text-[13px] outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
 
 const INDENT = ["pl-1", "pl-5", "pl-9"]
+
+type PeopleView = Extract<CollaborationView, "agents" | "members">
+
+interface FavoriteRow {
+  view: MockFavorite["view"]
+  id: string
+  label: string
+  icon: ReactNode
+}
+
+interface ProjectBranch {
+  project: MockProject
+  tasks: ReadonlyArray<MockTask>
+  channels: ReadonlyArray<MockChannel>
+}
+
+const projectMark = (project: MockProject) => (
+  <span
+    className="size-3.5 shrink-0 rounded-[0.3rem] bg-(--mark)"
+    style={{ "--mark": project.color } as CSSProperties}
+  />
+)
+
+const unreadIn = (channels: ReadonlyArray<MockChannel>) =>
+  channels.reduce((total, channel) => total + channel.unread, 0)
 
 function UnreadCount({ count }: { count: number }) {
   if (count === 0) return null
@@ -82,6 +114,8 @@ interface TreeRowProps {
   trailing?: ReactNode
   expanded?: boolean
   onToggle?: () => void
+  /** Lifts an at-rest row to full contrast — unread, not a hover state. */
+  strong?: boolean
 }
 
 function TreeRow({
@@ -94,6 +128,7 @@ function TreeRow({
   trailing,
   expanded,
   onToggle,
+  strong = false,
 }: TreeRowProps) {
   return (
     <div
@@ -126,7 +161,7 @@ function TreeRow({
         search={search}
         className={cn(
           ROW,
-          active
+          active || strong
             ? "text-foreground"
             : "text-muted-foreground group-hover/row:text-foreground"
         )}
@@ -156,19 +191,124 @@ function PersonRow({
   active,
 }: {
   person: MockPerson
-  view: Extract<CollaborationView, "agents" | "members">
+  view: PeopleView
   active: boolean
 }) {
   return (
     <TreeRow
       depth={0}
-      icon={<Avatar name={person.name} letters={1} className="size-4" />}
+      icon={
+        <Avatar
+          name={person.name}
+          letters={1}
+          className="size-4.5 text-[0.5rem]"
+        />
+      }
       label={person.name}
       to="/modes/collaboration"
       search={{ view, id: person.id }}
       active={active}
       trailing={<PresenceDot online={person.online} />}
     />
+  )
+}
+
+function PeopleSection({
+  title,
+  people,
+  view,
+  isActive,
+}: {
+  title: string
+  people: ReadonlyArray<MockPerson>
+  view: PeopleView
+  isActive: (view: CollaborationView, id?: string) => boolean
+}) {
+  return (
+    <Section title={title}>
+      {people.map((person) => (
+        <PersonRow
+          key={person.id}
+          person={person}
+          view={view}
+          active={isActive(view, person.id)}
+        />
+      ))}
+    </Section>
+  )
+}
+
+/**
+ * A project row plus its tasks, docs and channels when expanded. Collapsed, it
+ * carries its channels' unread total so the count does not disappear with them.
+ */
+function ProjectBranchRows({
+  branch: { project, tasks, channels },
+  expanded,
+  onToggle,
+  isActive,
+}: {
+  branch: ProjectBranch
+  expanded: boolean
+  onToggle: () => void
+  isActive: (view: CollaborationView, id?: string) => boolean
+}) {
+  return (
+    <div className="flex flex-col gap-px">
+      <TreeRow
+        depth={0}
+        icon={projectMark(project)}
+        label={project.name}
+        to="/modes/collaboration"
+        search={{ view: "project", id: project.id }}
+        active={isActive("project", project.id)}
+        expanded={expanded}
+        onToggle={onToggle}
+        trailing={
+          expanded ? undefined : <UnreadCount count={unreadIn(channels)} />
+        }
+      />
+      {expanded && (
+        <>
+          <TreeRow
+            depth={1}
+            icon={
+              <IconCircleCheck className="size-4 shrink-0 text-muted-foreground" />
+            }
+            label="Tasks"
+            to="/modes/collaboration"
+            search={{ view: "tasks", id: project.id }}
+            active={isActive("tasks", project.id)}
+            trailing={<UnreadCount count={tasks.length} />}
+          />
+          <TreeRow
+            depth={1}
+            icon={
+              <IconFileText className="size-4 shrink-0 text-muted-foreground" />
+            }
+            label="Docs"
+            to="/modes/collaboration"
+            search={{ view: "docs", id: project.id }}
+            active={isActive("docs", project.id)}
+          />
+          {channels.map((channel) => (
+            <TreeRow
+              key={channel.id}
+              depth={1}
+              icon={
+                <IconHash className="size-4 shrink-0 text-muted-foreground" />
+              }
+              label={channel.name}
+              to="/modes/collaboration"
+              search={{ view: "channel", id: channel.id }}
+              active={isActive("channel", channel.id)}
+              trailing={<UnreadCount count={channel.unread} />}
+              strong={channel.unread > 0}
+            />
+          ))}
+        </>
+      )}
+    </div>
   )
 }
 
@@ -193,13 +333,13 @@ export function CollaborationSidebar() {
           ? findChannel(id)?.projectId
           : undefined
 
-  const branches = PROJECTS.map((project) => ({
+  const branches: ReadonlyArray<ProjectBranch> = PROJECTS.map((project) => ({
     project,
     tasks: projectTasks(project.id).filter((t) => t.status !== "done"),
     channels: projectChannels(project.id),
   }))
 
-  const favorites = FAVORITES.map((favorite) => {
+  const favorites: ReadonlyArray<FavoriteRow> = FAVORITES.map((favorite) => {
     if (favorite.view === "channel") {
       const channel = findChannel(favorite.id)
       return channel === undefined
@@ -221,10 +361,7 @@ export function CollaborationSidebar() {
         favorite.view === "tasks" ? (
           <IconCircleCheck className="size-4 shrink-0 text-muted-foreground" />
         ) : (
-          <span
-            className="size-3.5 shrink-0 rounded-[0.3rem] bg-(--mark)"
-            style={{ "--mark": project.color } as CSSProperties}
-          />
+          projectMark(project)
         ),
     }
   }).filter((f) => f !== null)
@@ -241,16 +378,12 @@ export function CollaborationSidebar() {
     <>
       <aside className="flex shrink-0 flex-col border-r" style={{ width }}>
         <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
-          <Section title="Agents">
-            {AGENTS.map((agent) => (
-              <PersonRow
-                key={agent.id}
-                person={agent}
-                view="agents"
-                active={isActive("agents", agent.id)}
-              />
-            ))}
-          </Section>
+          <PeopleSection
+            title="Agents"
+            people={AGENTS}
+            view="agents"
+            isActive={isActive}
+          />
 
           {favorites.length > 0 && (
             <Section title="Favorites">
@@ -269,81 +402,23 @@ export function CollaborationSidebar() {
           )}
 
           <Section title="Projects">
-            {branches.map(({ project, tasks, channels }) => (
-              <div key={project.id} className="flex flex-col gap-px">
-                <TreeRow
-                  depth={0}
-                  icon={
-                    <span
-                      className="size-3.5 shrink-0 rounded-[0.3rem] bg-(--mark)"
-                      style={{ "--mark": project.color } as CSSProperties}
-                    />
-                  }
-                  label={project.name}
-                  to="/modes/collaboration"
-                  search={{ view: "project", id: project.id }}
-                  active={isActive("project", project.id)}
-                  expanded={isOpen(project.id)}
-                  onToggle={() => toggle(project.id)}
-                />
-                {isOpen(project.id) && (
-                  <>
-                    <TreeRow
-                      depth={1}
-                      icon={
-                        <IconCircleCheck className="size-4 shrink-0 text-muted-foreground" />
-                      }
-                      label="Tasks"
-                      to="/modes/collaboration"
-                      search={{ view: "tasks", id: project.id }}
-                      active={isActive("tasks", project.id)}
-                      trailing={<UnreadCount count={tasks.length} />}
-                    />
-                    <TreeRow
-                      depth={1}
-                      icon={
-                        <IconFileText className="size-4 shrink-0 text-muted-foreground" />
-                      }
-                      label="Docs"
-                      to="/modes/collaboration"
-                      search={{ view: "docs", id: project.id }}
-                      active={isActive("docs", project.id)}
-                    />
-                    {channels.map((channel) => (
-                      <TreeRow
-                        key={channel.id}
-                        depth={1}
-                        icon={
-                          <IconHash className="size-4 shrink-0 text-muted-foreground" />
-                        }
-                        label={channel.name}
-                        to="/modes/collaboration"
-                        search={{ view: "channel", id: channel.id }}
-                        active={isActive("channel", channel.id)}
-                        trailing={<UnreadCount count={channel.unread} />}
-                      />
-                    ))}
-                  </>
-                )}
-              </div>
-            ))}
-            {branches.length === 0 && (
-              <p className="px-2 py-1 text-[13px] text-muted-foreground">
-                No projects match.
-              </p>
-            )}
-          </Section>
-
-          <Section title="Members">
-            {MEMBERS.map((member) => (
-              <PersonRow
-                key={member.id}
-                person={member}
-                view="members"
-                active={isActive("members", member.id)}
+            {branches.map((branch) => (
+              <ProjectBranchRows
+                key={branch.project.id}
+                branch={branch}
+                expanded={isOpen(branch.project.id)}
+                onToggle={() => toggle(branch.project.id)}
+                isActive={isActive}
               />
             ))}
           </Section>
+
+          <PeopleSection
+            title="Members"
+            people={MEMBERS}
+            view="members"
+            isActive={isActive}
+          />
         </ScrollArea>
       </aside>
 
