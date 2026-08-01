@@ -18,6 +18,7 @@ import { SidebarToggle } from "@/components/layout/sidebar-toggle"
 import { WindowFrame } from "@/components/layout/window-frame"
 import { RepoPicker } from "@/components/repo-picker"
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search"
+import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog"
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker"
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import {
@@ -65,6 +66,7 @@ export function WorkspaceShell() {
           {collaborating && (
             <>
               <WorkspacePicker />
+              <NewTaskButton />
               <CollaborationSearch />
             </>
           )}

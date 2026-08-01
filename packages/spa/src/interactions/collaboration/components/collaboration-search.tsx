@@ -13,11 +13,16 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
 import {
   CHANNELS,
   PROJECTS,
-  TASKS,
+  allTasks,
   type CollaborationView,
 } from "@/interactions/collaboration/data/collaboration.mock"
 
@@ -49,7 +54,7 @@ export function CollaborationSearch() {
         />
       ),
     })),
-    ...TASKS.map((t) => ({
+    ...allTasks().map((t) => ({
       key: `task-${t.id}`,
       view: "task" as const,
       id: t.id,
@@ -74,18 +79,25 @@ export function CollaborationSearch() {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-2 rounded-full px-3.5 py-1.5 text-muted-foreground"
-          />
-        }
-      >
-        <IconSearch className="size-3.5 shrink-0" />
-        Search
-      </PopoverTrigger>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <PopoverTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Search"
+                  className="rounded-lg text-muted-foreground"
+                />
+              }
+            />
+          }
+        >
+          <IconSearch className="size-4.5" />
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Search</TooltipContent>
+      </Tooltip>
       <PopoverContent align="start" className="w-96 gap-0 overflow-hidden p-0">
         <div className="border-b p-2">
           <Input

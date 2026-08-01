@@ -240,7 +240,7 @@ export const CHANNELS: ReadonlyArray<MockChannel> = [
   },
 ]
 
-export const TASKS: ReadonlyArray<MockTask> = [
+const SEED_TASKS: ReadonlyArray<MockTask> = [
   {
     id: "atlas-1",
     key: "BYC-224",
@@ -772,14 +772,70 @@ export const CHAT_PROMPTS: ReadonlyArray<string> = [
   "Plan the next task in Atlas rewrite",
 ]
 
+/**
+ * The seed above is where the prototype starts; anything created in the app is
+ * appended here. It lives in memory only — a reload is a fresh workspace, which
+ * is the right trade for a surface with no backend behind it yet.
+ */
+let tasks: ReadonlyArray<MockTask> = SEED_TASKS
+
+export const allTasks = (): ReadonlyArray<MockTask> => tasks
+
+export interface TaskDraft {
+  projectId: string
+  title: string
+  status: TaskStatus
+  priority: TaskPriority
+  assignee: string
+  description: string
+}
+
+/** Keys run BYC-nnn across the whole workspace, so the next one is the max +1. */
+const nextTaskKey = (): string => {
+  const highest = tasks.reduce((top, task) => {
+    const n = Number(task.key.split("-")[1])
+    return Number.isFinite(n) ? Math.max(top, n) : top
+  }, 0)
+  return `BYC-${highest + 1}`
+}
+
+export function addTask(draft: TaskDraft): MockTask {
+  const key = nextTaskKey()
+  const created: MockTask = {
+    id: `task-${key.toLowerCase()}`,
+    key,
+    projectId: draft.projectId,
+    title: draft.title,
+    status: draft.status,
+    priority: draft.priority,
+    assignee: draft.assignee,
+    labels: [],
+    updated: new Date().toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    }),
+    description: draft.description.trim() === "" ? [] : [draft.description],
+    activity: [
+      {
+        id: `${key}-created`,
+        kind: "created",
+        author: VIEWER.name,
+        time: "just now",
+      },
+    ],
+  }
+  tasks = [created, ...tasks]
+  return created
+}
+
 export const projectChannels = (projectId: string) =>
   CHANNELS.filter((c) => c.projectId === projectId)
 
 export const taskChildren = (taskId: string) =>
-  TASKS.filter((t) => t.parentId === taskId)
+  tasks.filter((t) => t.parentId === taskId)
 
 export const projectTasks = (projectId: string) =>
-  TASKS.filter((t) => t.projectId === projectId)
+  tasks.filter((t) => t.projectId === projectId)
 
 export const projectDocs = (projectId: string) =>
   DOCS.filter((d) => d.projectId === projectId)
@@ -788,7 +844,7 @@ export const findProject = (id: string) => PROJECTS.find((p) => p.id === id)
 
 export const findChannel = (id: string) => CHANNELS.find((c) => c.id === id)
 
-export const findTask = (id: string) => TASKS.find((t) => t.id === id)
+export const findTask = (id: string) => tasks.find((t) => t.id === id)
 
 export const openTaskCount = (projectId: string) =>
   projectTasks(projectId).filter((t) => t.status !== "done").length
