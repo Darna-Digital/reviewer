@@ -82,6 +82,13 @@ export function updateWindowTabs(
   for (const listener of listeners) listener()
 }
 
+/**
+ * The strip as it is right now, for handlers that fire outside React's render
+ * cycle — a keyboard shortcut can arrive in the same task as the change before
+ * it, where the value closed over by the last render is already out of date.
+ */
+export const windowTabsSnapshot = (): WindowTabsState => state
+
 export const useWindowTabs = (): WindowTabsState =>
   useSyncExternalStore(
     (listener) => {

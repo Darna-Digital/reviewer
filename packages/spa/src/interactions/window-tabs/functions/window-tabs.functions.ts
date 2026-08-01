@@ -68,15 +68,32 @@ export function closeTab(state: WindowTabsState, id: string): WindowTabsState {
   return { tabs, activeId: next.id }
 }
 
-/** Step `delta` tabs along the strip, wrapping at both ends. */
-export function neighbourTab(
+/** Drop a tab at `toIndex`, sliding the ones it passes over out of its way. */
+export function moveTab(
   state: WindowTabsState,
-  delta: number
+  id: string,
+  toIndex: number
+): WindowTabsState {
+  const from = state.tabs.findIndex((tab) => tab.id === id)
+  if (from < 0) return state
+  const to = Math.max(0, Math.min(toIndex, state.tabs.length - 1))
+  if (from === to) return state
+  const tabs = [...state.tabs]
+  const [moved] = tabs.splice(from, 1)
+  tabs.splice(to, 0, moved)
+  return { ...state, tabs }
+}
+
+/**
+ * The tab a ⌘<digit> jumps to. 1–8 count from the left; 9 is the last tab
+ * however many there are, which is the convention every browser follows.
+ */
+export function tabAtPosition(
+  tabs: ReadonlyArray<WindowTab>,
+  position: number
 ): WindowTab | null {
-  const at = state.tabs.findIndex((tab) => tab.id === state.activeId)
-  if (at < 0 || state.tabs.length === 0) return null
-  const count = state.tabs.length
-  return state.tabs[(((at + delta) % count) + count) % count] ?? null
+  const index = position >= 9 ? tabs.length - 1 : position - 1
+  return tabs[index] ?? null
 }
 
 const TITLES: ReadonlyArray<readonly [string, string]> = [

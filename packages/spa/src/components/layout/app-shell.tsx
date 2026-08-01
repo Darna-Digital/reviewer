@@ -78,7 +78,6 @@ import {
   closeOthers,
   closeTab,
   keepTab,
-  neighbourTab,
   pruneTabs,
   syncActive,
   togglePin,
@@ -177,48 +176,18 @@ export function AppShell() {
   const hasGitHub = repo.data?.github != null
   const pulls = usePulls(hasGitHub)
 
-  // Global keyboard shortcuts: Cmd/Ctrl+B toggles the bottom panel; Cmd/Ctrl+1/2/3
-  // jump between the commit / review / browse modes (review only when on GitHub).
+  // Cmd/Ctrl+B toggles the bottom panel. The mode jumps that used to live on
+  // Cmd+1/2/3 are gone — those digits belong to the window's tab strip now.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
-      if (e.key.toLowerCase() === "b") {
-        e.preventDefault()
-        setUiPrefs({ bottomVisible: !prefs.bottomVisible })
-        return
-      }
-      if (e.key === "1") {
-        e.preventDefault()
-        void navigate({ to: "/modes/code/commit" })
-      } else if (e.key === "2") {
-        if (!hasGitHub) return
-        e.preventDefault()
-        void navigate({ to: "/modes/code/review" })
-      } else if (e.key === "3") {
-        e.preventDefault()
-        void navigate({ to: "/modes/code/browse" })
-      } else if (
-        e.altKey &&
-        (e.key === "ArrowLeft" || e.key === "ArrowRight")
-      ) {
-        // Step through the open files, as Cmd/Ctrl+Alt+arrow does in VS Code.
-        // Ctrl+Tab, which JetBrains uses, is the browser's own.
-        e.preventDefault()
-        updateTabs((state) => {
-          const next = neighbourTab(state, e.key === "ArrowRight" ? 1 : -1)
-          if (next !== null) {
-            void navigate({
-              to: ".",
-              search: (prev: Search) => ({ ...prev, file: next }),
-            })
-          }
-          return state
-        })
-      }
+      if (e.key.toLowerCase() !== "b") return
+      e.preventDefault()
+      setUiPrefs({ bottomVisible: !prefs.bottomVisible })
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [prefs.bottomVisible, hasGitHub, navigate])
+  }, [prefs.bottomVisible])
   // The in-progress merge/rebase, if any — drives the conflict banner + resolver.
   const mergeState = useMergeState()
   const conflictedPaths = useMemo(

@@ -13,7 +13,7 @@ import {
   IconX,
 } from "@tabler/icons-react"
 import { useCanGoBack, useRouter, useRouterState } from "@tanstack/react-router"
-import { useEffect } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Tooltip,
@@ -24,13 +24,15 @@ import {
   nextTabId,
   updateWindowTabs,
   useWindowTabs,
+  windowTabsSnapshot,
 } from "@/interactions/window-tabs/adapters/window-tabs.store"
 import {
   closeTab,
   HOME_HREF,
-  neighbourTab,
+  moveTab,
   openTab,
   selectTab,
+  tabAtPosition,
   tabTitle,
   trackLocation,
 } from "@/interactions/window-tabs/functions/window-tabs.functions"
@@ -76,6 +78,17 @@ export function WindowBar() {
   const canGoBack = useCanGoBack()
   const location = useRouterState({ select: (s) => s.location })
   const { tabs, activeId } = useWindowTabs()
+  /**
+   * The tab being dragged. It lives in a ref as well as state because the first
+   * `dragover` can arrive in the same task as the `dragstart` that set it, and
+   * would read the pre-render value; the state copy only drives the styling.
+   */
+  const draggingRef = useRef<string | null>(null)
+  const [dragging, setDragging] = useState<string | null>(null)
+  const endDrag = () => {
+    draggingRef.current = null
+    setDragging(null)
+  }
 
   const go = (href: string) => void router.navigate({ href })
 
@@ -104,29 +117,19 @@ export function WindowBar() {
     })
   }
 
-  // Cmd/Ctrl+T opens a tab, Cmd/Ctrl+W closes one, and Ctrl+Tab steps along the
-  // strip — the shortcuts every tabbed window already answers to.
+  // ⌘1–⌘8 jump to that tab and ⌘9 to the last one, as in every browser. The
+  // strip is read from the store rather than this render's copy: two presses in
+  // a row arrive before React has re-rendered for the first.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.key === "Tab") {
-        event.preventDefault()
-        updateWindowTabs((state) => {
-          const next = neighbourTab(state, event.shiftKey ? -1 : 1)
-          if (next === null) return state
-          go(next.href)
-          return selectTab(state, next.id)
-        })
-        return
-      }
-      if (!(event.metaKey || event.ctrlKey)) return
-      const key = event.key.toLowerCase()
-      if (key === "t") {
-        event.preventDefault()
-        open(HOME_HREF)
-      } else if (key === "w") {
-        event.preventDefault()
-        close(activeId)
-      }
+      if (!(event.metaKey || event.ctrlKey) || event.altKey) return
+      const position = Number(event.key)
+      if (!Number.isInteger(position) || position < 1 || position > 9) return
+      event.preventDefault()
+      const target = tabAtPosition(windowTabsSnapshot().tabs, position)
+      if (target === null) return
+      updateWindowTabs((state) => selectTab(state, target.id))
+      go(target.href)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
@@ -162,7 +165,7 @@ export function WindowBar() {
           NO_DRAG
         )}
       >
-        {tabs.map((tab) => {
+        {tabs.map((tab, index) => {
           const active = tab.id === activeId
           return (
             <div
@@ -171,12 +174,37 @@ export function WindowBar() {
               aria-selected={active}
               tabIndex={active ? 0 : -1}
               title={tab.title}
+              draggable
               className={cn(
                 "group/tab flex h-8 max-w-52 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-lg pr-1.5 pl-3 text-[0.8125rem] transition-colors",
                 active
                   ? "bg-elevate-strong text-foreground"
-                  : "text-muted-foreground hover:bg-elevate"
+                  : "text-muted-foreground hover:bg-elevate",
+                dragging === tab.id && "opacity-50"
               )}
+              onDragStart={(event) => {
+                draggingRef.current = tab.id
+                setDragging(tab.id)
+                event.dataTransfer.effectAllowed = "move"
+                // Firefox refuses to start a drag without a payload.
+                event.dataTransfer.setData("text/plain", tab.id)
+              }}
+              onDragOver={(event) => {
+                const held = draggingRef.current
+                if (held === null) return
+                event.preventDefault()
+                event.dataTransfer.dropEffect = "move"
+                // Reorder as the pointer crosses each tab, so the strip shows
+                // where the drop will land instead of only revealing it after.
+                if (held !== tab.id) {
+                  updateWindowTabs((state) => moveTab(state, held, index))
+                }
+              }}
+              onDragEnd={endDrag}
+              onDrop={(event) => {
+                event.preventDefault()
+                endDrag()
+              }}
               onClick={() => {
                 updateWindowTabs((state) => selectTab(state, tab.id))
                 if (!active) go(tab.href)

@@ -3,9 +3,10 @@ import type { WindowTabsState } from "../interfaces/window-tabs.interfaces"
 import {
   closeTab,
   initialWindowTabs,
-  neighbourTab,
+  moveTab,
   openTab,
   selectTab,
+  tabAtPosition,
   tabTitle,
   trackLocation,
 } from "./window-tabs.functions"
@@ -68,11 +69,37 @@ describe("closeTab", () => {
   })
 })
 
-describe("neighbourTab", () => {
-  it("wraps at both ends", () => {
+describe("moveTab", () => {
+  it("drops a tab at the index, sliding the rest out of its way", () => {
     const state = stripOf("a", "b", "c")
-    expect(neighbourTab(state, 1)?.id).toBe("a")
-    expect(neighbourTab(state, -1)?.id).toBe("b")
+    expect(show(moveTab(state, "a", 2))).toBe("b *c a")
+    expect(show(moveTab(state, "c", 0))).toBe("*c a b")
+  })
+
+  it("leaves which tab is active alone", () => {
+    const state = stripOf("a", "b", "c")
+    expect(moveTab(state, "a", 2).activeId).toBe(state.activeId)
+  })
+
+  it("clamps out-of-range targets and no-ops on a non-move", () => {
+    const state = stripOf("a", "b", "c")
+    expect(show(moveTab(state, "a", 99))).toBe("b *c a")
+    expect(moveTab(state, "b", 1)).toBe(state)
+    expect(moveTab(state, "missing", 0)).toBe(state)
+  })
+})
+
+describe("tabAtPosition", () => {
+  it("counts 1-8 from the left and sends 9 to the last tab", () => {
+    const { tabs } = stripOf("a", "b", "c", "d")
+    expect(tabAtPosition(tabs, 1)?.id).toBe("a")
+    expect(tabAtPosition(tabs, 3)?.id).toBe("c")
+    expect(tabAtPosition(tabs, 9)?.id).toBe("d")
+  })
+
+  it("has nothing at a position past the end", () => {
+    const { tabs } = stripOf("a", "b")
+    expect(tabAtPosition(tabs, 5)).toBeNull()
   })
 })
 
