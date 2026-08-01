@@ -145,7 +145,13 @@ export function ModeRail() {
   )
 
   return (
-    <nav className="flex h-full w-12 shrink-0 flex-col items-center border-r pb-2">
+    <nav className="relative flex h-full w-12 shrink-0 flex-col items-center pb-2">
+      {/* The rail's right edge is drawn over its last pixel column rather than
+          as a `border-r`, which would take that pixel out of the content box
+          and centre every icon half a pixel left of where the toolbar's own
+          `px-2` puts them — the inbox visibly stepping sideways on the way in
+          and out of collaboration mode, which has no rail. */}
+      <div className="absolute top-0 right-0 h-full w-px bg-border" />
       {/* The inbox shares its row with the toolbar's repo picker, and the rule
           below it continues the panel's top border, which the two meet at the
           rail's edge. It is a sibling rather than a `border-b`: the panel's
