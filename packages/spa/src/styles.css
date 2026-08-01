@@ -261,7 +261,10 @@
      their extreme and hold the frame back from it: white paper inside a grey
      surround here, near-black inside true black in the dark theme. */
   --frame: #f0f0f3;
-  --frame-translucent: rgb(240 240 243 / 0.88);
+  /* Thinner than the dark theme's tint. The material macOS blurs in behind a
+     light window is itself light, so a light tint disappears into it — the
+     effect only starts to read once rather more of it is let through. */
+  --frame-translucent: rgb(240 240 243 / 0.28);
   --frame-border: rgb(0 0 0 / 0.1);
   --canvas: #ffffff;
   --canvas-edge: #f6f6f8;
@@ -309,7 +312,7 @@
   --sidebar-ring: oklch(0.556 0 0);
   --overlay: 255 255 255;
   --frame: #000000;
-  --frame-translucent: rgb(0 0 0 / 0.88);
+  --frame-translucent: rgb(0 0 0 / 0.35);
   --frame-border: rgb(255 255 255 / 0.09);
   --canvas: #141417;
   --canvas-edge: #0c0c0e;
@@ -354,17 +357,17 @@
    desktop instead of reading as a painted bar. The canvas stays opaque — text
    has to survive whatever wallpaper is back there. `.desktop` is set on <html>
    by the shell-detection script in __root, before first paint. */
-.desktop body {
+/* Both are gated on `.translucent` (the Translucency setting) as well, so
+   turning it off leaves the frame painting its own solid colour over an
+   untouched window. The blur is the OS material behind the window; this is only
+   the tint over it. A `backdrop-filter` here would sample the page's own
+   backdrop, which is transparent all the way down, so it has nothing to work
+   on. */
+.desktop.translucent body {
   background-color: transparent;
 }
-/* The tint stays close to opaque on purpose: the frame should read as its own
-   colour with the desktop only just perceptible through it, not as a window
-   onto the wallpaper. No saturate() either — that would push the little which
-   does come through off-hue. */
-.desktop .app-frame {
+.desktop.translucent .app-frame {
   background-color: var(--frame-translucent);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
 
 /* --- byconvo: streaming "working" text ------------------------------------ */

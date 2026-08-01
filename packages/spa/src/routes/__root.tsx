@@ -61,7 +61,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             the vibrancy layer waits is the exact thing this avoids. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(()=>{try{const t=localStorage.getItem("byconvo-theme")||"system";const d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.dataset.theme=d?"dark":"light";document.documentElement.classList.toggle("desktop","byconvo" in window);}catch(e){}})()`,
+            __html: `(()=>{try{const r=document.documentElement;const t=localStorage.getItem("byconvo-theme")||"system";const d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);r.dataset.theme=d?"dark":"light";r.classList.toggle("desktop","byconvo" in window);const p=JSON.parse(localStorage.getItem("byconvo-ui")||"{}");r.classList.toggle("translucent",p.translucency!==false);}catch(e){}})()`,
           }}
         />
       </head>

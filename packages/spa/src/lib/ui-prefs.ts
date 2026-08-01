@@ -24,6 +24,11 @@ export interface UiPrefs {
   /** The selected mode in the top bar's mode selector. */
   workMode: WorkMode
   connectors: boolean
+  /**
+   * Whether the window frame lets the desktop through. Native shell only — a
+   * browser tab has nothing behind it to show.
+   */
+  translucency: boolean
   /** Whether the shell's left sidebar (file tree / collaboration nav) shows. */
   sidebarVisible: boolean
   bottomVisible: boolean
@@ -77,6 +82,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   diffStyle: "split",
   workMode: "code",
   connectors: true,
+  translucency: true,
   sidebarVisible: true,
   bottomVisible: true,
   bottomTab: "branches",
@@ -126,6 +132,7 @@ function persist() {
       diffStyle,
       workMode,
       connectors,
+      translucency,
       sidebarVisible,
       bottomVisible,
       bottomTab,
@@ -148,6 +155,7 @@ function persist() {
         diffStyle,
         workMode,
         connectors,
+        translucency,
         sidebarVisible,
         bottomVisible,
         bottomTab,
@@ -179,12 +187,23 @@ function applyTheme() {
   document.documentElement.dataset["theme"] = state.resolvedTheme
 }
 
+/**
+ * The frame reads its translucency off a class rather than a React prop: the
+ * window is painted before the app mounts, and a flash of the wrong chrome is
+ * exactly what the pre-paint script in __root exists to avoid.
+ */
+function applyTranslucency() {
+  if (typeof document === "undefined") return
+  document.documentElement.classList.toggle("translucent", state.translucency)
+}
+
 export function setUiPrefs(patch: Partial<Omit<UiPrefs, "resolvedTheme">>) {
   state = { ...state, ...patch }
   if (patch.theme !== undefined) {
     state.resolvedTheme = resolve(patch.theme)
     applyTheme()
   }
+  if (patch.translucency !== undefined) applyTranslucency()
   persist()
   emit()
 }

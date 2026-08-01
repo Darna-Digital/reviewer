@@ -220,6 +220,8 @@ async function createWindow(): Promise<void> {
     // On macOS the window frame is a vibrancy layer the renderer tints through
     // (see `.desktop .app-frame`), so the background has to be fully clear for
     // the blur behind it to show. Elsewhere it stays an opaque near-black.
+    // Do NOT add `transparent: true` here: the docs suggest it is needed for the
+    // alpha above, but it drops the vibrancy view instead of enabling it.
     backgroundColor: isMac ? "#00000000" : "#000000",
     ...(isMac
       ? {

@@ -1,5 +1,6 @@
 import {
   IconDeviceDesktop,
+  IconDroplet,
   IconGitFork,
   IconLayoutColumns,
   IconLayoutRows,
@@ -11,6 +12,7 @@ import type { ComponentType, ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
+import { isDesktop } from "@/lib/desktop"
 import {
   setUiPrefs,
   useUiPrefs,
@@ -153,6 +155,32 @@ export function SettingsPage() {
                     />
                   </label>
                 </SettingRow>
+                {/* The desktop behind the window is the only thing there is to
+                    show through, so a browser tab has nothing to offer here. */}
+                {isDesktop && (
+                  <SettingRow
+                    title="Translucency"
+                    detail="Let the desktop show through the window frame"
+                  >
+                    <label className="flex items-center gap-2">
+                      <IconDroplet
+                        className={cn(
+                          "size-4 text-muted-foreground",
+                          prefs.translucency && "text-foreground"
+                        )}
+                      />
+                      <Switch
+                        checked={prefs.translucency}
+                        onChange={(event) =>
+                          setUiPrefs({
+                            translucency: event.currentTarget.checked,
+                          })
+                        }
+                        aria-label="Translucency"
+                      />
+                    </label>
+                  </SettingRow>
+                )}
                 <SettingRow title="Git dock">
                   <label className="flex items-center gap-2">
                     <IconGitFork
