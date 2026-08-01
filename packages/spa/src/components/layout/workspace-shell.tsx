@@ -3,12 +3,15 @@
  * tasks/settings). It mirrors AppShell's frame — the same title bar over a
  * bordered content panel and the shared bottom dock. Code mode keeps the repo
  * picker and branch switcher; collaboration mode drops both, along with the
- * dock. Each feature page renders its own header and body into the `<Outlet />`.
+ * dock and the mode rail — its own sidebar carries what the rail held, so the
+ * panel runs to the window edge and loses its top-left corner. Each feature
+ * page renders its own header and body into the `<Outlet />`.
  */
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
 import { useState } from "react"
 import { BranchSwitcher } from "@/components/layout/branch-switcher"
 import { GitBottomDock } from "@/components/layout/git-bottom-dock"
+import { InboxPopover } from "@/components/layout/inbox-popover"
 import { ModeRail } from "@/components/layout/mode-rail"
 import { ModeSelector } from "@/components/layout/mode-selector"
 import { RepoPicker } from "@/components/repo-picker"
@@ -45,7 +48,7 @@ export function WorkspaceShell() {
 
   return (
     <div className="flex h-svh w-full overflow-hidden text-foreground">
-      <ModeRail />
+      {!collaborating && <ModeRail />}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* In desktop this doubles as the draggable title bar (clusters opt out). */}
         <header
@@ -54,6 +57,15 @@ export function WorkspaceShell() {
             isDesktop && "pl-10 [-webkit-app-region:drag]"
           )}
         >
+          {/* Without the rail this is the inbox's only door in. */}
+          {collaborating && (
+            <div className="[-webkit-app-region:no-drag]">
+              <InboxPopover
+                side="bottom"
+                active={pathname.startsWith("/inbox")}
+              />
+            </div>
+          )}
           <div className="[-webkit-app-region:no-drag]">
             <ModeSelector />
           </div>
@@ -102,7 +114,12 @@ export function WorkspaceShell() {
             </div>
           )}
         </header>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col overflow-hidden border-t",
+            !collaborating && "rounded-tl-lg border-l"
+          )}
+        >
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {current === null && !isSettings ? (
               <div className="flex h-full flex-col items-center justify-center gap-1 text-sm">

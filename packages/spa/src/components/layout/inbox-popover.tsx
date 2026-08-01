@@ -17,7 +17,14 @@ import { cn } from "@/lib/utils"
 
 const PREVIEW_COUNT = 4
 
-export function InboxPopover({ active }: { active: boolean }) {
+export function InboxPopover({
+  active,
+  side = "right",
+}: {
+  active: boolean
+  /** "right" hangs it off the rail; "bottom" off a title-bar button. */
+  side?: "right" | "bottom"
+}) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -36,7 +43,7 @@ export function InboxPopover({ active }: { active: boolean }) {
         )}
       </PopoverTrigger>
       <PopoverContent
-        side="right"
+        side={side}
         align="start"
         className="w-96 gap-0 overflow-hidden p-0"
       >

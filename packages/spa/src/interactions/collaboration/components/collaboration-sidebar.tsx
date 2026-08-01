@@ -1,9 +1,9 @@
 /**
- * The collaboration mode's sidebar — a tree of projects that expand into their
- * open tasks and their channels, the team-wide channels below, and people in the
- * footer. It lives apart from the page so shared surfaces (the inbox) can keep
- * it on screen, and every row is a link so the selection survives navigating
- * away and back.
+ * The collaboration mode's sidebar — collapsible sections, agents first and
+ * members last, wrapped around favourites and a tree of projects that expand
+ * into their tasks, docs and channels. It lives apart from the page so shared
+ * surfaces (the inbox) can keep it on screen, and every row is a link so the
+ * selection survives navigating away and back.
  */
 import {
   IconChevronDown,
@@ -15,20 +15,23 @@ import {
 import { Link, useRouterState } from "@tanstack/react-router"
 import { useState, type CSSProperties, type ReactNode } from "react"
 import { ResizeHandle } from "@/components/layout/resize-handle"
+import { Avatar } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
+  AGENTS,
   DEFAULT_ID,
   DEFAULT_VIEW,
   FAVORITES,
   findChannel,
   findProject,
   findTask,
+  MEMBERS,
   PROJECTS,
   projectChannels,
   projectTasks,
   type CollaborationView,
+  type MockPerson,
 } from "@/interactions/collaboration/data/collaboration.mock"
-import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
 
@@ -136,6 +139,39 @@ function TreeRow({
   )
 }
 
+function PresenceDot({ online }: { online: boolean }) {
+  return (
+    <span
+      className={cn(
+        "ml-auto size-1.5 shrink-0 rounded-full",
+        online ? "bg-emerald-500" : "bg-muted-foreground/40"
+      )}
+    />
+  )
+}
+
+function PersonRow({
+  person,
+  view,
+  active,
+}: {
+  person: MockPerson
+  view: Extract<CollaborationView, "agents" | "members">
+  active: boolean
+}) {
+  return (
+    <TreeRow
+      depth={0}
+      icon={<Avatar name={person.name} letters={1} className="size-4" />}
+      label={person.name}
+      to="/modes/collaboration"
+      search={{ view, id: person.id }}
+      active={active}
+      trailing={<PresenceDot online={person.online} />}
+    />
+  )
+}
+
 export function CollaborationSidebar() {
   const prefs = useUiPrefs()
   const [width, setWidth] = useState(prefs.workspaceSidebarWidth)
@@ -176,16 +212,6 @@ export function CollaborationSidebar() {
             ),
           }
     }
-    if (favorite.view === "task") {
-      const task = findTask(favorite.id)
-      return task === undefined
-        ? null
-        : {
-            ...favorite,
-            label: task.title,
-            icon: <TaskStatusIcon status={task.status} />,
-          }
-    }
     const project = findProject(favorite.id)
     if (project === undefined) return null
     return {
@@ -215,6 +241,17 @@ export function CollaborationSidebar() {
     <>
       <aside className="flex shrink-0 flex-col border-r" style={{ width }}>
         <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
+          <Section title="Agents">
+            {AGENTS.map((agent) => (
+              <PersonRow
+                key={agent.id}
+                person={agent}
+                view="agents"
+                active={isActive("agents", agent.id)}
+              />
+            ))}
+          </Section>
+
           {favorites.length > 0 && (
             <Section title="Favorites">
               {favorites.map((favorite) => (
@@ -295,6 +332,17 @@ export function CollaborationSidebar() {
                 No projects match.
               </p>
             )}
+          </Section>
+
+          <Section title="Members">
+            {MEMBERS.map((member) => (
+              <PersonRow
+                key={member.id}
+                person={member}
+                view="members"
+                active={isActive("members", member.id)}
+              />
+            ))}
           </Section>
         </ScrollArea>
       </aside>

@@ -23,7 +23,13 @@ const PEOPLE = {
   },
 }
 
-export function PeopleView({ kind }: { kind: "agents" | "members" }) {
+export function PeopleView({
+  kind,
+  selectedId,
+}: {
+  kind: "agents" | "members"
+  selectedId?: string
+}) {
   const { title, meta, list } = PEOPLE[kind]
   const online = list.filter((p) => p.online).length
 
@@ -49,7 +55,15 @@ export function PeopleView({ kind }: { kind: "agents" | "members" }) {
 
           <ul role="list" className="mt-5 divide-y">
             {list.map((person) => (
-              <li key={person.id} className="flex items-center gap-3 py-3">
+              <li
+                key={person.id}
+                aria-current={person.id === selectedId ? "true" : undefined}
+                className={cn(
+                  "flex items-center gap-3 py-3",
+                  person.id === selectedId &&
+                    "-mx-2 rounded-lg bg-muted px-2 [&+li]:border-transparent"
+                )}
+              >
                 <Avatar name={person.name} className="size-7" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-medium">

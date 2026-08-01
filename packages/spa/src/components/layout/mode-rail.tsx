@@ -1,7 +1,7 @@
 /**
- * ModeRail — the left rail both modes wear. The inbox sits on top either way;
- * below it code mode carries the git surfaces and the bottom dock's toggles,
- * collaboration the people. It reads the active surface from the route, so the
+ * ModeRail — code mode's left rail: the inbox on top, then the git surfaces and
+ * the bottom dock's toggles. Collaboration mode has no rail — its sidebar
+ * carries the equivalent. It reads the active surface from the route, so the
  * shells render it prop-free.
  */
 import {
@@ -11,9 +11,7 @@ import {
   IconGitPullRequest,
   IconMessageCircle,
   IconPlayerPlay,
-  IconRobot,
   IconSettings,
-  IconUsers,
   IconTerminal2,
 } from "@tabler/icons-react"
 import { Link, useRouterState } from "@tanstack/react-router"
@@ -27,7 +25,6 @@ import { InboxPopover } from "@/components/layout/inbox-popover"
 import { cn } from "@/lib/utils"
 import { isDesktop } from "@/lib/desktop"
 import { useRepo } from "@/lib/queries"
-import { activeWorkMode } from "@/lib/work-mode"
 import {
   openBottomTab,
   setUiPrefs,
@@ -115,35 +112,6 @@ function RailButton({
   )
 }
 
-function PeopleButton({
-  label,
-  view,
-  active,
-  children,
-}: {
-  label: string
-  view: "agents" | "members"
-  active: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        className={cn(
-          buttonVariants({ variant: "ghost", size: "icon" }),
-          "relative rounded-lg text-muted-foreground [-webkit-app-region:no-drag]",
-          active && "bg-muted text-foreground"
-        )}
-        aria-label={label}
-        render={<Link to="/modes/collaboration" search={{ view }} />}
-      >
-        {children}
-      </TooltipTrigger>
-      <TooltipContent side="right">{label}</TooltipContent>
-    </Tooltip>
-  )
-}
-
 /** Show a bottom-dock tab, or hide the dock if that tab is already active. */
 function toggleBottomTab(tab: BottomTab, current: BottomTab, visible: boolean) {
   if (visible && current === tab) {
@@ -156,11 +124,8 @@ function toggleBottomTab(tab: BottomTab, current: BottomTab, visible: boolean) {
 export function ModeRail() {
   const prefs = useUiPrefs()
   const repo = useRepo()
-  const { pathname, search } = useRouterState({ select: (s) => s.location })
+  const pathname = useRouterState({ select: (s) => s.location.pathname })
   const hasGitHub = repo.data?.github != null
-  const collaborating =
-    activeWorkMode(pathname, prefs.workMode) === "collaboration"
-  const view = (search as { view?: string }).view
 
   const gitActive =
     prefs.bottomVisible &&
@@ -199,85 +164,52 @@ export function ModeRail() {
           <InboxPopover active={pathname.startsWith(INBOX_MATCH)} />
         </div>
       )}
-      {collaborating ? (
-        <>
-          <div className="my-1 h-px w-6 bg-border" />
-          <PeopleButton label="Agents" view="agents" active={view === "agents"}>
-            <IconRobot className="size-5" />
-          </PeopleButton>
-          <PeopleButton
-            label="Members"
-            view="members"
-            active={view === "members"}
-          >
-            <IconUsers className="size-5" />
-          </PeopleButton>
-          <div className="mt-auto flex flex-col items-center gap-1">
-            <RailButton
-              to="/settings"
-              label="Settings"
-              active={pathname.startsWith("/settings")}
-            >
-              <IconSettings className="size-5" />
-            </RailButton>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="my-1 h-px w-6 bg-border" />
-          {GIT_LINKS.filter((l) => l.github !== true || hasGitHub).map(
-            renderLink
-          )}
-          <div className="my-1 h-px w-6 bg-border" />
-          {REVIEW_LINKS.map(renderLink)}
-          <div className="mt-auto flex flex-col items-center gap-1">
-            <RailButton
-              label="Branches & History"
-              active={gitActive}
-              onClick={() => {
-                const gitTab =
-                  prefs.bottomTab === "history" ? "history" : "branches"
-                if (prefs.bottomVisible && gitActive) {
-                  setUiPrefs({ bottomVisible: false })
-                  return
-                }
-                openBottomTab(gitTab)
-              }}
-            >
-              <IconGitFork className="size-5" />
-            </RailButton>
-            <RailButton
-              label="Services"
-              active={servicesActive}
-              onClick={() =>
-                toggleBottomTab(
-                  "services",
-                  prefs.bottomTab,
-                  prefs.bottomVisible
-                )
-              }
-            >
-              <IconPlayerPlay className="size-5" />
-            </RailButton>
-            <RailButton
-              label="Terminal threads"
-              active={threadsActive}
-              onClick={() =>
-                toggleBottomTab("threads", prefs.bottomTab, prefs.bottomVisible)
-              }
-            >
-              <IconTerminal2 className="size-5" />
-            </RailButton>
-            <RailButton
-              to="/settings"
-              label="Settings"
-              active={pathname.startsWith("/settings")}
-            >
-              <IconSettings className="size-5" />
-            </RailButton>
-          </div>
-        </>
-      )}
+      <div className="my-1 h-px w-6 bg-border" />
+      {GIT_LINKS.filter((l) => l.github !== true || hasGitHub).map(renderLink)}
+      <div className="my-1 h-px w-6 bg-border" />
+      {REVIEW_LINKS.map(renderLink)}
+      <div className="mt-auto flex flex-col items-center gap-1">
+        <RailButton
+          label="Branches & History"
+          active={gitActive}
+          onClick={() => {
+            const gitTab =
+              prefs.bottomTab === "history" ? "history" : "branches"
+            if (prefs.bottomVisible && gitActive) {
+              setUiPrefs({ bottomVisible: false })
+              return
+            }
+            openBottomTab(gitTab)
+          }}
+        >
+          <IconGitFork className="size-5" />
+        </RailButton>
+        <RailButton
+          label="Services"
+          active={servicesActive}
+          onClick={() =>
+            toggleBottomTab("services", prefs.bottomTab, prefs.bottomVisible)
+          }
+        >
+          <IconPlayerPlay className="size-5" />
+        </RailButton>
+        <RailButton
+          label="Terminal threads"
+          active={threadsActive}
+          onClick={() =>
+            toggleBottomTab("threads", prefs.bottomTab, prefs.bottomVisible)
+          }
+        >
+          <IconTerminal2 className="size-5" />
+        </RailButton>
+        <RailButton
+          to="/settings"
+          label="Settings"
+          active={pathname.startsWith("/settings")}
+        >
+          <IconSettings className="size-5" />
+        </RailButton>
+      </div>
     </nav>
   )
 }

@@ -57,7 +57,7 @@ export function CollaborationPage() {
         ) : task !== undefined ? (
           <TaskView task={task} />
         ) : view === "agents" || view === "members" ? (
-          <PeopleView kind={view} />
+          <PeopleView kind={view} selectedId={search.id} />
         ) : (
           <NothingSelected />
         )}

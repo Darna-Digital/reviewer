@@ -97,6 +97,11 @@ export interface MockWorkspace {
   color: string
 }
 
+export interface MockViewer {
+  name: string
+  email: string
+}
+
 export const STATUS_ORDER: ReadonlyArray<TaskStatus> = [
   "doing",
   "review",
@@ -134,6 +139,12 @@ export const WORKSPACES: ReadonlyArray<MockWorkspace> = [
   },
   { id: "personal", name: "Personal", detail: "Just you", color: "#E2707F" },
 ]
+
+/** Whoever is signed in — the account the workspace picker hangs off. */
+export const VIEWER: MockViewer = {
+  name: "Rūtenis Raila",
+  email: "rutenis@darnadigital.com",
+}
 
 export const PROJECTS: ReadonlyArray<MockProject> = [
   {
@@ -741,14 +752,15 @@ export const MEMBERS: ReadonlyArray<MockPerson> = [
 export const DEFAULT_VIEW: CollaborationView = "project"
 export const DEFAULT_ID = PROJECTS[0]?.id ?? ""
 
+/** Favourites hold surfaces, never a single task — a task list stands in. */
 export interface MockFavorite {
-  view: CollaborationView
+  view: Extract<CollaborationView, "project" | "tasks" | "channel">
   id: string
 }
 
 export const FAVORITES: ReadonlyArray<MockFavorite> = [
   { view: "channel", id: "atlas-dev" },
-  { view: "task", id: "atlas-1" },
+  { view: "tasks", id: "atlas" },
   { view: "tasks", id: "pricing" },
   { view: "project", id: "onboarding" },
 ]
