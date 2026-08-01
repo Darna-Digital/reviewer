@@ -58,7 +58,7 @@ function BarButton({
         render={
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="icon"
             aria-label={label}
             disabled={disabled}
             onClick={onClick}
@@ -151,10 +151,10 @@ export function WindowBar() {
         disabled={!canGoBack}
         onClick={() => router.history.back()}
       >
-        <IconArrowLeft className="size-4.5" />
+        <IconArrowLeft className="size-5" />
       </BarButton>
       <BarButton label="Forward" onClick={() => router.history.forward()}>
-        <IconArrowRight className="size-4.5" />
+        <IconArrowRight className="size-5" />
       </BarButton>
 
       <div
@@ -245,7 +245,7 @@ export function WindowBar() {
         })}
       </div>
       <BarButton label="New tab" onClick={() => open(HOME_HREF)}>
-        <IconPlus className="size-4.5" />
+        <IconPlus className="size-5" />
       </BarButton>
       <div className="flex-1" />
     </header>

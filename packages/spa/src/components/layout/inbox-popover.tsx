@@ -29,27 +29,17 @@ export function InboxPopover({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      {/* The rail sizes its buttons a step up from the toolbar's, so the inbox
-          matches whichever it is standing in rather than one of the two. */}
       <PopoverTrigger
         className={cn(
-          buttonVariants({
-            variant: "ghost",
-            size: side === "right" ? "icon" : "icon-sm",
-          }),
+          buttonVariants({ variant: "ghost", size: "icon" }),
           "relative rounded-lg text-muted-foreground [-webkit-app-region:no-drag]",
           (active || open) && "bg-muted text-foreground"
         )}
         aria-label="Inbox"
       >
-        <IconInbox className={side === "right" ? "size-5" : "size-4.5"} />
+        <IconInbox className="size-5" />
         {UNREAD_COUNT > 0 && (
-          <span
-            className={cn(
-              "absolute size-1.5 rounded-full bg-sky-500",
-              side === "right" ? "top-1 right-1" : "top-0.5 right-0.5"
-            )}
-          />
+          <span className="absolute top-1 right-1 size-1.5 rounded-full bg-sky-500" />
         )}
       </PopoverTrigger>
       <PopoverContent

@@ -159,7 +159,7 @@ export function NewTaskButton() {
               render={
                 <Button
                   variant="ghost"
-                  size="icon-sm"
+                  size="icon"
                   aria-label="New task"
                   className="rounded-lg text-muted-foreground"
                 />
@@ -167,7 +167,7 @@ export function NewTaskButton() {
             />
           }
         >
-          <IconPlus className="size-4.5" />
+          <IconPlus className="size-5" />
         </TooltipTrigger>
         <TooltipContent side="bottom">New task</TooltipContent>
       </Tooltip>

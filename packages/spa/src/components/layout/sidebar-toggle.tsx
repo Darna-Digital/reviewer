@@ -24,14 +24,14 @@ export function SidebarToggle({ className }: { className?: string }) {
         render={
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="icon"
             aria-label={label}
             onClick={() => setUiPrefs({ sidebarVisible: !sidebarVisible })}
             className={cn("rounded-lg text-muted-foreground", className)}
           />
         }
       >
-        <IconLayoutSidebar className="size-4.5" />
+        <IconLayoutSidebar className="size-5" />
       </TooltipTrigger>
       <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
