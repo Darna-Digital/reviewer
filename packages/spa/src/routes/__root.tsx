@@ -56,10 +56,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
-        {/* Apply the persisted theme before paint to avoid a flash. */}
+        {/* Apply the persisted theme, and flag the native shell, before paint —
+            the frame is translucent there, and a flash of opaque chrome while
+            the vibrancy layer waits is the exact thing this avoids. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(()=>{try{const t=localStorage.getItem("byconvo-theme")||"system";const d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.dataset.theme=d?"dark":"light";}catch(e){}})()`,
+            __html: `(()=>{try{const t=localStorage.getItem("byconvo-theme")||"system";const d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.dataset.theme=d?"dark":"light";document.documentElement.classList.toggle("desktop","byconvo" in window);}catch(e){}})()`,
           }}
         />
       </head>

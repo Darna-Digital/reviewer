@@ -167,9 +167,7 @@ async function ensureServer(): Promise<void> {
           ...process.env,
           ELECTRON_RUN_AS_NODE: "1",
           BYCONVO_PORT: String(serverPort),
-          ...(resolvedNodePty
-            ? { BYCONVO_NODE_PTY: resolvedNodePty }
-            : {}),
+          ...(resolvedNodePty ? { BYCONVO_NODE_PTY: resolvedNodePty } : {}),
         },
         stdio: "inherit",
       });
@@ -200,19 +198,42 @@ function registerRendererProtocol(): void {
   });
 }
 
+const isMac = process.platform === "darwin";
+
+/** Everything the app itself is served from — anything else is the web. */
+function isInternalUrl(url: string): boolean {
+  if (url.startsWith("byconvo://")) return true;
+  try {
+    const { origin } = new URL(url);
+    return origin === new URL(spaUrl).origin || origin === serverUrl;
+  } catch {
+    return false;
+  }
+}
+
 async function createWindow(): Promise<void> {
   const window = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 900,
     minHeight: 600,
-    backgroundColor: "#131316",
+    // On macOS the window frame is a vibrancy layer the renderer tints through
+    // (see `.desktop .app-frame`), so the background has to be fully clear for
+    // the blur behind it to show. Elsewhere it stays an opaque near-black.
+    backgroundColor: isMac ? "#00000000" : "#000000",
+    ...(isMac
+      ? {
+          vibrancy: "under-window" as const,
+          visualEffectState: "active" as const,
+        }
+      : {}),
     title: "Byconvo",
     icon: brandIcon,
     titleBarStyle: "hiddenInset",
-    // Center the traffic lights in the 40px (h-10) TopBar. The hiddenInset
-    // default is tuned for a ~28px toolbar, leaving the lights sitting too high.
-    trafficLightPosition: { x: 19, y: 13 },
+    // Center the traffic lights in the 44px (h-11) WindowBar and inset them to
+    // the system spacing; the bar's `pl-24` is what leaves room for them. The
+    // hiddenInset default is tuned for a ~28px toolbar, sitting too high here.
+    trafficLightPosition: { x: 20, y: 16 },
     webPreferences: {
       preload: resolve(__dirname, "preload.js"),
       contextIsolation: true,
@@ -224,6 +245,15 @@ async function createWindow(): Promise<void> {
   window.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("http")) shell.openExternal(url);
     return { action: "deny" };
+  });
+
+  // A plain link to the web (a PR on GitHub, a doc) would otherwise replace the
+  // app inside its own window, with no way back — the shell has no address bar.
+  // Hand those to the system browser and stay put; in-app navigation continues.
+  window.webContents.on("will-navigate", (event, url) => {
+    if (isInternalUrl(url)) return;
+    event.preventDefault();
+    if (url.startsWith("http")) void shell.openExternal(url);
   });
 
   if (isDev) {

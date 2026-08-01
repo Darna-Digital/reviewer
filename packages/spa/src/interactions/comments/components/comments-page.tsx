@@ -379,7 +379,7 @@ export function CommentsPage() {
       await Promise.all(assigned.map(remove))
       setSelectedId(null)
       toast.success(`Assigned ${count} comment${count === 1 ? "" : "s"}`)
-      void navigate({ to: "/chats/$chatId", params: { chatId } })
+      void navigate({ to: "/modes/code/chats/$chatId", params: { chatId } })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not assign comments"
@@ -411,12 +411,12 @@ export function CommentsPage() {
     if (comment.code === undefined) return
     const { filePath, target } = comment.code
     if (target === "worktree") {
-      void navigate({ to: "/commit", search: { path: filePath } })
+      void navigate({ to: "/modes/code/commit", search: { path: filePath } })
       return
     }
     if (target.startsWith("commit-")) {
       void navigate({
-        to: "/browse/commit/$sha",
+        to: "/modes/code/browse/commit/$sha",
         params: { sha: target.slice("commit-".length) },
         search: { path: filePath },
       })
@@ -426,14 +426,14 @@ export function CommentsPage() {
       const [base, head] = target.split("...")
       if (base === undefined || head === undefined) return
       void navigate({
-        to: "/browse/range",
+        to: "/modes/code/browse/range",
         search: { path: filePath, base, head },
       })
       return
     }
     if (target.startsWith("pr-")) {
       void navigate({
-        to: "/review/$pull",
+        to: "/modes/code/review/$pull",
         params: { pull: target.slice("pr-".length) },
         search: { path: filePath },
       })

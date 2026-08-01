@@ -18,6 +18,7 @@ import {
   findProject,
   findTask,
 } from "@/interactions/collaboration/data/collaboration.mock"
+import { useUiPrefs } from "@/lib/ui-prefs"
 
 function NothingSelected() {
   return (
@@ -31,6 +32,7 @@ function NothingSelected() {
 }
 
 export function CollaborationPage() {
+  const { sidebarVisible } = useUiPrefs()
   const search = useSearch({ strict: false })
   const view = search.view ?? DEFAULT_VIEW
   const id = search.id ?? DEFAULT_ID
@@ -43,7 +45,7 @@ export function CollaborationPage() {
 
   return (
     <div className="flex h-full min-h-0">
-      <CollaborationSidebar />
+      {sidebarVisible && <CollaborationSidebar />}
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {project !== undefined ? (

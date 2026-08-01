@@ -25,7 +25,7 @@ const visualComment: VisualComment = {
   createdAt: "2026-07-25T10:00:00.000Z",
   pageUrl: "http://localhost:41812/chats",
   pageTitle: "byconvo",
-  route: "/chats",
+  route: "/modes/code/chats",
   selector: "main > button#save",
   label: '<ChatsPage> button#save.btn "Save changes"',
   tagName: "button",
@@ -83,7 +83,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
     select,
   }: {
     select: (state: { location: { pathname: string } }) => unknown
-  }) => select({ location: { pathname: "/comments" } }),
+  }) => select({ location: { pathname: "/modes/code/comments" } }),
   Link: ({
     children,
     ...props
@@ -163,7 +163,7 @@ describe("CommentsPage", () => {
       })
     ).toBeDefined()
     expect(navigate).toHaveBeenCalledWith({
-      to: "/commit",
+      to: "/modes/code/commit",
       search: { path: "packages/spa/src/lib/date-filter.ts" },
     })
   })
@@ -211,7 +211,7 @@ describe("CommentsPage", () => {
     expect(removeVisual).toHaveBeenCalledWith("v-1")
     expect(removeCode).toHaveBeenCalledOnce()
     expect(navigate).toHaveBeenCalledWith({
-      to: "/chats/$chatId",
+      to: "/modes/code/chats/$chatId",
       params: { chatId: "chat-1" },
     })
   })

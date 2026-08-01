@@ -196,7 +196,7 @@ export function RepoPicker({
     // Workspace pages stay put (now scoped to the new repo); the git-review
     // shell defaults to jumping into the commit view.
     if (onChosen !== undefined) onChosen()
-    else void navigate({ to: "/commit", search: {} })
+    else void navigate({ to: "/modes/code/commit", search: {} })
   }
 
   const chooseDirectory = async () => {

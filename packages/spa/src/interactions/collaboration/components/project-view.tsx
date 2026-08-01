@@ -1,8 +1,7 @@
 /**
- * A project's overview — what state the work is in, who is on it, and the way
- * into everything it owns. It deliberately does not re-list every task: the
- * Tasks view does that, so this pane shows progress, the handful of tasks
- * actually moving, and the project's docs and channels.
+ * A project's overview — the way into everything it owns. It deliberately does
+ * not re-list every task: the Tasks view does that, so this pane shows the
+ * handful of tasks actually moving, and the project's docs and channels.
  */
 import { IconArrowRight, IconDots, IconHash } from "@tabler/icons-react"
 import { Link } from "@tanstack/react-router"
@@ -117,32 +116,6 @@ export function ProjectView({ project }: { project: MockProject }) {
           <p className="mt-2 max-w-[70ch] text-base text-pretty text-muted-foreground sm:text-sm">
             {project.summary}
           </p>
-
-          {/* The pane resizes independently of the viewport, so the meta row
-              answers to its own width rather than the window's. */}
-          <div className="@container mt-6">
-            <dl className="grid grid-cols-1 gap-x-10 gap-y-4 @xs:grid-cols-3">
-              <div className="min-w-0">
-                <dt className="truncate text-xs font-medium">Lead</dt>
-                <dd className="mt-1.5 flex min-w-0 items-center gap-1.5 text-[0.8125rem] text-muted-foreground">
-                  <AssigneeAvatar name={project.lead} />
-                  <span className="truncate">{project.lead}</span>
-                </dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="truncate text-xs font-medium">Target</dt>
-                <dd className="mt-1.5 text-[0.8125rem] text-muted-foreground tabular-nums">
-                  {project.target}
-                </dd>
-              </div>
-              <div className="min-w-0">
-                <dt className="truncate text-xs font-medium">Open</dt>
-                <dd className="mt-1.5 text-[0.8125rem] text-muted-foreground tabular-nums">
-                  {open.length} of {tasks.length}
-                </dd>
-              </div>
-            </dl>
-          </div>
 
           <SectionHeading
             title="Up next"

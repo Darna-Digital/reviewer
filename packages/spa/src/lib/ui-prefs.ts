@@ -24,6 +24,8 @@ export interface UiPrefs {
   /** The selected mode in the top bar's mode selector. */
   workMode: WorkMode
   connectors: boolean
+  /** Whether the shell's left sidebar (file tree / collaboration nav) shows. */
+  sidebarVisible: boolean
   bottomVisible: boolean
   /** Which bottom-dock tab is selected. */
   bottomTab: BottomTab
@@ -75,6 +77,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   diffStyle: "split",
   workMode: "code",
   connectors: true,
+  sidebarVisible: true,
   bottomVisible: true,
   bottomTab: "branches",
   sidebarWidth: 288,
@@ -123,6 +126,7 @@ function persist() {
       diffStyle,
       workMode,
       connectors,
+      sidebarVisible,
       bottomVisible,
       bottomTab,
       sidebarWidth,
@@ -144,6 +148,7 @@ function persist() {
         diffStyle,
         workMode,
         connectors,
+        sidebarVisible,
         bottomVisible,
         bottomTab,
         sidebarWidth,

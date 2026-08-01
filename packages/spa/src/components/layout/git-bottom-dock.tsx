@@ -80,16 +80,16 @@ export function GitBottomDock() {
           onLogFiltersChange={setLogFilters}
           onBranchCheckout={(b) => {
             void git.checkout(b)
-            void navigate({ to: "/commit" })
+            void navigate({ to: "/modes/code/commit" })
           }}
           onSelectCommit={(c) =>
             void navigate({
-              to: "/browse/commit/$sha",
+              to: "/modes/code/browse/commit/$sha",
               params: { sha: c.sha },
             })
           }
           onSelectCommitFile={(p) =>
-            void navigate({ to: "/browse", search: { file: p } })
+            void navigate({ to: "/modes/code/browse", search: { file: p } })
           }
         />
       </div>

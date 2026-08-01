@@ -2,7 +2,8 @@
  * ModeRail — code mode's left rail: the inbox on top, then the git surfaces and
  * the bottom dock's toggles. Collaboration mode has no rail — its sidebar
  * carries the equivalent. It reads the active surface from the route, so the
- * shells render it prop-free.
+ * shells render it prop-free. The window's own chrome (traffic lights, tabs)
+ * sits above it in the WindowFrame, so the rail starts at the content edge.
  */
 import {
   IconFolders,
@@ -23,7 +24,6 @@ import {
 } from "@/components/ui/tooltip"
 import { InboxPopover } from "@/components/layout/inbox-popover"
 import { cn } from "@/lib/utils"
-import { isDesktop } from "@/lib/desktop"
 import { useRepo } from "@/lib/queries"
 import {
   openBottomTab,
@@ -45,31 +45,31 @@ const INBOX_MATCH = "/inbox"
 
 const REVIEW_LINKS: RailLink[] = [
   {
-    to: "/comments",
+    to: "/modes/code/comments",
     label: "Comments — code & visual",
     icon: IconMessageCircle,
-    match: "/comments",
+    match: "/modes/code/comments",
   },
 ]
 
 const GIT_LINKS: RailLink[] = [
   {
-    to: "/browse",
+    to: "/modes/code/browse",
     label: "Browse the project",
     icon: IconFolders,
-    match: "/browse",
+    match: "/modes/code/browse",
   },
   {
-    to: "/commit",
+    to: "/modes/code/commit",
     label: "Local changes",
     icon: IconGitCommit,
-    match: "/commit",
+    match: "/modes/code/commit",
   },
   {
-    to: "/review",
+    to: "/modes/code/review",
     label: "Pull requests",
     icon: IconGitPullRequest,
-    match: "/review",
+    match: "/modes/code/review",
     github: true,
   },
 ]
@@ -145,25 +145,11 @@ export function ModeRail() {
   )
 
   return (
-    <nav
-      className={cn(
-        "flex h-full w-12 shrink-0 flex-col items-center gap-1 pb-2",
-        // In the desktop shell the macOS traffic lights sit over the rail's
-        // top-left. Reserve a draggable title-bar strip above the buttons (the
-        // height of the top bar) so they clear the lights; empty strip drags the
-        // window, the buttons opt back out via [-webkit-app-region:no-drag].
-        isDesktop && "pt-10 [-webkit-app-region:drag]"
-      )}
-    >
-      {/* The inbox shares the top-bar row with the repo picker (web); on desktop
-          the pt-10 spacer already clears that row. */}
-      {isDesktop ? (
+    <nav className="flex h-full w-12 shrink-0 flex-col items-center gap-1 pb-2">
+      {/* The inbox shares its row with the toolbar's repo picker. */}
+      <div className="flex h-11 w-full shrink-0 items-center justify-center">
         <InboxPopover active={pathname.startsWith(INBOX_MATCH)} />
-      ) : (
-        <div className="flex h-10 w-full shrink-0 items-center justify-center">
-          <InboxPopover active={pathname.startsWith(INBOX_MATCH)} />
-        </div>
-      )}
+      </div>
       <div className="my-1 h-px w-6 bg-border" />
       {GIT_LINKS.filter((l) => l.github !== true || hasGitHub).map(renderLink)}
       <div className="my-1 h-px w-6 bg-border" />

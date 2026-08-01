@@ -57,6 +57,7 @@ import { BottomPanel } from "@/components/layout/bottom-panel"
 import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs"
 import { ResizeHandle } from "@/components/layout/resize-handle"
 import { TopBar } from "@/components/layout/top-bar"
+import { WindowFrame } from "@/components/layout/window-frame"
 import { FileSidebar } from "@/components/tree/file-sidebar"
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import {
@@ -140,9 +141,9 @@ export function AppShell() {
   const params = useParams({ strict: false })
   const search = useSearch({ strict: false })
 
-  const mode: AppMode = pathname.startsWith("/review")
+  const mode: AppMode = pathname.startsWith("/modes/code/review")
     ? "review"
-    : pathname.startsWith("/browse")
+    : pathname.startsWith("/modes/code/browse")
       ? "browse"
       : "commit"
 
@@ -188,14 +189,14 @@ export function AppShell() {
       }
       if (e.key === "1") {
         e.preventDefault()
-        void navigate({ to: "/commit" })
+        void navigate({ to: "/modes/code/commit" })
       } else if (e.key === "2") {
         if (!hasGitHub) return
         e.preventDefault()
-        void navigate({ to: "/review" })
+        void navigate({ to: "/modes/code/review" })
       } else if (e.key === "3") {
         e.preventDefault()
-        void navigate({ to: "/browse" })
+        void navigate({ to: "/modes/code/browse" })
       } else if (
         e.altKey &&
         (e.key === "ArrowLeft" || e.key === "ArrowRight")
@@ -396,7 +397,7 @@ export function AppShell() {
         visibleComments.map((comment) => comments.remove(comment))
       )
       toast.success(`Assigned ${count} comment${plural}`)
-      void navigate({ to: "/chats/$chatId", params: { chatId } })
+      void navigate({ to: "/modes/code/chats/$chatId", params: { chatId } })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not assign comments"
@@ -554,14 +555,14 @@ export function AppShell() {
         id: "commit-mode",
         label: "Local changes",
         icon: IconGitCommit,
-        onClick: () => void navigate({ to: "/commit" }),
+        onClick: () => void navigate({ to: "/modes/code/commit" }),
       })
     } else if (mode === "review") {
       list.push({
         id: "review-mode",
         label: "Pull requests",
         icon: IconGitPullRequest,
-        onClick: () => void navigate({ to: "/review" }),
+        onClick: () => void navigate({ to: "/modes/code/review" }),
       })
       if (selectedPull !== null) {
         list.push({
@@ -616,7 +617,7 @@ export function AppShell() {
         id: "browse-mode",
         label: "Project",
         icon: IconFolders,
-        onClick: () => void navigate({ to: "/browse" }),
+        onClick: () => void navigate({ to: "/modes/code/browse" }),
       })
     }
     if (openPath !== null)
@@ -678,7 +679,7 @@ export function AppShell() {
         group: "Navigation",
         icon: IconGitCommit,
         keywords: "commit working tree changes",
-        run: () => void navigate({ to: "/commit" }),
+        run: () => void navigate({ to: "/modes/code/commit" }),
       },
     ]
     if (hasGitHub) {
@@ -688,7 +689,7 @@ export function AppShell() {
         group: "Navigation",
         icon: IconGitPullRequest,
         keywords: "review pr github",
-        run: () => void navigate({ to: "/review" }),
+        run: () => void navigate({ to: "/modes/code/review" }),
       })
     }
     list.push(
@@ -698,7 +699,7 @@ export function AppShell() {
         group: "Navigation",
         icon: IconFolders,
         keywords: "files history commits explore",
-        run: () => void navigate({ to: "/browse" }),
+        run: () => void navigate({ to: "/modes/code/browse" }),
       },
       {
         id: "git-refresh",
@@ -921,7 +922,7 @@ export function AppShell() {
       queryClient.setQueryData(["get", "/api/workspace"], data)
     }
     await queryClient.invalidateQueries()
-    void navigate({ to: "/commit", search: {} })
+    void navigate({ to: "/modes/code/commit", search: {} })
   }
 
   const crumbs = buildCrumbs()
@@ -930,7 +931,7 @@ export function AppShell() {
     // One Shiki worker pool shared by every diff/file surface below (diff
     // pane, file viewer, editor, conflict view) — see DiffWorkerPoolProvider.
     <DiffWorkerPoolProvider>
-      <div className="flex h-svh w-full overflow-hidden text-foreground">
+      <WindowFrame>
         <CommandMenu
           open={commandOpen}
           onOpenChange={setCommandOpen}
@@ -961,15 +962,18 @@ export function AppShell() {
             onDiffStyleChange={(diffStyle) => setUiPrefs({ diffStyle })}
             onCheckout={(b) => {
               void git.checkout(b)
-              void navigate({ to: "/commit" })
+              void navigate({ to: "/modes/code/commit" })
             }}
             onCheckoutAndUpdate={(b) => {
               void git.checkoutAndUpdate(b)
-              void navigate({ to: "/commit" })
+              void navigate({ to: "/modes/code/commit" })
             }}
             onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
             onCompare={(base, head) =>
-              void navigate({ to: "/browse/range", search: { base, head } })
+              void navigate({
+                to: "/modes/code/browse/range",
+                search: { base, head },
+              })
             }
             onMerge={(b) => void git.merge(b)}
             onRebase={(o) => void git.rebase(o)}
@@ -980,14 +984,17 @@ export function AppShell() {
             onPull={() => void git.pull()}
           />
 
-          {/* Everything below the title bar sits in a bordered panel, so the
-            title-bar strip stays clean. */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
+          {/* Everything below the toolbar sits in a bordered panel, so the
+            toolbar strip stays clean. */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t">
             <div className="flex min-h-0 flex-1">
               {/* Review mode stacks the pull request picker above the selected
                   PR's file tree; the other modes are just the tree. */}
               <div
-                className="flex shrink-0 flex-col overflow-hidden border-r"
+                className={cn(
+                  "flex shrink-0 flex-col overflow-hidden border-r",
+                  !prefs.sidebarVisible && "hidden"
+                )}
                 style={{ width: sidebarWidth }}
               >
                 {mode === "review" && (
@@ -1006,7 +1013,7 @@ export function AppShell() {
                       selectedNumber={selectedPull?.number ?? null}
                       onSelect={(p) =>
                         void navigate({
-                          to: "/review/$pull",
+                          to: "/modes/code/review/$pull",
                           params: { pull: String(p.number) },
                         })
                       }
@@ -1069,15 +1076,17 @@ export function AppShell() {
                   </div>
                 )}
               </div>
-              <ResizeHandle
-                orientation="col"
-                value={sidebarWidth}
-                min={180}
-                max={() => Math.max(240, window.innerWidth - 400)}
-                onResize={setSidebarWidth}
-                onResizeEnd={(w) => setUiPrefs({ sidebarWidth: w })}
-                label="Resize sidebar"
-              />
+              {prefs.sidebarVisible && (
+                <ResizeHandle
+                  orientation="col"
+                  value={sidebarWidth}
+                  min={180}
+                  max={() => Math.max(240, window.innerWidth - 400)}
+                  onResize={setSidebarWidth}
+                  onResizeEnd={(w) => setUiPrefs({ sidebarWidth: w })}
+                  label="Resize sidebar"
+                />
+              )}
               <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
                 {mode === "commit" &&
                   mergeState.data != null &&
@@ -1184,11 +1193,11 @@ export function AppShell() {
                 onLogFiltersChange={setLogFilters}
                 onBranchCheckout={(b) => {
                   void git.checkout(b)
-                  void navigate({ to: "/commit" })
+                  void navigate({ to: "/modes/code/commit" })
                 }}
                 onSelectCommit={(c) =>
                   void navigate({
-                    to: "/browse/commit/$sha",
+                    to: "/modes/code/browse/commit/$sha",
                     params: { sha: c.sha },
                     search: (prev: Search) => ({
                       ...prev,
@@ -1202,7 +1211,7 @@ export function AppShell() {
             </div>
           </div>
         </div>
-      </div>
+      </WindowFrame>
     </DiffWorkerPoolProvider>
   )
 }

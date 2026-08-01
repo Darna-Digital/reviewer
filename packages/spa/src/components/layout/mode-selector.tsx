@@ -25,7 +25,7 @@ const MODES: ReadonlyArray<{
     mode: "code",
     title: "Code",
     detail: "Focus on technical details in a detailed view",
-    to: "/browse",
+    to: "/modes/code/browse",
   },
   {
     mode: "collaboration",
