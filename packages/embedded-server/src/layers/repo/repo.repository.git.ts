@@ -529,6 +529,17 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     out.trim()
   )
 
+  // Staging is per-path and tolerant because a path whose deletion is already
+  // staged is present in neither the worktree nor the index, so `git add`
+  // rejects its pathspec — and one rejected pathspec aborts the whole batch,
+  // staging nothing. Nothing is lost: only untracked paths actually need the
+  // add, and the pathspec form of `git commit` records the rest from disk.
+  const stageOne = (path: string): Effect.Effect<void, GitFailure> =>
+    run("add", "-A", "--", path).pipe(
+      Effect.asVoid,
+      Effect.catchTag("GitError", () => Effect.void)
+    )
+
   const commit: RepoRepo["commit"] = (message, paths) =>
     Effect.gen(function* () {
       if (paths.length === 0) {
@@ -536,7 +547,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
         yield* run("commit", "-m", message)
         return yield* headShortSha
       }
-      yield* run("add", "--", ...paths)
+      yield* Effect.forEach(paths, stageOne, { discard: true })
       yield* run("commit", "-m", message, "--", ...paths)
       return yield* headShortSha
     })
