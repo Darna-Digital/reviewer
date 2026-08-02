@@ -17,10 +17,6 @@ export const useRemoteBranches = () =>
   api.useQuery("get", "/api/remote-branches")
 export const useComments = () => api.useQuery("get", "/api/comments")
 
-/** Comments anchored to a DOM element by the injected picker. */
-export const useVisualComments = () =>
-  api.useQuery("get", "/api/visual-comments")
-
 /** The in-progress merge/rebase operation and its remaining conflicts. */
 export const useMergeState = () => api.useQuery("get", "/api/merge-state")
 

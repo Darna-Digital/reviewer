@@ -1,12 +1,10 @@
 import { describe, expect, it } from "vitest"
 import type { ReviewComment } from "@byconvo/core/comments"
-import type { VisualComment } from "@byconvo/core/visual-comments"
 import {
   applyFilters,
   buildAssignmentPrompt,
-  groupByKind,
+  listComments,
   noFilters,
-  unify,
 } from "./comment-list.functions"
 
 const code = (over: Partial<ReviewComment> = {}): ReviewComment => ({
@@ -22,129 +20,75 @@ const code = (over: Partial<ReviewComment> = {}): ReviewComment => ({
   ...over,
 })
 
-const visual = (over: Partial<VisualComment> = {}): VisualComment => ({
-  id: "v-1",
-  body: "make this primary",
-  author: "you",
-  createdAt: "2026-07-02T00:00:00.000Z",
-  pageUrl: "http://localhost:3000/settings",
-  pageTitle: "Settings",
-  route: "/settings",
-  selector: "#save",
-  label: 'button#save "Save"',
-  tagName: "button",
-  elementText: "Save",
-  elementHtml: "<button id='save'>Save</button>",
-  rect: { x: 0, y: 0, width: 10, height: 10 },
-  viewport: { width: 800, height: 600 },
-  ...over,
-})
-
-describe("unify", () => {
+describe("listComments", () => {
   it("orders newest first so the freshest observation is worked on first", () => {
-    const list = unify([code()], [visual()])
+    const list = listComments([
+      code(),
+      code({ id: "c-2", createdAt: "2026-07-02T00:00:00.000Z" }),
+    ])
 
-    expect(list.map((c) => c.id)).toEqual(["v-1", "c-1"])
+    expect(list.map((c) => c.id)).toEqual(["c-2", "c-1"])
   })
 
-  it("anchors a code comment to file:line and a visual one to its element", () => {
-    const [visualComment, codeComment] = unify([code()], [visual()])
+  it("anchors a comment to file:line", () => {
+    const [comment] = listComments([code()])
 
-    expect(codeComment?.anchor).toBe("src/app.ts:42")
-    expect(visualComment?.anchor).toBe('button#save "Save"')
-    expect(visualComment?.context).toBe("/settings")
+    expect(comment?.anchor).toBe("src/app.ts:42")
+    expect(comment?.context).toBe("worktree")
   })
 
   it("drops GitHub PR comments — only local ones are the reviewer's to act on", () => {
-    const list = unify([code({ source: "github" })], [])
-
-    expect(list).toEqual([])
+    expect(listComments([code({ source: "github" })])).toEqual([])
   })
 })
 
 describe("applyFilters", () => {
-  const all = unify([code()], [visual()])
+  const all = listComments([
+    code(),
+    code({
+      id: "c-2",
+      filePath: "src/settings.ts",
+      body: "make this primary",
+      createdAt: "2026-07-02T00:00:00.000Z",
+    }),
+  ])
 
   it("keeps everything when no filter is set", () => {
     expect(applyFilters(all, noFilters)).toHaveLength(2)
-  })
-
-  it("narrows to one kind", () => {
-    const visualOnly = applyFilters(all, { ...noFilters, kind: "visual" })
-
-    expect(visualOnly.map((c) => c.id)).toEqual(["v-1"])
   })
 
   it("searches the anchor and context, not just the body", () => {
     expect(
       applyFilters(all, { ...noFilters, search: "app.ts" }).map((c) => c.id)
     ).toEqual(["c-1"])
-    expect(
-      applyFilters(all, { ...noFilters, search: "/settings" }).map((c) => c.id)
-    ).toEqual(["v-1"])
   })
 
   it("ignores case and surrounding whitespace in the query", () => {
     expect(
       applyFilters(all, { ...noFilters, search: "  PRIMARY " }).map((c) => c.id)
-    ).toEqual(["v-1"])
+    ).toEqual(["c-2"])
   })
 
   it("hides comments older than the selected window", () => {
-    const old = unify([code({ createdAt: "2020-01-01T00:00:00.000Z" })], [])
+    const old = listComments([code({ createdAt: "2020-01-01T00:00:00.000Z" })])
 
     expect(applyFilters(old, { ...noFilters, date: "today" })).toEqual([])
   })
 })
 
 describe("buildAssignmentPrompt", () => {
-  it("keeps the file:line form an agent already knows for code comments", () => {
-    const prompt = buildAssignmentPrompt(unify([code()], []))
+  it("keeps the file:line form an agent already knows", () => {
+    const prompt = buildAssignmentPrompt(listComments([code()]))
 
     expect(prompt).toContain("src/app.ts:42 - extract a helper")
   })
 
-  it("gives a visual comment the context needed to find its source", () => {
-    const prompt = buildAssignmentPrompt(unify([], [visual()]))
-
-    expect(prompt).toContain(
-      '/settings — button#save "Save" - make this primary'
+  it("carries every comment in one prompt", () => {
+    const prompt = buildAssignmentPrompt(
+      listComments([code(), code({ id: "c-2", body: "make this primary" })])
     )
-    expect(prompt).toContain("selector: #save")
-    expect(prompt).toContain("page: http://localhost:3000/settings")
-  })
-
-  it("includes the source file when the picker captured one", () => {
-    const withSource = visual({
-      sourceFile: "src/settings-form.tsx",
-      sourceLine: 42,
-    })
-
-    expect(buildAssignmentPrompt(unify([], [withSource]))).toContain(
-      "source: src/settings-form.tsx:42"
-    )
-  })
-
-  it("omits the source line when only a file was captured", () => {
-    const fileOnly = visual({ sourceFile: "src/settings-form.tsx" })
-
-    expect(buildAssignmentPrompt(unify([], [fileOnly]))).toContain(
-      "source: src/settings-form.tsx\n"
-    )
-  })
-
-  it("carries both kinds in one prompt", () => {
-    const prompt = buildAssignmentPrompt(unify([code()], [visual()]))
 
     expect(prompt).toContain("extract a helper")
     expect(prompt).toContain("make this primary")
-  })
-})
-
-describe("groupByKind", () => {
-  it("omits a kind that has no comments rather than showing an empty group", () => {
-    const groups = groupByKind(unify([code()], []))
-
-    expect(groups.map((g) => g.kind)).toEqual(["code"])
   })
 })

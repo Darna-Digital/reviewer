@@ -6,8 +6,8 @@ import { GitExec, type GitExecShape } from "@byconvo/core/ports/git-exec"
 import { makeGitRepoRepository } from "./repo.repository.git.ts"
 
 const NEW_DIR_FILES = [
-  "packages/visual-picker/package.json",
-  "packages/visual-picker/src/index.ts",
+  "packages/new-package/package.json",
+  "packages/new-package/src/index.ts",
 ]
 
 /**
@@ -32,7 +32,7 @@ const fakeGit = (): GitExecShape => {
         return Effect.succeed(
           args.includes("--untracked-files=all")
             ? NEW_DIR_FILES.map((path) => `?? ${path}`)
-            : ["?? packages/visual-picker/"]
+            : ["?? packages/new-package/"]
         )
       }
       return Effect.succeed([])

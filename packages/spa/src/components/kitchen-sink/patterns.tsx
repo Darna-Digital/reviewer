@@ -57,9 +57,9 @@ const THREADS = [
 
 const PULLS = [
   {
-    title: "Add visual review comments support",
+    title: "Add inline diff comment threads",
     author: "Rūtenis",
-    branch: "task/visual-comments",
+    branch: "task/inline-diff-comments",
     checks: "Passing",
     tone: "text-success",
   },
