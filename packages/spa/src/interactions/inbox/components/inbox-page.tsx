@@ -4,6 +4,8 @@
  * follows the mode you came from.
  */
 import {
+  IconArrowsDiagonal,
+  IconArrowsDiagonalMinimize2,
   IconChevronDown,
   IconDots,
   IconSend,
@@ -24,6 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { CollaborationSidebar } from "@/interactions/collaboration/components/collaboration-sidebar"
 import { NewChatView } from "@/interactions/collaboration/components/new-chat-view"
 import { MessageComposer } from "@/interactions/collaboration/components/message-composer"
+import { PaneHeader } from "@/interactions/collaboration/components/pane-header"
 import {
   INBOX_ITEMS,
   type InboxFilter,
@@ -48,6 +51,7 @@ export function InboxPage() {
   const [filter, setFilter] = useState<InboxFilter>("all")
   const [filterOpen, setFilterOpen] = useState(false)
   const [selectedId, setSelectedId] = useState(INBOX_ITEMS[0]?.id ?? "")
+  const [expanded, setExpanded] = useState(false)
 
   const items = INBOX_ITEMS.filter((i) =>
     filter === "unread" ? i.unread : filter === "mentions" ? i.mention : true
@@ -57,11 +61,13 @@ export function InboxPage() {
   const filterLabel =
     FILTERS.find((f) => f.value === filter)?.label ?? FILTERS[0]?.label
 
+  const showList = !composing && !expanded
+
   return (
     <div className="flex h-full min-h-0">
-      {collaborating && !composing && <CollaborationSidebar />}
+      {collaborating && showList && <CollaborationSidebar />}
 
-      {!composing && (
+      {showList && (
         <div
           className="flex shrink-0 flex-col border-r"
           style={{ width: listWidth }}
@@ -153,7 +159,7 @@ export function InboxPage() {
           </ScrollArea>
         </div>
       )}
-      {!composing && (
+      {showList && (
         <ResizeHandle
           orientation="col"
           value={listWidth}
@@ -170,25 +176,64 @@ export function InboxPage() {
           <NewChatView />
         ) : (
           <>
-            <header className="flex h-11 shrink-0 items-center gap-2 border-b px-4">
-              <span className="text-sm font-medium">
-                Thread in #{selected?.channel}
-              </span>
-              <div className="ml-auto flex items-center gap-1 text-muted-foreground">
-                <IconUsers className="size-4" />
-                <span className="text-xs tabular-nums">
-                  {selected?.thread.length ?? 0}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7"
-                  aria-label="Thread options"
-                >
-                  <IconDots className="size-4" />
-                </Button>
-              </div>
-            </header>
+            <PaneHeader
+              crumbs={
+                expanded
+                  ? [
+                      <button
+                        key="inbox"
+                        type="button"
+                        onClick={() => setExpanded(false)}
+                        className="shrink-0 text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
+                      >
+                        Inbox
+                      </button>,
+                      <span
+                        key="channel"
+                        className="truncate text-muted-foreground"
+                      >
+                        #{selected?.channel}
+                      </span>,
+                      <span key="thread" className="truncate font-medium">
+                        Thread
+                      </span>,
+                    ]
+                  : [
+                      <span key="thread" className="truncate font-medium">
+                        Thread in #{selected?.channel}
+                      </span>,
+                    ]
+              }
+              actions={
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <IconUsers className="size-4" />
+                  <span className="text-xs tabular-nums">
+                    {selected?.thread.length ?? 0}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    aria-label={expanded ? "Exit full width" : "Expand full"}
+                    onClick={() => setExpanded(!expanded)}
+                  >
+                    {expanded ? (
+                      <IconArrowsDiagonalMinimize2 className="size-4" />
+                    ) : (
+                      <IconArrowsDiagonal className="size-4" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    aria-label="Thread options"
+                  >
+                    <IconDots className="size-4" />
+                  </Button>
+                </div>
+              }
+            />
 
             <ScrollArea
               className="min-h-0 flex-1"
