@@ -4,6 +4,7 @@ import { NoRepoSelected, StorageError, Ok } from "@byconvo/core/shared"
 import {
   InvalidRepo,
   BrowsePayload,
+  FileBytes,
   FileContent,
   WorkspaceInfo,
   BrowseQuery,
@@ -38,6 +39,13 @@ export class WorkspaceApi extends HttpApiGroup.make("workspace")
     HttpApiEndpoint.get("readFile", "/file", {
       query: PathQuery,
       success: FileContent,
+      error: [NoRepoSelected, StorageError],
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("readFileBytes", "/file/raw", {
+      query: PathQuery,
+      success: FileBytes,
       error: [NoRepoSelected, StorageError],
     })
   )

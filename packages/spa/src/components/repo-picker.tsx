@@ -53,6 +53,8 @@ interface RepoPickerProps {
    * the current page (now scoped to the newly-opened repo).
    */
   onChosen?: () => void
+  /** Which way the popover opens — "top" for a bar pinned to the bottom. */
+  side?: "top" | "bottom"
 }
 
 function Avatar({
@@ -148,6 +150,7 @@ export function RepoPicker({
   open,
   onOpenChange,
   onChosen,
+  side,
 }: RepoPickerProps) {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -193,7 +196,7 @@ export function RepoPicker({
     // Workspace pages stay put (now scoped to the new repo); the git-review
     // shell defaults to jumping into the commit view.
     if (onChosen !== undefined) onChosen()
-    else void navigate({ to: "/commit", search: {} })
+    else void navigate({ to: "/modes/code/commit", search: {} })
   }
 
   const chooseDirectory = async () => {
@@ -234,6 +237,7 @@ export function RepoPicker({
       </PopoverTrigger>
       <PopoverContent
         align="start"
+        side={side ?? "bottom"}
         onKeyDown={handleSearchRowKeyDown}
         className="w-80 gap-0 overflow-hidden p-0"
       >

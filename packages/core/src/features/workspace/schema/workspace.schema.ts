@@ -31,6 +31,30 @@ export const FileContent = Schema.Struct({
   contents: Schema.String,
 })
 export type FileContent = typeof FileContent.Type
+const MEDIA_TYPES: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  webp: "image/webp",
+  avif: "image/avif",
+  bmp: "image/bmp",
+  ico: "image/x-icon",
+  svg: "image/svg+xml",
+}
+
+/** The media type a path renders as, `application/octet-stream` when unknown. */
+export const mediaTypeFor = (path: string): string =>
+  MEDIA_TYPES[path.split(".").at(-1)?.toLowerCase() ?? ""] ??
+  "application/octet-stream"
+
+/** A file read as bytes — for the surfaces that render rather than edit it. */
+export const FileBytes = Schema.Struct({
+  name: Schema.String,
+  mediaType: Schema.String,
+  base64: Schema.String,
+})
+export type FileBytes = typeof FileBytes.Type
 export const SetWorkspace = Schema.Struct({
   path: Schema.String,
 })

@@ -1,32 +1,18 @@
 import { dateCutoff, type DateFilter } from "@/lib/date-filter"
 import type { ReviewComment } from "@byconvo/core/comments"
-import type { VisualComment } from "@byconvo/core/visual-comments"
 
-export type CommentKind = "visual" | "code"
-
-export const KIND_FILTERS = [
-  { value: "all", label: "All comments" },
-  { value: "visual", label: "Visual" },
-  { value: "code", label: "Code" },
-] as const
-
-export type KindFilter = (typeof KIND_FILTERS)[number]["value"]
-
-export interface UnifiedComment {
+export interface ListedComment {
   readonly id: string
-  readonly kind: CommentKind
   readonly body: string
   readonly author: string
   readonly createdAt: string
   readonly anchor: string
   readonly context: string
-  readonly code?: ReviewComment
-  readonly visual?: VisualComment
+  readonly code: ReviewComment
 }
 
-export const fromCode = (comment: ReviewComment): UnifiedComment => ({
+export const fromCode = (comment: ReviewComment): ListedComment => ({
   id: comment.id,
-  kind: "code",
   body: comment.body,
   author: comment.author,
   createdAt: comment.createdAt,
@@ -35,47 +21,31 @@ export const fromCode = (comment: ReviewComment): UnifiedComment => ({
   code: comment,
 })
 
-export const fromVisual = (comment: VisualComment): UnifiedComment => ({
-  id: comment.id,
-  kind: "visual",
-  body: comment.body,
-  author: comment.author,
-  createdAt: comment.createdAt,
-  anchor: comment.label,
-  context: comment.route,
-  visual: comment,
-})
-
 export interface ListFilters {
-  readonly kind: KindFilter
   readonly date: DateFilter
   readonly search: string
 }
 
-export const noFilters: ListFilters = { kind: "all", date: "all", search: "" }
+export const noFilters: ListFilters = { date: "all", search: "" }
 
 export const filtersActive = (filters: ListFilters) =>
-  filters.kind !== "all" ||
-  filters.date !== "all" ||
-  filters.search.trim().length > 0
+  filters.date !== "all" || filters.search.trim().length > 0
 
-export const unify = (
-  code: ReadonlyArray<ReviewComment>,
-  visual: ReadonlyArray<VisualComment>
-): Array<UnifiedComment> =>
-  [
-    ...code.filter((c) => c.source === "local").map(fromCode),
-    ...visual.map(fromVisual),
-  ].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+export const listComments = (
+  code: ReadonlyArray<ReviewComment>
+): Array<ListedComment> =>
+  code
+    .filter((c) => c.source === "local")
+    .map(fromCode)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
 
 export const applyFilters = (
-  comments: ReadonlyArray<UnifiedComment>,
+  comments: ReadonlyArray<ListedComment>,
   filters: ListFilters
-): Array<UnifiedComment> => {
+): Array<ListedComment> => {
   const cutoff = dateCutoff(filters.date)
   const query = filters.search.trim().toLowerCase()
   return comments.filter((comment) => {
-    if (filters.kind !== "all" && comment.kind !== filters.kind) return false
     if (cutoff > 0 && Date.parse(comment.createdAt) < cutoff) return false
     if (query.length > 0) {
       const haystack =
@@ -86,50 +56,14 @@ export const applyFilters = (
   })
 }
 
-export interface CommentGroup {
-  readonly kind: CommentKind
-  readonly comments: Array<UnifiedComment>
-}
-
-export const groupByKind = (
-  comments: ReadonlyArray<UnifiedComment>
-): Array<CommentGroup> =>
-  (["visual", "code"] as const)
-    .map((kind) => ({
-      kind,
-      comments: comments.filter((c) => c.kind === kind),
-    }))
-    .filter((group) => group.comments.length > 0)
-
-const sourceRef = (comment: VisualComment) =>
-  comment.sourceLine === undefined
-    ? comment.sourceFile
-    : `${comment.sourceFile}:${comment.sourceLine}`
-
 const codeBlock = (comment: ReviewComment) =>
   `${comment.filePath}:${comment.lineNumber} - ${comment.body}`
 
-const visualBlock = (comment: VisualComment) =>
-  [
-    `${comment.route} — ${comment.label} - ${comment.body}`,
-    comment.sourceFile === undefined ? null : `  source: ${sourceRef(comment)}`,
-    `  selector: ${comment.selector}`,
-    `  page: ${comment.pageUrl}`,
-  ]
-    .filter((line) => line !== null)
-    .join("\n")
-
-const blockFor = (comment: UnifiedComment): string => {
-  if (comment.visual !== undefined) return visualBlock(comment.visual)
-  if (comment.code !== undefined) return codeBlock(comment.code)
-  return `${comment.anchor} - ${comment.body}`
-}
-
 export const buildAssignmentPrompt = (
-  comments: ReadonlyArray<UnifiedComment>
+  comments: ReadonlyArray<ListedComment>
 ): string =>
   `Address these review comments in the codebase:\n\n${comments
-    .map(blockFor)
+    .map((comment) => codeBlock(comment.code))
     .join("\n\n")}`
 
 export const buildAssignmentTitle = (count: number): string =>

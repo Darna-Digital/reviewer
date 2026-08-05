@@ -4,6 +4,7 @@ import type { NoRepoSelected, StorageError } from "../../../shared.ts"
 import type { InvalidRepo } from "../errors.ts"
 import type {
   BrowsePayload,
+  FileBytes,
   FileContent,
   WorkspaceInfo,
 } from "../schema/workspace.schema.ts"
@@ -19,6 +20,9 @@ export interface WorkspaceRepo {
   readonly readFile: (
     relPath: string
   ) => Effect.Effect<FileContent, NoRepoSelected | StorageError>
+  readonly readFileBytes: (
+    relPath: string
+  ) => Effect.Effect<FileBytes, NoRepoSelected | StorageError>
   readonly writeFile: (
     relPath: string,
     contents: string

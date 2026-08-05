@@ -33,18 +33,9 @@ import { timeAgo } from "@/lib/relative-time"
 import { cn } from "@/lib/utils"
 
 /** Agent CLIs that can be assigned to chat flows (excludes the plain shell). */
-const ASSIGNABLE: ReadonlyArray<{
-  kind: ChatProviderKind
-  label: string
-  hint: string
-}> = AGENTS.filter(
-  (
-    agent
-  ): agent is {
-    kind: ChatProviderKind
-    label: string
-    hint: string
-  } => isChatProviderKind(agent.kind)
+const ASSIGNABLE = AGENTS.filter(
+  (agent): agent is (typeof AGENTS)[number] & { kind: ChatProviderKind } =>
+    isChatProviderKind(agent.kind)
 )
 
 /** Where the review comments get handed off. */
@@ -120,7 +111,7 @@ export function ReviewAssignBar({
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center">
       <div className="pointer-events-auto flex animate-in items-center gap-2 rounded-full border bg-popover/95 py-1.5 pr-1.5 pl-1.5 shadow-lg ring-1 ring-foreground/5 backdrop-blur duration-150 fade-in slide-in-from-bottom-2">
         <Link
-          to="/comments"
+          to="/modes/code/comments"
           className={cn(
             buttonVariants({ variant: "ghost", size: "sm" }),
             "h-8 gap-1 rounded-full px-3"

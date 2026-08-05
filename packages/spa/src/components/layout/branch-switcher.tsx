@@ -62,6 +62,8 @@ interface BranchSwitcherProps {
   onPush: () => void
   onRenameBranch: (from: string, to: string) => void
   onDeleteBranch: (name: string) => void
+  /** Which way the menu opens — "top" for a bar pinned to the bottom. */
+  side?: "top" | "bottom"
 }
 
 /**
@@ -350,6 +352,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         />
         <DropdownMenuContent
           align="start"
+          side={props.side ?? "bottom"}
           className="max-h-[70vh] w-72 overflow-auto p-0"
         >
           {/* Filter box — a plain row, not a menu item, so typing never navigates. */}

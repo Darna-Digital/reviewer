@@ -46,7 +46,7 @@ export function NewChatView() {
       )
       if (started !== null) {
         void navigate({
-          to: "/chats/$chatId",
+          to: "/modes/code/chats/$chatId",
           params: { chatId: started.id },
         })
       }

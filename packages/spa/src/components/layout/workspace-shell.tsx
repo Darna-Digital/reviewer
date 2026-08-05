@@ -1,40 +1,35 @@
 /**
  * WorkspaceShell — the layout for the workspace feature pages (chats, docs,
- * tasks/settings). It mirrors AppShell's frame (mode rail + a rounded, bordered
- * content panel) and shares the git-review top bar's left cluster — the repo
- * picker and branch switcher — so the open repository is visible and switchable
- * here too. Each feature page renders its own header and body into the
- * `<Outlet />`. Services and terminal threads live in the shared bottom dock.
+ * tasks/settings). It mirrors AppShell's frame — the same toolbar over the
+ * content and the shared bottom dock — inside the window frame both shells
+ * share. Code mode keeps the repo picker and branch switcher; collaboration
+ * mode drops both, along with the dock and the mode rail, since its own sidebar
+ * carries what the rail held. Each feature page renders its own header and body
+ * into the `<Outlet />`.
  */
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
 import { useState } from "react"
 import { BranchSwitcher } from "@/components/layout/branch-switcher"
 import { GitBottomDock } from "@/components/layout/git-bottom-dock"
+import { InboxPopover } from "@/components/layout/inbox-popover"
 import { ModeRail } from "@/components/layout/mode-rail"
+import { ModeSelector } from "@/components/layout/mode-selector"
+import { SidebarToggle } from "@/components/layout/sidebar-toggle"
+import { WindowFrame } from "@/components/layout/window-frame"
 import { RepoPicker } from "@/components/repo-picker"
+import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search"
+import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog"
+import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker"
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
-import { isDesktop } from "@/lib/desktop"
-import type { AppMode } from "@/lib/api/types"
 import {
   useBranches,
   useRemoteBranches,
   useRepo,
   useWorkspace,
 } from "@/lib/queries"
-import { cn } from "@/lib/utils"
-
-const modeForPath = (pathname: string): AppMode =>
-  pathname.startsWith("/chats")
-    ? "chats"
-    : pathname.startsWith("/settings")
-      ? "settings"
-      : pathname.startsWith("/docs")
-        ? "docs"
-        : pathname.startsWith("/tasks")
-          ? "tasks"
-          : pathname.startsWith("/comments")
-            ? "comments"
-            : "chats"
+import { isDesktop } from "@/lib/desktop"
+import { useUiPrefs } from "@/lib/ui-prefs"
+import { activeWorkMode } from "@/lib/work-mode"
 
 export function WorkspaceShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname })
@@ -44,26 +39,38 @@ export function WorkspaceShell() {
   const branches = useBranches()
   const remoteBranches = useRemoteBranches()
   const git = useGitActions()
+  const prefs = useUiPrefs()
   const [pickerOpen, setPickerOpen] = useState(false)
 
-  const mode = modeForPath(pathname)
-  const hasGitHub = repo.data?.github != null
   const current = workspace.data?.current ?? null
-  const isSettings = mode === "settings"
+  const isSettings = pathname.startsWith("/settings")
+  // Collaboration mode hides the git chrome — no branch switcher, no dock.
+  const collaborating =
+    activeWorkMode(pathname, prefs.workMode) === "collaboration"
 
   return (
-    <div className="flex h-svh w-full overflow-hidden text-foreground">
-      <ModeRail mode={mode} hasGitHub={hasGitHub} />
+    <WindowFrame>
+      {!collaborating && <ModeRail />}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Top bar — repo picker + branch switcher, like the git-review shell.
-            In desktop it doubles as the draggable title bar (clusters opt out). */}
-        <header
-          className={cn(
-            "flex h-10 shrink-0 items-center gap-2 px-2",
-            isDesktop && "pl-10 [-webkit-app-region:drag]"
+        <header className="flex h-11 shrink-0 items-center gap-2 px-2">
+          {/* In the native shell the window bar above carries this. */}
+          {!isDesktop && <SidebarToggle />}
+          {/* Without the rail this is the inbox's only door in. */}
+          {collaborating && (
+            <InboxPopover
+              side="bottom"
+              active={pathname.startsWith("/inbox")}
+            />
           )}
-        >
-          <div className="[-webkit-app-region:no-drag]">
+          <ModeSelector />
+          {collaborating && (
+            <>
+              <WorkspacePicker />
+              <NewTaskButton />
+              <CollaborationSearch />
+            </>
+          )}
+          {!collaborating && (
             <RepoPicker
               repo={repo.data ?? null}
               workspace={workspace.data}
@@ -71,32 +78,33 @@ export function WorkspaceShell() {
               onOpenChange={setPickerOpen}
               onChosen={() => {}}
             />
-          </div>
-          {current !== null && (
-            <div className="[-webkit-app-region:no-drag]">
-              <BranchSwitcher
-                current={repo.data?.currentBranch ?? null}
-                branches={branches.data ?? []}
-                remoteBranches={remoteBranches.data ?? []}
-                busy={false}
-                onCheckout={(b) => void git.checkout(b)}
-                onCheckoutAndUpdate={(b) => void git.checkoutAndUpdate(b)}
-                onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
-                onCompare={(base, head) =>
-                  void navigate({ to: "/browse/range", search: { base, head } })
-                }
-                onMerge={(b) => void git.merge(b)}
-                onRebase={(o) => void git.rebase(o)}
-                onRenameBranch={(from, to) => void git.renameBranch(from, to)}
-                onDeleteBranch={(name) => void git.deleteBranch(name)}
-                onFetch={() => void git.fetch()}
-                onPull={() => void git.pull()}
-                onPush={() => void git.push()}
-              />
-            </div>
+          )}
+          {current !== null && !collaborating && (
+            <BranchSwitcher
+              current={repo.data?.currentBranch ?? null}
+              branches={branches.data ?? []}
+              remoteBranches={remoteBranches.data ?? []}
+              busy={false}
+              onCheckout={(b) => void git.checkout(b)}
+              onCheckoutAndUpdate={(b) => void git.checkoutAndUpdate(b)}
+              onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
+              onCompare={(base, head) =>
+                void navigate({
+                  to: "/modes/code/browse/range",
+                  search: { base, head },
+                })
+              }
+              onMerge={(b) => void git.merge(b)}
+              onRebase={(o) => void git.rebase(o)}
+              onRenameBranch={(from, to) => void git.renameBranch(from, to)}
+              onDeleteBranch={(name) => void git.deleteBranch(name)}
+              onFetch={() => void git.fetch()}
+              onPull={() => void git.pull()}
+              onPush={() => void git.push()}
+            />
           )}
         </header>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {current === null && !isSettings ? (
               <div className="flex h-full flex-col items-center justify-center gap-1 text-sm">
@@ -109,9 +117,9 @@ export function WorkspaceShell() {
               <Outlet />
             )}
           </div>
-          {current !== null && !isSettings && <GitBottomDock />}
+          {current !== null && !collaborating && <GitBottomDock />}
         </div>
       </div>
-    </div>
+    </WindowFrame>
   )
 }

@@ -12,6 +12,8 @@ export type DiffStyle = "split" | "unified"
 export type CommitAgent = "claude" | "opencode" | "codex" | "cursor"
 /** Active tab in the shared bottom dock (git + services + threads). */
 export type BottomTab = "branches" | "history" | "services" | "threads"
+/** Which way of working the app is framed around (UI only for now). */
+export type WorkMode = "code" | "collaboration"
 
 export interface UiPrefs {
   /** The user's choice; "system" follows the OS. */
@@ -19,7 +21,16 @@ export interface UiPrefs {
   /** The concrete theme to render (system resolved against the OS). */
   resolvedTheme: Theme
   diffStyle: DiffStyle
+  /** The selected mode in the top bar's mode selector. */
+  workMode: WorkMode
   connectors: boolean
+  /**
+   * Whether the window frame lets the desktop through. Native shell only — a
+   * browser tab has nothing behind it to show.
+   */
+  translucency: boolean
+  /** Whether the shell's left sidebar (file tree / collaboration nav) shows. */
+  sidebarVisible: boolean
   bottomVisible: boolean
   /** Which bottom-dock tab is selected. */
   bottomTab: BottomTab
@@ -27,6 +38,10 @@ export interface UiPrefs {
   sidebarWidth: number
   /** Drag-resizable left sidebar width for the workspace pages (threads/docs). */
   workspaceSidebarWidth: number
+  /** Drag-resizable width of the inbox's message list, in px. */
+  inboxListWidth: number
+  /** Drag-resizable source pane width in the SVG split view, in px. */
+  svgSourceWidth: number
   /** Drag-resizable bottom panel height, in px. */
   bottomHeight: number
   /** Drag-resizable changed-files list height in the commit panel, in px. */
@@ -65,11 +80,16 @@ const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
 const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   theme: "system",
   diffStyle: "split",
+  workMode: "code",
   connectors: true,
+  translucency: true,
+  sidebarVisible: true,
   bottomVisible: true,
   bottomTab: "branches",
   sidebarWidth: 288,
   workspaceSidebarWidth: 256,
+  inboxListWidth: 320,
+  svgSourceWidth: 420,
   bottomHeight: 256,
   commitFilesHeight: 180,
   commitMessageHeight: 80,
@@ -110,11 +130,16 @@ function persist() {
     const {
       theme,
       diffStyle,
+      workMode,
       connectors,
+      translucency,
+      sidebarVisible,
       bottomVisible,
       bottomTab,
       sidebarWidth,
       workspaceSidebarWidth,
+      inboxListWidth,
+      svgSourceWidth,
       bottomHeight,
       commitFilesHeight,
       commitMessageHeight,
@@ -128,11 +153,16 @@ function persist() {
       JSON.stringify({
         theme,
         diffStyle,
+        workMode,
         connectors,
+        translucency,
+        sidebarVisible,
         bottomVisible,
         bottomTab,
         sidebarWidth,
         workspaceSidebarWidth,
+        inboxListWidth,
+        svgSourceWidth,
         bottomHeight,
         commitFilesHeight,
         commitMessageHeight,
@@ -157,12 +187,23 @@ function applyTheme() {
   document.documentElement.dataset["theme"] = state.resolvedTheme
 }
 
+/**
+ * The frame reads its translucency off a class rather than a React prop: the
+ * window is painted before the app mounts, and a flash of the wrong chrome is
+ * exactly what the pre-paint script in __root exists to avoid.
+ */
+function applyTranslucency() {
+  if (typeof document === "undefined") return
+  document.documentElement.classList.toggle("translucent", state.translucency)
+}
+
 export function setUiPrefs(patch: Partial<Omit<UiPrefs, "resolvedTheme">>) {
   state = { ...state, ...patch }
   if (patch.theme !== undefined) {
     state.resolvedTheme = resolve(patch.theme)
     applyTheme()
   }
+  if (patch.translucency !== undefined) applyTranslucency()
   persist()
   emit()
 }
@@ -170,6 +211,11 @@ export function setUiPrefs(patch: Partial<Omit<UiPrefs, "resolvedTheme">>) {
 /** Show the bottom dock and select a tab (Services / Threads / git). */
 export function openBottomTab(tab: BottomTab) {
   setUiPrefs({ bottomVisible: true, bottomTab: tab })
+}
+
+/** Expand or collapse the bottom dock; its tab strip stays put either way. */
+export function toggleBottomVisible() {
+  setUiPrefs({ bottomVisible: !state.bottomVisible })
 }
 
 const THEME_ORDER: ThemePref[] = ["light", "dark", "system"]

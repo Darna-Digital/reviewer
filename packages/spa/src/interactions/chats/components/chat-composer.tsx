@@ -5,7 +5,7 @@
  * new-thread page, the chat itself once it exists).
  */
 import {
-  IconArrowUp,
+  IconSend,
   IconChevronDown,
   IconHammer,
   IconLock,
@@ -366,7 +366,7 @@ export function ChatComposer({
           disabled={!canSend}
           onClick={() => void submit()}
         >
-          <IconArrowUp className="size-4" />
+          <IconSend className="size-4" />
         </Button>
       </div>
     </div>
