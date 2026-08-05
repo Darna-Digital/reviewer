@@ -1,16 +1,25 @@
 /**
- * ChatsPage — the /chats layout: a resizable sidebar listing the repo's agent
- * chats beside the routed content (the new-thread composer on the index, a
- * conversation on /chats/$chatId).
+ * ChatsPage — code mode's inbox: the repo's agent threads listed beside the
+ * routed conversation (the new-thread composer on the index, a conversation on
+ * /chats/$chatId). Same two panes as the collaboration inbox, over real data.
  *
- * The sidebar filters the list by branch (grouped like the terminal threads,
- * defaulting to the current checkout), a time window, and a free-text search
- * over titles and last messages.
+ * The list filters by branch (grouped like the terminal threads, defaulting to
+ * the current checkout), a time window, and a free-text search over titles and
+ * last messages. Arriving marks the inbox seen, so the rail's dot only stands
+ * for threads that moved since you last looked; the rows keep comparing against
+ * the mark this visit started with, so nothing goes read out from under you.
  */
-import { IconGitBranch, IconPlus } from "@tabler/icons-react"
+import {
+  IconArrowsDiagonal,
+  IconArrowsDiagonalMinimize2,
+  IconGitBranch,
+  IconMessage,
+  IconPlus,
+} from "@tabler/icons-react"
 import { Outlet, useNavigate, useParams } from "@tanstack/react-router"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { toast } from "sonner"
+import { PaneHeader } from "@/components/layout/pane-header"
 import { ResizeHandle } from "@/components/layout/resize-handle"
 import {
   ALL_BRANCHES,
@@ -22,6 +31,7 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import { ChatRow } from "@/interactions/chats/components/chat-row"
+import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions"
 import type { ChatSummary } from "@byconvo/core/chats"
 import { dateCutoff, type DateFilter } from "@/lib/date-filter"
 import { useBranches, useChats, useRepo } from "@/lib/queries"
@@ -33,7 +43,13 @@ export function ChatsPage() {
   const navigate = useNavigate()
   const { chatId } = useParams({ strict: false })
   const prefs = useUiPrefs()
-  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth)
+  const [listWidth, setListWidth] = useState(prefs.inboxListWidth)
+  const [expanded, setExpanded] = useState(false)
+
+  const [seenAt] = useState(prefs.inboxSeenAt)
+  useEffect(() => {
+    setUiPrefs({ inboxSeenAt: new Date().toISOString() })
+  }, [])
 
   const repo = useRepo()
   const branchesQuery = useBranches()
@@ -44,8 +60,9 @@ export function ChatsPage() {
   )
 
   const summaries = useMemo(() => chats.data ?? [], [chats.data])
+  const selected = summaries.find((c) => c.id === chatId) ?? null
 
-  // Branch the sidebar is filtered to (null → follow the current branch).
+  // Branch the list is filtered to (null → follow the current branch).
   const [branchFilter, setBranchFilter] = useState<string | null>(null)
   const [dateFilter, setDateFilter] = useState<DateFilter>("all")
   const [search, setSearch] = useState("")
@@ -109,109 +126,175 @@ export function ChatsPage() {
       key={c.id}
       chat={c}
       active={c.id === chatId}
+      unread={isChatUnread(c, seenAt)}
       onDelete={() => void remove(c.id)}
     />
   )
 
+  const showList = !expanded
+
   return (
     <div className="flex h-full min-h-0">
-      <aside
-        className="flex shrink-0 flex-col border-r"
-        style={{ width: sidebarWidth }}
-      >
-        <div className="flex items-center gap-1.5 border-b p-2">
-          <SidebarSearch
-            label="Search threads"
-            placeholder="Search threads…"
-            value={search}
-            onChange={setSearch}
-          />
-          {/* Filters — branch (groups chats, defaulting to the current
-            checkout) and time window, combined behind one dropdown. */}
-          <SidebarFilterMenu
-            label="Filter threads"
-            branchValue={activeBranch}
-            branches={filterBranches}
-            onBranchChange={setBranchFilter}
-            dateValue={dateFilter}
-            onDateChange={setDateFilter}
-            active={filtersActive}
-          />
-          <Button
-            size="icon"
-            variant="ghost"
-            className="size-7 shrink-0"
-            aria-label="New thread"
-            onClick={() =>
-              void navigate({ to: "/modes/code/chats", search: { new: true } })
-            }
-          >
-            <IconPlus className="size-4" />
-          </Button>
-        </div>
-        <ScrollArea
-          className="min-h-0 flex-1"
-          viewportClassName="scroll-fade overflow-x-hidden px-1 py-2"
+      {showList && (
+        <aside
+          className="flex shrink-0 flex-col border-r"
+          style={{ width: listWidth }}
         >
-          {summaries.length === 0 ? (
-            <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No threads yet. Send a message to start one.
-            </p>
-          ) : !hasMatches ? (
-            <div className="flex flex-col items-center gap-2 px-3 py-6 text-center">
-              <p className="text-xs text-muted-foreground">
-                No threads match these filters.
+          <div className="flex h-11 shrink-0 items-center gap-1.5 border-b px-2">
+            <SidebarSearch
+              label="Search threads"
+              placeholder="Search threads…"
+              value={search}
+              onChange={setSearch}
+            />
+            {/* Filters — branch (groups chats, defaulting to the current
+              checkout) and time window, combined behind one dropdown. */}
+            <SidebarFilterMenu
+              label="Filter threads"
+              branchValue={activeBranch}
+              branches={filterBranches}
+              onBranchChange={setBranchFilter}
+              dateValue={dateFilter}
+              onDateChange={setDateFilter}
+              active={filtersActive}
+            />
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-7 shrink-0"
+              aria-label="New thread"
+              onClick={() =>
+                void navigate({
+                  to: "/modes/code/chats",
+                  search: { new: true },
+                })
+              }
+            >
+              <IconPlus className="size-4" />
+            </Button>
+          </div>
+          <ScrollArea
+            className="min-h-0 flex-1"
+            viewportClassName="scroll-fade"
+          >
+            {summaries.length === 0 ? (
+              <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                No threads yet. Send a message to start one.
               </p>
-              {filtersActive && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    setBranchFilter(ALL_BRANCHES)
-                    setDateFilter("all")
-                    setSearch("")
-                  }}
-                >
-                  Clear filters
-                </Button>
-              )}
-            </div>
-          ) : activeBranch === ALL_BRANCHES ? (
-            // Grouped under branch headers when viewing all branches.
-            groups
-              .filter((g) => g.chats.length > 0)
-              .map((group) => (
-                <div key={group.branch} className="mb-1">
-                  <div className="flex items-center gap-1.5 px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                    <IconGitBranch className="size-3 shrink-0" />
-                    <span className="truncate">
-                      {branchLabel(group.branch)}
-                    </span>
-                    <span className="ml-auto tabular-nums">
-                      {group.chats.length}
-                    </span>
+            ) : !hasMatches ? (
+              <div className="flex flex-col items-center gap-2 px-3 py-6 text-center">
+                <p className="text-sm text-muted-foreground">
+                  No threads match these filters.
+                </p>
+                {filtersActive && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      setBranchFilter(ALL_BRANCHES)
+                      setDateFilter("all")
+                      setSearch("")
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                )}
+              </div>
+            ) : activeBranch === ALL_BRANCHES ? (
+              // Grouped under branch headers when viewing all branches.
+              groups
+                .filter((g) => g.chats.length > 0)
+                .map((group) => (
+                  <div key={group.branch}>
+                    <div className="flex items-center gap-1.5 border-b bg-muted/40 px-3 py-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                      <IconGitBranch className="size-3 shrink-0" />
+                      <span className="truncate">
+                        {branchLabel(group.branch)}
+                      </span>
+                      <span className="ml-auto tabular-nums">
+                        {group.chats.length}
+                      </span>
+                    </div>
+                    {group.chats.map(renderRow)}
                   </div>
-                  {group.chats.map(renderRow)}
-                </div>
-              ))
-          ) : (
-            // A single branch is selected — the filter is the header.
-            groups[0]?.chats.map(renderRow)
-          )}
-        </ScrollArea>
-      </aside>
-      <ResizeHandle
-        orientation="col"
-        value={sidebarWidth}
-        min={180}
-        max={() => Math.max(240, window.innerWidth - 480)}
-        onResize={setSidebarWidth}
-        onResizeEnd={(w) => setUiPrefs({ workspaceSidebarWidth: w })}
-        label="Resize sidebar"
-      />
+                ))
+            ) : (
+              // A single branch is selected — the filter is the header.
+              groups[0]?.chats.map(renderRow)
+            )}
+          </ScrollArea>
+        </aside>
+      )}
+      {showList && (
+        <ResizeHandle
+          orientation="col"
+          value={listWidth}
+          min={240}
+          max={() => Math.max(320, window.innerWidth - 480)}
+          onResize={setListWidth}
+          onResizeEnd={(w) => setUiPrefs({ inboxListWidth: w })}
+          label="Resize the thread list"
+        />
+      )}
       <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <Outlet />
+        <PaneHeader
+          crumbs={
+            expanded && selected !== null
+              ? [
+                  <button
+                    key="inbox"
+                    type="button"
+                    onClick={() => setExpanded(false)}
+                    className="shrink-0 text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
+                  >
+                    Inbox
+                  </button>,
+                  <span key="branch" className="truncate text-muted-foreground">
+                    {branchLabel(selected.branch)}
+                  </span>,
+                  <span key="thread" className="truncate font-medium">
+                    {selected.title}
+                  </span>,
+                ]
+              : [
+                  <span key="thread" className="truncate font-medium">
+                    {selected?.title ?? "New thread"}
+                  </span>,
+                ]
+          }
+          {...(selected !== null && !expanded
+            ? { meta: branchLabel(selected.branch) }
+            : {})}
+          {...(selected !== null
+            ? {
+                actions: (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <IconMessage className="size-4" />
+                    <span className="text-xs tabular-nums">
+                      {selected.messageCount}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7"
+                      aria-label={expanded ? "Exit full width" : "Expand full"}
+                      onClick={() => setExpanded(!expanded)}
+                    >
+                      {expanded ? (
+                        <IconArrowsDiagonalMinimize2 className="size-4" />
+                      ) : (
+                        <IconArrowsDiagonal className="size-4" />
+                      )}
+                    </Button>
+                  </div>
+                ),
+              }
+            : {})}
+        />
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <Outlet />
+        </div>
       </section>
     </div>
   )

@@ -3,7 +3,7 @@ import { IconFileText, IconPlus } from "@tabler/icons-react"
 import { Link } from "@tanstack/react-router"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { PaneHeader } from "@/interactions/collaboration/components/pane-header"
+import { PaneHeader } from "@/components/layout/pane-header"
 import {
   projectDocs,
   type MockProject,

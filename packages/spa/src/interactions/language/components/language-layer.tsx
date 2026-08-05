@@ -234,10 +234,20 @@ export function useLanguageLayer({
   // and a card the user has stopped thinking about still covers the code and
   // swallows the click meant for it. A card the user asked for stays open and
   // rides along with its token instead.
+  //
+  // Scrolling *inside* the card is the opposite gesture — reading it — and a
+  // long signature or doc comment overflows often enough that closing there
+  // would make the rest of it unreachable.
   useEffect(() => {
     if (card?.kind !== "hover") return
-    window.addEventListener("scroll", closeCard, true)
-    return () => window.removeEventListener("scroll", closeCard, true)
+    const onScroll = (event: Event) => {
+      const target = event.target
+      if (target instanceof Element && target.closest("[data-symbol-card]"))
+        return
+      closeCard()
+    }
+    window.addEventListener("scroll", onScroll, true)
+    return () => window.removeEventListener("scroll", onScroll, true)
   }, [card?.kind, closeCard])
 
   const onTokenEnter = useCallback(

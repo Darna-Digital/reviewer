@@ -1,7 +1,8 @@
 /**
  * InboxPage — the item list beside the selected thread, filling the window.
- * Both modes link here and both get the same two panes: the inbox is a
- * destination of its own, not a pane inside whichever mode you came from.
+ * Collaboration mode's prototype inbox, on mock data: a destination of its own
+ * rather than a pane inside the workspace you came from. Code mode's inbox is
+ * the real thing, over the repo's agent threads.
  */
 import {
   IconArrowsDiagonal,
@@ -31,7 +32,7 @@ import {
 } from "@/interactions/collaboration/data/collaboration.mock"
 import { NewChatView } from "@/interactions/collaboration/components/new-chat-view"
 import { MessageComposer } from "@/interactions/collaboration/components/message-composer"
-import { PaneHeader } from "@/interactions/collaboration/components/pane-header"
+import { PaneHeader } from "@/components/layout/pane-header"
 import {
   INBOX_ITEMS,
   type InboxFilter,
@@ -116,7 +117,12 @@ export function InboxPage() {
               size="icon"
               aria-label="New chat"
               className={cn("size-7", composing && "bg-muted text-foreground")}
-              render={<Link to="/inbox" search={{ compose: "chat" }} />}
+              render={
+                <Link
+                  to="/modes/collaboration/inbox"
+                  search={{ compose: "chat" }}
+                />
+              }
             >
               <IconSend className="size-4" />
             </Button>

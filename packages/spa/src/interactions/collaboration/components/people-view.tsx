@@ -15,10 +15,7 @@ import {
   AgentMark,
   AgentStateDot,
 } from "@/interactions/collaboration/components/agent-mark"
-import {
-  PaneBody,
-  PaneHeader,
-} from "@/interactions/collaboration/components/pane-header"
+import { PaneBody, PaneHeader } from "@/components/layout/pane-header"
 import {
   ACCESS_LABEL,
   agentName,

@@ -670,7 +670,9 @@ export function DiffPane({
     // it must be the scroll container — the wrapper div only carries the ref
     // for the scroll-to-file animation above.
     <div ref={containerRef} className="h-full">
-      <Virtualizer className="diff-pane h-full overflow-auto">
+      {/* Trailing gutter, so the last file's last lines clear the floating
+          bars that hang over the bottom of the pane (the assign bar). */}
+      <Virtualizer className="diff-pane h-full overflow-auto pb-20">
         {files.map((file) => (
           <FileDiffSection
             key={`${target.kind}-${file.prevName ?? ""}-${file.name}`}

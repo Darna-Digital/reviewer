@@ -10,10 +10,7 @@ import { AvatarStack } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar"
-import {
-  PaneBody,
-  PaneHeader,
-} from "@/interactions/collaboration/components/pane-header"
+import { PaneBody, PaneHeader } from "@/components/layout/pane-header"
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
 import {
   projectChannels,

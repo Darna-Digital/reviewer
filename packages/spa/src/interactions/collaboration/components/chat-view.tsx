@@ -32,10 +32,7 @@ import {
   SystemLine,
 } from "@/interactions/collaboration/components/message-list"
 import { MessageComposer } from "@/interactions/collaboration/components/message-composer"
-import {
-  PaneBody,
-  PaneHeader,
-} from "@/interactions/collaboration/components/pane-header"
+import { PaneBody, PaneHeader } from "@/components/layout/pane-header"
 import {
   agentsIn,
   approveJoinRequest,

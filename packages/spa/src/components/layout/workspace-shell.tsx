@@ -11,7 +11,7 @@ import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
 import { useState } from "react"
 import { BranchSwitcher } from "@/components/layout/branch-switcher"
 import { GitBottomDock } from "@/components/layout/git-bottom-dock"
-import { InboxPopover } from "@/components/layout/inbox-popover"
+import { MockInboxPopover } from "@/interactions/inbox/components/mock-inbox-popover"
 import { ModeRail } from "@/components/layout/mode-rail"
 import { ModeSelector } from "@/components/layout/mode-selector"
 import { SidebarToggle } from "@/components/layout/sidebar-toggle"
@@ -57,9 +57,9 @@ export function WorkspaceShell() {
           {!isDesktop && <SidebarToggle />}
           {/* Without the rail this is the inbox's only door in. */}
           {collaborating && (
-            <InboxPopover
+            <MockInboxPopover
               side="bottom"
-              active={pathname.startsWith("/inbox")}
+              active={pathname.startsWith("/modes/collaboration/inbox")}
             />
           )}
           <ModeSelector />

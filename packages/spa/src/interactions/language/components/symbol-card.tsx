@@ -44,6 +44,9 @@ export function SymbolCard({
       }}
     >
       <PopoverContent
+        // Scrolling the view dismisses a hover card; scrolling the card itself
+        // must not, so the layer's scroll listener can tell them apart.
+        data-symbol-card=""
         anchor={anchor}
         side="bottom"
         align="start"
@@ -55,7 +58,9 @@ export function SymbolCard({
         initialFocus={interactive}
         finalFocus={false}
         className={cn(
-          "max-h-[min(24rem,60vh)] w-auto max-w-[min(40rem,90vw)] gap-0 overflow-auto p-2",
+          // `overscroll-contain`: reaching the end of the card must not hand
+          // the scroll on to the view behind it, which would dismiss the card.
+          "max-h-[min(24rem,60vh)] w-auto max-w-[min(40rem,90vw)] gap-0 overflow-auto overscroll-contain p-2",
           !interactive && "pointer-events-auto"
         )}
         onPointerEnter={onPointerEnter}

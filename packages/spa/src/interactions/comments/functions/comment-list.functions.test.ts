@@ -3,8 +3,11 @@ import type { ReviewComment } from "@byconvo/core/comments"
 import {
   applyFilters,
   buildAssignmentPrompt,
+  fileLabel,
+  groupByFile,
   listComments,
   noFilters,
+  targetLabel,
 } from "./comment-list.functions"
 
 const code = (over: Partial<ReviewComment> = {}): ReviewComment => ({
@@ -73,6 +76,53 @@ describe("applyFilters", () => {
     const old = listComments([code({ createdAt: "2020-01-01T00:00:00.000Z" })])
 
     expect(applyFilters(old, { ...noFilters, date: "today" })).toEqual([])
+  })
+})
+
+describe("groupByFile", () => {
+  const grouped = groupByFile(
+    listComments([
+      code({ id: "c-1", lineNumber: 42 }),
+      code({ id: "c-2", lineNumber: 7, createdAt: "2026-07-03T00:00:00.000Z" }),
+      code({
+        id: "c-3",
+        filePath: "src/settings.ts",
+        createdAt: "2026-07-02T00:00:00.000Z",
+      }),
+    ])
+  )
+
+  it("puts the most recently commented file first", () => {
+    expect(grouped.map((g) => g.filePath)).toEqual([
+      "src/app.ts",
+      "src/settings.ts",
+    ])
+  })
+
+  it("reads a file's comments top to bottom, as the code does", () => {
+    expect(grouped[0]?.comments.map((c) => c.code.lineNumber)).toEqual([7, 42])
+  })
+})
+
+describe("fileLabel", () => {
+  it("separates the file from the folders above it", () => {
+    expect(fileLabel("src/lib/date-filter.ts")).toEqual({
+      name: "date-filter.ts",
+      dir: "src/lib",
+    })
+  })
+
+  it("leaves a bare filename without a folder", () => {
+    expect(fileLabel("README.md")).toEqual({ name: "README.md", dir: "" })
+  })
+})
+
+describe("targetLabel", () => {
+  it("names each kind of target the way the UI talks about it", () => {
+    expect(targetLabel("worktree")).toBe("Working tree")
+    expect(targetLabel("pr-42")).toBe("PR #42")
+    expect(targetLabel("commit-0123456789abcdef")).toBe("0123456")
+    expect(targetLabel("main...feature")).toBe("main → feature")
   })
 })
 

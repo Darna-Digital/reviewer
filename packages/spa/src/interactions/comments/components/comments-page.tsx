@@ -1,7 +1,8 @@
 import {
   IconAdjustmentsHorizontal,
+  IconArrowUpRight,
   IconClock,
-  IconCode,
+  IconFileCode,
   IconSearch,
   IconX,
 } from "@tabler/icons-react"
@@ -26,11 +27,15 @@ import {
   applyFilters,
   buildAssignmentPrompt,
   buildAssignmentTitle,
+  fileLabel,
   filtersActive as areFiltersActive,
+  groupByFile,
   listComments,
   noFilters,
+  targetLabel,
   type ListedComment,
 } from "@/interactions/comments/functions/comment-list.functions"
+import { AuthorAvatar } from "@/interactions/comments/components/author-avatar"
 import { CommentComposer } from "@/interactions/comments/components/comment-thread"
 import {
   ReviewAssignBar,
@@ -45,17 +50,9 @@ import {
 } from "@/lib/date-filter"
 import { useChatModels, useChats, useComments, useRepo } from "@/lib/queries"
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter"
+import { timeAgo } from "@/lib/relative-time"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
-
-const relativeTime = (iso: string) => {
-  const diff = Date.now() - Date.parse(iso)
-  const minute = 60_000
-  if (diff < minute) return "just now"
-  if (diff < 60 * minute) return `${Math.floor(diff / minute)}m ago`
-  if (diff < 24 * 60 * minute) return `${Math.floor(diff / (60 * minute))}h ago`
-  return `${Math.floor(diff / (24 * 60 * minute))}d ago`
-}
 
 function FilterMenu({
   dateValue,
@@ -110,6 +107,86 @@ function FilterMenu({
   )
 }
 
+/** A file's heading in the list, and the count of what sits under it. */
+function FileHeading({ filePath, count }: { filePath: string; count: number }) {
+  const { name, dir } = fileLabel(filePath)
+  return (
+    <div className="sticky top-0 z-10 flex items-center gap-1.5 border-b bg-background/85 px-3 py-1.5 backdrop-blur-sm">
+      <IconFileCode className="size-3.5 shrink-0 text-muted-foreground" />
+      <span className="shrink-0 truncate text-xs font-medium">{name}</span>
+      {dir.length > 0 && (
+        <span className="min-w-0 truncate text-xs text-muted-foreground">
+          {dir}
+        </span>
+      )}
+      <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
+        {count}
+      </span>
+    </div>
+  )
+}
+
+function CommentRow({
+  comment,
+  selected,
+  onSelect,
+  onOpen,
+  onResolve,
+}: {
+  comment: ListedComment
+  selected: boolean
+  onSelect: () => void
+  onOpen: () => void
+  onResolve: () => void
+}) {
+  return (
+    <div className="group/row relative">
+      <button
+        type="button"
+        onClick={onSelect}
+        onDoubleClick={onOpen}
+        className={cn(
+          "flex w-full gap-2.5 px-3 py-2.5 pr-9 text-left outline-none hover:bg-elevate",
+          selected && "bg-muted hover:bg-muted"
+        )}
+      >
+        <AuthorAvatar
+          author={comment.author}
+          source={comment.code.source}
+          className="size-6"
+        />
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline gap-2">
+            <span className="truncate text-[13px] font-medium">
+              {comment.author}
+            </span>
+            <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
+              {timeAgo(comment.createdAt)}
+            </span>
+          </span>
+          <span className="mt-0.5 line-clamp-2 block text-[13px] text-muted-foreground">
+            {comment.body}
+          </span>
+          <span className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="rounded bg-elevate px-1 py-px font-mono text-foreground">
+              L{comment.code.lineNumber}
+            </span>
+            <span className="truncate">{targetLabel(comment.code.target)}</span>
+          </span>
+        </span>
+      </button>
+      <button
+        type="button"
+        aria-label="Resolve comment"
+        className="absolute top-2.5 right-2.5 text-muted-foreground opacity-0 group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100"
+        onClick={onResolve}
+      >
+        <IconX className="size-3.5" />
+      </button>
+    </div>
+  )
+}
+
 function Field({
   label,
   children,
@@ -119,22 +196,25 @@ function Field({
 }) {
   return (
     <div className="flex gap-3 text-xs">
-      <span className="w-20 shrink-0 text-muted-foreground">{label}</span>
-      <span className="min-w-0 flex-1 break-words">{children}</span>
+      <dt className="w-16 shrink-0 text-muted-foreground">{label}</dt>
+      <dd className="min-w-0 flex-1 break-words">{children}</dd>
     </div>
   )
 }
 
 function CommentDetail({
   comment,
+  onOpen,
   onResolve,
   onSave,
 }: {
   comment: ListedComment
+  onOpen: () => void
   onResolve: () => void
   onSave: (body: string) => Promise<void>
 }) {
   const { code } = comment
+  const { name, dir } = fileLabel(code.filePath)
   const [editing, setEditing] = useState(false)
 
   useEffect(() => {
@@ -143,31 +223,47 @@ function CommentDetail({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <header className="flex shrink-0 items-center gap-2 border-b px-4 py-2.5">
-        <IconCode className="size-4 text-muted-foreground" />
-        <span className="truncate text-sm font-medium">{comment.anchor}</span>
-        <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-          {relativeTime(comment.createdAt)}
-        </span>
-        {!editing && (
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-7"
-            onClick={() => setEditing(true)}
-          >
-            Edit
+      <header className="flex h-11 shrink-0 items-center gap-2 border-b px-3">
+        <IconFileCode className="size-4 shrink-0 text-muted-foreground" />
+        <div className="flex min-w-0 items-baseline gap-1.5">
+          <span className="truncate text-[13px] font-medium">
+            {name}:{code.lineNumber}
+          </span>
+          {dir.length > 0 && (
+            <span className="truncate text-xs text-muted-foreground max-lg:hidden">
+              {dir}
+            </span>
+          )}
+        </div>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          <Button variant="outline" size="sm" onClick={onOpen}>
+            <IconArrowUpRight data-icon="inline-start" className="size-3.5" />
+            Open in code
           </Button>
-        )}
-        <Button size="sm" variant="outline" className="h-7" onClick={onResolve}>
-          Resolve
-        </Button>
+          {!editing && (
+            <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
+              Edit
+            </Button>
+          )}
+          <Button variant="ghost" size="sm" onClick={onResolve}>
+            Resolve
+          </Button>
+        </div>
       </header>
-      <ScrollArea
-        className="min-h-0 flex-1"
-        viewportClassName="scroll-fade p-4"
-      >
-        <div className="space-y-4">
+      <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
+        <div className="mx-auto w-full max-w-3xl space-y-5 px-4 py-5">
+          <div className="flex items-center gap-2.5">
+            <AuthorAvatar author={comment.author} source={code.source} />
+            <div className="min-w-0">
+              <div className="truncate text-[13px] font-medium">
+                {comment.author}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {timeAgo(comment.createdAt)}
+              </div>
+            </div>
+          </div>
+
           {editing ? (
             <CommentComposer
               initialBody={comment.body}
@@ -183,18 +279,15 @@ function CommentDetail({
             <p className="text-sm whitespace-pre-wrap">{comment.body}</p>
           )}
 
-          <div className="space-y-1.5 border-t pt-3">
-            <Field label="Author">{comment.author}</Field>
+          <dl className="space-y-1.5 border-t pt-4">
             <Field label="File">
               <code className="font-mono">
                 {code.filePath}:{code.lineNumber}
               </code>
             </Field>
             <Field label="Side">{code.side}</Field>
-            <Field label="Target">
-              <code className="font-mono">{code.target}</code>
-            </Field>
-          </div>
+            <Field label="Target">{targetLabel(code.target)}</Field>
+          </dl>
         </div>
       </ScrollArea>
     </div>
@@ -224,6 +317,7 @@ export function CommentsPage() {
 
   const filters = useMemo(() => ({ date, search }), [date, search])
   const filtered = useMemo(() => applyFilters(all, filters), [all, filters])
+  const groups = useMemo(() => groupByFile(filtered), [filtered])
   const filtersOn = areFiltersActive(filters)
 
   const selected = filtered.find((c) => c.id === selectedId) ?? null
@@ -280,11 +374,18 @@ export function CommentsPage() {
     await commentActions.update(comment.code, body)
   }
 
-  const openComment = (comment: ListedComment) => {
-    setSelectedId(comment.id)
-    const { filePath, target } = comment.code
+  /**
+   * Go to the code the comment was left on. A comment on the working tree opens
+   * the file itself, at its line, where the comment renders inline; one left on
+   * a diff opens that diff, scrolled to the file.
+   */
+  const openInCode = (comment: ListedComment) => {
+    const { filePath, lineNumber, target } = comment.code
     if (target === "worktree") {
-      void navigate({ to: "/modes/code/commit", search: { path: filePath } })
+      void navigate({
+        to: "/modes/code/commit",
+        search: { path: filePath, file: filePath, line: lineNumber },
+      })
       return
     }
     if (target.startsWith("commit-")) {
@@ -313,42 +414,13 @@ export function CommentsPage() {
     }
   }
 
-  const renderRow = (comment: ListedComment) => (
-    <div key={comment.id} className="group/row relative mb-0.5">
-      <button
-        type="button"
-        onClick={() => openComment(comment)}
-        className={cn(
-          "flex w-full items-start gap-2 rounded-md px-2 py-1.5 pr-8 text-left hover:bg-muted/60",
-          comment.id === selectedId && "bg-muted"
-        )}
-      >
-        <IconCode className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-sm">{comment.body}</div>
-          <div className="truncate font-mono text-xs text-muted-foreground">
-            {comment.anchor}
-          </div>
-        </div>
-      </button>
-      <button
-        type="button"
-        aria-label="Resolve comment"
-        className="absolute top-2 right-2.5 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100"
-        onClick={() => void resolve(comment)}
-      >
-        <IconX className="size-3.5" />
-      </button>
-    </div>
-  )
-
   return (
     <div className="flex h-full min-h-0">
       <aside
         className="flex shrink-0 flex-col border-r"
         style={{ width: sidebarWidth }}
       >
-        <div className="flex items-center gap-1.5 border-b p-2">
+        <div className="flex h-11 shrink-0 items-center gap-1.5 border-b px-2">
           <div className="relative min-w-0 flex-1">
             <IconSearch className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -375,16 +447,13 @@ export function CommentsPage() {
             active={filtersOn}
           />
         </div>
-        <ScrollArea
-          className="min-h-0 flex-1"
-          viewportClassName="scroll-fade px-1 py-2"
-        >
+        <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
           {all.length === 0 ? (
-            <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No comments yet. Leave one on a diff line.
+            <p className="px-4 py-8 text-center text-xs text-muted-foreground">
+              No comments yet. Leave one with the + in a file's gutter.
             </p>
           ) : filtered.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 px-3 py-6 text-center">
+            <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
               <p className="text-xs text-muted-foreground">
                 No comments match these filters.
               </p>
@@ -401,7 +470,24 @@ export function CommentsPage() {
               </Button>
             </div>
           ) : (
-            filtered.map(renderRow)
+            groups.map((group) => (
+              <div key={group.filePath}>
+                <FileHeading
+                  filePath={group.filePath}
+                  count={group.comments.length}
+                />
+                {group.comments.map((comment) => (
+                  <CommentRow
+                    key={comment.id}
+                    comment={comment}
+                    selected={comment.id === selectedId}
+                    onSelect={() => setSelectedId(comment.id)}
+                    onOpen={() => openInCode(comment)}
+                    onResolve={() => void resolve(comment)}
+                  />
+                ))}
+              </div>
+            ))
           )}
         </ScrollArea>
       </aside>
@@ -416,14 +502,15 @@ export function CommentsPage() {
       />
       <section className="flex min-w-0 flex-1 flex-col">
         {selected === null ? (
-          <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-muted-foreground">
-              Select a comment to see its context.
+          <div className="flex h-full items-center justify-center px-6">
+            <p className="text-center text-sm text-muted-foreground">
+              Select a comment to read it, then open the code it was left on.
             </p>
           </div>
         ) : (
           <CommentDetail
             comment={selected}
+            onOpen={() => openInCode(selected)}
             onResolve={() => void resolve(selected)}
             onSave={async (body) => {
               try {

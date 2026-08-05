@@ -20,10 +20,7 @@ import { AgentMark } from "@/interactions/collaboration/components/agent-mark"
 import { ConversationAgents } from "@/interactions/collaboration/components/conversation-agents"
 import { MessageList } from "@/interactions/collaboration/components/message-list"
 import { MessageComposer } from "@/interactions/collaboration/components/message-composer"
-import {
-  PaneBody,
-  PaneHeader,
-} from "@/interactions/collaboration/components/pane-header"
+import { PaneBody, PaneHeader } from "@/components/layout/pane-header"
 import {
   agentName,
   agentsIn,

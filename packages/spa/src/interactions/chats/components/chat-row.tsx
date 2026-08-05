@@ -1,8 +1,10 @@
 /**
- * A chat row in the /chats sidebar. Hovering opens a side preview card with the
- * untruncated title, the tail of the conversation and the session's metadata —
- * the same elevated panel language as the review bar's session previews, rather
- * than a tiny tooltip bubble.
+ * A thread row in code mode's inbox — the same shape the collaboration inbox
+ * uses: the agent's mark, the title and when it last moved, the branch it runs
+ * on, and two lines of the last message. Hovering opens a side preview card
+ * with the untruncated title, the tail of the conversation and the session's
+ * metadata — the same elevated panel language as the review bar's session
+ * previews, rather than a tiny tooltip bubble.
  *
  * The conversation tail is fetched only once a card opens, so scrolling past a
  * hundred rows costs nothing.
@@ -26,7 +28,7 @@ const HOVER_DELAY_MS = 400
 const HOVER_CLOSE_DELAY_MS = 100
 const PREVIEW_TURNS = 3
 
-function TurnStateDot({ state }: { state: ChatSummary["turnState"] }) {
+export function TurnStateDot({ state }: { state: ChatSummary["turnState"] }) {
   if (state === null || state === "completed") return null
   return (
     <span
@@ -67,10 +69,12 @@ function ConversationTail({
 export function ChatRow({
   chat,
   active,
+  unread,
   onDelete,
 }: {
   chat: ChatSummary
   active: boolean
+  unread: boolean
   onDelete: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -105,37 +109,56 @@ export function ChatRow({
               clicked.current = false
             }}
             className={cn(
-              "group/row mb-0.5 flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-md px-2 py-1.5 text-left hover:bg-muted/60",
+              "group/row flex w-full gap-2.5 border-b px-3 py-2.5 text-left outline-none hover:bg-elevate focus-visible:bg-elevate",
               active && "bg-muted"
             )}
           />
         }
       >
-        <div className="min-w-0 flex-1 overflow-hidden">
-          <div className="flex min-w-0 items-center gap-1.5">
+        <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-elevate">
+          <Icon className="size-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline gap-2">
             <TurnStateDot state={chat.turnState} />
-            <span className="min-w-0 flex-1 truncate text-sm">
+            <span className="truncate text-[13px] font-medium">
               {chat.title}
             </span>
-          </div>
+            <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+              {timeAgo(chat.updatedAt)}
+            </span>
+          </span>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            {assistantLabel}
+            <span className="min-w-0 truncate rounded bg-elevate px-1 py-px text-foreground">
+              {chat.branch}
+            </span>
+          </span>
           {chat.lastMessage !== null && chat.lastMessage.length > 0 && (
-            <div className="truncate text-xs text-muted-foreground">
+            <span className="mt-1 line-clamp-2 block text-[13px] text-muted-foreground">
               {chat.lastMessage}
-            </div>
+            </span>
           )}
-        </div>
-        <button
-          type="button"
-          aria-label="Delete thread"
-          className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive"
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            onDelete()
-          }}
-        >
-          <IconX className="size-3.5" />
-        </button>
+        </span>
+        {/* The unread dot and the delete control share the same column: the
+            dot steps aside the moment the row is hovered. */}
+        <span className="relative mt-1.5 size-4 shrink-0">
+          {unread && (
+            <span className="absolute inset-0 m-auto size-2 rounded-full bg-sky-500 group-hover/row:opacity-0" />
+          )}
+          <button
+            type="button"
+            aria-label="Delete thread"
+            className="absolute inset-0 grid place-items-center text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              onDelete()
+            }}
+          >
+            <IconX className="size-3.5" />
+          </button>
+        </span>
       </PreviewCardTrigger>
       <PreviewCardContent side="right" align="start" className="w-80 gap-2 p-3">
         <div className="flex items-start justify-between gap-3">

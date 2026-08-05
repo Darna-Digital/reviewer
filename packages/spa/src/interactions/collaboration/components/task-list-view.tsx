@@ -15,7 +15,7 @@ import { useState, type CSSProperties } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar"
-import { PaneHeader } from "@/interactions/collaboration/components/pane-header"
+import { PaneHeader } from "@/components/layout/pane-header"
 import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-priority-icon"
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
 import {

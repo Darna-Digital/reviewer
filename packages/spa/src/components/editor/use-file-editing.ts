@@ -1,10 +1,9 @@
 /**
  * Editing a file in place.
  *
- * The file view is always editable — there is no mode to switch into — so this
- * owns everything that used to live in a separate editor component: the editor
- * instance, the dirty buffer, saving, and the keyboard commands the library
- * does not provide.
+ * The file view switches into editing rather than hosting a separate editor
+ * component, so this owns the editor instance, the dirty buffer, saving, and
+ * the keyboard commands the library does not provide.
  *
  * Two constraints shape it. The editable view snapshots the rendered code when
  * the editor attaches, so an asynchronous worker highlight landing afterwards
@@ -39,6 +38,8 @@ export interface FileEditing {
   readonly dirty: boolean
   readonly saving: boolean
   readonly save: () => void
+  /** Throw the unsaved buffer away and go back to what is on disk. */
+  readonly discard: () => void
   /**
    * The buffer to analyse: null while it matches what was loaded, so the
    * analyser reads the file from disk instead of being handed a copy of it.
@@ -193,6 +194,12 @@ export function useFileEditing(
     return () => window.removeEventListener("keydown", onKeyDown, true)
   }, [runCommand])
 
+  const discard = useCallback(() => {
+    valueRef.current = originalRef.current
+    setDirty(false)
+    setBufferForAnalysis(null)
+  }, [])
+
   const subscribe = useCallback((listener: () => void) => {
     listeners.current.add(listener)
     return () => listeners.current.delete(listener)
@@ -204,6 +211,7 @@ export function useFileEditing(
     dirty,
     saving,
     save: useCallback(() => void save(), [save]),
+    discard,
     bufferForAnalysis,
   }
 }

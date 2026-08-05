@@ -1,12 +1,13 @@
 import { type LineAnnotation } from "@pierre/diffs"
 import { EditorProvider, File, Virtualizer } from "@pierre/diffs/react"
-import { useCallback, useEffect, useMemo, useRef } from "react"
+import { IconPencil } from "@tabler/icons-react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import {
   CommentThread,
   DraftCard,
   type DraftLocation,
 } from "@/interactions/comments/components/comment-thread"
-import { useSelectionActions } from "@/interactions/code-actions/components/use-selection-actions"
 import {
   DiagnosticsAnnotation,
   DiagnosticsSummary,
@@ -48,7 +49,12 @@ interface CodeViewProps {
   onSaved?: () => void
   /** Whether this file has unsaved changes — the tab strip shows a marker. */
   onDirtyChange?: (dirty: boolean) => void
-  /** Open this file's commit history in the bottom dock. */
+  /**
+   * Where this file's own controls (Edit, Save, the problem count) render —
+   * the crumb bar above the view, so the path and everything acting on it stay
+   * on one line. Omit to leave the file without them.
+   */
+  actionsSlot?: HTMLElement | null
   /**
    * Open another file at a line — go-to-definition and find-usages need it.
    * Omit to leave the IDE layer off.
@@ -71,6 +77,7 @@ export function CodeView({
   theme,
   onSaved,
   onDirtyChange,
+  actionsSlot,
   onOpenLocation,
   reveal = null,
   comments,
@@ -87,6 +94,12 @@ export function CodeView({
   const commentsEnabled =
     onCommentSubmit !== undefined && onCommentDelete !== undefined
 
+  // Reading and editing are separate again. Reading is the default, and it is
+  // what the gutter `+` needs: an editable view takes the caret on every click
+  // and the library disables line selection inside it.
+  const [editing, setEditing] = useState(false)
+  useEffect(() => setEditing(false), [path])
+
   // A quick fix can touch a file that is not open — an import added to a
   // barrel, say. Those are read, edited and written back through the file API,
   // since the editor only owns the buffer on screen.
@@ -95,32 +108,37 @@ export function CodeView({
     []
   )
 
-  // The view is always editable — clicking anywhere places a caret, and there
-  // is no mode to switch into.
-  const editing = useFileEditing(
+  const buffer = useFileEditing(
     path,
     file.data?.contents,
     useCallback(() => onSaved?.(), [onSaved])
   )
 
   useEffect(() => {
-    onDirtyChange?.(editing.dirty)
-  }, [editing.dirty, onDirtyChange])
+    onDirtyChange?.(buffer.dirty)
+  }, [buffer.dirty, onDirtyChange])
 
   // Report the file as saved when it goes away, so a stale marker cannot
   // outlive the view that owned it.
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
 
+  const stopEditing = () => {
+    if (buffer.dirty && !window.confirm(`Discard unsaved changes in ${path}?`))
+      return
+    buffer.discard()
+    setEditing(false)
+  }
+
   // The IDE layer: diagnostics, go-to-definition and find-usages, driven by
   // `@pierre/diffs` token hooks. Only active when the host can navigate.
   const language = useLanguageLayer({
     path,
-    editor: editing.editor,
-    subscribe: editing.subscribe,
+    editor: buffer.editor,
+    subscribe: buffer.subscribe,
     getContainer: useCallback(() => scrollWrapper.current, []),
     onApplyForeignEdits: applyForeignEdits,
     // Diagnostics follow what is on screen, not what is on disk.
-    contents: editing.bufferForAnalysis,
+    contents: buffer.bufferForAnalysis,
     enabled: onOpenLocation !== undefined,
     onOpenLocation: useCallback(
       (location: Location) =>
@@ -153,17 +171,7 @@ export function CodeView({
   // The annotation slot carries diagnostics as well as comments, so it stays on
   // whenever either has something to show.
   const annotationsEnabled = commentsEnabled || language.annotations.length > 0
-
-  // Select text to act on it. The editor owns the popover and its placement.
-  const selection = useSelectionActions({
-    editor: editing.editor,
-    capabilities: { comment: commentsEnabled },
-    onComment: useCallback(
-      (lineNumber: number) =>
-        onDraftOpen?.({ filePath: path, side: FILE_COMMENT_SIDE, lineNumber }),
-      [onDraftOpen, path]
-    ),
-  })
+  const gutterCommentsEnabled = commentsEnabled && !editing
 
   // Line count drives the first scroll estimate for a line that has not been
   // rendered yet; zero until the file loads, which simply means "start at top".
@@ -197,32 +205,61 @@ export function CodeView({
     // wrapper exists so `useRevealLine` can reach the Virtualizer's own
     // scrolling root, which is its only child.
     <div ref={scrollWrapper} className="h-full">
-      <Virtualizer className="h-full overflow-auto">
-        <EditorProvider editor={editing.editor}>
+      {/* Trailing gutter: the last lines have to clear the floating bars that
+          hang over the bottom of the pane (the assign bar), and scrolling a
+          little past the end is how an editor behaves anyway. */}
+      <Virtualizer className="h-full overflow-auto pb-20">
+        <EditorProvider editor={buffer.editor}>
           <section className="diff-file" data-file-anchor={path}>
-            {/* Remount per file: the underlying File instance doesn't re-highlight
-            when only its `file` prop changes, so navigating between files would
-            otherwise show the new contents unhighlighted until a reload. */}
+            {/* Remount per file, and when editing is switched on or off: the
+            underlying File instance neither re-highlights on a `file` prop
+            change nor attaches the editor after mount, so navigating or
+            starting to edit would otherwise leave a stale view. */}
             <File<AnnotationMeta>
-              key={path}
+              key={`${path}:${editing}`}
               file={{ name: path, contents: file.data.contents }}
               options={{
                 theme: THEMES,
                 themeType: theme,
                 overflow: "wrap",
                 stickyHeader: false,
+                // The path, the file's actions and the trail that led here all
+                // belong on one line — the crumb bar above owns it, so the
+                // view's own header would only say the same thing twice.
+                disableFileHeader: true,
+                enableGutterUtility: gutterCommentsEnabled,
+                onGutterUtilityClick: gutterCommentsEnabled
+                  ? (range) =>
+                      onDraftOpen?.({
+                        filePath: path,
+                        side: FILE_COMMENT_SIDE,
+                        lineNumber: range.end,
+                      })
+                  : undefined,
+                onLineNumberClick: gutterCommentsEnabled
+                  ? (props) =>
+                      onDraftOpen?.({
+                        filePath: path,
+                        side: FILE_COMMENT_SIDE,
+                        lineNumber: props.lineNumber,
+                      })
+                  : undefined,
                 // Token hooks + the post-render pass that underlines problems.
                 ...language.viewOptions,
-                // Both of these render inside the view's shadow root, which the
-                // app stylesheet cannot reach.
-                unsafeCSS: `${language.viewOptions.unsafeCSS}\n${selection.unsafeCSS}`,
               }}
-              contentEditable
+              contentEditable={editing}
               /* The editable view snapshots the rendered code when the editor
                attaches, so a worker highlight landing afterwards would never
                reach it; `useLangReady` has primed the main-thread highlighter
                so the first paint is coloured anyway. */
-              disableWorkerPool
+              disableWorkerPool={editing}
+              selectedLines={
+                gutterCommentsEnabled
+                  ? draft !== null && draft.filePath === path
+                    ? { start: draft.lineNumber, end: draft.lineNumber }
+                    : null
+                  : undefined
+              }
               lineAnnotations={annotationsEnabled ? annotations : undefined}
               renderAnnotation={
                 annotationsEnabled
@@ -263,31 +300,44 @@ export function CodeView({
                     }
                   : undefined
               }
-              renderHeaderFilenameSuffix={() =>
-                editing.dirty ? (
-                  <span
-                    className="ml-2 inline-block size-1.5 rounded-full bg-primary align-middle"
-                    title="Unsaved changes"
-                  />
-                ) : null
-              }
-              renderHeaderMetadata={() => (
-                <div className="flex items-center gap-2">
-                  <DiagnosticsSummary counts={language.counts} />
-                  {editing.dirty && (
-                    <Button
-                      size="xs"
-                      disabled={editing.saving}
-                      onClick={editing.save}
-                    >
-                      {editing.saving ? "Saving…" : "Save"}
-                    </Button>
-                  )}
-                </div>
-              )}
             />
           </section>
         </EditorProvider>
+        {actionsSlot !== null &&
+          actionsSlot !== undefined &&
+          createPortal(
+            <>
+              <DiagnosticsSummary counts={language.counts} />
+              {editing ? (
+                <>
+                  {buffer.dirty && (
+                    <Button
+                      size="xs"
+                      disabled={buffer.saving}
+                      onClick={buffer.save}
+                    >
+                      {buffer.saving ? "Saving…" : "Save"}
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="xs" onClick={stopEditing}>
+                    Done
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="gap-1 text-muted-foreground"
+                  title={`Edit ${path}`}
+                  onClick={() => setEditing(true)}
+                >
+                  <IconPencil className="size-3.5" />
+                  Edit
+                </Button>
+              )}
+            </>,
+            actionsSlot
+          )}
         {language.card}
         {language.completions}
         {language.menu}

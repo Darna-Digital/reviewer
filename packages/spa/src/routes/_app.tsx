@@ -7,6 +7,8 @@ export interface AppSearch {
   file?: string
   /** Selected file to scroll the diff to. */
   path?: string
+  /** One-based line in the open file to reveal — how a comment links to its code. */
+  line?: number
   /** Range-diff base/head (browse mode). */
   base?: string
   head?: string
@@ -16,6 +18,9 @@ export const Route = createFileRoute("/_app")({
   validateSearch: (search: Record<string, unknown>): AppSearch => ({
     file: typeof search["file"] === "string" ? search["file"] : undefined,
     path: typeof search["path"] === "string" ? search["path"] : undefined,
+    line: Number.isFinite(Number(search["line"]))
+      ? Number(search["line"])
+      : undefined,
     base: typeof search["base"] === "string" ? search["base"] : undefined,
     head: typeof search["head"] === "string" ? search["head"] : undefined,
   }),

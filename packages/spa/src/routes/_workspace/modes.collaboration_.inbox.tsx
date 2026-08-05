@@ -6,7 +6,9 @@ export interface InboxSearch {
   compose?: "chat"
 }
 
-export const Route = createFileRoute("/_workspace/inbox")({
+// Trailing `_` keeps this out of the collaboration page's route, which renders
+// its own workspace rather than an `<Outlet />`.
+export const Route = createFileRoute("/_workspace/modes/collaboration_/inbox")({
   validateSearch: (search: Record<string, unknown>): InboxSearch => ({
     compose: search["compose"] === "chat" ? "chat" : undefined,
   }),

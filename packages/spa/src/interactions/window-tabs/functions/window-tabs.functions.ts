@@ -101,11 +101,11 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
   ["/modes/code/commit", "Local changes"],
   ["/modes/code/review", "Pull requests"],
   ["/modes/code/comments", "Comments"],
-  ["/modes/code/chats", "Chats"],
+  ["/modes/code/chats", "Inbox"],
   ["/modes/code/docs", "Docs"],
   ["/modes/code/tasks", "Tasks"],
+  ["/modes/collaboration/inbox", "Inbox"],
   ["/modes/collaboration", "Collaboration"],
-  ["/inbox", "Inbox"],
   ["/settings", "Settings"],
 ]
 

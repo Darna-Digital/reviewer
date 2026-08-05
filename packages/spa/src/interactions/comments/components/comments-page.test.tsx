@@ -113,7 +113,7 @@ describe("CommentsPage", () => {
     expect(screen.getByText(/select a comment/i)).toBeDefined()
   })
 
-  it("shows a comment's file and line on selection", async () => {
+  it("shows a comment's file and line on selection, and stays on the page", async () => {
     const user = userEvent.setup()
     render(<CommentsPage />)
 
@@ -124,10 +124,31 @@ describe("CommentsPage", () => {
         selector: "code",
       })
     ).toBeDefined()
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
+  it("opens the file at the line the comment was left on", async () => {
+    const user = userEvent.setup()
+    render(<CommentsPage />)
+
+    await user.click(screen.getByText("Add a 90-day window too"))
+    await user.click(screen.getByRole("button", { name: /open in code/i }))
+
     expect(navigate).toHaveBeenCalledWith({
       to: "/modes/code/commit",
-      search: { path: "packages/spa/src/lib/date-filter.ts" },
+      search: {
+        path: "packages/spa/src/lib/date-filter.ts",
+        file: "packages/spa/src/lib/date-filter.ts",
+        line: 18,
+      },
     })
+  })
+
+  it("groups the list by file", () => {
+    render(<CommentsPage />)
+
+    expect(screen.getByText("date-filter.ts")).toBeDefined()
+    expect(screen.getByText("chats-page.tsx")).toBeDefined()
   })
 
   it("filters the list down by a free-text search", async () => {

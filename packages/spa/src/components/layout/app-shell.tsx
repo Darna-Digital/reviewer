@@ -202,6 +202,11 @@ export function AppShell() {
     logFilters
   )
 
+  // Callback-ref state, not a ref object: the file view renders into this node,
+  // so it has to re-render once the node exists.
+  const [fileActionsSlot, setFileActionsSlot] = useState<HTMLElement | null>(
+    null
+  )
   const [pickerOpen, setPickerOpen] = useState(false)
   const [commandOpen, setCommandOpen] = useState(false)
   const [draft, setDraft] = useState<DraftLocation | null>(null)
@@ -396,6 +401,13 @@ export function AppShell() {
     revealLine(lineNumber)
   }
 
+  // A `line` in the URL is how another surface points at code — the comments
+  // page linking a comment back to the line it was left on.
+  useEffect(() => {
+    if (search.line === undefined || search.file === undefined) return
+    revealLine(search.line)
+  }, [search.line, search.file])
+
   // Show one file's past: the log filters down to it (following renames) and
   // the dock swings open on History.
   const showFileHistory = (path: string) => {
@@ -431,7 +443,6 @@ export function AppShell() {
     setSearch({ path, file: undefined })
   }
 
-  // One always-editable file view; there is no separate edit mode.
   const viewing = search.file ?? null
 
   // --- open-file tabs --------------------------------------------------------
@@ -798,6 +809,7 @@ export function AppShell() {
           theme={prefs.resolvedTheme}
           onSaved={git.refresh}
           onDirtyChange={onDirtyChange}
+          actionsSlot={fileActionsSlot}
           onOpenLocation={openLocation}
           reveal={reveal}
           comments={fileComments}
@@ -1101,18 +1113,26 @@ export function AppShell() {
                   {crumbs.length > 1 && (
                     <div className="flex h-8 shrink-0 items-center gap-2 border-b px-2">
                       <Breadcrumbs crumbs={crumbs} />
-                      {viewing !== null && (
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          className="ml-auto gap-1 text-muted-foreground"
-                          title={`Show the commit history of ${viewing}`}
-                          onClick={() => showFileHistory(viewing)}
-                        >
-                          <IconHistory className="size-3.5" />
-                          History
-                        </Button>
-                      )}
+                      <div className="ml-auto flex shrink-0 items-center gap-1">
+                        {viewing !== null && (
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            className="gap-1 text-muted-foreground"
+                            title={`Show the commit history of ${viewing}`}
+                            onClick={() => showFileHistory(viewing)}
+                          >
+                            <IconHistory className="size-3.5" />
+                            History
+                          </Button>
+                        )}
+                        {/* The open file's own controls portal in here, so its
+                            path, history and Edit share the one line. */}
+                        <div
+                          ref={setFileActionsSlot}
+                          className="flex items-center gap-1"
+                        />
+                      </div>
                     </div>
                   )}
                   <div className="min-h-0 flex-1 overflow-hidden">

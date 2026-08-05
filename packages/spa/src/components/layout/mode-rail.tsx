@@ -1,7 +1,7 @@
 /**
- * ModeRail — code mode's left rail: the inbox on top, then the git surfaces and
- * the bottom dock's toggles. Collaboration mode has no rail — its sidebar
- * carries the equivalent. It reads the active surface from the route, so the
+ * ModeRail — code mode's left rail: the inbox (the repo's agent threads) on
+ * top, then the git surfaces and the bottom dock's toggles. Collaboration mode
+ * has no rail — its sidebar carries the equivalent. It reads the active surface from the route, so the
  * shells render it prop-free. The window's own chrome (traffic lights, tabs)
  * sits above it in the WindowFrame, so the rail starts at the content edge.
  */
@@ -12,7 +12,6 @@ import {
   IconGitPullRequest,
   IconMessageCircle,
   IconPlayerPlay,
-  IconSend,
   IconSettings,
   IconTerminal2,
 } from "@tabler/icons-react"
@@ -23,7 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { InboxPopover } from "@/components/layout/inbox-popover"
+import { ChatsInboxPopover } from "@/interactions/chats/components/chats-inbox-popover"
 import { cn } from "@/lib/utils"
 import { useRepo } from "@/lib/queries"
 import {
@@ -40,20 +39,12 @@ interface RailLink {
   /** Route prefix that lights the button up. */
   match: string
   github?: boolean
-  /** Unfinished surface, kept out of packaged builds. */
-  dev?: boolean
 }
 
-const INBOX_MATCH = "/inbox"
+/** Code mode's inbox is the repo's agent threads. */
+const INBOX_MATCH = "/modes/code/chats"
 
 const REVIEW_LINKS: RailLink[] = [
-  {
-    to: "/modes/code/chats",
-    label: "Agent threads",
-    icon: IconSend,
-    match: "/modes/code/chats",
-    dev: true,
-  },
   {
     to: "/modes/code/comments",
     label: "Comments — code & visual",
@@ -168,7 +159,7 @@ export function ModeRail() {
           border sits *under* its own 44px header, so a border inside this row
           would draw one pixel high and the line would step at the seam. */}
       <div className="flex h-11 w-full shrink-0 items-center justify-center">
-        <InboxPopover active={pathname.startsWith(INBOX_MATCH)} />
+        <ChatsInboxPopover active={pathname.startsWith(INBOX_MATCH)} />
       </div>
       <div className="h-px w-full shrink-0 bg-border" />
       <div className="flex w-full flex-1 flex-col items-center gap-1 pt-2">
@@ -176,9 +167,7 @@ export function ModeRail() {
           renderLink
         )}
         <div className="my-1 h-px w-6 bg-border" />
-        {REVIEW_LINKS.filter((l) => l.dev !== true || import.meta.env.DEV).map(
-          renderLink
-        )}
+        {REVIEW_LINKS.map(renderLink)}
         <div className="mt-auto flex flex-col items-center gap-1">
           <RailButton
             label="Branches & History"

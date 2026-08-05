@@ -1,8 +1,9 @@
 import { Fragment, type ReactNode } from "react"
 
 /**
- * The header every collaboration pane wears: a breadcrumb on the left, the
- * subject's one-line context beside it, and the pane's actions on the right.
+ * The header a two-pane surface wears — collaboration's panes, the inbox and
+ * code mode's threads: a breadcrumb on the left, the subject's one-line context
+ * beside it, and the pane's actions on the right.
  */
 export function PaneHeader({
   crumbs,

@@ -13,7 +13,6 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as WorkspaceRouteImport } from './routes/_workspace'
 import { Route as KitchenSinkRouteImport } from './routes/kitchen-sink'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
-import { Route as WorkspaceInboxRouteImport } from './routes/_workspace/inbox'
 import { Route as WorkspaceSettingsRouteImport } from './routes/_workspace/settings'
 import { Route as WorkspaceModesCollaborationRouteImport } from './routes/_workspace/modes.collaboration'
 import { Route as AppModesCodeIndexRouteImport } from './routes/_app/modes.code.index'
@@ -24,6 +23,7 @@ import { Route as WorkspaceModesCodeDocsRouteImport } from './routes/_workspace/
 import { Route as WorkspaceModesCodeLocalDevRouteImport } from './routes/_workspace/modes.code.local-dev'
 import { Route as WorkspaceModesCodeTasksRouteImport } from './routes/_workspace/modes.code.tasks'
 import { Route as WorkspaceModesCodeThreadsRouteImport } from './routes/_workspace/modes.code.threads'
+import { Route as WorkspaceModesCollaborationInboxRouteImport } from './routes/_workspace/modes.collaboration_.inbox'
 import { Route as AppModesCodeBrowseIndexRouteImport } from './routes/_app/modes.code.browse.index'
 import { Route as AppModesCodeBrowseRangeRouteImport } from './routes/_app/modes.code.browse.range'
 import { Route as AppModesCodeReviewIndexRouteImport } from './routes/_app/modes.code.review.index'
@@ -49,11 +49,6 @@ const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppRoute,
-} as any)
-const WorkspaceInboxRoute = WorkspaceInboxRouteImport.update({
-  id: '/inbox',
-  path: '/inbox',
-  getParentRoute: () => WorkspaceRoute,
 } as any)
 const WorkspaceSettingsRoute = WorkspaceSettingsRouteImport.update({
   id: '/settings',
@@ -109,6 +104,12 @@ const WorkspaceModesCodeThreadsRoute =
     path: '/modes/code/threads',
     getParentRoute: () => WorkspaceRoute,
   } as any)
+const WorkspaceModesCollaborationInboxRoute =
+  WorkspaceModesCollaborationInboxRouteImport.update({
+    id: '/modes/collaboration_/inbox',
+    path: '/modes/collaboration/inbox',
+    getParentRoute: () => WorkspaceRoute,
+  } as any)
 const AppModesCodeBrowseIndexRoute = AppModesCodeBrowseIndexRouteImport.update({
   id: '/modes/code/browse/',
   path: '/modes/code/browse/',
@@ -151,7 +152,6 @@ const AppModesCodeBrowseCommitShaRoute =
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/kitchen-sink': typeof KitchenSinkRoute
-  '/inbox': typeof WorkspaceInboxRoute
   '/settings': typeof WorkspaceSettingsRoute
   '/modes/collaboration': typeof WorkspaceModesCollaborationRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
@@ -161,6 +161,7 @@ export interface FileRoutesByFullPath {
   '/modes/code/local-dev': typeof WorkspaceModesCodeLocalDevRoute
   '/modes/code/tasks': typeof WorkspaceModesCodeTasksRoute
   '/modes/code/threads': typeof WorkspaceModesCodeThreadsRoute
+  '/modes/collaboration/inbox': typeof WorkspaceModesCollaborationInboxRoute
   '/modes/code/': typeof AppModesCodeIndexRoute
   '/modes/code/browse/range': typeof AppModesCodeBrowseRangeRoute
   '/modes/code/review/$pull': typeof AppModesCodeReviewPullRoute
@@ -173,7 +174,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/kitchen-sink': typeof KitchenSinkRoute
-  '/inbox': typeof WorkspaceInboxRoute
   '/settings': typeof WorkspaceSettingsRoute
   '/modes/collaboration': typeof WorkspaceModesCollaborationRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
@@ -182,6 +182,7 @@ export interface FileRoutesByTo {
   '/modes/code/local-dev': typeof WorkspaceModesCodeLocalDevRoute
   '/modes/code/tasks': typeof WorkspaceModesCodeTasksRoute
   '/modes/code/threads': typeof WorkspaceModesCodeThreadsRoute
+  '/modes/collaboration/inbox': typeof WorkspaceModesCollaborationInboxRoute
   '/modes/code': typeof AppModesCodeIndexRoute
   '/modes/code/browse/range': typeof AppModesCodeBrowseRangeRoute
   '/modes/code/review/$pull': typeof AppModesCodeReviewPullRoute
@@ -196,7 +197,6 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/_workspace': typeof WorkspaceRouteWithChildren
   '/kitchen-sink': typeof KitchenSinkRoute
-  '/_workspace/inbox': typeof WorkspaceInboxRoute
   '/_workspace/settings': typeof WorkspaceSettingsRoute
   '/_app/': typeof AppIndexRoute
   '/_workspace/modes/collaboration': typeof WorkspaceModesCollaborationRoute
@@ -207,6 +207,7 @@ export interface FileRoutesById {
   '/_workspace/modes/code/local-dev': typeof WorkspaceModesCodeLocalDevRoute
   '/_workspace/modes/code/tasks': typeof WorkspaceModesCodeTasksRoute
   '/_workspace/modes/code/threads': typeof WorkspaceModesCodeThreadsRoute
+  '/_workspace/modes/collaboration_/inbox': typeof WorkspaceModesCollaborationInboxRoute
   '/_app/modes/code/': typeof AppModesCodeIndexRoute
   '/_app/modes/code/browse/range': typeof AppModesCodeBrowseRangeRoute
   '/_app/modes/code/review/$pull': typeof AppModesCodeReviewPullRoute
@@ -221,7 +222,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/kitchen-sink'
-    | '/inbox'
     | '/settings'
     | '/modes/collaboration'
     | '/modes/code/commit'
@@ -231,6 +231,7 @@ export interface FileRouteTypes {
     | '/modes/code/local-dev'
     | '/modes/code/tasks'
     | '/modes/code/threads'
+    | '/modes/collaboration/inbox'
     | '/modes/code/'
     | '/modes/code/browse/range'
     | '/modes/code/review/$pull'
@@ -243,7 +244,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/kitchen-sink'
-    | '/inbox'
     | '/settings'
     | '/modes/collaboration'
     | '/modes/code/commit'
@@ -252,6 +252,7 @@ export interface FileRouteTypes {
     | '/modes/code/local-dev'
     | '/modes/code/tasks'
     | '/modes/code/threads'
+    | '/modes/collaboration/inbox'
     | '/modes/code'
     | '/modes/code/browse/range'
     | '/modes/code/review/$pull'
@@ -265,7 +266,6 @@ export interface FileRouteTypes {
     | '/_app'
     | '/_workspace'
     | '/kitchen-sink'
-    | '/_workspace/inbox'
     | '/_workspace/settings'
     | '/_app/'
     | '/_workspace/modes/collaboration'
@@ -276,6 +276,7 @@ export interface FileRouteTypes {
     | '/_workspace/modes/code/local-dev'
     | '/_workspace/modes/code/tasks'
     | '/_workspace/modes/code/threads'
+    | '/_workspace/modes/collaboration_/inbox'
     | '/_app/modes/code/'
     | '/_app/modes/code/browse/range'
     | '/_app/modes/code/review/$pull'
@@ -321,13 +322,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
-    }
-    '/_workspace/inbox': {
-      id: '/_workspace/inbox'
-      path: '/inbox'
-      fullPath: '/inbox'
-      preLoaderRoute: typeof WorkspaceInboxRouteImport
-      parentRoute: typeof WorkspaceRoute
     }
     '/_workspace/settings': {
       id: '/_workspace/settings'
@@ -397,6 +391,13 @@ declare module '@tanstack/react-router' {
       path: '/modes/code/threads'
       fullPath: '/modes/code/threads'
       preLoaderRoute: typeof WorkspaceModesCodeThreadsRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_workspace/modes/collaboration_/inbox': {
+      id: '/_workspace/modes/collaboration_/inbox'
+      path: '/modes/collaboration/inbox'
+      fullPath: '/modes/collaboration/inbox'
+      preLoaderRoute: typeof WorkspaceModesCollaborationInboxRouteImport
       parentRoute: typeof WorkspaceRoute
     }
     '/_app/modes/code/browse/': {
@@ -492,7 +493,6 @@ const WorkspaceModesCodeChatsRouteWithChildren =
   )
 
 interface WorkspaceRouteChildren {
-  WorkspaceInboxRoute: typeof WorkspaceInboxRoute
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
   WorkspaceModesCollaborationRoute: typeof WorkspaceModesCollaborationRoute
   WorkspaceModesCodeChatsRoute: typeof WorkspaceModesCodeChatsRouteWithChildren
@@ -501,10 +501,10 @@ interface WorkspaceRouteChildren {
   WorkspaceModesCodeLocalDevRoute: typeof WorkspaceModesCodeLocalDevRoute
   WorkspaceModesCodeTasksRoute: typeof WorkspaceModesCodeTasksRoute
   WorkspaceModesCodeThreadsRoute: typeof WorkspaceModesCodeThreadsRoute
+  WorkspaceModesCollaborationInboxRoute: typeof WorkspaceModesCollaborationInboxRoute
 }
 
 const WorkspaceRouteChildren: WorkspaceRouteChildren = {
-  WorkspaceInboxRoute: WorkspaceInboxRoute,
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
   WorkspaceModesCollaborationRoute: WorkspaceModesCollaborationRoute,
   WorkspaceModesCodeChatsRoute: WorkspaceModesCodeChatsRouteWithChildren,
@@ -513,6 +513,7 @@ const WorkspaceRouteChildren: WorkspaceRouteChildren = {
   WorkspaceModesCodeLocalDevRoute: WorkspaceModesCodeLocalDevRoute,
   WorkspaceModesCodeTasksRoute: WorkspaceModesCodeTasksRoute,
   WorkspaceModesCodeThreadsRoute: WorkspaceModesCodeThreadsRoute,
+  WorkspaceModesCollaborationInboxRoute: WorkspaceModesCollaborationInboxRoute,
 }
 
 const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(

@@ -56,6 +56,51 @@ export const applyFilters = (
   })
 }
 
+/** One file's comments, in reading order. */
+export interface CommentGroup {
+  readonly filePath: string
+  readonly comments: ReadonlyArray<ListedComment>
+}
+
+/**
+ * The list as it reads: files in most-recently-commented order, and within a
+ * file the comments top to bottom, the way you would meet them in the code.
+ */
+export const groupByFile = (
+  comments: ReadonlyArray<ListedComment>
+): Array<CommentGroup> => {
+  const files = new Map<string, Array<ListedComment>>()
+  for (const comment of comments) {
+    const bucket = files.get(comment.code.filePath)
+    if (bucket) bucket.push(comment)
+    else files.set(comment.code.filePath, [comment])
+  }
+  return [...files].map(([filePath, list]) => ({
+    filePath,
+    comments: [...list].sort((a, b) => a.code.lineNumber - b.code.lineNumber),
+  }))
+}
+
+/** A path split for display: the file's own name, and the folders above it. */
+export const fileLabel = (
+  filePath: string
+): { readonly name: string; readonly dir: string } => {
+  const cut = filePath.lastIndexOf("/")
+  return cut === -1
+    ? { name: filePath, dir: "" }
+    : { name: filePath.slice(cut + 1), dir: filePath.slice(0, cut) }
+}
+
+/** What a comment's stored target is called on screen. */
+export const targetLabel = (target: string): string => {
+  if (target === "worktree") return "Working tree"
+  if (target.startsWith("pr-")) return `PR #${target.slice("pr-".length)}`
+  if (target.startsWith("commit-"))
+    return target.slice("commit-".length, "commit-".length + 7)
+  if (target.includes("...")) return target.replace("...", " → ")
+  return target
+}
+
 const codeBlock = (comment: ReviewComment) =>
   `${comment.filePath}:${comment.lineNumber} - ${comment.body}`
 
