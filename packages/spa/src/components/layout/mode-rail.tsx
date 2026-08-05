@@ -12,6 +12,7 @@ import {
   IconGitPullRequest,
   IconMessageCircle,
   IconPlayerPlay,
+  IconSend,
   IconSettings,
   IconTerminal2,
 } from "@tabler/icons-react"
@@ -39,11 +40,20 @@ interface RailLink {
   /** Route prefix that lights the button up. */
   match: string
   github?: boolean
+  /** Unfinished surface, kept out of packaged builds. */
+  dev?: boolean
 }
 
 const INBOX_MATCH = "/inbox"
 
 const REVIEW_LINKS: RailLink[] = [
+  {
+    to: "/modes/code/chats",
+    label: "Agent threads",
+    icon: IconSend,
+    match: "/modes/code/chats",
+    dev: true,
+  },
   {
     to: "/modes/code/comments",
     label: "Comments — code & visual",
@@ -166,7 +176,9 @@ export function ModeRail() {
           renderLink
         )}
         <div className="my-1 h-px w-6 bg-border" />
-        {REVIEW_LINKS.map(renderLink)}
+        {REVIEW_LINKS.filter((l) => l.dev !== true || import.meta.env.DEV).map(
+          renderLink
+        )}
         <div className="mt-auto flex flex-col items-center gap-1">
           <RailButton
             label="Branches & History"
