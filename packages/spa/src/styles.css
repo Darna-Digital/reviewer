@@ -370,6 +370,40 @@
   background-color: var(--frame-translucent);
 }
 
+/* --- byconvo: agent brand marks ------------------------------------------- */
+/* Each agent CLI wears its own brand colour rather than the surrounding text
+   colour, so a glance at a mark says which tool without reading the label.
+   Only published values are used here — no invented accents.
+
+   Claude is the one vendor with a chromatic mark. OpenAI and Cursor both
+   publish achromatic identities (black or near-black on light, off-white on
+   dark), so their marks flip with the theme rather than holding a hue. Resist
+   giving them one: ChatGPT's green and the blues that circulate for Codex are
+   another product's accent or community guesswork, not these tools' brands. */
+[data-agent="claude"] {
+  --agent: #d97757;
+}
+[data-agent="codex"] {
+  --agent: #0f0f0f;
+}
+[data-agent="cursor"] {
+  --agent: #14120b;
+}
+[data-agent="opencode"] {
+  --agent: #171717;
+}
+.dark [data-agent="codex"] {
+  --agent: #fafafa;
+}
+.dark [data-agent="cursor"],
+.dark [data-agent="opencode"] {
+  --agent: #f7f7f4;
+}
+/* A terminal thread is not a brand — it keeps the text colour it inherits. */
+[data-agent="terminal"] {
+  --agent: currentColor;
+}
+
 /* --- byconvo: streaming "working" text ------------------------------------ */
 /* A highlight sweeps left-to-right across the label while an agent turn is in
    flight, so a long silent stretch still reads as alive. The gradient is built

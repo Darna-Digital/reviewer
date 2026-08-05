@@ -7,6 +7,7 @@ const VIEWS: ReadonlyArray<CollaborationView> = [
   "tasks",
   "docs",
   "channel",
+  "chat",
   "task",
   "agents",
   "members",

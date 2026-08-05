@@ -5,6 +5,7 @@
  */
 import { useSearch } from "@tanstack/react-router"
 import { ChannelView } from "@/interactions/collaboration/components/channel-view"
+import { ChatView } from "@/interactions/collaboration/components/chat-view"
 import { DocsView } from "@/interactions/collaboration/components/docs-view"
 import { CollaborationSidebar } from "@/interactions/collaboration/components/collaboration-sidebar"
 import { PeopleView } from "@/interactions/collaboration/components/people-view"
@@ -15,6 +16,7 @@ import {
   DEFAULT_ID,
   DEFAULT_VIEW,
   findChannel,
+  findChat,
   findProject,
   findTask,
 } from "@/interactions/collaboration/data/collaboration.mock"
@@ -41,6 +43,7 @@ export function CollaborationPage() {
   const taskListProject = view === "tasks" ? findProject(id) : undefined
   const docsProject = view === "docs" ? findProject(id) : undefined
   const channel = view === "channel" ? findChannel(id) : undefined
+  const chat = view === "chat" ? findChat(id) : undefined
   const task = view === "task" ? findTask(id) : undefined
 
   return (
@@ -56,6 +59,8 @@ export function CollaborationPage() {
           <DocsView project={docsProject} />
         ) : channel !== undefined ? (
           <ChannelView channel={channel} />
+        ) : chat !== undefined ? (
+          <ChatView chat={chat} />
         ) : task !== undefined ? (
           <TaskView task={task} />
         ) : view === "agents" || view === "members" ? (

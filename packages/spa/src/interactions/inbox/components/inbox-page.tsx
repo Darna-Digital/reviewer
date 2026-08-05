@@ -1,7 +1,7 @@
 /**
- * InboxPage — a three-pane inbox: the current mode's sidebar, the item list,
- * and the selected thread. Both modes link here, so the sidebar it renders
- * follows the mode you came from.
+ * InboxPage — the item list beside the selected thread, filling the window.
+ * Both modes link here and both get the same two panes: the inbox is a
+ * destination of its own, not a pane inside whichever mode you came from.
  */
 import {
   IconArrowsDiagonal,
@@ -11,7 +11,7 @@ import {
   IconSend,
   IconUsers,
 } from "@tabler/icons-react"
-import { Link, useRouterState, useSearch } from "@tanstack/react-router"
+import { Link, useSearch } from "@tanstack/react-router"
 import { useState } from "react"
 import { Avatar } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -23,7 +23,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { CollaborationSidebar } from "@/interactions/collaboration/components/collaboration-sidebar"
+import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card"
+import { AgentMark } from "@/interactions/collaboration/components/agent-mark"
+import {
+  findAgentById,
+  managedBy,
+} from "@/interactions/collaboration/data/collaboration.mock"
 import { NewChatView } from "@/interactions/collaboration/components/new-chat-view"
 import { MessageComposer } from "@/interactions/collaboration/components/message-composer"
 import { PaneHeader } from "@/interactions/collaboration/components/pane-header"
@@ -33,7 +38,6 @@ import {
 } from "@/interactions/inbox/data/inbox.mock"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
-import { activeWorkMode } from "@/lib/work-mode"
 
 const FILTERS: ReadonlyArray<{ value: InboxFilter; label: string }> = [
   { value: "all", label: "All" },
@@ -41,12 +45,20 @@ const FILTERS: ReadonlyArray<{ value: InboxFilter; label: string }> = [
   { value: "mentions", label: "Mentions" },
 ]
 
+/** An agent author's mark, carrying the hover card that names whose it is. */
+function AgentAuthorMark({ agentId }: { agentId: string }) {
+  const agent = findAgentById(agentId)
+  if (agent === undefined) return null
+  return (
+    <AgentHoverCard agent={agent}>
+      <AgentMark kind={agent.kind} className="mt-0.5 size-7 rounded-lg" />
+    </AgentHoverCard>
+  )
+}
+
 export function InboxPage() {
   const prefs = useUiPrefs()
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
   const composing = useSearch({ strict: false }).compose === "chat"
-  const collaborating =
-    activeWorkMode(pathname, prefs.workMode) === "collaboration"
   const [listWidth, setListWidth] = useState(prefs.inboxListWidth)
   const [filter, setFilter] = useState<InboxFilter>("all")
   const [filterOpen, setFilterOpen] = useState(false)
@@ -65,8 +77,6 @@ export function InboxPage() {
 
   return (
     <div className="flex h-full min-h-0">
-      {collaborating && showList && <CollaborationSidebar />}
-
       {showList && (
         <div
           className="flex shrink-0 flex-col border-r"
@@ -126,7 +136,11 @@ export function InboxPage() {
                   item.id === selected?.id && "bg-muted"
                 )}
               >
-                <Avatar name={item.author} className="size-7" />
+                {item.agentId === undefined ? (
+                  <Avatar name={item.author} className="size-7" />
+                ) : (
+                  <AgentAuthorMark agentId={item.agentId} />
+                )}
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2">
                     <span className="truncate text-[13px] font-medium">
@@ -242,15 +256,19 @@ export function InboxPage() {
               <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-4">
                 {selected?.thread.map((m) => (
                   <div key={m.id} className="flex gap-3">
-                    <Avatar name={m.author} className="mt-0.5 size-7" />
+                    {m.agentId === undefined ? (
+                      <Avatar name={m.author} className="mt-0.5 size-7" />
+                    ) : (
+                      <AgentAuthorMark agentId={m.agentId} />
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-[13px] font-medium">
+                        <span className="text-[0.8125rem] font-medium">
                           {m.author}
                         </span>
-                        {m.managed !== undefined && (
+                        {m.agentId !== undefined && (
                           <Badge variant="outline" className="h-4.5 px-1.5">
-                            {m.managed}
+                            {managedBy(m.agentId)}
                           </Badge>
                         )}
                         <span className="text-xs text-muted-foreground">

@@ -38,7 +38,8 @@ import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-p
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
 import {
   addTask,
-  AGENTS,
+  agentName,
+  allAgents,
   MEMBERS,
   PROJECTS,
   UNASSIGNED,
@@ -65,7 +66,7 @@ const PRIORITIES: ReadonlyArray<{ value: TaskPriority; label: string }> = [
 const ASSIGNEES: ReadonlyArray<string> = [
   UNASSIGNED,
   ...MEMBERS.map((m) => m.name),
-  ...AGENTS.map((a) => a.name),
+  ...allAgents().map(agentName),
 ]
 
 const projectMark = (project: MockProject) => (

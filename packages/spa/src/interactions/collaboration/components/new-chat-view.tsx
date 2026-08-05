@@ -6,12 +6,15 @@ import {
   IconBolt,
   IconCheck,
   IconChevronDown,
+  IconCloud,
+  IconDatabase,
   IconHash,
+  IconLock,
   IconPaperclip,
-  IconRobot,
   IconSend,
   IconShieldCheck,
   IconTerminal2,
+  IconWorld,
   IconX,
 } from "@tabler/icons-react"
 import { Link } from "@tanstack/react-router"
@@ -26,6 +29,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { BranchSwitcher } from "@/components/layout/branch-switcher"
 import { RepoPicker } from "@/components/repo-picker"
+import { AgentMark } from "@/interactions/collaboration/components/agent-mark"
 import { PaneHeader } from "@/interactions/collaboration/components/pane-header"
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
 import {
@@ -35,10 +39,14 @@ import {
   useWorkspace,
 } from "@/lib/queries"
 import {
-  AGENTS,
+  agentName,
+  callableBy,
   CHANNELS,
   MEMBERS,
+  PROJECTS,
+  VIEWER,
 } from "@/interactions/collaboration/data/collaboration.mock"
+import type { AgentKind } from "@byconvo/core/threads"
 import { cn } from "@/lib/utils"
 
 interface Recipient {
@@ -46,20 +54,31 @@ interface Recipient {
   kind: "member" | "agent" | "channel"
   name: string
   detail: string
+  /** Which CLI to draw, on an agent recipient. */
+  agent?: AgentKind
+  /** Set on a cloud agent, which anyone in the workspace may start with. */
+  cloud?: boolean
 }
 
-const RECIPIENTS: ReadonlyArray<Recipient> = [
+/**
+ * Read per render, so an agent added this session can be messaged straight
+ * away. Only the agents you can actually call are offered: yours and the
+ * workspace's. A teammate's CLI joins when they bring it, not when you list it.
+ */
+const recipients = (): ReadonlyArray<Recipient> => [
   ...MEMBERS.map((m) => ({
     id: `member-${m.id}`,
     kind: "member" as const,
     name: m.name,
     detail: m.detail,
   })),
-  ...AGENTS.map((a) => ({
+  ...callableBy(VIEWER.name).map((a) => ({
     id: `agent-${a.id}`,
     kind: "agent" as const,
-    name: a.name,
+    name: agentName(a),
     detail: a.detail,
+    agent: a.kind,
+    cloud: a.runtime === "cloud",
   })),
   ...CHANNELS.map((c) => ({
     id: `channel-${c.id}`,
@@ -86,16 +105,9 @@ function RecipientIcon({
       />
     )
   }
-  if (recipient.kind === "agent") {
+  if (recipient.agent !== undefined) {
     return (
-      <span
-        className={cn(
-          "grid size-5 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground",
-          className
-        )}
-      >
-        <IconRobot className="size-3.5" />
-      </span>
+      <AgentMark kind={recipient.agent} className={cn("size-5", className)} />
     )
   }
   return <Avatar name={recipient.name} className={cn("size-5", className)} />
@@ -139,6 +151,12 @@ function RecipientRow({
     >
       <RecipientIcon recipient={recipient} />
       <span className="shrink-0 font-medium">{label(recipient)}</span>
+      {recipient.cloud === true && (
+        <IconCloud
+          className="size-3.5 shrink-0 text-muted-foreground"
+          aria-label="Runs in the workspace cloud"
+        />
+      )}
       <span className="min-w-0 truncate text-muted-foreground">
         {recipient.detail}
       </span>
@@ -170,6 +188,18 @@ const EFFORTS = [
   { id: "medium", label: "Medium", detail: "The usual balance" },
   { id: "low", label: "Low", detail: "Quick passes" },
 ]
+
+/** Public is the default, so it is the first option and the one already set. */
+const VISIBILITY = [
+  { id: "public", label: "Public", detail: "The project can read and join" },
+  { id: "private", label: "Private", detail: "Only the people you add" },
+]
+
+const PROJECT_OPTIONS = PROJECTS.map((project) => ({
+  id: project.id,
+  label: project.name,
+  detail: `${project.lead} · ${project.target}`,
+}))
 
 function ChipPicker({
   icon,
@@ -227,6 +257,8 @@ export function NewChatView() {
   const [message, setMessage] = useState("")
   const [permission, setPermission] = useState("edits")
   const [effort, setEffort] = useState("high")
+  const [visibility, setVisibility] = useState("public")
+  const [projectId, setProjectId] = useState(PROJECT_OPTIONS[0]?.id ?? "")
   const [repoOpen, setRepoOpen] = useState(false)
   const repo = useRepo()
   const workspace = useWorkspace()
@@ -236,7 +268,7 @@ export function NewChatView() {
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return RECIPIENTS.filter(
+    return recipients().filter(
       (r) =>
         !chosen.some((c) => c.id === r.id) &&
         (q.length === 0 ||
@@ -254,6 +286,9 @@ export function NewChatView() {
     matches.filter((r) => r.kind === kind)
   const toAgent = chosen.some((c) => c.kind === "agent")
   const suggesting = query.length > 0 || chosen.length === 0
+  const isPublic = visibility === "public"
+  const projectName =
+    PROJECT_OPTIONS.find((p) => p.id === projectId)?.label ?? "the project"
 
   return (
     <>
@@ -378,6 +413,26 @@ export function NewChatView() {
               >
                 <IconPaperclip className="size-4" />
               </Button>
+              <ChipPicker
+                icon={
+                  isPublic ? (
+                    <IconWorld className="size-4 shrink-0" />
+                  ) : (
+                    <IconLock className="size-4 shrink-0" />
+                  )
+                }
+                value={visibility}
+                options={VISIBILITY}
+                onSelect={setVisibility}
+              />
+              {isPublic && (
+                <ChipPicker
+                  icon={<IconHash className="size-4 shrink-0" />}
+                  value={projectId}
+                  options={PROJECT_OPTIONS}
+                  onSelect={setProjectId}
+                />
+              )}
               {toAgent && (
                 <>
                   <ChipPicker
@@ -404,6 +459,13 @@ export function NewChatView() {
               </Button>
             </div>
           </div>
+
+          <p className="mt-2 flex items-start gap-1.5 px-1 text-xs text-pretty text-muted-foreground">
+            <IconDatabase className="size-3.5 shrink-0 translate-y-px" />
+            {isPublic
+              ? `Saved to the workspace, not this machine. Everyone on ${projectName} will find it and can ask you to let them in.`
+              : "Saved to the workspace, not this machine. Only the people you put in it will see it."}
+          </p>
 
           {/* Where the agent runs: the repository the app has open and the
               branch it is on — the same pickers as the title bar, opening

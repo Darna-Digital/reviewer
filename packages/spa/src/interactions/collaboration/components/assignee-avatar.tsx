@@ -1,8 +1,16 @@
 import { Avatar } from "@/components/ui/avatar"
-import { UNASSIGNED } from "@/interactions/collaboration/data/collaboration.mock"
+import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card"
+import { AgentMark } from "@/interactions/collaboration/components/agent-mark"
+import {
+  findAgentByName,
+  UNASSIGNED,
+} from "@/interactions/collaboration/data/collaboration.mock"
 import { cn } from "@/lib/utils"
 
-/** An assignee's avatar, or a dashed placeholder while nobody owns the task. */
+/**
+ * An assignee's mark: a brand glyph when an agent owns the task, initials when
+ * a person does, and a dashed placeholder while nobody does.
+ */
 export function AssigneeAvatar({
   name,
   className,
@@ -18,6 +26,14 @@ export function AssigneeAvatar({
           className
         )}
       />
+    )
+  }
+  const agent = findAgentByName(name)
+  if (agent !== undefined) {
+    return (
+      <AgentHoverCard agent={agent}>
+        <AgentMark kind={agent.kind} className={cn("size-5", className)} />
+      </AgentHoverCard>
     )
   }
   return <Avatar name={name} className={cn("size-5", className)} />

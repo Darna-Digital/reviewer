@@ -33,18 +33,9 @@ import { timeAgo } from "@/lib/relative-time"
 import { cn } from "@/lib/utils"
 
 /** Agent CLIs that can be assigned to chat flows (excludes the plain shell). */
-const ASSIGNABLE: ReadonlyArray<{
-  kind: ChatProviderKind
-  label: string
-  hint: string
-}> = AGENTS.filter(
-  (
-    agent
-  ): agent is {
-    kind: ChatProviderKind
-    label: string
-    hint: string
-  } => isChatProviderKind(agent.kind)
+const ASSIGNABLE = AGENTS.filter(
+  (agent): agent is (typeof AGENTS)[number] & { kind: ChatProviderKind } =>
+    isChatProviderKind(agent.kind)
 )
 
 /** Where the review comments get handed off. */

@@ -58,18 +58,9 @@ import { timeAgo } from "@/lib/relative-time"
 import { cn } from "@/lib/utils"
 
 /** Agent CLIs that can be @-mentioned into a chat (excludes the plain shell). */
-const MENTIONABLE: ReadonlyArray<{
-  kind: ChatProviderKind
-  label: string
-  hint: string
-}> = AGENTS.filter(
-  (
-    agent
-  ): agent is {
-    kind: ChatProviderKind
-    label: string
-    hint: string
-  } => isChatProviderKind(agent.kind)
+const MENTIONABLE = AGENTS.filter(
+  (agent): agent is (typeof AGENTS)[number] & { kind: ChatProviderKind } =>
+    isChatProviderKind(agent.kind)
 )
 
 export function TasksPage() {

@@ -1,18 +1,24 @@
 /** Prototype inbox — items in the list pane, thread messages in the detail pane. */
+import {
+  agentName,
+  findAgentById,
+} from "@/interactions/collaboration/data/collaboration.mock"
 
 export type InboxFilter = "all" | "unread" | "mentions"
 
 export interface MockThreadMessage {
   id: string
   author: string
+  /** Set when an agent posted it, naming which of the workspace's agents. */
+  agentId?: string
   time: string
-  managed?: string
   body: ReadonlyArray<string>
 }
 
 export interface MockInboxItem {
   id: string
   author: string
+  agentId?: string
   reason: string
   channel: string
   time: string
@@ -22,10 +28,17 @@ export interface MockInboxItem {
   thread: ReadonlyArray<MockThreadMessage>
 }
 
+/** Authors are named through the same helper the rest of the UI uses. */
+const seedAgentName = (id: string): string => {
+  const agent = findAgentById(id)
+  return agent === undefined ? "" : agentName(agent)
+}
+
 export const INBOX_ITEMS: ReadonlyArray<MockInboxItem> = [
   {
     id: "i1",
-    author: "Reviewer",
+    author: seedAgentName("claude-rutenis"),
+    agentId: "claude-rutenis",
     reason: "Mentioned in",
     channel: "atlas-dev",
     time: "5:29 PM",
@@ -39,18 +52,18 @@ export const INBOX_ITEMS: ReadonlyArray<MockInboxItem> = [
         author: "Nadia",
         time: "Today at 3:42 PM",
         body: [
-          "Reviewer, is the queue drain idempotent? I want to run it again after the backfill.",
+          "@claude is the queue drain idempotent? I want to run it again after the backfill.",
         ],
       },
       {
         id: "m2",
-        author: "Reviewer",
+        author: seedAgentName("claude-rutenis"),
+        agentId: "claude-rutenis",
         time: "Today at 3:44 PM",
-        managed: "managed by you",
         body: [
           "Short version: the queue drain is safe to run twice, so the retry path does not need a lock.",
           "Each batch is keyed by checkpoint id and the writer skips ids it has already committed. A second run over the same window is a no-op rather than a duplicate write.",
-          "The one place I would be careful is the compaction step — it reads the checkpoint table without a transaction, so running it while the drain is live can shorten a window. Sequence them and you are fine.",
+          "The one place to be careful is the compaction step — it reads the checkpoint table without a transaction, so running it while the drain is live can shorten a window. Sequence them and it holds.",
         ],
       },
       {
@@ -91,7 +104,8 @@ export const INBOX_ITEMS: ReadonlyArray<MockInboxItem> = [
   },
   {
     id: "i3",
-    author: "Build",
+    author: seedAgentName("codex-nadia"),
+    agentId: "codex-nadia",
     reason: "Thread in",
     channel: "pricing-launch",
     time: "11:04 AM",
@@ -101,9 +115,9 @@ export const INBOX_ITEMS: ReadonlyArray<MockInboxItem> = [
     thread: [
       {
         id: "m6",
-        author: "Build",
+        author: seedAgentName("codex-nadia"),
+        agentId: "codex-nadia",
         time: "Today at 11:04 AM",
-        managed: "managed by you",
         body: [
           "v2.14.0 is on staging. Smoke suite green, 4 minutes 12 seconds.",
           "Two flaky specs retried once and passed: the upload timeout and the websocket reconnect.",
@@ -135,22 +149,24 @@ export const INBOX_ITEMS: ReadonlyArray<MockInboxItem> = [
   },
   {
     id: "i5",
-    author: "Scribe",
+    author: seedAgentName("cursor-theo"),
+    agentId: "cursor-theo",
     reason: "Thread in",
     channel: "atlas-migration",
     time: "Jul 28",
-    preview: "Release notes for v2.13 are drafted and waiting on a read.",
+    preview:
+      "Renamed the checkpoint helpers across the ingest package — 34 files, no behaviour change.",
     unread: false,
     mention: false,
     thread: [
       {
         id: "m8",
-        author: "Scribe",
+        author: seedAgentName("cursor-theo"),
+        agentId: "cursor-theo",
         time: "Jul 28 at 6:12 PM",
-        managed: "managed by you",
         body: [
-          "Release notes for v2.13 are drafted and waiting on a read.",
-          "I left the migration note out because it only affects self-hosted installs — say the word and I will add it back.",
+          "Renamed the checkpoint helpers across the ingest package — 34 files, no behaviour change.",
+          "The two call sites in the compaction step needed their imports reordered. Everything else was mechanical, and the suite is green.",
         ],
       },
     ],
