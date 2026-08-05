@@ -74,7 +74,7 @@ export function InboxPage() {
   const filterLabel =
     FILTERS.find((f) => f.value === filter)?.label ?? FILTERS[0]?.label;
 
-  const showList = !composing && !expanded;
+  const showList = !composing && !expanded && prefs.sidebarVisible;
 
   return (
     <div className="flex h-full min-h-0">

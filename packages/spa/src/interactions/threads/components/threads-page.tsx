@@ -277,7 +277,10 @@ export function ThreadsPage() {
     <div className="flex h-full min-h-0">
       {/* Threads sidebar (drag-resizable) */}
       <aside
-        className="flex shrink-0 flex-col border-r"
+        className={cn(
+          "flex shrink-0 flex-col border-r",
+          !prefs.sidebarVisible && "hidden"
+        )}
         style={{ width: sidebarWidth }}
       >
         <div className="flex items-center gap-1.5 border-b p-2">
@@ -365,15 +368,17 @@ export function ThreadsPage() {
           )}
         </ScrollArea>
       </aside>
-      <ResizeHandle
-        orientation="col"
-        value={sidebarWidth}
-        min={180}
-        max={() => Math.max(240, window.innerWidth - 480)}
-        onResize={setSidebarWidth}
-        onResizeEnd={(w) => setUiPrefs({ workspaceSidebarWidth: w })}
-        label="Resize sidebar"
-      />
+      {prefs.sidebarVisible && (
+        <ResizeHandle
+          orientation="col"
+          value={sidebarWidth}
+          min={180}
+          max={() => Math.max(240, window.innerWidth - 480)}
+          onResize={setSidebarWidth}
+          onResizeEnd={(w) => setUiPrefs({ workspaceSidebarWidth: w })}
+          label="Resize sidebar"
+        />
+      )}
 
       {/* Panel body — single active terminal */}
       <section className="flex min-w-0 flex-1 flex-col">

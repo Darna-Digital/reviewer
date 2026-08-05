@@ -78,6 +78,7 @@ import {
   closeOthers,
   closeTab,
   keepTab,
+  moveTab,
   pruneTabs,
   syncActive,
   togglePin,
@@ -487,6 +488,14 @@ export function AppShell() {
   );
 
   const selectTab = (path: string) => setSearch({ file: path });
+  /**
+   * A blank tab, for a strip that only ever holds files: empty the centre pane
+   * and offer the file search, so the tab you opened has something to become.
+   */
+  const openBlankTab = () => {
+    closeFile();
+    setCommandOpen(true);
+  };
   const closeTabAt = (path: string) => {
     updateTabs((state) => {
       const next = closeTab(state, path);
@@ -1110,6 +1119,10 @@ export function AppShell() {
                         return next;
                       })
                     }
+                    onMove={(path, toIndex) =>
+                      updateTabs((state) => moveTab(state, path, toIndex))
+                    }
+                    onOpenBlank={openBlankTab}
                   />
                   {/* The trail sits under the tabs, and only once it says more
                       than which mode you are in. */}

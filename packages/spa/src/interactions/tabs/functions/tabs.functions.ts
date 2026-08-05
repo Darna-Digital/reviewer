@@ -62,6 +62,30 @@ export const openTab = (
 };
 
 /**
+ * Drop a tab at `toIndex`, sliding the ones it passes over out of its way.
+ *
+ * Both ends are the strip's own order, so a drag reads off what is on screen.
+ * Pinned tabs still sort to the head afterwards: dragging an unpinned tab into
+ * them lands it at the head of the unpinned ones rather than past the boundary.
+ */
+export const moveTab = (
+  state: TabsState,
+  path: string,
+  toIndex: number
+): TabsState => {
+  const before = orderTabs(state.tabs);
+  const from = before.findIndex((tab) => tab.path === path);
+  if (from === -1) return state;
+  const moving = [...before];
+  const [moved] = moving.splice(from, 1);
+  moving.splice(Math.max(0, Math.min(toIndex, before.length - 1)), 0, moved);
+  const tabs = orderTabs(moving);
+  // A drag that the pinned-first sort undoes leaves the strip as it was.
+  if (tabs.every((tab, index) => tab === before[index])) return state;
+  return { ...state, tabs };
+};
+
+/**
  * Which tab to select once `closing` is gone: the one after it, or the one
  * before when it was last. Follows the strip's own order, so closing a pinned
  * tab lands on its pinned neighbour rather than wherever it sat originally.

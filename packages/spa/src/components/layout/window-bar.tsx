@@ -209,7 +209,13 @@ export function WindowBar() {
                 event.preventDefault();
                 endDrag();
               }}
-              onClick={() => {
+              onClick={(event) => {
+                // Shift-click closes, so a tab can go without aiming for its ✕.
+                if (event.shiftKey) {
+                  event.preventDefault();
+                  close(tab.id);
+                  return;
+                }
                 updateWindowTabs((state) => selectTab(state, tab.id));
                 if (!active) go(tab.href);
               }}
@@ -251,6 +257,13 @@ export function WindowBar() {
       <BarButton label="New tab" onClick={() => open(HOME_HREF)}>
         <IconPlus className="size-5" />
       </BarButton>
+      {/* Double clicking past the last tab opens one, as in a browser. Only
+          this stretch of the bar opts out of dragging the window: a drag region
+          hands its clicks to macOS, which would zoom the window instead. */}
+      <div
+        className={cn("h-full w-32 shrink-0", NO_DRAG)}
+        onDoubleClick={() => open(HOME_HREF)}
+      />
       <div className="flex-1" />
     </header>
   );

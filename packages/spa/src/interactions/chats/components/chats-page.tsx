@@ -131,7 +131,7 @@ export function ChatsPage() {
     />
   );
 
-  const showList = !expanded;
+  const showList = !expanded && prefs.sidebarVisible;
 
   return (
     <div className="flex h-full min-h-0">

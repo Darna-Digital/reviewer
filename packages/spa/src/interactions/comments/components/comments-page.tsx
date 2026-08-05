@@ -418,7 +418,10 @@ export function CommentsPage() {
   return (
     <div className="flex h-full min-h-0">
       <aside
-        className="flex shrink-0 flex-col border-r"
+        className={cn(
+          "flex shrink-0 flex-col border-r",
+          !prefs.sidebarVisible && "hidden"
+        )}
         style={{ width: sidebarWidth }}
       >
         <div className="flex h-11 shrink-0 items-center gap-1.5 border-b px-2">
@@ -492,15 +495,17 @@ export function CommentsPage() {
           )}
         </ScrollArea>
       </aside>
-      <ResizeHandle
-        orientation="col"
-        value={sidebarWidth}
-        min={180}
-        max={() => Math.max(240, window.innerWidth - 480)}
-        onResize={setSidebarWidth}
-        onResizeEnd={(w) => setUiPrefs({ workspaceSidebarWidth: w })}
-        label="Resize sidebar"
-      />
+      {prefs.sidebarVisible && (
+        <ResizeHandle
+          orientation="col"
+          value={sidebarWidth}
+          min={180}
+          max={() => Math.max(240, window.innerWidth - 480)}
+          onResize={setSidebarWidth}
+          onResizeEnd={(w) => setUiPrefs({ workspaceSidebarWidth: w })}
+          label="Resize sidebar"
+        />
+      )}
       <section className="flex min-w-0 flex-1 flex-col">
         {selected === null ? (
           <div className="flex h-full items-center justify-center px-6">

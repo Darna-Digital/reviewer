@@ -7,7 +7,9 @@
  * it does in every editor and browser.
  *
  * The strip scrolls rather than shrinking its tabs to nothing, and pinned tabs
- * sort to the head so they stay reachable once it does.
+ * sort to the head so they stay reachable once it does. Tabs drag into any
+ * order, shift-click closes one without aiming for its ✕, and a double click
+ * past the last tab opens an empty one.
  */
 import { IconPin, IconPinnedFilled, IconX } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
@@ -44,6 +46,10 @@ export interface TabStripProps {
   readonly onTogglePin: (path: string) => void;
   readonly onCloseOthers: (path: string) => void;
   readonly onCloseAll: () => void;
+  /** Drop the dragged tab at `toIndex` of the strip's order. */
+  readonly onMove: (path: string, toIndex: number) => void;
+  /** A double click past the last tab, as in a browser's strip. */
+  readonly onOpenBlank: () => void;
 }
 
 export function TabStrip({
@@ -56,10 +62,23 @@ export function TabStrip({
   onTogglePin,
   onCloseOthers,
   onCloseAll,
+  onMove,
+  onOpenBlank,
 }: TabStripProps) {
   const ordered = orderTabs(tabs);
   const stripRef = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<MenuState | null>(null);
+  /**
+   * The tab being dragged. It lives in a ref as well as state because the first
+   * `dragover` can arrive in the same task as the `dragstart` that set it, and
+   * would read the pre-render value; the state copy only drives the styling.
+   */
+  const draggingRef = useRef<string | null>(null);
+  const [dragging, setDragging] = useState<string | null>(null);
+  const endDrag = () => {
+    draggingRef.current = null;
+    setDragging(null);
+  };
 
   // Selecting a tab from outside the strip — go-to-definition, the command
   // menu — can select one that is scrolled out of the strip.
@@ -80,7 +99,7 @@ export function TabStrip({
         aria-label="Open files"
         className="flex shrink-0 items-stretch overflow-x-auto border-b border-border bg-background"
       >
-        {ordered.map((tab) => {
+        {ordered.map((tab, index) => {
           const isActive = tab.path === active;
           return (
             <div
@@ -90,13 +109,44 @@ export function TabStrip({
               aria-selected={isActive}
               tabIndex={isActive ? 0 : -1}
               title={tab.path}
+              draggable
               className={cn(
                 "group/tab flex max-w-56 min-w-0 shrink-0 cursor-default items-center gap-1.5 border-r border-border px-3 py-1.5 text-xs",
                 isActive
                   ? "bg-elevate text-foreground"
-                  : "text-muted-foreground hover:bg-elevate/60"
+                  : "text-muted-foreground hover:bg-elevate/60",
+                dragging === tab.path && "opacity-50"
               )}
-              onClick={() => onSelect(tab.path)}
+              onDragStart={(event) => {
+                draggingRef.current = tab.path;
+                setDragging(tab.path);
+                event.dataTransfer.effectAllowed = "move";
+                // Firefox refuses to start a drag without a payload.
+                event.dataTransfer.setData("text/plain", tab.path);
+              }}
+              onDragOver={(event) => {
+                const held = draggingRef.current;
+                if (held === null) return;
+                event.preventDefault();
+                event.dataTransfer.dropEffect = "move";
+                // Reorder as the pointer crosses each tab, so the strip shows
+                // where the drop will land instead of only revealing it after.
+                if (held !== tab.path) onMove(held, index);
+              }}
+              onDragEnd={endDrag}
+              onDrop={(event) => {
+                event.preventDefault();
+                endDrag();
+              }}
+              onClick={(event) => {
+                // Shift-click closes, so a tab can go without aiming for its ✕.
+                if (event.shiftKey) {
+                  event.preventDefault();
+                  onClose(tab.path);
+                  return;
+                }
+                onSelect(tab.path);
+              }}
               onDoubleClick={() => onKeep(tab.path)}
               onAuxClick={(event) => {
                 // Middle click closes, as everywhere else with tabs.
@@ -158,6 +208,21 @@ export function TabStrip({
             </div>
           );
         })}
+        <div
+          aria-hidden
+          className="min-w-8 flex-1 cursor-default"
+          onDoubleClick={onOpenBlank}
+          onDragOver={(event) => {
+            if (draggingRef.current === null) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "move";
+            onMove(draggingRef.current, ordered.length - 1);
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            endDrag();
+          }}
+        />
       </div>
       {menu !== null && (
         <DropdownMenu

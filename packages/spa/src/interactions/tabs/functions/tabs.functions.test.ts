@@ -6,6 +6,7 @@ import {
   closeTab,
   EMPTY_TABS,
   keepTab,
+  moveTab,
   neighbourTab,
   openTab,
   orderTabs,
@@ -83,6 +84,52 @@ describe("orderTabs", () => {
     state = togglePin(state, "c");
     state = togglePin(state, "c");
     expect(show(state)).toBe("a b c");
+  });
+});
+
+describe("moveTab", () => {
+  const three = () => {
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    state = openTab(state, "c", "permanent");
+    return state;
+  };
+
+  it("drops a tab where it was dragged", () => {
+    expect(show(moveTab(three(), "c", 0))).toBe("c a b");
+    expect(show(moveTab(three(), "a", 2))).toBe("b c a");
+    expect(show(moveTab(three(), "a", 1))).toBe("b a c");
+  });
+
+  it("leaves the selection alone", () => {
+    const state = moveTab({ ...three(), active: "a" }, "a", 2);
+    expect(state.active).toBe("a");
+  });
+
+  it("clamps a drop past either end", () => {
+    expect(show(moveTab(three(), "a", 9))).toBe("b c a");
+    expect(show(moveTab(three(), "c", -1))).toBe("c a b");
+  });
+
+  it("reorders within the pinned group", () => {
+    let state = three();
+    state = togglePin(state, "b");
+    state = togglePin(state, "c");
+    expect(show(state)).toBe("!b !c a");
+    expect(show(moveTab(state, "c", 0))).toBe("!c !b a");
+  });
+
+  it("keeps an unpinned tab out of the pinned ones", () => {
+    let state = three();
+    state = togglePin(state, "c");
+    expect(show(state)).toBe("!c a b");
+    expect(show(moveTab(state, "b", 0))).toBe("!c b a");
+  });
+
+  it("ignores a tab that is not open and a move that changes nothing", () => {
+    const state = three();
+    expect(moveTab(state, "zz", 0)).toBe(state);
+    expect(moveTab(state, "b", 1)).toBe(state);
   });
 });
 
