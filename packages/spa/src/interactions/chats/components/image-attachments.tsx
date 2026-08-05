@@ -3,17 +3,17 @@
  * (a removable chip) and a sent message's previews (click to view larger).
  * Follows the ai-sdk "Attachments" grid pattern, built on this app's UI kit.
  */
-import { IconX } from "@tabler/icons-react"
-import { useState } from "react"
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
+import { IconX } from "@tabler/icons-react";
+import { useState } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 /** The minimum an attachment needs to render a preview. */
 interface AttachmentImage {
-  readonly name: string
-  readonly thumbnail: string
+  readonly name: string;
+  readonly thumbnail: string;
   /** Full-resolution source for the enlarged view; falls back to `thumbnail`. */
-  readonly source?: string
+  readonly source?: string;
 }
 
 /** Wrapping row of attachment thumbnails. */
@@ -21,10 +21,12 @@ export function AttachmentGrid({
   className,
   children,
 }: {
-  className?: string
-  children: React.ReactNode
+  className?: string;
+  children: React.ReactNode;
 }) {
-  return <div className={cn("flex flex-wrap gap-2", className)}>{children}</div>
+  return (
+    <div className={cn("flex flex-wrap gap-2", className)}>{children}</div>
+  );
 }
 
 /** The enlarged image lightbox, shared by pending and sent previews. */
@@ -33,9 +35,9 @@ function ImageLightbox({
   open,
   onOpenChange,
 }: {
-  attachment: AttachmentImage
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  attachment: AttachmentImage;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -48,7 +50,7 @@ function ImageLightbox({
         />
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 /**
@@ -59,10 +61,10 @@ export function AttachmentChip({
   attachment,
   onRemove,
 }: {
-  attachment: AttachmentImage
-  onRemove: () => void
+  attachment: AttachmentImage;
+  onRemove: () => void;
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
   return (
     <div className="group relative size-16 overflow-hidden rounded-xl border bg-muted">
       <button
@@ -92,16 +94,16 @@ export function AttachmentChip({
         onOpenChange={setOpen}
       />
     </div>
-  )
+  );
 }
 
 /** A sent message's image preview — click to open a larger view in a dialog. */
 export function AttachmentPreview({
   attachment,
 }: {
-  attachment: AttachmentImage
+  attachment: AttachmentImage;
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
   return (
     <>
       <button
@@ -122,5 +124,5 @@ export function AttachmentPreview({
         onOpenChange={setOpen}
       />
     </>
-  )
+  );
 }

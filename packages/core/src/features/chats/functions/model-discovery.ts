@@ -22,12 +22,12 @@
  * `mergeDiscoveredModels`). That is also why nothing here throws — an
  * unparseable answer is an empty list, not an error.
  */
-import { CHAT_MODEL_CATALOG } from "./chats.catalog.ts"
+import { CHAT_MODEL_CATALOG } from "./chats.catalog.ts";
 import type {
   ChatModel,
   ChatModelCatalog,
   ChatProviderKind,
-} from "../schema/chats.schema.ts"
+} from "../schema/chats.schema.ts";
 
 /**
  * The shell command that asks `provider` what it can run. Written for the
@@ -38,33 +38,33 @@ import type {
 export const modelDiscoveryCommand = (provider: ChatProviderKind): string => {
   switch (provider) {
     case "claude":
-      return `printf '%s' '/model' | claude -p --output-format json`
+      return `printf '%s' '/model' | claude -p --output-format json`;
     case "codex":
-      return `codex debug models`
+      return `codex debug models`;
     case "opencode":
       // Unscoped on purpose: opencode brokers whichever upstream providers the
       // developer has credentials for, and all of them are runnable through
       // `opencode run --model <provider>/<model>`. They come back grouped by
       // vendor so the picker can show them that way.
-      return `opencode models --verbose`
+      return `opencode models --verbose`;
     case "cursor":
-      return `cursor-agent --list-models`
+      return `cursor-agent --list-models`;
   }
-}
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null
+  typeof value === "object" && value !== null;
 
 const asString = (value: unknown): string | null =>
-  typeof value === "string" ? value : null
+  typeof value === "string" ? value : null;
 
 const parsedOrNull = (text: string): unknown => {
   try {
-    return JSON.parse(text)
+    return JSON.parse(text);
   } catch {
-    return null
+    return null;
   }
-}
+};
 
 /**
  * The JSON object in a CLI's output, ignoring anything around it.
@@ -76,11 +76,11 @@ const parsedOrNull = (text: string): unknown => {
  * first brace to its last instead of trusting the stream to be clean.
  */
 const jsonObjectIn = (text: string): unknown => {
-  const start = text.indexOf("{")
-  const end = text.lastIndexOf("}")
-  if (start === -1 || end <= start) return null
-  return parsedOrNull(text.slice(start, end + 1))
-}
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end <= start) return null;
+  return parsedOrNull(text.slice(start, end + 1));
+};
 
 /**
  * A model id that could plausibly have come from a CLI rather than from its
@@ -89,7 +89,7 @@ const jsonObjectIn = (text: string): unknown => {
  * whitespace or punctuation beyond what real ids use is dropped.
  */
 const PLAUSIBLE_MODEL_ID =
-  /^[A-Za-z0-9][A-Za-z0-9._:/-]{1,127}(\[[\dA-Za-z]+\])?$/
+  /^[A-Za-z0-9][A-Za-z0-9._:/-]{1,127}(\[[\dA-Za-z]+\])?$/;
 
 /**
  * The `provider/model` form opencode prints, and the form `--model` wants.
@@ -98,7 +98,7 @@ const PLAUSIBLE_MODEL_ID =
  * ids that a tighter pattern would drop on the floor.
  */
 const QUALIFIED_MODEL_ID =
-  /^[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._:-]*)+$/
+  /^[A-Za-z0-9][A-Za-z0-9._-]*(\/[A-Za-z0-9][A-Za-z0-9._:-]*)+$/;
 
 /**
  * A display name for an id no CLI gave us one for: `sonnet` → `Sonnet`. Only
@@ -106,7 +106,7 @@ const QUALIFIED_MODEL_ID =
  * say) would misname models as often as it helped.
  */
 const labelFromId = (id: string): string =>
-  id.length === 0 ? id : id.slice(0, 1).toUpperCase() + id.slice(1)
+  id.length === 0 ? id : id.slice(0, 1).toUpperCase() + id.slice(1);
 
 /**
  * A heading for an upstream vendor id: `amazon-bedrock` → `Amazon Bedrock`.
@@ -115,7 +115,7 @@ const labelFromId = (id: string): string =>
  * imperfect capitalisation, which beats a table that has to be maintained.
  */
 const vendorLabel = (id: string): string =>
-  id.split(/[-_]/).filter(Boolean).map(labelFromId).join(" ")
+  id.split(/[-_]/).filter(Boolean).map(labelFromId).join(" ");
 
 /**
  * Claude answers `/model` in print mode with a sentence:
@@ -128,14 +128,14 @@ const vendorLabel = (id: string): string =>
  * directly, which is also what keeps this working if a CLI stops wrapping it.
  */
 const parseSlashModelOutput = (stdout: string): ReadonlyArray<ChatModel> => {
-  const parsed = jsonObjectIn(stdout)
-  const result = isRecord(parsed) ? asString(parsed["result"]) : null
+  const parsed = jsonObjectIn(stdout);
+  const result = isRecord(parsed) ? asString(parsed["result"]) : null;
   // Reading the envelope's `result` matters beyond tidiness: in the raw stream
   // the sentence's line breaks are still escaped, so "the rest of the line"
   // would run on into the JSON that follows it.
-  const text = result ?? stdout
-  const available = /available:\s*([^\n]+)/i.exec(text)
-  if (available?.[1] === undefined) return []
+  const text = result ?? stdout;
+  const available = /available:\s*([^\n]+)/i.exec(text);
+  if (available?.[1] === undefined) return [];
   return (
     available[1]
       .split(",")
@@ -144,8 +144,8 @@ const parseSlashModelOutput = (stdout: string): ReadonlyArray<ChatModel> => {
       .filter((part) => part.length > 0 && !/^or\b/i.test(part))
       .filter((id) => PLAUSIBLE_MODEL_ID.test(id))
       .map((id) => ({ id, label: labelFromId(id) }))
-  )
-}
+  );
+};
 
 /**
  * `cursor-agent --list-models` → a heading, then one `id - Label` line per
@@ -153,17 +153,17 @@ const parseSlashModelOutput = (stdout: string): ReadonlyArray<ChatModel> => {
  * `Auto (default)`); byconvo tracks the selection itself, so those markers are
  * dropped rather than baked into a name the picker then shows forever.
  */
-const CURSOR_ACTIVE_MARKER = /\s*\((?:default|current)\)\s*$/i
+const CURSOR_ACTIVE_MARKER = /\s*\((?:default|current)\)\s*$/i;
 
 const parseListModelsOutput = (stdout: string): ReadonlyArray<ChatModel> =>
   stdout.split("\n").flatMap((line) => {
-    const match = /^\s*(\S+)\s+-\s+(.+?)\s*$/.exec(line)
-    if (match?.[1] === undefined || match[2] === undefined) return []
-    const id = match[1]
-    if (!PLAUSIBLE_MODEL_ID.test(id)) return []
-    const label = match[2].replace(CURSOR_ACTIVE_MARKER, "")
-    return [{ id, label: label.length > 0 ? label : labelFromId(id) }]
-  })
+    const match = /^\s*(\S+)\s+-\s+(.+?)\s*$/.exec(line);
+    if (match?.[1] === undefined || match[2] === undefined) return [];
+    const id = match[1];
+    if (!PLAUSIBLE_MODEL_ID.test(id)) return [];
+    const label = match[2].replace(CURSOR_ACTIVE_MARKER, "");
+    return [{ id, label: label.length > 0 ? label : labelFromId(id) }];
+  });
 
 /**
  * `codex debug models` → `{models:[{slug, display_name, visibility, …}]}`.
@@ -171,16 +171,16 @@ const parseListModelsOutput = (stdout: string): ReadonlyArray<ChatModel> =>
  * deprecated entries are left out here too.
  */
 const parseCodexModels = (stdout: string): ReadonlyArray<ChatModel> => {
-  const parsed = jsonObjectIn(stdout)
-  if (!isRecord(parsed) || !Array.isArray(parsed["models"])) return []
+  const parsed = jsonObjectIn(stdout);
+  if (!isRecord(parsed) || !Array.isArray(parsed["models"])) return [];
   return parsed["models"].flatMap((entry) => {
-    if (!isRecord(entry)) return []
-    if (entry["visibility"] !== "list") return []
-    const id = asString(entry["slug"])
-    if (id === null || !PLAUSIBLE_MODEL_ID.test(id)) return []
-    return [{ id, label: asString(entry["display_name"]) ?? labelFromId(id) }]
-  })
-}
+    if (!isRecord(entry)) return [];
+    if (entry["visibility"] !== "list") return [];
+    const id = asString(entry["slug"]);
+    if (id === null || !PLAUSIBLE_MODEL_ID.test(id)) return [];
+    return [{ id, label: asString(entry["display_name"]) ?? labelFromId(id) }];
+  });
+};
 
 /**
  * `opencode models --verbose` → an id line, then that model as pretty-printed
@@ -193,48 +193,48 @@ const parseCodexModels = (stdout: string): ReadonlyArray<ChatModel> => {
  * Copilot's, and only the grouping tells them apart.
  */
 const parseOpencodeModels = (stdout: string): ReadonlyArray<ChatModel> => {
-  const models: ChatModel[] = []
-  let qualifiedId: string | null = null
-  let objectLines: string[] | null = null
+  const models: ChatModel[] = [];
+  let qualifiedId: string | null = null;
+  let objectLines: string[] | null = null;
   for (const line of stdout.split("\n")) {
-    const trimmed = line.trimEnd()
+    const trimmed = line.trimEnd();
     if (objectLines === null) {
       if (trimmed === "{") {
-        objectLines = [trimmed]
+        objectLines = [trimmed];
       } else if (QUALIFIED_MODEL_ID.test(trimmed.trim())) {
         // Requiring the `provider/model` form is what keeps a line of rc-file
         // noise ahead of the output from being read as a model id.
-        qualifiedId = trimmed.trim()
+        qualifiedId = trimmed.trim();
       }
-      continue
+      continue;
     }
-    objectLines.push(trimmed)
-    if (trimmed !== "}") continue
-    const parsed = parsedOrNull(objectLines.join("\n"))
-    objectLines = null
-    if (!isRecord(parsed)) continue
+    objectLines.push(trimmed);
+    if (trimmed !== "}") continue;
+    const parsed = parsedOrNull(objectLines.join("\n"));
+    objectLines = null;
+    if (!isRecord(parsed)) continue;
     // Prefer the id line: `--model` wants `opencode/big-pickle`, while the
     // object's own `id` is the bare `big-pickle`.
-    const bare = asString(parsed["id"])
-    const provider = asString(parsed["providerID"])
+    const bare = asString(parsed["id"]);
+    const provider = asString(parsed["providerID"]);
     const id =
       qualifiedId ??
-      (bare !== null && provider !== null ? `${provider}/${bare}` : null)
-    qualifiedId = null
-    if (id === null || !PLAUSIBLE_MODEL_ID.test(id)) continue
+      (bare !== null && provider !== null ? `${provider}/${bare}` : null);
+    qualifiedId = null;
+    if (id === null || !PLAUSIBLE_MODEL_ID.test(id)) continue;
     // A model opencode has retired can still be listed; don't offer it.
-    if (parsed["status"] === "deprecated") continue
-    const group = provider ?? id.split("/")[0]
+    if (parsed["status"] === "deprecated") continue;
+    const group = provider ?? id.split("/")[0];
     models.push({
       id,
       label: asString(parsed["name"]) ?? labelFromId(id),
       ...(group !== undefined && group.length > 0
         ? { group: vendorLabel(group) }
         : {}),
-    })
+    });
   }
-  return models
-}
+  return models;
+};
 
 /**
  * The models in a CLI's answer, or an empty list when it said nothing we
@@ -246,15 +246,15 @@ export const parseDiscoveredModels = (
 ): ReadonlyArray<ChatModel> => {
   switch (provider) {
     case "claude":
-      return parseSlashModelOutput(stdout)
+      return parseSlashModelOutput(stdout);
     case "cursor":
-      return parseListModelsOutput(stdout)
+      return parseListModelsOutput(stdout);
     case "codex":
-      return parseCodexModels(stdout)
+      return parseCodexModels(stdout);
     case "opencode":
-      return parseOpencodeModels(stdout)
+      return parseOpencodeModels(stdout);
   }
-}
+};
 
 /**
  * The catalog carrying each provider's discovered models. Every model a user
@@ -271,4 +271,4 @@ export const mergeDiscoveredModels = (
     ...provider,
     models: discovered.get(provider.id) ?? [],
   })),
-})
+});

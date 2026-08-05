@@ -17,18 +17,18 @@ import {
   IconHash,
   IconLock,
   IconMessageCircle,
-} from "@tabler/icons-react"
-import { Link, useRouterState } from "@tanstack/react-router"
-import { useState, type CSSProperties, type ReactNode } from "react"
-import { ResizeHandle } from "@/components/layout/resize-handle"
-import { Avatar } from "@/components/ui/avatar"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { AddAgentButton } from "@/interactions/collaboration/components/agent-add-dialog"
-import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card"
+} from "@tabler/icons-react";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import { Avatar } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AddAgentButton } from "@/interactions/collaboration/components/agent-add-dialog";
+import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card";
 import {
   AgentMark,
   AgentStateDot,
-} from "@/interactions/collaboration/components/agent-mark"
+} from "@/interactions/collaboration/components/agent-mark";
 import {
   agentName,
   DEFAULT_ID,
@@ -53,31 +53,31 @@ import {
   type MockPerson,
   type MockProject,
   type MockTask,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import { useAgents } from "@/interactions/collaboration/data/use-agents"
-import { useChats } from "@/interactions/collaboration/data/use-chats"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import { useAgents } from "@/interactions/collaboration/data/use-agents";
+import { useChats } from "@/interactions/collaboration/data/use-chats";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 const ROW =
-  "flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md pr-1.5 pl-1 text-[13px] outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+  "flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md pr-1.5 pl-1 text-[13px] outline-none focus-visible:ring-3 focus-visible:ring-ring/30";
 
-const INDENT = ["pl-1", "pl-5", "pl-9"]
+const INDENT = ["pl-1", "pl-5", "pl-9"];
 
-type PeopleView = Extract<CollaborationView, "agents" | "members">
+type PeopleView = Extract<CollaborationView, "agents" | "members">;
 
 interface FavoriteRow {
-  view: MockFavorite["view"]
-  id: string
-  label: string
-  icon: ReactNode
+  view: MockFavorite["view"];
+  id: string;
+  label: string;
+  icon: ReactNode;
 }
 
 interface ProjectBranch {
-  project: MockProject
-  tasks: ReadonlyArray<MockTask>
-  chats: ReadonlyArray<MockChat>
-  channels: ReadonlyArray<MockChannel>
+  project: MockProject;
+  tasks: ReadonlyArray<MockTask>;
+  chats: ReadonlyArray<MockChat>;
+  channels: ReadonlyArray<MockChannel>;
 }
 
 const projectMark = (project: MockProject) => (
@@ -85,10 +85,10 @@ const projectMark = (project: MockProject) => (
     className="size-3.5 shrink-0 rounded-[0.3rem] bg-(--mark)"
     style={{ "--mark": project.color } as CSSProperties}
   />
-)
+);
 
 const unreadIn = (channels: ReadonlyArray<MockChannel>) =>
-  channels.reduce((total, channel) => total + channel.unread, 0)
+  channels.reduce((total, channel) => total + channel.unread, 0);
 
 /** Only chats you are actually in can be unread — reading one is not owing it. */
 const unreadInChats = (chats: ReadonlyArray<MockChat>) =>
@@ -96,26 +96,26 @@ const unreadInChats = (chats: ReadonlyArray<MockChat>) =>
     (total, chat) =>
       total + (membershipOf(chat) === "joined" ? chat.unread : 0),
     0
-  )
+  );
 
 function UnreadCount({ count }: { count: number }) {
-  if (count === 0) return null
+  if (count === 0) return null;
   return (
     <span className="ml-auto shrink-0 pl-1 text-[0.6875rem] font-medium text-foreground tabular-nums">
       {count}
     </span>
-  )
+  );
 }
 
 /** Somebody is waiting on you to let them in — not an unread, so not a count. */
 function PendingRequestDot({ count }: { count: number }) {
-  if (count === 0) return null
+  if (count === 0) return null;
   return (
     <span
       title={count === 1 ? "1 join request" : `${count} join requests`}
       className="ml-auto size-1.5 shrink-0 rounded-full bg-amber-500"
     />
-  )
+  );
 }
 
 function Section({
@@ -123,12 +123,12 @@ function Section({
   action,
   children,
 }: {
-  title: string
+  title: string;
   /** Sits opposite the title, revealed on hover like a Linear section. */
-  action?: ReactNode
-  children: ReactNode
+  action?: ReactNode;
+  children: ReactNode;
 }) {
-  const [open, setOpen] = useState(true)
+  const [open, setOpen] = useState(true);
   return (
     <div className="group/section flex flex-col gap-px px-2 pt-3">
       <div className="flex items-center gap-1 pr-1">
@@ -154,21 +154,21 @@ function Section({
       </div>
       {open && children}
     </div>
-  )
+  );
 }
 
 interface TreeRowProps {
-  depth: number
-  icon: ReactNode
-  label: string
-  to: string
-  search?: { view: CollaborationView; id?: string }
-  active: boolean
-  trailing?: ReactNode
-  expanded?: boolean
-  onToggle?: () => void
+  depth: number;
+  icon: ReactNode;
+  label: string;
+  to: string;
+  search?: { view: CollaborationView; id?: string };
+  active: boolean;
+  trailing?: ReactNode;
+  expanded?: boolean;
+  onToggle?: () => void;
   /** Lifts an at-rest row to full contrast — unread, not a hover state. */
-  strong?: boolean
+  strong?: boolean;
 }
 
 function TreeRow({
@@ -224,7 +224,7 @@ function TreeRow({
         {trailing}
       </Link>
     </div>
-  )
+  );
 }
 
 function PresenceDot({ online }: { online: boolean }) {
@@ -235,7 +235,7 @@ function PresenceDot({ online }: { online: boolean }) {
         online ? "bg-emerald-500" : "bg-muted-foreground/40"
       )}
     />
-  )
+  );
 }
 
 function PersonRow({
@@ -243,9 +243,9 @@ function PersonRow({
   view,
   active,
 }: {
-  person: MockPerson
-  view: PeopleView
-  active: boolean
+  person: MockPerson;
+  view: PeopleView;
+  active: boolean;
 }) {
   return (
     <TreeRow
@@ -263,7 +263,7 @@ function PersonRow({
       active={active}
       trailing={<PresenceDot online={person.online} />}
     />
-  )
+  );
 }
 
 function AgentRow({ agent, active }: { agent: MockAgent; active: boolean }) {
@@ -286,7 +286,7 @@ function AgentRow({ agent, active }: { agent: MockAgent; active: boolean }) {
         }
       />
     </AgentHoverCard>
-  )
+  );
 }
 
 /**
@@ -295,8 +295,8 @@ function AgentRow({ agent, active }: { agent: MockAgent; active: boolean }) {
  * in there is waiting on you until you are in it.
  */
 function ChatRow({ chat, active }: { chat: MockChat; active: boolean }) {
-  const membership = membershipOf(chat)
-  const mine = chat.initiator === VIEWER.name
+  const membership = membershipOf(chat);
+  const mine = chat.initiator === VIEWER.name;
 
   return (
     <TreeRow
@@ -325,7 +325,7 @@ function ChatRow({ chat, active }: { chat: MockChat; active: boolean }) {
       }
       strong={membership === "joined" && chat.unread > 0}
     />
-  )
+  );
 }
 
 function PeopleSection({
@@ -334,10 +334,10 @@ function PeopleSection({
   view,
   isActive,
 }: {
-  title: string
-  people: ReadonlyArray<MockPerson>
-  view: PeopleView
-  isActive: (view: CollaborationView, id?: string) => boolean
+  title: string;
+  people: ReadonlyArray<MockPerson>;
+  view: PeopleView;
+  isActive: (view: CollaborationView, id?: string) => boolean;
 }) {
   return (
     <Section title={title}>
@@ -350,7 +350,7 @@ function PeopleSection({
         />
       ))}
     </Section>
-  )
+  );
 }
 
 /**
@@ -363,10 +363,10 @@ function ProjectBranchRows({
   onToggle,
   isActive,
 }: {
-  branch: ProjectBranch
-  expanded: boolean
-  onToggle: () => void
-  isActive: (view: CollaborationView, id?: string) => boolean
+  branch: ProjectBranch;
+  expanded: boolean;
+  onToggle: () => void;
+  isActive: (view: CollaborationView, id?: string) => boolean;
 }) {
   return (
     <div className="flex flex-col gap-px">
@@ -433,21 +433,21 @@ function ProjectBranchRows({
         </>
       )}
     </div>
-  )
+  );
 }
 
 export function CollaborationSidebar() {
-  const prefs = useUiPrefs()
-  const [width, setWidth] = useState(prefs.workspaceSidebarWidth)
-  const agents = useAgents()
-  useChats()
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
-  const { pathname, search } = useRouterState({ select: (s) => s.location })
+  const prefs = useUiPrefs();
+  const [width, setWidth] = useState(prefs.workspaceSidebarWidth);
+  const agents = useAgents();
+  useChats();
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({});
+  const { pathname, search } = useRouterState({ select: (s) => s.location });
 
-  const onCollaboration = pathname.startsWith("/modes/collaboration")
-  const current = search as { view?: CollaborationView; id?: string }
-  const view = current.view ?? DEFAULT_VIEW
-  const id = current.id ?? DEFAULT_ID
+  const onCollaboration = pathname.startsWith("/modes/collaboration");
+  const current = search as { view?: CollaborationView; id?: string };
+  const view = current.view ?? DEFAULT_VIEW;
+  const id = current.id ?? DEFAULT_ID;
 
   const activeProjectId = !onCollaboration
     ? undefined
@@ -459,18 +459,18 @@ export function CollaborationSidebar() {
           ? findChannel(id)?.projectId
           : view === "chat"
             ? findChat(id)?.projectId
-            : undefined
+            : undefined;
 
   const branches: ReadonlyArray<ProjectBranch> = PROJECTS.map((project) => ({
     project,
     tasks: projectTasks(project.id).filter((t) => t.status !== "done"),
     chats: visibleChats(project.id),
     channels: projectChannels(project.id),
-  }))
+  }));
 
   const favorites: ReadonlyArray<FavoriteRow> = FAVORITES.map((favorite) => {
     if (favorite.view === "channel") {
-      const channel = findChannel(favorite.id)
+      const channel = findChannel(favorite.id);
       return channel === undefined
         ? null
         : {
@@ -479,10 +479,10 @@ export function CollaborationSidebar() {
             icon: (
               <IconHash className="size-4 shrink-0 text-muted-foreground" />
             ),
-          }
+          };
     }
-    const project = findProject(favorite.id)
-    if (project === undefined) return null
+    const project = findProject(favorite.id);
+    if (project === undefined) return null;
     return {
       ...favorite,
       label: favorite.view === "tasks" ? `${project.name} tasks` : project.name,
@@ -492,16 +492,18 @@ export function CollaborationSidebar() {
         ) : (
           projectMark(project)
         ),
-    }
-  }).filter((f) => f !== null)
+    };
+  }).filter((f) => f !== null);
 
   const isOpen = (projectId: string) =>
-    overrides[projectId] ?? projectId === activeProjectId
+    overrides[projectId] ?? projectId === activeProjectId;
   const toggle = (projectId: string) =>
-    setOverrides((o) => ({ ...o, [projectId]: !isOpen(projectId) }))
+    setOverrides((o) => ({ ...o, [projectId]: !isOpen(projectId) }));
 
   const isActive = (rowView: CollaborationView, rowId?: string) =>
-    onCollaboration && view === rowView && (rowId === undefined || id === rowId)
+    onCollaboration &&
+    view === rowView &&
+    (rowId === undefined || id === rowId);
 
   return (
     <>
@@ -564,5 +566,5 @@ export function CollaborationSidebar() {
         label="Resize sidebar"
       />
     </>
-  )
+  );
 }

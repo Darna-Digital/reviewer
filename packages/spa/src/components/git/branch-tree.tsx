@@ -3,44 +3,44 @@ import {
   IconGitBranch,
   IconStar,
   IconStarFilled,
-} from "@tabler/icons-react"
-import { useRef, useState } from "react"
+} from "@tabler/icons-react";
+import { useRef, useState } from "react";
 import type {
   BranchLeaf,
   BranchTreeItem,
-} from "@/interactions/branch-tree/interfaces/branch-tree.interfaces"
-import { useBranchTree } from "@/interactions/branch-tree/adapters/branch-tree.hook.adapter"
-import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo"
-import { cn } from "@/lib/utils"
+} from "@/interactions/branch-tree/interfaces/branch-tree.interfaces";
+import { useBranchTree } from "@/interactions/branch-tree/adapters/branch-tree.hook.adapter";
+import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo";
+import { cn } from "@/lib/utils";
 
 interface BranchTreeProps {
-  branches: ReadonlyArray<BranchInfo>
-  remoteBranches: ReadonlyArray<RemoteBranchInfo>
-  currentBranch: string | null
+  branches: ReadonlyArray<BranchInfo>;
+  remoteBranches: ReadonlyArray<RemoteBranchInfo>;
+  currentBranch: string | null;
   /** The ref the history is currently showing (drives the selected highlight). */
-  selectedRef: string | null
-  query?: string
-  onSelect: (ref: string) => void
-  onCheckout: (ref: string) => void
+  selectedRef: string | null;
+  query?: string;
+  onSelect: (ref: string) => void;
+  onCheckout: (ref: string) => void;
 }
 
 type NavRow =
   | {
-      kind: "section"
-      id: string
-      sectionId: string
-      label: string
-      expanded: boolean
+      kind: "section";
+      id: string;
+      sectionId: string;
+      label: string;
+      expanded: boolean;
     }
   | {
-      kind: "folder"
-      id: string
-      path: string
-      label: string
-      depth: number
-      expanded: boolean
+      kind: "folder";
+      id: string;
+      path: string;
+      label: string;
+      depth: number;
+      expanded: boolean;
     }
-  | { kind: "branch"; id: string; item: BranchLeaf; depth: number }
+  | { kind: "branch"; id: string; item: BranchLeaf; depth: number };
 
 export function BranchTree({
   branches,
@@ -52,9 +52,9 @@ export function BranchTree({
   onCheckout,
 }: BranchTreeProps) {
   const { functions, favorites, expanded, toggleFavorite, toggleFolder } =
-    useBranchTree()
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const rows = useRef(new Map<string, HTMLElement>())
+    useBranchTree();
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const rows = useRef(new Map<string, HTMLElement>());
 
   const {
     local,
@@ -65,31 +65,31 @@ export function BranchTree({
     remoteBranches,
     favorites,
     query,
-  })
+  });
 
   // While filtering, force every folder open so matches are never hidden.
-  const filtering = query.trim().length > 0
-  const isOpen = (path: string) => filtering || expanded.has(path)
+  const filtering = query.trim().length > 0;
+  const isOpen = (path: string) => filtering || expanded.has(path);
 
   // The flat, top-to-bottom list of focusable rows (drives roving tabindex + arrows).
-  const navRows: NavRow[] = []
+  const navRows: NavRow[] = [];
   const pushSection = (
     sectionId: string,
     label: string,
     items: ReadonlyArray<BranchTreeItem>
   ) => {
-    const open = isOpen(sectionId)
+    const open = isOpen(sectionId);
     navRows.push({
       kind: "section",
       id: sectionId,
       sectionId,
       label,
       expanded: open,
-    })
-    if (!open) return
+    });
+    if (!open) return;
     for (const row of functions.flatten(items, isOpen, 2)) {
       // Prefix with section so favourites + local don't share React/focus keys.
-      const id = `${sectionId}:${row.key}`
+      const id = `${sectionId}:${row.key}`;
       navRows.push(
         row.item.kind === "folder"
           ? {
@@ -101,85 +101,86 @@ export function BranchTree({
               expanded: row.expanded,
             }
           : { kind: "branch", id, item: row.item, depth: row.depth }
-      )
+      );
     }
-  }
+  };
   if (favoriteLeaves.length > 0) {
-    pushSection("__favorites", "Starred", favoriteLeaves)
+    pushSection("__favorites", "Starred", favoriteLeaves);
   }
-  pushSection("__local", "Local", local)
-  if (remote.length > 0) pushSection("__remote", "Remote", remote)
+  pushSection("__local", "Local", local);
+  if (remote.length > 0) pushSection("__remote", "Remote", remote);
 
   const effectiveActive =
-    activeId ?? (navRows.length > 0 ? navRows[0].id : null)
+    activeId ?? (navRows.length > 0 ? navRows[0].id : null);
 
   const move = (delta: number) => {
-    if (navRows.length === 0) return
-    const idx = navRows.findIndex((r) => r.id === effectiveActive)
-    const next = navRows[Math.max(0, Math.min(navRows.length - 1, idx + delta))]
-    setActiveId(next.id)
-    rows.current.get(next.id)?.focus()
-  }
+    if (navRows.length === 0) return;
+    const idx = navRows.findIndex((r) => r.id === effectiveActive);
+    const next =
+      navRows[Math.max(0, Math.min(navRows.length - 1, idx + delta))];
+    setActiveId(next.id);
+    rows.current.get(next.id)?.focus();
+  };
 
   const focusId = (id: string) => {
-    setActiveId(id)
-    requestAnimationFrame(() => rows.current.get(id)?.focus())
-  }
+    setActiveId(id);
+    requestAnimationFrame(() => rows.current.get(id)?.focus());
+  };
 
   const activate = (row: NavRow) => {
-    if (row.kind === "section") toggleFolder(row.sectionId)
-    else if (row.kind === "folder") toggleFolder(row.path)
-    else onSelect(row.item.fullName)
-  }
+    if (row.kind === "section") toggleFolder(row.sectionId);
+    else if (row.kind === "folder") toggleFolder(row.path);
+    else onSelect(row.item.fullName);
+  };
 
   const onKeyDown = (event: React.KeyboardEvent, row: NavRow) => {
     switch (event.key) {
       case "ArrowDown":
-        event.preventDefault()
-        move(1)
-        break
+        event.preventDefault();
+        move(1);
+        break;
       case "ArrowUp":
-        event.preventDefault()
-        move(-1)
-        break
+        event.preventDefault();
+        move(-1);
+        break;
       case "Home":
-        event.preventDefault()
-        if (navRows[0]) focusId(navRows[0].id)
-        break
+        event.preventDefault();
+        if (navRows[0]) focusId(navRows[0].id);
+        break;
       case "End":
-        event.preventDefault()
-        if (navRows.at(-1)) focusId(navRows.at(-1)!.id)
-        break
+        event.preventDefault();
+        if (navRows.at(-1)) focusId(navRows.at(-1)!.id);
+        break;
       case "ArrowRight":
         if (row.kind !== "branch" && !row.expanded) {
-          event.preventDefault()
-          toggleFolder(row.kind === "section" ? row.sectionId : row.path)
+          event.preventDefault();
+          toggleFolder(row.kind === "section" ? row.sectionId : row.path);
         } else {
-          event.preventDefault()
-          move(1)
+          event.preventDefault();
+          move(1);
         }
-        break
+        break;
       case "ArrowLeft":
         if (row.kind !== "branch" && row.expanded && !filtering) {
-          event.preventDefault()
-          toggleFolder(row.kind === "section" ? row.sectionId : row.path)
+          event.preventDefault();
+          toggleFolder(row.kind === "section" ? row.sectionId : row.path);
         } else {
-          event.preventDefault()
-          move(-1)
+          event.preventDefault();
+          move(-1);
         }
-        break
+        break;
       case "Enter":
       case " ":
-        event.preventDefault()
-        activate(row)
-        break
+        event.preventDefault();
+        activate(row);
+        break;
     }
-  }
+  };
 
   const setRef = (id: string) => (el: HTMLElement | null) => {
-    if (el) rows.current.set(id, el)
-    else rows.current.delete(id)
-  }
+    if (el) rows.current.set(id, el);
+    else rows.current.delete(id);
+  };
 
   const rowClass = (active: boolean, selected = false) =>
     cn(
@@ -187,7 +188,7 @@ export function BranchTree({
       "hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring/50",
       active && "ring-2 ring-ring/40",
       selected && "bg-muted text-foreground"
-    )
+    );
 
   const chevron = (open: boolean) => (
     <IconChevronRight
@@ -196,18 +197,18 @@ export function BranchTree({
         open && "rotate-90"
       )}
     />
-  )
+  );
 
   const depthStyle = (depth: number): React.CSSProperties => ({
     // Nested folders step in from the row's own px-2; keep the math in rem.
     ["--indent" as string]: `${0.5 + (depth - 1) * 0.875}rem`,
-  })
+  });
 
   const favoriteButton = (branch: BranchLeaf) => {
-    const fav = favorites.has(branch.fullName)
+    const fav = favorites.has(branch.fullName);
     const label = fav
       ? `Remove ${branch.fullName} from Starred`
-      : `Add ${branch.fullName} to Starred`
+      : `Add ${branch.fullName} to Starred`;
     return (
       <button
         type="button"
@@ -221,8 +222,8 @@ export function BranchTree({
         aria-pressed={fav}
         title={label}
         onClick={(e) => {
-          e.stopPropagation()
-          toggleFavorite(branch.fullName)
+          e.stopPropagation();
+          toggleFavorite(branch.fullName);
         }}
       >
         {fav ? (
@@ -231,8 +232,8 @@ export function BranchTree({
           <IconStar className="size-3.5 opacity-60" />
         )}
       </button>
-    )
-  }
+    );
+  };
 
   return (
     <div
@@ -260,13 +261,13 @@ export function BranchTree({
             onClick={() => onSelect(currentBranch)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault()
-                onSelect(currentBranch)
-                return
+                e.preventDefault();
+                onSelect(currentBranch);
+                return;
               }
               if (e.key === "ArrowDown") {
-                e.preventDefault()
-                move(1)
+                e.preventDefault();
+                move(1);
               }
             }}
             title="Current branch"
@@ -281,12 +282,12 @@ export function BranchTree({
       )}
 
       {navRows.map((row, index) => {
-        const active = effectiveActive === row.id
-        const prev = navRows[index - 1]
+        const active = effectiveActive === row.id;
+        const prev = navRows[index - 1];
         const sectionStart =
           row.kind === "section" &&
           prev !== undefined &&
-          prev.kind !== "section"
+          prev.kind !== "section";
 
         if (row.kind === "section") {
           return (
@@ -312,7 +313,7 @@ export function BranchTree({
               {chevron(row.expanded)}
               <span>{row.label}</span>
             </button>
-          )
+          );
         }
         if (row.kind === "folder") {
           return (
@@ -335,10 +336,10 @@ export function BranchTree({
                 {row.label}
               </span>
             </button>
-          )
+          );
         }
-        const branch = row.item
-        const selected = selectedRef === branch.fullName
+        const branch = row.item;
+        const selected = selectedRef === branch.fullName;
         return (
           <div
             key={row.id}
@@ -396,8 +397,8 @@ export function BranchTree({
               {favoriteButton(branch)}
             </div>
           </div>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

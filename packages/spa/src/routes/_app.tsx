@@ -1,17 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { AppShell } from "@/components/layout/app-shell"
+import { createFileRoute } from "@tanstack/react-router";
+import { AppShell } from "@/components/layout/app-shell";
 
 /** Cross-mode view state lives in typed search params (no `useState` soup). */
 export interface AppSearch {
   /** Open file overlay path. */
-  file?: string
+  file?: string;
   /** Selected file to scroll the diff to. */
-  path?: string
+  path?: string;
   /** One-based line in the open file to reveal — how a comment links to its code. */
-  line?: number
+  line?: number;
   /** Range-diff base/head (browse mode). */
-  base?: string
-  head?: string
+  base?: string;
+  head?: string;
 }
 
 export const Route = createFileRoute("/_app")({
@@ -25,4 +25,4 @@ export const Route = createFileRoute("/_app")({
     head: typeof search["head"] === "string" ? search["head"] : undefined,
   }),
   component: AppShell,
-})
+});

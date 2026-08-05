@@ -1,10 +1,10 @@
-import * as Schema from "effect/Schema"
+import * as Schema from "effect/Schema";
 
-export const Ok = Schema.Struct({ ok: Schema.Boolean })
-export type Ok = typeof Ok.Type
+export const Ok = Schema.Struct({ ok: Schema.Boolean });
+export type Ok = typeof Ok.Type;
 
-export const DiffText = Schema.String
-export type DiffText = typeof DiffText.Type
+export const DiffText = Schema.String;
+export type DiffText = typeof DiffText.Type;
 
 export class NoRepoSelected extends Schema.TaggedErrorClass<NoRepoSelected>()(
   "NoRepoSelected",
@@ -12,7 +12,7 @@ export class NoRepoSelected extends Schema.TaggedErrorClass<NoRepoSelected>()(
   { httpApiStatus: 409 }
 ) {
   override get message(): string {
-    return "no repository selected — pick one with the repository picker"
+    return "no repository selected — pick one with the repository picker";
   }
 }
 
@@ -22,7 +22,7 @@ export class StorageError extends Schema.TaggedErrorClass<StorageError>()(
   { httpApiStatus: 500 }
 ) {
   override get message(): string {
-    return this.reason
+    return this.reason;
   }
 }
 
@@ -32,6 +32,6 @@ export class NotFound extends Schema.TaggedErrorClass<NotFound>()(
   { httpApiStatus: 404 }
 ) {
   override get message(): string {
-    return this.reason
+    return this.reason;
   }
 }

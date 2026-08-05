@@ -1,14 +1,14 @@
-import * as Effect from "effect/Effect"
-import * as Layer from "effect/Layer"
-import * as FileSystem from "effect/FileSystem"
-import { describe, expect, it } from "vitest"
-import { GitExec, type GitExecShape } from "@byconvo/core/ports/git-exec"
-import { makeGitRepoRepository } from "./repo.repository.git.ts"
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FileSystem from "effect/FileSystem";
+import { describe, expect, it } from "vitest";
+import { GitExec, type GitExecShape } from "@byconvo/core/ports/git-exec";
+import { makeGitRepoRepository } from "./repo.repository.git.ts";
 
 const NEW_DIR_FILES = [
   "packages/new-package/package.json",
   "packages/new-package/src/index.ts",
-]
+];
 
 /**
  * Models the behaviour that caused the bug: without `--untracked-files=all`,
@@ -16,7 +16,7 @@ const NEW_DIR_FILES = [
  * of one entry per file.
  */
 const fakeGit = (): GitExecShape => {
-  const notUsed = () => Effect.succeed("")
+  const notUsed = () => Effect.succeed("");
   return {
     run: notUsed,
     runVerbose: notUsed,
@@ -25,20 +25,20 @@ const fakeGit = (): GitExecShape => {
       if (args[0] === "ls-files" && args[1] === "--others") {
         return Effect.succeed(
           args.includes("--exclude-standard") ? NEW_DIR_FILES : []
-        )
+        );
       }
-      if (args[0] === "ls-files") return Effect.succeed(["README.md"])
+      if (args[0] === "ls-files") return Effect.succeed(["README.md"]);
       if (args[0] === "status") {
         return Effect.succeed(
           args.includes("--untracked-files=all")
             ? NEW_DIR_FILES.map((path) => `?? ${path}`)
             : ["?? packages/new-package/"]
-        )
+        );
       }
-      return Effect.succeed([])
+      return Effect.succeed([]);
     },
-  }
-}
+  };
+};
 
 const runFiles = () =>
   Effect.runPromise(
@@ -50,18 +50,18 @@ const runFiles = () =>
         )
       )
     )
-  )
+  );
 
 describe("files", () => {
   it("reports every untracked file in a brand-new directory", async () => {
-    const { gitStatus } = await runFiles()
+    const { gitStatus } = await runFiles();
 
-    expect(gitStatus.map((entry) => entry.path)).toEqual(NEW_DIR_FILES)
-  })
+    expect(gitStatus.map((entry) => entry.path)).toEqual(NEW_DIR_FILES);
+  });
 
   it("never yields a directory entry, which no file in the tree could match", async () => {
-    const { gitStatus } = await runFiles()
+    const { gitStatus } = await runFiles();
 
-    expect(gitStatus.filter((entry) => entry.path.endsWith("/"))).toEqual([])
-  })
-})
+    expect(gitStatus.filter((entry) => entry.path.endsWith("/"))).toEqual([]);
+  });
+});

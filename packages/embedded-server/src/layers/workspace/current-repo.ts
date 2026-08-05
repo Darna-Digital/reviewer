@@ -8,11 +8,11 @@
  * no separate copy: it reads and writes the selection through here (on boot and
  * on every `select`), and everything else reads it here too.
  */
-let currentRepo: string | null = null
+let currentRepo: string | null = null;
 
 /** Notified when the selection actually changes, with (next, previous) roots. */
-type RepoChangeListener = (next: string | null, prev: string | null) => void
-const listeners = new Set<RepoChangeListener>()
+type RepoChangeListener = (next: string | null, prev: string | null) => void;
+const listeners = new Set<RepoChangeListener>();
 
 /**
  * Subscribe to repository-selection changes. Used by long-lived, non-Effect
@@ -23,21 +23,21 @@ const listeners = new Set<RepoChangeListener>()
 export const onCurrentRepoChange = (
   listener: RepoChangeListener
 ): (() => void) => {
-  listeners.add(listener)
-  return () => listeners.delete(listener)
-}
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
 
 export const setCurrentRepo = (path: string | null): void => {
-  if (path === currentRepo) return
-  const prev = currentRepo
-  currentRepo = path
+  if (path === currentRepo) return;
+  const prev = currentRepo;
+  currentRepo = path;
   for (const listener of listeners) {
     try {
-      listener(path, prev)
+      listener(path, prev);
     } catch {
       // a listener must never break selection bookkeeping
     }
   }
-}
+};
 
-export const getCurrentRepo = (): string | null => currentRepo
+export const getCurrentRepo = (): string | null => currentRepo;

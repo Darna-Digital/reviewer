@@ -1,12 +1,12 @@
-import { IconGitBranch } from "@tabler/icons-react"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { repoAvatar } from "@/lib/repo-avatar"
-import type { RepoEntry } from "@byconvo/core/workspace"
+import { IconGitBranch } from "@tabler/icons-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { repoAvatar } from "@/lib/repo-avatar";
+import type { RepoEntry } from "@byconvo/core/workspace";
 
 interface RepoListProps {
-  folder: string
-  repos: ReadonlyArray<RepoEntry>
-  onOpen: (path: string) => void
+  folder: string;
+  repos: ReadonlyArray<RepoEntry>;
+  onOpen: (path: string) => void;
 }
 
 export function RepoList({ folder, repos, onOpen }: RepoListProps) {
@@ -21,7 +21,7 @@ export function RepoList({ folder, repos, onOpen }: RepoListProps) {
         </div>
         <ul className="grid grid-cols-2 gap-2">
           {repos.map((repo) => {
-            const avatar = repoAvatar(repo.name)
+            const avatar = repoAvatar(repo.name);
             return (
               <li key={repo.path}>
                 <button
@@ -42,10 +42,10 @@ export function RepoList({ folder, repos, onOpen }: RepoListProps) {
                   </span>
                 </button>
               </li>
-            )
+            );
           })}
         </ul>
       </div>
     </ScrollArea>
-  )
+  );
 }

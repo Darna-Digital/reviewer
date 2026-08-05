@@ -21,14 +21,14 @@ export const estimateScrollTop = (
   scrollHeight: number,
   clientHeight: number
 ): number => {
-  const maxTop = Math.max(0, scrollHeight - clientHeight)
-  if (maxTop === 0 || totalLines <= 0) return 0
-  const fraction = Math.min(Math.max((line - 1) / totalLines, 0), 1)
+  const maxTop = Math.max(0, scrollHeight - clientHeight);
+  if (maxTop === 0 || totalLines <= 0) return 0;
+  const fraction = Math.min(Math.max((line - 1) / totalLines, 0), 1);
   return Math.min(
     Math.max(fraction * scrollHeight - clientHeight / 2, 0),
     maxTop
-  )
-}
+  );
+};
 
 /** Scroll offset that centres an already-rendered element in its container. */
 export const scrollTopForElement = (
@@ -39,10 +39,10 @@ export const scrollTopForElement = (
   containerHeight: number,
   scrollHeight: number
 ): number => {
-  const offset = elementTop - containerTop + containerScrollTop
-  const centred = offset - containerHeight / 2 + elementHeight / 2
+  const offset = elementTop - containerTop + containerScrollTop;
+  const centred = offset - containerHeight / 2 + elementHeight / 2;
   return Math.min(
     Math.max(centred, 0),
     Math.max(0, scrollHeight - containerHeight)
-  )
-}
+  );
+};

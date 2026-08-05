@@ -22,19 +22,19 @@
  *    `*ToolCall` key is the tool, and its `args`/`result` are free-form — so
  *    the envelope is trusted and the payload is only mined for a summary.
  */
-import type { TurnEvent, TurnParser } from "./turn-parser.ts"
+import type { TurnEvent, TurnParser } from "./turn-parser.ts";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null
+  typeof value === "object" && value !== null;
 
 const asString = (value: unknown): string | null =>
-  typeof value === "string" ? value : null
+  typeof value === "string" ? value : null;
 
 /** How much of a tool's payload the timeline keeps — matches claude-stream. */
-const DETAIL_LIMIT = 4000
+const DETAIL_LIMIT = 4000;
 
 const truncate = (text: string): string =>
-  text.length > DETAIL_LIMIT ? `${text.slice(0, DETAIL_LIMIT)}…` : text
+  text.length > DETAIL_LIMIT ? `${text.slice(0, DETAIL_LIMIT)}…` : text;
 
 /**
  * Cursor's logged-out replies. `-p` can't open the browser login flow, so a
@@ -42,10 +42,10 @@ const truncate = (text: string): string =>
  * cursor-agent login") that would otherwise read as the assistant's answer.
  */
 const AUTH_ERROR_PATTERN =
-  /not logged in|cursor-agent login|unauthori[sz]ed|invalid api key|authentication[_ ]error/i
+  /not logged in|cursor-agent login|unauthori[sz]ed|invalid api key|authentication[_ ]error/i;
 
 export const isCursorAuthError = (text: string | null): boolean =>
-  text !== null && AUTH_ERROR_PATTERN.test(text)
+  text !== null && AUTH_ERROR_PATTERN.test(text);
 
 /** Shown instead of the CLI's bare logged-out reply. Mirrors the Claude hint's
  * shell-file gotcha, because turns are launched the same way: a login,
@@ -72,7 +72,7 @@ export const CURSOR_LOGIN_HINT = [
   "Verify it's wired up: `zsh -lc 'echo ${CURSOR_API_KEY:+present}'` should " +
     "print `present`. New turns pick it up automatically — each one is a " +
     "fresh login shell.",
-].join("\n")
+].join("\n");
 
 /**
  * The tool behind a `tool_call` event. Cursor nests one `<name>ToolCall` key
@@ -82,21 +82,21 @@ export const CURSOR_LOGIN_HINT = [
 const toolCallEntry = (
   toolCall: unknown
 ): { name: string; payload: Record<string, unknown> } | null => {
-  if (!isRecord(toolCall)) return null
+  if (!isRecord(toolCall)) return null;
   for (const [key, value] of Object.entries(toolCall)) {
-    if (!key.endsWith("ToolCall")) continue
+    if (!key.endsWith("ToolCall")) continue;
     return {
       name: key.slice(0, -"ToolCall".length),
       payload: isRecord(value) ? value : {},
-    }
+    };
   }
-  return null
-}
+  return null;
+};
 
 /** Title-cased tool label ("read" → "Read"), so cursor's activities read like
  * every other provider's in the work log. */
 const toolLabel = (name: string): string =>
-  name.length === 0 ? "Tool" : name.slice(0, 1).toUpperCase() + name.slice(1)
+  name.length === 0 ? "Tool" : name.slice(0, 1).toUpperCase() + name.slice(1);
 
 /**
  * A one-line summary from whichever telling field the tool happens to carry.
@@ -104,64 +104,64 @@ const toolLabel = (name: string): string =>
  */
 const toolSummary = (label: string, args: unknown): string => {
   if (isRecord(args)) {
-    const command = asString(args["command"])
-    if (command !== null) return `${label} — ${command.slice(0, 120)}`
+    const command = asString(args["command"]);
+    if (command !== null) return `${label} — ${command.slice(0, 120)}`;
     const subject =
       asString(args["path"]) ??
       asString(args["file_path"]) ??
       asString(args["pattern"]) ??
       asString(args["query"]) ??
-      asString(args["url"])
-    if (subject !== null) return `${label} — ${subject.slice(0, 120)}`
+      asString(args["url"]);
+    if (subject !== null) return `${label} — ${subject.slice(0, 120)}`;
   }
-  return label
-}
+  return label;
+};
 
 const payloadDetail = (value: unknown): string | null => {
-  if (!isRecord(value) || Object.keys(value).length === 0) return null
+  if (!isRecord(value) || Object.keys(value).length === 0) return null;
   try {
-    return truncate(JSON.stringify(value, null, 2))
+    return truncate(JSON.stringify(value, null, 2));
   } catch {
-    return null
+    return null;
   }
-}
+};
 
 /** The plain text of an assistant message: a bare string, or Anthropic-style
  * content blocks, both of which cursor has emitted. */
 const messageText = (message: unknown): string => {
-  if (!isRecord(message)) return ""
-  const direct = asString(message["content"])
-  if (direct !== null) return direct
-  const content = message["content"]
-  if (!Array.isArray(content)) return ""
+  if (!isRecord(message)) return "";
+  const direct = asString(message["content"]);
+  if (direct !== null) return direct;
+  const content = message["content"];
+  if (!Array.isArray(content)) return "";
   return content
     .flatMap((block) => {
-      if (!isRecord(block) || block["type"] !== "text") return []
-      const text = asString(block["text"])
-      return text === null ? [] : [text]
+      if (!isRecord(block) || block["type"] !== "text") return [];
+      const text = asString(block["text"]);
+      return text === null ? [] : [text];
     })
-    .join("")
-}
+    .join("");
+};
 
 export const createCursorTurnParser = (): TurnParser => {
-  let buffer = ""
-  let settled = false
+  let buffer = "";
+  let settled = false;
   /** Text of the assistant message currently being streamed, so a chunk can be
    * told apart from a re-send of the whole message. Reset by a tool round-trip,
    * which starts a new message. */
-  let currentMessage = ""
+  let currentMessage = "";
   /** Set after a tool round-trip so the next assistant message is separated
    * from the previous one inside the single per-turn message. */
-  let needSeparator = false
+  let needSeparator = false;
   /** call_id → label, so a `completed` event can name the tool its `started`
    * announced (the completion doesn't always repeat the payload). */
-  const toolLabels = new Map<string, string>()
+  const toolLabels = new Map<string, string>();
 
   const emit = (text: string): TurnEvent[] => {
-    if (text.length === 0) return []
-    buffer += text
-    return [{ type: "delta", text }]
-  }
+    if (text.length === 0) return [];
+    buffer += text;
+    return [{ type: "delta", text }];
+  };
 
   /**
    * Fold one assistant event into the reply. With `--stream-partial-output`
@@ -173,42 +173,42 @@ export const createCursorTurnParser = (): TurnParser => {
    * else is a fresh chunk and is appended.
    */
   const appendAssistantText = (text: string): TurnEvent[] => {
-    if (text.length === 0) return []
+    if (text.length === 0) return [];
     if (needSeparator || currentMessage.length === 0) {
-      const separator = needSeparator && buffer.length > 0 ? "\n\n" : ""
-      needSeparator = false
-      currentMessage = text
-      return emit(separator + text)
+      const separator = needSeparator && buffer.length > 0 ? "\n\n" : "";
+      needSeparator = false;
+      currentMessage = text;
+      return emit(separator + text);
     }
     if (text.startsWith(currentMessage)) {
-      const tail = text.slice(currentMessage.length)
-      currentMessage = text
-      return emit(tail)
+      const tail = text.slice(currentMessage.length);
+      currentMessage = text;
+      return emit(tail);
     }
-    currentMessage += text
-    return emit(text)
-  }
+    currentMessage += text;
+    return emit(text);
+  };
 
   const onToolCall = (parsed: Record<string, unknown>): TurnEvent[] => {
-    const callId = asString(parsed["call_id"]) ?? ""
-    const entry = toolCallEntry(parsed["tool_call"])
-    const started = parsed["subtype"] === "started"
+    const callId = asString(parsed["call_id"]) ?? "";
+    const entry = toolCallEntry(parsed["tool_call"]);
+    const started = parsed["subtype"] === "started";
     const label =
       entry !== null
         ? toolLabel(entry.name)
-        : (toolLabels.get(callId) ?? asString(parsed["name"]) ?? "Tool")
-    if (started && callId.length > 0) toolLabels.set(callId, label)
+        : (toolLabels.get(callId) ?? asString(parsed["name"]) ?? "Tool");
+    if (started && callId.length > 0) toolLabels.set(callId, label);
     // A tool round-trip ends the assistant message it interrupted.
     if (started) {
-      currentMessage = ""
-      needSeparator = buffer.length > 0
+      currentMessage = "";
+      needSeparator = buffer.length > 0;
     }
-    const args = entry?.payload["args"]
-    const result = entry?.payload["result"]
+    const args = entry?.payload["args"];
+    const result = entry?.payload["result"];
     const failed =
       parsed["subtype"] === "error" ||
       parsed["is_error"] === true ||
-      (isRecord(result) && result["success"] === false)
+      (isRecord(result) && result["success"] === false);
     return [
       {
         type: "activity",
@@ -227,52 +227,52 @@ export const createCursorTurnParser = (): TurnParser => {
         label,
         ...(callId.length > 0 ? { callId } : {}),
       },
-    ]
-  }
+    ];
+  };
 
   const push = (line: string): ReadonlyArray<TurnEvent> => {
-    const trimmed = line.trim()
-    if (trimmed.length === 0) return []
-    let parsed: unknown
+    const trimmed = line.trim();
+    if (trimmed.length === 0) return [];
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(trimmed)
+      parsed = JSON.parse(trimmed);
     } catch {
       // Shell/rc noise on stdout — never let it corrupt the conversation.
-      return []
+      return [];
     }
-    if (!isRecord(parsed)) return []
+    if (!isRecord(parsed)) return [];
 
     switch (parsed["type"]) {
       case "system": {
-        const sessionId = asString(parsed["session_id"])
+        const sessionId = asString(parsed["session_id"]);
         return parsed["subtype"] === "init" && sessionId !== null
           ? [{ type: "session", sessionId }]
-          : []
+          : [];
       }
       case "assistant":
-        return appendAssistantText(messageText(parsed["message"]))
+        return appendAssistantText(messageText(parsed["message"]));
       case "tool_call":
-        return onToolCall(parsed)
+        return onToolCall(parsed);
       case "result": {
-        settled = true
-        const resultText = asString(parsed["result"])
+        settled = true;
+        const resultText = asString(parsed["result"]);
         // A logged-out CLI reports the login prompt as its reply, sometimes
         // with is_error=false — always a failed turn, never a message.
         const authFailed =
-          isCursorAuthError(resultText) || isCursorAuthError(buffer)
+          isCursorAuthError(resultText) || isCursorAuthError(buffer);
         const failed =
           parsed["is_error"] === true ||
           parsed["subtype"] === "error" ||
-          authFailed
+          authFailed;
         // Don't leave "run cursor-agent login" standing as the assistant's
         // reply — the turn error carries the whole story.
         if (authFailed && isCursorAuthError(buffer) && buffer.length < 200) {
-          buffer = ""
+          buffer = "";
         }
         // A successful result carries the final text — authoritative when
         // nothing streamed (partials unsupported, or an assistant-less run).
         if (!failed && buffer.length === 0 && resultText !== null) {
-          buffer = resultText
+          buffer = resultText;
         }
         return [
           {
@@ -288,12 +288,12 @@ export const createCursorTurnParser = (): TurnParser => {
                 ? parsed["total_cost_usd"]
                 : null,
           },
-        ]
+        ];
       }
       default:
-        return []
+        return [];
     }
-  }
+  };
 
-  return { push, text: () => buffer, settled: () => settled }
-}
+  return { push, text: () => buffer, settled: () => settled };
+};

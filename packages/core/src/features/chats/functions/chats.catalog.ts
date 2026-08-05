@@ -12,14 +12,14 @@
 import type {
   ChatModelCatalog,
   ChatProviderKind,
-} from "../schema/chats.schema.ts"
+} from "../schema/chats.schema.ts";
 
 export const CHAT_PROVIDER_KINDS = [
   "claude",
   "codex",
   "opencode",
   "cursor",
-] as const satisfies ReadonlyArray<ChatProviderKind>
+] as const satisfies ReadonlyArray<ChatProviderKind>;
 export const chatProviderLabel: Record<ChatProviderKind, string> = {
   claude: "Claude",
   codex: "Codex",
@@ -28,7 +28,7 @@ export const chatProviderLabel: Record<ChatProviderKind, string> = {
   // for — grouped by vendor inside the picker.
   opencode: "opencode",
   cursor: "Cursor",
-}
+};
 export const CHAT_MODEL_CATALOG: ChatModelCatalog = {
   providers: CHAT_PROVIDER_KINDS.map((id) => ({
     id,
@@ -45,4 +45,4 @@ export const CHAT_MODEL_CATALOG: ChatModelCatalog = {
     access: "fullAccess",
     mode: "build",
   },
-}
+};

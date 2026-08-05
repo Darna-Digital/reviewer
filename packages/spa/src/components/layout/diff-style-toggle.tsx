@@ -1,20 +1,20 @@
-import { IconLayoutColumns, IconLayoutRows } from "@tabler/icons-react"
+import { IconLayoutColumns, IconLayoutRows } from "@tabler/icons-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { cn } from "@/lib/utils"
-import type { DiffStyle } from "@/lib/ui-prefs"
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import type { DiffStyle } from "@/lib/ui-prefs";
 
-type PreviewLineKind = "context" | "removed" | "added"
+type PreviewLineKind = "context" | "removed" | "added";
 
 function PreviewLine({
   kind,
   width,
 }: {
-  kind: PreviewLineKind
-  width: string
+  kind: PreviewLineKind;
+  width: string;
 }) {
   return (
     <div
@@ -43,7 +43,7 @@ function PreviewLine({
         )}
       />
     </div>
-  )
+  );
 }
 
 function HorizontalPreview() {
@@ -60,7 +60,7 @@ function HorizontalPreview() {
         <PreviewLine kind="context" width="w-1/2" />
       </div>
     </div>
-  )
+  );
 }
 
 function VerticalPreview() {
@@ -71,7 +71,7 @@ function VerticalPreview() {
       <PreviewLine kind="added" width="w-5/6" />
       <PreviewLine kind="context" width="w-1/2" />
     </div>
-  )
+  );
 }
 
 const OPTIONS = [
@@ -89,15 +89,15 @@ const OPTIONS = [
     icon: IconLayoutRows,
     preview: VerticalPreview,
   },
-] as const
+] as const;
 
 interface DiffStyleToggleProps {
-  value: DiffStyle
-  onChange: (style: DiffStyle) => void
+  value: DiffStyle;
+  onChange: (style: DiffStyle) => void;
 }
 
 export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
-  const activeIndex = OPTIONS.findIndex((option) => option.value === value)
+  const activeIndex = OPTIONS.findIndex((option) => option.value === value);
 
   return (
     <div className="relative flex items-center rounded-lg border p-0.5">
@@ -141,5 +141,5 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
         </Tooltip>
       ))}
     </div>
-  )
+  );
 }

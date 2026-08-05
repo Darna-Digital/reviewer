@@ -1,15 +1,15 @@
-import { Toaster as Sonner, type ToasterProps } from "sonner"
+import { Toaster as Sonner, type ToasterProps } from "sonner";
 import {
   IconCircleCheck,
   IconInfoCircle,
   IconAlertTriangle,
   IconAlertOctagon,
-} from "@tabler/icons-react"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
-import { useUiPrefs } from "@/lib/ui-prefs"
+} from "@tabler/icons-react";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { useUiPrefs } from "@/lib/ui-prefs";
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme } = useUiPrefs()
+  const { theme } = useUiPrefs();
 
   return (
     <Sonner
@@ -37,7 +37,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }}
       {...props}
     />
-  )
-}
+  );
+};
 
-export { Toaster }
+export { Toaster };

@@ -4,13 +4,13 @@ import type {
   BranchTreeDependencies,
   BranchTreeFunctions,
   BranchTreeItem,
-} from "../interfaces/branch-tree.interfaces"
+} from "../interfaces/branch-tree.interfaces";
 
 interface MutableFolder {
-  kind: "folder"
-  label: string
-  path: string
-  children: Array<MutableFolder | BranchLeaf>
+  kind: "folder";
+  label: string;
+  path: string;
+  children: Array<MutableFolder | BranchLeaf>;
 }
 
 const sortTree = (
@@ -19,17 +19,17 @@ const sortTree = (
 ): Array<BranchTreeItem> => {
   const score = (item: MutableFolder | BranchLeaf) => {
     // Folders before leaves; favourite branches float above the rest.
-    if (item.kind === "folder") return 0
-    return favorites.has(item.fullName) ? 1 : 2
-  }
+    if (item.kind === "folder") return 0;
+    return favorites.has(item.fullName) ? 1 : 2;
+  };
   return [...items]
     .sort((a, b) => score(a) - score(b) || a.label.localeCompare(b.label))
     .map((item) =>
       item.kind === "folder"
         ? { ...item, children: sortTree(item.children, favorites) }
         : item
-    )
-}
+    );
+};
 
 const buildLeafTree = (
   leaves: ReadonlyArray<{ segments: ReadonlyArray<string>; leaf: BranchLeaf }>,
@@ -40,7 +40,7 @@ const buildLeafTree = (
     label: "",
     path: "",
     children: [],
-  }
+  };
   const folderAt = (
     parent: MutableFolder,
     name: string,
@@ -48,32 +48,36 @@ const buildLeafTree = (
   ): MutableFolder => {
     const existing = parent.children.find(
       (c): c is MutableFolder => c.kind === "folder" && c.label === name
-    )
-    if (existing) return existing
+    );
+    if (existing) return existing;
     const created: MutableFolder = {
       kind: "folder",
       label: name,
       path,
       children: [],
-    }
-    parent.children.push(created)
-    return created
-  }
+    };
+    parent.children.push(created);
+    return created;
+  };
   for (const { segments, leaf } of leaves) {
-    let parent = root
+    let parent = root;
     for (let i = 0; i < segments.length - 1; i++) {
-      parent = folderAt(parent, segments[i], segments.slice(0, i + 1).join("/"))
+      parent = folderAt(
+        parent,
+        segments[i],
+        segments.slice(0, i + 1).join("/")
+      );
     }
-    parent.children.push(leaf)
+    parent.children.push(leaf);
   }
-  return sortTree(root.children, favorites)
-}
+  return sortTree(root.children, favorites);
+};
 
 export function createBranchTreeFunctions(
   _d: BranchTreeDependencies
 ): BranchTreeFunctions {
   const matches = (name: string, query: string) =>
-    query.length === 0 || name.toLowerCase().includes(query.toLowerCase())
+    query.length === 0 || name.toLowerCase().includes(query.toLowerCase());
 
   const buildTrees: BranchTreeFunctions["buildTrees"] = ({
     branches,
@@ -81,7 +85,7 @@ export function createBranchTreeFunctions(
     favorites,
     query,
   }) => {
-    const q = query.trim()
+    const q = query.trim();
 
     const localLeaves = branches
       .filter((branch) => matches(branch.name, q))
@@ -96,7 +100,7 @@ export function createBranchTreeFunctions(
           ahead: branch.ahead,
           behind: branch.behind,
         },
-      }))
+      }));
 
     const remoteLeaves = remoteBranches
       .filter((branch) => matches(branch.name, q))
@@ -111,66 +115,66 @@ export function createBranchTreeFunctions(
           ahead: 0,
           behind: 0,
         },
-      }))
+      }));
 
-    const local = buildLeafTree(localLeaves, favorites)
+    const local = buildLeafTree(localLeaves, favorites);
     // Remote branches nest under their remote name (origin/…).
-    const remote = buildLeafTree(remoteLeaves, favorites)
+    const remote = buildLeafTree(remoteLeaves, favorites);
 
     // Dedicated favourites strip — full names, sorted, so starring is obvious.
     const favoriteLeaves = [...localLeaves, ...remoteLeaves]
       .map(({ leaf }) => leaf)
       .filter((leaf) => favorites.has(leaf.fullName))
       .map((leaf) => ({ ...leaf, label: leaf.fullName }))
-      .sort((a, b) => a.fullName.localeCompare(b.fullName))
+      .sort((a, b) => a.fullName.localeCompare(b.fullName));
 
-    return { local, remote, favorites: favoriteLeaves }
-  }
+    return { local, remote, favorites: favoriteLeaves };
+  };
 
   const flatten: BranchTreeFunctions["flatten"] = (
     items,
     isExpanded,
     depth = 1
   ) => {
-    const rows: Array<ReturnType<BranchTreeFunctions["flatten"]>[number]> = []
+    const rows: Array<ReturnType<BranchTreeFunctions["flatten"]>[number]> = [];
     for (const item of items) {
       if (item.kind === "folder") {
-        const expanded = isExpanded(item.path)
-        rows.push({ key: `f:${item.path}`, item, depth, expanded })
+        const expanded = isExpanded(item.path);
+        rows.push({ key: `f:${item.path}`, item, depth, expanded });
         if (expanded)
-          rows.push(...flatten(item.children, isExpanded, depth + 1))
+          rows.push(...flatten(item.children, isExpanded, depth + 1));
       } else {
-        rows.push({ key: `b:${item.fullName}`, item, depth, expanded: false })
+        rows.push({ key: `b:${item.fullName}`, item, depth, expanded: false });
       }
     }
-    return rows
-  }
+    return rows;
+  };
 
   const toggleFavorite: BranchTreeFunctions["toggleFavorite"] = (
     favorites,
     name
   ) => {
-    const next = new Set(favorites)
-    if (next.has(name)) next.delete(name)
-    else next.add(name)
-    return next
-  }
+    const next = new Set(favorites);
+    if (next.has(name)) next.delete(name);
+    else next.add(name);
+    return next;
+  };
 
   const folderPaths: BranchTreeFunctions["folderPaths"] = (items) => {
-    const paths: Array<string> = []
+    const paths: Array<string> = [];
     const walk = (nodes: ReadonlyArray<BranchTreeItem>) => {
       for (const node of nodes) {
         if (node.kind === "folder") {
-          paths.push(node.path)
-          walk(node.children)
+          paths.push(node.path);
+          walk(node.children);
         }
       }
-    }
-    walk(items)
-    return paths
-  }
+    };
+    walk(items);
+    return paths;
+  };
 
-  return { buildTrees, flatten, toggleFavorite, folderPaths }
+  return { buildTrees, flatten, toggleFavorite, folderPaths };
 }
 
-export type { BranchFolder, BranchLeaf }
+export type { BranchFolder, BranchLeaf };

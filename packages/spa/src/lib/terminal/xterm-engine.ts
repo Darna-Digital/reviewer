@@ -23,10 +23,10 @@
  * The engine is imported lazily by callers so xterm never runs during
  * SSR/prerender.
  */
-import type { ITheme, Terminal as XTermTerminal } from "@xterm/xterm"
-import type { FitAddon } from "@xterm/addon-fit"
+import type { ITheme, Terminal as XTermTerminal } from "@xterm/xterm";
+import type { FitAddon } from "@xterm/addon-fit";
 
-export type TerminalTheme = "light" | "dark"
+export type TerminalTheme = "light" | "dark";
 
 /**
  * Full ANSI palette per theme. The 16 colours are Tailwind hues (the app's own
@@ -80,9 +80,9 @@ const THEMES: Record<TerminalTheme, ITheme> = {
     brightCyan: "#0e7490",
     brightWhite: "#111827",
   },
-}
+};
 
-export const terminalTheme = (theme: TerminalTheme): ITheme => THEMES[theme]
+export const terminalTheme = (theme: TerminalTheme): ITheme => THEMES[theme];
 
 /** Base xterm options shared by every terminal in the app. */
 const baseOptions = (theme: TerminalTheme) =>
@@ -104,7 +104,7 @@ const baseOptions = (theme: TerminalTheme) =>
     // the palette the way a high ratio would.
     minimumContrastRatio: 1.1,
     theme: terminalTheme(theme),
-  }) as const
+  }) as const;
 
 /**
  * Attach the best available renderer: WebGL2 → Canvas → DOM (the built-in
@@ -115,53 +115,53 @@ const baseOptions = (theme: TerminalTheme) =>
  */
 const attachRenderer = async (term: XTermTerminal): Promise<() => void> => {
   try {
-    const { WebglAddon } = await import("@xterm/addon-webgl")
-    const webgl = new WebglAddon()
+    const { WebglAddon } = await import("@xterm/addon-webgl");
+    const webgl = new WebglAddon();
     webgl.onContextLoss(() => {
       try {
-        webgl.dispose()
+        webgl.dispose();
       } catch {
         // already disposed
       }
-    })
-    term.loadAddon(webgl)
+    });
+    term.loadAddon(webgl);
     return () => {
       try {
-        webgl.dispose()
+        webgl.dispose();
       } catch {
         // already disposed
       }
-    }
+    };
   } catch {
     // WebGL2 unavailable — try the Canvas renderer before the DOM default.
     try {
-      const { CanvasAddon } = await import("@xterm/addon-canvas")
-      const canvas = new CanvasAddon()
-      term.loadAddon(canvas)
+      const { CanvasAddon } = await import("@xterm/addon-canvas");
+      const canvas = new CanvasAddon();
+      term.loadAddon(canvas);
       return () => {
         try {
-          canvas.dispose()
+          canvas.dispose();
         } catch {
           // already disposed
         }
-      }
+      };
     } catch {
       // Fall through to xterm's built-in DOM renderer.
-      return () => {}
+      return () => {};
     }
   }
-}
+};
 
 export interface MountedTerminal {
-  readonly term: XTermTerminal
-  readonly fit: FitAddon
+  readonly term: XTermTerminal;
+  readonly fit: FitAddon;
   /** Fit to the host, but only when it has a non-zero box (avoids throwing while
    * detached). */
-  readonly safeFit: () => void
+  readonly safeFit: () => void;
   /** Swap the live theme without tearing down the PTY. */
-  readonly setTheme: (theme: TerminalTheme) => void
+  readonly setTheme: (theme: TerminalTheme) => void;
   /** Dispose every addon and the terminal (does not touch the host element). */
-  readonly dispose: () => void
+  readonly dispose: () => void;
 }
 
 /**
@@ -177,71 +177,71 @@ export const mountTerminal = async (
   const [{ Terminal: XTerm }, { FitAddon: Fit }] = await Promise.all([
     import("@xterm/xterm"),
     import("@xterm/addon-fit"),
-  ])
+  ]);
 
-  const term = new XTerm(baseOptions(theme))
-  const fit = new Fit()
-  term.loadAddon(fit)
-  term.open(host)
+  const term = new XTerm(baseOptions(theme));
+  const fit = new Fit();
+  term.loadAddon(fit);
+  term.open(host);
 
   const safeFit = () => {
     if (host.clientWidth > 0 && host.clientHeight > 0) {
       try {
-        fit.fit()
+        fit.fit();
       } catch {
         // host detaching
       }
     }
-  }
-  safeFit()
+  };
+  safeFit();
 
-  const disposers: Array<() => void> = []
+  const disposers: Array<() => void> = [];
 
   // Unicode 11 width tables — load and activate so wide glyphs measure right.
   try {
-    const { Unicode11Addon } = await import("@xterm/addon-unicode11")
-    const unicode = new Unicode11Addon()
-    term.loadAddon(unicode)
-    term.unicode.activeVersion = "11"
+    const { Unicode11Addon } = await import("@xterm/addon-unicode11");
+    const unicode = new Unicode11Addon();
+    term.loadAddon(unicode);
+    term.unicode.activeVersion = "11";
     disposers.push(() => {
       try {
-        unicode.dispose()
+        unicode.dispose();
       } catch {
         // already disposed
       }
-    })
+    });
   } catch {
     // optional — fall back to the built-in Unicode 6 widths
   }
 
   // Clickable URLs printed by agents/dev servers.
   try {
-    const { WebLinksAddon } = await import("@xterm/addon-web-links")
-    const links = new WebLinksAddon()
-    term.loadAddon(links)
+    const { WebLinksAddon } = await import("@xterm/addon-web-links");
+    const links = new WebLinksAddon();
+    term.loadAddon(links);
     disposers.push(() => {
       try {
-        links.dispose()
+        links.dispose();
       } catch {
         // already disposed
       }
-    })
+    });
   } catch {
     // optional
   }
 
-  disposers.push(await attachRenderer(term))
+  disposers.push(await attachRenderer(term));
 
   return {
     term,
     fit,
     safeFit,
     setTheme: (next) => {
-      term.options.theme = terminalTheme(next)
+      term.options.theme = terminalTheme(next);
     },
     dispose: () => {
-      for (const d of disposers) d()
-      term.dispose()
+      for (const d of disposers) d();
+      term.dispose();
     },
-  }
-}
+  };
+};

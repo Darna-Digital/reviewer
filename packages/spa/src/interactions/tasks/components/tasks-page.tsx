@@ -14,13 +14,13 @@ import {
   IconPlus,
   IconTrash,
   IconX,
-} from "@tabler/icons-react"
-import { useNavigate } from "@tanstack/react-router"
-import { useEffect, useRef, useState } from "react"
-import { toast } from "sonner"
-import { agentIcon } from "@/interactions/threads/components/agent-icons"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+} from "@tabler/icons-react";
+import { useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { agentIcon } from "@/interactions/threads/components/agent-icons";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -29,18 +29,18 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Textarea } from "@/components/ui/textarea"
-import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import {
   buildChatAssignmentSettings,
   buildTaskAssignmentPrompt,
@@ -48,191 +48,193 @@ import {
   isChatProviderKind,
   mentionedChatProvider,
   trailingAgentMention,
-} from "@/interactions/chats/functions/chat-assignment.functions"
-import { useTasksActions } from "@/interactions/tasks/adapters/tasks.hook.adapter"
-import { AGENTS } from "@/interactions/threads/interfaces/agents"
-import type { ChatProviderKind } from "@byconvo/core/chats"
-import type { Card as TasksCard, TasksColumn } from "@byconvo/core/tasks"
-import { useChatModels, useRepo, useTasks } from "@/lib/queries"
-import { timeAgo } from "@/lib/relative-time"
-import { cn } from "@/lib/utils"
+} from "@/interactions/chats/functions/chat-assignment.functions";
+import { useTasksActions } from "@/interactions/tasks/adapters/tasks.hook.adapter";
+import { AGENTS } from "@/interactions/threads/interfaces/agents";
+import type { ChatProviderKind } from "@byconvo/core/chats";
+import type { Card as TasksCard, TasksColumn } from "@byconvo/core/tasks";
+import { useChatModels, useRepo, useTasks } from "@/lib/queries";
+import { timeAgo } from "@/lib/relative-time";
+import { cn } from "@/lib/utils";
 
 /** Agent CLIs that can be @-mentioned into a chat (excludes the plain shell). */
 const MENTIONABLE = AGENTS.filter(
   (agent): agent is (typeof AGENTS)[number] & { kind: ChatProviderKind } =>
     isChatProviderKind(agent.kind)
-)
+);
 
 export function TasksPage() {
-  const tasks = useTasks()
-  const board = tasks.data ?? null
-  const actions = useTasksActions(board)
-  const chatActions = useChatsActions()
-  const repo = useRepo()
-  const chatModels = useChatModels()
-  const navigate = useNavigate()
-  const currentBranch = repo.data?.currentBranch ?? ""
-  const [addingTo, setAddingTo] = useState<TasksColumn | null>(null)
-  const [newTitle, setNewTitle] = useState("")
-  const [dragId, setDragId] = useState<string | null>(null)
-  const [prefix, setPrefix] = useState("")
+  const tasks = useTasks();
+  const board = tasks.data ?? null;
+  const actions = useTasksActions(board);
+  const chatActions = useChatsActions();
+  const repo = useRepo();
+  const chatModels = useChatModels();
+  const navigate = useNavigate();
+  const currentBranch = repo.data?.currentBranch ?? "";
+  const [addingTo, setAddingTo] = useState<TasksColumn | null>(null);
+  const [newTitle, setNewTitle] = useState("");
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [prefix, setPrefix] = useState("");
   // The card open in the detail editor (title + description).
-  const [editing, setEditing] = useState<TasksCard | null>(null)
-  const [editTitle, setEditTitle] = useState("")
-  const [editDescription, setEditDescription] = useState("")
+  const [editing, setEditing] = useState<TasksCard | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
   // Column (status) management.
-  const [addingColumn, setAddingColumn] = useState(false)
-  const [newColumnName, setNewColumnName] = useState("")
-  const [renamingColumn, setRenamingColumn] = useState<string | null>(null)
-  const [columnDraft, setColumnDraft] = useState("")
+  const [addingColumn, setAddingColumn] = useState(false);
+  const [newColumnName, setNewColumnName] = useState("");
+  const [renamingColumn, setRenamingColumn] = useState<string | null>(null);
+  const [columnDraft, setColumnDraft] = useState("");
   // Comments on the open task.
-  const [newComment, setNewComment] = useState("")
-  const [copiedComment, setCopiedComment] = useState<string | null>(null)
+  const [newComment, setNewComment] = useState("");
+  const [copiedComment, setCopiedComment] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<{
-    id: string
-    snippet: string
-  } | null>(null)
+    id: string;
+    snippet: string;
+  } | null>(null);
   // The "@partial" the user is currently typing (drives the mention picker).
-  const [mentionQuery, setMentionQuery] = useState<string | null>(null)
-  const commentRef = useRef<HTMLInputElement | null>(null)
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const commentRef = useRef<HTMLInputElement | null>(null);
 
   // Keep the prefix field in sync with the loaded board.
   useEffect(() => {
-    if (board?.prefix != null) setPrefix(board.prefix)
-  }, [board?.prefix])
+    if (board?.prefix != null) setPrefix(board.prefix);
+  }, [board?.prefix]);
 
   const commitPrefix = async () => {
-    const next = prefix.trim()
-    if (next.length === 0 || next === board?.prefix) return
+    const next = prefix.trim();
+    if (next.length === 0 || next === board?.prefix) return;
     try {
-      await actions.setPrefix(next)
+      await actions.setPrefix(next);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not set prefix"
-      )
+      );
     }
-  }
+  };
 
-  const groups = actions.columns()
-  const byId = new Map((board?.cards ?? []).map((c) => [c.id, c]))
+  const groups = actions.columns();
+  const byId = new Map((board?.cards ?? []).map((c) => [c.id, c]));
 
   const addCard = async (column: TasksColumn) => {
     try {
-      const created = await actions.create(newTitle, column)
+      const created = await actions.create(newTitle, column);
       if (created !== null) {
-        setNewTitle("")
-        setAddingTo(null)
+        setNewTitle("");
+        setAddingTo(null);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "could not add card")
+      toast.error(
+        error instanceof Error ? error.message : "could not add card"
+      );
     }
-  }
+  };
 
   const drop = async (column: TasksColumn) => {
-    const card = dragId === null ? undefined : byId.get(dragId)
-    setDragId(null)
-    if (card === undefined) return
+    const card = dragId === null ? undefined : byId.get(dragId);
+    setDragId(null);
+    if (card === undefined) return;
     try {
-      await actions.move(card, column)
+      await actions.move(card, column);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not move card"
-      )
+      );
     }
-  }
+  };
 
   const openCard = (card: TasksCard) => {
-    setEditing(card)
-    setEditTitle(card.title)
-    setEditDescription(card.description)
-  }
+    setEditing(card);
+    setEditTitle(card.title);
+    setEditDescription(card.description);
+  };
 
   const saveCard = async () => {
-    if (editing === null) return
-    const title = editTitle.trim()
-    if (title.length === 0) return
+    if (editing === null) return;
+    const title = editTitle.trim();
+    if (title.length === 0) return;
     try {
       await actions.update(editing.id, {
         title,
         description: editDescription,
-      })
-      setEditing(null)
+      });
+      setEditing(null);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not update task"
-      )
+      );
     }
-  }
+  };
 
   // The live version of the open card (board refetches after a comment change,
   // so the dialog must read fresh comments, not the snapshot taken on open).
   const editingLive =
     editing === null
       ? null
-      : (board?.cards.find((c) => c.id === editing.id) ?? editing)
+      : (board?.cards.find((c) => c.id === editing.id) ?? editing);
 
   const onCommentChange = (value: string) => {
-    setNewComment(value)
-    setMentionQuery(trailingAgentMention(value))
-  }
+    setNewComment(value);
+    setMentionQuery(trailingAgentMention(value));
+  };
 
   // Replace the "@partial" being typed with a full "@agent " mention.
   const insertMention = (kind: ChatProviderKind) => {
     setNewComment((v) =>
       v.replace(/(^|\s)@\w*$/, (_m, p: string) => `${p}@${kind} `)
-    )
-    setMentionQuery(null)
-    commentRef.current?.focus()
-  }
+    );
+    setMentionQuery(null);
+    commentRef.current?.focus();
+  };
 
   const startReply = (commentId: string, body: string) => {
-    setReplyTo({ id: commentId, snippet: body.slice(0, 48) })
-    commentRef.current?.focus()
-  }
+    setReplyTo({ id: commentId, snippet: body.slice(0, 48) });
+    commentRef.current?.focus();
+  };
 
   const addComment = async () => {
-    if (editingLive === null) return
-    const card = editingLive
-    const body = newComment.trim()
-    if (body.length === 0) return
-    const parentId = replyTo?.id ?? null
-    const agent = mentionedChatProvider(body)
+    if (editingLive === null) return;
+    const card = editingLive;
+    const body = newComment.trim();
+    if (body.length === 0) return;
+    const parentId = replyTo?.id ?? null;
+    const agent = mentionedChatProvider(body);
     try {
-      await actions.addComment(card.id, body, parentId)
-      setNewComment("")
-      setReplyTo(null)
-      setMentionQuery(null)
-      if (agent === null) return
+      await actions.addComment(card.id, body, parentId);
+      setNewComment("");
+      setReplyTo(null);
+      setMentionQuery(null);
+      if (agent === null) return;
       const started = await chatActions.startWithTitle(
         buildChatAssignmentSettings(agent, chatModels.data),
         currentBranch,
         buildTaskAssignmentTitle(card, body, agent),
         buildTaskAssignmentPrompt(card, body, agent)
-      )
-      if (started === null) return
-      toast.success(`Started ${agent} on ${card.key}`)
-      setEditing(null)
+      );
+      if (started === null) return;
+      toast.success(`Started ${agent} on ${card.key}`);
+      setEditing(null);
       void navigate({
         to: "/modes/code/chats/$chatId",
         params: { chatId: started.id },
-      })
+      });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not add comment"
-      )
+      );
     }
-  }
+  };
 
   const removeComment = async (commentId: string) => {
-    if (editing === null) return
+    if (editing === null) return;
     try {
-      await actions.removeComment(editing.id, commentId)
+      await actions.removeComment(editing.id, commentId);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not delete comment"
-      )
+      );
     }
-  }
+  };
 
   // Copy a self-contained, agent-ready instruction with a resolvable link. The
   // agent runs with $BYCONVO_API set, so it can fetch the comment + task context.
@@ -240,53 +242,53 @@ export function TasksPage() {
     card: TasksCard,
     comment: { id: string; body: string }
   ) => {
-    const text = `Work on task ${card.key} (${card.title}): "${comment.body}". Full context: $BYCONVO_API/api/tasks/comments/${comment.id}`
+    const text = `Work on task ${card.key} (${card.title}): "${comment.body}". Full context: $BYCONVO_API/api/tasks/comments/${comment.id}`;
     try {
-      await navigator.clipboard.writeText(text)
-      setCopiedComment(comment.id)
+      await navigator.clipboard.writeText(text);
+      setCopiedComment(comment.id);
       setTimeout(
         () => setCopiedComment((c) => (c === comment.id ? null : c)),
         1500
-      )
+      );
     } catch {
-      toast.error("could not copy to clipboard")
+      toast.error("could not copy to clipboard");
     }
-  }
+  };
 
   const orderedColumnIds = (): string[] =>
     (board?.columns ?? [])
       .slice()
       .sort((a, b) => a.order - b.order)
-      .map((c) => c.id)
+      .map((c) => c.id);
 
   const addColumn = async () => {
-    const name = newColumnName.trim()
-    if (name.length === 0) return
+    const name = newColumnName.trim();
+    if (name.length === 0) return;
     try {
-      await actions.addColumn(name)
-      setNewColumnName("")
-      setAddingColumn(false)
+      await actions.addColumn(name);
+      setNewColumnName("");
+      setAddingColumn(false);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not add column"
-      )
+      );
     }
-  }
+  };
 
   const commitColumnRename = async () => {
-    if (renamingColumn === null) return
-    const id = renamingColumn
-    const name = columnDraft.trim()
-    setRenamingColumn(null)
-    if (name.length === 0) return
+    if (renamingColumn === null) return;
+    const id = renamingColumn;
+    const name = columnDraft.trim();
+    setRenamingColumn(null);
+    if (name.length === 0) return;
     try {
-      await actions.renameColumn(id, name)
+      await actions.renameColumn(id, name);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not rename column"
-      )
+      );
     }
-  }
+  };
 
   const deleteColumn = async (id: string, name: string) => {
     if (
@@ -294,41 +296,41 @@ export function TasksPage() {
         `Delete the "${name}" column? Its tasks move to the first column.`
       )
     )
-      return
+      return;
     try {
-      await actions.removeColumn(id)
+      await actions.removeColumn(id);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not delete column"
-      )
+      );
     }
-  }
+  };
 
   const moveColumn = async (id: string, dir: -1 | 1) => {
-    const ids = orderedColumnIds()
-    const i = ids.indexOf(id)
-    const j = i + dir
-    if (i < 0 || j < 0 || j >= ids.length) return
-    ;[ids[i], ids[j]] = [ids[j], ids[i]]
+    const ids = orderedColumnIds();
+    const i = ids.indexOf(id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
     try {
-      await actions.reorderColumns(ids)
+      await actions.reorderColumns(ids);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not move column"
-      )
+      );
     }
-  }
+  };
 
   const removeCard = async (id: string) => {
-    if (!window.confirm("Delete this card?")) return
+    if (!window.confirm("Delete this card?")) return;
     try {
-      await actions.remove(id)
+      await actions.remove(id);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not delete card"
-      )
+      );
     }
-  }
+  };
 
   const renderComment = (
     c: TasksCard["comments"][number],
@@ -376,7 +378,7 @@ export function TasksPage() {
         </button>
       </div>
     </li>
-  )
+  );
 
   return (
     <div className="flex h-full min-h-0">
@@ -398,8 +400,8 @@ export function TasksPage() {
               onBlur={() => void commitPrefix()}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  e.preventDefault()
-                  e.currentTarget.blur()
+                  e.preventDefault();
+                  e.currentTarget.blur();
                 }
               }}
               aria-label="Task key prefix"
@@ -431,9 +433,9 @@ export function TasksPage() {
                       onBlur={() => void commitColumnRename()}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
-                          e.preventDefault()
-                          void commitColumnRename()
-                        } else if (e.key === "Escape") setRenamingColumn(null)
+                          e.preventDefault();
+                          void commitColumnRename();
+                        } else if (e.key === "Escape") setRenamingColumn(null);
                       }}
                     />
                   ) : (
@@ -441,8 +443,8 @@ export function TasksPage() {
                       <span
                         className="flex-1 truncate text-sm font-medium"
                         onDoubleClick={() => {
-                          setRenamingColumn(group.key)
-                          setColumnDraft(group.title)
+                          setRenamingColumn(group.key);
+                          setColumnDraft(group.title);
                         }}
                         title="Double-click to rename"
                       >
@@ -465,8 +467,8 @@ export function TasksPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
                             onClick={() => {
-                              setRenamingColumn(group.key)
-                              setColumnDraft(group.title)
+                              setRenamingColumn(group.key);
+                              setColumnDraft(group.title);
                             }}
                           >
                             <IconPencil className="size-4" /> Rename
@@ -546,11 +548,11 @@ export function TasksPage() {
                           onChange={(e) => setNewTitle(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
-                              e.preventDefault()
-                              void addCard(group.key)
+                              e.preventDefault();
+                              void addCard(group.key);
                             } else if (e.key === "Escape") {
-                              setAddingTo(null)
-                              setNewTitle("")
+                              setAddingTo(null);
+                              setNewTitle("");
                             }
                           }}
                         />
@@ -566,8 +568,8 @@ export function TasksPage() {
                             size="sm"
                             variant="ghost"
                             onClick={() => {
-                              setAddingTo(null)
-                              setNewTitle("")
+                              setAddingTo(null);
+                              setNewTitle("");
                             }}
                           >
                             Cancel
@@ -580,8 +582,8 @@ export function TasksPage() {
                         size="sm"
                         className="justify-start text-muted-foreground"
                         onClick={() => {
-                          setAddingTo(group.key)
-                          setNewTitle("")
+                          setAddingTo(group.key);
+                          setNewTitle("");
                         }}
                       >
                         <IconPlus className="size-4" /> Add card
@@ -601,11 +603,11 @@ export function TasksPage() {
                   onChange={(e) => setNewColumnName(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      e.preventDefault()
-                      void addColumn()
+                      e.preventDefault();
+                      void addColumn();
                     } else if (e.key === "Escape") {
-                      setAddingColumn(false)
-                      setNewColumnName("")
+                      setAddingColumn(false);
+                      setNewColumnName("");
                     }
                   }}
                 />
@@ -621,8 +623,8 @@ export function TasksPage() {
                     size="sm"
                     variant="ghost"
                     onClick={() => {
-                      setAddingColumn(false)
-                      setNewColumnName("")
+                      setAddingColumn(false);
+                      setNewColumnName("");
                     }}
                   >
                     Cancel
@@ -634,8 +636,8 @@ export function TasksPage() {
                 variant="ghost"
                 className="h-9 w-44 shrink-0 justify-start self-start text-muted-foreground"
                 onClick={() => {
-                  setAddingColumn(true)
-                  setNewColumnName("")
+                  setAddingColumn(true);
+                  setNewColumnName("");
                 }}
               >
                 <IconPlus className="size-4" /> Add column
@@ -668,8 +670,8 @@ export function TasksPage() {
                 onChange={(e) => setEditTitle(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    e.preventDefault()
-                    void saveCard()
+                    e.preventDefault();
+                    void saveCard();
                   }
                 }}
               />
@@ -734,7 +736,7 @@ export function TasksPage() {
                       {MENTIONABLE.filter((a) =>
                         a.kind.startsWith(mentionQuery.toLowerCase())
                       ).map((a) => {
-                        const Icon = agentIcon(a.kind)
+                        const Icon = agentIcon(a.kind);
                         return (
                           <button
                             key={a.kind}
@@ -748,7 +750,7 @@ export function TasksPage() {
                               {a.label}
                             </span>
                           </button>
-                        )
+                        );
                       })}
                     </div>
                   )}
@@ -763,11 +765,11 @@ export function TasksPage() {
                     onChange={(e) => onCommentChange(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") {
-                        e.preventDefault()
-                        void addComment()
+                        e.preventDefault();
+                        void addComment();
                       } else if (e.key === "Escape" && mentionQuery !== null) {
-                        e.preventDefault()
-                        setMentionQuery(null)
+                        e.preventDefault();
+                        setMentionQuery(null);
                       }
                     }}
                   />
@@ -802,5 +804,5 @@ export function TasksPage() {
         </Dialog>
       </div>
     </div>
-  )
+  );
 }

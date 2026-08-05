@@ -15,111 +15,111 @@ import {
   IconGitBranch,
   IconMessage,
   IconPlus,
-} from "@tabler/icons-react"
-import { Outlet, useNavigate, useParams } from "@tanstack/react-router"
-import { useEffect, useMemo, useState } from "react"
-import { toast } from "sonner"
-import { PaneHeader } from "@/components/layout/pane-header"
-import { ResizeHandle } from "@/components/layout/resize-handle"
+} from "@tabler/icons-react";
+import { Outlet, useNavigate, useParams } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { PaneHeader } from "@/components/layout/pane-header";
+import { ResizeHandle } from "@/components/layout/resize-handle";
 import {
   ALL_BRANCHES,
   branchLabel,
   SidebarFilterMenu,
   SidebarSearch,
-} from "@/components/layout/sidebar-filters"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
-import { ChatRow } from "@/interactions/chats/components/chat-row"
-import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions"
-import type { ChatSummary } from "@byconvo/core/chats"
-import { dateCutoff, type DateFilter } from "@/lib/date-filter"
-import { useBranches, useChats, useRepo } from "@/lib/queries"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
+} from "@/components/layout/sidebar-filters";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
+import { ChatRow } from "@/interactions/chats/components/chat-row";
+import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
+import type { ChatSummary } from "@byconvo/core/chats";
+import { dateCutoff, type DateFilter } from "@/lib/date-filter";
+import { useBranches, useChats, useRepo } from "@/lib/queries";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 
 export function ChatsPage() {
-  const chats = useChats()
-  const actions = useChatsActions()
-  const navigate = useNavigate()
-  const { chatId } = useParams({ strict: false })
-  const prefs = useUiPrefs()
-  const [listWidth, setListWidth] = useState(prefs.inboxListWidth)
-  const [expanded, setExpanded] = useState(false)
+  const chats = useChats();
+  const actions = useChatsActions();
+  const navigate = useNavigate();
+  const { chatId } = useParams({ strict: false });
+  const prefs = useUiPrefs();
+  const [listWidth, setListWidth] = useState(prefs.inboxListWidth);
+  const [expanded, setExpanded] = useState(false);
 
-  const [seenAt] = useState(prefs.inboxSeenAt)
+  const [seenAt] = useState(prefs.inboxSeenAt);
   useEffect(() => {
-    setUiPrefs({ inboxSeenAt: new Date().toISOString() })
-  }, [])
+    setUiPrefs({ inboxSeenAt: new Date().toISOString() });
+  }, []);
 
-  const repo = useRepo()
-  const branchesQuery = useBranches()
-  const currentBranch = repo.data?.currentBranch ?? ""
+  const repo = useRepo();
+  const branchesQuery = useBranches();
+  const currentBranch = repo.data?.currentBranch ?? "";
   const localBranches = useMemo(
     () => (branchesQuery.data ?? []).map((b) => b.name),
     [branchesQuery.data]
-  )
+  );
 
-  const summaries = useMemo(() => chats.data ?? [], [chats.data])
-  const selected = summaries.find((c) => c.id === chatId) ?? null
+  const summaries = useMemo(() => chats.data ?? [], [chats.data]);
+  const selected = summaries.find((c) => c.id === chatId) ?? null;
 
   // Branch the list is filtered to (null → follow the current branch).
-  const [branchFilter, setBranchFilter] = useState<string | null>(null)
-  const [dateFilter, setDateFilter] = useState<DateFilter>("all")
-  const [search, setSearch] = useState("")
-  const activeBranch = branchFilter ?? (currentBranch || ALL_BRANCHES)
+  const [branchFilter, setBranchFilter] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [search, setSearch] = useState("");
+  const activeBranch = branchFilter ?? (currentBranch || ALL_BRANCHES);
 
   // Branches offered in the filter: current + local + any a chat already uses.
   const filterBranches = useMemo(() => {
-    const set = new Set<string>()
-    if (currentBranch) set.add(currentBranch)
-    localBranches.forEach((b) => set.add(b))
-    summaries.forEach((c) => c.branch && set.add(c.branch))
+    const set = new Set<string>();
+    if (currentBranch) set.add(currentBranch);
+    localBranches.forEach((b) => set.add(b));
+    summaries.forEach((c) => c.branch && set.add(c.branch));
     return [...set].sort((a, b) =>
       a === currentBranch ? -1 : b === currentBranch ? 1 : a.localeCompare(b)
-    )
-  }, [currentBranch, localBranches, summaries])
+    );
+  }, [currentBranch, localBranches, summaries]);
 
   // Chats surviving the date + search filters (branch is applied via grouping).
   const filtered = useMemo(() => {
-    const cutoff = dateCutoff(dateFilter)
-    const q = search.trim().toLowerCase()
+    const cutoff = dateCutoff(dateFilter);
+    const q = search.trim().toLowerCase();
     return summaries.filter((c) => {
-      if (cutoff > 0 && Date.parse(c.updatedAt) < cutoff) return false
+      if (cutoff > 0 && Date.parse(c.updatedAt) < cutoff) return false;
       if (q.length > 0) {
-        const haystack = `${c.title}\n${c.lastMessage ?? ""}`.toLowerCase()
-        if (!haystack.includes(q)) return false
+        const haystack = `${c.title}\n${c.lastMessage ?? ""}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
       }
-      return true
-    })
-  }, [summaries, dateFilter, search])
+      return true;
+    });
+  }, [summaries, dateFilter, search]);
 
   // Chats grouped under their branch, in the same order as the filter.
   const groups = useMemo(() => {
     const present = [...new Set(filtered.map((c) => c.branch))].sort((a, b) =>
       a === currentBranch ? -1 : b === currentBranch ? 1 : a.localeCompare(b)
-    )
+    );
     const branchesToShow =
-      activeBranch === ALL_BRANCHES ? present : [activeBranch]
+      activeBranch === ALL_BRANCHES ? present : [activeBranch];
     return branchesToShow.map((branch) => ({
       branch,
       chats: filtered.filter((c) => c.branch === branch),
-    }))
-  }, [filtered, activeBranch, currentBranch])
+    }));
+  }, [filtered, activeBranch, currentBranch]);
 
-  const hasMatches = groups.some((g) => g.chats.length > 0)
+  const hasMatches = groups.some((g) => g.chats.length > 0);
   const filtersActive =
     activeBranch !== ALL_BRANCHES ||
     dateFilter !== "all" ||
-    search.trim().length > 0
+    search.trim().length > 0;
 
   const remove = async (id: string) => {
     try {
-      await actions.remove(id)
-      if (id === chatId) void navigate({ to: "/modes/code/chats" })
+      await actions.remove(id);
+      if (id === chatId) void navigate({ to: "/modes/code/chats" });
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "delete failed")
+      toast.error(error instanceof Error ? error.message : "delete failed");
     }
-  }
+  };
 
   const renderRow = (c: ChatSummary) => (
     <ChatRow
@@ -129,9 +129,9 @@ export function ChatsPage() {
       unread={isChatUnread(c, seenAt)}
       onDelete={() => void remove(c.id)}
     />
-  )
+  );
 
-  const showList = !expanded
+  const showList = !expanded;
 
   return (
     <div className="flex h-full min-h-0">
@@ -192,9 +192,9 @@ export function ChatsPage() {
                     variant="ghost"
                     className="h-7 text-xs"
                     onClick={() => {
-                      setBranchFilter(ALL_BRANCHES)
-                      setDateFilter("all")
-                      setSearch("")
+                      setBranchFilter(ALL_BRANCHES);
+                      setDateFilter("all");
+                      setSearch("");
                     }}
                   >
                     Clear filters
@@ -297,5 +297,5 @@ export function ChatsPage() {
         </div>
       </section>
     </div>
-  )
+  );
 }

@@ -10,51 +10,56 @@
  * thread's terminal stays mounted (just hidden) so its PTY session survives
  * switching, and a hidden terminal that emits a bell shows an activity dot.
  */
-import { IconGitBranch, IconPencil, IconPlus, IconX } from "@tabler/icons-react"
-import { useEffect, useMemo, useState } from "react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+import {
+  IconGitBranch,
+  IconPencil,
+  IconPlus,
+  IconX,
+} from "@tabler/icons-react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { ResizeHandle } from "@/components/layout/resize-handle"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { ResizeHandle } from "@/components/layout/resize-handle";
 import {
   ALL_BRANCHES,
   branchLabel,
   SidebarFilterMenu,
   SidebarSearch,
-} from "@/components/layout/sidebar-filters"
-import { agentIcon } from "@/interactions/threads/components/agent-icons"
+} from "@/components/layout/sidebar-filters";
+import { agentIcon } from "@/interactions/threads/components/agent-icons";
 import {
   Terminal,
   disposeLiveTerminal,
-} from "@/interactions/threads/components/terminal"
-import { useThreadsActions } from "@/interactions/threads/adapters/threads.hook.adapter"
-import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents"
-import type { AgentKind, ThreadSummary } from "@byconvo/core/threads"
-import { dateCutoff, type DateFilter } from "@/lib/date-filter"
-import { useBranches, useRepo, useThreads } from "@/lib/queries"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+} from "@/interactions/threads/components/terminal";
+import { useThreadsActions } from "@/interactions/threads/adapters/threads.hook.adapter";
+import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents";
+import type { AgentKind, ThreadSummary } from "@byconvo/core/threads";
+import { dateCutoff, type DateFilter } from "@/lib/date-filter";
+import { useBranches, useRepo, useThreads } from "@/lib/queries";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 function NewTerminalMenu({
   onPick,
   trigger,
 }: {
-  onPick: (agent: AgentKind) => void
-  trigger: React.ReactElement
+  onPick: (agent: AgentKind) => void;
+  trigger: React.ReactElement;
 }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={trigger} />
       <DropdownMenuContent align="end" className="w-auto min-w-56">
         {AGENTS.map((agent) => {
-          const Icon = agentIcon(agent.kind)
+          const Icon = agentIcon(agent.kind);
           return (
             <DropdownMenuItem
               key={agent.kind}
@@ -67,146 +72,146 @@ function NewTerminalMenu({
                 {agent.hint}
               </span>
             </DropdownMenuItem>
-          )
+          );
         })}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 export function ThreadsPage() {
-  const threads = useThreads()
-  const actions = useThreadsActions()
-  const prefs = useUiPrefs()
+  const threads = useThreads();
+  const actions = useThreadsActions();
+  const prefs = useUiPrefs();
 
-  const repo = useRepo()
-  const branchesQuery = useBranches()
+  const repo = useRepo();
+  const branchesQuery = useBranches();
 
-  const summaries = useMemo(() => threads.data ?? [], [threads.data])
-  const currentBranch = repo.data?.currentBranch ?? ""
+  const summaries = useMemo(() => threads.data ?? [], [threads.data]);
+  const currentBranch = repo.data?.currentBranch ?? "";
   const localBranches = useMemo(
     () => (branchesQuery.data ?? []).map((b) => b.name),
     [branchesQuery.data]
-  )
+  );
 
-  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth)
+  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth);
   // Branch the sidebar is filtered to (null → follow the current branch).
-  const [branchFilter, setBranchFilter] = useState<string | null>(null)
-  const [dateFilter, setDateFilter] = useState<DateFilter>("all")
-  const [search, setSearch] = useState("")
-  const activeBranch = branchFilter ?? (currentBranch || ALL_BRANCHES)
+  const [branchFilter, setBranchFilter] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [search, setSearch] = useState("");
+  const activeBranch = branchFilter ?? (currentBranch || ALL_BRANCHES);
   // New threads land in the filtered branch (or the current branch under "All").
   const newThreadBranch =
-    activeBranch === ALL_BRANCHES ? currentBranch : activeBranch
+    activeBranch === ALL_BRANCHES ? currentBranch : activeBranch;
 
   // Branches offered in the filter: current + local + any a thread already uses.
   const filterBranches = useMemo(() => {
-    const set = new Set<string>()
-    if (currentBranch) set.add(currentBranch)
-    localBranches.forEach((b) => set.add(b))
-    summaries.forEach((t) => t.branch && set.add(t.branch))
+    const set = new Set<string>();
+    if (currentBranch) set.add(currentBranch);
+    localBranches.forEach((b) => set.add(b));
+    summaries.forEach((t) => t.branch && set.add(t.branch));
     return [...set].sort((a, b) =>
       a === currentBranch ? -1 : b === currentBranch ? 1 : a.localeCompare(b)
-    )
-  }, [currentBranch, localBranches, summaries])
+    );
+  }, [currentBranch, localBranches, summaries]);
 
   // Threads surviving the date + search filters (branch is applied via grouping).
   const filtered = useMemo(() => {
-    const cutoff = dateCutoff(dateFilter)
-    const q = search.trim().toLowerCase()
+    const cutoff = dateCutoff(dateFilter);
+    const q = search.trim().toLowerCase();
     return summaries.filter((t) => {
-      if (cutoff > 0 && Date.parse(t.updatedAt) < cutoff) return false
+      if (cutoff > 0 && Date.parse(t.updatedAt) < cutoff) return false;
       if (q.length > 0) {
         const haystack =
-          `${t.title}\n${t.lastCommand ?? ""}\n${agentLabel(t.agent)}`.toLowerCase()
-        if (!haystack.includes(q)) return false
+          `${t.title}\n${t.lastCommand ?? ""}\n${agentLabel(t.agent)}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
       }
-      return true
-    })
-  }, [summaries, dateFilter, search])
+      return true;
+    });
+  }, [summaries, dateFilter, search]);
 
   // Threads grouped under their branch, in the same order as the filter.
   const groups = useMemo(() => {
     const present = [...new Set(filtered.map((t) => t.branch))].sort((a, b) =>
       a === currentBranch ? -1 : b === currentBranch ? 1 : a.localeCompare(b)
-    )
+    );
     const branchesToShow =
-      activeBranch === ALL_BRANCHES ? present : [activeBranch]
+      activeBranch === ALL_BRANCHES ? present : [activeBranch];
     return branchesToShow.map((branch) => ({
       branch,
       threads: filtered.filter((t) => t.branch === branch),
-    }))
-  }, [filtered, activeBranch, currentBranch])
+    }));
+  }, [filtered, activeBranch, currentBranch]);
 
-  const hasMatches = groups.some((g) => g.threads.length > 0)
+  const hasMatches = groups.some((g) => g.threads.length > 0);
   const filtersActive =
     activeBranch !== ALL_BRANCHES ||
     dateFilter !== "all" ||
-    search.trim().length > 0
+    search.trim().length > 0;
 
-  const [activeId, setActiveId] = useState<string | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null);
   // Threads whose terminal has been mounted (and kept alive) — we never
   // unmount a visited terminal so it keeps running in the background.
-  const [mountedIds, setMountedIds] = useState<ReadonlyArray<string>>([])
-  const [liveTitles, setLiveTitles] = useState<Record<string, string>>({})
-  const [activity, setActivity] = useState<Record<string, boolean>>({})
+  const [mountedIds, setMountedIds] = useState<ReadonlyArray<string>>([]);
+  const [liveTitles, setLiveTitles] = useState<Record<string, string>>({});
+  const [activity, setActivity] = useState<Record<string, boolean>>({});
   const [renaming, setRenaming] = useState<{
-    id: string
-    draft: string
-  } | null>(null)
+    id: string;
+    draft: string;
+  } | null>(null);
 
   // Keep a valid selection as the list loads/changes.
   useEffect(() => {
-    if (summaries.length === 0) setActiveId(null)
+    if (summaries.length === 0) setActiveId(null);
     else if (!summaries.some((t) => t.id === activeId))
-      setActiveId(summaries[0].id)
-  }, [summaries, activeId])
+      setActiveId(summaries[0].id);
+  }, [summaries, activeId]);
 
   // Mount the focused thread (and keep it mounted) + clear its activity.
   useEffect(() => {
-    if (activeId === null) return
-    setMountedIds((ids) => (ids.includes(activeId) ? ids : [...ids, activeId]))
-    setActivity((a) => (a[activeId] ? { ...a, [activeId]: false } : a))
-  }, [activeId])
+    if (activeId === null) return;
+    setMountedIds((ids) => (ids.includes(activeId) ? ids : [...ids, activeId]));
+    setActivity((a) => (a[activeId] ? { ...a, [activeId]: false } : a));
+  }, [activeId]);
 
-  const active = summaries.find((t) => t.id === activeId) ?? null
-  const ActiveIcon = agentIcon(active?.agent ?? "terminal")
+  const active = summaries.find((t) => t.id === activeId) ?? null;
+  const ActiveIcon = agentIcon(active?.agent ?? "terminal");
 
   const createThread = async (agent: AgentKind) => {
     try {
-      const created = await actions.create(agent, "", null, newThreadBranch)
-      setActiveId(created.id)
+      const created = await actions.create(agent, "", null, newThreadBranch);
+      setActiveId(created.id);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not create thread"
-      )
+      );
     }
-  }
+  };
 
   const closeThread = async (id: string) => {
-    setMountedIds((ids) => ids.filter((m) => m !== id))
+    setMountedIds((ids) => ids.filter((m) => m !== id));
     if (activeId === id) {
-      const next = summaries.find((t) => t.id !== id)
-      setActiveId(next?.id ?? null)
+      const next = summaries.find((t) => t.id !== id);
+      setActiveId(next?.id ?? null);
     }
-    await actions.remove(id)
+    await actions.remove(id);
     // Tear down the persistent client-side session (the server kills the PTY).
-    disposeLiveTerminal(id)
-  }
+    disposeLiveTerminal(id);
+  };
 
   const commitRename = async () => {
-    if (renaming === null) return
-    const { id, draft } = renaming
-    setRenaming(null)
-    if (draft.trim().length > 0) await actions.rename(id, draft)
-  }
+    if (renaming === null) return;
+    const { id, draft } = renaming;
+    setRenaming(null);
+    if (draft.trim().length > 0) await actions.rename(id, draft);
+  };
 
   // Subtitle for a sidebar row: the live process title, else last command/agent.
   const subtitleOf = (t: ThreadSummary) =>
-    liveTitles[t.id] ?? t.lastCommand ?? agentLabel(t.agent)
+    liveTitles[t.id] ?? t.lastCommand ?? agentLabel(t.agent);
 
   const renderRow = (t: ThreadSummary) => {
-    const Icon = agentIcon(t.agent)
+    const Icon = agentIcon(t.agent);
     return (
       <div
         key={t.id}
@@ -229,9 +234,9 @@ export function ThreadsPage() {
             onBlur={() => void commitRename()}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
-                e.preventDefault()
-                void commitRename()
-              } else if (e.key === "Escape") setRenaming(null)
+                e.preventDefault();
+                void commitRename();
+              } else if (e.key === "Escape") setRenaming(null);
             }}
           />
         ) : (
@@ -258,15 +263,15 @@ export function ThreadsPage() {
           aria-label="Close terminal"
           className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive"
           onClick={(e) => {
-            e.stopPropagation()
-            void closeThread(t.id)
+            e.stopPropagation();
+            void closeThread(t.id);
           }}
         >
           <IconX className="size-3.5" />
         </button>
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <div className="flex h-full min-h-0">
@@ -327,9 +332,9 @@ export function ThreadsPage() {
                   variant="ghost"
                   className="h-7 text-xs"
                   onClick={() => {
-                    setBranchFilter(ALL_BRANCHES)
-                    setDateFilter("all")
-                    setSearch("")
+                    setBranchFilter(ALL_BRANCHES);
+                    setDateFilter("all");
+                    setSearch("");
                   }}
                 >
                   Clear filters
@@ -402,9 +407,9 @@ export function ThreadsPage() {
                   onBlur={() => void commitRename()}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
-                      e.preventDefault()
-                      void commitRename()
-                    } else if (e.key === "Escape") setRenaming(null)
+                      e.preventDefault();
+                      void commitRename();
+                    } else if (e.key === "Escape") setRenaming(null);
                   }}
                 />
               ) : (
@@ -463,5 +468,5 @@ export function ThreadsPage() {
         )}
       </section>
     </div>
-  )
+  );
 }

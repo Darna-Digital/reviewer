@@ -6,7 +6,7 @@
  * upstream badges, repo-level fetch/pull/push, and a per-branch action submenu
  * (checkout, compare, merge, rebase, rename, delete, …).
  */
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   IconArrowDown,
   IconArrowUp,
@@ -19,8 +19,8 @@ import {
   IconPlus,
   IconSearch,
   IconStarFilled,
-} from "@tabler/icons-react"
-import { Button } from "@/components/ui/button"
+} from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -29,7 +29,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,31 +39,31 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { handleSearchKeyDown } from "@/components/ui/search-keydown"
-import { cn } from "@/lib/utils"
-import { useSurfaceBackground } from "@/lib/surface-context"
-import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { handleSearchKeyDown } from "@/components/ui/search-keydown";
+import { cn } from "@/lib/utils";
+import { useSurfaceBackground } from "@/lib/surface-context";
+import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo";
 
 interface BranchSwitcherProps {
-  current: string | null
-  branches: ReadonlyArray<BranchInfo>
-  remoteBranches: ReadonlyArray<RemoteBranchInfo>
-  busy: boolean
-  onCheckout: (ref: string) => void
-  onCheckoutAndUpdate: (ref: string) => void
-  onCreateBranch: (name: string, startPoint: string | null) => void
-  onCompare: (base: string, head: string) => void
-  onMerge: (branch: string) => void
-  onRebase: (onto: string) => void
-  onFetch: () => void
-  onPull: () => void
-  onPush: () => void
-  onRenameBranch: (from: string, to: string) => void
-  onDeleteBranch: (name: string) => void
+  current: string | null;
+  branches: ReadonlyArray<BranchInfo>;
+  remoteBranches: ReadonlyArray<RemoteBranchInfo>;
+  busy: boolean;
+  onCheckout: (ref: string) => void;
+  onCheckoutAndUpdate: (ref: string) => void;
+  onCreateBranch: (name: string, startPoint: string | null) => void;
+  onCompare: (base: string, head: string) => void;
+  onMerge: (branch: string) => void;
+  onRebase: (onto: string) => void;
+  onFetch: () => void;
+  onPull: () => void;
+  onPush: () => void;
+  onRenameBranch: (from: string, to: string) => void;
+  onDeleteBranch: (name: string) => void;
   /** Which way the menu opens — "top" for a bar pinned to the bottom. */
-  side?: "top" | "bottom"
+  side?: "top" | "bottom";
 }
 
 /**
@@ -74,41 +74,41 @@ interface BranchSwitcherProps {
  */
 type BranchPrompt =
   | {
-      readonly kind: "create"
-      readonly startPoint: string | null
-      readonly label: string
+      readonly kind: "create";
+      readonly startPoint: string | null;
+      readonly label: string;
     }
   | { readonly kind: "rename"; readonly from: string }
-  | { readonly kind: "delete"; readonly name: string }
+  | { readonly kind: "delete"; readonly name: string };
 
 /** A branch the action submenu operates on, normalised across local/remote. */
 interface BranchTarget {
   /** Full display name, e.g. "task/BMB-207" or "origin/feature". */
-  readonly display: string
+  readonly display: string;
   /** The ref to check out — a local name, or a remote's short (tracking) name. */
-  readonly ref: string
-  readonly isCurrent: boolean
-  readonly isRemote: boolean
+  readonly ref: string;
+  readonly isCurrent: boolean;
+  readonly isRemote: boolean;
 }
 
 /** Submenu holding the repo-wide remote operations, not the branch-scoped ones. */
-const REPO_ACTIONS_LABEL = "Git"
+const REPO_ACTIONS_LABEL = "Git";
 
 /** Branch names make these labels long; the menu item tooltips the clipped ones. */
 const ActionLabel = ({ children }: { children: React.ReactNode }) => (
   <span className="min-w-0 flex-1 truncate">{children}</span>
-)
+);
 
 /** Split "task/BMB-1" → ["task", "BMB-1"]; "main" → [null, "main"]. */
 const splitFolder = (name: string): [string | null, string] => {
-  const slash = name.indexOf("/")
-  if (slash < 0) return [null, name]
-  return [name.slice(0, slash), name.slice(slash + 1)]
-}
+  const slash = name.indexOf("/");
+  if (slash < 0) return [null, name];
+  return [name.slice(0, slash), name.slice(slash + 1)];
+};
 
 interface FolderGroup<T> {
-  readonly folder: string | null
-  readonly items: ReadonlyArray<T>
+  readonly folder: string | null;
+  readonly items: ReadonlyArray<T>;
 }
 
 /** Group rows by their first path segment, preserving order. */
@@ -116,56 +116,56 @@ const groupByFolder = <T,>(
   rows: ReadonlyArray<T>,
   nameOf: (row: T) => string
 ): ReadonlyArray<FolderGroup<T>> => {
-  const groups: Array<{ folder: string | null; items: Array<T> }> = []
-  const index = new Map<string | null, number>()
+  const groups: Array<{ folder: string | null; items: Array<T> }> = [];
+  const index = new Map<string | null, number>();
   for (const row of rows) {
-    const [folder] = splitFolder(nameOf(row))
-    let at = index.get(folder)
+    const [folder] = splitFolder(nameOf(row));
+    let at = index.get(folder);
     if (at === undefined) {
-      at = groups.length
-      index.set(folder, at)
-      groups.push({ folder, items: [] })
+      at = groups.length;
+      index.set(folder, at);
+      groups.push({ folder, items: [] });
     }
-    groups[at].items.push(row)
+    groups[at].items.push(row);
   }
-  return groups
-}
+  return groups;
+};
 
 export function BranchSwitcher(props: BranchSwitcherProps) {
-  const { current, branches, remoteBranches, busy } = props
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState("")
+  const { current, branches, remoteBranches, busy } = props;
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   // Recent + Local open by default, Remote collapsed — like JetBrains.
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
     recent: false,
     local: false,
     remote: true,
-  })
-  const [prompt, setPrompt] = useState<BranchPrompt | null>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
+  });
+  const [prompt, setPrompt] = useState<BranchPrompt | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // base-ui highlights the first item on open; pull focus back to the filter.
   useEffect(() => {
-    if (!open) return
-    const id = requestAnimationFrame(() => searchRef.current?.focus())
-    return () => cancelAnimationFrame(id)
-  }, [open])
+    if (!open) return;
+    const id = requestAnimationFrame(() => searchRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [open]);
 
-  const q = query.trim().toLowerCase()
+  const q = query.trim().toLowerCase();
   const matches = (text: string) =>
-    q.length === 0 || text.toLowerCase().includes(q)
+    q.length === 0 || text.toLowerCase().includes(q);
   // While searching, force every section open so hits are never hidden.
-  const isCollapsed = (id: string) => q.length === 0 && collapsed[id] === true
+  const isCollapsed = (id: string) => q.length === 0 && collapsed[id] === true;
   const toggleSection = (id: string) =>
-    setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }))
+    setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
 
-  const currentName = current ?? branches.find((b) => b.isCurrent)?.name ?? "—"
+  const currentName = current ?? branches.find((b) => b.isCurrent)?.name ?? "—";
 
   const recent = useMemo(
     () => branches.filter((b) => matches(b.name)).slice(0, 5),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [branches, q]
-  )
+  );
   const localGroups = useMemo(
     () =>
       groupByFolder(
@@ -174,7 +174,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [branches, q]
-  )
+  );
   const remoteGroups = useMemo(
     () =>
       groupByFolder(
@@ -183,19 +183,19 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
       ),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [remoteBranches, q]
-  )
-  const localCount = localGroups.reduce((n, g) => n + g.items.length, 0)
-  const remoteCount = remoteGroups.reduce((n, g) => n + g.items.length, 0)
+  );
+  const localCount = localGroups.reduce((n, g) => n + g.items.length, 0);
+  const remoteCount = remoteGroups.reduce((n, g) => n + g.items.length, 0);
 
-  const showNew = matches("New Branch")
+  const showNew = matches("New Branch");
   const repoActions = [
     { label: "Fetch", run: props.onFetch, icon: IconCloudDownload },
     { label: "Pull", run: props.onPull, icon: IconArrowDown },
     { label: "Push", run: props.onPush, icon: IconArrowUp },
-  ].filter((a) => matches(REPO_ACTIONS_LABEL) || matches(a.label))
+  ].filter((a) => matches(REPO_ACTIONS_LABEL) || matches(a.label));
 
   const newBranch = (startPoint: string | null, label: string) =>
-    setPrompt({ kind: "create", startPoint, label })
+    setPrompt({ kind: "create", startPoint, label });
 
   /** The JetBrains-style action list for one branch. */
   const renderActions = (t: BranchTarget) => (
@@ -256,16 +256,16 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         </>
       )}
     </>
-  )
+  );
 
   const LocalRow = ({
     branch,
     flat,
   }: {
-    branch: BranchInfo
-    flat?: boolean
+    branch: BranchInfo;
+    flat?: boolean;
   }) => {
-    const leaf = flat ? branch.name : splitFolder(branch.name)[1]
+    const leaf = flat ? branch.name : splitFolder(branch.name)[1];
     return (
       <DropdownMenuSub>
         <DropdownMenuSubTrigger
@@ -309,8 +309,8 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           })}
         </DropdownMenuSubContent>
       </DropdownMenuSub>
-    )
-  }
+    );
+  };
 
   const RemoteRow = ({ branch }: { branch: RemoteBranchInfo }) => (
     <DropdownMenuSub>
@@ -330,15 +330,15 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         })}
       </DropdownMenuSubContent>
     </DropdownMenuSub>
-  )
+  );
 
   return (
     <>
       <DropdownMenu
         open={open}
         onOpenChange={(next) => {
-          setOpen(next)
-          if (!next) setQuery("")
+          setOpen(next);
+          if (!next) setQuery("");
         }}
       >
         <DropdownMenuTrigger
@@ -462,7 +462,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         onDeleteBranch={props.onDeleteBranch}
       />
     </>
-  )
+  );
 }
 
 /**
@@ -477,11 +477,11 @@ function BranchPromptDialog({
   onRenameBranch,
   onDeleteBranch,
 }: {
-  prompt: BranchPrompt | null
-  onClose: () => void
-  onCreateBranch: (name: string, startPoint: string | null) => void
-  onRenameBranch: (from: string, to: string) => void
-  onDeleteBranch: (name: string) => void
+  prompt: BranchPrompt | null;
+  onClose: () => void;
+  onCreateBranch: (name: string, startPoint: string | null) => void;
+  onRenameBranch: (from: string, to: string) => void;
+  onDeleteBranch: (name: string) => void;
 }) {
   return (
     <Dialog open={prompt !== null} onOpenChange={(next) => !next && onClose()}>
@@ -490,8 +490,8 @@ function BranchPromptDialog({
           <DeleteConfirm
             name={prompt.name}
             onConfirm={() => {
-              onDeleteBranch(prompt.name)
-              onClose()
+              onDeleteBranch(prompt.name);
+              onClose();
             }}
           />
         ) : prompt !== null ? (
@@ -500,19 +500,19 @@ function BranchPromptDialog({
             prompt={prompt}
             onSubmit={(value) => {
               if (prompt.kind === "create") {
-                onCreateBranch(value, prompt.startPoint)
-                onClose()
-                return
+                onCreateBranch(value, prompt.startPoint);
+                onClose();
+                return;
               }
               if (prompt.kind === "rename" && value !== prompt.from)
-                onRenameBranch(prompt.from, value)
-              onClose()
+                onRenameBranch(prompt.from, value);
+              onClose();
             }}
           />
         ) : null}
       </DialogContent>
     </Dialog>
-  )
+  );
 }
 
 /** Title/label/submit copy for each text-entry prompt. */
@@ -531,41 +531,41 @@ const PROMPT_COPY = (prompt: BranchPrompt) => {
             label: "Branch name",
             action: "Create",
             initial: "",
-          }
+          };
     case "rename":
       return {
         title: `Rename ‘${prompt.from}’`,
         label: "New name",
         action: "Rename",
         initial: prompt.from,
-      }
+      };
     default:
-      return { title: "", label: "", action: "", initial: "" }
+      return { title: "", label: "", action: "", initial: "" };
   }
-}
+};
 
 function BranchNameForm({
   prompt,
   onSubmit,
 }: {
-  prompt: BranchPrompt
-  onSubmit: (value: string) => void
+  prompt: BranchPrompt;
+  onSubmit: (value: string) => void;
 }) {
-  const copy = PROMPT_COPY(prompt)
-  const [value, setValue] = useState(copy.initial)
-  const trimmed = value.trim()
-  const inputRef = useRef<HTMLInputElement>(null)
+  const copy = PROMPT_COPY(prompt);
+  const [value, setValue] = useState(copy.initial);
+  const trimmed = value.trim();
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Select the existing text on open so rename can be typed over immediately.
   useEffect(() => {
-    inputRef.current?.select()
-  }, [])
+    inputRef.current?.select();
+  }, []);
 
   return (
     <form
       onSubmit={(e) => {
-        e.preventDefault()
-        if (trimmed) onSubmit(trimmed)
+        e.preventDefault();
+        if (trimmed) onSubmit(trimmed);
       }}
     >
       <DialogHeader>
@@ -589,15 +589,15 @@ function BranchNameForm({
         </Button>
       </DialogFooter>
     </form>
-  )
+  );
 }
 
 function DeleteConfirm({
   name,
   onConfirm,
 }: {
-  name: string
-  onConfirm: () => void
+  name: string;
+  onConfirm: () => void;
 }) {
   return (
     <>
@@ -614,7 +614,7 @@ function DeleteConfirm({
         </Button>
       </DialogFooter>
     </>
-  )
+  );
 }
 
 /**
@@ -623,7 +623,7 @@ function DeleteConfirm({
  * matches when the menu opens at a deeper elevation (inside a dialog, say).
  */
 function BranchSearchRow({ children }: { children: React.ReactNode }) {
-  const surface = useSurfaceBackground()
+  const surface = useSurfaceBackground();
   return (
     <div
       className={cn(
@@ -633,7 +633,7 @@ function BranchSearchRow({ children }: { children: React.ReactNode }) {
     >
       {children}
     </div>
-  )
+  );
 }
 
 /** A collapsible section header; hidden when it has no rows. */
@@ -644,13 +644,13 @@ function Section({
   onToggle,
   children,
 }: {
-  title: string
-  count: number
-  collapsed: boolean
-  onToggle: () => void
-  children: React.ReactNode
+  title: string;
+  count: number;
+  collapsed: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
 }) {
-  if (count === 0) return null
+  if (count === 0) return null;
   return (
     <div>
       <DropdownMenuItem
@@ -669,7 +669,7 @@ function Section({
       </DropdownMenuItem>
       {!collapsed && <div>{children}</div>}
     </div>
-  )
+  );
 }
 
 /**
@@ -682,13 +682,13 @@ function Folder({
   forceOpen,
   children,
 }: {
-  folder: string | null
-  forceOpen: boolean
-  children: React.ReactNode
+  folder: string | null;
+  forceOpen: boolean;
+  children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false)
-  if (folder === null) return <>{children}</>
-  const expanded = open || forceOpen
+  const [open, setOpen] = useState(false);
+  if (folder === null) return <>{children}</>;
+  const expanded = open || forceOpen;
   return (
     <div>
       <DropdownMenuItem
@@ -707,5 +707,5 @@ function Folder({
       </DropdownMenuItem>
       {expanded && <div className="pl-3">{children}</div>}
     </div>
-  )
+  );
 }

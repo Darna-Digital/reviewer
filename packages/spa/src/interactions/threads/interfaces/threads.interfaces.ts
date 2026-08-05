@@ -5,24 +5,24 @@
  * a task-link edit) lives here behind injected API side effects so it stays
  * unit-testable without a server.
  */
-import type { AgentKind, Thread, ThreadEntry } from "@byconvo/core/threads"
+import type { AgentKind, Thread, ThreadEntry } from "@byconvo/core/threads";
 
 export interface ThreadsDependencies {
-  data: Record<string, never>
+  data: Record<string, never>;
   sideEffects: {
     readonly create: (input: {
-      title?: string
-      agent: AgentKind
-      branch?: string
-      taskKey?: string | null
-    }) => Promise<Thread>
-    readonly run: (id: string, command: string) => Promise<ThreadEntry>
+      title?: string;
+      agent: AgentKind;
+      branch?: string;
+      taskKey?: string | null;
+    }) => Promise<Thread>;
+    readonly run: (id: string, command: string) => Promise<ThreadEntry>;
     readonly rename: (
       id: string,
       input: { title: string; branch?: string; taskKey?: string | null }
-    ) => Promise<Thread>
-    readonly remove: (id: string) => Promise<void>
-  }
+    ) => Promise<Thread>;
+    readonly remove: (id: string) => Promise<void>;
+  };
 }
 
 export interface ThreadsFunctions {
@@ -33,22 +33,22 @@ export interface ThreadsFunctions {
     title: string,
     taskKey: string | null,
     branch: string
-  ) => Promise<Thread>
+  ) => Promise<Thread>;
   /** Run a command; returns null (no-op) when the command is blank. */
-  readonly run: (id: string, command: string) => Promise<ThreadEntry | null>
+  readonly run: (id: string, command: string) => Promise<ThreadEntry | null>;
   /** Rename a thread, leaving its task link untouched. */
-  readonly rename: (id: string, title: string) => Promise<Thread>
+  readonly rename: (id: string, title: string) => Promise<Thread>;
   /** Link (or, with null, unlink) a task without changing the title. */
   readonly linkTask: (
     id: string,
     currentTitle: string,
     taskKey: string | null
-  ) => Promise<Thread>
+  ) => Promise<Thread>;
   /** Move a thread to another branch group without changing the title. */
   readonly setBranch: (
     id: string,
     currentTitle: string,
     branch: string
-  ) => Promise<Thread>
-  readonly remove: (id: string) => Promise<void>
+  ) => Promise<Thread>;
+  readonly remove: (id: string) => Promise<void>;
 }

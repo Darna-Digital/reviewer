@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react"
-import userEvent from "@testing-library/user-event"
-import { afterEach, describe, expect, it } from "vitest"
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   DropdownMenu,
@@ -11,23 +11,23 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { TooltipProvider } from "@/components/ui/tooltip"
+} from "@/components/ui/dropdown-menu";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
-afterEach(cleanup)
+afterEach(cleanup);
 
-const LONG = "task/BMB-207-a-branch-name-far-wider-than-the-menu"
+const LONG = "task/BMB-207-a-branch-name-far-wider-than-the-menu";
 
 /** Long enough to clear the submenu's hover delay and the tooltip's wait behind it. */
-const settle = () => new Promise((resolve) => setTimeout(resolve, 300))
+const settle = () => new Promise((resolve) => setTimeout(resolve, 300));
 
 /** jsdom does no layout, so the label's overflow is declared rather than measured. */
 const clipLabel = () => {
-  const label = document.querySelector(".label")
-  if (label === null) throw new Error("no label rendered")
-  Object.defineProperty(label, "scrollWidth", { value: 400 })
-  Object.defineProperty(label, "clientWidth", { value: 160 })
-}
+  const label = document.querySelector(".label");
+  if (label === null) throw new Error("no label rendered");
+  Object.defineProperty(label, "scrollWidth", { value: 400 });
+  Object.defineProperty(label, "clientWidth", { value: 160 });
+};
 
 const openMenu = (label: string) =>
   render(
@@ -41,7 +41,7 @@ const openMenu = (label: string) =>
         </DropdownMenuContent>
       </DropdownMenu>
     </TooltipProvider>
-  )
+  );
 
 const openMenuWithSubmenu = (label: string, submenuOpen: boolean) =>
   render(
@@ -60,65 +60,65 @@ const openMenuWithSubmenu = (label: string, submenuOpen: boolean) =>
         </DropdownMenuContent>
       </DropdownMenu>
     </TooltipProvider>
-  )
+  );
 
-const tooltip = () => document.querySelector('[data-slot="tooltip-content"]')
+const tooltip = () => document.querySelector('[data-slot="tooltip-content"]');
 
 describe("dropdown item truncation", () => {
   it("keeps the item a menu item, not a bare tooltip trigger", () => {
-    openMenu(LONG)
+    openMenu(LONG);
 
-    const item = document.querySelector('[data-slot="dropdown-menu-item"]')
-    expect(item).not.toBeNull()
-    expect(item?.getAttribute("role")).toBe("menuitem")
-  })
+    const item = document.querySelector('[data-slot="dropdown-menu-item"]');
+    expect(item).not.toBeNull();
+    expect(item?.getAttribute("role")).toBe("menuitem");
+  });
 
   it("reveals the full label on hover once it is clipped", async () => {
-    openMenu(LONG)
-    clipLabel()
+    openMenu(LONG);
+    clipLabel();
 
-    await userEvent.hover(screen.getByRole("menuitem"))
+    await userEvent.hover(screen.getByRole("menuitem"));
 
     await waitFor(() =>
       expect(
         document.querySelector('[data-slot="tooltip-content"]')?.textContent
       ).toBe(LONG)
-    )
-  })
+    );
+  });
 
   it("stays quiet on a label that fits", async () => {
-    openMenu("main")
+    openMenu("main");
 
-    await userEvent.hover(screen.getByRole("menuitem"))
+    await userEvent.hover(screen.getByRole("menuitem"));
 
-    await settle()
-    expect(tooltip()).toBeNull()
-  })
+    await settle();
+    expect(tooltip()).toBeNull();
+  });
 
   it("refuses to cover a submenu that is already open", async () => {
-    openMenuWithSubmenu(LONG, true)
-    clipLabel()
+    openMenuWithSubmenu(LONG, true);
+    clipLabel();
 
-    await userEvent.hover(screen.getByRole("menuitem", { expanded: true }))
+    await userEvent.hover(screen.getByRole("menuitem", { expanded: true }));
 
-    await settle()
-    expect(tooltip()).toBeNull()
-  })
+    await settle();
+    expect(tooltip()).toBeNull();
+  });
 
   it("still explains a clipped row whose submenu is shut", async () => {
-    openMenuWithSubmenu(LONG, false)
-    clipLabel()
+    openMenuWithSubmenu(LONG, false);
+    clipLabel();
 
-    await userEvent.hover(screen.getByRole("menuitem"))
+    await userEvent.hover(screen.getByRole("menuitem"));
 
-    await waitFor(() => expect(tooltip()?.textContent).toBe(LONG))
-  })
+    await waitFor(() => expect(tooltip()?.textContent).toBe(LONG));
+  });
 
   it("steps aside when the submenu opens underneath it", async () => {
-    const { rerender } = openMenuWithSubmenu(LONG, false)
-    clipLabel()
-    await userEvent.hover(screen.getByRole("menuitem"))
-    await waitFor(() => expect(tooltip()).not.toBeNull())
+    const { rerender } = openMenuWithSubmenu(LONG, false);
+    clipLabel();
+    await userEvent.hover(screen.getByRole("menuitem"));
+    await waitFor(() => expect(tooltip()).not.toBeNull());
 
     rerender(
       <TooltipProvider>
@@ -136,8 +136,8 @@ describe("dropdown item truncation", () => {
           </DropdownMenuContent>
         </DropdownMenu>
       </TooltipProvider>
-    )
+    );
 
-    await waitFor(() => expect(tooltip()).toBeNull())
-  })
-})
+    await waitFor(() => expect(tooltip()).toBeNull());
+  });
+});

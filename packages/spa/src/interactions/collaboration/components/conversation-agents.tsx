@@ -11,20 +11,20 @@ import {
   IconDeviceLaptop,
   IconPlus,
   IconX,
-} from "@tabler/icons-react"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+} from "@tabler/icons-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card"
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card";
 import {
   AgentMark,
   AgentStateDot,
-} from "@/interactions/collaboration/components/agent-mark"
+} from "@/interactions/collaboration/components/agent-mark";
 import {
   addAgentToConversation,
   agentName,
@@ -33,16 +33,16 @@ import {
   removeAgentFromConversation,
   VIEWER,
   type MockAgent,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import { cn } from "@/lib/utils"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import { cn } from "@/lib/utils";
 
 interface AgentGroup {
-  title: string
-  hint: string
-  icon: typeof IconCloud
-  agents: ReadonlyArray<MockAgent>
+  title: string;
+  hint: string;
+  icon: typeof IconCloud;
+  agents: ReadonlyArray<MockAgent>;
   /** Cleared for a teammate's machine — theirs to invite, not yours. */
-  yours: boolean
+  yours: boolean;
 }
 
 const groupsFor = (
@@ -50,7 +50,7 @@ const groupsFor = (
 ): ReadonlyArray<AgentGroup> => {
   const absent = allAgents().filter(
     (agent) => !present.some((p) => p.id === agent.id)
-  )
+  );
   return [
     {
       title: "On your machine",
@@ -77,15 +77,15 @@ const groupsFor = (
       ),
       yours: false,
     },
-  ].filter((group) => group.agents.length > 0)
-}
+  ].filter((group) => group.agents.length > 0);
+};
 
 function AgentChip({
   agent,
   onRemove,
 }: {
-  agent: MockAgent
-  onRemove?: () => void
+  agent: MockAgent;
+  onRemove?: () => void;
 }) {
   return (
     <span
@@ -118,18 +118,18 @@ function AgentChip({
         </button>
       )}
     </span>
-  )
+  );
 }
 
 function AddAgentPopover({
   present,
   onAdd,
 }: {
-  present: ReadonlyArray<MockAgent>
-  onAdd: (agentId: string) => void
+  present: ReadonlyArray<MockAgent>;
+  onAdd: (agentId: string) => void;
 }) {
-  const [open, setOpen] = useState(false)
-  const groups = groupsFor(present)
+  const [open, setOpen] = useState(false);
+  const groups = groupsFor(present);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -165,8 +165,8 @@ function AddAgentPopover({
                     type="button"
                     disabled={!group.yours}
                     onClick={() => {
-                      onAdd(agent.id)
-                      setOpen(false)
+                      onAdd(agent.id);
+                      setOpen(false);
                     }}
                     className={cn(
                       "flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left outline-none",
@@ -202,20 +202,20 @@ function AddAgentPopover({
         </ScrollArea>
       </PopoverContent>
     </Popover>
-  )
+  );
 }
 
 export function ConversationAgents({
   conversationId,
   canEdit,
 }: {
-  conversationId: string
+  conversationId: string;
   /** Reading a chat you have not joined shows the line-up but cannot change it. */
-  canEdit: boolean
+  canEdit: boolean;
 }) {
-  const present = agentsIn(conversationId)
+  const present = agentsIn(conversationId);
 
-  if (!canEdit && present.length === 0) return null
+  if (!canEdit && present.length === 0) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-1.5 pb-2">
@@ -237,5 +237,5 @@ export function ConversationAgents({
         />
       )}
     </div>
-  )
+  );
 }

@@ -1,12 +1,17 @@
-import * as Effect from "effect/Effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { Api } from "../../api.ts"
-import { GitProviderError, GitProvider } from "@byconvo/core/ports/git-provider"
+import * as Effect from "effect/Effect";
+import { HttpApiBuilder } from "effect/unstable/httpapi";
+import { Api } from "../../api.ts";
+import {
+  GitProviderError,
+  GitProvider,
+} from "@byconvo/core/ports/git-provider";
 
 const pullNumber = (raw: string): Effect.Effect<number, GitProviderError> =>
   Number.isInteger(Number(raw))
     ? Effect.succeed(Number(raw))
-    : Effect.fail(new GitProviderError({ reason: `invalid PR number: ${raw}` }))
+    : Effect.fail(
+        new GitProviderError({ reason: `invalid PR number: ${raw}` })
+      );
 
 export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
   handlers
@@ -55,4 +60,4 @@ export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
         )
       )
     )
-)
+);

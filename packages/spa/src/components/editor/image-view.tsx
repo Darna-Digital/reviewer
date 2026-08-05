@@ -2,12 +2,12 @@
  * ImageView — an image file rendered rather than parsed. SVGs get the WebStorm
  * treatment: source on the left, the rendered image on the right.
  */
-import { useState } from "react"
-import { CodeView } from "@/components/editor/code-view"
-import { ResizeHandle } from "@/components/layout/resize-handle"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
-import { useFileBytes } from "@/lib/queries"
-import { setUiPrefs, useUiPrefs, type Theme } from "@/lib/ui-prefs"
+import { useState } from "react";
+import { CodeView } from "@/components/editor/code-view";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { useFileBytes } from "@/lib/queries";
+import { setUiPrefs, useUiPrefs, type Theme } from "@/lib/ui-prefs";
 
 const IMAGE_EXTENSIONS = [
   "png",
@@ -19,31 +19,31 @@ const IMAGE_EXTENSIONS = [
   "bmp",
   "ico",
   "svg",
-]
+];
 
 const extensionOf = (path: string) =>
-  path.split(".").at(-1)?.toLowerCase() ?? ""
+  path.split(".").at(-1)?.toLowerCase() ?? "";
 
 export const isImagePath = (path: string) =>
-  IMAGE_EXTENSIONS.includes(extensionOf(path))
+  IMAGE_EXTENSIONS.includes(extensionOf(path));
 
-export const isSvgPath = (path: string) => extensionOf(path) === "svg"
+export const isSvgPath = (path: string) => extensionOf(path) === "svg";
 
 function Preview({ path }: { path: string }) {
-  const bytes = useFileBytes(path)
-  const [natural, setNatural] = useState<string | null>(null)
+  const bytes = useFileBytes(path);
+  const [natural, setNatural] = useState<string | null>(null);
 
   if (bytes.isPending) {
     return (
       <div className="p-8">
         <LoadingCursor label={`Loading ${path}…`} />
       </div>
-    )
+    );
   }
   if (bytes.error || bytes.data === undefined) {
     return (
       <div className="p-8 text-sm text-destructive">Could not open {path}</div>
-    )
+    );
   }
 
   return (
@@ -74,14 +74,14 @@ function Preview({ path }: { path: string }) {
         {natural !== null && <span>{natural}</span>}
       </div>
     </div>
-  )
+  );
 }
 
 export function ImageView({ path, theme }: { path: string; theme: Theme }) {
-  const prefs = useUiPrefs()
-  const [sourceWidth, setSourceWidth] = useState(prefs.svgSourceWidth)
+  const prefs = useUiPrefs();
+  const [sourceWidth, setSourceWidth] = useState(prefs.svgSourceWidth);
 
-  if (!isSvgPath(path)) return <Preview path={path} />
+  if (!isSvgPath(path)) return <Preview path={path} />;
 
   return (
     <div className="flex h-full min-h-0">
@@ -106,5 +106,5 @@ export function ImageView({ path, theme }: { path: string; theme: Theme }) {
         <Preview path={path} />
       </div>
     </div>
-  )
+  );
 }

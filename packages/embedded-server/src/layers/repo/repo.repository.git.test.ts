@@ -1,12 +1,12 @@
-import { describe, expect, it } from "vitest"
-import { splitDiffIntoHunks } from "./repo.repository.git.ts"
+import { describe, expect, it } from "vitest";
+import { splitDiffIntoHunks } from "./repo.repository.git.ts";
 
 const HEADER = [
   "diff --git a/src/app.ts b/src/app.ts",
   "index 1111111..2222222 100644",
   "--- a/src/app.ts",
   "+++ b/src/app.ts",
-].join("\n")
+].join("\n");
 
 describe("splitDiffIntoHunks", () => {
   it("splits a two-hunk file diff into its header and hunks", () => {
@@ -19,19 +19,19 @@ describe("splitDiffIntoHunks", () => {
       "@@ -20,2 +20,3 @@ fn foo()",
       " keep",
       "+added",
-    ].join("\n")
+    ].join("\n");
 
-    const { header, hunks } = splitDiffIntoHunks(patch)
+    const { header, hunks } = splitDiffIntoHunks(patch);
 
-    expect(header).toBe(HEADER)
-    expect(hunks).toHaveLength(2)
+    expect(header).toBe(HEADER);
+    expect(hunks).toHaveLength(2);
     expect(hunks[0]).toBe(
       ["@@ -1,3 +1,3 @@", " context", "-old one", "+new one"].join("\n")
-    )
+    );
     expect(hunks[1]).toBe(
       ["@@ -20,2 +20,3 @@ fn foo()", " keep", "+added"].join("\n")
-    )
-  })
+    );
+  });
 
   it("keeps body lines that merely contain @@ with their hunk", () => {
     const patch = [
@@ -39,13 +39,13 @@ describe("splitDiffIntoHunks", () => {
       "@@ -1,2 +1,2 @@",
       " untouched",
       "+const banner = '@@ not a header'",
-    ].join("\n")
+    ].join("\n");
 
-    const { hunks } = splitDiffIntoHunks(patch)
+    const { hunks } = splitDiffIntoHunks(patch);
 
-    expect(hunks).toHaveLength(1)
-    expect(hunks[0]).toContain("@@ not a header")
-  })
+    expect(hunks).toHaveLength(1);
+    expect(hunks[0]).toContain("@@ not a header");
+  });
 
   it("drops the trailing blank line real `git diff` output leaves on the last hunk", () => {
     // `git diff` ends with a newline, so splitting on "\n" yields an empty final
@@ -53,26 +53,26 @@ describe("splitDiffIntoHunks", () => {
     // one-hunk patch gains a blank line and `git apply` rejects it.
     const patch =
       [HEADER, "@@ -34,3 +34,3 @@", " a", "-old", "+new", " b"].join("\n") +
-      "\n"
+      "\n";
 
-    const { hunks } = splitDiffIntoHunks(patch)
+    const { hunks } = splitDiffIntoHunks(patch);
 
-    expect(hunks).toHaveLength(1)
+    expect(hunks).toHaveLength(1);
     expect(hunks[0]).toBe(
       ["@@ -34,3 +34,3 @@", " a", "-old", "+new", " b"].join("\n")
-    )
-    expect(hunks[0].endsWith("\n")).toBe(false)
-  })
+    );
+    expect(hunks[0].endsWith("\n")).toBe(false);
+  });
 
   it("returns no hunks for a diff without any (e.g. binary files)", () => {
     const patch = [
       "diff --git a/logo.png b/logo.png",
       "Binary files a/logo.png and b/logo.png differ",
-    ].join("\n")
+    ].join("\n");
 
-    const { header, hunks } = splitDiffIntoHunks(patch)
+    const { header, hunks } = splitDiffIntoHunks(patch);
 
-    expect(header).toBe(patch)
-    expect(hunks).toEqual([])
-  })
-})
+    expect(header).toBe(patch);
+    expect(hunks).toEqual([]);
+  });
+});

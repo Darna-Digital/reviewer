@@ -5,12 +5,12 @@ import {
   IconFileCode,
   IconSearch,
   IconX,
-} from "@tabler/icons-react"
-import { useEffect, useMemo, useState } from "react"
-import { useNavigate } from "@tanstack/react-router"
-import { toast } from "sonner"
-import { ResizeHandle } from "@/components/layout/resize-handle"
-import { Button } from "@/components/ui/button"
+} from "@tabler/icons-react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,9 +20,9 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   applyFilters,
   buildAssignmentPrompt,
@@ -34,34 +34,34 @@ import {
   noFilters,
   targetLabel,
   type ListedComment,
-} from "@/interactions/comments/functions/comment-list.functions"
-import { AuthorAvatar } from "@/interactions/comments/components/author-avatar"
-import { CommentComposer } from "@/interactions/comments/components/comment-thread"
+} from "@/interactions/comments/functions/comment-list.functions";
+import { AuthorAvatar } from "@/interactions/comments/components/author-avatar";
+import { CommentComposer } from "@/interactions/comments/components/comment-thread";
 import {
   ReviewAssignBar,
   type AssignTarget,
-} from "@/components/review-assign-bar"
-import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
-import { buildChatAssignmentSettings } from "@/interactions/chats/functions/chat-assignment.functions"
+} from "@/components/review-assign-bar";
+import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
+import { buildChatAssignmentSettings } from "@/interactions/chats/functions/chat-assignment.functions";
 import {
   DATE_FILTERS,
   dateFilterLabel,
   type DateFilter,
-} from "@/lib/date-filter"
-import { useChatModels, useChats, useComments, useRepo } from "@/lib/queries"
-import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter"
-import { timeAgo } from "@/lib/relative-time"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+} from "@/lib/date-filter";
+import { useChatModels, useChats, useComments, useRepo } from "@/lib/queries";
+import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
+import { timeAgo } from "@/lib/relative-time";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 function FilterMenu({
   dateValue,
   onDateChange,
   active,
 }: {
-  dateValue: DateFilter
-  onDateChange: (value: DateFilter) => void
-  active: boolean
+  dateValue: DateFilter;
+  onDateChange: (value: DateFilter) => void;
+  active: boolean;
 }) {
   return (
     <DropdownMenu>
@@ -104,12 +104,12 @@ function FilterMenu({
         </DropdownMenuSub>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 /** A file's heading in the list, and the count of what sits under it. */
 function FileHeading({ filePath, count }: { filePath: string; count: number }) {
-  const { name, dir } = fileLabel(filePath)
+  const { name, dir } = fileLabel(filePath);
   return (
     <div className="sticky top-0 z-10 flex items-center gap-1.5 border-b bg-background/85 px-3 py-1.5 backdrop-blur-sm">
       <IconFileCode className="size-3.5 shrink-0 text-muted-foreground" />
@@ -123,7 +123,7 @@ function FileHeading({ filePath, count }: { filePath: string; count: number }) {
         {count}
       </span>
     </div>
-  )
+  );
 }
 
 function CommentRow({
@@ -133,11 +133,11 @@ function CommentRow({
   onOpen,
   onResolve,
 }: {
-  comment: ListedComment
-  selected: boolean
-  onSelect: () => void
-  onOpen: () => void
-  onResolve: () => void
+  comment: ListedComment;
+  selected: boolean;
+  onSelect: () => void;
+  onOpen: () => void;
+  onResolve: () => void;
 }) {
   return (
     <div className="group/row relative">
@@ -184,22 +184,22 @@ function CommentRow({
         <IconX className="size-3.5" />
       </button>
     </div>
-  )
+  );
 }
 
 function Field({
   label,
   children,
 }: {
-  label: string
-  children: React.ReactNode
+  label: string;
+  children: React.ReactNode;
 }) {
   return (
     <div className="flex gap-3 text-xs">
       <dt className="w-16 shrink-0 text-muted-foreground">{label}</dt>
       <dd className="min-w-0 flex-1 break-words">{children}</dd>
     </div>
-  )
+  );
 }
 
 function CommentDetail({
@@ -208,18 +208,18 @@ function CommentDetail({
   onResolve,
   onSave,
 }: {
-  comment: ListedComment
-  onOpen: () => void
-  onResolve: () => void
-  onSave: (body: string) => Promise<void>
+  comment: ListedComment;
+  onOpen: () => void;
+  onResolve: () => void;
+  onSave: (body: string) => Promise<void>;
 }) {
-  const { code } = comment
-  const { name, dir } = fileLabel(code.filePath)
-  const [editing, setEditing] = useState(false)
+  const { code } = comment;
+  const { name, dir } = fileLabel(code.filePath);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
-    setEditing(false)
-  }, [comment.id])
+    setEditing(false);
+  }, [comment.id]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -271,8 +271,8 @@ function CommentDetail({
               placeholder="Edit comment…"
               onCancel={() => setEditing(false)}
               onSubmit={async (body) => {
-                await onSave(body)
-                setEditing(false)
+                await onSave(body);
+                setEditing(false);
               }}
             />
           ) : (
@@ -291,48 +291,49 @@ function CommentDetail({
         </div>
       </ScrollArea>
     </div>
-  )
+  );
 }
 
 export function CommentsPage() {
-  const codeComments = useComments()
-  const commentActions = useCommentsActions()
-  const chatActions = useChatsActions()
-  const chatModels = useChatModels()
-  const chats = useChats()
-  const repo = useRepo()
-  const navigate = useNavigate()
+  const codeComments = useComments();
+  const commentActions = useCommentsActions();
+  const chatActions = useChatsActions();
+  const chatModels = useChatModels();
+  const chats = useChats();
+  const repo = useRepo();
+  const navigate = useNavigate();
 
-  const prefs = useUiPrefs()
-  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth)
-  const [date, setDate] = useState<DateFilter>(noFilters.date)
-  const [search, setSearch] = useState(noFilters.search)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [assignBarDismissed, setAssignBarDismissed] = useState(false)
+  const prefs = useUiPrefs();
+  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth);
+  const [date, setDate] = useState<DateFilter>(noFilters.date);
+  const [search, setSearch] = useState(noFilters.search);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [assignBarDismissed, setAssignBarDismissed] = useState(false);
 
   const all = useMemo(
     () => listComments(codeComments.data ?? []),
     [codeComments.data]
-  )
+  );
 
-  const filters = useMemo(() => ({ date, search }), [date, search])
-  const filtered = useMemo(() => applyFilters(all, filters), [all, filters])
-  const groups = useMemo(() => groupByFile(filtered), [filtered])
-  const filtersOn = areFiltersActive(filters)
+  const filters = useMemo(() => ({ date, search }), [date, search]);
+  const filtered = useMemo(() => applyFilters(all, filters), [all, filters]);
+  const groups = useMemo(() => groupByFile(filtered), [filtered]);
+  const filtersOn = areFiltersActive(filters);
 
-  const selected = filtered.find((c) => c.id === selectedId) ?? null
+  const selected = filtered.find((c) => c.id === selectedId) ?? null;
 
   useEffect(() => {
-    if (all.length > 0) setAssignBarDismissed(false)
-  }, [all.length])
+    if (all.length > 0) setAssignBarDismissed(false);
+  }, [all.length]);
 
-  const remove = (comment: ListedComment) => commentActions.remove(comment.code)
+  const remove = (comment: ListedComment) =>
+    commentActions.remove(comment.code);
 
   const assign = async (dest: AssignTarget) => {
-    if (filtered.length === 0) return
-    const assigned = filtered
-    const count = assigned.length
-    const prompt = buildAssignmentPrompt(assigned)
+    if (filtered.length === 0) return;
+    const assigned = filtered;
+    const count = assigned.length;
+    const prompt = buildAssignmentPrompt(assigned);
     try {
       const chatId =
         dest.kind === "new"
@@ -346,33 +347,33 @@ export function CommentsPage() {
             )?.id ?? null)
           : (await chatActions.send(dest.chatId, prompt)) !== null
             ? dest.chatId
-            : null
-      if (chatId === null) return
+            : null;
+      if (chatId === null) return;
 
       // Handing them off is what resolves them — the text now lives in the chat.
-      await Promise.all(assigned.map(remove))
-      setSelectedId(null)
-      toast.success(`Assigned ${count} comment${count === 1 ? "" : "s"}`)
-      void navigate({ to: "/modes/code/chats/$chatId", params: { chatId } })
+      await Promise.all(assigned.map(remove));
+      setSelectedId(null);
+      toast.success(`Assigned ${count} comment${count === 1 ? "" : "s"}`);
+      void navigate({ to: "/modes/code/chats/$chatId", params: { chatId } });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not assign comments"
-      )
+      );
     }
-  }
+  };
 
   const resolve = async (comment: ListedComment) => {
     try {
-      await remove(comment)
-      if (comment.id === selectedId) setSelectedId(null)
+      await remove(comment);
+      if (comment.id === selectedId) setSelectedId(null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "resolve failed")
+      toast.error(error instanceof Error ? error.message : "resolve failed");
     }
-  }
+  };
 
   const save = async (comment: ListedComment, body: string) => {
-    await commentActions.update(comment.code, body)
-  }
+    await commentActions.update(comment.code, body);
+  };
 
   /**
    * Go to the code the comment was left on. A comment on the working tree opens
@@ -380,39 +381,39 @@ export function CommentsPage() {
    * a diff opens that diff, scrolled to the file.
    */
   const openInCode = (comment: ListedComment) => {
-    const { filePath, lineNumber, target } = comment.code
+    const { filePath, lineNumber, target } = comment.code;
     if (target === "worktree") {
       void navigate({
         to: "/modes/code/commit",
         search: { path: filePath, file: filePath, line: lineNumber },
-      })
-      return
+      });
+      return;
     }
     if (target.startsWith("commit-")) {
       void navigate({
         to: "/modes/code/browse/commit/$sha",
         params: { sha: target.slice("commit-".length) },
         search: { path: filePath },
-      })
-      return
+      });
+      return;
     }
     if (target.includes("...")) {
-      const [base, head] = target.split("...")
-      if (base === undefined || head === undefined) return
+      const [base, head] = target.split("...");
+      if (base === undefined || head === undefined) return;
       void navigate({
         to: "/modes/code/browse/range",
         search: { path: filePath, base, head },
-      })
-      return
+      });
+      return;
     }
     if (target.startsWith("pr-")) {
       void navigate({
         to: "/modes/code/review/$pull",
         params: { pull: target.slice("pr-".length) },
         search: { path: filePath },
-      })
+      });
     }
-  }
+  };
 
   return (
     <div className="flex h-full min-h-0">
@@ -462,8 +463,8 @@ export function CommentsPage() {
                 variant="ghost"
                 className="h-7 text-xs"
                 onClick={() => {
-                  setDate(noFilters.date)
-                  setSearch(noFilters.search)
+                  setDate(noFilters.date);
+                  setSearch(noFilters.search);
                 }}
               >
                 Clear filters
@@ -514,12 +515,12 @@ export function CommentsPage() {
             onResolve={() => void resolve(selected)}
             onSave={async (body) => {
               try {
-                await save(selected, body)
+                await save(selected, body);
               } catch (error) {
                 toast.error(
                   error instanceof Error ? error.message : "save failed"
-                )
-                throw error
+                );
+                throw error;
               }
             }}
           />
@@ -534,5 +535,5 @@ export function CommentsPage() {
         />
       )}
     </div>
-  )
+  );
 }

@@ -1,30 +1,30 @@
-import { useQueryClient } from "@tanstack/react-query"
-import { useCallback, useMemo } from "react"
-import { toast } from "sonner"
-import { fetchClient } from "@/lib/api/client"
-import type { CommitAgent } from "@/lib/ui-prefs"
-import { createGitActionsFunctions } from "../functions/git-actions.functions"
+import { useQueryClient } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
+import { toast } from "sonner";
+import { fetchClient } from "@/lib/api/client";
+import type { CommitAgent } from "@/lib/ui-prefs";
+import { createGitActionsFunctions } from "../functions/git-actions.functions";
 import {
   errorText,
   type NoticeKind,
-} from "../interfaces/git-actions.interfaces"
+} from "../interfaces/git-actions.interfaces";
 
 const unwrap = async <T>(
   p: Promise<{ data?: T; error?: unknown }>
 ): Promise<T> => {
-  const { data, error } = await p
+  const { data, error } = await p;
   if (error) {
-    const e = error as { message?: string; reason?: string; stderr?: string }
-    const stderr = e.stderr?.trim()
+    const e = error as { message?: string; reason?: string; stderr?: string };
+    const stderr = e.stderr?.trim();
     throw new Error(
       e.message ??
         e.reason ??
         (stderr !== undefined && stderr.length > 0 ? stderr : undefined) ??
         "request failed"
-    )
+    );
   }
-  return data as T
-}
+  return data as T;
+};
 
 /**
  * All imperative git actions, wired to the typed API, sonner toasts and
@@ -32,16 +32,16 @@ const unwrap = async <T>(
  * (commit→push messaging, op notices) lives in the functions layer.
  */
 export function useGitActions() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const notify = useCallback(
     (kind: NoticeKind, text: string) =>
       kind === "ok" ? toast.success(text) : toast.error(text),
     []
-  )
+  );
   const refresh = useCallback(() => {
-    void queryClient.invalidateQueries()
-  }, [queryClient])
+    void queryClient.invalidateQueries();
+  }, [queryClient]);
 
   const fns = useMemo(
     () =>
@@ -60,12 +60,12 @@ export function useGitActions() {
         },
       }),
     [notify, refresh]
-  )
+  );
 
   const post =
     <T>(p: Promise<{ data?: T; error?: unknown }>) =>
     () =>
-      unwrap(p)
+      unwrap(p);
 
   return {
     commitChanges: fns.commitChanges,
@@ -85,11 +85,11 @@ export function useGitActions() {
           fetchClient.POST("/api/git-message/generate", {
             body: { paths: [...paths], agent },
           })
-        )
-        return message
+        );
+        return message;
       } catch (cause) {
-        notify("err", errorText(cause))
-        return null
+        notify("err", errorText(cause));
+        return null;
       }
     },
 
@@ -130,15 +130,15 @@ export function useGitActions() {
 
     checkoutAndUpdate: async (branch: string) => {
       try {
-        await unwrap(fetchClient.POST("/api/checkout", { body: { branch } }))
-        const { output } = await unwrap(fetchClient.POST("/api/pull", {}))
+        await unwrap(fetchClient.POST("/api/checkout", { body: { branch } }));
+        const { output } = await unwrap(fetchClient.POST("/api/pull", {}));
         notify(
           "ok",
           output.length > 0 ? output : `Checked out and updated ${branch}`
-        )
-        refresh()
+        );
+        refresh();
       } catch (cause) {
-        notify("err", errorText(cause))
+        notify("err", errorText(cause));
       }
     },
 
@@ -191,16 +191,18 @@ export function useGitActions() {
     /** Write the user-merged content, then stage it as resolved. */
     resolveConflictWithContent: async (path: string, contents: string) => {
       try {
-        await unwrap(fetchClient.PUT("/api/file", { body: { path, contents } }))
+        await unwrap(
+          fetchClient.PUT("/api/file", { body: { path, contents } })
+        );
         await unwrap(
           fetchClient.POST("/api/conflicts/resolve", {
             body: { path, resolution: "content" },
           })
-        )
-        notify("ok", `Resolved ${path}`)
-        refresh()
+        );
+        notify("ok", `Resolved ${path}`);
+        refresh();
       } catch (cause) {
-        notify("err", errorText(cause))
+        notify("err", errorText(cause));
       }
     },
 
@@ -210,5 +212,5 @@ export function useGitActions() {
       fns.runOp("Continued", post(fetchClient.POST("/api/merge/continue", {}))),
 
     refresh,
-  }
+  };
 }

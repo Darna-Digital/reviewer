@@ -6,38 +6,38 @@
  *
  * It stays mounted while collapsed so Services/Threads keep their PTYs.
  */
-import { useNavigate, useParams, useSearch } from "@tanstack/react-router"
-import { useState } from "react"
-import { BottomPanel } from "@/components/layout/bottom-panel"
-import { ResizeHandle } from "@/components/layout/resize-handle"
-import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
-import { emptyLogQuery, type LogQuery } from "@/lib/api/types"
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { useState } from "react";
+import { BottomPanel } from "@/components/layout/bottom-panel";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
+import { emptyLogQuery, type LogQuery } from "@/lib/api/types";
 import {
   useBranches,
   usePagedLog,
   useRemoteBranches,
   useRepo,
-} from "@/lib/queries"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+} from "@/lib/queries";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 export function GitBottomDock() {
-  const prefs = useUiPrefs()
-  const navigate = useNavigate()
-  const git = useGitActions()
-  const params = useParams({ strict: false })
-  const search = useSearch({ strict: false })
+  const prefs = useUiPrefs();
+  const navigate = useNavigate();
+  const git = useGitActions();
+  const params = useParams({ strict: false });
+  const search = useSearch({ strict: false });
 
-  const repo = useRepo()
-  const branches = useBranches()
-  const remoteBranches = useRemoteBranches()
+  const repo = useRepo();
+  const branches = useBranches();
+  const remoteBranches = useRemoteBranches();
 
-  const [logRef, setLogRef] = useState<string | null>(null)
-  const [logFilters, setLogFilters] = useState<LogQuery>(emptyLogQuery)
-  const [bottomHeight, setBottomHeight] = useState(prefs.bottomHeight)
+  const [logRef, setLogRef] = useState<string | null>(null);
+  const [logFilters, setLogFilters] = useState<LogQuery>(emptyLogQuery);
+  const [bottomHeight, setBottomHeight] = useState(prefs.bottomHeight);
 
-  const ref = logRef ?? repo.data?.currentBranch ?? null
-  const log = usePagedLog(ref, logFilters)
+  const ref = logRef ?? repo.data?.currentBranch ?? null;
+  const log = usePagedLog(ref, logFilters);
 
   return (
     <>
@@ -79,8 +79,8 @@ export function GitBottomDock() {
           onLogRefChange={setLogRef}
           onLogFiltersChange={setLogFilters}
           onBranchCheckout={(b) => {
-            void git.checkout(b)
-            void navigate({ to: "/modes/code/commit" })
+            void git.checkout(b);
+            void navigate({ to: "/modes/code/commit" });
           }}
           onSelectCommit={(c) =>
             void navigate({
@@ -94,5 +94,5 @@ export function GitBottomDock() {
         />
       </div>
     </>
-  )
+  );
 }

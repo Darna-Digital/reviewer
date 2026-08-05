@@ -4,16 +4,16 @@
  * its normal interactive mode inside that same shell, so it runs as a full TUI
  * with the developer's real PATH and environment.
  */
-import type { AgentKind } from "@byconvo/core/threads"
+import type { AgentKind } from "@byconvo/core/threads";
 
 export interface PtyProgram {
-  readonly file: string
-  readonly args: ReadonlyArray<string>
+  readonly file: string;
+  readonly args: ReadonlyArray<string>;
 }
 
 /** The user's interactive shell, used both for plain terminals and to host the
  * agent CLIs. */
-const userShell = (): string => process.env["SHELL"] ?? "bash"
+const userShell = (): string => process.env["SHELL"] ?? "bash";
 
 /**
  * Launch an agent CLI *through* the user's login + interactive shell rather than
@@ -28,7 +28,7 @@ const userShell = (): string => process.env["SHELL"] ?? "bash"
  * user input, so they need no shell-quoting.)
  */
 const agentInShell = (cli: string, extraArgs = ""): PtyProgram => {
-  const invocation = extraArgs.length > 0 ? `${cli} ${extraArgs}` : cli
+  const invocation = extraArgs.length > 0 ? `${cli} ${extraArgs}` : cli;
   return {
     file: userShell(),
     args: [
@@ -37,8 +37,8 @@ const agentInShell = (cli: string, extraArgs = ""): PtyProgram => {
       "-c",
       `command -v ${cli} >/dev/null 2>&1 && exec ${invocation} || { echo "could not start ${cli} — is it installed and on your PATH?"; exit 127; }`,
     ],
-  }
-}
+  };
+};
 
 /**
  * The interactive program a live PTY terminal launches for `agent`.
@@ -51,17 +51,17 @@ export const agentPtyProgram = (
 ): PtyProgram => {
   switch (agent) {
     case "terminal":
-      return { file: userShell(), args: ["-l", "-i"] }
+      return { file: userShell(), args: ["-l", "-i"] };
     case "claude":
-      return agentInShell("claude", sessionArgs)
+      return agentInShell("claude", sessionArgs);
     case "opencode":
-      return agentInShell("opencode", sessionArgs)
+      return agentInShell("opencode", sessionArgs);
     case "codex":
-      return agentInShell("codex", sessionArgs)
+      return agentInShell("codex", sessionArgs);
     case "cursor":
-      return agentInShell("cursor-agent", sessionArgs)
+      return agentInShell("cursor-agent", sessionArgs);
   }
-}
+};
 
 /**
  * Trailing CLI args that make an agent start or resume a specific session, so a
@@ -80,18 +80,18 @@ export const agentSessionArgs = (
   agent: AgentKind,
   opts: { readonly sessionId: string | null; readonly resume: boolean }
 ) => {
-  const { sessionId, resume } = opts
-  if (sessionId === null) return ""
+  const { sessionId, resume } = opts;
+  if (sessionId === null) return "";
   switch (agent) {
     case "terminal":
-      return ""
+      return "";
     case "claude":
-      return resume ? `--resume ${sessionId}` : `--session-id ${sessionId}`
+      return resume ? `--resume ${sessionId}` : `--session-id ${sessionId}`;
     case "opencode":
-      return resume ? `--session ${sessionId}` : ""
+      return resume ? `--session ${sessionId}` : "";
     case "codex":
-      return resume ? `resume ${sessionId}` : ""
+      return resume ? `resume ${sessionId}` : "";
     case "cursor":
-      return `--resume ${sessionId}`
+      return `--resume ${sessionId}`;
   }
-}
+};

@@ -4,7 +4,7 @@
  * write plans straight on disk. The doc id is the file's slug; the title is its
  * first markdown heading (falling back to the id).
  */
-import * as Effect from "effect/Effect"
+import * as Effect from "effect/Effect";
 import {
   existsSync,
   mkdirSync,
@@ -13,55 +13,55 @@ import {
   rmSync,
   statSync,
   writeFileSync,
-} from "node:fs"
-import { NotFound, StorageError } from "@byconvo/core/shared"
-import { WorkspaceContext } from "../workspace/workspace-context.ts"
-import type { Doc, DocsRepo } from "@byconvo/core/docs"
+} from "node:fs";
+import { NotFound, StorageError } from "@byconvo/core/shared";
+import { WorkspaceContext } from "../workspace/workspace-context.ts";
+import type { Doc, DocsRepo } from "@byconvo/core/docs";
 
-const docsDir = (repoPath: string) => `${repoPath}/.byconvo/docs`
+const docsDir = (repoPath: string) => `${repoPath}/.byconvo/docs`;
 const docPath = (repoPath: string, id: string) =>
-  `${docsDir(repoPath)}/${id}.md`
+  `${docsDir(repoPath)}/${id}.md`;
 
 const slugify = (title: string) => {
   const slug = title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 60)
-  return slug.length > 0 ? slug : "doc"
-}
+    .slice(0, 60);
+  return slug.length > 0 ? slug : "doc";
+};
 
 const titleFromContent = (content: string, id: string) => {
-  const heading = content.match(/^#\s+(.+)$/m)
-  return heading?.[1].trim() ?? id
-}
+  const heading = content.match(/^#\s+(.+)$/m);
+  return heading?.[1].trim() ?? id;
+};
 
 const readDoc = (repoPath: string, id: string): Doc => {
-  const path = docPath(repoPath, id)
+  const path = docPath(repoPath, id);
   if (!existsSync(path)) {
-    throw new NotFound({ reason: `doc ${id} not found` })
+    throw new NotFound({ reason: `doc ${id} not found` });
   }
-  const content = readFileSync(path, "utf8")
+  const content = readFileSync(path, "utf8");
   return {
     id,
     title: titleFromContent(content, id),
     content,
     updatedAt: statSync(path).mtime.toISOString(),
-  }
-}
+  };
+};
 
 const uniqueId = (repoPath: string, base: string) => {
-  let id = base
-  let n = 1
+  let id = base;
+  let n = 1;
   while (existsSync(docPath(repoPath, id))) {
-    n += 1
-    id = `${base}-${n}`
+    n += 1;
+    id = `${base}-${n}`;
   }
-  return id
-}
+  return id;
+};
 
 export const makeFileDocsRepository = Effect.gen(function* () {
-  const ctx = yield* WorkspaceContext
+  const ctx = yield* WorkspaceContext;
 
   const withFile = <A>(f: (repoPath: string) => A) =>
     Effect.flatMap(ctx.requireCurrent, (repoPath) =>
@@ -74,46 +74,46 @@ export const makeFileDocsRepository = Effect.gen(function* () {
                 reason: error instanceof Error ? error.message : String(error),
               }),
       })
-    )
+    );
 
   const list: DocsRepo["list"] = withFile((repoPath) => {
-    const dir = docsDir(repoPath)
-    if (!existsSync(dir)) return []
+    const dir = docsDir(repoPath);
+    if (!existsSync(dir)) return [];
     return readdirSync(dir)
       .filter((name) => name.endsWith(".md"))
       .map((name) => {
-        const id = name.slice(0, -3)
-        const doc = readDoc(repoPath, id)
-        return { id: doc.id, title: doc.title, updatedAt: doc.updatedAt }
+        const id = name.slice(0, -3);
+        const doc = readDoc(repoPath, id);
+        return { id: doc.id, title: doc.title, updatedAt: doc.updatedAt };
       })
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-  })
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  });
 
   const get: DocsRepo["get"] = (id) =>
-    withFile((repoPath) => readDoc(repoPath, id))
+    withFile((repoPath) => readDoc(repoPath, id));
 
   const create: DocsRepo["create"] = (title) =>
     withFile((repoPath) => {
-      mkdirSync(docsDir(repoPath), { recursive: true })
-      const id = uniqueId(repoPath, slugify(title))
-      const heading = title.trim().length > 0 ? title.trim() : "Untitled plan"
-      writeFileSync(docPath(repoPath, id), `# ${heading}\n\n`)
-      return readDoc(repoPath, id)
-    })
+      mkdirSync(docsDir(repoPath), { recursive: true });
+      const id = uniqueId(repoPath, slugify(title));
+      const heading = title.trim().length > 0 ? title.trim() : "Untitled plan";
+      writeFileSync(docPath(repoPath, id), `# ${heading}\n\n`);
+      return readDoc(repoPath, id);
+    });
 
   const update: DocsRepo["update"] = (id, content) =>
     withFile((repoPath) => {
       if (!existsSync(docPath(repoPath, id))) {
-        throw new NotFound({ reason: `doc ${id} not found` })
+        throw new NotFound({ reason: `doc ${id} not found` });
       }
-      writeFileSync(docPath(repoPath, id), content)
-      return readDoc(repoPath, id)
-    })
+      writeFileSync(docPath(repoPath, id), content);
+      return readDoc(repoPath, id);
+    });
 
   const remove: DocsRepo["remove"] = (id) =>
     withFile((repoPath) => {
-      rmSync(docPath(repoPath, id), { force: true })
-    })
+      rmSync(docPath(repoPath, id), { force: true });
+    });
 
-  return { list, get, create, update, remove } satisfies DocsRepo
-})
+  return { list, get, create, update, remove } satisfies DocsRepo;
+});

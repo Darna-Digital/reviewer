@@ -7,12 +7,12 @@
  * back-to-front is the standard answer, and doing it here means the editor and
  * the file writer both get it right.
  */
-import { offsetAt } from "./language.positions.ts"
-import type { TextEdit } from "../schema/language.schema.ts"
+import { offsetAt } from "./language.positions.ts";
+import type { TextEdit } from "../schema/language.schema.ts";
 
 const compare = (a: TextEdit, b: TextEdit) =>
   a.range.start.line - b.range.start.line ||
-  a.range.start.character - b.range.start.character
+  a.range.start.character - b.range.start.character;
 
 /**
  * `text` with `edits` applied. Edits are sorted and applied from the end, so
@@ -31,25 +31,25 @@ export const applyTextEdits = (
       newText: edit.newText,
       edit,
     }))
-    .sort((a, b) => compare(a.edit, b.edit))
+    .sort((a, b) => compare(a.edit, b.edit));
 
   // Decide what survives in document order, so the *first* of an overlapping
   // pair wins — the same choice an editor makes when a fix collides with one
   // already applied.
-  const kept: typeof resolved = []
-  let previousEnd = -1
+  const kept: typeof resolved = [];
+  let previousEnd = -1;
   for (const entry of resolved) {
-    if (entry.start < previousEnd) continue
-    kept.push(entry)
-    previousEnd = entry.end
+    if (entry.start < previousEnd) continue;
+    kept.push(entry);
+    previousEnd = entry.end;
   }
 
   // Apply from the end so each remaining offset still refers to `text`.
-  let result = text
+  let result = text;
   for (let index = kept.length - 1; index >= 0; index--) {
-    const entry = kept[index]
+    const entry = kept[index];
     result =
-      result.slice(0, entry.start) + entry.newText + result.slice(entry.end)
+      result.slice(0, entry.start) + entry.newText + result.slice(entry.end);
   }
-  return result
-}
+  return result;
+};

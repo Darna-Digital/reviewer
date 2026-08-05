@@ -13,19 +13,19 @@
  * (pty-socket.ts carries an equivalent inline loader for now; it can be pointed
  * at this module once the terminal-threads work settles.)
  */
-import { chmodSync, existsSync, statSync } from "node:fs"
-import { createRequire } from "node:module"
-import { dirname, join } from "node:path"
-import type * as NodePtyModule from "@lydell/node-pty"
+import { chmodSync, existsSync, statSync } from "node:fs";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import type * as NodePtyModule from "@lydell/node-pty";
 
-export type NodePty = typeof NodePtyModule
+export type NodePty = typeof NodePtyModule;
 
 // In the esbuild CJS bundle a real `require` exists (and `import.meta.url` is
 // undefined); under tsx/ESM it's the reverse. Pick whichever is available.
 const requireFn: NodeRequire =
-  typeof require !== "undefined" ? require : createRequire(import.meta.url)
+  typeof require !== "undefined" ? require : createRequire(import.meta.url);
 
-let ptyModule: NodePty | null | undefined
+let ptyModule: NodePty | null | undefined;
 
 /**
  * On macOS/Linux node-pty `posix_spawn`s a bundled `spawn-helper` binary as the
@@ -38,14 +38,14 @@ let ptyModule: NodePty | null | undefined
  * keeps whatever perms shipped (there the helper is already +x).
  */
 const ensureSpawnHelperExecutable = (moduleEntry: string): void => {
-  if (process.platform === "win32") return
-  const arch = `${process.platform}-${process.arch}`
+  if (process.platform === "win32") return;
+  const arch = `${process.platform}-${process.arch}`;
   // Climb from the resolved entry to the main package root (dir with package.json).
-  let root = dirname(moduleEntry)
+  let root = dirname(moduleEntry);
   for (let i = 0; i < 6 && !existsSync(join(root, "package.json")); i++) {
-    const parent = dirname(root)
-    if (parent === root) break
-    root = parent
+    const parent = dirname(root);
+    if (parent === root) break;
+    root = parent;
   }
   const helpers = [
     // @lydell/node-pty keeps the prebuilt binary and spawn-helper in a sibling
@@ -56,21 +56,21 @@ const ensureSpawnHelperExecutable = (moduleEntry: string): void => {
     // Fallbacks for a self-contained layout where the helper sits under the root.
     join(root, "build", "Release", "spawn-helper"),
     join(root, "prebuilds", arch, "spawn-helper"),
-  ]
+  ];
   for (const helper of helpers) {
     try {
-      if (!existsSync(helper)) continue
-      const mode = statSync(helper).mode
-      if ((mode & 0o111) !== 0o111) chmodSync(helper, mode | 0o111)
+      if (!existsSync(helper)) continue;
+      const mode = statSync(helper).mode;
+      if ((mode & 0o111) !== 0o111) chmodSync(helper, mode | 0o111);
     } catch {
       // best-effort; ignore (e.g. a read-only filesystem)
     }
   }
-}
+};
 
 /** Load node-pty once, tolerating failure (returns `null` when unavailable). */
 export const loadNodePty = (): NodePty | null => {
-  if (ptyModule !== undefined) return ptyModule
+  if (ptyModule !== undefined) return ptyModule;
   // The desktop main process passes the exact node-pty location it resolved
   // (only in the packaged path, where the server shares Electron's Node ABI), so
   // resolution doesn't depend on walking up through the asar. Fall back to a
@@ -78,20 +78,20 @@ export const loadNodePty = (): NodePty | null => {
   const candidates = [
     process.env["BYCONVO_NODE_PTY"],
     "@lydell/node-pty",
-  ].filter((c): c is string => typeof c === "string" && c.length > 0)
+  ].filter((c): c is string => typeof c === "string" && c.length > 0);
   for (const candidate of candidates) {
     try {
-      ptyModule = requireFn(candidate) as NodePty
+      ptyModule = requireFn(candidate) as NodePty;
       try {
-        ensureSpawnHelperExecutable(requireFn.resolve(candidate))
+        ensureSpawnHelperExecutable(requireFn.resolve(candidate));
       } catch {
         // resolution is best-effort; the module already loaded
       }
-      return ptyModule
+      return ptyModule;
     } catch {
       // try the next candidate
     }
   }
-  ptyModule = null
-  return ptyModule
-}
+  ptyModule = null;
+  return ptyModule;
+};

@@ -5,95 +5,95 @@ import type {
   FileDiffMetadata,
   Hunk,
   SelectedLineRange,
-} from "@pierre/diffs"
-import { FileDiff, Virtualizer } from "@pierre/diffs/react"
+} from "@pierre/diffs";
+import { FileDiff, Virtualizer } from "@pierre/diffs/react";
 import {
   IconArrowBackUp,
   IconArrowsMaximize,
   IconArrowsMinimize,
   IconHistory,
-} from "@tabler/icons-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
+} from "@tabler/icons-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 import {
   CommentThread,
   DraftCard,
   type DraftLocation,
-} from "@/interactions/comments/components/comment-thread"
+} from "@/interactions/comments/components/comment-thread";
 import {
   DiffConnectors,
   connectorGutterCSS,
-} from "@/interactions/diff/components/diff-connectors"
-import { DiagnosticsAnnotation } from "@/interactions/language/components/diagnostics-annotation"
-import { useDiffLanguage } from "@/interactions/language/components/use-diff-language"
-import type { DiagnosticsAnnotationMeta } from "@/interactions/language/components/language-layer"
-import { fetchClient } from "@/lib/api/client"
-import { diffTargetKey, type DiffTarget } from "@/lib/api/types"
-import type { CommentSide, ReviewComment } from "@byconvo/core/comments"
-import type { DiffStyle, Theme } from "@/lib/ui-prefs"
+} from "@/interactions/diff/components/diff-connectors";
+import { DiagnosticsAnnotation } from "@/interactions/language/components/diagnostics-annotation";
+import { useDiffLanguage } from "@/interactions/language/components/use-diff-language";
+import type { DiagnosticsAnnotationMeta } from "@/interactions/language/components/language-layer";
+import { fetchClient } from "@/lib/api/client";
+import { diffTargetKey, type DiffTarget } from "@/lib/api/types";
+import type { CommentSide, ReviewComment } from "@byconvo/core/comments";
+import type { DiffStyle, Theme } from "@/lib/ui-prefs";
 
-export type { DraftLocation }
+export type { DraftLocation };
 
 type AnnotationMeta =
   | {
-      readonly kind: "comments"
-      readonly comments: ReadonlyArray<ReviewComment>
+      readonly kind: "comments";
+      readonly comments: ReadonlyArray<ReviewComment>;
     }
   | { readonly kind: "draft" }
   | { readonly kind: "hunk"; readonly hunkIndex: number }
-  | DiagnosticsAnnotationMeta
+  | DiagnosticsAnnotationMeta;
 
 interface DiffPaneProps {
-  files: ReadonlyArray<FileDiffMetadata>
-  theme: Theme
-  diffStyle: DiffStyle
-  connectors: boolean
-  loading: boolean
-  error: string | null
-  target: DiffTarget
-  comments: ReadonlyArray<ReviewComment>
-  draft: DraftLocation | null
-  selectedFile: string | null
-  onDraftOpen: (draft: DraftLocation) => void
-  onDraftCancel: () => void
-  onEditFile: (path: string) => void
+  files: ReadonlyArray<FileDiffMetadata>;
+  theme: Theme;
+  diffStyle: DiffStyle;
+  connectors: boolean;
+  loading: boolean;
+  error: string | null;
+  target: DiffTarget;
+  comments: ReadonlyArray<ReviewComment>;
+  draft: DraftLocation | null;
+  selectedFile: string | null;
+  onDraftOpen: (draft: DraftLocation) => void;
+  onDraftCancel: () => void;
+  onEditFile: (path: string) => void;
   /** Open a file's commit history in the bottom dock. */
-  onShowFileHistory?: (path: string) => void
+  onShowFileHistory?: (path: string) => void;
   /** Discard a file's worktree changes (revert to HEAD). Only wired in commit
    * mode, where the diff is the working tree; absent means no discard control. */
-  onDiscardFile?: (path: string) => void
+  onDiscardFile?: (path: string) => void;
   /** Discard a single hunk of a file's worktree diff. Only wired in commit mode;
    * absent means no per-hunk discard control is rendered. */
-  onDiscardHunk?: (path: string, hunkIndex: number) => void
-  onCommentSubmit: (location: DraftLocation, body: string) => Promise<void>
-  onCommentDelete: (comment: ReviewComment) => Promise<void>
-  onCommentEdit: (comment: ReviewComment, body: string) => Promise<void>
-  onCommentReply: (comment: ReviewComment, body: string) => Promise<void>
+  onDiscardHunk?: (path: string, hunkIndex: number) => void;
+  onCommentSubmit: (location: DraftLocation, body: string) => Promise<void>;
+  onCommentDelete: (comment: ReviewComment) => Promise<void>;
+  onCommentEdit: (comment: ReviewComment, body: string) => Promise<void>;
+  onCommentReply: (comment: ReviewComment, body: string) => Promise<void>;
   /** Go-to-definition and find-usages land here. */
-  onOpenLocation: (path: string, lineNumber: number) => void
+  onOpenLocation: (path: string, lineNumber: number) => void;
 }
 
 const emptyHint = (target: DiffTarget): string => {
   switch (target.kind) {
     case "worktree":
-      return "Working tree is clean — make some changes and hit refresh."
+      return "Working tree is clean — make some changes and hit refresh.";
     case "range":
-      return "These refs are identical."
+      return "These refs are identical.";
     case "commit":
-      return "This commit has no textual changes."
+      return "This commit has no textual changes.";
     case "pull":
-      return "This pull request has no diff."
+      return "This pull request has no diff.";
   }
-}
+};
 
-const THEMES = { light: "github-light", dark: "github-dark" } as const
+const THEMES = { light: "github-light", dark: "github-dark" } as const;
 
 /**
  * The `/api/diff-file` params that pin both sides of `target`, so expanded
@@ -107,18 +107,18 @@ const diffFileTargetQuery = (
 ): { commit?: string; base?: string; head?: string } => {
   switch (target.kind) {
     case "worktree":
-      return {}
+      return {};
     case "commit":
-      return { commit: target.sha }
+      return { commit: target.sha };
     case "range":
-      return { base: target.base, head: target.head }
+      return { base: target.base, head: target.head };
     case "pull":
       return {
         base: `origin/${target.pull.baseRef}`,
         head: target.pull.headSha,
-      }
+      };
   }
-}
+};
 
 /**
  * Where a hunk's discard control anchors: the line just above the hunk's first
@@ -130,47 +130,47 @@ const diffFileTargetQuery = (
 const hunkChangeAnchor = (
   hunk: Hunk
 ): { side: CommentSide; lineNumber: number } => {
-  let addition = hunk.additionStart
-  let deletion = hunk.deletionStart
-  let sawContext = false
+  let addition = hunk.additionStart;
+  let deletion = hunk.deletionStart;
+  let sawContext = false;
   for (const block of hunk.hunkContent) {
     if (block.type === "context") {
-      addition += block.lines
-      deletion += block.lines
-      sawContext = true
-      continue
+      addition += block.lines;
+      deletion += block.lines;
+      sawContext = true;
+      continue;
     }
     return block.additions > 0
       ? { side: "additions", lineNumber: sawContext ? addition - 1 : addition }
-      : { side: "deletions", lineNumber: sawContext ? deletion - 1 : deletion }
+      : { side: "deletions", lineNumber: sawContext ? deletion - 1 : deletion };
   }
-  return { side: "additions", lineNumber: hunk.additionStart }
-}
+  return { side: "additions", lineNumber: hunk.additionStart };
+};
 
 interface FileDiffSectionProps {
-  file: FileDiffMetadata
-  theme: Theme
-  diffStyle: DiffStyle
-  connectorsEnabled: boolean
+  file: FileDiffMetadata;
+  theme: Theme;
+  diffStyle: DiffStyle;
+  connectorsEnabled: boolean;
   /** Render this file whole (all unchanged lines expanded) instead of hunks. */
-  expandUnchanged: boolean
-  onToggleExpandUnchanged: () => void
-  loadDiffFiles: FileDiffContentsLoader
-  annotations: ReadonlyArray<DiffLineAnnotation<AnnotationMeta>>
-  selectedLines: SelectedLineRange | null
-  onDraftOpen: (draft: DraftLocation) => void
-  onDraftCancel: () => void
-  onEditFile: (path: string) => void
-  onShowFileHistory?: (path: string) => void
-  onDiscardFile?: (path: string) => void
-  onDiscardHunk?: (path: string, hunkIndex: number) => void
-  onCommentSubmit: (location: DraftLocation, body: string) => Promise<void>
-  onCommentDelete: (comment: ReviewComment) => Promise<void>
-  onCommentEdit: (comment: ReviewComment, body: string) => Promise<void>
-  onCommentReply: (comment: ReviewComment, body: string) => Promise<void>
+  expandUnchanged: boolean;
+  onToggleExpandUnchanged: () => void;
+  loadDiffFiles: FileDiffContentsLoader;
+  annotations: ReadonlyArray<DiffLineAnnotation<AnnotationMeta>>;
+  selectedLines: SelectedLineRange | null;
+  onDraftOpen: (draft: DraftLocation) => void;
+  onDraftCancel: () => void;
+  onEditFile: (path: string) => void;
+  onShowFileHistory?: (path: string) => void;
+  onDiscardFile?: (path: string) => void;
+  onDiscardHunk?: (path: string, hunkIndex: number) => void;
+  onCommentSubmit: (location: DraftLocation, body: string) => Promise<void>;
+  onCommentDelete: (comment: ReviewComment) => Promise<void>;
+  onCommentEdit: (comment: ReviewComment, body: string) => Promise<void>;
+  onCommentReply: (comment: ReviewComment, body: string) => Promise<void>;
   /** Give this file the language layer — only true for a worktree diff. */
-  languageEnabled: boolean
-  onOpenLocation: (path: string, lineNumber: number) => void
+  languageEnabled: boolean;
+  onOpenLocation: (path: string, lineNumber: number) => void;
 }
 
 function FileDiffSection({
@@ -199,8 +199,8 @@ function FileDiffSection({
   // Callback-ref state (not a ref object): DiffConnectors reads the section in a
   // layout effect, which fires bottom-up, so a child would see a parent ref as
   // null. The setter only fires on mount.
-  const [sectionEl, setSectionEl] = useState<HTMLElement | null>(null)
-  const recomputeConnectors = useRef<() => void>(() => {})
+  const [sectionEl, setSectionEl] = useState<HTMLElement | null>(null);
+  const recomputeConnectors = useRef<() => void>(() => {});
 
   // Hover documentation, go-to-definition and find-usages over the additions
   // side, which for a worktree diff is the file as it is on disk.
@@ -209,12 +209,12 @@ function FileDiffSection({
     section: sectionEl,
     enabled: languageEnabled,
     onOpenLocation,
-  })
+  });
 
   const withDiagnostics = useMemo(
     () => [...annotations, ...language.annotations],
     [annotations, language.annotations]
-  )
+  );
 
   return (
     <section
@@ -245,8 +245,8 @@ function FileDiffSection({
           onPostRender: (node, instance, phase) => {
             // Both need to know the code rendered: the connectors to measure
             // it, the language layer to know it may start asking about it.
-            if (connectorsEnabled) recomputeConnectors.current()
-            language.viewOptions.onPostRender(node, instance, phase)
+            if (connectorsEnabled) recomputeConnectors.current();
+            language.viewOptions.onPostRender(node, instance, phase);
           },
           onGutterUtilityClick: (range) =>
             onDraftOpen({
@@ -300,7 +300,7 @@ function FileDiffSection({
                       `Discard all changes in ${meta.name}?\n\nThis reverts the file to the last commit and cannot be undone.`
                     )
                   )
-                    onDiscardFile(meta.name)
+                    onDiscardFile(meta.name);
                 }}
               >
                 <IconArrowBackUp className="size-3.5" />
@@ -332,9 +332,9 @@ function FileDiffSection({
         )}
         lineAnnotations={withDiagnostics}
         renderAnnotation={(annotation) => {
-          const meta = annotation.metadata
+          const meta = annotation.metadata;
           if (meta.kind === "diagnostics") {
-            return <DiagnosticsAnnotation diagnostics={meta.diagnostics} />
+            return <DiagnosticsAnnotation diagnostics={meta.diagnostics} />;
           }
           if (meta.kind === "hunk") {
             // A quiet, icon-only revert affordance in the spirit of JetBrains'
@@ -363,7 +363,7 @@ function FileDiffSection({
                   </TooltipContent>
                 </Tooltip>
               </div>
-            )
+            );
           }
           if (meta.kind === "draft") {
             return (
@@ -380,7 +380,7 @@ function FileDiffSection({
                   )
                 }
               />
-            )
+            );
           }
           return (
             <CommentThread
@@ -389,7 +389,7 @@ function FileDiffSection({
               onEdit={onCommentEdit}
               onReply={onCommentReply}
             />
-          )
+          );
         }}
       />
       <DiffConnectors
@@ -399,7 +399,7 @@ function FileDiffSection({
       />
       {language.card}
     </section>
-  )
+  );
 }
 
 export function DiffPane({
@@ -425,29 +425,29 @@ export function DiffPane({
   onCommentReply,
   onOpenLocation,
 }: DiffPaneProps) {
-  const connectorsEnabled = connectors && diffStyle === "split"
-  const containerRef = useRef<HTMLDivElement>(null)
+  const connectorsEnabled = connectors && diffStyle === "split";
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Per-file "show the whole file" choices, scoped to the current target: the
   // stored key invalidates the set when the user navigates to another diff, so
   // stale expansions never leak across targets (no effect/reset dance needed).
-  const targetKey = diffTargetKey(target)
+  const targetKey = diffTargetKey(target);
   const [expansion, setExpansion] = useState<{
-    key: string
-    files: ReadonlySet<string>
-  }>({ key: targetKey, files: new Set() })
+    key: string;
+    files: ReadonlySet<string>;
+  }>({ key: targetKey, files: new Set() });
   const expandedFiles =
-    expansion.key === targetKey ? expansion.files : new Set<string>()
+    expansion.key === targetKey ? expansion.files : new Set<string>();
   const toggleExpanded = useCallback(
     (name: string) =>
       setExpansion((prev) => {
-        const next = new Set(prev.key === targetKey ? prev.files : [])
-        if (next.has(name)) next.delete(name)
-        else next.add(name)
-        return { key: targetKey, files: next }
+        const next = new Set(prev.key === targetKey ? prev.files : []);
+        if (next.has(name)) next.delete(name);
+        else next.add(name);
+        return { key: targetKey, files: next };
       }),
     [targetKey]
-  )
+  );
 
   // Fetch both full sides of a file so @pierre/diffs can render the unchanged
   // regions (per-hunk expansion and the "full file" view). Throwing is the
@@ -470,40 +470,40 @@ export function DiffPane({
               },
             },
           }
-        )
+        );
         if (fetchError !== undefined || data === undefined)
-          throw new Error(`Could not load contents for ${file.name}`)
+          throw new Error(`Could not load contents for ${file.name}`);
         if (data.newContents === null)
-          throw new Error(`No diff contents available for ${file.name}`)
-        const newFile = { name: file.name, contents: data.newContents }
-        if (file.type === "rename-pure") return { oldFile: null, newFile }
+          throw new Error(`No diff contents available for ${file.name}`);
+        const newFile = { name: file.name, contents: data.newContents };
+        if (file.type === "rename-pure") return { oldFile: null, newFile };
         if (data.oldContents === null)
-          throw new Error(`No previous contents available for ${file.name}`)
+          throw new Error(`No previous contents available for ${file.name}`);
         return {
           oldFile: {
             name: file.prevName ?? file.name,
             contents: data.oldContents,
           },
           newFile,
-        }
+        };
       } catch (error) {
         toast.error(`Couldn't load the rest of ${file.name}`, {
           description:
             target.kind === "pull"
               ? "The pull request's commits may not be fetched locally yet — try Fetch, then expand again."
               : "The server couldn't provide this file's full contents.",
-        })
+        });
         setExpansion((prev) => {
-          if (prev.key !== targetKey || !prev.files.has(file.name)) return prev
-          const files = new Set(prev.files)
-          files.delete(file.name)
-          return { key: targetKey, files }
-        })
-        throw error
+          if (prev.key !== targetKey || !prev.files.has(file.name)) return prev;
+          const files = new Set(prev.files);
+          files.delete(file.name);
+          return { key: targetKey, files };
+        });
+        throw error;
       }
     },
     [target, targetKey]
-  )
+  );
 
   // Animate the selected file's diff to the top of the pane. Hard-won details:
   //  - Native smooth scrolling (`scrollIntoView`/`scrollTo({behavior:"smooth"})`,
@@ -519,141 +519,141 @@ export function DiffPane({
   //  - rAF is throttled in background tabs, so a timed fallback jumps straight to
   //    the target if no frame has run.
   useEffect(() => {
-    if (selectedFile === null) return
+    if (selectedFile === null) return;
     // The scrolling element is the Virtualizer's own root div (it must own the
     // scroll to window rendering), which is the wrapper's only child.
-    const container = containerRef.current?.firstElementChild
-    if (!(container instanceof HTMLElement)) return
+    const container = containerRef.current?.firstElementChild;
+    if (!(container instanceof HTMLElement)) return;
 
-    let active = true
-    let raf = 0
-    let lastFrame = 0
-    const startedAt = performance.now()
-    const cleanups: Array<() => void> = []
+    let active = true;
+    let raf = 0;
+    let lastFrame = 0;
+    const startedAt = performance.now();
+    const cleanups: Array<() => void> = [];
 
     const targetTop = (): number | null => {
       const anchor = container.querySelector(
         `[data-file-anchor="${CSS.escape(selectedFile)}"]`
-      )
-      if (!(anchor instanceof HTMLElement)) return null
-      const max = container.scrollHeight - container.clientHeight
+      );
+      if (!(anchor instanceof HTMLElement)) return null;
+      const max = container.scrollHeight - container.clientHeight;
       return Math.min(
         anchor.getBoundingClientRect().top -
           container.getBoundingClientRect().top +
           container.scrollTop,
         max
-      )
-    }
+      );
+    };
 
     const stop = () => {
-      if (!active) return
-      active = false
-      cancelAnimationFrame(raf)
-      for (const cleanup of cleanups) cleanup()
-    }
+      if (!active) return;
+      active = false;
+      cancelAnimationFrame(raf);
+      for (const cleanup of cleanups) cleanup();
+    };
 
     const frame = (now: number) => {
-      if (!active) return
-      lastFrame = now
-      const top = targetTop()
+      if (!active) return;
+      lastFrame = now;
+      const top = targetTop();
       if (top !== null) {
-        const delta = top - container.scrollTop
+        const delta = top - container.scrollTop;
         container.scrollTop =
-          Math.abs(delta) <= 1 ? top : container.scrollTop + delta * 0.2
+          Math.abs(delta) <= 1 ? top : container.scrollTop + delta * 0.2;
       }
       // Keep following while the content settles; then stop.
-      if (now - startedAt < 1200) raf = requestAnimationFrame(frame)
-      else stop()
-    }
+      if (now - startedAt < 1200) raf = requestAnimationFrame(frame);
+      else stop();
+    };
 
     for (const type of ["wheel", "touchstart", "pointerdown", "keydown"]) {
-      container.addEventListener(type, stop, { passive: true })
-      cleanups.push(() => container.removeEventListener(type, stop))
+      container.addEventListener(type, stop, { passive: true });
+      cleanups.push(() => container.removeEventListener(type, stop));
     }
 
     // Background-tab fallback: if rAF hasn't run (throttled), jump to target.
     const fallback = setTimeout(() => {
-      if (!active || performance.now() - lastFrame < 100) return
-      const top = targetTop()
-      if (top !== null) container.scrollTop = top
-    }, 250)
-    cleanups.push(() => clearTimeout(fallback))
+      if (!active || performance.now() - lastFrame < 100) return;
+      const top = targetTop();
+      if (top !== null) container.scrollTop = top;
+    }, 250);
+    cleanups.push(() => clearTimeout(fallback));
 
-    raf = requestAnimationFrame(frame)
+    raf = requestAnimationFrame(frame);
 
-    return stop
-  }, [selectedFile, files])
+    return stop;
+  }, [selectedFile, files]);
 
   const annotationsByFile = useMemo(() => {
-    const result = new Map<string, Array<DiffLineAnnotation<AnnotationMeta>>>()
+    const result = new Map<string, Array<DiffLineAnnotation<AnnotationMeta>>>();
     const grouped = new Map<
       string,
       {
-        filePath: string
-        side: CommentSide
-        lineNumber: number
-        comments: ReviewComment[]
+        filePath: string;
+        side: CommentSide;
+        lineNumber: number;
+        comments: ReviewComment[];
       }
-    >()
+    >();
     for (const c of comments) {
-      const key = `${c.side}:${c.lineNumber}:${c.filePath}`
-      const bucket = grouped.get(key)
-      if (bucket) bucket.comments.push(c)
+      const key = `${c.side}:${c.lineNumber}:${c.filePath}`;
+      const bucket = grouped.get(key);
+      if (bucket) bucket.comments.push(c);
       else
         grouped.set(key, {
           filePath: c.filePath,
           side: c.side,
           lineNumber: c.lineNumber,
           comments: [c],
-        })
+        });
     }
     for (const g of grouped.values()) {
-      const arr = result.get(g.filePath) ?? []
+      const arr = result.get(g.filePath) ?? [];
       arr.push({
         side: g.side,
         lineNumber: g.lineNumber,
         metadata: { kind: "comments", comments: g.comments },
-      })
-      result.set(g.filePath, arr)
+      });
+      result.set(g.filePath, arr);
     }
     if (draft !== null) {
-      const arr = result.get(draft.filePath) ?? []
+      const arr = result.get(draft.filePath) ?? [];
       arr.push({
         side: draft.side,
         lineNumber: draft.lineNumber,
         metadata: { kind: "draft" },
-      })
-      result.set(draft.filePath, arr)
+      });
+      result.set(draft.filePath, arr);
     }
     // Anchor a "Discard hunk" control at the start of each hunk. Only in commit
     // mode (onDiscardHunk provided); hunk order here matches the server's
     // `git diff HEAD -- <path>`, so the index round-trips to the discard call.
     if (onDiscardHunk !== undefined) {
       for (const file of files) {
-        const arr = result.get(file.name) ?? []
+        const arr = result.get(file.name) ?? [];
         file.hunks.forEach((hunk, hunkIndex) => {
-          const anchor = hunkChangeAnchor(hunk)
+          const anchor = hunkChangeAnchor(hunk);
           arr.push({
             side: anchor.side,
             lineNumber: anchor.lineNumber,
             metadata: { kind: "hunk", hunkIndex },
-          })
-        })
-        result.set(file.name, arr)
+          });
+        });
+        result.set(file.name, arr);
       }
     }
-    return result
-  }, [comments, draft, files, onDiscardHunk])
+    return result;
+  }, [comments, draft, files, onDiscardHunk]);
 
   if (loading) {
     return (
       <div className="p-8">
         <LoadingCursor label="Loading diff…" />
       </div>
-    )
+    );
   }
   if (error !== null) {
-    return <div className="p-8 text-sm text-destructive">{error}</div>
+    return <div className="p-8 text-sm text-destructive">{error}</div>;
   }
   if (files.length === 0) {
     return (
@@ -661,7 +661,7 @@ export function DiffPane({
         <div className="font-medium">Nothing to review</div>
         <div className="text-muted-foreground">{emptyHint(target)}</div>
       </div>
-    )
+    );
   }
 
   return (
@@ -710,5 +710,5 @@ export function DiffPane({
         ))}
       </Virtualizer>
     </div>
-  )
+  );
 }

@@ -3,23 +3,23 @@
  * (Code vs Collaboration) and routes to that mode's home; the choice is
  * remembered so the chip still reads right after a reload.
  */
-import { IconCheck, IconChevronDown } from "@tabler/icons-react"
-import { useNavigate, useRouterState } from "@tanstack/react-router"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { IconCheck, IconChevronDown } from "@tabler/icons-react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { setUiPrefs, useUiPrefs, type WorkMode } from "@/lib/ui-prefs"
-import { activeWorkMode } from "@/lib/work-mode"
+} from "@/components/ui/popover";
+import { setUiPrefs, useUiPrefs, type WorkMode } from "@/lib/ui-prefs";
+import { activeWorkMode } from "@/lib/work-mode";
 
 const MODES: ReadonlyArray<{
-  mode: WorkMode
-  title: string
-  detail: string
-  to: string
+  mode: WorkMode;
+  title: string;
+  detail: string;
+  to: string;
 }> = [
   {
     mode: "code",
@@ -33,16 +33,16 @@ const MODES: ReadonlyArray<{
     detail: "Collaborate with humans and agents",
     to: "/modes/collaboration",
   },
-]
+];
 
 export function ModeSelector() {
-  const { workMode } = useUiPrefs()
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
+  const { workMode } = useUiPrefs();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
 
-  const active = activeWorkMode(pathname, workMode)
-  const selected = MODES.find((m) => m.mode === active) ?? MODES[0]
+  const active = activeWorkMode(pathname, workMode);
+  const selected = MODES.find((m) => m.mode === active) ?? MODES[0];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -65,9 +65,9 @@ export function ModeSelector() {
             type="button"
             className="flex w-full items-start gap-3 rounded-lg px-2.5 py-2 text-left outline-none hover:bg-elevate focus-visible:bg-elevate"
             onClick={() => {
-              setUiPrefs({ workMode: m.mode })
-              setOpen(false)
-              void navigate({ to: m.to })
+              setUiPrefs({ workMode: m.mode });
+              setOpen(false);
+              void navigate({ to: m.to });
             }}
           >
             <span className="min-w-0 flex-1">
@@ -83,5 +83,5 @@ export function ModeSelector() {
         ))}
       </PopoverContent>
     </Popover>
-  )
+  );
 }

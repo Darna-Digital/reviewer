@@ -1,13 +1,13 @@
-import * as Effect from "effect/Effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { Api } from "../../api.ts"
-import { WorkspaceContext } from "../workspace/workspace-context.ts"
-import type { DevRunStatus } from "../terminal/dev-process-manager.ts"
-import { DevRuntime } from "./local-dev.runtime.ts"
-import type { DevCommand, DevCommandView } from "@byconvo/core/local-dev"
-import { LocalDevService } from "@byconvo/core/local-dev"
+import * as Effect from "effect/Effect";
+import { HttpApiBuilder } from "effect/unstable/httpapi";
+import { Api } from "../../api.ts";
+import { WorkspaceContext } from "../workspace/workspace-context.ts";
+import type { DevRunStatus } from "../terminal/dev-process-manager.ts";
+import { DevRuntime } from "./local-dev.runtime.ts";
+import type { DevCommand, DevCommandView } from "@byconvo/core/local-dev";
+import { LocalDevService } from "@byconvo/core/local-dev";
 
-const ok = { ok: true } as const
+const ok = { ok: true } as const;
 
 /** Merge a stored definition with its (optional) runtime status into a view. */
 const toView = (
@@ -17,7 +17,7 @@ const toView = (
   ...command,
   status: status?.status ?? "stopped",
   exitCode: status?.exitCode ?? null,
-})
+});
 
 export const LocalDevHandler = HttpApiBuilder.group(
   Api,
@@ -26,16 +26,16 @@ export const LocalDevHandler = HttpApiBuilder.group(
     handlers
       .handle("list", () =>
         Effect.gen(function* () {
-          const dev = yield* LocalDevService
-          const runtime = yield* DevRuntime
-          const ctx = yield* WorkspaceContext
-          const repoPath = yield* ctx.requireCurrent
-          const commands = yield* dev.list
-          const statuses = yield* runtime.statuses(repoPath)
-          const byId = new Map(statuses.map((s) => [s.commandId, s]))
+          const dev = yield* LocalDevService;
+          const runtime = yield* DevRuntime;
+          const ctx = yield* WorkspaceContext;
+          const repoPath = yield* ctx.requireCurrent;
+          const commands = yield* dev.list;
+          const statuses = yield* runtime.statuses(repoPath);
+          const byId = new Map(statuses.map((s) => [s.commandId, s]));
           return commands.map((command) =>
             toView(command, byId.get(command.id))
-          )
+          );
         })
       )
       .handle("create", ({ payload }) =>
@@ -56,27 +56,27 @@ export const LocalDevHandler = HttpApiBuilder.group(
       )
       .handle("remove", ({ params }) =>
         Effect.gen(function* () {
-          const dev = yield* LocalDevService
-          const runtime = yield* DevRuntime
+          const dev = yield* LocalDevService;
+          const runtime = yield* DevRuntime;
           // Stop a running process before forgetting its definition.
-          yield* runtime.stop(params.id)
-          yield* dev.remove(params.id)
-          return ok
+          yield* runtime.stop(params.id);
+          yield* dev.remove(params.id);
+          return ok;
         })
       )
       .handle("start", ({ params }) =>
         Effect.gen(function* () {
-          const dev = yield* LocalDevService
-          const runtime = yield* DevRuntime
-          const ctx = yield* WorkspaceContext
-          const repoPath = yield* ctx.requireCurrent
-          const command = yield* dev.get(params.id)
+          const dev = yield* LocalDevService;
+          const runtime = yield* DevRuntime;
+          const ctx = yield* WorkspaceContext;
+          const repoPath = yield* ctx.requireCurrent;
+          const command = yield* dev.get(params.id);
           const status = yield* runtime.start({
             commandId: command.id,
             repoPath,
             command: command.command,
-          })
-          return toView(command, status)
+          });
+          return toView(command, status);
         })
       )
       .handle("stop", ({ params }) =>
@@ -84,30 +84,30 @@ export const LocalDevHandler = HttpApiBuilder.group(
       )
       .handle("startAll", () =>
         Effect.gen(function* () {
-          const dev = yield* LocalDevService
-          const runtime = yield* DevRuntime
-          const ctx = yield* WorkspaceContext
-          const repoPath = yield* ctx.requireCurrent
-          const commands = yield* dev.list
-          const views: DevCommandView[] = []
+          const dev = yield* LocalDevService;
+          const runtime = yield* DevRuntime;
+          const ctx = yield* WorkspaceContext;
+          const repoPath = yield* ctx.requireCurrent;
+          const commands = yield* dev.list;
+          const views: DevCommandView[] = [];
           for (const command of commands) {
             const status = yield* runtime.start({
               commandId: command.id,
               repoPath,
               command: command.command,
-            })
-            views.push(toView(command, status))
+            });
+            views.push(toView(command, status));
           }
-          return views
+          return views;
         })
       )
       .handle("stopAll", () =>
         Effect.gen(function* () {
-          const runtime = yield* DevRuntime
-          const ctx = yield* WorkspaceContext
-          const repoPath = yield* ctx.requireCurrent
-          yield* runtime.stopAll(repoPath)
-          return ok
+          const runtime = yield* DevRuntime;
+          const ctx = yield* WorkspaceContext;
+          const repoPath = yield* ctx.requireCurrent;
+          yield* runtime.stopAll(repoPath);
+          return ok;
         })
       )
-)
+);

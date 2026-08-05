@@ -28,12 +28,12 @@
  *     the thread starts an unresumable conversation, which is exactly what
  *     cursor threads did before this existed.
  */
-import { spawn, type ChildProcess } from "node:child_process"
+import { spawn, type ChildProcess } from "node:child_process";
 
 /** Cursor prints a UUID today. Matched first, and anywhere in the output, so a
  * shell banner or a progress line ahead of it doesn't hide it. */
 const UUID_PATTERN =
-  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/i;
 
 /** The fallback shape for a build that prints some other opaque id: a line
  * that is nothing but one bare token. Requiring the whole line keeps prose
@@ -41,7 +41,7 @@ const UUID_PATTERN =
  * excluding `-` keeps half a uuid — which resumes nothing — from qualifying as
  * a token in its own right. An id that genuinely contains dashes and isn't a
  * uuid would go unrecognised; that trade buys a wrong id being impossible. */
-const BARE_TOKEN_LINE = /^[A-Za-z0-9_]{6,64}$/
+const BARE_TOKEN_LINE = /^[A-Za-z0-9_]{6,64}$/;
 
 /**
  * The chat id in `create-chat` output, or null if it isn't there yet. Exported
@@ -59,16 +59,16 @@ export const cursorChatIdFrom = (
   output: string,
   { atEnd = false }: { atEnd?: boolean } = {}
 ): string | null => {
-  const uuid = UUID_PATTERN.exec(output)
-  if (uuid !== null) return uuid[0]
-  const lines = output.split("\n")
-  const complete = atEnd ? lines : lines.slice(0, -1)
+  const uuid = UUID_PATTERN.exec(output);
+  if (uuid !== null) return uuid[0];
+  const lines = output.split("\n");
+  const complete = atEnd ? lines : lines.slice(0, -1);
   for (const line of complete) {
-    const trimmed = line.trim()
-    if (BARE_TOKEN_LINE.test(trimmed)) return trimmed
+    const trimmed = line.trim();
+    if (BARE_TOKEN_LINE.test(trimmed)) return trimmed;
   }
-  return null
-}
+  return null;
+};
 
 /**
  * How long to wait for the id. Generous enough for a cold CLI start, short
@@ -76,21 +76,21 @@ export const cursorChatIdFrom = (
  * workspace prompts, and `--trust` only applies to headless runs) costs the
  * user a delayed terminal rather than a hung one.
  */
-const MINT_TIMEOUT_MS = 10000
+const MINT_TIMEOUT_MS = 10000;
 
 /** The user's shell — the CLI is launched through it for the same reason every
  * other agent invocation is: a bare spawn under a GUI launch misses the
  * developer's real PATH (see agent-pty.ts). */
-const userShell = (): string => process.env["SHELL"] ?? "bash"
+const userShell = (): string => process.env["SHELL"] ?? "bash";
 
 const ignoringAnAlreadyDeadProcess = (act: () => void): boolean => {
   try {
-    act()
-    return true
+    act();
+    return true;
   } catch {
-    return false
+    return false;
   }
-}
+};
 
 /**
  * Create a Cursor chat in `cwd` and return its id, or null if one couldn't be
@@ -98,7 +98,7 @@ const ignoringAnAlreadyDeadProcess = (act: () => void): boolean => {
  */
 export const mintCursorChatId = (cwd: string): Promise<string | null> =>
   new Promise((resolve) => {
-    let child: ChildProcess
+    let child: ChildProcess;
     try {
       child = spawn(userShell(), ["-l", "-c", "cursor-agent create-chat"], {
         cwd,
@@ -107,10 +107,10 @@ export const mintCursorChatId = (cwd: string): Promise<string | null> =>
         // Its own process group, so the kill below can take the CLI down with
         // the shell that launched it.
         detached: true,
-      })
+      });
     } catch {
-      resolve(null)
-      return
+      resolve(null);
+      return;
     }
     // The child is deliberately *not* unref'd: it is what keeps the event loop
     // alive long enough for its own `close` to be delivered. Unreferenced, a
@@ -118,41 +118,41 @@ export const mintCursorChatId = (cwd: string): Promise<string | null> =>
     // and leave this promise hanging forever. It can't outstay its welcome —
     // the timeout below always settles and kills it.
 
-    let output = ""
-    let settled = false
-    let timer: ReturnType<typeof setTimeout> | null = null
+    let output = "";
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
     const finish = (id: string | null): void => {
-      if (settled) return
-      settled = true
-      if (timer !== null) clearTimeout(timer)
+      if (settled) return;
+      settled = true;
+      if (timer !== null) clearTimeout(timer);
       // Release the pipe first: an orphan holding the read end open keeps this
       // process alive even once the writer is gone.
-      child.stdout?.destroy()
-      const pid = child.pid
+      child.stdout?.destroy();
+      const pid = child.pid;
       // A negative pid signals the whole group. Falling back to the child alone
       // covers a group that has already exited (and any platform without one).
       const killedTheGroup =
         pid !== undefined &&
-        ignoringAnAlreadyDeadProcess(() => process.kill(-pid, "SIGKILL"))
+        ignoringAnAlreadyDeadProcess(() => process.kill(-pid, "SIGKILL"));
       if (!killedTheGroup) {
-        ignoringAnAlreadyDeadProcess(() => child.kill("SIGKILL"))
+        ignoringAnAlreadyDeadProcess(() => child.kill("SIGKILL"));
       }
-      resolve(id)
-    }
+      resolve(id);
+    };
 
     timer = setTimeout(
       () => finish(cursorChatIdFrom(output, { atEnd: true })),
       MINT_TIMEOUT_MS
-    )
-    timer.unref?.()
+    );
+    timer.unref?.();
 
-    child.stdout?.setEncoding("utf8")
+    child.stdout?.setEncoding("utf8");
     child.stdout?.on("data", (chunk: string) => {
-      output += chunk
-      const id = cursorChatIdFrom(output)
-      if (id !== null) finish(id)
-    })
-    child.on("error", () => finish(null))
-    child.on("close", () => finish(cursorChatIdFrom(output, { atEnd: true })))
-  })
+      output += chunk;
+      const id = cursorChatIdFrom(output);
+      if (id !== null) finish(id);
+    });
+    child.on("error", () => finish(null));
+    child.on("close", () => finish(cursorChatIdFrom(output, { atEnd: true })));
+  });

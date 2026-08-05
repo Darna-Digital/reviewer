@@ -1,15 +1,15 @@
-import { HttpApi } from "effect/unstable/httpapi"
-import { ChatsApi } from "./layers/chats/chats.api.ts"
-import { CommentsApi } from "./layers/comments/comments.api.ts"
-import { DocsApi } from "./layers/docs/docs.api.ts"
-import { GitMessageApi } from "./layers/git-message/git-message.api.ts"
-import { GitHubApi } from "./layers/github/github.api.ts"
-import { LanguageApi } from "./layers/language/language.api.ts"
-import { TasksApi } from "./layers/tasks/tasks.api.ts"
-import { LocalDevApi } from "./layers/local-dev/local-dev.api.ts"
-import { RepoApi } from "./layers/repo/repo.api.ts"
-import { ThreadsApi } from "./layers/threads/threads.api.ts"
-import { WorkspaceApi } from "./layers/workspace/workspace.api.ts"
+import { HttpApi } from "effect/unstable/httpapi";
+import { ChatsApi } from "./layers/chats/chats.api.ts";
+import { CommentsApi } from "./layers/comments/comments.api.ts";
+import { DocsApi } from "./layers/docs/docs.api.ts";
+import { GitMessageApi } from "./layers/git-message/git-message.api.ts";
+import { GitHubApi } from "./layers/github/github.api.ts";
+import { LanguageApi } from "./layers/language/language.api.ts";
+import { TasksApi } from "./layers/tasks/tasks.api.ts";
+import { LocalDevApi } from "./layers/local-dev/local-dev.api.ts";
+import { RepoApi } from "./layers/repo/repo.api.ts";
+import { ThreadsApi } from "./layers/threads/threads.api.ts";
+import { WorkspaceApi } from "./layers/workspace/workspace.api.ts";
 
 export class Api extends HttpApi.make("byconvo")
   .add(WorkspaceApi)

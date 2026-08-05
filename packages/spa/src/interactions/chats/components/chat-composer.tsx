@@ -13,27 +13,27 @@ import {
   IconMap,
   IconPhotoPlus,
   IconPlayerStopFilled,
-} from "@tabler/icons-react"
-import { useRef, useState } from "react"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
+} from "@tabler/icons-react";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/dropdown-menu";
+import { Separator } from "@/components/ui/separator";
 import type {
   ChatAccess,
   ChatEffort,
   ChatMode,
   ChatModelCatalog,
-} from "@byconvo/core/chats"
-import { useDraft } from "@/lib/chat-drafts"
-import { cn } from "@/lib/utils"
-import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces"
-import { AttachmentChip, AttachmentGrid } from "./image-attachments"
+} from "@byconvo/core/chats";
+import { useDraft } from "@/lib/chat-drafts";
+import { cn } from "@/lib/utils";
+import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces";
+import { AttachmentChip, AttachmentGrid } from "./image-attachments";
 import {
   attachmentSource,
   isImageFile,
@@ -42,14 +42,14 @@ import {
   toImagePayload,
   type ChatImagePayload,
   type ComposerAttachment,
-} from "./attachments"
-import { ModelPicker } from "./model-picker"
+} from "./attachments";
+import { ModelPicker } from "./model-picker";
 
 const EFFORTS: Array<{ value: ChatEffort; label: string; hint: string }> = [
   { value: "low", label: "Low", hint: "Fast, minimal reasoning" },
   { value: "medium", label: "Medium", hint: "Balanced reasoning" },
   { value: "high", label: "High", hint: "Deep reasoning" },
-]
+];
 
 const ACCESS: Array<{ value: ChatAccess; label: string; hint: string }> = [
   {
@@ -67,12 +67,12 @@ const ACCESS: Array<{ value: ChatAccess; label: string; hint: string }> = [
     label: "Full access",
     hint: "Commands and edits without prompts",
   },
-]
+];
 
 const MODES: Array<{ value: ChatMode; label: string; hint: string }> = [
   { value: "build", label: "Build", hint: "Make changes" },
   { value: "plan", label: "Plan", hint: "Read-only planning" },
-]
+];
 
 function SelectorMenu<T extends string>({
   options,
@@ -81,13 +81,13 @@ function SelectorMenu<T extends string>({
   icon,
   ariaLabel,
 }: {
-  options: Array<{ value: T; label: string; hint: string }>
-  value: T
-  onSelect: (value: T) => void
-  icon?: React.ReactNode
-  ariaLabel: string
+  options: Array<{ value: T; label: string; hint: string }>;
+  value: T;
+  onSelect: (value: T) => void;
+  icon?: React.ReactNode;
+  ariaLabel: string;
 }) {
-  const current = options.find((o) => o.value === value)
+  const current = options.find((o) => o.value === value);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -119,7 +119,7 @@ function SelectorMenu<T extends string>({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 export function ChatComposer({
@@ -132,75 +132,76 @@ export function ChatComposer({
   placeholder,
   draftKey,
 }: {
-  settings: ChatSettings
-  onSettingsChange: (patch: Partial<ChatSettings>) => void
-  catalog: ChatModelCatalog | undefined
+  settings: ChatSettings;
+  onSettingsChange: (patch: Partial<ChatSettings>) => void;
+  catalog: ChatModelCatalog | undefined;
   /** Resolves once the send is accepted; the draft clears only on success. */
   onSend: (
     text: string,
     images: ReadonlyArray<ChatImagePayload>
-  ) => Promise<void>
-  running: boolean
-  onStop?: () => void
-  placeholder?: string
+  ) => Promise<void>;
+  running: boolean;
+  onStop?: () => void;
+  placeholder?: string;
   /** Stable id the draft is persisted under so it survives navigation. */
-  draftKey: string
+  draftKey: string;
 }) {
   // The prompt lives in the shared draft store (keyed per chat) rather than
   // local state, so leaving and returning to a thread keeps what you typed.
-  const [text, setText] = useDraft(draftKey)
-  const [sending, setSending] = useState(false)
-  const [attachments, setAttachments] = useState<ComposerAttachment[]>([])
-  const [dragging, setDragging] = useState(false)
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [text, setText] = useDraft(draftKey);
+  const [sending, setSending] = useState(false);
+  const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   // dragenter/dragleave fire per descendant, so count depth to know when the
   // pointer has truly left the composer (matches lib/terminal/image-drop.ts).
-  const dragDepth = useRef(0)
+  const dragDepth = useRef(0);
 
   // A send while a turn is running is accepted, not blocked: the server appends
   // the message to the thread and the agent picks it up when the turn settles.
-  const canSend = !sending && (text.trim().length > 0 || attachments.length > 0)
+  const canSend =
+    !sending && (text.trim().length > 0 || attachments.length > 0);
 
   const addFiles = async (files: ReadonlyArray<File>) => {
-    const images = files.filter(isImageFile)
+    const images = files.filter(isImageFile);
     if (images.length === 0) {
-      if (files.length > 0) toast.error("Only image files can be attached")
-      return
+      if (files.length > 0) toast.error("Only image files can be attached");
+      return;
     }
     for (const file of images) {
       if (file.size > MAX_IMAGE_BYTES) {
-        toast.error(`${file.name || "image"} is too large (max 15 MB)`)
-        continue
+        toast.error(`${file.name || "image"} is too large (max 15 MB)`);
+        continue;
       }
       try {
-        const attachment = await readImageAttachment(file)
-        setAttachments((prev) => [...prev, attachment])
+        const attachment = await readImageAttachment(file);
+        setAttachments((prev) => [...prev, attachment]);
       } catch {
-        toast.error(`Could not read ${file.name || "image"}`)
+        toast.error(`Could not read ${file.name || "image"}`);
       }
     }
-  }
+  };
 
   const removeAttachment = (id: string) =>
-    setAttachments((prev) => prev.filter((a) => a.id !== id))
+    setAttachments((prev) => prev.filter((a) => a.id !== id));
 
   // Deliver the draft. Clears it on success; keeps it on failure so the user
   // can retry — the caller has already surfaced a toast.
   const submit = async () => {
-    if (!canSend) return
-    setSending(true)
+    if (!canSend) return;
+    setSending(true);
     try {
-      await onSend(text, attachments.map(toImagePayload))
-      setText("")
-      setAttachments([])
+      await onSend(text, attachments.map(toImagePayload));
+      setText("");
+      setAttachments([]);
     } catch {
       // keep the draft for a manual retry
     } finally {
-      setSending(false)
-      textareaRef.current?.focus()
+      setSending(false);
+      textareaRef.current?.focus();
     }
-  }
+  };
 
   return (
     <div
@@ -209,27 +210,27 @@ export function ChatComposer({
         dragging && "border-primary"
       )}
       onDragEnter={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return
-        e.preventDefault()
-        dragDepth.current += 1
-        setDragging(true)
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        dragDepth.current += 1;
+        setDragging(true);
       }}
       onDragOver={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return
-        e.preventDefault()
-        e.dataTransfer.dropEffect = "copy"
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
       }}
       onDragLeave={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return
-        dragDepth.current = Math.max(0, dragDepth.current - 1)
-        if (dragDepth.current === 0) setDragging(false)
+        if (!e.dataTransfer.types.includes("Files")) return;
+        dragDepth.current = Math.max(0, dragDepth.current - 1);
+        if (dragDepth.current === 0) setDragging(false);
       }}
       onDrop={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return
-        e.preventDefault()
-        dragDepth.current = 0
-        setDragging(false)
-        void addFiles(Array.from(e.dataTransfer.files))
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        dragDepth.current = 0;
+        setDragging(false);
+        void addFiles(Array.from(e.dataTransfer.files));
       }}
     >
       {attachments.length > 0 && (
@@ -253,8 +254,8 @@ export function ChatComposer({
         multiple
         className="hidden"
         onChange={(e) => {
-          void addFiles(Array.from(e.target.files ?? []))
-          e.target.value = ""
+          void addFiles(Array.from(e.target.files ?? []));
+          e.target.value = "";
         }}
       />
       <textarea
@@ -263,16 +264,16 @@ export function ChatComposer({
         value={text}
         onChange={(e) => setText(e.target.value)}
         onPaste={(e) => {
-          const files = Array.from(e.clipboardData.files)
+          const files = Array.from(e.clipboardData.files);
           if (files.some(isImageFile)) {
-            e.preventDefault()
-            void addFiles(files)
+            e.preventDefault();
+            void addFiles(files);
           }
         }}
         onKeyDown={(e) => {
           if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault()
-            void submit()
+            e.preventDefault();
+            void submit();
           }
         }}
         rows={3}
@@ -370,5 +371,5 @@ export function ChatComposer({
         </Button>
       </div>
     </div>
-  )
+  );
 }

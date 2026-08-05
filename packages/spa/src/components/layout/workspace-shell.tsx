@@ -7,46 +7,46 @@
  * carries what the rail held. Each feature page renders its own header and body
  * into the `<Outlet />`.
  */
-import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router"
-import { useState } from "react"
-import { BranchSwitcher } from "@/components/layout/branch-switcher"
-import { GitBottomDock } from "@/components/layout/git-bottom-dock"
-import { MockInboxPopover } from "@/interactions/inbox/components/mock-inbox-popover"
-import { ModeRail } from "@/components/layout/mode-rail"
-import { ModeSelector } from "@/components/layout/mode-selector"
-import { SidebarToggle } from "@/components/layout/sidebar-toggle"
-import { WindowFrame } from "@/components/layout/window-frame"
-import { RepoPicker } from "@/components/repo-picker"
-import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search"
-import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog"
-import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker"
-import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
+import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useState } from "react";
+import { BranchSwitcher } from "@/components/layout/branch-switcher";
+import { GitBottomDock } from "@/components/layout/git-bottom-dock";
+import { MockInboxPopover } from "@/interactions/inbox/components/mock-inbox-popover";
+import { ModeRail } from "@/components/layout/mode-rail";
+import { ModeSelector } from "@/components/layout/mode-selector";
+import { SidebarToggle } from "@/components/layout/sidebar-toggle";
+import { WindowFrame } from "@/components/layout/window-frame";
+import { RepoPicker } from "@/components/repo-picker";
+import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
+import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
+import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
+import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import {
   useBranches,
   useRemoteBranches,
   useRepo,
   useWorkspace,
-} from "@/lib/queries"
-import { isDesktop } from "@/lib/desktop"
-import { useUiPrefs } from "@/lib/ui-prefs"
-import { activeWorkMode } from "@/lib/work-mode"
+} from "@/lib/queries";
+import { isDesktop } from "@/lib/desktop";
+import { useUiPrefs } from "@/lib/ui-prefs";
+import { activeWorkMode } from "@/lib/work-mode";
 
 export function WorkspaceShell() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const navigate = useNavigate()
-  const repo = useRepo()
-  const workspace = useWorkspace()
-  const branches = useBranches()
-  const remoteBranches = useRemoteBranches()
-  const git = useGitActions()
-  const prefs = useUiPrefs()
-  const [pickerOpen, setPickerOpen] = useState(false)
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const navigate = useNavigate();
+  const repo = useRepo();
+  const workspace = useWorkspace();
+  const branches = useBranches();
+  const remoteBranches = useRemoteBranches();
+  const git = useGitActions();
+  const prefs = useUiPrefs();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
-  const current = workspace.data?.current ?? null
-  const isSettings = pathname.startsWith("/settings")
+  const current = workspace.data?.current ?? null;
+  const isSettings = pathname.startsWith("/settings");
   // Collaboration mode hides the git chrome — no branch switcher, no dock.
   const collaborating =
-    activeWorkMode(pathname, prefs.workMode) === "collaboration"
+    activeWorkMode(pathname, prefs.workMode) === "collaboration";
 
   return (
     <WindowFrame>
@@ -121,5 +121,5 @@ export function WorkspaceShell() {
         </div>
       </div>
     </WindowFrame>
-  )
+  );
 }

@@ -1,16 +1,16 @@
-import type { CommitInfo } from "@byconvo/core/repo"
-import { DEFAULT_GRAPH_CONFIG } from "../interfaces/commit-graph.interfaces"
+import type { CommitInfo } from "@byconvo/core/repo";
+import { DEFAULT_GRAPH_CONFIG } from "../interfaces/commit-graph.interfaces";
 import type {
   CommitGraphConfig,
   CommitGraphDependencies,
-} from "../interfaces/commit-graph.interfaces"
+} from "../interfaces/commit-graph.interfaces";
 
 export const createCommitGraphDependenciesMock = (
   overrides?: Partial<CommitGraphConfig>
 ): CommitGraphDependencies => ({
   data: { ...DEFAULT_GRAPH_CONFIG, ...overrides },
   sideEffects: {},
-})
+});
 
 /** Build a minimal CommitInfo for layout tests — only sha/parents matter. */
 export const fakeCommit = (
@@ -24,4 +24,4 @@ export const fakeCommit = (
   subject: sha,
   refs: [],
   parents,
-})
+});

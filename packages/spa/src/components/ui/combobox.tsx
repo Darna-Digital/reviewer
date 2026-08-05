@@ -1,14 +1,14 @@
-import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox"
-import { IconCheck, IconSearch, IconSelector } from "@tabler/icons-react"
+import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
+import { IconCheck, IconSearch, IconSelector } from "@tabler/icons-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import {
   ELEVATION,
   POPUP_SHADOW,
   SurfaceProvider,
   useElevation,
-} from "@/lib/surface-context"
-import { TruncatedRow } from "@/components/ui/truncated-text"
+} from "@/lib/surface-context";
+import { TruncatedRow } from "@/components/ui/truncated-text";
 
 /**
  * Combobox — a searchable single-select built on Base UI's `Combobox`, styled to
@@ -17,11 +17,11 @@ import { TruncatedRow } from "@/components/ui/truncated-text"
  * the filtering internally from the `items` passed to the root.
  */
 function Combobox<Value>(props: ComboboxPrimitive.Root.Props<Value>) {
-  return <ComboboxPrimitive.Root data-slot="combobox" {...props} />
+  return <ComboboxPrimitive.Root data-slot="combobox" {...props} />;
 }
 
 function ComboboxValue(props: ComboboxPrimitive.Value.Props) {
-  return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />
+  return <ComboboxPrimitive.Value data-slot="combobox-value" {...props} />;
 }
 
 function ComboboxTrigger({
@@ -48,7 +48,7 @@ function ComboboxTrigger({
         className="text-muted-foreground"
       />
     </ComboboxPrimitive.Trigger>
-  )
+  );
 }
 
 function ComboboxContent({
@@ -63,7 +63,7 @@ function ComboboxContent({
   const { level, className: surface } = useElevation(
     ELEVATION.menu,
     POPUP_SHADOW
-  )
+  );
   return (
     <ComboboxPrimitive.Portal>
       <ComboboxPrimitive.Positioner
@@ -88,7 +88,7 @@ function ComboboxContent({
         </ComboboxPrimitive.Popup>
       </ComboboxPrimitive.Positioner>
     </ComboboxPrimitive.Portal>
-  )
+  );
 }
 
 function ComboboxInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
@@ -104,7 +104,7 @@ function ComboboxInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
         {...props}
       />
     </div>
-  )
+  );
 }
 
 function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
@@ -119,7 +119,7 @@ function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
@@ -132,7 +132,7 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function ComboboxItem({
@@ -161,7 +161,7 @@ function ComboboxItem({
         </ComboboxPrimitive.ItemIndicator>
       </span>
     </TruncatedRow>
-  )
+  );
 }
 
 export {
@@ -173,4 +173,4 @@ export {
   ComboboxList,
   ComboboxTrigger,
   ComboboxValue,
-}
+};

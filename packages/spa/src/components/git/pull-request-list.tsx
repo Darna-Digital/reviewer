@@ -3,29 +3,29 @@
  * agent-threads sidebar: a free-text search over number/title/author/branch, a
  * branch + time filter menu, and rows grouped under the branch each PR targets.
  */
-import { IconGitBranch } from "@tabler/icons-react"
-import { useMemo, useState, type CSSProperties } from "react"
+import { IconGitBranch } from "@tabler/icons-react";
+import { useMemo, useState, type CSSProperties } from "react";
 import {
   ALL_BRANCHES,
   branchLabel,
   SidebarFilterMenu,
   SidebarSearch,
-} from "@/components/layout/sidebar-filters"
-import { Button } from "@/components/ui/button"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { dateCutoff, type DateFilter } from "@/lib/date-filter"
-import { cn } from "@/lib/utils"
-import type { PullRequestInfo } from "@byconvo/core/ports/git-provider"
+} from "@/components/layout/sidebar-filters";
+import { Button } from "@/components/ui/button";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { dateCutoff, type DateFilter } from "@/lib/date-filter";
+import { cn } from "@/lib/utils";
+import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
 
 interface PullRequestListProps {
-  pulls: ReadonlyArray<PullRequestInfo>
-  error: string | null
-  loading?: boolean
-  selectedNumber: number | null
-  onSelect: (pull: PullRequestInfo) => void
-  className?: string
-  style?: CSSProperties
+  pulls: ReadonlyArray<PullRequestInfo>;
+  error: string | null;
+  loading?: boolean;
+  selectedNumber: number | null;
+  onSelect: (pull: PullRequestInfo) => void;
+  className?: string;
+  style?: CSSProperties;
 }
 
 export function PullRequestList({
@@ -37,43 +37,43 @@ export function PullRequestList({
   className,
   style,
 }: PullRequestListProps) {
-  const [baseFilter, setBaseFilter] = useState(ALL_BRANCHES)
-  const [dateFilter, setDateFilter] = useState<DateFilter>("all")
-  const [search, setSearch] = useState("")
+  const [baseFilter, setBaseFilter] = useState(ALL_BRANCHES);
+  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
+  const [search, setSearch] = useState("");
 
   const baseBranches = useMemo(
     () => [...new Set(pulls.map((p) => p.baseRef))].sort(),
     [pulls]
-  )
+  );
 
   const filtered = useMemo(() => {
-    const cutoff = dateCutoff(dateFilter)
-    const q = search.trim().replace(/^#/, "").toLowerCase()
+    const cutoff = dateCutoff(dateFilter);
+    const q = search.trim().replace(/^#/, "").toLowerCase();
     return pulls.filter((p) => {
-      if (cutoff > 0 && Date.parse(p.updatedAt) < cutoff) return false
+      if (cutoff > 0 && Date.parse(p.updatedAt) < cutoff) return false;
       if (q.length > 0) {
         const haystack =
-          `${p.number}\n${p.title}\n${p.author}\n${p.headRef}`.toLowerCase()
-        if (!haystack.includes(q)) return false
+          `${p.number}\n${p.title}\n${p.author}\n${p.headRef}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
       }
-      return true
-    })
-  }, [pulls, dateFilter, search])
+      return true;
+    });
+  }, [pulls, dateFilter, search]);
 
   const groups = useMemo(() => {
-    const present = [...new Set(filtered.map((p) => p.baseRef))].sort()
-    const basesToShow = baseFilter === ALL_BRANCHES ? present : [baseFilter]
+    const present = [...new Set(filtered.map((p) => p.baseRef))].sort();
+    const basesToShow = baseFilter === ALL_BRANCHES ? present : [baseFilter];
     return basesToShow.map((base) => ({
       base,
       pulls: filtered.filter((p) => p.baseRef === base),
-    }))
-  }, [filtered, baseFilter])
+    }));
+  }, [filtered, baseFilter]);
 
-  const hasMatches = groups.some((g) => g.pulls.length > 0)
+  const hasMatches = groups.some((g) => g.pulls.length > 0);
   const filtersActive =
     baseFilter !== ALL_BRANCHES ||
     dateFilter !== "all" ||
-    search.trim().length > 0
+    search.trim().length > 0;
 
   const renderRow = (p: PullRequestInfo) => (
     <button
@@ -98,7 +98,7 @@ export function PullRequestList({
         </div>
       </div>
     </button>
-  )
+  );
 
   return (
     <aside className={cn("flex min-h-0 flex-col", className)} style={style}>
@@ -145,9 +145,9 @@ export function PullRequestList({
               variant="ghost"
               className="h-7 text-xs"
               onClick={() => {
-                setBaseFilter(ALL_BRANCHES)
-                setDateFilter("all")
-                setSearch("")
+                setBaseFilter(ALL_BRANCHES);
+                setDateFilter("all");
+                setSearch("");
               }}
             >
               Clear filters
@@ -174,5 +174,5 @@ export function PullRequestList({
         )}
       </ScrollArea>
     </aside>
-  )
+  );
 }

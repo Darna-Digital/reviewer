@@ -3,19 +3,19 @@
  * file reads differently from stepping through history or a pull request.
  * Crumbs before the last one are links back to their level.
  */
-import { IconChevronRight, type IconGitBranch } from "@tabler/icons-react"
-import { Fragment } from "react"
-import { cn } from "@/lib/utils"
+import { IconChevronRight, type IconGitBranch } from "@tabler/icons-react";
+import { Fragment } from "react";
+import { cn } from "@/lib/utils";
 
 export interface Crumb {
-  id: string
-  label: string
-  icon?: typeof IconGitBranch
+  id: string;
+  label: string;
+  icon?: typeof IconGitBranch;
   /** Short mono prefix shown before the label, e.g. a commit's short sha. */
-  hint?: string
+  hint?: string;
   /** Render the label in mono — used for file paths. */
-  mono?: boolean
-  onClick?: () => void
+  mono?: boolean;
+  onClick?: () => void;
 }
 
 export function Breadcrumbs({ crumbs }: { crumbs: ReadonlyArray<Crumb> }) {
@@ -25,8 +25,8 @@ export function Breadcrumbs({ crumbs }: { crumbs: ReadonlyArray<Crumb> }) {
       className="flex min-w-0 items-center gap-0.5 text-xs"
     >
       {crumbs.map((crumb, index) => {
-        const last = index === crumbs.length - 1
-        const Icon = crumb.icon
+        const last = index === crumbs.length - 1;
+        const Icon = crumb.icon;
         const content = (
           <>
             {Icon && <Icon className="size-3.5 shrink-0" />}
@@ -39,7 +39,7 @@ export function Breadcrumbs({ crumbs }: { crumbs: ReadonlyArray<Crumb> }) {
               {crumb.label}
             </span>
           </>
-        )
+        );
         return (
           <Fragment key={crumb.id}>
             {index > 0 && (
@@ -65,8 +65,8 @@ export function Breadcrumbs({ crumbs }: { crumbs: ReadonlyArray<Crumb> }) {
               </span>
             )}
           </Fragment>
-        )
+        );
       })}
     </nav>
-  )
+  );
 }

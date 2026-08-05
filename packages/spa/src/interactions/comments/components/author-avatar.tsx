@@ -4,35 +4,35 @@
  * falls back to deterministic initials on a colour derived from the name —
  * reusing the same palette as the repo/project avatars.
  */
-import { useEffect, useState } from "react"
-import { repoAvatar } from "@/lib/repo-avatar"
-import { cn } from "@/lib/utils"
-import type { ReviewComment } from "@byconvo/core/comments"
+import { useEffect, useState } from "react";
+import { repoAvatar } from "@/lib/repo-avatar";
+import { cn } from "@/lib/utils";
+import type { ReviewComment } from "@byconvo/core/comments";
 
 export function AuthorAvatar({
   author,
   source,
   className,
 }: {
-  author: string
-  source: ReviewComment["source"]
-  className?: string
+  author: string;
+  source: ReviewComment["source"];
+  className?: string;
 }) {
-  const { initials, color } = repoAvatar(author)
+  const { initials, color } = repoAvatar(author);
   const githubUrl =
     source === "github" && /^[\w-]+$/.test(author)
       ? `https://github.com/${author}.png?size=48`
-      : null
-  const [failed, setFailed] = useState(false)
+      : null;
+  const [failed, setFailed] = useState(false);
 
   // Reset the error state if the author/url changes (avatars are reused across
   // re-renders as comments stream in).
-  useEffect(() => setFailed(false), [githubUrl])
+  useEffect(() => setFailed(false), [githubUrl]);
 
   const base = cn(
     "size-7 shrink-0 overflow-hidden rounded-full select-none",
     className
-  )
+  );
 
   if (githubUrl !== null && !failed) {
     return (
@@ -42,7 +42,7 @@ export function AuthorAvatar({
         className={cn(base, "object-cover")}
         onError={() => setFailed(true)}
       />
-    )
+    );
   }
 
   return (
@@ -57,5 +57,5 @@ export function AuthorAvatar({
     >
       {initials}
     </span>
-  )
+  );
 }

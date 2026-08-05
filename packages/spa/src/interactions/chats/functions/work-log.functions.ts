@@ -10,60 +10,60 @@
  * Pure, so the pairing rules (which are the fiddly part) are unit-testable
  * without a socket or a running agent.
  */
-import type { ChatActivity } from "@byconvo/core/chats"
+import type { ChatActivity } from "@byconvo/core/chats";
 
-export type WorkStepStatus = "running" | "done" | "failed"
+export type WorkStepStatus = "running" | "done" | "failed";
 
 export interface WorkStep {
-  readonly id: string
-  readonly label: string
-  readonly summary: string
+  readonly id: string;
+  readonly label: string;
+  readonly summary: string;
   /** The part of the summary after the tool name, which the label already
    * shows — `"Bash — pnpm test"` → `"pnpm test"`. */
-  readonly detail: string | null
-  readonly status: WorkStepStatus
-  readonly thinking: boolean
+  readonly detail: string | null;
+  readonly status: WorkStepStatus;
+  readonly thinking: boolean;
   /** The call's arguments, from the activity that opened it. */
-  readonly input: string | null
+  readonly input: string | null;
   /** What the tool returned, from the activity that settled it. */
-  readonly output: string | null
-  readonly startedAt: string
-  readonly endedAt: string | null
-  readonly durationMs: number | null
+  readonly output: string | null;
+  readonly startedAt: string;
+  readonly endedAt: string | null;
+  readonly durationMs: number | null;
 }
 
-const OPENING_KINDS = new Set(["tool.started", "thinking"])
+const OPENING_KINDS = new Set(["tool.started", "thinking"]);
 const CLOSING_KINDS = new Set([
   "tool.completed",
   "tool.failed",
   "thinking.completed",
-])
+]);
 
 /** `"Bash — pnpm test"` → `"Bash"`. Providers that send an explicit `label`
  * skip this; codex only ever encodes the tool in the summary's first clause. */
 const labelFrom = (activity: ChatActivity): string =>
-  activity.label ?? activity.summary.split(" — ")[0] ?? activity.summary
+  activity.label ?? activity.summary.split(" — ")[0] ?? activity.summary;
 
 const detailFrom = (activity: ChatActivity): string | null => {
-  const tail = activity.summary.split(" — ").slice(1).join(" — ")
-  return tail.length > 0 ? tail : null
-}
+  const tail = activity.summary.split(" — ").slice(1).join(" — ");
+  return tail.length > 0 ? tail : null;
+};
 
 const durationBetween = (startedAt: string, endedAt: string): number | null => {
-  const ms = Date.parse(endedAt) - Date.parse(startedAt)
-  return Number.isFinite(ms) && ms >= 0 ? ms : null
-}
+  const ms = Date.parse(endedAt) - Date.parse(startedAt);
+  return Number.isFinite(ms) && ms >= 0 ? ms : null;
+};
 
 interface MutableStep {
-  step: WorkStep
-  callId: string | undefined
+  step: WorkStep;
+  callId: string | undefined;
 }
 
 const isFailure = (activity: ChatActivity): boolean =>
-  activity.kind === "tool.failed" || activity.tone === "error"
+  activity.kind === "tool.failed" || activity.tone === "error";
 
 const alreadySettledOnArrival = (activity: ChatActivity): boolean =>
-  !OPENING_KINDS.has(activity.kind)
+  !OPENING_KINDS.has(activity.kind);
 
 const asAlreadyClosedStep = (activity: ChatActivity): MutableStep => ({
   callId: activity.callId,
@@ -80,10 +80,10 @@ const asAlreadyClosedStep = (activity: ChatActivity): MutableStep => ({
     endedAt: activity.createdAt,
     durationMs: null,
   },
-})
+});
 
 const asOpeningStep = (activity: ChatActivity): MutableStep => {
-  const settled = alreadySettledOnArrival(activity)
+  const settled = alreadySettledOnArrival(activity);
   return {
     callId: activity.callId,
     step: {
@@ -99,8 +99,8 @@ const asOpeningStep = (activity: ChatActivity): MutableStep => {
       endedAt: settled ? activity.createdAt : null,
       durationMs: null,
     },
-  }
-}
+  };
+};
 
 const closedBy = (open: WorkStep, activity: ChatActivity): WorkStep => ({
   ...open,
@@ -108,7 +108,7 @@ const closedBy = (open: WorkStep, activity: ChatActivity): WorkStep => ({
   output: activity.detail,
   endedAt: activity.createdAt,
   durationMs: durationBetween(open.startedAt, activity.createdAt),
-})
+});
 
 /**
  * @param turnRunning when false, a step with no closing activity never got one
@@ -119,7 +119,7 @@ export function toWorkSteps(
   activities: ReadonlyArray<ChatActivity>,
   turnRunning: boolean
 ): ReadonlyArray<WorkStep> {
-  const steps: MutableStep[] = []
+  const steps: MutableStep[] = [];
 
   /** Providers that send a call id (claude, whose tools overlap) match on it;
    * those that don't (codex, strictly sequential) close the oldest open step
@@ -128,35 +128,35 @@ export function toWorkSteps(
     if (activity.callId !== undefined) {
       return steps.find(
         (s) => s.callId === activity.callId && s.step.status === "running"
-      )
+      );
     }
-    const closesThinking = activity.kind === "thinking.completed"
+    const closesThinking = activity.kind === "thinking.completed";
     return steps.find(
       (s) =>
         s.callId === undefined &&
         s.step.status === "running" &&
         s.step.thinking === closesThinking
-    )
-  }
+    );
+  };
 
   for (const activity of activities) {
     if (!CLOSING_KINDS.has(activity.kind)) {
-      steps.push(asOpeningStep(activity))
-      continue
+      steps.push(asOpeningStep(activity));
+      continue;
     }
-    const open = openStepFor(activity)
+    const open = openStepFor(activity);
     if (open === undefined) {
-      steps.push(asAlreadyClosedStep(activity))
-      continue
+      steps.push(asAlreadyClosedStep(activity));
+      continue;
     }
-    open.step = closedBy(open.step, activity)
+    open.step = closedBy(open.step, activity);
   }
 
   return steps.map(({ step }) =>
     step.status === "running" && !turnRunning
       ? { ...step, status: "done" }
       : step
-  )
+  );
 }
 
 /** The step to surface in the live status line: whatever is still in flight. */
@@ -164,11 +164,11 @@ export const activeWorkStep = (
   steps: ReadonlyArray<WorkStep>
 ): WorkStep | undefined => {
   for (let i = steps.length - 1; i >= 0; i -= 1) {
-    const step = steps[i]
-    if (step !== undefined && step.status === "running") return step
+    const step = steps[i];
+    if (step !== undefined && step.status === "running") return step;
   }
-  return undefined
-}
+  return undefined;
+};
 
 /**
  * Wall-clock span of the whole turn, first start to last settle. Summing the
@@ -176,17 +176,17 @@ export const activeWorkStep = (
  * gaps between them.
  */
 export const elapsedMs = (steps: ReadonlyArray<WorkStep>): number | null => {
-  let first: number | null = null
-  let last: number | null = null
+  let first: number | null = null;
+  let last: number | null = null;
   for (const step of steps) {
-    const startedAt = Date.parse(step.startedAt)
-    const endedAt = Date.parse(step.endedAt ?? step.startedAt)
+    const startedAt = Date.parse(step.startedAt);
+    const endedAt = Date.parse(step.endedAt ?? step.startedAt);
     if (Number.isFinite(startedAt) && (first === null || startedAt < first)) {
-      first = startedAt
+      first = startedAt;
     }
     if (Number.isFinite(endedAt) && (last === null || endedAt > last)) {
-      last = endedAt
+      last = endedAt;
     }
   }
-  return first === null || last === null || last < first ? null : last - first
-}
+  return first === null || last === null || last < first ? null : last - first;
+};

@@ -1,6 +1,6 @@
-import baseConfig from "@byconvo/lint/prettier"
+import baseConfig from "@byconvo/lint/prettier";
 
 /** @type {import("prettier").Config} */
 export default {
   ...baseConfig,
-}
+};

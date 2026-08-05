@@ -3,20 +3,20 @@
  * `.byconvo/chats.json` inside the selected repository, through the shared
  * plain-fs store the turn runtime also writes through.
  */
-import * as Effect from "effect/Effect"
-import { DEFAULT_CHAT_TITLE, summarizeChat } from "@byconvo/core/chats"
-import { NotFound, StorageError } from "@byconvo/core/shared"
-import { WorkspaceContext } from "../workspace/workspace-context.ts"
+import * as Effect from "effect/Effect";
+import { DEFAULT_CHAT_TITLE, summarizeChat } from "@byconvo/core/chats";
+import { NotFound, StorageError } from "@byconvo/core/shared";
+import { WorkspaceContext } from "../workspace/workspace-context.ts";
 import type {
   Chat,
   ChatsRepo,
   CreateChatInput,
   UpdateChatInput,
-} from "@byconvo/core/chats"
-import { nextChatId, readChats, writeChats } from "./store.ts"
+} from "@byconvo/core/chats";
+import { nextChatId, readChats, writeChats } from "./store.ts";
 
 export const makeFileChatsRepository = Effect.gen(function* () {
-  const ctx = yield* WorkspaceContext
+  const ctx = yield* WorkspaceContext;
 
   const withFile = <A>(f: (repoPath: string) => A) =>
     Effect.flatMap(ctx.requireCurrent, (repoPath) =>
@@ -30,28 +30,28 @@ export const makeFileChatsRepository = Effect.gen(function* () {
                 reason: error instanceof Error ? error.message : String(error),
               }),
       })
-    )
+    );
 
   const requireChat = (repoPath: string, id: string): Chat => {
-    const chat = readChats(repoPath).find((c) => c.id === id)
+    const chat = readChats(repoPath).find((c) => c.id === id);
     if (chat === undefined) {
-      throw new NotFound({ reason: `chat ${id} not found` })
+      throw new NotFound({ reason: `chat ${id} not found` });
     }
-    return chat
-  }
+    return chat;
+  };
 
   const list: ChatsRepo["list"] = withFile((repoPath) =>
     [...readChats(repoPath)]
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .map(summarizeChat)
-  )
+  );
 
   const get: ChatsRepo["get"] = (id) =>
-    withFile((repoPath) => requireChat(repoPath, id))
+    withFile((repoPath) => requireChat(repoPath, id));
 
   const create: ChatsRepo["create"] = (input: CreateChatInput) =>
     withFile((repoPath) => {
-      const now = new Date().toISOString()
+      const now = new Date().toISOString();
       const created: Chat = {
         id: nextChatId("c"),
         title:
@@ -70,21 +70,21 @@ export const makeFileChatsRepository = Effect.gen(function* () {
         messages: [],
         activities: [],
         latestTurn: null,
-      }
-      writeChats(repoPath, [created, ...readChats(repoPath)])
-      return created
-    })
+      };
+      writeChats(repoPath, [created, ...readChats(repoPath)]);
+      return created;
+    });
 
   const update: ChatsRepo["update"] = (id, input: UpdateChatInput) =>
     withFile((repoPath) => {
-      const existing = requireChat(repoPath, id)
-      const provider = input.provider ?? existing.provider
+      const existing = requireChat(repoPath, id);
+      const provider = input.provider ?? existing.provider;
       // Switching the chat's agent invalidates the native session — each CLI
       // mints and can only resume its own — so drop the id (the next turn
       // starts the new agent fresh). A provider change without an explicit
       // model also falls back to that CLI's default rather than keeping the
       // previous agent's model id.
-      const providerChanged = provider !== existing.provider
+      const providerChanged = provider !== existing.provider;
       const updated: Chat = {
         ...existing,
         title:
@@ -98,21 +98,21 @@ export const makeFileChatsRepository = Effect.gen(function* () {
         mode: input.mode ?? existing.mode,
         sessionId: providerChanged ? null : existing.sessionId,
         updatedAt: new Date().toISOString(),
-      }
+      };
       writeChats(
         repoPath,
         readChats(repoPath).map((c) => (c.id === id ? updated : c))
-      )
-      return updated
-    })
+      );
+      return updated;
+    });
 
   const remove: ChatsRepo["remove"] = (id) =>
     withFile((repoPath) => {
       writeChats(
         repoPath,
         readChats(repoPath).filter((c) => c.id !== id)
-      )
-    })
+      );
+    });
 
-  return { list, get, create, update, remove } satisfies ChatsRepo
-})
+  return { list, get, create, update, remove } satisfies ChatsRepo;
+});

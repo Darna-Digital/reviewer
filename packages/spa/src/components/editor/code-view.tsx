@@ -1,75 +1,75 @@
-import { type LineAnnotation } from "@pierre/diffs"
-import { EditorProvider, File, Virtualizer } from "@pierre/diffs/react"
-import { IconPencil } from "@tabler/icons-react"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { createPortal } from "react-dom"
+import { type LineAnnotation } from "@pierre/diffs";
+import { EditorProvider, File, Virtualizer } from "@pierre/diffs/react";
+import { IconPencil } from "@tabler/icons-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   CommentThread,
   DraftCard,
   type DraftLocation,
-} from "@/interactions/comments/components/comment-thread"
+} from "@/interactions/comments/components/comment-thread";
 import {
   DiagnosticsAnnotation,
   DiagnosticsSummary,
-} from "@/interactions/language/components/diagnostics-annotation"
+} from "@/interactions/language/components/diagnostics-annotation";
 import {
   useLanguageLayer,
   type DiagnosticsAnnotationMeta,
-} from "@/interactions/language/components/language-layer"
+} from "@/interactions/language/components/language-layer";
 import {
   useRevealLine,
   type RevealTarget,
-} from "@/interactions/language/components/use-reveal-line"
-import { THEMES, useLangReady } from "@/components/editor/highlighter"
-import { useFileEditing } from "@/components/editor/use-file-editing"
-import { Button } from "@/components/ui/button"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
-import { useFile } from "@/lib/queries"
-import type { ReviewComment } from "@byconvo/core/comments"
-import type { FileEdits, Location } from "@byconvo/core/language"
-import { writeFileEdits } from "@/interactions/language/adapters/language.hook.adapter"
-import type { Theme } from "@/lib/ui-prefs"
+} from "@/interactions/language/components/use-reveal-line";
+import { THEMES, useLangReady } from "@/components/editor/highlighter";
+import { useFileEditing } from "@/components/editor/use-file-editing";
+import { Button } from "@/components/ui/button";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { useFile } from "@/lib/queries";
+import type { ReviewComment } from "@byconvo/core/comments";
+import type { FileEdits, Location } from "@byconvo/core/language";
+import { writeFileEdits } from "@/interactions/language/adapters/language.hook.adapter";
+import type { Theme } from "@/lib/ui-prefs";
 
 // Comments on a plain (non-diff) file are always anchored to the current
 // content, i.e. the "additions" side of an eventual worktree diff.
-const FILE_COMMENT_SIDE = "additions" as const
+const FILE_COMMENT_SIDE = "additions" as const;
 
 type AnnotationMeta =
   | {
-      readonly kind: "comments"
-      readonly comments: ReadonlyArray<ReviewComment>
+      readonly kind: "comments";
+      readonly comments: ReadonlyArray<ReviewComment>;
     }
   | { readonly kind: "draft" }
-  | DiagnosticsAnnotationMeta
+  | DiagnosticsAnnotationMeta;
 
 interface CodeViewProps {
-  path: string
-  theme: Theme
+  path: string;
+  theme: Theme;
   /** Called after the buffer is written to disk, so git state can refresh. */
-  onSaved?: () => void
+  onSaved?: () => void;
   /** Whether this file has unsaved changes — the tab strip shows a marker. */
-  onDirtyChange?: (dirty: boolean) => void
+  onDirtyChange?: (dirty: boolean) => void;
   /**
    * Where this file's own controls (Edit, Save, the problem count) render —
    * the crumb bar above the view, so the path and everything acting on it stay
    * on one line. Omit to leave the file without them.
    */
-  actionsSlot?: HTMLElement | null
+  actionsSlot?: HTMLElement | null;
   /**
    * Open another file at a line — go-to-definition and find-usages need it.
    * Omit to leave the IDE layer off.
    */
-  onOpenLocation?: (path: string, lineNumber: number) => void
+  onOpenLocation?: (path: string, lineNumber: number) => void;
   /** Scroll this one-based line into view and flash it. */
-  reveal?: RevealTarget | null
+  reveal?: RevealTarget | null;
   /** Local review comments anchored to this file (optional — omit to disable). */
-  comments?: ReadonlyArray<ReviewComment>
-  draft?: DraftLocation | null
-  onDraftOpen?: (draft: DraftLocation) => void
-  onDraftCancel?: () => void
-  onCommentSubmit?: (location: DraftLocation, body: string) => Promise<void>
-  onCommentDelete?: (comment: ReviewComment) => Promise<void>
-  onCommentEdit?: (comment: ReviewComment, body: string) => Promise<void>
+  comments?: ReadonlyArray<ReviewComment>;
+  draft?: DraftLocation | null;
+  onDraftOpen?: (draft: DraftLocation) => void;
+  onDraftCancel?: () => void;
+  onCommentSubmit?: (location: DraftLocation, body: string) => Promise<void>;
+  onCommentDelete?: (comment: ReviewComment) => Promise<void>;
+  onCommentEdit?: (comment: ReviewComment, body: string) => Promise<void>;
 }
 
 export function CodeView({
@@ -88,17 +88,17 @@ export function CodeView({
   onCommentDelete,
   onCommentEdit,
 }: CodeViewProps) {
-  const file = useFile(path)
-  const langReady = useLangReady(path)
-  const scrollWrapper = useRef<HTMLDivElement>(null)
+  const file = useFile(path);
+  const langReady = useLangReady(path);
+  const scrollWrapper = useRef<HTMLDivElement>(null);
   const commentsEnabled =
-    onCommentSubmit !== undefined && onCommentDelete !== undefined
+    onCommentSubmit !== undefined && onCommentDelete !== undefined;
 
   // Reading and editing are separate again. Reading is the default, and it is
   // what the gutter `+` needs: an editable view takes the caret on every click
   // and the library disables line selection inside it.
-  const [editing, setEditing] = useState(false)
-  useEffect(() => setEditing(false), [path])
+  const [editing, setEditing] = useState(false);
+  useEffect(() => setEditing(false), [path]);
 
   // A quick fix can touch a file that is not open — an import added to a
   // barrel, say. Those are read, edited and written back through the file API,
@@ -106,28 +106,28 @@ export function CodeView({
   const applyForeignEdits = useCallback(
     (files: ReadonlyArray<FileEdits>) => void writeFileEdits(files),
     []
-  )
+  );
 
   const buffer = useFileEditing(
     path,
     file.data?.contents,
     useCallback(() => onSaved?.(), [onSaved])
-  )
+  );
 
   useEffect(() => {
-    onDirtyChange?.(buffer.dirty)
-  }, [buffer.dirty, onDirtyChange])
+    onDirtyChange?.(buffer.dirty);
+  }, [buffer.dirty, onDirtyChange]);
 
   // Report the file as saved when it goes away, so a stale marker cannot
   // outlive the view that owned it.
-  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange])
+  useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
 
   const stopEditing = () => {
     if (buffer.dirty && !window.confirm(`Discard unsaved changes in ${path}?`))
-      return
-    buffer.discard()
-    setEditing(false)
-  }
+      return;
+    buffer.discard();
+    setEditing(false);
+  };
 
   // The IDE layer: diagnostics, go-to-definition and find-usages, driven by
   // `@pierre/diffs` token hooks. Only active when the host can navigate.
@@ -145,33 +145,33 @@ export function CodeView({
         onOpenLocation?.(location.path, location.range.start.line + 1),
       [onOpenLocation]
     ),
-  })
+  });
 
   // Group this file's comments (and the open draft) into per-line annotations.
   const annotations = useMemo<Array<LineAnnotation<AnnotationMeta>>>(() => {
-    const byLine = new Map<number, ReviewComment[]>()
+    const byLine = new Map<number, ReviewComment[]>();
     for (const c of comments ?? []) {
-      const bucket = byLine.get(c.lineNumber)
-      if (bucket) bucket.push(c)
-      else byLine.set(c.lineNumber, [c])
+      const bucket = byLine.get(c.lineNumber);
+      if (bucket) bucket.push(c);
+      else byLine.set(c.lineNumber, [c]);
     }
-    const out: Array<LineAnnotation<AnnotationMeta>> = []
+    const out: Array<LineAnnotation<AnnotationMeta>> = [];
     for (const [lineNumber, group] of byLine) {
-      out.push({ lineNumber, metadata: { kind: "comments", comments: group } })
+      out.push({ lineNumber, metadata: { kind: "comments", comments: group } });
     }
     if (draft !== null && draft.filePath === path) {
-      out.push({ lineNumber: draft.lineNumber, metadata: { kind: "draft" } })
+      out.push({ lineNumber: draft.lineNumber, metadata: { kind: "draft" } });
     }
     // Diagnostics share the annotation slot with comments; a line can carry
     // both, and `@pierre/diffs` stacks them in order.
-    out.push(...language.annotations)
-    return out
-  }, [comments, draft, language.annotations, path])
+    out.push(...language.annotations);
+    return out;
+  }, [comments, draft, language.annotations, path]);
 
   // The annotation slot carries diagnostics as well as comments, so it stays on
   // whenever either has something to show.
-  const annotationsEnabled = commentsEnabled || language.annotations.length > 0
-  const gutterCommentsEnabled = commentsEnabled && !editing
+  const annotationsEnabled = commentsEnabled || language.annotations.length > 0;
+  const gutterCommentsEnabled = commentsEnabled && !editing;
 
   // Line count drives the first scroll estimate for a line that has not been
   // rendered yet; zero until the file loads, which simply means "start at top".
@@ -179,24 +179,24 @@ export function CodeView({
     // The Virtualizer's own root div owns the scroll — it has to, in order to
     // window its rendering — and it is the wrapper's only child.
     useCallback(() => {
-      const scroller = scrollWrapper.current?.firstElementChild
-      return scroller instanceof HTMLElement ? scroller : null
+      const scroller = scrollWrapper.current?.firstElementChild;
+      return scroller instanceof HTMLElement ? scroller : null;
     }, []),
     reveal,
     file.data === undefined ? 0 : file.data.contents.split("\n").length
-  )
+  );
 
   if (file.isPending || !langReady) {
     return (
       <div className="p-8">
         <LoadingCursor label={`Loading ${path}…`} />
       </div>
-    )
+    );
   }
   if (file.error || file.data === undefined) {
     return (
       <div className="p-8 text-sm text-destructive">Could not open {path}</div>
-    )
+    );
   }
 
   return (
@@ -264,14 +264,14 @@ export function CodeView({
               renderAnnotation={
                 annotationsEnabled
                   ? (annotation) => {
-                      const meta = annotation.metadata
-                      if (meta === undefined) return null
+                      const meta = annotation.metadata;
+                      if (meta === undefined) return null;
                       if (meta.kind === "diagnostics") {
                         return (
                           <DiagnosticsAnnotation
                             diagnostics={meta.diagnostics}
                           />
-                        )
+                        );
                       }
                       if (meta.kind === "draft") {
                         return onCommentSubmit === undefined ? null : (
@@ -288,7 +288,7 @@ export function CodeView({
                               )
                             }
                           />
-                        )
+                        );
                       }
                       return onCommentDelete === undefined ? null : (
                         <CommentThread
@@ -296,7 +296,7 @@ export function CodeView({
                           onDelete={onCommentDelete}
                           onEdit={onCommentEdit}
                         />
-                      )
+                      );
                     }
                   : undefined
               }
@@ -343,5 +343,5 @@ export function CodeView({
         {language.menu}
       </Virtualizer>
     </div>
-  )
+  );
 }

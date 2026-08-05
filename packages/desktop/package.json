@@ -15,10 +15,14 @@
     "dist": "electron-builder --config electron-builder.config.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "dev": "tsc -p tsconfig.json && BYCONVO_DESKTOP_DEV=1 electron .",
-    "start": "tsc -p tsconfig.json && electron ."
+    "start": "tsc -p tsconfig.json && electron .",
+    "format": "prettier --write \"src/**/*.ts\" \"*.js\"",
+    "format:check": "prettier --check \"src/**/*.ts\" \"*.js\""
   },
   "devDependencies": {
+    "@byconvo/lint": "workspace:*",
     "@types/node": "^22.15.0",
+    "prettier": "^3.8.3",
     "electron": "^42.4.0",
     "electron-builder": "^26.15.3",
     "typescript": "^5.8.0"

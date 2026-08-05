@@ -1,41 +1,41 @@
-import { IconSparkles } from "@tabler/icons-react"
-import { useMemo, useState } from "react"
-import { ResizeHandle } from "@/components/layout/resize-handle"
-import { agentIcon } from "@/interactions/threads/components/agent-icons"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { IconSparkles } from "@tabler/icons-react";
+import { useMemo, useState } from "react";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import { agentIcon } from "@/interactions/threads/components/agent-icons";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
-import { TruncatedText } from "@/components/ui/truncated-text"
-import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents"
-import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo"
-import { STATUS_COLOR } from "@/lib/git-status"
-import { setUiPrefs, useUiPrefs, type CommitAgent } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { TruncatedText } from "@/components/ui/truncated-text";
+import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents";
+import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo";
+import { STATUS_COLOR } from "@/lib/git-status";
+import { setUiPrefs, useUiPrefs, type CommitAgent } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 /** Agents that can draft a message — every kind except the plain terminal. */
-const COMMIT_AGENTS = AGENTS.filter((a) => a.kind !== "terminal")
+const COMMIT_AGENTS = AGENTS.filter((a) => a.kind !== "terminal");
 
 interface CommitPanelProps {
-  changes: ReadonlyArray<GitStatusEntry>
-  busy: boolean
+  changes: ReadonlyArray<GitStatusEntry>;
+  busy: boolean;
   onCommit: (
     message: string,
     paths: ReadonlyArray<string>,
     andPush: boolean
-  ) => Promise<unknown>
+  ) => Promise<unknown>;
   /** Draft a commit message for the chosen paths with the chosen agent CLI. */
   onGenerate?: (
     paths: ReadonlyArray<string>,
     agent: CommitAgent
-  ) => Promise<string | null>
+  ) => Promise<string | null>;
 }
 
 const STATUS_LETTER: Record<GitFileStatus, string> = {
@@ -45,7 +45,7 @@ const STATUS_LETTER: Record<GitFileStatus, string> = {
   renamed: "R",
   untracked: "U",
   ignored: "I",
-}
+};
 
 export function CommitPanel({
   changes,
@@ -53,79 +53,79 @@ export function CommitPanel({
   onCommit,
   onGenerate,
 }: CommitPanelProps) {
-  const { commitFilesHeight, commitMessageHeight, commitAgent } = useUiPrefs()
+  const { commitFilesHeight, commitMessageHeight, commitAgent } = useUiPrefs();
   // Live heights for smooth dragging; committed back to prefs on release.
-  const [filesHeight, setFilesHeight] = useState(commitFilesHeight)
-  const [messageHeight, setMessageHeight] = useState(commitMessageHeight)
-  const [message, setMessage] = useState("")
-  const [generating, setGenerating] = useState(false)
+  const [filesHeight, setFilesHeight] = useState(commitFilesHeight);
+  const [messageHeight, setMessageHeight] = useState(commitMessageHeight);
+  const [message, setMessage] = useState("");
+  const [generating, setGenerating] = useState(false);
   // Which action is in flight, so its button can show a spinner.
-  const [pending, setPending] = useState<"commit" | "push" | null>(null)
+  const [pending, setPending] = useState<"commit" | "push" | null>(null);
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(changes.map((c) => c.path))
-  )
+  );
 
   // Keep the selection in sync as the change set shifts.
-  const paths = useMemo(() => changes.map((c) => c.path).join("\n"), [changes])
+  const paths = useMemo(() => changes.map((c) => c.path).join("\n"), [changes]);
   useMemo(() => {
     setSelected((prev) => {
-      const next = new Set<string>()
-      for (const c of changes) if (prev.has(c.path)) next.add(c.path)
+      const next = new Set<string>();
+      for (const c of changes) if (prev.has(c.path)) next.add(c.path);
       // Newly appeared files default to selected.
       for (const c of changes)
-        if (!prev.has(c.path) && prev.size === 0) next.add(c.path)
+        if (!prev.has(c.path) && prev.size === 0) next.add(c.path);
       return next.size === 0 && changes.length > 0
         ? new Set(changes.map((c) => c.path))
-        : next
-    })
+        : next;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paths])
+  }, [paths]);
 
   const toggle = (path: string) =>
     setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(path)) next.delete(path)
-      else next.add(path)
-      return next
-    })
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
 
-  const chosen = changes.filter((c) => selected.has(c.path)).map((c) => c.path)
+  const chosen = changes.filter((c) => selected.has(c.path)).map((c) => c.path);
   const canCommit =
     message.trim().length > 0 &&
     chosen.length > 0 &&
     !busy &&
     !generating &&
-    pending === null
+    pending === null;
   const canGenerate =
     onGenerate !== undefined &&
     chosen.length > 0 &&
     !generating &&
     !busy &&
-    pending === null
+    pending === null;
 
   const commit = async (andPush: boolean) => {
-    if (!canCommit) return
-    setPending(andPush ? "push" : "commit")
+    if (!canCommit) return;
+    setPending(andPush ? "push" : "commit");
     try {
-      const ok = await onCommit(message.trim(), chosen, andPush)
-      if (ok !== false) setMessage("")
+      const ok = await onCommit(message.trim(), chosen, andPush);
+      if (ok !== false) setMessage("");
     } finally {
-      setPending(null)
+      setPending(null);
     }
-  }
+  };
 
   const generate = async () => {
-    if (!canGenerate || onGenerate === undefined) return
-    setGenerating(true)
+    if (!canGenerate || onGenerate === undefined) return;
+    setGenerating(true);
     try {
-      const generated = await onGenerate(chosen, commitAgent)
-      if (generated !== null && generated.length > 0) setMessage(generated)
+      const generated = await onGenerate(chosen, commitAgent);
+      if (generated !== null && generated.length > 0) setMessage(generated);
     } finally {
-      setGenerating(false)
+      setGenerating(false);
     }
-  }
+  };
 
-  const AgentGlyph = agentIcon(commitAgent)
+  const AgentGlyph = agentIcon(commitAgent);
 
   return (
     <div className="flex shrink-0 flex-col border-t">
@@ -194,7 +194,7 @@ export function CommitPanel({
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === "Enter")
-                void commit(false)
+                void commit(false);
             }}
           />
           {onGenerate !== undefined && (
@@ -235,13 +235,13 @@ export function CommitPanel({
                 </SelectTrigger>
                 <SelectContent align="end">
                   {COMMIT_AGENTS.map((a) => {
-                    const Icon = agentIcon(a.kind)
+                    const Icon = agentIcon(a.kind);
                     return (
                       <SelectItem key={a.kind} value={a.kind}>
                         <Icon className="size-4 shrink-0 text-muted-foreground" />
                         {a.label}
                       </SelectItem>
-                    )
+                    );
                   })}
                 </SelectContent>
               </Select>
@@ -276,5 +276,5 @@ export function CommitPanel({
         </div>
       </div>
     </div>
-  )
+  );
 }

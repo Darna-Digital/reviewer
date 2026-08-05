@@ -3,77 +3,77 @@ import {
   IconHistory,
   IconPlayerPlay,
   IconTerminal2,
-} from "@tabler/icons-react"
-import { BranchTree } from "@/components/git/branch-tree"
-import { CommitHistory } from "@/components/git/commit-history"
-import { TabsSubtle, TabsSubtleItem } from "@/components/ui/tabs-subtle"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { LocalDevPage } from "@/interactions/local-dev/components/local-dev-page"
-import { ThreadsPage } from "@/interactions/threads/components/threads-page"
-import type { LogQuery } from "@/lib/api/types"
-import type { BottomTab } from "@/lib/ui-prefs"
+} from "@tabler/icons-react";
+import { BranchTree } from "@/components/git/branch-tree";
+import { CommitHistory } from "@/components/git/commit-history";
+import { TabsSubtle, TabsSubtleItem } from "@/components/ui/tabs-subtle";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { LocalDevPage } from "@/interactions/local-dev/components/local-dev-page";
+import { ThreadsPage } from "@/interactions/threads/components/threads-page";
+import type { LogQuery } from "@/lib/api/types";
+import type { BottomTab } from "@/lib/ui-prefs";
 import type {
   BranchInfo,
   CommitInfo,
   RemoteBranchInfo,
-} from "@byconvo/core/repo"
-import { useState } from "react"
-import { cn } from "@/lib/utils"
+} from "@byconvo/core/repo";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 
 const TABS: ReadonlyArray<{
-  id: BottomTab
-  label: string
-  icon: typeof IconGitBranch
+  id: BottomTab;
+  label: string;
+  icon: typeof IconGitBranch;
 }> = [
   { id: "branches", label: "Branches", icon: IconGitBranch },
   { id: "history", label: "History", icon: IconHistory },
   { id: "services", label: "Services", icon: IconPlayerPlay },
   { id: "threads", label: "Terminal threads", icon: IconTerminal2 },
-]
+];
 
 interface BottomPanelProps {
-  tab: BottomTab
+  tab: BottomTab;
   /** Whether the dock is expanded. While collapsed, no new panel mounts. */
-  active: boolean
-  onTabChange: (tab: BottomTab) => void
-  branches: ReadonlyArray<BranchInfo>
-  remoteBranches: ReadonlyArray<RemoteBranchInfo>
-  currentBranch: string | null
-  commits: ReadonlyArray<CommitInfo>
-  commitsLoading: boolean
-  commitsHaveMore: boolean
-  logRef: string | null
-  logFilters: LogQuery
-  selectedCommitSha: string | null
-  selectedCommitFile: string | null
-  onLoadMoreCommits: () => void
-  onLogRefChange: (ref: string) => void
-  onLogFiltersChange: (filters: LogQuery) => void
-  onBranchCheckout: (name: string) => void
-  onSelectCommit: (commit: CommitInfo) => void
-  onSelectCommitFile: (path: string) => void
+  active: boolean;
+  onTabChange: (tab: BottomTab) => void;
+  branches: ReadonlyArray<BranchInfo>;
+  remoteBranches: ReadonlyArray<RemoteBranchInfo>;
+  currentBranch: string | null;
+  commits: ReadonlyArray<CommitInfo>;
+  commitsLoading: boolean;
+  commitsHaveMore: boolean;
+  logRef: string | null;
+  logFilters: LogQuery;
+  selectedCommitSha: string | null;
+  selectedCommitFile: string | null;
+  onLoadMoreCommits: () => void;
+  onLogRefChange: (ref: string) => void;
+  onLogFiltersChange: (filters: LogQuery) => void;
+  onBranchCheckout: (name: string) => void;
+  onSelectCommit: (commit: CommitInfo) => void;
+  onSelectCommitFile: (path: string) => void;
 }
 
 export function BottomPanel(props: BottomPanelProps) {
   const selectedIndex = Math.max(
     0,
     TABS.findIndex((t) => t.id === props.tab)
-  )
+  );
 
   // Services and Threads own live terminals, so once opened they stay mounted
   // while hidden. Until first opened they cost nothing.
   const [visitedTabs, setVisitedTabs] = useState<ReadonlySet<BottomTab>>(
     () => new Set(props.active ? [props.tab] : [])
-  )
+  );
   if (props.active && !visitedTabs.has(props.tab)) {
-    setVisitedTabs(new Set(visitedTabs).add(props.tab))
+    setVisitedTabs(new Set(visitedTabs).add(props.tab));
   }
 
   // Picking a branch from the tree sets the history ref and jumps to History.
   const selectRef = (ref: string) => {
-    props.onLogRefChange(ref)
-    props.onTabChange("history")
-  }
+    props.onLogRefChange(ref);
+    props.onTabChange("history");
+  };
 
   return (
     <div className="flex h-full flex-col gap-0">
@@ -83,8 +83,8 @@ export function BottomPanel(props: BottomPanelProps) {
           activeLabel
           selectedIndex={selectedIndex}
           onSelect={(index) => {
-            const next = TABS[index]
-            if (next) props.onTabChange(next.id)
+            const next = TABS[index];
+            if (next) props.onTabChange(next.id);
           }}
         >
           {TABS.map((t, index) => (
@@ -176,5 +176,5 @@ export function BottomPanel(props: BottomPanelProps) {
         {visitedTabs.has("threads") && <ThreadsPage />}
       </div>
     </div>
-  )
+  );
 }

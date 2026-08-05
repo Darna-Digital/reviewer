@@ -1,4 +1,4 @@
-import * as Schema from "effect/Schema"
+import * as Schema from "effect/Schema";
 
 export const GitFileStatus = Schema.Literals([
   "added",
@@ -7,26 +7,26 @@ export const GitFileStatus = Schema.Literals([
   "modified",
   "renamed",
   "untracked",
-])
-export type GitFileStatus = typeof GitFileStatus.Type
+]);
+export type GitFileStatus = typeof GitFileStatus.Type;
 export const GitStatusEntry = Schema.Struct({
   path: Schema.String,
   status: GitFileStatus,
-})
-export type GitStatusEntry = typeof GitStatusEntry.Type
+});
+export type GitStatusEntry = typeof GitStatusEntry.Type;
 export const GitHubRemote = Schema.Struct({
   owner: Schema.String,
   repo: Schema.String,
-})
-export type GitHubRemote = typeof GitHubRemote.Type
+});
+export type GitHubRemote = typeof GitHubRemote.Type;
 export const RepoInfo = Schema.Struct({
   root: Schema.String,
   name: Schema.String,
   currentBranch: Schema.String,
   remoteUrl: Schema.NullOr(Schema.String),
   github: Schema.NullOr(GitHubRemote),
-})
-export type RepoInfo = typeof RepoInfo.Type
+});
+export type RepoInfo = typeof RepoInfo.Type;
 export const BranchInfo = Schema.Struct({
   name: Schema.String,
   sha: Schema.String,
@@ -36,8 +36,8 @@ export const BranchInfo = Schema.Struct({
   behind: Schema.Number,
   committedAt: Schema.String,
   subject: Schema.String,
-})
-export type BranchInfo = typeof BranchInfo.Type
+});
+export type BranchInfo = typeof BranchInfo.Type;
 export const RemoteBranchInfo = Schema.Struct({
   name: Schema.String,
   remote: Schema.String,
@@ -45,8 +45,8 @@ export const RemoteBranchInfo = Schema.Struct({
   sha: Schema.String,
   committedAt: Schema.String,
   subject: Schema.String,
-})
-export type RemoteBranchInfo = typeof RemoteBranchInfo.Type
+});
+export type RemoteBranchInfo = typeof RemoteBranchInfo.Type;
 export const CommitInfo = Schema.Struct({
   sha: Schema.String,
   shortSha: Schema.String,
@@ -55,14 +55,14 @@ export const CommitInfo = Schema.Struct({
   subject: Schema.String,
   refs: Schema.Array(Schema.String),
   parents: Schema.Array(Schema.String),
-})
-export type CommitInfo = typeof CommitInfo.Type
+});
+export type CommitInfo = typeof CommitInfo.Type;
 export const CommitFileChange = Schema.Struct({
   path: Schema.String,
   status: GitFileStatus,
   oldPath: Schema.NullOr(Schema.String),
-})
-export type CommitFileChange = typeof CommitFileChange.Type
+});
+export type CommitFileChange = typeof CommitFileChange.Type;
 export const CommitDetail = Schema.Struct({
   sha: Schema.String,
   shortSha: Schema.String,
@@ -74,13 +74,13 @@ export const CommitDetail = Schema.Struct({
   refs: Schema.Array(Schema.String),
   parents: Schema.Array(Schema.String),
   files: Schema.Array(CommitFileChange),
-})
-export type CommitDetail = typeof CommitDetail.Type
+});
+export type CommitDetail = typeof CommitDetail.Type;
 export const FilesPayload = Schema.Struct({
   paths: Schema.Array(Schema.String),
   gitStatus: Schema.Array(GitStatusEntry),
-})
-export type FilesPayload = typeof FilesPayload.Type
+});
+export type FilesPayload = typeof FilesPayload.Type;
 export const RepoStatus = Schema.Struct({
   branch: Schema.String,
   upstream: Schema.NullOr(Schema.String),
@@ -92,12 +92,12 @@ export const RepoStatus = Schema.Struct({
   unstaged: Schema.Number,
   untracked: Schema.Number,
   conflicted: Schema.Number,
-})
-export type RepoStatus = typeof RepoStatus.Type
-export const CommandOutput = Schema.Struct({ output: Schema.String })
-export type CommandOutput = typeof CommandOutput.Type
-export const CommitResult = Schema.Struct({ sha: Schema.String })
-export type CommitResult = typeof CommitResult.Type
+});
+export type RepoStatus = typeof RepoStatus.Type;
+export const CommandOutput = Schema.Struct({ output: Schema.String });
+export type CommandOutput = typeof CommandOutput.Type;
+export const CommitResult = Schema.Struct({ sha: Schema.String });
+export type CommitResult = typeof CommitResult.Type;
 export const ConflictKind = Schema.Literals([
   "both-modified",
   "both-added",
@@ -106,35 +106,35 @@ export const ConflictKind = Schema.Literals([
   "added-by-them",
   "deleted-by-us",
   "deleted-by-them",
-])
-export type ConflictKind = typeof ConflictKind.Type
+]);
+export type ConflictKind = typeof ConflictKind.Type;
 export const ConflictedFile = Schema.Struct({
   path: Schema.String,
   kind: ConflictKind,
-})
-export type ConflictedFile = typeof ConflictedFile.Type
+});
+export type ConflictedFile = typeof ConflictedFile.Type;
 export const MergeOperation = Schema.Literals([
   "merge",
   "rebase",
   "cherry-pick",
   "revert",
   "none",
-])
-export type MergeOperation = typeof MergeOperation.Type
+]);
+export type MergeOperation = typeof MergeOperation.Type;
 export const MergeState = Schema.Struct({
   operation: MergeOperation,
   incoming: Schema.NullOr(Schema.String),
   onto: Schema.NullOr(Schema.String),
   conflicted: Schema.Array(ConflictedFile),
-})
-export type MergeState = typeof MergeState.Type
+});
+export type MergeState = typeof MergeState.Type;
 export const ConflictBlobs = Schema.Struct({
   path: Schema.String,
   base: Schema.NullOr(Schema.String),
   ours: Schema.String,
   theirs: Schema.String,
-})
-export type ConflictBlobs = typeof ConflictBlobs.Type
+});
+export type ConflictBlobs = typeof ConflictBlobs.Type;
 export const LogQueryParams = Schema.Struct({
   ref: Schema.optionalKey(Schema.String),
   limit: Schema.optionalKey(Schema.String),
@@ -147,70 +147,70 @@ export const LogQueryParams = Schema.Struct({
   before: Schema.optionalKey(Schema.String),
   path: Schema.optionalKey(Schema.String),
   follow: Schema.optionalKey(Schema.String),
-})
-export type LogQueryParams = typeof LogQueryParams.Type
+});
+export type LogQueryParams = typeof LogQueryParams.Type;
 export const DiffQuery = Schema.Struct({
   commit: Schema.optionalKey(Schema.String),
   base: Schema.optionalKey(Schema.String),
   head: Schema.optionalKey(Schema.String),
-})
-export type DiffQuery = typeof DiffQuery.Type
+});
+export type DiffQuery = typeof DiffQuery.Type;
 export const DiffFileQuery = Schema.Struct({
   path: Schema.String,
   prevPath: Schema.optionalKey(Schema.String),
   commit: Schema.optionalKey(Schema.String),
   base: Schema.optionalKey(Schema.String),
   head: Schema.optionalKey(Schema.String),
-})
-export type DiffFileQuery = typeof DiffFileQuery.Type
+});
+export type DiffFileQuery = typeof DiffFileQuery.Type;
 export const DiffFileContents = Schema.Struct({
   oldContents: Schema.NullOr(Schema.String),
   newContents: Schema.NullOr(Schema.String),
-})
-export type DiffFileContents = typeof DiffFileContents.Type
-export const CommitParam = Schema.Struct({ sha: Schema.String })
-export const Checkout = Schema.Struct({ branch: Schema.String })
-export type Checkout = typeof Checkout.Type
+});
+export type DiffFileContents = typeof DiffFileContents.Type;
+export const CommitParam = Schema.Struct({ sha: Schema.String });
+export const Checkout = Schema.Struct({ branch: Schema.String });
+export type Checkout = typeof Checkout.Type;
 export const CommitBody = Schema.Struct({
   message: Schema.String,
   paths: Schema.optionalKey(Schema.Array(Schema.String)),
-})
-export type CommitBody = typeof CommitBody.Type
+});
+export type CommitBody = typeof CommitBody.Type;
 export const Discard = Schema.Struct({
   paths: Schema.Array(Schema.String),
-})
-export type Discard = typeof Discard.Type
+});
+export type Discard = typeof Discard.Type;
 export const DiscardHunk = Schema.Struct({
   path: Schema.String,
   hunkIndex: Schema.Int,
-})
-export type DiscardHunk = typeof DiscardHunk.Type
-export const Merge = Schema.Struct({ branch: Schema.String })
-export type Merge = typeof Merge.Type
-export const Rebase = Schema.Struct({ onto: Schema.String })
-export type Rebase = typeof Rebase.Type
-export const ConflictParam = Schema.Struct({ path: Schema.String })
-export type ConflictParam = typeof ConflictParam.Type
+});
+export type DiscardHunk = typeof DiscardHunk.Type;
+export const Merge = Schema.Struct({ branch: Schema.String });
+export type Merge = typeof Merge.Type;
+export const Rebase = Schema.Struct({ onto: Schema.String });
+export type Rebase = typeof Rebase.Type;
+export const ConflictParam = Schema.Struct({ path: Schema.String });
+export type ConflictParam = typeof ConflictParam.Type;
 export const ResolveConflict = Schema.Struct({
   path: Schema.String,
   resolution: Schema.Literals(["ours", "theirs", "content"]),
-})
-export type ResolveConflict = typeof ResolveConflict.Type
+});
+export type ResolveConflict = typeof ResolveConflict.Type;
 export const CreateBranch = Schema.Struct({
   name: Schema.String,
   startPoint: Schema.optionalKey(Schema.String),
-})
-export type CreateBranch = typeof CreateBranch.Type
+});
+export type CreateBranch = typeof CreateBranch.Type;
 export const RenameBranch = Schema.Struct({
   from: Schema.String,
   to: Schema.String,
-})
-export type RenameBranch = typeof RenameBranch.Type
+});
+export type RenameBranch = typeof RenameBranch.Type;
 export const DeleteBranch = Schema.Struct({
   name: Schema.String,
   force: Schema.optionalKey(Schema.Boolean),
-})
-export type DeleteBranch = typeof DeleteBranch.Type
+});
+export type DeleteBranch = typeof DeleteBranch.Type;
 /**
  * Which diff a full-file-contents lookup belongs to — mirrors the `/diff`
  * query, so both sides of the file resolve against the same refs the diff
@@ -219,27 +219,27 @@ export type DeleteBranch = typeof DeleteBranch.Type
 export type DiffFileTarget =
   | { readonly kind: "worktree" }
   | { readonly kind: "commit"; readonly sha: string }
-  | { readonly kind: "range"; readonly base: string; readonly head: string }
+  | { readonly kind: "range"; readonly base: string; readonly head: string };
 
 /**
  * Sentinel `LogQuery.ref` asking for every ref (local, remote and tags) instead
  * of one branch's ancestry — git's `--all`. Not a valid ref name, so it can
  * never collide with a real branch.
  */
-export const ALL_REFS = "@all"
+export const ALL_REFS = "@all";
 
 export interface LogQuery {
-  readonly ref: string
-  readonly limit: number
+  readonly ref: string;
+  readonly limit: number;
   /** Commits to walk past before collecting — the page offset. */
-  readonly skip: number
-  readonly author: string | null
-  readonly grep: string | null
-  readonly regex: boolean
-  readonly caseSensitive: boolean
-  readonly after: string | null
-  readonly before: string | null
-  readonly path: string | null
+  readonly skip: number;
+  readonly author: string | null;
+  readonly grep: string | null;
+  readonly regex: boolean;
+  readonly caseSensitive: boolean;
+  readonly after: string | null;
+  readonly before: string | null;
+  readonly path: string | null;
   /** Trace `path` across renames — git's `--follow`. Needs a single path. */
-  readonly follow: boolean
+  readonly follow: boolean;
 }

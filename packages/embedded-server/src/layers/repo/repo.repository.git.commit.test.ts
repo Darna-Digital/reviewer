@@ -1,16 +1,16 @@
-import * as Effect from "effect/Effect"
-import * as Layer from "effect/Layer"
-import * as FileSystem from "effect/FileSystem"
-import { describe, expect, it } from "vitest"
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as FileSystem from "effect/FileSystem";
+import { describe, expect, it } from "vitest";
 import {
   GitExec,
   GitError,
   type GitExecShape,
-} from "@byconvo/core/ports/git-exec"
-import { makeGitRepoRepository } from "./repo.repository.git.ts"
+} from "@byconvo/core/ports/git-exec";
+import { makeGitRepoRepository } from "./repo.repository.git.ts";
 
-const STAGED_DELETION = "packages/visual-picker/src/index.ts"
-const UNTRACKED = "packages/spa/src/new-file.ts"
+const STAGED_DELETION = "packages/visual-picker/src/index.ts";
+const UNTRACKED = "packages/spa/src/new-file.ts";
 
 /**
  * Models the behaviour that caused the bug: a path already staged as a deletion
@@ -18,9 +18,9 @@ const UNTRACKED = "packages/spa/src/new-file.ts"
  * and a single rejected pathspec aborts the batch without staging anything.
  */
 const fakeGit = (): { git: GitExecShape; commands: Array<string> } => {
-  const commands: Array<string> = []
+  const commands: Array<string> = [];
   const run = (...args: ReadonlyArray<string>) => {
-    commands.push(args.join(" "))
+    commands.push(args.join(" "));
     if (args[0] === "add" && args.includes(STAGED_DELETION)) {
       return Effect.fail(
         new GitError({
@@ -28,10 +28,10 @@ const fakeGit = (): { git: GitExecShape; commands: Array<string> } => {
           exitCode: 128,
           stderr: `fatal: pathspec '${STAGED_DELETION}' did not match any files`,
         })
-      )
+      );
     }
-    return Effect.succeed(args[0] === "rev-parse" ? "abc1234\n" : "")
-  }
+    return Effect.succeed(args[0] === "rev-parse" ? "abc1234\n" : "");
+  };
   return {
     commands,
     git: {
@@ -40,11 +40,11 @@ const fakeGit = (): { git: GitExecShape; commands: Array<string> } => {
       runTolerant: run,
       lines: () => Effect.succeed([]),
     },
-  }
-}
+  };
+};
 
 const runCommit = (paths: ReadonlyArray<string>) => {
-  const { git, commands } = fakeGit()
+  const { git, commands } = fakeGit();
   return Effect.runPromise(
     Effect.flatMap(makeGitRepoRepository, (repo) =>
       repo.commit("Remove visual picker", paths)
@@ -57,25 +57,25 @@ const runCommit = (paths: ReadonlyArray<string>) => {
       ),
       Effect.map((sha) => ({ sha, commands }))
     )
-  )
-}
+  );
+};
 
 describe("commit", () => {
   it("commits a path whose deletion git has already staged", async () => {
-    const { sha, commands } = await runCommit([STAGED_DELETION])
+    const { sha, commands } = await runCommit([STAGED_DELETION]);
 
-    expect(sha).toBe("abc1234")
+    expect(sha).toBe("abc1234");
     expect(commands).toContain(
       `commit -m Remove visual picker -- ${STAGED_DELETION}`
-    )
-  })
+    );
+  });
 
   it("still stages the other paths when one pathspec is rejected", async () => {
-    const { commands } = await runCommit([STAGED_DELETION, UNTRACKED])
+    const { commands } = await runCommit([STAGED_DELETION, UNTRACKED]);
 
-    expect(commands).toContain(`add -A -- ${UNTRACKED}`)
+    expect(commands).toContain(`add -A -- ${UNTRACKED}`);
     expect(commands).toContain(
       `commit -m Remove visual picker -- ${STAGED_DELETION} ${UNTRACKED}`
-    )
-  })
-})
+    );
+  });
+});

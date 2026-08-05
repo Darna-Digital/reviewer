@@ -12,10 +12,10 @@
  * travels beside them so providers can resolve files on disk without leaking
  * machine paths into the HTTP API or the UI.
  */
-import * as Context from "effect/Context"
-import type * as Effect from "effect/Effect"
-import * as Schema from "effect/Schema"
-import type { NoRepoSelected } from "../shared.ts"
+import * as Context from "effect/Context";
+import type * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
+import type { NoRepoSelected } from "../shared.ts";
 import type {
   CodeActionItem,
   CompletionResolution,
@@ -27,7 +27,7 @@ import type {
   Range,
   ReferencesResult,
   ProviderTransport,
-} from "../features/language/schema/language.schema.ts"
+} from "../features/language/schema/language.schema.ts";
 
 export class LanguageError extends Schema.TaggedErrorClass<LanguageError>()(
   "LanguageError",
@@ -35,89 +35,89 @@ export class LanguageError extends Schema.TaggedErrorClass<LanguageError>()(
   { httpApiStatus: 500 }
 ) {
   override get message(): string {
-    return `${this.providerId}: ${this.reason}`
+    return `${this.providerId}: ${this.reason}`;
   }
 }
 
-export type LanguageFailure = LanguageError | NoRepoSelected
+export type LanguageFailure = LanguageError | NoRepoSelected;
 
 /** What a provider can answer. Unsupported operations return empty results. */
 export interface ProviderCapabilities {
-  readonly diagnostics: boolean
-  readonly definition: boolean
-  readonly references: boolean
-  readonly hover: boolean
-  readonly completions: boolean
-  readonly codeActions: boolean
+  readonly diagnostics: boolean;
+  readonly definition: boolean;
+  readonly references: boolean;
+  readonly hover: boolean;
+  readonly completions: boolean;
+  readonly codeActions: boolean;
 }
 
 /** Whether a provider can serve a given repository right now. */
 export interface ProviderAvailability {
-  readonly available: boolean
+  readonly available: boolean;
   /** Human-readable reason — shown in settings when `available` is false. */
-  readonly detail: string
+  readonly detail: string;
 }
 
 export interface DocumentRequest {
   /** Absolute repository root. */
-  readonly root: string
+  readonly root: string;
   /** Repository-relative POSIX path of the document. */
-  readonly path: string
+  readonly path: string;
   /**
    * The editor's unsaved buffer, or null to read the file from disk. Providers
    * must honour it so diagnostics track what the user is looking at.
    */
-  readonly contents: string | null
+  readonly contents: string | null;
 }
 
 export interface PositionRequest extends DocumentRequest {
-  readonly position: Position
+  readonly position: Position;
 }
 
 export interface CompletionRequest extends PositionRequest {
   /** The identifier typed so far, used to narrow the list before it is sent. */
-  readonly prefix: string
+  readonly prefix: string;
 }
 
 export interface CompletionResolveRequest extends PositionRequest {
-  readonly label: string
+  readonly label: string;
   /** Module the item would be imported from, empty when already in scope. */
-  readonly source: string
-  readonly data: string | null
+  readonly source: string;
+  readonly data: string | null;
 }
 
 export interface RangeRequest extends DocumentRequest {
-  readonly range: Range
+  readonly range: Range;
 }
 
 export interface LanguageProvider {
   /** Stable id, e.g. `typescript` or `lsp:rust-analyzer`. */
-  readonly id: string
-  readonly name: string
+  readonly id: string;
+  readonly name: string;
   /**
    * What this provider claims. Entries starting with `.` match a file
    * extension (`.ts`); entries without match a whole basename (`Dockerfile`).
    * Matching is case-insensitive.
    */
-  readonly patterns: ReadonlyArray<string>
-  readonly transport: ProviderTransport
-  readonly capabilities: ProviderCapabilities
-  readonly probe: (root: string) => Effect.Effect<ProviderAvailability>
+  readonly patterns: ReadonlyArray<string>;
+  readonly transport: ProviderTransport;
+  readonly capabilities: ProviderCapabilities;
+  readonly probe: (root: string) => Effect.Effect<ProviderAvailability>;
   readonly diagnostics: (
     request: DocumentRequest
-  ) => Effect.Effect<ReadonlyArray<Diagnostic>, LanguageError>
+  ) => Effect.Effect<ReadonlyArray<Diagnostic>, LanguageError>;
   readonly definition: (
     request: PositionRequest
-  ) => Effect.Effect<DefinitionResult, LanguageError>
+  ) => Effect.Effect<DefinitionResult, LanguageError>;
   readonly references: (
     request: PositionRequest
-  ) => Effect.Effect<ReferencesResult, LanguageError>
+  ) => Effect.Effect<ReferencesResult, LanguageError>;
   readonly hover: (
     request: PositionRequest
-  ) => Effect.Effect<HoverResult, LanguageError>
+  ) => Effect.Effect<HoverResult, LanguageError>;
   readonly completions: (
     request: CompletionRequest
-  ) => Effect.Effect<CompletionResult, LanguageError>
+  ) => Effect.Effect<CompletionResult, LanguageError>;
   /**
    * Fill in an item the user is about to accept: its documentation and, for an
    * auto-import, the edits that bring the symbol into scope. Kept separate
@@ -125,10 +125,10 @@ export interface LanguageProvider {
    */
   readonly resolveCompletion: (
     request: CompletionResolveRequest
-  ) => Effect.Effect<CompletionResolution, LanguageError>
+  ) => Effect.Effect<CompletionResolution, LanguageError>;
   readonly codeActions: (
     request: RangeRequest
-  ) => Effect.Effect<ReadonlyArray<CodeActionItem>, LanguageError>
+  ) => Effect.Effect<ReadonlyArray<CodeActionItem>, LanguageError>;
 }
 
 /**
@@ -136,7 +136,7 @@ export interface LanguageProvider {
  * path serves it, so configured providers can shadow the built-in ones.
  */
 export interface LanguageProvidersShape {
-  readonly all: ReadonlyArray<LanguageProvider>
+  readonly all: ReadonlyArray<LanguageProvider>;
 }
 
 export class LanguageProviders extends Context.Service<

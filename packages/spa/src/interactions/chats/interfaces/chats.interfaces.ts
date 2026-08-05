@@ -11,46 +11,46 @@ import type {
   ChatImageUpload,
   ChatMode,
   ChatProviderKind,
-} from "@byconvo/core/chats"
+} from "@byconvo/core/chats";
 
-export type { ChatWireEvent } from "@byconvo/core/chats"
+export type { ChatWireEvent } from "@byconvo/core/chats";
 
 /** Images sent with a prompt (server type ChatImageUpload). */
-export type ChatImage = ChatImageUpload
+export type ChatImage = ChatImageUpload;
 
 /** The composer's settings for a chat (what the picker/menus edit). */
 export interface ChatSettings {
-  readonly provider: ChatProviderKind
-  readonly model: string
-  readonly effort: ChatEffort
-  readonly access: ChatAccess
-  readonly mode: ChatMode
+  readonly provider: ChatProviderKind;
+  readonly model: string;
+  readonly effort: ChatEffort;
+  readonly access: ChatAccess;
+  readonly mode: ChatMode;
 }
 
 export interface ChatsDependencies {
-  data: Record<string, never>
+  data: Record<string, never>;
   sideEffects: {
     readonly create: (input: {
-      title?: string
-      provider: ChatProviderKind
-      model: string
-      effort: ChatEffort
-      access: ChatAccess
-      mode: ChatMode
-      branch?: string
-    }) => Promise<Chat>
+      title?: string;
+      provider: ChatProviderKind;
+      model: string;
+      effort: ChatEffort;
+      access: ChatAccess;
+      mode: ChatMode;
+      branch?: string;
+    }) => Promise<Chat>;
     readonly send: (
       id: string,
       text: string,
       images: ReadonlyArray<ChatImage>
-    ) => Promise<Chat>
+    ) => Promise<Chat>;
     readonly update: (
       id: string,
       input: Partial<ChatSettings> & { title?: string }
-    ) => Promise<Chat>
-    readonly stop: (id: string) => Promise<void>
-    readonly remove: (id: string) => Promise<void>
-  }
+    ) => Promise<Chat>;
+    readonly stop: (id: string) => Promise<void>;
+    readonly remove: (id: string) => Promise<void>;
+  };
 }
 
 export interface ChatsFunctions {
@@ -62,7 +62,7 @@ export interface ChatsFunctions {
     branch: string,
     text: string,
     images?: ReadonlyArray<ChatImage>
-  ) => Promise<Chat | null>
+  ) => Promise<Chat | null>;
   /** Create a titled chat, then immediately send the first prompt. */
   readonly startWithTitle: (
     settings: ChatSettings,
@@ -70,19 +70,19 @@ export interface ChatsFunctions {
     title: string,
     text: string,
     images?: ReadonlyArray<ChatImage>
-  ) => Promise<Chat | null>
+  ) => Promise<Chat | null>;
   /** Send a prompt (and any images); returns null (no-op) when both are empty. */
   readonly send: (
     id: string,
     text: string,
     images?: ReadonlyArray<ChatImage>
-  ) => Promise<Chat | null>
+  ) => Promise<Chat | null>;
   /** Patch composer settings on an existing chat. */
   readonly updateSettings: (
     id: string,
     patch: Partial<ChatSettings>
-  ) => Promise<Chat>
-  readonly rename: (id: string, title: string) => Promise<Chat>
-  readonly stop: (id: string) => Promise<void>
-  readonly remove: (id: string) => Promise<void>
+  ) => Promise<Chat>;
+  readonly rename: (id: string, title: string) => Promise<Chat>;
+  readonly stop: (id: string) => Promise<void>;
+  readonly remove: (id: string) => Promise<void>;
 }

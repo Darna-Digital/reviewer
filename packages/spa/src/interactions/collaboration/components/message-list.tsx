@@ -4,36 +4,36 @@
  * plus the badge naming whose account it posts under — in a room where four
  * people can each bring their own Claude, "Claude" alone says nothing.
  */
-import { Avatar } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card"
-import { AgentMark } from "@/interactions/collaboration/components/agent-mark"
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card";
+import { AgentMark } from "@/interactions/collaboration/components/agent-mark";
 import {
   findAgentById,
   managedBy,
   type MockAgent,
   type MockMessage,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import type { ReactNode } from "react"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import type { ReactNode } from "react";
 
 interface MessageRun {
-  day: string
-  author: string
-  agent?: MockAgent
-  time: string
-  messages: MockMessage[]
+  day: string;
+  author: string;
+  agent?: MockAgent;
+  time: string;
+  messages: MockMessage[];
 }
 
 const runsOf = (messages: ReadonlyArray<MockMessage>) => {
-  const runs: MessageRun[] = []
+  const runs: MessageRun[] = [];
   for (const message of messages) {
-    const last = runs.at(-1)
+    const last = runs.at(-1);
     if (
       last !== undefined &&
       last.day === message.day &&
       last.author === message.author
     ) {
-      last.messages.push(message)
+      last.messages.push(message);
     } else {
       runs.push({
         day: message.day,
@@ -44,11 +44,11 @@ const runsOf = (messages: ReadonlyArray<MockMessage>) => {
             : findAgentById(message.agentId),
         time: message.time,
         messages: [message],
-      })
+      });
     }
   }
-  return runs
-}
+  return runs;
+};
 
 function Rule({ children }: { children: ReactNode }) {
   return (
@@ -57,12 +57,12 @@ function Rule({ children }: { children: ReactNode }) {
       <span className="shrink-0 text-xs text-muted-foreground">{children}</span>
       <span className="h-px flex-1 bg-border" />
     </div>
-  )
+  );
 }
 
 /** Joining is part of the record, so it lands in the transcript, not a toast. */
 export function SystemLine({ children }: { children: ReactNode }) {
-  return <Rule>{children}</Rule>
+  return <Rule>{children}</Rule>;
 }
 
 export function MessageList({
@@ -70,17 +70,17 @@ export function MessageList({
   empty,
   footer,
 }: {
-  messages: ReadonlyArray<MockMessage>
-  empty: string
+  messages: ReadonlyArray<MockMessage>;
+  empty: string;
   /** System lines appended after the last post — joins, for a chat. */
-  footer?: ReactNode
+  footer?: ReactNode;
 }) {
-  const runs = runsOf(messages)
+  const runs = runsOf(messages);
 
   if (runs.length === 0 && footer === undefined) {
     return (
       <p className="py-10 text-center text-sm text-muted-foreground">{empty}</p>
-    )
+    );
   }
 
   return (
@@ -127,5 +127,5 @@ export function MessageList({
       ))}
       {footer}
     </div>
-  )
+  );
 }

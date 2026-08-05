@@ -9,26 +9,26 @@
  * the opening comment, and a blue "Add reply… / Resolve" action row. Built on
  * the shadcn primitives and theme tokens so it adapts to light & dark.
  */
-import { IconBrandGithub, IconCornerDownRight } from "@tabler/icons-react"
-import { useEffect, useRef, useState } from "react"
-import Markdown from "react-markdown"
-import rehypeHighlight from "rehype-highlight"
-import remarkGfm from "remark-gfm"
-import { AuthorAvatar } from "@/interactions/comments/components/author-avatar"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { timeAgo } from "@/lib/relative-time"
-import type { CommentSide, ReviewComment } from "@byconvo/core/comments"
+import { IconBrandGithub, IconCornerDownRight } from "@tabler/icons-react";
+import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
+import remarkGfm from "remark-gfm";
+import { AuthorAvatar } from "@/interactions/comments/components/author-avatar";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { timeAgo } from "@/lib/relative-time";
+import type { CommentSide, ReviewComment } from "@byconvo/core/comments";
 
 /** Where a draft (or new) comment is anchored. */
 export interface DraftLocation {
-  readonly filePath: string
-  readonly side: CommentSide
-  readonly lineNumber: number
+  readonly filePath: string;
+  readonly side: CommentSide;
+  readonly lineNumber: number;
 }
 
 /** Indent (avatar + gap) used to nest replies under the opening comment. */
-const REPLY_INDENT = "ml-10"
+const REPLY_INDENT = "ml-10";
 
 export function CommentComposer({
   onCancel,
@@ -38,33 +38,33 @@ export function CommentComposer({
   placeholder = "Leave a comment…",
   initialBody = "",
 }: {
-  onCancel: () => void
-  onSubmit: (body: string) => Promise<void>
-  autoFocus?: boolean
-  submitLabel?: string
-  placeholder?: string
-  initialBody?: string
+  onCancel: () => void;
+  onSubmit: (body: string) => Promise<void>;
+  autoFocus?: boolean;
+  submitLabel?: string;
+  placeholder?: string;
+  initialBody?: string;
 }) {
-  const [body, setBody] = useState(initialBody)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const ref = useRef<HTMLTextAreaElement>(null)
+  const [body, setBody] = useState(initialBody);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const ref = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (autoFocus) ref.current?.focus()
-  }, [autoFocus])
+    if (autoFocus) ref.current?.focus();
+  }, [autoFocus]);
 
   const submit = async () => {
-    if (body.trim().length === 0 || busy) return
-    setBusy(true)
-    setError(null)
+    if (body.trim().length === 0 || busy) return;
+    setBusy(true);
+    setError(null);
     try {
-      await onSubmit(body.trim())
+      await onSubmit(body.trim());
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause))
-      setBusy(false)
+      setError(cause instanceof Error ? cause.message : String(cause));
+      setBusy(false);
     }
-  }
+  };
 
   return (
     <div className="flex flex-col gap-2">
@@ -75,8 +75,8 @@ export function CommentComposer({
         className="min-h-20 resize-none bg-background text-sm"
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void submit()
-          if (e.key === "Escape") onCancel()
+          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void submit();
+          if (e.key === "Escape") onCancel();
         }}
       />
       {error !== null && <p className="text-xs text-destructive">{error}</p>}
@@ -93,7 +93,7 @@ export function CommentComposer({
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
 function CommentCard({
@@ -102,10 +102,10 @@ function CommentCard({
   onEdit,
   onCancelEdit,
 }: {
-  comment: ReviewComment
-  editing: boolean
-  onEdit?: (body: string) => Promise<void>
-  onCancelEdit?: () => void
+  comment: ReviewComment;
+  editing: boolean;
+  onEdit?: (body: string) => Promise<void>;
+  onCancelEdit?: () => void;
 }) {
   if (editing && onEdit !== undefined && onCancelEdit !== undefined) {
     return (
@@ -118,13 +118,13 @@ function CommentCard({
             placeholder="Edit comment…"
             onCancel={onCancelEdit}
             onSubmit={async (body) => {
-              await onEdit(body)
-              onCancelEdit()
+              await onEdit(body);
+              onCancelEdit();
             }}
           />
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -155,7 +155,7 @@ function CommentCard({
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 /** A blue, link-styled thread action (Add reply… / Resolve). */
@@ -164,9 +164,9 @@ function ThreadAction({
   icon,
   children,
 }: {
-  onClick: () => void
-  icon?: React.ReactNode
-  children: React.ReactNode
+  onClick: () => void;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
 }) {
   return (
     <button
@@ -177,7 +177,7 @@ function ThreadAction({
       {icon}
       {children}
     </button>
-  )
+  );
 }
 
 /**
@@ -192,36 +192,36 @@ export function CommentThread({
   onEdit,
   onReply,
 }: {
-  comments: ReadonlyArray<ReviewComment>
-  onDelete: (c: ReviewComment) => Promise<void>
-  onEdit?: (c: ReviewComment, body: string) => Promise<void>
-  onReply?: (c: ReviewComment, body: string) => Promise<void>
+  comments: ReadonlyArray<ReviewComment>;
+  onDelete: (c: ReviewComment) => Promise<void>;
+  onEdit?: (c: ReviewComment, body: string) => Promise<void>;
+  onReply?: (c: ReviewComment, body: string) => Promise<void>;
 }) {
-  const [replying, setReplying] = useState(false)
-  const [resolving, setResolving] = useState(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
+  const [replying, setReplying] = useState(false);
+  const [resolving, setResolving] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
-  const lastGithub = [...comments].reverse().find((c) => c.source === "github")
-  const localComments = comments.filter((c) => c.source === "local")
+  const lastGithub = [...comments].reverse().find((c) => c.source === "github");
+  const localComments = comments.filter((c) => c.source === "local");
   const editableComment =
     onEdit === undefined
       ? undefined
-      : (localComments.find((c) => c.id === editingId) ?? localComments[0])
-  const canEdit = editableComment !== undefined && onEdit !== undefined
-  const canReply = onReply !== undefined && lastGithub !== undefined
-  const canResolve = localComments.length > 0
+      : (localComments.find((c) => c.id === editingId) ?? localComments[0]);
+  const canEdit = editableComment !== undefined && onEdit !== undefined;
+  const canReply = onReply !== undefined && lastGithub !== undefined;
+  const canResolve = localComments.length > 0;
   const showActions =
-    !replying && editingId === null && (canEdit || canReply || canResolve)
+    !replying && editingId === null && (canEdit || canReply || canResolve);
 
   const resolve = async () => {
-    if (resolving) return
-    setResolving(true)
+    if (resolving) return;
+    setResolving(true);
     try {
-      await Promise.all(localComments.map((c) => onDelete(c)))
+      await Promise.all(localComments.map((c) => onDelete(c)));
     } finally {
-      setResolving(false)
+      setResolving(false);
     }
-  }
+  };
 
   return (
     <div className="my-2 mr-3 ml-12 max-w-2xl min-w-0 overflow-hidden rounded-xl border bg-card p-4 font-sans text-card-foreground shadow-sm">
@@ -249,8 +249,8 @@ export function CommentThread({
             placeholder="Reply…"
             onCancel={() => setReplying(false)}
             onSubmit={async (body) => {
-              await onReply(lastGithub, body)
-              setReplying(false)
+              await onReply(lastGithub, body);
+              setReplying(false);
             }}
           />
         ) : (
@@ -279,7 +279,7 @@ export function CommentThread({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 /** A standalone draft composer, card-styled to match `CommentThread`. */
@@ -287,12 +287,12 @@ export function DraftCard({
   onCancel,
   onSubmit,
 }: {
-  onCancel: () => void
-  onSubmit: (body: string) => Promise<void>
+  onCancel: () => void;
+  onSubmit: (body: string) => Promise<void>;
 }) {
   return (
     <div className="my-2 mr-3 ml-12 max-w-2xl min-w-0 overflow-hidden rounded-xl border bg-card p-4 font-sans text-card-foreground shadow-sm">
       <CommentComposer onCancel={onCancel} onSubmit={onSubmit} />
     </div>
-  )
+  );
 }

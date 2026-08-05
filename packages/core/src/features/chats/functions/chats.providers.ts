@@ -1,4 +1,4 @@
-import type { ChatProviderKind } from "../schema/chats.schema.ts"
+import type { ChatProviderKind } from "../schema/chats.schema.ts";
 
 /**
  * Where a chat's native session id comes from — the thing that decides whether
@@ -17,18 +17,18 @@ import type { ChatProviderKind } from "../schema/chats.schema.ts"
  * A `session` event is always honoured, whatever the origin — `discovered`
  * only means the runtime must also go looking when none arrives.
  */
-export type ChatSessionOrigin = "minted" | "announced" | "discovered"
+export type ChatSessionOrigin = "minted" | "announced" | "discovered";
 
 export const chatSessionOrigin = (
   provider: ChatProviderKind
 ): ChatSessionOrigin => {
   switch (provider) {
     case "claude":
-      return "minted"
+      return "minted";
     case "cursor":
-      return "announced"
+      return "announced";
     case "codex":
     case "opencode":
-      return "discovered"
+      return "discovered";
   }
-}
+};

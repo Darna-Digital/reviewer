@@ -8,52 +8,52 @@ import type {
   Board as TasksBoard,
   Card as TasksCard,
   TasksColumn,
-} from "@byconvo/core/tasks"
+} from "@byconvo/core/tasks";
 
 export interface ColumnGroup {
   /** The column (status) id. */
-  readonly key: TasksColumn
-  readonly title: string
-  readonly cards: ReadonlyArray<TasksCard>
+  readonly key: TasksColumn;
+  readonly title: string;
+  readonly cards: ReadonlyArray<TasksCard>;
 }
 
 export interface TasksDependencies {
-  data: { readonly board: TasksBoard | null }
+  data: { readonly board: TasksBoard | null };
   sideEffects: {
     readonly create: (input: {
-      title: string
-      description?: string
-      column?: TasksColumn
-    }) => Promise<TasksCard>
+      title: string;
+      description?: string;
+      column?: TasksColumn;
+    }) => Promise<TasksCard>;
     readonly update: (
       id: string,
       input: {
-        title?: string
-        description?: string
-        column?: TasksColumn
-        order?: number
+        title?: string;
+        description?: string;
+        column?: TasksColumn;
+        order?: number;
       }
-    ) => Promise<TasksCard>
-    readonly remove: (id: string) => Promise<void>
-  }
+    ) => Promise<TasksCard>;
+    readonly remove: (id: string) => Promise<void>;
+  };
 }
 
 export interface TasksFunctions {
   /** The board's cards grouped into the fixed columns, each sorted by order. */
-  readonly columns: () => ReadonlyArray<ColumnGroup>
+  readonly columns: () => ReadonlyArray<ColumnGroup>;
   /** Create a card; returns null when the title is blank (no-op). */
   readonly create: (
     title: string,
     column: TasksColumn
-  ) => Promise<TasksCard | null>
+  ) => Promise<TasksCard | null>;
   /** Move a card to another column (appended last); null when already there. */
   readonly move: (
     card: TasksCard,
     column: TasksColumn
-  ) => Promise<TasksCard | null>
+  ) => Promise<TasksCard | null>;
   readonly update: (
     id: string,
     input: { title?: string; description?: string }
-  ) => Promise<TasksCard>
-  readonly remove: (id: string) => Promise<void>
+  ) => Promise<TasksCard>;
+  readonly remove: (id: string) => Promise<void>;
 }

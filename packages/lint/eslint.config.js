@@ -1,6 +1,6 @@
 // @ts-check
 
-import { tanstackConfig } from "@tanstack/eslint-config"
+import { tanstackConfig } from "@tanstack/eslint-config";
 
 /**
  * Shared ESLint flat config for bemybond.com packages.
@@ -34,4 +34,4 @@ export default [
       "import/consistent-type-specifier-style": "off",
     },
   },
-]
+];

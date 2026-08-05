@@ -8,16 +8,16 @@ import {
   IconBulb,
   IconInfoCircle,
   IconXboxX,
-} from "@tabler/icons-react"
-import type { Diagnostic, DiagnosticSeverity } from "@byconvo/core/language"
-import { cn } from "@/lib/utils"
+} from "@tabler/icons-react";
+import type { Diagnostic, DiagnosticSeverity } from "@byconvo/core/language";
+import { cn } from "@/lib/utils";
 
 const SEVERITY_STYLE: Record<
   DiagnosticSeverity,
   {
-    readonly icon: typeof IconXboxX
-    readonly className: string
-    readonly label: string
+    readonly icon: typeof IconXboxX;
+    readonly className: string;
+    readonly label: string;
   }
 > = {
   error: { icon: IconXboxX, className: "text-destructive", label: "Error" },
@@ -32,10 +32,10 @@ const SEVERITY_STYLE: Record<
     label: "Information",
   },
   hint: { icon: IconBulb, className: "text-muted-foreground", label: "Hint" },
-}
+};
 
 export function DiagnosticRow({ diagnostic }: { diagnostic: Diagnostic }) {
-  const { icon: Icon, className, label } = SEVERITY_STYLE[diagnostic.severity]
+  const { icon: Icon, className, label } = SEVERITY_STYLE[diagnostic.severity];
   return (
     <li className="flex items-start gap-2 py-0.5 text-xs leading-relaxed">
       <Icon
@@ -50,15 +50,15 @@ export function DiagnosticRow({ diagnostic }: { diagnostic: Diagnostic }) {
         </span>
       </span>
     </li>
-  )
+  );
 }
 
 export function DiagnosticsAnnotation({
   diagnostics,
 }: {
-  diagnostics: ReadonlyArray<Diagnostic>
+  diagnostics: ReadonlyArray<Diagnostic>;
 }) {
-  if (diagnostics.length === 0) return null
+  if (diagnostics.length === 0) return null;
   return (
     <ul className="border-l-2 border-destructive/40 bg-muted/40 px-3 py-1">
       {diagnostics.map((diagnostic, index) => (
@@ -70,27 +70,27 @@ export function DiagnosticsAnnotation({
         />
       ))}
     </ul>
-  )
+  );
 }
 
 /** Counts for the file header — nothing at all when the file is clean. */
 export function DiagnosticsSummary({
   counts,
 }: {
-  counts: { errors: number; warnings: number; infos: number; hints: number }
+  counts: { errors: number; warnings: number; infos: number; hints: number };
 }) {
   const shown = [
     { key: "error" as const, value: counts.errors },
     { key: "warning" as const, value: counts.warnings },
     { key: "information" as const, value: counts.infos },
     { key: "hint" as const, value: counts.hints },
-  ].filter((entry) => entry.value > 0)
-  if (shown.length === 0) return null
+  ].filter((entry) => entry.value > 0);
+  if (shown.length === 0) return null;
 
   return (
     <div className="flex items-center gap-2">
       {shown.map(({ key, value }) => {
-        const { icon: Icon, className, label } = SEVERITY_STYLE[key]
+        const { icon: Icon, className, label } = SEVERITY_STYLE[key];
         return (
           <span
             key={key}
@@ -100,8 +100,8 @@ export function DiagnosticsSummary({
             <Icon className="size-3.5" />
             {value}
           </span>
-        )
+        );
       })}
     </div>
-  )
+  );
 }

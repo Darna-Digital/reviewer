@@ -1,5 +1,5 @@
-import { createFileRoute, notFound } from "@tanstack/react-router"
-import { KitchenSinkPage } from "@/components/kitchen-sink/kitchen-sink-page"
+import { createFileRoute, notFound } from "@tanstack/react-router";
+import { KitchenSinkPage } from "@/components/kitchen-sink/kitchen-sink-page";
 
 /**
  * The design-system reference. It ships no product behaviour, so it is gated to
@@ -7,7 +7,7 @@ import { KitchenSinkPage } from "@/components/kitchen-sink/kitchen-sink-page"
  */
 export const Route = createFileRoute("/kitchen-sink")({
   beforeLoad: () => {
-    if (!import.meta.env.DEV) throw notFound()
+    if (!import.meta.env.DEV) throw notFound();
   },
   component: KitchenSinkPage,
-})
+});

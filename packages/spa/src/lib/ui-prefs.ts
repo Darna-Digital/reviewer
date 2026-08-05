@@ -3,84 +3,84 @@
  * are genuinely-local view state (not navigation), so they live in a tiny
  * localStorage-backed store instead of the URL.
  */
-import { useSyncExternalStore } from "react"
+import { useSyncExternalStore } from "react";
 
-export type ThemePref = "light" | "dark" | "system"
-export type Theme = "light" | "dark"
-export type DiffStyle = "split" | "unified"
+export type ThemePref = "light" | "dark" | "system";
+export type Theme = "light" | "dark";
+export type DiffStyle = "split" | "unified";
 /** Agent CLIs that can draft a commit message (threads kinds minus terminal). */
-export type CommitAgent = "claude" | "opencode" | "codex" | "cursor"
+export type CommitAgent = "claude" | "opencode" | "codex" | "cursor";
 /** Active tab in the shared bottom dock (git + services + threads). */
-export type BottomTab = "branches" | "history" | "services" | "threads"
+export type BottomTab = "branches" | "history" | "services" | "threads";
 /** Which way of working the app is framed around (UI only for now). */
-export type WorkMode = "code" | "collaboration"
+export type WorkMode = "code" | "collaboration";
 
 export interface UiPrefs {
   /** The user's choice; "system" follows the OS. */
-  theme: ThemePref
+  theme: ThemePref;
   /** The concrete theme to render (system resolved against the OS). */
-  resolvedTheme: Theme
-  diffStyle: DiffStyle
+  resolvedTheme: Theme;
+  diffStyle: DiffStyle;
   /** The selected mode in the top bar's mode selector. */
-  workMode: WorkMode
-  connectors: boolean
+  workMode: WorkMode;
+  connectors: boolean;
   /**
    * Whether the window frame lets the desktop through. Native shell only — a
    * browser tab has nothing behind it to show.
    */
-  translucency: boolean
+  translucency: boolean;
   /** Whether the shell's left sidebar (file tree / collaboration nav) shows. */
-  sidebarVisible: boolean
-  bottomVisible: boolean
+  sidebarVisible: boolean;
+  bottomVisible: boolean;
   /** Which bottom-dock tab is selected. */
-  bottomTab: BottomTab
+  bottomTab: BottomTab;
   /** Drag-resizable left sidebar width, in px. */
-  sidebarWidth: number
+  sidebarWidth: number;
   /** Drag-resizable left sidebar width for the workspace pages (threads/docs). */
-  workspaceSidebarWidth: number
+  workspaceSidebarWidth: number;
   /** Drag-resizable width of the inbox's message list, in px. */
-  inboxListWidth: number
+  inboxListWidth: number;
   /**
    * When the inbox was last opened, ISO. Threads touched since then read as
    * unread — the server keeps no per-reader state, so this is the mark.
    */
-  inboxSeenAt: string
+  inboxSeenAt: string;
   /** Drag-resizable source pane width in the SVG split view, in px. */
-  svgSourceWidth: number
+  svgSourceWidth: number;
   /** Drag-resizable bottom panel height, in px. */
-  bottomHeight: number
+  bottomHeight: number;
   /** Drag-resizable changed-files list height in the commit panel, in px. */
-  commitFilesHeight: number
+  commitFilesHeight: number;
   /** Drag-resizable commit-message textarea height, in px. */
-  commitMessageHeight: number
+  commitMessageHeight: number;
   /** Drag-resizable pull-request list height in the review sidebar, in px. */
-  reviewPullsHeight: number
+  reviewPullsHeight: number;
   /** Drag-resizable commit-details pane width in the history panel, in px. */
-  commitDetailsWidth: number
+  commitDetailsWidth: number;
   /** Which agent CLI drafts commit messages via the "Generate" button. */
-  commitAgent: CommitAgent
+  commitAgent: CommitAgent;
   /** Model ids starred in the chat composer's model picker. */
-  chatModelFavorites: string[]
+  chatModelFavorites: string[];
 }
 
-const STORE_KEY = "byconvo-ui"
-const THEME_KEY = "byconvo-theme"
+const STORE_KEY = "byconvo-ui";
+const THEME_KEY = "byconvo-theme";
 
 const systemTheme = (): Theme =>
   typeof window !== "undefined" &&
   window.matchMedia("(prefers-color-scheme: dark)").matches
     ? "dark"
-    : "light"
+    : "light";
 
 const resolve = (pref: ThemePref): Theme =>
-  pref === "system" ? systemTheme() : pref
+  pref === "system" ? systemTheme() : pref;
 
 const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
   "branches",
   "history",
   "services",
   "threads",
-]
+];
 
 const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   theme: "system",
@@ -103,35 +103,35 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   commitDetailsWidth: 320,
   commitAgent: "claude",
   chatModelFavorites: [],
-}
+};
 
 function load(): UiPrefs {
-  let prefs = { ...defaults }
+  let prefs = { ...defaults };
   if (typeof window !== "undefined") {
     try {
-      const raw = window.localStorage.getItem(STORE_KEY)
+      const raw = window.localStorage.getItem(STORE_KEY);
       if (raw !== null)
-        prefs = { ...prefs, ...(JSON.parse(raw) as Partial<typeof defaults>) }
+        prefs = { ...prefs, ...(JSON.parse(raw) as Partial<typeof defaults>) };
     } catch {
       // ignore malformed storage
     }
-    if (!BOTTOM_TABS.includes(prefs.bottomTab)) prefs.bottomTab = "branches"
-    const stored = window.localStorage.getItem(THEME_KEY)
+    if (!BOTTOM_TABS.includes(prefs.bottomTab)) prefs.bottomTab = "branches";
+    const stored = window.localStorage.getItem(THEME_KEY);
     if (stored === "light" || stored === "dark" || stored === "system")
-      prefs.theme = stored
+      prefs.theme = stored;
   }
-  return { ...prefs, resolvedTheme: resolve(prefs.theme) }
+  return { ...prefs, resolvedTheme: resolve(prefs.theme) };
 }
 
-let state: UiPrefs = load()
-const listeners = new Set<() => void>()
+let state: UiPrefs = load();
+const listeners = new Set<() => void>();
 
 function emit() {
-  for (const l of listeners) l()
+  for (const l of listeners) l();
 }
 
 function persist() {
-  if (typeof window === "undefined") return
+  if (typeof window === "undefined") return;
   try {
     const {
       theme,
@@ -154,7 +154,7 @@ function persist() {
       commitDetailsWidth,
       commitAgent,
       chatModelFavorites,
-    } = state
+    } = state;
     window.localStorage.setItem(
       STORE_KEY,
       JSON.stringify({
@@ -179,20 +179,20 @@ function persist() {
         commitAgent,
         chatModelFavorites,
       })
-    )
-    window.localStorage.setItem(THEME_KEY, state.theme)
+    );
+    window.localStorage.setItem(THEME_KEY, state.theme);
   } catch {
     // ignore quota errors
   }
 }
 
 function applyTheme() {
-  if (typeof document === "undefined") return
+  if (typeof document === "undefined") return;
   document.documentElement.classList.toggle(
     "dark",
     state.resolvedTheme === "dark"
-  )
-  document.documentElement.dataset["theme"] = state.resolvedTheme
+  );
+  document.documentElement.dataset["theme"] = state.resolvedTheme;
 }
 
 /**
@@ -201,36 +201,36 @@ function applyTheme() {
  * exactly what the pre-paint script in __root exists to avoid.
  */
 function applyTranslucency() {
-  if (typeof document === "undefined") return
-  document.documentElement.classList.toggle("translucent", state.translucency)
+  if (typeof document === "undefined") return;
+  document.documentElement.classList.toggle("translucent", state.translucency);
 }
 
 export function setUiPrefs(patch: Partial<Omit<UiPrefs, "resolvedTheme">>) {
-  state = { ...state, ...patch }
+  state = { ...state, ...patch };
   if (patch.theme !== undefined) {
-    state.resolvedTheme = resolve(patch.theme)
-    applyTheme()
+    state.resolvedTheme = resolve(patch.theme);
+    applyTheme();
   }
-  if (patch.translucency !== undefined) applyTranslucency()
-  persist()
-  emit()
+  if (patch.translucency !== undefined) applyTranslucency();
+  persist();
+  emit();
 }
 
 /** Show the bottom dock and select a tab (Services / Threads / git). */
 export function openBottomTab(tab: BottomTab) {
-  setUiPrefs({ bottomVisible: true, bottomTab: tab })
+  setUiPrefs({ bottomVisible: true, bottomTab: tab });
 }
 
 /** Expand or collapse the bottom dock; its tab strip stays put either way. */
 export function toggleBottomVisible() {
-  setUiPrefs({ bottomVisible: !state.bottomVisible })
+  setUiPrefs({ bottomVisible: !state.bottomVisible });
 }
 
-const THEME_ORDER: ThemePref[] = ["light", "dark", "system"]
+const THEME_ORDER: ThemePref[] = ["light", "dark", "system"];
 export function cycleTheme() {
   const next =
-    THEME_ORDER[(THEME_ORDER.indexOf(state.theme) + 1) % THEME_ORDER.length]
-  setUiPrefs({ theme: next })
+    THEME_ORDER[(THEME_ORDER.indexOf(state.theme) + 1) % THEME_ORDER.length];
+  setUiPrefs({ theme: next });
 }
 
 // Track the OS theme so "system" updates live.
@@ -243,20 +243,20 @@ if (typeof window !== "undefined") {
         // change and re-renders. Components reading resolvedTheme through a React
         // prop (e.g. pierre's FileDiff themeType) won't update otherwise — the
         // <html> class flips via applyTheme() but the prop value would be stale.
-        state = { ...state, resolvedTheme: systemTheme() }
-        applyTheme()
-        emit()
+        state = { ...state, resolvedTheme: systemTheme() };
+        applyTheme();
+        emit();
       }
-    })
+    });
 }
 
 export function useUiPrefs(): UiPrefs {
   return useSyncExternalStore(
     (cb) => {
-      listeners.add(cb)
-      return () => listeners.delete(cb)
+      listeners.add(cb);
+      return () => listeners.delete(cb);
     },
     () => state,
     () => state
-  )
+  );
 }

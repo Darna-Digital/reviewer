@@ -6,18 +6,18 @@
  * alpha so the mark stays a quiet chip rather than a swatch. The icon scales
  * with whatever box size the caller passes.
  */
-import { agentIcon } from "@/interactions/threads/components/agent-icons"
-import type { AgentKind } from "@byconvo/core/threads"
-import { cn } from "@/lib/utils"
+import { agentIcon } from "@/interactions/threads/components/agent-icons";
+import type { AgentKind } from "@byconvo/core/threads";
+import { cn } from "@/lib/utils";
 
 export function AgentMark({
   kind,
   className,
 }: {
-  kind: AgentKind
-  className?: string
+  kind: AgentKind;
+  className?: string;
 }) {
-  const Icon = agentIcon(kind)
+  const Icon = agentIcon(kind);
   return (
     <span
       aria-hidden
@@ -29,7 +29,7 @@ export function AgentMark({
     >
       <Icon className="size-[62%]" />
     </span>
-  )
+  );
 }
 
 /** Mid-turn agents pulse, exactly as a running chat row does in the sidebar. */
@@ -37,8 +37,8 @@ export function AgentStateDot({
   running,
   className,
 }: {
-  running: boolean
-  className?: string
+  running: boolean;
+  className?: string;
 }) {
   return (
     <span
@@ -48,5 +48,5 @@ export function AgentStateDot({
         className
       )}
     />
-  )
+  );
 }

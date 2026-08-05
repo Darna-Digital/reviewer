@@ -3,16 +3,16 @@
  * one page so a change to the theme can be judged everywhere at once. Dev only;
  * the route drops it from production builds.
  */
-import { useEffect, useState } from "react"
-import { IconDeviceDesktop, IconMoon, IconSun } from "@tabler/icons-react"
+import { useEffect, useState } from "react";
+import { IconDeviceDesktop, IconMoon, IconSun } from "@tabler/icons-react";
 
-import { ComponentsGallery } from "@/components/kitchen-sink/components-gallery"
-import { Foundations } from "@/components/kitchen-sink/foundations"
-import { Patterns } from "@/components/kitchen-sink/patterns"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { cycleTheme, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+import { ComponentsGallery } from "@/components/kitchen-sink/components-gallery";
+import { Foundations } from "@/components/kitchen-sink/foundations";
+import { Patterns } from "@/components/kitchen-sink/patterns";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { cycleTheme, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 const SECTIONS = [
   { id: "color", label: "Colour" },
@@ -26,42 +26,42 @@ const SECTIONS = [
   { id: "surfaces", label: "Surfaces" },
   { id: "data", label: "Data" },
   { id: "feedback", label: "Feedback" },
-]
+];
 
 const THEME_ICON = {
   light: IconSun,
   dark: IconMoon,
   system: IconDeviceDesktop,
-}
+};
 
 function useVisibleSection() {
-  const [active, setActive] = useState(SECTIONS[0].id)
+  const [active, setActive] = useState(SECTIONS[0].id);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        const onscreen = entries.filter((e) => e.isIntersecting)
-        if (onscreen.length === 0) return
+        const onscreen = entries.filter((e) => e.isIntersecting);
+        if (onscreen.length === 0) return;
         const topmost = onscreen.reduce((a, b) =>
           a.boundingClientRect.top <= b.boundingClientRect.top ? a : b
-        )
-        setActive(topmost.target.id)
+        );
+        setActive(topmost.target.id);
       },
       { rootMargin: "-96px 0px -60% 0px" }
-    )
+    );
     for (const { id } of SECTIONS) {
-      const el = document.getElementById(id)
-      if (el !== null) observer.observe(el)
+      const el = document.getElementById(id);
+      if (el !== null) observer.observe(el);
     }
-    return () => observer.disconnect()
-  }, [])
+    return () => observer.disconnect();
+  }, []);
 
-  return active
+  return active;
 }
 
 function ThemeButton() {
-  const { theme } = useUiPrefs()
-  const Icon = THEME_ICON[theme]
+  const { theme } = useUiPrefs();
+  const Icon = THEME_ICON[theme];
   return (
     <Button
       variant="outline"
@@ -72,11 +72,11 @@ function ThemeButton() {
       <Icon data-icon="inline-start" />
       {theme}
     </Button>
-  )
+  );
 }
 
 export function KitchenSinkPage() {
-  const active = useVisibleSection()
+  const active = useVisibleSection();
 
   return (
     <div className="isolate min-h-svh bg-background text-foreground">
@@ -154,5 +154,5 @@ export function KitchenSinkPage() {
         </main>
       </div>
     </div>
-  )
+  );
 }

@@ -4,18 +4,18 @@
  * rendered as small collapsed rows above the reply — t3code's timeline shape.
  * Auto-follows the stream unless the reader has scrolled up.
  */
-import { IconAlertCircle, IconPlayerStopFilled } from "@tabler/icons-react"
-import { useCallback, useEffect, useRef, useState } from "react"
-import type { Chat, ChatActivity, ChatMessage } from "@byconvo/core/chats"
-import { ThinkingIndicator } from "@/components/ui/thinking-indicator"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { toConversationSections } from "../functions/conversation-sections.functions"
-import { activeWorkStep, toWorkSteps } from "../functions/work-log.functions"
-import { AttachmentGrid, AttachmentPreview } from "./image-attachments"
-import { ChatMarkdown } from "./chat-markdown"
-import { ConversationSections } from "./conversation-sections"
-import { Message, MessageBubble } from "./message"
-import { WorkLog } from "./work-log"
+import { IconAlertCircle, IconPlayerStopFilled } from "@tabler/icons-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { Chat, ChatActivity, ChatMessage } from "@byconvo/core/chats";
+import { ThinkingIndicator } from "@/components/ui/thinking-indicator";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toConversationSections } from "../functions/conversation-sections.functions";
+import { activeWorkStep, toWorkSteps } from "../functions/work-log.functions";
+import { AttachmentGrid, AttachmentPreview } from "./image-attachments";
+import { ChatMarkdown } from "./chat-markdown";
+import { ConversationSections } from "./conversation-sections";
+import { Message, MessageBubble } from "./message";
+import { WorkLog } from "./work-log";
 
 /**
  * A failed turn's error. The lead paragraph (up to the first blank line) shows
@@ -23,8 +23,8 @@ import { WorkLog } from "./work-log"
  * collapses behind a native "Details" disclosure so the chip stays compact.
  */
 function TurnError({ message }: { message: string }) {
-  const [summary, ...rest] = message.split(/\n\n+/)
-  const details = rest.join("\n\n").trim()
+  const [summary, ...rest] = message.split(/\n\n+/);
+  const details = rest.join("\n\n").trim();
   return (
     <div className="flex max-w-3xl items-start gap-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
       <IconAlertCircle className="mt-0.5 size-3.5 shrink-0" />
@@ -42,14 +42,14 @@ function TurnError({ message }: { message: string }) {
         )}
       </div>
     </div>
-  )
+  );
 }
 
 /** How far below the viewport's top edge a question has to sit before the rail
  * counts it as the one being read. */
-const SECTION_ACTIVE_LINE = 140
-const SECTION_SCROLL_MARGIN = 24
-const SCROLL_INTERRUPTS = ["wheel", "touchstart", "pointerdown", "keydown"]
+const SECTION_ACTIVE_LINE = 140;
+const SECTION_SCROLL_MARGIN = 24;
+const SCROLL_INTERRUPTS = ["wheel", "touchstart", "pointerdown", "keydown"];
 
 /**
  * `scroll-behavior: smooth` and `scrollTo({behavior})` are silently ignored
@@ -61,50 +61,50 @@ function easeScrollTo(viewport: HTMLElement, top: number) {
   const target = Math.max(
     0,
     Math.min(top, viewport.scrollHeight - viewport.clientHeight)
-  )
-  let running = true
+  );
+  let running = true;
   const stop = () => {
-    running = false
+    running = false;
     for (const type of SCROLL_INTERRUPTS) {
-      viewport.removeEventListener(type, stop)
+      viewport.removeEventListener(type, stop);
     }
-  }
+  };
   for (const type of SCROLL_INTERRUPTS) {
-    viewport.addEventListener(type, stop, { passive: true })
+    viewport.addEventListener(type, stop, { passive: true });
   }
   const frame = () => {
-    if (!running) return
-    const delta = target - viewport.scrollTop
+    if (!running) return;
+    const delta = target - viewport.scrollTop;
     if (Math.abs(delta) <= 1) {
-      viewport.scrollTop = target
-      stop()
-      return
+      viewport.scrollTop = target;
+      stop();
+      return;
     }
-    viewport.scrollTop += delta * 0.2
-    requestAnimationFrame(frame)
-  }
-  requestAnimationFrame(frame)
+    viewport.scrollTop += delta * 0.2;
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
 }
 
 export function MessagesTimeline({ chat }: { chat: Chat }) {
-  const scrollRef = useRef<HTMLDivElement | null>(null)
-  const pinnedToBottom = useRef(true)
-  const lastUserMessageId = useRef<string | null>(null)
-  const [activeSectionId, setActiveSectionId] = useState<string | null>(null)
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const pinnedToBottom = useRef(true);
+  const lastUserMessageId = useRef<string | null>(null);
+  const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
 
-  const sections = toConversationSections(chat.messages)
-  const sectionIds = new Set(sections.map((section) => section.id))
-  const firstSectionId = sections[0]?.id ?? null
+  const sections = toConversationSections(chat.messages);
+  const sectionIds = new Set(sections.map((section) => section.id));
+  const firstSectionId = sections[0]?.id ?? null;
 
-  const syncFrame = useRef(0)
+  const syncFrame = useRef(0);
   const queueSectionSync = useCallback(() => {
-    if (syncFrame.current !== 0) return
+    if (syncFrame.current !== 0) return;
     syncFrame.current = requestAnimationFrame(() => {
-      syncFrame.current = 0
-      const el = scrollRef.current
-      if (el === null) return
-      const viewportTop = el.getBoundingClientRect().top
-      let current: string | null = null
+      syncFrame.current = 0;
+      const el = scrollRef.current;
+      if (el === null) return;
+      const viewportTop = el.getBoundingClientRect().top;
+      let current: string | null = null;
       for (const anchor of el.querySelectorAll<HTMLElement>(
         "[data-section-id]"
       )) {
@@ -112,77 +112,77 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
           anchor.getBoundingClientRect().top - viewportTop >
           SECTION_ACTIVE_LINE
         ) {
-          break
+          break;
         }
-        current = anchor.dataset.sectionId ?? null
+        current = anchor.dataset.sectionId ?? null;
       }
-      setActiveSectionId(current ?? firstSectionId)
-    })
-  }, [firstSectionId])
-  useEffect(() => () => cancelAnimationFrame(syncFrame.current), [])
+      setActiveSectionId(current ?? firstSectionId);
+    });
+  }, [firstSectionId]);
+  useEffect(() => () => cancelAnimationFrame(syncFrame.current), []);
 
   const scrollToSection = (id: string) => {
-    const el = scrollRef.current
-    if (el === null) return
+    const el = scrollRef.current;
+    if (el === null) return;
     const anchor = el.querySelector<HTMLElement>(
       `[data-section-id="${CSS.escape(id)}"]`
-    )
-    if (anchor === null) return
-    pinnedToBottom.current = false
-    setActiveSectionId(id)
+    );
+    if (anchor === null) return;
+    pinnedToBottom.current = false;
+    setActiveSectionId(id);
     easeScrollTo(
       el,
       anchor.getBoundingClientRect().top -
         el.getBoundingClientRect().top +
         el.scrollTop -
         SECTION_SCROLL_MARGIN
-    )
-  }
+    );
+  };
 
   // Track whether the reader is at the bottom; only then auto-follow.
   const onScroll = () => {
-    const el = scrollRef.current
-    if (el === null) return
+    const el = scrollRef.current;
+    if (el === null) return;
     pinnedToBottom.current =
-      el.scrollHeight - el.scrollTop - el.clientHeight < 80
-    queueSectionSync()
-  }
+      el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    queueSectionSync();
+  };
   useEffect(() => {
-    const el = scrollRef.current
-    if (el === null) return
+    const el = scrollRef.current;
+    if (el === null) return;
     // When the reader sends a new message, always jump to the bottom so they
     // can see their own question — even if they'd scrolled up beforehand.
-    let latestUserMessageId: string | null = null
+    let latestUserMessageId: string | null = null;
     for (const m of chat.messages) {
-      if (m.role === "user") latestUserMessageId = m.id
+      if (m.role === "user") latestUserMessageId = m.id;
     }
     const sentNewMessage =
       latestUserMessageId !== null &&
-      latestUserMessageId !== lastUserMessageId.current
+      latestUserMessageId !== lastUserMessageId.current;
     if (latestUserMessageId !== null) {
-      lastUserMessageId.current = latestUserMessageId
+      lastUserMessageId.current = latestUserMessageId;
     }
-    if (sentNewMessage) pinnedToBottom.current = true
-    if (pinnedToBottom.current) el.scrollTop = el.scrollHeight
-    queueSectionSync()
-  }, [chat, queueSectionSync])
+    if (sentNewMessage) pinnedToBottom.current = true;
+    if (pinnedToBottom.current) el.scrollTop = el.scrollHeight;
+    queueSectionSync();
+  }, [chat, queueSectionSync]);
 
-  const activitiesByTurn = new Map<string, ChatActivity[]>()
+  const activitiesByTurn = new Map<string, ChatActivity[]>();
   for (const activity of chat.activities) {
-    const group = activitiesByTurn.get(activity.turnId) ?? []
-    group.push(activity)
-    activitiesByTurn.set(activity.turnId, group)
+    const group = activitiesByTurn.get(activity.turnId) ?? [];
+    group.push(activity);
+    activitiesByTurn.set(activity.turnId, group);
   }
 
-  const running = chat.latestTurn?.state === "running"
+  const running = chat.latestTurn?.state === "running";
   const turnError =
     chat.latestTurn !== null && chat.latestTurn.state === "error"
       ? chat.latestTurn.errorMessage
-      : null
+      : null;
 
   const renderMessage = (message: ChatMessage) => {
     if (message.role === "user") {
-      const attachments = message.attachments ?? []
+      const attachments = message.attachments ?? [];
       return (
         <Message key={message.id} align="end">
           <div
@@ -206,16 +206,16 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
             )}
           </div>
         </Message>
-      )
+      );
     }
-    const streaming = message.streaming && running
+    const streaming = message.streaming && running;
     const steps = toWorkSteps(
       activitiesByTurn.get(message.turnId) ?? [],
       streaming
-    )
+    );
     // While a tool runs, name it; while the model is generating text, there is
     // genuinely nothing to name, so the indicator cycles instead of inventing.
-    const active = streaming ? activeWorkStep(steps) : undefined
+    const active = streaming ? activeWorkStep(steps) : undefined;
     return (
       <Message key={message.id} align="start">
         <div className="flex w-full min-w-0 flex-col">
@@ -237,8 +237,8 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
           )}
         </div>
       </Message>
-    )
-  }
+    );
+  };
 
   return (
     <div className="@container relative flex min-h-0 flex-1 flex-col">
@@ -259,5 +259,5 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
         onSelect={scrollToSection}
       />
     </div>
-  )
+  );
 }

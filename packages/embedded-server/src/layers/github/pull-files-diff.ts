@@ -6,25 +6,25 @@
  */
 
 export interface PullFileEntry {
-  readonly filename: string
-  readonly status: string
-  readonly patch?: string
-  readonly previousFilename?: string
+  readonly filename: string;
+  readonly status: string;
+  readonly patch?: string;
+  readonly previousFilename?: string;
 }
 
-const REGULAR_FILE_MODE = "100644"
+const REGULAR_FILE_MODE = "100644";
 
 export const parsePullFiles = (data: unknown): ReadonlyArray<PullFileEntry> => {
-  if (!Array.isArray(data)) return []
+  if (!Array.isArray(data)) return [];
   return data.flatMap((raw: unknown): Array<PullFileEntry> => {
     const entry = raw as {
-      filename?: unknown
-      status?: unknown
-      patch?: unknown
-      previous_filename?: unknown
-    }
+      filename?: unknown;
+      status?: unknown;
+      patch?: unknown;
+      previous_filename?: unknown;
+    };
     if (typeof entry.filename !== "string" || entry.filename.length === 0)
-      return []
+      return [];
     return [
       {
         filename: entry.filename,
@@ -34,9 +34,9 @@ export const parsePullFiles = (data: unknown): ReadonlyArray<PullFileEntry> => {
           ? { previousFilename: entry.previous_filename }
           : {}),
       },
-    ]
-  })
-}
+    ];
+  });
+};
 
 const renameLines = (file: PullFileEntry, previous: string): Array<string> =>
   file.previousFilename === undefined
@@ -49,12 +49,12 @@ const renameLines = (file: PullFileEntry, previous: string): Array<string> =>
           : "similarity index 99%",
         `rename from ${previous}`,
         `rename to ${file.filename}`,
-      ]
+      ];
 
 const fileDiff = (file: PullFileEntry): string => {
-  const previous = file.previousFilename ?? file.filename
-  const added = file.status === "added"
-  const removed = file.status === "removed"
+  const previous = file.previousFilename ?? file.filename;
+  const added = file.status === "added";
+  const removed = file.status === "removed";
   return [
     `diff --git a/${previous} b/${file.filename}`,
     ...(added ? [`new file mode ${REGULAR_FILE_MODE}`] : []),
@@ -63,9 +63,9 @@ const fileDiff = (file: PullFileEntry): string => {
     added ? "--- /dev/null" : `--- a/${previous}`,
     removed ? "+++ /dev/null" : `+++ b/${file.filename}`,
     ...(file.patch === undefined ? [] : [file.patch]),
-  ].join("\n")
-}
+  ].join("\n");
+};
 
 export const diffFromPullFiles = (
   files: ReadonlyArray<PullFileEntry>
-): string => (files.length === 0 ? "" : files.map(fileDiff).join("\n") + "\n")
+): string => (files.length === 0 ? "" : files.map(fileDiff).join("\n") + "\n");

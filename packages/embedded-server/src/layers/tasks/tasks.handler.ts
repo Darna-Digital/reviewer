@@ -1,9 +1,9 @@
-import * as Effect from "effect/Effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { Api } from "../../api.ts"
-import { TasksService } from "@byconvo/core/tasks"
+import * as Effect from "effect/Effect";
+import { HttpApiBuilder } from "effect/unstable/httpapi";
+import { Api } from "../../api.ts";
+import { TasksService } from "@byconvo/core/tasks";
 
-const ok = { ok: true } as const
+const ok = { ok: true } as const;
 
 export const TasksHandler = HttpApiBuilder.group(Api, "tasks", (handlers) =>
   handlers
@@ -66,4 +66,4 @@ export const TasksHandler = HttpApiBuilder.group(Api, "tasks", (handlers) =>
     .handle("resolveComment", ({ params }) =>
       Effect.flatMap(TasksService, (s) => s.resolveComment(params.commentId))
     )
-)
+);

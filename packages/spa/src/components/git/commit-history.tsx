@@ -1,45 +1,45 @@
-import { useEffect, useRef, useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useCommitGraph } from "@/interactions/commit-graph/adapters/commit-graph.hook.adapter"
-import { DEFAULT_GRAPH_CONFIG } from "@/interactions/commit-graph/interfaces/commit-graph.interfaces"
-import type { LogQuery } from "@/lib/api/types"
-import type { BranchInfo, CommitInfo } from "@byconvo/core/repo"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
-import { ResizeHandle } from "@/components/layout/resize-handle"
-import { CommitDetailsPanel } from "./commit-details-panel"
-import { GraphCell } from "./commit-graph"
-import { LogFilters } from "./log-filters"
+import { useEffect, useRef, useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useCommitGraph } from "@/interactions/commit-graph/adapters/commit-graph.hook.adapter";
+import { DEFAULT_GRAPH_CONFIG } from "@/interactions/commit-graph/interfaces/commit-graph.interfaces";
+import type { LogQuery } from "@/lib/api/types";
+import type { BranchInfo, CommitInfo } from "@byconvo/core/repo";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import { CommitDetailsPanel } from "./commit-details-panel";
+import { GraphCell } from "./commit-graph";
+import { LogFilters } from "./log-filters";
 
 /** How far ahead of the list's end the next page starts loading. */
-const LOAD_MORE_MARGIN = "600px"
+const LOAD_MORE_MARGIN = "600px";
 
 interface CommitHistoryProps {
-  refName: string
-  branches: ReadonlyArray<BranchInfo>
-  commits: ReadonlyArray<CommitInfo>
-  query: LogQuery
-  loading: boolean
+  refName: string;
+  branches: ReadonlyArray<BranchInfo>;
+  commits: ReadonlyArray<CommitInfo>;
+  query: LogQuery;
+  loading: boolean;
   /** Whether the log may hold commits past the ones loaded so far. */
-  hasMore: boolean
-  selectedCommitSha: string | null
+  hasMore: boolean;
+  selectedCommitSha: string | null;
   /** File open from the selected commit, highlighted in its changed-file tree. */
-  selectedFile: string | null
-  onLoadMore: () => void
-  onRefChange: (ref: string) => void
-  onQueryChange: (query: LogQuery) => void
-  onSelectCommit: (commit: CommitInfo) => void
-  onSelectCommitFile: (path: string) => void
+  selectedFile: string | null;
+  onLoadMore: () => void;
+  onRefChange: (ref: string) => void;
+  onQueryChange: (query: LogQuery) => void;
+  onSelectCommit: (commit: CommitInfo) => void;
+  onSelectCommitFile: (path: string) => void;
 }
 
 const formatDate = (iso: string): string => {
-  if (iso.length === 0) return ""
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return ""
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
-}
+  if (iso.length === 0) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+};
 
 export function CommitHistory({
   refName,
@@ -56,81 +56,82 @@ export function CommitHistory({
   onSelectCommit,
   onSelectCommitFile,
 }: CommitHistoryProps) {
-  const { layout, functions } = useCommitGraph(commits)
-  const rowRefs = useRef(new Map<string, HTMLElement>())
-  const [activeSha, setActiveSha] = useState<string | null>(null)
-  const prefs = useUiPrefs()
-  const [detailsWidth, setDetailsWidth] = useState(prefs.commitDetailsWidth)
+  const { layout, functions } = useCommitGraph(commits);
+  const rowRefs = useRef(new Map<string, HTMLElement>());
+  const [activeSha, setActiveSha] = useState<string | null>(null);
+  const prefs = useUiPrefs();
+  const [detailsWidth, setDetailsWidth] = useState(prefs.commitDetailsWidth);
 
   // Nearing the end of the loaded page pulls the next one, so scrolling walks
   // back through history instead of stopping at the first page. An observer on
   // the trailing row does the watching: measuring the viewport from a scroll
   // handler instead would read `scrollHeight` on every scroll event, forcing a
   // synchronous layout of the whole list and stuttering the scroll.
-  const viewportRef = useRef<HTMLDivElement | null>(null)
-  const endRef = useRef<HTMLLIElement | null>(null)
-  const onLoadMoreRef = useRef(onLoadMore)
-  onLoadMoreRef.current = onLoadMore
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const endRef = useRef<HTMLLIElement | null>(null);
+  const onLoadMoreRef = useRef(onLoadMore);
+  onLoadMoreRef.current = onLoadMore;
 
   useEffect(() => {
-    const end = endRef.current
-    const root = viewportRef.current
-    if (end === null || root === null) return
+    const end = endRef.current;
+    const root = viewportRef.current;
+    if (end === null || root === null) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting))
-          onLoadMoreRef.current()
+          onLoadMoreRef.current();
       },
       { root, rootMargin: LOAD_MORE_MARGIN }
-    )
-    observer.observe(end)
-    return () => observer.disconnect()
-  }, [hasMore, commits.length])
+    );
+    observer.observe(end);
+    return () => observer.disconnect();
+  }, [hasMore, commits.length]);
 
   const effectiveActive =
     activeSha ??
     selectedCommitSha ??
-    (commits.length > 0 ? commits[0].sha : null)
+    (commits.length > 0 ? commits[0].sha : null);
 
   const move = (delta: number) => {
-    if (commits.length === 0) return
-    const idx = commits.findIndex((c) => c.sha === effectiveActive)
-    const next = commits[Math.max(0, Math.min(commits.length - 1, idx + delta))]
-    setActiveSha(next.sha)
-    rowRefs.current.get(next.sha)?.focus()
-  }
+    if (commits.length === 0) return;
+    const idx = commits.findIndex((c) => c.sha === effectiveActive);
+    const next =
+      commits[Math.max(0, Math.min(commits.length - 1, idx + delta))];
+    setActiveSha(next.sha);
+    rowRefs.current.get(next.sha)?.focus();
+  };
 
   const onKeyDown = (event: React.KeyboardEvent, commit: CommitInfo) => {
     switch (event.key) {
       case "ArrowDown":
-        event.preventDefault()
-        move(1)
-        break
+        event.preventDefault();
+        move(1);
+        break;
       case "ArrowUp":
-        event.preventDefault()
-        move(-1)
-        break
+        event.preventDefault();
+        move(-1);
+        break;
       case "Home":
-        event.preventDefault()
+        event.preventDefault();
         if (commits[0]) {
-          setActiveSha(commits[0].sha)
-          rowRefs.current.get(commits[0].sha)?.focus()
+          setActiveSha(commits[0].sha);
+          rowRefs.current.get(commits[0].sha)?.focus();
         }
-        break
+        break;
       case "End":
-        event.preventDefault()
+        event.preventDefault();
         if (commits.at(-1)) {
-          setActiveSha(commits.at(-1)!.sha)
-          rowRefs.current.get(commits.at(-1)!.sha)?.focus()
+          setActiveSha(commits.at(-1)!.sha);
+          rowRefs.current.get(commits.at(-1)!.sha)?.focus();
         }
-        break
+        break;
       case "Enter":
       case " ":
-        event.preventDefault()
-        onSelectCommit(commit)
-        break
+        event.preventDefault();
+        onSelectCommit(commit);
+        break;
     }
-  }
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -150,16 +151,16 @@ export function CommitHistory({
         >
           <ul role="listbox" aria-label="Commits" aria-busy={loading}>
             {commits.map((commit, index) => {
-              const row = layout.rows[index]
-              const selected = selectedCommitSha === commit.sha
-              const active = effectiveActive === commit.sha
+              const row = layout.rows[index];
+              const selected = selectedCommitSha === commit.sha;
+              const active = effectiveActive === commit.sha;
               return (
                 <li key={commit.sha} role="option" aria-selected={selected}>
                   <div
                     tabIndex={active ? 0 : -1}
                     ref={(el) => {
-                      if (el) rowRefs.current.set(commit.sha, el)
-                      else rowRefs.current.delete(commit.sha)
+                      if (el) rowRefs.current.set(commit.sha, el);
+                      else rowRefs.current.delete(commit.sha);
                     }}
                     className={cn(
                       "flex cursor-pointer items-center gap-2 px-2 text-sm outline-none",
@@ -204,7 +205,7 @@ export function CommitHistory({
                     </span>
                   </div>
                 </li>
-              )
+              );
             })}
             {commits.length === 0 && (
               <li className="p-3 text-sm text-muted-foreground">
@@ -251,5 +252,5 @@ export function CommitHistory({
         )}
       </div>
     </div>
-  )
+  );
 }

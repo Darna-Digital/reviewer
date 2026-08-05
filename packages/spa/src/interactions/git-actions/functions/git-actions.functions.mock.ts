@@ -1,5 +1,5 @@
-import { vi } from "vitest"
-import type { GitActionsDependencies } from "../interfaces/git-actions.interfaces"
+import { vi } from "vitest";
+import type { GitActionsDependencies } from "../interfaces/git-actions.interfaces";
 
 export const createGitActionsDependenciesMock = (
   overrides?: Partial<GitActionsDependencies["sideEffects"]>
@@ -12,4 +12,4 @@ export const createGitActionsDependenciesMock = (
     refresh: vi.fn(),
     ...overrides,
   },
-})
+});

@@ -1,16 +1,16 @@
 /** A project's docs — one row each, newest work first. */
-import { IconFileText, IconPlus } from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { PaneHeader } from "@/components/layout/pane-header"
+import { IconFileText, IconPlus } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { PaneHeader } from "@/components/layout/pane-header";
 import {
   projectDocs,
   type MockProject,
-} from "@/interactions/collaboration/data/collaboration.mock"
+} from "@/interactions/collaboration/data/collaboration.mock";
 
 export function DocsView({ project }: { project: MockProject }) {
-  const docs = projectDocs(project.id)
+  const docs = projectDocs(project.id);
 
   return (
     <>
@@ -70,5 +70,5 @@ export function DocsView({ project }: { project: MockProject }) {
         )}
       </ScrollArea>
     </>
-  )
+  );
 }

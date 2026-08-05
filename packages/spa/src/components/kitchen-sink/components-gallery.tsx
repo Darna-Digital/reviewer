@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState } from "react";
 import {
   IconArrowRight,
   IconCheck,
@@ -7,19 +7,19 @@ import {
   IconSearch,
   IconSparkles,
   IconTrash,
-} from "@tabler/icons-react"
-import { toast } from "sonner"
+} from "@tabler/icons-react";
+import { toast } from "sonner";
 
 import {
   Section,
   Specimen,
   SpecimenRow,
   Subsection,
-} from "@/components/kitchen-sink/kitchen-sink-primitives"
-import { Badge } from "@/components/ui/badge"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+} from "@/components/kitchen-sink/kitchen-sink-primitives";
+import { Badge } from "@/components/ui/badge";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogClose,
@@ -29,7 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,9 +37,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Kbd, KbdGroup } from "@/components/ui/kbd"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   Popover,
   PopoverContent,
@@ -47,27 +47,27 @@ import {
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 
 const RADIO_CLASSES =
-  "col-start-1 row-start-1 appearance-none rounded-full border border-border bg-background checked:border-primary checked:bg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:border-border disabled:bg-muted disabled:checked:bg-muted dark:bg-white/5 dark:disabled:bg-white/10 forced-colors:appearance-auto"
+  "col-start-1 row-start-1 appearance-none rounded-full border border-border bg-background checked:border-primary checked:bg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:border-border disabled:bg-muted disabled:checked:bg-muted dark:bg-white/5 dark:disabled:bg-white/10 forced-colors:appearance-auto";
 
-const REVIEWERS = ["Anyone on the team", "Only me", "Nobody yet"]
+const REVIEWERS = ["Anyone on the team", "Only me", "Nobody yet"];
 
 function Field({
   label,
@@ -75,10 +75,10 @@ function Field({
   htmlFor,
   children,
 }: {
-  label: string
-  hint?: string
-  htmlFor: string
-  children: React.ReactNode
+  label: string;
+  hint?: string;
+  htmlFor: string;
+  children: React.ReactNode;
 }) {
   return (
     <div className="flex max-w-xs flex-col gap-1.5">
@@ -92,7 +92,7 @@ function Field({
         </p>
       )}
     </div>
-  )
+  );
 }
 
 function ChoiceRow({
@@ -100,9 +100,9 @@ function ChoiceRow({
   label,
   htmlFor,
 }: {
-  children: React.ReactNode
-  label: string
-  htmlFor: string
+  children: React.ReactNode;
+  label: string;
+  htmlFor: string;
 }) {
   return (
     <div className="flex items-start gap-3">
@@ -113,11 +113,11 @@ function ChoiceRow({
         {label}
       </label>
     </div>
-  )
+  );
 }
 
 export function ComponentsGallery() {
-  const [reviewer, setReviewer] = useState(REVIEWERS[0])
+  const [reviewer, setReviewer] = useState(REVIEWERS[0]);
 
   return (
     <>
@@ -622,5 +622,5 @@ export function ComponentsGallery() {
         </SpecimenRow>
       </Section>
     </>
-  )
+  );
 }

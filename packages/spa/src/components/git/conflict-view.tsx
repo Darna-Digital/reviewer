@@ -1,39 +1,39 @@
-import { UnresolvedFile } from "@pierre/diffs/react"
-import { IconPencil, IconX } from "@tabler/icons-react"
-import { useEffect, useState } from "react"
-import { THEMES, useLangReady } from "@/components/editor/highlighter"
-import { Button } from "@/components/ui/button"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useFile } from "@/lib/queries"
-import type { Theme } from "@/lib/ui-prefs"
+import { UnresolvedFile } from "@pierre/diffs/react";
+import { IconPencil, IconX } from "@tabler/icons-react";
+import { useEffect, useState } from "react";
+import { THEMES, useLangReady } from "@/components/editor/highlighter";
+import { Button } from "@/components/ui/button";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useFile } from "@/lib/queries";
+import type { Theme } from "@/lib/ui-prefs";
 
 interface ConflictViewProps {
-  path: string
-  theme: Theme
+  path: string;
+  theme: Theme;
   /** Take one whole side for the entire file (server-side checkout). */
-  onUseSide: (side: "ours" | "theirs") => void
+  onUseSide: (side: "ours" | "theirs") => void;
   /** Persist the user-merged content and stage it as resolved. */
-  onResolve: (mergedContent: string) => void
+  onResolve: (mergedContent: string) => void;
   /** Open the file in the full editor for freeform fixes. */
-  onEdit: (path: string) => void
-  onClose: () => void
+  onEdit: (path: string) => void;
+  onClose: () => void;
 }
 
 // Git conflict markers. Matched line-exact or with a trailing label
 // (`<<<<<<< HEAD`), mirroring how git writes them.
-const OURS = "<<<<<<<"
-const BASE = "|||||||"
-const SEP = "======="
-const THEIRS = ">>>>>>>"
+const OURS = "<<<<<<<";
+const BASE = "|||||||";
+const SEP = "=======";
+const THEIRS = ">>>>>>>";
 const isMarker = (line: string, marker: string): boolean =>
-  line === marker || line.startsWith(`${marker} `)
+  line === marker || line.startsWith(`${marker} `);
 
-type Resolution = "current" | "incoming" | "both"
+type Resolution = "current" | "incoming" | "both";
 
 /** How many unresolved conflict blocks remain in the buffer. */
 const countConflicts = (contents: string): number =>
-  contents.split("\n").filter((l) => isMarker(l, OURS)).length
+  contents.split("\n").filter((l) => isMarker(l, OURS)).length;
 
 /**
  * Replace the `targetIndex`-th conflict block with the chosen side, dropping the
@@ -45,41 +45,41 @@ function resolveConflictInText(
   targetIndex: number,
   resolution: Resolution
 ): string {
-  const lines = contents.split("\n")
-  let index = -1
+  const lines = contents.split("\n");
+  let index = -1;
   for (let start = 0; start < lines.length; start++) {
-    if (!isMarker(lines[start], OURS)) continue
-    index++
-    if (index !== targetIndex) continue
+    if (!isMarker(lines[start], OURS)) continue;
+    index++;
+    if (index !== targetIndex) continue;
 
-    let baseAt = -1
-    let sepAt = -1
-    let endAt = -1
+    let baseAt = -1;
+    let sepAt = -1;
+    let endAt = -1;
     for (let j = start + 1; j < lines.length; j++) {
-      if (baseAt === -1 && isMarker(lines[j], BASE)) baseAt = j
-      else if (sepAt === -1 && isMarker(lines[j], SEP)) sepAt = j
+      if (baseAt === -1 && isMarker(lines[j], BASE)) baseAt = j;
+      else if (sepAt === -1 && isMarker(lines[j], SEP)) sepAt = j;
       else if (isMarker(lines[j], THEIRS)) {
-        endAt = j
-        break
+        endAt = j;
+        break;
       }
     }
-    if (sepAt === -1 || endAt === -1) return contents
+    if (sepAt === -1 || endAt === -1) return contents;
 
-    const ours = lines.slice(start + 1, baseAt === -1 ? sepAt : baseAt)
-    const theirs = lines.slice(sepAt + 1, endAt)
+    const ours = lines.slice(start + 1, baseAt === -1 ? sepAt : baseAt);
+    const theirs = lines.slice(sepAt + 1, endAt);
     const replacement =
       resolution === "current"
         ? ours
         : resolution === "incoming"
           ? theirs
-          : [...ours, ...theirs]
+          : [...ours, ...theirs];
     return [
       ...lines.slice(0, start),
       ...replacement,
       ...lines.slice(endAt + 1),
-    ].join("\n")
+    ].join("\n");
   }
-  return contents
+  return contents;
 }
 
 /**
@@ -97,38 +97,38 @@ export function ConflictView({
   onEdit,
   onClose,
 }: ConflictViewProps) {
-  const file = useFile(path)
-  const langReady = useLangReady(path)
-  const [result, setResult] = useState<string | null>(null)
+  const file = useFile(path);
+  const langReady = useLangReady(path);
+  const [result, setResult] = useState<string | null>(null);
 
-  const original = file.data?.contents ?? null
+  const original = file.data?.contents ?? null;
 
   // Seed (and re-seed on file change) the working buffer with the conflicted
   // file. Re-keyed by path so switching files resets cleanly.
   useEffect(() => {
-    setResult(original)
-  }, [original])
+    setResult(original);
+  }, [original]);
 
   const resolveAt = (conflictIndex: number, resolution: Resolution) =>
     setResult((cur) =>
       cur === null ? cur : resolveConflictInText(cur, conflictIndex, resolution)
-    )
+    );
 
   if (file.isPending || result === null || !langReady) {
     return (
       <div className="p-8">
         <LoadingCursor label={`Loading ${path}…`} />
       </div>
-    )
+    );
   }
   if (file.error) {
     return (
       <div className="p-8 text-sm text-destructive">Could not open {path}</div>
-    )
+    );
   }
 
-  const remaining = countConflicts(result)
-  const resolved = remaining === 0
+  const remaining = countConflicts(result);
+  const resolved = remaining === 0;
 
   return (
     <div className="flex h-full flex-col">
@@ -218,5 +218,5 @@ export function ConflictView({
         />
       </ScrollArea>
     </div>
-  )
+  );
 }

@@ -1,28 +1,28 @@
-import type { ReactElement } from "react"
+import type { ReactElement } from "react";
 import type {
   CommitGraphConfig,
   CommitGraphFunctions,
   GraphRow,
-} from "@/interactions/commit-graph/interfaces/commit-graph.interfaces"
+} from "@/interactions/commit-graph/interfaces/commit-graph.interfaces";
 
 interface GraphCellProps {
-  row: GraphRow
-  width: number
-  functions: CommitGraphFunctions
-  config: CommitGraphConfig
+  row: GraphRow;
+  width: number;
+  functions: CommitGraphFunctions;
+  config: CommitGraphConfig;
 }
 
 /** Render one commit's graph cell: passing lanes, converging/branching edges, dot. */
 export function GraphCell({ row, width, functions, config }: GraphCellProps) {
-  const { centerX, edgePath } = functions
-  const { colWidth, dotRadius, rowHeight } = config
-  const w = Math.max(width, 1) * colWidth
-  const mid = rowHeight / 2
-  const lines: Array<ReactElement> = []
+  const { centerX, edgePath } = functions;
+  const { colWidth, dotRadius, rowHeight } = config;
+  const w = Math.max(width, 1) * colWidth;
+  const mid = rowHeight / 2;
+  const lines: Array<ReactElement> = [];
 
   row.before.forEach((lane, k) => {
-    if (lane === null) return
-    const toCol = lane.target === row.sha ? row.dotCol : k
+    if (lane === null) return;
+    const toCol = lane.target === row.sha ? row.dotCol : k;
     lines.push(
       <path
         key={`t${k}`}
@@ -31,12 +31,12 @@ export function GraphCell({ row, width, functions, config }: GraphCellProps) {
         fill="none"
         strokeWidth={1.5}
       />
-    )
-  })
+    );
+  });
 
   row.after.forEach((lane, k) => {
-    if (lane === null) return
-    const fromCol = row.written.includes(k) ? row.dotCol : k
+    if (lane === null) return;
+    const fromCol = row.written.includes(k) ? row.dotCol : k;
     lines.push(
       <path
         key={`b${k}`}
@@ -45,8 +45,8 @@ export function GraphCell({ row, width, functions, config }: GraphCellProps) {
         fill="none"
         strokeWidth={1.5}
       />
-    )
-  })
+    );
+  });
 
   return (
     <svg
@@ -67,5 +67,5 @@ export function GraphCell({ row, width, functions, config }: GraphCellProps) {
         strokeWidth={row.isMerge ? 1.5 : 0}
       />
     </svg>
-  )
+  );
 }

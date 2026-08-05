@@ -5,24 +5,24 @@
  * accepted item actually replaces — all of it is decidable from the buffer, the
  * caret and the list, so none of it needs a rendered popup to test.
  */
-import { prefixAt, type CompletionItem } from "@byconvo/core/language"
+import { prefixAt, type CompletionItem } from "@byconvo/core/language";
 
 /** Shortest prefix worth asking about, unless a trigger character forces it. */
-export const MIN_PREFIX = 1
+export const MIN_PREFIX = 1;
 
 /** Characters that open the list regardless of prefix, as in every IDE. */
-const TRIGGERS = new Set([".", '"', "'", "`", "/", "@", "<"])
+const TRIGGERS = new Set([".", '"', "'", "`", "/", "@", "<"]);
 
 export interface CaretContext {
   /** The text of the caret's line. */
-  readonly lineText: string
+  readonly lineText: string;
   /** Zero-based caret column. */
-  readonly character: number
+  readonly character: number;
 }
 
 /** The identifier being typed at the caret. */
 export const prefixOf = (caret: CaretContext): string =>
-  prefixAt(caret.lineText, caret.character)
+  prefixAt(caret.lineText, caret.character);
 
 /**
  * Whether a caret should be asking for completions. Typing an identifier does;
@@ -30,11 +30,11 @@ export const prefixOf = (caret: CaretContext): string =>
  * anything has been typed.
  */
 export const shouldRequest = (caret: CaretContext): boolean => {
-  const prefix = prefixOf(caret)
-  if (prefix.length >= MIN_PREFIX) return true
-  const previous = caret.lineText[caret.character - 1]
-  return previous !== undefined && TRIGGERS.has(previous)
-}
+  const prefix = prefixOf(caret);
+  if (prefix.length >= MIN_PREFIX) return true;
+  const previous = caret.lineText[caret.character - 1];
+  return previous !== undefined && TRIGGERS.has(previous);
+};
 
 /** Index after moving `delta` rows, wrapping at both ends. */
 export const moveSelection = (
@@ -42,16 +42,16 @@ export const moveSelection = (
   delta: number,
   length: number
 ): number => {
-  if (length === 0) return 0
-  return (((current + delta) % length) + length) % length
-}
+  if (length === 0) return 0;
+  return (((current + delta) % length) + length) % length;
+};
 
 export interface AcceptedEdit {
   /** Zero-based line the replacement happens on. */
-  readonly line: number
-  readonly startCharacter: number
-  readonly endCharacter: number
-  readonly newText: string
+  readonly line: number;
+  readonly startCharacter: number;
+  readonly endCharacter: number;
+  readonly newText: string;
 }
 
 /**
@@ -63,26 +63,26 @@ export const acceptedEdit = (
   line: number,
   caret: CaretContext
 ): AcceptedEdit => {
-  const prefix = prefixOf(caret)
+  const prefix = prefixOf(caret);
   return {
     line,
     startCharacter: Math.max(0, caret.character - prefix.length),
     endCharacter: caret.character,
     newText: item.insertText.length > 0 ? item.insertText : item.label,
-  }
-}
+  };
+};
 
 /**
  * Whether an item needs resolving before it can be accepted — only the ones
  * that would bring a symbol into scope, since resolving is a round trip.
  */
 export const needsResolve = (item: CompletionItem): boolean =>
-  item.source.length > 0
+  item.source.length > 0;
 
 /** Zero-based caret coordinates in a buffer. */
 export interface CaretPosition {
-  readonly line: number
-  readonly character: number
+  readonly line: number;
+  readonly character: number;
 }
 
 /**
@@ -98,7 +98,7 @@ export interface CaretPosition {
 export const caretAfter = (edit: AcceptedEdit): CaretPosition => ({
   line: edit.line,
   character: edit.startCharacter + edit.newText.length,
-})
+});
 
 /** Whether a caret is the one an accepted item left behind. */
 export const isEchoOfAccept = (
@@ -107,4 +107,4 @@ export const isEchoOfAccept = (
 ): boolean =>
   accepted !== null &&
   caret.line === accepted.line &&
-  caret.character === accepted.character
+  caret.character === accepted.character;

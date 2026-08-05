@@ -1,6 +1,6 @@
 // @ts-check
 
-import baseConfig from "@byconvo/lint/eslint"
+import baseConfig from "@byconvo/lint/eslint";
 
 export default [
   ...baseConfig,
@@ -12,4 +12,4 @@ export default [
       "vitest.config.ts",
     ],
   },
-]
+];

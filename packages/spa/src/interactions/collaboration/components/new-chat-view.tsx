@@ -16,28 +16,28 @@ import {
   IconTerminal2,
   IconWorld,
   IconX,
-} from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
-import { useMemo, useState, type ReactNode } from "react"
-import { Avatar } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+} from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
+import { useMemo, useState, type ReactNode } from "react";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { BranchSwitcher } from "@/components/layout/branch-switcher"
-import { RepoPicker } from "@/components/repo-picker"
-import { AgentMark } from "@/interactions/collaboration/components/agent-mark"
-import { PaneHeader } from "@/components/layout/pane-header"
-import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { BranchSwitcher } from "@/components/layout/branch-switcher";
+import { RepoPicker } from "@/components/repo-picker";
+import { AgentMark } from "@/interactions/collaboration/components/agent-mark";
+import { PaneHeader } from "@/components/layout/pane-header";
+import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import {
   useBranches,
   useRemoteBranches,
   useRepo,
   useWorkspace,
-} from "@/lib/queries"
+} from "@/lib/queries";
 import {
   agentName,
   callableBy,
@@ -45,19 +45,19 @@ import {
   MEMBERS,
   PROJECTS,
   VIEWER,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import type { AgentKind } from "@byconvo/core/threads"
-import { cn } from "@/lib/utils"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import type { AgentKind } from "@byconvo/core/threads";
+import { cn } from "@/lib/utils";
 
 interface Recipient {
-  id: string
-  kind: "member" | "agent" | "channel"
-  name: string
-  detail: string
+  id: string;
+  kind: "member" | "agent" | "channel";
+  name: string;
+  detail: string;
   /** Which CLI to draw, on an agent recipient. */
-  agent?: AgentKind
+  agent?: AgentKind;
   /** Set on a cloud agent, which anyone in the workspace may start with. */
-  cloud?: boolean
+  cloud?: boolean;
 }
 
 /**
@@ -86,39 +86,39 @@ const recipients = (): ReadonlyArray<Recipient> => [
     name: c.name,
     detail: c.topic,
   })),
-]
+];
 
 const label = (recipient: Recipient) =>
-  recipient.kind === "channel" ? `#${recipient.name}` : recipient.name
+  recipient.kind === "channel" ? `#${recipient.name}` : recipient.name;
 
 function RecipientIcon({
   recipient,
   className,
 }: {
-  recipient: Recipient
-  className?: string
+  recipient: Recipient;
+  className?: string;
 }) {
   if (recipient.kind === "channel") {
     return (
       <IconHash
         className={cn("size-4 shrink-0 text-muted-foreground", className)}
       />
-    )
+    );
   }
   if (recipient.agent !== undefined) {
     return (
       <AgentMark kind={recipient.agent} className={cn("size-5", className)} />
-    )
+    );
   }
-  return <Avatar name={recipient.name} className={cn("size-5", className)} />
+  return <Avatar name={recipient.name} className={cn("size-5", className)} />;
 }
 
 function Chip({
   recipient,
   onRemove,
 }: {
-  recipient: Recipient
-  onRemove: () => void
+  recipient: Recipient;
+  onRemove: () => void;
 }) {
   return (
     <span className="flex h-6 items-center gap-1.5 rounded-md bg-muted py-1 pr-1 pl-1.5 text-[13px]">
@@ -133,15 +133,15 @@ function Chip({
         <IconX className="size-3" />
       </button>
     </span>
-  )
+  );
 }
 
 function RecipientRow({
   recipient,
   onSelect,
 }: {
-  recipient: Recipient
-  onSelect: () => void
+  recipient: Recipient;
+  onSelect: () => void;
 }) {
   return (
     <button
@@ -161,7 +161,7 @@ function RecipientRow({
         {recipient.detail}
       </span>
     </button>
-  )
+  );
 }
 
 function Group({ title, children }: { title: string; children: ReactNode }) {
@@ -170,36 +170,36 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
       <p className="px-3 pt-2 pb-1 text-xs text-muted-foreground">{title}</p>
       {children}
     </div>
-  )
+  );
 }
 
 const CHIP =
-  "flex h-7 min-w-0 items-center gap-1.5 rounded-full px-2.5 text-[13px] text-muted-foreground outline-none hover:bg-elevate hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+  "flex h-7 min-w-0 items-center gap-1.5 rounded-full px-2.5 text-[13px] text-muted-foreground outline-none hover:bg-elevate hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30";
 
 /** How much the agent may do on its own before it comes back to ask. */
 const PERMISSIONS = [
   { id: "ask", label: "Ask every time", detail: "Every edit and command" },
   { id: "edits", label: "Approve edits", detail: "Commands still ask" },
   { id: "full", label: "Full access", detail: "Edits, commands, git" },
-]
+];
 
 const EFFORTS = [
   { id: "high", label: "High", detail: "Slower, thinks it through" },
   { id: "medium", label: "Medium", detail: "The usual balance" },
   { id: "low", label: "Low", detail: "Quick passes" },
-]
+];
 
 /** Public is the default, so it is the first option and the one already set. */
 const VISIBILITY = [
   { id: "public", label: "Public", detail: "The project can read and join" },
   { id: "private", label: "Private", detail: "Only the people you add" },
-]
+];
 
 const PROJECT_OPTIONS = PROJECTS.map((project) => ({
   id: project.id,
   label: project.name,
   detail: `${project.lead} · ${project.target}`,
-}))
+}));
 
 function ChipPicker({
   icon,
@@ -207,13 +207,13 @@ function ChipPicker({
   options,
   onSelect,
 }: {
-  icon: ReactNode
-  value: string
-  options: ReadonlyArray<{ id: string; label: string; detail: string }>
-  onSelect: (id: string) => void
+  icon: ReactNode;
+  value: string;
+  options: ReadonlyArray<{ id: string; label: string; detail: string }>;
+  onSelect: (id: string) => void;
 }) {
-  const [open, setOpen] = useState(false)
-  const selected = options.find((o) => o.id === value) ?? options[0]
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.id === value) ?? options[0];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -228,8 +228,8 @@ function ChipPicker({
             key={option.id}
             type="button"
             onClick={() => {
-              onSelect(option.id)
-              setOpen(false)
+              onSelect(option.id);
+              setOpen(false);
             }}
             className="flex w-full items-center gap-2.5 rounded-lg px-2 py-1.5 text-left outline-none hover:bg-elevate focus-visible:bg-elevate"
           >
@@ -248,47 +248,47 @@ function ChipPicker({
         ))}
       </PopoverContent>
     </Popover>
-  )
+  );
 }
 
 export function NewChatView() {
-  const [chosen, setChosen] = useState<ReadonlyArray<Recipient>>([])
-  const [query, setQuery] = useState("")
-  const [message, setMessage] = useState("")
-  const [permission, setPermission] = useState("edits")
-  const [effort, setEffort] = useState("high")
-  const [visibility, setVisibility] = useState("public")
-  const [projectId, setProjectId] = useState(PROJECT_OPTIONS[0]?.id ?? "")
-  const [repoOpen, setRepoOpen] = useState(false)
-  const repo = useRepo()
-  const workspace = useWorkspace()
-  const branches = useBranches()
-  const remoteBranches = useRemoteBranches()
-  const git = useGitActions()
+  const [chosen, setChosen] = useState<ReadonlyArray<Recipient>>([]);
+  const [query, setQuery] = useState("");
+  const [message, setMessage] = useState("");
+  const [permission, setPermission] = useState("edits");
+  const [effort, setEffort] = useState("high");
+  const [visibility, setVisibility] = useState("public");
+  const [projectId, setProjectId] = useState(PROJECT_OPTIONS[0]?.id ?? "");
+  const [repoOpen, setRepoOpen] = useState(false);
+  const repo = useRepo();
+  const workspace = useWorkspace();
+  const branches = useBranches();
+  const remoteBranches = useRemoteBranches();
+  const git = useGitActions();
 
   const matches = useMemo(() => {
-    const q = query.trim().toLowerCase()
+    const q = query.trim().toLowerCase();
     return recipients().filter(
       (r) =>
         !chosen.some((c) => c.id === r.id) &&
         (q.length === 0 ||
           r.name.toLowerCase().includes(q) ||
           r.detail.toLowerCase().includes(q))
-    )
-  }, [chosen, query])
+    );
+  }, [chosen, query]);
 
   const add = (recipient: Recipient) => {
-    setChosen([...chosen, recipient])
-    setQuery("")
-  }
+    setChosen([...chosen, recipient]);
+    setQuery("");
+  };
 
   const group = (kind: Recipient["kind"]) =>
-    matches.filter((r) => r.kind === kind)
-  const toAgent = chosen.some((c) => c.kind === "agent")
-  const suggesting = query.length > 0 || chosen.length === 0
-  const isPublic = visibility === "public"
+    matches.filter((r) => r.kind === kind);
+  const toAgent = chosen.some((c) => c.kind === "agent");
+  const suggesting = query.length > 0 || chosen.length === 0;
+  const isPublic = visibility === "public";
   const projectName =
-    PROJECT_OPTIONS.find((p) => p.id === projectId)?.label ?? "the project"
+    PROJECT_OPTIONS.find((p) => p.id === projectId)?.label ?? "the project";
 
   return (
     <>
@@ -326,11 +326,11 @@ export function NewChatView() {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Backspace" && query.length === 0) {
-                  setChosen(chosen.slice(0, -1))
+                  setChosen(chosen.slice(0, -1));
                 }
                 if (e.key === "Enter" && matches[0] !== undefined) {
-                  e.preventDefault()
-                  add(matches[0])
+                  e.preventDefault();
+                  add(matches[0]);
                 }
               }}
               placeholder={
@@ -509,5 +509,5 @@ export function NewChatView() {
         </div>
       </div>
     </>
-  )
+  );
 }

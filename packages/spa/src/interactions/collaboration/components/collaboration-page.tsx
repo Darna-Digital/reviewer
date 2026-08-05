@@ -3,15 +3,15 @@
  * Collaboration entry. The sidebar picks what the right pane shows through the
  * URL; everything it renders comes from `collaboration.mock`.
  */
-import { useSearch } from "@tanstack/react-router"
-import { ChannelView } from "@/interactions/collaboration/components/channel-view"
-import { ChatView } from "@/interactions/collaboration/components/chat-view"
-import { DocsView } from "@/interactions/collaboration/components/docs-view"
-import { CollaborationSidebar } from "@/interactions/collaboration/components/collaboration-sidebar"
-import { PeopleView } from "@/interactions/collaboration/components/people-view"
-import { ProjectView } from "@/interactions/collaboration/components/project-view"
-import { TaskListView } from "@/interactions/collaboration/components/task-list-view"
-import { TaskView } from "@/interactions/collaboration/components/task-view"
+import { useSearch } from "@tanstack/react-router";
+import { ChannelView } from "@/interactions/collaboration/components/channel-view";
+import { ChatView } from "@/interactions/collaboration/components/chat-view";
+import { DocsView } from "@/interactions/collaboration/components/docs-view";
+import { CollaborationSidebar } from "@/interactions/collaboration/components/collaboration-sidebar";
+import { PeopleView } from "@/interactions/collaboration/components/people-view";
+import { ProjectView } from "@/interactions/collaboration/components/project-view";
+import { TaskListView } from "@/interactions/collaboration/components/task-list-view";
+import { TaskView } from "@/interactions/collaboration/components/task-view";
 import {
   DEFAULT_ID,
   DEFAULT_VIEW,
@@ -19,8 +19,8 @@ import {
   findChat,
   findProject,
   findTask,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import { useUiPrefs } from "@/lib/ui-prefs"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import { useUiPrefs } from "@/lib/ui-prefs";
 
 function NothingSelected() {
   return (
@@ -30,21 +30,21 @@ function NothingSelected() {
         Pick a project, task, or channel from the sidebar.
       </p>
     </div>
-  )
+  );
 }
 
 export function CollaborationPage() {
-  const { sidebarVisible } = useUiPrefs()
-  const search = useSearch({ strict: false })
-  const view = search.view ?? DEFAULT_VIEW
-  const id = search.id ?? DEFAULT_ID
+  const { sidebarVisible } = useUiPrefs();
+  const search = useSearch({ strict: false });
+  const view = search.view ?? DEFAULT_VIEW;
+  const id = search.id ?? DEFAULT_ID;
 
-  const project = view === "project" ? findProject(id) : undefined
-  const taskListProject = view === "tasks" ? findProject(id) : undefined
-  const docsProject = view === "docs" ? findProject(id) : undefined
-  const channel = view === "channel" ? findChannel(id) : undefined
-  const chat = view === "chat" ? findChat(id) : undefined
-  const task = view === "task" ? findTask(id) : undefined
+  const project = view === "project" ? findProject(id) : undefined;
+  const taskListProject = view === "tasks" ? findProject(id) : undefined;
+  const docsProject = view === "docs" ? findProject(id) : undefined;
+  const channel = view === "channel" ? findChannel(id) : undefined;
+  const chat = view === "chat" ? findChat(id) : undefined;
+  const task = view === "task" ? findTask(id) : undefined;
 
   return (
     <div className="flex h-full min-h-0">
@@ -70,5 +70,5 @@ export function CollaborationPage() {
         )}
       </section>
     </div>
-  )
+  );
 }

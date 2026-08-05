@@ -1,7 +1,7 @@
 /** Assistant text rendered as markdown, matching the docs preview styling. */
-import Markdown from "react-markdown"
-import rehypeHighlight from "rehype-highlight"
-import remarkGfm from "remark-gfm"
+import Markdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
+import remarkGfm from "remark-gfm";
 
 export function ChatMarkdown({ text }: { text: string }) {
   return (
@@ -10,5 +10,5 @@ export function ChatMarkdown({ text }: { text: string }) {
         {text}
       </Markdown>
     </div>
-  )
+  );
 }

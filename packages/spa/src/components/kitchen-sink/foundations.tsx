@@ -3,8 +3,8 @@ import {
   Specimen,
   SpecimenRow,
   Subsection,
-} from "@/components/kitchen-sink/kitchen-sink-primitives"
-import { surfaceClasses } from "@/lib/surface-classes"
+} from "@/components/kitchen-sink/kitchen-sink-primitives";
+import { surfaceClasses } from "@/lib/surface-classes";
 
 const BRAND_RAMP = [
   { step: "50", swatch: "bg-brand-50" },
@@ -18,7 +18,7 @@ const BRAND_RAMP = [
   { step: "800", swatch: "bg-brand-800" },
   { step: "900", swatch: "bg-brand-900" },
   { step: "950", swatch: "bg-brand-950" },
-]
+];
 
 const ROLE_TOKENS = [
   {
@@ -51,7 +51,7 @@ const ROLE_TOKENS = [
     swatch: "bg-destructive",
     role: "Failures and irreversible actions",
   },
-]
+];
 
 const SURFACE_TOKENS = [
   { token: "background", swatch: "bg-background", role: "The page itself" },
@@ -59,14 +59,14 @@ const SURFACE_TOKENS = [
   { token: "muted", swatch: "bg-muted", role: "Recessed wells, hover states" },
   { token: "input", swatch: "bg-input", role: "Field fills" },
   { token: "border", swatch: "bg-border", role: "Hairlines and dividers" },
-]
+];
 
 const INK_TOKENS = [
   { token: "text-foreground", ink: "text-foreground" },
   { token: "text-muted-foreground", ink: "text-muted-foreground" },
   { token: "text-link", ink: "text-link" },
   { token: "text-destructive", ink: "text-destructive" },
-]
+];
 
 const RADII = [
   { token: "rounded-md", radius: "rounded-md" },
@@ -75,7 +75,7 @@ const RADII = [
   { token: "rounded-2xl", radius: "rounded-2xl" },
   { token: "rounded-3xl", radius: "rounded-3xl" },
   { token: "rounded-full", radius: "rounded-full" },
-]
+];
 
 const SURFACE_LADDER = [
   { level: 1, role: "Page, sidebar" },
@@ -86,14 +86,14 @@ const SURFACE_LADDER = [
   { level: 6, role: "Tooltip over a menu" },
   { level: 7, role: "Menu inside a dialog" },
   { level: 8, role: "Ceiling — deeper nesting clamps here" },
-]
+];
 
 function SwatchTile({ swatch }: { swatch: string }) {
   return (
     <div
       className={`h-14 w-full rounded-2xl inset-ring inset-ring-foreground/10 ${swatch}`}
     />
-  )
+  );
 }
 
 export function Foundations() {
@@ -280,5 +280,5 @@ export function Foundations() {
         </Subsection>
       </Section>
     </>
-  )
+  );
 }

@@ -1,14 +1,14 @@
-import * as Effect from "effect/Effect"
-import * as Ref from "effect/Ref"
-import { NotFound } from "../../../shared.ts"
-import { TerminalExec } from "../../../ports/terminal-exec.ts"
-import { agentCommand, agentDefaultTitle } from "../functions/agents.ts"
-import type { Thread, ThreadEntry } from "../schema/threads.schema.ts"
+import * as Effect from "effect/Effect";
+import * as Ref from "effect/Ref";
+import { NotFound } from "../../../shared.ts";
+import { TerminalExec } from "../../../ports/terminal-exec.ts";
+import { agentCommand, agentDefaultTitle } from "../functions/agents.ts";
+import type { Thread, ThreadEntry } from "../schema/threads.schema.ts";
 import type {
   CreateThreadInput,
   RenameThreadInput,
   ThreadsRepo,
-} from "./threads.repository.ts"
+} from "./threads.repository.ts";
 
 const summarize = (thread: Thread) => ({
   id: thread.id,
@@ -23,29 +23,29 @@ const summarize = (thread: Thread) => ({
     thread.entries.length > 0
       ? thread.entries[thread.entries.length - 1].command
       : null,
-})
-const DEFAULT_TITLE = "New thread"
+});
+const DEFAULT_TITLE = "New thread";
 const titleFromCommand = (command: string) => {
-  const first = command.trim().split(/\s+/)[0] ?? ""
-  return first.length > 0 ? first.slice(0, 60) : "terminal"
-}
+  const first = command.trim().split(/\s+/)[0] ?? "";
+  return first.length > 0 ? first.slice(0, 60) : "terminal";
+};
 export const makeMemoryThreadsRepository = (seed: ReadonlyArray<Thread> = []) =>
   Effect.gen(function* () {
-    const terminal = yield* TerminalExec
-    const store = yield* Ref.make<ReadonlyArray<Thread>>([...seed])
-    let counter = 0
+    const terminal = yield* TerminalExec;
+    const store = yield* Ref.make<ReadonlyArray<Thread>>([...seed]);
+    let counter = 0;
     const nextId = (prefix: string) => {
-      counter += 1
-      return `${prefix}-mem-${counter}`
-    }
-    const now = () => "2026-01-01T00:00:00.000Z"
+      counter += 1;
+      return `${prefix}-mem-${counter}`;
+    };
+    const now = () => "2026-01-01T00:00:00.000Z";
     const find = (threads: ReadonlyArray<Thread>, id: string) => {
-      const thread = threads.find((t) => t.id === id)
+      const thread = threads.find((t) => t.id === id);
       if (thread === undefined) {
-        return Effect.fail(new NotFound({ reason: `thread ${id} not found` }))
+        return Effect.fail(new NotFound({ reason: `thread ${id} not found` }));
       }
-      return Effect.succeed(thread)
-    }
+      return Effect.succeed(thread);
+    };
     const repo: ThreadsRepo = {
       list: Ref.get(store).pipe(
         Effect.map((threads) => threads.map(summarize))
@@ -68,13 +68,13 @@ export const makeMemoryThreadsRepository = (seed: ReadonlyArray<Thread> = []) =>
             createdAt: now(),
             updatedAt: now(),
             entries: [],
-          }
-          yield* Ref.update(store, (all) => [created, ...all])
-          return created
+          };
+          yield* Ref.update(store, (all) => [created, ...all]);
+          return created;
         }),
       rename: (id, input: RenameThreadInput) =>
         Effect.gen(function* () {
-          const existing = yield* find(yield* Ref.get(store), id)
+          const existing = yield* find(yield* Ref.get(store), id);
           const updated: Thread = {
             ...existing,
             title:
@@ -85,20 +85,20 @@ export const makeMemoryThreadsRepository = (seed: ReadonlyArray<Thread> = []) =>
             taskKey:
               input.taskKey === undefined ? existing.taskKey : input.taskKey,
             updatedAt: now(),
-          }
+          };
           yield* Ref.update(store, (all) =>
             all.map((t) => (t.id === id ? updated : t))
-          )
-          return updated
+          );
+          return updated;
         }),
       remove: (id) =>
         Ref.update(store, (all) => all.filter((t) => t.id !== id)),
       run: (id, input) =>
         Effect.gen(function* () {
-          const existing = yield* find(yield* Ref.get(store), id)
+          const existing = yield* find(yield* Ref.get(store), id);
           const result = yield* terminal.run(
             agentCommand(existing.agent, input)
-          )
+          );
           const entry: ThreadEntry = {
             id: nextId("e"),
             command: input,
@@ -106,7 +106,7 @@ export const makeMemoryThreadsRepository = (seed: ReadonlyArray<Thread> = []) =>
             stderr: result.stderr,
             exitCode: result.exitCode,
             createdAt: now(),
-          }
+          };
           yield* Ref.update(store, (all) =>
             all.map((t) =>
               t.id === id
@@ -121,9 +121,9 @@ export const makeMemoryThreadsRepository = (seed: ReadonlyArray<Thread> = []) =>
                   }
                 : t
             )
-          )
-          return entry
+          );
+          return entry;
         }),
-    }
-    return repo
-  })
+    };
+    return repo;
+  });

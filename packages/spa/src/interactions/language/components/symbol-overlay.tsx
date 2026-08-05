@@ -3,32 +3,32 @@
  * pointer rests on a symbol, and after a click either its usages or a choice of
  * declarations.
  */
-import { IconArrowRight, IconLoader2 } from "@tabler/icons-react"
-import Markdown from "react-markdown"
-import rehypeHighlight from "rehype-highlight"
-import remarkGfm from "remark-gfm"
+import { IconArrowRight, IconLoader2 } from "@tabler/icons-react";
+import Markdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
+import remarkGfm from "remark-gfm";
 import type {
   Location,
   SymbolReference,
   SymbolTarget,
-} from "@byconvo/core/language"
-import { cn } from "@/lib/utils"
+} from "@byconvo/core/language";
+import { cn } from "@/lib/utils";
 
 /** `src/a/b.ts` -> `src/a/`, so the name can be kept while the path clips. */
 const directoryOf = (path: string) => {
-  const cut = path.lastIndexOf("/")
-  return cut === -1 ? "" : path.slice(0, cut + 1)
-}
+  const cut = path.lastIndexOf("/");
+  return cut === -1 ? "" : path.slice(0, cut + 1);
+};
 const basenameOf = (path: string) => {
-  const cut = path.lastIndexOf("/")
-  return cut === -1 ? path : path.slice(cut + 1)
-}
+  const cut = path.lastIndexOf("/");
+  return cut === -1 ? path : path.slice(cut + 1);
+};
 
 const REFERENCE_KIND_LABEL = {
   definition: "declaration",
   write: "write",
   read: "read",
-} as const
+} as const;
 
 /** One row in a usage or declaration list. */
 function LocationRow({
@@ -37,10 +37,10 @@ function LocationRow({
   detail,
   onOpen,
 }: {
-  location: Location
-  preview: string
-  detail?: string
-  onOpen: (location: Location) => void
+  location: Location;
+  preview: string;
+  detail?: string;
+  onOpen: (location: Location) => void;
 }) {
   return (
     <li>
@@ -69,12 +69,12 @@ function LocationRow({
         )}
       </button>
     </li>
-  )
+  );
 }
 
 export function HoverDocumentation({ contents }: { contents: string }) {
   if (contents.trim().length === 0) {
-    return <p className="px-1 text-xs text-muted-foreground">No information</p>
+    return <p className="px-1 text-xs text-muted-foreground">No information</p>;
   }
   return (
     <div className="markdown min-w-0 text-xs [&_pre]:my-1 [&_pre]:text-xs">
@@ -82,7 +82,7 @@ export function HoverDocumentation({ contents }: { contents: string }) {
         {contents}
       </Markdown>
     </div>
-  )
+  );
 }
 
 export function UsagesList({
@@ -90,9 +90,9 @@ export function UsagesList({
   references,
   onOpen,
 }: {
-  symbol: string
-  references: ReadonlyArray<SymbolReference>
-  onOpen: (location: Location) => void
+  symbol: string;
+  references: ReadonlyArray<SymbolReference>;
+  onOpen: (location: Location) => void;
 }) {
   return (
     <div className="min-w-[20rem]">
@@ -112,15 +112,15 @@ export function UsagesList({
         ))}
       </ul>
     </div>
-  )
+  );
 }
 
 export function TargetChoice({
   targets,
   onOpen,
 }: {
-  targets: ReadonlyArray<SymbolTarget>
-  onOpen: (location: Location) => void
+  targets: ReadonlyArray<SymbolTarget>;
+  onOpen: (location: Location) => void;
 }) {
   return (
     <div className="min-w-[20rem]">
@@ -140,7 +140,7 @@ export function TargetChoice({
         ))}
       </ul>
     </div>
-  )
+  );
 }
 
 export function CardSpinner({ label }: { label: string }) {
@@ -153,5 +153,5 @@ export function CardSpinner({ label }: { label: string }) {
       <IconLoader2 className="size-3.5 animate-spin" />
       {label}
     </p>
-  )
+  );
 }

@@ -6,7 +6,7 @@
  * root plus a repository-relative path, the service above receives LSP shapes,
  * and neither knows which repository is selected.
  */
-import * as Effect from "effect/Effect"
+import * as Effect from "effect/Effect";
 import {
   selectProvider,
   type CodeActionsResult,
@@ -15,22 +15,22 @@ import {
   type LanguageRepo,
   type Position,
   type Range,
-} from "@byconvo/core/language"
+} from "@byconvo/core/language";
 import type {
   LanguageFailure,
   LanguageProvider,
-} from "@byconvo/core/ports/language-provider"
-import { WorkspaceContext } from "../workspace/workspace-context.ts"
-import { providersFor } from "./language.providers.ts"
+} from "@byconvo/core/ports/language-provider";
+import { WorkspaceContext } from "../workspace/workspace-context.ts";
+import { providersFor } from "./language.providers.ts";
 
 /** A provider chosen for a path, with the repository root it works against. */
 interface Resolved {
-  readonly root: string
-  readonly provider: LanguageProvider
+  readonly root: string;
+  readonly provider: LanguageProvider;
 }
 
 export const makeLiveLanguageRepository = Effect.gen(function* () {
-  const workspace = yield* WorkspaceContext
+  const workspace = yield* WorkspaceContext;
 
   const resolve = (
     path: string
@@ -41,7 +41,7 @@ export const makeLiveLanguageRepository = Effect.gen(function* () {
     Effect.map(workspace.requireCurrent, (root) => ({
       root,
       provider: selectProvider(providersFor(root).providers, path),
-    }))
+    }));
 
   const describe = (
     root: string,
@@ -60,19 +60,19 @@ export const makeLiveLanguageRepository = Effect.gen(function* () {
       detail: [availability.detail, ...problems]
         .filter((part) => part.length > 0)
         .join(" · "),
-    }))
+    }));
 
   const repo: LanguageRepo = {
     providers: Effect.gen(function* () {
-      const root = yield* workspace.requireCurrent
-      const { providers, problems } = providersFor(root)
+      const root = yield* workspace.requireCurrent;
+      const { providers, problems } = providersFor(root);
       return yield* Effect.forEach(providers, (provider) =>
         describe(
           root,
           provider,
           provider.transport === "lsp-stdio" ? problems : []
         )
-      )
+      );
     }),
 
     diagnostics: (path, contents) =>
@@ -159,10 +159,10 @@ export const makeLiveLanguageRepository = Effect.gen(function* () {
                 (actions) => ({ providerId: provider.id, actions })
               )
       ),
-  }
+  };
 
-  return repo
-})
+  return repo;
+});
 
 /** Shared plumbing for the three position-addressed operations. */
 const withPosition = <A>(
@@ -176,10 +176,10 @@ const withPosition = <A>(
   run: (
     provider: LanguageProvider,
     request: {
-      root: string
-      path: string
-      contents: string | null
-      position: Position
+      root: string;
+      path: string;
+      contents: string | null;
+      position: Position;
     }
   ) => Effect.Effect<A, LanguageFailure>,
   empty: A
@@ -188,4 +188,4 @@ const withPosition = <A>(
     provider === null
       ? Effect.succeed(empty)
       : run(provider, { root, path, contents, position })
-  )
+  );

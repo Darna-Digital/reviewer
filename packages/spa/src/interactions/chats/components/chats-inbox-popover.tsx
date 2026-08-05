@@ -3,24 +3,24 @@
  * the same panel the collaboration prototype wears. Opening it clears the dot:
  * the mark it compares against moves to now once the panel closes.
  */
-import { IconPlus } from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
+import { IconPlus } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
 import {
   INBOX_PREVIEW_COUNT,
   InboxPopover,
   InboxPopoverHeader,
   inboxPopoverLink,
-} from "@/components/layout/inbox-popover"
-import { agentIcon } from "@/interactions/threads/components/agent-icons"
-import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions"
-import { useChats } from "@/lib/queries"
-import { timeAgo } from "@/lib/relative-time"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
+} from "@/components/layout/inbox-popover";
+import { agentIcon } from "@/interactions/threads/components/agent-icons";
+import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
+import { useChats } from "@/lib/queries";
+import { timeAgo } from "@/lib/relative-time";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 
 export function ChatsInboxPopover({ active }: { active: boolean }) {
-  const seenAt = useUiPrefs().inboxSeenAt
-  const chats = useChats().data ?? []
-  const unread = chats.filter((chat) => isChatUnread(chat, seenAt))
+  const seenAt = useUiPrefs().inboxSeenAt;
+  const chats = useChats().data ?? [];
+  const unread = chats.filter((chat) => isChatUnread(chat, seenAt));
 
   return (
     <InboxPopover
@@ -56,7 +56,7 @@ export function ChatsInboxPopover({ active }: { active: boolean }) {
           ) : (
             <ul role="list" className="flex flex-col">
               {chats.slice(0, INBOX_PREVIEW_COUNT).map((chat) => {
-                const Icon = agentIcon(chat.provider)
+                const Icon = agentIcon(chat.provider);
                 return (
                   <li key={chat.id} className="border-b last:border-b-0">
                     <Link
@@ -89,12 +89,12 @@ export function ChatsInboxPopover({ active }: { active: boolean }) {
                       )}
                     </Link>
                   </li>
-                )
+                );
               })}
             </ul>
           )}
         </>
       )}
     </InboxPopover>
-  )
+  );
 }

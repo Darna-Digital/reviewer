@@ -1,5 +1,5 @@
-import { useQueryClient } from "@tanstack/react-query"
-import { useNavigate } from "@tanstack/react-router"
+import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import {
   IconArrowLeft,
   IconCheck,
@@ -8,63 +8,63 @@ import {
   IconFolderOpen,
   IconGitBranch,
   IconSearch,
-} from "@tabler/icons-react"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { toast } from "sonner"
-import { api, fetchClient } from "@/lib/api/client"
-import { Button } from "@/components/ui/button"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
+} from "@tabler/icons-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { api, fetchClient } from "@/lib/api/client";
+import { Button } from "@/components/ui/button";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { ScrollArea } from "@/components/ui/scroll-area"
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   handleSearchKeyDown,
   handleSearchRowKeyDown,
-} from "@/components/ui/search-keydown"
+} from "@/components/ui/search-keydown";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@/components/ui/tooltip";
 import {
   ROW_TOOLTIP_PLACEMENT,
   TruncatedText,
   truncatedTooltipClass,
   useClippedText,
-} from "@/components/ui/truncated-text"
-import { displayPath, pathName } from "@/lib/display-path"
-import { isDesktop, openDesktopDirectory } from "@/lib/desktop"
-import { repoAvatar } from "@/lib/repo-avatar"
-import { cn } from "@/lib/utils"
-import type { RepoInfo } from "@byconvo/core/repo"
-import type { WorkspaceInfo } from "@byconvo/core/workspace"
+} from "@/components/ui/truncated-text";
+import { displayPath, pathName } from "@/lib/display-path";
+import { isDesktop, openDesktopDirectory } from "@/lib/desktop";
+import { repoAvatar } from "@/lib/repo-avatar";
+import { cn } from "@/lib/utils";
+import type { RepoInfo } from "@byconvo/core/repo";
+import type { WorkspaceInfo } from "@byconvo/core/workspace";
 
 interface RepoPickerProps {
-  repo: RepoInfo | null
-  workspace: WorkspaceInfo | undefined
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  repo: RepoInfo | null;
+  workspace: WorkspaceInfo | undefined;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   /**
    * Called after a repository is opened, instead of the default jump to the
    * commit view. The workspace pages pass this so switching repo keeps you on
    * the current page (now scoped to the newly-opened repo).
    */
-  onChosen?: () => void
+  onChosen?: () => void;
   /** Which way the popover opens — "top" for a bar pinned to the bottom. */
-  side?: "top" | "bottom"
+  side?: "top" | "bottom";
 }
 
 function Avatar({
   name,
   className = "size-5 text-[10px]",
 }: {
-  name: string
-  className?: string
+  name: string;
+  className?: string;
 }) {
-  const a = repoAvatar(name)
+  const a = repoAvatar(name);
   return (
     <span
       className={`flex shrink-0 items-center justify-center rounded-sm font-semibold text-white ${className}`}
@@ -72,16 +72,16 @@ function Avatar({
     >
       {a.initials}
     </span>
-  )
+  );
 }
 
 /** Matches the branch dropdown's menu items, on buttons the menu doesn't own. */
 const rowClass =
-  "flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-hidden select-none hover:bg-elevate hover:text-foreground focus:bg-elevate focus:text-foreground"
+  "flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-hidden select-none hover:bg-elevate hover:text-foreground focus:bg-elevate focus:text-foreground";
 
-const sectionLabelClass = "px-2 py-1 text-xs text-muted-foreground"
+const sectionLabelClass = "px-2 py-1 text-xs text-muted-foreground";
 
-const emptyClass = "px-2 py-6 text-center text-sm text-muted-foreground"
+const emptyClass = "px-2 py-6 text-center text-sm text-muted-foreground";
 
 /**
  * A folder row: name over its path. Anywhere on the row is the tooltip's
@@ -95,14 +95,14 @@ function PathRow({
   trailing,
   onClick,
 }: {
-  icon: React.ReactNode
-  label: string
-  path: string
-  emphasized?: boolean
-  trailing?: React.ReactNode
-  onClick: () => void
+  icon: React.ReactNode;
+  label: string;
+  path: string;
+  emphasized?: boolean;
+  trailing?: React.ReactNode;
+  onClick: () => void;
 }) {
-  const { ref, clipped, measure } = useClippedText<HTMLSpanElement>(path)
+  const { ref, clipped, measure } = useClippedText<HTMLSpanElement>(path);
 
   return (
     <Tooltip>
@@ -139,7 +139,7 @@ function PathRow({
         </TooltipContent>
       )}
     </Tooltip>
-  )
+  );
 }
 
 /** The repo chip in the top bar; opening it reveals a recents + folder browser
@@ -152,70 +152,70 @@ export function RepoPicker({
   onChosen,
   side,
 }: RepoPickerProps) {
-  const queryClient = useQueryClient()
-  const navigate = useNavigate()
-  const [path, setPath] = useState<string | null>(null)
-  const [browsing, setBrowsing] = useState(false)
-  const [query, setQuery] = useState("")
-  const searchRef = useRef<HTMLInputElement>(null)
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [path, setPath] = useState<string | null>(null);
+  const [browsing, setBrowsing] = useState(false);
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
   const browse = api.useQuery(
     "get",
     "/api/fs/browse",
     { params: { query: path === null ? {} : { path } } },
     { enabled: open && browsing }
-  )
+  );
 
   useEffect(() => {
     if (!open) {
-      setQuery("")
-      setBrowsing(false)
-      setPath(null)
-      return
+      setQuery("");
+      setBrowsing(false);
+      setPath(null);
+      return;
     }
-    const id = requestAnimationFrame(() => searchRef.current?.focus())
-    return () => cancelAnimationFrame(id)
-  }, [open])
+    const id = requestAnimationFrame(() => searchRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [open]);
 
   const choose = async (target: string) => {
     const { data, error } = await fetchClient.POST("/api/workspace", {
       body: { path: target },
-    })
+    });
     if (error) {
       toast.error(
         (error as { message?: string; reason?: string }).message ??
           (error as { reason?: string }).reason ??
           "could not open repository"
-      )
-      return
+      );
+      return;
     }
     if (data !== undefined) {
-      queryClient.setQueryData(["get", "/api/workspace"], data)
+      queryClient.setQueryData(["get", "/api/workspace"], data);
     }
-    await queryClient.invalidateQueries()
-    onOpenChange(false)
+    await queryClient.invalidateQueries();
+    onOpenChange(false);
     // Workspace pages stay put (now scoped to the new repo); the git-review
     // shell defaults to jumping into the commit view.
-    if (onChosen !== undefined) onChosen()
-    else void navigate({ to: "/modes/code/commit", search: {} })
-  }
+    if (onChosen !== undefined) onChosen();
+    else void navigate({ to: "/modes/code/commit", search: {} });
+  };
 
   const chooseDirectory = async () => {
-    const selected = await openDesktopDirectory()
+    const selected = await openDesktopDirectory();
     if (selected !== null) {
-      await choose(selected)
+      await choose(selected);
     }
-  }
+  };
 
-  const home = workspace?.home
-  const recents = workspace?.recents ?? []
+  const home = workspace?.home;
+  const recents = workspace?.recents ?? [];
   const filteredRecents = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (q.length === 0) return recents
-    return recents.filter((recent) => recent.toLowerCase().includes(q))
-  }, [query, recents])
+    const q = query.trim().toLowerCase();
+    if (q.length === 0) return recents;
+    return recents.filter((recent) => recent.toLowerCase().includes(q));
+  }, [query, recents]);
 
-  const data = browse.data
-  const entries = data?.entries ?? []
+  const data = browse.data;
+  const entries = data?.entries ?? [];
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -263,7 +263,7 @@ export function RepoPicker({
                   <div className={sectionLabelClass}>Recent</div>
                 )}
                 {filteredRecents.map((recent) => {
-                  const isCurrent = recent === workspace?.current
+                  const isCurrent = recent === workspace?.current;
                   return (
                     <PathRow
                       key={recent}
@@ -280,7 +280,7 @@ export function RepoPicker({
                       }
                       onClick={() => void choose(recent)}
                     />
-                  )
+                  );
                 })}
                 {recents.length > 0 && filteredRecents.length === 0 && (
                   <div className={emptyClass}>No projects match “{query}”</div>
@@ -308,8 +308,8 @@ export function RepoPicker({
                 data-search-row
                 className={rowClass}
                 onClick={() => {
-                  setBrowsing(true)
-                  setPath(null)
+                  setBrowsing(true);
+                  setPath(null);
                 }}
               >
                 <IconFolder className="size-4 shrink-0 text-muted-foreground" />
@@ -327,8 +327,8 @@ export function RepoPicker({
                 data-search-row
                 className={cn(rowClass, "w-auto shrink-0 px-1.5")}
                 onClick={() => {
-                  setBrowsing(false)
-                  setPath(null)
+                  setBrowsing(false);
+                  setPath(null);
                 }}
                 aria-label="Back to projects"
               >
@@ -424,5 +424,5 @@ export function RepoPicker({
         )}
       </PopoverContent>
     </Popover>
-  )
+  );
 }

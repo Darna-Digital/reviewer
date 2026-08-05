@@ -1,12 +1,12 @@
-import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core/chats"
+import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core/chats";
 
 export interface CatalogModel {
-  readonly id: string
-  readonly label: string
-  readonly provider: ChatProviderKind
-  readonly providerLabel: string
+  readonly id: string;
+  readonly label: string;
+  readonly provider: ChatProviderKind;
+  readonly providerLabel: string;
   /** The upstream vendor, for agents that broker other people's models. */
-  readonly group: string | undefined
+  readonly group: string | undefined;
 }
 
 export const catalogModels = (
@@ -20,7 +20,7 @@ export const catalogModels = (
       providerLabel: provider.label,
       group: model.group,
     }))
-  )
+  );
 
 /**
  * The model a fresh composer starts on: the first favorite in catalog order —
@@ -30,6 +30,6 @@ export const preferredChatModel = (
   catalog: ChatModelCatalog | undefined,
   favorites: ReadonlyArray<string>
 ): CatalogModel | undefined => {
-  const models = catalogModels(catalog)
-  return models.find((model) => favorites.includes(model.id)) ?? models[0]
-}
+  const models = catalogModels(catalog);
+  return models.find((model) => favorites.includes(model.id)) ?? models[0];
+};

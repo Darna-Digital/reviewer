@@ -21,46 +21,47 @@
  * There is no token-level streaming in either dialect — assistant messages
  * arrive whole, appended as one delta each (separated like Claude's rounds).
  */
-import type { TurnEvent, TurnParser } from "./turn-parser.ts"
+import type { TurnEvent, TurnParser } from "./turn-parser.ts";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null
+  typeof value === "object" && value !== null;
 
 const asString = (value: unknown): string | null =>
-  typeof value === "string" ? value : null
+  typeof value === "string" ? value : null;
 
 const command = (value: unknown): string | null => {
-  if (typeof value === "string") return value
+  if (typeof value === "string") return value;
   if (Array.isArray(value))
-    return value.filter((v) => typeof v === "string").join(" ")
-  return null
-}
+    return value.filter((v) => typeof v === "string").join(" ");
+  return null;
+};
 
 export const createCodexTurnParser = (): TurnParser => {
-  let buffer = ""
-  let settled = false
-  let announcedThinking = false
+  let buffer = "";
+  let settled = false;
+  let announcedThinking = false;
 
   const appendText = (text: string): TurnEvent[] => {
-    if (text.length === 0) return []
-    const prefix = buffer.length > 0 ? "\n\n" : ""
-    buffer += prefix + text
-    return [{ type: "delta", text: prefix + text }]
-  }
+    if (text.length === 0) return [];
+    const prefix = buffer.length > 0 ? "\n\n" : "";
+    buffer += prefix + text;
+    return [{ type: "delta", text: prefix + text }];
+  };
 
   const activity = (
     kind: string,
     tone: "info" | "tool" | "error",
     summary: string,
     detail: string | null = null
-  ): TurnEvent => ({ type: "activity", kind, tone, summary, detail })
+  ): TurnEvent => ({ type: "activity", kind, tone, summary, detail });
 
   const onItem = (
     phase: "started" | "updated" | "completed",
     item: unknown
   ): TurnEvent[] => {
-    if (!isRecord(item)) return []
-    const itemType = asString(item["item_type"]) ?? asString(item["type"]) ?? ""
+    if (!isRecord(item)) return [];
+    const itemType =
+      asString(item["item_type"]) ?? asString(item["type"]) ?? "";
     switch (itemType) {
       // Current codex names the reply item `agent_message`; older/experimental
       // builds used `assistant_message`. Accept both — missing this drops the
@@ -69,24 +70,24 @@ export const createCodexTurnParser = (): TurnParser => {
       case "agent_message":
         return phase === "completed"
           ? appendText(asString(item["text"]) ?? "")
-          : []
+          : [];
       case "reasoning":
         if (phase === "started" && !announcedThinking) {
-          announcedThinking = true
-          return [activity("thinking", "info", "Thinking…")]
+          announcedThinking = true;
+          return [activity("thinking", "info", "Thinking…")];
         }
-        return []
+        return [];
       case "command_execution": {
-        const cmd = command(item["command"]) ?? "command"
+        const cmd = command(item["command"]) ?? "command";
         if (phase === "started") {
           return [
             activity("tool.started", "tool", `Command — ${cmd.slice(0, 120)}`),
-          ]
+          ];
         }
         if (phase === "completed") {
           const failed =
             item["status"] === "failed" ||
-            (typeof item["exit_code"] === "number" && item["exit_code"] !== 0)
+            (typeof item["exit_code"] === "number" && item["exit_code"] !== 0);
           return [
             failed
               ? activity(
@@ -95,14 +96,14 @@ export const createCodexTurnParser = (): TurnParser => {
                   `Command failed — ${cmd.slice(0, 100)}`
                 )
               : activity("tool.completed", "tool", "Command finished"),
-          ]
+          ];
         }
-        return []
+        return [];
       }
       case "file_change":
         return phase === "completed"
           ? [activity("tool.completed", "tool", "Edited files")]
-          : []
+          : [];
       case "mcp_tool_call":
       case "web_search":
         return phase === "started"
@@ -113,47 +114,47 @@ export const createCodexTurnParser = (): TurnParser => {
                 itemType === "web_search" ? "Web search" : "MCP tool call"
               ),
             ]
-          : []
+          : [];
       case "error":
         return [
           activity("error", "error", asString(item["message"]) ?? "error"),
-        ]
+        ];
       default:
-        return []
+        return [];
     }
-  }
+  };
 
   const onLegacyMsg = (msg: Record<string, unknown>): TurnEvent[] => {
     switch (msg["type"]) {
       case "session_configured": {
-        const sessionId = asString(msg["session_id"])
-        return sessionId !== null ? [{ type: "session", sessionId }] : []
+        const sessionId = asString(msg["session_id"]);
+        return sessionId !== null ? [{ type: "session", sessionId }] : [];
       }
       case "agent_message":
-        return appendText(asString(msg["message"]) ?? "")
+        return appendText(asString(msg["message"]) ?? "");
       case "agent_reasoning":
         if (!announcedThinking) {
-          announcedThinking = true
-          return [activity("thinking", "info", "Thinking…")]
+          announcedThinking = true;
+          return [activity("thinking", "info", "Thinking…")];
         }
-        return []
+        return [];
       case "exec_command_begin": {
-        const cmd = command(msg["command"]) ?? "command"
+        const cmd = command(msg["command"]) ?? "command";
         return [
           activity("tool.started", "tool", `Command — ${cmd.slice(0, 120)}`),
-        ]
+        ];
       }
       case "exec_command_end": {
         const failed =
-          typeof msg["exit_code"] === "number" && msg["exit_code"] !== 0
+          typeof msg["exit_code"] === "number" && msg["exit_code"] !== 0;
         return [
           failed
             ? activity("tool.failed", "error", "Command failed")
             : activity("tool.completed", "tool", "Command finished"),
-        ]
+        ];
       }
       case "task_complete":
-        settled = true
+        settled = true;
         return [
           {
             type: "result",
@@ -161,9 +162,9 @@ export const createCodexTurnParser = (): TurnParser => {
             errorMessage: null,
             totalCostUsd: null,
           },
-        ]
+        ];
       case "error":
-        settled = true
+        settled = true;
         return [
           {
             type: "result",
@@ -171,39 +172,39 @@ export const createCodexTurnParser = (): TurnParser => {
             errorMessage: asString(msg["message"]) ?? "turn failed",
             totalCostUsd: null,
           },
-        ]
+        ];
       default:
-        return []
+        return [];
     }
-  }
+  };
 
   const push = (line: string): ReadonlyArray<TurnEvent> => {
-    const trimmed = line.trim()
-    if (trimmed.length === 0) return []
-    let parsed: unknown
+    const trimmed = line.trim();
+    if (trimmed.length === 0) return [];
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(trimmed)
+      parsed = JSON.parse(trimmed);
     } catch {
       // Shell/log noise — codex also prints non-JSON banners around the stream.
-      return []
+      return [];
     }
-    if (!isRecord(parsed)) return []
+    if (!isRecord(parsed)) return [];
 
-    if (isRecord(parsed["msg"])) return onLegacyMsg(parsed["msg"])
+    if (isRecord(parsed["msg"])) return onLegacyMsg(parsed["msg"]);
 
     switch (parsed["type"]) {
       case "thread.started": {
-        const sessionId = asString(parsed["thread_id"])
-        return sessionId !== null ? [{ type: "session", sessionId }] : []
+        const sessionId = asString(parsed["thread_id"]);
+        return sessionId !== null ? [{ type: "session", sessionId }] : [];
       }
       case "item.started":
-        return onItem("started", parsed["item"])
+        return onItem("started", parsed["item"]);
       case "item.updated":
-        return onItem("updated", parsed["item"])
+        return onItem("updated", parsed["item"]);
       case "item.completed":
-        return onItem("completed", parsed["item"])
+        return onItem("completed", parsed["item"]);
       case "turn.completed":
-        settled = true
+        settled = true;
         return [
           {
             type: "result",
@@ -211,10 +212,10 @@ export const createCodexTurnParser = (): TurnParser => {
             errorMessage: null,
             totalCostUsd: null,
           },
-        ]
+        ];
       case "turn.failed": {
-        settled = true
-        const error = parsed["error"]
+        settled = true;
+        const error = parsed["error"];
         return [
           {
             type: "result",
@@ -224,10 +225,10 @@ export const createCodexTurnParser = (): TurnParser => {
               "turn failed",
             totalCostUsd: null,
           },
-        ]
+        ];
       }
       case "error":
-        settled = true
+        settled = true;
         return [
           {
             type: "result",
@@ -235,11 +236,11 @@ export const createCodexTurnParser = (): TurnParser => {
             errorMessage: asString(parsed["message"]) ?? "turn failed",
             totalCostUsd: null,
           },
-        ]
+        ];
       default:
-        return []
+        return [];
     }
-  }
+  };
 
-  return { push, text: () => buffer, settled: () => settled }
-}
+  return { push, text: () => buffer, settled: () => settled };
+};

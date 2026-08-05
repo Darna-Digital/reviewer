@@ -4,19 +4,19 @@
  * operations (merge/rebase/fetch/…) with a consistent notice + refresh. The
  * messaging is the real logic; the API calls, toast and refresh are injected.
  */
-export type NoticeKind = "ok" | "err"
+export type NoticeKind = "ok" | "err";
 
 export interface GitActionsDependencies {
-  data: Record<string, never>
+  data: Record<string, never>;
   sideEffects: {
     readonly commit: (
       message: string,
       paths: ReadonlyArray<string>
-    ) => Promise<{ sha: string }>
-    readonly push: () => Promise<{ output: string }>
-    readonly notify: (kind: NoticeKind, text: string) => void
-    readonly refresh: () => void
-  }
+    ) => Promise<{ sha: string }>;
+    readonly push: () => Promise<{ output: string }>;
+    readonly notify: (kind: NoticeKind, text: string) => void;
+    readonly refresh: () => void;
+  };
 }
 
 export interface GitActionsFunctions {
@@ -26,13 +26,13 @@ export interface GitActionsFunctions {
     message: string,
     paths: ReadonlyArray<string>,
     andPush: boolean
-  ) => Promise<boolean>
+  ) => Promise<boolean>;
   /** Run a branch operation, surfacing its output (or `label`) and refreshing. */
   readonly runOp: (
     label: string,
     op: () => Promise<{ output?: string } | unknown>
-  ) => Promise<void>
+  ) => Promise<void>;
 }
 
 export const errorText = (cause: unknown): string =>
-  cause instanceof Error ? cause.message : String(cause)
+  cause instanceof Error ? cause.message : String(cause);

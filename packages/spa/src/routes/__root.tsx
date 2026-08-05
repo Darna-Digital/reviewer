@@ -3,16 +3,16 @@ import {
   Outlet,
   Scripts,
   createRootRouteWithContext,
-} from "@tanstack/react-router"
-import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
-import { TanStackDevtools } from "@tanstack/react-devtools"
-import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools"
+} from "@tanstack/react-router";
+import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { TanStackDevtools } from "@tanstack/react-devtools";
+import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 
-import { Toaster } from "@/components/ui/sonner"
-import { TooltipProvider } from "@/components/ui/tooltip"
-import { isDesktop } from "@/lib/desktop"
-import type { RouterContext } from "../router"
-import appCss from "../styles.css?url"
+import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { isDesktop } from "@/lib/desktop";
+import type { RouterContext } from "../router";
+import appCss from "../styles.css?url";
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
@@ -49,7 +49,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     </main>
   ),
   shellComponent: RootDocument,
-})
+});
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
@@ -84,5 +84,5 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
-  )
+  );
 }

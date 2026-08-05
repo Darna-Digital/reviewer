@@ -4,11 +4,11 @@ import type {
   ChatActivity,
   ChatMessage,
   ChatTurn,
-} from "@byconvo/core/chats"
+} from "@byconvo/core/chats";
 import type {
   ChatImage,
   ChatsDependencies,
-} from "../interfaces/chats.interfaces"
+} from "../interfaces/chats.interfaces";
 
 export const chat = (overrides: Partial<Chat> = {}): Chat => ({
   id: "c-1",
@@ -26,7 +26,7 @@ export const chat = (overrides: Partial<Chat> = {}): Chat => ({
   activities: [],
   latestTurn: null,
   ...overrides,
-})
+});
 
 export const message = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   id: "m-1",
@@ -36,7 +36,7 @@ export const message = (overrides: Partial<ChatMessage> = {}): ChatMessage => ({
   streaming: true,
   createdAt: "2026-01-01T00:00:00.000Z",
   ...overrides,
-})
+});
 
 export const activity = (
   overrides: Partial<ChatActivity> = {}
@@ -49,7 +49,7 @@ export const activity = (
   detail: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   ...overrides,
-})
+});
 
 export const turn = (overrides: Partial<ChatTurn> = {}): ChatTurn => ({
   id: "turn-1",
@@ -59,22 +59,22 @@ export const turn = (overrides: Partial<ChatTurn> = {}): ChatTurn => ({
   errorMessage: null,
   totalCostUsd: null,
   ...overrides,
-})
+});
 
 export interface ChatsCalls {
-  create: Array<Parameters<ChatsDependencies["sideEffects"]["create"]>[0]>
-  send: Array<{ id: string; text: string; images: ReadonlyArray<ChatImage> }>
+  create: Array<Parameters<ChatsDependencies["sideEffects"]["create"]>[0]>;
+  send: Array<{ id: string; text: string; images: ReadonlyArray<ChatImage> }>;
   update: Array<{
-    id: string
-    input: Parameters<ChatsDependencies["sideEffects"]["update"]>[1]
-  }>
-  stop: string[]
-  remove: string[]
+    id: string;
+    input: Parameters<ChatsDependencies["sideEffects"]["update"]>[1];
+  }>;
+  stop: string[];
+  remove: string[];
 }
 
 export function mockChatsDependencies(): {
-  deps: ChatsDependencies
-  calls: ChatsCalls
+  deps: ChatsDependencies;
+  calls: ChatsCalls;
 } {
   const calls: ChatsCalls = {
     create: [],
@@ -82,29 +82,29 @@ export function mockChatsDependencies(): {
     update: [],
     stop: [],
     remove: [],
-  }
+  };
   const deps: ChatsDependencies = {
     data: {},
     sideEffects: {
       create: async (input) => {
-        calls.create.push(input)
-        return chat({ id: `c-${calls.create.length}` })
+        calls.create.push(input);
+        return chat({ id: `c-${calls.create.length}` });
       },
       send: async (id, text, images) => {
-        calls.send.push({ id, text, images })
-        return chat({ id })
+        calls.send.push({ id, text, images });
+        return chat({ id });
       },
       update: async (id, input) => {
-        calls.update.push({ id, input })
-        return chat({ id, title: input.title ?? "New thread" })
+        calls.update.push({ id, input });
+        return chat({ id, title: input.title ?? "New thread" });
       },
       stop: async (id) => {
-        calls.stop.push(id)
+        calls.stop.push(id);
       },
       remove: async (id) => {
-        calls.remove.push(id)
+        calls.remove.push(id);
       },
     },
-  }
-  return { deps, calls }
+  };
+  return { deps, calls };
 }

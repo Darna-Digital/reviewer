@@ -11,13 +11,13 @@
 
 /** The shape a positioner needs from an anchor. */
 export interface VirtualAnchor {
-  getBoundingClientRect: () => DOMRect
+  getBoundingClientRect: () => DOMRect;
 }
 
 /** A rectangle promoted to something a positioner can measure repeatedly. */
 export const rectAnchor = (rect: DOMRect): VirtualAnchor => ({
   getBoundingClientRect: () => rect,
-})
+});
 
 /**
  * The point a pointer event happened at, as something a menu can hang off —
@@ -26,7 +26,7 @@ export const rectAnchor = (rect: DOMRect): VirtualAnchor => ({
  */
 export const pointerAnchor = (x: number, y: number): VirtualAnchor => ({
   getBoundingClientRect: () => new DOMRect(x, y, 0, 0),
-})
+});
 
 /**
  * Whether an element is still worth anchoring to: attached to a document, and
@@ -35,7 +35,7 @@ export const pointerAnchor = (x: number, y: number): VirtualAnchor => ({
  * the surface in the corner of the screen instead of closing it.
  */
 export const isLiveAnchor = (element: Element | null): boolean => {
-  if (element === null || !element.isConnected) return false
-  const { width, height } = element.getBoundingClientRect()
-  return width > 0 || height > 0
-}
+  if (element === null || !element.isConnected) return false;
+  const { width, height } = element.getBoundingClientRect();
+  return width > 0 || height > 0;
+};

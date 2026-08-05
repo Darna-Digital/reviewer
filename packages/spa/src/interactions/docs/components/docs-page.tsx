@@ -3,112 +3,112 @@
  * lists docs (stored as `.md` files under `.byconvo/docs/`); the main pane is a
  * markdown editor with an Edit/Preview toggle and a Save action.
  */
-import { IconDeviceFloppy, IconPlus, IconTrash } from "@tabler/icons-react"
-import { useEffect, useMemo, useState } from "react"
-import Markdown from "react-markdown"
-import rehypeHighlight from "rehype-highlight"
-import remarkGfm from "remark-gfm"
-import { toast } from "sonner"
-import { ResizeHandle } from "@/components/layout/resize-handle"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Textarea } from "@/components/ui/textarea"
-import { useDocsActions } from "@/interactions/docs/adapters/docs.hook.adapter"
-import { useDoc, useDocs } from "@/lib/queries"
-import { timeAgo } from "@/lib/relative-time"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+import { IconDeviceFloppy, IconPlus, IconTrash } from "@tabler/icons-react";
+import { useEffect, useMemo, useState } from "react";
+import Markdown from "react-markdown";
+import rehypeHighlight from "rehype-highlight";
+import remarkGfm from "remark-gfm";
+import { toast } from "sonner";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { useDocsActions } from "@/interactions/docs/adapters/docs.hook.adapter";
+import { useDoc, useDocs } from "@/lib/queries";
+import { timeAgo } from "@/lib/relative-time";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 export function DocsPage() {
-  const docs = useDocs()
-  const actions = useDocsActions()
-  const prefs = useUiPrefs()
-  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [draft, setDraft] = useState("")
-  const [loadedId, setLoadedId] = useState<string | null>(null)
-  const [mode, setMode] = useState<"edit" | "preview">("edit")
-  const [saving, setSaving] = useState(false)
-  const [adding, setAdding] = useState(false)
-  const [newTitle, setNewTitle] = useState("")
-  const [creating, setCreating] = useState(false)
+  const docs = useDocs();
+  const actions = useDocsActions();
+  const prefs = useUiPrefs();
+  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [draft, setDraft] = useState("");
+  const [loadedId, setLoadedId] = useState<string | null>(null);
+  const [mode, setMode] = useState<"edit" | "preview">("edit");
+  const [saving, setSaving] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [creating, setCreating] = useState(false);
 
-  const summaries = useMemo(() => docs.data ?? [], [docs.data])
+  const summaries = useMemo(() => docs.data ?? [], [docs.data]);
   useEffect(() => {
     if (summaries.length === 0) {
-      setSelectedId(null)
+      setSelectedId(null);
     } else if (!summaries.some((d) => d.id === selectedId)) {
-      setSelectedId(summaries[0].id)
+      setSelectedId(summaries[0].id);
     }
-  }, [summaries, selectedId])
+  }, [summaries, selectedId]);
 
-  const detail = useDoc(selectedId)
+  const detail = useDoc(selectedId);
   // Load the fetched content into the editable draft once per doc.
   useEffect(() => {
     if (detail.data && detail.data.id !== loadedId) {
-      setDraft(detail.data.content)
-      setLoadedId(detail.data.id)
+      setDraft(detail.data.content);
+      setLoadedId(detail.data.id);
     }
-  }, [detail.data, loadedId])
+  }, [detail.data, loadedId]);
 
-  const dirty = detail.data != null && draft !== detail.data.content
+  const dirty = detail.data != null && draft !== detail.data.content;
 
   const openNew = () => {
-    setNewTitle("")
-    setAdding(true)
-  }
+    setNewTitle("");
+    setAdding(true);
+  };
 
   const cancelNew = () => {
-    setAdding(false)
-    setNewTitle("")
-  }
+    setAdding(false);
+    setNewTitle("");
+  };
 
   // Create from the inline title field. A native `window.prompt` is unreliable
   // here — it throws in the Electron desktop renderer, so clicking + did nothing.
   const submitNew = async () => {
-    const title = newTitle.trim()
-    if (title.length === 0 || creating) return
-    setCreating(true)
+    const title = newTitle.trim();
+    if (title.length === 0 || creating) return;
+    setCreating(true);
     try {
-      const created = await actions.create(title)
+      const created = await actions.create(title);
       if (created !== null) {
-        setSelectedId(created.id)
-        setMode("edit")
-        cancelNew()
+        setSelectedId(created.id);
+        setMode("edit");
+        cancelNew();
       }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not create doc"
-      )
+      );
     } finally {
-      setCreating(false)
+      setCreating(false);
     }
-  }
+  };
 
   const save = async () => {
-    if (selectedId === null || saving) return
-    setSaving(true)
+    if (selectedId === null || saving) return;
+    setSaving(true);
     try {
-      await actions.save(selectedId, draft)
-      toast.success("Saved")
+      await actions.save(selectedId, draft);
+      toast.success("Saved");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "could not save")
+      toast.error(error instanceof Error ? error.message : "could not save");
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   const removeDoc = async (id: string) => {
-    if (!window.confirm("Delete this plan?")) return
+    if (!window.confirm("Delete this plan?")) return;
     try {
-      await actions.remove(id)
+      await actions.remove(id);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not delete plan"
-      )
+      );
     }
-  }
+  };
 
   return (
     <div className="flex h-full min-h-0">
@@ -137,14 +137,14 @@ export function DocsPage() {
               disabled={creating}
               onChange={(e) => setNewTitle(e.target.value)}
               onBlur={() => {
-                if (newTitle.trim().length === 0) cancelNew()
+                if (newTitle.trim().length === 0) cancelNew();
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
-                  e.preventDefault()
-                  void submitNew()
+                  e.preventDefault();
+                  void submitNew();
                 } else if (e.key === "Escape") {
-                  cancelNew()
+                  cancelNew();
                 }
               }}
               className="h-7"
@@ -267,5 +267,5 @@ export function DocsPage() {
         )}
       </section>
     </div>
-  )
+  );
 }

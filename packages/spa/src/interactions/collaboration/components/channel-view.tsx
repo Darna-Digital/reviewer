@@ -4,41 +4,43 @@
  * workspace runs in the cloud, which is why the same strip sits on both
  * composers.
  */
-import { IconDots, IconWorld } from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
-import { AvatarStack } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { IconDots, IconWorld } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
+import { AvatarStack } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card"
-import { AgentMark } from "@/interactions/collaboration/components/agent-mark"
-import { ConversationAgents } from "@/interactions/collaboration/components/conversation-agents"
-import { MessageList } from "@/interactions/collaboration/components/message-list"
-import { MessageComposer } from "@/interactions/collaboration/components/message-composer"
-import { PaneBody, PaneHeader } from "@/components/layout/pane-header"
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card";
+import { AgentMark } from "@/interactions/collaboration/components/agent-mark";
+import { ConversationAgents } from "@/interactions/collaboration/components/conversation-agents";
+import { MessageList } from "@/interactions/collaboration/components/message-list";
+import { MessageComposer } from "@/interactions/collaboration/components/message-composer";
+import { PaneBody, PaneHeader } from "@/components/layout/pane-header";
 import {
   agentName,
   agentsIn,
   findProject,
   MESSAGES,
   type MockChannel,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import { useChats } from "@/interactions/collaboration/data/use-chats"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import { useChats } from "@/interactions/collaboration/data/use-chats";
 
 export function ChannelView({ channel }: { channel: MockChannel }) {
-  useChats()
-  const messages = MESSAGES[channel.id] ?? []
+  useChats();
+  const messages = MESSAGES[channel.id] ?? [];
   const project =
-    channel.projectId === undefined ? undefined : findProject(channel.projectId)
-  const agents = agentsIn(channel.id)
+    channel.projectId === undefined
+      ? undefined
+      : findProject(channel.projectId);
+  const agents = agentsIn(channel.id);
   const memberAuthors = [...new Set(messages.map((m) => m.author))].filter(
     (name) => !agents.some((agent) => agentName(agent) === name)
-  )
+  );
 
   return (
     <>
@@ -119,5 +121,5 @@ export function ChannelView({ channel }: { channel: MockChannel }) {
       </div>
       <MessageComposer placeholder={`Message #${channel.name}`} />
     </>
-  )
+  );
 }

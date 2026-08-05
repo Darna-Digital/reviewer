@@ -5,10 +5,10 @@ import {
   IconGitFork,
   IconSearch,
   IconX,
-} from "@tabler/icons-react"
-import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+} from "@tabler/icons-react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Combobox,
   ComboboxContent,
@@ -18,49 +18,49 @@ import {
   ComboboxList,
   ComboboxTrigger,
   ComboboxValue,
-} from "@/components/ui/combobox"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/combobox";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { TruncatedText } from "@/components/ui/truncated-text"
-import { ALL_REFS, logRefLabel, type LogQuery } from "@/lib/api/types"
-import { pathName } from "@/lib/display-path"
-import type { BranchInfo } from "@byconvo/core/repo"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/popover";
+import { TruncatedText } from "@/components/ui/truncated-text";
+import { ALL_REFS, logRefLabel, type LogQuery } from "@/lib/api/types";
+import { pathName } from "@/lib/display-path";
+import type { BranchInfo } from "@byconvo/core/repo";
+import { cn } from "@/lib/utils";
 
 /** Parse a `YYYY-MM-DD` string as a local date (no timezone shift). */
 const parseISODate = (value: string): Date | undefined => {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
-  if (match === null) return undefined
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (match === null) return undefined;
   const date = new Date(
     Number(match[1]),
     Number(match[2]) - 1,
     Number(match[3])
-  )
-  return Number.isNaN(date.getTime()) ? undefined : date
-}
+  );
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
 
 /** Format a local date back to `YYYY-MM-DD`. */
 const toISODate = (date: Date): string => {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, "0")
-  const d = String(date.getDate()).padStart(2, "0")
-  return `${y}-${m}-${d}`
-}
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
 interface LogFiltersProps {
-  refName: string
-  branches: ReadonlyArray<BranchInfo>
-  query: LogQuery
-  onRefChange: (ref: string) => void
-  onQueryChange: (query: LogQuery) => void
+  refName: string;
+  branches: ReadonlyArray<BranchInfo>;
+  query: LogQuery;
+  onRefChange: (ref: string) => void;
+  onQueryChange: (query: LogQuery) => void;
 }
 
 const blank = (value: string): string | null =>
-  value.trim().length > 0 ? value.trim() : null
+  value.trim().length > 0 ? value.trim() : null;
 
 /**
  * History toolbar. Text fields apply on Enter/blur; the branch picker, toggles
@@ -74,26 +74,27 @@ export function LogFilters({
   onRefChange,
   onQueryChange,
 }: LogFiltersProps) {
-  const [grep, setGrep] = useState(query.grep ?? "")
-  const [author, setAuthor] = useState(query.author ?? "")
-  const [dateOpen, setDateOpen] = useState(false)
-  const afterDate = query.after !== null ? parseISODate(query.after) : undefined
+  const [grep, setGrep] = useState(query.grep ?? "");
+  const [author, setAuthor] = useState(query.author ?? "");
+  const [dateOpen, setDateOpen] = useState(false);
+  const afterDate =
+    query.after !== null ? parseISODate(query.after) : undefined;
 
-  useEffect(() => setGrep(query.grep ?? ""), [query.grep])
-  useEffect(() => setAuthor(query.author ?? ""), [query.author])
+  useEffect(() => setGrep(query.grep ?? ""), [query.grep]);
+  useEffect(() => setAuthor(query.author ?? ""), [query.author]);
 
   const apply = (patch: Partial<LogQuery>) =>
-    onQueryChange({ ...query, ...patch })
+    onQueryChange({ ...query, ...patch });
 
   const hasFilters =
     query.grep !== null ||
     query.author !== null ||
     query.path !== null ||
     query.after !== null ||
-    query.before !== null
+    query.before !== null;
 
   const knownRef =
-    refName === ALL_REFS || branches.some((b) => b.name === refName)
+    refName === ALL_REFS || branches.some((b) => b.name === refName);
   // The searchable ref list — "All branches" (the whole graph), every local
   // branch, plus the active ref itself when it isn't one (a detached commit,
   // tag or remote ref driving the log).
@@ -101,7 +102,7 @@ export function LogFilters({
     ALL_REFS,
     ...(knownRef ? [] : [refName]),
     ...branches.map((b) => b.name),
-  ]
+  ];
 
   return (
     <div className="flex flex-wrap items-center gap-2 border-b p-2">
@@ -109,7 +110,7 @@ export function LogFilters({
         value={refName}
         items={refItems}
         onValueChange={(value) => {
-          if (value !== null) onRefChange(value)
+          if (value !== null) onRefChange(value);
         }}
       >
         <ComboboxTrigger size="sm" className="w-48 text-xs" aria-label="Branch">
@@ -161,7 +162,7 @@ export function LogFilters({
           value={grep}
           onChange={(e) => setGrep(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") apply({ grep: blank(grep) })
+            if (e.key === "Enter") apply({ grep: blank(grep) });
           }}
           onBlur={() => apply({ grep: blank(grep) })}
         />
@@ -202,7 +203,7 @@ export function LogFilters({
         value={author}
         onChange={(e) => setAuthor(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === "Enter") apply({ author: blank(author) })
+          if (e.key === "Enter") apply({ author: blank(author) });
         }}
         onBlur={() => apply({ author: blank(author) })}
       />
@@ -230,8 +231,8 @@ export function LogFilters({
             autoFocus
             selected={afterDate}
             onSelect={(date) => {
-              apply({ after: date ? toISODate(date) : null })
-              setDateOpen(false)
+              apply({ after: date ? toISODate(date) : null });
+              setDateOpen(false);
             }}
           />
         </PopoverContent>
@@ -260,7 +261,7 @@ export function LogFilters({
         </Button>
       )}
     </div>
-  )
+  );
 }
 
 function FilterToggle({
@@ -269,10 +270,10 @@ function FilterToggle({
   onClick,
   children,
 }: {
-  active: boolean
-  label: string
-  onClick: () => void
-  children: React.ReactNode
+  active: boolean;
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <button
@@ -290,5 +291,5 @@ function FilterToggle({
     >
       {children}
     </button>
-  )
+  );
 }

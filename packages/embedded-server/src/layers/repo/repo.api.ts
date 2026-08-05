@@ -1,8 +1,8 @@
 /** HTTP endpoints for git: repo info, files, branches, log, diff, commit, sync. */
-import * as Schema from "effect/Schema"
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
-import { GitError } from "@byconvo/core/ports/git-exec"
-import { NoRepoSelected, DiffText, Ok } from "@byconvo/core/shared"
+import * as Schema from "effect/Schema";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import { GitError } from "@byconvo/core/ports/git-exec";
+import { NoRepoSelected, DiffText, Ok } from "@byconvo/core/shared";
 import {
   BranchInfo,
   CommandOutput,
@@ -31,9 +31,9 @@ import {
   Rebase,
   RenameBranch,
   ResolveConflict,
-} from "@byconvo/core/repo"
+} from "@byconvo/core/repo";
 
-const gitError = [GitError, NoRepoSelected] as const
+const gitError = [GitError, NoRepoSelected] as const;
 
 export class RepoApi extends HttpApiGroup.make("repo")
   .add(

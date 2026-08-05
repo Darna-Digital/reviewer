@@ -5,40 +5,43 @@
  * lives here behind injected API side effects so it stays unit-testable without
  * a server.
  */
-import type { DevCommand } from "@byconvo/core/local-dev"
+import type { DevCommand } from "@byconvo/core/local-dev";
 
 export interface LocalDevDependencies {
-  data: Record<string, never>
+  data: Record<string, never>;
   sideEffects: {
     readonly create: (input: {
-      name: string
-      command: string
-    }) => Promise<DevCommand>
+      name: string;
+      command: string;
+    }) => Promise<DevCommand>;
     readonly update: (
       id: string,
       input: { name: string; command: string }
-    ) => Promise<DevCommand>
-    readonly remove: (id: string) => Promise<void>
-    readonly start: (id: string) => Promise<void>
-    readonly stop: (id: string) => Promise<void>
-    readonly startAll: () => Promise<void>
-    readonly stopAll: () => Promise<void>
-  }
+    ) => Promise<DevCommand>;
+    readonly remove: (id: string) => Promise<void>;
+    readonly start: (id: string) => Promise<void>;
+    readonly stop: (id: string) => Promise<void>;
+    readonly startAll: () => Promise<void>;
+    readonly stopAll: () => Promise<void>;
+  };
 }
 
 export interface LocalDevFunctions {
   /** Create a command; returns null (no-op) when the command is blank. A blank
    * name defaults to the command text. */
-  readonly create: (name: string, command: string) => Promise<DevCommand | null>
+  readonly create: (
+    name: string,
+    command: string
+  ) => Promise<DevCommand | null>;
   /** Update a command; returns null (no-op) when the command is blank. */
   readonly update: (
     id: string,
     name: string,
     command: string
-  ) => Promise<DevCommand | null>
-  readonly remove: (id: string) => Promise<void>
-  readonly start: (id: string) => Promise<void>
-  readonly stop: (id: string) => Promise<void>
-  readonly startAll: () => Promise<void>
-  readonly stopAll: () => Promise<void>
+  ) => Promise<DevCommand | null>;
+  readonly remove: (id: string) => Promise<void>;
+  readonly start: (id: string) => Promise<void>;
+  readonly stop: (id: string) => Promise<void>;
+  readonly startAll: () => Promise<void>;
+  readonly stopAll: () => Promise<void>;
 }

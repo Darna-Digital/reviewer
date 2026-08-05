@@ -1,5 +1,5 @@
-import type { CSSProperties } from "react"
-import { cn } from "@/lib/utils"
+import type { CSSProperties } from "react";
+import { cn } from "@/lib/utils";
 
 /**
  * Initials on a solid colour picked from the name, so nobody has to store a
@@ -10,30 +10,30 @@ import { cn } from "@/lib/utils"
  * visual weight — no washed-out yellows beside heavy blues — and every one of
  * them clears 4.5:1 against the white initials at any size.
  */
-const LIGHTNESS = 0.48
-const CHROMA = 0.15
+const LIGHTNESS = 0.48;
+const CHROMA = 0.15;
 
-const HUES = [18, 48, 92, 145, 178, 212, 248, 278, 308, 342]
+const HUES = [18, 48, 92, 145, 178, 212, 248, 278, 308, 342];
 
 /** FNV-1a — names sharing letters still land on different colours. */
 const hash = (name: string) => {
-  let value = 0x811c9dc5
+  let value = 0x811c9dc5;
   for (let index = 0; index < name.length; index++) {
-    value ^= name.charCodeAt(index)
-    value = Math.imul(value, 0x01000193)
+    value ^= name.charCodeAt(index);
+    value = Math.imul(value, 0x01000193);
   }
-  return value >>> 0
-}
+  return value >>> 0;
+};
 
 const colorFor = (name: string) =>
-  `oklch(${LIGHTNESS} ${CHROMA} ${HUES[hash(name) % HUES.length]})`
+  `oklch(${LIGHTNESS} ${CHROMA} ${HUES[hash(name) % HUES.length]})`;
 
 const initials = (name: string, letters: number) =>
   name
     .split(/\s+/)
     .slice(0, letters)
     .map((part) => part.slice(0, 1).toUpperCase())
-    .join("")
+    .join("");
 
 function Avatar({
   name,
@@ -55,7 +55,7 @@ function Avatar({
     >
       {initials(name, letters)}
     </span>
-  )
+  );
 }
 
 /** Overlapping avatars, ringed in the page background so they read as a stack. */
@@ -64,12 +64,12 @@ function AvatarStack({
   max = 3,
   className,
 }: {
-  names: ReadonlyArray<string>
-  max?: number
-  className?: string
+  names: ReadonlyArray<string>;
+  max?: number;
+  className?: string;
 }) {
-  const shown = names.slice(0, max)
-  const hidden = names.length - shown.length
+  const shown = names.slice(0, max);
+  const hidden = names.length - shown.length;
 
   return (
     <div className={cn("flex items-center", className)}>
@@ -88,7 +88,7 @@ function AvatarStack({
         </span>
       )}
     </div>
-  )
+  );
 }
 
-export { Avatar, AvatarStack }
+export { Avatar, AvatarStack };

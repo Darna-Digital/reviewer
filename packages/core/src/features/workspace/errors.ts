@@ -1,4 +1,4 @@
-import * as Schema from "effect/Schema"
+import * as Schema from "effect/Schema";
 
 export class InvalidRepo extends Schema.TaggedErrorClass<InvalidRepo>()(
   "InvalidRepo",
@@ -6,6 +6,6 @@ export class InvalidRepo extends Schema.TaggedErrorClass<InvalidRepo>()(
   { httpApiStatus: 400 }
 ) {
   override get message(): string {
-    return `${this.path} is not a git repository: ${this.reason}`
+    return `${this.path} is not a git repository: ${this.reason}`;
   }
 }

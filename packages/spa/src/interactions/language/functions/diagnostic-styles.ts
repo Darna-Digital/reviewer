@@ -74,4 +74,4 @@ export const DIAGNOSTIC_CSS = `
     background-color: transparent;
   }
 }
-`
+`;

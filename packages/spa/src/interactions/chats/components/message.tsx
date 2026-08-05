@@ -3,7 +3,7 @@
  * aligns its content to a side, plus a bubble surface. Assistant replies render
  * as plain markdown (no bubble); user prompts sit in a `MessageBubble`.
  */
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 /** A conversation row. `end` right-aligns (the user); `start` left-aligns. */
 export function Message({
@@ -11,9 +11,9 @@ export function Message({
   className,
   children,
 }: {
-  align?: "start" | "end"
-  className?: string
-  children: React.ReactNode
+  align?: "start" | "end";
+  className?: string;
+  children: React.ReactNode;
 }) {
   return (
     <div
@@ -25,7 +25,7 @@ export function Message({
     >
       {children}
     </div>
-  )
+  );
 }
 
 /** The rounded surface a user prompt sits on. */
@@ -33,8 +33,8 @@ export function MessageBubble({
   className,
   children,
 }: {
-  className?: string
-  children: React.ReactNode
+  className?: string;
+  children: React.ReactNode;
 }) {
   return (
     <div
@@ -45,5 +45,5 @@ export function MessageBubble({
     >
       {children}
     </div>
-  )
+  );
 }

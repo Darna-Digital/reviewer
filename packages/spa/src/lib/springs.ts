@@ -26,11 +26,11 @@ export const spring = {
     bounce: 0.12,
     exit: { duration: 0.16 },
   },
-} as const
+} as const;
 
-const STALLED_ANIMATION_BUFFER_MS = 100
+const STALLED_ANIMATION_BUFFER_MS = 100;
 
 /** A backgrounded tab can stall an exit animation, leaving a portal that waits
  * on `onAnimationComplete` mounted forever; this is when to unmount anyway. */
 export const exitFallbackMs = (tier: { exit: { duration: number } }) =>
-  Math.round(tier.exit.duration * 1000) + STALLED_ANIMATION_BUFFER_MS
+  Math.round(tier.exit.duration * 1000) + STALLED_ANIMATION_BUFFER_MS;

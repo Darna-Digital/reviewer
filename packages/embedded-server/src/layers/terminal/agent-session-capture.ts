@@ -12,48 +12,48 @@
  * write, or an unknown layout just yields no result, and the thread stays
  * un-resumable (it simply starts fresh next time) rather than breaking.
  */
-import { type Dirent, readdirSync, readFileSync, statSync } from "node:fs"
-import { homedir } from "node:os"
-import { join } from "node:path"
+import { type Dirent, readdirSync, readFileSync, statSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 
 export interface FoundSession {
-  readonly id: string
-  readonly mtimeMs: number
+  readonly id: string;
+  readonly mtimeMs: number;
 }
 
 /** opencode: ~/.local/share/opencode/storage/session/<projectID>/<ses_*>.json */
 const opencodeSessionsRoot = (): string =>
-  join(homedir(), ".local", "share", "opencode", "storage", "session")
+  join(homedir(), ".local", "share", "opencode", "storage", "session");
 
 const recentOpencode = (cwd: string, sinceMs: number): FoundSession[] => {
-  const root = opencodeSessionsRoot()
-  const out: FoundSession[] = []
-  let projectDirs: string[]
+  const root = opencodeSessionsRoot();
+  const out: FoundSession[] = [];
+  let projectDirs: string[];
   try {
-    projectDirs = readdirSync(root)
+    projectDirs = readdirSync(root);
   } catch {
-    return out
+    return out;
   }
   for (const projectDir of projectDirs) {
-    const dir = join(root, projectDir)
-    let files: string[]
+    const dir = join(root, projectDir);
+    let files: string[];
     try {
-      files = readdirSync(dir)
+      files = readdirSync(dir);
     } catch {
-      continue
+      continue;
     }
     for (const file of files) {
-      if (!file.startsWith("ses_") || !file.endsWith(".json")) continue
-      const fullPath = join(dir, file)
-      let mtimeMs: number
+      if (!file.startsWith("ses_") || !file.endsWith(".json")) continue;
+      const fullPath = join(dir, file);
+      let mtimeMs: number;
       try {
-        mtimeMs = statSync(fullPath).mtimeMs
+        mtimeMs = statSync(fullPath).mtimeMs;
       } catch {
-        continue
+        continue;
       }
-      if (mtimeMs < sinceMs) continue
+      if (mtimeMs < sinceMs) continue;
       try {
-        const data = JSON.parse(readFileSync(fullPath, "utf8"))
+        const data = JSON.parse(readFileSync(fullPath, "utf8"));
         // The session JSON records its working directory and its own id.
         if (
           data !== null &&
@@ -61,15 +61,15 @@ const recentOpencode = (cwd: string, sinceMs: number): FoundSession[] => {
           data.directory === cwd &&
           typeof data.id === "string"
         ) {
-          out.push({ id: data.id, mtimeMs })
+          out.push({ id: data.id, mtimeMs });
         }
       } catch {
         // partial write / not yet flushed — try again on the next poll
       }
     }
   }
-  return out
-}
+  return out;
+};
 
 /**
  * codex: $CODEX_HOME (or ~/.codex)/sessions/YYYY/MM/DD/rollout-<ts>-<uuid>.jsonl.
@@ -77,68 +77,68 @@ const recentOpencode = (cwd: string, sinceMs: number): FoundSession[] => {
  * session id and cwd.
  */
 const codexSessionsRoot = (): string =>
-  join(process.env["CODEX_HOME"] ?? join(homedir(), ".codex"), "sessions")
+  join(process.env["CODEX_HOME"] ?? join(homedir(), ".codex"), "sessions");
 
 const firstLine = (text: string): string => {
-  const nl = text.indexOf("\n")
-  return nl >= 0 ? text.slice(0, nl) : text
-}
+  const nl = text.indexOf("\n");
+  return nl >= 0 ? text.slice(0, nl) : text;
+};
 
 const recentCodex = (cwd: string, sinceMs: number): FoundSession[] => {
-  const out: FoundSession[] = []
+  const out: FoundSession[] = [];
   const walk = (dir: string): void => {
-    let entries: Dirent[]
+    let entries: Dirent[];
     try {
-      entries = readdirSync(dir, { withFileTypes: true })
+      entries = readdirSync(dir, { withFileTypes: true });
     } catch {
-      return
+      return;
     }
     for (const entry of entries) {
-      const fullPath = join(dir, entry.name)
+      const fullPath = join(dir, entry.name);
       if (entry.isDirectory()) {
-        walk(fullPath)
-        continue
+        walk(fullPath);
+        continue;
       }
       if (!entry.name.startsWith("rollout-") || !entry.name.endsWith(".jsonl"))
-        continue
-      let mtimeMs: number
+        continue;
+      let mtimeMs: number;
       try {
-        mtimeMs = statSync(fullPath).mtimeMs
+        mtimeMs = statSync(fullPath).mtimeMs;
       } catch {
-        continue
+        continue;
       }
-      if (mtimeMs < sinceMs) continue
+      if (mtimeMs < sinceMs) continue;
       try {
-        const meta = JSON.parse(firstLine(readFileSync(fullPath, "utf8")))
+        const meta = JSON.parse(firstLine(readFileSync(fullPath, "utf8")));
         const payload =
           meta !== null && typeof meta === "object" && "payload" in meta
             ? (meta as { payload: unknown }).payload
-            : meta
+            : meta;
         if (
           payload !== null &&
           typeof payload === "object" &&
           typeof (payload as { id?: unknown }).id === "string" &&
           (payload as { cwd?: unknown }).cwd === cwd
         ) {
-          out.push({ id: (payload as { id: string }).id, mtimeMs })
+          out.push({ id: (payload as { id: string }).id, mtimeMs });
         }
       } catch {
         // partial write — try again on the next poll
       }
     }
-  }
-  walk(codexSessionsRoot())
-  return out
-}
+  };
+  walk(codexSessionsRoot());
+  return out;
+};
 
 /** The agents whose on-disk session layout this module knows — the only ones
  * {@link recentAgentSessions} can be asked about. Agents that name their
  * session on their own event stream (cursor) never need to come here. */
-export type DiscoverableAgent = "opencode" | "codex"
+export type DiscoverableAgent = "opencode" | "codex";
 
 export const writesDiscoverableSessions = (
   agent: string
-): agent is DiscoverableAgent => agent === "opencode" || agent === "codex"
+): agent is DiscoverableAgent => agent === "opencode" || agent === "codex";
 
 /**
  * Sessions for `agent` whose recorded cwd matches `cwd` and whose file was
@@ -152,4 +152,4 @@ export const recentAgentSessions = (
 ): FoundSession[] =>
   agent === "opencode"
     ? recentOpencode(cwd, sinceMs)
-    : recentCodex(cwd, sinceMs)
+    : recentCodex(cwd, sinceMs);

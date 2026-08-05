@@ -12,6 +12,10 @@
     "eslint.config.js",
     "prettier.config.js"
   ],
+  "scripts": {
+    "format": "prettier --write \"*.js\"",
+    "format:check": "prettier --check \"*.js\""
+  },
   "dependencies": {
     "@tanstack/eslint-config": "^0.4.0",
     "eslint": "^9",

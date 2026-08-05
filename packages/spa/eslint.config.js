@@ -1,7 +1,7 @@
 //  @ts-check
 
-import baseConfig from "@byconvo/lint/eslint"
-import reactHooks from "eslint-plugin-react-hooks"
+import baseConfig from "@byconvo/lint/eslint";
+import reactHooks from "eslint-plugin-react-hooks";
 
 export default [
   ...baseConfig,
@@ -15,4 +15,4 @@ export default [
   {
     ignores: ["eslint.config.js", "prettier.config.js", "src/routeTree.gen.ts"],
   },
-]
+];

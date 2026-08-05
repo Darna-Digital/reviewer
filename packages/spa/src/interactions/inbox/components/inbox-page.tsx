@@ -11,70 +11,70 @@ import {
   IconDots,
   IconSend,
   IconUsers,
-} from "@tabler/icons-react"
-import { Link, useSearch } from "@tanstack/react-router"
-import { useState } from "react"
-import { Avatar } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { ResizeHandle } from "@/components/layout/resize-handle"
-import { Button } from "@/components/ui/button"
+} from "@tabler/icons-react";
+import { Link, useSearch } from "@tanstack/react-router";
+import { useState } from "react";
+import { Avatar } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card"
-import { AgentMark } from "@/interactions/collaboration/components/agent-mark"
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card";
+import { AgentMark } from "@/interactions/collaboration/components/agent-mark";
 import {
   findAgentById,
   managedBy,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import { NewChatView } from "@/interactions/collaboration/components/new-chat-view"
-import { MessageComposer } from "@/interactions/collaboration/components/message-composer"
-import { PaneHeader } from "@/components/layout/pane-header"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import { NewChatView } from "@/interactions/collaboration/components/new-chat-view";
+import { MessageComposer } from "@/interactions/collaboration/components/message-composer";
+import { PaneHeader } from "@/components/layout/pane-header";
 import {
   INBOX_ITEMS,
   type InboxFilter,
-} from "@/interactions/inbox/data/inbox.mock"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+} from "@/interactions/inbox/data/inbox.mock";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 const FILTERS: ReadonlyArray<{ value: InboxFilter; label: string }> = [
   { value: "all", label: "All" },
   { value: "unread", label: "Unread" },
   { value: "mentions", label: "Mentions" },
-]
+];
 
 /** An agent author's mark, carrying the hover card that names whose it is. */
 function AgentAuthorMark({ agentId }: { agentId: string }) {
-  const agent = findAgentById(agentId)
-  if (agent === undefined) return null
+  const agent = findAgentById(agentId);
+  if (agent === undefined) return null;
   return (
     <AgentHoverCard agent={agent}>
       <AgentMark kind={agent.kind} className="mt-0.5 size-7 rounded-lg" />
     </AgentHoverCard>
-  )
+  );
 }
 
 export function InboxPage() {
-  const prefs = useUiPrefs()
-  const composing = useSearch({ strict: false }).compose === "chat"
-  const [listWidth, setListWidth] = useState(prefs.inboxListWidth)
-  const [filter, setFilter] = useState<InboxFilter>("all")
-  const [filterOpen, setFilterOpen] = useState(false)
-  const [selectedId, setSelectedId] = useState(INBOX_ITEMS[0]?.id ?? "")
-  const [expanded, setExpanded] = useState(false)
+  const prefs = useUiPrefs();
+  const composing = useSearch({ strict: false }).compose === "chat";
+  const [listWidth, setListWidth] = useState(prefs.inboxListWidth);
+  const [filter, setFilter] = useState<InboxFilter>("all");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState(INBOX_ITEMS[0]?.id ?? "");
+  const [expanded, setExpanded] = useState(false);
 
   const items = INBOX_ITEMS.filter((i) =>
     filter === "unread" ? i.unread : filter === "mentions" ? i.mention : true
-  )
+  );
   const selected =
-    INBOX_ITEMS.find((i) => i.id === selectedId) ?? items[0] ?? INBOX_ITEMS[0]
+    INBOX_ITEMS.find((i) => i.id === selectedId) ?? items[0] ?? INBOX_ITEMS[0];
   const filterLabel =
-    FILTERS.find((f) => f.value === filter)?.label ?? FILTERS[0]?.label
+    FILTERS.find((f) => f.value === filter)?.label ?? FILTERS[0]?.label;
 
-  const showList = !composing && !expanded
+  const showList = !composing && !expanded;
 
   return (
     <div className="flex h-full min-h-0">
@@ -103,8 +103,8 @@ export function InboxPage() {
                       f.value === filter && "bg-muted text-foreground"
                     )}
                     onClick={() => {
-                      setFilter(f.value)
-                      setFilterOpen(false)
+                      setFilter(f.value);
+                      setFilterOpen(false);
                     }}
                   >
                     {f.label}
@@ -302,5 +302,5 @@ export function InboxPage() {
         )}
       </section>
     </div>
-  )
+  );
 }

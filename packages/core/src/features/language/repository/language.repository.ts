@@ -1,6 +1,6 @@
-import * as Context from "effect/Context"
-import type * as Effect from "effect/Effect"
-import type { LanguageFailure } from "../../../ports/language-provider.ts"
+import * as Context from "effect/Context";
+import type * as Effect from "effect/Effect";
+import type { LanguageFailure } from "../../../ports/language-provider.ts";
 import type {
   CodeActionsResult,
   CompletionResolution,
@@ -12,7 +12,7 @@ import type {
   Position,
   Range,
   ReferencesResult,
-} from "../schema/language.schema.ts"
+} from "../schema/language.schema.ts";
 
 /**
  * The language backend as the service sees it: repository-relative paths in,
@@ -27,43 +27,43 @@ export interface LanguageRepo {
   readonly providers: Effect.Effect<
     ReadonlyArray<LanguageProviderInfo>,
     LanguageFailure
-  >
+  >;
   readonly diagnostics: (
     path: string,
     contents: string | null
-  ) => Effect.Effect<DiagnosticsResult, LanguageFailure>
+  ) => Effect.Effect<DiagnosticsResult, LanguageFailure>;
   readonly definition: (
     path: string,
     position: Position,
     contents: string | null
-  ) => Effect.Effect<DefinitionResult, LanguageFailure>
+  ) => Effect.Effect<DefinitionResult, LanguageFailure>;
   readonly references: (
     path: string,
     position: Position,
     contents: string | null
-  ) => Effect.Effect<ReferencesResult, LanguageFailure>
+  ) => Effect.Effect<ReferencesResult, LanguageFailure>;
   readonly hover: (
     path: string,
     position: Position,
     contents: string | null
-  ) => Effect.Effect<HoverResult, LanguageFailure>
+  ) => Effect.Effect<HoverResult, LanguageFailure>;
   readonly completions: (
     path: string,
     position: Position,
     prefix: string,
     contents: string | null
-  ) => Effect.Effect<CompletionResult, LanguageFailure>
+  ) => Effect.Effect<CompletionResult, LanguageFailure>;
   readonly resolveCompletion: (
     path: string,
     position: Position,
     item: { label: string; source: string; data: string | null },
     contents: string | null
-  ) => Effect.Effect<CompletionResolution, LanguageFailure>
+  ) => Effect.Effect<CompletionResolution, LanguageFailure>;
   readonly codeActions: (
     path: string,
     range: Range,
     contents: string | null
-  ) => Effect.Effect<CodeActionsResult, LanguageFailure>
+  ) => Effect.Effect<CodeActionsResult, LanguageFailure>;
 }
 
 export class LanguageRepository extends Context.Service<

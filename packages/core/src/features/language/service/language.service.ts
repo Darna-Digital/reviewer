@@ -1,15 +1,15 @@
-import * as Context from "effect/Context"
-import * as Effect from "effect/Effect"
-import { LanguageError } from "../../../ports/language-provider.ts"
+import * as Context from "effect/Context";
+import * as Effect from "effect/Effect";
+import { LanguageError } from "../../../ports/language-provider.ts";
 import {
   normalizeDiagnostics,
   normalizeReferences,
   normalizeTargets,
-} from "../functions/language.results.ts"
+} from "../functions/language.results.ts";
 import {
   LanguageRepository,
   type LanguageRepo,
-} from "../repository/language.repository.ts"
+} from "../repository/language.repository.ts";
 
 /**
  * The language service — request validation and result normalisation around
@@ -25,10 +25,10 @@ export class LanguageService extends Context.Service<
   LanguageServiceShape
 >()("LanguageService") {}
 
-const SERVICE_ID = "language"
+const SERVICE_ID = "language";
 
 const requirePath = (path: string): Effect.Effect<string, LanguageError> => {
-  const trimmed = path.trim()
+  const trimmed = path.trim();
   return trimmed.length === 0
     ? Effect.fail(
         new LanguageError({
@@ -36,11 +36,11 @@ const requirePath = (path: string): Effect.Effect<string, LanguageError> => {
           reason: "a file path is required",
         })
       )
-    : Effect.succeed(trimmed)
-}
+    : Effect.succeed(trimmed);
+};
 
 export const makeLanguageService = Effect.gen(function* () {
-  const repo = yield* LanguageRepository
+  const repo = yield* LanguageRepository;
 
   const service: LanguageServiceShape = {
     providers: repo.providers,
@@ -95,7 +95,7 @@ export const makeLanguageService = Effect.gen(function* () {
       requirePath(path).pipe(
         Effect.flatMap((valid) => repo.codeActions(valid, range, contents))
       ),
-  }
+  };
 
-  return LanguageService.of(service)
-})
+  return LanguageService.of(service);
+});

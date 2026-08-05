@@ -1,21 +1,21 @@
-import * as Schema from "effect/Schema"
+import * as Schema from "effect/Schema";
 import {
   ReviewComment,
   CommentIdParam,
   NewComment,
   UpdateComment,
-} from "@byconvo/core/comments"
+} from "@byconvo/core/comments";
 import {
   NoRepoSelected,
   NotFound,
   StorageError,
   Ok,
-} from "@byconvo/core/shared"
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
+} from "@byconvo/core/shared";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 // The repository types every operation with the same failure union
 // (CommentsFailure), so each endpoint declares all three.
-const storeError = [NoRepoSelected, NotFound, StorageError] as const
+const storeError = [NoRepoSelected, NotFound, StorageError] as const;
 
 export class CommentsApi extends HttpApiGroup.make("comments")
   .add(

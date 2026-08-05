@@ -12,12 +12,12 @@ import {
   IconPlayerStopFilled,
   IconPlus,
   IconTrash,
-} from "@tabler/icons-react"
-import { useEffect, useMemo, useState } from "react"
-import { toast } from "sonner"
-import { ResizeHandle } from "@/components/layout/resize-handle"
-import { DevTerminal } from "@/interactions/local-dev/components/dev-terminal"
-import { Button } from "@/components/ui/button"
+} from "@tabler/icons-react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import { DevTerminal } from "@/interactions/local-dev/components/dev-terminal";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -25,29 +25,29 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useLocalDevActions } from "@/interactions/local-dev/adapters/local-dev.hook.adapter"
-import type { DevCommandView } from "@byconvo/core/local-dev"
-import { useDevCommands } from "@/lib/queries"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useLocalDevActions } from "@/interactions/local-dev/adapters/local-dev.hook.adapter";
+import type { DevCommandView } from "@byconvo/core/local-dev";
+import { useDevCommands } from "@/lib/queries";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 interface Draft {
-  id: string | null
-  name: string
-  command: string
+  id: string | null;
+  name: string;
+  command: string;
 }
 
 const statusLabel = (c: DevCommandView): string => {
-  if (c.status === "running") return "running"
+  if (c.status === "running") return "running";
   if (c.status === "exited")
     return c.exitCode !== null && c.exitCode !== 0
       ? `exited (${c.exitCode})`
-      : "exited"
-  return "stopped"
-}
+      : "exited";
+  return "stopped";
+};
 
 function StatusDot({ command }: { command: DevCommandView }) {
   const cls =
@@ -57,79 +57,79 @@ function StatusDot({ command }: { command: DevCommandView }) {
         ? command.exitCode !== null && command.exitCode !== 0
           ? "bg-red-500"
           : "bg-muted-foreground/50"
-        : "border border-muted-foreground/40"
+        : "border border-muted-foreground/40";
   return (
     <span
       className={cn("size-2 shrink-0 rounded-full", cls)}
       aria-label={statusLabel(command)}
     />
-  )
+  );
 }
 
 export function LocalDevPage() {
-  const commands = useDevCommands()
-  const actions = useLocalDevActions()
-  const prefs = useUiPrefs()
+  const commands = useDevCommands();
+  const actions = useLocalDevActions();
+  const prefs = useUiPrefs();
 
-  const items = useMemo(() => commands.data ?? [], [commands.data])
+  const items = useMemo(() => commands.data ?? [], [commands.data]);
 
-  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth)
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [draft, setDraft] = useState<Draft | null>(null)
+  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(null);
 
   // Keep a valid selection as the list loads/changes.
   useEffect(() => {
-    if (items.length === 0) setActiveId(null)
-    else if (!items.some((c) => c.id === activeId)) setActiveId(items[0].id)
-  }, [items, activeId])
+    if (items.length === 0) setActiveId(null);
+    else if (!items.some((c) => c.id === activeId)) setActiveId(items[0].id);
+  }, [items, activeId]);
 
-  const active = items.find((c) => c.id === activeId) ?? null
+  const active = items.find((c) => c.id === activeId) ?? null;
 
   const guard = async (action: () => Promise<unknown>, fallback: string) => {
     try {
-      await action()
+      await action();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : fallback)
+      toast.error(error instanceof Error ? error.message : fallback);
     }
-  }
+  };
 
   const run = (id: string) => {
-    setActiveId(id)
-    void guard(() => actions.start(id), "could not start command")
-  }
+    setActiveId(id);
+    void guard(() => actions.start(id), "could not start command");
+  };
   const stop = (id: string) =>
-    void guard(() => actions.stop(id), "could not stop command")
+    void guard(() => actions.stop(id), "could not stop command");
   const runAll = () =>
     void guard(async () => {
-      await actions.startAll()
-      if (items.length > 0) setActiveId(items[0].id)
-    }, "could not start commands")
+      await actions.startAll();
+      if (items.length > 0) setActiveId(items[0].id);
+    }, "could not start commands");
   const stopAll = () =>
-    void guard(() => actions.stopAll(), "could not stop commands")
+    void guard(() => actions.stopAll(), "could not stop commands");
 
   const removeCommand = (id: string) =>
     void guard(async () => {
       if (activeId === id) {
-        const next = items.find((c) => c.id !== id)
-        setActiveId(next?.id ?? null)
+        const next = items.find((c) => c.id !== id);
+        setActiveId(next?.id ?? null);
       }
-      await actions.remove(id)
-    }, "could not delete command")
+      await actions.remove(id);
+    }, "could not delete command");
 
   const saveDraft = () =>
     void guard(async () => {
-      if (draft === null) return
+      if (draft === null) return;
       const result =
         draft.id === null
           ? await actions.create(draft.name, draft.command)
-          : await actions.update(draft.id, draft.name, draft.command)
+          : await actions.update(draft.id, draft.name, draft.command);
       if (result === null) {
-        toast.error("Enter a command to run")
-        return
+        toast.error("Enter a command to run");
+        return;
       }
-      if (draft.id === null) setActiveId(result.id)
-      setDraft(null)
-    }, "could not save command")
+      if (draft.id === null) setActiveId(result.id);
+      setDraft(null);
+    }, "could not save command");
 
   return (
     <div className="flex h-full min-h-0">
@@ -211,8 +211,8 @@ export function LocalDevPage() {
                     title="Stop"
                     className="shrink-0 text-muted-foreground hover:text-foreground"
                     onClick={(e) => {
-                      e.stopPropagation()
-                      stop(c.id)
+                      e.stopPropagation();
+                      stop(c.id);
                     }}
                   >
                     <IconPlayerStopFilled className="size-4" />
@@ -224,8 +224,8 @@ export function LocalDevPage() {
                     title="Run"
                     className="shrink-0 text-emerald-600 hover:text-emerald-500"
                     onClick={(e) => {
-                      e.stopPropagation()
-                      run(c.id)
+                      e.stopPropagation();
+                      run(c.id);
                     }}
                   >
                     <IconPlayerPlayFilled className="size-4" />
@@ -237,8 +237,8 @@ export function LocalDevPage() {
                   title="Edit"
                   className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-foreground"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    setDraft({ id: c.id, name: c.name, command: c.command })
+                    e.stopPropagation();
+                    setDraft({ id: c.id, name: c.name, command: c.command });
                   }}
                 >
                   <IconPencil className="size-3.5" />
@@ -249,8 +249,8 @@ export function LocalDevPage() {
                   title="Delete"
                   className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive"
                   onClick={(e) => {
-                    e.stopPropagation()
-                    removeCommand(c.id)
+                    e.stopPropagation();
+                    removeCommand(c.id);
                   }}
                 >
                   <IconTrash className="size-3.5" />
@@ -364,7 +364,7 @@ export function LocalDevPage() {
       <Dialog
         open={draft !== null}
         onOpenChange={(open: boolean) => {
-          if (!open) setDraft(null)
+          if (!open) setDraft(null);
         }}
       >
         <DialogContent>
@@ -403,8 +403,8 @@ export function LocalDevPage() {
                 }
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
-                    e.preventDefault()
-                    saveDraft()
+                    e.preventDefault();
+                    saveDraft();
                   }
                 }}
               />
@@ -421,5 +421,5 @@ export function LocalDevPage() {
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }

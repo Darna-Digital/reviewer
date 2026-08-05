@@ -4,28 +4,28 @@
  * the same elevated card the chats sidebar uses for a thread preview, with the
  * owner as its subject and the run state as supporting detail.
  */
-import { IconCloud, IconDeviceLaptop } from "@tabler/icons-react"
-import type { ReactElement, ReactNode } from "react"
-import { Avatar } from "@/components/ui/avatar"
+import { IconCloud, IconDeviceLaptop } from "@tabler/icons-react";
+import type { ReactElement, ReactNode } from "react";
+import { Avatar } from "@/components/ui/avatar";
 import {
   PreviewCard,
   PreviewCardContent,
   PreviewCardTrigger,
-} from "@/components/ui/preview-card"
+} from "@/components/ui/preview-card";
 import {
   AgentMark,
   AgentStateDot,
-} from "@/interactions/collaboration/components/agent-mark"
+} from "@/interactions/collaboration/components/agent-mark";
 import {
   agentName,
   agentOwner,
   runtimeLine,
   type MockAgent,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import { agentHint } from "@/interactions/threads/interfaces/agents"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import { agentHint } from "@/interactions/threads/interfaces/agents";
 
-const HOVER_DELAY_MS = 400
-const HOVER_CLOSE_DELAY_MS = 100
+const HOVER_DELAY_MS = 400;
+const HOVER_CLOSE_DELAY_MS = 100;
 
 export function AgentHoverCard({
   agent,
@@ -33,14 +33,14 @@ export function AgentHoverCard({
   side = "right",
   children,
 }: {
-  agent: MockAgent
+  agent: MockAgent;
   /** The element the trigger merges into — a span unless the row is a link. */
-  render?: ReactElement
+  render?: ReactElement;
   /** Full-width rows pass "bottom"; beside a small mark, "right" stays anchored. */
-  side?: "right" | "bottom"
-  children: ReactNode
+  side?: "right" | "bottom";
+  children: ReactNode;
 }) {
-  const owner = agentOwner(agent)
+  const owner = agentOwner(agent);
 
   return (
     <PreviewCard>
@@ -106,5 +106,5 @@ export function AgentHoverCard({
         </div>
       </PreviewCardContent>
     </PreviewCard>
-  )
+  );
 }

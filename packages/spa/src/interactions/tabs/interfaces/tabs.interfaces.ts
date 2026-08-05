@@ -17,20 +17,20 @@
 
 export interface Tab {
   /** Repository-relative path — also the tab's identity. */
-  readonly path: string
+  readonly path: string;
   /** Pinned tabs survive "close others" and never become the preview slot. */
-  readonly pinned: boolean
+  readonly pinned: boolean;
   /**
    * A tab opened by a single click, holding the slot until the next single
    * click reuses it. At most one tab is ever preview.
    */
-  readonly preview: boolean
+  readonly preview: boolean;
 }
 
 export interface TabsState {
-  readonly tabs: ReadonlyArray<Tab>
+  readonly tabs: ReadonlyArray<Tab>;
   /** Path of the tab on screen, or null when the strip is empty. */
-  readonly active: string | null
+  readonly active: string | null;
 }
 
 /** How a file came to be opened, which decides whether it gets its own slot. */
@@ -38,4 +38,4 @@ export type OpenIntent =
   /** A single click in the tree, or a jump from go-to-definition. */
   | "preview"
   /** A double click, an edit, or anything else that says "I am staying". */
-  | "permanent"
+  | "permanent";

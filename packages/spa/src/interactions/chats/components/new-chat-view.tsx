@@ -4,37 +4,37 @@
  * creates the chat, starts the turn, and navigates to the conversation
  * (create-on-first-message).
  */
-import { useNavigate } from "@tanstack/react-router"
-import { useState } from "react"
-import { toast } from "sonner"
-import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
+import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import type {
   ChatImage,
   ChatSettings,
-} from "@/interactions/chats/interfaces/chats.interfaces"
-import { preferredChatModel } from "@/interactions/chats/functions/chat-model.functions"
-import { NEW_CHAT_DRAFT } from "@/lib/chat-drafts"
-import { useChatModels, useRepo } from "@/lib/queries"
-import { useUiPrefs } from "@/lib/ui-prefs"
-import { ChatComposer } from "./chat-composer"
+} from "@/interactions/chats/interfaces/chats.interfaces";
+import { preferredChatModel } from "@/interactions/chats/functions/chat-model.functions";
+import { NEW_CHAT_DRAFT } from "@/lib/chat-drafts";
+import { useChatModels, useRepo } from "@/lib/queries";
+import { useUiPrefs } from "@/lib/ui-prefs";
+import { ChatComposer } from "./chat-composer";
 
 export function NewChatView() {
-  const models = useChatModels()
-  const repo = useRepo()
-  const actions = useChatsActions()
-  const navigate = useNavigate()
-  const [overrides, setOverrides] = useState<Partial<ChatSettings>>({})
+  const models = useChatModels();
+  const repo = useRepo();
+  const actions = useChatsActions();
+  const navigate = useNavigate();
+  const [overrides, setOverrides] = useState<Partial<ChatSettings>>({});
 
-  const favorites = useUiPrefs().chatModelFavorites
-  const defaults = models.data?.defaults
-  const preferred = preferredChatModel(models.data, favorites)
+  const favorites = useUiPrefs().chatModelFavorites;
+  const defaults = models.data?.defaults;
+  const preferred = preferredChatModel(models.data, favorites);
   const settings: ChatSettings = {
     provider: overrides.provider ?? preferred?.provider ?? "claude",
     model: overrides.model ?? preferred?.id ?? "",
     effort: overrides.effort ?? defaults?.effort ?? "high",
     access: overrides.access ?? defaults?.access ?? "fullAccess",
     mode: overrides.mode ?? defaults?.mode ?? "build",
-  }
+  };
 
   const send = async (text: string, images: ReadonlyArray<ChatImage>) => {
     try {
@@ -43,20 +43,20 @@ export function NewChatView() {
         repo.data?.currentBranch ?? "",
         text,
         images
-      )
+      );
       if (started !== null) {
         void navigate({
           to: "/modes/code/chats/$chatId",
           params: { chatId: started.id },
-        })
+        });
       }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "failed to start the thread"
-      )
-      throw error
+      );
+      throw error;
     }
-  }
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -80,5 +80,5 @@ export function NewChatView() {
         />
       </div>
     </div>
-  )
+  );
 }

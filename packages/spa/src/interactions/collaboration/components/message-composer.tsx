@@ -3,8 +3,8 @@ import {
   IconAt,
   IconMoodSmile,
   IconPaperclip,
-} from "@tabler/icons-react"
-import { Button } from "@/components/ui/button"
+} from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
 
 /** The reply box shared by the channel panes and the inbox thread. */
 export function MessageComposer({ placeholder }: { placeholder: string }) {
@@ -30,5 +30,5 @@ export function MessageComposer({ placeholder }: { placeholder: string }) {
         </div>
       </div>
     </div>
-  )
+  );
 }

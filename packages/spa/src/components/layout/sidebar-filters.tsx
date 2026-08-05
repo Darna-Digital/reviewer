@@ -9,9 +9,9 @@ import {
   IconGitBranch,
   IconSearch,
   IconX,
-} from "@tabler/icons-react"
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+} from "@tabler/icons-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,20 +21,20 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { TruncatedText } from "@/components/ui/truncated-text"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { TruncatedText } from "@/components/ui/truncated-text";
 import {
   DATE_FILTERS,
   dateFilterLabel,
   type DateFilter,
-} from "@/lib/date-filter"
+} from "@/lib/date-filter";
 
-export const ALL_BRANCHES = "__all__"
+export const ALL_BRANCHES = "__all__";
 
 /** Display label for a branch ("" → items with no branch of their own). */
 export const branchLabel = (branch: string) =>
-  branch.length > 0 ? branch : "No branch"
+  branch.length > 0 ? branch : "No branch";
 
 export function SidebarSearch({
   label,
@@ -42,10 +42,10 @@ export function SidebarSearch({
   value,
   onChange,
 }: {
-  label: string
-  placeholder: string
-  value: string
-  onChange: (value: string) => void
+  label: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
 }) {
   return (
     <div className="relative min-w-0 flex-1">
@@ -68,7 +68,7 @@ export function SidebarSearch({
         </button>
       )}
     </div>
-  )
+  );
 }
 
 /**
@@ -85,27 +85,27 @@ export function SidebarFilterMenu({
   onDateChange,
   active,
 }: {
-  label: string
-  branchValue: string
-  branches: ReadonlyArray<string>
-  onBranchChange: (branch: string) => void
-  dateValue: DateFilter
-  onDateChange: (value: DateFilter) => void
-  active: boolean
+  label: string;
+  branchValue: string;
+  branches: ReadonlyArray<string>;
+  onBranchChange: (branch: string) => void;
+  dateValue: DateFilter;
+  onDateChange: (value: DateFilter) => void;
+  active: boolean;
 }) {
-  const [query, setQuery] = useState("")
-  const q = query.trim().toLowerCase()
-  const showAll = "all branches".includes(q)
-  const shownBranches = branches.filter((b) => b.toLowerCase().includes(q))
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const showAll = "all branches".includes(q);
+  const shownBranches = branches.filter((b) => b.toLowerCase().includes(q));
 
   const branchSummary =
-    branchValue === ALL_BRANCHES ? "All branches" : branchLabel(branchValue)
-  const dateSummary = dateFilterLabel(dateValue)
+    branchValue === ALL_BRANCHES ? "All branches" : branchLabel(branchValue);
+  const dateSummary = dateFilterLabel(dateValue);
 
   const pickBranch = (branch: string) => {
-    onBranchChange(branch)
-    setQuery("")
-  }
+    onBranchChange(branch);
+    setQuery("");
+  };
 
   return (
     <DropdownMenu>
@@ -145,24 +145,26 @@ export function SidebarFilterMenu({
                 // Keep typing in the input rather than the menu's typeahead,
                 // but still let Escape close and arrows move into the list.
                 onKeyDown={(e) => {
-                  if (e.key === "Escape") return
+                  if (e.key === "Escape") return;
                   if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-                    e.preventDefault()
-                    e.stopPropagation()
+                    e.preventDefault();
+                    e.stopPropagation();
                     const popup = e.currentTarget.closest(
                       '[data-slot="dropdown-menu-sub-content"], [data-slot="dropdown-menu-content"]'
-                    )
-                    if (!(popup instanceof HTMLElement)) return
+                    );
+                    if (!(popup instanceof HTMLElement)) return;
                     const items = popup.querySelectorAll<HTMLElement>(
                       '[data-slot="dropdown-menu-radio-item"]:not([data-disabled])'
-                    )
-                    if (items.length === 0) return
+                    );
+                    if (items.length === 0) return;
                     const item =
-                      e.key === "ArrowDown" ? items[0] : items[items.length - 1]
-                    item.focus()
-                    return
+                      e.key === "ArrowDown"
+                        ? items[0]
+                        : items[items.length - 1];
+                    item.focus();
+                    return;
                   }
-                  e.stopPropagation()
+                  e.stopPropagation();
                 }}
                 className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
               />
@@ -217,5 +219,5 @@ export function SidebarFilterMenu({
         </DropdownMenuSub>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

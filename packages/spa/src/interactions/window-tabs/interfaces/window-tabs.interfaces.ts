@@ -10,13 +10,13 @@
 
 export interface WindowTab {
   /** Stable across navigation, so a tab keeps its slot as its href changes. */
-  readonly id: string
+  readonly id: string;
   /** The location the tab shows — path plus search. */
-  readonly href: string
-  readonly title: string
+  readonly href: string;
+  readonly title: string;
 }
 
 export interface WindowTabsState {
-  readonly tabs: ReadonlyArray<WindowTab>
-  readonly activeId: string
+  readonly tabs: ReadonlyArray<WindowTab>;
+  readonly activeId: string;
 }

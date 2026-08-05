@@ -1,19 +1,19 @@
-import { it } from "@effect/vitest"
-import { Effect, Layer } from "effect"
-import { mkdtempSync, rmSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { afterAll, describe, expect } from "vitest"
-import { memoryLayer } from "../workspace/workspace-context.ts"
-import { CommentsRepository } from "@byconvo/core/comments"
-import { makeFileCommentsRepository } from "./comments.repository.file.ts"
+import { it } from "@effect/vitest";
+import { Effect, Layer } from "effect";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { afterAll, describe, expect } from "vitest";
+import { memoryLayer } from "../workspace/workspace-context.ts";
+import { CommentsRepository } from "@byconvo/core/comments";
+import { makeFileCommentsRepository } from "./comments.repository.file.ts";
 
 // A real temp repo root: the file store writes `.byconvo/comments.json` here.
-const repoDir = mkdtempSync(`${tmpdir()}/byconvo-comments-`)
-afterAll(() => rmSync(repoDir, { recursive: true, force: true }))
+const repoDir = mkdtempSync(`${tmpdir()}/byconvo-comments-`);
+afterAll(() => rmSync(repoDir, { recursive: true, force: true }));
 
 const FileRepo = Layer.effect(CommentsRepository)(
   makeFileCommentsRepository
-).pipe(Layer.provide(memoryLayer(repoDir)))
+).pipe(Layer.provide(memoryLayer(repoDir)));
 
 const input = {
   filePath: "src/a.ts",
@@ -22,41 +22,41 @@ const input = {
   body: "looks good",
   author: "alice",
   target: "worktree",
-}
+};
 
 describe("FileCommentsRepository", () => {
   it.effect("add stamps id + source=local and lists it back", () =>
     Effect.gen(function* () {
-      const repo = yield* CommentsRepository
-      const created = yield* repo.add(input)
-      expect(created.source).toBe("local")
-      expect(created.id).not.toBe("")
-      const all = yield* repo.list
-      expect(all.map((c) => c.body)).toContain("looks good")
+      const repo = yield* CommentsRepository;
+      const created = yield* repo.add(input);
+      expect(created.source).toBe("local");
+      expect(created.id).not.toBe("");
+      const all = yield* repo.list;
+      expect(all.map((c) => c.body)).toContain("looks good");
     }).pipe(Effect.provide(FileRepo))
-  )
+  );
 
   it.effect("remove deletes by id", () =>
     Effect.gen(function* () {
-      const repo = yield* CommentsRepository
-      const created = yield* repo.add({ ...input, body: "to be removed" })
-      yield* repo.remove(created.id)
-      const remaining = yield* repo.list
-      expect(remaining.map((c) => c.id)).not.toContain(created.id)
+      const repo = yield* CommentsRepository;
+      const created = yield* repo.add({ ...input, body: "to be removed" });
+      yield* repo.remove(created.id);
+      const remaining = yield* repo.list;
+      expect(remaining.map((c) => c.id)).not.toContain(created.id);
     }).pipe(Effect.provide(FileRepo))
-  )
+  );
 
   it.effect("update rewrites the body", () =>
     Effect.gen(function* () {
-      const repo = yield* CommentsRepository
-      const created = yield* repo.add({ ...input, body: "old" })
-      const updated = yield* repo.update(created.id, { body: "new" })
-      expect(updated.body).toBe("new")
-      expect(updated.id).toBe(created.id)
-      const all = yield* repo.list
-      expect(all.find((c) => c.id === created.id)?.body).toBe("new")
+      const repo = yield* CommentsRepository;
+      const created = yield* repo.add({ ...input, body: "old" });
+      const updated = yield* repo.update(created.id, { body: "new" });
+      expect(updated.body).toBe("new");
+      expect(updated.id).toBe(created.id);
+      const all = yield* repo.list;
+      expect(all.find((c) => c.id === created.id)?.body).toBe("new");
     }).pipe(Effect.provide(FileRepo))
-  )
+  );
 
   it.effect(
     "persists across repository instances (unlike the in-memory store)",
@@ -64,17 +64,17 @@ describe("FileCommentsRepository", () => {
       Effect.gen(function* () {
         // Add through one repository instance...
         const created = yield* Effect.gen(function* () {
-          const repo = yield* CommentsRepository
-          return yield* repo.add({ ...input, body: "durable" })
-        }).pipe(Effect.provide(FileRepo))
+          const repo = yield* CommentsRepository;
+          return yield* repo.add({ ...input, body: "durable" });
+        }).pipe(Effect.provide(FileRepo));
 
         // ...and read it back through a freshly-built one (new request).
         const all = yield* Effect.gen(function* () {
-          const repo = yield* CommentsRepository
-          return yield* repo.list
-        }).pipe(Effect.provide(FileRepo))
+          const repo = yield* CommentsRepository;
+          return yield* repo.list;
+        }).pipe(Effect.provide(FileRepo));
 
-        expect(all.map((c) => c.id)).toContain(created.id)
+        expect(all.map((c) => c.id)).toContain(created.id);
       })
-  )
-})
+  );
+});

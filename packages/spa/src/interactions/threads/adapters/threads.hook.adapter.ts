@@ -1,17 +1,17 @@
-import { useQueryClient } from "@tanstack/react-query"
-import { useMemo } from "react"
-import { fetchClient } from "@/lib/api/client"
-import type { AgentKind, Thread, ThreadSummary } from "@byconvo/core/threads"
-import { createThreadsFunctions } from "../functions/threads.functions"
-import type { ThreadsFunctions } from "../interfaces/threads.interfaces"
+import { useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { fetchClient } from "@/lib/api/client";
+import type { AgentKind, Thread, ThreadSummary } from "@byconvo/core/threads";
+import { createThreadsFunctions } from "../functions/threads.functions";
+import type { ThreadsFunctions } from "../interfaces/threads.interfaces";
 
 const fail = (error: unknown, fallback: string): never => {
-  throw new Error((error as { reason?: string })?.reason ?? fallback)
-}
+  throw new Error((error as { reason?: string })?.reason ?? fallback);
+};
 
 /** Wires the real thread API mutations + cache invalidation into the logic. */
 export function useThreadsActions() {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
 
   const fns: ThreadsFunctions = useMemo(
     () =>
@@ -26,43 +26,43 @@ export function useThreadsActions() {
                 branch: input.branch,
                 taskKey: input.taskKey ?? undefined,
               },
-            })
-            if (error) return fail(error, "failed to create thread")
-            return data
+            });
+            if (error) return fail(error, "failed to create thread");
+            return data;
           },
           run: async (id, command) => {
             const { data, error } = await fetchClient.POST(
               "/api/threads/{id}/run",
               { params: { path: { id } }, body: { command } }
-            )
-            if (error) return fail(error, "command failed to run")
-            return data
+            );
+            if (error) return fail(error, "command failed to run");
+            return data;
           },
           rename: async (id, input) => {
             const { data, error } = await fetchClient.PATCH(
               "/api/threads/{id}",
               { params: { path: { id } }, body: input }
-            )
-            if (error) return fail(error, "failed to rename thread")
-            return data
+            );
+            if (error) return fail(error, "failed to rename thread");
+            return data;
           },
           remove: async (id) => {
             await fetchClient.DELETE("/api/threads/{id}", {
               params: { path: { id } },
-            })
+            });
           },
         },
       }),
     []
-  )
+  );
 
   const invalidate = (id?: string) => {
-    void queryClient.invalidateQueries({ queryKey: ["get", "/api/threads"] })
+    void queryClient.invalidateQueries({ queryKey: ["get", "/api/threads"] });
     if (id !== undefined)
       void queryClient.invalidateQueries({
         queryKey: ["get", "/api/threads/{id}"],
-      })
-  }
+      });
+  };
 
   // Optimistically put a freshly-created thread at the top of the list cache so
   // it's immediately present (and newest) for the UI to select — without this,
@@ -79,12 +79,12 @@ export function useThreadsActions() {
       updatedAt: thread.updatedAt,
       entryCount: thread.entries.length,
       lastCommand: null,
-    }
+    };
     queryClient.setQueriesData<ReadonlyArray<ThreadSummary>>(
       { queryKey: ["get", "/api/threads"] },
       (old) => [summary, ...(old ?? []).filter((t) => t.id !== summary.id)]
-    )
-  }
+    );
+  };
 
   return {
     create: async (
@@ -93,43 +93,43 @@ export function useThreadsActions() {
       taskKey: string | null,
       branch: string
     ) => {
-      const created = await fns.create(agent, title, taskKey, branch)
-      prependThread(created)
-      invalidate()
-      return created
+      const created = await fns.create(agent, title, taskKey, branch);
+      prependThread(created);
+      invalidate();
+      return created;
     },
     run: async (id: string, command: string) => {
-      const entry = await fns.run(id, command)
-      if (entry !== null) invalidate(id)
-      return entry
+      const entry = await fns.run(id, command);
+      if (entry !== null) invalidate(id);
+      return entry;
     },
     rename: async (id: string, title: string) => {
-      const updated = await fns.rename(id, title)
-      invalidate(id)
-      return updated
+      const updated = await fns.rename(id, title);
+      invalidate(id);
+      return updated;
     },
     linkTask: async (
       id: string,
       currentTitle: string,
       taskKey: string | null
     ) => {
-      const updated = await fns.linkTask(id, currentTitle, taskKey)
-      invalidate(id)
-      return updated
+      const updated = await fns.linkTask(id, currentTitle, taskKey);
+      invalidate(id);
+      return updated;
     },
     setBranch: async (id: string, currentTitle: string, branch: string) => {
-      const updated = await fns.setBranch(id, currentTitle, branch)
-      invalidate(id)
-      return updated
+      const updated = await fns.setBranch(id, currentTitle, branch);
+      invalidate(id);
+      return updated;
     },
     // Start an agent thread seeded with a prompt (a task comment handed to the
     // agent). The prompt is typed into the agent once it boots.
     spawnForTask: async (input: {
-      agent: AgentKind
-      branch: string
-      taskKey: string | null
-      title: string
-      initialPrompt: string
+      agent: AgentKind;
+      branch: string;
+      taskKey: string | null;
+      title: string;
+      initialPrompt: string;
     }) => {
       const { data, error } = await fetchClient.POST("/api/threads", {
         body: {
@@ -139,15 +139,15 @@ export function useThreadsActions() {
           title: input.title,
           initialPrompt: input.initialPrompt,
         },
-      })
-      if (error) return fail(error, "failed to start agent")
-      if (data) prependThread(data)
-      invalidate()
-      return data
+      });
+      if (error) return fail(error, "failed to start agent");
+      if (data) prependThread(data);
+      invalidate();
+      return data;
     },
     remove: async (id: string) => {
-      await fns.remove(id)
-      invalidate(id)
+      await fns.remove(id);
+      invalidate(id);
     },
-  }
+  };
 }

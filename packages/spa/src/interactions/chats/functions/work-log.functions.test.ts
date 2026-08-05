@@ -1,10 +1,10 @@
-import { describe, expect, it } from "vitest"
-import type { ChatActivity } from "@byconvo/core/chats"
-import { activeWorkStep, elapsedMs, toWorkSteps } from "./work-log.functions"
+import { describe, expect, it } from "vitest";
+import type { ChatActivity } from "@byconvo/core/chats";
+import { activeWorkStep, elapsedMs, toWorkSteps } from "./work-log.functions";
 
-let seq = 0
+let seq = 0;
 const activity = (input: Partial<ChatActivity>): ChatActivity => {
-  seq += 1
+  seq += 1;
   return {
     id: `a-${seq}`,
     turnId: "turn-1",
@@ -14,8 +14,8 @@ const activity = (input: Partial<ChatActivity>): ChatActivity => {
     detail: null,
     createdAt: "2026-07-25T12:00:00.000Z",
     ...input,
-  }
-}
+  };
+};
 
 describe("toWorkSteps", () => {
   it("folds a tool's start and completion into one step with both payloads", () => {
@@ -38,8 +38,8 @@ describe("toWorkSteps", () => {
         }),
       ],
       false
-    )
-    expect(steps).toHaveLength(1)
+    );
+    expect(steps).toHaveLength(1);
     expect(steps[0]).toMatchObject({
       label: "Bash",
       summary: "Bash — pnpm test",
@@ -47,8 +47,8 @@ describe("toWorkSteps", () => {
       input: '{"command":"pnpm test"}',
       output: "51 passed",
       durationMs: 2500,
-    })
-  })
+    });
+  });
 
   it("pairs overlapping tool calls by call id, not by arrival order", () => {
     const steps = toWorkSteps(
@@ -64,13 +64,13 @@ describe("toWorkSteps", () => {
         }),
       ],
       true
-    )
+    );
     expect(steps.map((s) => [s.label, s.status])).toEqual([
       ["Read", "running"],
       ["Bash", "failed"],
-    ])
-    expect(steps[1]?.output).toBe("exit 1")
-  })
+    ]);
+    expect(steps[1]?.output).toBe("exit 1");
+  });
 
   it("closes the oldest open step when a provider sends no call ids", () => {
     // codex reports "Command — ls" then "Command finished", with no id linking
@@ -82,17 +82,17 @@ describe("toWorkSteps", () => {
         activity({ kind: "tool.started", summary: "Command — pwd" }),
       ],
       true
-    )
+    );
     expect(steps.map((s) => [s.summary, s.status])).toEqual([
       ["Command — ls", "done"],
       ["Command — pwd", "running"],
-    ])
+    ]);
     // The label falls out of the summary when the provider sends none.
-    expect(steps[0]?.label).toBe("Command")
+    expect(steps[0]?.label).toBe("Command");
     // ...and so does the detail shown beside it.
-    expect(steps[0]?.detail).toBe("ls")
-    expect(steps[1]?.detail).toBe("pwd")
-  })
+    expect(steps[0]?.detail).toBe("ls");
+    expect(steps[1]?.detail).toBe("pwd");
+  });
 
   it("never closes an id-less thinking block with a tool completion", () => {
     const steps = toWorkSteps(
@@ -102,18 +102,18 @@ describe("toWorkSteps", () => {
         activity({ kind: "tool.completed", summary: "Command finished" }),
       ],
       true
-    )
+    );
     expect(steps.map((s) => [s.thinking, s.status])).toEqual([
       [true, "running"],
       [false, "done"],
-    ])
-  })
+    ]);
+  });
 
   it("settles steps left open when the turn is no longer running", () => {
-    const open = [activity({ kind: "tool.started", callId: "tu-1" })]
-    expect(toWorkSteps(open, true)[0]?.status).toBe("running")
-    expect(toWorkSteps(open, false)[0]?.status).toBe("done")
-  })
+    const open = [activity({ kind: "tool.started", callId: "tu-1" })];
+    expect(toWorkSteps(open, true)[0]?.status).toBe("running");
+    expect(toWorkSteps(open, false)[0]?.status).toBe("done");
+  });
 
   it("keeps a completion whose start was never seen", () => {
     const steps = toWorkSteps(
@@ -127,11 +127,11 @@ describe("toWorkSteps", () => {
         }),
       ],
       true
-    )
+    );
     expect(steps).toMatchObject([
       { label: "Grep", status: "done", input: null, output: "3 matches" },
-    ])
-  })
+    ]);
+  });
 
   it("carries thinking through as a step holding the reasoning text", () => {
     const steps = toWorkSteps(
@@ -153,22 +153,22 @@ describe("toWorkSteps", () => {
         }),
       ],
       true
-    )
+    );
     expect(steps).toMatchObject([
       { thinking: true, status: "done", output: "weigh the options" },
-    ])
-  })
+    ]);
+  });
 
   it("treats a standalone error activity as an already-failed step", () => {
     const steps = toWorkSteps(
       [activity({ kind: "error", tone: "error", summary: "sandbox denied" })],
       true
-    )
+    );
     expect(steps).toMatchObject([
       { status: "failed", summary: "sandbox denied" },
-    ])
-  })
-})
+    ]);
+  });
+});
 
 describe("elapsedMs", () => {
   it("spans first start to last settle, not the sum of overlapping calls", () => {
@@ -196,15 +196,15 @@ describe("elapsedMs", () => {
         }),
       ],
       false
-    )
+    );
     // Summing durations would say 8s; the turn actually took 5s.
-    expect(elapsedMs(steps)).toBe(5000)
-  })
+    expect(elapsedMs(steps)).toBe(5000);
+  });
 
   it("is null when there are no steps", () => {
-    expect(elapsedMs([])).toBeNull()
-  })
-})
+    expect(elapsedMs([])).toBeNull();
+  });
+});
 
 describe("activeWorkStep", () => {
   it("is the most recent step still running", () => {
@@ -215,15 +215,15 @@ describe("activeWorkStep", () => {
         activity({ kind: "tool.started", callId: "b", label: "Bash" }),
       ],
       true
-    )
-    expect(activeWorkStep(steps)?.label).toBe("Bash")
-  })
+    );
+    expect(activeWorkStep(steps)?.label).toBe("Bash");
+  });
 
   it("is undefined once everything has settled", () => {
     const steps = toWorkSteps(
       [activity({ kind: "tool.started", callId: "a" })],
       false
-    )
-    expect(activeWorkStep(steps)).toBeUndefined()
-  })
-})
+    );
+    expect(activeWorkStep(steps)).toBeUndefined();
+  });
+});

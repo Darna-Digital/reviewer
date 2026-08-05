@@ -1,4 +1,4 @@
-import type { AgentKind } from "../schema/threads.schema.ts"
+import type { AgentKind } from "../schema/threads.schema.ts";
 
 export const AGENT_KINDS = [
   "terminal",
@@ -6,31 +6,31 @@ export const AGENT_KINDS = [
   "opencode",
   "codex",
   "cursor",
-] as const satisfies ReadonlyArray<AgentKind>
-const quote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`
+] as const satisfies ReadonlyArray<AgentKind>;
+const quote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
 export const agentLabel: Record<AgentKind, string> = {
   terminal: "Terminal",
   claude: "Claude Code",
   opencode: "opencode",
   codex: "Codex",
   cursor: "Cursor",
-}
+};
 export const agentDefaultTitle = (agent: AgentKind): string =>
-  agent === "terminal" ? "New thread" : agentLabel[agent]
+  agent === "terminal" ? "New thread" : agentLabel[agent];
 export const agentCommand = (agent: AgentKind, input: string): string => {
   switch (agent) {
     case "terminal":
-      return input
+      return input;
     case "claude":
-      return `claude -p ${quote(input)} --output-format text`
+      return `claude -p ${quote(input)} --output-format text`;
     case "opencode":
-      return `opencode run ${quote(input)}`
+      return `opencode run ${quote(input)}`;
     case "codex":
-      return `codex exec ${quote(input)}`
+      return `codex exec ${quote(input)}`;
     case "cursor":
-      return `cursor-agent -p ${quote(input)}`
+      return `cursor-agent -p ${quote(input)}`;
   }
-}
+};
 
 /**
  * Where a thread's native agent session id comes from — the same split
@@ -48,17 +48,17 @@ export const agentCommand = (agent: AgentKind, input: string): string => {
  * How a minted id is obtained is the server's business and differs per agent:
  * claude takes any id we hand it, cursor has to be asked for one.
  */
-export type AgentSessionOrigin = "none" | "minted" | "discovered"
+export type AgentSessionOrigin = "none" | "minted" | "discovered";
 
 export const agentSessionOrigin = (agent: AgentKind): AgentSessionOrigin => {
   switch (agent) {
     case "terminal":
-      return "none"
+      return "none";
     case "claude":
     case "cursor":
-      return "minted"
+      return "minted";
     case "codex":
     case "opencode":
-      return "discovered"
+      return "discovered";
   }
-}
+};

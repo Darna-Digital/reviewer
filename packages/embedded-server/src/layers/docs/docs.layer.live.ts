@@ -1,11 +1,11 @@
-import * as Layer from "effect/Layer"
+import * as Layer from "effect/Layer";
 import {
   DocsRepository,
   DocsService,
   makeDocsService,
-} from "@byconvo/core/docs"
-import { makeFileDocsRepository } from "./docs.repository.file.ts"
+} from "@byconvo/core/docs";
+import { makeFileDocsRepository } from "./docs.repository.file.ts";
 
 export const DocsLive = Layer.effect(DocsService)(makeDocsService).pipe(
   Layer.provide(Layer.effect(DocsRepository)(makeFileDocsRepository))
-)
+);

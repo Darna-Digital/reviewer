@@ -1,11 +1,11 @@
-import { describe, expect, it } from "vitest"
-import type { ReviewComment } from "@byconvo/core/comments"
-import type { PullRequestInfo } from "@byconvo/core/ports/git-provider"
-import type { GitStatusEntry } from "@byconvo/core/repo"
-import { createDiffFunctions } from "./diff.functions"
-import { createDiffDependenciesMock } from "./diff.functions.mock"
+import { describe, expect, it } from "vitest";
+import type { ReviewComment } from "@byconvo/core/comments";
+import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
+import type { GitStatusEntry } from "@byconvo/core/repo";
+import { createDiffFunctions } from "./diff.functions";
+import { createDiffDependenciesMock } from "./diff.functions.mock";
 
-const fns = () => createDiffFunctions(createDiffDependenciesMock())
+const fns = () => createDiffFunctions(createDiffDependenciesMock());
 
 const pull = (number: number): PullRequestInfo => ({
   number,
@@ -16,7 +16,7 @@ const pull = (number: number): PullRequestInfo => ({
   headSha: "s",
   url: "u",
   updatedAt: "",
-})
+});
 
 describe("deriveTarget", () => {
   it("commit mode → worktree", () => {
@@ -24,21 +24,21 @@ describe("deriveTarget", () => {
       fns().deriveTarget({ mode: "commit", selectedPull: null, browse: null })
     ).toEqual({
       kind: "worktree",
-    })
-  })
+    });
+  });
 
   it("review mode needs a selected pull", () => {
     expect(
       fns().deriveTarget({ mode: "review", selectedPull: null, browse: null })
-    ).toBeNull()
+    ).toBeNull();
     expect(
       fns().deriveTarget({
         mode: "review",
         selectedPull: pull(7),
         browse: null,
       })
-    ).toEqual({ kind: "pull", pull: pull(7) })
-  })
+    ).toEqual({ kind: "pull", pull: pull(7) });
+  });
 
   it("browse commit / range map through", () => {
     expect(
@@ -47,33 +47,33 @@ describe("deriveTarget", () => {
         selectedPull: null,
         browse: { kind: "commit", sha: "abc", shortSha: "abc1234" },
       })
-    ).toEqual({ kind: "commit", sha: "abc", shortSha: "abc1234" })
+    ).toEqual({ kind: "commit", sha: "abc", shortSha: "abc1234" });
     expect(
       fns().deriveTarget({
         mode: "browse",
         selectedPull: null,
         browse: { kind: "range", base: "main", head: "feat" },
       })
-    ).toEqual({ kind: "range", base: "main", head: "feat" })
-  })
-})
+    ).toEqual({ kind: "range", base: "main", head: "feat" });
+  });
+});
 
 describe("parseFiles", () => {
   it("returns [] for empty/whitespace and never throws", () => {
-    expect(fns().parseFiles(null)).toEqual([])
-    expect(fns().parseFiles("   ")).toEqual([])
-  })
+    expect(fns().parseFiles(null)).toEqual([]);
+    expect(fns().parseFiles("   ")).toEqual([]);
+  });
   it("delegates to the injected parser", () => {
-    const files = fns().parseFiles("+++ b/src/a.ts\n+++ b/src/b.ts")
-    expect(files.map((f) => f.name)).toEqual(["src/a.ts", "src/b.ts"])
-  })
-})
+    const files = fns().parseFiles("+++ b/src/a.ts\n+++ b/src/b.ts");
+    expect(files.map((f) => f.name)).toEqual(["src/a.ts", "src/b.ts"]);
+  });
+});
 
 describe("tree derivations", () => {
   const status: GitStatusEntry[] = [
     { path: "src/a.ts", status: "modified" },
     { path: ".byconvo/comments.json", status: "modified" },
-  ]
+  ];
 
   it("commit mode lists only changed, non-internal paths", () => {
     const paths = fns().treePaths({
@@ -81,9 +81,9 @@ describe("tree derivations", () => {
       allPaths: ["src/a.ts", "src/b.ts", ".byconvo/comments.json"],
       gitStatus: status,
       parsedFiles: [],
-    })
-    expect(paths).toEqual(["src/a.ts"])
-  })
+    });
+    expect(paths).toEqual(["src/a.ts"]);
+  });
 
   it("commit mode also lists commented-but-unchanged paths", () => {
     const paths = fns().treePaths({
@@ -92,9 +92,9 @@ describe("tree derivations", () => {
       gitStatus: [{ path: "src/a.ts", status: "modified" }],
       parsedFiles: [],
       commentedPaths: ["src/c.ts"],
-    })
-    expect(paths).toEqual(["src/a.ts", "src/c.ts"])
-  })
+    });
+    expect(paths).toEqual(["src/a.ts", "src/c.ts"]);
+  });
 
   it("browse mode lists every non-internal path", () => {
     const paths = fns().treePaths({
@@ -102,18 +102,18 @@ describe("tree derivations", () => {
       allPaths: ["src/a.ts", ".byconvo/x"],
       gitStatus: [],
       parsedFiles: [],
-    })
-    expect(paths).toEqual(["src/a.ts"])
-  })
+    });
+    expect(paths).toEqual(["src/a.ts"]);
+  });
 
   it("changedFiles strips the internal dir", () => {
     expect(
       fns()
         .changedFiles(status)
         .map((e) => e.path)
-    ).toEqual(["src/a.ts"])
-  })
-})
+    ).toEqual(["src/a.ts"]);
+  });
+});
 
 describe("visibleComments", () => {
   const local: ReviewComment[] = [
@@ -139,7 +139,7 @@ describe("visibleComments", () => {
       target: "commit-x",
       source: "local",
     },
-  ]
+  ];
 
   it("filters local comments by target key", () => {
     const out = fns().visibleComments({
@@ -148,23 +148,23 @@ describe("visibleComments", () => {
       localComments: local,
       pullComments: [],
       viewingFile: null,
-    })
-    expect(out.map((c) => c.id)).toEqual(["1"])
-  })
+    });
+    expect(out.map((c) => c.id)).toEqual(["1"]);
+  });
 
   it("uses pull comments for a pull target", () => {
     const pr: ReviewComment[] = [
       { ...local[0], id: "pr1", source: "github", target: "pr-3" },
-    ]
+    ];
     const out = fns().visibleComments({
       targetKind: "pull",
       targetKey: "pr-3",
       localComments: local,
       pullComments: pr,
       viewingFile: null,
-    })
-    expect(out.map((c) => c.id)).toEqual(["pr1"])
-  })
+    });
+    expect(out.map((c) => c.id)).toEqual(["pr1"]);
+  });
 
   it("counts worktree comments while a file is open in the viewer", () => {
     // Browsing a commit, with a file open: the viewer writes worktree
@@ -175,9 +175,9 @@ describe("visibleComments", () => {
       localComments: local,
       pullComments: [],
       viewingFile: "a",
-    })
-    expect(out.map((c) => c.id).sort()).toEqual(["1", "2"])
-  })
+    });
+    expect(out.map((c) => c.id).sort()).toEqual(["1", "2"]);
+  });
 
   it("does not repeat a comment that is already on target", () => {
     const out = fns().visibleComments({
@@ -186,21 +186,21 @@ describe("visibleComments", () => {
       localComments: local,
       pullComments: [],
       viewingFile: "a",
-    })
-    expect(out.map((c) => c.id)).toEqual(["1"])
-  })
+    });
+    expect(out.map((c) => c.id)).toEqual(["1"]);
+  });
 
   it("still shows only the pull's own comments with a file open", () => {
     const pr: ReviewComment[] = [
       { ...local[0], id: "pr1", source: "github", target: "pr-3" },
-    ]
+    ];
     const out = fns().visibleComments({
       targetKind: "pull",
       targetKey: "pr-3",
       localComments: local,
       pullComments: pr,
       viewingFile: "a",
-    })
-    expect(out.map((c) => c.id)).toEqual(["pr1"])
-  })
-})
+    });
+    expect(out.map((c) => c.id)).toEqual(["pr1"]);
+  });
+});

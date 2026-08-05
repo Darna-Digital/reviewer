@@ -1,23 +1,23 @@
-import { FileTree, useFileTree } from "@pierre/trees/react"
-import type { ReactNode } from "react"
-import { useEffect, useRef } from "react"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
-import type { AppMode } from "@/lib/api/types"
-import type { GitStatusEntry } from "@byconvo/core/repo"
+import { FileTree, useFileTree } from "@pierre/trees/react";
+import type { ReactNode } from "react";
+import { useEffect, useRef } from "react";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
+import type { AppMode } from "@/lib/api/types";
+import type { GitStatusEntry } from "@byconvo/core/repo";
 
 interface FileSidebarProps {
-  mode: AppMode
-  paths: ReadonlyArray<string>
-  gitStatus: ReadonlyArray<GitStatusEntry>
-  selectedFile: string | null
-  onFileSelect: (path: string | null) => void
-  onDeletePath?: (path: string, isDirectory: boolean) => Promise<void> | void
-  onRenamePath?: (from: string, to: string) => Promise<void>
+  mode: AppMode;
+  paths: ReadonlyArray<string>;
+  gitStatus: ReadonlyArray<GitStatusEntry>;
+  selectedFile: string | null;
+  onFileSelect: (path: string | null) => void;
+  onDeletePath?: (path: string, isDirectory: boolean) => Promise<void> | void;
+  onRenamePath?: (from: string, to: string) => Promise<void>;
   /** Open the bottom dock on this path's commit history. */
-  onShowHistory?: (path: string) => void
-  onError?: (message: string) => void
-  loading?: boolean
-  footer?: ReactNode
+  onShowHistory?: (path: string) => void;
+  onError?: (message: string) => void;
+  loading?: boolean;
+  footer?: ReactNode;
 }
 
 // Inset each row's hover/selection background vertically so a highlighted row
@@ -34,7 +34,7 @@ const TREE_UNSAFE_CSS = `
     border-block: 2px solid transparent;
     background-clip: padding-box;
   }
-`
+`;
 
 /**
  * Directory prefixes that must be expanded for `filePath` to be visible, e.g.
@@ -42,15 +42,15 @@ const TREE_UNSAFE_CSS = `
  * collapsed tree (both up-front via `initialExpandedPaths` and imperatively).
  */
 function ancestorDirs(filePath: string): ReadonlyArray<string> {
-  const segments = filePath.split("/")
-  segments.pop()
-  const dirs: string[] = []
-  let prefix = ""
+  const segments = filePath.split("/");
+  segments.pop();
+  const dirs: string[] = [];
+  let prefix = "";
   for (const segment of segments) {
-    prefix = prefix === "" ? segment : `${prefix}/${segment}`
-    dirs.push(prefix)
+    prefix = prefix === "" ? segment : `${prefix}/${segment}`;
+    dirs.push(prefix);
   }
-  return dirs
+  return dirs;
 }
 
 export function FileSidebar({
@@ -66,19 +66,19 @@ export function FileSidebar({
   loading = false,
   footer,
 }: FileSidebarProps) {
-  const onFileSelectRef = useRef(onFileSelect)
-  onFileSelectRef.current = onFileSelect
-  const onRenamePathRef = useRef(onRenamePath)
-  onRenamePathRef.current = onRenamePath
-  const onErrorRef = useRef(onError)
-  onErrorRef.current = onError
-  const pathsRef = useRef(paths)
-  pathsRef.current = paths
-  const selectedFileRef = useRef(selectedFile)
-  selectedFileRef.current = selectedFile
+  const onFileSelectRef = useRef(onFileSelect);
+  onFileSelectRef.current = onFileSelect;
+  const onRenamePathRef = useRef(onRenamePath);
+  onRenamePathRef.current = onRenamePath;
+  const onErrorRef = useRef(onError);
+  onErrorRef.current = onError;
+  const pathsRef = useRef(paths);
+  pathsRef.current = paths;
+  const selectedFileRef = useRef(selectedFile);
+  selectedFileRef.current = selectedFile;
   // Set while we sync the tree's selection to `selectedFile`, so the resulting
   // selection-change events don't loop back through `onFileSelect`.
-  const syncingSelectionRef = useRef(false)
+  const syncingSelectionRef = useRef(false);
 
   const { model } = useFileTree({
     paths: [...paths],
@@ -95,74 +95,75 @@ export function FileSidebar({
     unsafeCSS: TREE_UNSAFE_CSS,
     gitStatus: [...gitStatus],
     onSelectionChange: (selectedPaths) => {
-      if (syncingSelectionRef.current) return
-      const first = selectedPaths.at(0)
+      if (syncingSelectionRef.current) return;
+      const first = selectedPaths.at(0);
       if (first !== undefined) {
-        const item = modelRef.current?.getItem(first)
-        if (item != null && !item.isDirectory()) onFileSelectRef.current(first)
+        const item = modelRef.current?.getItem(first);
+        if (item != null && !item.isDirectory()) onFileSelectRef.current(first);
       }
     },
     renaming: {
       canRename: () => onRenamePathRef.current !== undefined,
       onError: (message) => onErrorRef.current?.(message),
       onRename: ({ destinationPath, sourcePath }) => {
-        const revert = () => modelRef.current?.resetPaths([...pathsRef.current])
-        const handler = onRenamePathRef.current
-        if (handler === undefined) return revert()
-        if (destinationPath === sourcePath) return
-        void handler(sourcePath, destinationPath).catch(revert)
+        const revert = () =>
+          modelRef.current?.resetPaths([...pathsRef.current]);
+        const handler = onRenamePathRef.current;
+        if (handler === undefined) return revert();
+        if (destinationPath === sourcePath) return;
+        void handler(sourcePath, destinationPath).catch(revert);
       },
     },
-  })
+  });
 
-  const modelRef = useRef(model)
-  modelRef.current = model
+  const modelRef = useRef(model);
+  modelRef.current = model;
 
   // Reveal `path` in the tree: expand its ancestor directories, select just that
   // row (so it is visibly highlighted), and scroll to it. `focus` moves keyboard
   // focus too — reserved for explicit navigation so background refreshes don't
   // yank focus. Returns false when the path isn't in the current tree yet.
-  const prevRevealedRef = useRef<string | null>(null)
+  const prevRevealedRef = useRef<string | null>(null);
   const revealFile = (path: string, focus: boolean): boolean => {
-    const target = model.getItem(path)
-    if (target == null) return false
+    const target = model.getItem(path);
+    if (target == null) return false;
     for (const dir of ancestorDirs(path)) {
-      const item = model.getItem(dir)
-      if (item != null && "expand" in item && !item.isExpanded()) item.expand()
+      const item = model.getItem(dir);
+      if (item != null && "expand" in item && !item.isExpanded()) item.expand();
     }
-    const current = model.getSelectedPaths()
+    const current = model.getSelectedPaths();
     if (!(current.length === 1 && current[0] === path)) {
       // Selection-change events fire synchronously here; suppress the loop back
       // into `onFileSelect` while we replace the selection with just this file.
-      syncingSelectionRef.current = true
-      for (const p of current) model.getItem(p)?.deselect()
-      target.select()
-      syncingSelectionRef.current = false
+      syncingSelectionRef.current = true;
+      for (const p of current) model.getItem(p)?.deselect();
+      target.select();
+      syncingSelectionRef.current = false;
     }
-    model.scrollToPath(path, { focus, offset: "center" })
-    return true
-  }
+    model.scrollToPath(path, { focus, offset: "center" });
+    return true;
+  };
 
-  const pathsKey = paths.join("\n")
+  const pathsKey = paths.join("\n");
   useEffect(() => {
     // Rebuilding collapses the tree; seed the open file's ancestors as expanded
     // so it doesn't flash closed. Selection/scroll/focus is re-applied by the
     // reveal effect below (which also depends on `pathsKey`).
-    const open = selectedFileRef.current
+    const open = selectedFileRef.current;
     model.resetPaths(
       [...paths],
       open !== null
         ? { initialExpandedPaths: [...ancestorDirs(open)] }
         : undefined
-    )
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathsKey, model])
+  }, [pathsKey, model]);
 
-  const statusKey = gitStatus.map((e) => `${e.path}:${e.status}`).join("\n")
+  const statusKey = gitStatus.map((e) => `${e.path}:${e.status}`).join("\n");
   useEffect(() => {
-    model.setGitStatus([...gitStatus])
+    model.setGitStatus([...gitStatus]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusKey, pathsKey, model])
+  }, [statusKey, pathsKey, model]);
 
   // Reveal the open file whenever it changes, and re-apply after the tree is
   // rebuilt (`pathsKey`) — e.g. on initial load the file is set before its paths
@@ -170,19 +171,19 @@ export function FileSidebar({
   // re-highlights without stealing keyboard focus.
   useEffect(() => {
     if (selectedFile === null) {
-      prevRevealedRef.current = null
-      return
+      prevRevealedRef.current = null;
+      return;
     }
     if (revealFile(selectedFile, prevRevealedRef.current !== selectedFile)) {
-      prevRevealedRef.current = selectedFile
+      prevRevealedRef.current = selectedFile;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFile, pathsKey, model])
+  }, [selectedFile, pathsKey, model]);
 
   const hasMenu =
     onDeletePath !== undefined ||
     onRenamePath !== undefined ||
-    onShowHistory !== undefined
+    onShowHistory !== undefined;
   const renderContextMenu = hasMenu
     ? (
         item: { kind: "directory" | "file"; path: string },
@@ -197,8 +198,8 @@ export function FileSidebar({
               role="menuitem"
               className="flex w-full items-center rounded-sm px-2 py-1 text-left hover:bg-muted"
               onClick={() => {
-                context.close()
-                onShowHistory(item.path)
+                context.close();
+                onShowHistory(item.path);
               }}
             >
               Show history
@@ -209,8 +210,8 @@ export function FileSidebar({
               role="menuitem"
               className="flex w-full items-center rounded-sm px-2 py-1 text-left hover:bg-muted"
               onClick={() => {
-                context.close({ restoreFocus: false })
-                modelRef.current?.startRenaming(item.path)
+                context.close({ restoreFocus: false });
+                modelRef.current?.startRenaming(item.path);
               }}
             >
               Rename…
@@ -221,8 +222,8 @@ export function FileSidebar({
               role="menuitem"
               className="flex w-full items-center rounded-sm px-2 py-1 text-left text-destructive hover:bg-muted"
               onClick={() => {
-                context.close()
-                void onDeletePath(item.path, item.kind === "directory")
+                context.close();
+                void onDeletePath(item.path, item.kind === "directory");
               }}
             >
               Delete
@@ -230,7 +231,7 @@ export function FileSidebar({
           )}
         </div>
       )
-    : undefined
+    : undefined;
 
   return (
     <aside className="flex h-full flex-col">
@@ -249,5 +250,5 @@ export function FileSidebar({
       </div>
       {footer}
     </aside>
-  )
+  );
 }

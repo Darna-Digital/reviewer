@@ -1,7 +1,7 @@
-import { describe, expect, it } from "vitest"
-import type { ChatModelCatalog } from "@byconvo/core/chats"
-import type { ReviewComment } from "@byconvo/core/comments"
-import type { Card as TasksCard } from "@byconvo/core/tasks"
+import { describe, expect, it } from "vitest";
+import type { ChatModelCatalog } from "@byconvo/core/chats";
+import type { ReviewComment } from "@byconvo/core/comments";
+import type { Card as TasksCard } from "@byconvo/core/tasks";
 import {
   buildChatAssignmentSettings,
   buildReviewAssignmentPrompt,
@@ -12,7 +12,7 @@ import {
   isChatProviderKind,
   mentionedChatProvider,
   trailingAgentMention,
-} from "./chat-assignment.functions"
+} from "./chat-assignment.functions";
 
 const catalog: ChatModelCatalog = {
   defaults: {
@@ -39,7 +39,7 @@ const catalog: ChatModelCatalog = {
       models: [{ id: "opencode/big-pickle", label: "Big Pickle" }],
     },
   ],
-}
+};
 
 const card = {
   id: "card-1",
@@ -51,17 +51,19 @@ const card = {
   comments: [],
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
-} as TasksCard
+} as TasksCard;
 
 describe("chat assignment helpers", () => {
   it("detects assignable chat providers and @mentions", () => {
-    expect(isChatProviderKind("claude")).toBe(true)
-    expect(isChatProviderKind("terminal")).toBe(false)
-    expect(trailingAgentMention("please @co")).toBe("co")
-    expect(trailingAgentMention("please @codex now")).toBeNull()
-    expect(mentionedChatProvider("please ask @Codex to fix this")).toBe("codex")
-    expect(mentionedChatProvider("@terminal run ls")).toBeNull()
-  })
+    expect(isChatProviderKind("claude")).toBe(true);
+    expect(isChatProviderKind("terminal")).toBe(false);
+    expect(trailingAgentMention("please @co")).toBe("co");
+    expect(trailingAgentMention("please @codex now")).toBeNull();
+    expect(mentionedChatProvider("please ask @Codex to fix this")).toBe(
+      "codex"
+    );
+    expect(mentionedChatProvider("@terminal run ls")).toBeNull();
+  });
 
   it("builds provider-specific chat settings from the catalog", () => {
     expect(buildChatAssignmentSettings("claude", catalog)).toEqual({
@@ -70,15 +72,15 @@ describe("chat assignment helpers", () => {
       effort: "high",
       access: "fullAccess",
       mode: "build",
-    })
+    });
     expect(buildChatAssignmentSettings("codex", catalog)).toEqual({
       provider: "codex",
       model: "gpt-5.5",
       effort: "high",
       access: "fullAccess",
       mode: "build",
-    })
-  })
+    });
+  });
 
   it("builds review assignment title and prompt", () => {
     const comments: ReadonlyArray<ReviewComment> = [
@@ -104,11 +106,11 @@ describe("chat assignment helpers", () => {
         target: "worktree",
         source: "local",
       },
-    ]
+    ];
 
     expect(buildReviewAssignmentTitle(comments.length)).toBe(
       "Fix 2 review comments"
-    )
+    );
     expect(buildReviewAssignmentPrompt(comments)).toBe(
       [
         "Address these review comments in the codebase:",
@@ -116,16 +118,16 @@ describe("chat assignment helpers", () => {
         "src/a.ts:12 - Fix this",
         "src/b.ts:5 - Rename that",
       ].join("\n")
-    )
-  })
+    );
+  });
 
   it("strips task @mentions and builds task assignment content", () => {
     expect(
       instructionWithoutChatProviderMention("please @claude fix", "claude")
-    ).toBe("please fix")
+    ).toBe("please fix");
     expect(
       buildTaskAssignmentTitle(card, "@codex implement the flow", "codex")
-    ).toBe("DAR-168 - implement the flow")
+    ).toBe("DAR-168 - implement the flow");
     expect(
       buildTaskAssignmentPrompt(card, "@codex implement the flow", "codex")
     ).toBe(
@@ -137,12 +139,12 @@ describe("chat assignment helpers", () => {
         "Address this comment:",
         "implement the flow",
       ].join("\n")
-    )
-  })
+    );
+  });
 
   it("uses a generic task instruction when the comment only names an agent", () => {
     expect(buildTaskAssignmentPrompt(card, "@opencode", "opencode")).toContain(
       "Follow the task description and resolve this task."
-    )
-  })
-})
+    );
+  });
+});

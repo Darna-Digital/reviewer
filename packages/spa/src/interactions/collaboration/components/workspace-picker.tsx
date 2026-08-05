@@ -4,11 +4,11 @@
  * workspace-level actions, and a submenu that switches between the workspaces
  * on this account. Which workspace is open is prototype-local state.
  */
-import { IconCheck, IconChevronDown } from "@tabler/icons-react"
-import { useNavigate } from "@tanstack/react-router"
-import { useState, type CSSProperties } from "react"
-import { Avatar } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { IconCheck, IconChevronDown } from "@tabler/icons-react";
+import { useNavigate } from "@tanstack/react-router";
+import { useState, type CSSProperties } from "react";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,20 +21,20 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   VIEWER,
   WORKSPACES,
   type MockWorkspace,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import { cn } from "@/lib/utils"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import { cn } from "@/lib/utils";
 
 function WorkspaceMark({
   workspace,
   className,
 }: {
-  workspace: MockWorkspace
-  className?: string
+  workspace: MockWorkspace;
+  className?: string;
 }) {
   return (
     <span
@@ -47,15 +47,15 @@ function WorkspaceMark({
     >
       {workspace.name.slice(0, 1)}
     </span>
-  )
+  );
 }
 
 export function WorkspacePicker() {
-  const navigate = useNavigate()
-  const [id, setId] = useState(WORKSPACES[0]?.id)
-  const selected = WORKSPACES.find((w) => w.id === id) ?? WORKSPACES[0]
+  const navigate = useNavigate();
+  const [id, setId] = useState(WORKSPACES[0]?.id);
+  const selected = WORKSPACES.find((w) => w.id === id) ?? WORKSPACES[0];
 
-  if (!selected) return null
+  if (!selected) return null;
 
   return (
     <DropdownMenu>
@@ -138,5 +138,5 @@ export function WorkspacePicker() {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

@@ -7,10 +7,10 @@
  * is required except a title, so the fast path is type-and-create and every
  * property is a default you can override on the way past.
  */
-import { IconChevronDown, IconPlus } from "@tabler/icons-react"
-import { useNavigate } from "@tanstack/react-router"
-import { useState, type CSSProperties, type ReactNode } from "react"
-import { Button } from "@/components/ui/button"
+import { IconChevronDown, IconPlus } from "@tabler/icons-react";
+import { useNavigate } from "@tanstack/react-router";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -19,23 +19,23 @@ import {
   DialogFooter,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar"
-import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-priority-icon"
-import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
+} from "@/components/ui/tooltip";
+import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar";
+import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-priority-icon";
+import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
 import {
   addTask,
   agentName,
@@ -46,14 +46,14 @@ import {
   type MockProject,
   type TaskPriority,
   type TaskStatus,
-} from "@/interactions/collaboration/data/collaboration.mock"
+} from "@/interactions/collaboration/data/collaboration.mock";
 
 const STATUSES: ReadonlyArray<{ value: TaskStatus; label: string }> = [
   { value: "todo", label: "Todo" },
   { value: "doing", label: "In Progress" },
   { value: "review", label: "In Review" },
   { value: "done", label: "Done" },
-]
+];
 
 const PRIORITIES: ReadonlyArray<{ value: TaskPriority; label: string }> = [
   { value: "none", label: "No priority" },
@@ -61,20 +61,20 @@ const PRIORITIES: ReadonlyArray<{ value: TaskPriority; label: string }> = [
   { value: "high", label: "High" },
   { value: "medium", label: "Medium" },
   { value: "low", label: "Low" },
-]
+];
 
 const ASSIGNEES: ReadonlyArray<string> = [
   UNASSIGNED,
   ...MEMBERS.map((m) => m.name),
   ...allAgents().map(agentName),
-]
+];
 
 const projectMark = (project: MockProject) => (
   <span
     className="size-3 shrink-0 rounded-[0.25rem] bg-(--mark)"
     style={{ "--mark": project.color } as CSSProperties}
   />
-)
+);
 
 /** A property pill: the current value, and a menu of the rest. */
 function Picker({
@@ -82,9 +82,9 @@ function Picker({
   children,
   menu,
 }: {
-  label: string
-  children: ReactNode
-  menu: ReactNode
+  label: string;
+  children: ReactNode;
+  menu: ReactNode;
 }) {
   return (
     <DropdownMenu>
@@ -105,34 +105,34 @@ function Picker({
         {menu}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 export function NewTaskButton() {
-  const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
-  const [projectId, setProjectId] = useState(PROJECTS[0]?.id ?? "")
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [status, setStatus] = useState<TaskStatus>("todo")
-  const [priority, setPriority] = useState<TaskPriority>("none")
-  const [assignee, setAssignee] = useState(UNASSIGNED)
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [projectId, setProjectId] = useState(PROJECTS[0]?.id ?? "");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [status, setStatus] = useState<TaskStatus>("todo");
+  const [priority, setPriority] = useState<TaskPriority>("none");
+  const [assignee, setAssignee] = useState(UNASSIGNED);
 
-  const project = PROJECTS.find((p) => p.id === projectId) ?? PROJECTS[0]
-  const statusLabel = STATUSES.find((s) => s.value === status)?.label ?? "Todo"
+  const project = PROJECTS.find((p) => p.id === projectId) ?? PROJECTS[0];
+  const statusLabel = STATUSES.find((s) => s.value === status)?.label ?? "Todo";
   const priorityLabel =
-    PRIORITIES.find((p) => p.value === priority)?.label ?? "No priority"
+    PRIORITIES.find((p) => p.value === priority)?.label ?? "No priority";
 
   const reset = () => {
-    setTitle("")
-    setDescription("")
-    setStatus("todo")
-    setPriority("none")
-    setAssignee(UNASSIGNED)
-  }
+    setTitle("");
+    setDescription("");
+    setStatus("todo");
+    setPriority("none");
+    setAssignee(UNASSIGNED);
+  };
 
   const create = () => {
-    if (title.trim() === "" || project === undefined) return
+    if (title.trim() === "" || project === undefined) return;
     const task = addTask({
       projectId: project.id,
       title: title.trim(),
@@ -140,16 +140,16 @@ export function NewTaskButton() {
       priority,
       assignee,
       description,
-    })
-    reset()
-    setOpen(false)
+    });
+    reset();
+    setOpen(false);
     void navigate({
       to: "/modes/collaboration",
       search: { view: "task", id: task.id },
-    })
-  }
+    });
+  };
 
-  if (project === undefined) return null
+  if (project === undefined) return null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -269,5 +269,5 @@ export function NewTaskButton() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

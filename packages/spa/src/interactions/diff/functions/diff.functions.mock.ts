@@ -1,6 +1,6 @@
-import { vi } from "vitest"
-import type { FileDiffMetadata } from "@pierre/diffs"
-import type { DiffDependencies } from "../interfaces/diff.interfaces"
+import { vi } from "vitest";
+import type { FileDiffMetadata } from "@pierre/diffs";
+import type { DiffDependencies } from "../interfaces/diff.interfaces";
 
 /** A tiny parsePatch stub: one file per `+++ b/<name>` header line. */
 const fakeParse = (diffText: string): ReadonlyArray<FileDiffMetadata> =>
@@ -13,11 +13,11 @@ const fakeParse = (diffText: string): ReadonlyArray<FileDiffMetadata> =>
           name: line.slice("+++ b/".length),
           type: "modified",
         }) as unknown as FileDiffMetadata
-    )
+    );
 
 export const createDiffDependenciesMock = (
   overrides?: Partial<DiffDependencies["data"]>
 ): DiffDependencies => ({
   data: { internalDir: ".byconvo", ...overrides },
   sideEffects: { parsePatch: vi.fn(fakeParse) },
-})
+});

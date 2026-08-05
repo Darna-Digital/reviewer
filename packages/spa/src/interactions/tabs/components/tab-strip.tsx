@@ -9,41 +9,41 @@
  * The strip scrolls rather than shrinking its tabs to nothing, and pinned tabs
  * sort to the head so they stay reachable once it does.
  */
-import { IconPin, IconPinnedFilled, IconX } from "@tabler/icons-react"
-import { useEffect, useRef, useState } from "react"
+import { IconPin, IconPinnedFilled, IconX } from "@tabler/icons-react";
+import { useEffect, useRef, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   pointerAnchor,
   type VirtualAnchor,
-} from "@/interactions/language/functions/anchors"
-import { pathName } from "@/lib/display-path"
-import { cn } from "@/lib/utils"
-import { orderTabs } from "../functions/tabs.functions"
-import type { Tab } from "../interfaces/tabs.interfaces"
+} from "@/interactions/language/functions/anchors";
+import { pathName } from "@/lib/display-path";
+import { cn } from "@/lib/utils";
+import { orderTabs } from "../functions/tabs.functions";
+import type { Tab } from "../interfaces/tabs.interfaces";
 
 /** The tab a right-click opened the menu on, and where to hang it. */
 interface MenuState {
-  readonly path: string
-  readonly anchor: VirtualAnchor
+  readonly path: string;
+  readonly anchor: VirtualAnchor;
 }
 
 export interface TabStripProps {
-  readonly tabs: ReadonlyArray<Tab>
-  readonly active: string | null
+  readonly tabs: ReadonlyArray<Tab>;
+  readonly active: string | null;
   /** Paths whose buffer has unsaved changes. */
-  readonly dirty: ReadonlySet<string>
-  readonly onSelect: (path: string) => void
+  readonly dirty: ReadonlySet<string>;
+  readonly onSelect: (path: string) => void;
   /** A double click settles a preview tab, as in every IDE. */
-  readonly onKeep: (path: string) => void
-  readonly onClose: (path: string) => void
-  readonly onTogglePin: (path: string) => void
-  readonly onCloseOthers: (path: string) => void
-  readonly onCloseAll: () => void
+  readonly onKeep: (path: string) => void;
+  readonly onClose: (path: string) => void;
+  readonly onTogglePin: (path: string) => void;
+  readonly onCloseOthers: (path: string) => void;
+  readonly onCloseAll: () => void;
 }
 
 export function TabStrip({
@@ -57,20 +57,20 @@ export function TabStrip({
   onCloseOthers,
   onCloseAll,
 }: TabStripProps) {
-  const ordered = orderTabs(tabs)
-  const stripRef = useRef<HTMLDivElement>(null)
-  const [menu, setMenu] = useState<MenuState | null>(null)
+  const ordered = orderTabs(tabs);
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [menu, setMenu] = useState<MenuState | null>(null);
 
   // Selecting a tab from outside the strip — go-to-definition, the command
   // menu — can select one that is scrolled out of the strip.
   useEffect(() => {
-    if (active === null) return
+    if (active === null) return;
     stripRef.current
       ?.querySelector(`[data-tab="${CSS.escape(active)}"]`)
-      ?.scrollIntoView({ block: "nearest", inline: "nearest" })
-  }, [active])
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [active]);
 
-  if (ordered.length === 0) return null
+  if (ordered.length === 0) return null;
 
   return (
     <>
@@ -81,7 +81,7 @@ export function TabStrip({
         className="flex shrink-0 items-stretch overflow-x-auto border-b border-border bg-background"
       >
         {ordered.map((tab) => {
-          const isActive = tab.path === active
+          const isActive = tab.path === active;
           return (
             <div
               key={tab.path}
@@ -101,21 +101,21 @@ export function TabStrip({
               onAuxClick={(event) => {
                 // Middle click closes, as everywhere else with tabs.
                 if (event.button === 1) {
-                  event.preventDefault()
-                  onClose(tab.path)
+                  event.preventDefault();
+                  onClose(tab.path);
                 }
               }}
               onContextMenu={(event) => {
-                event.preventDefault()
+                event.preventDefault();
                 setMenu({
                   path: tab.path,
                   anchor: pointerAnchor(event.clientX, event.clientY),
-                })
+                });
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault()
-                  onSelect(tab.path)
+                  event.preventDefault();
+                  onSelect(tab.path);
                 }
               }}
             >
@@ -148,22 +148,22 @@ export function TabStrip({
                       : "opacity-0 group-hover/tab:opacity-70"
                   )}
                   onClick={(event) => {
-                    event.stopPropagation()
-                    onClose(tab.path)
+                    event.stopPropagation();
+                    onClose(tab.path);
                   }}
                 >
                   <IconX className="size-3" />
                 </button>
               )}
             </div>
-          )
+          );
         })}
       </div>
       {menu !== null && (
         <DropdownMenu
           open
           onOpenChange={(open) => {
-            if (!open) setMenu(null)
+            if (!open) setMenu(null);
           }}
         >
           <DropdownMenuContent
@@ -174,8 +174,8 @@ export function TabStrip({
           >
             <DropdownMenuItem
               onClick={() => {
-                onTogglePin(menu.path)
-                setMenu(null)
+                onTogglePin(menu.path);
+                setMenu(null);
               }}
             >
               {tabs.find((tab) => tab.path === menu.path)?.pinned === true ? (
@@ -191,24 +191,24 @@ export function TabStrip({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
-                onClose(menu.path)
-                setMenu(null)
+                onClose(menu.path);
+                setMenu(null);
               }}
             >
               Close
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
-                onCloseOthers(menu.path)
-                setMenu(null)
+                onCloseOthers(menu.path);
+                setMenu(null);
               }}
             >
               Close others
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
-                onCloseAll()
-                setMenu(null)
+                onCloseAll();
+                setMenu(null);
               }}
             >
               Close all
@@ -217,5 +217,5 @@ export function TabStrip({
         </DropdownMenu>
       )}
     </>
-  )
+  );
 }

@@ -1,33 +1,33 @@
-import * as Effect from "effect/Effect"
-import * as Ref from "effect/Ref"
-import { NotFound } from "../../../shared.ts"
-import type { DevCommand } from "../schema/local-dev.schema.ts"
+import * as Effect from "effect/Effect";
+import * as Ref from "effect/Ref";
+import { NotFound } from "../../../shared.ts";
+import type { DevCommand } from "../schema/local-dev.schema.ts";
 import type {
   CreateDevCommandInput,
   DevCommandsRepo,
   UpdateDevCommandInput,
-} from "./local-dev.repository.ts"
+} from "./local-dev.repository.ts";
 
 export const makeMemoryDevCommandsRepository = (
   seed: ReadonlyArray<DevCommand> = []
 ) =>
   Effect.gen(function* () {
-    const store = yield* Ref.make<ReadonlyArray<DevCommand>>([...seed])
-    let counter = 0
+    const store = yield* Ref.make<ReadonlyArray<DevCommand>>([...seed]);
+    let counter = 0;
     const nextId = () => {
-      counter += 1
-      return `d-mem-${counter}`
-    }
-    const now = () => "2026-01-01T00:00:00.000Z"
+      counter += 1;
+      return `d-mem-${counter}`;
+    };
+    const now = () => "2026-01-01T00:00:00.000Z";
     const find = (commands: ReadonlyArray<DevCommand>, id: string) => {
-      const command = commands.find((c) => c.id === id)
+      const command = commands.find((c) => c.id === id);
       if (command === undefined) {
         return Effect.fail(
           new NotFound({ reason: `dev command ${id} not found` })
-        )
+        );
       }
-      return Effect.succeed(command)
-    }
+      return Effect.succeed(command);
+    };
     const repo: DevCommandsRepo = {
       list: Ref.get(store).pipe(
         Effect.map((commands) =>
@@ -44,13 +44,13 @@ export const makeMemoryDevCommandsRepository = (
             command: input.command.trim(),
             createdAt: now(),
             updatedAt: now(),
-          }
-          yield* Ref.update(store, (all) => [...all, created])
-          return created
+          };
+          yield* Ref.update(store, (all) => [...all, created]);
+          return created;
         }),
       update: (id, input: UpdateDevCommandInput) =>
         Effect.gen(function* () {
-          const existing = yield* find(yield* Ref.get(store), id)
+          const existing = yield* find(yield* Ref.get(store), id);
           const updated: DevCommand = {
             ...existing,
             name:
@@ -62,14 +62,14 @@ export const makeMemoryDevCommandsRepository = (
                 ? input.command.trim()
                 : existing.command,
             updatedAt: now(),
-          }
+          };
           yield* Ref.update(store, (all) =>
             all.map((c) => (c.id === id ? updated : c))
-          )
-          return updated
+          );
+          return updated;
         }),
       remove: (id) =>
         Ref.update(store, (all) => all.filter((c) => c.id !== id)),
-    }
-    return repo
-  })
+    };
+    return repo;
+  });

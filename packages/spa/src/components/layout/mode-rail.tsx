@@ -14,35 +14,35 @@ import {
   IconPlayerPlay,
   IconSettings,
   IconTerminal2,
-} from "@tabler/icons-react"
-import { Link, useRouterState } from "@tanstack/react-router"
-import { buttonVariants } from "@/components/ui/button"
+} from "@tabler/icons-react";
+import { Link, useRouterState } from "@tanstack/react-router";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { ChatsInboxPopover } from "@/interactions/chats/components/chats-inbox-popover"
-import { cn } from "@/lib/utils"
-import { useRepo } from "@/lib/queries"
+} from "@/components/ui/tooltip";
+import { ChatsInboxPopover } from "@/interactions/chats/components/chats-inbox-popover";
+import { cn } from "@/lib/utils";
+import { useRepo } from "@/lib/queries";
 import {
   openBottomTab,
   setUiPrefs,
   useUiPrefs,
   type BottomTab,
-} from "@/lib/ui-prefs"
+} from "@/lib/ui-prefs";
 
 interface RailLink {
-  to: string
-  label: string
-  icon: typeof IconGitCommit
+  to: string;
+  label: string;
+  icon: typeof IconGitCommit;
   /** Route prefix that lights the button up. */
-  match: string
-  github?: boolean
+  match: string;
+  github?: boolean;
 }
 
 /** Code mode's inbox is the repo's agent threads. */
-const INBOX_MATCH = "/modes/code/chats"
+const INBOX_MATCH = "/modes/code/chats";
 
 const REVIEW_LINKS: RailLink[] = [
   {
@@ -51,7 +51,7 @@ const REVIEW_LINKS: RailLink[] = [
     icon: IconMessageCircle,
     match: "/modes/code/comments",
   },
-]
+];
 
 const GIT_LINKS: RailLink[] = [
   {
@@ -73,7 +73,7 @@ const GIT_LINKS: RailLink[] = [
     match: "/modes/code/review",
     github: true,
   },
-]
+];
 
 function RailButton({
   label,
@@ -82,17 +82,17 @@ function RailButton({
   to,
   children,
 }: {
-  label: string
-  active?: boolean
-  onClick?: () => void
-  to?: string
-  children: React.ReactNode
+  label: string;
+  active?: boolean;
+  onClick?: () => void;
+  to?: string;
+  children: React.ReactNode;
 }) {
   const className = cn(
     buttonVariants({ variant: "ghost", size: "icon" }),
     "relative rounded-lg text-muted-foreground [-webkit-app-region:no-drag]",
     active && "bg-muted text-foreground"
-  )
+  );
   return (
     <Tooltip>
       <TooltipTrigger
@@ -110,29 +110,29 @@ function RailButton({
       </TooltipTrigger>
       <TooltipContent side="right">{label}</TooltipContent>
     </Tooltip>
-  )
+  );
 }
 
 /** Show a bottom-dock tab, or hide the dock if that tab is already active. */
 function toggleBottomTab(tab: BottomTab, current: BottomTab, visible: boolean) {
   if (visible && current === tab) {
-    setUiPrefs({ bottomVisible: false })
-    return
+    setUiPrefs({ bottomVisible: false });
+    return;
   }
-  openBottomTab(tab)
+  openBottomTab(tab);
 }
 
 export function ModeRail() {
-  const prefs = useUiPrefs()
-  const repo = useRepo()
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const hasGitHub = repo.data?.github != null
+  const prefs = useUiPrefs();
+  const repo = useRepo();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const hasGitHub = repo.data?.github != null;
 
   const gitActive =
     prefs.bottomVisible &&
-    (prefs.bottomTab === "branches" || prefs.bottomTab === "history")
-  const servicesActive = prefs.bottomVisible && prefs.bottomTab === "services"
-  const threadsActive = prefs.bottomVisible && prefs.bottomTab === "threads"
+    (prefs.bottomTab === "branches" || prefs.bottomTab === "history");
+  const servicesActive = prefs.bottomVisible && prefs.bottomTab === "services";
+  const threadsActive = prefs.bottomVisible && prefs.bottomTab === "threads";
 
   const renderLink = ({ to, label, icon: Icon, match }: RailLink) => (
     <RailButton
@@ -143,7 +143,7 @@ export function ModeRail() {
     >
       <Icon className="size-5" />
     </RailButton>
-  )
+  );
 
   return (
     <nav className="relative flex h-full w-12 shrink-0 flex-col items-center pb-2">
@@ -174,12 +174,12 @@ export function ModeRail() {
             active={gitActive}
             onClick={() => {
               const gitTab =
-                prefs.bottomTab === "history" ? "history" : "branches"
+                prefs.bottomTab === "history" ? "history" : "branches";
               if (prefs.bottomVisible && gitActive) {
-                setUiPrefs({ bottomVisible: false })
-                return
+                setUiPrefs({ bottomVisible: false });
+                return;
               }
-              openBottomTab(gitTab)
+              openBottomTab(gitTab);
             }}
           >
             <IconGitFork className="size-5" />
@@ -212,5 +212,5 @@ export function ModeRail() {
         </div>
       </div>
     </nav>
-  )
+  );
 }

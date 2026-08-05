@@ -1,36 +1,36 @@
-import { IconFolder } from "@tabler/icons-react"
-import { useMemo } from "react"
-import { Badge } from "@/components/ui/badge"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { createCommitDetailsFunctions } from "@/interactions/commit-details/functions/commit-details.functions"
-import { STATUS_COLOR } from "@/lib/git-status"
-import { useCommitDetail } from "@/lib/queries"
-import { cn } from "@/lib/utils"
+import { IconFolder } from "@tabler/icons-react";
+import { useMemo } from "react";
+import { Badge } from "@/components/ui/badge";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { createCommitDetailsFunctions } from "@/interactions/commit-details/functions/commit-details.functions";
+import { STATUS_COLOR } from "@/lib/git-status";
+import { useCommitDetail } from "@/lib/queries";
+import { cn } from "@/lib/utils";
 
 interface CommitDetailsPanelProps {
-  sha: string | null
+  sha: string | null;
   /** Path currently open from this commit — rendered as the selected row. */
-  selectedFile: string | null
-  onSelectFile: (path: string) => void
+  selectedFile: string | null;
+  onSelectFile: (path: string) => void;
 }
 
 const formatDateTime = (iso: string): string => {
-  if (iso.length === 0) return ""
-  const date = new Date(iso)
-  if (Number.isNaN(date.getTime())) return ""
+  if (iso.length === 0) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleString(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  })
-}
+  });
+};
 
 const indent = (depth: number): React.CSSProperties => ({
   paddingLeft: 8 + depth * 14,
-})
+});
 
 export function CommitDetailsPanel({
   sha,
@@ -40,33 +40,33 @@ export function CommitDetailsPanel({
   const fns = useMemo(
     () => createCommitDetailsFunctions({ data: {}, sideEffects: {} }),
     []
-  )
-  const detail = useCommitDetail(sha)
+  );
+  const detail = useCommitDetail(sha);
 
   if (sha === null) {
     return (
       <div className="grid h-full place-items-center p-4 text-center text-sm text-muted-foreground">
         Select a commit to see its details.
       </div>
-    )
+    );
   }
   if (detail.isPending) {
     return (
       <div className="grid h-full place-items-center p-4">
         <LoadingCursor label="Loading commit…" />
       </div>
-    )
+    );
   }
   if (detail.error) {
     return (
       <div className="grid h-full place-items-center p-4 text-sm text-destructive">
         Could not load this commit.
       </div>
-    )
+    );
   }
 
-  const data = detail.data
-  const rows = fns.buildRows(data.files)
+  const data = detail.data;
+  const rows = fns.buildRows(data.files);
 
   return (
     <ScrollArea className="h-full" viewportClassName="scroll-fade p-3 text-sm">
@@ -163,5 +163,5 @@ export function CommitDetailsPanel({
         </div>
       </div>
     </ScrollArea>
-  )
+  );
 }

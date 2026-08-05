@@ -1,21 +1,24 @@
 /** Collaboration mode's inbox button, on the prototype's mock threads. */
-import { IconSend } from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
+import { IconSend } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
 import {
   INBOX_PREVIEW_COUNT,
   InboxPopover,
   InboxPopoverHeader,
   inboxPopoverLink,
-} from "@/components/layout/inbox-popover"
-import { Avatar } from "@/components/ui/avatar"
-import { INBOX_ITEMS, UNREAD_COUNT } from "@/interactions/inbox/data/inbox.mock"
+} from "@/components/layout/inbox-popover";
+import { Avatar } from "@/components/ui/avatar";
+import {
+  INBOX_ITEMS,
+  UNREAD_COUNT,
+} from "@/interactions/inbox/data/inbox.mock";
 
 export function MockInboxPopover({
   active,
   side,
 }: {
-  active: boolean
-  side?: "right" | "bottom"
+  active: boolean;
+  side?: "right" | "bottom";
 }) {
   return (
     <InboxPopover active={active} side={side} waiting={UNREAD_COUNT > 0}>
@@ -75,5 +78,5 @@ export function MockInboxPopover({
         </>
       )}
     </InboxPopover>
-  )
+  );
 }

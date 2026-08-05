@@ -7,25 +7,25 @@
  * It sits against the pane's left edge, clear of the text rather than tracking
  * it, and hides itself when the pane is too narrow to spare the margin.
  */
-import { IconPhoto } from "@tabler/icons-react"
+import { IconPhoto } from "@tabler/icons-react";
 import {
   PreviewCard,
   PreviewCardContent,
   PreviewCardTrigger,
-} from "@/components/ui/preview-card"
-import { cn } from "@/lib/utils"
-import type { ConversationSection } from "../functions/conversation-sections.functions"
+} from "@/components/ui/preview-card";
+import { cn } from "@/lib/utils";
+import type { ConversationSection } from "../functions/conversation-sections.functions";
 
 export function ConversationSections({
   sections,
   activeId,
   onSelect,
 }: {
-  sections: ReadonlyArray<ConversationSection>
-  activeId: string | null
-  onSelect: (id: string) => void
+  sections: ReadonlyArray<ConversationSection>;
+  activeId: string | null;
+  onSelect: (id: string) => void;
 }) {
-  if (sections.length < 2) return null
+  if (sections.length < 2) return null;
 
   return (
     <nav
@@ -41,7 +41,7 @@ export function ConversationSections({
         />
       ))}
     </nav>
-  )
+  );
 }
 
 function SectionTick({
@@ -49,9 +49,9 @@ function SectionTick({
   active,
   onSelect,
 }: {
-  section: ConversationSection
-  active: boolean
-  onSelect: () => void
+  section: ConversationSection;
+  active: boolean;
+  onSelect: () => void;
 }) {
   return (
     <PreviewCard>
@@ -96,5 +96,5 @@ function SectionTick({
         )}
       </PreviewCardContent>
     </PreviewCard>
-  )
+  );
 }

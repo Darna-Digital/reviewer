@@ -7,15 +7,15 @@
  * the failures that actually happen: a wrong Content-Length, an unanswered
  * server request that wedges the handshake, a `didOpen` the server never sees.
  */
-import { Effect } from "effect"
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
-import { tmpdir } from "node:os"
-import { join } from "node:path"
-import { afterEach, beforeEach, describe, expect, it } from "vitest"
-import { connect, disposeConnections, languageIdOf } from "./lsp-client.ts"
-import type { LspServerConfig } from "./lsp-config.ts"
-import { pathToUri } from "./lsp-mapping.ts"
-import { makeLspProvider } from "./lsp-provider.ts"
+import { Effect } from "effect";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { connect, disposeConnections, languageIdOf } from "./lsp-client.ts";
+import type { LspServerConfig } from "./lsp-config.ts";
+import { pathToUri } from "./lsp-mapping.ts";
+import { makeLspProvider } from "./lsp-provider.ts";
 
 /**
  * A language server in one file: framed JSON-RPC over stdio, push diagnostics
@@ -102,22 +102,22 @@ process.stdin.on("data", (chunk) => {
     handle(JSON.parse(body))
   }
 })
-`
+`;
 
-const A_TXT = "const greeting = 1\n// BROKEN marker\n"
-const B_TXT = "line0\nline1\nline2\nline3\n  greeting used here\n"
+const A_TXT = "const greeting = 1\n// BROKEN marker\n";
+const B_TXT = "line0\nline1\nline2\nline3\n  greeting used here\n";
 
-let root: string
-let config: LspServerConfig
+let root: string;
+let config: LspServerConfig;
 
-const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect)
+const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect);
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "byconvo-lsp-"))
-  writeFileSync(join(root, "server.mjs"), FAKE_SERVER)
-  mkdirSync(join(root, "src"))
-  writeFileSync(join(root, "src/a.txt"), A_TXT)
-  writeFileSync(join(root, "src/b.txt"), B_TXT)
+  root = mkdtempSync(join(tmpdir(), "byconvo-lsp-"));
+  writeFileSync(join(root, "server.mjs"), FAKE_SERVER);
+  mkdirSync(join(root, "src"));
+  writeFileSync(join(root, "src/a.txt"), A_TXT);
+  writeFileSync(join(root, "src/b.txt"), B_TXT);
   config = {
     id: "fake",
     name: "Fake",
@@ -126,40 +126,40 @@ beforeEach(() => {
     args: [join(root, "server.mjs")],
     env: {},
     initializationOptions: null,
-  }
-})
+  };
+});
 
 afterEach(async () => {
   // Every test gets a fresh root, so cached connections would otherwise leak a
   // child process per test.
-  await disposeConnections()
-  rmSync(root, { recursive: true, force: true })
-})
+  await disposeConnections();
+  rmSync(root, { recursive: true, force: true });
+});
 
 describe("languageIdOf", () => {
   it("maps known extensions", () => {
-    expect(languageIdOf("src/main.rs")).toBe("rust")
-    expect(languageIdOf("src/App.tsx")).toBe("typescriptreact")
-  })
+    expect(languageIdOf("src/main.rs")).toBe("rust");
+    expect(languageIdOf("src/App.tsx")).toBe("typescriptreact");
+  });
   it("falls back to the extension itself", () => {
-    expect(languageIdOf("a.zig")).toBe("zig")
-    expect(languageIdOf("Makefile")).toBe("plaintext")
-  })
-})
+    expect(languageIdOf("a.zig")).toBe("zig");
+    expect(languageIdOf("Makefile")).toBe("plaintext");
+  });
+});
 
 describe("connect", () => {
   it("completes the handshake and exposes the server's capabilities", async () => {
-    const connection = await connect(config, root)
+    const connection = await connect(config, root);
     try {
-      expect(connection.capabilities["hoverProvider"]).toBe(true)
-      expect(connection.alive()).toBe(true)
+      expect(connection.capabilities["hoverProvider"]).toBe(true);
+      expect(connection.alive()).toBe(true);
     } finally {
-      await connection.dispose()
+      await connection.dispose();
     }
-  })
+  });
 
   it("answers a server-to-client request so the session keeps working", async () => {
-    const connection = await connect(config, root)
+    const connection = await connect(config, root);
     try {
       // The server sends `workspace/configuration` right after initialize. If
       // the client left it unanswered a strict server would stall; this request
@@ -167,75 +167,77 @@ describe("connect", () => {
       const hover = await connection.request("textDocument/hover", {
         textDocument: { uri: pathToUri(join(root, "src/a.txt")) },
         position: { line: 0, character: 8 },
-      })
-      expect(hover).toMatchObject({ contents: { value: "**hovered**" } })
+      });
+      expect(hover).toMatchObject({ contents: { value: "**hovered**" } });
     } finally {
-      await connection.dispose()
+      await connection.dispose();
     }
-  })
+  });
 
   it("reports whether a document actually changed", async () => {
-    const connection = await connect(config, root)
+    const connection = await connect(config, root);
     try {
-      const file = join(root, "src/a.txt")
-      expect(connection.syncDocument(file, A_TXT).changed).toBe(true)
-      expect(connection.syncDocument(file, A_TXT).changed).toBe(false)
-      expect(connection.syncDocument(file, `${A_TXT}more\n`).changed).toBe(true)
+      const file = join(root, "src/a.txt");
+      expect(connection.syncDocument(file, A_TXT).changed).toBe(true);
+      expect(connection.syncDocument(file, A_TXT).changed).toBe(false);
+      expect(connection.syncDocument(file, `${A_TXT}more\n`).changed).toBe(
+        true
+      );
     } finally {
-      await connection.dispose()
+      await connection.dispose();
     }
-  })
+  });
 
   it("receives pushed diagnostics for an opened document", async () => {
-    const connection = await connect(config, root)
+    const connection = await connect(config, root);
     try {
-      const { uri } = connection.syncDocument(join(root, "src/a.txt"), A_TXT)
-      const published = await connection.awaitDiagnostics(uri, 3_000)
-      expect(published).toHaveLength(1)
-      expect(connection.diagnosticsFor(uri)).toHaveLength(1)
+      const { uri } = connection.syncDocument(join(root, "src/a.txt"), A_TXT);
+      const published = await connection.awaitDiagnostics(uri, 3_000);
+      expect(published).toHaveLength(1);
+      expect(connection.diagnosticsFor(uri)).toHaveLength(1);
     } finally {
-      await connection.dispose()
+      await connection.dispose();
     }
-  })
+  });
 
   it("surfaces a server error response as a failure", async () => {
-    const connection = await connect(config, root)
+    const connection = await connect(config, root);
     try {
       await expect(
         connection.request("textDocument/rename", {})
-      ).rejects.toThrow(/not supported/)
+      ).rejects.toThrow(/not supported/);
     } finally {
-      await connection.dispose()
+      await connection.dispose();
     }
-  })
+  });
 
   it("fails to start a command that does not exist", async () => {
     await expect(
       connect({ ...config, command: join(root, "missing-binary") }, root)
-    ).rejects.toThrow()
-  })
+    ).rejects.toThrow();
+  });
 
   it("is no longer alive after dispose", async () => {
-    const connection = await connect(config, root)
-    await connection.dispose()
-    expect(connection.alive()).toBe(false)
-  })
-})
+    const connection = await connect(config, root);
+    await connection.dispose();
+    expect(connection.alive()).toBe(false);
+  });
+});
 
 describe("makeLspProvider", () => {
   it("describes itself from the configuration", () => {
-    const provider = makeLspProvider(config)
-    expect(provider.id).toBe("lsp:fake")
-    expect(provider.name).toBe("Fake")
-    expect(provider.transport).toBe("lsp-stdio")
-    expect(provider.patterns).toEqual([".txt"])
-  })
+    const provider = makeLspProvider(config);
+    expect(provider.id).toBe("lsp:fake");
+    expect(provider.name).toBe("Fake");
+    expect(provider.transport).toBe("lsp-stdio");
+    expect(provider.patterns).toEqual([".txt"]);
+  });
 
   it("reports the resolved binary", async () => {
-    const availability = await run(makeLspProvider(config).probe(root))
-    expect(availability.available).toBe(true)
-    expect(availability.detail).toBe(process.execPath)
-  })
+    const availability = await run(makeLspProvider(config).probe(root));
+    expect(availability.available).toBe(true);
+    expect(availability.detail).toBe(process.execPath);
+  });
 
   it("maps pushed diagnostics onto the port's shape", async () => {
     const diagnostics = await run(
@@ -244,7 +246,7 @@ describe("makeLspProvider", () => {
         path: "src/a.txt",
         contents: null,
       })
-    )
+    );
     expect(diagnostics).toEqual([
       {
         range: {
@@ -258,8 +260,8 @@ describe("makeLspProvider", () => {
         tags: ["unnecessary"],
         related: [],
       },
-    ])
-  })
+    ]);
+  });
 
   it("returns no diagnostics for a clean buffer", async () => {
     const diagnostics = await run(
@@ -268,9 +270,9 @@ describe("makeLspProvider", () => {
         path: "src/a.txt",
         contents: "all fine here\n",
       })
-    )
-    expect(diagnostics).toEqual([])
-  })
+    );
+    expect(diagnostics).toEqual([]);
+  });
 
   it("resolves a definition to a repository-relative path", async () => {
     const result = await run(
@@ -280,17 +282,17 @@ describe("makeLspProvider", () => {
         contents: null,
         position: { line: 0, character: 8 },
       })
-    )
-    expect(result.providerId).toBe("lsp:fake")
-    expect(result.targets).toHaveLength(1)
-    expect(result.targets[0].location.path).toBe("src/a.txt")
-    expect(result.targets[0].preview).toBe("const greeting = 1")
+    );
+    expect(result.providerId).toBe("lsp:fake");
+    expect(result.targets).toHaveLength(1);
+    expect(result.targets[0].location.path).toBe("src/a.txt");
+    expect(result.targets[0].preview).toBe("const greeting = 1");
     // The server sent a LocationLink, so the origin span is known.
     expect(result.origin).toEqual({
       start: { line: 0, character: 6 },
       end: { line: 0, character: 14 },
-    })
-  })
+    });
+  });
 
   it("labels the declaration among the references and drops foreign URIs", async () => {
     const result = await run(
@@ -300,20 +302,20 @@ describe("makeLspProvider", () => {
         contents: null,
         position: { line: 0, character: 8 },
       })
-    )
+    );
     // The `untitled:` entry is not a file and cannot be opened.
-    expect(result.references).toHaveLength(2)
+    expect(result.references).toHaveLength(2);
     expect(result.references[0]).toMatchObject({
       kind: "definition",
       location: { path: "src/a.txt" },
-    })
+    });
     expect(result.references[1]).toMatchObject({
       kind: "read",
       location: { path: "src/b.txt" },
       preview: "greeting used here",
-    })
-    expect(result.symbol).toBe("greeting")
-  })
+    });
+    expect(result.symbol).toBe("greeting");
+  });
 
   it("returns hover markdown", async () => {
     const result = await run(
@@ -323,29 +325,29 @@ describe("makeLspProvider", () => {
         contents: null,
         position: { line: 0, character: 8 },
       })
-    )
-    expect(result.contents).toBe("**hovered**")
+    );
+    expect(result.contents).toBe("**hovered**");
     expect(result.range).toEqual({
       start: { line: 0, character: 6 },
       end: { line: 0, character: 14 },
-    })
-  })
+    });
+  });
 
   it("stays quiet when the configured binary is missing", async () => {
     const missing = makeLspProvider({
       ...config,
       command: join(root, "not-installed"),
-    })
-    const availability = await run(missing.probe(root))
-    expect(availability.available).toBe(false)
-    expect(availability.detail).toContain("not found on PATH")
+    });
+    const availability = await run(missing.probe(root));
+    expect(availability.available).toBe(false);
+    expect(availability.detail).toContain("not found on PATH");
 
-    const document = { root, path: "src/a.txt", contents: null }
-    expect(await run(missing.diagnostics(document))).toEqual([])
+    const document = { root, path: "src/a.txt", contents: null };
+    expect(await run(missing.diagnostics(document))).toEqual([]);
     expect(
       await run(
         missing.hover({ ...document, position: { line: 0, character: 0 } })
       )
-    ).toEqual({ providerId: null, range: null, contents: "" })
-  })
-})
+    ).toEqual({ providerId: null, range: null, contents: "" });
+  });
+});

@@ -8,7 +8,7 @@
  * one silently returns nothing. Everything that has to touch rendered lines or
  * tokens goes through here instead.
  */
-import { DIFFS_TAG_NAME } from "@pierre/diffs"
+import { DIFFS_TAG_NAME } from "@pierre/diffs";
 
 /**
  * The node a view's own lines live under: its shadow root when it has one, and
@@ -16,7 +16,7 @@ import { DIFFS_TAG_NAME } from "@pierre/diffs"
  * drops the shadow DOM).
  */
 export const codeRootOf = (container: HTMLElement): ParentNode =>
-  container.shadowRoot ?? container
+  container.shadowRoot ?? container;
 
 /**
  * Every code root inside `container` — one per view, since a scroller may hold
@@ -26,12 +26,12 @@ export const codeRootOf = (container: HTMLElement): ParentNode =>
 export const codeRootsWithin = (
   container: ParentNode
 ): ReadonlyArray<ParentNode> => {
-  const roots: Array<ParentNode> = []
+  const roots: Array<ParentNode> = [];
   for (const host of container.querySelectorAll(DIFFS_TAG_NAME)) {
-    if (host.shadowRoot !== null) roots.push(host.shadowRoot)
+    if (host.shadowRoot !== null) roots.push(host.shadowRoot);
   }
-  return roots.length > 0 ? roots : [container]
-}
+  return roots.length > 0 ? roots : [container];
+};
 
 /** The first element matching `selector` in any code root under `container`. */
 export const queryInCode = (
@@ -39,11 +39,11 @@ export const queryInCode = (
   selector: string
 ): HTMLElement | null => {
   for (const root of codeRootsWithin(container)) {
-    const found = root.querySelector(selector)
-    if (found instanceof HTMLElement) return found
+    const found = root.querySelector(selector);
+    if (found instanceof HTMLElement) return found;
   }
-  return null
-}
+  return null;
+};
 
 /**
  * Viewport rectangle of the caret or selection inside an editable code view.
@@ -53,7 +53,7 @@ export const queryInCode = (
  * this, and the document selection is the fallback for anywhere that does not.
  */
 export const caretRect = (container: ParentNode): DOMRect | null => {
-  const roots = codeRootsWithin(container)
+  const roots = codeRootsWithin(container);
   for (const root of roots) {
     const selection =
       "getSelection" in root &&
@@ -61,22 +61,22 @@ export const caretRect = (container: ParentNode): DOMRect | null => {
         ? (
             root as unknown as { getSelection: () => Selection | null }
           ).getSelection()
-        : null
-    const rect = rectOfSelection(selection)
-    if (rect !== null) return rect
+        : null;
+    const rect = rectOfSelection(selection);
+    if (rect !== null) return rect;
   }
   return rectOfSelection(
     typeof document === "undefined" ? null : document.getSelection()
-  )
-}
+  );
+};
 
 const rectOfSelection = (selection: Selection | null): DOMRect | null => {
-  if (selection === null || selection.rangeCount === 0) return null
-  const range = selection.getRangeAt(0)
-  const rect = range.getBoundingClientRect()
+  if (selection === null || selection.rangeCount === 0) return null;
+  const range = selection.getRangeAt(0);
+  const rect = range.getBoundingClientRect();
   // A collapsed caret between two text nodes can measure as all zeros; the
   // client rects of the range still place it.
-  if (rect.width > 0 || rect.height > 0) return rect
-  const first = range.getClientRects()[0]
-  return first ?? null
-}
+  if (rect.width > 0 || rect.height > 0) return rect;
+  const first = range.getClientRects()[0];
+  return first ?? null;
+};

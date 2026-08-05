@@ -4,8 +4,8 @@
  * streaming behaviour (delta append, activity dedupe, turn settle) is
  * unit-testable without a socket.
  */
-import type { Chat } from "@byconvo/core/chats"
-import type { ChatWireEvent } from "../interfaces/chats.interfaces"
+import type { Chat } from "@byconvo/core/chats";
+import type { ChatWireEvent } from "../interfaces/chats.interfaces";
 
 export function applyChatEvent(
   chat: Chat | null,
@@ -15,31 +15,31 @@ export function applyChatEvent(
     case "turn-started":
       // The server sends the full updated chat (new user message + streaming
       // assistant placeholder, possibly a new title) — adopt it wholesale.
-      return event.chat
+      return event.chat;
     case "message-appended": {
       // A message queued while a turn runs — append it (deduped: a reconnect
       // can replay one already in the snapshot).
-      if (chat === null) return chat
-      if (chat.messages.some((m) => m.id === event.message.id)) return chat
-      return { ...chat, messages: [...chat.messages, event.message] }
+      if (chat === null) return chat;
+      if (chat.messages.some((m) => m.id === event.message.id)) return chat;
+      return { ...chat, messages: [...chat.messages, event.message] };
     }
     case "delta": {
-      if (chat === null) return chat
+      if (chat === null) return chat;
       return {
         ...chat,
         messages: chat.messages.map((m) =>
           m.id === event.messageId ? { ...m, text: m.text + event.text } : m
         ),
-      }
+      };
     }
     case "activity": {
-      if (chat === null) return chat
+      if (chat === null) return chat;
       // A reconnect can replay an activity already present in the snapshot.
-      if (chat.activities.some((a) => a.id === event.activity.id)) return chat
-      return { ...chat, activities: [...chat.activities, event.activity] }
+      if (chat.activities.some((a) => a.id === event.activity.id)) return chat;
+      return { ...chat, activities: [...chat.activities, event.activity] };
     }
     case "turn-completed": {
-      if (chat === null) return chat
+      if (chat === null) return chat;
       return {
         ...chat,
         updatedAt: event.turn.endedAt ?? chat.updatedAt,
@@ -49,11 +49,11 @@ export function applyChatEvent(
             : m
         ),
         latestTurn: event.turn,
-      }
+      };
     }
   }
 }
 
 /** Whether the chat currently has a running turn (drives send vs stop). */
 export const isChatRunning = (chat: Chat | null): boolean =>
-  chat?.latestTurn?.state === "running"
+  chat?.latestTurn?.state === "running";

@@ -8,14 +8,14 @@
  * a round trip. Everything TypeScript-specific stops here — mapping to wire
  * types lives in `ts-mapping.ts`, and the rest of the system only sees the port.
  */
-import * as Effect from "effect/Effect"
-import type * as TS from "typescript"
+import * as Effect from "effect/Effect";
+import type * as TS from "typescript";
 import {
   LanguageError,
   type DocumentRequest,
   type LanguageProvider,
   type PositionRequest,
-} from "@byconvo/core/ports/language-provider"
+} from "@byconvo/core/ports/language-provider";
 import {
   filterCompletions,
   identifierAt,
@@ -34,9 +34,9 @@ import {
   type ReferencesResult,
   type SymbolReference,
   type SymbolTarget,
-} from "@byconvo/core/language"
-import { loadTypeScript } from "./ts-module.ts"
-import { projectFor, type TsProject } from "./ts-project.ts"
+} from "@byconvo/core/language";
+import { loadTypeScript } from "./ts-module.ts";
+import { projectFor, type TsProject } from "./ts-project.ts";
 import {
   completionKind,
   hoverMarkdown,
@@ -47,9 +47,9 @@ import {
   toDiagnostic,
   toFileEdits,
   toRepoRelative,
-} from "./ts-mapping.ts"
+} from "./ts-mapping.ts";
 
-export const TYPESCRIPT_PROVIDER_ID = "typescript"
+export const TYPESCRIPT_PROVIDER_ID = "typescript";
 
 /** What the compiler analyses. `.d.ts` files match `.ts`. */
 const PATTERNS = [
@@ -61,23 +61,23 @@ const PATTERNS = [
   ".jsx",
   ".mjs",
   ".cjs",
-] as const
+] as const;
 
 const fail = (reason: string) =>
-  new LanguageError({ providerId: TYPESCRIPT_PROVIDER_ID, reason })
+  new LanguageError({ providerId: TYPESCRIPT_PROVIDER_ID, reason });
 
 const reasonOf = (error: unknown) =>
-  error instanceof Error ? error.message : String(error)
+  error instanceof Error ? error.message : String(error);
 
 /** Empty results, used when no TypeScript is installed for the repository. */
 const unsupported: {
-  readonly diagnostics: ReadonlyArray<Diagnostic>
-  readonly definition: DefinitionResult
-  readonly references: ReferencesResult
-  readonly hover: HoverResult
-  readonly completions: CompletionResult
-  readonly resolution: CompletionResolution
-  readonly codeActions: ReadonlyArray<CodeActionItem>
+  readonly diagnostics: ReadonlyArray<Diagnostic>;
+  readonly definition: DefinitionResult;
+  readonly references: ReferencesResult;
+  readonly hover: HoverResult;
+  readonly completions: CompletionResult;
+  readonly resolution: CompletionResolution;
+  readonly codeActions: ReadonlyArray<CodeActionItem>;
 } = {
   diagnostics: [],
   definition: { providerId: null, origin: null, targets: [] },
@@ -91,14 +91,14 @@ const unsupported: {
   },
   resolution: { detail: "", documentation: "", additionalEdits: [] },
   codeActions: [],
-}
+};
 
 interface OpenDocument {
-  readonly project: TsProject
-  readonly ts: TsProject["ts"]
-  readonly service: TS.LanguageService
-  readonly fileName: string
-  readonly text: string
+  readonly project: TsProject;
+  readonly ts: TsProject["ts"];
+  readonly service: TS.LanguageService;
+  readonly fileName: string;
+  readonly text: string;
 }
 
 /**
@@ -107,18 +107,18 @@ interface OpenDocument {
  * UI renders as no analysis rather than as an error.
  */
 const open = (request: DocumentRequest): OpenDocument | null => {
-  const fileName = toAbsolute(request.root, request.path)
-  const project = projectFor(request.root, fileName)
-  if (project === null) return null
-  project.openFile(fileName, request.contents)
+  const fileName = toAbsolute(request.root, request.path);
+  const project = projectFor(request.root, fileName);
+  if (project === null) return null;
+  project.openFile(fileName, request.contents);
   return {
     project,
     ts: project.ts,
     service: project.service,
     fileName,
     text: project.textOf(fileName) ?? request.contents ?? "",
-  }
-}
+  };
+};
 
 /** Run a compiler call, turning a thrown compiler error into a port failure. */
 const attempt = <A>(
@@ -128,19 +128,19 @@ const attempt = <A>(
   Effect.try({
     try: run,
     catch: (error) => fail(`${what} failed: ${reasonOf(error)}`),
-  })
+  });
 
 const relatedOf = (
   ts: TsProject["ts"],
   root: string,
   diagnostic: TS.Diagnostic
 ): ReadonlyArray<DiagnosticRelated> => {
-  const out: Array<DiagnosticRelated> = []
+  const out: Array<DiagnosticRelated> = [];
   for (const related of diagnostic.relatedInformation ?? []) {
-    const file = related.file
-    if (file === undefined) continue
-    const path = toRepoRelative(root, file.fileName)
-    if (path === null) continue
+    const file = related.file;
+    if (file === undefined) continue;
+    const path = toRepoRelative(root, file.fileName);
+    if (path === null) continue;
     out.push({
       location: {
         path,
@@ -150,23 +150,23 @@ const relatedOf = (
         }),
       },
       message: ts.flattenDiagnosticMessageText(related.messageText, " "),
-    })
+    });
   }
-  return out
-}
+  return out;
+};
 
 const diagnosticsOf = (
   document: OpenDocument,
   root: string
 ): ReadonlyArray<Diagnostic> => {
-  const { service, fileName, ts, text } = document
+  const { service, fileName, ts, text } = document;
   const collected: Array<TS.Diagnostic> = [
     ...service.getSyntacticDiagnostics(fileName),
     ...service.getSemanticDiagnostics(fileName),
     // TypeScript's weak warnings — unused locals, promotable JSDoc types. They
     // arrive as hints so the UI can fade them instead of flagging them.
     ...service.getSuggestionDiagnostics(fileName),
-  ]
+  ];
   return collected.map((diagnostic) =>
     toDiagnostic({
       // A diagnostic without a file (a bad compiler option) is anchored to the
@@ -181,74 +181,74 @@ const diagnosticsOf = (
       deprecated: diagnostic.reportsDeprecated === true,
       related: relatedOf(ts, root, diagnostic),
     })
-  )
-}
+  );
+};
 
 /** The identifier span a position resolves to, for highlighting the origin. */
 const boundSpan = (document: OpenDocument, offset: number): Range | null => {
   const bound = document.service.getDefinitionAndBoundSpan(
     document.fileName,
     offset
-  )
+  );
   return bound?.textSpan === undefined
     ? null
-    : spanToRange(document.text, bound.textSpan)
-}
+    : spanToRange(document.text, bound.textSpan);
+};
 
 const targetsOf = (
   document: OpenDocument,
   root: string,
   definitions: ReadonlyArray<TS.DefinitionInfo>
 ): ReadonlyArray<SymbolTarget> => {
-  const out: Array<SymbolTarget> = []
+  const out: Array<SymbolTarget> = [];
   for (const definition of definitions) {
-    const path = toRepoRelative(root, definition.fileName)
-    if (path === null) continue
-    const text = document.project.textOf(definition.fileName) ?? ""
+    const path = toRepoRelative(root, definition.fileName);
+    if (path === null) continue;
+    const text = document.project.textOf(definition.fileName) ?? "";
     out.push({
       location: { path, range: spanToRange(text, definition.textSpan) },
       name: definition.name,
       kind: definition.kind,
       containerName: definition.containerName,
       preview: spanPreview(text, definition.textSpan.start),
-    })
+    });
   }
-  return out
-}
+  return out;
+};
 
 const referencesOf = (
   document: OpenDocument,
   root: string,
   symbols: ReadonlyArray<TS.ReferencedSymbol>
 ): ReadonlyArray<SymbolReference> => {
-  const out: Array<SymbolReference> = []
+  const out: Array<SymbolReference> = [];
   for (const symbol of symbols) {
     for (const entry of symbol.references) {
-      const path = toRepoRelative(root, entry.fileName)
-      if (path === null) continue
-      const text = document.project.textOf(entry.fileName) ?? ""
+      const path = toRepoRelative(root, entry.fileName);
+      if (path === null) continue;
+      const text = document.project.textOf(entry.fileName) ?? "";
       out.push({
         location: { path, range: spanToRange(text, entry.textSpan) },
         kind: referenceKind(entry),
         preview: spanPreview(text, entry.textSpan.start),
-      })
+      });
     }
   }
-  return out
-}
+  return out;
+};
 
 /** Formatting the compiler applies to the edits it generates. */
 const FORMAT_OPTIONS: TS.FormatCodeSettings = {
   convertTabsToSpaces: true,
   indentSize: 2,
   tabSize: 2,
-}
+};
 
 /**
  * Diagnostics that mean "this name is not in scope", which is what makes an
  * import worth offering: cannot-find-name, and its did-you-mean variants.
  */
-const UNRESOLVED_NAME_CODES = new Set([2304, 2552, 2503, 2593, 2686])
+const UNRESOLVED_NAME_CODES = new Set([2304, 2552, 2503, 2593, 2686]);
 
 /** Preferences that turn on auto-import suggestions and snippet inserts. */
 const COMPLETION_PREFERENCES: TS.UserPreferences = {
@@ -256,7 +256,7 @@ const COMPLETION_PREFERENCES: TS.UserPreferences = {
   includeCompletionsForImportStatements: true,
   includeCompletionsWithInsertText: true,
   includeCompletionsWithSnippetText: false,
-}
+};
 
 /**
  * Collect the file changes of a code action, dropping any that fall outside the
@@ -267,17 +267,17 @@ const editsOf = (
   root: string,
   changes: ReadonlyArray<TS.FileTextChanges>
 ): ReadonlyArray<FileEdits> => {
-  const out: Array<FileEdits> = []
+  const out: Array<FileEdits> = [];
   for (const change of changes) {
-    const text = document.project.textOf(change.fileName) ?? ""
-    const mapped = toFileEdits(root, change.fileName, text, change.textChanges)
-    if (mapped !== null) out.push(mapped)
+    const text = document.project.textOf(change.fileName) ?? "";
+    const mapped = toFileEdits(root, change.fileName, text, change.textChanges);
+    if (mapped !== null) out.push(mapped);
   }
-  return out
-}
+  return out;
+};
 
 const positionOffset = (document: OpenDocument, request: PositionRequest) =>
-  offsetAt(document.text, request.position)
+  offsetAt(document.text, request.position);
 
 export const typescriptProvider: LanguageProvider = {
   id: TYPESCRIPT_PROVIDER_ID,
@@ -295,26 +295,26 @@ export const typescriptProvider: LanguageProvider = {
 
   probe: (root) =>
     Effect.sync(() => {
-      const { module, detail } = loadTypeScript(root)
-      return { available: module !== null, detail }
+      const { module, detail } = loadTypeScript(root);
+      return { available: module !== null, detail };
     }),
 
   diagnostics: (request) =>
     attempt("typescript diagnostics", () => {
-      const document = open(request)
-      if (document === null) return unsupported.diagnostics
-      return diagnosticsOf(document, request.root)
+      const document = open(request);
+      if (document === null) return unsupported.diagnostics;
+      return diagnosticsOf(document, request.root);
     }),
 
   definition: (request) =>
     attempt("typescript definition", () => {
-      const document = open(request)
-      if (document === null) return unsupported.definition
-      const offset = positionOffset(document, request)
+      const document = open(request);
+      if (document === null) return unsupported.definition;
+      const offset = positionOffset(document, request);
       const bound = document.service.getDefinitionAndBoundSpan(
         document.fileName,
         offset
-      )
+      );
       return {
         providerId: TYPESCRIPT_PROVIDER_ID,
         origin:
@@ -322,17 +322,17 @@ export const typescriptProvider: LanguageProvider = {
             ? null
             : spanToRange(document.text, bound.textSpan),
         targets: targetsOf(document, request.root, bound?.definitions ?? []),
-      }
+      };
     }),
 
   references: (request) =>
     attempt("typescript references", () => {
-      const document = open(request)
-      if (document === null) return unsupported.references
-      const offset = positionOffset(document, request)
-      const origin = boundSpan(document, offset)
+      const document = open(request);
+      if (document === null) return unsupported.references;
+      const offset = positionOffset(document, request);
+      const origin = boundSpan(document, offset);
       const symbols =
-        document.service.findReferences(document.fileName, offset) ?? []
+        document.service.findReferences(document.fileName, offset) ?? [];
       return {
         providerId: TYPESCRIPT_PROVIDER_ID,
         origin,
@@ -346,20 +346,20 @@ export const typescriptProvider: LanguageProvider = {
                 offsetAt(document.text, origin.end)
               ),
         references: referencesOf(document, request.root, symbols),
-      }
+      };
     }),
 
   hover: (request) =>
     attempt("typescript hover", () => {
-      const document = open(request)
-      if (document === null) return unsupported.hover
-      const offset = positionOffset(document, request)
+      const document = open(request);
+      if (document === null) return unsupported.hover;
+      const offset = positionOffset(document, request);
       const info = document.service.getQuickInfoAtPosition(
         document.fileName,
         offset
-      )
-      if (info === undefined) return unsupported.hover
-      const { ts } = document
+      );
+      if (info === undefined) return unsupported.hover;
+      const { ts } = document;
       return {
         providerId: TYPESCRIPT_PROVIDER_ID,
         range: spanToRange(document.text, info.textSpan),
@@ -371,19 +371,19 @@ export const typescriptProvider: LanguageProvider = {
             text: ts.displayPartsToString(tag.text),
           })),
         }),
-      }
+      };
     }),
 
   completions: (request) =>
     attempt("typescript completions", (): CompletionResult => {
-      const document = open(request)
-      if (document === null) return unsupported.completions
-      const offset = positionOffset(document, request)
+      const document = open(request);
+      if (document === null) return unsupported.completions;
+      const offset = positionOffset(document, request);
       const answered = document.service.getCompletionsAtPosition(
         document.fileName,
         offset,
         COMPLETION_PREFERENCES
-      )
+      );
       // A position with nothing to suggest is not the same as an unsupported
       // one: the caller shows an empty list rather than deciding the language
       // has no provider.
@@ -393,7 +393,7 @@ export const typescriptProvider: LanguageProvider = {
           replace: null,
           items: [],
           incomplete: false,
-        }
+        };
       }
 
       const items: Array<CompletionItem> = answered.entries.map((entry) => ({
@@ -406,12 +406,12 @@ export const typescriptProvider: LanguageProvider = {
         // to add an import — which `resolveCompletion` works out.
         source: entry.source ?? "",
         data: entry.data === undefined ? null : JSON.stringify(entry.data),
-      }))
+      }));
 
       // The compiler answers with everything in scope plus every exported
       // symbol it could import; the prefix is what makes that a usable list.
-      const filtered = filterCompletions(items, request.prefix)
-      const start = offset - request.prefix.length
+      const filtered = filterCompletions(items, request.prefix);
+      const start = offset - request.prefix.length;
       return {
         providerId: TYPESCRIPT_PROVIDER_ID,
         replace: {
@@ -420,14 +420,14 @@ export const typescriptProvider: LanguageProvider = {
         },
         items: filtered,
         incomplete: true,
-      }
+      };
     }),
 
   resolveCompletion: (request) =>
     attempt("typescript completion detail", (): CompletionResolution => {
-      const document = open(request)
-      if (document === null) return unsupported.resolution
-      const offset = positionOffset(document, request)
+      const document = open(request);
+      if (document === null) return unsupported.resolution;
+      const offset = positionOffset(document, request);
       const details = document.service.getCompletionEntryDetails(
         document.fileName,
         offset,
@@ -436,55 +436,55 @@ export const typescriptProvider: LanguageProvider = {
         request.source.length > 0 ? request.source : undefined,
         COMPLETION_PREFERENCES,
         request.data === null ? undefined : (JSON.parse(request.data) as never)
-      )
-      if (details === undefined) return unsupported.resolution
-      const { ts } = document
+      );
+      if (details === undefined) return unsupported.resolution;
+      const { ts } = document;
       return {
         detail: ts.displayPartsToString(details.displayParts),
         documentation: ts.displayPartsToString(details.documentation),
         additionalEdits: (details.codeActions ?? []).flatMap((action) =>
           editsOf(document, request.root, action.changes)
         ),
-      }
+      };
     }),
 
   codeActions: (request) =>
     attempt("typescript code actions", (): ReadonlyArray<CodeActionItem> => {
-      const document = open(request)
-      if (document === null) return unsupported.codeActions
-      const start = offsetAt(document.text, request.range.start)
-      const end = offsetAt(document.text, request.range.end)
+      const document = open(request);
+      if (document === null) return unsupported.codeActions;
+      const start = offsetAt(document.text, request.range.start);
+      const end = offsetAt(document.text, request.range.end);
 
       const overlapping = [
         ...document.service.getSemanticDiagnostics(document.fileName),
         ...document.service.getSyntacticDiagnostics(document.fileName),
       ].filter((diagnostic) => {
-        const from = diagnostic.start ?? 0
-        const to = from + (diagnostic.length ?? 0)
-        return from <= end && to >= start
-      })
-      if (overlapping.length === 0) return unsupported.codeActions
+        const from = diagnostic.start ?? 0;
+        const to = from + (diagnostic.length ?? 0);
+        return from <= end && to >= start;
+      });
+      if (overlapping.length === 0) return unsupported.codeActions;
 
-      const actions: Array<CodeActionItem> = []
+      const actions: Array<CodeActionItem> = [];
 
       // Imports come from the completion machinery rather than from
       // `getCodeFixesAtPosition`. The fix API keys off a span whose exact
       // shape varies with how the error was produced, whereas asking what
       // could complete to this identifier names every module it could come
       // from — which is also more useful, since it offers the choice.
-      const identifier = identifierAt(document.text, start)
+      const identifier = identifierAt(document.text, start);
       const unresolved = overlapping.some((diagnostic) =>
         UNRESOLVED_NAME_CODES.has(diagnostic.code)
-      )
+      );
       if (identifier !== null && unresolved) {
         const candidates = document.service.getCompletionsAtPosition(
           document.fileName,
           identifier.end,
           COMPLETION_PREFERENCES
-        )
+        );
         for (const entry of candidates?.entries ?? []) {
-          if (entry.name !== identifier.text) continue
-          if (entry.source === undefined || entry.source.length === 0) continue
+          if (entry.name !== identifier.text) continue;
+          if (entry.source === undefined || entry.source.length === 0) continue;
           const details = document.service.getCompletionEntryDetails(
             document.fileName,
             identifier.end,
@@ -493,13 +493,13 @@ export const typescriptProvider: LanguageProvider = {
             entry.source,
             COMPLETION_PREFERENCES,
             entry.data
-          )
+          );
           for (const action of details?.codeActions ?? []) {
             actions.push({
               title: action.description,
               kind: "quickfix.import",
               edits: editsOf(document, request.root, action.changes),
-            })
+            });
           }
         }
       }
@@ -512,21 +512,21 @@ export const typescriptProvider: LanguageProvider = {
         [...new Set(overlapping.map((diagnostic) => diagnostic.code))],
         FORMAT_OPTIONS,
         COMPLETION_PREFERENCES
-      )
+      );
       for (const fix of fixes) {
         actions.push({
           title: fix.description,
           kind: "quickfix",
           edits: editsOf(document, request.root, fix.changes),
-        })
+        });
       }
 
       // The import path and the fix API can find the same import.
-      const seen = new Set<string>()
+      const seen = new Set<string>();
       return actions.filter((action) => {
-        if (seen.has(action.title)) return false
-        seen.add(action.title)
-        return action.edits.length > 0
-      })
+        if (seen.has(action.title)) return false;
+        seen.add(action.title);
+        return action.edits.length > 0;
+      });
     }),
-}
+};

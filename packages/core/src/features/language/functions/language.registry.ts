@@ -8,14 +8,14 @@
 
 /** Matchable shape of a provider — the full port satisfies it structurally. */
 export interface PatternOwner {
-  readonly patterns: ReadonlyArray<string>
+  readonly patterns: ReadonlyArray<string>;
 }
 
 /** Basename of a POSIX or Windows path. */
 export const basenameOf = (path: string): string => {
-  const cut = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"))
-  return cut === -1 ? path : path.slice(cut + 1)
-}
+  const cut = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
+  return cut === -1 ? path : path.slice(cut + 1);
+};
 
 /**
  * Lowercased extension including the dot, or `""` when there is none.
@@ -23,11 +23,11 @@ export const basenameOf = (path: string): string => {
  * convention; `index.d.ts` reports `.ts`, which is what providers register.
  */
 export const extensionOf = (path: string): string => {
-  const name = basenameOf(path)
-  const dot = name.lastIndexOf(".")
-  if (dot <= 0) return ""
-  return name.slice(dot).toLowerCase()
-}
+  const name = basenameOf(path);
+  const dot = name.lastIndexOf(".");
+  if (dot <= 0) return "";
+  return name.slice(dot).toLowerCase();
+};
 
 /**
  * Whether `pattern` claims `path`. Patterns starting with `.` match the
@@ -35,12 +35,12 @@ export const extensionOf = (path: string): string => {
  * Matching is case-insensitive.
  */
 export const patternMatches = (pattern: string, path: string): boolean => {
-  const normalized = pattern.trim().toLowerCase()
-  if (normalized.length === 0) return false
+  const normalized = pattern.trim().toLowerCase();
+  if (normalized.length === 0) return false;
   return normalized.startsWith(".")
     ? extensionOf(path) === normalized
-    : basenameOf(path).toLowerCase() === normalized
-}
+    : basenameOf(path).toLowerCase() === normalized;
+};
 
 /**
  * The first provider claiming `path`, or null when none does. Order is
@@ -51,13 +51,13 @@ export const selectProvider = <P extends PatternOwner>(
   providers: ReadonlyArray<P>,
   path: string
 ): P | null => {
-  if (path.trim().length === 0) return null
+  if (path.trim().length === 0) return null;
   for (const provider of providers) {
     if (provider.patterns.some((pattern) => patternMatches(pattern, path)))
-      return provider
+      return provider;
   }
-  return null
-}
+  return null;
+};
 
 /**
  * Parse the `line`/`character` query params of a position request. Returns null
@@ -65,18 +65,18 @@ export const selectProvider = <P extends PatternOwner>(
  * domain failure instead of leaking a decode error.
  */
 export const parsePositionQuery = (query: {
-  readonly line: string
-  readonly character: string
+  readonly line: string;
+  readonly character: string;
 }): { readonly line: number; readonly character: number } | null => {
-  const line = parseIndex(query.line)
-  const character = parseIndex(query.character)
-  if (line === null || character === null) return null
-  return { line, character }
-}
+  const line = parseIndex(query.line);
+  const character = parseIndex(query.character);
+  if (line === null || character === null) return null;
+  return { line, character };
+};
 
 const parseIndex = (raw: string): number | null => {
-  const trimmed = raw.trim()
-  if (!/^\d+$/.test(trimmed)) return null
-  const value = Number(trimmed)
-  return Number.isSafeInteger(value) ? value : null
-}
+  const trimmed = raw.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+  const value = Number(trimmed);
+  return Number.isSafeInteger(value) ? value : null;
+};

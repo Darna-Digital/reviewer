@@ -1,12 +1,12 @@
-import * as Effect from "effect/Effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { Api } from "../../api.ts"
-import type { DiffFileTarget, LogQuery } from "@byconvo/core/repo"
-import { RepoService } from "@byconvo/core/repo"
+import * as Effect from "effect/Effect";
+import { HttpApiBuilder } from "effect/unstable/httpapi";
+import { Api } from "../../api.ts";
+import type { DiffFileTarget, LogQuery } from "@byconvo/core/repo";
+import { RepoService } from "@byconvo/core/repo";
 
-const ok = { ok: true } as const
+const ok = { ok: true } as const;
 const trimmed = (value: string | undefined): string | null =>
-  value !== undefined && value.trim().length > 0 ? value.trim() : null
+  value !== undefined && value.trim().length > 0 ? value.trim() : null;
 
 export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
   handlers
@@ -30,19 +30,19 @@ export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
         before: trimmed(query.before),
         path: trimmed(query.path),
         follow: query.follow === "1",
-      }
-      return Effect.flatMap(RepoService, (s) => s.log(q))
+      };
+      return Effect.flatMap(RepoService, (s) => s.log(q));
     })
     .handle("commitDetail", ({ params }) =>
       Effect.flatMap(RepoService, (s) => s.commitDetail(params.sha))
     )
     .handle("diff", ({ query }) =>
       Effect.flatMap(RepoService, (s) => {
-        if (query.commit !== undefined) return s.commitDiff(query.commit)
+        if (query.commit !== undefined) return s.commitDiff(query.commit);
         if (query.base !== undefined && query.head !== undefined) {
-          return s.rangeDiff(query.base, query.head)
+          return s.rangeDiff(query.base, query.head);
         }
-        return s.worktreeDiff
+        return s.worktreeDiff;
       })
     )
     .handle("diffFile", ({ query }) =>
@@ -52,8 +52,8 @@ export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
             ? { kind: "commit", sha: query.commit }
             : query.base !== undefined && query.head !== undefined
               ? { kind: "range", base: query.base, head: query.head }
-              : { kind: "worktree" }
-        return s.diffFileContents(target, query.path, query.prevPath ?? null)
+              : { kind: "worktree" };
+        return s.diffFileContents(target, query.path, query.prevPath ?? null);
       })
     )
     .handle("checkout", ({ payload }) =>
@@ -137,4 +137,4 @@ export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
         s.deleteBranch(payload.name, payload.force ?? false)
       ).pipe(Effect.as(ok))
     )
-)
+);

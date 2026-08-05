@@ -3,15 +3,15 @@
  * not re-list every task: the Tasks view does that, so this pane shows the
  * handful of tasks actually moving, and the project's docs and channels.
  */
-import { IconArrowRight, IconDots, IconHash } from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
-import { type CSSProperties, type ReactNode } from "react"
-import { AvatarStack } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar"
-import { PaneBody, PaneHeader } from "@/components/layout/pane-header"
-import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
+import { IconArrowRight, IconDots, IconHash } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
+import { type CSSProperties, type ReactNode } from "react";
+import { AvatarStack } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar";
+import { PaneBody, PaneHeader } from "@/components/layout/pane-header";
+import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
 import {
   projectChannels,
   projectDocs,
@@ -19,29 +19,29 @@ import {
   UNASSIGNED,
   type MockProject,
   type TaskStatus,
-} from "@/interactions/collaboration/data/collaboration.mock"
+} from "@/interactions/collaboration/data/collaboration.mock";
 
 /** Open work, most-moved first — the order "Up next" picks from. */
-const UP_NEXT_ORDER: ReadonlyArray<TaskStatus> = ["doing", "review", "todo"]
+const UP_NEXT_ORDER: ReadonlyArray<TaskStatus> = ["doing", "review", "todo"];
 
-const UP_NEXT_LIMIT = 5
+const UP_NEXT_LIMIT = 5;
 
 const ROW =
-  "flex h-9 items-center gap-2.5 rounded-lg px-2 outline-none hover:bg-elevate focus-visible:ring-3 focus-visible:ring-ring/30"
+  "flex h-9 items-center gap-2.5 rounded-lg px-2 outline-none hover:bg-elevate focus-visible:ring-3 focus-visible:ring-ring/30";
 
 function SectionHeading({
   title,
   action,
 }: {
-  title: string
-  action?: ReactNode
+  title: string;
+  action?: ReactNode;
 }) {
   return (
     <div className="mt-8 flex h-6 items-center gap-3">
       <h2 className="text-[0.8125rem] font-medium">{title}</h2>
       {action !== undefined && <div className="ml-auto">{action}</div>}
     </div>
-  )
+  );
 }
 
 function SeeAll({
@@ -49,9 +49,9 @@ function SeeAll({
   to,
   search,
 }: {
-  label: string
-  to: string
-  search: { view: "tasks" | "docs"; id: string }
+  label: string;
+  to: string;
+  search: { view: "tasks" | "docs"; id: string };
 }) {
   return (
     <Link
@@ -62,21 +62,21 @@ function SeeAll({
       {label}
       <IconArrowRight className="size-3.5 shrink-0" />
     </Link>
-  )
+  );
 }
 
 export function ProjectView({ project }: { project: MockProject }) {
-  const tasks = projectTasks(project.id)
-  const channels = projectChannels(project.id)
-  const docs = projectDocs(project.id)
+  const tasks = projectTasks(project.id);
+  const channels = projectChannels(project.id);
+  const docs = projectDocs(project.id);
 
   const open = UP_NEXT_ORDER.flatMap((status) =>
     tasks.filter((t) => t.status === status)
-  )
-  const upNext = open.slice(0, UP_NEXT_LIMIT)
+  );
+  const upNext = open.slice(0, UP_NEXT_LIMIT);
   const people = [
     ...new Set(tasks.map((t) => t.assignee).filter((a) => a !== UNASSIGNED)),
-  ]
+  ];
 
   return (
     <>
@@ -218,5 +218,5 @@ export function ProjectView({ project }: { project: MockProject }) {
         </PaneBody>
       </ScrollArea>
     </>
-  )
+  );
 }

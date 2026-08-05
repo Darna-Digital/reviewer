@@ -1,11 +1,11 @@
-import { defineConfig } from "vite"
-import { devtools } from "@tanstack/devtools-vite"
-import { tanstackStart } from "@tanstack/react-start/plugin/vite"
-import viteReact from "@vitejs/plugin-react"
-import tailwindcss from "@tailwindcss/vite"
+import { defineConfig } from "vite";
+import { devtools } from "@tanstack/devtools-vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import viteReact from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
 
-const SERVER_URL = process.env.BYCONVO_SERVER_URL ?? "http://localhost:41811"
-const isProduction = process.env.NODE_ENV === "production"
+const SERVER_URL = process.env.BYCONVO_SERVER_URL ?? "http://localhost:41811";
+const isProduction = process.env.NODE_ENV === "production";
 
 const config = defineConfig({
   base: isProduction ? "./" : "/",
@@ -35,6 +35,6 @@ const config = defineConfig({
       "/api": { target: SERVER_URL, changeOrigin: true, ws: true },
     },
   },
-})
+});
 
-export default config
+export default config;

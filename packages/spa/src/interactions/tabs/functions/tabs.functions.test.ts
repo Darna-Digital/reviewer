@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest"
-import type { TabsState } from "../interfaces/tabs.interfaces"
+import { describe, expect, it } from "vitest";
+import type { TabsState } from "../interfaces/tabs.interfaces";
 import {
   closeAll,
   closeOthers,
@@ -12,7 +12,7 @@ import {
   pruneTabs,
   syncActive,
   togglePin,
-} from "./tabs.functions"
+} from "./tabs.functions";
 
 /** Compact view of a strip: `path` for permanent, `~path` preview, `!path` pinned. */
 const show = (state: TabsState) =>
@@ -20,217 +20,217 @@ const show = (state: TabsState) =>
     .map(
       (tab) => `${tab.pinned ? "!" : ""}${tab.preview ? "~" : ""}${tab.path}`
     )
-    .join(" ")
+    .join(" ");
 
 describe("openTab", () => {
   it("previews a single click in a reusable slot", () => {
-    let state = openTab(EMPTY_TABS, "a")
-    state = openTab(state, "b")
-    state = openTab(state, "c")
-    expect(show(state)).toBe("~c")
-    expect(state.active).toBe("c")
-  })
+    let state = openTab(EMPTY_TABS, "a");
+    state = openTab(state, "b");
+    state = openTab(state, "c");
+    expect(show(state)).toBe("~c");
+    expect(state.active).toBe("c");
+  });
 
   it("keeps a file opened to stay", () => {
-    let state = openTab(EMPTY_TABS, "a", "permanent")
-    state = openTab(state, "b", "permanent")
-    expect(show(state)).toBe("a b")
-  })
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    expect(show(state)).toBe("a b");
+  });
 
   it("previews alongside the permanent tabs", () => {
-    let state = openTab(EMPTY_TABS, "a", "permanent")
-    state = openTab(state, "b")
-    state = openTab(state, "c")
-    expect(show(state)).toBe("a ~c")
-  })
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b");
+    state = openTab(state, "c");
+    expect(show(state)).toBe("a ~c");
+  });
 
   it("selects a file that is already open instead of duplicating it", () => {
-    let state = openTab(EMPTY_TABS, "a", "permanent")
-    state = openTab(state, "b", "permanent")
-    state = openTab(state, "a")
-    expect(show(state)).toBe("a b")
-    expect(state.active).toBe("a")
-  })
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    state = openTab(state, "a");
+    expect(show(state)).toBe("a b");
+    expect(state.active).toBe("a");
+  });
 
   it("promotes a previewed file when it is opened to stay", () => {
-    let state = openTab(EMPTY_TABS, "a")
-    expect(show(state)).toBe("~a")
-    state = openTab(state, "a", "permanent")
-    expect(show(state)).toBe("a")
-  })
+    let state = openTab(EMPTY_TABS, "a");
+    expect(show(state)).toBe("~a");
+    state = openTab(state, "a", "permanent");
+    expect(show(state)).toBe("a");
+  });
 
   it("never lets the preview slot take a pinned tab", () => {
-    let state = openTab(EMPTY_TABS, "a")
-    state = togglePin(state, "a")
-    state = openTab(state, "b")
-    expect(show(state)).toBe("!a ~b")
-  })
-})
+    let state = openTab(EMPTY_TABS, "a");
+    state = togglePin(state, "a");
+    state = openTab(state, "b");
+    expect(show(state)).toBe("!a ~b");
+  });
+});
 
 describe("orderTabs", () => {
   it("puts pinned tabs first, keeping insertion order within each group", () => {
-    let state = openTab(EMPTY_TABS, "a", "permanent")
-    state = openTab(state, "b", "permanent")
-    state = openTab(state, "c", "permanent")
-    state = togglePin(state, "c")
-    expect(show(state)).toBe("!c a b")
-  })
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    state = openTab(state, "c", "permanent");
+    state = togglePin(state, "c");
+    expect(show(state)).toBe("!c a b");
+  });
 
   it("puts an unpinned tab back where it was", () => {
-    let state = openTab(EMPTY_TABS, "a", "permanent")
-    state = openTab(state, "b", "permanent")
-    state = openTab(state, "c", "permanent")
-    state = togglePin(state, "c")
-    state = togglePin(state, "c")
-    expect(show(state)).toBe("a b c")
-  })
-})
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    state = openTab(state, "c", "permanent");
+    state = togglePin(state, "c");
+    state = togglePin(state, "c");
+    expect(show(state)).toBe("a b c");
+  });
+});
 
 describe("togglePin", () => {
   it("settles a preview tab, since it is now worth keeping", () => {
-    let state = openTab(EMPTY_TABS, "a")
-    state = togglePin(state, "a")
-    expect(show(state)).toBe("!a")
-    state = openTab(state, "b")
-    expect(show(state)).toBe("!a ~b")
-  })
-})
+    let state = openTab(EMPTY_TABS, "a");
+    state = togglePin(state, "a");
+    expect(show(state)).toBe("!a");
+    state = openTab(state, "b");
+    expect(show(state)).toBe("!a ~b");
+  });
+});
 
 describe("closeTab", () => {
   const three = () => {
-    let state = openTab(EMPTY_TABS, "a", "permanent")
-    state = openTab(state, "b", "permanent")
-    state = openTab(state, "c", "permanent")
-    return state
-  }
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    state = openTab(state, "c", "permanent");
+    return state;
+  };
 
   it("selects the tab after the one closed", () => {
-    const state = closeTab({ ...three(), active: "b" }, "b")
-    expect(state.active).toBe("c")
-    expect(show(state)).toBe("a c")
-  })
+    const state = closeTab({ ...three(), active: "b" }, "b");
+    expect(state.active).toBe("c");
+    expect(show(state)).toBe("a c");
+  });
 
   it("falls back to the tab before when the last one closes", () => {
-    const state = closeTab({ ...three(), active: "c" }, "c")
-    expect(state.active).toBe("b")
-  })
+    const state = closeTab({ ...three(), active: "c" }, "c");
+    expect(state.active).toBe("b");
+  });
 
   it("leaves the selection alone when another tab closes", () => {
-    const state = closeTab({ ...three(), active: "a" }, "c")
-    expect(state.active).toBe("a")
-  })
+    const state = closeTab({ ...three(), active: "a" }, "c");
+    expect(state.active).toBe("a");
+  });
 
   it("empties out", () => {
-    let state = openTab(EMPTY_TABS, "a", "permanent")
-    state = closeTab(state, "a")
-    expect(state).toEqual(EMPTY_TABS)
-  })
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = closeTab(state, "a");
+    expect(state).toEqual(EMPTY_TABS);
+  });
 
   it("ignores a path that is not open", () => {
-    const state = three()
-    expect(closeTab(state, "zz")).toBe(state)
-  })
+    const state = three();
+    expect(closeTab(state, "zz")).toBe(state);
+  });
 
   it("follows the strip's order, not insertion order", () => {
     // `c` is pinned, so it sits first; closing it lands on `a`, its neighbour
     // on screen.
-    let state = togglePin(three(), "c")
-    state = closeTab({ ...state, active: "c" }, "c")
-    expect(state.active).toBe("a")
-  })
-})
+    let state = togglePin(three(), "c");
+    state = closeTab({ ...state, active: "c" }, "c");
+    expect(state.active).toBe("a");
+  });
+});
 
 describe("closeOthers", () => {
   it("keeps the named tab and every pinned one", () => {
-    let state = openTab(EMPTY_TABS, "a", "permanent")
-    state = openTab(state, "b", "permanent")
-    state = openTab(state, "c", "permanent")
-    state = togglePin(state, "a")
-    expect(show(closeOthers(state, "b"))).toBe("!a b")
-  })
-})
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    state = openTab(state, "c", "permanent");
+    state = togglePin(state, "a");
+    expect(show(closeOthers(state, "b"))).toBe("!a b");
+  });
+});
 
 describe("closeAll", () => {
   it("keeps the pinned tabs", () => {
-    let state = openTab(EMPTY_TABS, "a", "permanent")
-    state = openTab(state, "b", "permanent")
-    state = togglePin(state, "a")
-    const closed = closeAll({ ...state, active: "b" })
-    expect(show(closed)).toBe("!a")
-    expect(closed.active).toBe("a")
-  })
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    state = togglePin(state, "a");
+    const closed = closeAll({ ...state, active: "b" });
+    expect(show(closed)).toBe("!a");
+    expect(closed.active).toBe("a");
+  });
 
   it("clears the selection when nothing is pinned", () => {
-    const state = closeAll(openTab(EMPTY_TABS, "a", "permanent"))
-    expect(state).toEqual(EMPTY_TABS)
-  })
-})
+    const state = closeAll(openTab(EMPTY_TABS, "a", "permanent"));
+    expect(state).toEqual(EMPTY_TABS);
+  });
+});
 
 describe("keepTab", () => {
   it("promotes a preview tab, as an edit does", () => {
-    const state = keepTab(openTab(EMPTY_TABS, "a"), "a")
-    expect(show(state)).toBe("a")
-  })
+    const state = keepTab(openTab(EMPTY_TABS, "a"), "a");
+    expect(show(state)).toBe("a");
+  });
   it("does nothing to a tab that is already permanent", () => {
-    const state = openTab(EMPTY_TABS, "a", "permanent")
-    expect(keepTab(state, "a")).toBe(state)
-  })
-})
+    const state = openTab(EMPTY_TABS, "a", "permanent");
+    expect(keepTab(state, "a")).toBe(state);
+  });
+});
 
 describe("neighbourTab", () => {
   const three = () => {
-    let state = openTab(EMPTY_TABS, "a", "permanent")
-    state = openTab(state, "b", "permanent")
-    state = openTab(state, "c", "permanent")
-    return state
-  }
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    state = openTab(state, "c", "permanent");
+    return state;
+  };
   it("steps forward and back", () => {
-    expect(neighbourTab({ ...three(), active: "a" }, 1)).toBe("b")
-    expect(neighbourTab({ ...three(), active: "b" }, -1)).toBe("a")
-  })
+    expect(neighbourTab({ ...three(), active: "a" }, 1)).toBe("b");
+    expect(neighbourTab({ ...three(), active: "b" }, -1)).toBe("a");
+  });
   it("wraps at both ends", () => {
-    expect(neighbourTab({ ...three(), active: "c" }, 1)).toBe("a")
-    expect(neighbourTab({ ...three(), active: "a" }, -1)).toBe("c")
-  })
+    expect(neighbourTab({ ...three(), active: "c" }, 1)).toBe("a");
+    expect(neighbourTab({ ...three(), active: "a" }, -1)).toBe("c");
+  });
   it("has nothing to step to in an empty strip", () => {
-    expect(neighbourTab(EMPTY_TABS, 1)).toBeNull()
-  })
-})
+    expect(neighbourTab(EMPTY_TABS, 1)).toBeNull();
+  });
+});
 
 describe("syncActive", () => {
   it("opens a file the rest of the app navigated to", () => {
-    const state = syncActive(EMPTY_TABS, "a")
-    expect(show(state)).toBe("~a")
-    expect(state.active).toBe("a")
-  })
+    const state = syncActive(EMPTY_TABS, "a");
+    expect(show(state)).toBe("~a");
+    expect(state.active).toBe("a");
+  });
   it("selects one that is already open without disturbing it", () => {
-    let state = openTab(EMPTY_TABS, "a", "permanent")
-    state = openTab(state, "b", "permanent")
-    const synced = syncActive({ ...state, active: "b" }, "a")
-    expect(show(synced)).toBe("a b")
-    expect(synced.active).toBe("a")
-  })
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    const synced = syncActive({ ...state, active: "b" }, "a");
+    expect(show(synced)).toBe("a b");
+    expect(synced.active).toBe("a");
+  });
   it("clears the selection when the file view closes", () => {
-    const state = syncActive(openTab(EMPTY_TABS, "a", "permanent"), null)
-    expect(state.active).toBeNull()
-    expect(show(state)).toBe("a")
-  })
+    const state = syncActive(openTab(EMPTY_TABS, "a", "permanent"), null);
+    expect(state.active).toBeNull();
+    expect(show(state)).toBe("a");
+  });
   it("is a no-op when nothing changed", () => {
-    const state = openTab(EMPTY_TABS, "a", "permanent")
-    expect(syncActive(state, "a")).toBe(state)
-  })
-})
+    const state = openTab(EMPTY_TABS, "a", "permanent");
+    expect(syncActive(state, "a")).toBe(state);
+  });
+});
 
 describe("pruneTabs", () => {
   it("drops tabs whose file is gone and reselects", () => {
-    let state = openTab(EMPTY_TABS, "a", "permanent")
-    state = openTab(state, "b", "permanent")
-    const pruned = pruneTabs({ ...state, active: "b" }, (path) => path === "a")
-    expect(show(pruned)).toBe("a")
-    expect(pruned.active).toBe("a")
-  })
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    const pruned = pruneTabs({ ...state, active: "b" }, (path) => path === "a");
+    expect(show(pruned)).toBe("a");
+    expect(pruned.active).toBe("a");
+  });
   it("is a no-op when every file still exists", () => {
-    const state = openTab(EMPTY_TABS, "a", "permanent")
-    expect(pruneTabs(state, () => true)).toBe(state)
-  })
-})
+    const state = openTab(EMPTY_TABS, "a", "permanent");
+    expect(pruneTabs(state, () => true)).toBe(state);
+  });
+});

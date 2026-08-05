@@ -8,28 +8,28 @@
  * Definition and references are one-shot fetches. They answer a click and move
  * the user somewhere, and a stale jump is worse than a slow one.
  */
-import { useQueryClient, type QueryClient } from "@tanstack/react-query"
-import { useMemo } from "react"
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 import {
   applyTextEdits,
   type Diagnostic,
   type FileEdits,
   type Position,
-} from "@byconvo/core/language"
-import { api, fetchClient } from "@/lib/api/client"
-import { createLanguageFunctions } from "../functions/language.functions"
-import type { LanguageFunctions } from "../interfaces/language.interfaces"
+} from "@byconvo/core/language";
+import { api, fetchClient } from "@/lib/api/client";
+import { createLanguageFunctions } from "../functions/language.functions";
+import type { LanguageFunctions } from "../interfaces/language.interfaces";
 
 /** How long diagnostics stay fresh; long enough to survive a scroll. */
-const DIAGNOSTICS_STALE_MS = 10_000
+const DIAGNOSTICS_STALE_MS = 10_000;
 
 const fail = (error: unknown, fallback: string): never => {
-  throw new Error((error as { reason?: string })?.reason ?? fallback)
-}
+  throw new Error((error as { reason?: string })?.reason ?? fallback);
+};
 
 /** Installed language providers and whether each can serve this repository. */
 export const useLanguageProviders = () =>
-  api.useQuery("get", "/api/language/providers", {}, { retry: false })
+  api.useQuery("get", "/api/language/providers", {}, { retry: false });
 
 /**
  * Diagnostics for `path`. Pass `contents` to analyse an unsaved buffer instead
@@ -63,7 +63,7 @@ export const useDiagnostics = (
       // retry; real failures show up in the providers list.
       retry: false,
     }
-  )
+  );
 
 const positionQuery = (path: string, position: Position) => ({
   params: {
@@ -73,10 +73,10 @@ const positionQuery = (path: string, position: Position) => ({
       character: String(position.character),
     },
   },
-})
+});
 
 /** How long a symbol's documentation stays fresh. */
-const HOVER_STALE_MS = 60_000
+const HOVER_STALE_MS = 60_000;
 
 /**
  * The language actions, bound to the real API. Each call carries its own path,
@@ -95,7 +95,7 @@ const HOVER_STALE_MS = 60_000
 export const useLanguageActions = (
   diagnostics: ReadonlyArray<Diagnostic>
 ): LanguageFunctions => {
-  const queryClient = useQueryClient()
+  const queryClient = useQueryClient();
   return useMemo(
     () =>
       createLanguageFunctions({
@@ -105,17 +105,17 @@ export const useLanguageActions = (
             const { data, error } = await fetchClient.GET(
               "/api/language/definition",
               positionQuery(filePath, position)
-            )
-            if (error) return fail(error, "could not resolve the definition")
-            return data
+            );
+            if (error) return fail(error, "could not resolve the definition");
+            return data;
           },
           references: async (filePath, position) => {
             const { data, error } = await fetchClient.GET(
               "/api/language/references",
               positionQuery(filePath, position)
-            )
-            if (error) return fail(error, "could not find usages")
-            return data
+            );
+            if (error) return fail(error, "could not find usages");
+            return data;
           },
           hover: (filePath, position) =>
             queryClient.fetchQuery({
@@ -130,17 +130,17 @@ export const useLanguageActions = (
                 const { data, error } = await fetchClient.GET(
                   "/api/language/hover",
                   positionQuery(filePath, position)
-                )
-                if (error) return fail(error, "could not read the symbol")
-                return data
+                );
+                if (error) return fail(error, "could not read the symbol");
+                return data;
               },
               staleTime: HOVER_STALE_MS,
             }),
         },
       }),
     [diagnostics, queryClient]
-  )
-}
+  );
+};
 
 /** Completions at a caret, narrowed by what has been typed so far. */
 export const requestCompletions = async (
@@ -157,10 +157,10 @@ export const requestCompletions = async (
       prefix,
       ...(contents === null ? {} : { contents }),
     },
-  })
-  if (error) return fail(error, "could not read completions")
-  return data
-}
+  });
+  if (error) return fail(error, "could not read completions");
+  return data;
+};
 
 /** Documentation and any import edits for the item about to be accepted. */
 export const resolveCompletion = async (
@@ -182,10 +182,10 @@ export const resolveCompletion = async (
         ...(contents === null ? {} : { contents }),
       },
     }
-  )
-  if (error) return fail(error, "could not resolve the completion")
-  return data
-}
+  );
+  if (error) return fail(error, "could not resolve the completion");
+  return data;
+};
 
 /**
  * Forget what a file's symbols said. Its contents have moved on, so both the
@@ -193,8 +193,8 @@ export const resolveCompletion = async (
  * exists.
  */
 export const forgetHovers = (queryClient: QueryClient, path: string): void => {
-  queryClient.removeQueries({ queryKey: ["language", "hover", path] })
-}
+  queryClient.removeQueries({ queryKey: ["language", "hover", path] });
+};
 
 /** Quick fixes covering a range — import resolution among them. */
 export const requestCodeActions = async (
@@ -209,10 +209,10 @@ export const requestCodeActions = async (
       end: range.end,
       ...(contents === null ? {} : { contents }),
     },
-  })
-  if (error) return fail(error, "could not read quick fixes")
-  return data
-}
+  });
+  if (error) return fail(error, "could not read quick fixes");
+  return data;
+};
 
 /**
  * Apply edits to files other than the open one, which the editor cannot reach.
@@ -224,12 +224,12 @@ export const writeFileEdits = async (
   for (const file of files) {
     const read = await fetchClient.GET("/api/file", {
       params: { query: { path: file.path } },
-    })
-    if (read.error || read.data === undefined) continue
-    const next = applyTextEdits(read.data.contents, file.edits)
-    if (next === read.data.contents) continue
+    });
+    if (read.error || read.data === undefined) continue;
+    const next = applyTextEdits(read.data.contents, file.edits);
+    if (next === read.data.contents) continue;
     await fetchClient.PUT("/api/file", {
       body: { path: file.path, contents: next },
-    })
+    });
   }
-}
+};

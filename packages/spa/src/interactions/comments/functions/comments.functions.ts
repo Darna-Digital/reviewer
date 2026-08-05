@@ -1,7 +1,7 @@
 import type {
   CommentsDependencies,
   CommentsFunctions,
-} from "../interfaces/comments.interfaces"
+} from "../interfaces/comments.interfaces";
 
 export function createCommentsFunctions(
   d: CommentsDependencies
@@ -13,7 +13,7 @@ export function createCommentsFunctions(
         side: location.side,
         lineNumber: location.lineNumber,
         body,
-      })
+      });
     }
     return d.sideEffects.addLocalComment({
       filePath: location.filePath,
@@ -21,33 +21,33 @@ export function createCommentsFunctions(
       lineNumber: location.lineNumber,
       body,
       target: ctx.targetKey,
-    })
-  }
+    });
+  };
 
   const update: CommentsFunctions["update"] = async (comment, body) => {
-    if (comment.source !== "local") return null
-    return d.sideEffects.updateLocalComment(comment.id, body)
-  }
+    if (comment.source !== "local") return null;
+    return d.sideEffects.updateLocalComment(comment.id, body);
+  };
 
   const remove: CommentsFunctions["remove"] = async (comment) => {
-    if (comment.source !== "local") return false
-    await d.sideEffects.deleteComment(comment.id)
-    return true
-  }
+    if (comment.source !== "local") return false;
+    await d.sideEffects.deleteComment(comment.id);
+    return true;
+  };
 
   const reply: CommentsFunctions["reply"] = async (
     selectedPull,
     comment,
     body
   ) => {
-    if (selectedPull === null || comment.source !== "github") return null
-    const commentId = Number(comment.id.replace(/^gh-/, ""))
-    if (!Number.isInteger(commentId)) return null
+    if (selectedPull === null || comment.source !== "github") return null;
+    const commentId = Number(comment.id.replace(/^gh-/, ""));
+    if (!Number.isInteger(commentId)) return null;
     const created = await d.sideEffects.replyPullComment(
       selectedPull.number,
       commentId,
       body
-    )
+    );
     // Anchor the reply to the parent's line so it lands in the same thread even
     // when GitHub reports a null position for an outdated diff.
     return {
@@ -55,8 +55,8 @@ export function createCommentsFunctions(
       filePath: comment.filePath,
       side: comment.side,
       lineNumber: comment.lineNumber,
-    }
-  }
+    };
+  };
 
-  return { submit, update, remove, reply }
+  return { submit, update, remove, reply };
 }

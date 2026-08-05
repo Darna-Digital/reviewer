@@ -1,10 +1,10 @@
-import * as Effect from "effect/Effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { Api } from "../../api.ts"
-import { killPtySession } from "../terminal/pty-socket.ts"
-import { ThreadsService } from "@byconvo/core/threads"
+import * as Effect from "effect/Effect";
+import { HttpApiBuilder } from "effect/unstable/httpapi";
+import { Api } from "../../api.ts";
+import { killPtySession } from "../terminal/pty-socket.ts";
+import { ThreadsService } from "@byconvo/core/threads";
 
-const ok = { ok: true } as const
+const ok = { ok: true } as const;
 
 export const ThreadsHandler = HttpApiBuilder.group(Api, "threads", (handlers) =>
   handlers
@@ -43,4 +43,4 @@ export const ThreadsHandler = HttpApiBuilder.group(Api, "threads", (handlers) =>
         Effect.as(ok)
       )
     )
-)
+);

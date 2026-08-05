@@ -3,32 +3,32 @@
  * `api.queryOptions(...)`; components use these hooks. Centralising them keeps
  * query keys consistent so mutations/invalidation hit the right caches.
  */
-import { useInfiniteQuery } from "@tanstack/react-query"
-import { useMemo } from "react"
-import { api, fetchClient } from "@/lib/api/client"
-import type { DiffTarget, LogQuery } from "@/lib/api/types"
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { api, fetchClient } from "@/lib/api/client";
+import type { DiffTarget, LogQuery } from "@/lib/api/types";
 
-export const useWorkspace = () => api.useQuery("get", "/api/workspace")
-export const useRepo = () => api.useQuery("get", "/api/repo")
-export const useFiles = () => api.useQuery("get", "/api/files")
-export const useStatus = () => api.useQuery("get", "/api/status")
-export const useBranches = () => api.useQuery("get", "/api/branches")
+export const useWorkspace = () => api.useQuery("get", "/api/workspace");
+export const useRepo = () => api.useQuery("get", "/api/repo");
+export const useFiles = () => api.useQuery("get", "/api/files");
+export const useStatus = () => api.useQuery("get", "/api/status");
+export const useBranches = () => api.useQuery("get", "/api/branches");
 export const useRemoteBranches = () =>
-  api.useQuery("get", "/api/remote-branches")
-export const useComments = () => api.useQuery("get", "/api/comments")
+  api.useQuery("get", "/api/remote-branches");
+export const useComments = () => api.useQuery("get", "/api/comments");
 
 /** The in-progress merge/rebase operation and its remaining conflicts. */
-export const useMergeState = () => api.useQuery("get", "/api/merge-state")
+export const useMergeState = () => api.useQuery("get", "/api/merge-state");
 
 // --- Threads / Chats / Docs / Tasks (workspace features) ------------------
 
-export const useThreads = () => api.useQuery("get", "/api/threads")
+export const useThreads = () => api.useQuery("get", "/api/threads");
 
 /** Agent chats (structured conversations, distinct from terminal threads). */
-export const useChats = () => api.useQuery("get", "/api/chats")
+export const useChats = () => api.useQuery("get", "/api/chats");
 
 /** The static provider/model catalog behind the composer's model picker. */
-export const useChatModels = () => api.useQuery("get", "/api/chats/models")
+export const useChatModels = () => api.useQuery("get", "/api/chats/models");
 
 /**
  * One chat's full record. The live view streams over a WebSocket instead; this
@@ -41,7 +41,7 @@ export const useChatPreview = (id: string, enabled: boolean) =>
     "/api/chats/{id}",
     { params: { path: { id } } },
     { enabled, staleTime: 15_000 }
-  )
+  );
 
 export const useThread = (id: string | null) =>
   api.useQuery(
@@ -49,9 +49,9 @@ export const useThread = (id: string | null) =>
     "/api/threads/{id}",
     { params: { path: { id: id ?? "" } } },
     { enabled: id !== null }
-  )
+  );
 
-export const useDocs = () => api.useQuery("get", "/api/docs")
+export const useDocs = () => api.useQuery("get", "/api/docs");
 
 export const useDoc = (id: string | null) =>
   api.useQuery(
@@ -59,13 +59,13 @@ export const useDoc = (id: string | null) =>
     "/api/docs/{id}",
     { params: { path: { id: id ?? "" } } },
     { enabled: id !== null }
-  )
+  );
 
-export const useTasks = () => api.useQuery("get", "/api/tasks/board")
+export const useTasks = () => api.useQuery("get", "/api/tasks/board");
 
 /** Saved Local Dev commands for the selected repo, with their runtime status. */
 export const useDevCommands = () =>
-  api.useQuery("get", "/api/local-dev/commands")
+  api.useQuery("get", "/api/local-dev/commands");
 
 /** The base/ours/theirs index stages of a conflicted file. */
 export const useConflictBlobs = (path: string | null) =>
@@ -74,10 +74,10 @@ export const useConflictBlobs = (path: string | null) =>
     "/api/conflict",
     { params: { query: { path: path ?? "" } } },
     { enabled: path !== null }
-  )
+  );
 
 export const usePulls = (enabled: boolean) =>
-  api.useQuery("get", "/api/github/pulls", {}, { enabled })
+  api.useQuery("get", "/api/github/pulls", {}, { enabled });
 
 export const useCommitDetail = (sha: string | null) =>
   api.useQuery(
@@ -87,7 +87,7 @@ export const useCommitDetail = (sha: string | null) =>
     {
       enabled: sha !== null,
     }
-  )
+  );
 
 export const usePullComments = (pullNumber: number | null) =>
   api.useQuery(
@@ -95,10 +95,10 @@ export const usePullComments = (pullNumber: number | null) =>
     "/api/github/pulls/{number}/comments",
     { params: { path: { number: String(pullNumber ?? "") } } },
     { enabled: pullNumber !== null }
-  )
+  );
 
 /** How many commits one page of history holds. */
-export const LOG_PAGE_SIZE = 150
+export const LOG_PAGE_SIZE = 150;
 
 const logSearchParams = (
   ref: string | null,
@@ -108,18 +108,18 @@ const logSearchParams = (
   const query: Record<string, string> = {
     ref: ref ?? "HEAD",
     limit: String(LOG_PAGE_SIZE),
-  }
-  if (skip > 0) query["skip"] = String(skip)
-  if (filters.author !== null) query["author"] = filters.author
-  if (filters.grep !== null) query["grep"] = filters.grep
-  if (filters.regex) query["regex"] = "1"
-  if (filters.caseSensitive) query["case"] = "1"
-  if (filters.after !== null) query["after"] = filters.after
-  if (filters.before !== null) query["before"] = filters.before
-  if (filters.path !== null) query["path"] = filters.path
-  if (filters.follow) query["follow"] = "1"
-  return query
-}
+  };
+  if (skip > 0) query["skip"] = String(skip);
+  if (filters.author !== null) query["author"] = filters.author;
+  if (filters.grep !== null) query["grep"] = filters.grep;
+  if (filters.regex) query["regex"] = "1";
+  if (filters.caseSensitive) query["case"] = "1";
+  if (filters.after !== null) query["after"] = filters.after;
+  if (filters.before !== null) query["before"] = filters.before;
+  if (filters.path !== null) query["path"] = filters.path;
+  if (filters.follow) query["follow"] = "1";
+  return query;
+};
 
 /**
  * The commit log, one page at a time. Each page fetches only the commits past
@@ -136,29 +136,29 @@ export const usePagedLog = (ref: string | null, filters: LogQuery) => {
     queryFn: async ({ pageParam }) => {
       const { data, error } = await fetchClient.GET("/api/log", {
         params: { query: logSearchParams(ref, filters, pageParam) },
-      })
-      if (error !== undefined) throw error
-      return data ?? []
+      });
+      if (error !== undefined) throw error;
+      return data ?? [];
     },
     // A short page is the end of the history; a full one may have more behind it.
     getNextPageParam: (lastPage, pages) =>
       lastPage.length < LOG_PAGE_SIZE
         ? undefined
         : pages.reduce((count, page) => count + page.length, 0),
-  })
+  });
 
   const commits = useMemo(
     () => (query.data?.pages ?? []).flat(),
     [query.data?.pages]
-  )
+  );
 
   return {
     commits,
     loading: query.isPending,
     hasMore: query.hasNextPage,
     loadMore: query.fetchNextPage,
-  }
-}
+  };
+};
 
 /** The right diff for the current target (worktree / commit / range / PR). */
 export const useDiffText = (target: DiffTarget | null) => {
@@ -169,7 +169,7 @@ export const useDiffText = (target: DiffTarget | null) => {
     {
       enabled: target?.kind === "worktree",
     }
-  )
+  );
   const commit = api.useQuery(
     "get",
     "/api/diff",
@@ -179,7 +179,7 @@ export const useDiffText = (target: DiffTarget | null) => {
       },
     },
     { enabled: target?.kind === "commit" }
-  )
+  );
   const range = api.useQuery(
     "get",
     "/api/diff",
@@ -192,7 +192,7 @@ export const useDiffText = (target: DiffTarget | null) => {
       },
     },
     { enabled: target?.kind === "range" }
-  )
+  );
   const pull = api.useQuery(
     "get",
     "/api/github/pulls/{number}/diff",
@@ -204,21 +204,21 @@ export const useDiffText = (target: DiffTarget | null) => {
       },
     },
     { enabled: target?.kind === "pull" }
-  )
+  );
 
   switch (target?.kind) {
     case "worktree":
-      return worktree
+      return worktree;
     case "commit":
-      return commit
+      return commit;
     case "range":
-      return range
+      return range;
     case "pull":
-      return pull
+      return pull;
     default:
-      return worktree
+      return worktree;
   }
-}
+};
 
 export const useFileBytes = (path: string | null) =>
   api.useQuery(
@@ -226,7 +226,7 @@ export const useFileBytes = (path: string | null) =>
     "/api/file/raw",
     { params: { query: { path: path ?? "" } } },
     { enabled: path !== null, retry: false }
-  )
+  );
 
 export const useFile = (path: string | null) =>
   api.useQuery(
@@ -237,4 +237,4 @@ export const useFile = (path: string | null) =>
     // path (e.g. a staged-then-deleted "AD" ghost that has no worktree content)
     // just hangs the viewer on "Loading", so fail fast and surface the error.
     { enabled: path !== null, retry: false }
-  )
+  );

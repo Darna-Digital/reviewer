@@ -8,15 +8,15 @@
  * as a turn streams. Keeping every mutation here means there is exactly one
  * shape of the file, whichever side writes.
  */
-import { randomUUID } from "node:crypto"
+import { randomUUID } from "node:crypto";
 import {
   mkdirSync,
   readFileSync,
   renameSync,
   rmSync,
   writeFileSync,
-} from "node:fs"
-import * as Schema from "effect/Schema"
+} from "node:fs";
+import * as Schema from "effect/Schema";
 import {
   Chat,
   type ChatActivity,
@@ -24,27 +24,27 @@ import {
   type ChatTurn,
   DEFAULT_CHAT_TITLE,
   titleFromPrompt,
-} from "@byconvo/core/chats"
+} from "@byconvo/core/chats";
 
-const ChatsFile = Schema.Array(Chat)
-const decodeChatsFile = Schema.decodeUnknownSync(ChatsFile)
+const ChatsFile = Schema.Array(Chat);
+const decodeChatsFile = Schema.decodeUnknownSync(ChatsFile);
 
-const chatsPath = (repoPath: string) => `${repoPath}/.byconvo/chats.json`
+const chatsPath = (repoPath: string) => `${repoPath}/.byconvo/chats.json`;
 
 export const nextChatId = (prefix: string): string =>
-  `${prefix}-${randomUUID()}`
+  `${prefix}-${randomUUID()}`;
 
 export const readChats = (repoPath: string): ReadonlyArray<Chat> => {
   try {
-    const raw = readFileSync(chatsPath(repoPath), "utf8")
-    return decodeChatsFile(JSON.parse(raw))
+    const raw = readFileSync(chatsPath(repoPath), "utf8");
+    return decodeChatsFile(JSON.parse(raw));
   } catch (error) {
     if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return []
+      return [];
     }
-    throw error
+    throw error;
   }
-}
+};
 
 /**
  * A torn `chats.json` fails to decode for *every* chat, and a streaming turn
@@ -55,20 +55,20 @@ export const writeChats = (
   repoPath: string,
   chats: ReadonlyArray<Chat>
 ): void => {
-  mkdirSync(`${repoPath}/.byconvo`, { recursive: true })
-  const target = chatsPath(repoPath)
-  const beside = `${target}.${process.pid}.tmp`
+  mkdirSync(`${repoPath}/.byconvo`, { recursive: true });
+  const target = chatsPath(repoPath);
+  const beside = `${target}.${process.pid}.tmp`;
   try {
-    writeFileSync(beside, `${JSON.stringify(chats, null, 2)}\n`)
-    renameSync(beside, target)
+    writeFileSync(beside, `${JSON.stringify(chats, null, 2)}\n`);
+    renameSync(beside, target);
   } catch (error) {
-    rmSync(beside, { force: true })
-    throw error
+    rmSync(beside, { force: true });
+    throw error;
   }
-}
+};
 
 export const findChat = (repoPath: string, id: string): Chat | undefined =>
-  readChats(repoPath).find((c) => c.id === id)
+  readChats(repoPath).find((c) => c.id === id);
 
 /** Apply `patch` to one chat and persist; returns the updated chat or
  * undefined when the id is gone (e.g. deleted mid-turn — the write is
@@ -78,32 +78,32 @@ export const patchChat = (
   id: string,
   patch: (chat: Chat) => Chat
 ): Chat | undefined => {
-  const chats = readChats(repoPath)
-  const existing = chats.find((c) => c.id === id)
-  if (existing === undefined) return undefined
-  const updated = patch(existing)
+  const chats = readChats(repoPath);
+  const existing = chats.find((c) => c.id === id);
+  if (existing === undefined) return undefined;
+  const updated = patch(existing);
   writeChats(
     repoPath,
     chats.map((c) => (c.id === id ? updated : c))
-  )
-  return updated
-}
+  );
+  return updated;
+};
 
 // --- Turn-progress mutations (used by the runtime while a turn streams) -----
 
 const titleFromFirstPrompt = (current: string, prompt: string): string => {
-  if (current !== DEFAULT_CHAT_TITLE) return current
-  const seeded = titleFromPrompt(prompt)
-  return seeded.length > 0 ? seeded : current
-}
+  if (current !== DEFAULT_CHAT_TITLE) return current;
+  const seeded = titleFromPrompt(prompt);
+  return seeded.length > 0 ? seeded : current;
+};
 
 export const appendTurnStart = (
   repoPath: string,
   chatId: string,
   input: {
-    readonly turn: ChatTurn
-    readonly userMessage: ChatMessage
-    readonly assistantMessage: ChatMessage
+    readonly turn: ChatTurn;
+    readonly userMessage: ChatMessage;
+    readonly assistantMessage: ChatMessage;
   }
 ): Chat | undefined =>
   patchChat(repoPath, chatId, (chat) => ({
@@ -112,7 +112,7 @@ export const appendTurnStart = (
     updatedAt: input.turn.startedAt,
     messages: [...chat.messages, input.userMessage, input.assistantMessage],
     latestTurn: input.turn,
-  }))
+  }));
 
 /** Append a user message queued while a turn was running. It shows in the
  * timeline immediately (marked pending) and is picked up by the next turn. */
@@ -125,7 +125,7 @@ export const appendPendingMessage = (
     ...chat,
     updatedAt: userMessage.createdAt,
     messages: [...chat.messages, userMessage],
-  }))
+  }));
 
 /** Start a turn that consumes already-persisted pending messages: attach them
  * to the new turn (clearing their pending flag) and add the streaming assistant
@@ -134,9 +134,9 @@ export const startPendingTurn = (
   repoPath: string,
   chatId: string,
   input: {
-    readonly turn: ChatTurn
-    readonly assistantMessage: ChatMessage
-    readonly consumeIds: ReadonlyArray<string>
+    readonly turn: ChatTurn;
+    readonly assistantMessage: ChatMessage;
+    readonly consumeIds: ReadonlyArray<string>;
   }
 ): Chat | undefined =>
   patchChat(repoPath, chatId, (chat) => ({
@@ -151,7 +151,7 @@ export const startPendingTurn = (
       input.assistantMessage,
     ],
     latestTurn: input.turn,
-  }))
+  }));
 
 export const appendActivity = (
   repoPath: string,
@@ -162,7 +162,7 @@ export const appendActivity = (
     ...chat,
     updatedAt: activity.createdAt,
     activities: [...chat.activities, activity],
-  }))
+  }));
 
 /** Until this lands, the reply exists only in the parser's closure — a crash
  * loses every token the user already watched arrive. */
@@ -177,7 +177,7 @@ export const saveStreamingText = (
     messages: chat.messages.map((m) =>
       m.id === messageId ? { ...m, text } : m
     ),
-  }))
+  }));
 
 const asInterrupted = (
   chat: Chat,
@@ -197,7 +197,7 @@ const asInterrupted = (
           endedAt,
           errorMessage,
         },
-      }
+      };
 
 /**
  * Whatever text was flushed stays as the reply; the turn becomes `interrupted`
@@ -209,44 +209,44 @@ export const settleStaleTurns = (
   isLive: (chatId: string) => boolean,
   errorMessage: string
 ): ReadonlyArray<string> => {
-  const chats = readChats(repoPath)
+  const chats = readChats(repoPath);
   const staleIds = new Set(
     chats
       .filter(
         (chat) => chat.latestTurn?.state === "running" && !isLive(chat.id)
       )
       .map((chat) => chat.id)
-  )
-  if (staleIds.size === 0) return []
-  const endedAt = new Date().toISOString()
+  );
+  if (staleIds.size === 0) return [];
+  const endedAt = new Date().toISOString();
   writeChats(
     repoPath,
     chats.map((chat) =>
       staleIds.has(chat.id) ? asInterrupted(chat, endedAt, errorMessage) : chat
     )
-  )
-  return [...staleIds]
-}
+  );
+  return [...staleIds];
+};
 
 export const saveSessionId = (
   repoPath: string,
   chatId: string,
   sessionId: string
 ): Chat | undefined =>
-  patchChat(repoPath, chatId, (chat) => ({ ...chat, sessionId }))
+  patchChat(repoPath, chatId, (chat) => ({ ...chat, sessionId }));
 
 /** Settle a turn: final assistant text, streaming off, turn state persisted. */
 export const completeTurn = (
   repoPath: string,
   chatId: string,
   input: {
-    readonly turnId: string
-    readonly assistantMessageId: string
-    readonly text: string
-    readonly state: ChatTurn["state"]
-    readonly errorMessage: string | null
-    readonly totalCostUsd: number | null
-    readonly endedAt: string
+    readonly turnId: string;
+    readonly assistantMessageId: string;
+    readonly text: string;
+    readonly state: ChatTurn["state"];
+    readonly errorMessage: string | null;
+    readonly totalCostUsd: number | null;
+    readonly endedAt: string;
   }
 ): Chat | undefined =>
   patchChat(repoPath, chatId, (chat) => ({
@@ -267,4 +267,4 @@ export const completeTurn = (
             totalCostUsd: input.totalCostUsd,
           }
         : chat.latestTurn,
-  }))
+  }));

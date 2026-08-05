@@ -10,38 +10,38 @@ import {
   IconGitBranch,
   IconSearch,
   IconX,
-} from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
-import { useMemo, useState } from "react"
-import { agentIcon } from "@/interactions/threads/components/agent-icons"
-import { Button, buttonVariants } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+} from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { agentIcon } from "@/interactions/threads/components/agent-icons";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
+} from "@/components/ui/popover";
 import {
   PreviewCard,
   PreviewCardContent,
   PreviewCardTrigger,
-} from "@/components/ui/preview-card"
-import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignment.functions"
-import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents"
-import type { ChatProviderKind, ChatSummary } from "@byconvo/core/chats"
-import { timeAgo } from "@/lib/relative-time"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/preview-card";
+import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignment.functions";
+import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents";
+import type { ChatProviderKind, ChatSummary } from "@byconvo/core/chats";
+import { timeAgo } from "@/lib/relative-time";
+import { cn } from "@/lib/utils";
 
 /** Agent CLIs that can be assigned to chat flows (excludes the plain shell). */
 const ASSIGNABLE = AGENTS.filter(
   (agent): agent is (typeof AGENTS)[number] & { kind: ChatProviderKind } =>
     isChatProviderKind(agent.kind)
-)
+);
 
 /** Where the review comments get handed off. */
 export type AssignTarget =
   | { kind: "new"; agent: ChatProviderKind }
-  | { kind: "existing"; chatId: string }
+  | { kind: "existing"; chatId: string };
 
 export function ReviewAssignBar({
   count,
@@ -49,25 +49,25 @@ export function ReviewAssignBar({
   onAssign,
   onDismiss,
 }: {
-  count: number
-  chats: ReadonlyArray<ChatSummary>
-  onAssign: (target: AssignTarget) => Promise<void> | void
-  onDismiss: () => void
+  count: number;
+  chats: ReadonlyArray<ChatSummary>;
+  onAssign: (target: AssignTarget) => Promise<void> | void;
+  onDismiss: () => void;
 }) {
   const [target, setTarget] = useState<AssignTarget>({
     kind: "new",
     agent: "claude",
-  })
-  const [query, setQuery] = useState("")
-  const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
+  });
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const q = query.trim().toLowerCase()
+  const q = query.trim().toLowerCase();
   const agents = useMemo(
     () =>
       ASSIGNABLE.filter((a) => q === "" || a.label.toLowerCase().includes(q)),
     [q]
-  )
+  );
   const sessions = useMemo(
     () =>
       chats.filter(
@@ -77,35 +77,35 @@ export function ReviewAssignBar({
           chat.branch.toLowerCase().includes(q)
       ),
     [chats, q]
-  )
+  );
 
   const selectedChat =
     target.kind === "existing"
       ? (chats.find((c) => c.id === target.chatId) ?? null)
-      : null
+      : null;
   const TargetIcon = agentIcon(
     target.kind === "new" ? target.agent : (selectedChat?.provider ?? "claude")
-  )
+  );
   const targetLabel =
     target.kind === "new"
       ? `New ${agentLabel(target.agent)} chat`
-      : (selectedChat?.title ?? "Session")
+      : (selectedChat?.title ?? "Session");
 
   const pick = (next: AssignTarget) => {
-    setTarget(next)
-    setQuery("")
-    setOpen(false)
-  }
+    setTarget(next);
+    setQuery("");
+    setOpen(false);
+  };
 
   const assign = async () => {
-    if (busy) return
-    setBusy(true)
+    if (busy) return;
+    setBusy(true);
     try {
-      await onAssign(target)
+      await onAssign(target);
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
-  }
+  };
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center">
@@ -153,8 +153,8 @@ export function ReviewAssignBar({
                 </div>
               )}
               {agents.map((a) => {
-                const Icon = agentIcon(a.kind)
-                const active = target.kind === "new" && target.agent === a.kind
+                const Icon = agentIcon(a.kind);
+                const active = target.kind === "new" && target.agent === a.kind;
                 return (
                   <button
                     key={a.kind}
@@ -168,7 +168,7 @@ export function ReviewAssignBar({
                     <Icon className="size-4 shrink-0 text-muted-foreground" />
                     <span className="truncate">{a.label}</span>
                   </button>
-                )
+                );
               })}
               {sessions.length > 0 && (
                 <div className="px-2 pt-2 pb-1 text-xs text-muted-foreground">
@@ -217,7 +217,7 @@ export function ReviewAssignBar({
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
 /**
@@ -230,11 +230,11 @@ function SessionRow({
   active,
   onSelect,
 }: {
-  chat: ChatSummary
-  active: boolean
-  onSelect: () => void
+  chat: ChatSummary;
+  active: boolean;
+  onSelect: () => void;
 }) {
-  const Icon = agentIcon(chat.provider)
+  const Icon = agentIcon(chat.provider);
 
   return (
     <PreviewCard>
@@ -281,5 +281,5 @@ function SessionRow({
         </div>
       </PreviewCardContent>
     </PreviewCard>
-  )
+  );
 }

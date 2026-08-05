@@ -4,19 +4,19 @@
  * the native shell and the app's own toolbar in the browser, which has no
  * window bar to put it on.
  */
-import { IconLayoutSidebar } from "@tabler/icons-react"
-import { Button } from "@/components/ui/button"
+import { IconLayoutSidebar } from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/tooltip";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 export function SidebarToggle({ className }: { className?: string }) {
-  const { sidebarVisible } = useUiPrefs()
-  const label = sidebarVisible ? "Hide sidebar" : "Show sidebar"
+  const { sidebarVisible } = useUiPrefs();
+  const label = sidebarVisible ? "Hide sidebar" : "Show sidebar";
 
   return (
     <Tooltip>
@@ -35,5 +35,5 @@ export function SidebarToggle({ className }: { className?: string }) {
       </TooltipTrigger>
       <TooltipContent side="bottom">{label}</TooltipContent>
     </Tooltip>
-  )
+  );
 }

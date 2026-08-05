@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
   return (
@@ -15,7 +15,7 @@ function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
       )}
       {...props}
     />
-  )
+  );
 }
 
 function KbdGroup({ className, ...props }: React.ComponentProps<"span">) {
@@ -28,7 +28,7 @@ function KbdGroup({ className, ...props }: React.ComponentProps<"span">) {
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { Kbd, KbdGroup }
+export { Kbd, KbdGroup };

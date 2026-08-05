@@ -20,32 +20,32 @@ import type {
   Position,
   SymbolReference,
   SymbolTarget,
-} from "@byconvo/core/language"
+} from "@byconvo/core/language";
 
 /** A token as `@pierre/diffs` reports it, without its DOM element. */
 export interface TokenSpan {
   /** One-based, as the editor displays it. */
-  readonly lineNumber: number
+  readonly lineNumber: number;
   /** Zero-based column of the token's first character. */
-  readonly lineCharStart: number
+  readonly lineCharStart: number;
   /** Zero-based column just past the token's last character. */
-  readonly lineCharEnd: number
-  readonly tokenText: string
+  readonly lineCharEnd: number;
+  readonly tokenText: string;
 }
 
 /** Why a token is marked, and what to say about it on hover. */
 export interface DiagnosticMarker {
-  readonly severity: DiagnosticSeverity
-  readonly tags: ReadonlyArray<DiagnosticTag>
+  readonly severity: DiagnosticSeverity;
+  readonly tags: ReadonlyArray<DiagnosticTag>;
   /** Every diagnostic touching the token, most severe first. */
-  readonly diagnostics: ReadonlyArray<Diagnostic>
+  readonly diagnostics: ReadonlyArray<Diagnostic>;
 }
 
 export interface DiagnosticCounts {
-  readonly errors: number
-  readonly warnings: number
-  readonly infos: number
-  readonly hints: number
+  readonly errors: number;
+  readonly warnings: number;
+  readonly infos: number;
+  readonly hints: number;
 }
 
 /** What clicking a token resolved to. */
@@ -54,32 +54,32 @@ export type NavigationOutcome =
   | { readonly kind: "open"; readonly target: SymbolTarget }
   | { readonly kind: "choose"; readonly targets: ReadonlyArray<SymbolTarget> }
   | {
-      readonly kind: "usages"
-      readonly symbol: string
-      readonly references: ReadonlyArray<SymbolReference>
-    }
+      readonly kind: "usages";
+      readonly symbol: string;
+      readonly references: ReadonlyArray<SymbolReference>;
+    };
 
 export interface LanguageDependencies {
   data: {
     /** Diagnostics for the file on screen. */
-    readonly diagnostics: ReadonlyArray<Diagnostic>
-  }
+    readonly diagnostics: ReadonlyArray<Diagnostic>;
+  };
   sideEffects: {
     readonly definition: (
       path: string,
       position: Position
     ) => Promise<{
-      readonly targets: ReadonlyArray<SymbolTarget>
-    }>
+      readonly targets: ReadonlyArray<SymbolTarget>;
+    }>;
     readonly references: (
       path: string,
       position: Position
     ) => Promise<{
-      readonly symbol: string | null
-      readonly references: ReadonlyArray<SymbolReference>
-    }>
-    readonly hover: (path: string, position: Position) => Promise<HoverResult>
-  }
+      readonly symbol: string | null;
+      readonly references: ReadonlyArray<SymbolReference>;
+    }>;
+    readonly hover: (path: string, position: Position) => Promise<HoverResult>;
+  };
 }
 
 export interface LanguageFunctions {
@@ -87,14 +87,14 @@ export interface LanguageFunctions {
   readonly diagnosticsByLine: () => ReadonlyMap<
     number,
     ReadonlyArray<Diagnostic>
-  >
+  >;
   /** How to mark `token`, or null when no diagnostic touches it. */
-  readonly markerFor: (token: TokenSpan) => DiagnosticMarker | null
-  readonly counts: () => DiagnosticCounts
+  readonly markerFor: (token: TokenSpan) => DiagnosticMarker | null;
+  readonly counts: () => DiagnosticCounts;
   readonly navigate: (
     path: string,
     token: TokenSpan
-  ) => Promise<NavigationOutcome>
+  ) => Promise<NavigationOutcome>;
   /**
    * Usages of the symbol, always — unlike `navigate`, which decides between
    * jumping and listing. This is what "Find usages" asks for explicitly.
@@ -102,6 +102,6 @@ export interface LanguageFunctions {
   readonly references: (
     path: string,
     token: TokenSpan
-  ) => Promise<NavigationOutcome>
-  readonly describe: (path: string, token: TokenSpan) => Promise<HoverResult>
+  ) => Promise<NavigationOutcome>;
+  readonly describe: (path: string, token: TokenSpan) => Promise<HoverResult>;
 }

@@ -1,10 +1,10 @@
-import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo"
-import type { BranchTreeDependencies } from "../interfaces/branch-tree.interfaces"
+import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo";
+import type { BranchTreeDependencies } from "../interfaces/branch-tree.interfaces";
 
 export const createBranchTreeDependenciesMock = (): BranchTreeDependencies => ({
   data: {},
   sideEffects: {},
-})
+});
 
 export const fakeBranch = (
   name: string,
@@ -19,7 +19,7 @@ export const fakeBranch = (
   committedAt: "",
   subject: name,
   ...extra,
-})
+});
 
 export const fakeRemoteBranch = (
   name: string,
@@ -32,4 +32,4 @@ export const fakeRemoteBranch = (
   committedAt: "",
   subject: name,
   ...extra,
-})
+});

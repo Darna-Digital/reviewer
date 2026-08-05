@@ -11,50 +11,50 @@
  * git exec and GitHub client — is built once as a global singleton so the
  * selection persists across requests.
  */
-import { NodeHttpServer, NodeRuntime } from "@effect/platform-node"
-import * as Layer from "effect/Layer"
-import { FetchHttpClient, HttpRouter } from "effect/unstable/http"
-import { HttpApiBuilder, HttpApiScalar } from "effect/unstable/httpapi"
-import { createServer } from "node:http"
-import { Api } from "./api.ts"
-import { ChatsHandler } from "./layers/chats/chats.handler.ts"
-import { ChatsLive } from "./layers/chats/chats.layer.live.ts"
-import { CommentsHandler } from "./layers/comments/comments.handler.ts"
-import { CommentsLive } from "./layers/comments/comments.layer.live.ts"
-import { DocsHandler } from "./layers/docs/docs.handler.ts"
-import { DocsLive } from "./layers/docs/docs.layer.live.ts"
-import { GitMessageHandler } from "./layers/git-message/git-message.handler.ts"
-import { GitMessageLive } from "./layers/git-message/git-message.layer.live.ts"
-import { GitHubHandler } from "./layers/github/github.handler.ts"
-import { GitHubLive } from "./layers/github/github.layer.live.ts"
-import { LanguageHandler } from "./layers/language/language.handler.ts"
-import { LanguageLive } from "./layers/language/language.layer.live.ts"
-import { TasksHandler } from "./layers/tasks/tasks.handler.ts"
-import { TasksLive } from "./layers/tasks/tasks.layer.live.ts"
-import { LocalDevHandler } from "./layers/local-dev/local-dev.handler.ts"
-import { LocalDevLive } from "./layers/local-dev/local-dev.layer.live.ts"
-import { DevRuntimeLive } from "./layers/local-dev/local-dev.runtime.ts"
-import { RepoHandler } from "./layers/repo/repo.handler.ts"
-import { RepoLive } from "./layers/repo/repo.layer.live.ts"
-import { ThreadsHandler } from "./layers/threads/threads.handler.ts"
-import { ThreadsLive } from "./layers/threads/threads.layer.live.ts"
-import { WorkspaceHandler } from "./layers/workspace/workspace.handler.ts"
-import { WorkspaceLive } from "./layers/workspace/workspace.layer.live.ts"
-import { layer as gitExecLayer } from "./layers/git/git-exec.ts"
-import { layer as gitHubClientLayer } from "./layers/github/github-client.ts"
-import { attachPtyServer } from "./layers/terminal/pty-socket.ts"
-import { layer as terminalExecLayer } from "./layers/terminal/terminal-exec.ts"
+import { NodeHttpServer, NodeRuntime } from "@effect/platform-node";
+import * as Layer from "effect/Layer";
+import { FetchHttpClient, HttpRouter } from "effect/unstable/http";
+import { HttpApiBuilder, HttpApiScalar } from "effect/unstable/httpapi";
+import { createServer } from "node:http";
+import { Api } from "./api.ts";
+import { ChatsHandler } from "./layers/chats/chats.handler.ts";
+import { ChatsLive } from "./layers/chats/chats.layer.live.ts";
+import { CommentsHandler } from "./layers/comments/comments.handler.ts";
+import { CommentsLive } from "./layers/comments/comments.layer.live.ts";
+import { DocsHandler } from "./layers/docs/docs.handler.ts";
+import { DocsLive } from "./layers/docs/docs.layer.live.ts";
+import { GitMessageHandler } from "./layers/git-message/git-message.handler.ts";
+import { GitMessageLive } from "./layers/git-message/git-message.layer.live.ts";
+import { GitHubHandler } from "./layers/github/github.handler.ts";
+import { GitHubLive } from "./layers/github/github.layer.live.ts";
+import { LanguageHandler } from "./layers/language/language.handler.ts";
+import { LanguageLive } from "./layers/language/language.layer.live.ts";
+import { TasksHandler } from "./layers/tasks/tasks.handler.ts";
+import { TasksLive } from "./layers/tasks/tasks.layer.live.ts";
+import { LocalDevHandler } from "./layers/local-dev/local-dev.handler.ts";
+import { LocalDevLive } from "./layers/local-dev/local-dev.layer.live.ts";
+import { DevRuntimeLive } from "./layers/local-dev/local-dev.runtime.ts";
+import { RepoHandler } from "./layers/repo/repo.handler.ts";
+import { RepoLive } from "./layers/repo/repo.layer.live.ts";
+import { ThreadsHandler } from "./layers/threads/threads.handler.ts";
+import { ThreadsLive } from "./layers/threads/threads.layer.live.ts";
+import { WorkspaceHandler } from "./layers/workspace/workspace.handler.ts";
+import { WorkspaceLive } from "./layers/workspace/workspace.layer.live.ts";
+import { layer as gitExecLayer } from "./layers/git/git-exec.ts";
+import { layer as gitHubClientLayer } from "./layers/github/github-client.ts";
+import { attachPtyServer } from "./layers/terminal/pty-socket.ts";
+import { layer as terminalExecLayer } from "./layers/terminal/terminal-exec.ts";
 import {
   layer as workspaceContextLayer,
   type InitialSelection,
-} from "./layers/workspace/workspace-context.ts"
+} from "./layers/workspace/workspace-context.ts";
 
-const envRepo = process.env["BYCONVO_REPO"]
+const envRepo = process.env["BYCONVO_REPO"];
 const initial: InitialSelection =
   envRepo !== undefined && envRepo.length > 0
     ? { path: envRepo, explicit: true }
-    : { path: process.cwd(), explicit: false }
-const port = Number(process.env["BYCONVO_PORT"] ?? 41811)
+    : { path: process.cwd(), explicit: false };
+const port = Number(process.env["BYCONVO_PORT"] ?? 41811);
 
 /**
  * The API router with every feature controller attached. The OpenAPI document
@@ -77,7 +77,7 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(LanguageHandler),
   Layer.provide(TasksHandler),
   Layer.provide(LocalDevHandler)
-)
+);
 
 /** Stateless feature services, resolved per request. */
 const RequestServices = Layer.mergeAll(
@@ -93,7 +93,7 @@ const RequestServices = Layer.mergeAll(
   TasksLive,
   LocalDevLive,
   DevRuntimeLive
-)
+);
 
 /**
  * Global singletons, built once so the selected-repo state persists across
@@ -104,7 +104,7 @@ const InfraLive = gitHubClientLayer.pipe(
   Layer.provideMerge(Layer.mergeAll(gitExecLayer, terminalExecLayer)),
   Layer.provideMerge(workspaceContextLayer(initial)),
   Layer.provide(FetchHttpClient.layer)
-)
+);
 
 /**
  * The packaged desktop app loads the SPA from the `byconvo://app` protocol and
@@ -116,10 +116,10 @@ const InfraLive = gitHubClientLayer.pipe(
 const createServerWithPty: typeof createServer = ((
   ...args: Parameters<typeof createServer>
 ) => {
-  const server = createServer(...args)
-  attachPtyServer(server)
-  return server
-}) as typeof createServer
+  const server = createServer(...args);
+  attachPtyServer(server);
+  return server;
+}) as typeof createServer;
 
 const HttpLive = HttpRouter.serve(
   Layer.mergeAll(
@@ -129,6 +129,6 @@ const HttpLive = HttpRouter.serve(
 ).pipe(
   Layer.provide(InfraLive),
   Layer.provide(NodeHttpServer.layer(createServerWithPty, { port }))
-)
+);
 
-NodeRuntime.runMain(Layer.launch(HttpLive))
+NodeRuntime.runMain(Layer.launch(HttpLive));

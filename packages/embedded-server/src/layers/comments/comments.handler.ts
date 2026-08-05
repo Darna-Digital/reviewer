@@ -1,9 +1,9 @@
-import * as Effect from "effect/Effect"
-import { HttpApiBuilder } from "effect/unstable/httpapi"
-import { Api } from "../../api.ts"
-import { CommentsService } from "@byconvo/core/comments"
+import * as Effect from "effect/Effect";
+import { HttpApiBuilder } from "effect/unstable/httpapi";
+import { Api } from "../../api.ts";
+import { CommentsService } from "@byconvo/core/comments";
 
-const ok = { ok: true } as const
+const ok = { ok: true } as const;
 
 export const CommentsHandler = HttpApiBuilder.group(
   Api,
@@ -36,4 +36,4 @@ export const CommentsHandler = HttpApiBuilder.group(
           Effect.as(ok)
         )
       )
-)
+);

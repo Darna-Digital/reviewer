@@ -2,8 +2,8 @@ import type {
   Board as TasksBoard,
   Card as TasksCard,
   TasksColumn,
-} from "@byconvo/core/tasks"
-import type { TasksDependencies } from "../interfaces/tasks.interfaces"
+} from "@byconvo/core/tasks";
+import type { TasksDependencies } from "../interfaces/tasks.interfaces";
 
 export const card = (over: Partial<TasksCard> = {}): TasksCard => ({
   id: "card-1",
@@ -16,7 +16,7 @@ export const card = (over: Partial<TasksCard> = {}): TasksCard => ({
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
   ...over,
-})
+});
 
 export function mockTasksDependencies(cards: ReadonlyArray<TasksCard> = []) {
   const board: TasksBoard = {
@@ -27,41 +27,41 @@ export function mockTasksDependencies(cards: ReadonlyArray<TasksCard> = []) {
       { id: "done", name: "Done", order: 2 },
     ],
     prefix: "T",
-  }
+  };
   const calls = {
     create: [] as Array<{
-      title: string
-      description?: string
-      column?: TasksColumn
+      title: string;
+      description?: string;
+      column?: TasksColumn;
     }>,
     update: [] as Array<{
-      id: string
+      id: string;
       input: {
-        title?: string
-        description?: string
-        column?: TasksColumn
-        order?: number
-      }
+        title?: string;
+        description?: string;
+        column?: TasksColumn;
+        order?: number;
+      };
     }>,
     remove: [] as Array<string>,
-  }
+  };
 
   const deps: TasksDependencies = {
     data: { board },
     sideEffects: {
       create: async (input) => {
-        calls.create.push(input)
-        return card({ title: input.title, column: input.column ?? "todo" })
+        calls.create.push(input);
+        return card({ title: input.title, column: input.column ?? "todo" });
       },
       update: async (id, input) => {
-        calls.update.push({ id, input })
-        return card({ id, ...input })
+        calls.update.push({ id, input });
+        return card({ id, ...input });
       },
       remove: async (id) => {
-        calls.remove.push(id)
+        calls.remove.push(id);
       },
     },
-  }
+  };
 
-  return { deps, calls }
+  return { deps, calls };
 }

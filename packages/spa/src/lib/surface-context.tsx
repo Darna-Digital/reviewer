@@ -9,7 +9,7 @@
  * failure mode of fixed `bg-popover` surfaces in dark mode, where every layer
  * lands on the same value.
  */
-import { createContext, useContext, type ReactNode } from "react"
+import { createContext, useContext, type ReactNode } from "react";
 
 import {
   BASE_SURFACE,
@@ -17,57 +17,57 @@ import {
   clampLevel,
   surfaceBackground,
   surfaceClasses,
-} from "@/lib/surface-classes"
+} from "@/lib/surface-classes";
 
 /** Steps a popup lifts above its substrate. */
 const ELEVATION = {
   menu: 2,
   tooltip: 3,
   dialog: 4,
-} as const
+} as const;
 
 /**
  * Popups keep one constant shadow weight regardless of nesting: only the
  * background tracks the substrate, so a submenu doesn't stack a heavier and
  * heavier drop the further in it opens.
  */
-const POPUP_SHADOW = 3
+const POPUP_SHADOW = 3;
 
-const SurfaceContext = createContext<number>(BASE_SURFACE)
+const SurfaceContext = createContext<number>(BASE_SURFACE);
 
 function useSurface(): number {
-  return useContext(SurfaceContext)
+  return useContext(SurfaceContext);
 }
 
 /** Background class of the surface the caller is currently sitting on. */
 function useSurfaceBackground(): string {
-  return surfaceBackground(useSurface())
+  return surfaceBackground(useSurface());
 }
 
 interface Elevation {
   /** Absolute level to re-publish to descendants. */
-  level: number
+  level: number;
   /** Background + shadow classes for the lifted element. */
-  className: string
+  className: string;
 }
 
 function useElevation(offset: number, shadowLevel?: number): Elevation {
-  const level = Math.min(useSurface() + offset, TOP_SURFACE)
-  return { level, className: surfaceClasses(level, shadowLevel ?? level) }
+  const level = Math.min(useSurface() + offset, TOP_SURFACE);
+  return { level, className: surfaceClasses(level, shadowLevel ?? level) };
 }
 
 function SurfaceProvider({
   value,
   children,
 }: {
-  value: number
-  children: ReactNode
+  value: number;
+  children: ReactNode;
 }) {
   return (
     <SurfaceContext.Provider value={clampLevel(value)}>
       {children}
     </SurfaceContext.Provider>
-  )
+  );
 }
 
 export {
@@ -77,4 +77,4 @@ export {
   useElevation,
   useSurface,
   useSurfaceBackground,
-}
+};

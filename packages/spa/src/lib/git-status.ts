@@ -1,4 +1,4 @@
-import type { GitFileStatus } from "@byconvo/core/repo"
+import type { GitFileStatus } from "@byconvo/core/repo";
 
 /** Per-status text colour, shared by every changed-file list. */
 export const STATUS_COLOR: Record<GitFileStatus, string> = {
@@ -8,4 +8,4 @@ export const STATUS_COLOR: Record<GitFileStatus, string> = {
   renamed: "text-violet-600 dark:text-violet-400",
   untracked: "text-sky-600 dark:text-sky-400",
   ignored: "text-muted-foreground",
-}
+};

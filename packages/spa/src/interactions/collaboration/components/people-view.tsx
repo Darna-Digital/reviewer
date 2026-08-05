@@ -1,21 +1,21 @@
-import { IconDots } from "@tabler/icons-react"
-import { Avatar } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { IconDots } from "@tabler/icons-react";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { AddAgentButton } from "@/interactions/collaboration/components/agent-add-dialog"
-import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card"
+} from "@/components/ui/dropdown-menu";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AddAgentButton } from "@/interactions/collaboration/components/agent-add-dialog";
+import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card";
 import {
   AgentMark,
   AgentStateDot,
-} from "@/interactions/collaboration/components/agent-mark"
-import { PaneBody, PaneHeader } from "@/components/layout/pane-header"
+} from "@/interactions/collaboration/components/agent-mark";
+import { PaneBody, PaneHeader } from "@/components/layout/pane-header";
 import {
   ACCESS_LABEL,
   agentName,
@@ -23,11 +23,11 @@ import {
   removeAgent,
   setAgentRunning,
   type MockAgent,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import { useAgents } from "@/interactions/collaboration/data/use-agents"
-import { cn } from "@/lib/utils"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import { useAgents } from "@/interactions/collaboration/data/use-agents";
+import { cn } from "@/lib/utils";
 
-const ROW = "flex items-center gap-3"
+const ROW = "flex items-center gap-3";
 
 function AgentControls({ agent }: { agent: MockAgent }) {
   return (
@@ -56,12 +56,12 @@ function AgentControls({ agent }: { agent: MockAgent }) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 function AgentRows({ selectedId }: { selectedId?: string }) {
-  const agents = useAgents()
-  const running = agents.filter((a) => a.running).length
+  const agents = useAgents();
+  const running = agents.filter((a) => a.running).length;
 
   return (
     <>
@@ -137,11 +137,11 @@ function AgentRows({ selectedId }: { selectedId?: string }) {
         </PaneBody>
       </ScrollArea>
     </>
-  )
+  );
 }
 
 function MemberRows({ selectedId }: { selectedId?: string }) {
-  const online = MEMBERS.filter((m) => m.online).length
+  const online = MEMBERS.filter((m) => m.online).length;
 
   return (
     <>
@@ -203,7 +203,7 @@ function MemberRows({ selectedId }: { selectedId?: string }) {
         </PaneBody>
       </ScrollArea>
     </>
-  )
+  );
 }
 
 /**
@@ -215,12 +215,12 @@ export function PeopleView({
   kind,
   selectedId,
 }: {
-  kind: "agents" | "members"
-  selectedId?: string
+  kind: "agents" | "members";
+  selectedId?: string;
 }) {
   return kind === "agents" ? (
     <AgentRows selectedId={selectedId} />
   ) : (
     <MemberRows selectedId={selectedId} />
-  )
+  );
 }

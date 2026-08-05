@@ -1,6 +1,6 @@
-import type * as React from "react"
+import type * as React from "react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 export function Section({
   id,
@@ -8,10 +8,10 @@ export function Section({
   description,
   children,
 }: {
-  id: string
-  title: string
-  description: string
-  children: React.ReactNode
+  id: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
 }) {
   return (
     <section id={id} className="scroll-mt-28">
@@ -21,7 +21,7 @@ export function Section({
       </p>
       <div className="mt-8 flex flex-col gap-10">{children}</div>
     </section>
-  )
+  );
 }
 
 export function Subsection({
@@ -30,10 +30,10 @@ export function Subsection({
   children,
   className,
 }: {
-  title: string
-  hint?: string
-  children: React.ReactNode
-  className?: string
+  title: string;
+  hint?: string;
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <div className={cn("flex flex-col gap-4", className)}>
@@ -47,7 +47,7 @@ export function Subsection({
       </div>
       {children}
     </div>
-  )
+  );
 }
 
 /** A labelled specimen: the thing itself, with the token or class beneath it. */
@@ -56,9 +56,9 @@ export function Specimen({
   children,
   className,
 }: {
-  label: string
-  children: React.ReactNode
-  className?: string
+  label: string;
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <div className={cn("flex min-w-0 flex-col items-start gap-2", className)}>
@@ -67,7 +67,7 @@ export function Specimen({
         {label}
       </p>
     </div>
-  )
+  );
 }
 
 /** Wraps specimens in an evenly-spaced row that wraps on narrow screens. */
@@ -75,12 +75,12 @@ export function SpecimenRow({
   children,
   className,
 }: {
-  children: React.ReactNode
-  className?: string
+  children: React.ReactNode;
+  className?: string;
 }) {
   return (
     <div className={cn("flex flex-wrap items-end gap-x-6 gap-y-5", className)}>
       {children}
     </div>
-  )
+  );
 }

@@ -1,10 +1,10 @@
-import * as Layer from "effect/Layer"
+import * as Layer from "effect/Layer";
 import {
   DevCommandsRepository,
   LocalDevService,
   makeLocalDevService,
-} from "@byconvo/core/local-dev"
-import { makeFileDevCommandsRepository } from "./local-dev.repository.file.ts"
+} from "@byconvo/core/local-dev";
+import { makeFileDevCommandsRepository } from "./local-dev.repository.file.ts";
 
 export const LocalDevLive = Layer.effect(LocalDevService)(
   makeLocalDevService
@@ -12,4 +12,4 @@ export const LocalDevLive = Layer.effect(LocalDevService)(
   Layer.provide(
     Layer.effect(DevCommandsRepository)(makeFileDevCommandsRepository)
   )
-)
+);

@@ -5,10 +5,10 @@
  * so the service's validation and normalisation can be exercised without a
  * TypeScript program or a language server subprocess.
  */
-import * as Effect from "effect/Effect"
-import { filterCompletions } from "../functions/language.completions.ts"
-import { previewAt } from "../functions/language.positions.ts"
-import { selectProvider } from "../functions/language.registry.ts"
+import * as Effect from "effect/Effect";
+import { filterCompletions } from "../functions/language.completions.ts";
+import { previewAt } from "../functions/language.positions.ts";
+import { selectProvider } from "../functions/language.registry.ts";
 import type {
   CodeActionItem,
   CompletionItem,
@@ -18,20 +18,26 @@ import type {
   Position,
   SymbolReference,
   SymbolTarget,
-} from "../schema/language.schema.ts"
-import type { LanguageRepo } from "./language.repository.ts"
+} from "../schema/language.schema.ts";
+import type { LanguageRepo } from "./language.repository.ts";
 
 export interface MemoryLanguageSeed {
   /** Repository-relative path to file contents, used for previews. */
-  readonly files?: Readonly<Record<string, string>>
-  readonly providers?: ReadonlyArray<LanguageProviderInfo>
-  readonly diagnostics?: Readonly<Record<string, ReadonlyArray<Diagnostic>>>
-  readonly targets?: Readonly<Record<string, ReadonlyArray<SymbolTarget>>>
-  readonly references?: Readonly<Record<string, ReadonlyArray<SymbolReference>>>
-  readonly hover?: Readonly<Record<string, string>>
-  readonly completions?: Readonly<Record<string, ReadonlyArray<CompletionItem>>>
-  readonly resolutions?: Readonly<Record<string, CompletionResolution>>
-  readonly codeActions?: Readonly<Record<string, ReadonlyArray<CodeActionItem>>>
+  readonly files?: Readonly<Record<string, string>>;
+  readonly providers?: ReadonlyArray<LanguageProviderInfo>;
+  readonly diagnostics?: Readonly<Record<string, ReadonlyArray<Diagnostic>>>;
+  readonly targets?: Readonly<Record<string, ReadonlyArray<SymbolTarget>>>;
+  readonly references?: Readonly<
+    Record<string, ReadonlyArray<SymbolReference>>
+  >;
+  readonly hover?: Readonly<Record<string, string>>;
+  readonly completions?: Readonly<
+    Record<string, ReadonlyArray<CompletionItem>>
+  >;
+  readonly resolutions?: Readonly<Record<string, CompletionResolution>>;
+  readonly codeActions?: Readonly<
+    Record<string, ReadonlyArray<CodeActionItem>>
+  >;
 }
 
 const DEFAULT_PROVIDER: LanguageProviderInfo = {
@@ -49,26 +55,26 @@ const DEFAULT_PROVIDER: LanguageProviderInfo = {
   },
   available: true,
   detail: "",
-}
+};
 
 export const makeMemoryLanguageRepository = (seed: MemoryLanguageSeed = {}) =>
   Effect.sync((): LanguageRepo => {
-    const providers = seed.providers ?? [DEFAULT_PROVIDER]
-    const files = seed.files ?? {}
+    const providers = seed.providers ?? [DEFAULT_PROVIDER];
+    const files = seed.files ?? {};
 
     /** Null when no seeded provider claims the path — the unsupported case. */
     const providerFor = (path: string) =>
-      selectProvider(providers, path)?.id ?? null
+      selectProvider(providers, path)?.id ?? null;
 
     /** The identifier-sized span a request resolved to, from the seeded text. */
     const originAt = (path: string, position: Position) => {
-      const contents = files[path]
-      if (contents === undefined) return null
+      const contents = files[path];
+      if (contents === undefined) return null;
       return {
         start: position,
         end: { line: position.line, character: position.character },
-      }
-    }
+      };
+    };
 
     return {
       providers: Effect.succeed(providers),
@@ -125,5 +131,5 @@ export const makeMemoryLanguageRepository = (seed: MemoryLanguageSeed = {}) =>
           providerId: providerFor(path),
           actions: seed.codeActions?.[path] ?? [],
         }),
-    }
-  })
+    };
+  });

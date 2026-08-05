@@ -2,37 +2,37 @@
 import {
   agentName,
   findAgentById,
-} from "@/interactions/collaboration/data/collaboration.mock"
+} from "@/interactions/collaboration/data/collaboration.mock";
 
-export type InboxFilter = "all" | "unread" | "mentions"
+export type InboxFilter = "all" | "unread" | "mentions";
 
 export interface MockThreadMessage {
-  id: string
-  author: string
+  id: string;
+  author: string;
   /** Set when an agent posted it, naming which of the workspace's agents. */
-  agentId?: string
-  time: string
-  body: ReadonlyArray<string>
+  agentId?: string;
+  time: string;
+  body: ReadonlyArray<string>;
 }
 
 export interface MockInboxItem {
-  id: string
-  author: string
-  agentId?: string
-  reason: string
-  channel: string
-  time: string
-  preview: string
-  unread: boolean
-  mention: boolean
-  thread: ReadonlyArray<MockThreadMessage>
+  id: string;
+  author: string;
+  agentId?: string;
+  reason: string;
+  channel: string;
+  time: string;
+  preview: string;
+  unread: boolean;
+  mention: boolean;
+  thread: ReadonlyArray<MockThreadMessage>;
 }
 
 /** Authors are named through the same helper the rest of the UI uses. */
 const seedAgentName = (id: string): string => {
-  const agent = findAgentById(id)
-  return agent === undefined ? "" : agentName(agent)
-}
+  const agent = findAgentById(id);
+  return agent === undefined ? "" : agentName(agent);
+};
 
 export const INBOX_ITEMS: ReadonlyArray<MockInboxItem> = [
   {
@@ -171,6 +171,6 @@ export const INBOX_ITEMS: ReadonlyArray<MockInboxItem> = [
       },
     ],
   },
-]
+];
 
-export const UNREAD_COUNT = INBOX_ITEMS.filter((i) => i.unread).length
+export const UNREAD_COUNT = INBOX_ITEMS.filter((i) => i.unread).length;

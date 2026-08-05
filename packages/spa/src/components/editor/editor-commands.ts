@@ -7,8 +7,8 @@
  * Edits are computed against the original line array and returned sorted
  * bottom-up so they can be applied sequentially without invalidating positions.
  */
-import { getFiletypeFromFileName } from "@pierre/diffs"
-import type { TextEdit } from "@pierre/diffs/editor"
+import { getFiletypeFromFileName } from "@pierre/diffs";
+import type { TextEdit } from "@pierre/diffs/editor";
 
 // Line-comment token by Shiki filetype id (see getFiletypeFromFileName).
 const HASH = new Set([
@@ -35,7 +35,7 @@ const HASH = new Set([
   "elixir",
   "cmake",
   "coffee",
-])
+]);
 const SLASH = new Set([
   "typescript",
   "tsx",
@@ -60,20 +60,20 @@ const SLASH = new Set([
   "glsl",
   "scss",
   "less",
-])
-const DASH = new Set(["sql", "lua", "haskell", "elm", "ada"])
-const SEMI = new Set(["clojure", "commonlisp", "lisp", "scheme"])
+]);
+const DASH = new Set(["sql", "lua", "haskell", "elm", "ada"]);
+const SEMI = new Set(["clojure", "commonlisp", "lisp", "scheme"]);
 
 /** The line-comment prefix for a path, or null when we don't know one. */
 export function lineCommentToken(path: string): string | null {
-  const t = getFiletypeFromFileName(path)
-  if (HASH.has(t)) return "#"
-  if (SLASH.has(t)) return "//"
-  if (DASH.has(t)) return "--"
-  if (SEMI.has(t)) return ";"
+  const t = getFiletypeFromFileName(path);
+  if (HASH.has(t)) return "#";
+  if (SLASH.has(t)) return "//";
+  if (DASH.has(t)) return "--";
+  if (SEMI.has(t)) return ";";
   // env files (e.g. `.env.local`) fall back to the "text" grammar.
-  if (/(^|\/|\.)env(\.|$)/i.test(path)) return "#"
-  return null
+  if (/(^|\/|\.)env(\.|$)/i.test(path)) return "#";
+  return null;
 }
 
 const sortDesc = (edits: TextEdit[]): TextEdit[] =>
@@ -81,17 +81,17 @@ const sortDesc = (edits: TextEdit[]): TextEdit[] =>
     (a, b) =>
       b.range.start.line - a.range.start.line ||
       b.range.start.character - a.range.start.character
-  )
+  );
 
 /** Merge sorted, unique line numbers into contiguous [lo, hi] runs. */
 function toRuns(sorted: ReadonlyArray<number>): Array<[number, number]> {
-  const runs: Array<[number, number]> = []
+  const runs: Array<[number, number]> = [];
   for (const n of sorted) {
-    const last = runs[runs.length - 1]
-    if (last !== undefined && n === last[1] + 1) last[1] = n
-    else runs.push([n, n])
+    const last = runs[runs.length - 1];
+    if (last !== undefined && n === last[1] + 1) last[1] = n;
+    else runs.push([n, n]);
   }
-  return runs
+  return runs;
 }
 
 /**
@@ -105,31 +105,31 @@ export function toggleLineCommentEdits(
   lineNums: ReadonlyArray<number>,
   token: string
 ): TextEdit[] {
-  const targets = lineNums.filter((n) => (lines[n] ?? "").trim().length > 0)
-  if (targets.length === 0) return []
-  const indentOf = (l: string) => l.length - l.trimStart().length
-  const commented = (l: string) => l.trimStart().startsWith(token)
+  const targets = lineNums.filter((n) => (lines[n] ?? "").trim().length > 0);
+  if (targets.length === 0) return [];
+  const indentOf = (l: string) => l.length - l.trimStart().length;
+  const commented = (l: string) => l.trimStart().startsWith(token);
 
   if (targets.every((n) => commented(lines[n]))) {
     return sortDesc(
       targets.map((n) => {
-        const l = lines[n]
-        const indent = indentOf(l)
+        const l = lines[n];
+        const indent = indentOf(l);
         // Drop the token plus one following space, when present.
         const len =
-          l[indent + token.length] === " " ? token.length + 1 : token.length
+          l[indent + token.length] === " " ? token.length + 1 : token.length;
         return {
           range: {
             start: { line: n, character: indent },
             end: { line: n, character: indent + len },
           },
           newText: "",
-        }
+        };
       })
-    )
+    );
   }
 
-  const col = Math.min(...targets.map((n) => indentOf(lines[n])))
+  const col = Math.min(...targets.map((n) => indentOf(lines[n])));
   return sortDesc(
     targets.map((n) => ({
       range: {
@@ -138,7 +138,7 @@ export function toggleLineCommentEdits(
       },
       newText: `${token} `,
     }))
-  )
+  );
 }
 
 /** Duplicate each contiguous run of lines directly below itself. */
@@ -154,7 +154,7 @@ export function duplicateLinesEdits(
       },
       newText: `\n${lines.slice(lo, hi + 1).join("\n")}`,
     }))
-  )
+  );
 }
 
 /** Delete each contiguous run of lines, including its line break. */
@@ -162,7 +162,7 @@ export function deleteLinesEdits(
   lines: ReadonlyArray<string>,
   lineNums: ReadonlyArray<number>
 ): TextEdit[] {
-  const last = lines.length - 1
+  const last = lines.length - 1;
   return sortDesc(
     toRuns([...lineNums]).map(([lo, hi]) => {
       if (hi < last)
@@ -172,7 +172,7 @@ export function deleteLinesEdits(
             end: { line: hi + 1, character: 0 },
           },
           newText: "",
-        }
+        };
       // Run reaches the final line: also swallow the preceding break.
       return {
         range: {
@@ -183,7 +183,7 @@ export function deleteLinesEdits(
           end: { line: hi, character: lines[hi].length },
         },
         newText: "",
-      }
+      };
     })
-  )
+  );
 }

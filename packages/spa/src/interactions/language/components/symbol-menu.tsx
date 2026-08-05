@@ -9,29 +9,29 @@
  *
  * It hangs off the pointer rather than off the token, the way context menus do.
  */
-import { IconLoader2 } from "@tabler/icons-react"
+import { IconLoader2 } from "@tabler/icons-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import type { VirtualAnchor } from "../functions/anchors"
+} from "@/components/ui/dropdown-menu";
+import type { VirtualAnchor } from "../functions/anchors";
 
 export interface SymbolMenuEntry {
-  readonly id: string
-  readonly label: string
+  readonly id: string;
+  readonly label: string;
   /** Entries in the `fix` group are separated from the navigation ones. */
-  readonly group?: "fix"
-  readonly run: () => void
+  readonly group?: "fix";
+  readonly run: () => void;
 }
 
 interface SymbolMenuProps {
-  anchor: VirtualAnchor
-  entries: ReadonlyArray<SymbolMenuEntry>
+  anchor: VirtualAnchor;
+  entries: ReadonlyArray<SymbolMenuEntry>;
   /** Quick fixes are still being fetched. */
-  loading: boolean
-  onClose: () => void
+  loading: boolean;
+  onClose: () => void;
 }
 
 export function SymbolMenu({
@@ -40,14 +40,14 @@ export function SymbolMenu({
   loading,
   onClose,
 }: SymbolMenuProps) {
-  const navigation = entries.filter((entry) => entry.group !== "fix")
-  const fixes = entries.filter((entry) => entry.group === "fix")
+  const navigation = entries.filter((entry) => entry.group !== "fix");
+  const fixes = entries.filter((entry) => entry.group === "fix");
 
   return (
     <DropdownMenu
       open
       onOpenChange={(open) => {
-        if (!open) onClose()
+        if (!open) onClose();
       }}
     >
       <DropdownMenuContent
@@ -76,5 +76,5 @@ export function SymbolMenu({
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }

@@ -51,7 +51,7 @@ app.setName(isBeta ? "Byconvo Beta" : "Byconvo");
 
 const isDev = process.env["BYCONVO_DESKTOP_DEV"] === "1";
 const serverPort = Number(
-  process.env["BYCONVO_PORT"] ?? (isBeta ? 41821 : 41811),
+  process.env["BYCONVO_PORT"] ?? (isBeta ? 41821 : 41811)
 );
 // Propagate the resolved port so the preload/renderer (which reads
 // BYCONVO_PORT) and the spawned server agree on it, even when it wasn't set
@@ -78,7 +78,7 @@ const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 // renders it at the same size as other dock icons rather than full-bleed.
 // Resolved relative to `dist/` (../assets) so it works in packaged builds too.
 const brandIcon = nativeImage.createFromPath(
-  resolve(__dirname, "..", "assets", "byconvo-dock-icon.png"),
+  resolve(__dirname, "..", "assets", "byconvo-dock-icon.png")
 );
 
 let serverProcess: ChildProcess | null = null;

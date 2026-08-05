@@ -7,11 +7,11 @@
  * Everything else is a pill in the footer row, the same property-pill language
  * the new-task dialog uses.
  */
-import { IconCloud, IconDeviceLaptop, IconPlus } from "@tabler/icons-react"
-import { useNavigate } from "@tanstack/react-router"
-import { useState } from "react"
-import { Avatar } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { IconCloud, IconDeviceLaptop, IconPlus } from "@tabler/icons-react";
+import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -20,15 +20,15 @@ import {
   DialogFooter,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { AgentMark } from "@/interactions/collaboration/components/agent-mark"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { AgentMark } from "@/interactions/collaboration/components/agent-mark";
 import {
   ACCESS_DETAIL,
   ACCESS_LABEL,
@@ -40,26 +40,26 @@ import {
   WORKSPACE_OWNER,
   type AgentAccess,
   type AgentRuntime,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import { AGENTS, agentShort } from "@/interactions/threads/interfaces/agents"
-import type { AgentKind } from "@byconvo/core/threads"
-import { cn } from "@/lib/utils"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import { AGENTS, agentShort } from "@/interactions/threads/interfaces/agents";
+import type { AgentKind } from "@byconvo/core/threads";
+import { cn } from "@/lib/utils";
 
 /** The plain shell is not something you add to a workspace as a teammate. */
-const INSTALLABLE = AGENTS.filter((agent) => agent.kind !== "terminal")
+const INSTALLABLE = AGENTS.filter((agent) => agent.kind !== "terminal");
 
-const OWNERS = [VIEWER.name, ...MEMBERS.map((m) => m.name)]
+const OWNERS = [VIEWER.name, ...MEMBERS.map((m) => m.name)];
 
-const ACCESS_ORDER: ReadonlyArray<AgentAccess> = ["ask", "edits", "full"]
+const ACCESS_ORDER: ReadonlyArray<AgentAccess> = ["ask", "edits", "full"];
 
 /**
  * Where the CLI actually runs decides who may call it later, so it is the
  * choice the dialog makes before it asks whose account it posts under.
  */
 const RUNTIMES: ReadonlyArray<{
-  value: AgentRuntime
-  label: string
-  detail: string
+  value: AgentRuntime;
+  label: string;
+  detail: string;
 }> = [
   {
     value: "local",
@@ -71,7 +71,7 @@ const RUNTIMES: ReadonlyArray<{
     label: "In the workspace cloud",
     detail: "Anyone in the workspace can call it",
   },
-]
+];
 
 function KindTile({
   kind,
@@ -80,11 +80,11 @@ function KindTile({
   taken,
   onSelect,
 }: {
-  kind: AgentKind
-  hint: string
-  selected: boolean
-  taken: boolean
-  onSelect: () => void
+  kind: AgentKind;
+  hint: string;
+  selected: boolean;
+  taken: boolean;
+  onSelect: () => void;
 }) {
   return (
     <button
@@ -109,7 +109,7 @@ function KindTile({
         </span>
       </span>
     </button>
-  )
+  );
 }
 
 function Pill({
@@ -117,9 +117,9 @@ function Pill({
   children,
   menu,
 }: {
-  label: string
-  children: React.ReactNode
-  menu: React.ReactNode
+  label: string;
+  children: React.ReactNode;
+  menu: React.ReactNode;
 }) {
   return (
     <DropdownMenu>
@@ -132,40 +132,40 @@ function Pill({
         {menu}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
+  );
 }
 
 export function AddAgentButton({ compact = false }: { compact?: boolean }) {
-  const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
-  const [kind, setKind] = useState<AgentKind>("claude")
-  const [runtime, setRuntime] = useState<AgentRuntime>("local")
-  const [person, setPerson] = useState(VIEWER.name)
-  const [detail, setDetail] = useState("")
-  const [access, setAccess] = useState<AgentAccess>("edits")
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState<AgentKind>("claude");
+  const [runtime, setRuntime] = useState<AgentRuntime>("local");
+  const [person, setPerson] = useState(VIEWER.name);
+  const [detail, setDetail] = useState("");
+  const [access, setAccess] = useState<AgentAccess>("edits");
 
   // A cloud agent belongs to the workspace, so there is nobody to pick — the
   // owner pill drops out and the tiles are checked against the workspace.
-  const owner = runtime === "cloud" ? WORKSPACE_OWNER : person
+  const owner = runtime === "cloud" ? WORKSPACE_OWNER : person;
 
   // Switching owner can make the current pick unavailable — rather than opening
   // on a disabled tile, the selection falls through to the first one free.
-  const free = INSTALLABLE.filter((a) => !ownerHasAgent(owner, a.kind))
-  const selected = ownerHasAgent(owner, kind) ? free[0]?.kind : kind
-  const ownerLabel = owner === VIEWER.name ? `${owner} (You)` : owner
+  const free = INSTALLABLE.filter((a) => !ownerHasAgent(owner, a.kind));
+  const selected = ownerHasAgent(owner, kind) ? free[0]?.kind : kind;
+  const ownerLabel = owner === VIEWER.name ? `${owner} (You)` : owner;
   const runtimeLabel =
-    RUNTIMES.find((r) => r.value === runtime)?.label ?? RUNTIMES[0]?.label
+    RUNTIMES.find((r) => r.value === runtime)?.label ?? RUNTIMES[0]?.label;
 
   const create = () => {
-    if (selected === undefined) return
-    const agent = addAgent({ kind: selected, runtime, owner, detail, access })
-    setOpen(false)
-    setDetail("")
+    if (selected === undefined) return;
+    const agent = addAgent({ kind: selected, runtime, owner, detail, access });
+    setOpen(false);
+    setDetail("");
     void navigate({
       to: "/modes/collaboration",
       search: { view: "agents", id: agent.id },
-    })
-  }
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -305,5 +305,5 @@ export function AddAgentButton({ compact = false }: { compact?: boolean }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

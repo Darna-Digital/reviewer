@@ -1,6 +1,9 @@
-import * as Context from "effect/Context"
-import * as Effect from "effect/Effect"
-import { RepoRepository, type RepoRepo } from "../repository/repo.repository.ts"
+import * as Context from "effect/Context";
+import * as Effect from "effect/Effect";
+import {
+  RepoRepository,
+  type RepoRepo,
+} from "../repository/repo.repository.ts";
 
 export interface RepoServiceShape extends RepoRepo {}
 export class RepoService extends Context.Service<
@@ -8,6 +11,6 @@ export class RepoService extends Context.Service<
   RepoServiceShape
 >()("RepoService") {}
 export const makeRepoService = Effect.gen(function* () {
-  const repo = yield* RepoRepository
-  return RepoService.of(repo)
-})
+  const repo = yield* RepoRepository;
+  return RepoService.of(repo);
+});

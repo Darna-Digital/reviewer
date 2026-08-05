@@ -9,56 +9,56 @@ import {
   type ComponentType,
   type ReactNode,
   type HTMLAttributes,
-} from "react"
-import { Tabs } from "@base-ui/react/tabs"
-import { motion, AnimatePresence } from "framer-motion"
-import { cn } from "@/lib/utils"
-import { spring } from "@/lib/springs"
-import { useShape } from "@/lib/shape-context"
-import { useProximityHover } from "@/hooks/use-proximity-hover"
+} from "react";
+import { Tabs } from "@base-ui/react/tabs";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import { spring } from "@/lib/springs";
+import { useShape } from "@/lib/shape-context";
+import { useProximityHover } from "@/hooks/use-proximity-hover";
 
 /** Tabler (or Lucide-compatible) icon accepted by TabsSubtleItem. */
 export type TabsSubtleIcon = ComponentType<{
-  size?: number
-  stroke?: number
-  strokeWidth?: number
-  className?: string
-}>
+  size?: number;
+  stroke?: number;
+  strokeWidth?: number;
+  className?: string;
+}>;
 
 interface TabsSubtleContextValue {
-  registerTab: (index: number, element: HTMLElement | null) => void
-  hoveredIndex: number | null
-  selectedIndex: number
-  idPrefix: string | undefined
-  activeLabel: boolean
+  registerTab: (index: number, element: HTMLElement | null) => void;
+  hoveredIndex: number | null;
+  selectedIndex: number;
+  idPrefix: string | undefined;
+  activeLabel: boolean;
 }
 
-const TabsSubtleContext = createContext<TabsSubtleContextValue | null>(null)
+const TabsSubtleContext = createContext<TabsSubtleContextValue | null>(null);
 
 /** Without the padding, `overflow-x-auto` clips the ring's 2px outset. */
-const ROOM_FOR_THE_OUTSET_FOCUS_RING = "-mx-1 -my-1 px-1 py-1"
+const ROOM_FOR_THE_OUTSET_FOCUS_RING = "-mx-1 -my-1 px-1 py-1";
 
 /** Weight is off-limits for the active state: changing `wght` reflows glyph
  * advance widths and shoves neighbouring tabs. */
-const ACTIVE_TAB_TEXT = "text-foreground"
-const INACTIVE_TAB_TEXT = "text-muted-foreground"
+const ACTIVE_TAB_TEXT = "text-foreground";
+const INACTIVE_TAB_TEXT = "text-muted-foreground";
 
 function useTabsSubtle() {
-  const ctx = useContext(TabsSubtleContext)
-  if (!ctx) throw new Error("useTabsSubtle must be used within a TabsSubtle")
-  return ctx
+  const ctx = useContext(TabsSubtleContext);
+  if (!ctx) throw new Error("useTabsSubtle must be used within a TabsSubtle");
+  return ctx;
 }
 
 interface TabsSubtleProps extends Omit<
   HTMLAttributes<HTMLDivElement>,
   "onSelect"
 > {
-  children: ReactNode
-  selectedIndex: number
-  onSelect: (index: number) => void
-  idPrefix?: string
+  children: ReactNode;
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+  idPrefix?: string;
   /** When true, only the selected tab shows its text label. Requires icons on tabs. */
-  activeLabel?: boolean
+  activeLabel?: boolean;
 }
 
 const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
@@ -74,9 +74,9 @@ const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
     },
     ref
   ) => {
-    const containerRef = useRef<HTMLDivElement>(null)
-    const isMouseInside = useRef(false)
-    const shape = useShape()
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isMouseInside = useRef(false);
+    const shape = useShape();
 
     const {
       activeIndex: hoveredIndex,
@@ -85,55 +85,55 @@ const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
       handlers,
       registerItem,
       measureItems: measureTabs,
-    } = useProximityHover(containerRef, { axis: "x" })
+    } = useProximityHover(containerRef, { axis: "x" });
 
-    const tabElementsRef = useRef(new Map<number, HTMLElement>())
+    const tabElementsRef = useRef(new Map<number, HTMLElement>());
     const registerTab = useCallback(
       (index: number, element: HTMLElement | null) => {
-        registerItem(index, element)
+        registerItem(index, element);
         if (element) {
-          tabElementsRef.current.set(index, element)
+          tabElementsRef.current.set(index, element);
         } else {
-          tabElementsRef.current.delete(index)
+          tabElementsRef.current.delete(index);
         }
       },
       [registerItem]
-    )
+    );
 
     useEffect(() => {
-      measureTabs()
-    }, [measureTabs, children])
+      measureTabs();
+    }, [measureTabs, children]);
 
     // A tab resizes on its own when `activeLabel` expands or collapses its
     // label, which the container's own resize never sees.
     useEffect(() => {
-      const tabs = tabElementsRef.current
-      if (tabs.size === 0) return
-      const observer = new ResizeObserver(() => measureTabs())
-      tabs.forEach((tab) => observer.observe(tab))
-      return () => observer.disconnect()
-    }, [measureTabs, children])
+      const tabs = tabElementsRef.current;
+      if (tabs.size === 0) return;
+      const observer = new ResizeObserver(() => measureTabs());
+      tabs.forEach((tab) => observer.observe(tab));
+      return () => observer.disconnect();
+    }, [measureTabs, children]);
 
     const handleMouseMove = useCallback(
       (e: React.MouseEvent) => {
-        isMouseInside.current = true
-        handlers.onMouseMove(e)
+        isMouseInside.current = true;
+        handlers.onMouseMove(e);
       },
       [handlers]
-    )
+    );
 
     const handleMouseLeave = useCallback(() => {
-      isMouseInside.current = false
-      handlers.onMouseLeave()
-    }, [handlers])
+      isMouseInside.current = false;
+      handlers.onMouseLeave();
+    }, [handlers]);
 
-    const [focusedIndex, setFocusedIndex] = useState<number | null>(null)
+    const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
 
-    const selectedRect = tabRects[selectedIndex]
-    const hoverRect = hoveredIndex !== null ? tabRects[hoveredIndex] : null
-    const focusRect = focusedIndex !== null ? tabRects[focusedIndex] : null
-    const isHoveringSelected = hoveredIndex === selectedIndex
-    const isHovering = hoveredIndex !== null && !isHoveringSelected
+    const selectedRect = tabRects[selectedIndex];
+    const hoverRect = hoveredIndex !== null ? tabRects[hoveredIndex] : null;
+    const focusRect = focusedIndex !== null ? tabRects[focusedIndex] : null;
+    const isHoveringSelected = hoveredIndex === selectedIndex;
+    const isHovering = hoveredIndex !== null && !isHoveringSelected;
 
     return (
       <TabsSubtleContext.Provider
@@ -148,7 +148,7 @@ const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
         <Tabs.Root
           value={selectedIndex}
           onValueChange={(value) => {
-            if (typeof value === "number") onSelect(value)
+            if (typeof value === "number") onSelect(value);
           }}
           render={
             // Rendered as the List so one <div> carries both; Base UI owns
@@ -157,31 +157,31 @@ const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
             <Tabs.List
               activateOnFocus={false}
               ref={(node: HTMLDivElement | null) => {
-                containerRef.current = node
-                if (typeof ref === "function") ref(node)
-                else if (ref) ref.current = node
+                containerRef.current = node;
+                if (typeof ref === "function") ref(node);
+                else if (ref) ref.current = node;
               }}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
               onFocus={(e: React.FocusEvent<HTMLDivElement>) => {
                 const indexAttr = (e.target as HTMLElement)
                   .closest("[data-proximity-index]")
-                  ?.getAttribute("data-proximity-index")
+                  ?.getAttribute("data-proximity-index");
                 if (indexAttr != null) {
-                  const idx = Number(indexAttr)
-                  setHoveredIndex(idx)
+                  const idx = Number(indexAttr);
+                  setHoveredIndex(idx);
                   setFocusedIndex(
                     (e.target as HTMLElement).matches(":focus-visible")
                       ? idx
                       : null
-                  )
+                  );
                 }
               }}
               onBlur={(e: React.FocusEvent<HTMLDivElement>) => {
-                if (containerRef.current?.contains(e.relatedTarget)) return
-                setFocusedIndex(null)
-                if (isMouseInside.current) return
-                setHoveredIndex(null)
+                if (containerRef.current?.contains(e.relatedTarget)) return;
+                setFocusedIndex(null);
+                if (isMouseInside.current) return;
+                setHoveredIndex(null);
               }}
               className={cn(
                 "relative flex max-w-full [scrollbar-width:none] items-center gap-0.5 overflow-x-auto select-none [&::-webkit-scrollbar]:hidden",
@@ -286,34 +286,34 @@ const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
           }
         />
       </TabsSubtleContext.Provider>
-    )
+    );
   }
-)
+);
 
-TabsSubtle.displayName = "TabsSubtle"
+TabsSubtle.displayName = "TabsSubtle";
 
 interface TabsSubtleItemProps extends HTMLAttributes<HTMLButtonElement> {
-  icon?: TabsSubtleIcon
-  label: string
-  index: number
+  icon?: TabsSubtleIcon;
+  label: string;
+  index: number;
 }
 
 const TabsSubtleItem = forwardRef<HTMLButtonElement, TabsSubtleItemProps>(
   ({ icon: Icon, label, index, className, ...props }, ref) => {
-    const internalRef = useRef<HTMLButtonElement | null>(null)
-    const shape = useShape()
+    const internalRef = useRef<HTMLButtonElement | null>(null);
+    const shape = useShape();
     const { registerTab, hoveredIndex, selectedIndex, idPrefix, activeLabel } =
-      useTabsSubtle()
+      useTabsSubtle();
 
     useEffect(() => {
-      registerTab(index, internalRef.current)
-      return () => registerTab(index, null)
-    }, [index, registerTab])
+      registerTab(index, internalRef.current);
+      return () => registerTab(index, null);
+    }, [index, registerTab]);
 
-    const isSelected = selectedIndex === index
-    const isActive = hoveredIndex === index || isSelected
-    const collapseLabel = activeLabel && !!Icon
-    const showLabel = !collapseLabel || isSelected
+    const isSelected = selectedIndex === index;
+    const isActive = hoveredIndex === index || isSelected;
+    const collapseLabel = activeLabel && !!Icon;
+    const showLabel = !collapseLabel || isSelected;
 
     const labelContent = (
       <span
@@ -324,15 +324,15 @@ const TabsSubtleItem = forwardRef<HTMLButtonElement, TabsSubtleItemProps>(
       >
         {label}
       </span>
-    )
+    );
 
     return (
       <Tabs.Tab
         ref={(node: HTMLElement | null) => {
-          const button = node as HTMLButtonElement | null
-          internalRef.current = button
-          if (typeof ref === "function") ref(button)
-          else if (ref) ref.current = button
+          const button = node as HTMLButtonElement | null;
+          internalRef.current = button;
+          if (typeof ref === "function") ref(button);
+          else if (ref) ref.current = button;
         }}
         value={index}
         data-proximity-index={index}
@@ -381,17 +381,17 @@ const TabsSubtleItem = forwardRef<HTMLButtonElement, TabsSubtleItemProps>(
           labelContent
         )}
       </Tabs.Tab>
-    )
+    );
   }
-)
+);
 
-TabsSubtleItem.displayName = "TabsSubtleItem"
+TabsSubtleItem.displayName = "TabsSubtleItem";
 
 interface TabsSubtlePanelProps extends HTMLAttributes<HTMLDivElement> {
-  index: number
-  selectedIndex: number
-  idPrefix: string
-  children: ReactNode
+  index: number;
+  selectedIndex: number;
+  idPrefix: string;
+  children: ReactNode;
 }
 
 /** Every call site renders this outside `<TabsSubtle>`, beyond the reach of
@@ -399,7 +399,7 @@ interface TabsSubtlePanelProps extends HTMLAttributes<HTMLDivElement> {
  * rather than Base UI's `Tabs.Panel`. */
 const TabsSubtlePanel = forwardRef<HTMLDivElement, TabsSubtlePanelProps>(
   ({ index, selectedIndex, idPrefix, children, className, ...props }, ref) => {
-    const isSelected = selectedIndex === index
+    const isSelected = selectedIndex === index;
 
     return (
       <div
@@ -414,11 +414,11 @@ const TabsSubtlePanel = forwardRef<HTMLDivElement, TabsSubtlePanelProps>(
       >
         {isSelected && children}
       </div>
-    )
+    );
   }
-)
+);
 
-TabsSubtlePanel.displayName = "TabsSubtlePanel"
+TabsSubtlePanel.displayName = "TabsSubtlePanel";
 
-export { TabsSubtle, TabsSubtleItem, TabsSubtlePanel }
-export default TabsSubtle
+export { TabsSubtle, TabsSubtleItem, TabsSubtlePanel };
+export default TabsSubtle;

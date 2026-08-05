@@ -1,10 +1,10 @@
-import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react"
-import { DayPicker, getDefaultClassNames } from "react-day-picker"
-import type { DayButton } from "react-day-picker"
-import * as React from "react"
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
+import { DayPicker, getDefaultClassNames } from "react-day-picker";
+import type { DayButton } from "react-day-picker";
+import * as React from "react";
 
-import { Button, buttonVariants } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 /**
  * Calendar — shadcn's `react-day-picker` calendar wired to this project's Base
@@ -20,7 +20,7 @@ function Calendar({
   components,
   ...props
 }: React.ComponentProps<typeof DayPicker>) {
-  const defaultClassNames = getDefaultClassNames()
+  const defaultClassNames = getDefaultClassNames();
 
   return (
     <DayPicker
@@ -103,7 +103,7 @@ function Calendar({
       }}
       {...props}
     />
-  )
+  );
 }
 
 function CalendarDayButton({
@@ -112,10 +112,10 @@ function CalendarDayButton({
   modifiers,
   ...props
 }: React.ComponentProps<typeof DayButton>) {
-  const ref = React.useRef<HTMLButtonElement>(null)
+  const ref = React.useRef<HTMLButtonElement>(null);
   React.useEffect(() => {
-    if (modifiers.focused) ref.current?.focus()
-  }, [modifiers.focused])
+    if (modifiers.focused) ref.current?.focus();
+  }, [modifiers.focused]);
 
   return (
     <Button
@@ -135,7 +135,7 @@ function CalendarDayButton({
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { Calendar, CalendarDayButton }
+export { Calendar, CalendarDayButton };

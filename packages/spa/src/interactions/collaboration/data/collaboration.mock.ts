@@ -5,8 +5,8 @@
  * belongs to, so the sidebar can nest them and the panes can look either way
  * (project → its work, task/channel → its project) from the same arrays.
  */
-import { agentShort } from "@/interactions/threads/interfaces/agents"
-import type { AgentKind } from "@byconvo/core/threads"
+import { agentShort } from "@/interactions/threads/interfaces/agents";
+import type { AgentKind } from "@byconvo/core/threads";
 
 export type CollaborationView =
   | "project"
@@ -16,57 +16,57 @@ export type CollaborationView =
   | "channel"
   | "chat"
   | "agents"
-  | "members"
+  | "members";
 
-export type TaskStatus = "todo" | "doing" | "review" | "done"
+export type TaskStatus = "todo" | "doing" | "review" | "done";
 
-export const UNASSIGNED = "Unassigned"
+export const UNASSIGNED = "Unassigned";
 
-export type TaskPriority = "urgent" | "high" | "medium" | "low" | "none"
+export type TaskPriority = "urgent" | "high" | "medium" | "low" | "none";
 
 export interface MockActivity {
-  id: string
-  kind: "created" | "priority" | "status" | "comment"
-  author: string
-  time: string
+  id: string;
+  kind: "created" | "priority" | "status" | "comment";
+  author: string;
+  time: string;
   /** What happened, for everything but a comment. */
-  detail?: string
+  detail?: string;
   /** The comment itself. */
-  body?: string
+  body?: string;
 }
 
 export interface MockTask {
-  id: string
+  id: string;
   /** The short key the list and the header show, e.g. BYC-224. */
-  key: string
-  projectId: string
+  key: string;
+  projectId: string;
   /** Set on a sub-issue; the list nests it under its parent. */
-  parentId?: string
-  title: string
-  status: TaskStatus
-  priority: TaskPriority
-  assignee: string
-  labels: ReadonlyArray<string>
-  updated: string
-  description: ReadonlyArray<string>
-  activity: ReadonlyArray<MockActivity>
+  parentId?: string;
+  title: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assignee: string;
+  labels: ReadonlyArray<string>;
+  updated: string;
+  description: ReadonlyArray<string>;
+  activity: ReadonlyArray<MockActivity>;
 }
 
 export interface MockDoc {
-  id: string
-  projectId: string
-  title: string
-  summary: string
-  author: string
-  updated: string
+  id: string;
+  projectId: string;
+  title: string;
+  summary: string;
+  author: string;
+  updated: string;
 }
 
 export interface MockChannel {
-  id: string
-  name: string
-  topic: string
-  unread: number
-  projectId?: string
+  id: string;
+  name: string;
+  topic: string;
+  unread: number;
+  projectId?: string;
 }
 
 /**
@@ -75,75 +75,75 @@ export interface MockChannel {
  * request the person who started it answers. Private is the exception, and the
  * only kind that stays out of a teammate's sidebar.
  */
-export type ChatVisibility = "public" | "private"
+export type ChatVisibility = "public" | "private";
 
 /** Where the viewer stands with a chat they can already read. */
-export type ChatMembership = "joined" | "open" | "requested"
+export type ChatMembership = "joined" | "open" | "requested";
 
 export interface MockJoinRequest {
-  id: string
-  person: string
-  note: string
-  asked: string
+  id: string;
+  person: string;
+  note: string;
+  asked: string;
 }
 
 export interface MockChat {
-  id: string
-  projectId: string
-  title: string
-  visibility: ChatVisibility
+  id: string;
+  projectId: string;
+  title: string;
+  visibility: ChatVisibility;
   /** Who started it, and so who answers the join requests. */
-  initiator: string
-  members: ReadonlyArray<string>
+  initiator: string;
+  members: ReadonlyArray<string>;
   /** The viewer's own outstanding ask, which only they ever see. */
-  viewerRequested: boolean
-  requests: ReadonlyArray<MockJoinRequest>
+  viewerRequested: boolean;
+  requests: ReadonlyArray<MockJoinRequest>;
   /** Approved requests, replayed at the foot of the transcript. */
-  joins: ReadonlyArray<{ id: string; person: string; time: string }>
-  updated: string
-  unread: number
+  joins: ReadonlyArray<{ id: string; person: string; time: string }>;
+  updated: string;
+  unread: number;
 }
 
 export interface MockProject {
-  id: string
-  name: string
-  color: string
-  summary: string
-  lead: string
-  target: string
+  id: string;
+  name: string;
+  color: string;
+  summary: string;
+  lead: string;
+  target: string;
 }
 
 export interface MockMessage {
-  id: string
-  author: string
+  id: string;
+  author: string;
   /** Set when an agent posted it, so the row can find whose agent that is. */
-  agentId?: string
-  time: string
-  day: string
-  body: string
+  agentId?: string;
+  time: string;
+  day: string;
+  body: string;
 }
 
 export interface MockPerson {
-  id: string
-  name: string
-  detail: string
-  online: boolean
+  id: string;
+  name: string;
+  detail: string;
+  online: boolean;
 }
 
 /** How much an agent may do before it stops to ask its owner. */
-export type AgentAccess = "ask" | "edits" | "full"
+export type AgentAccess = "ask" | "edits" | "full";
 
 export const ACCESS_LABEL: Record<AgentAccess, string> = {
   ask: "Ask every time",
   edits: "Approve edits",
   full: "Full access",
-}
+};
 
 export const ACCESS_DETAIL: Record<AgentAccess, string> = {
   ask: "Every edit and command",
   edits: "Commands still ask",
   full: "Edits, commands, git",
-}
+};
 
 /**
  * Where an agent's process actually lives. A local one is a CLI on somebody's
@@ -151,7 +151,7 @@ export const ACCESS_DETAIL: Record<AgentAccess, string> = {
  * in the workspace and anyone here can call it. This is the line that decides
  * which agents a member may add to a chat.
  */
-export type AgentRuntime = "local" | "cloud"
+export type AgentRuntime = "local" | "cloud";
 
 /**
  * An agent is one of the CLIs the code mode already runs, not a character: its
@@ -160,26 +160,26 @@ export type AgentRuntime = "local" | "cloud"
  * two people can each run Claude in the same workspace.
  */
 export interface MockAgent {
-  id: string
-  kind: AgentKind
-  runtime: AgentRuntime
+  id: string;
+  kind: AgentKind;
+  runtime: AgentRuntime;
   /** The person whose account the CLI runs under — the workspace, when cloud. */
-  owner: string
-  detail: string
-  access: AgentAccess
-  running: boolean
+  owner: string;
+  detail: string;
+  access: AgentAccess;
+  running: boolean;
 }
 
 export interface MockWorkspace {
-  id: string
-  name: string
-  detail: string
-  color: string
+  id: string;
+  name: string;
+  detail: string;
+  color: string;
 }
 
 export interface MockViewer {
-  name: string
-  email: string
+  name: string;
+  email: string;
 }
 
 export const STATUS_ORDER: ReadonlyArray<TaskStatus> = [
@@ -187,14 +187,14 @@ export const STATUS_ORDER: ReadonlyArray<TaskStatus> = [
   "review",
   "todo",
   "done",
-]
+];
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
   todo: "Todo",
   doing: "In Progress",
   review: "In Review",
   done: "Done",
-}
+};
 
 export const PRIORITY_LABEL: Record<TaskPriority, string> = {
   urgent: "Urgent",
@@ -202,7 +202,7 @@ export const PRIORITY_LABEL: Record<TaskPriority, string> = {
   medium: "Medium",
   low: "Low",
   none: "No priority",
-}
+};
 
 export const WORKSPACES: ReadonlyArray<MockWorkspace> = [
   {
@@ -218,13 +218,13 @@ export const WORKSPACES: ReadonlyArray<MockWorkspace> = [
     color: "#5BC0A8",
   },
   { id: "personal", name: "Personal", detail: "Just you", color: "#E2707F" },
-]
+];
 
 /** Whoever is signed in — the account the workspace picker hangs off. */
 export const VIEWER: MockViewer = {
   name: "Rūtenis Raila",
   email: "rutenis@darnadigital.com",
-}
+};
 
 export const PROJECTS: ReadonlyArray<MockProject> = [
   {
@@ -259,7 +259,7 @@ export const PROJECTS: ReadonlyArray<MockProject> = [
     lead: "Sam Okoro",
     target: "Oct 9",
   },
-]
+];
 
 export const CHANNELS: ReadonlyArray<MockChannel> = [
   {
@@ -318,10 +318,10 @@ export const CHANNELS: ReadonlyArray<MockChannel> = [
     unread: 4,
     projectId: "mobile",
   },
-]
+];
 
 /** The owner a cloud agent carries, since no one person's machine runs it. */
-export const WORKSPACE_OWNER = WORKSPACES[0]?.name ?? "Workspace"
+export const WORKSPACE_OWNER = WORKSPACES[0]?.name ?? "Workspace";
 
 const SEED_AGENTS: ReadonlyArray<MockAgent> = [
   {
@@ -369,7 +369,7 @@ const SEED_AGENTS: ReadonlyArray<MockAgent> = [
     access: "edits",
     running: false,
   },
-]
+];
 
 /**
  * Added agents live here for the session, the same way created tasks do — the
@@ -379,40 +379,40 @@ const SEED_AGENTS: ReadonlyArray<MockAgent> = [
  * to piggyback a re-render on, and the sidebar's state dot would otherwise
  * disagree with the pane that just changed it.
  */
-let agents: ReadonlyArray<MockAgent> = SEED_AGENTS
-const agentListeners = new Set<() => void>()
+let agents: ReadonlyArray<MockAgent> = SEED_AGENTS;
+const agentListeners = new Set<() => void>();
 
 /**
  * Not everything the panes read is an array they can compare — a conversation's
  * agent line-up is a record keyed by id — so every change bumps one counter and
  * the hooks watch that instead of guessing which reference moved.
  */
-let revision = 0
+let revision = 0;
 
-export const collaborationRevision = (): number => revision
+export const collaborationRevision = (): number => revision;
 
 const emitAgents = () => {
-  revision += 1
-  for (const listener of agentListeners) listener()
-}
+  revision += 1;
+  for (const listener of agentListeners) listener();
+};
 
 export const subscribeToAgents = (listener: () => void): (() => void) => {
-  agentListeners.add(listener)
-  return () => agentListeners.delete(listener)
-}
+  agentListeners.add(listener);
+  return () => agentListeners.delete(listener);
+};
 
-export const allAgents = (): ReadonlyArray<MockAgent> => agents
+export const allAgents = (): ReadonlyArray<MockAgent> => agents;
 
-export const findAgentById = (id: string) => agents.find((a) => a.id === id)
+export const findAgentById = (id: string) => agents.find((a) => a.id === id);
 
 export const findAgentByName = (name: string) =>
-  agents.find((a) => agentName(a) === name)
+  agents.find((a) => agentName(a) === name);
 
 /** Someone's first name, possessive — "Rūtenis'", "Nadia's". */
 const possessive = (fullName: string) => {
-  const first = fullName.split(" ")[0] ?? fullName
-  return first.endsWith("s") ? `${first}'` : `${first}'s`
-}
+  const first = fullName.split(" ")[0] ?? fullName;
+  return first.endsWith("s") ? `${first}'` : `${first}'s`;
+};
 
 /**
  * An agent is named for whose it is, because two people can both run Claude and
@@ -422,13 +422,13 @@ const possessive = (fullName: string) => {
 export const agentName = (agent: MockAgent): string =>
   agent.runtime === "cloud"
     ? `Workspace ${agentShort(agent.kind)}`
-    : `${possessive(agent.owner)} ${agentShort(agent.kind)}`
+    : `${possessive(agent.owner)} ${agentShort(agent.kind)}`;
 
 /** The owner as the UI shows them: their workspace role, or "You" for the viewer. */
 export const agentOwner = (
   agent: MockAgent
 ): { name: string; detail: string; isViewer: boolean } => {
-  const isViewer = agent.runtime === "local" && agent.owner === VIEWER.name
+  const isViewer = agent.runtime === "local" && agent.owner === VIEWER.name;
   return {
     name: agent.owner,
     detail:
@@ -438,23 +438,23 @@ export const agentOwner = (
           ? "You"
           : (MEMBERS.find((m) => m.name === agent.owner)?.detail ?? ""),
     isViewer,
-  }
-}
+  };
+};
 
 /** Where the agent runs, as the hover card and the pickers say it. */
 export const RUNTIME_LABEL: Record<AgentRuntime, string> = {
   local: "On a machine",
   cloud: "In the cloud",
-}
+};
 
 export const runtimeLine = (agent: MockAgent): string => {
   if (agent.runtime === "cloud") {
-    return "Runs in the workspace cloud. Anyone here can bring it into a conversation."
+    return "Runs in the workspace cloud. Anyone here can bring it into a conversation.";
   }
   return agent.owner === VIEWER.name
     ? "Runs on your machine and posts as you. Only you can bring it into a conversation."
-    : `Runs on ${agent.owner.split(" ")[0]}'s machine. Only they can bring it into a conversation.`
-}
+    : `Runs on ${agent.owner.split(" ")[0]}'s machine. Only they can bring it into a conversation.`;
+};
 
 /**
  * What a given member may add to a conversation: whatever runs on their own
@@ -462,24 +462,24 @@ export const runtimeLine = (agent: MockAgent): string => {
  * is theirs to invite, never yours.
  */
 export const callableBy = (person: string): ReadonlyArray<MockAgent> =>
-  agents.filter((a) => a.runtime === "cloud" || a.owner === person)
+  agents.filter((a) => a.runtime === "cloud" || a.owner === person);
 
 /** The badge an agent's own messages carry, naming whose account posted them. */
 export const managedBy = (agentId: string): string => {
-  const agent = findAgentById(agentId)
-  if (agent === undefined) return ""
-  if (agent.runtime === "cloud") return "runs in the cloud"
+  const agent = findAgentById(agentId);
+  if (agent === undefined) return "";
+  if (agent.runtime === "cloud") return "runs in the cloud";
   return agent.owner === VIEWER.name
     ? "managed by you"
-    : `managed by ${agent.owner.split(" ")[0]}`
-}
+    : `managed by ${agent.owner.split(" ")[0]}`;
+};
 
 export interface AgentDraft {
-  kind: AgentKind
-  runtime: AgentRuntime
-  owner: string
-  detail: string
-  access: AgentAccess
+  kind: AgentKind;
+  runtime: AgentRuntime;
+  owner: string;
+  detail: string;
+  access: AgentAccess;
 }
 
 /** Ids read as kind + owner, so a second Claude cannot collide with the first. */
@@ -487,7 +487,7 @@ export function addAgent(draft: AgentDraft): MockAgent {
   const suffix =
     draft.runtime === "cloud"
       ? "cloud"
-      : (draft.owner.split(" ")[0]?.toLowerCase() ?? "new")
+      : (draft.owner.split(" ")[0]?.toLowerCase() ?? "new");
   const created: MockAgent = {
     id: `${draft.kind}-${suffix}`,
     kind: draft.kind,
@@ -496,25 +496,25 @@ export function addAgent(draft: AgentDraft): MockAgent {
     detail: draft.detail.trim() === "" ? "Not run yet" : draft.detail.trim(),
     access: draft.access,
     running: false,
-  }
-  agents = [...agents, created]
-  emitAgents()
-  return created
+  };
+  agents = [...agents, created];
+  emitAgents();
+  return created;
 }
 
 export function removeAgent(id: string): void {
-  agents = agents.filter((a) => a.id !== id)
-  emitAgents()
+  agents = agents.filter((a) => a.id !== id);
+  emitAgents();
 }
 
 export function setAgentRunning(id: string, running: boolean): void {
-  agents = agents.map((a) => (a.id === id ? { ...a, running } : a))
-  emitAgents()
+  agents = agents.map((a) => (a.id === id ? { ...a, running } : a));
+  emitAgents();
 }
 
 /** One person cannot install the same CLI twice — the picker greys these out. */
 export const ownerHasAgent = (owner: string, kind: AgentKind): boolean =>
-  agents.some((a) => a.owner === owner && a.kind === kind)
+  agents.some((a) => a.owner === owner && a.kind === kind);
 
 const SEED_CHATS: ReadonlyArray<MockChat> = [
   {
@@ -595,7 +595,7 @@ const SEED_CHATS: ReadonlyArray<MockChat> = [
     updated: "Yesterday",
     unread: 0,
   },
-]
+];
 
 /**
  * Chats and their agent line-ups change from inside the panes — joining,
@@ -603,7 +603,7 @@ const SEED_CHATS: ReadonlyArray<MockChat> = [
  * agent line-up is keyed by conversation id and covers channels too: a public
  * channel takes agents on exactly the same terms a chat does.
  */
-let chats: ReadonlyArray<MockChat> = SEED_CHATS
+let chats: ReadonlyArray<MockChat> = SEED_CHATS;
 
 const SEED_CONVERSATION_AGENTS: Record<string, ReadonlyArray<string>> = {
   "atlas-retry": ["claude-rutenis", "cloud-claude"],
@@ -615,28 +615,28 @@ const SEED_CONVERSATION_AGENTS: Record<string, ReadonlyArray<string>> = {
   "atlas-dev": ["claude-rutenis"],
   "pricing-launch": ["codex-nadia"],
   "onboarding-research": ["cloud-claude"],
-}
+};
 
 let conversationAgents: Record<
   string,
   ReadonlyArray<string>
-> = SEED_CONVERSATION_AGENTS
+> = SEED_CONVERSATION_AGENTS;
 
-const chatListeners = new Set<() => void>()
+const chatListeners = new Set<() => void>();
 
 const emitChats = () => {
-  revision += 1
-  for (const listener of chatListeners) listener()
-}
+  revision += 1;
+  for (const listener of chatListeners) listener();
+};
 
 export const subscribeToChats = (listener: () => void): (() => void) => {
-  chatListeners.add(listener)
-  return () => chatListeners.delete(listener)
-}
+  chatListeners.add(listener);
+  return () => chatListeners.delete(listener);
+};
 
-export const allChats = (): ReadonlyArray<MockChat> => chats
+export const allChats = (): ReadonlyArray<MockChat> => chats;
 
-export const findChat = (id: string) => chats.find((c) => c.id === id)
+export const findChat = (id: string) => chats.find((c) => c.id === id);
 
 /** A private chat is invisible to anyone outside it; a public one is not. */
 export const visibleChats = (projectId: string): ReadonlyArray<MockChat> =>
@@ -644,41 +644,41 @@ export const visibleChats = (projectId: string): ReadonlyArray<MockChat> =>
     (c) =>
       c.projectId === projectId &&
       (c.visibility === "public" || c.members.includes(VIEWER.name))
-  )
+  );
 
 export const membershipOf = (chat: MockChat): ChatMembership =>
   chat.members.includes(VIEWER.name)
     ? "joined"
     : chat.viewerRequested
       ? "requested"
-      : "open"
+      : "open";
 
 const setViewerRequested = (chatId: string, viewerRequested: boolean) => {
   chats = chats.map((chat) =>
     chat.id === chatId ? { ...chat, viewerRequested } : chat
-  )
-  emitChats()
-}
+  );
+  emitChats();
+};
 
 export function requestToJoin(chatId: string): void {
-  setViewerRequested(chatId, true)
+  setViewerRequested(chatId, true);
 }
 
 export function withdrawJoinRequest(chatId: string): void {
-  setViewerRequested(chatId, false)
+  setViewerRequested(chatId, false);
 }
 
 const nowTime = () =>
   new Date().toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
-  })
+  });
 
 export function approveJoinRequest(chatId: string, requestId: string): void {
   chats = chats.map((chat) => {
-    if (chat.id !== chatId) return chat
-    const request = chat.requests.find((r) => r.id === requestId)
-    if (request === undefined) return chat
+    if (chat.id !== chatId) return chat;
+    const request = chat.requests.find((r) => r.id === requestId);
+    if (request === undefined) return chat;
     return {
       ...chat,
       members: [...chat.members, request.person],
@@ -687,9 +687,9 @@ export function approveJoinRequest(chatId: string, requestId: string): void {
         ...chat.joins,
         { id: requestId, person: request.person, time: nowTime() },
       ],
-    }
-  })
-  emitChats()
+    };
+  });
+  emitChats();
 }
 
 export function declineJoinRequest(chatId: string, requestId: string): void {
@@ -697,48 +697,48 @@ export function declineJoinRequest(chatId: string, requestId: string): void {
     chat.id === chatId
       ? { ...chat, requests: chat.requests.filter((r) => r.id !== requestId) }
       : chat
-  )
-  emitChats()
+  );
+  emitChats();
 }
 
 export const agentsIn = (conversationId: string): ReadonlyArray<MockAgent> =>
   (conversationAgents[conversationId] ?? [])
     .map((id) => findAgentById(id))
-    .filter((agent) => agent !== undefined)
+    .filter((agent) => agent !== undefined);
 
 const setConversationAgents = (
   conversationId: string,
   ids: ReadonlyArray<string>
 ) => {
-  conversationAgents = { ...conversationAgents, [conversationId]: ids }
-  emitChats()
-}
+  conversationAgents = { ...conversationAgents, [conversationId]: ids };
+  emitChats();
+};
 
 export function addAgentToConversation(
   conversationId: string,
   agentId: string
 ): void {
-  const current = conversationAgents[conversationId] ?? []
-  if (current.includes(agentId)) return
-  setConversationAgents(conversationId, [...current, agentId])
+  const current = conversationAgents[conversationId] ?? [];
+  if (current.includes(agentId)) return;
+  setConversationAgents(conversationId, [...current, agentId]);
 }
 
 export function removeAgentFromConversation(
   conversationId: string,
   agentId: string
 ): void {
-  const current = conversationAgents[conversationId] ?? []
+  const current = conversationAgents[conversationId] ?? [];
   setConversationAgents(
     conversationId,
     current.filter((id) => id !== agentId)
-  )
+  );
 }
 
 /** Seed rows name their agent through the same helper the UI uses. */
 const seedAgentName = (id: string): string => {
-  const agent = SEED_AGENTS.find((a) => a.id === id)
-  return agent === undefined ? "" : agentName(agent)
-}
+  const agent = SEED_AGENTS.find((a) => a.id === id);
+  return agent === undefined ? "" : agentName(agent);
+};
 
 const SEED_TASKS: ReadonlyArray<MockTask> = [
   {
@@ -1029,7 +1029,7 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     description: ["Ask on first mention, never at launch."],
     activity: [],
   },
-]
+];
 
 export const MESSAGES: Record<string, ReadonlyArray<MockMessage>> = {
   "atlas-retry": [
@@ -1299,7 +1299,7 @@ export const MESSAGES: Record<string, ReadonlyArray<MockMessage>> = {
       body: "Two taps to reach the composer from a cold launch. Feels right.",
     },
   ],
-}
+};
 
 export const DOCS: ReadonlyArray<MockDoc> = [
   {
@@ -1343,23 +1343,23 @@ export const DOCS: ReadonlyArray<MockDoc> = [
     author: "Sam Okoro",
     updated: "Jul 21",
   },
-]
+];
 
 export const MEMBERS: ReadonlyArray<MockPerson> = [
   { id: "nadia", name: "Nadia Alvi", detail: "Engineering lead", online: true },
   { id: "theo", name: "Theo Brandt", detail: "Backend", online: true },
   { id: "ines", name: "Ines Faber", detail: "Design", online: false },
   { id: "sam", name: "Sam Okoro", detail: "Product", online: false },
-]
+];
 
 /** What an unqualified `/modes/collaboration` shows — the lead project. */
-export const DEFAULT_VIEW: CollaborationView = "project"
-export const DEFAULT_ID = PROJECTS[0]?.id ?? ""
+export const DEFAULT_VIEW: CollaborationView = "project";
+export const DEFAULT_ID = PROJECTS[0]?.id ?? "";
 
 /** Favourites hold surfaces, never a single task — a task list stands in. */
 export interface MockFavorite {
-  view: Extract<CollaborationView, "project" | "tasks" | "channel">
-  id: string
+  view: Extract<CollaborationView, "project" | "tasks" | "channel">;
+  id: string;
 }
 
 export const FAVORITES: ReadonlyArray<MockFavorite> = [
@@ -1367,44 +1367,44 @@ export const FAVORITES: ReadonlyArray<MockFavorite> = [
   { view: "tasks", id: "atlas" },
   { view: "tasks", id: "pricing" },
   { view: "project", id: "onboarding" },
-]
+];
 
 /** Openers offered on the new-chat surface, in the order they are shown. */
 export const CHAT_PROMPTS: ReadonlyArray<string> = [
   "Review the open pull requests on this branch",
   "Draft release notes from the last ten commits",
   "Plan the next task in Atlas rewrite",
-]
+];
 
 /**
  * The seed above is where the prototype starts; anything created in the app is
  * appended here. It lives in memory only — a reload is a fresh workspace, which
  * is the right trade for a surface with no backend behind it yet.
  */
-let tasks: ReadonlyArray<MockTask> = SEED_TASKS
+let tasks: ReadonlyArray<MockTask> = SEED_TASKS;
 
-export const allTasks = (): ReadonlyArray<MockTask> => tasks
+export const allTasks = (): ReadonlyArray<MockTask> => tasks;
 
 export interface TaskDraft {
-  projectId: string
-  title: string
-  status: TaskStatus
-  priority: TaskPriority
-  assignee: string
-  description: string
+  projectId: string;
+  title: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assignee: string;
+  description: string;
 }
 
 /** Keys run BYC-nnn across the whole workspace, so the next one is the max +1. */
 const nextTaskKey = (): string => {
   const highest = tasks.reduce((top, task) => {
-    const n = Number(task.key.split("-")[1])
-    return Number.isFinite(n) ? Math.max(top, n) : top
-  }, 0)
-  return `BYC-${highest + 1}`
-}
+    const n = Number(task.key.split("-")[1]);
+    return Number.isFinite(n) ? Math.max(top, n) : top;
+  }, 0);
+  return `BYC-${highest + 1}`;
+};
 
 export function addTask(draft: TaskDraft): MockTask {
-  const key = nextTaskKey()
+  const key = nextTaskKey();
   const created: MockTask = {
     id: `task-${key.toLowerCase()}`,
     key,
@@ -1427,28 +1427,28 @@ export function addTask(draft: TaskDraft): MockTask {
         time: "just now",
       },
     ],
-  }
-  tasks = [created, ...tasks]
-  return created
+  };
+  tasks = [created, ...tasks];
+  return created;
 }
 
 export const projectChannels = (projectId: string) =>
-  CHANNELS.filter((c) => c.projectId === projectId)
+  CHANNELS.filter((c) => c.projectId === projectId);
 
 export const taskChildren = (taskId: string) =>
-  tasks.filter((t) => t.parentId === taskId)
+  tasks.filter((t) => t.parentId === taskId);
 
 export const projectTasks = (projectId: string) =>
-  tasks.filter((t) => t.projectId === projectId)
+  tasks.filter((t) => t.projectId === projectId);
 
 export const projectDocs = (projectId: string) =>
-  DOCS.filter((d) => d.projectId === projectId)
+  DOCS.filter((d) => d.projectId === projectId);
 
-export const findProject = (id: string) => PROJECTS.find((p) => p.id === id)
+export const findProject = (id: string) => PROJECTS.find((p) => p.id === id);
 
-export const findChannel = (id: string) => CHANNELS.find((c) => c.id === id)
+export const findChannel = (id: string) => CHANNELS.find((c) => c.id === id);
 
-export const findTask = (id: string) => tasks.find((t) => t.id === id)
+export const findTask = (id: string) => tasks.find((t) => t.id === id);
 
 export const openTaskCount = (projectId: string) =>
-  projectTasks(projectId).filter((t) => t.status !== "done").length
+  projectTasks(projectId).filter((t) => t.status !== "done").length;

@@ -1,9 +1,9 @@
-import * as Context from "effect/Context"
-import * as Effect from "effect/Effect"
+import * as Context from "effect/Context";
+import * as Effect from "effect/Effect";
 import {
   CommentsRepository,
   type CommentsRepo,
-} from "../repository/comments.repository.ts"
+} from "../repository/comments.repository.ts";
 
 export interface CommentsServiceShape extends CommentsRepo {}
 export class CommentsService extends Context.Service<
@@ -11,6 +11,6 @@ export class CommentsService extends Context.Service<
   CommentsServiceShape
 >()("CommentsService") {}
 export const makeCommentsService = Effect.gen(function* () {
-  const repo = yield* CommentsRepository
-  return CommentsService.of(repo)
-})
+  const repo = yield* CommentsRepository;
+  return CommentsService.of(repo);
+});

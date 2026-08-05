@@ -1,7 +1,7 @@
-import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox"
+import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
 
-import { cn } from "@/lib/utils"
-import { IconCheck } from "@tabler/icons-react"
+import { cn } from "@/lib/utils";
+import { IconCheck } from "@tabler/icons-react";
 
 function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
   return (
@@ -20,7 +20,7 @@ function Checkbox({ className, ...props }: CheckboxPrimitive.Root.Props) {
         <IconCheck />
       </CheckboxPrimitive.Indicator>
     </CheckboxPrimitive.Root>
-  )
+  );
 }
 
-export { Checkbox }
+export { Checkbox };

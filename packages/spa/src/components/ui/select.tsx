@@ -1,25 +1,25 @@
-import { Select as SelectPrimitive } from "@base-ui/react/select"
-import { IconCheck, IconChevronDown, IconSelector } from "@tabler/icons-react"
+import { Select as SelectPrimitive } from "@base-ui/react/select";
+import { IconCheck, IconChevronDown, IconSelector } from "@tabler/icons-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import {
   ELEVATION,
   POPUP_SHADOW,
   SurfaceProvider,
   useElevation,
-} from "@/lib/surface-context"
-import { TruncatedRow } from "@/components/ui/truncated-text"
+} from "@/lib/surface-context";
+import { TruncatedRow } from "@/components/ui/truncated-text";
 
 function Select<TValue>(props: SelectPrimitive.Root.Props<TValue>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />
+  return <SelectPrimitive.Root data-slot="select" {...props} />;
 }
 
 function SelectGroup(props: SelectPrimitive.Group.Props) {
-  return <SelectPrimitive.Group data-slot="select-group" {...props} />
+  return <SelectPrimitive.Group data-slot="select-group" {...props} />;
 }
 
 function SelectValue(props: SelectPrimitive.Value.Props) {
-  return <SelectPrimitive.Value data-slot="select-value" {...props} />
+  return <SelectPrimitive.Value data-slot="select-value" {...props} />;
 }
 
 function SelectTrigger({
@@ -41,7 +41,7 @@ function SelectTrigger({
       {children}
       <SelectPrimitive.Icon render={<IconSelector />} />
     </SelectPrimitive.Trigger>
-  )
+  );
 }
 
 function SelectContent({
@@ -56,7 +56,7 @@ function SelectContent({
   const { level, className: surface } = useElevation(
     ELEVATION.menu,
     POPUP_SHADOW
-  )
+  );
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Positioner
@@ -86,7 +86,7 @@ function SelectContent({
         </SelectPrimitive.ScrollDownArrow>
       </SelectPrimitive.Positioner>
     </SelectPrimitive.Portal>
-  )
+  );
 }
 
 function SelectGroupLabel({
@@ -99,7 +99,7 @@ function SelectGroupLabel({
       className={cn("px-2 py-1 text-xs text-muted-foreground", className)}
       {...props}
     />
-  )
+  );
 }
 
 function SelectItem({
@@ -129,7 +129,7 @@ function SelectItem({
         {children}
       </SelectPrimitive.ItemText>
     </TruncatedRow>
-  )
+  );
 }
 
 export {
@@ -140,4 +140,4 @@ export {
   SelectItem,
   SelectTrigger,
   SelectValue,
-}
+};

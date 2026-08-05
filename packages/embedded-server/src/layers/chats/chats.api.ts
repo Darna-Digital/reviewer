@@ -1,4 +1,4 @@
-import * as Schema from "effect/Schema"
+import * as Schema from "effect/Schema";
 import {
   ChatBusy,
   Chat,
@@ -8,15 +8,15 @@ import {
   NewChat,
   SendChatMessage,
   UpdateChat,
-} from "@byconvo/core/chats"
-import { TerminalError } from "@byconvo/core/ports/terminal-exec"
+} from "@byconvo/core/chats";
+import { TerminalError } from "@byconvo/core/ports/terminal-exec";
 import {
   NoRepoSelected,
   NotFound,
   Ok,
   StorageError,
-} from "@byconvo/core/shared"
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
+} from "@byconvo/core/shared";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 const errors = [
   NoRepoSelected,
@@ -24,7 +24,7 @@ const errors = [
   StorageError,
   TerminalError,
   ChatBusy,
-] as const
+] as const;
 
 export class ChatsApi extends HttpApiGroup.make("chats")
   .add(

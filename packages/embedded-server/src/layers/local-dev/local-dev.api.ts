@@ -1,20 +1,20 @@
-import * as Schema from "effect/Schema"
+import * as Schema from "effect/Schema";
 import {
   NoRepoSelected,
   NotFound,
   StorageError,
   Ok,
-} from "@byconvo/core/shared"
+} from "@byconvo/core/shared";
 import {
   DevCommand,
   DevCommandView,
   DevCommandIdParam,
   NewDevCommand,
   UpdateDevCommand,
-} from "@byconvo/core/local-dev"
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
+} from "@byconvo/core/local-dev";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
-const errors = [NoRepoSelected, NotFound, StorageError] as const
+const errors = [NoRepoSelected, NotFound, StorageError] as const;
 
 export class LocalDevApi extends HttpApiGroup.make("localDev")
   .add(

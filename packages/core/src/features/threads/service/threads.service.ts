@@ -1,9 +1,9 @@
-import * as Context from "effect/Context"
-import * as Effect from "effect/Effect"
+import * as Context from "effect/Context";
+import * as Effect from "effect/Effect";
 import {
   ThreadsRepository,
   type ThreadsRepo,
-} from "../repository/threads.repository.ts"
+} from "../repository/threads.repository.ts";
 
 export interface ThreadsServiceShape extends ThreadsRepo {}
 export class ThreadsService extends Context.Service<
@@ -11,6 +11,6 @@ export class ThreadsService extends Context.Service<
   ThreadsServiceShape
 >()("ThreadsService") {}
 export const makeThreadsService = Effect.gen(function* () {
-  const repo = yield* ThreadsRepository
-  return ThreadsService.of(repo)
-})
+  const repo = yield* ThreadsRepository;
+  return ThreadsService.of(repo);
+});

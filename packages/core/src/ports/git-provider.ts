@@ -1,9 +1,9 @@
-import * as Context from "effect/Context"
-import * as Effect from "effect/Effect"
-import * as Layer from "effect/Layer"
-import * as Schema from "effect/Schema"
-import { CommentSide } from "../features/comments/schema/comments.schema.ts"
-import type { ReviewComment } from "../features/comments/schema/comments.schema.ts"
+import * as Context from "effect/Context";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as Schema from "effect/Schema";
+import { CommentSide } from "../features/comments/schema/comments.schema.ts";
+import type { ReviewComment } from "../features/comments/schema/comments.schema.ts";
 
 export class GitProviderError extends Schema.TaggedErrorClass<GitProviderError>()(
   "GitProviderError",
@@ -11,7 +11,7 @@ export class GitProviderError extends Schema.TaggedErrorClass<GitProviderError>(
   { httpApiStatus: 502 }
 ) {
   override get message(): string {
-    return this.reason
+    return this.reason;
   }
 }
 
@@ -24,56 +24,56 @@ export const PullRequestInfo = Schema.Struct({
   headSha: Schema.String,
   url: Schema.String,
   updatedAt: Schema.String,
-})
-export type PullRequestInfo = typeof PullRequestInfo.Type
+});
+export type PullRequestInfo = typeof PullRequestInfo.Type;
 
-export const PullNumberParam = Schema.Struct({ number: Schema.String })
+export const PullNumberParam = Schema.Struct({ number: Schema.String });
 export const PullReplyParams = Schema.Struct({
   number: Schema.String,
   commentId: Schema.String,
-})
+});
 
 export const PrComment = Schema.Struct({
   filePath: Schema.String,
   side: CommentSide,
   lineNumber: Schema.Number,
   body: Schema.String,
-})
-export type PrComment = typeof PrComment.Type
+});
+export type PrComment = typeof PrComment.Type;
 
-export const PrReply = Schema.Struct({ body: Schema.String })
-export type PrReply = typeof PrReply.Type
+export const PrReply = Schema.Struct({ body: Schema.String });
+export type PrReply = typeof PrReply.Type;
 
 export interface PrCommentInput {
-  readonly pullNumber: number
-  readonly filePath: string
-  readonly side: "deletions" | "additions"
-  readonly lineNumber: number
-  readonly body: string
+  readonly pullNumber: number;
+  readonly filePath: string;
+  readonly side: "deletions" | "additions";
+  readonly lineNumber: number;
+  readonly body: string;
 }
 export interface PrReplyInput {
-  readonly pullNumber: number
-  readonly commentId: number
-  readonly body: string
+  readonly pullNumber: number;
+  readonly commentId: number;
+  readonly body: string;
 }
 
 export interface GitProviderShape {
   readonly pulls: Effect.Effect<
     ReadonlyArray<PullRequestInfo>,
     GitProviderError
-  >
+  >;
   readonly pullDiff: (
     pullNumber: number
-  ) => Effect.Effect<string, GitProviderError>
+  ) => Effect.Effect<string, GitProviderError>;
   readonly pullComments: (
     pullNumber: number
-  ) => Effect.Effect<ReadonlyArray<ReviewComment>, GitProviderError>
+  ) => Effect.Effect<ReadonlyArray<ReviewComment>, GitProviderError>;
   readonly createPullComment: (
     input: PrCommentInput
-  ) => Effect.Effect<ReviewComment, GitProviderError>
+  ) => Effect.Effect<ReviewComment, GitProviderError>;
   readonly replyToPullComment: (
     input: PrReplyInput
-  ) => Effect.Effect<ReviewComment, GitProviderError>
+  ) => Effect.Effect<ReviewComment, GitProviderError>;
 }
 
 export class GitProvider extends Context.Service<
@@ -82,9 +82,9 @@ export class GitProvider extends Context.Service<
 >()("GitProvider") {}
 
 export interface GitProviderSeed {
-  readonly pulls?: ReadonlyArray<PullRequestInfo>
-  readonly comments?: ReadonlyArray<ReviewComment>
-  readonly diff?: string
+  readonly pulls?: ReadonlyArray<PullRequestInfo>;
+  readonly comments?: ReadonlyArray<ReviewComment>;
+  readonly diff?: string;
 }
 
 export const GitProviderMemory = (
@@ -120,4 +120,4 @@ export const GitProviderMemory = (
           source: "github",
         }),
     })
-  )
+  );

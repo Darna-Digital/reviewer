@@ -1,7 +1,7 @@
-import { focusManager, QueryClient } from "@tanstack/react-query"
-import { createRouter as createTanStackRouter } from "@tanstack/react-router"
-import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query"
-import { routeTree } from "./routeTree.gen"
+import { focusManager, QueryClient } from "@tanstack/react-query";
+import { createRouter as createTanStackRouter } from "@tanstack/react-router";
+import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
+import { routeTree } from "./routeTree.gen";
 
 // TanStack Query's default focus manager only listens to `visibilitychange`,
 // which never fires when you OS-switch between apps (the document stays
@@ -11,19 +11,19 @@ import { routeTree } from "./routeTree.gen"
 // when the BrowserWindow regains OS focus, so listen for that too.
 if (typeof window !== "undefined") {
   focusManager.setEventListener((handleFocus) => {
-    const onFocus = () => handleFocus(true)
-    const onVisibility = () => handleFocus()
-    window.addEventListener("focus", onFocus, false)
-    window.addEventListener("visibilitychange", onVisibility, false)
+    const onFocus = () => handleFocus(true);
+    const onVisibility = () => handleFocus();
+    window.addEventListener("focus", onFocus, false);
+    window.addEventListener("visibilitychange", onVisibility, false);
     return () => {
-      window.removeEventListener("focus", onFocus)
-      window.removeEventListener("visibilitychange", onVisibility)
-    }
-  })
+      window.removeEventListener("focus", onFocus);
+      window.removeEventListener("visibilitychange", onVisibility);
+    };
+  });
 }
 
 export interface RouterContext {
-  queryClient: QueryClient
+  queryClient: QueryClient;
 }
 
 export function getRouter() {
@@ -38,22 +38,22 @@ export function getRouter() {
         refetchOnReconnect: true,
       },
     },
-  })
+  });
 
   const router = createTanStackRouter({
     routeTree,
     context: { queryClient } satisfies RouterContext,
     scrollRestoration: true,
     defaultPreload: "intent",
-  })
+  });
 
-  setupRouterSsrQueryIntegration({ router, queryClient })
+  setupRouterSsrQueryIntegration({ router, queryClient });
 
-  return router
+  return router;
 }
 
 declare module "@tanstack/react-router" {
   interface Register {
-    router: ReturnType<typeof getRouter>
+    router: ReturnType<typeof getRouter>;
   }
 }

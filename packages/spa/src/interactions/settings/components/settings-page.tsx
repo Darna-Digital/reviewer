@@ -7,40 +7,40 @@ import {
   IconMoon,
   IconRoute,
   IconSun,
-} from "@tabler/icons-react"
-import type { ComponentType, ReactNode } from "react"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Switch } from "@/components/ui/switch"
-import { isDesktop } from "@/lib/desktop"
+} from "@tabler/icons-react";
+import type { ComponentType, ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { isDesktop } from "@/lib/desktop";
 import {
   setUiPrefs,
   useUiPrefs,
   type DiffStyle,
   type ThemePref,
-} from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+} from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
-type SettingsIcon = ComponentType<{ className?: string }>
+type SettingsIcon = ComponentType<{ className?: string }>;
 
 const THEME_OPTIONS: {
-  value: ThemePref
-  label: string
-  icon: SettingsIcon
+  value: ThemePref;
+  label: string;
+  icon: SettingsIcon;
 }[] = [
   { value: "light", label: "Light", icon: IconSun },
   { value: "dark", label: "Dark", icon: IconMoon },
   { value: "system", label: "System", icon: IconDeviceDesktop },
-]
+];
 
 const DIFF_OPTIONS: {
-  value: DiffStyle
-  label: string
-  icon: SettingsIcon
+  value: DiffStyle;
+  label: string;
+  icon: SettingsIcon;
 }[] = [
   { value: "split", label: "Horizontal", icon: IconLayoutColumns },
   { value: "unified", label: "Vertical", icon: IconLayoutRows },
-]
+];
 
 function SegmentedOption<T extends string>({
   value,
@@ -49,11 +49,11 @@ function SegmentedOption<T extends string>({
   selected,
   onSelect,
 }: {
-  value: T
-  label: string
-  icon: SettingsIcon
-  selected: boolean
-  onSelect: (value: T) => void
+  value: T;
+  label: string;
+  icon: SettingsIcon;
+  selected: boolean;
+  onSelect: (value: T) => void;
 }) {
   return (
     <Button
@@ -67,7 +67,7 @@ function SegmentedOption<T extends string>({
       <Icon className="size-4" />
       {label}
     </Button>
-  )
+  );
 }
 
 function SettingRow({
@@ -75,9 +75,9 @@ function SettingRow({
   detail,
   children,
 }: {
-  title: string
-  detail?: string
-  children: ReactNode
+  title: string;
+  detail?: string;
+  children: ReactNode;
 }) {
   return (
     <div className="grid gap-3 border-b px-4 py-4 last:border-b-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
@@ -91,11 +91,11 @@ function SettingRow({
         {children}
       </div>
     </div>
-  )
+  );
 }
 
 export function SettingsPage() {
-  const prefs = useUiPrefs()
+  const prefs = useUiPrefs();
 
   return (
     <div className="flex h-full min-h-0">
@@ -206,5 +206,5 @@ export function SettingsPage() {
         </main>
       </div>
     </div>
-  )
+  );
 }

@@ -16,11 +16,11 @@ import {
   IconTerminal2,
   IconTool,
   IconWorld,
-} from "@tabler/icons-react"
-import { useState } from "react"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
-import { cn } from "@/lib/utils"
-import { elapsedMs, type WorkStep } from "../functions/work-log.functions"
+} from "@tabler/icons-react";
+import { useState } from "react";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { cn } from "@/lib/utils";
+import { elapsedMs, type WorkStep } from "../functions/work-log.functions";
 
 const TOOL_ICONS: ReadonlyArray<[RegExp, typeof IconTool]> = [
   [/^bash|^command|shell|terminal/i, IconTerminal2],
@@ -30,34 +30,34 @@ const TOOL_ICONS: ReadonlyArray<[RegExp, typeof IconTool]> = [
   [/^web|^fetch|^url/i, IconWorld],
   [/^todo/i, IconListCheck],
   [/^task|^agent|^mcp/i, IconSubtask],
-]
+];
 
 const stepIcon = (step: WorkStep) => {
-  if (step.thinking) return IconBrain
-  const match = TOOL_ICONS.find(([pattern]) => pattern.test(step.label))
-  return match?.[1] ?? IconTool
-}
+  if (step.thinking) return IconBrain;
+  const match = TOOL_ICONS.find(([pattern]) => pattern.test(step.label));
+  return match?.[1] ?? IconTool;
+};
 
 const formatDuration = (ms: number): string =>
   ms < 1000
     ? `${ms}ms`
     : ms < 60_000
       ? `${(ms / 1000).toFixed(ms < 10_000 ? 1 : 0)}s`
-      : `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`
+      : `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`;
 
 function StatusIcon({ status }: { status: WorkStep["status"] }) {
   if (status === "failed") {
-    return <IconAlertCircle className="size-3.5 shrink-0 text-destructive" />
+    return <IconAlertCircle className="size-3.5 shrink-0 text-destructive" />;
   }
   if (status === "done") {
-    return <IconCheck className="size-3.5 shrink-0 text-muted-foreground/70" />
+    return <IconCheck className="size-3.5 shrink-0 text-muted-foreground/70" />;
   }
   return (
     // Boxed to the width of the done/failed icons so the rows stay aligned.
     <span className="flex size-3.5 shrink-0 items-center justify-center">
       <LoadingCursor label="Running" />
     </span>
-  )
+  );
 }
 
 function Payload({ title, body }: { title: string; body: string }) {
@@ -70,14 +70,14 @@ function Payload({ title, body }: { title: string; body: string }) {
         {body}
       </pre>
     </div>
-  )
+  );
 }
 
 function WorkStepRow({ step, last }: { step: WorkStep; last: boolean }) {
-  const [open, setOpen] = useState(false)
-  const Icon = stepIcon(step)
-  const expandable = step.input !== null || step.output !== null
-  const tail = step.detail
+  const [open, setOpen] = useState(false);
+  const Icon = stepIcon(step);
+  const expandable = step.input !== null || step.output !== null;
+  const tail = step.detail;
 
   return (
     <div className="flex gap-2">
@@ -161,29 +161,29 @@ function WorkStepRow({ step, last }: { step: WorkStep; last: boolean }) {
         )}
       </div>
     </div>
-  )
+  );
 }
 
 export function WorkLog({
   steps,
   running,
 }: {
-  readonly steps: ReadonlyArray<WorkStep>
-  readonly running: boolean
+  readonly steps: ReadonlyArray<WorkStep>;
+  readonly running: boolean;
 }) {
-  const [readerChoice, setReaderChoice] = useState<boolean | null>(null)
-  const followTheTurn = readerChoice === null
-  const open = followTheTurn ? running : readerChoice
+  const [readerChoice, setReaderChoice] = useState<boolean | null>(null);
+  const followTheTurn = readerChoice === null;
+  const open = followTheTurn ? running : readerChoice;
 
-  const failures = steps.filter((s) => s.status === "failed").length
-  const elapsed = elapsedMs(steps)
+  const failures = steps.filter((s) => s.status === "failed").length;
+  const elapsed = elapsedMs(steps);
   const summary = [
     `${steps.length} ${steps.length === 1 ? "step" : "steps"}`,
     elapsed !== null && elapsed >= 1000 ? formatDuration(elapsed) : null,
     failures > 0 ? `${failures} failed` : null,
   ]
     .filter((part) => part !== null)
-    .join(" · ")
+    .join(" · ");
 
   return (
     <div className="mb-2">
@@ -222,5 +222,5 @@ export function WorkLog({
         </div>
       </div>
     </div>
-  )
+  );
 }

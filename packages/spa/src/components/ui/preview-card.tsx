@@ -1,21 +1,21 @@
-import { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card"
+import { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import {
   ELEVATION,
   POPUP_SHADOW,
   SurfaceProvider,
   useElevation,
-} from "@/lib/surface-context"
+} from "@/lib/surface-context";
 
 function PreviewCard({ ...props }: PreviewCardPrimitive.Root.Props) {
-  return <PreviewCardPrimitive.Root data-slot="preview-card" {...props} />
+  return <PreviewCardPrimitive.Root data-slot="preview-card" {...props} />;
 }
 
 function PreviewCardTrigger({ ...props }: PreviewCardPrimitive.Trigger.Props) {
   return (
     <PreviewCardPrimitive.Trigger data-slot="preview-card-trigger" {...props} />
-  )
+  );
 }
 
 function PreviewCardContent({
@@ -34,7 +34,7 @@ function PreviewCardContent({
   const { level, className: surface } = useElevation(
     ELEVATION.menu,
     POPUP_SHADOW
-  )
+  );
   return (
     <PreviewCardPrimitive.Portal>
       <PreviewCardPrimitive.Positioner
@@ -60,7 +60,7 @@ function PreviewCardContent({
         </PreviewCardPrimitive.Popup>
       </PreviewCardPrimitive.Positioner>
     </PreviewCardPrimitive.Portal>
-  )
+  );
 }
 
-export { PreviewCard, PreviewCardTrigger, PreviewCardContent }
+export { PreviewCard, PreviewCardTrigger, PreviewCardContent };

@@ -1,6 +1,6 @@
-import { vi } from "vitest"
-import type { ReviewComment } from "@byconvo/core/comments"
-import type { CommentsDependencies } from "../interfaces/comments.interfaces"
+import { vi } from "vitest";
+import type { ReviewComment } from "@byconvo/core/comments";
+import type { CommentsDependencies } from "../interfaces/comments.interfaces";
 
 const comment = (over: Partial<ReviewComment>): ReviewComment => ({
   id: "c1",
@@ -13,7 +13,7 @@ const comment = (over: Partial<ReviewComment>): ReviewComment => ({
   target: "worktree",
   source: "local",
   ...over,
-})
+});
 
 export const createCommentsDependenciesMock = (): CommentsDependencies => ({
   data: {},
@@ -44,4 +44,4 @@ export const createCommentsDependenciesMock = (): CommentsDependencies => ({
       })
     ),
   },
-})
+});

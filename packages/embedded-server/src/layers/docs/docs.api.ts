@@ -1,20 +1,20 @@
-import * as Schema from "effect/Schema"
+import * as Schema from "effect/Schema";
 import {
   Doc,
   DocSummary,
   DocIdParam,
   NewDoc,
   UpdateDoc,
-} from "@byconvo/core/docs"
+} from "@byconvo/core/docs";
 import {
   NoRepoSelected,
   NotFound,
   StorageError,
   Ok,
-} from "@byconvo/core/shared"
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
+} from "@byconvo/core/shared";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
-const errors = [NoRepoSelected, NotFound, StorageError] as const
+const errors = [NoRepoSelected, NotFound, StorageError] as const;
 
 export class DocsApi extends HttpApiGroup.make("docs")
   .add(

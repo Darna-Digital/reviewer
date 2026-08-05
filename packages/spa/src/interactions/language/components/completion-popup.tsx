@@ -12,22 +12,22 @@
  * And it hangs off the caret, re-measured as the view moves, rather than off a
  * trigger element — there is nothing in the DOM that *is* the caret.
  */
-import { useLayoutEffect, useRef } from "react"
-import type { CompletionItem } from "@byconvo/core/language"
-import { Popover, PopoverContent } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import type { VirtualAnchor } from "../functions/anchors"
+import { useLayoutEffect, useRef } from "react";
+import type { CompletionItem } from "@byconvo/core/language";
+import { Popover, PopoverContent } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import type { VirtualAnchor } from "../functions/anchors";
 
 /** Rows visible before the list scrolls. */
-const VISIBLE_ROWS = 9
+const VISIBLE_ROWS = 9;
 
 interface CompletionPopupProps {
-  anchor: () => VirtualAnchor | null
-  items: ReadonlyArray<CompletionItem>
-  selected: number
-  onSelect: (index: number) => void
-  onAccept: (index: number) => void
-  onClose: () => void
+  anchor: () => VirtualAnchor | null;
+  items: ReadonlyArray<CompletionItem>;
+  selected: number;
+  onSelect: (index: number) => void;
+  onAccept: (index: number) => void;
+  onClose: () => void;
 }
 
 export function CompletionPopup({
@@ -38,22 +38,22 @@ export function CompletionPopup({
   onAccept,
   onClose,
 }: CompletionPopupProps) {
-  const listRef = useRef<HTMLUListElement>(null)
+  const listRef = useRef<HTMLUListElement>(null);
 
   // Keyboard navigation moves the highlight past the visible rows.
   useLayoutEffect(() => {
     listRef.current
       ?.querySelector(`[data-index="${selected}"]`)
-      ?.scrollIntoView({ block: "nearest" })
-  }, [selected])
+      ?.scrollIntoView({ block: "nearest" });
+  }, [selected]);
 
-  if (items.length === 0) return null
+  if (items.length === 0) return null;
 
   return (
     <Popover
       open
       onOpenChange={(open) => {
-        if (!open) onClose()
+        if (!open) onClose();
       }}
     >
       <PopoverContent
@@ -106,5 +106,5 @@ export function CompletionPopup({
         </ul>
       </PopoverContent>
     </Popover>
-  )
+  );
 }

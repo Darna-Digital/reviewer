@@ -13,19 +13,19 @@
  * opts out of the initial focus move. A card the user asked for by clicking
  * does take focus, which is what makes its list reachable from the keyboard.
  */
-import { Popover, PopoverContent } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import type { VirtualAnchor } from "../functions/anchors"
+import { Popover, PopoverContent } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import type { VirtualAnchor } from "../functions/anchors";
 
 interface SymbolCardProps {
   /** What the card hangs off, re-measured as the view moves. */
-  anchor: Element | VirtualAnchor | (() => Element | VirtualAnchor | null)
-  onClose: () => void
+  anchor: Element | VirtualAnchor | (() => Element | VirtualAnchor | null);
+  onClose: () => void;
   /** A hover card is passive; a clicked one is the user's focus. */
-  interactive?: boolean
-  onPointerEnter?: () => void
-  onPointerLeave?: () => void
-  children: React.ReactNode
+  interactive?: boolean;
+  onPointerEnter?: () => void;
+  onPointerLeave?: () => void;
+  children: React.ReactNode;
 }
 
 export function SymbolCard({
@@ -40,7 +40,7 @@ export function SymbolCard({
     <Popover
       open
       onOpenChange={(open) => {
-        if (!open) onClose()
+        if (!open) onClose();
       }}
     >
       <PopoverContent
@@ -69,5 +69,5 @@ export function SymbolCard({
         {children}
       </PopoverContent>
     </Popover>
-  )
+  );
 }

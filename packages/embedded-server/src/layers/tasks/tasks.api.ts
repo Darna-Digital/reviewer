@@ -1,10 +1,10 @@
-import * as Schema from "effect/Schema"
+import * as Schema from "effect/Schema";
 import {
   NoRepoSelected,
   NotFound,
   StorageError,
   Ok,
-} from "@byconvo/core/shared"
+} from "@byconvo/core/shared";
 import {
   Board,
   Card,
@@ -20,10 +20,10 @@ import {
   TaskRefParam,
   UpdateCard,
   UpdateColumn,
-} from "@byconvo/core/tasks"
-import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi"
+} from "@byconvo/core/tasks";
+import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
-const errors = [NoRepoSelected, NotFound, StorageError] as const
+const errors = [NoRepoSelected, NotFound, StorageError] as const;
 
 export class TasksApi extends HttpApiGroup.make("tasks")
   .add(

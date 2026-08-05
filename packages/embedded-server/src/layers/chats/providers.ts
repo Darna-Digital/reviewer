@@ -10,28 +10,28 @@
  *   opencode `opencode run` — plain text streamed as it prints
  *   cursor   `cursor-agent -p --output-format stream-json` — token streaming
  */
-import type { Chat, ChatMessage } from "@byconvo/core/chats"
+import type { Chat, ChatMessage } from "@byconvo/core/chats";
 
 export interface ChatTurnProgram {
-  readonly file: string
-  readonly args: ReadonlyArray<string>
+  readonly file: string;
+  readonly args: ReadonlyArray<string>;
   /** Extra environment merged over the inherited process env. */
-  readonly env: Record<string, string>
+  readonly env: Record<string, string>;
   /** Written to the CLI's stdin (the prompt), which is then closed. */
-  readonly stdin: string
+  readonly stdin: string;
 }
 
 /** The chat's native session, decided by the runtime from the provider's
  * `chatSessionOrigin`: a minted id is ours up-front; every other agent mints
  * its own (id stays null until captured), so only a known id can be resumed. */
 export interface ChatTurnSession {
-  readonly id: string | null
-  readonly resume: boolean
+  readonly id: string | null;
+  readonly resume: boolean;
 }
 
 /** The user's shell — the CLI is launched through it (see threads/agents.ts:
  * a bare spawn under a GUI launch misses the developer's real PATH). */
-const userShell = (): string => process.env["SHELL"] ?? "bash"
+const userShell = (): string => process.env["SHELL"] ?? "bash";
 
 /**
  * Claude's reasoning budget per effort level, via the documented
@@ -42,7 +42,7 @@ const CLAUDE_THINKING_TOKENS: Record<Chat["effort"], string> = {
   low: "1024",
   medium: "8192",
   high: "31999",
-}
+};
 
 /**
  * `--permission-mode` / skip-permissions flags for the chat's access level.
@@ -51,32 +51,32 @@ const CLAUDE_THINKING_TOKENS: Record<Chat["effort"], string> = {
  * default mode where gated tools are refused (surfaced as failed activities).
  */
 const claudePermissionArgs = (chat: Chat): ReadonlyArray<string> => {
-  if (chat.mode === "plan") return ["--permission-mode", "plan"]
+  if (chat.mode === "plan") return ["--permission-mode", "plan"];
   switch (chat.access) {
     case "supervised":
-      return []
+      return [];
     case "acceptEdits":
-      return ["--permission-mode", "acceptEdits"]
+      return ["--permission-mode", "acceptEdits"];
     case "fullAccess":
-      return ["--dangerously-skip-permissions"]
+      return ["--dangerously-skip-permissions"];
   }
-}
+};
 
 /**
  * Codex sandbox/approval flags. Plan mode has no codex equivalent, so it
  * falls back to the read-only default sandbox (same as "supervised").
  */
 const codexAccessArgs = (chat: Chat): ReadonlyArray<string> => {
-  if (chat.mode === "plan") return []
+  if (chat.mode === "plan") return [];
   switch (chat.access) {
     case "supervised":
-      return []
+      return [];
     case "acceptEdits":
-      return ["--full-auto"]
+      return ["--full-auto"];
     case "fullAccess":
-      return ["--dangerously-bypass-approvals-and-sandbox"]
+      return ["--dangerously-bypass-approvals-and-sandbox"];
   }
-}
+};
 
 /**
  * Cursor's one permission switch: `--force` lets the agent edit files and run
@@ -87,18 +87,18 @@ const codexAccessArgs = (chat: Chat): ReadonlyArray<string> => {
  * default, exactly like codex.
  */
 const cursorAccessArgs = (chat: Chat): ReadonlyArray<string> => {
-  if (chat.mode === "plan") return []
+  if (chat.mode === "plan") return [];
   switch (chat.access) {
     case "supervised":
-      return []
+      return [];
     case "acceptEdits":
     case "fullAccess":
-      return ["--force"]
+      return ["--force"];
   }
-}
+};
 
 /** Single-quote a string for safe interpolation into a shell command. */
-const quote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`
+const quote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
 
 const inLoginShell = (
   cli: string,
@@ -112,7 +112,7 @@ const inLoginShell = (
     "-c",
     `command -v ${cli} >/dev/null 2>&1 && exec ${parts.map(quote).join(" ")} || { echo "could not start ${cli} — is it installed and on your PATH?" >&2; exit 127; }`,
   ],
-})
+});
 
 /**
  * A turn's prompt, with the prior conversation prepended when the agent has no
@@ -125,11 +125,11 @@ export const withHistory = (
   messages: ReadonlyArray<ChatMessage>,
   prompt: string
 ): string => {
-  const prior = messages.filter((m) => m.text.trim().length > 0)
-  if (prior.length === 0) return prompt
+  const prior = messages.filter((m) => m.text.trim().length > 0);
+  if (prior.length === 0) return prompt;
   const transcript = prior
     .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.text}`)
-    .join("\n\n")
+    .join("\n\n");
   return [
     "You are continuing an existing conversation. For context, here is the",
     "transcript so far (it may have been produced by a different agent):",
@@ -141,8 +141,8 @@ export const withHistory = (
     "Reply to this latest message, using the history above for context:",
     "",
     prompt,
-  ].join("\n")
-}
+  ].join("\n");
+};
 
 /**
  * Append attached image paths to the prompt so the agent reads them — the same
@@ -155,10 +155,10 @@ export const withAttachedImages = (
   prompt: string,
   imagePaths: ReadonlyArray<string>
 ): string => {
-  if (imagePaths.length === 0) return prompt
-  const refs = imagePaths.map((path) => `[Attached image: ${path}]`).join("\n")
-  return prompt.trim().length > 0 ? `${prompt}\n\n${refs}` : refs
-}
+  if (imagePaths.length === 0) return prompt;
+  const refs = imagePaths.map((path) => `[Attached image: ${path}]`).join("\n");
+  return prompt.trim().length > 0 ? `${prompt}\n\n${refs}` : refs;
+};
 
 /**
  * Build the streaming one-turn invocation for `chat`. The prompt goes through
@@ -192,12 +192,12 @@ export const chatTurnProgram = (
             ? ["--resume", session.id]
             : ["--session-id", session.id]
           : []),
-      ]
+      ];
       return {
         ...inLoginShell("claude", parts),
         env: { MAX_THINKING_TOKENS: CLAUDE_THINKING_TOKENS[chat.effort] },
         stdin: prompt,
-      }
+      };
     }
     case "codex": {
       const parts = [
@@ -213,8 +213,8 @@ export const chatTurnProgram = (
         ...codexAccessArgs(chat),
         // "-" = read the prompt from stdin.
         "-",
-      ]
-      return { ...inLoginShell("codex", parts), env: {}, stdin: prompt }
+      ];
+      return { ...inLoginShell("codex", parts), env: {}, stdin: prompt };
     }
     case "opencode": {
       const parts = [
@@ -226,8 +226,8 @@ export const chatTurnProgram = (
         ...(session.resume && session.id !== null
           ? ["--session", session.id]
           : []),
-      ]
-      return { ...inLoginShell("opencode", parts), env: {}, stdin: prompt }
+      ];
+      return { ...inLoginShell("opencode", parts), env: {}, stdin: prompt };
     }
     case "cursor": {
       const parts = [
@@ -244,8 +244,8 @@ export const chatTurnProgram = (
         ...(session.resume && session.id !== null
           ? ["--resume", session.id]
           : []),
-      ]
-      return { ...inLoginShell("cursor-agent", parts), env: {}, stdin: prompt }
+      ];
+      return { ...inLoginShell("cursor-agent", parts), env: {}, stdin: prompt };
     }
   }
-}
+};

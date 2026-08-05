@@ -1,17 +1,17 @@
-import createFetchClient from "openapi-fetch"
-import createQueryClient from "openapi-react-query"
-import type { paths } from "./schema"
+import createFetchClient from "openapi-fetch";
+import createQueryClient from "openapi-react-query";
+import type { paths } from "./schema";
 
 type ByconvoWindow = Window & {
   byconvo?: {
-    apiBaseUrl?: string
-  }
-}
+    apiBaseUrl?: string;
+  };
+};
 
 const desktopApiBaseUrl =
   typeof window === "undefined"
     ? undefined
-    : (window as ByconvoWindow).byconvo?.apiBaseUrl
+    : (window as ByconvoWindow).byconvo?.apiBaseUrl;
 
 /**
  * Browser/dev stays same-origin through Vite's proxy. Packaged Electron loads
@@ -19,9 +19,9 @@ const desktopApiBaseUrl =
  */
 export const fetchClient = createFetchClient<paths>({
   baseUrl: desktopApiBaseUrl ?? "",
-})
+});
 
-export const api = createQueryClient(fetchClient)
+export const api = createQueryClient(fetchClient);
 
 /**
  * The PTY WebSocket URL for a live terminal. Shares the API origin/port (the
@@ -31,29 +31,29 @@ export const api = createQueryClient(fetchClient)
  */
 export const ptySocketUrl = (params: {
   /** Thread id — keys the persistent server-side PTY session for reconnects. */
-  id: string
-  agent: string
-  cols: number
-  rows: number
+  id: string;
+  agent: string;
+  cols: number;
+  rows: number;
   /** Terminal theme, so the PTY can advertise its background brightness
    * (COLORFGBG) and agent CLIs pick readable colours. Only used on a fresh
    * spawn. */
-  theme: "light" | "dark"
+  theme: "light" | "dark";
 }): string => {
   const origin =
     desktopApiBaseUrl ??
     (typeof window === "undefined"
       ? "http://localhost"
-      : window.location.origin)
-  const url = new URL("/api/threads/pty", origin)
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
-  url.searchParams.set("id", params.id)
-  url.searchParams.set("agent", params.agent)
-  url.searchParams.set("cols", String(params.cols))
-  url.searchParams.set("rows", String(params.rows))
-  url.searchParams.set("theme", params.theme)
-  return url.toString()
-}
+      : window.location.origin);
+  const url = new URL("/api/threads/pty", origin);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.searchParams.set("id", params.id);
+  url.searchParams.set("agent", params.agent);
+  url.searchParams.set("cols", String(params.cols));
+  url.searchParams.set("rows", String(params.rows));
+  url.searchParams.set("theme", params.theme);
+  return url.toString();
+};
 
 /**
  * The event-stream WebSocket URL for an agent chat. Same origin/port and
@@ -66,12 +66,12 @@ export const chatStreamUrl = (chatId: string): string => {
     desktopApiBaseUrl ??
     (typeof window === "undefined"
       ? "http://localhost"
-      : window.location.origin)
-  const url = new URL("/api/chats/stream", origin)
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
-  url.searchParams.set("chat", chatId)
-  return url.toString()
-}
+      : window.location.origin);
+  const url = new URL("/api/chats/stream", origin);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.searchParams.set("chat", chatId);
+  return url.toString();
+};
 
 /**
  * The PTY WebSocket URL for a Local Dev command's running process. Same
@@ -80,19 +80,19 @@ export const chatStreamUrl = (chatId: string): string => {
  */
 export const devPtySocketUrl = (params: {
   /** Dev command id — the DevProcessManager keys its running process by it. */
-  command: string
-  cols: number
-  rows: number
+  command: string;
+  cols: number;
+  rows: number;
 }): string => {
   const origin =
     desktopApiBaseUrl ??
     (typeof window === "undefined"
       ? "http://localhost"
-      : window.location.origin)
-  const url = new URL("/api/local-dev/pty", origin)
-  url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
-  url.searchParams.set("command", params.command)
-  url.searchParams.set("cols", String(params.cols))
-  url.searchParams.set("rows", String(params.rows))
-  return url.toString()
-}
+      : window.location.origin);
+  const url = new URL("/api/local-dev/pty", origin);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  url.searchParams.set("command", params.command);
+  url.searchParams.set("cols", String(params.cols));
+  url.searchParams.set("rows", String(params.rows));
+  return url.toString();
+};

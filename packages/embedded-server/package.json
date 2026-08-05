@@ -13,8 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint",
-    "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\""
+    "format": "prettier --write \"**/*.{ts,js}\"",
+    "format:check": "prettier --check \"**/*.{ts,js}\""
   },
   "dependencies": {
     "@byconvo/core": "workspace:*",

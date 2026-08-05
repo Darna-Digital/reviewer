@@ -2,32 +2,32 @@
  * GitHub-backed PR repository — the real implementation. Ports `core/GitHub.ts`
  * onto the shared `GitHubClient` (owner/repo resolution + REST helpers).
  */
-import * as Effect from "effect/Effect"
-import { GitProviderError } from "@byconvo/core/ports/git-provider"
-import { GitHubClient } from "./github-client.ts"
-import { diffFromPullFiles, parsePullFiles } from "./pull-files-diff.ts"
-import type { PullFileEntry } from "./pull-files-diff.ts"
-import type { ReviewComment } from "@byconvo/core/comments"
+import * as Effect from "effect/Effect";
+import { GitProviderError } from "@byconvo/core/ports/git-provider";
+import { GitHubClient } from "./github-client.ts";
+import { diffFromPullFiles, parsePullFiles } from "./pull-files-diff.ts";
+import type { PullFileEntry } from "./pull-files-diff.ts";
+import type { ReviewComment } from "@byconvo/core/comments";
 import type {
   PullRequestInfo,
   GitProviderShape,
-} from "@byconvo/core/ports/git-provider"
+} from "@byconvo/core/ports/git-provider";
 
-const FILES_PER_PAGE = 100
-const MAX_FILE_PAGES = 30
+const FILES_PER_PAGE = 100;
+const MAX_FILE_PAGES = 30;
 
 const isDiffTooLarge = (error: GitProviderError): boolean =>
-  error.status === 406
+  error.status === 406;
 
 export const makeGitHubProvider = Effect.gen(function* () {
-  const gh = yield* GitHubClient
+  const gh = yield* GitHubClient;
 
   const pulls: GitProviderShape["pulls"] = Effect.gen(function* () {
-    const { owner, repo } = yield* gh.repo
+    const { owner, repo } = yield* gh.repo;
     const data = (yield* gh.getJson(
       `/repos/${owner}/${repo}/pulls?state=open&per_page=50`
-    )) as any
-    if (!Array.isArray(data)) return []
+    )) as any;
+    if (!Array.isArray(data)) return [];
     return data.map(
       (pr: any): PullRequestInfo => ({
         number: pr.number,
@@ -39,31 +39,31 @@ export const makeGitHubProvider = Effect.gen(function* () {
         url: pr.html_url ?? "",
         updatedAt: pr.updated_at ?? "",
       })
-    )
-  })
+    );
+  });
 
   const pullFiles = (owner: string, repo: string, pullNumber: number) =>
     Effect.gen(function* () {
-      const entries: Array<PullFileEntry> = []
+      const entries: Array<PullFileEntry> = [];
       for (let page = 1; page <= MAX_FILE_PAGES; page++) {
         const data = yield* gh.getJson(
           `/repos/${owner}/${repo}/pulls/${pullNumber}/files` +
             `?per_page=${FILES_PER_PAGE}&page=${page}`
-        )
-        const parsed = parsePullFiles(data)
-        entries.push(...parsed)
-        if (parsed.length < FILES_PER_PAGE) return entries
+        );
+        const parsed = parsePullFiles(data);
+        entries.push(...parsed);
+        if (parsed.length < FILES_PER_PAGE) return entries;
       }
       yield* Effect.logWarning(
         `PR #${pullNumber}: stopped after ${MAX_FILE_PAGES} pages of files ` +
           `(${entries.length} files); the diff shown is incomplete.`
-      )
-      return entries
-    })
+      );
+      return entries;
+    });
 
   const pullDiff: GitProviderShape["pullDiff"] = (pullNumber) =>
     Effect.gen(function* () {
-      const { owner, repo } = yield* gh.repo
+      const { owner, repo } = yield* gh.repo;
       return yield* gh
         .getText(
           `/repos/${owner}/${repo}/pulls/${pullNumber}`,
@@ -74,27 +74,27 @@ export const makeGitHubProvider = Effect.gen(function* () {
             Effect.gen(function* () {
               yield* Effect.logInfo(
                 `PR #${pullNumber}: ${error.reason}; rebuilding the diff from paginated file patches.`
-              )
-              const files = yield* pullFiles(owner, repo, pullNumber)
-              return diffFromPullFiles(files)
+              );
+              const files = yield* pullFiles(owner, repo, pullNumber);
+              return diffFromPullFiles(files);
             })
           )
-        )
-    })
+        );
+    });
 
   const pullComments: GitProviderShape["pullComments"] = (pullNumber) =>
     Effect.gen(function* () {
-      const { owner, repo } = yield* gh.repo
+      const { owner, repo } = yield* gh.repo;
       const data = (yield* gh.getJson(
         `/repos/${owner}/${repo}/pulls/${pullNumber}/comments?per_page=100`
-      )) as any
-      if (!Array.isArray(data)) return []
+      )) as any;
+      if (!Array.isArray(data)) return [];
       return data.flatMap((comment: any): Array<ReviewComment> => {
         if (
           typeof comment.line !== "number" ||
           typeof comment.path !== "string"
         )
-          return []
+          return [];
         return [
           {
             id: `gh-${comment.id}`,
@@ -107,21 +107,21 @@ export const makeGitHubProvider = Effect.gen(function* () {
             target: `pr-${pullNumber}`,
             source: "github",
           },
-        ]
-      })
-    })
+        ];
+      });
+    });
 
   const createPullComment: GitProviderShape["createPullComment"] = (input) =>
     Effect.gen(function* () {
-      const { owner, repo } = yield* gh.repo
+      const { owner, repo } = yield* gh.repo;
       const prData = (yield* gh.getJson(
         `/repos/${owner}/${repo}/pulls/${input.pullNumber}`
-      )) as any
-      const headSha = prData?.head?.sha
+      )) as any;
+      const headSha = prData?.head?.sha;
       if (typeof headSha !== "string") {
         return yield* Effect.fail(
           new GitProviderError({ reason: "could not resolve PR head sha" })
-        )
+        );
       }
       const created = (yield* gh.postJson(
         `/repos/${owner}/${repo}/pulls/${input.pullNumber}/comments`,
@@ -132,7 +132,7 @@ export const makeGitHubProvider = Effect.gen(function* () {
           line: input.lineNumber,
           side: input.side === "deletions" ? "LEFT" : "RIGHT",
         }
-      )) as any
+      )) as any;
       return {
         id: `gh-${created.id}`,
         filePath: input.filePath,
@@ -143,16 +143,16 @@ export const makeGitHubProvider = Effect.gen(function* () {
         createdAt: created.created_at ?? new Date().toISOString(),
         target: `pr-${input.pullNumber}`,
         source: "github",
-      } satisfies ReviewComment
-    })
+      } satisfies ReviewComment;
+    });
 
   const replyToPullComment: GitProviderShape["replyToPullComment"] = (input) =>
     Effect.gen(function* () {
-      const { owner, repo } = yield* gh.repo
+      const { owner, repo } = yield* gh.repo;
       const created = (yield* gh.postJson(
         `/repos/${owner}/${repo}/pulls/${input.pullNumber}/comments/${input.commentId}/replies`,
         { body: input.body }
-      )) as any
+      )) as any;
       return {
         id: `gh-${created.id}`,
         filePath: created.path ?? "",
@@ -163,8 +163,8 @@ export const makeGitHubProvider = Effect.gen(function* () {
         createdAt: created.created_at ?? new Date().toISOString(),
         target: `pr-${input.pullNumber}`,
         source: "github",
-      } satisfies ReviewComment
-    })
+      } satisfies ReviewComment;
+    });
 
   return {
     pulls,
@@ -172,5 +172,5 @@ export const makeGitHubProvider = Effect.gen(function* () {
     pullComments,
     createPullComment,
     replyToPullComment,
-  } satisfies GitProviderShape
-})
+  } satisfies GitProviderShape;
+});

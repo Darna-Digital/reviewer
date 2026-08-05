@@ -2,44 +2,44 @@
  * The workspace search pill in the title bar. It opens onto everything the
  * sidebar holds — projects, tasks and channels — and jumps straight there.
  */
-import { IconHash, IconSearch } from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
-import { useState, type CSSProperties, type ReactNode } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { IconHash, IconSearch } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
+import { useState, type CSSProperties, type ReactNode } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { ScrollArea } from "@/components/ui/scroll-area"
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
+} from "@/components/ui/tooltip";
+import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
 import {
   CHANNELS,
   PROJECTS,
   allTasks,
   type CollaborationView,
-} from "@/interactions/collaboration/data/collaboration.mock"
+} from "@/interactions/collaboration/data/collaboration.mock";
 
 interface Hit {
-  key: string
-  view: CollaborationView
-  id: string
-  label: string
-  detail: string
-  icon: ReactNode
+  key: string;
+  view: CollaborationView;
+  id: string;
+  label: string;
+  detail: string;
+  icon: ReactNode;
 }
 
 export function CollaborationSearch() {
-  const [open, setOpen] = useState(false)
-  const [query, setQuery] = useState("")
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
-  const q = query.trim().toLowerCase()
+  const q = query.trim().toLowerCase();
   const hits: ReadonlyArray<Hit> = [
     ...PROJECTS.map((p) => ({
       key: `project-${p.id}`,
@@ -75,7 +75,7 @@ export function CollaborationSearch() {
       q.length === 0 ||
       hit.label.toLowerCase().includes(q) ||
       hit.detail.toLowerCase().includes(q)
-  )
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -134,5 +134,5 @@ export function CollaborationSearch() {
         </ScrollArea>
       </PopoverContent>
     </Popover>
-  )
+  );
 }

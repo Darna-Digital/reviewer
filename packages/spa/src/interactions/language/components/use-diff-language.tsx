@@ -13,53 +13,56 @@
  * its own side, so a row alone does not say which file its number belongs to.
  * Diagnostics show as line annotations instead, which carry a side explicitly.
  */
-import { useCallback, useEffect, useMemo, useState } from "react"
-import type { DiffLineAnnotation, DiffTokenEventBaseProps } from "@pierre/diffs"
-import type { Diagnostic, Location } from "@byconvo/core/language"
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type {
+  DiffLineAnnotation,
+  DiffTokenEventBaseProps,
+} from "@pierre/diffs";
+import type { Diagnostic, Location } from "@byconvo/core/language";
 import {
   useLanguageLayer,
   type DiagnosticsAnnotationMeta,
-} from "./language-layer"
+} from "./language-layer";
 
 export interface DiffLanguageOptions {
   /** Repository-relative path of the file the diff is of. */
-  readonly path: string
+  readonly path: string;
   /** The section the rendered diff lives in. */
-  readonly section: HTMLElement | null
+  readonly section: HTMLElement | null;
   /**
    * Only a worktree diff has its additions side on disk. Against a commit or a
    * pull request the additions side is a past revision that the language server
    * would answer about from the current one, so the layer stays off.
    */
-  readonly enabled: boolean
-  readonly onOpenLocation: (path: string, lineNumber: number) => void
+  readonly enabled: boolean;
+  readonly onOpenLocation: (path: string, lineNumber: number) => void;
 }
 
 export interface DiffLanguage {
-  readonly diagnostics: ReadonlyArray<Diagnostic>
+  readonly diagnostics: ReadonlyArray<Diagnostic>;
   /** Merge into the section's `lineAnnotations`. */
   readonly annotations: ReadonlyArray<
     DiffLineAnnotation<DiagnosticsAnnotationMeta>
-  >
+  >;
   /** Spread into the section's `options`. */
   readonly viewOptions: {
-    readonly useTokenTransformer: boolean
-    readonly unsafeCSS: string
+    readonly useTokenTransformer: boolean;
+    readonly unsafeCSS: string;
     /** Compose with the view's own: it is what says the code exists. */
     readonly onPostRender: (
       node: HTMLElement,
       instance: unknown,
       phase: "mount" | "update" | "unmount"
-    ) => void
-    readonly onTokenEnter: (props: DiffTokenEventBaseProps) => void
-    readonly onTokenLeave: () => void
+    ) => void;
+    readonly onTokenEnter: (props: DiffTokenEventBaseProps) => void;
+    readonly onTokenLeave: () => void;
     readonly onTokenClick: (
       props: DiffTokenEventBaseProps,
       event: MouseEvent
-    ) => void
-  }
+    ) => void;
+  };
   /** Render inside the section. */
-  readonly card: React.ReactNode
+  readonly card: React.ReactNode;
 }
 
 export function useDiffLanguage({
@@ -73,20 +76,20 @@ export function useDiffLanguage({
   // of them to keep the language server busy while the first screen waits. A
   // file is asked about once it comes near the viewport, and stays asked about
   // afterwards so scrolling back is instant.
-  const [seen, setSeen] = useState(false)
+  const [seen, setSeen] = useState(false);
   useEffect(() => {
-    if (seen || section === null || !enabled) return
+    if (seen || section === null || !enabled) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((entry) => entry.isIntersecting)) setSeen(true)
+        if (entries.some((entry) => entry.isIntersecting)) setSeen(true);
       },
       { rootMargin: "400px" }
-    )
-    observer.observe(section)
-    return () => observer.disconnect()
-  }, [enabled, section, seen])
+    );
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, [enabled, section, seen]);
 
-  const getContainer = useCallback(() => section, [section])
+  const getContainer = useCallback(() => section, [section]);
 
   const layer = useLanguageLayer({
     path,
@@ -100,10 +103,10 @@ export function useDiffLanguage({
         onOpenLocation(location.path, location.range.start.line + 1),
       [onOpenLocation]
     ),
-  })
+  });
 
   const { onPostRender, onTokenEnter, onTokenLeave, onTokenClick } =
-    layer.viewOptions
+    layer.viewOptions;
 
   const viewOptions = useMemo(
     () => ({
@@ -111,13 +114,13 @@ export function useDiffLanguage({
       unsafeCSS: layer.viewOptions.unsafeCSS,
       onPostRender,
       onTokenEnter: (props: DiffTokenEventBaseProps) => {
-        if (props.side !== "additions") return
-        onTokenEnter(props)
+        if (props.side !== "additions") return;
+        onTokenEnter(props);
       },
       onTokenLeave,
       onTokenClick: (props: DiffTokenEventBaseProps, event: MouseEvent) => {
-        if (props.side !== "additions") return
-        onTokenClick(props, event)
+        if (props.side !== "additions") return;
+        onTokenClick(props, event);
       },
     }),
     [
@@ -127,7 +130,7 @@ export function useDiffLanguage({
       onTokenEnter,
       onTokenLeave,
     ]
-  )
+  );
 
   const annotations = useMemo(
     () =>
@@ -136,12 +139,12 @@ export function useDiffLanguage({
         side: "additions" as const,
       })),
     [layer.annotations]
-  )
+  );
 
   return {
     diagnostics: layer.diagnostics,
     annotations,
     viewOptions,
     card: layer.card,
-  }
+  };
 }

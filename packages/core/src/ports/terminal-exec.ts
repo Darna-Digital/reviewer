@@ -1,7 +1,7 @@
-import * as Context from "effect/Context"
-import * as Effect from "effect/Effect"
-import * as Layer from "effect/Layer"
-import * as Schema from "effect/Schema"
+import * as Context from "effect/Context";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as Schema from "effect/Schema";
 
 export class TerminalError extends Schema.TaggedErrorClass<TerminalError>()(
   "TerminalError",
@@ -9,19 +9,19 @@ export class TerminalError extends Schema.TaggedErrorClass<TerminalError>()(
   { httpApiStatus: 500 }
 ) {
   override get message(): string {
-    return this.reason
+    return this.reason;
   }
 }
 
 export interface TerminalResult {
-  readonly stdout: string
-  readonly stderr: string
-  readonly exitCode: number
+  readonly stdout: string;
+  readonly stderr: string;
+  readonly exitCode: number;
 }
 export interface TerminalExecShape {
   readonly run: (
     command: string
-  ) => Effect.Effect<TerminalResult, TerminalError>
+  ) => Effect.Effect<TerminalResult, TerminalError>;
 }
 export class TerminalExec extends Context.Service<
   TerminalExec,
@@ -36,4 +36,4 @@ export const memoryLayer = (
 ): Layer.Layer<TerminalExec> =>
   Layer.succeed(TerminalExec)(
     TerminalExec.of({ run: (c) => Effect.succeed(result(c)) })
-  )
+  );

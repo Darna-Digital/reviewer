@@ -11,34 +11,34 @@ import {
   useCallback,
   useState,
   type PointerEvent as ReactPointerEvent,
-} from "react"
-import { cn } from "@/lib/utils"
+} from "react";
+import { cn } from "@/lib/utils";
 
 interface ResizeHandleProps {
   /**
    * "col" → a vertical divider dragged horizontally (col-resize).
    * "row" → a horizontal divider dragged vertically (row-resize).
    */
-  orientation: "col" | "row"
+  orientation: "col" | "row";
   /** Current panel size in px. Captured fresh at the start of each drag. */
-  value: number
+  value: number;
   /** Lower bound, in px. */
-  min: number
+  min: number;
   /** Upper bound, in px — a function so it can track the live viewport. */
-  max: () => number
+  max: () => number;
   /**
    * How a positive pointer delta (moving right / down) changes the size:
    * +1 when the handle sits on the panel's trailing edge (e.g. a left
    * sidebar's right edge), -1 when on its leading edge (e.g. a bottom
    * panel's top edge). Defaults to +1.
    */
-  direction?: 1 | -1
+  direction?: 1 | -1;
   /** Called continuously during the drag with the clamped size. */
-  onResize: (next: number) => void
+  onResize: (next: number) => void;
   /** Called once when the drag ends with the final clamped size. */
-  onResizeEnd?: (next: number) => void
-  className?: string
-  label?: string
+  onResizeEnd?: (next: number) => void;
+  className?: string;
+  label?: string;
 }
 
 export function ResizeHandle({
@@ -56,36 +56,36 @@ export function ResizeHandle({
   // class is global (so the resize cursor shows everywhere mid-drag), but the
   // highlight keys off this per-handle flag — otherwise every sibling row/col
   // handle would glow at once.
-  const [dragging, setDragging] = useState(false)
+  const [dragging, setDragging] = useState(false);
   const onPointerDown = useCallback(
     (event: ReactPointerEvent) => {
-      event.preventDefault()
-      const axis = orientation === "col" ? "clientX" : "clientY"
-      const start = event[axis]
-      const startSize = value
+      event.preventDefault();
+      const axis = orientation === "col" ? "clientX" : "clientY";
+      const start = event[axis];
+      const startSize = value;
       const cursorClass =
-        orientation === "col" ? "is-resizing-col" : "is-resizing-row"
-      document.body.classList.add(cursorClass)
-      setDragging(true)
+        orientation === "col" ? "is-resizing-col" : "is-resizing-row";
+      document.body.classList.add(cursorClass);
+      setDragging(true);
 
-      let latest = startSize
+      let latest = startSize;
       const onMove = (move: PointerEvent) => {
-        const delta = (move[axis] - start) * direction
-        latest = Math.min(Math.max(startSize + delta, min), max())
-        onResize(latest)
-      }
+        const delta = (move[axis] - start) * direction;
+        latest = Math.min(Math.max(startSize + delta, min), max());
+        onResize(latest);
+      };
       const onUp = () => {
-        document.body.classList.remove(cursorClass)
-        setDragging(false)
-        window.removeEventListener("pointermove", onMove)
-        window.removeEventListener("pointerup", onUp)
-        onResizeEnd?.(latest)
-      }
-      window.addEventListener("pointermove", onMove)
-      window.addEventListener("pointerup", onUp)
+        document.body.classList.remove(cursorClass);
+        setDragging(false);
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+        onResizeEnd?.(latest);
+      };
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
     },
     [orientation, value, min, max, direction, onResize, onResizeEnd]
-  )
+  );
 
   return (
     <div
@@ -100,5 +100,5 @@ export function ResizeHandle({
         className
       )}
     />
-  )
+  );
 }

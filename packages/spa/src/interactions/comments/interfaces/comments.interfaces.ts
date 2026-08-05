@@ -4,52 +4,52 @@
  * anchored to its parent line is real business logic, so it lives here behind
  * injected side effects (the API mutations).
  */
-import type { AppMode } from "@/lib/api/types"
-import type { CommentSide, ReviewComment } from "@byconvo/core/comments"
-import type { PullRequestInfo } from "@byconvo/core/ports/git-provider"
+import type { AppMode } from "@/lib/api/types";
+import type { CommentSide, ReviewComment } from "@byconvo/core/comments";
+import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
 
 export interface DraftLocation {
-  readonly filePath: string
-  readonly side: CommentSide
-  readonly lineNumber: number
+  readonly filePath: string;
+  readonly side: CommentSide;
+  readonly lineNumber: number;
 }
 
 export interface SubmitContext {
-  readonly mode: AppMode
-  readonly selectedPull: PullRequestInfo | null
-  readonly targetKey: string
+  readonly mode: AppMode;
+  readonly selectedPull: PullRequestInfo | null;
+  readonly targetKey: string;
 }
 
 export interface CommentsDependencies {
-  data: Record<string, never>
+  data: Record<string, never>;
   sideEffects: {
     readonly addLocalComment: (input: {
-      filePath: string
-      side: CommentSide
-      lineNumber: number
-      body: string
-      target: string
-    }) => Promise<ReviewComment>
+      filePath: string;
+      side: CommentSide;
+      lineNumber: number;
+      body: string;
+      target: string;
+    }) => Promise<ReviewComment>;
     readonly addPullComment: (
       pullNumber: number,
       input: {
-        filePath: string
-        side: CommentSide
-        lineNumber: number
-        body: string
+        filePath: string;
+        side: CommentSide;
+        lineNumber: number;
+        body: string;
       }
-    ) => Promise<ReviewComment>
+    ) => Promise<ReviewComment>;
     readonly updateLocalComment: (
       id: string,
       body: string
-    ) => Promise<ReviewComment>
-    readonly deleteComment: (id: string) => Promise<void>
+    ) => Promise<ReviewComment>;
+    readonly deleteComment: (id: string) => Promise<void>;
     readonly replyPullComment: (
       pullNumber: number,
       commentId: number,
       body: string
-    ) => Promise<ReviewComment>
-  }
+    ) => Promise<ReviewComment>;
+  };
 }
 
 export interface CommentsFunctions {
@@ -58,18 +58,18 @@ export interface CommentsFunctions {
     ctx: SubmitContext,
     location: DraftLocation,
     body: string
-  ) => Promise<ReviewComment>
+  ) => Promise<ReviewComment>;
   /** Update a local comment's body; returns the updated comment, or null if not local. */
   readonly update: (
     comment: ReviewComment,
     body: string
-  ) => Promise<ReviewComment | null>
+  ) => Promise<ReviewComment | null>;
   /** Delete a comment — only local comments are deletable; returns true if removed. */
-  readonly remove: (comment: ReviewComment) => Promise<boolean>
+  readonly remove: (comment: ReviewComment) => Promise<boolean>;
   /** Reply to a GitHub PR comment, anchored to its parent's line. */
   readonly reply: (
     selectedPull: PullRequestInfo | null,
     comment: ReviewComment,
     body: string
-  ) => Promise<ReviewComment | null>
+  ) => Promise<ReviewComment | null>;
 }

@@ -5,11 +5,11 @@
  * "could not load".
  */
 export const errorReason = (error: unknown, fallback: string): string => {
-  if (typeof error === "string" && error.trim().length > 0) return error
-  const shaped = error as { reason?: unknown; message?: unknown } | null
+  if (typeof error === "string" && error.trim().length > 0) return error;
+  const shaped = error as { reason?: unknown; message?: unknown } | null;
   if (typeof shaped?.reason === "string" && shaped.reason.length > 0)
-    return shaped.reason
+    return shaped.reason;
   if (typeof shaped?.message === "string" && shaped.message.length > 0)
-    return shaped.message
-  return fallback
-}
+    return shaped.message;
+  return fallback;
+};

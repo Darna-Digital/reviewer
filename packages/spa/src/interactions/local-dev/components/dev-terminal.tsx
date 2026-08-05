@@ -9,16 +9,16 @@
  * The xterm wiring deliberately mirrors components/threads/Terminal.tsx; once the
  * terminal-threads work settles the two could share a hook.
  */
-import { useEffect, useRef, useState } from "react"
-import { devPtySocketUrl } from "@/lib/api/client"
-import { mountTerminal, type TerminalTheme } from "@/lib/terminal/xterm-engine"
-import "@xterm/xterm/css/xterm.css"
+import { useEffect, useRef, useState } from "react";
+import { devPtySocketUrl } from "@/lib/api/client";
+import { mountTerminal, type TerminalTheme } from "@/lib/terminal/xterm-engine";
+import "@xterm/xterm/css/xterm.css";
 
 interface TerminalHandles {
-  fit: () => void
-  focus: () => void
-  resize: () => void
-  setTheme: (theme: TerminalTheme) => void
+  fit: () => void;
+  focus: () => void;
+  resize: () => void;
+  setTheme: (theme: TerminalTheme) => void;
 }
 
 export function DevTerminal({
@@ -28,33 +28,33 @@ export function DevTerminal({
   onExit,
 }: {
   /** Dev command id — selects the server-side process to attach to. */
-  commandId: string
-  active: boolean
-  resolvedTheme: TerminalTheme
+  commandId: string;
+  active: boolean;
+  resolvedTheme: TerminalTheme;
   /** Called when the process exits, so the page can refresh its status. */
-  onExit?: (exitCode: number) => void
+  onExit?: (exitCode: number) => void;
 }) {
-  const hostRef = useRef<HTMLDivElement | null>(null)
-  const handlesRef = useRef<TerminalHandles | null>(null)
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const handlesRef = useRef<TerminalHandles | null>(null);
   const [status, setStatus] = useState<"connecting" | "open" | "closed">(
     "connecting"
-  )
-  const [error, setError] = useState<string | null>(null)
+  );
+  const [error, setError] = useState<string | null>(null);
 
   // Mount the engine + attach once per command.
   useEffect(() => {
-    const host = hostRef.current
-    if (host === null) return
-    let disposed = false
-    let cleanup = () => {}
+    const host = hostRef.current;
+    if (host === null) return;
+    let disposed = false;
+    let cleanup = () => {};
 
     void (async () => {
-      const mounted = await mountTerminal(host, resolvedTheme)
+      const mounted = await mountTerminal(host, resolvedTheme);
       if (disposed) {
-        mounted.dispose()
-        return
+        mounted.dispose();
+        return;
       }
-      const { term, safeFit } = mounted
+      const { term, safeFit } = mounted;
 
       const ws = new WebSocket(
         devPtySocketUrl({
@@ -62,85 +62,85 @@ export function DevTerminal({
           cols: term.cols,
           rows: term.rows,
         })
-      )
+      );
       const sendResize = () => {
         if (ws.readyState === WebSocket.OPEN)
-          ws.send(JSON.stringify({ r: { cols: term.cols, rows: term.rows } }))
-      }
+          ws.send(JSON.stringify({ r: { cols: term.cols, rows: term.rows } }));
+      };
 
       ws.onopen = () => {
-        if (!disposed) setStatus("open")
-        sendResize()
-      }
+        if (!disposed) setStatus("open");
+        sendResize();
+      };
       ws.onmessage = (event) => {
         try {
-          const msg = JSON.parse(event.data as string)
-          if (typeof msg.d === "string") term.write(msg.d)
-          else if (typeof msg.error === "string") setError(msg.error)
+          const msg = JSON.parse(event.data as string);
+          if (typeof msg.d === "string") term.write(msg.d);
+          else if (typeof msg.error === "string") setError(msg.error);
           else if (msg.exit !== undefined) {
-            term.write(`\r\n\x1b[90m[process exited: ${msg.exit}]\x1b[0m\r\n`)
-            onExit?.(Number(msg.exit))
+            term.write(`\r\n\x1b[90m[process exited: ${msg.exit}]\x1b[0m\r\n`);
+            onExit?.(Number(msg.exit));
           }
         } catch {
           // ignore malformed frames
         }
-      }
+      };
       ws.onclose = () => {
-        if (!disposed) setStatus("closed")
-      }
+        if (!disposed) setStatus("closed");
+      };
       ws.onerror = () => {
-        if (!disposed) setError("connection failed")
-      }
+        if (!disposed) setError("connection failed");
+      };
 
       const dataSub = term.onData((data) => {
         if (ws.readyState === WebSocket.OPEN)
-          ws.send(JSON.stringify({ d: data }))
-      })
+          ws.send(JSON.stringify({ d: data }));
+      });
 
       const observer = new ResizeObserver(() => {
-        safeFit()
-        sendResize()
-      })
-      observer.observe(host)
+        safeFit();
+        sendResize();
+      });
+      observer.observe(host);
 
       handlesRef.current = {
         fit: safeFit,
         focus: () => term.focus(),
         resize: sendResize,
         setTheme: (theme) => mounted.setTheme(theme),
-      }
+      };
 
       cleanup = () => {
-        handlesRef.current = null
-        observer.disconnect()
-        dataSub.dispose()
-        ws.close()
-        mounted.dispose()
-      }
-    })()
+        handlesRef.current = null;
+        observer.disconnect();
+        dataSub.dispose();
+        ws.close();
+        mounted.dispose();
+      };
+    })();
 
     return () => {
-      disposed = true
-      cleanup()
-    }
+      disposed = true;
+      cleanup();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [commandId])
+  }, [commandId]);
 
   // Re-fit + focus when this terminal becomes the active one.
   useEffect(() => {
-    if (!active) return
+    if (!active) return;
     const id = requestAnimationFrame(() => {
-      handlesRef.current?.fit()
-      handlesRef.current?.resize()
-      handlesRef.current?.focus()
-    })
-    return () => cancelAnimationFrame(id)
-  }, [active])
+      handlesRef.current?.fit();
+      handlesRef.current?.resize();
+      handlesRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [active]);
 
   // Apply theme changes live without tearing down the connection.
   useEffect(() => {
-    handlesRef.current?.setTheme(resolvedTheme)
-  }, [resolvedTheme])
+    handlesRef.current?.setTheme(resolvedTheme);
+  }, [resolvedTheme]);
 
   return (
     <div className="relative h-full min-h-0 w-full">
@@ -157,5 +157,5 @@ export function DevTerminal({
         )
       )}
     </div>
-  )
+  );
 }

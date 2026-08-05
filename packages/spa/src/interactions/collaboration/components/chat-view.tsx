@@ -13,26 +13,26 @@ import {
   IconLock,
   IconWorld,
   IconX,
-} from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
-import { Avatar, AvatarStack } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+} from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
+import { Avatar, AvatarStack } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card"
-import { AgentMark } from "@/interactions/collaboration/components/agent-mark"
-import { ConversationAgents } from "@/interactions/collaboration/components/conversation-agents"
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card";
+import { AgentMark } from "@/interactions/collaboration/components/agent-mark";
+import { ConversationAgents } from "@/interactions/collaboration/components/conversation-agents";
 import {
   MessageList,
   SystemLine,
-} from "@/interactions/collaboration/components/message-list"
-import { MessageComposer } from "@/interactions/collaboration/components/message-composer"
-import { PaneBody, PaneHeader } from "@/components/layout/pane-header"
+} from "@/interactions/collaboration/components/message-list";
+import { MessageComposer } from "@/interactions/collaboration/components/message-composer";
+import { PaneBody, PaneHeader } from "@/components/layout/pane-header";
 import {
   agentsIn,
   approveJoinRequest,
@@ -45,10 +45,10 @@ import {
   withdrawJoinRequest,
   type MockChat,
   type MockJoinRequest,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import { useChat } from "@/interactions/collaboration/data/use-chats"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import { useChat } from "@/interactions/collaboration/data/use-chats";
 
-const firstName = (name: string) => name.split(" ")[0] ?? name
+const firstName = (name: string) => name.split(" ")[0] ?? name;
 
 /**
  * Where the chat lives and who may read it — the one thing a public-by-default
@@ -58,10 +58,10 @@ function VisibilityBadge({
   chat,
   projectName,
 }: {
-  chat: MockChat
-  projectName: string
+  chat: MockChat;
+  projectName: string;
 }) {
-  const isPublic = chat.visibility === "public"
+  const isPublic = chat.visibility === "public";
   return (
     <Popover>
       <PopoverTrigger
@@ -96,7 +96,7 @@ function VisibilityBadge({
         </p>
       </PopoverContent>
     </Popover>
-  )
+  );
 }
 
 /** The initiator's queue — the half of the flow that only they ever see. */
@@ -104,8 +104,8 @@ function JoinRequests({
   chat,
   requests,
 }: {
-  chat: MockChat
-  requests: ReadonlyArray<MockJoinRequest>
+  chat: MockChat;
+  requests: ReadonlyArray<MockJoinRequest>;
 }) {
   return (
     <div className="mx-auto w-full max-w-3xl shrink-0 px-4 pb-3">
@@ -156,7 +156,7 @@ function JoinRequests({
         </ul>
       </div>
     </div>
-  )
+  );
 }
 
 /** What stands where the composer would be, for someone who is only reading. */
@@ -165,9 +165,9 @@ function JoinBar({
   projectName,
   pending,
 }: {
-  chat: MockChat
-  projectName: string
-  pending: boolean
+  chat: MockChat;
+  projectName: string;
+  pending: boolean;
 }) {
   return (
     <div className="mx-auto w-full max-w-3xl shrink-0 px-4 pb-4">
@@ -209,17 +209,17 @@ function JoinBar({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 export function ChatView({ chat: initial }: { chat: MockChat }) {
-  const chat = useChat(initial.id) ?? initial
-  const project = findProject(chat.projectId)
-  const projectName = project?.name ?? "this project"
-  const membership = membershipOf(chat)
-  const joined = membership === "joined"
-  const agents = agentsIn(chat.id)
-  const isInitiator = chat.initiator === VIEWER.name
+  const chat = useChat(initial.id) ?? initial;
+  const project = findProject(chat.projectId);
+  const projectName = project?.name ?? "this project";
+  const membership = membershipOf(chat);
+  const joined = membership === "joined";
+  const agents = agentsIn(chat.id);
+  const isInitiator = chat.initiator === VIEWER.name;
 
   return (
     <>
@@ -292,5 +292,5 @@ export function ChatView({ chat: initial }: { chat: MockChat }) {
         />
       )}
     </>
-  )
+  );
 }

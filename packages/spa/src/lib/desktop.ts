@@ -11,15 +11,15 @@
  */
 type ByconvoWindow = Window & {
   byconvo?: {
-    apiBaseUrl?: string
-    openDirectory: () => Promise<string | null>
-  }
-}
+    apiBaseUrl?: string;
+    openDirectory: () => Promise<string | null>;
+  };
+};
 
 export const isDesktop =
-  typeof window !== "undefined" && "byconvo" in (window as ByconvoWindow)
+  typeof window !== "undefined" && "byconvo" in (window as ByconvoWindow);
 
 export async function openDesktopDirectory(): Promise<string | null> {
-  if (!isDesktop) return null
-  return (window as ByconvoWindow).byconvo?.openDirectory() ?? null
+  if (!isDesktop) return null;
+  return (window as ByconvoWindow).byconvo?.openDirectory() ?? null;
 }

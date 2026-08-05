@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from "react"
+import { Fragment, type ReactNode } from "react";
 
 /**
  * The header a two-pane surface wears — collaboration's panes, the inbox and
@@ -10,9 +10,9 @@ export function PaneHeader({
   meta,
   actions,
 }: {
-  crumbs: ReadonlyArray<ReactNode>
-  meta?: string
-  actions?: ReactNode
+  crumbs: ReadonlyArray<ReactNode>;
+  meta?: string;
+  actions?: ReactNode;
 }) {
   return (
     <header className="flex h-11 shrink-0 items-center gap-2 border-b px-3">
@@ -38,10 +38,10 @@ export function PaneHeader({
         </div>
       )}
     </header>
-  )
+  );
 }
 
 /** The roomy, centred column every pane's body lives in. */
 export function PaneBody({ children }: { children: ReactNode }) {
-  return <div className="mx-auto w-full max-w-3xl px-4 py-5">{children}</div>
+  return <div className="mx-auto w-full max-w-3xl px-4 py-5">{children}</div>;
 }

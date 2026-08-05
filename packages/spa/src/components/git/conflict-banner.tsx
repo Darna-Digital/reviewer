@@ -3,18 +3,18 @@ import {
   IconCheck,
   IconPlayerPlay,
   IconX,
-} from "@tabler/icons-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
-import type { MergeState } from "@byconvo/core/repo"
+} from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import type { MergeState } from "@byconvo/core/repo";
 
 interface ConflictBannerProps {
-  state: MergeState
+  state: MergeState;
   /** The file currently open in the resolver, if any. */
-  selectedPath: string | null
-  onSelectFile: (path: string) => void
-  onAbort: () => void
-  onContinue: () => void
+  selectedPath: string | null;
+  onSelectFile: (path: string) => void;
+  onAbort: () => void;
+  onContinue: () => void;
 }
 
 const VERB: Record<MergeState["operation"], string> = {
@@ -23,21 +23,21 @@ const VERB: Record<MergeState["operation"], string> = {
   "cherry-pick": "Cherry-picking",
   revert: "Reverting",
   none: "",
-}
+};
 
 /** A description like "Merging feature into main" from the merge state. */
 const describe = (state: MergeState): string => {
-  const verb = VERB[state.operation]
-  if (state.incoming === null) return `${verb} in progress`
+  const verb = VERB[state.operation];
+  if (state.incoming === null) return `${verb} in progress`;
   if (state.operation === "rebase") {
     return state.onto === null
       ? `${verb} ${state.incoming}`
-      : `${verb} ${state.incoming} onto ${state.onto}`
+      : `${verb} ${state.incoming} onto ${state.onto}`;
   }
   return state.onto === null
     ? `${verb} ${state.incoming}`
-    : `${verb} ${state.incoming} into ${state.onto}`
-}
+    : `${verb} ${state.incoming} into ${state.onto}`;
+};
 
 export function ConflictBanner({
   state,
@@ -46,9 +46,9 @@ export function ConflictBanner({
   onAbort,
   onContinue,
 }: ConflictBannerProps) {
-  if (state.operation === "none") return null
-  const remaining = state.conflicted.length
-  const resolved = remaining === 0
+  if (state.operation === "none") return null;
+  const remaining = state.conflicted.length;
+  const resolved = remaining === 0;
 
   return (
     <div className="shrink-0 border-b border-amber-500/40 bg-amber-500/10 px-3 py-2">
@@ -107,5 +107,5 @@ export function ConflictBanner({
         </div>
       )}
     </div>
-  )
+  );
 }

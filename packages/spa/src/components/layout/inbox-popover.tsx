@@ -4,20 +4,23 @@
  * panel with its own rows — collaboration's prototype threads, code mode's
  * agent chats — so this only carries the chrome the two share.
  */
-import { IconInbox } from "@tabler/icons-react"
-import { useState, type ReactNode } from "react"
-import { buttonVariants } from "@/components/ui/button"
+import { IconInbox } from "@tabler/icons-react";
+import { useRef, useState, type ReactNode } from "react";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
-export const INBOX_PREVIEW_COUNT = 4
+export const INBOX_PREVIEW_COUNT = 4;
+
+const HOVER_OPEN_DELAY = 150;
+const HOVER_CLOSE_DELAY = 200;
 
 export const inboxPopoverLink =
-  "text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
+  "text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground";
 
 export function InboxPopoverHeader({ children }: { children: ReactNode }) {
   return (
@@ -25,7 +28,7 @@ export function InboxPopoverHeader({ children }: { children: ReactNode }) {
       <p className="text-[13px] font-medium">Inbox</p>
       {children}
     </div>
-  )
+  );
 }
 
 export function InboxPopover({
@@ -35,27 +38,38 @@ export function InboxPopover({
   onClose,
   children,
 }: {
-  active: boolean
+  active: boolean;
   /** "right" hangs it off the rail; "bottom" off a title-bar button. */
-  side?: "right" | "bottom"
+  side?: "right" | "bottom";
   /** Draws the dot on the button — something in the list wants a look. */
-  waiting: boolean
+  waiting: boolean;
   /** Fired once the panel is dismissed, so a mode can mark the list seen. */
-  onClose?: () => void
-  children: (close: () => void) => ReactNode
+  onClose?: () => void;
+  children: (close: () => void) => ReactNode;
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
+  const holdsFocus = useRef(false);
   const close = () => {
-    setOpen(false)
-    onClose?.()
-  }
+    holdsFocus.current = false;
+    setOpen(false);
+    onClose?.();
+  };
 
   return (
     <Popover
       open={open}
-      onOpenChange={(next) => (next ? setOpen(true) : close())}
+      onOpenChange={(next, details) => {
+        if (!next && details.reason === "trigger-hover" && holdsFocus.current) {
+          details.cancel();
+          return;
+        }
+        return next ? setOpen(true) : close();
+      }}
     >
       <PopoverTrigger
+        openOnHover
+        delay={HOVER_OPEN_DELAY}
+        closeDelay={HOVER_CLOSE_DELAY}
         className={cn(
           buttonVariants({ variant: "ghost", size: "icon" }),
           "relative rounded-lg text-muted-foreground [-webkit-app-region:no-drag]",
@@ -72,9 +86,17 @@ export function InboxPopover({
         side={side}
         align="start"
         className="w-96 gap-0 overflow-hidden p-0"
+        onFocusCapture={() => {
+          holdsFocus.current = true;
+        }}
+        onBlurCapture={(event) => {
+          holdsFocus.current = event.currentTarget.contains(
+            event.relatedTarget
+          );
+        }}
       >
         {children(close)}
       </PopoverContent>
     </Popover>
-  )
+  );
 }

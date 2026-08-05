@@ -9,15 +9,15 @@ import {
   IconAdjustmentsHorizontal,
   IconFilter,
   IconPlus,
-} from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
-import { useState, type CSSProperties } from "react"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar"
-import { PaneHeader } from "@/components/layout/pane-header"
-import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-priority-icon"
-import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
+} from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
+import { useState, type CSSProperties } from "react";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar";
+import { PaneHeader } from "@/components/layout/pane-header";
+import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-priority-icon";
+import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
 import {
   projectTasks,
   STATUS_LABEL,
@@ -26,8 +26,8 @@ import {
   type MockProject,
   type MockTask,
   type TaskStatus,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import { cn } from "@/lib/utils"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import { cn } from "@/lib/utils";
 
 /** The tint each group header wears, matching its status icon. */
 const GROUP_TINT: Record<TaskStatus, string> = {
@@ -35,7 +35,7 @@ const GROUP_TINT: Record<TaskStatus, string> = {
   review: "bg-brand-500/5",
   todo: "bg-muted/40",
   done: "bg-emerald-500/5",
-}
+};
 
 function TaskRow({ task, nested }: { task: MockTask; nested?: boolean }) {
   return (
@@ -65,18 +65,18 @@ function TaskRow({ task, nested }: { task: MockTask; nested?: boolean }) {
         {task.updated}
       </span>
     </Link>
-  )
+  );
 }
 
 function Group({
   status,
   tasks,
 }: {
-  status: TaskStatus
-  tasks: ReadonlyArray<MockTask>
+  status: TaskStatus;
+  tasks: ReadonlyArray<MockTask>;
 }) {
-  const [open, setOpen] = useState(true)
-  const parents = tasks.filter((t) => t.parentId === undefined)
+  const [open, setOpen] = useState(true);
+  const parents = tasks.filter((t) => t.parentId === undefined);
 
   return (
     <section>
@@ -119,7 +119,7 @@ function Group({
         parents.map((task) => {
           const children = taskChildren(task.id).filter(
             (child) => child.status === status
-          )
+          );
           return (
             <div key={task.id}>
               <TaskRow task={task} />
@@ -131,18 +131,18 @@ function Group({
                 </div>
               )}
             </div>
-          )
+          );
         })}
     </section>
-  )
+  );
 }
 
 export function TaskListView({ project }: { project: MockProject }) {
-  const tasks = projectTasks(project.id)
+  const tasks = projectTasks(project.id);
   const groups = STATUS_ORDER.map((status) => ({
     status,
     tasks: tasks.filter((t) => t.status === status),
-  })).filter((group) => group.tasks.length > 0)
+  })).filter((group) => group.tasks.length > 0);
 
   return (
     <>
@@ -205,5 +205,5 @@ export function TaskListView({ project }: { project: MockProject }) {
         )}
       </ScrollArea>
     </>
-  )
+  );
 }

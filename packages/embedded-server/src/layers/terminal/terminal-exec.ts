@@ -18,46 +18,46 @@
  * captured in the result so the caller can show them. Only a genuine spawn/IO
  * failure (no shell on PATH) fails the effect with TerminalError.
  */
-import * as Effect from "effect/Effect"
-import * as Layer from "effect/Layer"
-import * as Stream from "effect/Stream"
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+import * as Stream from "effect/Stream";
+import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import {
   TerminalError,
   TerminalExec,
   type TerminalExecShape,
   type TerminalResult,
-} from "@byconvo/core/ports/terminal-exec"
-import { WorkspaceContext } from "../workspace/workspace-context.ts"
+} from "@byconvo/core/ports/terminal-exec";
+import { WorkspaceContext } from "../workspace/workspace-context.ts";
 
 export {
   memoryLayer,
   TerminalExec,
   type TerminalExecShape,
   type TerminalResult,
-} from "@byconvo/core/ports/terminal-exec"
+} from "@byconvo/core/ports/terminal-exec";
 
 export const make = Effect.gen(function* () {
-  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
-  const workspace = yield* WorkspaceContext
+  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+  const workspace = yield* WorkspaceContext;
 
   const run: TerminalExecShape["run"] = (command) =>
     Effect.scoped(
       Effect.gen(function* () {
         const cwd = yield* workspace.current.pipe(
           Effect.map((root) => root ?? process.cwd())
-        )
-        const isWin = process.platform === "win32"
+        );
+        const isWin = process.platform === "win32";
         // POSIX: go through the user's login + interactive shell so the command
         // sees the same PATH a real terminal tab does (see the file header).
-        const shell = isWin ? "cmd.exe" : (process.env["SHELL"] ?? "/bin/bash")
-        const args = isWin ? ["/c", command] : ["-l", "-i", "-c", command]
+        const shell = isWin ? "cmd.exe" : (process.env["SHELL"] ?? "/bin/bash");
+        const args = isWin ? ["/c", command] : ["-l", "-i", "-c", command];
         // Ignore stdin (an immediately-closed /dev/null). Without this the
         // default "pipe" leaves the child's stdin open, and CLIs that read it —
         // notably `opencode run` — block forever waiting for input/EOF.
         const handle = yield* spawner.spawn(
           ChildProcess.make(shell, args, { cwd, stdin: "ignore" })
-        )
+        );
         const [stdout, stderr, exitCode] = yield* Effect.all(
           [
             Stream.mkString(Stream.decodeText(handle.stdout)),
@@ -65,8 +65,8 @@ export const make = Effect.gen(function* () {
             handle.exitCode,
           ],
           { concurrency: "unbounded" }
-        )
-        return { stdout, stderr, exitCode } satisfies TerminalResult
+        );
+        return { stdout, stderr, exitCode } satisfies TerminalResult;
       })
     ).pipe(
       Effect.catch((error) =>
@@ -78,13 +78,13 @@ export const make = Effect.gen(function* () {
           })
         )
       )
-    )
+    );
 
-  return TerminalExec.of({ run })
-})
+  return TerminalExec.of({ run });
+});
 
 export const layer: Layer.Layer<
   TerminalExec,
   never,
   ChildProcessSpawner.ChildProcessSpawner | WorkspaceContext
-> = Layer.effect(TerminalExec)(make)
+> = Layer.effect(TerminalExec)(make);

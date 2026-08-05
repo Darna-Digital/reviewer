@@ -16,15 +16,15 @@ import {
   IconPlus,
   IconStar,
   IconTag,
-} from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
-import type { CSSProperties, ReactNode } from "react"
-import { Avatar } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar"
-import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-priority-icon"
-import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon"
+} from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
+import type { CSSProperties, ReactNode } from "react";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar";
+import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-priority-icon";
+import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
 import {
   findProject,
   PRIORITY_LABEL,
@@ -34,11 +34,11 @@ import {
   taskChildren,
   type MockActivity,
   type MockTask,
-} from "@/interactions/collaboration/data/collaboration.mock"
-import { cn } from "@/lib/utils"
+} from "@/interactions/collaboration/data/collaboration.mock";
+import { cn } from "@/lib/utils";
 
 const PROPERTY_ROW =
-  "flex h-7 items-center gap-2 rounded-md px-1.5 text-[13px] outline-none hover:bg-elevate focus-visible:ring-3 focus-visible:ring-ring/30"
+  "flex h-7 items-center gap-2 rounded-md px-1.5 text-[13px] outline-none hover:bg-elevate focus-visible:ring-3 focus-visible:ring-ring/30";
 
 function ActivityEntry({ entry }: { entry: MockActivity }) {
   if (entry.kind === "comment") {
@@ -51,7 +51,7 @@ function ActivityEntry({ entry }: { entry: MockActivity }) {
         </div>
         <p className="px-3 pt-1 pb-3 text-sm text-pretty">{entry.body}</p>
       </li>
-    )
+    );
   }
   return (
     <li className="flex items-center gap-2 px-1 text-[13px] text-muted-foreground">
@@ -61,7 +61,7 @@ function ActivityEntry({ entry }: { entry: MockActivity }) {
       </span>
       <span className="shrink-0">· {entry.time}</span>
     </li>
-  )
+  );
 }
 
 function Property({ label, children }: { label: string; children: ReactNode }) {
@@ -70,19 +70,19 @@ function Property({ label, children }: { label: string; children: ReactNode }) {
       <p className="text-xs text-muted-foreground">{label}</p>
       {children}
     </div>
-  )
+  );
 }
 
 export function TaskView({ task }: { task: MockTask }) {
-  const project = findProject(task.projectId)
-  const channel = projectChannels(task.projectId)[0]
-  const children = taskChildren(task.id)
+  const project = findProject(task.projectId);
+  const channel = projectChannels(task.projectId)[0];
+  const children = taskChildren(task.id);
   const siblings = projectTasks(task.projectId).filter(
     (t) => t.parentId === task.parentId
-  )
-  const index = siblings.findIndex((t) => t.id === task.id)
-  const previous = siblings[index - 1]
-  const next = siblings[index + 1]
+  );
+  const index = siblings.findIndex((t) => t.id === task.id);
+  const previous = siblings[index - 1];
+  const next = siblings[index + 1];
 
   return (
     <>
@@ -341,5 +341,5 @@ export function TaskView({ task }: { task: MockTask }) {
         </div>
       </ScrollArea>
     </>
-  )
+  );
 }

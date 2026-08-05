@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { CollaborationPage } from "@/interactions/collaboration/components/collaboration-page"
-import type { CollaborationView } from "@/interactions/collaboration/data/collaboration.mock"
+import { createFileRoute } from "@tanstack/react-router";
+import { CollaborationPage } from "@/interactions/collaboration/components/collaboration-page";
+import type { CollaborationView } from "@/interactions/collaboration/data/collaboration.mock";
 
 const VIEWS: ReadonlyArray<CollaborationView> = [
   "project",
@@ -11,11 +11,11 @@ const VIEWS: ReadonlyArray<CollaborationView> = [
   "task",
   "agents",
   "members",
-]
+];
 
 export interface CollaborationSearch {
-  view?: CollaborationView
-  id?: string
+  view?: CollaborationView;
+  id?: string;
 }
 
 export const Route = createFileRoute("/_workspace/modes/collaboration")({
@@ -26,4 +26,4 @@ export const Route = createFileRoute("/_workspace/modes/collaboration")({
     id: typeof search["id"] === "string" ? search["id"] : undefined,
   }),
   component: CollaborationPage,
-})
+});

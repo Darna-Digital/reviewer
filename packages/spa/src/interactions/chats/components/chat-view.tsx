@@ -3,24 +3,24 @@
  * the chat WebSocket (snapshot + streamed events through the pure reducer);
  * sends/stops/settings go through the REST actions and come back as events.
  */
-import { IconPlugConnectedX } from "@tabler/icons-react"
-import { toast } from "sonner"
-import { LoadingCursor } from "@/components/ui/loading-cursor"
-import { useChatStream } from "@/interactions/chats/adapters/chats.stream.adapter"
-import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
+import { IconPlugConnectedX } from "@tabler/icons-react";
+import { toast } from "sonner";
+import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { useChatStream } from "@/interactions/chats/adapters/chats.stream.adapter";
+import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import type {
   ChatImage,
   ChatSettings,
-} from "@/interactions/chats/interfaces/chats.interfaces"
-import { isChatRunning } from "@/interactions/chats/functions/chats.reducer"
-import { useChatModels } from "@/lib/queries"
-import { ChatComposer } from "./chat-composer"
-import { MessagesTimeline } from "./messages-timeline"
+} from "@/interactions/chats/interfaces/chats.interfaces";
+import { isChatRunning } from "@/interactions/chats/functions/chats.reducer";
+import { useChatModels } from "@/lib/queries";
+import { ChatComposer } from "./chat-composer";
+import { MessagesTimeline } from "./messages-timeline";
 
 export function ChatView({ chatId }: { chatId: string }) {
-  const { chat, error, status } = useChatStream(chatId)
-  const models = useChatModels()
-  const actions = useChatsActions()
+  const { chat, error, status } = useChatStream(chatId);
+  const models = useChatModels();
+  const actions = useChatsActions();
 
   if (error !== null) {
     return (
@@ -28,35 +28,35 @@ export function ChatView({ chatId }: { chatId: string }) {
         <div className="font-medium">Thread unavailable</div>
         <div className="text-muted-foreground">{error}</div>
       </div>
-    )
+    );
   }
   if (chat === null) {
     return (
       <div className="flex h-full items-center justify-center">
         <LoadingCursor label="Loading thread…" />
       </div>
-    )
+    );
   }
 
-  const running = isChatRunning(chat)
+  const running = isChatRunning(chat);
   const settings: ChatSettings = {
     provider: chat.provider,
     model: chat.model,
     effort: chat.effort,
     access: chat.access,
     mode: chat.mode,
-  }
+  };
 
   const send = async (text: string, images: ReadonlyArray<ChatImage>) => {
     try {
-      await actions.send(chat.id, text, images)
+      await actions.send(chat.id, text, images);
     } catch (sendError) {
       toast.error(
         sendError instanceof Error ? sendError.message : "failed to send"
-      )
-      throw sendError
+      );
+      throw sendError;
     }
-  }
+  };
 
   const changeSettings = (patch: Partial<ChatSettings>) => {
     actions.updateSettings(chat.id, patch).catch((updateError: unknown) => {
@@ -64,9 +64,9 @@ export function ChatView({ chatId }: { chatId: string }) {
         updateError instanceof Error
           ? updateError.message
           : "failed to update settings"
-      )
-    })
-  }
+      );
+    });
+  };
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -96,11 +96,11 @@ export function ChatView({ chatId }: { chatId: string }) {
           onSend={send}
           running={running}
           onStop={() => {
-            void actions.stop(chat.id)
+            void actions.stop(chat.id);
           }}
           placeholder="Ask for follow-up changes or attach images…"
         />
       </div>
     </div>
-  )
+  );
 }

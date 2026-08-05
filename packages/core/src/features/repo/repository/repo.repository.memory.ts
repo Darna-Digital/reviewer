@@ -1,4 +1,4 @@
-import * as Effect from "effect/Effect"
+import * as Effect from "effect/Effect";
 import type {
   BranchInfo,
   CommitInfo,
@@ -7,18 +7,18 @@ import type {
   MergeState,
   RepoInfo,
   RepoStatus,
-} from "../schema/repo.schema.ts"
-import type { RepoRepo } from "./repo.repository.ts"
+} from "../schema/repo.schema.ts";
+import type { RepoRepo } from "./repo.repository.ts";
 
 export interface MemoryRepoSeed {
-  readonly info?: RepoInfo
-  readonly files?: FilesPayload
-  readonly status?: RepoStatus
-  readonly branches?: ReadonlyArray<BranchInfo>
-  readonly commits?: ReadonlyArray<CommitInfo>
-  readonly diff?: string
-  readonly mergeState?: MergeState
-  readonly conflictBlobs?: ConflictBlobs
+  readonly info?: RepoInfo;
+  readonly files?: FilesPayload;
+  readonly status?: RepoStatus;
+  readonly branches?: ReadonlyArray<BranchInfo>;
+  readonly commits?: ReadonlyArray<CommitInfo>;
+  readonly diff?: string;
+  readonly mergeState?: MergeState;
+  readonly conflictBlobs?: ConflictBlobs;
 }
 const defaultInfo: RepoInfo = {
   root: "/repo",
@@ -26,7 +26,7 @@ const defaultInfo: RepoInfo = {
   currentBranch: "main",
   remoteUrl: null,
   github: null,
-}
+};
 const defaultStatus: RepoStatus = {
   branch: "main",
   upstream: null,
@@ -38,7 +38,7 @@ const defaultStatus: RepoStatus = {
   unstaged: 0,
   untracked: 0,
   conflicted: 0,
-}
+};
 export const makeMemoryRepoRepository = (seed: MemoryRepoSeed = {}) =>
   Effect.gen(function* () {
     const repo: RepoRepo = {
@@ -94,6 +94,6 @@ export const makeMemoryRepoRepository = (seed: MemoryRepoSeed = {}) =>
       continueMerge: Effect.succeed("continued"),
       renameBranch: () => Effect.void,
       deleteBranch: () => Effect.void,
-    }
-    return repo
-  })
+    };
+    return repo;
+  });

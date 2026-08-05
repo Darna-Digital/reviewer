@@ -18,16 +18,16 @@
 
 // Shared canonical event/parser shapes live in turn-parser.ts (type-only
 // import — the runtime import goes the other way, so no cycle).
-import type { TurnEvent, TurnParser } from "./turn-parser.ts"
+import type { TurnEvent, TurnParser } from "./turn-parser.ts";
 
-export type ClaudeStreamEvent = TurnEvent
-export type ClaudeTurnParser = TurnParser
+export type ClaudeStreamEvent = TurnEvent;
+export type ClaudeTurnParser = TurnParser;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null
+  typeof value === "object" && value !== null;
 
 const asString = (value: unknown): string | null =>
-  typeof value === "string" ? value : null
+  typeof value === "string" ? value : null;
 
 /**
  * The CLI's logged-out / expired-credential replies. In `-p` mode Claude
@@ -37,10 +37,10 @@ const asString = (value: unknown): string | null =>
  * as if the assistant said it.
  */
 const AUTH_ERROR_PATTERN =
-  /not logged in|please run \/login|invalid api key|oauth token (has )?(expired|been revoked)|authentication[_ ]error/i
+  /not logged in|please run \/login|invalid api key|oauth token (has )?(expired|been revoked)|authentication[_ ]error/i;
 
 export const isClaudeAuthError = (text: string | null): boolean =>
-  text !== null && AUTH_ERROR_PATTERN.test(text)
+  text !== null && AUTH_ERROR_PATTERN.test(text);
 
 /**
  * What the chat shows instead of the CLI's bare logged-out reply. Rendered as
@@ -81,7 +81,7 @@ export const CLAUDE_LOGIN_HINT = [
   "Verify it's wired up: `zsh -lc 'echo ${CLAUDE_CODE_OAUTH_TOKEN:+present}'` " +
     "should print `present`. New turns pick it up automatically — no restart " +
     "needed, since each turn is a fresh login shell.",
-].join("\n")
+].join("\n");
 
 /**
  * A one-line human summary of a tool call. Common Claude tools carry their
@@ -89,92 +89,92 @@ export const CLAUDE_LOGIN_HINT = [
  */
 const toolSummary = (name: string, input: unknown): string => {
   if (isRecord(input)) {
-    const command = asString(input["command"])
-    if (command !== null) return `${name} — ${command.slice(0, 120)}`
+    const command = asString(input["command"]);
+    if (command !== null) return `${name} — ${command.slice(0, 120)}`;
     const path =
       asString(input["file_path"]) ??
       asString(input["path"]) ??
       asString(input["pattern"]) ??
       asString(input["url"]) ??
-      asString(input["query"])
-    if (path !== null) return `${name} — ${path.slice(0, 120)}`
+      asString(input["query"]);
+    if (path !== null) return `${name} — ${path.slice(0, 120)}`;
   }
-  return name
-}
+  return name;
+};
 
 /** How much of a tool's input/output the timeline keeps. Enough to read a diff
  * or a command's output inline, still bounded so `chats.json` stays sane. */
-const DETAIL_LIMIT = 4000
+const DETAIL_LIMIT = 4000;
 
 const truncate = (text: string): string =>
-  text.length > DETAIL_LIMIT ? `${text.slice(0, DETAIL_LIMIT)}…` : text
+  text.length > DETAIL_LIMIT ? `${text.slice(0, DETAIL_LIMIT)}…` : text;
 
 const toolDetail = (input: unknown): string | null => {
-  if (!isRecord(input) || Object.keys(input).length === 0) return null
+  if (!isRecord(input) || Object.keys(input).length === 0) return null;
   try {
-    return truncate(JSON.stringify(input, null, 2))
+    return truncate(JSON.stringify(input, null, 2));
   } catch {
-    return null
+    return null;
   }
-}
+};
 
 /**
  * A tool_result's body. The CLI sends either a bare string or Anthropic's
  * content-block array; both collapse to the text the user would want to read.
  */
 const resultDetail = (content: unknown): string | null => {
-  const text = asString(content)
-  if (text !== null) return text.length === 0 ? null : truncate(text)
-  if (!Array.isArray(content)) return null
+  const text = asString(content);
+  if (text !== null) return text.length === 0 ? null : truncate(text);
+  if (!Array.isArray(content)) return null;
   const parts = content.flatMap((block) => {
-    if (!isRecord(block) || block["type"] !== "text") return []
-    const value = asString(block["text"])
-    return value === null || value.length === 0 ? [] : [value]
-  })
-  return parts.length === 0 ? null : truncate(parts.join("\n"))
-}
+    if (!isRecord(block) || block["type"] !== "text") return [];
+    const value = asString(block["text"]);
+    return value === null || value.length === 0 ? [] : [value];
+  });
+  return parts.length === 0 ? null : truncate(parts.join("\n"));
+};
 
 export const createClaudeTurnParser = (): ClaudeTurnParser => {
-  let buffer = ""
-  let settled = false
+  let buffer = "";
+  let settled = false;
   /** Characters streamed via deltas for the in-flight assistant message —
    * when a CLI doesn't emit partials, the complete message is used instead. */
-  let deltaChars = 0
+  let deltaChars = 0;
   /** Set after a complete assistant message so the next one (after a tool
    * round-trip) is separated from it in the single per-turn message. */
-  let needSeparator = false
+  let needSeparator = false;
   /** tool_use id → name, to label the matching tool_result. */
-  const toolNames = new Map<string, string>()
+  const toolNames = new Map<string, string>();
   /** The open thinking block, if any: announced at `content_block_start` so the
    * timeline shows it live, then settled at `content_block_stop` with the
    * reasoning text the deltas carried. Both events share a `callId`, so the
    * client folds them into one step exactly as it does a tool call. */
   let thinking: { callId: string; index: number | null; text: string } | null =
-    null
-  let thinkingSeq = 0
+    null;
+  let thinkingSeq = 0;
   /** Thinking already announced for the current assistant message. */
-  let announcedThinking = false
+  let announcedThinking = false;
 
   /** The CLI redacts `thinking` on both the deltas and the complete block, so
    * today this finds nothing; a CLI that stops redacting starts showing
    * reasoning with no change here. */
   const adoptUnredactedReasoning = (message: unknown): void => {
-    if (thinking === null || !isRecord(message)) return
-    if (!Array.isArray(message["content"])) return
+    if (thinking === null || !isRecord(message)) return;
+    if (!Array.isArray(message["content"])) return;
     for (const block of message["content"]) {
-      if (!isRecord(block) || block["type"] !== "thinking") continue
-      const reasoning = asString(block["thinking"])
-      if (reasoning !== null && reasoning.length > 0) thinking.text = reasoning
+      if (!isRecord(block) || block["type"] !== "thinking") continue;
+      const reasoning = asString(block["thinking"]);
+      if (reasoning !== null && reasoning.length > 0) thinking.text = reasoning;
     }
-  }
+  };
 
   /** Also closes a block whose `content_block_stop` never arrived — partials
    * disabled, or a truncated run. */
   const settleThinking = (): ClaudeStreamEvent[] => {
-    if (thinking === null) return []
-    const { callId, text } = thinking
-    thinking = null
-    const reasoning = text.trim()
+    if (thinking === null) return [];
+    const { callId, text } = thinking;
+    thinking = null;
+    const reasoning = text.trim();
     return [
       {
         type: "activity",
@@ -185,33 +185,33 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
         label: "Thinking",
         callId,
       },
-    ]
-  }
+    ];
+  };
 
   const appendText = (text: string): ClaudeStreamEvent[] => {
-    if (text.length === 0) return []
-    const prefix = needSeparator && buffer.length > 0 ? "\n\n" : ""
-    needSeparator = false
-    buffer += prefix + text
-    return [{ type: "delta", text: prefix + text }]
-  }
+    if (text.length === 0) return [];
+    const prefix = needSeparator && buffer.length > 0 ? "\n\n" : "";
+    needSeparator = false;
+    buffer += prefix + text;
+    return [{ type: "delta", text: prefix + text }];
+  };
 
   const onStreamEvent = (event: unknown): ClaudeStreamEvent[] => {
-    if (!isRecord(event)) return []
+    if (!isRecord(event)) return [];
     if (event["type"] === "content_block_start") {
-      const block = event["content_block"]
+      const block = event["content_block"];
       if (
         isRecord(block) &&
         block["type"] === "thinking" &&
         !announcedThinking
       ) {
-        announcedThinking = true
-        thinkingSeq += 1
+        announcedThinking = true;
+        thinkingSeq += 1;
         thinking = {
           callId: `think-${thinkingSeq}`,
           index: typeof event["index"] === "number" ? event["index"] : null,
           text: "",
-        }
+        };
         return [
           {
             type: "activity",
@@ -222,44 +222,44 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
             label: "Thinking",
             callId: thinking.callId,
           },
-        ]
+        ];
       }
-      return []
+      return [];
     }
     if (event["type"] === "content_block_delta") {
-      const delta = event["delta"]
+      const delta = event["delta"];
       if (isRecord(delta) && delta["type"] === "text_delta") {
-        const text = asString(delta["text"]) ?? ""
-        deltaChars += text.length
-        return appendText(text)
+        const text = asString(delta["text"]) ?? "";
+        deltaChars += text.length;
+        return appendText(text);
       }
       if (isRecord(delta) && delta["type"] === "thinking_delta") {
         if (thinking !== null) {
-          thinking.text += asString(delta["thinking"]) ?? ""
+          thinking.text += asString(delta["thinking"]) ?? "";
         }
-        return []
+        return [];
       }
-      return []
+      return [];
     }
     if (event["type"] === "content_block_stop") {
       const closes =
         thinking !== null &&
-        (thinking.index === null || thinking.index === event["index"])
-      return closes ? settleThinking() : []
+        (thinking.index === null || thinking.index === event["index"]);
+      return closes ? settleThinking() : [];
     }
-    return []
-  }
+    return [];
+  };
 
   const onAssistantMessage = (message: unknown): ClaudeStreamEvent[] => {
-    adoptUnredactedReasoning(message)
-    const events: ClaudeStreamEvent[] = settleThinking()
-    if (!isRecord(message) || !Array.isArray(message["content"])) return events
+    adoptUnredactedReasoning(message);
+    const events: ClaudeStreamEvent[] = settleThinking();
+    if (!isRecord(message) || !Array.isArray(message["content"])) return events;
     for (const block of message["content"]) {
-      if (!isRecord(block)) continue
+      if (!isRecord(block)) continue;
       if (block["type"] === "tool_use") {
-        const id = asString(block["id"]) ?? ""
-        const name = asString(block["name"]) ?? "tool"
-        if (id.length > 0) toolNames.set(id, name)
+        const id = asString(block["id"]) ?? "";
+        const name = asString(block["name"]) ?? "tool";
+        if (id.length > 0) toolNames.set(id, name);
         events.push({
           type: "activity",
           kind: "tool.started",
@@ -268,28 +268,28 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
           detail: toolDetail(block["input"]),
           label: name,
           ...(id.length > 0 ? { callId: id } : {}),
-        })
+        });
       } else if (block["type"] === "text" && deltaChars === 0) {
         // No partials were streamed for this message (older CLI) — take the
         // complete text instead.
-        events.push(...appendText(asString(block["text"]) ?? ""))
+        events.push(...appendText(asString(block["text"]) ?? ""));
       }
     }
     // The next assistant message (after tool results) starts a new paragraph.
-    needSeparator = true
-    deltaChars = 0
-    announcedThinking = false
-    return events
-  }
+    needSeparator = true;
+    deltaChars = 0;
+    announcedThinking = false;
+    return events;
+  };
 
   const onUserMessage = (message: unknown): ClaudeStreamEvent[] => {
-    if (!isRecord(message) || !Array.isArray(message["content"])) return []
-    const events: ClaudeStreamEvent[] = []
+    if (!isRecord(message) || !Array.isArray(message["content"])) return [];
+    const events: ClaudeStreamEvent[] = [];
     for (const block of message["content"]) {
-      if (!isRecord(block) || block["type"] !== "tool_result") continue
-      const callId = asString(block["tool_use_id"]) ?? ""
-      const name = toolNames.get(callId) ?? "tool"
-      const failed = block["is_error"] === true
+      if (!isRecord(block) || block["type"] !== "tool_result") continue;
+      const callId = asString(block["tool_use_id"]) ?? "";
+      const name = toolNames.get(callId) ?? "tool";
+      const failed = block["is_error"] === true;
       events.push({
         type: "activity",
         kind: failed ? "tool.failed" : "tool.completed",
@@ -298,53 +298,53 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
         detail: resultDetail(block["content"]),
         label: name,
         ...(callId.length > 0 ? { callId } : {}),
-      })
+      });
     }
-    return events
-  }
+    return events;
+  };
 
   const push = (line: string): ReadonlyArray<ClaudeStreamEvent> => {
-    const trimmed = line.trim()
-    if (trimmed.length === 0) return []
-    let parsed: unknown
+    const trimmed = line.trim();
+    if (trimmed.length === 0) return [];
+    let parsed: unknown;
     try {
-      parsed = JSON.parse(trimmed)
+      parsed = JSON.parse(trimmed);
     } catch {
       // Shell/rc noise on stdout — never let it corrupt the conversation.
-      return []
+      return [];
     }
-    if (!isRecord(parsed)) return []
+    if (!isRecord(parsed)) return [];
 
     switch (parsed["type"]) {
       case "system": {
-        const sessionId = asString(parsed["session_id"])
+        const sessionId = asString(parsed["session_id"]);
         return parsed["subtype"] === "init" && sessionId !== null
           ? [{ type: "session", sessionId }]
-          : []
+          : [];
       }
       case "stream_event":
-        return onStreamEvent(parsed["event"])
+        return onStreamEvent(parsed["event"]);
       case "assistant":
-        return onAssistantMessage(parsed["message"])
+        return onAssistantMessage(parsed["message"]);
       case "user":
-        return onUserMessage(parsed["message"])
+        return onUserMessage(parsed["message"]);
       case "result": {
-        settled = true
-        const resultText = asString(parsed["result"])
+        settled = true;
+        const resultText = asString(parsed["result"]);
         // A logged-out CLI reports the login prompt as its reply (sometimes
         // even with is_error=false) — always a failed turn, never a message.
         const authFailed =
-          isClaudeAuthError(resultText) || isClaudeAuthError(buffer)
-        const failed = parsed["is_error"] === true || authFailed
+          isClaudeAuthError(resultText) || isClaudeAuthError(buffer);
+        const failed = parsed["is_error"] === true || authFailed;
         // Don't leave "Please run /login" standing as the assistant's reply —
         // the turn error (with the login hint) is the whole story.
         if (authFailed && isClaudeAuthError(buffer) && buffer.length < 200) {
-          buffer = ""
+          buffer = "";
         }
         // A successful result carries the final text — authoritative when
         // nothing streamed (e.g. partials disabled and no assistant line).
         if (!failed && buffer.length === 0 && resultText !== null) {
-          buffer = resultText
+          buffer = resultText;
         }
         return [
           {
@@ -360,12 +360,12 @@ export const createClaudeTurnParser = (): ClaudeTurnParser => {
                 ? parsed["total_cost_usd"]
                 : null,
           },
-        ]
+        ];
       }
       default:
-        return []
+        return [];
     }
-  }
+  };
 
-  return { push, text: () => buffer, settled: () => settled }
-}
+  return { push, text: () => buffer, settled: () => settled };
+};

@@ -3,21 +3,21 @@ import {
   IconGitPullRequest,
   IconInfoCircle,
   IconX,
-} from "@tabler/icons-react"
+} from "@tabler/icons-react";
 
 import {
   Section,
   Subsection,
-} from "@/components/kitchen-sink/kitchen-sink-primitives"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+} from "@/components/kitchen-sink/kitchen-sink-primitives";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const STATS = [
   { label: "Files changed", value: "14" },
   { label: "Unresolved comments", value: "2" },
   { label: "Commits ahead", value: "6" },
   { label: "Checks passing", value: "18/19" },
-]
+];
 
 /**
  * Divider and padding per position, for a grid that goes 2 columns → 4. Row
@@ -29,7 +29,7 @@ const STAT_LAYOUT = [
   "border-l pl-5 pb-5 lg:pr-5 lg:pb-0",
   "border-t border-foreground/10 pt-5 pr-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-5",
   "border-t border-l border-foreground/10 pt-5 pl-5 lg:border-t-0 lg:pt-0",
-]
+];
 
 const THREADS = [
   {
@@ -53,7 +53,7 @@ const THREADS = [
     state: "Waiting",
     dot: "bg-warning",
   },
-]
+];
 
 const PULLS = [
   {
@@ -77,14 +77,14 @@ const PULLS = [
     checks: "Queued",
     tone: "text-muted-foreground",
   },
-]
+];
 
 function Monogram({ initials }: { initials: string }) {
   return (
     <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[0.625rem] font-medium text-brand-800 outline-1 -outline-offset-1 outline-black/5 dark:bg-brand-950 dark:text-brand-200 dark:outline-white/10">
       {initials}
     </div>
-  )
+  );
 }
 
 export function Patterns() {
@@ -295,5 +295,5 @@ export function Patterns() {
         </Subsection>
       </Section>
     </>
-  )
+  );
 }

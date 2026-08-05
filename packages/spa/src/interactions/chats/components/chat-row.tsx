@@ -9,27 +9,27 @@
  * The conversation tail is fetched only once a card opens, so scrolling past a
  * hundred rows costs nothing.
  */
-import { IconGitBranch, IconMessage, IconX } from "@tabler/icons-react"
-import { Link } from "@tanstack/react-router"
-import { useRef, useState } from "react"
+import { IconGitBranch, IconMessage, IconX } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
+import { useRef, useState } from "react";
 import {
   PreviewCard,
   PreviewCardContent,
   PreviewCardTrigger,
-} from "@/components/ui/preview-card"
-import { agentIcon } from "@/interactions/threads/components/agent-icons"
-import { agentLabel } from "@/interactions/threads/interfaces/agents"
-import type { ChatMessage, ChatSummary } from "@byconvo/core/chats"
-import { useChatPreview } from "@/lib/queries"
-import { timeAgo } from "@/lib/relative-time"
-import { cn } from "@/lib/utils"
+} from "@/components/ui/preview-card";
+import { agentIcon } from "@/interactions/threads/components/agent-icons";
+import { agentLabel } from "@/interactions/threads/interfaces/agents";
+import type { ChatMessage, ChatSummary } from "@byconvo/core/chats";
+import { useChatPreview } from "@/lib/queries";
+import { timeAgo } from "@/lib/relative-time";
+import { cn } from "@/lib/utils";
 
-const HOVER_DELAY_MS = 400
-const HOVER_CLOSE_DELAY_MS = 100
-const PREVIEW_TURNS = 3
+const HOVER_DELAY_MS = 400;
+const HOVER_CLOSE_DELAY_MS = 100;
+const PREVIEW_TURNS = 3;
 
 export function TurnStateDot({ state }: { state: ChatSummary["turnState"] }) {
-  if (state === null || state === "completed") return null
+  if (state === null || state === "completed") return null;
   return (
     <span
       className={cn(
@@ -40,15 +40,15 @@ export function TurnStateDot({ state }: { state: ChatSummary["turnState"] }) {
       )}
       aria-label={`turn ${state}`}
     />
-  )
+  );
 }
 
 function ConversationTail({
   messages,
   assistantLabel,
 }: {
-  messages: ReadonlyArray<ChatMessage>
-  assistantLabel: string
+  messages: ReadonlyArray<ChatMessage>;
+  assistantLabel: string;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -63,7 +63,7 @@ function ConversationTail({
         </div>
       ))}
     </div>
-  )
+  );
 }
 
 export function ChatRow({
@@ -72,22 +72,22 @@ export function ChatRow({
   unread,
   onDelete,
 }: {
-  chat: ChatSummary
-  active: boolean
-  unread: boolean
-  onDelete: () => void
+  chat: ChatSummary;
+  active: boolean;
+  unread: boolean;
+  onDelete: () => void;
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false);
   // Opening a thread shouldn't leave a preview of it hovering over the view —
   // a click closes the card and holds it shut until the pointer leaves.
-  const clicked = useRef(false)
-  const preview = useChatPreview(chat.id, open)
-  const Icon = agentIcon(chat.provider)
-  const assistantLabel = agentLabel(chat.provider)
+  const clicked = useRef(false);
+  const preview = useChatPreview(chat.id, open);
+  const Icon = agentIcon(chat.provider);
+  const assistantLabel = agentLabel(chat.provider);
 
   const tail = (preview.data?.messages ?? [])
     .filter((m) => m.text.trim().length > 0)
-    .slice(-PREVIEW_TURNS)
+    .slice(-PREVIEW_TURNS);
 
   return (
     <PreviewCard
@@ -102,11 +102,11 @@ export function ChatRow({
             to="/modes/code/chats/$chatId"
             params={{ chatId: chat.id }}
             onPointerDown={() => {
-              clicked.current = true
-              setOpen(false)
+              clicked.current = true;
+              setOpen(false);
             }}
             onPointerLeave={() => {
-              clicked.current = false
+              clicked.current = false;
             }}
             className={cn(
               "group/row flex w-full gap-2.5 border-b px-3 py-2.5 text-left outline-none hover:bg-elevate focus-visible:bg-elevate",
@@ -151,9 +151,9 @@ export function ChatRow({
             aria-label="Delete thread"
             className="absolute inset-0 grid place-items-center text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive"
             onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              onDelete()
+              e.preventDefault();
+              e.stopPropagation();
+              onDelete();
             }}
           >
             <IconX className="size-3.5" />
@@ -202,5 +202,5 @@ export function ChatRow({
         </div>
       </PreviewCardContent>
     </PreviewCard>
-  )
+  );
 }

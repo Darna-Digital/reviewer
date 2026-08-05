@@ -13,47 +13,47 @@
  * entries drives ↑/↓ + Enter, while the render groups them under headings. The
  * global ⌘K listener lives here so the whole feature is self-contained.
  */
-import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
-import { IconCornerDownLeft, IconFile, IconSearch } from "@tabler/icons-react"
-import { useEffect, useMemo, useRef, useState } from "react"
-import { DialogOverlay, DialogPortal } from "@/components/ui/dialog"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { cn } from "@/lib/utils"
-import { ELEVATION, useElevation } from "@/lib/surface-context"
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
+import { IconCornerDownLeft, IconFile, IconSearch } from "@tabler/icons-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { DialogOverlay, DialogPortal } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import { ELEVATION, useElevation } from "@/lib/surface-context";
 
 export interface Command {
-  readonly id: string
-  readonly label: string
+  readonly id: string;
+  readonly label: string;
   /** Heading the command is grouped under (e.g. "Navigation", "Git"). */
-  readonly group: string
-  readonly icon: React.ComponentType<{ className?: string }>
+  readonly group: string;
+  readonly icon: React.ComponentType<{ className?: string }>;
   /** Extra search terms not shown in the label (e.g. "dark light system"). */
-  readonly keywords?: string
+  readonly keywords?: string;
   /** Right-aligned hint — a current value or shortcut. */
-  readonly hint?: string
-  readonly run: () => void
+  readonly hint?: string;
+  readonly run: () => void;
 }
 
 interface CommandMenuProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  commands: readonly Command[]
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  commands: readonly Command[];
   /** All repo file paths, for the "jump to file" search. */
-  files: readonly string[]
-  onOpenFile: (path: string) => void
+  files: readonly string[];
+  onOpenFile: (path: string) => void;
 }
 
 /** A flat, render-order entry; `index` drives keyboard selection. */
 interface Entry {
-  readonly key: string
-  readonly group: string
-  readonly icon: React.ComponentType<{ className?: string }>
-  readonly label: string
-  readonly hint?: string
-  readonly run: () => void
+  readonly key: string;
+  readonly group: string;
+  readonly icon: React.ComponentType<{ className?: string }>;
+  readonly label: string;
+  readonly hint?: string;
+  readonly run: () => void;
 }
 
-const MAX_FILES = 40
+const MAX_FILES = 40;
 
 /**
  * Subsequence match: every char of `query` must appear in `text` in order.
@@ -61,21 +61,21 @@ const MAX_FILES = 40
  * match. Empty query matches everything with a neutral score.
  */
 function fuzzyScore(text: string, query: string): number | null {
-  if (query === "") return 0
-  const t = text.toLowerCase()
-  const q = query.toLowerCase()
-  let ti = 0
-  let firstHit = -1
-  let lastHit = -1
+  if (query === "") return 0;
+  const t = text.toLowerCase();
+  const q = query.toLowerCase();
+  let ti = 0;
+  let firstHit = -1;
+  let lastHit = -1;
   for (const c of q) {
-    const found = t.indexOf(c, ti)
-    if (found === -1) return null
-    if (firstHit === -1) firstHit = found
-    lastHit = found
-    ti = found + 1
+    const found = t.indexOf(c, ti);
+    if (found === -1) return null;
+    if (firstHit === -1) firstHit = found;
+    lastHit = found;
+    ti = found + 1;
   }
   // Reward early start + compact span (span ≈ how spread-out the match is).
-  return firstHit + (lastHit - firstHit) * 0.5
+  return firstHit + (lastHit - firstHit) * 0.5;
 }
 
 export function CommandMenu({
@@ -85,32 +85,32 @@ export function CommandMenu({
   files,
   onOpenFile,
 }: CommandMenuProps) {
-  const [query, setQuery] = useState("")
-  const [active, setActive] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const listRef = useRef<HTMLDivElement>(null)
+  const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   // Global ⌘K / Ctrl+K toggle.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault()
-        onOpenChange(!open)
+        e.preventDefault();
+        onOpenChange(!open);
       }
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [open, onOpenChange])
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onOpenChange]);
 
   // Fresh search each time the palette opens.
   useEffect(() => {
     if (open) {
-      setQuery("")
-      setActive(0)
+      setQuery("");
+      setActive(0);
     }
-  }, [open])
+  }, [open]);
 
-  const q = query.trim().toLowerCase()
+  const q = query.trim().toLowerCase();
 
   const entries = useMemo<Entry[]>(() => {
     const cmdMatches = commands
@@ -129,7 +129,7 @@ export function CommandMenu({
           hint: c.hint,
           run: c.run,
         })
-      )
+      );
 
     // Only search files once the user types — the full repo list would bury the
     // actions otherwise.
@@ -149,55 +149,55 @@ export function CommandMenu({
                 label: p,
                 run: () => onOpenFile(p),
               })
-            )
+            );
 
     // Commands first so the most-common actions stay reachable from the top.
-    return [...cmdMatches, ...fileMatches]
-  }, [commands, files, q, onOpenFile])
+    return [...cmdMatches, ...fileMatches];
+  }, [commands, files, q, onOpenFile]);
 
   // Keep the active index in range as the result set shrinks/grows.
   useEffect(() => {
     setActive((a) =>
       entries.length === 0 ? 0 : Math.min(a, entries.length - 1)
-    )
-  }, [entries.length])
+    );
+  }, [entries.length]);
 
   const run = (entry: Entry | undefined) => {
-    if (entry === undefined) return
-    onOpenChange(false)
-    entry.run()
-  }
+    if (entry === undefined) return;
+    onOpenChange(false);
+    entry.run();
+  };
 
   const onInputKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown") {
-      e.preventDefault()
-      setActive((a) => (entries.length === 0 ? 0 : (a + 1) % entries.length))
+      e.preventDefault();
+      setActive((a) => (entries.length === 0 ? 0 : (a + 1) % entries.length));
     } else if (e.key === "ArrowUp") {
-      e.preventDefault()
+      e.preventDefault();
       setActive((a) =>
         entries.length === 0 ? 0 : (a - 1 + entries.length) % entries.length
-      )
+      );
     } else if (e.key === "Enter") {
-      e.preventDefault()
-      run(entries[active])
+      e.preventDefault();
+      run(entries[active]);
     } else if (e.key === "Home") {
-      e.preventDefault()
-      setActive(0)
+      e.preventDefault();
+      setActive(0);
     } else if (e.key === "End") {
-      e.preventDefault()
-      setActive(Math.max(0, entries.length - 1))
+      e.preventDefault();
+      setActive(Math.max(0, entries.length - 1));
     }
-  }
+  };
 
   // Scroll the active row into view on keyboard movement.
   useEffect(() => {
     const el = listRef.current?.querySelector<HTMLElement>(
       `[data-index="${active}"]`
-    )
-    el?.scrollIntoView({ block: "nearest" })
-  }, [active])
+    );
+    el?.scrollIntoView({ block: "nearest" });
+  }, [active]);
 
-  const { level, className: surface } = useElevation(ELEVATION.dialog)
+  const { level, className: surface } = useElevation(ELEVATION.dialog);
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -223,8 +223,8 @@ export function CommandMenu({
               ref={inputRef}
               value={query}
               onChange={(e) => {
-                setQuery(e.target.value)
-                setActive(0)
+                setQuery(e.target.value);
+                setActive(0);
               }}
               onKeyDown={onInputKeyDown}
               placeholder="Type a command or search files…"
@@ -245,12 +245,12 @@ export function CommandMenu({
               </div>
             ) : (
               entries.map((entry, i) => {
-                const prev = entries[i - 1]
+                const prev = entries[i - 1];
                 const showHeader =
-                  prev === undefined || prev.group !== entry.group
-                const Icon = entry.icon
-                const isActive = i === active
-                const isFile = entry.group === "Files"
+                  prev === undefined || prev.group !== entry.group;
+                const Icon = entry.icon;
+                const isActive = i === active;
+                const isFile = entry.group === "Files";
                 return (
                   <div key={entry.key}>
                     {showHeader && (
@@ -290,7 +290,7 @@ export function CommandMenu({
                       )}
                     </button>
                   </div>
-                )
+                );
               })
             )}
           </ScrollArea>
@@ -306,19 +306,19 @@ export function CommandMenu({
         </DialogPrimitive.Popup>
       </DialogPortal>
     </DialogPrimitive.Root>
-  )
+  );
 }
 
 /** Render a path with a dimmed directory and an emphasised file name. */
 function FilePath({ path }: { path: string }) {
-  const slash = path.lastIndexOf("/")
-  if (slash === -1) return <>{path}</>
+  const slash = path.lastIndexOf("/");
+  if (slash === -1) return <>{path}</>;
   return (
     <>
       <span className="text-muted-foreground">{path.slice(0, slash + 1)}</span>
       {path.slice(slash + 1)}
     </>
-  )
+  );
 }
 
 function Kbd({ children }: { children: React.ReactNode }) {
@@ -326,5 +326,5 @@ function Kbd({ children }: { children: React.ReactNode }) {
     <kbd className="inline-flex h-4 min-w-4 items-center justify-center rounded border bg-muted px-1 font-sans text-[0.625rem] text-muted-foreground">
       {children}
     </kbd>
-  )
+  );
 }

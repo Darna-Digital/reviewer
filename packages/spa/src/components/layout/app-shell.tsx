@@ -24,55 +24,55 @@ import {
   IconRepeat,
   IconSettings,
   IconTerminal2,
-} from "@tabler/icons-react"
-import { useQueryClient } from "@tanstack/react-query"
+} from "@tabler/icons-react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useNavigate,
   useParams,
   useRouterState,
   useSearch,
-} from "@tanstack/react-router"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { toast } from "sonner"
-import { CommandMenu, type Command } from "@/components/command-menu"
-import { CommitPanel } from "@/components/commit-panel"
-import { Button } from "@/components/ui/button"
-import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool"
-import { RepoList } from "@/components/repo-list"
+} from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { CommandMenu, type Command } from "@/components/command-menu";
+import { CommitPanel } from "@/components/commit-panel";
+import { Button } from "@/components/ui/button";
+import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
+import { RepoList } from "@/components/repo-list";
 import {
   ReviewAssignBar,
   type AssignTarget,
-} from "@/components/review-assign-bar"
+} from "@/components/review-assign-bar";
 import {
   DiffPane,
   type DraftLocation,
-} from "@/interactions/diff/components/diff-pane"
-import { CodeView } from "@/components/editor/code-view"
-import { ImageView, isImagePath } from "@/components/editor/image-view"
-import { ModeRail } from "@/components/layout/mode-rail"
-import { ConflictBanner } from "@/components/git/conflict-banner"
-import { ConflictView } from "@/components/git/conflict-view"
-import { PullRequestList } from "@/components/git/pull-request-list"
-import { BottomPanel } from "@/components/layout/bottom-panel"
-import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs"
-import { ResizeHandle } from "@/components/layout/resize-handle"
-import { TopBar } from "@/components/layout/top-bar"
-import { WindowFrame } from "@/components/layout/window-frame"
-import { FileSidebar } from "@/components/tree/file-sidebar"
-import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
+} from "@/interactions/diff/components/diff-pane";
+import { CodeView } from "@/components/editor/code-view";
+import { ImageView, isImagePath } from "@/components/editor/image-view";
+import { ModeRail } from "@/components/layout/mode-rail";
+import { ConflictBanner } from "@/components/git/conflict-banner";
+import { ConflictView } from "@/components/git/conflict-view";
+import { PullRequestList } from "@/components/git/pull-request-list";
+import { BottomPanel } from "@/components/layout/bottom-panel";
+import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs";
+import { ResizeHandle } from "@/components/layout/resize-handle";
+import { TopBar } from "@/components/layout/top-bar";
+import { WindowFrame } from "@/components/layout/window-frame";
+import { FileSidebar } from "@/components/tree/file-sidebar";
+import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import {
   buildChatAssignmentSettings,
   buildReviewAssignmentPrompt,
   buildReviewAssignmentTitle,
-} from "@/interactions/chats/functions/chat-assignment.functions"
-import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter"
-import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter"
-import { TabStrip } from "@/interactions/tabs/components/tab-strip"
+} from "@/interactions/chats/functions/chat-assignment.functions";
+import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
+import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
+import { TabStrip } from "@/interactions/tabs/components/tab-strip";
 import {
   scopeTabsTo,
   updateTabs,
   useTabs,
-} from "@/interactions/tabs/adapters/tabs.store"
+} from "@/interactions/tabs/adapters/tabs.store";
 import {
   closeAll,
   closeOthers,
@@ -81,9 +81,9 @@ import {
   pruneTabs,
   syncActive,
   togglePin,
-} from "@/interactions/tabs/functions/tabs.functions"
-import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter"
-import { fetchClient } from "@/lib/api/client"
+} from "@/interactions/tabs/functions/tabs.functions";
+import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
+import { fetchClient } from "@/lib/api/client";
 import {
   ALL_REFS,
   diffTargetKey,
@@ -93,10 +93,10 @@ import {
   type AppMode,
   type DiffTarget,
   type LogQuery,
-} from "@/lib/api/types"
-import type { ReviewComment } from "@byconvo/core/comments"
-import { pathName } from "@/lib/display-path"
-import { errorReason } from "@/lib/errors"
+} from "@/lib/api/types";
+import type { ReviewComment } from "@byconvo/core/comments";
+import { pathName } from "@/lib/display-path";
+import { errorReason } from "@/lib/errors";
 import {
   useBranches,
   useChatModels,
@@ -112,49 +112,49 @@ import {
   useRemoteBranches,
   useRepo,
   useWorkspace,
-} from "@/lib/queries"
-import { openBottomTab, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
-import { cn } from "@/lib/utils"
+} from "@/lib/queries";
+import { openBottomTab, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 type Search = {
-  base?: string
-  head?: string
-  file?: string
-  path?: string
-}
+  base?: string;
+  head?: string;
+  file?: string;
+  path?: string;
+};
 
 // Target key under which worktree/browse comments are stored, so a comment left
 // while browsing a file shows up again in commit mode.
-const WORKTREE_KEY = diffTargetKey({ kind: "worktree" })
+const WORKTREE_KEY = diffTargetKey({ kind: "worktree" });
 
 export function AppShell() {
-  const navigate = useNavigate()
-  const prefs = useUiPrefs()
-  const diffFns = useDiffFunctions()
-  const git = useGitActions()
-  const comments = useCommentsActions()
-  const chatActions = useChatsActions()
-  const queryClient = useQueryClient()
+  const navigate = useNavigate();
+  const prefs = useUiPrefs();
+  const diffFns = useDiffFunctions();
+  const git = useGitActions();
+  const comments = useCommentsActions();
+  const chatActions = useChatsActions();
+  const queryClient = useQueryClient();
 
-  const pathname = useRouterState({ select: (s) => s.location.pathname })
-  const params = useParams({ strict: false })
-  const search = useSearch({ strict: false })
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const params = useParams({ strict: false });
+  const search = useSearch({ strict: false });
 
   const mode: AppMode = pathname.startsWith("/modes/code/review")
     ? "review"
     : pathname.startsWith("/modes/code/browse")
       ? "browse"
-      : "commit"
+      : "commit";
 
   // --- queries ---------------------------------------------------------------
-  const workspace = useWorkspace()
-  const repo = useRepo()
-  const chatModels = useChatModels()
-  const chats = useChats()
-  const files = useFiles()
-  const branches = useBranches()
-  const remoteBranches = useRemoteBranches()
-  const localComments = useComments()
+  const workspace = useWorkspace();
+  const repo = useRepo();
+  const chatModels = useChatModels();
+  const chats = useChats();
+  const files = useFiles();
+  const branches = useBranches();
+  const remoteBranches = useRemoteBranches();
+  const localComments = useComments();
   // Files carrying a local worktree comment (left here or while browsing). Commit
   // mode surfaces these in the tree even when the file has no git changes.
   const commentedPaths = useMemo(
@@ -166,73 +166,73 @@ export function AppShell() {
       ),
     ],
     [localComments.data]
-  )
+  );
   // The floating "assign to agent" bar's dismiss state. The comment set it acts
   // on (visibleComments — local + GitHub) is derived lower down, so the handler
   // lives there; the state stays here with the other UI state.
-  const [assignBarDismissed, setAssignBarDismissed] = useState(false)
-  const reviewCountRef = useRef(0)
+  const [assignBarDismissed, setAssignBarDismissed] = useState(false);
+  const reviewCountRef = useRef(0);
 
-  const hasGitHub = repo.data?.github != null
-  const pulls = usePulls(hasGitHub)
+  const hasGitHub = repo.data?.github != null;
+  const pulls = usePulls(hasGitHub);
 
   // Cmd/Ctrl+B toggles the bottom panel. The mode jumps that used to live on
   // Cmd+1/2/3 are gone — those digits belong to the window's tab strip now.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return
-      if (e.key.toLowerCase() !== "b") return
-      e.preventDefault()
-      setUiPrefs({ bottomVisible: !prefs.bottomVisible })
-    }
-    window.addEventListener("keydown", onKey)
-    return () => window.removeEventListener("keydown", onKey)
-  }, [prefs.bottomVisible])
+      if (!(e.metaKey || e.ctrlKey)) return;
+      if (e.key.toLowerCase() !== "b") return;
+      e.preventDefault();
+      setUiPrefs({ bottomVisible: !prefs.bottomVisible });
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [prefs.bottomVisible]);
   // The in-progress merge/rebase, if any — drives the conflict banner + resolver.
-  const mergeState = useMergeState()
+  const mergeState = useMergeState();
   const conflictedPaths = useMemo(
     () => (mergeState.data?.conflicted ?? []).map((c) => c.path),
     [mergeState.data]
-  )
-  const [logFilters, setLogFilters] = useState<LogQuery>(emptyLogQuery)
+  );
+  const [logFilters, setLogFilters] = useState<LogQuery>(emptyLogQuery);
   // The branch whose history the bottom panel shows; falls back to HEAD.
-  const [logRef, setLogRef] = useState<string | null>(null)
+  const [logRef, setLogRef] = useState<string | null>(null);
   const log = usePagedLog(
     logRef ?? repo.data?.currentBranch ?? null,
     logFilters
-  )
+  );
 
   // Callback-ref state, not a ref object: the file view renders into this node,
   // so it has to re-render once the node exists.
   const [fileActionsSlot, setFileActionsSlot] = useState<HTMLElement | null>(
     null
-  )
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [commandOpen, setCommandOpen] = useState(false)
-  const [draft, setDraft] = useState<DraftLocation | null>(null)
+  );
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  const [draft, setDraft] = useState<DraftLocation | null>(null);
 
   // Live panel sizes for smooth dragging; seeded from (and committed back to)
   // the persisted prefs so they survive reloads. See `ResizeHandle`.
-  const [sidebarWidth, setSidebarWidth] = useState(prefs.sidebarWidth)
-  const [bottomHeight, setBottomHeight] = useState(prefs.bottomHeight)
+  const [sidebarWidth, setSidebarWidth] = useState(prefs.sidebarWidth);
+  const [bottomHeight, setBottomHeight] = useState(prefs.bottomHeight);
   const [reviewPullsHeight, setReviewPullsHeight] = useState(
     prefs.reviewPullsHeight
-  )
+  );
 
   const isFolder =
-    workspace.data?.current != null && workspace.data.isGitRepo === false
+    workspace.data?.current != null && workspace.data.isGitRepo === false;
 
   // Open the picker automatically only once the workspace has loaded with no
   // repository selected (not during the initial undefined loading state).
   useEffect(() => {
     if (workspace.isSuccess && workspace.data.current === null)
-      setPickerOpen(true)
-  }, [workspace.isSuccess, workspace.data])
+      setPickerOpen(true);
+  }, [workspace.isSuccess, workspace.data]);
 
   // --- selection / diff target ----------------------------------------------
   const selectedPull = useMemo(() => {
-    if (params.pull === undefined) return null
-    const n = Number(params.pull)
+    if (params.pull === undefined) return null;
+    const n = Number(params.pull);
     return (
       pulls.data?.find((p) => p.number === n) ?? {
         number: n,
@@ -244,8 +244,8 @@ export function AppShell() {
         url: "",
         updatedAt: "",
       }
-    )
-  }, [params.pull, pulls.data])
+    );
+  }, [params.pull, pulls.data]);
 
   const browse = useMemo(() => {
     if (params.sha !== undefined) {
@@ -253,49 +253,49 @@ export function AppShell() {
         kind: "commit" as const,
         sha: params.sha,
         shortSha: params.sha.slice(0, 7),
-      }
+      };
     }
     if (search.base !== undefined && search.head !== undefined) {
-      return { kind: "range" as const, base: search.base, head: search.head }
+      return { kind: "range" as const, base: search.base, head: search.head };
     }
-    return null
-  }, [params.sha, search.base, search.head])
+    return null;
+  }, [params.sha, search.base, search.head]);
 
   const target: DiffTarget | null = diffFns.deriveTarget({
     mode,
     selectedPull,
     browse,
-  })
-  const targetKey = target === null ? "none" : diffTargetKey(target)
+  });
+  const targetKey = target === null ? "none" : diffTargetKey(target);
 
-  const diff = useDiffText(target)
+  const diff = useDiffText(target);
   const parsedFiles = useMemo(
     () => diffFns.parseFiles(typeof diff.data === "string" ? diff.data : null),
     [diff.data, diffFns]
-  )
+  );
   const pullComments = usePullComments(
     target?.kind === "pull" ? target.pull.number : null
-  )
+  );
 
   // Opening a commit out of a file's history shows just that file's side of it,
   // like the log's filter reads. Commits from before a rename don't carry the
   // path, so those fall back to the whole commit.
   const diffFiles = useMemo(() => {
     if (logFilters.path === null || target?.kind !== "commit")
-      return parsedFiles
-    const forPath = parsedFiles.filter((f) => f.name === logFilters.path)
-    return forPath.length > 0 ? forPath : parsedFiles
-  }, [parsedFiles, logFilters.path, target?.kind])
+      return parsedFiles;
+    const forPath = parsedFiles.filter((f) => f.name === logFilters.path);
+    return forPath.length > 0 ? forPath : parsedFiles;
+  }, [parsedFiles, logFilters.path, target?.kind]);
 
   // Reset the comment draft when the diff target or the open file changes.
-  useEffect(() => setDraft(null), [targetKey, search.file])
+  useEffect(() => setDraft(null), [targetKey, search.file]);
 
   // --- derived tree / comments (memoised: these run over the whole repo) -----
   const gitStatus = useMemo(
     () => files.data?.gitStatus ?? [],
     [files.data?.gitStatus]
-  )
-  const allPaths = useMemo(() => files.data?.paths ?? [], [files.data?.paths])
+  );
+  const allPaths = useMemo(() => files.data?.paths ?? [], [files.data?.paths]);
   const treePaths = useMemo(
     () =>
       diffFns.treePaths({
@@ -306,15 +306,15 @@ export function AppShell() {
         commentedPaths,
       }),
     [diffFns, mode, allPaths, gitStatus, parsedFiles, commentedPaths]
-  )
+  );
   const treeGitStatus = useMemo(
     () => diffFns.treeGitStatus({ mode, allPaths, gitStatus, parsedFiles }),
     [diffFns, mode, allPaths, gitStatus, parsedFiles]
-  )
+  );
   const changedFiles = useMemo(
     () => diffFns.changedFiles(gitStatus),
     [diffFns, gitStatus]
-  )
+  );
   const visibleComments = useMemo(
     () =>
       diffFns.visibleComments({
@@ -332,172 +332,172 @@ export function AppShell() {
       pullComments.data,
       search.file,
     ]
-  )
+  );
 
   // --- review → agent: hand the comments in view (local + GitHub) to an agent.
   useEffect(() => {
     // Re-show the bar whenever a new comment appears (count grows past last seen).
     if (visibleComments.length > reviewCountRef.current)
-      setAssignBarDismissed(false)
-    reviewCountRef.current = visibleComments.length
-  }, [visibleComments.length])
+      setAssignBarDismissed(false);
+    reviewCountRef.current = visibleComments.length;
+  }, [visibleComments.length]);
 
   const assignReview = async (dest: AssignTarget) => {
-    if (visibleComments.length === 0) return
-    const count = visibleComments.length
-    const plural = count === 1 ? "" : "s"
-    const prompt = buildReviewAssignmentPrompt(visibleComments)
+    if (visibleComments.length === 0) return;
+    const count = visibleComments.length;
+    const plural = count === 1 ? "" : "s";
+    const prompt = buildReviewAssignmentPrompt(visibleComments);
     try {
       // New chat: start a titled one seeded with the comments. Existing session:
       // send the comments as a message into that chat.
-      let chatId: string | null
+      let chatId: string | null;
       if (dest.kind === "new") {
         const started = await chatActions.startWithTitle(
           buildChatAssignmentSettings(dest.agent, chatModels.data),
           repo.data?.currentBranch ?? "",
           buildReviewAssignmentTitle(count),
           prompt
-        )
-        chatId = started?.id ?? null
+        );
+        chatId = started?.id ?? null;
       } else {
-        const sent = await chatActions.send(dest.chatId, prompt)
-        chatId = sent !== null ? dest.chatId : null
+        const sent = await chatActions.send(dest.chatId, prompt);
+        chatId = sent !== null ? dest.chatId : null;
       }
-      if (chatId === null) return
+      if (chatId === null) return;
       // Handing the comments off resolves them: their text now lives in the chat,
       // so clear the local ones (remove() ignores GitHub comments) instead of
       // leaving them lingering in the diff.
       await Promise.all(
         visibleComments.map((comment) => comments.remove(comment))
-      )
-      toast.success(`Assigned ${count} comment${plural}`)
-      void navigate({ to: "/modes/code/chats/$chatId", params: { chatId } })
+      );
+      toast.success(`Assigned ${count} comment${plural}`);
+      void navigate({ to: "/modes/code/chats/$chatId", params: { chatId } });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not assign comments"
-      )
+      );
     }
-  }
+  };
 
   // --- navigation helpers ----------------------------------------------------
   const setSearch = (patch: Partial<Search>) =>
-    navigate({ to: ".", search: (prev: Search) => ({ ...prev, ...patch }) })
-  const openFile = (path: string) => setSearch({ file: path })
-  const closeFile = () => setSearch({ file: undefined })
+    navigate({ to: ".", search: (prev: Search) => ({ ...prev, ...patch }) });
+  const openFile = (path: string) => setSearch({ file: path });
+  const closeFile = () => setSearch({ file: undefined });
 
   // Go-to-definition and find-usages land here: open the file (it may already
   // be the one on screen) and ask the view to reveal the line. The counter lets
   // the same line be revealed twice in a row.
   const [reveal, setReveal] = useState<{ line: number; key: number } | null>(
     null
-  )
+  );
   const revealLine = (lineNumber: number) =>
     setReveal((previous) => ({
       line: lineNumber,
       key: (previous?.key ?? 0) + 1,
-    }))
+    }));
   const openLocation = (path: string, lineNumber: number) => {
-    openFile(path)
-    revealLine(lineNumber)
-  }
+    openFile(path);
+    revealLine(lineNumber);
+  };
 
   // A `line` in the URL is how another surface points at code — the comments
   // page linking a comment back to the line it was left on.
   useEffect(() => {
-    if (search.line === undefined || search.file === undefined) return
-    revealLine(search.line)
-  }, [search.line, search.file])
+    if (search.line === undefined || search.file === undefined) return;
+    revealLine(search.line);
+  }, [search.line, search.file]);
 
   // Show one file's past: the log filters down to it (following renames) and
   // the dock swings open on History.
   const showFileHistory = (path: string) => {
-    setLogFilters(fileHistoryQuery(path))
-    openBottomTab("history")
-  }
+    setLogFilters(fileHistoryQuery(path));
+    openBottomTab("history");
+  };
 
   // --- conflict resolution ---------------------------------------------------
-  const openConflict = (path: string) => setSearch({ path, file: undefined })
+  const openConflict = (path: string) => setSearch({ path, file: undefined });
   const resolveConflictSide = async (path: string, side: "ours" | "theirs") => {
-    await git.resolveConflict(path, side)
-    if (search.path === path) setSearch({ path: undefined })
-  }
+    await git.resolveConflict(path, side);
+    if (search.path === path) setSearch({ path: undefined });
+  };
   const resolveConflictContent = async (path: string, merged: string) => {
-    await git.resolveConflictWithContent(path, merged)
-    if (search.path === path) setSearch({ path: undefined })
-  }
+    await git.resolveConflictWithContent(path, merged);
+    if (search.path === path) setSearch({ path: undefined });
+  };
 
   const onFileSelect = (path: string | null) => {
-    if (path === null) return
+    if (path === null) return;
     if (mode === "browse") {
-      openFile(path)
-      return
+      openFile(path);
+      return;
     }
     // Commit mode: a file with no diff hunks isn't in the diff pane — either it
     // was newly added/untracked (git diff omits new files) or it only carries
     // local comments. Open it in the file viewer so its contents and comments
     // are still reachable; files that are in the diff open in the diff pane.
     if (mode === "commit" && !parsedFiles.some((f) => f.name === path)) {
-      setSearch({ file: path, path })
-      return
+      setSearch({ file: path, path });
+      return;
     }
-    setSearch({ path, file: undefined })
-  }
+    setSearch({ path, file: undefined });
+  };
 
-  const viewing = search.file ?? null
+  const viewing = search.file ?? null;
 
   // --- open-file tabs --------------------------------------------------------
   // The strip follows the open file rather than owning it: navigation arrives
   // from the tree, the command menu, go-to-definition and restored URLs alike.
-  const tabs = useTabs()
-  const repoRoot = repo.data?.root ?? null
+  const tabs = useTabs();
+  const repoRoot = repo.data?.root ?? null;
   useEffect(() => {
-    scopeTabsTo(repoRoot)
-  }, [repoRoot])
+    scopeTabsTo(repoRoot);
+  }, [repoRoot]);
   // Re-syncs when the repository resolves as well as when the file changes:
   // pointing the store at a repository swaps in that repository's strip, which
   // would otherwise drop the file already on screen.
   useEffect(() => {
-    updateTabs((state) => syncActive(state, viewing))
-  }, [repoRoot, viewing])
+    updateTabs((state) => syncActive(state, viewing));
+  }, [repoRoot, viewing]);
   // A strip restored from a previous session can name files that have since
   // been deleted or renamed.
   useEffect(() => {
-    if (allPaths.length === 0) return
-    const known = new Set(allPaths)
-    updateTabs((state) => pruneTabs(state, (path) => known.has(path)))
-  }, [allPaths])
+    if (allPaths.length === 0) return;
+    const known = new Set(allPaths);
+    updateTabs((state) => pruneTabs(state, (path) => known.has(path)));
+  }, [allPaths]);
 
   // Only the open file has a buffer, so it is the only one that can be dirty.
-  const [dirtyFile, setDirtyFile] = useState<string | null>(null)
+  const [dirtyFile, setDirtyFile] = useState<string | null>(null);
   const dirtyPaths = useMemo(
     () => new Set(dirtyFile === null ? [] : [dirtyFile]),
     [dirtyFile]
-  )
+  );
   const onDirtyChange = useCallback(
     (dirty: boolean) => {
-      setDirtyFile(dirty ? (search.file ?? null) : null)
+      setDirtyFile(dirty ? (search.file ?? null) : null);
       // Editing a file is the clearest possible statement that you are staying
       // in it, so it stops being a preview.
       if (dirty && search.file !== undefined) {
-        const path = search.file
-        updateTabs((state) => keepTab(state, path))
+        const path = search.file;
+        updateTabs((state) => keepTab(state, path));
       }
     },
     [search.file]
-  )
+  );
 
-  const selectTab = (path: string) => setSearch({ file: path })
+  const selectTab = (path: string) => setSearch({ file: path });
   const closeTabAt = (path: string) => {
     updateTabs((state) => {
-      const next = closeTab(state, path)
+      const next = closeTab(state, path);
       // Closing the tab on screen moves the file view to its neighbour, or
       // shuts it when the strip empties.
       if (state.active === path) {
-        setSearch({ file: next.active ?? undefined })
+        setSearch({ file: next.active ?? undefined });
       }
-      return next
-    })
-  }
+      return next;
+    });
+  };
 
   // Local comments anchored to the file currently open in the viewer (worktree
   // target — see CodeView). Threaded into the viewer so browse/commit comments
@@ -510,13 +510,13 @@ export function AppShell() {
             (c) => c.target === WORKTREE_KEY && c.filePath === viewing
           ),
     [localComments.data, viewing]
-  )
+  );
 
   // The commit behind a history crumb. Same query key as the details panel, so
   // opening a commit from the log reads its subject straight from the cache.
   const browsedCommit = useCommitDetail(
     browse?.kind === "commit" ? browse.sha : null
-  )
+  );
 
   const buildCrumbs = (): ReadonlyArray<Crumb> => {
     if (isFolder) {
@@ -526,30 +526,30 @@ export function AppShell() {
           label: `${workspace.data?.childRepos.length ?? 0} repositories`,
           icon: IconFolders,
         },
-      ]
+      ];
     }
-    const openPath = viewing
-    const list: Crumb[] = []
+    const openPath = viewing;
+    const list: Crumb[] = [];
     if (mode === "commit") {
       list.push({
         id: "commit-mode",
         label: "Local changes",
         icon: IconGitCommit,
         onClick: () => void navigate({ to: "/modes/code/commit" }),
-      })
+      });
     } else if (mode === "review") {
       list.push({
         id: "review-mode",
         label: "Pull requests",
         icon: IconGitPullRequest,
         onClick: () => void navigate({ to: "/modes/code/review" }),
-      })
+      });
       if (selectedPull !== null) {
         list.push({
           id: "pull",
           label: selectedPull.title,
           hint: `#${selectedPull.number}`,
-        })
+        });
       }
     } else if (browse !== null) {
       // A commit or a range came from the log, so the trail starts at History
@@ -559,15 +559,15 @@ export function AppShell() {
         label: "History",
         icon: IconHistory,
         onClick: () => openBottomTab("history"),
-      })
-      const historyRef = logRef ?? repo.data?.currentBranch ?? null
+      });
+      const historyRef = logRef ?? repo.data?.currentBranch ?? null;
       if (browse.kind === "commit") {
         if (historyRef !== null) {
           list.push({
             id: "ref",
             label: logRefLabel(historyRef),
             icon: historyRef === ALL_REFS ? IconGitFork : IconGitBranch,
-          })
+          });
         }
         // The filtered file names what the diff below shows — unless a file is
         // open in the viewer, which ends the trail with a path of its own.
@@ -577,20 +577,20 @@ export function AppShell() {
             label: pathName(logFilters.path),
             icon: IconFile,
             mono: true,
-          })
+          });
         }
         list.push({
           id: "commit",
           label: browsedCommit.data?.subject ?? "Commit",
           hint: browse.shortSha,
           onClick: () => closeFile(),
-        })
+        });
       } else {
         list.push({
           id: "range",
           label: `${browse.base} → ${browse.head}`,
           icon: IconGitCompare,
-        })
+        });
       }
     } else {
       list.push({
@@ -598,12 +598,12 @@ export function AppShell() {
         label: "Project",
         icon: IconFolders,
         onClick: () => void navigate({ to: "/modes/code/browse" }),
-      })
+      });
     }
     if (openPath !== null)
-      list.push({ id: "file", label: openPath, mono: true })
-    return list
-  }
+      list.push({ id: "file", label: openPath, mono: true });
+    return list;
+  };
 
   // --- handlers --------------------------------------------------------------
   const deletePath = async (path: string, isDirectory: boolean) => {
@@ -612,23 +612,23 @@ export function AppShell() {
         `Delete ${isDirectory ? "folder" : "file"} "${path}"? This cannot be undone.`
       )
     )
-      return
-    await fetchClient.DELETE("/api/file", { params: { query: { path } } })
-    if (search.file === path) closeFile()
-    git.refresh()
-  }
+      return;
+    await fetchClient.DELETE("/api/file", { params: { query: { path } } });
+    if (search.file === path) closeFile();
+    git.refresh();
+  };
   const renamePath = async (from: string, to: string) => {
     const { error } = await fetchClient.POST("/api/file/rename", {
       body: { from, to },
-    })
-    if (error) throw new Error("rename failed")
-    git.refresh()
-  }
+    });
+    if (error) throw new Error("rename failed");
+    git.refresh();
+  };
 
   const submitComment = async (location: DraftLocation, body: string) => {
-    await comments.submit({ mode, selectedPull, targetKey }, location, body)
-    setDraft(null)
-  }
+    await comments.submit({ mode, selectedPull, targetKey }, location, body);
+    setDraft(null);
+  };
   // Comments left on a file in the viewer (browse, or commit mode) always store
   // against the worktree, regardless of the active mode/diff target.
   const submitFileComment = async (location: DraftLocation, body: string) => {
@@ -636,19 +636,19 @@ export function AppShell() {
       { mode: "commit", selectedPull: null, targetKey: WORKTREE_KEY },
       location,
       body
-    )
-    setDraft(null)
-  }
+    );
+    setDraft(null);
+  };
   const deleteComment = async (comment: ReviewComment) => {
-    await comments.remove(comment)
-  }
+    await comments.remove(comment);
+  };
   const editComment = async (comment: ReviewComment, body: string) => {
-    await comments.update(comment, body)
-  }
+    await comments.update(comment, body);
+  };
   const replyComment = async (comment: ReviewComment, body: string) => {
-    await comments.reply(selectedPull, comment, body)
-    void pullComments.refetch()
-  }
+    await comments.reply(selectedPull, comment, body);
+    void pullComments.refetch();
+  };
 
   // --- command palette -------------------------------------------------------
   const commands = useMemo<Command[]>(() => {
@@ -661,7 +661,7 @@ export function AppShell() {
         keywords: "commit working tree changes",
         run: () => void navigate({ to: "/modes/code/commit" }),
       },
-    ]
+    ];
     if (hasGitHub) {
       list.push({
         id: "go-review",
@@ -670,7 +670,7 @@ export function AppShell() {
         icon: IconGitPullRequest,
         keywords: "review pr github",
         run: () => void navigate({ to: "/modes/code/review" }),
-      })
+      });
     }
     list.push(
       {
@@ -720,9 +720,12 @@ export function AppShell() {
         icon: IconGitBranch,
         keywords: "new checkout",
         run: () => {
-          const name = window.prompt("New branch name:")
+          const name = window.prompt("New branch name:");
           if (name && name.trim())
-            void git.createBranch(name.trim(), repo.data?.currentBranch ?? null)
+            void git.createBranch(
+              name.trim(),
+              repo.data?.currentBranch ?? null
+            );
         },
       },
       {
@@ -777,8 +780,8 @@ export function AppShell() {
         keywords: "open change project picker",
         run: () => setPickerOpen(true),
       }
-    )
-    return list
+    );
+    return list;
   }, [
     navigate,
     git,
@@ -786,7 +789,7 @@ export function AppShell() {
     prefs.diffStyle,
     prefs.bottomVisible,
     repo.data?.currentBranch,
-  ])
+  ]);
 
   // --- center pane -----------------------------------------------------------
   const renderCenter = () => {
@@ -797,10 +800,10 @@ export function AppShell() {
           repos={workspace.data!.childRepos}
           onOpen={(path) => void choose(path)}
         />
-      )
+      );
     }
     if (viewing !== null && isImagePath(viewing)) {
-      return <ImageView path={viewing} theme={prefs.resolvedTheme} />
+      return <ImageView path={viewing} theme={prefs.resolvedTheme} />;
     }
     if (viewing !== null) {
       return (
@@ -820,7 +823,7 @@ export function AppShell() {
           onCommentDelete={deleteComment}
           onCommentEdit={editComment}
         />
-      )
+      );
     }
     if (
       mode === "commit" &&
@@ -838,7 +841,7 @@ export function AppShell() {
           onEdit={(p) => openFile(p)}
           onClose={() => setSearch({ path: undefined })}
         />
-      )
+      );
     }
     if (target === null) {
       return (
@@ -850,7 +853,7 @@ export function AppShell() {
               : "Pick a file from the tree, or a commit from the log."}
           </div>
         </div>
-      )
+      );
     }
     return (
       <DiffPane
@@ -884,29 +887,29 @@ export function AppShell() {
         onCommentEdit={editComment}
         onCommentReply={replyComment}
       />
-    )
-  }
+    );
+  };
 
   const choose = async (path: string) => {
     const { data, error } = await fetchClient.POST("/api/workspace", {
       body: { path },
-    })
+    });
     if (error) {
       toast.error(
         (error as { message?: string; reason?: string }).message ??
           (error as { reason?: string }).reason ??
           "could not open repository"
-      )
-      return
+      );
+      return;
     }
     if (data !== undefined) {
-      queryClient.setQueryData(["get", "/api/workspace"], data)
+      queryClient.setQueryData(["get", "/api/workspace"], data);
     }
-    await queryClient.invalidateQueries()
-    void navigate({ to: "/modes/code/commit", search: {} })
-  }
+    await queryClient.invalidateQueries();
+    void navigate({ to: "/modes/code/commit", search: {} });
+  };
 
-  const crumbs = buildCrumbs()
+  const crumbs = buildCrumbs();
 
   return (
     // One Shiki worker pool shared by every diff/file surface below (diff
@@ -942,12 +945,12 @@ export function AppShell() {
             onPickerOpenChange={setPickerOpen}
             onDiffStyleChange={(diffStyle) => setUiPrefs({ diffStyle })}
             onCheckout={(b) => {
-              void git.checkout(b)
-              void navigate({ to: "/modes/code/commit" })
+              void git.checkout(b);
+              void navigate({ to: "/modes/code/commit" });
             }}
             onCheckoutAndUpdate={(b) => {
-              void git.checkoutAndUpdate(b)
-              void navigate({ to: "/modes/code/commit" })
+              void git.checkoutAndUpdate(b);
+              void navigate({ to: "/modes/code/commit" });
             }}
             onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
             onCompare={(base, head) =>
@@ -1095,16 +1098,16 @@ export function AppShell() {
                     }
                     onCloseOthers={(path) =>
                       updateTabs((state) => {
-                        const next = closeOthers(state, path)
-                        setSearch({ file: next.active ?? undefined })
-                        return next
+                        const next = closeOthers(state, path);
+                        setSearch({ file: next.active ?? undefined });
+                        return next;
                       })
                     }
                     onCloseAll={() =>
                       updateTabs((state) => {
-                        const next = closeAll(state)
-                        setSearch({ file: next.active ?? undefined })
-                        return next
+                        const next = closeAll(state);
+                        setSearch({ file: next.active ?? undefined });
+                        return next;
                       })
                     }
                   />
@@ -1181,8 +1184,8 @@ export function AppShell() {
                 onLogRefChange={setLogRef}
                 onLogFiltersChange={setLogFilters}
                 onBranchCheckout={(b) => {
-                  void git.checkout(b)
-                  void navigate({ to: "/modes/code/commit" })
+                  void git.checkout(b);
+                  void navigate({ to: "/modes/code/commit" });
                 }}
                 onSelectCommit={(c) =>
                   void navigate({
@@ -1202,5 +1205,5 @@ export function AppShell() {
         </div>
       </WindowFrame>
     </DiffWorkerPoolProvider>
-  )
+  );
 }

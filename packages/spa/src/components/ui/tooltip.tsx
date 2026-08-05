@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
-import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
+import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 
-import { cn } from "@/lib/utils"
-import { ELEVATION, POPUP_SHADOW, useElevation } from "@/lib/surface-context"
+import { cn } from "@/lib/utils";
+import { ELEVATION, POPUP_SHADOW, useElevation } from "@/lib/surface-context";
 
 function TooltipProvider({
   delay = 0,
@@ -15,15 +15,15 @@ function TooltipProvider({
       delay={delay}
       {...props}
     />
-  )
+  );
 }
 
 function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
-  return <TooltipPrimitive.Root data-slot="tooltip" {...props} />
+  return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
 }
 
 function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
-  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
+  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
 }
 
 function TooltipContent({
@@ -39,7 +39,7 @@ function TooltipContent({
     TooltipPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
-  const { className: surface } = useElevation(ELEVATION.tooltip, POPUP_SHADOW)
+  const { className: surface } = useElevation(ELEVATION.tooltip, POPUP_SHADOW);
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Positioner
@@ -67,7 +67,7 @@ function TooltipContent({
         </TooltipPrimitive.Popup>
       </TooltipPrimitive.Positioner>
     </TooltipPrimitive.Portal>
-  )
+  );
 }
 
-export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider }
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider };

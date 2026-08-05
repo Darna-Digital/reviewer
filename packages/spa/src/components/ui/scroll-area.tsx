@@ -6,29 +6,29 @@ import {
   type ComponentRef,
   type Ref,
   type UIEventHandler,
-} from "react"
-import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area"
-import { cn } from "@/lib/utils"
-import { useShape } from "@/lib/shape-context"
-import { useTouchPrimary } from "@/hooks/use-touch-primary"
+} from "react";
+import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
+import { cn } from "@/lib/utils";
+import { useShape } from "@/lib/shape-context";
+import { useTouchPrimary } from "@/hooks/use-touch-primary";
 
 /**
  * Touch devices scroll natively — their momentum and rubber-banding beat
  * anything scripted — so the custom scrollbar sits out; `ScrollBar` reads this
  * to render nothing there.
  */
-const NativeScrollingContext = createContext<boolean>(false)
+const NativeScrollingContext = createContext<boolean>(false);
 
-type Orientation = "vertical" | "horizontal" | "both"
+type Orientation = "vertical" | "horizontal" | "both";
 
 interface ScrollAreaProps extends ComponentPropsWithoutRef<"div"> {
-  viewportClassName?: string
+  viewportClassName?: string;
   /** Ref to the scrolling viewport — needed for programmatic scroll. */
-  viewportRef?: Ref<HTMLDivElement>
+  viewportRef?: Ref<HTMLDivElement>;
   /** Scroll listener on the viewport (not the outer container). */
-  onViewportScroll?: UIEventHandler<HTMLDivElement>
+  onViewportScroll?: UIEventHandler<HTMLDivElement>;
   /** Which axes get scrollbars. Defaults to `"vertical"`. */
-  orientation?: Orientation
+  orientation?: Orientation;
 }
 
 const overflowClass = (orientation: Orientation) =>
@@ -36,7 +36,7 @@ const overflowClass = (orientation: Orientation) =>
     ? "overflow-x-hidden overflow-y-auto"
     : orientation === "horizontal"
       ? "overflow-x-auto"
-      : "overflow-auto"
+      : "overflow-auto";
 
 function NativeScrollArea({
   className,
@@ -48,8 +48,8 @@ function NativeScrollArea({
   containerRef,
   ...props
 }: ScrollAreaProps & {
-  orientation: Orientation
-  containerRef: Ref<HTMLDivElement>
+  orientation: Orientation;
+  containerRef: Ref<HTMLDivElement>;
 }) {
   return (
     <div
@@ -74,7 +74,7 @@ function NativeScrollArea({
         {children}
       </div>
     </div>
-  )
+  );
 }
 
 const ScrollArea = forwardRef<
@@ -93,7 +93,7 @@ const ScrollArea = forwardRef<
     },
     ref
   ) => {
-    const scrollsNatively = useTouchPrimary()
+    const scrollsNatively = useTouchPrimary();
 
     return (
       <NativeScrollingContext.Provider value={scrollsNatively}>
@@ -148,42 +148,42 @@ const ScrollArea = forwardRef<
           </ScrollAreaPrimitive.Root>
         )}
       </NativeScrollingContext.Provider>
-    )
+    );
   }
-)
+);
 
-ScrollArea.displayName = "ScrollArea"
+ScrollArea.displayName = "ScrollArea";
 
 const REVEAL_ON_HOVER_OR_SCROLL = [
   "opacity-0 transition-opacity delay-160 duration-120 ease-out",
   "data-[hovering]:duration-160 data-[scrolling]:duration-160",
   "data-[hovering]:opacity-100 data-[scrolling]:opacity-100",
   "data-[hovering]:delay-0 data-[scrolling]:delay-0",
-].join(" ")
+].join(" ");
 
 const TRACK_BY_ORIENTATION = {
   vertical: "top-0 right-0 h-full w-2.5",
   horizontal: "bottom-0 left-0 h-2.5 w-full flex-col",
-} as const
+} as const;
 
 const THUMB_RESTS_NARROW_WIDENS_ON_HOVER = {
   vertical:
     "mx-auto my-1 h-[var(--scroll-area-thumb-height)] w-1 -translate-x-0.5 group-hover/scrollbar:w-1.5",
   horizontal:
     "mx-1 my-auto h-1 w-[var(--scroll-area-thumb-width)] -translate-y-0.5 group-hover/scrollbar:h-1.5",
-} as const
+} as const;
 
 const THUMB_OVERLAY_RAMP =
-  "bg-[rgb(var(--overlay)/0.08)] group-hover/scrollbar:bg-[rgb(var(--overlay)/0.12)] active:!bg-[rgb(var(--overlay)/0.16)]"
+  "bg-[rgb(var(--overlay)/0.08)] group-hover/scrollbar:bg-[rgb(var(--overlay)/0.12)] active:!bg-[rgb(var(--overlay)/0.16)]";
 
 const ScrollBar = forwardRef<
   ComponentRef<typeof ScrollAreaPrimitive.Scrollbar>,
   ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Scrollbar>
 >(({ className, orientation = "vertical", ...props }, ref) => {
-  const scrollsNatively = useContext(NativeScrollingContext)
-  const shape = useShape()
+  const scrollsNatively = useContext(NativeScrollingContext);
+  const shape = useShape();
 
-  if (scrollsNatively) return null
+  if (scrollsNatively) return null;
 
   return (
     <ScrollAreaPrimitive.Scrollbar
@@ -208,10 +208,10 @@ const ScrollBar = forwardRef<
         )}
       />
     </ScrollAreaPrimitive.Scrollbar>
-  )
-})
+  );
+});
 
-ScrollBar.displayName = "ScrollBar"
+ScrollBar.displayName = "ScrollBar";
 
-export { ScrollArea, ScrollBar }
-export type { ScrollAreaProps }
+export { ScrollArea, ScrollBar };
+export type { ScrollAreaProps };

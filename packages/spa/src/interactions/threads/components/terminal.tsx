@@ -15,36 +15,36 @@
  * the page fully reloads — and on reload the server keeps the PTY alive and
  * replays the scrollback when the new page reconnects (see pty-socket.ts).
  */
-import { useEffect, useRef, useState } from "react"
-import { ptySocketUrl } from "@/lib/api/client"
-import { attachImageDrop } from "@/lib/terminal/image-drop"
-import { mountTerminal, type TerminalTheme } from "@/lib/terminal/xterm-engine"
-import type { AgentKind } from "@byconvo/core/threads"
-import "@xterm/xterm/css/xterm.css"
+import { useEffect, useRef, useState } from "react";
+import { ptySocketUrl } from "@/lib/api/client";
+import { attachImageDrop } from "@/lib/terminal/image-drop";
+import { mountTerminal, type TerminalTheme } from "@/lib/terminal/xterm-engine";
+import type { AgentKind } from "@byconvo/core/threads";
+import "@xterm/xterm/css/xterm.css";
 
-type Theme = TerminalTheme
-type Status = "connecting" | "open" | "closed"
+type Theme = TerminalTheme;
+type Status = "connecting" | "open" | "closed";
 
 /** A terminal session that outlives any single React mount. */
 interface LiveTerminal {
-  readonly host: HTMLDivElement
-  status: Status
-  error: string | null
+  readonly host: HTMLDivElement;
+  status: Status;
+  error: string | null;
   /** Last xterm title, replayed to a re-mounting view so the sidebar stays right. */
-  lastTitle: string | null
-  onState: ((s: { status: Status; error: string | null }) => void) | null
-  onTitle: ((title: string) => void) | null
-  onBell: (() => void) | null
+  lastTitle: string | null;
+  onState: ((s: { status: Status; error: string | null }) => void) | null;
+  onTitle: ((title: string) => void) | null;
+  onBell: (() => void) | null;
   /** Drag-over affordance — shown by the mounted view while a file hovers. */
-  onDrag: ((dragging: boolean) => void) | null
-  fit: () => void
-  focus: () => void
-  resize: () => void
-  setTheme: (theme: Theme) => void
-  dispose: () => void
+  onDrag: ((dragging: boolean) => void) | null;
+  fit: () => void;
+  focus: () => void;
+  resize: () => void;
+  setTheme: (theme: Theme) => void;
+  dispose: () => void;
 }
 
-const registry = new Map<string, LiveTerminal>()
+const registry = new Map<string, LiveTerminal>();
 
 /**
  * Get (or lazily create) the persistent terminal for a thread. Creating one
@@ -56,11 +56,11 @@ const ensureLiveTerminal = (
   agent: AgentKind,
   theme: Theme
 ): LiveTerminal => {
-  const existing = registry.get(id)
-  if (existing !== undefined) return existing
+  const existing = registry.get(id);
+  if (existing !== undefined) return existing;
 
-  const host = document.createElement("div")
-  host.className = "h-full w-full"
+  const host = document.createElement("div");
+  host.className = "h-full w-full";
   const live: LiveTerminal = {
     host,
     status: "connecting",
@@ -75,60 +75,61 @@ const ensureLiveTerminal = (
     resize: () => {},
     setTheme: () => {},
     dispose: () => {},
-  }
-  registry.set(id, live)
+  };
+  registry.set(id, live);
 
   const setStatus = (status: Status) => {
-    live.status = status
-    live.onState?.({ status, error: live.error })
-  }
+    live.status = status;
+    live.onState?.({ status, error: live.error });
+  };
   const setError = (error: string) => {
-    live.error = error
-    live.onState?.({ status: live.status, error })
-  }
+    live.error = error;
+    live.onState?.({ status: live.status, error });
+  };
 
   // The engine is imported lazily so it never runs during SSR/prerender.
   void (async () => {
-    const mounted = await mountTerminal(host, theme)
+    const mounted = await mountTerminal(host, theme);
     if (registry.get(id) !== live) {
-      mounted.dispose() // disposed before the engine loaded
-      return
+      mounted.dispose(); // disposed before the engine loaded
+      return;
     }
-    const { term, safeFit } = mounted
+    const { term, safeFit } = mounted;
 
     const ws = new WebSocket(
       ptySocketUrl({ id, agent, cols: term.cols, rows: term.rows, theme })
-    )
+    );
     const sendResize = () => {
       if (ws.readyState === WebSocket.OPEN)
-        ws.send(JSON.stringify({ r: { cols: term.cols, rows: term.rows } }))
-    }
+        ws.send(JSON.stringify({ r: { cols: term.cols, rows: term.rows } }));
+    };
     ws.onopen = () => {
-      setStatus("open")
-      sendResize()
-    }
+      setStatus("open");
+      sendResize();
+    };
     ws.onmessage = (event) => {
       try {
-        const msg = JSON.parse(event.data as string)
-        if (typeof msg.d === "string") term.write(msg.d)
-        else if (typeof msg.error === "string") setError(msg.error)
+        const msg = JSON.parse(event.data as string);
+        if (typeof msg.d === "string") term.write(msg.d);
+        else if (typeof msg.error === "string") setError(msg.error);
         else if (msg.exit !== undefined)
-          term.write(`\r\n\x1b[90m[process exited: ${msg.exit}]\x1b[0m\r\n`)
+          term.write(`\r\n\x1b[90m[process exited: ${msg.exit}]\x1b[0m\r\n`);
       } catch {
         // ignore malformed frames
       }
-    }
-    ws.onclose = () => setStatus("closed")
-    ws.onerror = () => setError("connection failed")
+    };
+    ws.onclose = () => setStatus("closed");
+    ws.onerror = () => setError("connection failed");
 
     const dataSub = term.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ d: data }))
-    })
+      if (ws.readyState === WebSocket.OPEN)
+        ws.send(JSON.stringify({ d: data }));
+    });
     const titleSub = term.onTitleChange((t) => {
-      live.lastTitle = t
-      live.onTitle?.(t)
-    })
-    const bellSub = term.onBell(() => live.onBell?.())
+      live.lastTitle = t;
+      live.onTitle?.(t);
+    });
+    const bellSub = term.onBell(() => live.onBell?.());
 
     // Drop an image onto the terminal to hand its path to the agent, like the
     // Claude Code CLI in a native terminal (the server saves it and types the
@@ -136,46 +137,46 @@ const ensureLiveTerminal = (
     const detachDrop = attachImageDrop(host, {
       getSocket: () => ws,
       onDragState: (dragging) => live.onDrag?.(dragging),
-    })
+    });
 
     const observer = new ResizeObserver(() => {
-      safeFit()
-      sendResize()
-    })
-    observer.observe(host)
+      safeFit();
+      sendResize();
+    });
+    observer.observe(host);
 
-    live.fit = safeFit
-    live.focus = () => term.focus()
-    live.resize = sendResize
-    live.setTheme = (next) => mounted.setTheme(next)
+    live.fit = safeFit;
+    live.focus = () => term.focus();
+    live.resize = sendResize;
+    live.setTheme = (next) => mounted.setTheme(next);
     live.dispose = () => {
-      observer.disconnect()
-      detachDrop()
-      dataSub.dispose()
-      titleSub.dispose()
-      bellSub.dispose()
+      observer.disconnect();
+      detachDrop();
+      dataSub.dispose();
+      titleSub.dispose();
+      bellSub.dispose();
       try {
-        ws.close()
+        ws.close();
       } catch {
         // already closing
       }
-      mounted.dispose()
-      host.remove()
-    }
-    safeFit()
-    sendResize()
-  })()
+      mounted.dispose();
+      host.remove();
+    };
+    safeFit();
+    sendResize();
+  })();
 
-  return live
-}
+  return live;
+};
 
 /** Tear down a thread's live terminal — call this when the thread is closed. */
 export const disposeLiveTerminal = (id: string): void => {
-  const live = registry.get(id)
-  if (live === undefined) return
-  registry.delete(id)
-  live.dispose()
-}
+  const live = registry.get(id);
+  if (live === undefined) return;
+  registry.delete(id);
+  live.dispose();
+};
 
 export function Terminal({
   id,
@@ -186,75 +187,75 @@ export function Terminal({
   onBell,
 }: {
   /** Thread id — keys the persistent session in the registry (and on the server). */
-  id: string
-  agent: AgentKind
-  active: boolean
-  resolvedTheme: Theme
-  onTitle?: (title: string) => void
-  onBell?: () => void
+  id: string;
+  agent: AgentKind;
+  active: boolean;
+  resolvedTheme: Theme;
+  onTitle?: (title: string) => void;
+  onBell?: () => void;
 }) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const [status, setStatus] = useState<Status>("connecting")
-  const [error, setError] = useState<string | null>(null)
-  const [dragging, setDragging] = useState(false)
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [status, setStatus] = useState<Status>("connecting");
+  const [error, setError] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
 
   // Adopt (or create) the persistent terminal for this thread and attach its host
   // element. On unmount we detach the host but keep the session alive.
   useEffect(() => {
-    const container = containerRef.current
-    if (container === null) return
-    const live = ensureLiveTerminal(id, agent, resolvedTheme)
+    const container = containerRef.current;
+    if (container === null) return;
+    const live = ensureLiveTerminal(id, agent, resolvedTheme);
 
-    live.onTitle = onTitle ?? null
-    live.onBell = onBell ?? null
-    live.onDrag = setDragging
+    live.onTitle = onTitle ?? null;
+    live.onBell = onBell ?? null;
+    live.onDrag = setDragging;
     live.onState = ({ status: s, error: e }) => {
-      setStatus(s)
-      setError(e)
-    }
+      setStatus(s);
+      setError(e);
+    };
     // Reflect whatever state the session reached while it was detached.
-    setStatus(live.status)
-    setError(live.error)
-    if (live.lastTitle !== null) onTitle?.(live.lastTitle)
+    setStatus(live.status);
+    setError(live.error);
+    if (live.lastTitle !== null) onTitle?.(live.lastTitle);
 
-    container.appendChild(live.host)
+    container.appendChild(live.host);
     const raf = requestAnimationFrame(() => {
-      live.fit()
-      live.resize()
-      if (active) live.focus()
-    })
+      live.fit();
+      live.resize();
+      if (active) live.focus();
+    });
 
     return () => {
-      cancelAnimationFrame(raf)
-      live.onTitle = null
-      live.onBell = null
-      live.onDrag = null
-      live.onState = null
-      setDragging(false)
+      cancelAnimationFrame(raf);
+      live.onTitle = null;
+      live.onBell = null;
+      live.onDrag = null;
+      live.onState = null;
+      setDragging(false);
       // Detach but keep the session alive. (React also removes `container`;
       // pulling the host out first guarantees it isn't torn down with it.)
-      if (live.host.parentNode === container) container.removeChild(live.host)
-    }
+      if (live.host.parentNode === container) container.removeChild(live.host);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, agent])
+  }, [id, agent]);
 
   // Re-fit + focus when this terminal becomes the active one (it may have been
   // sized while hidden, or just re-attached after navigating back).
   useEffect(() => {
-    if (!active) return
+    if (!active) return;
     const raf = requestAnimationFrame(() => {
-      const live = registry.get(id)
-      live?.fit()
-      live?.resize()
-      live?.focus()
-    })
-    return () => cancelAnimationFrame(raf)
-  }, [id, active])
+      const live = registry.get(id);
+      live?.fit();
+      live?.resize();
+      live?.focus();
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [id, active]);
 
   // Apply theme changes live without tearing down the PTY.
   useEffect(() => {
-    registry.get(id)?.setTheme(resolvedTheme)
-  }, [id, resolvedTheme])
+    registry.get(id)?.setTheme(resolvedTheme);
+  }, [id, resolvedTheme]);
 
   return (
     <div className="relative h-full min-h-0 w-full">
@@ -276,5 +277,5 @@ export function Terminal({
         )
       )}
     </div>
-  )
+  );
 }

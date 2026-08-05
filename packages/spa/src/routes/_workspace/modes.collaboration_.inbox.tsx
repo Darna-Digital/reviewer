@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router"
-import { InboxPage } from "@/interactions/inbox/components/inbox-page"
+import { createFileRoute } from "@tanstack/react-router";
+import { InboxPage } from "@/interactions/inbox/components/inbox-page";
 
 /** `compose=chat` swaps the thread pane for the new-chat composer. */
 export interface InboxSearch {
-  compose?: "chat"
+  compose?: "chat";
 }
 
 // Trailing `_` keeps this out of the collaboration page's route, which renders
@@ -13,4 +13,4 @@ export const Route = createFileRoute("/_workspace/modes/collaboration_/inbox")({
     compose: search["compose"] === "chat" ? "chat" : undefined,
   }),
   component: InboxPage,
-})
+});
