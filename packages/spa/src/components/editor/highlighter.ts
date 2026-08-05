@@ -77,8 +77,7 @@ export function useHighlightPrimed(
 ): boolean {
   const pool = useWorkerPool();
   const [primed, setPrimed] = useState(false);
-  const cached =
-    file !== null && pool?.getFileResultCache(file) !== undefined;
+  const cached = file !== null && pool?.getFileResultCache(file) !== undefined;
 
   useEffect(() => {
     if (!enabled || file === null || pool === undefined) return;

@@ -106,8 +106,7 @@ export function CodeView({
   const langReady = useLangReady(path, editing);
   const contents = file.data?.contents;
   const highlightFile = useMemo(
-    () =>
-      contents === undefined ? null : fileForHighlighting(path, contents),
+    () => (contents === undefined ? null : fileForHighlighting(path, contents)),
     [path, contents]
   );
   // Editing renders off the pool, so there is nothing to prime for it.
