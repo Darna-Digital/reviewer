@@ -252,6 +252,25 @@ export function useLanguageLayer({
     return () => window.removeEventListener("scroll", onScroll, true);
   }, [card?.kind, closeCard]);
 
+  // And it goes away as soon as the pointer is somewhere else entirely — the
+  // rail, the sidebar, another pane. The token's own leave event only fires
+  // while the pointer is still travelling over the code, so a move straight out
+  // of it would otherwise leave the card hanging there.
+  useEffect(() => {
+    if (card?.kind !== "hover") return;
+    const onPointerOver = (event: Event) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (target instanceof Element && target.closest("[data-symbol-card]"))
+        return;
+      const container = getContainer();
+      if (container !== null && container.contains(target)) return;
+      closeCard();
+    };
+    window.addEventListener("pointerover", onPointerOver, true);
+    return () => window.removeEventListener("pointerover", onPointerOver, true);
+  }, [card?.kind, closeCard, getContainer]);
+
   const onTokenEnter = useCallback(
     (props: TokenEventBase) => {
       const token = spanOf(props);
