@@ -252,7 +252,7 @@ export const projectFor = (
   root: string,
   absoluteFile: string
 ): TsProject | null => {
-  const { module: ts } = loadTypeScript(root);
+  const { module: ts } = loadTypeScript(dirname(absoluteFile));
   if (ts === null) return null;
 
   const parsed = parseProject(ts, root, absoluteFile);

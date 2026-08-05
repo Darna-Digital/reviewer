@@ -7,6 +7,17 @@
  * ahead of the one in its lockfile would invent errors nobody can reproduce.
  * When a repository has no TypeScript installed, the provider reports itself
  * unavailable rather than guessing.
+ *
+ * The lookup is anchored at the directory of the file being analysed, not at
+ * the repository root: a pnpm workspace installs `typescript` under each
+ * package rather than at the top, so a root-anchored resolution finds nothing
+ * in exactly the repositories most likely to be reviewed here.
+ *
+ * Do not verify this path under `pnpm dev`. The dev server runs through `tsx`,
+ * whose resolution hook answers every bare specifier from byconvo's own
+ * dependency graph — `require("typescript")` succeeds there from any directory
+ * on the machine, including ones with no `node_modules` at all. Only the
+ * bundled server on plain node resolves the way this module intends.
  */
 import { createRequire } from "node:module";
 import type * as TSModule from "typescript";
@@ -27,10 +38,11 @@ const cache = new Map<string, TypeScriptLookup>();
 const reasonOf = (error: unknown) =>
   error instanceof Error ? (error.message.split("\n")[0] ?? "") : String(error);
 
-const load = (root: string, env: NodeJS.ProcessEnv): TypeScriptLookup => {
-  // Resolving from a path *inside* the repository makes node walk up from
-  // there, so a package in a monorepo picks up the workspace-root install.
-  const requireFrom = createRequire(`${root.replace(/\/+$/, "")}/`);
+const load = (
+  fromDirectory: string,
+  env: NodeJS.ProcessEnv
+): TypeScriptLookup => {
+  const requireFrom = createRequire(`${fromDirectory.replace(/\/+$/, "")}/`);
 
   const override = env[OVERRIDE_ENV]?.trim();
   const specifier =
@@ -45,25 +57,25 @@ const load = (root: string, env: NodeJS.ProcessEnv): TypeScriptLookup => {
       module: null,
       detail:
         origin === "repository"
-          ? `no TypeScript found in this repository — install its dependencies, or set ${OVERRIDE_ENV} (${reasonOf(error)})`
+          ? `no TypeScript resolvable from here — install the repository's dependencies, or set ${OVERRIDE_ENV} (${reasonOf(error)})`
           : `${OVERRIDE_ENV} could not be loaded: ${reasonOf(error)}`,
     };
   }
 };
 
 /**
- * The compiler for `root`, memoised per repository. A failed lookup is cached
- * too — every keystroke would otherwise retry a module resolution that walks
- * the whole directory tree.
+ * The compiler visible from `fromDirectory`, memoised per directory. A failed
+ * lookup is cached too — every keystroke would otherwise retry a module
+ * resolution that walks the whole directory tree.
  */
 export const loadTypeScript = (
-  root: string,
+  fromDirectory: string,
   env: NodeJS.ProcessEnv = process.env
 ): TypeScriptLookup => {
-  const cached = cache.get(root);
+  const cached = cache.get(fromDirectory);
   if (cached !== undefined) return cached;
-  const lookup = load(root, env);
-  cache.set(root, lookup);
+  const lookup = load(fromDirectory, env);
+  cache.set(fromDirectory, lookup);
   return lookup;
 };
 
