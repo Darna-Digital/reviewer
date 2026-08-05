@@ -56,10 +56,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
-        {/* Apply the persisted theme before paint to avoid a flash. */}
+        {/* Apply the persisted theme, and flag the native shell, before paint —
+            the frame is translucent there, and a flash of opaque chrome while
+            the vibrancy layer waits is the exact thing this avoids. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(()=>{try{const t=localStorage.getItem("byconvo-theme")||"system";const d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",d);document.documentElement.dataset.theme=d?"dark":"light";}catch(e){}})()`,
+            __html: `(()=>{try{const r=document.documentElement;const t=localStorage.getItem("byconvo-theme")||"system";const d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);r.dataset.theme=d?"dark":"light";r.classList.toggle("desktop","byconvo" in window);const p=JSON.parse(localStorage.getItem("byconvo-ui")||"{}");r.classList.toggle("translucent",p.translucency!==false);}catch(e){}})()`,
           }}
         />
       </head>
@@ -77,16 +79,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               },
               { name: "TanStack Query", render: <ReactQueryDevtoolsPanel /> },
             ]}
-          />
-        )}
-        {/* byconvo dogfoods its own visual-comment picker with the same
-            absolute-origin script tag any other project would add, so the
-            cross-origin path every consumer relies on is exercised here too.
-            `import.meta.env.DEV` drops it from production builds. */}
-        {import.meta.env.DEV && (
-          <script
-            defer
-            src={`${import.meta.env.VITE_BYCONVO_SERVER_URL ?? "http://localhost:41811"}/api/visual-comments/picker.js`}
           />
         )}
         <Scripts />

@@ -57,6 +57,8 @@
   --color-background: var(--background);
   --color-elevate: var(--elevate);
   --color-elevate-strong: var(--elevate-strong);
+  --color-frame: var(--frame);
+  --color-frame-border: var(--frame-border);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
@@ -128,29 +130,32 @@
   --surface-8: #ffffff;
   --shadow-color: rgb(0 0 0 / 0.06);
   --shadow-1: 0 0 0 1px var(--shadow-color);
-  --shadow-2: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px
-    var(--shadow-color);
-  --shadow-3: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px
-    var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color);
-  --shadow-4: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px
-    var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px
-    var(--shadow-color);
-  --shadow-5: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px
-    var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px
-    var(--shadow-color), 0 12px 12px -6px var(--shadow-color);
-  --shadow-6: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px
-    var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px
-    var(--shadow-color), 0 12px 12px -6px var(--shadow-color), 0 24px 24px -12px
-    var(--shadow-color);
-  --shadow-7: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px
-    var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px
-    var(--shadow-color), 0 12px 12px -6px var(--shadow-color), 0 24px 24px -12px
-    var(--shadow-color), 0 48px 48px -24px var(--shadow-color);
-  --shadow-8: 0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px
-    var(--shadow-color), 0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px
-    var(--shadow-color), 0 12px 12px -6px var(--shadow-color), 0 24px 24px -12px
-    var(--shadow-color), 0 48px 48px -24px var(--shadow-color), 0 96px 96px -48px
-    var(--shadow-color);
+  --shadow-2:
+    0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color);
+  --shadow-3:
+    0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color),
+    0 3px 3px -1.5px var(--shadow-color);
+  --shadow-4:
+    0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color),
+    0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color);
+  --shadow-5:
+    0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color),
+    0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color),
+    0 12px 12px -6px var(--shadow-color);
+  --shadow-6:
+    0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color),
+    0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color),
+    0 12px 12px -6px var(--shadow-color), 0 24px 24px -12px var(--shadow-color);
+  --shadow-7:
+    0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color),
+    0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color),
+    0 12px 12px -6px var(--shadow-color), 0 24px 24px -12px var(--shadow-color),
+    0 48px 48px -24px var(--shadow-color);
+  --shadow-8:
+    0 0 0 1px var(--shadow-color), 0 1px 1px -0.5px var(--shadow-color),
+    0 3px 3px -1.5px var(--shadow-color), 0 6px 6px -3px var(--shadow-color),
+    0 12px 12px -6px var(--shadow-color), 0 24px 24px -12px var(--shadow-color),
+    0 48px 48px -24px var(--shadow-color), 0 96px 96px -48px var(--shadow-color);
 }
 
 .dark {
@@ -173,39 +178,43 @@
   --dm-ring-high: rgba(255, 255, 255, 0.06);
   --dm-drop: rgba(0, 0, 0, 0.18);
   --shadow-1: inset 0 0 0 1px var(--dm-ring-base);
-  --shadow-2: inset 0 1px 0 0 var(--dm-hi-base), inset 0 0 0 1px
-    var(--dm-ring-base), 0 1px 1px -0.5px var(--dm-drop);
-  --shadow-3: inset 0 1px 0 0 var(--dm-hi-mid), inset 0 0 0 1px
-    var(--dm-ring-base), 0 0 0 1px rgba(0, 0, 0, 0.12), 0 1px 1px -0.5px
-    var(--dm-drop), 0 3px 3px -1.5px var(--dm-drop);
-  --shadow-4: inset 0 1px 0 0 var(--dm-hi-mid), inset 0 0 0 1px
-    var(--dm-ring-mid), 0 0 0 1px rgba(0, 0, 0, 0.14), 0 1px 1px -0.5px
-    var(--dm-drop), 0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px
-    var(--dm-drop);
-  --shadow-5: inset 0 1px 0 0 var(--dm-hi-high), inset 0 0 0 1px
-    var(--dm-ring-mid), 0 0 0 1px rgba(0, 0, 0, 0.16), 0 1px 1px -0.5px
-    var(--dm-drop), 0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px
-    var(--dm-drop), 0 12px 12px -6px var(--dm-drop);
-  --shadow-6: inset 0 1px 0 0 var(--dm-hi-high), inset 0 0 0 1px
-    var(--dm-ring-high), 0 0 0 1px rgba(0, 0, 0, 0.18), 0 1px 1px -0.5px
-    var(--dm-drop), 0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px
-    var(--dm-drop), 0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px
-    var(--dm-drop);
-  --shadow-7: inset 0 1px 0 0 var(--dm-hi-peak), inset 0 0 0 1px
-    var(--dm-ring-high), 0 0 0 1px rgba(0, 0, 0, 0.2), 0 1px 1px -0.5px
-    var(--dm-drop), 0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px
-    var(--dm-drop), 0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px
-    var(--dm-drop), 0 48px 48px -24px var(--dm-drop);
-  --shadow-8: inset 0 1px 0 0 var(--dm-hi-peak), inset 0 0 0 1px
-    var(--dm-ring-high), 0 0 0 1px rgba(0, 0, 0, 0.22), 0 1px 1px -0.5px
-    var(--dm-drop), 0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px
-    var(--dm-drop), 0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px
-    var(--dm-drop), 0 48px 48px -24px var(--dm-drop), 0 96px 96px -48px
-    var(--dm-drop);
+  --shadow-2:
+    inset 0 1px 0 0 var(--dm-hi-base), inset 0 0 0 1px var(--dm-ring-base),
+    0 1px 1px -0.5px var(--dm-drop);
+  --shadow-3:
+    inset 0 1px 0 0 var(--dm-hi-mid), inset 0 0 0 1px var(--dm-ring-base),
+    0 0 0 1px rgba(0, 0, 0, 0.12), 0 1px 1px -0.5px var(--dm-drop),
+    0 3px 3px -1.5px var(--dm-drop);
+  --shadow-4:
+    inset 0 1px 0 0 var(--dm-hi-mid), inset 0 0 0 1px var(--dm-ring-mid),
+    0 0 0 1px rgba(0, 0, 0, 0.14), 0 1px 1px -0.5px var(--dm-drop),
+    0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop);
+  --shadow-5:
+    inset 0 1px 0 0 var(--dm-hi-high), inset 0 0 0 1px var(--dm-ring-mid),
+    0 0 0 1px rgba(0, 0, 0, 0.16), 0 1px 1px -0.5px var(--dm-drop),
+    0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop),
+    0 12px 12px -6px var(--dm-drop);
+  --shadow-6:
+    inset 0 1px 0 0 var(--dm-hi-high), inset 0 0 0 1px var(--dm-ring-high),
+    0 0 0 1px rgba(0, 0, 0, 0.18), 0 1px 1px -0.5px var(--dm-drop),
+    0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop),
+    0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px var(--dm-drop);
+  --shadow-7:
+    inset 0 1px 0 0 var(--dm-hi-peak), inset 0 0 0 1px var(--dm-ring-high),
+    0 0 0 1px rgba(0, 0, 0, 0.2), 0 1px 1px -0.5px var(--dm-drop),
+    0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop),
+    0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px var(--dm-drop),
+    0 48px 48px -24px var(--dm-drop);
+  --shadow-8:
+    inset 0 1px 0 0 var(--dm-hi-peak), inset 0 0 0 1px var(--dm-ring-high),
+    0 0 0 1px rgba(0, 0, 0, 0.22), 0 1px 1px -0.5px var(--dm-drop),
+    0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop),
+    0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px var(--dm-drop),
+    0 48px 48px -24px var(--dm-drop), 0 96px 96px -48px var(--dm-drop);
 }
 
 :root {
-  --background: oklch(1 0 0);
+  --background: var(--canvas);
   --foreground: oklch(0.145 0 0);
   --card: var(--surface-2);
   --card-foreground: oklch(0.145 0 0);
@@ -247,10 +256,25 @@
   --sidebar-ring: oklch(0.708 0 0);
   /* RGB channel triple for overlay tints (scroll thumbs, menu hover ramps). */
   --overlay: 0 0 0;
+  /* The window frame — the strip the tabs and window controls sit on, which
+     surrounds the content canvas on every side. Both themes push the canvas to
+     their extreme and hold the frame back from it: white paper inside a grey
+     surround here, near-black inside true black in the dark theme. */
+  --frame: #f0f0f3;
+  /* Thinner than the dark theme's tint. The material macOS blurs in behind a
+     light window is itself light, so a light tint disappears into it — the
+     effect only starts to read once rather more of it is let through. */
+  --frame-translucent: rgb(240 240 243 / 0.28);
+  --frame-border: rgb(0 0 0 / 0.1);
+  --canvas: #ffffff;
+  --canvas-edge: #f6f6f8;
 }
 
 .dark {
-  --background: var(--surface-1);
+  /* The canvas is the page every surface stacks on; the ladder above it
+     (sidebars, cards, popovers) lifts away from it, the frame beneath it sinks
+     to true black. */
+  --background: var(--canvas);
   --foreground: oklch(0.985 0 0);
   --card: var(--surface-2);
   --card-foreground: oklch(0.985 0 0);
@@ -287,6 +311,11 @@
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
   --overlay: 255 255 255;
+  --frame: #000000;
+  --frame-translucent: rgb(0 0 0 / 0.35);
+  --frame-border: rgb(255 255 255 / 0.09);
+  --canvas: #141417;
+  --canvas-edge: #0c0c0e;
 }
 
 @layer base {
@@ -306,6 +335,75 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss03";
   }
 }
+/* --- byconvo: the window frame and its content canvas ---------------------- */
+/* The canvas is a single sheet inset in the frame: brightest through the middle
+   and settling towards the frame's own tone at its edges, so the seam never
+   reads as a hard step. Panels drawn on it stay transparent, so the ramp shows
+   through. */
+.app-canvas {
+  background: radial-gradient(
+    120% 95% at 50% 46%,
+    var(--canvas) 0%,
+    var(--canvas) 45%,
+    var(--canvas-edge) 100%
+  );
+}
+.app-frame {
+  background-color: var(--frame);
+}
+
+/* In the native window the frame is a vibrancy layer: the OS blurs whatever is
+   behind the window and this tint sits over it, so the shell picks up the
+   desktop instead of reading as a painted bar. The canvas stays opaque — text
+   has to survive whatever wallpaper is back there. `.desktop` is set on <html>
+   by the shell-detection script in __root, before first paint. */
+/* Both are gated on `.translucent` (the Translucency setting) as well, so
+   turning it off leaves the frame painting its own solid colour over an
+   untouched window. The blur is the OS material behind the window; this is only
+   the tint over it. A `backdrop-filter` here would sample the page's own
+   backdrop, which is transparent all the way down, so it has nothing to work
+   on. */
+.desktop.translucent body {
+  background-color: transparent;
+}
+.desktop.translucent .app-frame {
+  background-color: var(--frame-translucent);
+}
+
+/* --- byconvo: agent brand marks ------------------------------------------- */
+/* Each agent CLI wears its own brand colour rather than the surrounding text
+   colour, so a glance at a mark says which tool without reading the label.
+   Only published values are used here — no invented accents.
+
+   Claude is the one vendor with a chromatic mark. OpenAI and Cursor both
+   publish achromatic identities (black or near-black on light, off-white on
+   dark), so their marks flip with the theme rather than holding a hue. Resist
+   giving them one: ChatGPT's green and the blues that circulate for Codex are
+   another product's accent or community guesswork, not these tools' brands. */
+[data-agent="claude"] {
+  --agent: #d97757;
+}
+[data-agent="codex"] {
+  --agent: #0f0f0f;
+}
+[data-agent="cursor"] {
+  --agent: #14120b;
+}
+[data-agent="opencode"] {
+  --agent: #171717;
+}
+.dark [data-agent="codex"] {
+  --agent: #fafafa;
+}
+.dark [data-agent="cursor"],
+.dark [data-agent="opencode"] {
+  --agent: #f7f7f4;
+}
+/* A terminal thread is not a brand — it keeps the text colour it inherits. */
+[data-agent="terminal"] {
+  --agent: currentColor;
+}
+
 /* --- byconvo: streaming "working" text ------------------------------------ */
 /* A highlight sweeps left-to-right across the label while an agent turn is in
    flight, so a long silent stretch still reads as alive. The gradient is built
@@ -820,4 +918,3 @@ body.is-resizing-row * {
   cursor: row-resize !important;
   user-select: none;
 }
-

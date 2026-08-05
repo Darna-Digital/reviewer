@@ -36,6 +36,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "sonner"
 import { CommandMenu, type Command } from "@/components/command-menu"
 import { CommitPanel } from "@/components/commit-panel"
+import { Button } from "@/components/ui/button"
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool"
 import { RepoList } from "@/components/repo-list"
 import {
@@ -47,14 +48,16 @@ import {
   type DraftLocation,
 } from "@/interactions/diff/components/diff-pane"
 import { CodeView } from "@/components/editor/code-view"
+import { ImageView, isImagePath } from "@/components/editor/image-view"
+import { ModeRail } from "@/components/layout/mode-rail"
 import { ConflictBanner } from "@/components/git/conflict-banner"
 import { ConflictView } from "@/components/git/conflict-view"
 import { PullRequestList } from "@/components/git/pull-request-list"
 import { BottomPanel } from "@/components/layout/bottom-panel"
-import type { Crumb } from "@/components/layout/breadcrumbs"
-import { ModeRail } from "@/components/layout/mode-rail"
+import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs"
 import { ResizeHandle } from "@/components/layout/resize-handle"
 import { TopBar } from "@/components/layout/top-bar"
+import { WindowFrame } from "@/components/layout/window-frame"
 import { FileSidebar } from "@/components/tree/file-sidebar"
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter"
 import {
@@ -75,7 +78,6 @@ import {
   closeOthers,
   closeTab,
   keepTab,
-  neighbourTab,
   pruneTabs,
   syncActive,
   togglePin,
@@ -138,9 +140,9 @@ export function AppShell() {
   const params = useParams({ strict: false })
   const search = useSearch({ strict: false })
 
-  const mode: AppMode = pathname.startsWith("/review")
+  const mode: AppMode = pathname.startsWith("/modes/code/review")
     ? "review"
-    : pathname.startsWith("/browse")
+    : pathname.startsWith("/modes/code/browse")
       ? "browse"
       : "commit"
 
@@ -174,48 +176,18 @@ export function AppShell() {
   const hasGitHub = repo.data?.github != null
   const pulls = usePulls(hasGitHub)
 
-  // Global keyboard shortcuts: Cmd/Ctrl+B toggles the bottom panel; Cmd/Ctrl+1/2/3
-  // jump between the commit / review / browse modes (review only when on GitHub).
+  // Cmd/Ctrl+B toggles the bottom panel. The mode jumps that used to live on
+  // Cmd+1/2/3 are gone — those digits belong to the window's tab strip now.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.metaKey || e.ctrlKey)) return
-      if (e.key.toLowerCase() === "b") {
-        e.preventDefault()
-        setUiPrefs({ bottomVisible: !prefs.bottomVisible })
-        return
-      }
-      if (e.key === "1") {
-        e.preventDefault()
-        void navigate({ to: "/commit" })
-      } else if (e.key === "2") {
-        if (!hasGitHub) return
-        e.preventDefault()
-        void navigate({ to: "/review" })
-      } else if (e.key === "3") {
-        e.preventDefault()
-        void navigate({ to: "/browse" })
-      } else if (
-        e.altKey &&
-        (e.key === "ArrowLeft" || e.key === "ArrowRight")
-      ) {
-        // Step through the open files, as Cmd/Ctrl+Alt+arrow does in VS Code.
-        // Ctrl+Tab, which JetBrains uses, is the browser's own.
-        e.preventDefault()
-        updateTabs((state) => {
-          const next = neighbourTab(state, e.key === "ArrowRight" ? 1 : -1)
-          if (next !== null) {
-            void navigate({
-              to: ".",
-              search: (prev: Search) => ({ ...prev, file: next }),
-            })
-          }
-          return state
-        })
-      }
+      if (e.key.toLowerCase() !== "b") return
+      e.preventDefault()
+      setUiPrefs({ bottomVisible: !prefs.bottomVisible })
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [prefs.bottomVisible, hasGitHub, navigate])
+  }, [prefs.bottomVisible])
   // The in-progress merge/rebase, if any — drives the conflict banner + resolver.
   const mergeState = useMergeState()
   const conflictedPaths = useMemo(
@@ -394,7 +366,7 @@ export function AppShell() {
         visibleComments.map((comment) => comments.remove(comment))
       )
       toast.success(`Assigned ${count} comment${plural}`)
-      void navigate({ to: "/chats/$chatId", params: { chatId } })
+      void navigate({ to: "/modes/code/chats/$chatId", params: { chatId } })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not assign comments"
@@ -552,14 +524,14 @@ export function AppShell() {
         id: "commit-mode",
         label: "Local changes",
         icon: IconGitCommit,
-        onClick: () => void navigate({ to: "/commit" }),
+        onClick: () => void navigate({ to: "/modes/code/commit" }),
       })
     } else if (mode === "review") {
       list.push({
         id: "review-mode",
         label: "Pull requests",
         icon: IconGitPullRequest,
-        onClick: () => void navigate({ to: "/review" }),
+        onClick: () => void navigate({ to: "/modes/code/review" }),
       })
       if (selectedPull !== null) {
         list.push({
@@ -614,7 +586,7 @@ export function AppShell() {
         id: "browse-mode",
         label: "Project",
         icon: IconFolders,
-        onClick: () => void navigate({ to: "/browse" }),
+        onClick: () => void navigate({ to: "/modes/code/browse" }),
       })
     }
     if (openPath !== null)
@@ -676,7 +648,7 @@ export function AppShell() {
         group: "Navigation",
         icon: IconGitCommit,
         keywords: "commit working tree changes",
-        run: () => void navigate({ to: "/commit" }),
+        run: () => void navigate({ to: "/modes/code/commit" }),
       },
     ]
     if (hasGitHub) {
@@ -686,7 +658,7 @@ export function AppShell() {
         group: "Navigation",
         icon: IconGitPullRequest,
         keywords: "review pr github",
-        run: () => void navigate({ to: "/review" }),
+        run: () => void navigate({ to: "/modes/code/review" }),
       })
     }
     list.push(
@@ -696,7 +668,7 @@ export function AppShell() {
         group: "Navigation",
         icon: IconFolders,
         keywords: "files history commits explore",
-        run: () => void navigate({ to: "/browse" }),
+        run: () => void navigate({ to: "/modes/code/browse" }),
       },
       {
         id: "git-refresh",
@@ -816,15 +788,16 @@ export function AppShell() {
         />
       )
     }
+    if (viewing !== null && isImagePath(viewing)) {
+      return <ImageView path={viewing} theme={prefs.resolvedTheme} />
+    }
     if (viewing !== null) {
       return (
         <CodeView
           path={viewing}
           theme={prefs.resolvedTheme}
-          onClose={closeFile}
           onSaved={git.refresh}
           onDirtyChange={onDirtyChange}
-          onShowHistory={showFileHistory}
           onOpenLocation={openLocation}
           reveal={reveal}
           comments={fileComments}
@@ -918,14 +891,16 @@ export function AppShell() {
       queryClient.setQueryData(["get", "/api/workspace"], data)
     }
     await queryClient.invalidateQueries()
-    void navigate({ to: "/commit", search: {} })
+    void navigate({ to: "/modes/code/commit", search: {} })
   }
+
+  const crumbs = buildCrumbs()
 
   return (
     // One Shiki worker pool shared by every diff/file surface below (diff
     // pane, file viewer, editor, conflict view) — see DiffWorkerPoolProvider.
     <DiffWorkerPoolProvider>
-      <div className="flex h-svh w-full overflow-hidden text-foreground">
+      <WindowFrame>
         <CommandMenu
           open={commandOpen}
           onOpenChange={setCommandOpen}
@@ -941,14 +916,13 @@ export function AppShell() {
             onDismiss={() => setAssignBarDismissed(true)}
           />
         )}
-        <ModeRail mode={mode} hasGitHub={hasGitHub} />
+        <ModeRail />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar
             repo={repo.data ?? null}
             workspace={workspace.data}
             branches={branches.data ?? []}
             remoteBranches={remoteBranches.data ?? []}
-            crumbs={buildCrumbs()}
             diffStyle={prefs.diffStyle}
             showDiffStyleToggle={viewing === null && target !== null}
             busy={false}
@@ -957,15 +931,18 @@ export function AppShell() {
             onDiffStyleChange={(diffStyle) => setUiPrefs({ diffStyle })}
             onCheckout={(b) => {
               void git.checkout(b)
-              void navigate({ to: "/commit" })
+              void navigate({ to: "/modes/code/commit" })
             }}
             onCheckoutAndUpdate={(b) => {
               void git.checkoutAndUpdate(b)
-              void navigate({ to: "/commit" })
+              void navigate({ to: "/modes/code/commit" })
             }}
             onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
             onCompare={(base, head) =>
-              void navigate({ to: "/browse/range", search: { base, head } })
+              void navigate({
+                to: "/modes/code/browse/range",
+                search: { base, head },
+              })
             }
             onMerge={(b) => void git.merge(b)}
             onRebase={(o) => void git.rebase(o)}
@@ -976,15 +953,17 @@ export function AppShell() {
             onPull={() => void git.pull()}
           />
 
-          {/* Everything below the title bar sits in a panel whose left border +
-            rounded top-left form the rail divider, so it curves in right above
-            the file list while the title-bar strip stays clean. */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-tl-lg border-t border-l">
+          {/* Everything below the toolbar sits in a bordered panel, so the
+            toolbar strip stays clean. */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t">
             <div className="flex min-h-0 flex-1">
               {/* Review mode stacks the pull request picker above the selected
                   PR's file tree; the other modes are just the tree. */}
               <div
-                className="flex shrink-0 flex-col overflow-hidden border-r"
+                className={cn(
+                  "flex shrink-0 flex-col overflow-hidden border-r",
+                  !prefs.sidebarVisible && "hidden"
+                )}
                 style={{ width: sidebarWidth }}
               >
                 {mode === "review" && (
@@ -1003,7 +982,7 @@ export function AppShell() {
                       selectedNumber={selectedPull?.number ?? null}
                       onSelect={(p) =>
                         void navigate({
-                          to: "/review/$pull",
+                          to: "/modes/code/review/$pull",
                           params: { pull: String(p.number) },
                         })
                       }
@@ -1066,15 +1045,17 @@ export function AppShell() {
                   </div>
                 )}
               </div>
-              <ResizeHandle
-                orientation="col"
-                value={sidebarWidth}
-                min={180}
-                max={() => Math.max(240, window.innerWidth - 400)}
-                onResize={setSidebarWidth}
-                onResizeEnd={(w) => setUiPrefs({ sidebarWidth: w })}
-                label="Resize sidebar"
-              />
+              {prefs.sidebarVisible && (
+                <ResizeHandle
+                  orientation="col"
+                  value={sidebarWidth}
+                  min={180}
+                  max={() => Math.max(240, window.innerWidth - 400)}
+                  onResize={setSidebarWidth}
+                  onResizeEnd={(w) => setUiPrefs({ sidebarWidth: w })}
+                  label="Resize sidebar"
+                />
+              )}
               <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
                 {mode === "commit" &&
                   mergeState.data != null &&
@@ -1115,6 +1096,25 @@ export function AppShell() {
                       })
                     }
                   />
+                  {/* The trail sits under the tabs, and only once it says more
+                      than which mode you are in. */}
+                  {crumbs.length > 1 && (
+                    <div className="flex h-8 shrink-0 items-center gap-2 border-b px-2">
+                      <Breadcrumbs crumbs={crumbs} />
+                      {viewing !== null && (
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          className="ml-auto gap-1 text-muted-foreground"
+                          title={`Show the commit history of ${viewing}`}
+                          onClick={() => showFileHistory(viewing)}
+                        >
+                          <IconHistory className="size-3.5" />
+                          History
+                        </Button>
+                      )}
+                    </div>
+                  )}
                   <div className="min-h-0 flex-1 overflow-hidden">
                     {renderCenter()}
                   </div>
@@ -1162,11 +1162,11 @@ export function AppShell() {
                 onLogFiltersChange={setLogFilters}
                 onBranchCheckout={(b) => {
                   void git.checkout(b)
-                  void navigate({ to: "/commit" })
+                  void navigate({ to: "/modes/code/commit" })
                 }}
                 onSelectCommit={(c) =>
                   void navigate({
-                    to: "/browse/commit/$sha",
+                    to: "/modes/code/browse/commit/$sha",
                     params: { sha: c.sha },
                     search: (prev: Search) => ({
                       ...prev,
@@ -1180,7 +1180,7 @@ export function AppShell() {
             </div>
           </div>
         </div>
-      </div>
+      </WindowFrame>
     </DiffWorkerPoolProvider>
   )
 }

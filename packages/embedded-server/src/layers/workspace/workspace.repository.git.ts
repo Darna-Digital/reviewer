@@ -10,7 +10,7 @@ import { ChildProcessSpawner } from "effect/unstable/process"
 import { homedir } from "node:os"
 import { resolve as pathResolve } from "node:path"
 import { NoRepoSelected, StorageError } from "@byconvo/core/shared"
-import { InvalidRepo } from "@byconvo/core/workspace"
+import { InvalidRepo, mediaTypeFor } from "@byconvo/core/workspace"
 import { resolveWorkspace, WorkspaceContext } from "./workspace-context.ts"
 import type {
   BrowseEntry,
@@ -158,6 +158,17 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
       return { name, contents }
     })
 
+  const readFileBytes: WorkspaceRepo["readFileBytes"] = (relPath) =>
+    Effect.gen(function* () {
+      const { name, resolved } = yield* resolveInRepo(relPath)
+      const bytes = yield* tryFs(fs.readFile(resolved))
+      return {
+        name,
+        mediaType: mediaTypeFor(relPath),
+        base64: Buffer.from(bytes).toString("base64"),
+      }
+    })
+
   const writeFile: WorkspaceRepo["writeFile"] = (relPath, contents) =>
     Effect.gen(function* () {
       const { resolved } = yield* resolveInRepo(relPath)
@@ -185,6 +196,7 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
     setCurrent,
     browse,
     readFile,
+    readFileBytes,
     writeFile,
     deletePath,
     renamePath,

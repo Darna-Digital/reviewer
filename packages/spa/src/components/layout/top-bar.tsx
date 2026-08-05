@@ -1,8 +1,8 @@
 import { BranchSwitcher } from "@/components/layout/branch-switcher"
-import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs"
+import { ModeSelector } from "@/components/layout/mode-selector"
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle"
+import { SidebarToggle } from "@/components/layout/sidebar-toggle"
 import { RepoPicker } from "@/components/repo-picker"
-import { cn } from "@/lib/utils"
 import { isDesktop } from "@/lib/desktop"
 import type { BranchInfo, RemoteBranchInfo, RepoInfo } from "@byconvo/core/repo"
 import type { WorkspaceInfo } from "@byconvo/core/workspace"
@@ -13,8 +13,6 @@ interface TopBarProps {
   workspace: WorkspaceInfo | undefined
   branches: ReadonlyArray<BranchInfo>
   remoteBranches: ReadonlyArray<RemoteBranchInfo>
-  /** Where the open content sits: mode → ref/pull → commit → file. */
-  crumbs: ReadonlyArray<Crumb>
   diffStyle: DiffStyle
   showDiffStyleToggle: boolean
   busy: boolean
@@ -46,56 +44,41 @@ export function TopBar(props: TopBarProps) {
   const current = repo?.currentBranch ?? null
 
   return (
-    <header
-      className={cn(
-        "flex h-10 shrink-0 items-center gap-2 px-2",
-        // In the desktop shell the bar doubles as the window's title bar and lets
-        // empty regions drag the window (interactive clusters opt back out below).
-        // The rail to the left reserves the bulk of the traffic-light strip; this
-        // small left pad just clears the lights' overflow past the rail's edge.
-        isDesktop && "pl-10 [-webkit-app-region:drag]"
-      )}
-    >
+    <header className="flex h-11 shrink-0 items-center gap-2 px-2">
+      {/* In the native shell the window bar above carries this. */}
+      {!isDesktop && <SidebarToggle />}
+      <ModeSelector />
+
       {/* Repo chip — opens the recents + folder-browser dropdown */}
-      <div className="[-webkit-app-region:no-drag]">
-        <RepoPicker
-          repo={repo}
-          workspace={props.workspace}
-          open={props.pickerOpen}
-          onOpenChange={props.onPickerOpenChange}
-        />
-      </div>
+      <RepoPicker
+        repo={repo}
+        workspace={props.workspace}
+        open={props.pickerOpen}
+        onOpenChange={props.onPickerOpenChange}
+      />
 
       {/* Branch switcher */}
       {repo !== null && (
-        <div className="[-webkit-app-region:no-drag]">
-          <BranchSwitcher
-            current={current}
-            branches={branches}
-            remoteBranches={remoteBranches}
-            busy={busy}
-            onCheckout={props.onCheckout}
-            onCheckoutAndUpdate={props.onCheckoutAndUpdate}
-            onCreateBranch={props.onCreateBranch}
-            onCompare={props.onCompare}
-            onMerge={props.onMerge}
-            onRebase={props.onRebase}
-            onFetch={props.onFetch}
-            onPull={props.onPull}
-            onPush={props.onPush}
-            onRenameBranch={props.onRenameBranch}
-            onDeleteBranch={props.onDeleteBranch}
-          />
-        </div>
+        <BranchSwitcher
+          current={current}
+          branches={branches}
+          remoteBranches={remoteBranches}
+          busy={busy}
+          onCheckout={props.onCheckout}
+          onCheckoutAndUpdate={props.onCheckoutAndUpdate}
+          onCreateBranch={props.onCreateBranch}
+          onCompare={props.onCompare}
+          onMerge={props.onMerge}
+          onRebase={props.onRebase}
+          onFetch={props.onFetch}
+          onPull={props.onPull}
+          onPush={props.onPush}
+          onRenameBranch={props.onRenameBranch}
+          onDeleteBranch={props.onDeleteBranch}
+        />
       )}
 
-      {props.crumbs.length > 0 && (
-        <div className="min-w-0 flex-1 [-webkit-app-region:no-drag]">
-          <Breadcrumbs crumbs={props.crumbs} />
-        </div>
-      )}
-
-      <div className="ml-auto flex items-center gap-1 [-webkit-app-region:no-drag]">
+      <div className="ml-auto flex items-center gap-1">
         {showDiffStyleToggle && (
           <DiffStyleToggle
             value={diffStyle}

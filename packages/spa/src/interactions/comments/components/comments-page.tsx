@@ -2,9 +2,6 @@ import {
   IconAdjustmentsHorizontal,
   IconClock,
   IconCode,
-  IconCursorText,
-  IconExternalLink,
-  IconFilter,
   IconSearch,
   IconX,
 } from "@tabler/icons-react"
@@ -26,17 +23,13 @@ import {
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import {
-  KIND_FILTERS,
   applyFilters,
   buildAssignmentPrompt,
   buildAssignmentTitle,
   filtersActive as areFiltersActive,
-  groupByKind,
+  listComments,
   noFilters,
-  unify,
-  type CommentKind,
-  type KindFilter,
-  type UnifiedComment,
+  type ListedComment,
 } from "@/interactions/comments/functions/comment-list.functions"
 import { CommentComposer } from "@/interactions/comments/components/comment-thread"
 import {
@@ -50,35 +43,10 @@ import {
   dateFilterLabel,
   type DateFilter,
 } from "@/lib/date-filter"
-import {
-  useChatModels,
-  useChats,
-  useComments,
-  useRepo,
-  useVisualComments,
-} from "@/lib/queries"
+import { useChatModels, useChats, useComments, useRepo } from "@/lib/queries"
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter"
-import { useVisualCommentsActions } from "@/interactions/comments/adapters/visual-comments.hook.adapter"
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs"
 import { cn } from "@/lib/utils"
-
-const KIND_LABELS: Record<CommentKind, string> = {
-  visual: "Visual",
-  code: "Code",
-}
-
-const KindIcon = ({
-  kind,
-  className,
-}: {
-  kind: CommentKind
-  className?: string
-}) =>
-  kind === "visual" ? (
-    <IconCursorText className={className} />
-  ) : (
-    <IconCode className={className} />
-  )
 
 const relativeTime = (iso: string) => {
   const diff = Date.now() - Date.parse(iso)
@@ -90,21 +58,14 @@ const relativeTime = (iso: string) => {
 }
 
 function FilterMenu({
-  kindValue,
-  onKindChange,
   dateValue,
   onDateChange,
   active,
 }: {
-  kindValue: KindFilter
-  onKindChange: (value: KindFilter) => void
   dateValue: DateFilter
   onDateChange: (value: DateFilter) => void
   active: boolean
 }) {
-  const kindSummary =
-    KIND_FILTERS.find((k) => k.value === kindValue)?.label ?? "All comments"
-
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -123,27 +84,6 @@ function FilterMenu({
         }
       />
       <DropdownMenuContent align="end" className="w-72">
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <IconFilter className="size-4" />
-            <span>Kind</span>
-            <span className="ml-auto max-w-28 truncate text-xs text-muted-foreground">
-              {kindSummary}
-            </span>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-72">
-            <DropdownMenuRadioGroup
-              value={kindValue}
-              onValueChange={(v) => onKindChange(v as KindFilter)}
-            >
-              {KIND_FILTERS.map((k) => (
-                <DropdownMenuRadioItem key={k.value} value={k.value}>
-                  {k.label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <IconClock className="size-4" />
@@ -190,11 +130,11 @@ function CommentDetail({
   onResolve,
   onSave,
 }: {
-  comment: UnifiedComment
+  comment: ListedComment
   onResolve: () => void
   onSave: (body: string) => Promise<void>
 }) {
-  const { visual, code } = comment
+  const { code } = comment
   const [editing, setEditing] = useState(false)
 
   useEffect(() => {
@@ -204,10 +144,7 @@ function CommentDetail({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <header className="flex shrink-0 items-center gap-2 border-b px-4 py-2.5">
-        <KindIcon
-          kind={comment.kind}
-          className="size-4 text-muted-foreground"
-        />
+        <IconCode className="size-4 text-muted-foreground" />
         <span className="truncate text-sm font-medium">{comment.anchor}</span>
         <span className="ml-auto shrink-0 text-xs text-muted-foreground">
           {relativeTime(comment.createdAt)}
@@ -248,63 +185,16 @@ function CommentDetail({
 
           <div className="space-y-1.5 border-t pt-3">
             <Field label="Author">{comment.author}</Field>
-            {code !== undefined && (
-              <>
-                <Field label="File">
-                  <code className="font-mono">
-                    {code.filePath}:{code.lineNumber}
-                  </code>
-                </Field>
-                <Field label="Side">{code.side}</Field>
-                <Field label="Target">
-                  <code className="font-mono">{code.target}</code>
-                </Field>
-              </>
-            )}
-            {visual !== undefined && (
-              <>
-                <Field label="Page">
-                  <a
-                    href={visual.pageUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex max-w-full min-w-0 items-center gap-1 break-all underline underline-offset-2"
-                  >
-                    <span className="min-w-0">{visual.pageUrl}</span>
-                    <IconExternalLink className="size-3 shrink-0" />
-                  </a>
-                </Field>
-                <Field label="Element">
-                  <code className="font-mono break-all">{visual.label}</code>
-                </Field>
-                <Field label="Selector">
-                  <code className="font-mono break-all">{visual.selector}</code>
-                </Field>
-                {visual.sourceFile !== undefined && (
-                  <Field label="Source">
-                    <code className="font-mono break-all">
-                      {visual.sourceFile}
-                      {visual.sourceLine === undefined
-                        ? ""
-                        : `:${visual.sourceLine}`}
-                    </code>
-                  </Field>
-                )}
-                <Field label="Viewport">
-                  {visual.viewport.width} × {visual.viewport.height}
-                </Field>
-              </>
-            )}
+            <Field label="File">
+              <code className="font-mono">
+                {code.filePath}:{code.lineNumber}
+              </code>
+            </Field>
+            <Field label="Side">{code.side}</Field>
+            <Field label="Target">
+              <code className="font-mono">{code.target}</code>
+            </Field>
           </div>
-
-          {visual !== undefined && (
-            <div className="min-w-0 border-t pt-3">
-              <p className="mb-1.5 text-xs text-muted-foreground">Markup</p>
-              <pre className="max-w-full overflow-x-hidden rounded-md bg-muted p-2.5 font-mono text-xs break-all whitespace-pre-wrap">
-                {visual.elementHtml}
-              </pre>
-            </div>
-          )}
         </div>
       </ScrollArea>
     </div>
@@ -313,32 +203,27 @@ function CommentDetail({
 
 export function CommentsPage() {
   const codeComments = useComments()
-  const visualComments = useVisualComments()
   const commentActions = useCommentsActions()
-  const visualActions = useVisualCommentsActions()
   const chatActions = useChatsActions()
   const chatModels = useChatModels()
   const chats = useChats()
   const repo = useRepo()
   const navigate = useNavigate()
 
-  const [sidebarWidth, setSidebarWidth] = useState(
-    useUiPrefs().workspaceSidebarWidth
-  )
-  const [kind, setKind] = useState<KindFilter>(noFilters.kind)
+  const prefs = useUiPrefs()
+  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth)
   const [date, setDate] = useState<DateFilter>(noFilters.date)
   const [search, setSearch] = useState(noFilters.search)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [assignBarDismissed, setAssignBarDismissed] = useState(false)
 
   const all = useMemo(
-    () => unify(codeComments.data ?? [], visualComments.data ?? []),
-    [codeComments.data, visualComments.data]
+    () => listComments(codeComments.data ?? []),
+    [codeComments.data]
   )
 
-  const filters = useMemo(() => ({ kind, date, search }), [kind, date, search])
+  const filters = useMemo(() => ({ date, search }), [date, search])
   const filtered = useMemo(() => applyFilters(all, filters), [all, filters])
-  const groups = useMemo(() => groupByKind(filtered), [filtered])
   const filtersOn = areFiltersActive(filters)
 
   const selected = filtered.find((c) => c.id === selectedId) ?? null
@@ -347,13 +232,7 @@ export function CommentsPage() {
     if (all.length > 0) setAssignBarDismissed(false)
   }, [all.length])
 
-  const remove = async (comment: UnifiedComment) => {
-    if (comment.visual !== undefined) {
-      await visualActions.remove(comment.id)
-      return
-    }
-    if (comment.code !== undefined) await commentActions.remove(comment.code)
-  }
+  const remove = (comment: ListedComment) => commentActions.remove(comment.code)
 
   const assign = async (dest: AssignTarget) => {
     if (filtered.length === 0) return
@@ -380,7 +259,7 @@ export function CommentsPage() {
       await Promise.all(assigned.map(remove))
       setSelectedId(null)
       toast.success(`Assigned ${count} comment${count === 1 ? "" : "s"}`)
-      void navigate({ to: "/chats/$chatId", params: { chatId } })
+      void navigate({ to: "/modes/code/chats/$chatId", params: { chatId } })
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not assign comments"
@@ -388,7 +267,7 @@ export function CommentsPage() {
     }
   }
 
-  const resolve = async (comment: UnifiedComment) => {
+  const resolve = async (comment: ListedComment) => {
     try {
       await remove(comment)
       if (comment.id === selectedId) setSelectedId(null)
@@ -397,27 +276,20 @@ export function CommentsPage() {
     }
   }
 
-  const save = async (comment: UnifiedComment, body: string) => {
-    if (comment.visual !== undefined) {
-      await visualActions.update(comment.id, body)
-      return
-    }
-    if (comment.code !== undefined) {
-      await commentActions.update(comment.code, body)
-    }
+  const save = async (comment: ListedComment, body: string) => {
+    await commentActions.update(comment.code, body)
   }
 
-  const openComment = (comment: UnifiedComment) => {
+  const openComment = (comment: ListedComment) => {
     setSelectedId(comment.id)
-    if (comment.code === undefined) return
     const { filePath, target } = comment.code
     if (target === "worktree") {
-      void navigate({ to: "/commit", search: { path: filePath } })
+      void navigate({ to: "/modes/code/commit", search: { path: filePath } })
       return
     }
     if (target.startsWith("commit-")) {
       void navigate({
-        to: "/browse/commit/$sha",
+        to: "/modes/code/browse/commit/$sha",
         params: { sha: target.slice("commit-".length) },
         search: { path: filePath },
       })
@@ -427,21 +299,21 @@ export function CommentsPage() {
       const [base, head] = target.split("...")
       if (base === undefined || head === undefined) return
       void navigate({
-        to: "/browse/range",
+        to: "/modes/code/browse/range",
         search: { path: filePath, base, head },
       })
       return
     }
     if (target.startsWith("pr-")) {
       void navigate({
-        to: "/review/$pull",
+        to: "/modes/code/review/$pull",
         params: { pull: target.slice("pr-".length) },
         search: { path: filePath },
       })
     }
   }
 
-  const renderRow = (comment: UnifiedComment) => (
+  const renderRow = (comment: ListedComment) => (
     <div key={comment.id} className="group/row relative mb-0.5">
       <button
         type="button"
@@ -451,10 +323,7 @@ export function CommentsPage() {
           comment.id === selectedId && "bg-muted"
         )}
       >
-        <KindIcon
-          kind={comment.kind}
-          className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
-        />
+        <IconCode className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm">{comment.body}</div>
           <div className="truncate font-mono text-xs text-muted-foreground">
@@ -501,8 +370,6 @@ export function CommentsPage() {
             )}
           </div>
           <FilterMenu
-            kindValue={kind}
-            onKindChange={setKind}
             dateValue={date}
             onDateChange={setDate}
             active={filtersOn}
@@ -514,8 +381,7 @@ export function CommentsPage() {
         >
           {all.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No comments yet. Leave one on a diff line, or click an element in
-              a running app with the byconvo picker.
+              No comments yet. Leave one on a diff line.
             </p>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center gap-2 px-3 py-6 text-center">
@@ -527,7 +393,6 @@ export function CommentsPage() {
                 variant="ghost"
                 className="h-7 text-xs"
                 onClick={() => {
-                  setKind(noFilters.kind)
                   setDate(noFilters.date)
                   setSearch(noFilters.search)
                 }}
@@ -535,19 +400,6 @@ export function CommentsPage() {
                 Clear filters
               </Button>
             </div>
-          ) : kind === "all" ? (
-            groups.map((group) => (
-              <div key={group.kind} className="mb-1">
-                <div className="flex items-center gap-1.5 px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                  <KindIcon kind={group.kind} className="size-3 shrink-0" />
-                  <span className="truncate">{KIND_LABELS[group.kind]}</span>
-                  <span className="ml-auto tabular-nums">
-                    {group.comments.length}
-                  </span>
-                </div>
-                {group.comments.map(renderRow)}
-              </div>
-            ))
           ) : (
             filtered.map(renderRow)
           )}

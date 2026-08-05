@@ -327,7 +327,7 @@ export function ComponentsGallery() {
             <Input
               id="ks-branch"
               name="branch"
-              placeholder="task/visual-comments"
+              placeholder="task/inline-diff-comments"
             />
           </Field>
 
@@ -531,7 +531,7 @@ export function ComponentsGallery() {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56">
                 <DropdownMenuLabel>Switch to</DropdownMenuLabel>
-                <DropdownMenuItem>task/visual-comments</DropdownMenuItem>
+                <DropdownMenuItem>task/inline-diff-comments</DropdownMenuItem>
                 <DropdownMenuItem>fix/safari-hover-shift</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive">

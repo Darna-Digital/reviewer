@@ -17,10 +17,6 @@ export const useRemoteBranches = () =>
   api.useQuery("get", "/api/remote-branches")
 export const useComments = () => api.useQuery("get", "/api/comments")
 
-/** Comments anchored to a DOM element by the injected picker. */
-export const useVisualComments = () =>
-  api.useQuery("get", "/api/visual-comments")
-
 /** The in-progress merge/rebase operation and its remaining conflicts. */
 export const useMergeState = () => api.useQuery("get", "/api/merge-state")
 
@@ -223,6 +219,14 @@ export const useDiffText = (target: DiffTarget | null) => {
       return worktree
   }
 }
+
+export const useFileBytes = (path: string | null) =>
+  api.useQuery(
+    "get",
+    "/api/file/raw",
+    { params: { query: { path: path ?? "" } } },
+    { enabled: path !== null, retry: false }
+  )
 
 export const useFile = (path: string | null) =>
   api.useQuery(
