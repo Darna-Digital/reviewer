@@ -10,6 +10,7 @@ import {
   CommitInfo,
   CommitResult,
   ConflictBlobs,
+  ContentMatches,
   FilesPayload,
   MergeState,
   RemoteBranchInfo,
@@ -31,6 +32,7 @@ import {
   Rebase,
   RenameBranch,
   ResolveConflict,
+  SearchQueryParams,
 } from "@byconvo/core/repo";
 
 const gitError = [GitError, NoRepoSelected] as const;
@@ -67,6 +69,13 @@ export class RepoApi extends HttpApiGroup.make("repo")
     HttpApiEndpoint.get("log", "/log", {
       query: LogQueryParams,
       success: Schema.Array(CommitInfo),
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("search", "/search", {
+      query: SearchQueryParams,
+      success: ContentMatches,
       error: gitError,
     })
   )

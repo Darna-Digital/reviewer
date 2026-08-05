@@ -17,7 +17,10 @@ import {
   PreviewCardContent,
   PreviewCardTrigger,
 } from "@/components/ui/preview-card";
-import { agentIcon } from "@/interactions/threads/components/agent-icons";
+import {
+  AgentGlyph,
+  AgentMark,
+} from "@/interactions/threads/components/agent-mark";
 import { agentLabel } from "@/interactions/threads/interfaces/agents";
 import type { ChatMessage, ChatSummary } from "@byconvo/core/chats";
 import { useChatPreview } from "@/lib/queries";
@@ -82,7 +85,6 @@ export function ChatRow({
   // a click closes the card and holds it shut until the pointer leaves.
   const clicked = useRef(false);
   const preview = useChatPreview(chat.id, open);
-  const Icon = agentIcon(chat.provider);
   const assistantLabel = agentLabel(chat.provider);
 
   const tail = (preview.data?.messages ?? [])
@@ -115,9 +117,7 @@ export function ChatRow({
           />
         }
       >
-        <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-elevate">
-          <Icon className="size-4" />
-        </span>
+        <AgentMark kind={chat.provider} className="mt-0.5 size-7 rounded-lg" />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-2">
             <TurnStateDot state={chat.turnState} />
@@ -185,7 +185,7 @@ export function ChatRow({
             <span className="min-w-0 truncate">{chat.branch}</span>
           </div>
           <div className="flex min-w-0 items-center gap-1.5">
-            <Icon className="size-3.5 shrink-0" />
+            <AgentGlyph kind={chat.provider} className="size-3.5 shrink-0" />
             <span className="shrink-0">{assistantLabel}</span>
             {chat.model.length > 0 && (
               <span className="min-w-0 truncate opacity-70">{chat.model}</span>

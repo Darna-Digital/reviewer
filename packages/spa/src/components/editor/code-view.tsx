@@ -1,7 +1,6 @@
 import { type LineAnnotation } from "@pierre/diffs";
 import { EditorProvider, File, Virtualizer } from "@pierre/diffs/react";
-import { IconPencil } from "@tabler/icons-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   CommentThread,
@@ -50,11 +49,19 @@ interface CodeViewProps {
   /** Whether this file has unsaved changes — the tab strip shows a marker. */
   onDirtyChange?: (dirty: boolean) => void;
   /**
-   * Where this file's own controls (Edit, Save, the problem count) render —
-   * the crumb bar above the view, so the path and everything acting on it stay
-   * on one line. Omit to leave the file without them.
+   * Where this file's own controls (Save, Done, the problem count) render —
+   * the end of the tab strip above the view, so the file and everything acting
+   * on it stay on one line. Omit to leave the file without them.
    */
   actionsSlot?: HTMLElement | null;
+  /**
+   * Reading and editing stay separate — reading is what the gutter `+` needs,
+   * since an editable view takes the caret on every click. Editing is switched
+   * on from the file's tab, which is why the host owns the flag; omit it for a
+   * view that is only ever read.
+   */
+  editing?: boolean;
+  onEditingChange?: (editing: boolean) => void;
   /**
    * Open another file at a line — go-to-definition and find-usages need it.
    * Omit to leave the IDE layer off.
@@ -78,6 +85,8 @@ export function CodeView({
   onSaved,
   onDirtyChange,
   actionsSlot,
+  editing = false,
+  onEditingChange,
   onOpenLocation,
   reveal = null,
   comments,
@@ -93,12 +102,6 @@ export function CodeView({
   const scrollWrapper = useRef<HTMLDivElement>(null);
   const commentsEnabled =
     onCommentSubmit !== undefined && onCommentDelete !== undefined;
-
-  // Reading and editing are separate again. Reading is the default, and it is
-  // what the gutter `+` needs: an editable view takes the caret on every click
-  // and the library disables line selection inside it.
-  const [editing, setEditing] = useState(false);
-  useEffect(() => setEditing(false), [path]);
 
   // A quick fix can touch a file that is not open — an import added to a
   // barrel, say. Those are read, edited and written back through the file API,
@@ -126,7 +129,7 @@ export function CodeView({
     if (buffer.dirty && !window.confirm(`Discard unsaved changes in ${path}?`))
       return;
     buffer.discard();
-    setEditing(false);
+    onEditingChange?.(false);
   };
 
   // The IDE layer: diagnostics, go-to-definition and find-usages, driven by
@@ -308,7 +311,7 @@ export function CodeView({
           createPortal(
             <>
               <DiagnosticsSummary counts={language.counts} />
-              {editing ? (
+              {editing && (
                 <>
                   {buffer.dirty && (
                     <Button
@@ -323,17 +326,6 @@ export function CodeView({
                     Done
                   </Button>
                 </>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  className="gap-1 text-muted-foreground"
-                  title={`Edit ${path}`}
-                  onClick={() => setEditing(true)}
-                >
-                  <IconPencil className="size-3.5" />
-                  Edit
-                </Button>
               )}
             </>,
             actionsSlot

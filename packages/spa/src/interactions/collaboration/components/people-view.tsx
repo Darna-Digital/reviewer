@@ -14,7 +14,7 @@ import { AgentHoverCard } from "@/interactions/collaboration/components/agent-ho
 import {
   AgentMark,
   AgentStateDot,
-} from "@/interactions/collaboration/components/agent-mark";
+} from "@/interactions/threads/components/agent-mark";
 import { PaneBody, PaneHeader } from "@/components/layout/pane-header";
 import {
   ACCESS_LABEL,

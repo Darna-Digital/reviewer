@@ -26,7 +26,7 @@ import {
 } from "@/interactions/chats/functions/chat-model.functions";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
-import { ProviderIcon } from "./provider-icons";
+import { AgentGlyph } from "@/interactions/threads/components/agent-mark";
 
 const FAVORITES_RAIL = "favorites";
 
@@ -89,10 +89,7 @@ export function ModelPicker({
           />
         }
       >
-        <ProviderIcon
-          provider={current?.provider ?? "claude"}
-          className="size-3.5 text-muted-foreground"
-        />
+        <AgentGlyph kind={current?.provider ?? "claude"} className="size-3.5" />
         <span className="max-w-40 truncate">
           {current?.label ?? (model.length > 0 ? model : "Model")}
         </span>
@@ -129,7 +126,7 @@ export function ModelPicker({
                   rail === p.id && "bg-muted text-foreground"
                 )}
               >
-                <ProviderIcon provider={p.id} className="size-4.5" />
+                <AgentGlyph kind={p.id} className="size-4.5" />
               </button>
             ))}
           </div>
@@ -193,10 +190,7 @@ export function ModelPicker({
                           )}
                         </div>
                         <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <ProviderIcon
-                            provider={m.provider}
-                            className="size-3"
-                          />
+                          <AgentGlyph kind={m.provider} className="size-3" />
                           {m.providerLabel}
                         </div>
                       </div>

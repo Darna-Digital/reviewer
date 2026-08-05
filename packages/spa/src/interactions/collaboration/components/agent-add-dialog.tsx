@@ -28,7 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { AgentMark } from "@/interactions/collaboration/components/agent-mark";
+import { AgentMark } from "@/interactions/threads/components/agent-mark";
 import {
   ACCESS_DETAIL,
   ACCESS_LABEL,

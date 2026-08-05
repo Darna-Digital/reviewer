@@ -1,6 +1,6 @@
 import { Avatar } from "@/components/ui/avatar";
 import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card";
-import { AgentMark } from "@/interactions/collaboration/components/agent-mark";
+import { AgentMark } from "@/interactions/threads/components/agent-mark";
 import {
   findAgentByName,
   UNASSIGNED,

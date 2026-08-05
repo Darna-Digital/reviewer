@@ -6,6 +6,7 @@ import type {
   CommitDetail,
   CommitInfo,
   ConflictBlobs,
+  ContentMatches,
   DiffFileContents,
   DiffFileTarget,
   FilesPayload,
@@ -14,6 +15,7 @@ import type {
   RepoInfo,
   RepoStatus,
   LogQuery,
+  SearchQuery,
 } from "../schema/repo.schema.ts";
 
 export interface RepoRepo {
@@ -28,6 +30,10 @@ export interface RepoRepo {
   readonly log: (
     query: LogQuery
   ) => Effect.Effect<ReadonlyArray<CommitInfo>, GitFailure>;
+  /** Lines in the working tree matching `query` — the repo-wide grep. */
+  readonly search: (
+    query: SearchQuery
+  ) => Effect.Effect<ContentMatches, GitFailure>;
   readonly commitDetail: (
     sha: string
   ) => Effect.Effect<CommitDetail, GitFailure>;

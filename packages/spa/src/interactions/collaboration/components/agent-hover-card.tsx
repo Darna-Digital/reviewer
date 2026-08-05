@@ -15,7 +15,7 @@ import {
 import {
   AgentMark,
   AgentStateDot,
-} from "@/interactions/collaboration/components/agent-mark";
+} from "@/interactions/threads/components/agent-mark";
 import {
   agentName,
   agentOwner,

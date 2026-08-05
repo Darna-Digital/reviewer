@@ -29,7 +29,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { RepoPicker } from "@/components/repo-picker";
-import { AgentMark } from "@/interactions/collaboration/components/agent-mark";
+import { AgentMark } from "@/interactions/threads/components/agent-mark";
 import { PaneHeader } from "@/components/layout/pane-header";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import {

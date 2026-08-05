@@ -15,12 +15,15 @@ import type {
   CommitInfo,
   ConflictedFile,
   ConflictKind,
+  ContentMatch,
+  ContentMatches,
   GitFileStatus,
   GitStatusEntry,
   MergeState,
   RemoteBranchInfo,
   RepoStatus,
   RepoRepo,
+  SearchQuery,
 } from "@byconvo/core/repo";
 
 /** Map a porcelain v2 unmerged `XY` field to a conflict kind. */
@@ -106,6 +109,65 @@ export const splitDiffIntoHunks = (
   }
   flush();
   return { header, hunks };
+};
+
+/** Long enough to read a match in context; minified files would otherwise ship megabytes. */
+const MAX_MATCH_LINE_LENGTH = 400;
+
+export const EMPTY_CONTENT_MATCHES: ContentMatches = {
+  matches: [],
+  truncated: false,
+};
+
+/** The `git grep` invocation behind a content search. */
+export const searchArgs = (query: SearchQuery): ReadonlyArray<string> => [
+  "grep",
+  "--no-color",
+  "--line-number",
+  "--column",
+  "--null",
+  // Binary files have nothing readable to show; untracked-but-not-ignored ones
+  // are as much "the working tree" as tracked ones.
+  "-I",
+  "--untracked",
+  ...(query.caseSensitive ? [] : ["-i"]),
+  ...(query.wholeWord ? ["-w"] : []),
+  query.regex ? "-E" : "-F",
+  "-e",
+  query.query,
+];
+
+/**
+ * Parse `git grep --null --line-number --column` output. `--null` separates
+ * every field with a NUL, so a path containing a colon (or a match on a line of
+ * colons) can never be mistaken for a field boundary. Stops at `limit`,
+ * reporting whether git had more to give.
+ */
+export const parseContentMatches = (
+  out: string,
+  limit: number
+): ContentMatches => {
+  const matches: Array<ContentMatch> = [];
+  for (const record of out.split("\n")) {
+    if (record.length === 0) continue;
+    const [path, line, column, ...text] = record.split("\0");
+    if (path === undefined || line === undefined || column === undefined) {
+      continue;
+    }
+    const lineNumber = Number(line);
+    const columnNumber = Number(column);
+    if (!Number.isInteger(lineNumber) || !Number.isInteger(columnNumber)) {
+      continue;
+    }
+    if (matches.length === limit) return { matches, truncated: true };
+    matches.push({
+      path,
+      line: lineNumber,
+      column: columnNumber,
+      text: text.join("\0").replace(/\r$/, "").slice(0, MAX_MATCH_LINE_LENGTH),
+    });
+  }
+  return { matches, truncated: false };
 };
 
 /** Fold a filesystem error into a GitError so it stays on the git failure channel. */
@@ -214,7 +276,7 @@ const emptyStatus: RepoStatus = {
 export const makeGitRepoRepository = Effect.gen(function* () {
   const git = yield* GitExec;
   const fs = yield* FileSystem.FileSystem;
-  const { lines, run, runVerbose } = git;
+  const { lines, run, runTolerant, runVerbose } = git;
 
   const info: RepoRepo["info"] = Effect.gen(function* () {
     const root = (yield* run("rev-parse", "--show-toplevel")).trim();
@@ -423,6 +485,17 @@ export const makeGitRepoRepository = Effect.gen(function* () {
           ];
         })
       )
+    );
+
+  // `git grep` exits 1 when nothing matched, so a tolerant run is what keeps an
+  // empty result off the error channel.
+  const search: RepoRepo["search"] = (query) =>
+    Effect.suspend(() =>
+      query.query.length === 0
+        ? Effect.succeed(EMPTY_CONTENT_MATCHES)
+        : runTolerant(...searchArgs(query)).pipe(
+            Effect.map((out) => parseContentMatches(out, query.limit))
+          )
     );
 
   const commitDetail: RepoRepo["commitDetail"] = (sha) =>
@@ -817,6 +890,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     branches,
     remoteBranches,
     log,
+    search,
     commitDetail,
     worktreeDiff,
     rangeDiff,

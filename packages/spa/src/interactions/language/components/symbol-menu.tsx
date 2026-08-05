@@ -9,7 +9,6 @@
  *
  * It hangs off the pointer rather than off the token, the way context menus do.
  */
-import { IconLoader2 } from "@tabler/icons-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,17 +28,10 @@ export interface SymbolMenuEntry {
 interface SymbolMenuProps {
   anchor: VirtualAnchor;
   entries: ReadonlyArray<SymbolMenuEntry>;
-  /** Quick fixes are still being fetched. */
-  loading: boolean;
   onClose: () => void;
 }
 
-export function SymbolMenu({
-  anchor,
-  entries,
-  loading,
-  onClose,
-}: SymbolMenuProps) {
+export function SymbolMenu({ anchor, entries, onClose }: SymbolMenuProps) {
   const navigation = entries.filter((entry) => entry.group !== "fix");
   const fixes = entries.filter((entry) => entry.group === "fix");
 
@@ -62,13 +54,7 @@ export function SymbolMenu({
             {entry.label}
           </DropdownMenuItem>
         ))}
-        {(fixes.length > 0 || loading) && <DropdownMenuSeparator />}
-        {loading && (
-          <p className="flex items-center gap-2 px-2 py-1.5 text-sm text-muted-foreground">
-            <IconLoader2 className="size-3.5 animate-spin" />
-            Looking for fixes…
-          </p>
-        )}
+        {fixes.length > 0 && <DropdownMenuSeparator />}
         {fixes.map((entry) => (
           <DropdownMenuItem key={entry.id} onClick={entry.run}>
             {entry.label}

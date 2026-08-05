@@ -3,10 +3,12 @@ import type {
   BranchInfo,
   CommitInfo,
   ConflictBlobs,
+  ContentMatch,
   FilesPayload,
   MergeState,
   RepoInfo,
   RepoStatus,
+  SearchQuery,
 } from "../schema/repo.schema.ts";
 import type { RepoRepo } from "./repo.repository.ts";
 
@@ -19,6 +21,7 @@ export interface MemoryRepoSeed {
   readonly diff?: string;
   readonly mergeState?: MergeState;
   readonly conflictBlobs?: ConflictBlobs;
+  readonly contentMatches?: ReadonlyArray<ContentMatch>;
 }
 const defaultInfo: RepoInfo = {
   root: "/repo",
@@ -39,6 +42,30 @@ const defaultStatus: RepoStatus = {
   untracked: 0,
   conflicted: 0,
 };
+/**
+ * Stand-in for `git grep` over the seeded lines: literal (or regex) matching so
+ * a test can seed a handful of lines and assert on what a search returns.
+ */
+const matchSeed = (seeded: ReadonlyArray<ContentMatch>, query: SearchQuery) => {
+  const hit = (text: string): boolean => {
+    if (query.regex) {
+      const flags = query.caseSensitive ? "" : "i";
+      const source = query.wholeWord ? `\\b(?:${query.query})\\b` : query.query;
+      return new RegExp(source, flags).test(text);
+    }
+    const haystack = query.caseSensitive ? text : text.toLowerCase();
+    const needle = query.caseSensitive
+      ? query.query
+      : query.query.toLowerCase();
+    return haystack.includes(needle);
+  };
+  const matches = seeded.filter((match) => hit(match.text));
+  return {
+    matches: matches.slice(0, query.limit),
+    truncated: matches.length > query.limit,
+  };
+};
+
 export const makeMemoryRepoRepository = (seed: MemoryRepoSeed = {}) =>
   Effect.gen(function* () {
     const repo: RepoRepo = {
@@ -49,6 +76,8 @@ export const makeMemoryRepoRepository = (seed: MemoryRepoSeed = {}) =>
       remoteBranches: Effect.succeed([]),
       log: (query) =>
         Effect.succeed((seed.commits ?? []).slice(0, query.limit)),
+      search: (query) =>
+        Effect.succeed(matchSeed(seed.contentMatches ?? [], query)),
       commitDetail: (sha) =>
         Effect.succeed({
           sha,

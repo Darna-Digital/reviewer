@@ -10,15 +10,30 @@
  * sort to the head so they stay reachable once it does. Tabs drag into any
  * order, shift-click closes one without aiming for its ✕, and a double click
  * past the last tab opens an empty one.
+ *
+ * A tab shows only the file's name; its path is a tooltip, and everything that
+ * acts on the file — edit it, read its history — is on its context menu.
  */
-import { IconPin, IconPinnedFilled, IconX } from "@tabler/icons-react";
-import { useEffect, useRef, useState } from "react";
+import {
+  IconHistory,
+  IconPencil,
+  IconPin,
+  IconPinnedFilled,
+  IconX,
+} from "@tabler/icons-react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { isImagePath } from "@/components/editor/image-view";
 import {
   pointerAnchor,
   type VirtualAnchor,
@@ -50,6 +65,13 @@ export interface TabStripProps {
   readonly onMove: (path: string, toIndex: number) => void;
   /** A double click past the last tab, as in a browser's strip. */
   readonly onOpenBlank: () => void;
+  /** Open this file for editing. Omit to leave the strip read-only. */
+  readonly onEditFile?: (path: string) => void;
+  /** Show this file's commit history. */
+  readonly onShowHistory?: (path: string) => void;
+  /** The open file's own controls — Save, Done, its problem count — pinned to
+   * the end of the strip, so the file and everything acting on it share a line. */
+  readonly actions?: ReactNode;
 }
 
 export function TabStrip({
@@ -64,6 +86,9 @@ export function TabStrip({
   onCloseAll,
   onMove,
   onOpenBlank,
+  onEditFile,
+  onShowHistory,
+  actions,
 }: TabStripProps) {
   const ordered = orderTabs(tabs);
   const stripRef = useRef<HTMLDivElement>(null);
@@ -102,110 +127,125 @@ export function TabStrip({
         {ordered.map((tab, index) => {
           const isActive = tab.path === active;
           return (
-            <div
+            <Tooltip
               key={tab.path}
-              data-tab={tab.path}
-              role="tab"
-              aria-selected={isActive}
-              tabIndex={isActive ? 0 : -1}
-              title={tab.path}
-              draggable
-              className={cn(
-                "group/tab flex max-w-56 min-w-0 shrink-0 cursor-default items-center gap-1.5 border-r border-border px-3 py-1.5 text-xs",
-                isActive
-                  ? "bg-elevate text-foreground"
-                  : "text-muted-foreground hover:bg-elevate/60",
-                dragging === tab.path && "opacity-50"
-              )}
-              onDragStart={(event) => {
-                draggingRef.current = tab.path;
-                setDragging(tab.path);
-                event.dataTransfer.effectAllowed = "move";
-                // Firefox refuses to start a drag without a payload.
-                event.dataTransfer.setData("text/plain", tab.path);
-              }}
-              onDragOver={(event) => {
-                const held = draggingRef.current;
-                if (held === null) return;
-                event.preventDefault();
-                event.dataTransfer.dropEffect = "move";
-                // Reorder as the pointer crosses each tab, so the strip shows
-                // where the drop will land instead of only revealing it after.
-                if (held !== tab.path) onMove(held, index);
-              }}
-              onDragEnd={endDrag}
-              onDrop={(event) => {
-                event.preventDefault();
-                endDrag();
-              }}
-              onClick={(event) => {
-                // Shift-click closes, so a tab can go without aiming for its ✕.
-                if (event.shiftKey) {
-                  event.preventDefault();
-                  onClose(tab.path);
-                  return;
-                }
-                onSelect(tab.path);
-              }}
-              onDoubleClick={() => onKeep(tab.path)}
-              onAuxClick={(event) => {
-                // Middle click closes, as everywhere else with tabs.
-                if (event.button === 1) {
-                  event.preventDefault();
-                  onClose(tab.path);
-                }
-              }}
-              onContextMenu={(event) => {
-                event.preventDefault();
-                setMenu({
-                  path: tab.path,
-                  anchor: pointerAnchor(event.clientX, event.clientY),
-                });
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  onSelect(tab.path);
-                }
-              }}
+              // The path is an answer to hovering a tab, not to acting on one:
+              // a drag or the context menu has the pointer for something else.
+              disabled={menu !== null || dragging !== null}
             >
-              {tab.pinned && (
-                <IconPinnedFilled
-                  className="size-3 shrink-0 text-muted-foreground"
-                  aria-label="Pinned"
-                />
-              )}
-              <span
-                className={cn("truncate", tab.preview && "italic")}
-                // A preview tab is one the next single click may replace; the
-                // italic says so without needing a legend.
-              >
-                {pathName(tab.path)}
-              </span>
-              {dirty.has(tab.path) ? (
-                <span
-                  className="size-1.5 shrink-0 rounded-full bg-primary"
-                  aria-label="Unsaved changes"
-                />
-              ) : (
-                <button
-                  type="button"
-                  aria-label={`Close ${pathName(tab.path)}`}
-                  className={cn(
-                    "shrink-0 rounded p-0.5 hover:bg-elevate",
-                    isActive
-                      ? "opacity-70"
-                      : "opacity-0 group-hover/tab:opacity-70"
-                  )}
-                  onClick={(event) => {
-                    event.stopPropagation();
+              <TooltipTrigger
+                data-tab={tab.path}
+                role="tab"
+                aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                draggable
+                className={cn(
+                  "group/tab flex max-w-56 min-w-0 shrink-0 cursor-default items-center gap-1.5 border-r border-border px-3 py-1.5 text-xs",
+                  isActive
+                    ? "bg-elevate text-foreground"
+                    : "text-muted-foreground hover:bg-elevate/60",
+                  dragging === tab.path && "opacity-50"
+                )}
+                render={<div />}
+                onDragStart={(event) => {
+                  draggingRef.current = tab.path;
+                  setDragging(tab.path);
+                  event.dataTransfer.effectAllowed = "move";
+                  // Firefox refuses to start a drag without a payload.
+                  event.dataTransfer.setData("text/plain", tab.path);
+                }}
+                onDragOver={(event) => {
+                  const held = draggingRef.current;
+                  if (held === null) return;
+                  event.preventDefault();
+                  event.dataTransfer.dropEffect = "move";
+                  // Reorder as the pointer crosses each tab, so the strip shows
+                  // where the drop will land instead of only revealing it after.
+                  if (held !== tab.path) onMove(held, index);
+                }}
+                onDragEnd={endDrag}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  endDrag();
+                }}
+                onClick={(event) => {
+                  // Shift-click closes, so a tab can go without aiming for its ✕.
+                  if (event.shiftKey) {
+                    event.preventDefault();
                     onClose(tab.path);
-                  }}
+                    return;
+                  }
+                  onSelect(tab.path);
+                }}
+                onDoubleClick={() => onKeep(tab.path)}
+                onAuxClick={(event) => {
+                  // Middle click closes, as everywhere else with tabs.
+                  if (event.button === 1) {
+                    event.preventDefault();
+                    onClose(tab.path);
+                  }
+                }}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  setMenu({
+                    path: tab.path,
+                    anchor: pointerAnchor(event.clientX, event.clientY),
+                  });
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect(tab.path);
+                  }
+                }}
+              >
+                {tab.pinned && (
+                  <IconPinnedFilled
+                    className="size-3 shrink-0 text-muted-foreground"
+                    aria-label="Pinned"
+                  />
+                )}
+                <span
+                  className={cn("truncate", tab.preview && "italic")}
+                  // A preview tab is one the next single click may replace; the
+                  // italic says so without needing a legend.
                 >
-                  <IconX className="size-3" />
-                </button>
-              )}
-            </div>
+                  {pathName(tab.path)}
+                </span>
+                {dirty.has(tab.path) ? (
+                  <span
+                    className="size-1.5 shrink-0 rounded-full bg-primary"
+                    aria-label="Unsaved changes"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    aria-label={`Close ${pathName(tab.path)}`}
+                    className={cn(
+                      "shrink-0 rounded p-0.5 hover:bg-elevate",
+                      isActive
+                        ? "opacity-70"
+                        : "opacity-0 group-hover/tab:opacity-70"
+                    )}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onClose(tab.path);
+                    }}
+                  >
+                    <IconX className="size-3" />
+                  </button>
+                )}
+              </TooltipTrigger>
+              <TooltipContent
+                side="bottom"
+                align="start"
+                // A path has no spaces to break at, so it would otherwise run
+                // straight out of the popup instead of wrapping inside it.
+                className="max-w-[min(32rem,var(--available-width,32rem))] font-mono break-all whitespace-normal"
+              >
+                {tab.path}
+              </TooltipContent>
+            </Tooltip>
           );
         })}
         <div
@@ -223,6 +263,13 @@ export function TabStrip({
             endDrag();
           }}
         />
+        {actions !== undefined && (
+          // Sticky, so a strip scrolled sideways keeps the open file's controls
+          // where they were rather than sliding them off the end.
+          <div className="sticky right-0 flex shrink-0 items-center gap-1 border-l border-border bg-background px-2">
+            {actions}
+          </div>
+        )}
       </div>
       {menu !== null && (
         <DropdownMenu
@@ -237,6 +284,29 @@ export function TabStrip({
             align="start"
             className="min-w-52"
           >
+            {onEditFile !== undefined && !isImagePath(menu.path) && (
+              <DropdownMenuItem
+                onClick={() => {
+                  onEditFile(menu.path);
+                  setMenu(null);
+                }}
+              >
+                <IconPencil /> Edit file
+              </DropdownMenuItem>
+            )}
+            {onShowHistory !== undefined && (
+              <DropdownMenuItem
+                onClick={() => {
+                  onShowHistory(menu.path);
+                  setMenu(null);
+                }}
+              >
+                <IconHistory /> File history
+              </DropdownMenuItem>
+            )}
+            {(onEditFile !== undefined || onShowHistory !== undefined) && (
+              <DropdownMenuSeparator />
+            )}
             <DropdownMenuItem
               onClick={() => {
                 onTogglePin(menu.path);

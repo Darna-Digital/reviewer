@@ -14,6 +14,7 @@ import {
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { agentIcon } from "@/interactions/threads/components/agent-icons";
+import { AgentGlyph } from "@/interactions/threads/components/agent-mark";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -83,9 +84,11 @@ export function ReviewAssignBar({
     target.kind === "existing"
       ? (chats.find((c) => c.id === target.chatId) ?? null)
       : null;
-  const TargetIcon = agentIcon(
-    target.kind === "new" ? target.agent : (selectedChat?.provider ?? "claude")
-  );
+  const targetAgent =
+    target.kind === "new" ? target.agent : (selectedChat?.provider ?? "claude");
+  // On the filled assign button the glyph rides the button's own foreground —
+  // a brand colour there would fight the primary fill.
+  const TargetIcon = agentIcon(targetAgent);
   const targetLabel =
     target.kind === "new"
       ? `New ${agentLabel(target.agent)} chat`
@@ -128,7 +131,7 @@ export function ReviewAssignBar({
             className="flex h-8 w-auto max-w-56 min-w-40 items-center gap-1.5 rounded-full px-3 text-sm hover:bg-muted"
             aria-label="Assign target"
           >
-            <TargetIcon className="size-4 shrink-0 text-muted-foreground" />
+            <AgentGlyph kind={targetAgent} className="size-4 shrink-0" />
             <span className="truncate">{targetLabel}</span>
             <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
           </PopoverTrigger>
@@ -153,7 +156,6 @@ export function ReviewAssignBar({
                 </div>
               )}
               {agents.map((a) => {
-                const Icon = agentIcon(a.kind);
                 const active = target.kind === "new" && target.agent === a.kind;
                 return (
                   <button
@@ -165,7 +167,7 @@ export function ReviewAssignBar({
                       active && "bg-muted"
                     )}
                   >
-                    <Icon className="size-4 shrink-0 text-muted-foreground" />
+                    <AgentGlyph kind={a.kind} className="size-4 shrink-0" />
                     <span className="truncate">{a.label}</span>
                   </button>
                 );
@@ -234,8 +236,6 @@ function SessionRow({
   active: boolean;
   onSelect: () => void;
 }) {
-  const Icon = agentIcon(chat.provider);
-
   return (
     <PreviewCard>
       <PreviewCardTrigger
@@ -252,7 +252,7 @@ function SessionRow({
           />
         }
       >
-        <Icon className="size-4 shrink-0 text-muted-foreground" />
+        <AgentGlyph kind={chat.provider} className="size-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">{chat.title}</span>
         <span className="shrink-0 text-xs text-muted-foreground">
           {chat.branch}
@@ -273,7 +273,7 @@ function SessionRow({
             <span className="min-w-0 truncate">{chat.branch}</span>
           </div>
           <div className="flex min-w-0 items-center gap-1.5">
-            <Icon className="size-3.5 shrink-0" />
+            <AgentGlyph kind={chat.provider} className="size-3.5 shrink-0" />
             <span className="min-w-0 truncate">
               {agentLabel(chat.provider)}
             </span>

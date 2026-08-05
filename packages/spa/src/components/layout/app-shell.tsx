@@ -6,9 +6,6 @@
  * runs mutations through the composable `git-actions` / `comments` adapters.
  */
 import {
-  IconArrowDown,
-  IconArrowUp,
-  IconCloudDownload,
   IconColumns2,
   IconFile,
   IconFolders,
@@ -20,9 +17,7 @@ import {
   IconHistory,
   IconLayoutBottombarExpand,
   IconPlayerPlay,
-  IconRefresh,
   IconRepeat,
-  IconSettings,
   IconTerminal2,
 } from "@tabler/icons-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -34,9 +29,8 @@ import {
 } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { CommandMenu, type Command } from "@/components/command-menu";
+import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { CommitPanel } from "@/components/commit-panel";
-import { Button } from "@/components/ui/button";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
 import { RepoList } from "@/components/repo-list";
 import {
@@ -67,6 +61,10 @@ import {
 } from "@/interactions/chats/functions/chat-assignment.functions";
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
+import {
+  openSearch,
+  useRegisterCommands,
+} from "@/interactions/search/adapters/search.store";
 import { TabStrip } from "@/interactions/tabs/components/tab-strip";
 import {
   scopeTabsTo,
@@ -209,7 +207,6 @@ export function AppShell() {
     null
   );
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [commandOpen, setCommandOpen] = useState(false);
   const [draft, setDraft] = useState<DraftLocation | null>(null);
 
   // Live panel sizes for smooth dragging; seeded from (and committed back to)
@@ -386,6 +383,14 @@ export function AppShell() {
   const openFile = (path: string) => setSearch({ file: path });
   const closeFile = () => setSearch({ file: undefined });
 
+  // Which file is open for editing rather than reading. Held here because the
+  // request comes from the file's tab, above the view that does the editing.
+  const [editingFile, setEditingFile] = useState<string | null>(null);
+  const editFile = (path: string) => {
+    openFile(path);
+    setEditingFile(path);
+  };
+
   // Go-to-definition and find-usages land here: open the file (it may already
   // be the one on screen) and ask the view to reveal the line. The counter lets
   // the same line be revealed twice in a row.
@@ -494,7 +499,7 @@ export function AppShell() {
    */
   const openBlankTab = () => {
     closeFile();
-    setCommandOpen(true);
+    openSearch("files");
   };
   const closeTabAt = (path: string) => {
     updateTabs((state) => {
@@ -609,8 +614,8 @@ export function AppShell() {
         onClick: () => void navigate({ to: "/modes/code/browse" }),
       });
     }
-    if (openPath !== null)
-      list.push({ id: "file", label: openPath, mono: true });
+    // The open file itself is not a crumb: the strip names it, and its tab
+    // carries the full path as a tooltip.
     return list;
   };
 
@@ -660,91 +665,10 @@ export function AppShell() {
   };
 
   // --- command palette -------------------------------------------------------
-  const commands = useMemo<Command[]>(() => {
-    const list: Command[] = [
-      {
-        id: "go-commit",
-        label: "Go to Local Changes",
-        group: "Navigation",
-        icon: IconGitCommit,
-        keywords: "commit working tree changes",
-        run: () => void navigate({ to: "/modes/code/commit" }),
-      },
-    ];
-    if (hasGitHub) {
-      list.push({
-        id: "go-review",
-        label: "Go to Pull Requests",
-        group: "Navigation",
-        icon: IconGitPullRequest,
-        keywords: "review pr github",
-        run: () => void navigate({ to: "/modes/code/review" }),
-      });
-    }
-    list.push(
-      {
-        id: "go-browse",
-        label: "Browse the Project",
-        group: "Navigation",
-        icon: IconFolders,
-        keywords: "files history commits explore",
-        run: () => void navigate({ to: "/modes/code/browse" }),
-      },
-      {
-        id: "git-refresh",
-        label: "Refresh",
-        group: "Git",
-        icon: IconRefresh,
-        keywords: "reload sync",
-        run: () => git.refresh(),
-      },
-      {
-        id: "git-fetch",
-        label: "Fetch",
-        group: "Git",
-        icon: IconCloudDownload,
-        keywords: "remote",
-        run: () => void git.fetch(),
-      },
-      {
-        id: "git-pull",
-        label: "Pull",
-        group: "Git",
-        icon: IconArrowDown,
-        keywords: "remote update",
-        run: () => void git.pull(),
-      },
-      {
-        id: "git-push",
-        label: "Push",
-        group: "Git",
-        icon: IconArrowUp,
-        keywords: "remote upload",
-        run: () => void git.push(),
-      },
-      {
-        id: "git-branch",
-        label: "Create Branch…",
-        group: "Git",
-        icon: IconGitBranch,
-        keywords: "new checkout",
-        run: () => {
-          const name = window.prompt("New branch name:");
-          if (name && name.trim())
-            void git.createBranch(
-              name.trim(),
-              repo.data?.currentBranch ?? null
-            );
-        },
-      },
-      {
-        id: "go-settings",
-        label: "Open Settings",
-        group: "Navigation",
-        icon: IconSettings,
-        keywords: "theme dark light system appearance preferences",
-        run: () => void navigate({ to: "/settings" }),
-      },
+  // Only what this shell owns; the code-wide commands live with the dialog, so
+  // every page offers them. Registered for as long as the shell is mounted.
+  const shellCommands = useMemo<ReadonlyArray<Command>>(
+    () => [
       {
         id: "view-diff-style",
         label: "Toggle Diff Style",
@@ -788,17 +712,11 @@ export function AppShell() {
         icon: IconRepeat,
         keywords: "open change project picker",
         run: () => setPickerOpen(true),
-      }
-    );
-    return list;
-  }, [
-    navigate,
-    git,
-    hasGitHub,
-    prefs.diffStyle,
-    prefs.bottomVisible,
-    repo.data?.currentBranch,
-  ]);
+      },
+    ],
+    [prefs.diffStyle, prefs.bottomVisible]
+  );
+  useRegisterCommands("code-shell", shellCommands);
 
   // --- center pane -----------------------------------------------------------
   const renderCenter = () => {
@@ -822,6 +740,8 @@ export function AppShell() {
           onSaved={git.refresh}
           onDirtyChange={onDirtyChange}
           actionsSlot={fileActionsSlot}
+          editing={editingFile === viewing}
+          onEditingChange={(on) => setEditingFile(on ? viewing : null)}
           onOpenLocation={openLocation}
           reveal={reveal}
           comments={fileComments}
@@ -847,7 +767,7 @@ export function AppShell() {
           onResolve={(merged) =>
             void resolveConflictContent(search.path!, merged)
           }
-          onEdit={(p) => openFile(p)}
+          onEdit={editFile}
           onClose={() => setSearch({ path: undefined })}
         />
       );
@@ -881,7 +801,7 @@ export function AppShell() {
         selectedFile={search.path ?? null}
         onDraftOpen={setDraft}
         onDraftCancel={() => setDraft(null)}
-        onEditFile={(p) => openFile(p)}
+        onEditFile={editFile}
         onShowFileHistory={showFileHistory}
         onDiscardFile={
           mode === "commit" ? (p) => void git.discard([p]) : undefined
@@ -925,13 +845,6 @@ export function AppShell() {
     // pane, file viewer, editor, conflict view) — see DiffWorkerPoolProvider.
     <DiffWorkerPoolProvider>
       <WindowFrame>
-        <CommandMenu
-          open={commandOpen}
-          onOpenChange={setCommandOpen}
-          commands={commands}
-          files={allPaths}
-          onOpenFile={(path) => openFile(path)}
-        />
         {visibleComments.length > 0 && !assignBarDismissed && (
           <ReviewAssignBar
             count={visibleComments.length}
@@ -1123,32 +1036,20 @@ export function AppShell() {
                       updateTabs((state) => moveTab(state, path, toIndex))
                     }
                     onOpenBlank={openBlankTab}
+                    onEditFile={editFile}
+                    onShowHistory={showFileHistory}
+                    actions={
+                      <div
+                        ref={setFileActionsSlot}
+                        className="flex items-center gap-1"
+                      />
+                    }
                   />
                   {/* The trail sits under the tabs, and only once it says more
                       than which mode you are in. */}
                   {crumbs.length > 1 && (
                     <div className="flex h-8 shrink-0 items-center gap-2 border-b px-2">
                       <Breadcrumbs crumbs={crumbs} />
-                      <div className="ml-auto flex shrink-0 items-center gap-1">
-                        {viewing !== null && (
-                          <Button
-                            variant="ghost"
-                            size="xs"
-                            className="gap-1 text-muted-foreground"
-                            title={`Show the commit history of ${viewing}`}
-                            onClick={() => showFileHistory(viewing)}
-                          >
-                            <IconHistory className="size-3.5" />
-                            History
-                          </Button>
-                        )}
-                        {/* The open file's own controls portal in here, so its
-                            path, history and Edit share the one line. */}
-                        <div
-                          ref={setFileActionsSlot}
-                          className="flex items-center gap-1"
-                        />
-                      </div>
                     </div>
                   )}
                   <div className="min-h-0 flex-1 overflow-hidden">

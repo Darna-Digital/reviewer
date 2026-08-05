@@ -24,7 +24,6 @@ interface MenuState {
   readonly anchor: VirtualAnchor;
   readonly token: TokenSpan;
   readonly actions: ReadonlyArray<CodeActionItem>;
-  readonly loading: boolean;
 }
 
 export interface SymbolMenuOptions {
@@ -126,7 +125,7 @@ export function useSymbolMenu({
       const anchor = pointerAnchor(event.clientX, event.clientY);
       // Held by identity so a slow answer for one symbol cannot land in the
       // menu of the next one right-clicked.
-      const opened: MenuState = { anchor, token, actions: [], loading: true };
+      const opened: MenuState = { anchor, token, actions: [] };
       setState(opened);
 
       const position = positionOfToken(token);
@@ -138,15 +137,11 @@ export function useSymbolMenu({
         .then((result) =>
           setState((current) =>
             current === opened
-              ? { ...current, actions: result.actions, loading: false }
+              ? { ...current, actions: result.actions }
               : current
           )
         )
-        .catch(() =>
-          setState((current) =>
-            current === opened ? { ...current, loading: false } : current
-          )
-        );
+        .catch(() => {});
     };
 
     // Listening on the window rather than on the code roots: the view mounts
@@ -209,12 +204,7 @@ export function useSymbolMenu({
   const menu = useMemo(
     () =>
       state === null ? null : (
-        <SymbolMenu
-          anchor={state.anchor}
-          entries={entries}
-          loading={state.loading}
-          onClose={close}
-        />
+        <SymbolMenu anchor={state.anchor} entries={entries} onClose={close} />
       ),
     [close, entries, state]
   );

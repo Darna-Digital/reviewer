@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card";
-import { AgentMark } from "@/interactions/collaboration/components/agent-mark";
+import { AgentMark } from "@/interactions/threads/components/agent-mark";
 import { ConversationAgents } from "@/interactions/collaboration/components/conversation-agents";
 import { MessageList } from "@/interactions/collaboration/components/message-list";
 import { MessageComposer } from "@/interactions/collaboration/components/message-composer";

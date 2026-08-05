@@ -11,7 +11,7 @@ import {
   InboxPopoverHeader,
   inboxPopoverLink,
 } from "@/components/layout/inbox-popover";
-import { agentIcon } from "@/interactions/threads/components/agent-icons";
+import { AgentMark } from "@/interactions/threads/components/agent-mark";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
 import { useChats } from "@/lib/queries";
 import { timeAgo } from "@/lib/relative-time";
@@ -55,42 +55,37 @@ export function ChatsInboxPopover({ active }: { active: boolean }) {
             </p>
           ) : (
             <ul role="list" className="flex flex-col">
-              {chats.slice(0, INBOX_PREVIEW_COUNT).map((chat) => {
-                const Icon = agentIcon(chat.provider);
-                return (
-                  <li key={chat.id} className="border-b last:border-b-0">
-                    <Link
-                      to="/modes/code/chats/$chatId"
-                      params={{ chatId: chat.id }}
-                      onClick={close}
-                      className="flex gap-2.5 px-3 py-2.5 outline-none hover:bg-elevate focus-visible:bg-elevate"
-                    >
-                      <span className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-md bg-elevate">
-                        <Icon className="size-3.5" />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-baseline gap-2">
-                          <span className="truncate text-[13px] font-medium">
-                            {chat.title}
-                          </span>
-                          <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                            {timeAgo(chat.updatedAt)}
-                          </span>
+              {chats.slice(0, INBOX_PREVIEW_COUNT).map((chat) => (
+                <li key={chat.id} className="border-b last:border-b-0">
+                  <Link
+                    to="/modes/code/chats/$chatId"
+                    params={{ chatId: chat.id }}
+                    onClick={close}
+                    className="flex gap-2.5 px-3 py-2.5 outline-none hover:bg-elevate focus-visible:bg-elevate"
+                  >
+                    <AgentMark kind={chat.provider} className="mt-0.5" />
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline gap-2">
+                        <span className="truncate text-[13px] font-medium">
+                          {chat.title}
                         </span>
-                        {chat.lastMessage !== null &&
-                          chat.lastMessage.length > 0 && (
-                            <span className="mt-0.5 line-clamp-2 block text-[13px] text-muted-foreground">
-                              {chat.lastMessage}
-                            </span>
-                          )}
+                        <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                          {timeAgo(chat.updatedAt)}
+                        </span>
                       </span>
-                      {isChatUnread(chat, seenAt) && (
-                        <span className="mt-1.5 size-2 shrink-0 rounded-full bg-sky-500" />
-                      )}
-                    </Link>
-                  </li>
-                );
-              })}
+                      {chat.lastMessage !== null &&
+                        chat.lastMessage.length > 0 && (
+                          <span className="mt-0.5 line-clamp-2 block text-[13px] text-muted-foreground">
+                            {chat.lastMessage}
+                          </span>
+                        )}
+                    </span>
+                    {isChatUnread(chat, seenAt) && (
+                      <span className="mt-1.5 size-2 shrink-0 rounded-full bg-sky-500" />
+                    )}
+                  </Link>
+                </li>
+              ))}
             </ul>
           )}
         </>

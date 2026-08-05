@@ -1,0 +1,130 @@
+import {
+  IconArrowDown,
+  IconArrowUp,
+  IconCloudDownload,
+  IconFolders,
+  IconGitBranch,
+  IconGitCommit,
+  IconGitPullRequest,
+  IconRefresh,
+  IconSettings,
+} from "@tabler/icons-react";
+import type { Command } from "../interfaces/search.interfaces";
+
+/** The pages the command list can send you to. */
+export type CodeRoute =
+  | "/modes/code/commit"
+  | "/modes/code/review"
+  | "/modes/code/browse"
+  | "/settings";
+
+export interface CodeCommandDependencies {
+  data: {
+    /** Pull requests only exist when the repo has a GitHub remote. */
+    readonly hasGitHub: boolean;
+    readonly currentBranch: string | null;
+  };
+  sideEffects: {
+    readonly goTo: (route: CodeRoute) => void;
+    readonly refresh: () => void;
+    readonly fetch: () => void;
+    readonly pull: () => void;
+    readonly push: () => void;
+    readonly createBranch: (name: string, startPoint: string | null) => void;
+    /** Returns the name to branch to, or null when the user backs out. */
+    readonly askForBranchName: () => string | null;
+  };
+}
+
+/**
+ * The commands every code-mode page offers: where to go, and what to do with
+ * git. Shell-specific commands (panel toggles, the repo picker) are registered
+ * by the shell that owns them instead.
+ */
+export const buildCodeCommands = (
+  d: CodeCommandDependencies
+): ReadonlyArray<Command> => {
+  const { goTo, ...git } = d.sideEffects;
+  return [
+    {
+      id: "go-commit",
+      label: "Go to Local Changes",
+      group: "Navigation",
+      icon: IconGitCommit,
+      keywords: "commit working tree changes",
+      run: () => goTo("/modes/code/commit"),
+    },
+    ...(d.data.hasGitHub
+      ? [
+          {
+            id: "go-review",
+            label: "Go to Pull Requests",
+            group: "Navigation",
+            icon: IconGitPullRequest,
+            keywords: "review pr github",
+            run: () => goTo("/modes/code/review"),
+          },
+        ]
+      : []),
+    {
+      id: "go-browse",
+      label: "Browse the Project",
+      group: "Navigation",
+      icon: IconFolders,
+      keywords: "files history commits explore",
+      run: () => goTo("/modes/code/browse"),
+    },
+    {
+      id: "go-settings",
+      label: "Open Settings",
+      group: "Navigation",
+      icon: IconSettings,
+      keywords: "theme dark light system appearance preferences",
+      run: () => goTo("/settings"),
+    },
+    {
+      id: "git-refresh",
+      label: "Refresh",
+      group: "Git",
+      icon: IconRefresh,
+      keywords: "reload sync",
+      run: git.refresh,
+    },
+    {
+      id: "git-fetch",
+      label: "Fetch",
+      group: "Git",
+      icon: IconCloudDownload,
+      keywords: "remote",
+      run: git.fetch,
+    },
+    {
+      id: "git-pull",
+      label: "Pull",
+      group: "Git",
+      icon: IconArrowDown,
+      keywords: "remote update",
+      run: git.pull,
+    },
+    {
+      id: "git-push",
+      label: "Push",
+      group: "Git",
+      icon: IconArrowUp,
+      keywords: "remote upload",
+      run: git.push,
+    },
+    {
+      id: "git-branch",
+      label: "Create Branch…",
+      group: "Git",
+      icon: IconGitBranch,
+      keywords: "new checkout",
+      run: () => {
+        const name = git.askForBranchName()?.trim();
+        if (name === undefined || name.length === 0) return;
+        git.createBranch(name, d.data.currentBranch);
+      },
+    },
+  ];
+};

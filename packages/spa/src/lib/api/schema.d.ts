@@ -180,6 +180,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["repo.search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/commit/{sha}": {
         parameters: {
             query?: never;
@@ -1203,10 +1219,6 @@ export interface components {
             _tag: "NotFound";
             reason: string;
         };
-        EmptyCommentBody: {
-            /** @enum {string} */
-            _tag: "EmptyCommentBody";
-        };
         GitProviderError: {
             /** @enum {string} */
             _tag: "GitProviderError";
@@ -1861,6 +1873,58 @@ export interface operations {
                         refs: string[];
                         parents: string[];
                     }[];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description GitError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitError"];
+                };
+            };
+        };
+    };
+    "repo.search": {
+        parameters: {
+            query: {
+                q: string;
+                case?: string;
+                word?: string;
+                regex?: string;
+                limit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        matches: {
+                            path: string;
+                            line: number;
+                            column: number;
+                            text: string;
+                        }[];
+                        truncated: boolean;
+                    };
                 };
             };
             /** @description NoRepoSelected */

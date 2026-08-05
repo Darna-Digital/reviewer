@@ -81,6 +81,27 @@ export const FilesPayload = Schema.Struct({
   gitStatus: Schema.Array(GitStatusEntry),
 });
 export type FilesPayload = typeof FilesPayload.Type;
+export const ContentMatch = Schema.Struct({
+  path: Schema.String,
+  line: Schema.Number,
+  column: Schema.Number,
+  text: Schema.String,
+});
+export type ContentMatch = typeof ContentMatch.Type;
+export const ContentMatches = Schema.Struct({
+  matches: Schema.Array(ContentMatch),
+  /** More matches existed than the query's limit allowed through. */
+  truncated: Schema.Boolean,
+});
+export type ContentMatches = typeof ContentMatches.Type;
+export const SearchQueryParams = Schema.Struct({
+  q: Schema.String,
+  case: Schema.optionalKey(Schema.String),
+  word: Schema.optionalKey(Schema.String),
+  regex: Schema.optionalKey(Schema.String),
+  limit: Schema.optionalKey(Schema.String),
+});
+export type SearchQueryParams = typeof SearchQueryParams.Type;
 export const RepoStatus = Schema.Struct({
   branch: Schema.String,
   upstream: Schema.NullOr(Schema.String),
@@ -242,4 +263,15 @@ export interface LogQuery {
   readonly path: string | null;
   /** Trace `path` across renames — git's `--follow`. Needs a single path. */
   readonly follow: boolean;
+}
+
+/** A content search over the working tree — the grep dialog's request. */
+export interface SearchQuery {
+  readonly query: string;
+  readonly caseSensitive: boolean;
+  /** Match only whole words — git's `-w`. */
+  readonly wholeWord: boolean;
+  /** Treat `query` as an extended regular expression instead of literal text. */
+  readonly regex: boolean;
+  readonly limit: number;
 }

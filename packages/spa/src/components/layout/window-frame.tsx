@@ -7,10 +7,13 @@
  * solid page resting on top. A browser tab already has all of that chrome, so
  * there the canvas simply fills the viewport.
  */
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { WindowBar } from "@/components/layout/window-bar";
+import { SearchHost } from "@/interactions/search/components/search-host";
 import { isDesktop } from "@/lib/desktop";
+import { useUiPrefs } from "@/lib/ui-prefs";
+import { activeWorkMode } from "@/lib/work-mode";
 
 export function WindowFrame({ children }: { children: React.ReactNode }) {
   // ⌘, opens Settings, as in every Mac app. It lives here rather than in either
@@ -30,20 +33,30 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate]);
 
-  if (!isDesktop) {
-    return (
-      <div className="app-canvas flex h-svh w-full overflow-hidden text-foreground">
-        {children}
-      </div>
-    );
-  }
+  // For the same reason, code mode's search dialog (⌘K, ⇧⇧, ⌘⇧F) is mounted
+  // here: one host for every code page, whichever shell is showing it.
+  // Collaboration is left alone — it has a search of its own.
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const prefs = useUiPrefs();
+  const inCodeMode = activeWorkMode(pathname, prefs.workMode) === "code";
 
   return (
-    <div className="app-frame flex h-svh w-full flex-col overflow-hidden text-foreground">
-      <WindowBar />
-      <div className="app-canvas mx-1.5 mb-1.5 flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-frame-border">
-        {children}
-      </div>
-    </div>
+    <>
+      {inCodeMode && <SearchHost />}
+      {isDesktop ? (
+        <div className="app-frame flex h-svh w-full flex-col overflow-hidden text-foreground">
+          <WindowBar />
+          <div className="app-canvas mx-1.5 mb-1.5 flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-frame-border">
+            {children}
+          </div>
+        </div>
+      ) : (
+        <div className="app-canvas flex h-svh w-full overflow-hidden text-foreground">
+          {children}
+        </div>
+      )}
+    </>
   );
 }

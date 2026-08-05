@@ -1,10 +1,11 @@
 import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
 import { Api } from "../../api.ts";
-import type { DiffFileTarget, LogQuery } from "@byconvo/core/repo";
+import type { DiffFileTarget, LogQuery, SearchQuery } from "@byconvo/core/repo";
 import { RepoService } from "@byconvo/core/repo";
 
 const ok = { ok: true } as const;
+const MAX_SEARCH_MATCHES = 2000;
 const trimmed = (value: string | undefined): string | null =>
   value !== undefined && value.trim().length > 0 ? value.trim() : null;
 
@@ -32,6 +33,16 @@ export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
         follow: query.follow === "1",
       };
       return Effect.flatMap(RepoService, (s) => s.log(q));
+    })
+    .handle("search", ({ query }) => {
+      const q: SearchQuery = {
+        query: query.q.trim(),
+        caseSensitive: query.case === "1",
+        wholeWord: query.word === "1",
+        regex: query.regex === "1",
+        limit: Math.min(Number(query.limit ?? 200) || 200, MAX_SEARCH_MATCHES),
+      };
+      return Effect.flatMap(RepoService, (s) => s.search(q));
     })
     .handle("commitDetail", ({ params }) =>
       Effect.flatMap(RepoService, (s) => s.commitDetail(params.sha))

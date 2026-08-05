@@ -8,7 +8,8 @@
  * into the `<Outlet />`.
  */
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useState } from "react";
+import { IconRepeat } from "@tabler/icons-react";
+import { useMemo, useState } from "react";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
 import { MockInboxPopover } from "@/interactions/inbox/components/mock-inbox-popover";
@@ -21,6 +22,8 @@ import { CollaborationSearch } from "@/interactions/collaboration/components/col
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
+import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
+import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import {
   useBranches,
   useRemoteBranches,
@@ -47,6 +50,22 @@ export function WorkspaceShell() {
   // Collaboration mode hides the git chrome — no branch switcher, no dock.
   const collaborating =
     activeWorkMode(pathname, prefs.workMode) === "collaboration";
+
+  // The picker is this shell's own, so the command that raises it is too.
+  const shellCommands = useMemo<ReadonlyArray<Command>>(
+    () => [
+      {
+        id: "repo-switch",
+        label: "Switch Repository…",
+        group: "Repository",
+        icon: IconRepeat,
+        keywords: "open change project picker",
+        run: () => setPickerOpen(true),
+      },
+    ],
+    []
+  );
+  useRegisterCommands("workspace-shell", shellCommands);
 
   return (
     <WindowFrame>
