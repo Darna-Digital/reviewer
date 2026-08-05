@@ -11,17 +11,11 @@
  * order, shift-click closes one without aiming for its ✕, and a double click
  * past the last tab opens an empty one.
  *
- * A tab shows only the file's name; its path is a tooltip, and everything that
- * acts on the file — edit it, read its history — is on its context menu.
+ * A tab shows only the file's name; its path is a tooltip, and what acts on the
+ * file — edit it, read its history — sits on the path bar under the pane.
  */
-import {
-  IconHistory,
-  IconPencil,
-  IconPin,
-  IconPinnedFilled,
-  IconX,
-} from "@tabler/icons-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { IconPin, IconPinnedFilled, IconX } from "@tabler/icons-react";
+import { useEffect, useRef, useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +27,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { isImagePath } from "@/components/editor/image-view";
 import {
   pointerAnchor,
   type VirtualAnchor,
@@ -63,15 +56,6 @@ export interface TabStripProps {
   readonly onCloseAll: () => void;
   /** Drop the dragged tab at `toIndex` of the strip's order. */
   readonly onMove: (path: string, toIndex: number) => void;
-  /** A double click past the last tab, as in a browser's strip. */
-  readonly onOpenBlank: () => void;
-  /** Open this file for editing. Omit to leave the strip read-only. */
-  readonly onEditFile?: (path: string) => void;
-  /** Show this file's commit history. */
-  readonly onShowHistory?: (path: string) => void;
-  /** The open file's own controls — Save, Done, its problem count — pinned to
-   * the end of the strip, so the file and everything acting on it share a line. */
-  readonly actions?: ReactNode;
 }
 
 export function TabStrip({
@@ -85,10 +69,6 @@ export function TabStrip({
   onCloseOthers,
   onCloseAll,
   onMove,
-  onOpenBlank,
-  onEditFile,
-  onShowHistory,
-  actions,
 }: TabStripProps) {
   const ordered = orderTabs(tabs);
   const stripRef = useRef<HTMLDivElement>(null);
@@ -251,7 +231,6 @@ export function TabStrip({
         <div
           aria-hidden
           className="min-w-8 flex-1 cursor-default"
-          onDoubleClick={onOpenBlank}
           onDragOver={(event) => {
             if (draggingRef.current === null) return;
             event.preventDefault();
@@ -263,13 +242,6 @@ export function TabStrip({
             endDrag();
           }}
         />
-        {actions !== undefined && (
-          // Sticky, so a strip scrolled sideways keeps the open file's controls
-          // where they were rather than sliding them off the end.
-          <div className="sticky right-0 flex shrink-0 items-center gap-1 border-l border-border bg-background px-2">
-            {actions}
-          </div>
-        )}
       </div>
       {menu !== null && (
         <DropdownMenu
@@ -284,29 +256,6 @@ export function TabStrip({
             align="start"
             className="min-w-52"
           >
-            {onEditFile !== undefined && !isImagePath(menu.path) && (
-              <DropdownMenuItem
-                onClick={() => {
-                  onEditFile(menu.path);
-                  setMenu(null);
-                }}
-              >
-                <IconPencil /> Edit file
-              </DropdownMenuItem>
-            )}
-            {onShowHistory !== undefined && (
-              <DropdownMenuItem
-                onClick={() => {
-                  onShowHistory(menu.path);
-                  setMenu(null);
-                }}
-              >
-                <IconHistory /> File history
-              </DropdownMenuItem>
-            )}
-            {(onEditFile !== undefined || onShowHistory !== undefined) && (
-              <DropdownMenuSeparator />
-            )}
             <DropdownMenuItem
               onClick={() => {
                 onTogglePin(menu.path);

@@ -48,7 +48,8 @@ import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
 import { PullRequestList } from "@/components/git/pull-request-list";
 import { BottomPanel } from "@/components/layout/bottom-panel";
-import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs";
+import type { Crumb } from "@/components/layout/breadcrumbs";
+import { PathBar } from "@/components/layout/path-bar";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { TopBar } from "@/components/layout/top-bar";
 import { WindowFrame } from "@/components/layout/window-frame";
@@ -61,10 +62,7 @@ import {
 } from "@/interactions/chats/functions/chat-assignment.functions";
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
-import {
-  openSearch,
-  useRegisterCommands,
-} from "@/interactions/search/adapters/search.store";
+import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { TabStrip } from "@/interactions/tabs/components/tab-strip";
 import {
   scopeTabsTo,
@@ -493,14 +491,6 @@ export function AppShell() {
   );
 
   const selectTab = (path: string) => setSearch({ file: path });
-  /**
-   * A blank tab, for a strip that only ever holds files: empty the centre pane
-   * and offer the file search, so the tab you opened has something to become.
-   */
-  const openBlankTab = () => {
-    closeFile();
-    openSearch("files");
-  };
   const closeTabAt = (path: string) => {
     updateTabs((state) => {
       const next = closeTab(state, path);
@@ -1035,26 +1025,38 @@ export function AppShell() {
                     onMove={(path, toIndex) =>
                       updateTabs((state) => moveTab(state, path, toIndex))
                     }
-                    onOpenBlank={openBlankTab}
-                    onEditFile={editFile}
-                    onShowHistory={showFileHistory}
-                    actions={
-                      <div
-                        ref={setFileActionsSlot}
-                        className="flex items-center gap-1"
-                      />
-                    }
                   />
-                  {/* The trail sits under the tabs, and only once it says more
-                      than which mode you are in. */}
-                  {crumbs.length > 1 && (
-                    <div className="flex h-8 shrink-0 items-center gap-2 border-b px-2">
-                      <Breadcrumbs crumbs={crumbs} />
-                    </div>
-                  )}
                   <div className="min-h-0 flex-1 overflow-hidden">
                     {renderCenter()}
                   </div>
+                  {/* The trail closes the pane, and only once it says more than
+                      which mode you are in. */}
+                  {(crumbs.length > 1 || viewing !== null) && (
+                    <PathBar
+                      crumbs={crumbs}
+                      path={viewing}
+                      paths={allPaths}
+                      onOpenFile={openFile}
+                      onEdit={
+                        viewing !== null &&
+                        !isImagePath(viewing) &&
+                        editingFile !== viewing
+                          ? () => editFile(viewing)
+                          : undefined
+                      }
+                      onShowHistory={
+                        viewing === null
+                          ? undefined
+                          : () => showFileHistory(viewing)
+                      }
+                      actions={
+                        <div
+                          ref={setFileActionsSlot}
+                          className="flex items-center gap-1"
+                        />
+                      }
+                    />
+                  )}
                 </div>
               </main>
             </div>

@@ -1,10 +1,17 @@
 /**
- * The title bar's trail — what is open and how you got there, so browsing a
- * file reads differently from stepping through history or a pull request.
- * Crumbs before the last one are links back to their level.
+ * The trail along the foot of the centre pane — what is open and how you got
+ * there, so browsing a file reads differently from stepping through history or
+ * a pull request. Crumbs before the last one are links back to their level, and
+ * a crumb can instead carry a dropdown of what else sits at its level; the
+ * trail is the pane's last line, so those open upwards.
  */
 import { IconChevronRight, type IconGitBranch } from "@tabler/icons-react";
-import { Fragment } from "react";
+import { Fragment, type ReactNode, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 export interface Crumb {
@@ -16,7 +23,12 @@ export interface Crumb {
   /** Render the label in mono — used for file paths. */
   mono?: boolean;
   onClick?: () => void;
+  /** Menu items, built only once the crumb's dropdown opens. */
+  menu?: () => ReactNode;
 }
+
+const interactiveCrumb =
+  "flex min-w-0 shrink items-center gap-1 rounded-md px-1.5 py-0.5 outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50";
 
 export function Breadcrumbs({ crumbs }: { crumbs: ReadonlyArray<Crumb> }) {
   return (
@@ -45,11 +57,15 @@ export function Breadcrumbs({ crumbs }: { crumbs: ReadonlyArray<Crumb> }) {
             {index > 0 && (
               <IconChevronRight className="size-3 shrink-0 text-muted-foreground/50" />
             )}
-            {crumb.onClick !== undefined && !last ? (
+            {crumb.menu !== undefined ? (
+              <CrumbMenu crumb={crumb} last={last}>
+                {content}
+              </CrumbMenu>
+            ) : crumb.onClick !== undefined && !last ? (
               <button
                 type="button"
                 onClick={crumb.onClick}
-                className="flex min-w-0 shrink items-center gap-1 rounded-md px-1.5 py-0.5 text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/50"
+                className={cn(interactiveCrumb, "text-muted-foreground")}
               >
                 {content}
               </button>
@@ -68,5 +84,35 @@ export function Breadcrumbs({ crumbs }: { crumbs: ReadonlyArray<Crumb> }) {
         );
       })}
     </nav>
+  );
+}
+
+function CrumbMenu({
+  crumb,
+  last,
+  children,
+}: {
+  crumb: Crumb;
+  last: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger
+        aria-current={last ? "page" : undefined}
+        className={cn(
+          interactiveCrumb,
+          "cursor-default",
+          last ? "font-medium text-foreground" : "text-muted-foreground"
+        )}
+        render={<button type="button" />}
+      >
+        {children}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" className="min-w-56">
+        {open && crumb.menu?.()}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

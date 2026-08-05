@@ -1,7 +1,7 @@
 import { UnresolvedFile } from "@pierre/diffs/react";
 import { IconPencil, IconX } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
-import { THEMES, useLangReady } from "@/components/editor/highlighter";
+import { THEMES, fileForHighlighting } from "@/components/editor/highlighter";
 import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -98,7 +98,6 @@ export function ConflictView({
   onClose,
 }: ConflictViewProps) {
   const file = useFile(path);
-  const langReady = useLangReady(path);
   const [result, setResult] = useState<string | null>(null);
 
   const original = file.data?.contents ?? null;
@@ -114,7 +113,7 @@ export function ConflictView({
       cur === null ? cur : resolveConflictInText(cur, conflictIndex, resolution)
     );
 
-  if (file.isPending || result === null || !langReady) {
+  if (file.isPending || result === null) {
     return (
       <div className="p-8">
         <LoadingCursor label={`Loading ${path}…`} />
@@ -183,7 +182,7 @@ export function ConflictView({
       <ScrollArea className="min-h-0 flex-1">
         <UnresolvedFile
           key={remaining}
-          file={{ name: path, contents: result }}
+          file={fileForHighlighting(path, result)}
           options={{
             theme: THEMES,
             themeType: theme,

@@ -19,7 +19,12 @@ import {
   useRevealLine,
   type RevealTarget,
 } from "@/interactions/language/components/use-reveal-line";
-import { THEMES, useLangReady } from "@/components/editor/highlighter";
+import {
+  THEMES,
+  fileForHighlighting,
+  useHighlightPrimed,
+  useLangReady,
+} from "@/components/editor/highlighter";
 import { useFileEditing } from "@/components/editor/use-file-editing";
 import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
@@ -98,7 +103,15 @@ export function CodeView({
   onCommentEdit,
 }: CodeViewProps) {
   const file = useFile(path);
-  const langReady = useLangReady(path);
+  const langReady = useLangReady(path, editing);
+  const contents = file.data?.contents;
+  const highlightFile = useMemo(
+    () =>
+      contents === undefined ? null : fileForHighlighting(path, contents),
+    [path, contents]
+  );
+  // Editing renders off the pool, so there is nothing to prime for it.
+  const highlightPrimed = useHighlightPrimed(highlightFile, !editing);
   const scrollWrapper = useRef<HTMLDivElement>(null);
   const commentsEnabled =
     onCommentSubmit !== undefined && onCommentDelete !== undefined;
@@ -189,14 +202,14 @@ export function CodeView({
     file.data === undefined ? 0 : file.data.contents.split("\n").length
   );
 
-  if (file.isPending || !langReady) {
+  if (file.isPending || !langReady || !highlightPrimed) {
     return (
       <div className="p-8">
         <LoadingCursor label={`Loading ${path}…`} />
       </div>
     );
   }
-  if (file.error || file.data === undefined) {
+  if (file.error || file.data === undefined || highlightFile === null) {
     return (
       <div className="p-8 text-sm text-destructive">Could not open {path}</div>
     );
@@ -220,7 +233,7 @@ export function CodeView({
             starting to edit would otherwise leave a stale view. */}
             <File<AnnotationMeta>
               key={`${path}:${editing}`}
-              file={{ name: path, contents: file.data.contents }}
+              file={highlightFile}
               options={{
                 theme: THEMES,
                 themeType: theme,
@@ -253,8 +266,9 @@ export function CodeView({
               contentEditable={editing}
               /* The editable view snapshots the rendered code when the editor
                attaches, so a worker highlight landing afterwards would never
-               reach it; `useLangReady` has primed the main-thread highlighter
-               so the first paint is coloured anyway. */
+               reach it; `useLangReady` primes the main-thread highlighter for
+               that case so the first paint is coloured anyway. Reading goes
+               through the pool, off the main thread. */
               disableWorkerPool={editing}
               selectedLines={
                 gutterCommentsEnabled
