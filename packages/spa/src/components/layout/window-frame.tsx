@@ -59,7 +59,9 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
               {children}
             </div>
             {prefs.plansPaneOpen && (
-              <>
+              // The handle rides inside the pane's own group so the flex gap
+              // counts once — one seam, the same width as the frame's inset.
+              <div className="flex min-h-0 shrink-0">
                 <ResizeHandle
                   orientation="col"
                   label="Resize analysis"
@@ -70,10 +72,10 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
                   onResize={(plansPaneWidth) => setUiPrefs({ plansPaneWidth })}
                 />
                 <PlansPane />
-              </>
+              </div>
             )}
             {prefs.browserPaneOpen && (
-              <>
+              <div className="flex min-h-0 shrink-0">
                 <ResizeHandle
                   orientation="col"
                   label="Resize browser"
@@ -86,7 +88,7 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
                   }
                 />
                 <BrowserPane />
-              </>
+              </div>
             )}
           </div>
         </div>
