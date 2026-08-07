@@ -108,9 +108,9 @@ export function WindowBar() {
   const chats = useChats();
 
   /**
-   * Threads touched since the inbox was last looked at. A session tab wears the
-   * dot for its own conversation and Sessions for any of them, so a thread that
-   * moves while you are elsewhere in the strip says so without being opened.
+   * Threads touched since the inbox was last looked at. Only a session tab
+   * wears the dot, for its own conversation — the strip is where you watch a
+   * thread you have open, not a count of everything in the inbox.
    */
   const seenAt = useUiPrefs().inboxSeenAt;
   const unread = useMemo(
@@ -123,9 +123,7 @@ export function WindowBar() {
     [chats.data, seenAt]
   );
   const waiting = (tab: WindowTab): boolean => {
-    if (tab.kind === "sessions") return unread.size > 0;
-    if (tab.kind !== "session") return false;
-    const chatId = chatIdOf(tab.href);
+    const chatId = tab.kind === "session" ? chatIdOf(tab.href) : null;
     return chatId !== null && unread.has(chatId);
   };
 
@@ -281,30 +279,38 @@ export function WindowBar() {
                 }
               }}
             >
-              {waiting(tab) && (
-                <span
-                  aria-label="Waiting"
-                  className="size-1.5 shrink-0 rounded-full bg-sky-500"
-                />
-              )}
               <span className="truncate">{tab.title}</span>
+              {/* The dot shares the ✕'s slot, which the tab already reserves —
+                  so a thread going quiet neither resizes the tab nor leaves a
+                  hole. Reaching for the ✕ trades one for the other. */}
               {!pinned && (
-                <button
-                  type="button"
-                  aria-label={`Close ${tab.title}`}
-                  className={cn(
-                    "shrink-0 rounded p-0.5 hover:bg-elevate-strong",
-                    active
-                      ? "opacity-70"
-                      : "opacity-0 group-hover/tab:opacity-70"
+                <span className="relative flex size-[1.125rem] shrink-0 items-center justify-center">
+                  {waiting(tab) && (
+                    <span
+                      aria-label="Waiting"
+                      className={cn(
+                        "size-1.5 rounded-full bg-sky-500 group-hover/tab:opacity-0",
+                        active && "opacity-0"
+                      )}
+                    />
                   )}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    close(tab.id);
-                  }}
-                >
-                  <IconX className="size-3.5" />
-                </button>
+                  <button
+                    type="button"
+                    aria-label={`Close ${tab.title}`}
+                    className={cn(
+                      "absolute inset-0 flex items-center justify-center rounded hover:bg-elevate-strong",
+                      active
+                        ? "opacity-70"
+                        : "opacity-0 group-hover/tab:opacity-70"
+                    )}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      close(tab.id);
+                    }}
+                  >
+                    <IconX className="size-3.5" />
+                  </button>
+                </span>
               )}
             </div>
           );
