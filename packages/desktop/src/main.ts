@@ -240,7 +240,19 @@ async function createWindow(): Promise<void> {
       preload: resolve(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      // The browser pane embeds the app under review in a <webview>.
+      webviewTag: true,
     },
+  });
+
+  // The pane loads whatever the user types into its address bar, so the guest is
+  // untrusted: hold it to the sandbox regardless of the attributes the renderer
+  // asked for, and refuse to run any preload in it.
+  window.webContents.on("will-attach-webview", (_event, webPreferences) => {
+    webPreferences.nodeIntegration = false;
+    webPreferences.nodeIntegrationInSubFrames = false;
+    webPreferences.contextIsolation = true;
+    delete webPreferences.preload;
   });
 
   // Open target=_blank / external links in the system browser, not the app.

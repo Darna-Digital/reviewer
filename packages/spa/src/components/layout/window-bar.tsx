@@ -8,7 +8,7 @@
  */
 // The history arrows are parked for now, along with the icons they wore.
 // import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
-import { IconPlus, IconX } from "@tabler/icons-react";
+import { IconPlus, IconWorld, IconX } from "@tabler/icons-react";
 // import { useCanGoBack } from "@tanstack/react-router";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -41,7 +41,7 @@ import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import { useChats } from "@/lib/queries";
-import { useUiPrefs } from "@/lib/ui-prefs";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
 const NO_DRAG = "[-webkit-app-region:no-drag]";
@@ -50,11 +50,14 @@ function BarButton({
   label,
   onClick,
   disabled,
+  pressed,
   children,
 }: {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  /** Set on toggles, so the button both announces and shows its state. */
+  pressed?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -65,9 +68,14 @@ function BarButton({
             variant="ghost"
             size="icon"
             aria-label={label}
+            aria-pressed={pressed}
             disabled={disabled}
             onClick={onClick}
-            className={cn("rounded-lg text-muted-foreground", NO_DRAG)}
+            className={cn(
+              "rounded-lg text-muted-foreground",
+              pressed === true && "bg-elevate-strong text-foreground",
+              NO_DRAG
+            )}
           />
         }
       >
@@ -112,7 +120,8 @@ export function WindowBar() {
    * wears the dot, for its own conversation — the strip is where you watch a
    * thread you have open, not a count of everything in the inbox.
    */
-  const seenAt = useUiPrefs().inboxSeenAt;
+  const prefs = useUiPrefs();
+  const seenAt = prefs.inboxSeenAt;
   const unread = useMemo(
     () =>
       new Set(
@@ -320,6 +329,16 @@ export function WindowBar() {
         <IconPlus className="size-5" />
       </BarButton>
       <div className="flex-1" />
+      {/* The pane the agents verify their DOM changes in — a window-level
+          surface like the strip itself, not something a route owns, so it sits
+          at the far end rather than among the tabs. */}
+      <BarButton
+        label="Browser"
+        pressed={prefs.browserPaneOpen}
+        onClick={() => setUiPrefs({ browserPaneOpen: !prefs.browserPaneOpen })}
+      >
+        <IconWorld className="size-5" />
+      </BarButton>
     </header>
   );
 }

@@ -61,6 +61,15 @@ export interface UiPrefs {
   commitAgent: CommitAgent;
   /** Model ids starred in the chat composer's model picker. */
   chatModelFavorites: string[];
+  /** Whether the browser pane splits the canvas. Native shell only. */
+  browserPaneOpen: boolean;
+  /** Drag-resizable browser pane width, in px. */
+  browserPaneWidth: number;
+  /**
+   * The page the browser pane last showed, per repository path. Keyed rather
+   * than single so switching repos doesn't carry the last app's URL over.
+   */
+  browserPaneUrls: Record<string, string>;
 }
 
 const STORE_KEY = "byconvo-ui";
@@ -103,6 +112,9 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   commitDetailsWidth: 320,
   commitAgent: "claude",
   chatModelFavorites: [],
+  browserPaneOpen: false,
+  browserPaneWidth: 480,
+  browserPaneUrls: {},
 };
 
 function load(): UiPrefs {
@@ -154,6 +166,9 @@ function persist() {
       commitDetailsWidth,
       commitAgent,
       chatModelFavorites,
+      browserPaneOpen,
+      browserPaneWidth,
+      browserPaneUrls,
     } = state;
     window.localStorage.setItem(
       STORE_KEY,
@@ -178,6 +193,9 @@ function persist() {
         commitDetailsWidth,
         commitAgent,
         chatModelFavorites,
+        browserPaneOpen,
+        browserPaneWidth,
+        browserPaneUrls,
       })
     );
     window.localStorage.setItem(THEME_KEY, state.theme);

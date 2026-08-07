@@ -1,6 +1,7 @@
 import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core/chats";
 import type { ReviewComment } from "@byconvo/core/comments";
 import type { Card as TasksCard } from "@byconvo/core/tasks";
+import type { VisualComment } from "@byconvo/core/visual-comments";
 import type { ChatSettings } from "../interfaces/chats.interfaces";
 
 export const ASSIGNABLE_CHAT_PROVIDERS = [
@@ -76,6 +77,39 @@ export const buildReviewAssignmentPrompt = (
     )
     .join("\n");
   return `Address these review comments in the codebase:\n\n${lines}`;
+};
+
+export const buildVisualAssignmentTitle = (count: number): string => {
+  const plural = count === 1 ? "" : "s";
+  return `Fix ${count} UI comment${plural}`;
+};
+
+/**
+ * A visual comment points at rendered UI, not at a file, so the agent is given
+ * the page and the selector and told where to go looking — plus a nudge that the
+ * same browser pane is the thing to check the fix in.
+ */
+export const buildVisualAssignmentPrompt = (
+  comments: ReadonlyArray<VisualComment>
+): string => {
+  const lines = comments
+    .map((comment) =>
+      [
+        `${comment.url}`,
+        `Element: ${comment.selector} (${comment.elementLabel})`,
+        `Viewport: ${comment.viewport.width}×${comment.viewport.height}`,
+        comment.body,
+      ].join("\n")
+    )
+    .join("\n\n");
+  return [
+    "Address these comments left on the running UI:",
+    "",
+    lines,
+    "",
+    "Find the code that renders each element, then verify your change through",
+    "byconvo's browser API (see the byconvo skill) rather than assuming it worked.",
+  ].join("\n");
 };
 
 export const buildTaskAssignmentPrompt = (

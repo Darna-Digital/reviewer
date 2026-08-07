@@ -268,6 +268,14 @@
   --frame-border: rgb(0 0 0 / 0.1);
   --canvas: #ffffff;
   --canvas-edge: #f6f6f8;
+  /* The browser pane is a sheet like the canvas, not part of the surround, so
+     it sits at this theme's extreme rather than taking the frame's grey — beside
+     white paper (and usually a white page inside it) the frame tone reads as a
+     slab rather than as the same sheet continuing. */
+  --pane: #ffffff;
+  /* Held further open than the frame's tint: this is a white veil over the
+     material rather than a grey one, which is what keeps it reading as paper. */
+  --pane-translucent: rgb(255 255 255 / 0.62);
 }
 
 .dark {
@@ -316,6 +324,10 @@
   --frame-border: rgb(255 255 255 / 0.09);
   --canvas: #141417;
   --canvas-edge: #0c0c0e;
+  /* Here the frame's own true black is already the extreme, so the pane sinks
+     to it and the page inside carries the contrast. */
+  --pane: #000000;
+  --pane-translucent: rgb(0 0 0 / 0.35);
 }
 
 @layer base {
@@ -368,6 +380,18 @@
 }
 .desktop.translucent .app-frame {
   background-color: var(--frame-translucent);
+}
+
+/* The browser pane is its own sheet beside the canvas, on the `--pane` tone each
+   theme sets: white here, true black in the dark theme. The gap the split leaves
+   between the two is the frame itself, so with translucency on the seam is the
+   desktop showing through — which is the point of the split being a gap and not
+   a border. */
+.browser-pane {
+  background-color: var(--pane);
+}
+.desktop.translucent .browser-pane {
+  background-color: var(--pane-translucent);
 }
 
 /* --- byconvo: agent brand marks ------------------------------------------- */

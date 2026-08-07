@@ -45,6 +45,10 @@ import {
   agentSessionArgs,
   type PtyProgram,
 } from "./agent-pty.ts";
+import {
+  BROWSER_BRIDGE_PATH,
+  startBrowserBridge,
+} from "../browser/browser-bridge.ts";
 import { CHAT_STREAM_PATH, startChatStream } from "../chats/chat-runtime.ts";
 import { getCurrentRepo } from "../workspace/current-repo.ts";
 import {
@@ -767,6 +771,12 @@ export const attachPtyServer = (server: Server): void => {
       wss.handleUpgrade(request, socket, head, (ws) =>
         startChatStream(ws, request)
       );
+      return;
+    }
+    // The window's browser pane, held open for as long as it is mounted so the
+    // browser API has something to relay an agent's commands to.
+    if (pathname === BROWSER_BRIDGE_PATH) {
+      wss.handleUpgrade(request, socket, head, (ws) => startBrowserBridge(ws));
       return;
     }
     for (const delegate of delegates)

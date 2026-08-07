@@ -17,6 +17,8 @@ import { FetchHttpClient, HttpRouter } from "effect/unstable/http";
 import { HttpApiBuilder, HttpApiScalar } from "effect/unstable/httpapi";
 import { createServer } from "node:http";
 import { Api } from "./api.ts";
+import { BrowserHandler } from "./layers/browser/browser.handler.ts";
+import { BrowserRuntimeLive } from "./layers/browser/browser.runtime.ts";
 import { ChatsHandler } from "./layers/chats/chats.handler.ts";
 import { ChatsLive } from "./layers/chats/chats.layer.live.ts";
 import { CommentsHandler } from "./layers/comments/comments.handler.ts";
@@ -38,6 +40,8 @@ import { RepoHandler } from "./layers/repo/repo.handler.ts";
 import { RepoLive } from "./layers/repo/repo.layer.live.ts";
 import { ThreadsHandler } from "./layers/threads/threads.handler.ts";
 import { ThreadsLive } from "./layers/threads/threads.layer.live.ts";
+import { VisualCommentsHandler } from "./layers/visual-comments/visual-comments.handler.ts";
+import { VisualCommentsLive } from "./layers/visual-comments/visual-comments.layer.live.ts";
 import { WorkspaceHandler } from "./layers/workspace/workspace.handler.ts";
 import { WorkspaceLive } from "./layers/workspace/workspace.layer.live.ts";
 import { layer as gitExecLayer } from "./layers/git/git-exec.ts";
@@ -76,7 +80,9 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(DocsHandler),
   Layer.provide(LanguageHandler),
   Layer.provide(TasksHandler),
-  Layer.provide(LocalDevHandler)
+  Layer.provide(LocalDevHandler),
+  Layer.provide(BrowserHandler),
+  Layer.provide(VisualCommentsHandler)
 );
 
 /** Stateless feature services, resolved per request. */
@@ -92,7 +98,9 @@ const RequestServices = Layer.mergeAll(
   LanguageLive,
   TasksLive,
   LocalDevLive,
-  DevRuntimeLive
+  DevRuntimeLive,
+  BrowserRuntimeLive,
+  VisualCommentsLive
 );
 
 /**

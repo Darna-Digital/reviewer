@@ -74,6 +74,22 @@ export const chatStreamUrl = (chatId: string): string => {
 };
 
 /**
+ * The command socket for the window's browser pane. Same origin/port and `/api`
+ * ws routing as {@link ptySocketUrl}; the pane holds it open while mounted and
+ * answers the commands agents send through the browser API.
+ */
+export const browserBridgeUrl = (): string => {
+  const origin =
+    desktopApiBaseUrl ??
+    (typeof window === "undefined"
+      ? "http://localhost"
+      : window.location.origin);
+  const url = new URL("/api/browser/bridge", origin);
+  url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+  return url.toString();
+};
+
+/**
  * The PTY WebSocket URL for a Local Dev command's running process. Same
  * origin/port and `/api` ws routing as {@link ptySocketUrl}; the server attaches
  * the socket to the process the DevProcessManager already owns for `command`.

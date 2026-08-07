@@ -54,9 +54,9 @@ import { ResizeHandle } from "@/components/layout/resize-handle";
 import { TopBar } from "@/components/layout/top-bar";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { FileSidebar } from "@/components/tree/file-sidebar";
+import { assignToChat } from "@/interactions/chats/adapters/assign-to-chat.adapter";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import {
-  buildChatAssignmentSettings,
   buildReviewAssignmentPrompt,
   buildReviewAssignmentTitle,
 } from "@/interactions/chats/functions/chat-assignment.functions";
@@ -344,21 +344,13 @@ export function AppShell() {
     const plural = count === 1 ? "" : "s";
     const prompt = buildReviewAssignmentPrompt(visibleComments);
     try {
-      // New chat: start a titled one seeded with the comments. Existing session:
-      // send the comments as a message into that chat.
-      let chatId: string | null;
-      if (dest.kind === "new") {
-        const started = await chatActions.startWithTitle(
-          buildChatAssignmentSettings(dest.agent, chatModels.data),
-          repo.data?.currentBranch ?? "",
-          buildReviewAssignmentTitle(count),
-          prompt
-        );
-        chatId = started?.id ?? null;
-      } else {
-        const sent = await chatActions.send(dest.chatId, prompt);
-        chatId = sent !== null ? dest.chatId : null;
-      }
+      const chatId = await assignToChat(chatActions, {
+        target: dest,
+        catalog: chatModels.data,
+        branch: repo.data?.currentBranch ?? "",
+        title: buildReviewAssignmentTitle(count),
+        prompt,
+      });
       if (chatId === null) return;
       // Handing the comments off resolves them: their text now lives in the chat,
       // so clear the local ones (remove() ignores GitHub comments) instead of

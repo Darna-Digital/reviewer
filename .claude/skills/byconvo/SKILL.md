@@ -86,6 +86,45 @@ Field meaning:
    (`pnpm typecheck`, `pnpm --filter @byconvo/embedded-server test`, etc.) and report what
    you changed, file by file, with each comment's `body` you addressed.
 
+## Verifying in the browser
+
+byconvo's window has a browser pane (the globe at the right of the window bar).
+When it is open you can drive the page it is showing and read what it renders —
+this is how you check a DOM change actually landed instead of assuming it did.
+
+**Always call `state` first.** It is the only endpoint that never fails:
+
+```bash
+curl -s http://localhost:41811/api/browser/state
+```
+
+`{"connected": false, ...}` means the human has not opened the pane. Say so and
+carry on without it — do not try to work around it, and do not ask them to open
+it unless seeing the page is genuinely the only way to finish the task. Every
+other endpoint answers `503 BrowserUnavailable` in that situation.
+
+| Call | What it does |
+| --- | --- |
+| `GET /api/browser/state` | `{connected, url, title, loading}` |
+| `POST /api/browser/navigate` `{"url": "localhost:3000/settings"}` | Loads a page; a bare host is read as http |
+| `GET /api/browser/snapshot?selector=<css>` | `{url, title, selector, html, text}` for that subtree (whole document when omitted) |
+| `POST /api/browser/eval` `{"script": "..."}` | Runs JS in the page; `{"json": "<result as JSON>"}` |
+| `GET /api/browser/console` | Recent console messages, cleared on each navigation |
+| `GET /api/browser/screenshot` | `{"dataUrl": "data:image/png;base64,..."}` of the viewport |
+
+A typical check after changing a component:
+
+```bash
+curl -s -X POST http://localhost:41811/api/browser/navigate \
+  -H 'content-type: application/json' -d '{"url":"localhost:3000"}'
+curl -s 'http://localhost:41811/api/browser/snapshot?selector=%23sidebar' | jq -r .text
+curl -s http://localhost:41811/api/browser/console | jq '[.[] | select(.level=="error")]'
+```
+
+The pane shows whatever the user pointed it at — usually their own dev server,
+which **they** run, not you. If the page 404s or refuses to connect, report that;
+don't start a dev server yourself.
+
 ## Notes
 
 - Never delete a comment you didn't implement — deletion is the "resolved" signal,

@@ -2,12 +2,15 @@ import { describe, expect, it } from "vitest";
 import type { ChatModelCatalog } from "@byconvo/core/chats";
 import type { ReviewComment } from "@byconvo/core/comments";
 import type { Card as TasksCard } from "@byconvo/core/tasks";
+import type { VisualComment } from "@byconvo/core/visual-comments";
 import {
   buildChatAssignmentSettings,
   buildReviewAssignmentPrompt,
   buildReviewAssignmentTitle,
   buildTaskAssignmentPrompt,
   buildTaskAssignmentTitle,
+  buildVisualAssignmentPrompt,
+  buildVisualAssignmentTitle,
   instructionWithoutChatProviderMention,
   isChatProviderKind,
   mentionedChatProvider,
@@ -119,6 +122,33 @@ describe("chat assignment helpers", () => {
         "src/b.ts:5 - Rename that",
       ].join("\n")
     );
+  });
+
+  it("builds visual assignment content from the element each comment points at", () => {
+    const comments: VisualComment[] = [
+      {
+        id: "v-1",
+        url: "http://localhost:3000/settings",
+        selector: "#save",
+        elementLabel: 'button#save "Save"',
+        body: "This should be disabled until the form is dirty",
+        author: "you",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        screenshot: null,
+        viewport: { width: 1280, height: 800 },
+      },
+    ];
+
+    expect(buildVisualAssignmentTitle(1)).toBe("Fix 1 UI comment");
+    expect(buildVisualAssignmentTitle(3)).toBe("Fix 3 UI comments");
+
+    const prompt = buildVisualAssignmentPrompt(comments);
+    expect(prompt).toContain("http://localhost:3000/settings");
+    expect(prompt).toContain('Element: #save (button#save "Save")');
+    expect(prompt).toContain("Viewport: 1280×800");
+    expect(prompt).toContain("disabled until the form is dirty");
+    // The agent is pointed at the browser API rather than left to guess.
+    expect(prompt).toContain("byconvo skill");
   });
 
   it("strips task @mentions and builds task assignment content", () => {

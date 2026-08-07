@@ -39,6 +39,15 @@ const ASSIGNABLE = AGENTS.filter(
     isChatProviderKind(agent.kind)
 );
 
+const CommentCount = ({ count }: { count: number }) => (
+  <>
+    <span className="font-medium tabular-nums">{count}</span>
+    <span className="font-normal text-muted-foreground">
+      {count === 1 ? "comment" : "comments"}
+    </span>
+  </>
+);
+
 /** Where the review comments get handed off. */
 export type AssignTarget =
   | { kind: "new"; agent: ChatProviderKind }
@@ -49,11 +58,24 @@ export function ReviewAssignBar({
   chats,
   onAssign,
   onDismiss,
+  className,
+  linkToComments = true,
 }: {
   count: number;
   chats: ReadonlyArray<ChatSummary>;
   onAssign: (target: AssignTarget) => Promise<void> | void;
   onDismiss: () => void;
+  /**
+   * Where the bar sits. Defaults to the bottom of the window; a caller that
+   * owns a panel of its own passes positioning that keeps the bar inside it.
+   */
+  className?: string;
+  /**
+   * Whether the count links to the review-comments page. False for comments
+   * that page does not list — a link there would say they are somewhere they
+   * are not.
+   */
+  linkToComments?: boolean;
 }) {
   const [target, setTarget] = useState<AssignTarget>({
     kind: "new",
@@ -111,20 +133,28 @@ export function ReviewAssignBar({
   };
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center">
+    <div
+      className={cn(
+        "pointer-events-none z-40 flex justify-center",
+        className ?? "fixed inset-x-0 bottom-6"
+      )}
+    >
       <div className="pointer-events-auto flex animate-in items-center gap-2 rounded-full border bg-popover/95 py-1.5 pr-1.5 pl-1.5 shadow-lg ring-1 ring-foreground/5 backdrop-blur duration-150 fade-in slide-in-from-bottom-2">
-        <Link
-          to="/modes/code/comments"
-          className={cn(
-            buttonVariants({ variant: "ghost", size: "sm" }),
-            "h-8 gap-1 rounded-full px-3"
-          )}
-        >
-          <span className="font-medium tabular-nums">{count}</span>
-          <span className="font-normal text-muted-foreground">
-            {count === 1 ? "comment" : "comments"}
+        {linkToComments ? (
+          <Link
+            to="/modes/code/comments"
+            className={cn(
+              buttonVariants({ variant: "ghost", size: "sm" }),
+              "h-8 gap-1 rounded-full px-3"
+            )}
+          >
+            <CommentCount count={count} />
+          </Link>
+        ) : (
+          <span className="flex h-8 items-center gap-1 px-3 text-sm">
+            <CommentCount count={count} />
           </span>
-        </Link>
+        )}
         <div className="h-5 w-px bg-border" />
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger
