@@ -8,7 +8,7 @@
  */
 // The history arrows are parked for now, along with the icons they wore.
 // import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
-import { IconPlus, IconWorld, IconX } from "@tabler/icons-react";
+import { IconPlus, IconSitemap, IconWorld, IconX } from "@tabler/icons-react";
 // import { useCanGoBack } from "@tanstack/react-router";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -72,7 +72,7 @@ function BarButton({
             disabled={disabled}
             onClick={onClick}
             className={cn(
-              "rounded-lg text-muted-foreground",
+              "text-muted-foreground",
               pressed === true && "bg-elevate-strong text-foreground",
               NO_DRAG
             )}
@@ -234,7 +234,7 @@ export function WindowBar() {
               title={tab.title}
               draggable={!pinned}
               className={cn(
-                "group/tab flex h-8 max-w-52 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-lg pl-3 text-[0.8125rem] transition-colors",
+                "group/tab flex h-8 max-w-52 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-md pl-3 text-[0.8125rem] transition-colors",
                 // Without a ✕ to sit in it, the trailing padding matches the lead.
                 pinned ? "pr-3" : "pr-1.5",
                 active
@@ -329,6 +329,16 @@ export function WindowBar() {
         <IconPlus className="size-5" />
       </BarButton>
       <div className="flex-1" />
+      {/* The analysis pane, beside the browser: both are window-level surfaces
+          rather than routes, and both are a second thing to look at while the
+          canvas keeps the code. */}
+      <BarButton
+        label="Analysis"
+        pressed={prefs.plansPaneOpen}
+        onClick={() => setUiPrefs({ plansPaneOpen: !prefs.plansPaneOpen })}
+      >
+        <IconSitemap className="size-5" />
+      </BarButton>
       {/* The pane the agents verify their DOM changes in — a window-level
           surface like the strip itself, not something a route owns, so it sits
           at the far end rather than among the tabs. */}

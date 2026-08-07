@@ -72,7 +72,7 @@ export function InboxPopover({
         closeDelay={HOVER_CLOSE_DELAY}
         className={cn(
           buttonVariants({ variant: "ghost", size: "icon" }),
-          "relative rounded-lg text-muted-foreground [-webkit-app-region:no-drag]",
+          "relative text-muted-foreground [-webkit-app-region:no-drag]",
           (active || open) && "bg-muted text-foreground"
         )}
         aria-label="Inbox"

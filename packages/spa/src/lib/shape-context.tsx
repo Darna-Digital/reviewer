@@ -32,7 +32,7 @@ const shapeMap: Record<ShapeVariant, ShapeClasses> = {
     bg: "rounded-[20px]",
     // +2px over `item` because the focus ring sits 2px outside the element
     // (top/left -2, width/height +4); this keeps the corners concentric so a
-    // pill element gets a pill ring (matches the rounded-mode 8px→10px bump).
+    // pill element gets a pill ring (matches the rounded-mode 6px→8px bump).
     focusRing: "rounded-[22px]",
     mergedBg: "rounded-2xl",
     container: "rounded-3xl",
@@ -42,15 +42,15 @@ const shapeMap: Record<ShapeVariant, ShapeClasses> = {
     mergedRadius: 16,
   },
   rounded: {
-    item: "rounded-lg",
-    bg: "rounded-lg",
-    focusRing: "rounded-[10px]",
-    mergedBg: "rounded-lg",
-    container: "rounded-xl",
-    button: "rounded-lg",
-    input: "rounded-lg",
-    bgRadius: 8,
-    mergedRadius: 8,
+    item: "rounded-md",
+    bg: "rounded-md",
+    focusRing: "rounded-lg",
+    mergedBg: "rounded-md",
+    container: "rounded-lg",
+    button: "rounded-md",
+    input: "rounded-md",
+    bgRadius: 6,
+    mergedRadius: 6,
   },
 };
 
@@ -64,7 +64,7 @@ const ShapeContext = createContext<ShapeContextValue | null>(null);
 
 function useShape(): ShapeClasses {
   const ctx = useContext(ShapeContext);
-  if (!ctx) return shapeMap.pill;
+  if (!ctx) return shapeMap.rounded;
   return ctx.classes;
 }
 
@@ -77,7 +77,7 @@ function useShapeContext() {
 
 function ShapeProvider({
   children,
-  defaultShape = "pill",
+  defaultShape = "rounded",
 }: {
   children: ReactNode;
   defaultShape?: ShapeVariant;

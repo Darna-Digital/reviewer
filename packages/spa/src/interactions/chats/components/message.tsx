@@ -39,7 +39,7 @@ export function MessageBubble({
   return (
     <div
       className={cn(
-        "rounded-2xl bg-muted px-4 py-2.5 text-sm leading-relaxed break-words whitespace-pre-wrap",
+        "rounded-lg bg-muted px-4 py-2.5 text-sm leading-relaxed break-words whitespace-pre-wrap",
         className
       )}
     >

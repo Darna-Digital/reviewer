@@ -70,6 +70,12 @@ export interface UiPrefs {
    * than single so switching repos doesn't carry the last app's URL over.
    */
   browserPaneUrls: Record<string, string>;
+  /** Whether the analysis pane splits the canvas. Native shell only. */
+  plansPaneOpen: boolean;
+  /** Drag-resizable analysis pane width, in px. */
+  plansPaneWidth: number;
+  /** Drag-resizable height of the notes list under the analysis graph, in px. */
+  plansNotesHeight: number;
 }
 
 const STORE_KEY = "byconvo-ui";
@@ -115,6 +121,9 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   browserPaneOpen: false,
   browserPaneWidth: 480,
   browserPaneUrls: {},
+  plansPaneOpen: false,
+  plansPaneWidth: 560,
+  plansNotesHeight: 220,
 };
 
 function load(): UiPrefs {
@@ -169,6 +178,9 @@ function persist() {
       browserPaneOpen,
       browserPaneWidth,
       browserPaneUrls,
+      plansPaneOpen,
+      plansPaneWidth,
+      plansNotesHeight,
     } = state;
     window.localStorage.setItem(
       STORE_KEY,
@@ -196,6 +208,9 @@ function persist() {
         browserPaneOpen,
         browserPaneWidth,
         browserPaneUrls,
+        plansPaneOpen,
+        plansPaneWidth,
+        plansNotesHeight,
       })
     );
     window.localStorage.setItem(THEME_KEY, state.theme);

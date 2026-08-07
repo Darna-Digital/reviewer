@@ -206,7 +206,7 @@ export function ChatComposer({
   return (
     <div
       className={cn(
-        "relative rounded-2xl border bg-background shadow-sm focus-within:border-ring/60",
+        "relative rounded-lg border bg-background shadow-sm focus-within:border-ring/60",
         dragging && "border-primary"
       )}
       onDragEnter={(e) => {

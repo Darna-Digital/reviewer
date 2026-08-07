@@ -37,7 +37,6 @@ export function SidebarToggle({ className }: { className?: string }) {
             aria-pressed={sidebarVisible}
             onClick={() => setUiPrefs({ sidebarVisible: !sidebarVisible })}
             className={cn(
-              "rounded-lg",
               sidebarVisible ? "text-foreground" : "text-muted-foreground",
               className
             )}

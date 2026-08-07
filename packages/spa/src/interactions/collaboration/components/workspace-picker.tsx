@@ -64,7 +64,7 @@ export function WorkspacePicker() {
           <Button
             variant="ghost"
             size="sm"
-            className="max-w-56 gap-2 rounded-full px-3.5 py-1.5"
+            className="max-w-56 gap-2 px-3.5 py-1.5"
           />
         }
       >

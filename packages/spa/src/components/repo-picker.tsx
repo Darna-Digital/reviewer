@@ -59,7 +59,7 @@ interface RepoPickerProps {
 
 function Avatar({
   name,
-  className = "size-5 text-[10px]",
+  className = "size-4 text-[9px]",
 }: {
   name: string;
   className?: string;
@@ -224,7 +224,7 @@ export function RepoPicker({
           <Button
             variant="ghost"
             size="sm"
-            className="max-w-56 gap-2 rounded-full px-3.5 py-1.5"
+            className="max-w-56 gap-2 px-3.5 py-1.5"
           />
         }
       >

@@ -48,7 +48,7 @@ function PreviewCardContent({
           data-slot="preview-card-content"
           data-surface={level}
           className={cn(
-            "z-50 flex w-64 origin-(--transform-origin) flex-col gap-1.5 rounded-xl p-3 text-sm text-popover-foreground outline-hidden",
+            "z-50 flex w-64 origin-(--transform-origin) flex-col gap-1.5 rounded-md p-3 text-sm text-popover-foreground outline-hidden",
             surface,
             "data-[side=bottom]:slide-in-from-top-1 data-[side=inline-end]:slide-in-from-left-1 data-[side=inline-start]:slide-in-from-right-1 data-[side=left]:slide-in-from-right-1 data-[side=right]:slide-in-from-left-1 data-[side=top]:slide-in-from-bottom-1",
             "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98]",

@@ -136,7 +136,7 @@ export function LogFilters({
 
       {query.path !== null && (
         <div
-          className="flex h-7 max-w-64 shrink-0 items-center gap-1 rounded-2xl bg-input/50 pr-1 pl-2.5 text-xs"
+          className="flex h-7 max-w-64 shrink-0 items-center gap-1 rounded-md bg-input/50 pr-1 pl-2.5 text-xs"
           title={`History of ${query.path}`}
         >
           <IconFile className="size-3.5 shrink-0 text-muted-foreground" />
@@ -215,7 +215,7 @@ export function LogFilters({
               variant="ghost"
               size="sm"
               className={cn(
-                "w-36 justify-start rounded-2xl border border-transparent bg-input/50 px-2.5 text-xs font-normal hover:bg-input/50 dark:bg-input/50 dark:hover:bg-input/50",
+                "w-36 justify-start rounded-md border border-transparent bg-input/50 px-2.5 text-xs font-normal hover:bg-input/50 dark:bg-input/50 dark:hover:bg-input/50",
                 query.after === null && "text-muted-foreground"
               )}
               aria-label="Since date"
@@ -225,7 +225,7 @@ export function LogFilters({
           <IconCalendar className="size-3.5 text-muted-foreground" />
           {afterDate ? afterDate.toLocaleDateString() : "Since date"}
         </PopoverTrigger>
-        <PopoverContent className="w-auto gap-0 rounded-2xl p-0">
+        <PopoverContent className="w-auto gap-0 rounded-md p-0">
           <Calendar
             mode="single"
             autoFocus

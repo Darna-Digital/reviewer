@@ -291,7 +291,7 @@ export function SearchDialog({
           data-mode={mode}
           initialFocus={inputRef}
           className={cn(
-            "fixed top-[12vh] left-1/2 z-50 flex max-h-[70vh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 flex-col overflow-hidden rounded-[min(var(--radius-4xl),20px)] text-sm text-popover-foreground duration-100 outline-none sm:max-w-2xl",
+            "fixed top-[12vh] left-1/2 z-50 flex max-h-[70vh] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 flex-col overflow-hidden rounded-xl text-sm text-popover-foreground duration-100 outline-none sm:max-w-2xl",
             surface,
             "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95"
           )}

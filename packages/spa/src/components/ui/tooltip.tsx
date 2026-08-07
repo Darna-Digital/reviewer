@@ -52,7 +52,7 @@ function TooltipContent({
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"
           className={cn(
-            "z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-popover-foreground",
+            "z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-2 rounded-sm px-2.5 py-1.5 text-xs font-medium text-popover-foreground",
             // Lifts a rung further than a menu: a tooltip has to stay legible
             // over whatever popup triggered it.
             surface,

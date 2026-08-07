@@ -36,6 +36,8 @@ import { TasksLive } from "./layers/tasks/tasks.layer.live.ts";
 import { LocalDevHandler } from "./layers/local-dev/local-dev.handler.ts";
 import { LocalDevLive } from "./layers/local-dev/local-dev.layer.live.ts";
 import { DevRuntimeLive } from "./layers/local-dev/local-dev.runtime.ts";
+import { PlansHandler } from "./layers/plans/plans.handler.ts";
+import { PlansLive } from "./layers/plans/plans.layer.live.ts";
 import { RepoHandler } from "./layers/repo/repo.handler.ts";
 import { RepoLive } from "./layers/repo/repo.layer.live.ts";
 import { ThreadsHandler } from "./layers/threads/threads.handler.ts";
@@ -82,6 +84,7 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(TasksHandler),
   Layer.provide(LocalDevHandler),
   Layer.provide(BrowserHandler),
+  Layer.provide(PlansHandler),
   Layer.provide(VisualCommentsHandler)
 );
 
@@ -100,6 +103,7 @@ const RequestServices = Layer.mergeAll(
   LocalDevLive,
   DevRuntimeLive,
   BrowserRuntimeLive,
+  PlansLive,
   VisualCommentsLive
 );
 

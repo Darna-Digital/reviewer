@@ -68,6 +68,19 @@ export function ResizeHandle({
       document.body.classList.add(cursorClass);
       setDragging(true);
 
+      // A shield over the whole window for the length of the drag. Without it a
+      // pointer crossing anything that swallows input — the browser pane's
+      // <webview>, which is a separate process, or an embedded terminal — takes
+      // the rest of the gesture with it: no more `pointermove`, and crucially no
+      // `pointerup`, so the drag never ends and the cursor stays stuck. The
+      // shield keeps every event in this document, where the listeners below
+      // still see it bubble to `window`.
+      const shield = document.createElement("div");
+      shield.style.cssText =
+        "position:fixed;inset:0;z-index:2147483647;background:transparent";
+      shield.style.cursor = orientation === "col" ? "col-resize" : "row-resize";
+      document.body.appendChild(shield);
+
       let latest = startSize;
       const onMove = (move: PointerEvent) => {
         const delta = (move[axis] - start) * direction;
@@ -76,13 +89,21 @@ export function ResizeHandle({
       };
       const onUp = () => {
         document.body.classList.remove(cursorClass);
+        shield.remove();
         setDragging(false);
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
+        window.removeEventListener("pointercancel", onUp);
+        window.removeEventListener("blur", onUp);
         onResizeEnd?.(latest);
       };
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
+      // A drag interrupted rather than finished — the OS taking the pointer, or
+      // the window losing focus — has to release the shield too, or it would
+      // outlive the gesture and swallow every click after it.
+      window.addEventListener("pointercancel", onUp);
+      window.addEventListener("blur", onUp);
     },
     [orientation, value, min, max, direction, onResize, onResizeEnd]
   );

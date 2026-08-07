@@ -51,7 +51,7 @@ export function ModeSelector() {
           <Button
             variant="ghost"
             size="sm"
-            className="gap-1.5 rounded-full px-3.5 py-1.5 font-semibold"
+            className="gap-1.5 px-3.5 py-1.5 font-semibold"
           />
         }
       >

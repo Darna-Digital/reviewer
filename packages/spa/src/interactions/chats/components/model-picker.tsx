@@ -98,7 +98,7 @@ export function ModelPicker({
       <PopoverContent
         align="start"
         side="top"
-        className="w-96 gap-0 rounded-2xl p-0"
+        className="w-96 gap-0 rounded-md p-0"
       >
         <div className="flex">
           {/* Provider rail */}

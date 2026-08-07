@@ -12,6 +12,7 @@ import { useEffect } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { WindowBar } from "@/components/layout/window-bar";
 import { BrowserPane } from "@/interactions/browser-pane/components/browser-pane";
+import { PlansPane } from "@/interactions/plans-pane/components/plans-pane";
 import { SearchHost } from "@/interactions/search/components/search-host";
 import { isDesktop } from "@/lib/desktop";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
@@ -57,6 +58,20 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
             <div className="app-canvas flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-frame-border">
               {children}
             </div>
+            {prefs.plansPaneOpen && (
+              <>
+                <ResizeHandle
+                  orientation="col"
+                  label="Resize analysis"
+                  value={prefs.plansPaneWidth}
+                  min={380}
+                  max={() => Math.max(380, window.innerWidth - 480)}
+                  direction={-1}
+                  onResize={(plansPaneWidth) => setUiPrefs({ plansPaneWidth })}
+                />
+                <PlansPane />
+              </>
+            )}
             {prefs.browserPaneOpen && (
               <>
                 <ResizeHandle

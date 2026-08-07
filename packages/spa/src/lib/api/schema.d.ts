@@ -1284,6 +1284,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["plans.list"];
+        put?: never;
+        post: operations["plans.create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plans/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["plans.get"];
+        put?: never;
+        post?: never;
+        delete: operations["plans.remove"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plans/{id}/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["plans.save"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plans/{id}/annotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["plans.annotate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plans/{id}/annotations/{annotationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["plans.removeAnnotation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/visual-comments": {
         parameters: {
             query?: never;
@@ -6982,6 +7062,655 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BrowserUnavailable"];
+                };
+            };
+        };
+    };
+    "plans.list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        title: string;
+                        question: string;
+                        createdAt: string;
+                        updatedAt: string;
+                        savedAt: string | null;
+                        nodeCount: number;
+                        annotationCount: number;
+                    }[];
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "plans.create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                    question?: string;
+                    nodes: {
+                        id: string;
+                        label: string;
+                        /** @enum {string} */
+                        layer: "entry" | "frontend" | "transport" | "backend" | "data" | "external";
+                        /** @enum {string} */
+                        kind?: "ui" | "state" | "route" | "handler" | "service" | "store" | "process" | "external";
+                        summary?: string;
+                        anchor?: {
+                            filePath: string;
+                            line?: (number) | null;
+                        } | null;
+                        order?: number;
+                    }[];
+                    edges: {
+                        from: string;
+                        to: string;
+                        label?: string;
+                        /** @enum {string} */
+                        kind?: "call" | "data" | "event";
+                    }[];
+                    annotations?: {
+                        nodeId?: string | null;
+                        body: string;
+                        anchor?: {
+                            filePath: string;
+                            line?: (number) | null;
+                        } | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        title: string;
+                        question: string;
+                        createdAt: string;
+                        updatedAt: string;
+                        savedAt: string | null;
+                        nodes: {
+                            id: string;
+                            label: string;
+                            /** @enum {string} */
+                            layer: "entry" | "frontend" | "transport" | "backend" | "data" | "external";
+                            /** @enum {string} */
+                            kind: "ui" | "state" | "route" | "handler" | "service" | "store" | "process" | "external";
+                            summary: string;
+                            anchor: {
+                                filePath: string;
+                                line: (number) | null;
+                                snippet: string;
+                                fileHash: string;
+                            } | null;
+                            order: number;
+                        }[];
+                        edges: {
+                            id: string;
+                            from: string;
+                            to: string;
+                            label: string;
+                            /** @enum {string} */
+                            kind: "call" | "data" | "event";
+                        }[];
+                        annotations: {
+                            id: string;
+                            /** @enum {string} */
+                            origin: "analysis" | "review";
+                            nodeId: string | null;
+                            body: string;
+                            author: string;
+                            createdAt: string;
+                            anchor: {
+                                filePath: string;
+                                line: (number) | null;
+                                snippet: string;
+                                fileHash: string;
+                            } | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "plans.get": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        plan: {
+                            id: string;
+                            title: string;
+                            question: string;
+                            createdAt: string;
+                            updatedAt: string;
+                            savedAt: string | null;
+                            nodes: {
+                                id: string;
+                                label: string;
+                                /** @enum {string} */
+                                layer: "entry" | "frontend" | "transport" | "backend" | "data" | "external";
+                                /** @enum {string} */
+                                kind: "ui" | "state" | "route" | "handler" | "service" | "store" | "process" | "external";
+                                summary: string;
+                                anchor: {
+                                    filePath: string;
+                                    line: (number) | null;
+                                    snippet: string;
+                                    fileHash: string;
+                                } | null;
+                                order: number;
+                            }[];
+                            edges: {
+                                id: string;
+                                from: string;
+                                to: string;
+                                label: string;
+                                /** @enum {string} */
+                                kind: "call" | "data" | "event";
+                            }[];
+                            annotations: {
+                                id: string;
+                                /** @enum {string} */
+                                origin: "analysis" | "review";
+                                nodeId: string | null;
+                                body: string;
+                                author: string;
+                                createdAt: string;
+                                anchor: {
+                                    filePath: string;
+                                    line: (number) | null;
+                                    snippet: string;
+                                    fileHash: string;
+                                } | null;
+                            }[];
+                        };
+                        staleness: {
+                            checkedAt: string;
+                            anchors: {
+                                /** @enum {string} */
+                                target: "node" | "annotation";
+                                targetId: string;
+                                filePath: string;
+                                /** @enum {string} */
+                                status: "fresh" | "relocated" | "lost" | "missing";
+                                line: (number) | null;
+                                recordedLine: (number) | null;
+                            }[];
+                            fresh: number;
+                            relocated: number;
+                            lost: number;
+                            missing: number;
+                            needsRerun: boolean;
+                        };
+                    };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "plans.remove": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok: boolean;
+                    };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "plans.save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        title: string;
+                        question: string;
+                        createdAt: string;
+                        updatedAt: string;
+                        savedAt: string | null;
+                        nodes: {
+                            id: string;
+                            label: string;
+                            /** @enum {string} */
+                            layer: "entry" | "frontend" | "transport" | "backend" | "data" | "external";
+                            /** @enum {string} */
+                            kind: "ui" | "state" | "route" | "handler" | "service" | "store" | "process" | "external";
+                            summary: string;
+                            anchor: {
+                                filePath: string;
+                                line: (number) | null;
+                                snippet: string;
+                                fileHash: string;
+                            } | null;
+                            order: number;
+                        }[];
+                        edges: {
+                            id: string;
+                            from: string;
+                            to: string;
+                            label: string;
+                            /** @enum {string} */
+                            kind: "call" | "data" | "event";
+                        }[];
+                        annotations: {
+                            id: string;
+                            /** @enum {string} */
+                            origin: "analysis" | "review";
+                            nodeId: string | null;
+                            body: string;
+                            author: string;
+                            createdAt: string;
+                            anchor: {
+                                filePath: string;
+                                line: (number) | null;
+                                snippet: string;
+                                fileHash: string;
+                            } | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "plans.annotate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    nodeId?: string | null;
+                    body: string;
+                    author?: string;
+                    anchor?: {
+                        filePath: string;
+                        line?: (number) | null;
+                    } | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        title: string;
+                        question: string;
+                        createdAt: string;
+                        updatedAt: string;
+                        savedAt: string | null;
+                        nodes: {
+                            id: string;
+                            label: string;
+                            /** @enum {string} */
+                            layer: "entry" | "frontend" | "transport" | "backend" | "data" | "external";
+                            /** @enum {string} */
+                            kind: "ui" | "state" | "route" | "handler" | "service" | "store" | "process" | "external";
+                            summary: string;
+                            anchor: {
+                                filePath: string;
+                                line: (number) | null;
+                                snippet: string;
+                                fileHash: string;
+                            } | null;
+                            order: number;
+                        }[];
+                        edges: {
+                            id: string;
+                            from: string;
+                            to: string;
+                            label: string;
+                            /** @enum {string} */
+                            kind: "call" | "data" | "event";
+                        }[];
+                        annotations: {
+                            id: string;
+                            /** @enum {string} */
+                            origin: "analysis" | "review";
+                            nodeId: string | null;
+                            body: string;
+                            author: string;
+                            createdAt: string;
+                            anchor: {
+                                filePath: string;
+                                line: (number) | null;
+                                snippet: string;
+                                fileHash: string;
+                            } | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "plans.removeAnnotation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                annotationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        title: string;
+                        question: string;
+                        createdAt: string;
+                        updatedAt: string;
+                        savedAt: string | null;
+                        nodes: {
+                            id: string;
+                            label: string;
+                            /** @enum {string} */
+                            layer: "entry" | "frontend" | "transport" | "backend" | "data" | "external";
+                            /** @enum {string} */
+                            kind: "ui" | "state" | "route" | "handler" | "service" | "store" | "process" | "external";
+                            summary: string;
+                            anchor: {
+                                filePath: string;
+                                line: (number) | null;
+                                snippet: string;
+                                fileHash: string;
+                            } | null;
+                            order: number;
+                        }[];
+                        edges: {
+                            id: string;
+                            from: string;
+                            to: string;
+                            label: string;
+                            /** @enum {string} */
+                            kind: "call" | "data" | "event";
+                        }[];
+                        annotations: {
+                            id: string;
+                            /** @enum {string} */
+                            origin: "analysis" | "review";
+                            nodeId: string | null;
+                            body: string;
+                            author: string;
+                            createdAt: string;
+                            anchor: {
+                                filePath: string;
+                                line: (number) | null;
+                                snippet: string;
+                                fileHash: string;
+                            } | null;
+                        }[];
+                    };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
                 };
             };
         };

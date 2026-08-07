@@ -46,7 +46,7 @@ function ImageLightbox({
         <img
           src={attachment.source ?? attachment.thumbnail}
           alt={attachment.name}
-          className="max-h-[90vh] w-full rounded-2xl object-contain"
+          className="max-h-[90vh] w-full rounded-lg object-contain"
         />
       </DialogContent>
     </Dialog>

@@ -75,13 +75,13 @@
   --shadow-surface-6: var(--shadow-6);
   --shadow-surface-7: var(--shadow-7);
   --shadow-surface-8: var(--shadow-8);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.25);
+  --radius-2xl: calc(var(--radius) * 1.5);
+  --radius-3xl: calc(var(--radius) * 1.75);
+  --radius-4xl: calc(var(--radius) * 2);
 }
 
 /* The baby-blue accent ramp, anchored at brand-500 = oklch(0.69 0.16 265.2).
@@ -245,7 +245,7 @@
   --chart-3: var(--brand-700);
   --chart-4: oklch(0.72 0.115 205);
   --chart-5: oklch(0.66 0.13 305);
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --sidebar: var(--surface-1);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -391,6 +391,40 @@
   background-color: var(--pane);
 }
 .desktop.translucent .browser-pane {
+  background-color: var(--pane-translucent);
+}
+
+/* The analysis pane is the browser's twin on the other side of the canvas, on
+   the same `--pane` tone. Its canvas is the exception: a dotted grid, which is
+   what says "this is a drawing surface" before a single node has loaded, and
+   gives the eye something fixed to read the pan and zoom against. The dots are
+   drawn in the border colour at low alpha so they recede in both themes rather
+   than needing a second value per theme. */
+.plans-pane {
+  background-color: var(--pane);
+}
+.desktop.translucent .plans-pane {
+  background-color: var(--pane-translucent);
+}
+.plans-canvas {
+  --plans-dot: color-mix(in oklab, var(--border) 70%, transparent);
+  background-image: radial-gradient(
+    var(--plans-dot) 1px,
+    transparent 1px
+  );
+  background-size: 16px 16px;
+  background-position: -1px -1px;
+  cursor: grab;
+}
+.plans-canvas:active {
+  cursor: grabbing;
+}
+/* The node boxes ride over the grid, so they carry the pane's own tone rather
+   than sitting transparent the way panels on the canvas do. */
+.plan-node {
+  background-color: var(--pane);
+}
+.desktop.translucent .plan-node {
   background-color: var(--pane-translucent);
 }
 
