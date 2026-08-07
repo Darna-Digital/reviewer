@@ -25,7 +25,7 @@ import {
   statusLabel,
 } from "../functions/plans-pane.functions";
 import { setViewport } from "../adapters/plans-pane.store";
-import { KIND_TONE } from "./plan-node-tone";
+import { KIND_LABEL, KIND_PILL, KIND_PILL_SHAPE } from "./plan-node-tone";
 import type { Size, Viewport } from "../interfaces/plans-pane.interfaces";
 import { cn } from "@/lib/utils";
 
@@ -179,7 +179,7 @@ export function PlanGraph({
               key={lane.layer}
               x={lane.x}
               y={20}
-              className="fill-muted-foreground text-[0.625rem] font-medium tracking-widest uppercase"
+              className="fill-muted-foreground text-[0.6875rem] font-medium"
             >
               {lane.label}
             </text>
@@ -238,7 +238,7 @@ export function PlanGraph({
                   title={status === null ? node.label : statusLabel(status)}
                   style={{ height: NODE_HEIGHT }}
                   className={cn(
-                    "plan-node group flex w-full flex-col justify-center gap-0.5 rounded-xl border px-3 py-2 text-left transition-shadow",
+                    "plan-node group flex w-full flex-col justify-center gap-1 overflow-hidden rounded-md border px-3 py-2 text-left transition-shadow",
                     selected
                       ? "border-primary shadow-md ring-2 ring-primary/30"
                       : "border-frame-border hover:shadow-sm",
@@ -249,13 +249,8 @@ export function PlanGraph({
                   onDoubleClick={() => onOpenNode(node.id)}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "text-[0.625rem] font-medium tracking-wide uppercase",
-                        KIND_TONE[node.kind]
-                      )}
-                    >
-                      {node.kind}
+                    <span className={cn(KIND_PILL_SHAPE, KIND_PILL[node.kind])}>
+                      {KIND_LABEL[node.kind]}
                     </span>
                     {broken && (
                       <IconAlertTriangle className="size-3 text-destructive" />
@@ -267,16 +262,16 @@ export function PlanGraph({
                       </span>
                     )}
                   </div>
-                  <div className="truncate text-[0.8125rem] font-medium">
+                  <div className="truncate text-[0.8125rem] leading-5 font-medium">
                     {node.label}
                   </div>
                   {node.summary !== "" ? (
-                    <div className="line-clamp-2 text-[0.6875rem] leading-tight text-muted-foreground">
+                    <div className="line-clamp-2 text-[0.6875rem] leading-4 text-muted-foreground">
                       {node.summary}
                     </div>
                   ) : (
                     node.anchor !== null && (
-                      <div className="flex items-center gap-1 truncate text-[0.6875rem] text-muted-foreground">
+                      <div className="flex items-center gap-1 truncate text-[0.6875rem] leading-4 text-muted-foreground">
                         <IconFileCode className="size-3 shrink-0" />
                         <span className="truncate">
                           {node.anchor.filePath.split("/").pop()}

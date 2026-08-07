@@ -11,6 +11,7 @@ import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { updateTabs } from "@/interactions/tabs/adapters/tabs.store";
 import { openTab } from "@/interactions/tabs/functions/tabs.functions";
+import { requestCodeReveal } from "@/lib/code-reveal";
 import { CODE_HOME, hasFileViewer } from "../functions/plans-pane.functions";
 
 export function useOpenInEditor() {
@@ -32,6 +33,10 @@ export function useOpenInEditor() {
           ? { to: ".", search: (prev: object) => ({ ...prev, ...search }) }
           : { to: CODE_HOME, search }
       );
+      // The params alone cannot ask twice for the line they already name, so
+      // the reveal is requested outright — following the same link a second
+      // time has to scroll and flash exactly like the first.
+      if (line !== null) requestCodeReveal(filePath, line);
     },
     [navigate, pathname]
   );

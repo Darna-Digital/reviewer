@@ -7,7 +7,9 @@
  * none of that — arrow keys went to whatever the browser thought came next in
  * the document, which was a button in the file header.
  *
- * It hangs off the pointer rather than off the token, the way context menus do.
+ * It hangs off the pointer rather than off the token, the way context menus do,
+ * and is the context-menu root for the same reason — see there for what a
+ * pointer-anchored menu needs that a trigger-anchored one does not.
  */
 import {
   DropdownMenu,

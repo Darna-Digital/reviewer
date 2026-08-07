@@ -298,6 +298,35 @@ describe("the drawing and the notes", () => {
     expect(plansPaneSnapshot().selectedNodeId).toBe("quiet");
   });
 
+  it("selects the step from the summary line, not just the heading", async () => {
+    render(<Wired />);
+    await userEvent.click(notes().getByText("But it does do something"));
+    expect(plansPaneSnapshot().selectedNodeId).toBe("quiet");
+  });
+
+  /**
+   * The link does its own job and then lets the click carry on up to the row —
+   * following code should light up the step it came from, not leave the drawing
+   * pointing somewhere else.
+   */
+  it("both opens the file and selects the step from a code link", async () => {
+    const onOpenCode = vi.fn();
+    render(<Wired staleness={relocated} onOpenCode={onOpenCode} />);
+    await userEvent.click(notes().getByText("src/branch.ts:40"));
+    expect(onOpenCode).toHaveBeenCalledWith("src/branch.ts", 40);
+    expect(plansPaneSnapshot().selectedNodeId).toBe("svc");
+  });
+
+  it("keeps a note's own selection when the note is clicked", async () => {
+    render(<Wired />);
+    await userEvent.click(
+      notes().getByText("should this be disabled mid-rebase?")
+    );
+    // The row would otherwise overwrite this with the group's first note.
+    expect(plansPaneSnapshot().selectedAnnotationId).toBe("a-mine");
+    expect(plansPaneSnapshot().selectedNodeId).toBe("ui");
+  });
+
   it("shows a step's own file once, not again under its note", () => {
     render(<Wired staleness={relocated} />);
     // The note is anchored to the same line as its step, so the link belongs at

@@ -110,6 +110,7 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
+import { useCodeReveal } from "@/lib/code-reveal";
 import { openBottomTab, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
@@ -403,6 +404,25 @@ export function AppShell() {
     if (search.line === undefined || search.file === undefined) return;
     revealLine(search.line);
   }, [search.line, search.file]);
+
+  /**
+   * The same jump, asked for outright rather than through the URL. A surface
+   * pointing at the line already in the params leaves them untouched, so the
+   * effect above never re-runs; this one keys off the request counter instead
+   * and fires as soon as the file it names is the one on screen.
+   */
+  const revealRequest = useCodeReveal();
+  const revealed = useRef(0);
+  useEffect(() => {
+    if (revealRequest === null || revealRequest.key === revealed.current) {
+      return;
+    }
+    // Navigation lands a moment after the request, so it waits for its file
+    // rather than being spent against whatever was open at the time.
+    if (search.file !== revealRequest.path) return;
+    revealed.current = revealRequest.key;
+    revealLine(revealRequest.line);
+  }, [revealRequest, search.file]);
 
   // Show one file's past: the log filters down to it (following renames) and
   // the dock swings open on History.

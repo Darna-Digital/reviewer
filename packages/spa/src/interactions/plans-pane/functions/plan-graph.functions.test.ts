@@ -85,6 +85,25 @@ describe("groupByLane", () => {
   });
 });
 
+describe("NODE_HEIGHT", () => {
+  /**
+   * The box is drawn in a `foreignObject` of exactly this height, so anything
+   * taller is clipped rather than scrolled. It has to clear the tallest thing a
+   * box can hold — pill, label, and a two-line summary — which is what went
+   * wrong when the kind became a pill and the box stayed at its old height.
+   */
+  it("clears the tallest content a box can hold", () => {
+    const padding = 16;
+    const pill = 18;
+    const gaps = 4 * 2;
+    const label = 20;
+    const summary = 16 * 2;
+    expect(NODE_HEIGHT).toBeGreaterThanOrEqual(
+      padding + pill + gaps + label + summary
+    );
+  });
+});
+
 describe("layoutPlanGraph", () => {
   const layout = layoutPlanGraph(
     [
@@ -224,6 +243,9 @@ describe("routeEdge", () => {
   });
 });
 
+/** The room a label actually has between two lanes. */
+const GUTTER = COLUMN_GAP - 16;
+
 describe("fitLabel", () => {
   it("leaves a label that already fits alone", () => {
     expect(fitLabel("dispatch", 200)).toBe("dispatch");
@@ -237,8 +259,37 @@ describe("fitLabel", () => {
     expect(fitted.endsWith("…")).toBe(true);
   });
 
-  it("does not leave a space stranded before the ellipsis", () => {
+  it("does not leave a separator stranded before the ellipsis", () => {
     expect(fitLabel("one two three four", 40)).not.toContain(" …");
+    expect(fitLabel("stdout NDJSON -> delta event", GUTTER)).not.toContain(
+      "->…"
+    );
+  });
+
+  /**
+   * The labels are rendered as their author wrote them, so the only lever on how
+   * they read is where the ellipsis falls. Mid-token reads as damage; at a
+   * separator it reads as an abbreviation.
+   */
+  it("cuts at a token boundary rather than mid-word", () => {
+    expect(fitLabel("startChatTurn(repoPath, id, text, images)", GUTTER)).toBe(
+      "startChatTurn…"
+    );
+    expect(fitLabel("POST /api/chats/{id}/messages", GUTTER)).toBe(
+      "POST /api/chats…"
+    );
+    expect(fitLabel("applyChatEvent appends text", GUTTER)).toBe(
+      "applyChatEvent…"
+    );
+    expect(fitLabel("{event: delta} broadcast", GUTTER)).toBe(
+      "{event: delta}…"
+    );
+  });
+
+  it("cuts mid-token rather than lose most of the line to one", () => {
+    // The only boundary is right at the start, so honouring it would leave
+    // almost nothing — the hard cut keeps more of the label.
+    expect(fitLabel("a/verylongsingletokenindeed", 60)).toBe("a/verylong…");
   });
 
   it("always keeps a few characters, however little room there is", () => {

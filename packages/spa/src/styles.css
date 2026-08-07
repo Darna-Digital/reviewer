@@ -408,10 +408,7 @@
 }
 .plans-canvas {
   --plans-dot: color-mix(in oklab, var(--border) 70%, transparent);
-  background-image: radial-gradient(
-    var(--plans-dot) 1px,
-    transparent 1px
-  );
+  background-image: radial-gradient(var(--plans-dot) 1px, transparent 1px);
   background-size: 16px 16px;
   background-position: -1px -1px;
   cursor: grab;
@@ -426,6 +423,16 @@
 }
 .desktop.translucent .plan-node {
   background-color: var(--pane-translucent);
+}
+
+/* The outline below the drawing is a reading surface, so it takes the canvas
+   tone the editor uses rather than the pane's own: the pane is a true-black
+   sheet in the dark theme, which is right behind a dotted grid and far too deep
+   behind paragraphs of text. It also stays opaque with translucency on — the
+   grid can afford to show the desktop through it, body text cannot — so there
+   is deliberately no `.desktop.translucent` override here. */
+.plans-notes {
+  background-color: var(--canvas);
 }
 
 /* --- byconvo: agent brand marks ------------------------------------------- */

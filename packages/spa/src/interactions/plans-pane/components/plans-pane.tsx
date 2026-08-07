@@ -536,7 +536,7 @@ export function PlansPane() {
             onResize={(plansNotesHeight) => setUiPrefs({ plansNotesHeight })}
           />
           <div
-            className="min-h-0 shrink-0 overflow-y-auto border-t border-frame-border"
+            className="plans-notes min-h-0 shrink-0 overflow-y-auto border-t border-frame-border"
             style={{ height: prefs.plansNotesHeight }}
           >
             <PlanAnnotations

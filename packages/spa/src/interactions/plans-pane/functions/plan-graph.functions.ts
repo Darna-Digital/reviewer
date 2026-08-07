@@ -21,7 +21,23 @@ import type {
 } from "../interfaces/plans-pane.interfaces";
 
 export const NODE_WIDTH = 208;
-export const NODE_HEIGHT = 84;
+/**
+ * Tall enough for everything a box can hold: the kind pill, a line of label,
+ * and two lines of summary, plus its own padding.
+ *
+ * The box is drawn inside a `foreignObject` of exactly this height, which clips
+ * whatever does not fit — so this is not a suggestion. It is stated as the sum
+ * it has to cover, and the leading of each part is pinned in the component
+ * rather than inherited, so the arithmetic stays true.
+ */
+export const NODE_HEIGHT =
+  16 + // py-2
+  18 + // kind pill
+  4 + // gap-1
+  20 + // label, leading-5
+  4 + // gap-1
+  32 + // summary, two lines at leading-4
+  2; // a hair of slack for descenders
 /** Wide enough for an edge label to sit between two lanes without crowding. */
 export const COLUMN_GAP = 128;
 export const ROW_GAP = 28;
@@ -37,17 +53,48 @@ export const PADDING = 48;
 const LABEL_CHAR_WIDTH = 5.2;
 
 /**
- * A label clipped to the room it actually has.
+ * Where a label may be cut: the punctuation that separates one part of a call,
+ * path or phrase from the next.
+ */
+const TOKEN_BOUNDARY = /[\s/(.,:>-]/;
+/** Trailing separators look like a typo in front of an ellipsis. */
+const TRAILING_BOUNDARY = /[\s/(.,:>-]+$/;
+/**
+ * How much of the budget a boundary has to leave in place to be worth cutting
+ * at. Below this the label loses more than the tidiness is worth.
+ */
+const BOUNDARY_KEEP = 0.6;
+
+/**
+ * A label clipped to the room it actually has, cut at a token boundary.
  *
- * Edge labels are centred on the wire, so a label wider than the gap it sits in
- * spills over the boxes on both sides and collides with their text. Clipping
- * keeps the drawing readable; the full text is still available on the element
- * itself, so nothing is lost, only deferred to a hover.
+ * The text itself is never rewritten — a label says what its author wrote — but
+ * *where* it breaks is the renderer's business, and a break mid-token is what
+ * makes a perfectly good label look careless: `startChatTurn(repoPa…` reads as
+ * damage, `startChatTurn…` reads as an abbreviation. So the cut falls back to
+ * the last separator, unless that would throw away most of the line.
+ *
+ * The whole text stays on the element, so nothing is lost, only deferred to a
+ * hover.
  */
 export const fitLabel = (text: string, available: number): string => {
   const capacity = Math.max(6, Math.floor(available / LABEL_CHAR_WIDTH));
   if (text.length <= capacity) return text;
-  return `${text.slice(0, capacity - 1).trimEnd()}…`;
+
+  const budget = capacity - 1;
+  const head = text.slice(0, budget);
+  let boundary = -1;
+  for (let index = head.length - 1; index > 0; index -= 1) {
+    if (TOKEN_BOUNDARY.test(head[index])) {
+      boundary = index;
+      break;
+    }
+  }
+  const kept =
+    boundary >= Math.floor(budget * BOUNDARY_KEEP)
+      ? head.slice(0, boundary)
+      : head;
+  return `${kept.replace(TRAILING_BOUNDARY, "")}…`;
 };
 
 /** The room an edge label has between two lanes, minus a little breathing space. */

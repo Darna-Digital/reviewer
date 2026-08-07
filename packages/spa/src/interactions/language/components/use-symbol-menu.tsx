@@ -83,6 +83,68 @@ const lineNumberOf = (token: HTMLElement): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+/**
+ * Last resort if a release never arrives — the pointer leaving the window
+ * mid-press, say. Long enough that it can never beat a human finger to it.
+ */
+const RELEASE_FALLBACK_MS = 4000;
+
+/**
+ * Run `open` once the right-click that asked for the menu has finished.
+ *
+ * The menu hangs off the pointer, so mounting it during `contextmenu` puts it
+ * directly under the cursor — and the release that ends the very same click
+ * then lands *on the menu*. A context menu treats press-drag-release as a
+ * choice, so a hand that drifts a few pixels while pressing runs the first
+ * entry instead of opening the menu.
+ *
+ * The wait is therefore on the release *itself*, never on a timer: a button is
+ * held for as long as a hand holds it, and any grace period short enough to
+ * feel instant is also short enough to fire first and reopen the whole problem.
+ * The fallback below exists only for a release that never comes at all.
+ *
+ * Returns a canceller, so a view that unmounts mid-gesture does not open a menu
+ * into a torn-down tree.
+ */
+const whenGestureEnds = (
+  /** Whether a button is still down — false for a menu raised by keyboard. */
+  pointerHeld: boolean,
+  open: () => void
+): (() => void) => {
+  let done = false;
+  // A task later, so the rest of the gesture — `mouseup`, then `auxclick` — is
+  // delivered before the menu exists to receive any of it.
+  const openLater = () => window.setTimeout(open, 0);
+
+  if (!pointerHeld) {
+    const immediate = openLater();
+    return () => window.clearTimeout(immediate);
+  }
+
+  const releases = ["pointerup", "pointercancel", "blur"] as const;
+  const stopWaiting = () => {
+    window.clearTimeout(fallback);
+    for (const type of releases) {
+      window.removeEventListener(type, finish, true);
+    }
+  };
+
+  function finish() {
+    if (done) return;
+    done = true;
+    stopWaiting();
+    openLater();
+  }
+
+  const fallback = window.setTimeout(finish, RELEASE_FALLBACK_MS);
+  for (const type of releases) window.addEventListener(type, finish, true);
+
+  return () => {
+    done = true;
+    stopWaiting();
+  };
+};
+
 export function useSymbolMenu({
   editor,
   path,
@@ -99,6 +161,10 @@ export function useSymbolMenu({
 
   useEffect(() => {
     if (!enabled || editor === null) return;
+
+    // A menu waiting on a gesture that this view outlives would open into a
+    // tree that is no longer here.
+    let cancelOpen: (() => void) | null = null;
 
     const onContextMenu = (event: MouseEvent) => {
       const element = tokenFromEvent(event, getContainer());
@@ -123,10 +189,15 @@ export function useSymbolMenu({
       event.preventDefault();
       onOpen();
       const anchor = pointerAnchor(event.clientX, event.clientY);
-      // Held by identity so a slow answer for one symbol cannot land in the
-      // menu of the next one right-clicked.
-      const opened: MenuState = { anchor, token, actions: [] };
-      setState(opened);
+      // The fixes may answer before the menu is even mounted, so they are held
+      // here as well as pushed — whichever happens second finds the other.
+      const pending: { actions: ReadonlyArray<CodeActionItem> } = {
+        actions: [],
+      };
+      cancelOpen?.();
+      cancelOpen = whenGestureEnds(event.buttons !== 0, () =>
+        setState({ anchor, token, actions: pending.actions })
+      );
 
       const position = positionOfToken(token);
       void requestCodeActions(
@@ -134,13 +205,16 @@ export function useSymbolMenu({
         { start: position, end: position },
         editor.getState().file.contents
       )
-        .then((result) =>
+        .then((result) => {
+          pending.actions = result.actions;
+          // The anchor is this right-click's own, so a slow answer for one
+          // symbol cannot land in the menu of the next one opened.
           setState((current) =>
-            current === opened
+            current !== null && current.anchor === anchor
               ? { ...current, actions: result.actions }
               : current
-          )
-        )
+          );
+        })
         .catch(() => {});
     };
 
@@ -150,7 +224,10 @@ export function useSymbolMenu({
     // `tokenFromEvent` is what keeps the menu to the code — everywhere else in
     // the app keeps the browser's own menu.
     window.addEventListener("contextmenu", onContextMenu, true);
-    return () => window.removeEventListener("contextmenu", onContextMenu, true);
+    return () => {
+      cancelOpen?.();
+      window.removeEventListener("contextmenu", onContextMenu, true);
+    };
   }, [editor, enabled, getContainer, onOpen, path]);
 
   const applyAction = useCallback(

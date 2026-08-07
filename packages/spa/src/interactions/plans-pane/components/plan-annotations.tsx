@@ -30,7 +30,7 @@ import {
   sameTarget,
   statusLabel,
 } from "../functions/plans-pane.functions";
-import { KIND_TONE } from "./plan-node-tone";
+import { KIND_LABEL, KIND_PILL, KIND_PILL_SHAPE } from "./plan-node-tone";
 import type {
   AnnotationTarget,
   OutlineGroup,
@@ -60,10 +60,7 @@ function CodeLink({
           ? "text-destructive"
           : "text-muted-foreground hover:text-foreground"
       )}
-      onClick={(event) => {
-        event.stopPropagation();
-        onOpen();
-      }}
+      onClick={onOpen}
     >
       {broken ? (
         <IconAlertTriangle className="size-3.5 shrink-0" />
@@ -97,7 +94,10 @@ function Note({
   const mine = annotation.origin === "review";
   return (
     <div
-      onClick={onSelect}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSelect();
+      }}
       className={cn(
         "flex flex-col gap-1",
         mine && "rounded-lg bg-elevate p-2 pl-2.5"
@@ -171,17 +171,20 @@ function Group({
     <li
       ref={row}
       className={cn(
-        "flex flex-col gap-1.5 px-3 py-2.5",
         // The lightest thing that separates siblings: a hairline, not a card.
         "border-t border-frame-border first:border-t-0",
         selected && "bg-elevate"
       )}
     >
+      {/* The whole row is the target, not just its heading: everything in here
+          is about one step, so anywhere in it should light that step up on the
+          drawing. The parts that do something of their own — a file link, the
+          remove button — do it and then let the click carry on up to here. */}
       <div
         role="button"
         tabIndex={0}
         aria-pressed={selected}
-        className="flex w-full cursor-default items-center gap-1.5"
+        className="flex w-full cursor-default flex-col gap-1.5 px-3 py-2.5 text-left"
         onClick={pick}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -190,71 +193,68 @@ function Group({
           }
         }}
       >
-        {group.kind === null ? (
-          <div className="text-[0.625rem] font-medium tracking-wide text-muted-foreground uppercase">
-            On the analysis
-          </div>
-        ) : (
-          <>
-            <div
-              className={cn(
-                "shrink-0 text-[0.625rem] font-medium tracking-wide uppercase",
-                KIND_TONE[group.kind]
-              )}
-            >
-              {group.kind}
+        <div className="flex items-center gap-1.5">
+          {group.kind === null ? (
+            <div className="text-[0.8125rem] font-medium text-muted-foreground">
+              On the analysis
             </div>
-            <div className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium">
-              {group.label}
+          ) : (
+            <>
+              <div className={cn(KIND_PILL_SHAPE, KIND_PILL[group.kind])}>
+                {KIND_LABEL[group.kind]}
+              </div>
+              <div className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium">
+                {group.label}
+              </div>
+            </>
+          )}
+          {group.annotations.length > 0 && (
+            <div className="shrink-0 text-[0.6875rem] text-muted-foreground tabular-nums">
+              {group.annotations.length}
             </div>
-          </>
+          )}
+        </div>
+
+        {/* A step nobody wrote about still says what it does, so the row earns
+          its place rather than reading as an empty heading. */}
+        {group.annotations.length === 0 && group.summary !== "" && (
+          <p className="text-[0.8125rem] leading-5 text-pretty text-muted-foreground">
+            {group.summary}
+          </p>
         )}
+
+        {step !== null && (
+          <CodeLink
+            target={step}
+            onOpen={() => onOpenCode(step.filePath, step.line)}
+          />
+        )}
+
         {group.annotations.length > 0 && (
-          <div className="shrink-0 text-[0.6875rem] text-muted-foreground tabular-nums">
-            {group.annotations.length}
+          <div className="flex flex-col gap-2">
+            {group.annotations.map((annotation) => {
+              const target = annotationTarget(annotation, staleness);
+              return (
+                <Note
+                  key={annotation.id}
+                  annotation={annotation}
+                  // The step's own link is already at the head of the group.
+                  target={sameTarget(target, step) ? null : target}
+                  onSelect={() => onSelect(annotation.id)}
+                  onOpen={() =>
+                    target !== null && onOpenCode(target.filePath, target.line)
+                  }
+                  onRemove={
+                    annotation.origin === "review"
+                      ? () => onRemove(annotation.id)
+                      : null
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </div>
-
-      {/* A step nobody wrote about still says what it does, so the row earns
-          its place rather than reading as an empty heading. */}
-      {group.annotations.length === 0 && group.summary !== "" && (
-        <p className="text-[0.8125rem] leading-5 text-pretty text-muted-foreground">
-          {group.summary}
-        </p>
-      )}
-
-      {step !== null && (
-        <CodeLink
-          target={step}
-          onOpen={() => onOpenCode(step.filePath, step.line)}
-        />
-      )}
-
-      {group.annotations.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {group.annotations.map((annotation) => {
-            const target = annotationTarget(annotation, staleness);
-            return (
-              <Note
-                key={annotation.id}
-                annotation={annotation}
-                // The step's own link is already at the head of the group.
-                target={sameTarget(target, step) ? null : target}
-                onSelect={() => onSelect(annotation.id)}
-                onOpen={() =>
-                  target !== null && onOpenCode(target.filePath, target.line)
-                }
-                onRemove={
-                  annotation.origin === "review"
-                    ? () => onRemove(annotation.id)
-                    : null
-                }
-              />
-            );
-          })}
-        </div>
-      )}
     </li>
   );
 }
