@@ -131,7 +131,10 @@ export function ChatsPage() {
     />
   );
 
-  const showList = !expanded && prefs.sidebarVisible;
+  // Starting a thread gets the whole pane: there is nothing to pick from a list
+  // yet, and the composer is the only thing on screen worth looking at.
+  const composing = chatId === undefined;
+  const showList = !composing && !expanded && prefs.sidebarVisible;
 
   return (
     <div className="flex h-full min-h-0">

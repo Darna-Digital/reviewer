@@ -14,7 +14,8 @@ import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
 import { MockInboxPopover } from "@/interactions/inbox/components/mock-inbox-popover";
 import { ModeRail } from "@/components/layout/mode-rail";
-import { ModeSelector } from "@/components/layout/mode-selector";
+// Only code mode is offered for now, so the mode chip stays parked.
+// import { ModeSelector } from "@/components/layout/mode-selector";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { RepoPicker } from "@/components/repo-picker";
@@ -81,7 +82,7 @@ export function WorkspaceShell() {
               active={pathname.startsWith("/modes/collaboration/inbox")}
             />
           )}
-          <ModeSelector />
+          {/* <ModeSelector /> */}
           {collaborating && (
             <>
               <WorkspacePicker />

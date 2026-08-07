@@ -6,18 +6,12 @@
  * the browser's own tabs, its back button, its chrome — so WindowFrame does not
  * render this there. Empty regions drag the window; every control opts back out.
  */
-import {
-  IconArrowLeft,
-  IconArrowRight,
-  IconPlus,
-  IconX,
-} from "@tabler/icons-react";
-import {
-  useCanGoBack,
-  useRouter,
-  useRouterState,
-} from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+// The history arrows are parked for now, along with the icons they wore.
+// import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
+import { IconPlus, IconX } from "@tabler/icons-react";
+// import { useCanGoBack } from "@tanstack/react-router";
+import { useRouter, useRouterState } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -31,16 +25,23 @@ import {
   windowTabsSnapshot,
 } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import {
+  chatIdOf,
   closeTab,
-  HOME_HREF,
+  isPinnedTab,
   moveTab,
+  NEW_SESSION_HREF,
+  NEW_SESSION_TITLE,
   openTab,
+  renameTab,
   selectTab,
   tabAtPosition,
-  tabTitle,
   trackLocation,
 } from "@/interactions/window-tabs/functions/window-tabs.functions";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
+import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
+import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
+import { useChats } from "@/lib/queries";
+import { useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
 const NO_DRAG = "[-webkit-app-region:no-drag]";
@@ -79,7 +80,7 @@ function BarButton({
 
 export function WindowBar() {
   const router = useRouter();
-  const canGoBack = useCanGoBack();
+  // const canGoBack = useCanGoBack();
   const location = useRouterState({ select: (s) => s.location });
   const { tabs, activeId } = useWindowTabs();
   /**
@@ -96,18 +97,63 @@ export function WindowBar() {
 
   const go = (href: string) => void router.navigate({ href });
 
-  // The active tab is wherever the window currently is, however it got there.
+  // Whichever tab owns the window's location is the active one, however the
+  // window got there.
   useEffect(() => {
     updateWindowTabs((state) =>
-      trackLocation(state, location.href, tabTitle(location.pathname))
+      trackLocation(state, location.href, location.pathname)
     );
   }, [location.href, location.pathname]);
 
-  const open = (href: string) => {
+  const chats = useChats();
+
+  /**
+   * Threads touched since the inbox was last looked at. A session tab wears the
+   * dot for its own conversation and Sessions for any of them, so a thread that
+   * moves while you are elsewhere in the strip says so without being opened.
+   */
+  const seenAt = useUiPrefs().inboxSeenAt;
+  const unread = useMemo(
+    () =>
+      new Set(
+        (chats.data ?? [])
+          .filter((chat) => isChatUnread(chat, seenAt))
+          .map((chat) => chat.id)
+      ),
+    [chats.data, seenAt]
+  );
+  const waiting = (tab: WindowTab): boolean => {
+    if (tab.kind === "sessions") return unread.size > 0;
+    if (tab.kind !== "session") return false;
+    const chatId = chatIdOf(tab.href);
+    return chatId !== null && unread.has(chatId);
+  };
+
+  // A session tab is minted before its conversation exists, so it takes the
+  // chat's name once the list has one to give.
+  useEffect(() => {
+    const summaries = chats.data;
+    if (summaries === undefined) return;
     updateWindowTabs((state) =>
-      openTab(state, { id: nextTabId(), href, title: tabTitle(href) })
+      state.tabs.reduce((next, tab) => {
+        if (tab.kind !== "session") return next;
+        const chatId = chatIdOf(tab.href);
+        const title = summaries.find((chat) => chat.id === chatId)?.title;
+        return title === undefined ? next : renameTab(next, tab.id, title);
+      }, state)
     );
-    go(href);
+  }, [chats.data]);
+
+  const openSession = () => {
+    updateWindowTabs((state) =>
+      openTab(state, {
+        id: nextTabId(),
+        href: NEW_SESSION_HREF,
+        title: NEW_SESSION_TITLE,
+        kind: "session",
+      })
+    );
+    go(NEW_SESSION_HREF);
   };
 
   const close = (id: string) => {
@@ -150,7 +196,7 @@ export function WindowBar() {
       )}
     >
       <SidebarToggle className={NO_DRAG} />
-      <BarButton
+      {/* <BarButton
         label="Back"
         disabled={!canGoBack}
         onClick={() => router.history.back()}
@@ -159,7 +205,7 @@ export function WindowBar() {
       </BarButton>
       <BarButton label="Forward" onClick={() => router.history.forward()}>
         <IconArrowRight className="size-5" />
-      </BarButton>
+      </BarButton> */}
 
       <div
         role="tablist"
@@ -171,6 +217,7 @@ export function WindowBar() {
       >
         {tabs.map((tab, index) => {
           const active = tab.id === activeId;
+          const pinned = isPinnedTab(tab);
           return (
             <div
               key={tab.id}
@@ -178,9 +225,11 @@ export function WindowBar() {
               aria-selected={active}
               tabIndex={active ? 0 : -1}
               title={tab.title}
-              draggable
+              draggable={!pinned}
               className={cn(
-                "group/tab flex h-8 max-w-52 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-lg pr-1.5 pl-3 text-[0.8125rem] transition-colors",
+                "group/tab flex h-8 max-w-52 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-lg pl-3 text-[0.8125rem] transition-colors",
+                // Without a ✕ to sit in it, the trailing padding matches the lead.
+                pinned ? "pr-3" : "pr-1.5",
                 active
                   ? "bg-elevate-strong text-foreground"
                   : "text-muted-foreground hover:bg-elevate",
@@ -211,7 +260,7 @@ export function WindowBar() {
               }}
               onClick={(event) => {
                 // Shift-click closes, so a tab can go without aiming for its ✕.
-                if (event.shiftKey) {
+                if (event.shiftKey && !pinned) {
                   event.preventDefault();
                   close(tab.id);
                   return;
@@ -220,7 +269,7 @@ export function WindowBar() {
                 if (!active) go(tab.href);
               }}
               onAuxClick={(event) => {
-                if (event.button === 1) {
+                if (event.button === 1 && !pinned) {
                   event.preventDefault();
                   close(tab.id);
                 }
@@ -232,29 +281,36 @@ export function WindowBar() {
                 }
               }}
             >
+              {waiting(tab) && (
+                <span
+                  aria-label="Waiting"
+                  className="size-1.5 shrink-0 rounded-full bg-sky-500"
+                />
+              )}
               <span className="truncate">{tab.title}</span>
-              <button
-                type="button"
-                aria-label={`Close ${tab.title}`}
-                className={cn(
-                  "shrink-0 rounded p-0.5 hover:bg-elevate-strong",
-                  active
-                    ? "opacity-70"
-                    : "opacity-0 group-hover/tab:opacity-70",
-                  tabs.length === 1 && "invisible"
-                )}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  close(tab.id);
-                }}
-              >
-                <IconX className="size-3.5" />
-              </button>
+              {!pinned && (
+                <button
+                  type="button"
+                  aria-label={`Close ${tab.title}`}
+                  className={cn(
+                    "shrink-0 rounded p-0.5 hover:bg-elevate-strong",
+                    active
+                      ? "opacity-70"
+                      : "opacity-0 group-hover/tab:opacity-70"
+                  )}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    close(tab.id);
+                  }}
+                >
+                  <IconX className="size-3.5" />
+                </button>
+              )}
             </div>
           );
         })}
       </div>
-      <BarButton label="New tab" onClick={() => open(HOME_HREF)}>
+      <BarButton label="New session" onClick={openSession}>
         <IconPlus className="size-5" />
       </BarButton>
       <div className="flex-1" />

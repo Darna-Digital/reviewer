@@ -7,31 +7,128 @@ import type {
   WindowTabsState,
 } from "../interfaces/window-tabs.interfaces";
 
-/** The strip is never empty: a window always shows something. */
-export const initialWindowTabs = (tab: WindowTab): WindowTabsState => ({
-  tabs: [tab],
-  activeId: tab.id,
+export const PROJECT_TAB_ID = "pinned-project";
+export const SESSIONS_TAB_ID = "pinned-sessions";
+
+export const HOME_HREF = "/modes/code/commit";
+export const SESSIONS_HREF = "/modes/code/chats";
+/** `?new` holds the composer open instead of resuming the latest chat. */
+export const NEW_SESSION_HREF = "/modes/code/chats?new=true";
+
+const SESSIONS_PREFIX = "/modes/code/chats";
+
+const TITLES: ReadonlyArray<readonly [string, string]> = [
+  ["/modes/code/browse", "Project"],
+  ["/modes/code/commit", "Local changes"],
+  ["/modes/code/review", "Pull requests"],
+  ["/modes/code/comments", "Comments"],
+  ["/modes/code/docs", "Docs"],
+  ["/modes/code/tasks", "Tasks"],
+  ["/modes/collaboration/inbox", "Inbox"],
+  ["/modes/collaboration", "Collaboration"],
+  ["/settings", "Settings"],
+];
+
+/** What a location calls itself in the strip. */
+export function tabTitle(pathname: string): string {
+  return (
+    TITLES.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? "Byconvo"
+  );
+}
+
+const PINNED_TABS: ReadonlyArray<WindowTab> = [
+  {
+    id: PROJECT_TAB_ID,
+    href: HOME_HREF,
+    title: tabTitle(HOME_HREF),
+    kind: "project",
+  },
+  {
+    id: SESSIONS_TAB_ID,
+    href: SESSIONS_HREF,
+    title: "Sessions",
+    kind: "sessions",
+  },
+];
+
+export const isPinnedTab = (tab: WindowTab): boolean => tab.kind !== "session";
+
+/** Pinned tabs always lead the strip, so their count is also the first slot a
+ * session tab may take. */
+const firstSessionSlot = (tabs: ReadonlyArray<WindowTab>): number =>
+  tabs.filter(isPinnedTab).length;
+
+const inSessions = (pathname: string): boolean =>
+  pathname.startsWith(SESSIONS_PREFIX);
+
+/** The strip a window opens with: the pinned pair, on Project. */
+export const initialWindowTabs = (): WindowTabsState => ({
+  tabs: PINNED_TABS,
+  activeId: PROJECT_TAB_ID,
 });
+
+/**
+ * Restore the pinned pair at the head of a strip, each keeping where it was
+ * left, and drop anything that is neither pinned nor a session.
+ */
+export function withPinnedTabs(
+  tabs: ReadonlyArray<WindowTab>
+): ReadonlyArray<WindowTab> {
+  const pinned = PINNED_TABS.map((tab) => {
+    const saved = tabs.find((candidate) => candidate.id === tab.id);
+    return saved === undefined
+      ? tab
+      : { ...tab, href: saved.href, title: saved.title };
+  });
+  return [...pinned, ...tabs.filter((tab) => tab.kind === "session")];
+}
 
 export const activeTab = (state: WindowTabsState): WindowTab | null =>
   state.tabs.find((tab) => tab.id === state.activeId) ?? null;
 
 /**
- * The active tab follows navigation. A no-op when it already points there, so
- * an unrelated re-render never rewrites the strip.
+ * Where a location belongs. A session tab holds one conversation, so it keeps
+ * anything inside Sessions; everything else lands on the pinned tab that owns
+ * that half of the app, whichever tab you set off from — leaving Sessions from
+ * a chat hands the window back to Project rather than overwriting the chat.
+ */
+function tabForLocation(
+  state: WindowTabsState,
+  pathname: string
+): WindowTab | null {
+  const current = activeTab(state);
+  const sessions = inSessions(pathname);
+  if (current !== null && current.kind === "session" && sessions)
+    return current;
+  const owner = sessions ? SESSIONS_TAB_ID : PROJECT_TAB_ID;
+  return state.tabs.find((tab) => tab.id === owner) ?? current;
+}
+
+/**
+ * Follow navigation: the owning tab takes the window and remembers where it was
+ * left. A no-op when it is already active and points there, so an unrelated
+ * re-render never rewrites the strip. The project tab is named after the
+ * surface it is on; Sessions and its conversations carry their own names.
  */
 export function trackLocation(
   state: WindowTabsState,
   href: string,
-  title: string
+  pathname: string
 ): WindowTabsState {
-  const current = activeTab(state);
-  if (current === null) return state;
-  if (current.href === href && current.title === title) return state;
+  const target = tabForLocation(state, pathname);
+  if (target === null) return state;
+  const title = target.kind === "project" ? tabTitle(pathname) : target.title;
+  if (
+    target.id === state.activeId &&
+    target.href === href &&
+    target.title === title
+  ) {
+    return state;
+  }
   return {
-    ...state,
+    activeId: target.id,
     tabs: state.tabs.map((tab) =>
-      tab.id === state.activeId ? { ...tab, href, title } : tab
+      tab.id === target.id ? { ...tab, href, title } : tab
     ),
   };
 }
@@ -41,9 +138,10 @@ export function openTab(
   state: WindowTabsState,
   tab: WindowTab
 ): WindowTabsState {
-  const at = state.tabs.findIndex((existing) => existing.id === state.activeId);
+  const after =
+    state.tabs.findIndex((existing) => existing.id === state.activeId) + 1;
   const tabs = [...state.tabs];
-  tabs.splice(at < 0 ? tabs.length : at + 1, 0, tab);
+  tabs.splice(Math.max(after, firstSessionSlot(state.tabs)), 0, tab);
   return { tabs, activeId: tab.id };
 }
 
@@ -53,30 +151,48 @@ export function selectTab(state: WindowTabsState, id: string): WindowTabsState {
   return { ...state, activeId: id };
 }
 
-/**
- * Close a tab. Closing the active one hands the window to its right-hand
- * neighbour (the left-hand one at the end of the strip); closing the last tab
- * leaves it, since the window still has to show something.
- */
-export function closeTab(state: WindowTabsState, id: string): WindowTabsState {
-  if (state.tabs.length <= 1) return state;
-  const at = state.tabs.findIndex((tab) => tab.id === id);
-  if (at < 0) return state;
-  const tabs = state.tabs.filter((tab) => tab.id !== id);
-  if (id !== state.activeId) return { ...state, tabs };
-  const next = tabs[Math.min(at, tabs.length - 1)];
-  return { tabs, activeId: next.id };
+/** Name a session tab after its conversation, once the chat list knows it. */
+export function renameTab(
+  state: WindowTabsState,
+  id: string,
+  title: string
+): WindowTabsState {
+  const tab = state.tabs.find((candidate) => candidate.id === id);
+  if (tab === undefined || tab.title === title) return state;
+  return {
+    ...state,
+    tabs: state.tabs.map((candidate) =>
+      candidate.id === id ? { ...candidate, title } : candidate
+    ),
+  };
 }
 
-/** Drop a tab at `toIndex`, sliding the ones it passes over out of its way. */
+/**
+ * Close a session tab. Closing the active one hands the window to its
+ * right-hand neighbour (the left-hand one at the end of the strip). The pinned
+ * pair does not close, so the strip is never empty.
+ */
+export function closeTab(state: WindowTabsState, id: string): WindowTabsState {
+  const at = state.tabs.findIndex((tab) => tab.id === id);
+  if (at < 0 || isPinnedTab(state.tabs[at])) return state;
+  const tabs = state.tabs.filter((tab) => tab.id !== id);
+  if (id !== state.activeId) return { ...state, tabs };
+  return { tabs, activeId: tabs[Math.min(at, tabs.length - 1)].id };
+}
+
+/** Drop a session tab at `toIndex`, sliding the ones it passes over out of its
+ * way. Pinned tabs neither move nor give up their slots. */
 export function moveTab(
   state: WindowTabsState,
   id: string,
   toIndex: number
 ): WindowTabsState {
   const from = state.tabs.findIndex((tab) => tab.id === id);
-  if (from < 0) return state;
-  const to = Math.max(0, Math.min(toIndex, state.tabs.length - 1));
+  if (from < 0 || isPinnedTab(state.tabs[from])) return state;
+  const to = Math.max(
+    firstSessionSlot(state.tabs),
+    Math.min(toIndex, state.tabs.length - 1)
+  );
   if (from === to) return state;
   const tabs = [...state.tabs];
   const [moved] = tabs.splice(from, 1);
@@ -96,24 +212,12 @@ export function tabAtPosition(
   return tabs[index] ?? null;
 }
 
-const TITLES: ReadonlyArray<readonly [string, string]> = [
-  ["/modes/code/browse", "Project"],
-  ["/modes/code/commit", "Local changes"],
-  ["/modes/code/review", "Pull requests"],
-  ["/modes/code/comments", "Comments"],
-  ["/modes/code/chats", "Inbox"],
-  ["/modes/code/docs", "Docs"],
-  ["/modes/code/tasks", "Tasks"],
-  ["/modes/collaboration/inbox", "Inbox"],
-  ["/modes/collaboration", "Collaboration"],
-  ["/settings", "Settings"],
-];
+const CHAT_HREF = /^\/modes\/code\/chats\/([^/?#]+)/;
 
-export const HOME_HREF = "/modes/code/commit";
-
-/** What a location calls itself in the strip. */
-export function tabTitle(pathname: string): string {
-  return (
-    TITLES.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? "Byconvo"
-  );
+/** The conversation a session tab is showing, if it has got one yet. */
+export function chatIdOf(href: string): string | null {
+  return CHAT_HREF.exec(href)?.[1] ?? null;
 }
+
+/** What a session tab is called before its conversation has a name. */
+export const NEW_SESSION_TITLE = "New session";

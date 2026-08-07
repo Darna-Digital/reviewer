@@ -1,12 +1,14 @@
 /**
  * `window-tabs` feature — the browser-style strip in the window's title bar.
  *
- * A window tab is a place in the app you are keeping open: a mode surface, a
- * chat, the inbox. Unlike the editor's file strip it is not scoped to a
- * repository and it carries no preview slot — every tab was opened on purpose,
- * and the only one that moves is the active one, which follows navigation the
- * way a browser tab follows the address bar.
+ * The strip leads with two pinned tabs: Project, which follows the git surfaces
+ * the way a browser tab follows the address bar, and Sessions, the agent
+ * conversations. Neither closes, so the window always has somewhere to be.
+ * Behind them sit the session tabs `+` opens — one chat each, closable and
+ * reorderable, and unlike the editor's file strip never a preview slot.
  */
+
+export type WindowTabKind = "project" | "sessions" | "session";
 
 export interface WindowTab {
   /** Stable across navigation, so a tab keeps its slot as its href changes. */
@@ -14,6 +16,7 @@ export interface WindowTab {
   /** The location the tab shows — path plus search. */
   readonly href: string;
   readonly title: string;
+  readonly kind: WindowTabKind;
 }
 
 export interface WindowTabsState {

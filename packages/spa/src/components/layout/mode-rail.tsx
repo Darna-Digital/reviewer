@@ -1,9 +1,9 @@
 /**
- * ModeRail — code mode's left rail: the inbox (the repo's agent threads) on
- * top, then the git surfaces and the bottom dock's toggles. Collaboration mode
- * has no rail — its sidebar carries the equivalent. It reads the active surface from the route, so the
- * shells render it prop-free. The window's own chrome (traffic lights, tabs)
- * sits above it in the WindowFrame, so the rail starts at the content edge.
+ * ModeRail — code mode's left rail: the git surfaces on top, then the bottom
+ * dock's toggles. Collaboration mode has no rail — its sidebar carries the
+ * equivalent. It reads the active surface from the route, so the shells render
+ * it prop-free. The window's own chrome (traffic lights, tabs) sits above it in
+ * the WindowFrame, so the rail starts at the content edge.
  */
 import {
   IconFolders,
@@ -22,7 +22,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ChatsInboxPopover } from "@/interactions/chats/components/chats-inbox-popover";
+// The Sessions tab is the way into the threads now, so the rail's inbox is parked.
+// import { ChatsInboxPopover } from "@/interactions/chats/components/chats-inbox-popover";
 import { cn } from "@/lib/utils";
 import { useRepo } from "@/lib/queries";
 import {
@@ -42,7 +43,7 @@ interface RailLink {
 }
 
 /** Code mode's inbox is the repo's agent threads. */
-const INBOX_MATCH = "/modes/code/chats";
+// const INBOX_MATCH = "/modes/code/chats";
 
 const REVIEW_LINKS: RailLink[] = [
   {
@@ -146,23 +147,14 @@ export function ModeRail() {
   );
 
   return (
-    <nav className="relative flex h-full w-12 shrink-0 flex-col items-center pb-2">
+    <nav className="relative flex h-full w-12 shrink-0 flex-col items-center py-2">
       {/* The rail's right edge is drawn over its last pixel column rather than
           as a `border-r`, which would take that pixel out of the content box
           and centre every icon half a pixel left of where the toolbar's own
-          `px-2` puts them — the inbox visibly stepping sideways on the way in
+          `px-2` puts them — the icons visibly stepping sideways on the way in
           and out of collaboration mode, which has no rail. */}
       <div className="absolute top-0 right-0 h-full w-px bg-border" />
-      {/* The inbox shares its row with the toolbar's repo picker, and the rule
-          below it continues the panel's top border, which the two meet at the
-          rail's edge. It is a sibling rather than a `border-b`: the panel's
-          border sits *under* its own 44px header, so a border inside this row
-          would draw one pixel high and the line would step at the seam. */}
-      <div className="flex h-11 w-full shrink-0 items-center justify-center">
-        <ChatsInboxPopover active={pathname.startsWith(INBOX_MATCH)} />
-      </div>
-      <div className="h-px w-full shrink-0 bg-border" />
-      <div className="flex w-full flex-1 flex-col items-center gap-1 pt-2">
+      <div className="flex w-full flex-1 flex-col items-center gap-1">
         {GIT_LINKS.filter((l) => l.github !== true || hasGitHub).map(
           renderLink
         )}

@@ -7,12 +7,13 @@
  */
 import { useSyncExternalStore } from "react";
 import {
-  HOME_HREF,
   initialWindowTabs,
-  tabTitle,
+  NEW_SESSION_TITLE,
+  withPinnedTabs,
 } from "../functions/window-tabs.functions";
 import type {
   WindowTab,
+  WindowTabKind,
   WindowTabsState,
 } from "../interfaces/window-tabs.interfaces";
 
@@ -21,27 +22,31 @@ const STORE_KEY = "byconvo-window-tabs";
 let sequence = 0;
 export const nextTabId = (): string => `tab-${(sequence += 1)}`;
 
+const KINDS: ReadonlyArray<WindowTabKind> = ["project", "sessions", "session"];
+
+// A strip written before the pinned pair existed carries no `kind`, so every
+// tab in it fails here and the restore falls back to a fresh pinned strip.
 const isTab = (value: unknown): value is WindowTab =>
   typeof value === "object" &&
   value !== null &&
   typeof (value as WindowTab).id === "string" &&
-  typeof (value as WindowTab).href === "string";
-
-const fresh = (href = HOME_HREF): WindowTabsState =>
-  initialWindowTabs({ id: nextTabId(), href, title: tabTitle(href) });
+  typeof (value as WindowTab).href === "string" &&
+  KINDS.includes((value as WindowTab).kind);
 
 function load(): WindowTabsState {
-  if (typeof window === "undefined") return fresh();
+  if (typeof window === "undefined") return initialWindowTabs();
   try {
     const raw = window.localStorage.getItem(STORE_KEY);
-    if (raw === null) return fresh();
+    if (raw === null) return initialWindowTabs();
     const parsed = JSON.parse(raw) as Partial<WindowTabsState>;
-    const tabs = (parsed.tabs ?? []).filter(isTab).map((tab) => ({
-      id: tab.id,
-      href: tab.href,
-      title: typeof tab.title === "string" ? tab.title : tabTitle(tab.href),
-    }));
-    if (tabs.length === 0) return fresh();
+    const tabs = withPinnedTabs(
+      (parsed.tabs ?? []).filter(isTab).map((tab) => ({
+        id: tab.id,
+        href: tab.href,
+        title: typeof tab.title === "string" ? tab.title : NEW_SESSION_TITLE,
+        kind: tab.kind,
+      }))
+    );
     // Restored ids must not collide with ones minted this session, and a strip
     // that has had tabs closed is not numbered contiguously.
     sequence = tabs.reduce(
@@ -55,7 +60,7 @@ function load(): WindowTabsState {
         : tabs[0].id;
     return { tabs, activeId };
   } catch {
-    return fresh();
+    return initialWindowTabs();
   }
 }
 

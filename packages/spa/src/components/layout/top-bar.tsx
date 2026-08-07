@@ -1,5 +1,6 @@
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
-import { ModeSelector } from "@/components/layout/mode-selector";
+// Only code mode is offered for now, so the mode chip stays parked.
+// import { ModeSelector } from "@/components/layout/mode-selector";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { RepoPicker } from "@/components/repo-picker";
@@ -51,7 +52,7 @@ export function TopBar(props: TopBarProps) {
     <header className="flex h-11 shrink-0 items-center gap-2 px-2">
       {/* In the native shell the window bar above carries this. */}
       {!isDesktop && <SidebarToggle />}
-      <ModeSelector />
+      {/* <ModeSelector /> */}
 
       {/* Repo chip — opens the recents + folder-browser dropdown */}
       <RepoPicker
