@@ -1,5 +1,5 @@
 /**
- * Shared Prettier config for bemybond.com packages.
+ * Shared Prettier config for byconvo.com packages.
  *
  * Import and spread into a package's `prettier.config.js` to extend with
  * package-specific options (e.g. plugins):

@@ -3,7 +3,7 @@
 import { tanstackConfig } from "@tanstack/eslint-config";
 
 /**
- * Shared ESLint flat config for bemybond.com packages.
+ * Shared ESLint flat config for byconvo.com packages.
  *
  * Spread this into a package's `eslint.config.js` and append any
  * package-specific overrides or `ignores` after it:
