@@ -2,14 +2,16 @@
  * SearchHost — mounts the search dialog and its keyboard gestures for a shell,
  * so ⌘K, ⇧⇧ and ⌘⇧F work on every code-mode page rather than only on the ones
  * that show a diff. What it offers is assembled here: the code-mode commands,
- * whatever the mounted pages registered, and the repository's file list.
+ * whatever the mounted pages registered, the repository's file list, and its
+ * branches for the checkout list.
  *
  * A result opens where it can be read — in place when the page already shows
  * files, otherwise on the local-changes page.
  */
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useMemo } from "react";
-import { useFiles } from "@/lib/queries";
+import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
+import { useBranches, useFiles, useRemoteBranches } from "@/lib/queries";
 import { useCodeCommands } from "../adapters/code-commands.hook.adapter";
 import {
   openSearch,
@@ -23,6 +25,7 @@ import {
   FILE_FALLBACK_ROUTE,
   opensFileInPlace,
 } from "../functions/navigation.functions";
+import { branchChoices } from "../functions/palette.functions";
 import { SearchDialog } from "./search-dialog";
 import { SearchShortcuts } from "./search-shortcuts";
 
@@ -38,10 +41,18 @@ export function SearchHost() {
   const codeCommands = useCodeCommands();
   const pageCommands = useRegisteredCommands();
   const files = useFiles();
+  const local = useBranches();
+  const remote = useRemoteBranches();
+  const git = useGitActions();
 
   const commands = useMemo(
     () => [...codeCommands, ...pageCommands],
     [codeCommands, pageCommands]
+  );
+
+  const branches = useMemo(
+    () => branchChoices(local.data ?? [], remote.data ?? []),
+    [local.data, remote.data]
   );
 
   const show = (location: FileLocation) => {
@@ -72,8 +83,10 @@ export function SearchHost() {
         onModeChange={setSearchMode}
         commands={commands}
         files={files.data?.paths ?? []}
+        branches={branches}
         onOpenFile={(file) => show({ file })}
         onOpenLocation={(file, line) => show({ file, line })}
+        onCheckout={(ref) => void git.checkout(ref)}
       />
     </>
   );

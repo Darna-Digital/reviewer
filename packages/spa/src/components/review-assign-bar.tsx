@@ -1,21 +1,22 @@
 /**
- * ReviewAssignBar — a Figma-style floating bottom bar that appears while you have
- * local review comments (left in the commit/PR diff or a code view). It lets you
- * pick a target and hand the comments off: either start a fresh chat with a chosen
+ * ReviewAssignBar — a floating bottom bar that appears while you have local
+ * review comments (left in the commit/PR diff or a code view). It lets you pick
+ * a target and hand the comments off: either start a fresh chat with a chosen
  * agent, or attach them to an existing session (chat) picked from a searchable
- * dropdown. Dismissable; it re-appears when you leave more.
+ * dropdown. Collapsing it parks a count chip against the right edge of whatever
+ * it floats over; the bar comes back from that chip, and on its own whenever a
+ * new comment is left.
  */
 import {
   IconChevronDown,
   IconGitBranch,
+  IconMessage,
   IconSearch,
   IconX,
 } from "@tabler/icons-react";
-import { Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { agentIcon } from "@/interactions/threads/components/agent-icons";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AgentGlyph } from "@/interactions/threads/components/agent-mark";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -31,6 +32,12 @@ import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignme
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents";
 import type { ChatProviderKind, ChatSummary } from "@byconvo/core/chats";
 import { timeAgo } from "@/lib/relative-time";
+import {
+  ELEVATION,
+  POPUP_SHADOW,
+  SurfaceProvider,
+  useElevation,
+} from "@/lib/surface-context";
 import { cn } from "@/lib/utils";
 
 /** Agent CLIs that can be assigned to chat flows (excludes the plain shell). */
@@ -48,42 +55,63 @@ const CommentCount = ({ count }: { count: number }) => (
   </>
 );
 
+/**
+ * One comment as the bar lists it: where it was left and what it says. Callers
+ * flatten their own comment shape to this — a diff comment names a file and
+ * line, a visual one names the element it was drawn on and has no line.
+ */
+export interface AssignBarComment {
+  id: string;
+  file: string;
+  line: number | null;
+  body: string;
+}
+
 /** Where the review comments get handed off. */
 export type AssignTarget =
   | { kind: "new"; agent: ChatProviderKind }
   | { kind: "existing"; chatId: string };
 
 export function ReviewAssignBar({
-  count,
+  comments,
   chats,
   onAssign,
-  onDismiss,
+  onOpenComment,
   className,
-  linkToComments = true,
 }: {
-  count: number;
+  comments: ReadonlyArray<AssignBarComment>;
   chats: ReadonlyArray<ChatSummary>;
   onAssign: (target: AssignTarget) => Promise<void> | void;
-  onDismiss: () => void;
+  /**
+   * Jump to where a comment was left. Omitted by callers whose comments have
+   * nowhere in the code to jump to — the list then just reads them back.
+   */
+  onOpenComment?: (id: string) => void;
   /**
    * Where the bar sits. Defaults to the bottom of the window; a caller that
    * owns a panel of its own passes positioning that keeps the bar inside it.
    */
   className?: string;
-  /**
-   * Whether the count links to the review-comments page. False for comments
-   * that page does not list — a link there would say they are somewhere they
-   * are not.
-   */
-  linkToComments?: boolean;
 }) {
+  const count = comments.length;
   const [target, setTarget] = useState<AssignTarget>({
     kind: "new",
     agent: "claude",
   });
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const seen = useRef(count);
+  useEffect(() => {
+    if (count > seen.current) setCollapsed(false);
+    seen.current = count;
+  }, [count]);
+  const { level, className: surface } = useElevation(
+    ELEVATION.menu,
+    POPUP_SHADOW
+  );
 
   const q = query.trim().toLowerCase();
   const agents = useMemo(
@@ -91,6 +119,17 @@ export function ReviewAssignBar({
       ASSIGNABLE.filter((a) => q === "" || a.label.toLowerCase().includes(q)),
     [q]
   );
+  // Comments read as a review, not as a flat list: each file says its name once
+  // and its notes hang under it in the order they were left.
+  const byFile = useMemo(() => {
+    const grouped = new Map<string, AssignBarComment[]>();
+    for (const comment of comments) {
+      const inFile = grouped.get(comment.file);
+      if (inFile === undefined) grouped.set(comment.file, [comment]);
+      else inFile.push(comment);
+    }
+    return [...grouped];
+  }, [comments]);
   const sessions = useMemo(
     () =>
       chats.filter(
@@ -108,9 +147,6 @@ export function ReviewAssignBar({
       : null;
   const targetAgent =
     target.kind === "new" ? target.agent : (selectedChat?.provider ?? "claude");
-  // On the filled assign button the glyph rides the button's own foreground —
-  // a brand colour there would fight the primary fill.
-  const TargetIcon = agentIcon(targetAgent);
   const targetLabel =
     target.kind === "new"
       ? `New ${agentLabel(target.agent)} chat`
@@ -132,123 +168,219 @@ export function ReviewAssignBar({
     }
   };
 
+  if (collapsed) {
+    return (
+      <div
+        className={cn(
+          "pointer-events-none z-40 flex justify-end",
+          className ?? "fixed inset-x-4 bottom-6"
+        )}
+      >
+        <Button
+          variant="outline"
+          size="sm"
+          className="pointer-events-auto animate-in gap-1.5 duration-150 fade-in slide-in-from-right-2"
+          aria-label={`Show ${count} review ${count === 1 ? "comment" : "comments"}`}
+          onClick={() => setCollapsed(false)}
+        >
+          <IconMessage className="size-4 text-muted-foreground" />
+          {count}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div
       className={cn(
         "pointer-events-none z-40 flex justify-center",
-        className ?? "fixed inset-x-0 bottom-6"
+        className ?? "fixed inset-x-4 bottom-6"
       )}
     >
-      <div className="pointer-events-auto flex animate-in items-center gap-2 rounded-full border bg-popover/95 py-1.5 pr-1.5 pl-1.5 shadow-lg ring-1 ring-foreground/5 backdrop-blur duration-150 fade-in slide-in-from-bottom-2">
-        {linkToComments ? (
-          <Link
-            to="/modes/code/comments"
-            className={cn(
-              buttonVariants({ variant: "ghost", size: "sm" }),
-              "h-8 gap-1 rounded-full px-3"
-            )}
-          >
-            <CommentCount count={count} />
-          </Link>
-        ) : (
-          <span className="flex h-8 items-center gap-1 px-3 text-sm">
-            <CommentCount count={count} />
-          </span>
-        )}
-        <div className="h-5 w-px bg-border" />
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger
-            className="flex h-8 w-auto max-w-56 min-w-40 items-center gap-1.5 rounded-full px-3 text-sm hover:bg-muted"
-            aria-label="Assign target"
-          >
-            <AgentGlyph kind={targetAgent} className="size-4 shrink-0" />
-            <span className="truncate">{targetLabel}</span>
-            <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-64 gap-0 p-1">
-            <div className="-mx-1 mb-1 flex items-center gap-2 border-b px-2.5 py-2">
-              <IconSearch className="size-4 shrink-0 text-muted-foreground" />
-              <Input
-                autoFocus
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search sessions…"
-                className="h-auto rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
-              />
-            </div>
-            {/* Native overflow (not ScrollArea) so max-height actually scrolls —
-                Base UI ScrollArea's size-full viewport won't constrain under a
-                max-h parent, so content is clipped with nowhere to scroll. */}
-            <div className="scroll-fade max-h-64 min-w-0 overflow-x-hidden overflow-y-auto">
-              {agents.length > 0 && (
-                <div className="px-2 pt-1 pb-0.5 text-xs text-muted-foreground">
-                  New chat
-                </div>
-              )}
-              {agents.map((a) => {
-                const active = target.kind === "new" && target.agent === a.kind;
-                return (
-                  <button
-                    key={a.kind}
-                    type="button"
-                    onClick={() => pick({ kind: "new", agent: a.kind })}
-                    className={cn(
-                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
-                      active && "bg-muted"
-                    )}
-                  >
-                    <AgentGlyph kind={a.kind} className="size-4 shrink-0" />
-                    <span className="truncate">{a.label}</span>
-                  </button>
-                );
-              })}
-              {sessions.length > 0 && (
-                <div className="px-2 pt-2 pb-1 text-xs text-muted-foreground">
-                  Sessions
-                </div>
-              )}
-              {sessions.map((chat) => (
-                <SessionRow
-                  key={chat.id}
-                  chat={chat}
-                  active={
-                    target.kind === "existing" && target.chatId === chat.id
-                  }
-                  onSelect={() => pick({ kind: "existing", chatId: chat.id })}
+      <SurfaceProvider value={level}>
+        <div
+          data-surface={level}
+          className={cn(
+            "pointer-events-auto flex max-w-full animate-in items-center gap-1 rounded-xl p-1 duration-150 fade-in slide-in-from-bottom-2",
+            surface
+          )}
+        >
+          <Popover open={listOpen} onOpenChange={setListOpen}>
+            <PopoverTrigger
+              aria-label={`${count} review ${count === 1 ? "comment" : "comments"}`}
+              render={<Button variant="ghost" size="sm" className="gap-1" />}
+            >
+              <CommentCount count={count} />
+              <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+            </PopoverTrigger>
+            <PopoverContent side="top" align="start" className="w-80 gap-0 p-1">
+              <div className="scroll-fade flex max-h-72 min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto py-1">
+                {byFile.map(([file, inFile]) => (
+                  <div key={file} className="flex min-w-0 flex-col gap-0.5">
+                    <FileHeading file={file} />
+                    {inFile.map((comment) => (
+                      <CommentRow
+                        key={comment.id}
+                        comment={comment}
+                        onOpen={
+                          onOpenComment === undefined
+                            ? undefined
+                            : () => {
+                                setListOpen(false);
+                                onOpenComment(comment.id);
+                              }
+                        }
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <div className="mx-0.5 h-4 w-px bg-border" />
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger
+              aria-label="Assign target"
+              render={
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="max-w-56 min-w-0 justify-start"
                 />
-              ))}
-              {agents.length === 0 && sessions.length === 0 && (
-                <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                  No matches
-                </div>
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
-        <Button
-          size="sm"
-          className="rounded-full"
-          disabled={busy}
-          onClick={() => void assign()}
-        >
-          <TargetIcon className="size-4" />
-          {busy
-            ? "Starting…"
-            : target.kind === "new"
-              ? "Assign to fix"
-              : "Send to session"}
-        </Button>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="size-7 rounded-full"
-          aria-label="Dismiss"
-          onClick={onDismiss}
-        >
-          <IconX className="size-4" />
-        </Button>
-      </div>
+              }
+            >
+              <AgentGlyph kind={targetAgent} className="size-4 shrink-0" />
+              <span className="truncate">{targetLabel}</span>
+              <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-64 gap-0 p-1">
+              <div className="-mx-1 mb-1 flex items-center gap-2 border-b px-2.5 py-2">
+                <IconSearch className="size-4 shrink-0 text-muted-foreground" />
+                <Input
+                  autoFocus
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search sessions…"
+                  className="h-auto rounded-none border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
+                />
+              </div>
+              {/* Native overflow (not ScrollArea) so max-height actually scrolls —
+                  Base UI ScrollArea's size-full viewport won't constrain under a
+                  max-h parent, so content is clipped with nowhere to scroll. */}
+              <div className="scroll-fade max-h-64 min-w-0 overflow-x-hidden overflow-y-auto">
+                {agents.length > 0 && (
+                  <div className="px-2 pt-1 pb-0.5 text-xs text-muted-foreground">
+                    New chat
+                  </div>
+                )}
+                {agents.map((a) => {
+                  const active =
+                    target.kind === "new" && target.agent === a.kind;
+                  return (
+                    <button
+                      key={a.kind}
+                      type="button"
+                      onClick={() => pick({ kind: "new", agent: a.kind })}
+                      className={cn(
+                        "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
+                        active && "bg-muted"
+                      )}
+                    >
+                      <AgentGlyph kind={a.kind} className="size-4 shrink-0" />
+                      <span className="truncate">{a.label}</span>
+                    </button>
+                  );
+                })}
+                {sessions.length > 0 && (
+                  <div className="px-2 pt-2 pb-1 text-xs text-muted-foreground">
+                    Sessions
+                  </div>
+                )}
+                {sessions.map((chat) => (
+                  <SessionRow
+                    key={chat.id}
+                    chat={chat}
+                    active={
+                      target.kind === "existing" && target.chatId === chat.id
+                    }
+                    onSelect={() => pick({ kind: "existing", chatId: chat.id })}
+                  />
+                ))}
+                {agents.length === 0 && sessions.length === 0 && (
+                  <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+                    No matches
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button size="sm" disabled={busy} onClick={() => void assign()}>
+            {busy ? "Assigning…" : "Assign"}
+          </Button>
+          <Button
+            size="icon-sm"
+            variant="ghost-muted"
+            aria-label="Hide"
+            onClick={() => setCollapsed(true)}
+          >
+            <IconX className="size-4" />
+          </Button>
+        </div>
+      </SurfaceProvider>
     </div>
+  );
+}
+
+/**
+ * A comment in the count's list: where it sits over what it says. Clicking it
+ * goes there, so the bar doubles as the way around the review.
+ */
+/**
+ * The file a group of comments was left in — a quiet label over its notes, the
+ * way the tab strip names a file: the leaf alone, since the folders above it
+ * are the same for most of a review and only push the names out of view.
+ */
+function FileHeading({ file }: { file: string }) {
+  return (
+    <div className="truncate px-2 type-xs text-muted-foreground">
+      {file.slice(file.lastIndexOf("/") + 1)}
+    </div>
+  );
+}
+
+/**
+ * A comment under its file: the line it sits on in a gutter, then what it says.
+ * Clicking it goes there, so the bar doubles as the way around the review.
+ */
+function CommentRow({
+  comment,
+  onOpen,
+}: {
+  comment: AssignBarComment;
+  onOpen?: () => void;
+}) {
+  const content = (
+    <>
+      {comment.line !== null && (
+        <span className="min-w-7 shrink-0 text-right text-muted-foreground tabular-nums">
+          {comment.line}
+        </span>
+      )}
+      <span className="line-clamp-2 min-w-0 flex-1">{comment.body}</span>
+    </>
+  );
+  const className = "flex min-w-0 items-baseline gap-2 px-2 py-1 type-body";
+  if (onOpen === undefined) {
+    return <div className={className}>{content}</div>;
+  }
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={cn(className, "w-full rounded-md text-left hover:bg-muted")}
+    >
+      {content}
+    </button>
   );
 }
 

@@ -103,16 +103,15 @@ const ELEVATIONS = [
   { token: "shadow-overlay", shadow: "shadow-overlay", role: "Dialogs" },
 ];
 
-/* The interface scale — distinct from the display sizes above it. Two sizes and
-   two weights cover every control in the app; the tracking flips sign between
-   them because small type needs opening up where large type needs closing. */
+/* The interface scale — distinct from the display sizes above it. Each step is
+   one class carrying both size and weight, so nothing has to be merged against
+   anything; the tracking flips sign across them because small type needs
+   opening up where large type needs closing. */
 const UI_TYPE = [
-  { cls: "text-ui font-plus", token: "text-ui / font-plus (13 / 530)" },
-  { cls: "text-ui font-book", token: "text-ui / font-book (13 / 440)" },
-  {
-    cls: "text-meta font-plus text-muted-foreground",
-    token: "text-meta / font-plus (11 / 530)",
-  },
+  { cls: "type-ui", token: "type-ui — 13 / 530" },
+  { cls: "type-body", token: "type-body — 13 / 440" },
+  { cls: "type-xs", token: "type-xs — 12 / 530" },
+  { cls: "type-meta text-muted-foreground", token: "type-meta — 11 / 530" },
 ];
 
 const SURFACE_LADDER = [
@@ -213,8 +212,8 @@ export function Foundations() {
                     <span className="size-2 rounded-full bg-brand-500" />
                   )}
                 </span>
-                <p className="text-ui">{label}</p>
-                <p className="text-meta font-plus text-muted-foreground">
+                <p className="type-ui">{label}</p>
+                <p className="type-meta text-muted-foreground">
                   {meta}
                 </p>
               </div>
@@ -354,7 +353,7 @@ export function Foundations() {
               <Specimen key={token} label={role}>
                 <button
                   type="button"
-                  className={`inline-flex h-8 items-center justify-center rounded-md px-3 text-ui font-plus ${face}`}
+                  className={`inline-flex h-8 items-center justify-center rounded-md px-3 type-ui ${face}`}
                 >
                   {token}
                 </button>

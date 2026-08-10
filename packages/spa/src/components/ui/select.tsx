@@ -25,9 +25,14 @@ function SelectValue(props: SelectPrimitive.Value.Props) {
 function SelectTrigger({
   className,
   size = "default",
+  hideIcon = false,
   children,
   ...props
-}: SelectPrimitive.Trigger.Props & { size?: "sm" | "default" }) {
+}: SelectPrimitive.Trigger.Props & {
+  size?: "sm" | "default";
+  /** For icon-only triggers, where a chevron would be more chrome than help. */
+  hideIcon?: boolean;
+}) {
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
@@ -39,7 +44,7 @@ function SelectTrigger({
       {...props}
     >
       {children}
-      <SelectPrimitive.Icon render={<IconSelector />} />
+      {!hideIcon && <SelectPrimitive.Icon render={<IconSelector />} />}
     </SelectPrimitive.Trigger>
   );
 }

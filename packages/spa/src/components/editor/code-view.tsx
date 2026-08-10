@@ -28,6 +28,7 @@ import {
 import { useFileEditing } from "@/components/editor/use-file-editing";
 import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { selectionShadingCSS } from "@/lib/code-selection-css";
 import { useFile } from "@/lib/queries";
 import type { ReviewComment } from "@byconvo/core/comments";
 import type { FileEdits, Location } from "@byconvo/core/language";
@@ -261,6 +262,7 @@ export function CodeView({
                   : undefined,
                 // Token hooks + the post-render pass that underlines problems.
                 ...language.viewOptions,
+                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}`,
               }}
               contentEditable={editing}
               /* The editable view snapshots the rendered code when the editor

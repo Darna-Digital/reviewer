@@ -27,26 +27,24 @@ const buttonVariants = cva(
         destructive: "face-raised bg-button-neutral text-destructive",
         link: "text-link underline-offset-4 hover:underline",
       },
-      /* Type lives on the size rather than the base: `text-ui` and `font-plus`
-         are project-invented names, which tailwind-merge cannot recognise as a
-         font-size and a font-weight, so a `text-sm` passed in `className` would
-         not displace them — both would survive and stylesheet order, not class
-         order, would pick the winner. One type class per size keeps that
-         decision where it can be read. */
+      /* Each size carries its own whole type step, so a button never has to
+         merge a size class against a weight class from somewhere else. */
       size: {
         default:
-          "h-8 gap-1.5 px-3 text-ui font-plus has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
-        xs: "h-6 gap-1 rounded-sm px-2 text-xs font-plus has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "h-7 gap-1 px-2.5 text-ui font-plus has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        lg: "h-9 gap-1.5 px-4 text-ui font-plus has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
+          "h-8 gap-1.5 px-3 type-ui has-data-[icon=inline-end]:pr-2.5 has-data-[icon=inline-start]:pl-2.5",
+        xs: "h-6 gap-1 rounded-sm px-2 type-xs has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "h-7 gap-1 px-2.5 type-ui has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+        lg: "h-9 gap-1.5 px-4 type-ui has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
         /* The top-bar pickers — project, organisation, branch. They read as
            labels you press rather than as controls, so they keep the roomier
-           14px/500 they have always had instead of joining the 13px/530 chrome. */
+           14px/500 they have always had instead of joining the 13px/530 chrome.
+           Plain Tailwind steps here on purpose: both are ones tailwind-merge
+           knows, so a caller can still override them. */
         chip: "h-7 gap-1 px-3 text-sm font-medium has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        icon: "size-8 text-ui font-plus",
-        "icon-xs": "size-6 rounded-sm text-xs font-plus [&_svg:not([class*='size-'])]:size-3",
-        "icon-sm": "size-7 text-ui font-plus",
-        "icon-lg": "size-9 text-ui font-plus",
+        icon: "size-8 type-ui",
+        "icon-xs": "size-6 rounded-sm type-xs [&_svg:not([class*='size-'])]:size-3",
+        "icon-sm": "size-7 type-ui",
+        "icon-lg": "size-9 type-ui",
       },
     },
     defaultVariants: {

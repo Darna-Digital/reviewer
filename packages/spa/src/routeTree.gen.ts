@@ -20,7 +20,6 @@ import { Route as AppModesCodeIndexRouteImport } from './routes/_app/modes.code.
 import { Route as AppModesCodeCommitRouteImport } from './routes/_app/modes.code.commit'
 import { Route as WorkspaceModesAgentSessionIndexRouteImport } from './routes/_workspace/modes.agent-session.index'
 import { Route as WorkspaceModesAgentSessionChatIdRouteImport } from './routes/_workspace/modes.agent-session.$chatId'
-import { Route as WorkspaceModesCodeCommentsRouteImport } from './routes/_workspace/modes.code.comments'
 import { Route as WorkspaceModesCodeDocsRouteImport } from './routes/_workspace/modes.code.docs'
 import { Route as WorkspaceModesCodeLocalDevRouteImport } from './routes/_workspace/modes.code.local-dev'
 import { Route as WorkspaceModesCodeTasksRouteImport } from './routes/_workspace/modes.code.tasks'
@@ -89,12 +88,6 @@ const WorkspaceModesAgentSessionChatIdRoute =
     path: '/$chatId',
     getParentRoute: () => WorkspaceModesAgentSessionRoute,
   } as any)
-const WorkspaceModesCodeCommentsRoute =
-  WorkspaceModesCodeCommentsRouteImport.update({
-    id: '/modes/code/comments',
-    path: '/modes/code/comments',
-    getParentRoute: () => WorkspaceRoute,
-  } as any)
 const WorkspaceModesCodeDocsRoute = WorkspaceModesCodeDocsRouteImport.update({
   id: '/modes/code/docs',
   path: '/modes/code/docs',
@@ -158,7 +151,6 @@ export interface FileRoutesByFullPath {
   '/modes/collaboration': typeof WorkspaceModesCollaborationRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
   '/modes/agent-session/$chatId': typeof WorkspaceModesAgentSessionChatIdRoute
-  '/modes/code/comments': typeof WorkspaceModesCodeCommentsRoute
   '/modes/code/docs': typeof WorkspaceModesCodeDocsRoute
   '/modes/code/local-dev': typeof WorkspaceModesCodeLocalDevRoute
   '/modes/code/tasks': typeof WorkspaceModesCodeTasksRoute
@@ -179,7 +171,6 @@ export interface FileRoutesByTo {
   '/modes/collaboration': typeof WorkspaceModesCollaborationRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
   '/modes/agent-session/$chatId': typeof WorkspaceModesAgentSessionChatIdRoute
-  '/modes/code/comments': typeof WorkspaceModesCodeCommentsRoute
   '/modes/code/docs': typeof WorkspaceModesCodeDocsRoute
   '/modes/code/local-dev': typeof WorkspaceModesCodeLocalDevRoute
   '/modes/code/tasks': typeof WorkspaceModesCodeTasksRoute
@@ -204,7 +195,6 @@ export interface FileRoutesById {
   '/_workspace/modes/collaboration': typeof WorkspaceModesCollaborationRoute
   '/_app/modes/code/commit': typeof AppModesCodeCommitRoute
   '/_workspace/modes/agent-session/$chatId': typeof WorkspaceModesAgentSessionChatIdRoute
-  '/_workspace/modes/code/comments': typeof WorkspaceModesCodeCommentsRoute
   '/_workspace/modes/code/docs': typeof WorkspaceModesCodeDocsRoute
   '/_workspace/modes/code/local-dev': typeof WorkspaceModesCodeLocalDevRoute
   '/_workspace/modes/code/tasks': typeof WorkspaceModesCodeTasksRoute
@@ -228,7 +218,6 @@ export interface FileRouteTypes {
     | '/modes/collaboration'
     | '/modes/code/commit'
     | '/modes/agent-session/$chatId'
-    | '/modes/code/comments'
     | '/modes/code/docs'
     | '/modes/code/local-dev'
     | '/modes/code/tasks'
@@ -249,7 +238,6 @@ export interface FileRouteTypes {
     | '/modes/collaboration'
     | '/modes/code/commit'
     | '/modes/agent-session/$chatId'
-    | '/modes/code/comments'
     | '/modes/code/docs'
     | '/modes/code/local-dev'
     | '/modes/code/tasks'
@@ -273,7 +261,6 @@ export interface FileRouteTypes {
     | '/_workspace/modes/collaboration'
     | '/_app/modes/code/commit'
     | '/_workspace/modes/agent-session/$chatId'
-    | '/_workspace/modes/code/comments'
     | '/_workspace/modes/code/docs'
     | '/_workspace/modes/code/local-dev'
     | '/_workspace/modes/code/tasks'
@@ -372,13 +359,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/modes/agent-session/$chatId'
       preLoaderRoute: typeof WorkspaceModesAgentSessionChatIdRouteImport
       parentRoute: typeof WorkspaceModesAgentSessionRoute
-    }
-    '/_workspace/modes/code/comments': {
-      id: '/_workspace/modes/code/comments'
-      path: '/modes/code/comments'
-      fullPath: '/modes/code/comments'
-      preLoaderRoute: typeof WorkspaceModesCodeCommentsRouteImport
-      parentRoute: typeof WorkspaceRoute
     }
     '/_workspace/modes/code/docs': {
       id: '/_workspace/modes/code/docs'
@@ -498,7 +478,6 @@ interface WorkspaceRouteChildren {
   WorkspaceSettingsRoute: typeof WorkspaceSettingsRoute
   WorkspaceModesAgentSessionRoute: typeof WorkspaceModesAgentSessionRouteWithChildren
   WorkspaceModesCollaborationRoute: typeof WorkspaceModesCollaborationRoute
-  WorkspaceModesCodeCommentsRoute: typeof WorkspaceModesCodeCommentsRoute
   WorkspaceModesCodeDocsRoute: typeof WorkspaceModesCodeDocsRoute
   WorkspaceModesCodeLocalDevRoute: typeof WorkspaceModesCodeLocalDevRoute
   WorkspaceModesCodeTasksRoute: typeof WorkspaceModesCodeTasksRoute
@@ -510,7 +489,6 @@ const WorkspaceRouteChildren: WorkspaceRouteChildren = {
   WorkspaceSettingsRoute: WorkspaceSettingsRoute,
   WorkspaceModesAgentSessionRoute: WorkspaceModesAgentSessionRouteWithChildren,
   WorkspaceModesCollaborationRoute: WorkspaceModesCollaborationRoute,
-  WorkspaceModesCodeCommentsRoute: WorkspaceModesCodeCommentsRoute,
   WorkspaceModesCodeDocsRoute: WorkspaceModesCodeDocsRoute,
   WorkspaceModesCodeLocalDevRoute: WorkspaceModesCodeLocalDevRoute,
   WorkspaceModesCodeTasksRoute: WorkspaceModesCodeTasksRoute,

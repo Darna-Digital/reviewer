@@ -1,8 +1,9 @@
 /**
- * SearchDialog — one box, three lists. It opens on **commands** (⌘K), and two
- * of those commands lead deeper: **files** (also a double-tap of Shift) searches
- * paths, **text** (also ⌘⇧F) greps file contents. A breadcrumb across the top
- * says which list you are in and walks back to the commands.
+ * SearchDialog — one box, a stack of lists. It opens on **commands** (⌘K), and
+ * some of those commands lead deeper rather than acting: **files** (also a
+ * double-tap of Shift) searches paths, **text** (also ⌘⇧F) greps file contents,
+ * **git** holds the git actions and leads on to **branches**, which checks one
+ * out. A breadcrumb across the top says which list you are in and walks back up.
  *
  * Every mode renders the same flat list of rows, so one keyboard handler drives
  * ↑/↓ + Enter everywhere, and the headings are derived from the rows rather than
@@ -13,6 +14,7 @@ import {
   IconChevronRight,
   IconCornerDownLeft,
   IconFile,
+  IconGitBranch,
   IconSearch,
 } from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -26,10 +28,14 @@ import {
   useGrepSearch,
 } from "../adapters/search.hook.adapter";
 import {
+  commandsIn,
   crumbsFor,
+  filterBranches,
   filterCommands,
   filterFiles,
+  parentOf,
   splitPath,
+  submenusIn,
 } from "../functions/palette.functions";
 import {
   DEFAULT_GREP_OPTIONS,
@@ -39,6 +45,7 @@ import {
   matchRange,
 } from "../functions/search.functions";
 import type {
+  BranchChoice,
   Command,
   GrepOptions,
   SearchMode,
@@ -52,8 +59,11 @@ interface SearchDialogProps {
   commands: ReadonlyArray<Command>;
   /** Every path in the repository, for the file search. */
   files: ReadonlyArray<string>;
+  /** Local and remote branches, for the checkout list. */
+  branches: ReadonlyArray<BranchChoice>;
   onOpenFile: (path: string) => void;
   onOpenLocation: (path: string, line: number) => void;
+  onCheckout: (ref: string) => void;
 }
 
 /** A row in the list, whatever mode built it. */
@@ -76,12 +86,25 @@ const PLACEHOLDERS: Record<SearchMode, string> = {
   commands: "Type a command…",
   files: "Search files by name…",
   text: "Search in files…",
+  git: "Type a git action…",
+  branches: "Search branches…",
 };
 
 const INPUT_LABELS: Record<SearchMode, string> = {
   commands: "Search commands",
   files: "Search files by name",
   text: "Search file contents",
+  git: "Search git actions",
+  branches: "Search branches",
+};
+
+/** What Enter does, for the footer. */
+const ENTER_LABELS: Record<SearchMode, string> = {
+  commands: "to select",
+  files: "to open",
+  text: "to open",
+  git: "to select",
+  branches: "to check out",
 };
 
 const TOGGLES: ReadonlyArray<{
@@ -98,7 +121,12 @@ const EMPTY_QUERIES: Record<SearchMode, string> = {
   commands: "",
   files: "",
   text: "",
+  git: "",
+  branches: "",
 };
+
+/** The lists that are menus rather than searches: they start fresh every time. */
+const FRESH_QUERIES = { commands: "", git: "", branches: "" };
 
 export function SearchDialog({
   open,
@@ -107,8 +135,10 @@ export function SearchDialog({
   onModeChange,
   commands,
   files,
+  branches,
   onOpenFile,
   onOpenLocation,
+  onCheckout,
 }: SearchDialogProps) {
   // One query per mode, kept while the dialog is closed: reopening a search you
   // ran a minute ago should show it, not an empty box.
@@ -129,35 +159,25 @@ export function SearchDialog({
   const search = useGrepSearch(queries.text, options, open && mode === "text");
   const results = search.data ?? EMPTY_GREP_RESULTS;
 
-  /** The commands the dialog itself owns — the way into its other two modes. */
-  const modeCommands = useMemo<ReadonlyArray<Command>>(
-    () => [
-      {
-        id: "search-files",
-        label: "Go to File…",
-        group: "Search",
-        icon: IconFile,
-        keywords: "open path jump navigate",
-        hint: "⇧⇧",
-        run: () => onModeChange("files"),
-      },
-      {
-        id: "search-text",
-        label: "Search in Files…",
-        group: "Search",
-        icon: IconSearch,
-        keywords: "grep content text find occurrences",
-        hint: "⇧⌘F",
-        run: () => onModeChange("text"),
-      },
-    ],
-    [onModeChange]
-  );
-
   const rows = useMemo<ReadonlyArray<Row>>(() => {
-    if (mode === "commands") {
-      const leadsDeeper = new Set(modeCommands.map((command) => command.id));
-      return filterCommands([...modeCommands, ...commands], query).map(
+    if (mode === "commands" || mode === "git") {
+      /** The commands the dialog itself owns — the ways into its other lists. */
+      const openers = submenusIn(mode, query).map(
+        (submenu): Command => ({
+          id: `open-${submenu.mode}`,
+          label: submenu.label,
+          group: submenu.group,
+          icon: submenu.icon,
+          keywords: submenu.keywords,
+          hint: submenu.hint,
+          run: () => onModeChange(submenu.mode),
+        })
+      );
+      const leadsDeeper = new Set(openers.map((command) => command.id));
+      return filterCommands(
+        [...openers, ...commandsIn(mode, commands, query)],
+        query
+      ).map(
         (command): Row => ({
           key: `command:${command.id}`,
           group: command.group,
@@ -166,6 +186,20 @@ export function SearchDialog({
           hint: command.hint,
           run: command.run,
           closeOnRun: !leadsDeeper.has(command.id),
+        })
+      );
+    }
+    if (mode === "branches") {
+      return filterBranches(branches, query).map(
+        (branch): Row => ({
+          key: `branch:${branch.group}:${branch.name}`,
+          group: branch.group,
+          icon: IconGitBranch,
+          mono: true,
+          label: branch.name,
+          hint: branch.hint,
+          run: () => onCheckout(branch.ref),
+          closeOnRun: true,
         })
       );
     }
@@ -208,21 +242,21 @@ export function SearchDialog({
     query,
     options,
     commands,
-    modeCommands,
+    branches,
     files,
     results.matches,
+    onModeChange,
     onOpenFile,
     onOpenLocation,
+    onCheckout,
   ]);
 
-  // The command list is a menu, not a search: it starts fresh every time.
+  // The menus are not searches, so they never resume: every way into one — and
+  // ⌘K in particular, from however deep you had walked — starts on an empty box.
   useEffect(() => {
-    if (!open) return;
-    setQueries((current) => ({ ...current, commands: "" }));
+    setQueries((current) => ({ ...current, ...FRESH_QUERIES }));
     setActive(0);
-  }, [open]);
-
-  useEffect(() => setActive(0), [mode]);
+  }, [mode, open]);
 
   // A query carried over from last time is selected, so typing replaces it and
   // ↑/↓ or Enter picks up where it left off.
@@ -268,13 +302,11 @@ export function SearchDialog({
     } else if (event.key === "End") {
       event.preventDefault();
       setActive(Math.max(0, rows.length - 1));
-    } else if (
-      event.key === "Backspace" &&
-      query === "" &&
-      mode !== "commands"
-    ) {
+    } else if (event.key === "Backspace" && query === "") {
+      const parent = parentOf(mode);
+      if (parent === null) return;
       event.preventDefault();
-      onModeChange("commands");
+      onModeChange(parent);
     }
   };
 
@@ -446,7 +478,7 @@ export function SearchDialog({
             </span>
             <span className="flex shrink-0 items-center gap-1">
               <Kbd>↵</Kbd>
-              {mode === "commands" ? "to select" : "to open"}
+              {ENTER_LABELS[mode]}
               <span aria-hidden="true">·</span>
               <Kbd>esc</Kbd>
               to close
@@ -490,12 +522,19 @@ function EmptyState({
   loading: boolean;
   error: unknown;
 }) {
-  if (mode === "commands") return <>No commands found.</>;
+  if (mode === "commands" || mode === "git") return <>No commands found.</>;
   if (mode === "files") {
     return query.trim().length === 0 ? (
       <>Type to find a file by name.</>
     ) : (
       <>No files match.</>
+    );
+  }
+  if (mode === "branches") {
+    return query.trim().length === 0 ? (
+      <>This repository has no branches.</>
+    ) : (
+      <>No branches match.</>
     );
   }
   if (error !== null && error !== undefined) {

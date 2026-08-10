@@ -38,8 +38,9 @@ export interface CodeCommandDependencies {
 
 /**
  * The commands every code-mode page offers: where to go, and what to do with
- * git. Shell-specific commands (panel toggles, the repo picker) are registered
- * by the shell that owns them instead.
+ * git. The git ones sit in the dialog's own Git list rather than the root one,
+ * so the command list you land on stays short. Shell-specific commands (panel
+ * toggles, the repo picker) are registered by the shell that owns them instead.
  */
 export const buildCodeCommands = (
   d: CodeCommandDependencies
@@ -84,6 +85,7 @@ export const buildCodeCommands = (
     },
     {
       id: "git-refresh",
+      submenu: "git",
       label: "Refresh",
       group: "Git",
       icon: IconRefresh,
@@ -92,6 +94,7 @@ export const buildCodeCommands = (
     },
     {
       id: "git-fetch",
+      submenu: "git",
       label: "Fetch",
       group: "Git",
       icon: IconCloudDownload,
@@ -100,6 +103,7 @@ export const buildCodeCommands = (
     },
     {
       id: "git-pull",
+      submenu: "git",
       label: "Pull",
       group: "Git",
       icon: IconArrowDown,
@@ -108,6 +112,7 @@ export const buildCodeCommands = (
     },
     {
       id: "git-push",
+      submenu: "git",
       label: "Push",
       group: "Git",
       icon: IconArrowUp,
@@ -116,6 +121,7 @@ export const buildCodeCommands = (
     },
     {
       id: "git-branch",
+      submenu: "git",
       label: "Create Branch…",
       group: "Git",
       icon: IconGitBranch,

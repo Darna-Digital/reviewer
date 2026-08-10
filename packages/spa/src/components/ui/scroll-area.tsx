@@ -38,6 +38,16 @@ const overflowClass = (orientation: Orientation) =>
       ? "overflow-x-auto"
       : "overflow-auto";
 
+/**
+ * The viewport takes its height from flexing rather than `h-full`: a percentage
+ * height needs a definite one to resolve against, and a scroll area inside a
+ * `max-h-*` box (a dialog) has none — the viewport grew past the container that
+ * was meant to clip it and nothing ever scrolled. `flex-auto` still sizes to the
+ * content when the container is free to grow.
+ */
+const CONTAINER_FILLS_VIEWPORT = "relative flex flex-col overflow-hidden";
+const VIEWPORT_FILLS_CONTAINER = "w-full min-h-0 flex-auto rounded-[inherit]";
+
 function NativeScrollArea({
   className,
   children,
@@ -57,14 +67,14 @@ function NativeScrollArea({
       role="group"
       data-slot="scroll-area"
       aria-roledescription="scroll area"
-      className={cn("relative overflow-hidden", className)}
+      className={cn(CONTAINER_FILLS_VIEWPORT, className)}
       {...props}
     >
       <div
         ref={viewportRef}
         data-slot="scroll-area-viewport"
         className={cn(
-          "size-full rounded-[inherit]",
+          VIEWPORT_FILLS_CONTAINER,
           overflowClass(orientation),
           viewportClassName
         )}
@@ -113,14 +123,14 @@ const ScrollArea = forwardRef<
           <ScrollAreaPrimitive.Root
             ref={ref}
             data-slot="scroll-area"
-            className={cn("relative overflow-hidden", className)}
+            className={cn(CONTAINER_FILLS_VIEWPORT, className)}
             {...props}
           >
             <ScrollAreaPrimitive.Viewport
               ref={viewportRef}
               data-slot="scroll-area-viewport"
               className={cn(
-                "size-full rounded-[inherit]",
+                VIEWPORT_FILLS_CONTAINER,
                 orientation === "vertical" && "overflow-x-hidden",
                 viewportClassName
               )}

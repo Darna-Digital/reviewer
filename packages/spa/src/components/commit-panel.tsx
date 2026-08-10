@@ -59,6 +59,10 @@ export function CommitPanel({
   const [messageHeight, setMessageHeight] = useState(commitMessageHeight);
   const [message, setMessage] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [composerFocused, setComposerFocused] = useState(false);
+  // The picker's popup is portalled, so opening it takes focus out of the
+  // composer -- track it so the controls it belongs to do not vanish.
+  const [agentPickerOpen, setAgentPickerOpen] = useState(false);
   // Which action is in flight, so its button can show a spinner.
   const [pending, setPending] = useState<"commit" | "push" | null>(null);
   const [selected, setSelected] = useState<Set<string>>(
@@ -126,6 +130,8 @@ export function CommitPanel({
   };
 
   const AgentGlyph = agentIcon(commitAgent);
+  const showGenerateControls =
+    composerFocused || agentPickerOpen || generating;
 
   return (
     <div className="flex shrink-0 flex-col border-t">
@@ -184,12 +190,21 @@ export function CommitPanel({
           the viewport bottom and taller than our sm button, so matching its
           centre -- not its bottom edge -- is what visually lines them up. */}
       <div className="flex flex-col gap-2 border-t px-3 pt-3 pb-2.5">
-        <div className="group/message relative">
+        <div
+          className="relative"
+          onFocus={() => setComposerFocused(true)}
+          onBlur={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget))
+              setComposerFocused(false);
+          }}
+        >
+          {/* Bottom padding clears the floating controls' full height plus
+              their inset, so scrolling to the end reveals the last line. */}
           <Textarea
             value={message}
             placeholder="Commit message..."
             wrap="off"
-            className="resize-none pr-40 text-sm"
+            className="pb-12 text-sm"
             style={{ height: messageHeight }}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => {
@@ -198,17 +213,20 @@ export function CommitPanel({
             }}
           />
           {onGenerate !== undefined && (
-            <div className="absolute right-1.5 bottom-1.5 flex items-center gap-1">
+            <div
+              className={cn(
+                "absolute right-2 bottom-2 z-10 flex items-center gap-1 rounded-md bg-background/70 p-1 shadow-xs ring-1 ring-border/50 backdrop-blur-sm",
+                "transition-opacity duration-150",
+                showGenerateControls
+                  ? "opacity-100"
+                  : "pointer-events-none opacity-0"
+              )}
+            >
               <Button
                 type="button"
-                size="sm"
-                variant="ghost"
-                className={cn(
-                  "h-6 gap-1 px-2 text-xs text-muted-foreground transition-opacity duration-150",
-                  generating
-                    ? "opacity-100"
-                    : "pointer-events-none opacity-0 group-hover/message:pointer-events-auto group-hover/message:opacity-100 focus-visible:pointer-events-auto focus-visible:opacity-100"
-                )}
+                size="xs"
+                variant="ghost-muted"
+                className="gap-0"
                 disabled={!canGenerate}
                 title={`Generate a commit message with ${agentLabel(commitAgent)}`}
                 onClick={() => void generate()}
@@ -218,15 +236,30 @@ export function CommitPanel({
                 ) : (
                   <IconSparkles className="size-3.5" />
                 )}
-                {generating ? "Generating…" : "Generate"}
+                {/* The label is a hover affordance: at rest the control is just
+                    the sparkle, and it widens into its name on hover, focus, or
+                    while a draft is running. */}
+                <span
+                  className={cn(
+                    "max-w-0 overflow-hidden opacity-0 transition-[max-width,opacity,margin] duration-200 ease-out",
+                    "group-hover/button:ml-1 group-hover/button:max-w-24 group-hover/button:opacity-100",
+                    "group-focus-visible/button:ml-1 group-focus-visible/button:max-w-24 group-focus-visible/button:opacity-100",
+                    generating && "ml-1 max-w-24 opacity-100"
+                  )}
+                >
+                  {generating ? "Generating…" : "Generate"}
+                </span>
               </Button>
               {/* Pick which local agent CLI drafts the message. */}
               <Select
                 value={commitAgent}
+                open={agentPickerOpen}
+                onOpenChange={setAgentPickerOpen}
                 onValueChange={(v) => v && setUiPrefs({ commitAgent: v })}
               >
                 <SelectTrigger
                   size="sm"
+                  hideIcon
                   className="h-6 w-auto gap-1 rounded-md border-0 bg-transparent px-1.5 text-xs text-muted-foreground shadow-none hover:bg-muted"
                   aria-label="Commit message agent"
                   title={`Draft with ${agentLabel(commitAgent)}`}
@@ -248,9 +281,7 @@ export function CommitPanel({
             </div>
           )}
         </div>
-        {/* Sized to the Generate/agent controls sitting inside the message box
-            above, so the whole panel keeps one row height. */}
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Button
             size="xs"
             disabled={!canCommit}

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
+  BranchChoice,
   Command,
   ContentMatch,
   GrepOptions,
@@ -18,6 +19,7 @@ const COMMANDS: ReadonlyArray<Command> = [
     id: "git-push",
     label: "Push",
     group: "Git",
+    submenu: "git",
     icon: Icon,
     keywords: "remote upload",
     run: vi.fn(),
@@ -29,6 +31,30 @@ const COMMANDS: ReadonlyArray<Command> = [
     icon: Icon,
     keywords: "theme appearance",
     run: vi.fn(),
+  },
+];
+
+const BRANCHES: ReadonlyArray<BranchChoice> = [
+  {
+    name: "master",
+    ref: "master",
+    group: "Local",
+    isCurrent: true,
+    hint: "current",
+  },
+  {
+    name: "task/BMB-207",
+    ref: "task/BMB-207",
+    group: "Local",
+    isCurrent: false,
+    hint: "↑2",
+  },
+  {
+    name: "origin/release",
+    ref: "release",
+    group: "Remote",
+    isCurrent: false,
+    hint: "origin",
   },
 ];
 
@@ -86,6 +112,7 @@ const { SearchDialog } = await import("./search-dialog");
 const onOpenChange = vi.fn();
 const onOpenFile = vi.fn();
 const onOpenLocation = vi.fn();
+const onCheckout = vi.fn();
 
 /** Renders the dialog with `mode` as live state, the way the shell holds it. */
 function Harness({ initialMode = "commands" as SearchMode, open = true }) {
@@ -98,8 +125,10 @@ function Harness({ initialMode = "commands" as SearchMode, open = true }) {
       onModeChange={setMode}
       commands={COMMANDS}
       files={FILES}
+      branches={BRANCHES}
       onOpenFile={onOpenFile}
       onOpenLocation={onOpenLocation}
+      onCheckout={onCheckout}
     />
   );
 }
@@ -130,20 +159,34 @@ describe("SearchDialog — commands", () => {
   it("opens on the command list, not on a search", () => {
     setup();
 
-    expect(screen.getByText("Push")).toBeDefined();
     expect(screen.getByText("Open Settings")).toBeDefined();
     expect(screen.queryByText("queries.ts")).toBeNull();
   });
 
-  it("offers the two searches as commands, with their shortcuts", () => {
+  it("offers the deeper lists as commands, with their shortcuts", () => {
     setup();
 
     expect(screen.getByRole("button", { name: /Go to File/ })).toBeDefined();
     expect(
       screen.getByRole("button", { name: /Search in Files/ })
     ).toBeDefined();
+    expect(screen.getByRole("button", { name: /Git Actions/ })).toBeDefined();
     expect(screen.getByText("⇧⇧")).toBeDefined();
     expect(screen.getByText("⇧⌘F")).toBeDefined();
+  });
+
+  it("keeps the git actions behind their own list", () => {
+    setup();
+
+    expect(screen.queryByText("Push")).toBeNull();
+  });
+
+  it("still finds a git action typed at the root", async () => {
+    const { user } = setup();
+
+    await user.type(box(), "push");
+
+    expect(screen.getByText("Push")).toBeDefined();
   });
 
   it("filters the commands as you type", async () => {
@@ -158,9 +201,9 @@ describe("SearchDialog — commands", () => {
   it("runs a command and closes", async () => {
     const { user } = setup();
 
-    await user.click(screen.getByText("Push"));
+    await user.click(screen.getByText("Open Settings"));
 
-    expect(COMMANDS[0].run).toHaveBeenCalledOnce();
+    expect(COMMANDS[1].run).toHaveBeenCalledOnce();
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
@@ -169,6 +212,96 @@ describe("SearchDialog — commands", () => {
 
     expect(crumbs().getByText("Commands")).toBeDefined();
     expect(crumbs().queryByText("Files")).toBeNull();
+  });
+});
+
+describe("SearchDialog — git", () => {
+  const enterGit = async (user: ReturnType<typeof userEvent.setup>) =>
+    user.click(screen.getByRole("button", { name: /Git Actions/ }));
+
+  it("lists the git actions under a Git crumb", async () => {
+    const { user } = setup();
+
+    await enterGit(user);
+
+    expect(crumbs().getByText("Git")).toBeDefined();
+    expect(screen.getByText("Push")).toBeDefined();
+    expect(screen.queryByText("Open Settings")).toBeNull();
+  });
+
+  it("runs a git action and closes", async () => {
+    const { user } = setup();
+
+    await enterGit(user);
+    await user.click(screen.getByText("Push"));
+
+    expect(COMMANDS[0].run).toHaveBeenCalledOnce();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("leads on to the branches, keeping the whole trail", async () => {
+    const { user } = setup();
+
+    await enterGit(user);
+    await user.click(screen.getByRole("button", { name: /Switch Branch/ }));
+
+    expect(crumbs().getByText("Commands")).toBeDefined();
+    expect(crumbs().getByText("Git")).toBeDefined();
+    expect(crumbs().getByText("Branches").getAttribute("aria-current")).toBe(
+      "page"
+    );
+  });
+
+  it("goes back to the git list on Backspace, not to the root", async () => {
+    const { user } = setup({ initialMode: "branches" });
+
+    await user.type(box(), "{Backspace}");
+
+    expect(screen.getByText("Push")).toBeDefined();
+    expect(crumbs().queryByText("Branches")).toBeNull();
+  });
+});
+
+describe("SearchDialog — branches", () => {
+  it("lists local and remote branches without waiting for a query", () => {
+    setup({ initialMode: "branches" });
+
+    expect(screen.getByText("Local")).toBeDefined();
+    expect(screen.getByText("Remote")).toBeDefined();
+    expect(screen.getByText("task/BMB-207")).toBeDefined();
+    expect(screen.getByText("origin/release")).toBeDefined();
+  });
+
+  it("marks the branch you are on", () => {
+    setup({ initialMode: "branches" });
+
+    expect(screen.getByText("current")).toBeDefined();
+  });
+
+  it("finds a branch by a loose match on its name", async () => {
+    const { user } = setup({ initialMode: "branches" });
+
+    await user.type(box(), "207");
+
+    expect(screen.getByText("task/BMB-207")).toBeDefined();
+    expect(screen.queryByText("origin/release")).toBeNull();
+  });
+
+  it("checks out the branch it was asked for, and closes", async () => {
+    const { user } = setup({ initialMode: "branches" });
+
+    await user.type(box(), "release{Enter}");
+
+    expect(onCheckout).toHaveBeenCalledWith("release");
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("says when nothing matches", async () => {
+    const { user } = setup({ initialMode: "branches" });
+
+    await user.type(box(), "zzzzz");
+
+    expect(screen.getByText("No branches match.")).toBeDefined();
   });
 });
 
@@ -197,7 +330,7 @@ describe("SearchDialog — moving between modes", () => {
 
     await user.click(crumbs().getByRole("button", { name: "Commands" }));
 
-    expect(screen.getByText("Push")).toBeDefined();
+    expect(screen.getByText("Open Settings")).toBeDefined();
     expect(crumbs().queryByText("Files")).toBeNull();
   });
 
@@ -218,7 +351,7 @@ describe("SearchDialog — moving between modes", () => {
 
     await user.clear(box());
     await user.type(box(), "{Backspace}");
-    expect(screen.getByText("Push")).toBeDefined();
+    expect(screen.getByText("Open Settings")).toBeDefined();
   });
 });
 
@@ -407,6 +540,16 @@ describe("SearchDialog — remembering a search", () => {
 
     await user.type(box(), "settings");
     reopen(view, "commands");
+
+    expect(value()).toBe("");
+  });
+
+  it("drops what was typed at the root once you walk into a menu and back", async () => {
+    const { user } = setup();
+
+    await user.type(box(), "git");
+    await user.click(screen.getByRole("button", { name: /Git Actions/ }));
+    await user.click(crumbs().getByRole("button", { name: "Commands" }));
 
     expect(value()).toBe("");
   });

@@ -10,7 +10,6 @@ import {
   IconGitCommit,
   IconGitFork,
   IconGitPullRequest,
-  IconMessageCircle,
   IconPlayerPlay,
   IconTerminal2,
 } from "@tabler/icons-react";
@@ -43,15 +42,6 @@ interface RailLink {
 
 /** Code mode's inbox is the repo's agent threads. */
 // const INBOX_MATCH = "/modes/agent-session";
-
-const REVIEW_LINKS: RailLink[] = [
-  {
-    to: "/modes/code/comments",
-    label: "Comments — code & visual",
-    icon: IconMessageCircle,
-    match: "/modes/code/comments",
-  },
-];
 
 const GIT_LINKS: RailLink[] = [
   {
@@ -157,8 +147,6 @@ export function ModeRail() {
         {GIT_LINKS.filter((l) => l.github !== true || hasGitHub).map(
           renderLink
         )}
-        <div className="my-1 h-px w-6 bg-border" />
-        {REVIEW_LINKS.map(renderLink)}
         <div className="mt-auto flex flex-col items-center gap-1">
           <RailButton
             label="Branches & History"

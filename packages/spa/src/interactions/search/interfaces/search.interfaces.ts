@@ -1,8 +1,8 @@
 /**
- * `search` feature — one dialog, three modes, three ways in: ⌘K for the
+ * `search` feature — one dialog, a handful of lists, three ways in: ⌘K for the
  * commands it opens on, a double-tap of Shift to go straight to files, and ⌘⇧F
- * to go straight to a content grep. The file and text modes are also plain
- * entries in the command list, so the keyboard shortcuts are accelerators for
+ * to go straight to a content grep. Every list past the commands is also a plain
+ * entry in the command list, so the keyboard shortcuts are accelerators for
  * something you can always find by reading.
  *
  * The searches themselves are one call each, but the rules around them (what is
@@ -10,17 +10,38 @@
  * line the pattern actually hit, how a query scores against a path) are pure and
  * live behind injected side effects so the dialog stays declarative.
  */
-import type { ContentMatch } from "@byconvo/core/repo";
+import type {
+  BranchInfo,
+  ContentMatch,
+  RemoteBranchInfo,
+} from "@byconvo/core/repo";
 
-export type { ContentMatch };
+export type { BranchInfo, ContentMatch, RemoteBranchInfo };
 
-/** Which of the dialog's three lists is on screen. */
-export type SearchMode = "commands" | "files" | "text";
+/** Which of the dialog's lists is on screen. */
+export type SearchMode = "commands" | "files" | "text" | "git" | "branches";
 
 /** One step of the dialog's breadcrumb trail. */
 export interface Crumb {
   readonly mode: SearchMode;
   readonly label: string;
+}
+
+/**
+ * A list the dialog can walk into, and the list it walks back to. One table of
+ * these is what gives every mode its breadcrumb trail, its row in the list above
+ * it, and where Backspace on an empty query goes.
+ */
+export interface Submenu {
+  readonly mode: Exclude<SearchMode, "commands">;
+  readonly parent: SearchMode;
+  /** How the row that opens it reads, e.g. "Go to File…". */
+  readonly label: string;
+  readonly group: string;
+  readonly icon: React.ComponentType<{ className?: string }>;
+  readonly keywords: string;
+  /** Right-aligned shortcut on the row that opens it. */
+  readonly hint?: string;
 }
 
 /** An app action offered by the command list. Built by the shell that has
@@ -35,7 +56,21 @@ export interface Command {
   readonly keywords?: string;
   /** Right-aligned hint — a current value or shortcut. */
   readonly hint?: string;
+  /** The list the command lives in; the root command list when omitted. */
+  readonly submenu?: SearchMode;
   readonly run: () => void;
+}
+
+/** A branch the checkout list offers, local and remote flattened into one row. */
+export interface BranchChoice {
+  /** Full display name, e.g. "task/BMB-207" or "origin/feature". */
+  readonly name: string;
+  /** The ref to check out — a local name, or a remote's tracking name. */
+  readonly ref: string;
+  readonly group: "Local" | "Remote";
+  readonly isCurrent: boolean;
+  /** Right-aligned note — ahead/behind counts, or which remote it came from. */
+  readonly hint?: string;
 }
 
 /** The match modifiers, mirroring the `git grep` flags behind them. */

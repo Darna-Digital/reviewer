@@ -38,6 +38,7 @@
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
   --color-ring: var(--ring);
+  --color-ring-accent: var(--ring-accent);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
@@ -84,14 +85,6 @@
   --color-hover: var(--overlay-hover);
   --color-pressed: var(--overlay-pressed);
   --color-button-neutral: var(--button-neutral);
-  --text-ui: 0.8125rem;
-  --text-ui--line-height: 1.25rem;
-  --text-ui--letter-spacing: -0.04px;
-  --text-meta: 0.6875rem;
-  --text-meta--line-height: 1rem;
-  --text-meta--letter-spacing: 0.05px;
-  --font-weight-book: 440;
-  --font-weight-plus: 530;
   --radius-sm: calc(var(--radius) * 0.5);
   --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
@@ -339,6 +332,49 @@
     inset 0 0 0 0.5px rgb(255 255 255 / 0.16);
 }
 
+/* The interface type scale, as whole steps rather than a size class plus a
+   weight class.
+
+   The names deliberately avoid `text-*` and `font-*`. Those prefixes are how
+   tailwind-merge decides what a class *is*, and it can only recognise sizes and
+   weights it already knows — so a `text-ui` reads to it as a text *colour*, and
+   `cn("text-primary-foreground", "text-ui")` quietly drops the colour and paints
+   the label black. A weight named `font-plus` is read as a font family, which
+   fails the other way: it never displaces `font-medium`, so the two survive
+   together and the stylesheet's order picks the winner instead of the caller's.
+   `type-*` collides with nothing, so both stay honest. */
+@utility type-ui {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  letter-spacing: -0.04px;
+  font-weight: 530;
+}
+
+/* The same size at reading weight — comment bodies, editor text, anything made
+   of sentences rather than labels. */
+@utility type-body {
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  letter-spacing: -0.04px;
+  font-weight: 440;
+}
+
+@utility type-xs {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  letter-spacing: 0;
+  font-weight: 530;
+}
+
+/* Timestamps, counts, captions. Tracking opens up rather than tightening: small
+   type needs the room that large type needs taken away. */
+@utility type-meta {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  letter-spacing: 0.05px;
+  font-weight: 530;
+}
+
 /* A raised face: sheen on top, hairline ring, hover/press tinted over both.
    The tint is stacked as a further gradient layer rather than swapped into the
    background colour, so the sheen underneath survives the hover. */
@@ -460,6 +496,13 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
+  /* Text fields focus in the accent, everything else in grey `--ring`. A caret
+     landing in a field is the one focus worth colouring: it says where typing
+     will go, which no amount of grey outline communicates. It stays a hairline
+     border and nothing more — the field is already outlined, so recolouring
+     that edge is enough, and a glow around it would shout where the caret
+     already whispers. */
+  --ring-accent: var(--brand-500);
   --chart-1: var(--brand-500);
   --chart-2: var(--brand-300);
   --chart-3: var(--brand-700);
@@ -525,6 +568,7 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
+  --ring-accent: var(--brand-400);
   --chart-1: var(--brand-400);
   --chart-2: var(--brand-200);
   --chart-3: var(--brand-600);
@@ -938,6 +982,26 @@ diffs-container {
   --diffs-modified-color-override: var(--primary);
   --diffs-bg-selection-override: light-dark(#009fff, #69b1ff);
   --diffs-bg-selection-number-override: light-dark(#009fff, #69b1ff);
+  /* One blue in three weights for the row you are commenting on: the gutter
+     deepest, the anchor line next, and the annotation the composer sits in only
+     a wash — so the line reads as the subject and the card as its overflow.
+     Pierre mixes the selection into whatever the line already is, so an
+     addition's green swung the anchor line off-hue from the neutral-based
+     annotation and the two blues stopped looking related. These mix from the
+     background instead, which keeps one hue across the ramp; diff-pane maps
+     them onto the rows through the shadow root's `unsafe` layer. */
+  --diffs-selection-gutter-bg: light-dark(
+    color-mix(in lab, var(--background) 68%, var(--diffs-bg-selection-override)),
+    color-mix(in lab, var(--background) 58%, var(--diffs-bg-selection-override))
+  );
+  --diffs-selection-line-bg: light-dark(
+    color-mix(in lab, var(--background) 78%, var(--diffs-bg-selection-override)),
+    color-mix(in lab, var(--background) 68%, var(--diffs-bg-selection-override))
+  );
+  --diffs-selection-annotation-bg: light-dark(
+    color-mix(in lab, var(--background) 93%, var(--diffs-bg-selection-override)),
+    color-mix(in lab, var(--background) 88%, var(--diffs-bg-selection-override))
+  );
 }
 
 /* --- byconvo: file tree theming (pierre/trees web component) --------------- */

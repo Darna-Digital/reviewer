@@ -64,7 +64,8 @@ import { useChatModels, useChats, useRepo } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { activeWorkMode } from "@/lib/work-mode";
 
 const CONSOLE_LEVELS = ["verbose", "info", "warning", "error"] as const;
 
@@ -117,7 +118,13 @@ export function BrowserPane() {
   const [guest, setGuest] = useState<WebviewElement | null>(null);
   const [address, setAddress] = useState("");
   const [editing, setEditing] = useState(false);
-  const [assignDismissed, setAssignDismissed] = useState(false);
+
+  // Handing visual comments to an agent is code work, so the bar keeps to code
+  // mode even though the pane itself rides along beside every mode.
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const inCodeMode = activeWorkMode(pathname, prefs.workMode) === "code";
 
   const navigate = useNavigate();
   const comments = useVisualComments();
@@ -273,7 +280,6 @@ export function BrowserPane() {
         viewport: draft.viewport,
       });
       updateBrowserPane({ draft: null });
-      setAssignDismissed(false);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not save the comment"
@@ -397,14 +403,17 @@ export function BrowserPane() {
             onCancel={() => updateBrowserPane({ draft: null })}
           />
         )}
-        {pane.draft === null && pending.length > 0 && !assignDismissed && (
+        {pane.draft === null && pending.length > 0 && inCodeMode && (
           <ReviewAssignBar
-            count={pending.length}
+            comments={pending.map((comment) => ({
+              id: comment.id,
+              file: comment.elementLabel,
+              line: null,
+              body: comment.body,
+            }))}
             chats={chats.data ?? []}
             onAssign={assign}
-            onDismiss={() => setAssignDismissed(true)}
             className="absolute inset-x-2 bottom-3"
-            linkToComments={false}
           />
         )}
       </div>

@@ -35,6 +35,7 @@ import { DiagnosticsAnnotation } from "@/interactions/language/components/diagno
 import { useDiffLanguage } from "@/interactions/language/components/use-diff-language";
 import type { DiagnosticsAnnotationMeta } from "@/interactions/language/components/language-layer";
 import { fetchClient } from "@/lib/api/client";
+import { selectionShadingCSS } from "@/lib/code-selection-css";
 import { diffTargetKey, type DiffTarget } from "@/lib/api/types";
 import type { CommentSide, ReviewComment } from "@byconvo/core/comments";
 import type { DiffStyle, Theme } from "@/lib/ui-prefs";
@@ -239,9 +240,11 @@ function FileDiffSection({
           expandUnchanged,
           enableGutterUtility: true,
           ...language.viewOptions,
-          unsafeCSS: connectorsEnabled
-            ? `${connectorGutterCSS}\n${language.viewOptions.unsafeCSS}`
-            : language.viewOptions.unsafeCSS,
+          unsafeCSS: [
+            selectionShadingCSS,
+            connectorsEnabled ? connectorGutterCSS : "",
+            language.viewOptions.unsafeCSS,
+          ].join("\n"),
           onPostRender: (node, instance, phase) => {
             // Both need to know the code rendered: the connectors to measure
             // it, the language layer to know it may start asking about it.

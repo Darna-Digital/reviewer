@@ -30,6 +30,16 @@ export interface DraftLocation {
 /** Indent (avatar + gap) used to nest replies under the opening comment. */
 const REPLY_INDENT = "ml-10";
 
+/**
+ * The card a thread and a draft both sit in. Capped at 400px rather than
+ * stretched to the pane: a comment anchored to one line reads as a note pinned
+ * beside that line, and a card that runs the width of the diff stops looking
+ * pinned to anything. It also keeps the prose to a measure you can actually
+ * scan — the same cap opencode puts on its line comments.
+ */
+const COMMENT_CARD =
+  "my-2 mr-3 ml-12 w-full max-w-100 min-w-0 overflow-hidden rounded-md bg-surface-2 p-3 font-sans text-card-foreground shadow-raised";
+
 export function CommentComposer({
   onCancel,
   onSubmit,
@@ -79,14 +89,11 @@ export function CommentComposer({
           if (e.key === "Escape") onCancel();
         }}
       />
-      <div className="flex items-center gap-1">
-        <p className="min-w-0 flex-1 truncate text-meta font-plus text-destructive">
-          {error}
-        </p>
+      {/* Actions sit under the left edge of the field, submit first: the eye
+          finishes the draft at the start of the last line, not out at the right
+          margin, so that is where the button it wants should already be. */}
+      <div className="flex items-center gap-2">
         <div className="flex shrink-0 items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            Cancel
-          </Button>
           <Button
             size="sm"
             disabled={body.trim().length === 0 || busy}
@@ -94,7 +101,13 @@ export function CommentComposer({
           >
             {busy ? "Saving…" : submitLabel}
           </Button>
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            Cancel
+          </Button>
         </div>
+        <p className="min-w-0 flex-1 truncate type-meta text-destructive">
+          {error}
+        </p>
       </div>
     </div>
   );
@@ -136,7 +149,7 @@ function CommentCard({
       <AuthorAvatar author={comment.author} source={comment.source} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="text-ui font-plus text-foreground">
+          <span className="type-ui text-foreground">
             {comment.author}
           </span>
           {comment.source === "github" && (
@@ -145,11 +158,11 @@ function CommentCard({
               aria-label="GitHub"
             />
           )}
-          <span className="text-meta font-plus text-muted-foreground tabular-nums">
+          <span className="type-meta text-muted-foreground tabular-nums">
             {timeAgo(comment.createdAt)}
           </span>
         </div>
-        <div className="markdown mt-1 min-w-0 text-ui font-book">
+        <div className="markdown mt-1 min-w-0 type-body">
           <Markdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight]}
@@ -181,7 +194,7 @@ function ThreadAction({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1 rounded-sm text-ui text-muted-foreground transition-colors outline-offset-2 outline-ring hover:text-foreground focus-visible:outline-2"
+      className="inline-flex items-center gap-1 rounded-sm type-body text-muted-foreground transition-colors outline-offset-2 outline-ring hover:text-foreground focus-visible:outline-2"
     >
       {icon}
       {children}
@@ -233,7 +246,7 @@ export function CommentThread({
   };
 
   return (
-    <div className="my-2 mr-3 ml-12 max-w-2xl min-w-0 overflow-hidden rounded-md bg-surface-2 p-3 font-sans text-card-foreground shadow-raised">
+    <div className={COMMENT_CARD}>
       <div className="flex flex-col gap-4">
         {comments.map((comment, i) => (
           <div key={comment.id} className={i === 0 ? undefined : REPLY_INDENT}>
@@ -300,7 +313,7 @@ export function DraftCard({
   onSubmit: (body: string) => Promise<void>;
 }) {
   return (
-    <div className="my-2 mr-3 ml-12 max-w-2xl min-w-0 overflow-hidden rounded-md bg-surface-2 p-3 font-sans text-card-foreground shadow-raised">
+    <div className={COMMENT_CARD}>
       <CommentComposer onCancel={onCancel} onSubmit={onSubmit} />
     </div>
   );

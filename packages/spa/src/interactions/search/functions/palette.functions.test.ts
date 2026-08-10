@@ -1,11 +1,19 @@
 import { describe, expect, it } from "vitest";
-import type { Command } from "../interfaces/search.interfaces";
+import type {
+  BranchInfo,
+  Command,
+  RemoteBranchInfo,
+} from "../interfaces/search.interfaces";
 import {
+  branchChoices,
+  commandsIn,
   crumbsFor,
+  filterBranches,
   filterCommands,
   filterFiles,
   fuzzyScore,
   splitPath,
+  submenusIn,
 } from "./palette.functions";
 
 const Icon = () => null;
@@ -20,8 +28,13 @@ const command = (over: Partial<Command> = {}): Command => ({
 });
 
 const COMMANDS: ReadonlyArray<Command> = [
-  command(),
-  command({ id: "git-pull", label: "Pull", keywords: "remote update" }),
+  command({ submenu: "git" }),
+  command({
+    id: "git-pull",
+    label: "Pull",
+    keywords: "remote update",
+    submenu: "git",
+  }),
   command({
     id: "go-settings",
     label: "Open Settings",
@@ -29,6 +42,30 @@ const COMMANDS: ReadonlyArray<Command> = [
     keywords: "theme appearance",
   }),
 ];
+
+const branch = (over: Partial<BranchInfo> = {}): BranchInfo => ({
+  name: "master",
+  sha: "a1",
+  isCurrent: false,
+  upstream: "origin/master",
+  ahead: 0,
+  behind: 0,
+  committedAt: "2026-08-10",
+  subject: "latest",
+  ...over,
+});
+
+const remoteBranch = (
+  over: Partial<RemoteBranchInfo> = {}
+): RemoteBranchInfo => ({
+  name: "origin/release",
+  remote: "origin",
+  shortName: "release",
+  sha: "c3",
+  committedAt: "2026-08-10",
+  subject: "cut",
+  ...over,
+});
 
 const PATHS = [
   "packages/spa/src/lib/queries.ts",
@@ -46,6 +83,122 @@ describe("crumbsFor", () => {
       { mode: "files", label: "Files" },
     ]);
     expect(crumbsFor("text").at(-1)).toEqual({ mode: "text", label: "Text" });
+  });
+
+  it("walks the whole way up from a list nested inside another", () => {
+    expect(crumbsFor("branches")).toEqual([
+      { mode: "commands", label: "Commands" },
+      { mode: "git", label: "Git" },
+      { mode: "branches", label: "Branches" },
+    ]);
+  });
+});
+
+describe("submenusIn / commandsIn", () => {
+  it("offers a list only the rows that live in it", () => {
+    expect(submenusIn("commands", "").map((s) => s.mode)).toEqual([
+      "files",
+      "text",
+      "git",
+    ]);
+    expect(submenusIn("git", "").map((s) => s.mode)).toEqual(["branches"]);
+    expect(commandsIn("git", COMMANDS, "").map((c) => c.id)).toEqual([
+      "git-push",
+      "git-pull",
+    ]);
+    expect(commandsIn("commands", COMMANDS, "").map((c) => c.id)).toEqual([
+      "go-settings",
+    ]);
+  });
+
+  it("reaches into every list once something is typed at the root", () => {
+    expect(commandsIn("commands", COMMANDS, "push").map((c) => c.id)).toEqual(
+      COMMANDS.map((c) => c.id)
+    );
+    expect(submenusIn("commands", "branch").map((s) => s.mode)).toContain(
+      "branches"
+    );
+  });
+
+  it("keeps a nested list to itself even while searching", () => {
+    expect(commandsIn("git", COMMANDS, "settings").map((c) => c.id)).toEqual([
+      "git-push",
+      "git-pull",
+    ]);
+  });
+});
+
+describe("branchChoices", () => {
+  it("puts the branch you are on first, and says so", () => {
+    const [first] = branchChoices(
+      [branch({ name: "task/BMB-207" }), branch({ isCurrent: true })],
+      []
+    );
+
+    expect(first).toMatchObject({ name: "master", hint: "current" });
+  });
+
+  it("notes how far a branch has drifted from its upstream", () => {
+    const [only] = branchChoices([branch({ ahead: 2, behind: 1 })], []);
+
+    expect(only.hint).toBe("↑2 ↓1");
+  });
+
+  it("checks a remote branch out by its tracking name", () => {
+    const [only] = branchChoices([], [remoteBranch()]);
+
+    expect(only).toMatchObject({
+      name: "origin/release",
+      ref: "release",
+      group: "Remote",
+      hint: "origin",
+    });
+  });
+
+  it("drops a remote branch that is already checked out locally", () => {
+    const choices = branchChoices(
+      [branch({ name: "release" })],
+      [remoteBranch(), remoteBranch({ name: "origin/next", shortName: "next" })]
+    );
+
+    expect(choices.map((c) => c.name)).toEqual(["release", "origin/next"]);
+  });
+
+  it("leaves the branches it was given alone", () => {
+    const local = [
+      branch({ name: "task/BMB-207" }),
+      branch({ isCurrent: true }),
+    ];
+
+    branchChoices(local, []);
+
+    expect(local[0].name).toBe("task/BMB-207");
+  });
+});
+
+describe("filterBranches", () => {
+  const CHOICES = branchChoices(
+    [branch({ isCurrent: true }), branch({ name: "task/BMB-207" })],
+    [remoteBranch()]
+  );
+
+  it("lists everything until something is typed", () => {
+    expect(filterBranches(CHOICES, "")).toHaveLength(3);
+  });
+
+  it("matches on any part of the name", () => {
+    expect(filterBranches(CHOICES, "207").map((b) => b.name)).toEqual([
+      "task/BMB-207",
+    ]);
+  });
+
+  it("caps how many branches come back", () => {
+    const many = branchChoices(
+      Array.from({ length: 100 }, (_, i) => branch({ name: `task/${i}` })),
+      []
+    );
+
+    expect(filterBranches(many, "task", 40)).toHaveLength(40);
   });
 });
 

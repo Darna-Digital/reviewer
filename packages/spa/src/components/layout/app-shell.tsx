@@ -64,6 +64,7 @@ import {
 } from "@/interactions/chats/functions/chat-assignment.functions";
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
+import { useOpenInEditor } from "@/interactions/plans-pane/adapters/open-in-editor.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { TabStrip } from "@/interactions/tabs/components/tab-strip";
 import {
@@ -169,11 +170,6 @@ export function AppShell() {
     ],
     [localComments.data]
   );
-  // The floating "assign to agent" bar's dismiss state. The comment set it acts
-  // on (visibleComments — local + GitHub) is derived lower down, so the handler
-  // lives there; the state stays here with the other UI state.
-  const [assignBarDismissed, setAssignBarDismissed] = useState(false);
-  const reviewCountRef = useRef(0);
 
   const hasGitHub = repo.data?.github != null;
   const pulls = usePulls(hasGitHub);
@@ -336,13 +332,6 @@ export function AppShell() {
   );
 
   // --- review → agent: hand the comments in view (local + GitHub) to an agent.
-  useEffect(() => {
-    // Re-show the bar whenever a new comment appears (count grows past last seen).
-    if (visibleComments.length > reviewCountRef.current)
-      setAssignBarDismissed(false);
-    reviewCountRef.current = visibleComments.length;
-  }, [visibleComments.length]);
-
   const assignReview = async (dest: AssignTarget) => {
     if (visibleComments.length === 0) return;
     const count = visibleComments.length;
@@ -400,6 +389,15 @@ export function AppShell() {
   const openLocation = (path: string, lineNumber: number) => {
     openFile(path);
     revealLine(lineNumber);
+  };
+  // A comment picked out of the bar's list opens the way a note in the analysis
+  // pane does — a permanent tab, the line in the URL, and the reveal asked for
+  // outright so following the same comment twice scrolls both times.
+  const openInEditor = useOpenInEditor();
+  const openComment = (id: string) => {
+    const comment = visibleComments.find((c) => c.id === id);
+    if (comment === undefined) return;
+    openInEditor(comment.filePath, comment.lineNumber);
   };
 
   // A `line` in the URL is how another surface points at code — the comments
@@ -869,14 +867,6 @@ export function AppShell() {
     // pane, file viewer, editor, conflict view) — see DiffWorkerPoolProvider.
     <DiffWorkerPoolProvider>
       <WindowFrame>
-        {visibleComments.length > 0 && !assignBarDismissed && (
-          <ReviewAssignBar
-            count={visibleComments.length}
-            chats={chats.data ?? []}
-            onAssign={assignReview}
-            onDismiss={() => setAssignBarDismissed(true)}
-          />
-        )}
         <ModeRail />
         <div className="flex min-w-0 flex-1 flex-col">
           <TopBar
@@ -1060,8 +1050,25 @@ export function AppShell() {
                       }
                     />
                   )}
-                  <div className="min-h-0 flex-1 overflow-hidden">
+                  {/* The assign bar floats over the code itself, so it clears
+                      the path bar and stops at the panes' edge rather than the
+                      window's. */}
+                  <div className="relative min-h-0 flex-1 overflow-hidden">
                     {renderCenter()}
+                    {visibleComments.length > 0 && (
+                      <ReviewAssignBar
+                        comments={visibleComments.map((comment) => ({
+                          id: comment.id,
+                          file: comment.filePath,
+                          line: comment.lineNumber,
+                          body: comment.body,
+                        }))}
+                        chats={chats.data ?? []}
+                        onAssign={assignReview}
+                        onOpenComment={openComment}
+                        className="absolute inset-x-3 bottom-8"
+                      />
+                    )}
                   </div>
                   {/* The trail closes the pane, and only once it says more than
                       which mode you are in. */}

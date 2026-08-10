@@ -20,7 +20,31 @@ const git = vi.hoisted(() => ({
   pull: vi.fn(),
   push: vi.fn(),
   createBranch: vi.fn(),
+  checkout: vi.fn(),
 }));
+
+const BRANCHES = [
+  {
+    name: "master",
+    sha: "a1",
+    isCurrent: true,
+    upstream: "origin/master",
+    ahead: 0,
+    behind: 0,
+    committedAt: "2026-08-10",
+    subject: "latest",
+  },
+  {
+    name: "task/BMB-207",
+    sha: "b2",
+    isCurrent: false,
+    upstream: null,
+    ahead: 2,
+    behind: 0,
+    committedAt: "2026-08-09",
+    subject: "wip",
+  },
+];
 /** The page the host is mounted on; drives where a result opens. */
 let pathname = "/modes/agent-session";
 
@@ -36,6 +60,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 vi.mock("@/lib/queries", () => ({
   useFiles: () => ({ data: { paths: FILES, gitStatus: [] } }),
   useRepo: () => ({ data: { currentBranch: "main", github: null } }),
+  useBranches: () => ({ data: BRANCHES }),
+  useRemoteBranches: () => ({ data: [] }),
 }));
 vi.mock("@/interactions/git-actions/adapters/git-actions.hook.adapter", () => ({
   useGitActions: () => git,
@@ -115,7 +141,7 @@ describe("SearchHost", () => {
     await user.keyboard("{Meta>}k{/Meta}");
 
     expect(screen.getByText("Go to Local Changes")).toBeDefined();
-    expect(screen.getByText("Push")).toBeDefined();
+    expect(screen.getByText("Git Actions…")).toBeDefined();
   });
 
   it("opens even while the page's own text box has focus", async () => {
@@ -148,9 +174,32 @@ describe("SearchHost", () => {
     const user = setup();
 
     await user.keyboard("{Meta>}k{/Meta}");
+    await user.click(screen.getByText("Git Actions…"));
     await user.click(screen.getByText("Fetch"));
 
     expect(git.fetch).toHaveBeenCalledOnce();
+  });
+
+  it("checks out a branch found by name", async () => {
+    const user = setup();
+
+    await user.keyboard("{Meta>}k{/Meta}");
+    await user.click(screen.getByText("Git Actions…"));
+    await user.click(screen.getByText("Switch Branch…"));
+    await user.type(dialog()!, "207{Enter}");
+
+    expect(git.checkout).toHaveBeenCalledWith("task/BMB-207");
+  });
+
+  it("drops the list you had walked into when Cmd+K is pressed again", async () => {
+    const user = setup();
+
+    await user.keyboard("{Meta>}k{/Meta}");
+    await user.click(screen.getByText("Git Actions…"));
+    await user.keyboard("{Meta>}k{/Meta}");
+
+    expect(screen.getByText("Go to Local Changes")).toBeDefined();
+    expect(screen.queryByText("Fetch")).toBeNull();
   });
 
   it("goes straight to the file search on a double-tap of Shift", async () => {
