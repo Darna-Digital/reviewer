@@ -17,7 +17,6 @@ export const chat = (overrides: Partial<Chat> = {}): Chat => ({
   model: "claude-opus-4-8",
   effort: "high",
   access: "fullAccess",
-  mode: "build",
   branch: "main",
   sessionId: null,
   createdAt: "2026-01-01T00:00:00.000Z",

@@ -23,7 +23,6 @@ const catalog: ChatModelCatalog = {
     model: "claude-opus-4-8",
     effort: "high",
     access: "fullAccess",
-    mode: "build",
   },
   providers: [
     {
@@ -74,14 +73,12 @@ describe("chat assignment helpers", () => {
       model: "claude-opus-4-8",
       effort: "high",
       access: "fullAccess",
-      mode: "build",
     });
     expect(buildChatAssignmentSettings("codex", catalog)).toEqual({
       provider: "codex",
       model: "gpt-5.5",
       effort: "high",
       access: "fullAccess",
-      mode: "build",
     });
   });
 

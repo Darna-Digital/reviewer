@@ -36,7 +36,6 @@ const newChat = {
   model: "claude-opus-4-8",
   effort: "high",
   access: "fullAccess",
-  mode: "build",
   branch: "main",
 } as const;
 describe("ChatsService", () => {
@@ -143,12 +142,10 @@ describe("ChatsService", () => {
       const updated = yield* chats.update(created.id, {
         model: "claude-fable-5",
         effort: "low",
-        mode: "plan",
       });
       expect(updated.title).toBe("My chat");
       expect(updated.model).toBe("claude-fable-5");
       expect(updated.effort).toBe("low");
-      expect(updated.mode).toBe("plan");
       expect(updated.access).toBe("fullAccess");
     }).pipe(Effect.provide(layer));
   });
@@ -162,8 +159,7 @@ describe("ChatsService", () => {
         model: "claude-opus-4-8",
         effort: "high",
         access: "fullAccess",
-        mode: "build",
-        branch: "main",
+              branch: "main",
         sessionId: "claude-session-abc",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
@@ -195,8 +191,7 @@ describe("ChatsService", () => {
         model: "claude-opus-4-8",
         effort: "high",
         access: "fullAccess",
-        mode: "build",
-        branch: "main",
+              branch: "main",
         sessionId: "claude-session-xyz",
         createdAt: "2026-01-01T00:00:00.000Z",
         updatedAt: "2026-01-01T00:00:00.000Z",
@@ -224,8 +219,7 @@ describe("ChatsService", () => {
       model: "claude-opus-4-8",
       effort: "high",
       access: "fullAccess",
-      mode: "build",
-      branch: "main",
+          branch: "main",
       sessionId: "claude-session-keep",
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",

@@ -7,7 +7,6 @@ const settings = {
   model: "claude-opus-4-8",
   effort: "high",
   access: "fullAccess",
-  mode: "build",
 } as const;
 
 describe("createChatsFunctions", () => {
@@ -92,9 +91,9 @@ describe("createChatsFunctions", () => {
   it("updateSettings passes the patch through", async () => {
     const { deps, calls } = mockChatsDependencies();
     const fns = createChatsFunctions(deps);
-    await fns.updateSettings("c-1", { mode: "plan", effort: "low" });
+    await fns.updateSettings("c-1", { access: "supervised", effort: "low" });
     expect(calls.update).toEqual([
-      { id: "c-1", input: { mode: "plan", effort: "low" } },
+      { id: "c-1", input: { access: "supervised", effort: "low" } },
     ]);
   });
 

@@ -46,12 +46,10 @@ const CLAUDE_THINKING_TOKENS: Record<Chat["effort"], string> = {
 
 /**
  * `--permission-mode` / skip-permissions flags for the chat's access level.
- * Plan mode wins over access: it forces Claude's read-only "plan" mode.
  * Non-interactive runs can't pause for approval, so "supervised" leaves the
  * default mode where gated tools are refused (surfaced as failed activities).
  */
 const claudePermissionArgs = (chat: Chat): ReadonlyArray<string> => {
-  if (chat.mode === "plan") return ["--permission-mode", "plan"];
   switch (chat.access) {
     case "supervised":
       return [];
@@ -62,12 +60,8 @@ const claudePermissionArgs = (chat: Chat): ReadonlyArray<string> => {
   }
 };
 
-/**
- * Codex sandbox/approval flags. Plan mode has no codex equivalent, so it
- * falls back to the read-only default sandbox (same as "supervised").
- */
+/** Codex sandbox/approval flags. */
 const codexAccessArgs = (chat: Chat): ReadonlyArray<string> => {
-  if (chat.mode === "plan") return [];
   switch (chat.access) {
     case "supervised":
       return [];
@@ -80,14 +74,11 @@ const codexAccessArgs = (chat: Chat): ReadonlyArray<string> => {
 
 /**
  * Cursor's one permission switch: `--force` lets the agent edit files and run
- * commands without asking. Print mode can't ask, so without it a build turn
- * stalls on the first write. There is no sandbox tier between "ask" and
- * "don't ask", so acceptEdits and fullAccess land on the same flag, and plan
- * mode — which cursor has no equivalent of — falls back to the read-only
- * default, exactly like codex.
+ * commands without asking. Print mode can't ask, so without it a turn stalls
+ * on the first write. There is no sandbox tier between "ask" and "don't ask",
+ * so acceptEdits and fullAccess land on the same flag.
  */
 const cursorAccessArgs = (chat: Chat): ReadonlyArray<string> => {
-  if (chat.mode === "plan") return [];
   switch (chat.access) {
     case "supervised":
       return [];

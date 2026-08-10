@@ -63,7 +63,6 @@ export function NewChatView() {
     model: overrides.model ?? preferred?.id ?? "",
     effort: overrides.effort ?? defaults?.effort ?? "high",
     access: overrides.access ?? defaults?.access ?? "fullAccess",
-    mode: overrides.mode ?? defaults?.mode ?? "build",
   };
 
   const send = async (text: string, images: ReadonlyArray<ChatImage>) => {
@@ -103,7 +102,7 @@ export function NewChatView() {
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-6 py-8">
       <div className="flex w-full max-w-3xl flex-col gap-5">
-        <h1 className="text-center text-2xl font-medium tracking-tight">
+        <h1 className="mb-6 text-center text-2xl font-medium tracking-tight">
           What should we work on?
         </h1>
         <div className="flex flex-col">

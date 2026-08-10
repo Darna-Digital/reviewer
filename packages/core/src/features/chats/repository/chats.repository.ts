@@ -11,7 +11,6 @@ import type {
   Chat,
   ChatAccess,
   ChatEffort,
-  ChatMode,
   ChatProviderKind,
   ChatSummary,
 } from "../schema/chats.schema.ts";
@@ -22,7 +21,6 @@ export interface CreateChatInput {
   readonly model: string;
   readonly effort: ChatEffort;
   readonly access: ChatAccess;
-  readonly mode: ChatMode;
   readonly branch: string;
 }
 export interface UpdateChatInput {
@@ -31,7 +29,6 @@ export interface UpdateChatInput {
   readonly model?: string;
   readonly effort?: ChatEffort;
   readonly access?: ChatAccess;
-  readonly mode?: ChatMode;
 }
 export type ChatsFailure =
   | NoRepoSelected

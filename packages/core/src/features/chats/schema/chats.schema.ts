@@ -15,8 +15,6 @@ export const ChatAccess = Schema.Literals([
   "fullAccess",
 ]);
 export type ChatAccess = typeof ChatAccess.Type;
-export const ChatMode = Schema.Literals(["build", "plan"]);
-export type ChatMode = typeof ChatMode.Type;
 export const ChatTurnState = Schema.Literals([
   "running",
   "completed",
@@ -75,7 +73,6 @@ export const Chat = Schema.Struct({
   model: Schema.String,
   effort: ChatEffort,
   access: ChatAccess,
-  mode: ChatMode,
   branch: Schema.String,
   sessionId: Schema.NullOr(Schema.String),
   createdAt: Schema.String,
@@ -121,7 +118,6 @@ export const ChatModelCatalog = Schema.Struct({
     model: Schema.String,
     effort: ChatEffort,
     access: ChatAccess,
-    mode: ChatMode,
   }),
 });
 export type ChatModelCatalog = typeof ChatModelCatalog.Type;
@@ -131,7 +127,6 @@ export const NewChat = Schema.Struct({
   model: Schema.optionalKey(Schema.String),
   effort: Schema.optionalKey(ChatEffort),
   access: Schema.optionalKey(ChatAccess),
-  mode: Schema.optionalKey(ChatMode),
   branch: Schema.optionalKey(Schema.String),
 });
 export type NewChat = typeof NewChat.Type;
@@ -141,7 +136,6 @@ export const UpdateChat = Schema.Struct({
   model: Schema.optionalKey(Schema.String),
   effort: Schema.optionalKey(ChatEffort),
   access: Schema.optionalKey(ChatAccess),
-  mode: Schema.optionalKey(ChatMode),
 });
 export type UpdateChat = typeof UpdateChat.Type;
 export const ChatImageUpload = Schema.Struct({

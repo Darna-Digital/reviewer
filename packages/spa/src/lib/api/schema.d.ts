@@ -4114,8 +4114,6 @@ export interface operations {
                     effort?: "low" | "medium" | "high";
                     /** @enum {string} */
                     access?: "supervised" | "acceptEdits" | "fullAccess";
-                    /** @enum {string} */
-                    mode?: "build" | "plan";
                     branch?: string;
                 };
             };
@@ -4137,8 +4135,6 @@ export interface operations {
                         effort: "low" | "medium" | "high";
                         /** @enum {string} */
                         access: "supervised" | "acceptEdits" | "fullAccess";
-                        /** @enum {string} */
-                        mode: "build" | "plan";
                         branch: string;
                         sessionId: string | null;
                         createdAt: string;
@@ -4244,8 +4240,6 @@ export interface operations {
                             effort: "low" | "medium" | "high";
                             /** @enum {string} */
                             access: "supervised" | "acceptEdits" | "fullAccess";
-                            /** @enum {string} */
-                            mode: "build" | "plan";
                         };
                     };
                 };
@@ -4306,8 +4300,6 @@ export interface operations {
                         effort: "low" | "medium" | "high";
                         /** @enum {string} */
                         access: "supervised" | "acceptEdits" | "fullAccess";
-                        /** @enum {string} */
-                        mode: "build" | "plan";
                         branch: string;
                         sessionId: string | null;
                         createdAt: string;
@@ -4450,8 +4442,6 @@ export interface operations {
                     effort?: "low" | "medium" | "high";
                     /** @enum {string} */
                     access?: "supervised" | "acceptEdits" | "fullAccess";
-                    /** @enum {string} */
-                    mode?: "build" | "plan";
                 };
             };
         };
@@ -4472,8 +4462,6 @@ export interface operations {
                         effort: "low" | "medium" | "high";
                         /** @enum {string} */
                         access: "supervised" | "acceptEdits" | "fullAccess";
-                        /** @enum {string} */
-                        mode: "build" | "plan";
                         branch: string;
                         sessionId: string | null;
                         createdAt: string;
@@ -4583,8 +4571,6 @@ export interface operations {
                         effort: "low" | "medium" | "high";
                         /** @enum {string} */
                         access: "supervised" | "acceptEdits" | "fullAccess";
-                        /** @enum {string} */
-                        mode: "build" | "plan";
                         branch: string;
                         sessionId: string | null;
                         createdAt: string;

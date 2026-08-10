@@ -197,14 +197,14 @@ export function WindowBar() {
     go(NEW_SESSION_HREF);
   };
 
-  // ⌘N mints a session, the same as the ✛ at the end of the strip. ⇧ and ⌥ are
+  // ⌘T mints a session, the same as the ✛ at the end of the strip. ⇧ and ⌥ are
   // left alone so the chord stays exactly this one.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) {
         return;
       }
-      if (event.key.toLowerCase() !== "n") return;
+      if (event.key.toLowerCase() !== "t") return;
       event.preventDefault();
       openSession();
     };

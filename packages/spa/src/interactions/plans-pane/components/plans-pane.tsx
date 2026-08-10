@@ -196,9 +196,6 @@ export function PlansPane() {
     model: overrides.model ?? preferred?.id ?? "",
     effort: overrides.effort ?? defaults?.effort ?? "high",
     access: overrides.access ?? defaults?.access ?? "fullAccess",
-    // An analysis has to read the code and then POST the result back, so it
-    // needs the mode that can run a command — plan mode is read-only.
-    mode: overrides.mode ?? "build",
   };
 
   const summaries = plans.data ?? [];
