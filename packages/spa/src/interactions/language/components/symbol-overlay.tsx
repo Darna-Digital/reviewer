@@ -46,7 +46,7 @@ function LocationRow({
     <li>
       <button
         type="button"
-        className="flex w-full items-baseline gap-2 rounded px-2 py-1 text-left text-xs hover:bg-muted"
+        className="flex w-full items-baseline gap-2 rounded px-2 py-1 text-left text-xs hover:bg-elevate"
         onClick={() => onOpen(location)}
       >
         {/* The file name carries the information, so the directory is what
