@@ -12,20 +12,17 @@ export const Route = createFileRoute("/_workspace/modes/agent-session/")({
     new: search["new"] === true || search["new"] === "true" ? true : undefined,
   }),
   loaderDeps: ({ search }) => ({ forceNew: search.new === true }),
-  // Resume the most recent chat on the current branch by redirecting to it, so
-  // entering Chats (from another mode, a deep link, or a reload) picks up where
-  // you left off. The redirect runs before render — no composer flash — and is
-  // skipped when `?new` asks for a fresh thread or the branch has no chats yet.
+  // Resume the most recent session by redirecting to it, so entering Sessions
+  // (from another mode, a deep link, or a reload) picks up where you left off.
+  // The redirect runs before render — no composer flash — and is skipped when
+  // `?new` asks for a fresh session or there are no sessions yet.
   loader: async ({ context, deps }) => {
     if (deps.forceNew) return;
-    const [chats, repo] = await Promise.all([
-      context.queryClient.ensureQueryData(
-        api.queryOptions("get", "/api/chats")
-      ),
-      context.queryClient.ensureQueryData(api.queryOptions("get", "/api/repo")),
-    ]);
+    const chats = await context.queryClient.ensureQueryData(
+      api.queryOptions("get", "/api/chats")
+    );
     // The chats list is already sorted newest-first by the server.
-    const latest = chats.find((c) => c.branch === (repo.currentBranch ?? ""));
+    const latest = chats[0];
     if (latest) {
       throw redirect({
         to: "/modes/agent-session/$chatId",

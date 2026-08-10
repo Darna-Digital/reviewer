@@ -16,6 +16,7 @@ import { isChatRunning } from "@/interactions/chats/functions/chats.reducer";
 import { useChatModels } from "@/lib/queries";
 import { ChatComposer } from "./chat-composer";
 import { MessagesTimeline } from "./messages-timeline";
+import { SessionContextBar } from "./session-context-bar";
 
 export function ChatView({ chatId }: { chatId: string }) {
   const { chat, error, status } = useChatStream(chatId);
@@ -87,19 +88,24 @@ export function ChatView({ chatId }: { chatId: string }) {
       ) : (
         <MessagesTimeline chat={chat} />
       )}
-      <div className="mx-auto w-full max-w-3xl shrink-0 px-2 pb-4">
-        <ChatComposer
-          draftKey={chat.id}
-          settings={settings}
-          onSettingsChange={changeSettings}
-          catalog={models.data}
-          onSend={send}
-          running={running}
-          onStop={() => {
-            void actions.stop(chat.id);
-          }}
-          placeholder="Ask for follow-up changes or attach images…"
-        />
+      <div className="mx-auto flex w-full max-w-3xl shrink-0 flex-col px-2 pb-4">
+        {/* Lifted so the composer's own sheet occludes the strip sliding up
+            underneath it, which is what makes the two read as one block. */}
+        <div className="relative z-10">
+          <ChatComposer
+            draftKey={chat.id}
+            settings={settings}
+            onSettingsChange={changeSettings}
+            catalog={models.data}
+            onSend={send}
+            running={running}
+            onStop={() => {
+              void actions.stop(chat.id);
+            }}
+            placeholder="Ask for follow-up changes or attach images…"
+          />
+        </div>
+        <SessionContextBar projectLocked />
       </div>
     </div>
   );

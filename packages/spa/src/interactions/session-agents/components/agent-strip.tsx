@@ -33,7 +33,31 @@ export function AgentStrip({ className }: { className?: string }) {
   const agents = sessionAgents(detected, custom);
 
   return (
-    <div className={cn("flex items-center gap-1.5", className)}>
+    <div
+      className={cn(
+        "group flex items-center gap-1.5 rounded-lg px-1.5 py-1 transition-colors hover:bg-elevate",
+        className
+      )}
+    >
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Add agent"
+              onClick={() => setOpen(true)}
+              // Held in the layout rather than unmounted, so the avatars beside
+              // it don't shift the moment the pointer arrives.
+              className="rounded-full border border-dashed border-border text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+            />
+          }
+        >
+          <IconPlus className="size-4" />
+        </TooltipTrigger>
+        <TooltipContent side="bottom">Add agent</TooltipContent>
+      </Tooltip>
+
       <div className="flex items-center">
         {agents.map((agent) => (
           <Tooltip key={agent.id}>
@@ -63,23 +87,6 @@ export function AgentStrip({ className }: { className?: string }) {
           </Tooltip>
         ))}
       </div>
-
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Add agent"
-              onClick={() => setOpen(true)}
-              className="rounded-full border border-dashed border-border text-muted-foreground"
-            />
-          }
-        >
-          <IconPlus className="size-4" />
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Add agent</TooltipContent>
-      </Tooltip>
 
       <AgentManagerDialog agents={agents} open={open} onOpenChange={setOpen} />
     </div>

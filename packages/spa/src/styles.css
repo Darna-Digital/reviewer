@@ -570,7 +570,7 @@
   --success-foreground: oklch(0.22 0.05 158);
   --warning: oklch(0.8 0.14 78);
   --warning-foreground: oklch(0.26 0.06 78);
-  --border: oklch(1 0 0 / 10%);
+  --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
   --ring-accent: var(--brand-400);
@@ -585,14 +585,14 @@
   --sidebar-primary-foreground: oklch(0.205 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-border: oklch(1 0 0 / 12%);
   --sidebar-ring: oklch(0.556 0 0);
   --overlay: 255 255 255;
   --frame: #000000;
   --frame-translucent: rgb(0 0 0 / 0.35);
-  --frame-border: rgb(255 255 255 / 0.09);
+  --frame-border: rgb(255 255 255 / 0.12);
   --canvas: #141417;
-  --canvas-edge: #0c0c0e;
+  --canvas-edge: #1c1c21;
   /* Here the frame's own true black is already the extreme, so the pane sinks
      to it and the page inside carries the contrast. */
   --pane: #000000;
@@ -617,10 +617,10 @@
   }
 }
 /* --- byconvo: the window frame and its content canvas ---------------------- */
-/* The canvas is a single sheet inset in the frame: brightest through the middle
-   and settling towards the frame's own tone at its edges, so the seam never
-   reads as a hard step. Panels drawn on it stay transparent, so the ramp shows
-   through. */
+/* The canvas is a single sheet inset in the frame: darkest through the middle
+   and lifting towards its edges, so the corners catch the light and the sheet
+   reads as curving up out of the frame rather than sinking into it. Panels
+   drawn on it stay transparent, so the ramp shows through. */
 .app-canvas {
   background: radial-gradient(
     120% 95% at 50% 46%,

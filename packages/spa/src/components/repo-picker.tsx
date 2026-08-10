@@ -32,8 +32,9 @@ import {
 import {
   ROW_TOOLTIP_PLACEMENT,
   TruncatedText,
+  clippedText,
   truncatedTooltipClass,
-  useClippedText,
+  useClipGate,
 } from "@/components/ui/truncated-text";
 import { displayPath, pathName } from "@/lib/display-path";
 import { isDesktop, openDesktopDirectory } from "@/lib/desktop";
@@ -102,10 +103,10 @@ function PathRow({
   trailing?: React.ReactNode;
   onClick: () => void;
 }) {
-  const { ref, clipped, measure } = useClippedText<HTMLSpanElement>(path);
+  const { ref, full, open, gate } = useClipGate<HTMLSpanElement>(clippedText);
 
   return (
-    <Tooltip>
+    <Tooltip open={open} onOpenChange={gate}>
       <TooltipTrigger
         render={
           <button
@@ -113,7 +114,6 @@ function PathRow({
             data-search-row
             className={cn(rowClass, "items-start")}
             onClick={onClick}
-            onMouseEnter={measure}
           />
         }
       >
@@ -130,12 +130,12 @@ function PathRow({
         </div>
         {trailing}
       </TooltipTrigger>
-      {clipped && (
+      {full !== null && (
         <TooltipContent
           {...ROW_TOOLTIP_PLACEMENT}
           className={truncatedTooltipClass}
         >
-          {path}
+          {full}
         </TooltipContent>
       )}
     </Tooltip>

@@ -125,7 +125,8 @@ function FolderItems({ paths, dir, openPath, onOpenFile }: FolderItemsProps) {
             onClick={() => onOpenFile(entry.path)}
             className={cn(onTrail(entry.path) && "font-medium text-foreground")}
           >
-            <FileTypeIcon path={entry.path} /> {entry.name}
+            <FileTypeIcon path={entry.path} />
+            <span className="min-w-0 flex-1 truncate">{entry.name}</span>
           </DropdownMenuItem>
         )
       )}
@@ -143,7 +144,8 @@ function FolderSubmenu({
       <DropdownMenuSubTrigger
         className={cn(current && "font-medium text-foreground")}
       >
-        <IconFolder /> {name}
+        <IconFolder />
+        <span className="min-w-0 flex-1 truncate">{name}</span>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="max-h-[min(60vh,24rem)] overflow-y-auto">
         <FolderItems {...items} />

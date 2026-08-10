@@ -114,7 +114,7 @@ function CrumbMenu({
       <DropdownMenuContent
         side="top"
         align="start"
-        className="max-h-[min(60vh,24rem)] min-w-56 overflow-y-auto"
+        className="max-h-[min(60vh,24rem)] max-w-72 min-w-56 overflow-y-auto"
       >
         {open && crumb.menu?.()}
       </DropdownMenuContent>

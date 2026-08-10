@@ -156,6 +156,7 @@ export function ChatComposer({
   onStop,
   placeholder,
   draftKey,
+  textareaRef: externalTextareaRef,
 }: {
   settings: ChatSettings;
   onSettingsChange: (patch: Partial<ChatSettings>) => void;
@@ -170,6 +171,8 @@ export function ChatComposer({
   placeholder?: string;
   /** Stable id the draft is persisted under so it survives navigation. */
   draftKey: string;
+  /** Lets a caller that writes the draft put the caret where it landed. */
+  textareaRef?: React.RefObject<HTMLTextAreaElement | null>;
 }) {
   // The prompt lives in the shared draft store (keyed per chat) rather than
   // local state, so leaving and returning to a thread keeps what you typed.
@@ -177,7 +180,8 @@ export function ChatComposer({
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [dragging, setDragging] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const ownTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const textareaRef = externalTextareaRef ?? ownTextareaRef;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // dragenter/dragleave fire per descendant, so count depth to know when the
   // pointer has truly left the composer (matches lib/terminal/image-drop.ts).
@@ -193,7 +197,7 @@ export function ChatComposer({
     pendingSelection.current = null;
     textarea.setSelectionRange(selection[0], selection[1]);
     scrollCaretIntoView(textarea);
-  }, [text]);
+  }, [text, textareaRef]);
 
   const applyListEdit = (edit: ComposerSelection | null) => {
     if (edit === null) return false;

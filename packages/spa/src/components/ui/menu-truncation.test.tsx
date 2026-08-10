@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -64,6 +64,24 @@ const openMenuWithSubmenu = (label: string, submenuOpen: boolean) =>
 
 const tooltip = () => document.querySelector('[data-slot="tooltip-content"]');
 
+/**
+ * One pointer entering a row: every event of it in a single task, the way a
+ * real one arrives. `userEvent.hover` renders between its events, which hands
+ * the row a second chance the browser never gives it.
+ */
+const enter = (row: Element) =>
+  act(() => {
+    for (const type of [
+      "pointerover",
+      "pointerenter",
+      "mouseover",
+      "mouseenter",
+    ])
+      row.dispatchEvent(
+        new MouseEvent(type, { bubbles: type.endsWith("over") })
+      );
+  });
+
 describe("dropdown item truncation", () => {
   it("keeps the item a menu item, not a bare tooltip trigger", () => {
     openMenu(LONG);
@@ -73,17 +91,13 @@ describe("dropdown item truncation", () => {
     expect(item?.getAttribute("role")).toBe("menuitem");
   });
 
-  it("reveals the full label on hover once it is clipped", async () => {
+  it("reveals the full label the first time the pointer enters a clipped row", async () => {
     openMenu(LONG);
     clipLabel();
 
-    await userEvent.hover(screen.getByRole("menuitem"));
+    enter(screen.getByRole("menuitem"));
 
-    await waitFor(() =>
-      expect(
-        document.querySelector('[data-slot="tooltip-content"]')?.textContent
-      ).toBe(LONG)
-    );
+    await waitFor(() => expect(tooltip()?.textContent).toBe(LONG));
   });
 
   it("stays quiet on a label that fits", async () => {

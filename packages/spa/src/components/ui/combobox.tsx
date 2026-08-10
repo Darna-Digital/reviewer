@@ -78,7 +78,7 @@ function ComboboxContent({
           className={cn(
             // Match Select: grow with content, never shrink below the trigger.
             // A fixed `w-(--anchor-width)` clipped long labels (branch names).
-            "z-50 flex max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) flex-col overflow-hidden rounded-md p-1 text-popover-foreground duration-100 outline-none data-open:animate-in data-open:fade-in-0 data-open:zoom-in-[0.98] data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-[0.98]",
+            "z-50 flex max-h-(--available-height) min-w-(--anchor-width) origin-(--transform-origin) flex-col overflow-hidden rounded-md p-1 text-popover-foreground outline-none",
             surface,
             className
           )}

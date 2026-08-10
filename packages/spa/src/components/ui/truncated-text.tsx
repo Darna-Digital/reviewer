@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Tooltip,
   TooltipContent,
@@ -35,21 +35,37 @@ const isClipped = (node: HTMLElement) =>
   node.scrollWidth > node.clientWidth + CLIP_SLACK;
 
 /**
- * Tracks whether `text` overflows the element the returned ref is on, so a
- * caller can trigger the tooltip from a wider region than the text itself.
+ * Drives a tooltip that speaks only for text the layout has cut off: `read`
+ * runs the moment the tooltip asks to open and answers with what to say, or
+ * null to stay shut.
+ *
+ * Measuring any earlier — on hover, on mount — is what makes the tooltip miss.
+ * A width read during the hover only reaches state on the next render, by which
+ * point the pointer is already inside, and base-ui opens a tooltip on entering
+ * its trigger and on nothing after that. A row therefore spends its one hover
+ * measuring and stays silent; a menu row, remounted every time its menu opens,
+ * never gets a second one.
  */
-export function useClippedText<T extends HTMLElement>(text: string) {
+export function useClipGate<T extends HTMLElement>(
+  read: (node: T) => string | null
+) {
   const ref = useRef<T>(null);
-  const [clipped, setClipped] = useState(false);
+  const [full, setFull] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
 
-  const measure = () => {
+  const gate = (wanted: boolean) => {
     const node = ref.current;
-    if (node) setClipped(isClipped(node));
+    const text = wanted && node !== null ? read(node) : null;
+    setFull(text);
+    setOpen(text !== null);
   };
 
-  useEffect(measure, [text]);
+  const close = useCallback(() => {
+    setFull(null);
+    setOpen(false);
+  }, []);
 
-  return { ref, clipped, measure };
+  return { ref, full, open, gate, close };
 }
 
 /** The full text of whichever descendant is ellipsized, if any. */
@@ -91,41 +107,29 @@ export function TruncatedRow({
   delay?: number;
 }) {
   // `TooltipTrigger` types its ref as a button even when `render` swaps the tag.
-  const ref = useRef<HTMLButtonElement>(null);
-  const [full, setFull] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
-  const measure = () => {
-    if (ref.current !== null) setFull(clippedText(ref.current));
-  };
+  const { ref, full, open, gate, close } = useClipGate<HTMLButtonElement>(
+    // A row with nothing clipped has nothing to say, and refusing to open is
+    // what keeps it quiet: a live-but-empty tooltip is not inert, it is still a
+    // dismissable layer, so it answers the first Escape and the menu around it
+    // stays open. Every menu in the app needed two presses to close once the
+    // arrow keys had focused a row.
+    (row) => (ownsOpenPopup(row) ? null : clippedText(row))
+  );
 
   useEffect(() => {
     const row = ref.current;
     if (!open || row === null) return;
     const yieldToPopup = () => {
-      if (ownsOpenPopup(row)) setOpen(false);
+      if (ownsOpenPopup(row)) close();
     };
     const observer = new MutationObserver(yieldToPopup);
     observer.observe(row, { attributeFilter: [EXPANDED] });
     return () => observer.disconnect();
-  }, [open]);
+  }, [open, close, ref]);
 
   return (
-    <Tooltip
-      open={open}
-      onOpenChange={(next) => setOpen(next && !ownsOpenPopup(ref.current))}
-      // A row with nothing clipped has no tooltip to show, and a live-but-empty
-      // tooltip is not inert: it is still a dismissable layer, so it answers the
-      // first Escape and the menu around it stays open. Every menu in the app
-      // needed two presses to close once the arrow keys had focused a row.
-      disabled={full === null}
-    >
-      <TooltipTrigger
-        ref={ref}
-        render={render}
-        delay={delay}
-        onMouseEnter={measure}
-        onFocus={measure}
-      >
+    <Tooltip open={open} onOpenChange={gate}>
+      <TooltipTrigger ref={ref} render={render} delay={delay}>
         {children}
       </TooltipTrigger>
       {full !== null && (
@@ -141,27 +145,23 @@ export function TruncatedRow({
 }
 
 export function TruncatedText({ text, className }: Props) {
-  const { ref, clipped, measure } = useClippedText<HTMLSpanElement>(text);
+  const { ref, full, open, gate } = useClipGate<HTMLSpanElement>(clippedText);
 
   return (
-    <Tooltip>
+    <Tooltip open={open} onOpenChange={gate}>
       <TooltipTrigger
         render={
-          <span
-            ref={ref}
-            onMouseEnter={measure}
-            className={cn("block min-w-0 truncate", className)}
-          />
+          <span ref={ref} className={cn("block min-w-0 truncate", className)} />
         }
       >
         {text}
       </TooltipTrigger>
-      {clipped && (
+      {full !== null && (
         <TooltipContent
           {...ROW_TOOLTIP_PLACEMENT}
           className={truncatedTooltipClass}
         >
-          {text}
+          {full}
         </TooltipContent>
       )}
     </Tooltip>

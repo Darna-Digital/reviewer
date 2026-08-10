@@ -17,6 +17,8 @@ import { ModeRail } from "@/components/layout/mode-rail";
 // Only code mode is offered for now, so the mode chip stays parked.
 // import { ModeSelector } from "@/components/layout/mode-selector";
 import { AgentStrip } from "@/interactions/session-agents/components/agent-strip";
+import { NewSessionButton } from "@/interactions/chats/components/new-session-button";
+import { SessionSearch } from "@/interactions/chats/components/session-search";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { RepoPicker } from "@/components/repo-picker";
 import { SearchMenu } from "@/interactions/search/components/search-menu";
@@ -94,9 +96,17 @@ export function WorkspaceShell() {
               onChosen={() => {}}
             />
           )}
-          {/* A session is answered by an agent, so the strip of them stands
-              where the git chrome would. */}
-          {inSession && <AgentStrip />}
+          {/* A session's bar opens with the two things that act on the list —
+              minting one and finding one — and parks the agents answering it at
+              the far end, where they read as status rather than as controls. */}
+          {inSession && (
+            <>
+              <NewSessionButton />
+              <SessionSearch />
+              <div className="flex-1" />
+              <AgentStrip />
+            </>
+          )}
           {current !== null && !collaborating && !inSession && (
             <BranchSwitcher
               current={repo.data?.currentBranch ?? null}
