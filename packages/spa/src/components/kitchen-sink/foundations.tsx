@@ -203,19 +203,19 @@ export function Foundations() {
           <div className="flex flex-col gap-3 border-t border-foreground/10 pt-4">
             {[
               { dot: true, label: "Unread thread", meta: "chat, inbox" },
-              { dot: true, label: "Agent waiting for input", meta: "window bar" },
+              {
+                dot: true,
+                label: "Agent waiting for input",
+                meta: "window bar",
+              },
               { dot: false, label: "Read, nothing pending", meta: "at rest" },
             ].map(({ dot, label, meta }) => (
               <div key={label} className="flex items-center gap-3">
                 <span className="grid size-4 shrink-0 place-items-center">
-                  {dot && (
-                    <span className="size-2 rounded-full bg-brand-500" />
-                  )}
+                  {dot && <span className="size-2 rounded-full bg-brand-500" />}
                 </span>
                 <p className="type-ui">{label}</p>
-                <p className="type-meta text-muted-foreground">
-                  {meta}
-                </p>
+                <p className="type-meta text-muted-foreground">{meta}</p>
               </div>
             ))}
           </div>

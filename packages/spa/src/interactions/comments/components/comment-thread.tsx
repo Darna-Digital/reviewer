@@ -149,9 +149,7 @@ function CommentCard({
       <AuthorAvatar author={comment.author} source={comment.source} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="type-ui text-foreground">
-            {comment.author}
-          </span>
+          <span className="type-ui text-foreground">{comment.author}</span>
           {comment.source === "github" && (
             <IconBrandGithub
               className="size-3.5 text-muted-foreground"
@@ -194,7 +192,7 @@ function ThreadAction({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1 rounded-sm type-body text-muted-foreground transition-colors outline-offset-2 outline-ring hover:text-foreground focus-visible:outline-2"
+      className="inline-flex items-center gap-1 rounded-sm type-body text-muted-foreground outline-offset-2 outline-ring transition-colors hover:text-foreground focus-visible:outline-2"
     >
       {icon}
       {children}

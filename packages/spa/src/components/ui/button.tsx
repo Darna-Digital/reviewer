@@ -10,21 +10,21 @@ import { cn } from "@/lib/utils";
    text" as ours and "the primary action here" as simply the darkest thing on
    screen. Tabular numerals keep counts from reflowing as they tick. */
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-md bg-clip-padding tabular-nums whitespace-nowrap transition-[background,box-shadow,color] outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-[2.5px] focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 aria-invalid:outline-2 aria-invalid:outline-offset-[2.5px] aria-invalid:outline-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-md bg-clip-padding whitespace-nowrap tabular-nums transition-[background,box-shadow,color] outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-[2.5px] focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 aria-invalid:outline-2 aria-invalid:outline-offset-[2.5px] aria-invalid:outline-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
         default:
-          "face-contrast bg-primary text-primary-foreground disabled:opacity-40",
+          "bg-primary face-contrast text-primary-foreground disabled:opacity-40",
         outline:
-          "face-raised bg-button-neutral text-foreground aria-expanded:bg-pressed",
+          "bg-button-neutral face-raised text-foreground aria-expanded:bg-pressed",
         secondary:
-          "face-raised bg-button-neutral text-foreground aria-expanded:bg-pressed",
+          "bg-button-neutral face-raised text-foreground aria-expanded:bg-pressed",
         ghost:
           "face-quiet text-foreground aria-expanded:bg-pressed aria-expanded:text-foreground",
         "ghost-muted":
-          "face-quiet text-muted-foreground [&_svg]:text-muted-foreground aria-expanded:bg-pressed aria-expanded:text-foreground aria-expanded:[&_svg]:text-foreground",
-        destructive: "face-raised bg-button-neutral text-destructive",
+          "face-quiet text-muted-foreground aria-expanded:bg-pressed aria-expanded:text-foreground [&_svg]:text-muted-foreground aria-expanded:[&_svg]:text-foreground",
+        destructive: "bg-button-neutral face-raised text-destructive",
         link: "text-link underline-offset-4 hover:underline",
       },
       /* Each size carries its own whole type step, so a button never has to
@@ -42,7 +42,8 @@ const buttonVariants = cva(
            knows, so a caller can still override them. */
         chip: "h-7 gap-1 px-3 text-sm font-medium has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         icon: "size-8 type-ui",
-        "icon-xs": "size-6 rounded-sm type-xs [&_svg:not([class*='size-'])]:size-3",
+        "icon-xs":
+          "size-6 rounded-sm type-xs [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-7 type-ui",
         "icon-lg": "size-9 type-ui",
       },

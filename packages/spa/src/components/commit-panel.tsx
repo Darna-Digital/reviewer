@@ -130,8 +130,7 @@ export function CommitPanel({
   };
 
   const AgentGlyph = agentIcon(commitAgent);
-  const showGenerateControls =
-    composerFocused || agentPickerOpen || generating;
+  const showGenerateControls = composerFocused || agentPickerOpen || generating;
 
   return (
     <div className="flex shrink-0 flex-col border-t">
