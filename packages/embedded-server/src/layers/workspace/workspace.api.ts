@@ -4,8 +4,10 @@ import { NoRepoSelected, StorageError, Ok } from "@byconvo/core/shared";
 import {
   InvalidRepo,
   BrowsePayload,
+  CreatePath,
   FileBytes,
   FileContent,
+  PathExists,
   WorkspaceInfo,
   BrowseQuery,
   PathQuery,
@@ -54,6 +56,13 @@ export class WorkspaceApi extends HttpApiGroup.make("workspace")
       payload: WriteFile,
       success: Ok,
       error: [NoRepoSelected, StorageError],
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("createPath", "/file/create", {
+      payload: CreatePath,
+      success: Ok,
+      error: [NoRepoSelected, PathExists, StorageError],
     })
   )
   .add(

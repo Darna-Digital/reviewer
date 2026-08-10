@@ -69,6 +69,13 @@ export const RenameFile = Schema.Struct({
   to: Schema.String,
 });
 export type RenameFile = typeof RenameFile.Type;
+export const PathKind = Schema.Literals(["file", "directory"]);
+export type PathKind = typeof PathKind.Type;
+export const CreatePath = Schema.Struct({
+  path: Schema.String,
+  kind: PathKind,
+});
+export type CreatePath = typeof CreatePath.Type;
 export const BrowseQuery = Schema.Struct({
   path: Schema.optionalKey(Schema.String),
 });

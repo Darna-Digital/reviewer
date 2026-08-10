@@ -28,6 +28,11 @@ export const WorkspaceHandler = HttpApiBuilder.group(
           s.writeFile(payload.path, payload.contents)
         ).pipe(Effect.as(ok))
       )
+      .handle("createPath", ({ payload }) =>
+        Effect.flatMap(WorkspaceService, (s) =>
+          s.createPath(payload.path, payload.kind)
+        ).pipe(Effect.as(ok))
+      )
       .handle("deleteFile", ({ query }) =>
         Effect.flatMap(WorkspaceService, (s) => s.deletePath(query.path)).pipe(
           Effect.as(ok)

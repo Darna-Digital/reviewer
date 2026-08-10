@@ -2,6 +2,15 @@ import { FileTree, useFileTree } from "@pierre/trees/react";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
+import {
+  draftPath,
+  targetDirectory,
+  withoutTrailingSlash,
+} from "@/interactions/file-actions/functions/file-actions.functions";
+import type {
+  PathKind,
+  TreeItem,
+} from "@/interactions/file-actions/interfaces/file-actions.interfaces";
 import type { AppMode } from "@/lib/api/types";
 import type { GitStatusEntry } from "@byconvo/core/repo";
 
@@ -13,6 +22,7 @@ interface FileSidebarProps {
   onFileSelect: (path: string | null) => void;
   onDeletePath?: (path: string, isDirectory: boolean) => Promise<void> | void;
   onRenamePath?: (from: string, to: string) => Promise<void>;
+  onCreatePath?: (path: string, kind: PathKind) => Promise<void>;
   /** Open the bottom dock on this path's commit history. */
   onShowHistory?: (path: string) => void;
   onError?: (message: string) => void;
@@ -61,6 +71,7 @@ export function FileSidebar({
   onFileSelect,
   onDeletePath,
   onRenamePath,
+  onCreatePath,
   onShowHistory,
   onError,
   loading = false,
@@ -70,6 +81,12 @@ export function FileSidebar({
   onFileSelectRef.current = onFileSelect;
   const onRenamePathRef = useRef(onRenamePath);
   onRenamePathRef.current = onRenamePath;
+  const onCreatePathRef = useRef(onCreatePath);
+  onCreatePathRef.current = onCreatePath;
+  // The row a "New file/folder" is being named in, as the rename event spells
+  // it. It is an ordinary tree row until the name is committed, so the rename
+  // handler recognises it here and routes it to creation instead.
+  const draftRef = useRef<string | null>(null);
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
   const pathsRef = useRef(paths);
@@ -103,11 +120,22 @@ export function FileSidebar({
       }
     },
     renaming: {
-      canRename: () => onRenamePathRef.current !== undefined,
+      canRename: () =>
+        onRenamePathRef.current !== undefined ||
+        onCreatePathRef.current !== undefined,
       onError: (message) => onErrorRef.current?.(message),
-      onRename: ({ destinationPath, sourcePath }) => {
+      onRename: ({ destinationPath, isFolder, sourcePath }) => {
         const revert = () =>
           modelRef.current?.resetPaths([...pathsRef.current]);
+        if (draftRef.current === sourcePath) {
+          draftRef.current = null;
+          const create = onCreatePathRef.current;
+          if (create === undefined) return revert();
+          void create(destinationPath, isFolder ? "directory" : "file").catch(
+            revert
+          );
+          return;
+        }
         const handler = onRenamePathRef.current;
         if (handler === undefined) return revert();
         if (destinationPath === sourcePath) return;
@@ -180,19 +208,51 @@ export function FileSidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFile, pathsKey, model]);
 
+  // Draw the new entry as a row and let the user name it in place; the rename
+  // that commits it is routed to `onCreatePath` by the handler above.
+  const startCreate = (item: TreeItem, kind: PathKind) => {
+    const row = draftPath(
+      targetDirectory(item),
+      kind,
+      (candidate) => modelRef.current?.getItem(candidate) != null
+    );
+    draftRef.current = withoutTrailingSlash(row);
+    modelRef.current?.add(row);
+    modelRef.current?.startRenaming(row, { removeIfCanceled: true });
+  };
+
   const hasMenu =
+    onCreatePath !== undefined ||
     onDeletePath !== undefined ||
     onRenamePath !== undefined ||
     onShowHistory !== undefined;
   const renderContextMenu = hasMenu
     ? (
-        item: { kind: "directory" | "file"; path: string },
+        item: TreeItem,
         context: { close: (options?: { restoreFocus?: boolean }) => void }
       ) => (
         <div
           role="menu"
           className="min-w-36 rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-md"
         >
+          {onCreatePath !== undefined && (
+            <>
+              {(["file", "directory"] as const).map((kind) => (
+                <button
+                  key={kind}
+                  role="menuitem"
+                  className="flex w-full items-center rounded-sm px-2 py-1 text-left hover:bg-muted"
+                  onClick={() => {
+                    context.close({ restoreFocus: false });
+                    startCreate(item, kind);
+                  }}
+                >
+                  {kind === "file" ? "New file…" : "New folder…"}
+                </button>
+              ))}
+              <div role="separator" className="my-1 h-px bg-border" />
+            </>
+          )}
           {onShowHistory !== undefined && (
             <button
               role="menuitem"

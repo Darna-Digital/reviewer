@@ -68,6 +68,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/file/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["workspace.createPath"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/file/rename": {
         parameters: {
             query?: never;
@@ -1415,6 +1431,11 @@ export interface components {
             /** @enum {string} */
             _tag: "NoRepoSelected";
         };
+        PathExists: {
+            /** @enum {string} */
+            _tag: "PathExists";
+            path: string;
+        };
         GitError: {
             /** @enum {string} */
             _tag: "GitError";
@@ -1757,6 +1778,54 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "workspace.createPath": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    path: string;
+                    /** @enum {string} */
+                    kind: "file" | "directory";
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok: boolean;
+                    };
+                };
+            };
+            /** @description NoRepoSelected | PathExists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["PathExists"];
                 };
             };
             /** @description StorageError */

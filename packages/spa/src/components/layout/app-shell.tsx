@@ -84,6 +84,7 @@ import {
   tabToRestore,
   togglePin,
 } from "@/interactions/tabs/functions/tabs.functions";
+import { useFileActions } from "@/interactions/file-actions/adapters/file-actions.hook.adapter";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { fetchClient } from "@/lib/api/client";
 import {
@@ -366,6 +367,14 @@ export function AppShell() {
     navigate({ to: ".", search: (prev: Search) => ({ ...prev, ...patch }) });
   const openFile = (path: string) => setSearch({ file: path });
   const closeFile = () => setSearch({ file: undefined });
+
+  const fileActions = useFileActions(openFile);
+  // A folder created here holds nothing for git to list, so the tree is told
+  // about it separately until it does.
+  const sidebarPaths = useMemo(
+    () => fileActions.withPendingFolders(treePaths),
+    [fileActions, treePaths]
+  );
 
   // Which file is open for editing rather than reading. Held here because the
   // request comes from the file's tab, above the view that does the editing.
@@ -966,7 +975,7 @@ export function AppShell() {
                     <FileSidebar
                       key={mode}
                       mode={mode}
-                      paths={treePaths}
+                      paths={sidebarPaths}
                       gitStatus={treeGitStatus}
                       loading={
                         mode === "review" ? diff.isPending : files.isPending
@@ -977,6 +986,9 @@ export function AppShell() {
                       onFileSelect={onFileSelect}
                       onDeletePath={mode === "review" ? undefined : deletePath}
                       onRenamePath={mode === "review" ? undefined : renamePath}
+                      onCreatePath={
+                        mode === "review" ? undefined : fileActions.create
+                      }
                       onShowHistory={showFileHistory}
                       footer={
                         mode === "commit" && changedFiles.length > 0 ? (

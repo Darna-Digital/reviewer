@@ -10,7 +10,7 @@ import { ChildProcessSpawner } from "effect/unstable/process";
 import { homedir } from "node:os";
 import { resolve as pathResolve } from "node:path";
 import { NoRepoSelected, StorageError } from "@byconvo/core/shared";
-import { InvalidRepo, mediaTypeFor } from "@byconvo/core/workspace";
+import { InvalidRepo, mediaTypeFor, PathExists } from "@byconvo/core/workspace";
 import { resolveWorkspace, WorkspaceContext } from "./workspace-context.ts";
 import type {
   BrowseEntry,
@@ -169,10 +169,30 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
       };
     });
 
+  const makeParentDirectory = (resolved: string) => {
+    const parent = resolved.slice(0, resolved.lastIndexOf("/"));
+    return parent.length > 0
+      ? tryFs(fs.makeDirectory(parent, { recursive: true }))
+      : Effect.void;
+  };
+
   const writeFile: WorkspaceRepo["writeFile"] = (relPath, contents) =>
     Effect.gen(function* () {
       const { resolved } = yield* resolveInRepo(relPath);
       yield* tryFs(fs.writeFileString(resolved, contents));
+    });
+
+  const createPath: WorkspaceRepo["createPath"] = (relPath, kind) =>
+    Effect.gen(function* () {
+      const { resolved } = yield* resolveInRepo(relPath);
+      if (yield* tryFs(fs.exists(resolved))) {
+        return yield* Effect.fail(new PathExists({ path: relPath }));
+      }
+      if (kind === "directory") {
+        return yield* tryFs(fs.makeDirectory(resolved, { recursive: true }));
+      }
+      yield* makeParentDirectory(resolved);
+      yield* tryFs(fs.writeFileString(resolved, ""));
     });
 
   const deletePath: WorkspaceRepo["deletePath"] = (relPath) =>
@@ -185,9 +205,7 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
     Effect.gen(function* () {
       const from = yield* resolveInRepo(fromRel);
       const to = yield* resolveInRepo(toRel);
-      const parent = to.resolved.slice(0, to.resolved.lastIndexOf("/"));
-      if (parent.length > 0)
-        yield* tryFs(fs.makeDirectory(parent, { recursive: true }));
+      yield* makeParentDirectory(to.resolved);
       yield* tryFs(fs.rename(from.resolved, to.resolved));
     });
 
@@ -198,6 +216,7 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
     readFile,
     readFileBytes,
     writeFile,
+    createPath,
     deletePath,
     renamePath,
   } satisfies WorkspaceRepo;

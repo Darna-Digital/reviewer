@@ -1,11 +1,12 @@
 import * as Context from "effect/Context";
 import type * as Effect from "effect/Effect";
 import type { NoRepoSelected, StorageError } from "../../../shared.ts";
-import type { InvalidRepo } from "../errors.ts";
+import type { InvalidRepo, PathExists } from "../errors.ts";
 import type {
   BrowsePayload,
   FileBytes,
   FileContent,
+  PathKind,
   WorkspaceInfo,
 } from "../schema/workspace.schema.ts";
 
@@ -27,6 +28,11 @@ export interface WorkspaceRepo {
     relPath: string,
     contents: string
   ) => Effect.Effect<void, NoRepoSelected | StorageError>;
+  /** Create an empty file or directory, refusing to overwrite what is there. */
+  readonly createPath: (
+    relPath: string,
+    kind: PathKind
+  ) => Effect.Effect<void, NoRepoSelected | PathExists | StorageError>;
   readonly deletePath: (
     relPath: string
   ) => Effect.Effect<void, NoRepoSelected | StorageError>;
