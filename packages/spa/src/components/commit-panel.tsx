@@ -17,6 +17,12 @@ import { TruncatedText } from "@/components/ui/truncated-text";
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents";
 import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo";
 import { STATUS_COLOR } from "@/lib/git-status";
+import {
+  ELEVATION,
+  POPUP_SHADOW,
+  SurfaceProvider,
+  useElevation,
+} from "@/lib/surface-context";
 import { setUiPrefs, useUiPrefs, type CommitAgent } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
@@ -131,6 +137,13 @@ export function CommitPanel({
 
   const AgentGlyph = agentIcon(commitAgent);
   const showGenerateControls = composerFocused || agentPickerOpen || generating;
+  // The controls float over the message field, so they lift off the substrate
+  // the same way a menu does -- brighter than the input rather than a wash of
+  // it -- and publish that level so the agent picker opens a rung above them.
+  const { level: controlsLevel, className: controlsSurface } = useElevation(
+    ELEVATION.menu,
+    POPUP_SHADOW
+  );
 
   return (
     <div className="flex shrink-0 flex-col border-t">
@@ -212,72 +225,76 @@ export function CommitPanel({
             }}
           />
           {onGenerate !== undefined && (
-            <div
-              className={cn(
-                "absolute right-2 bottom-2 z-10 flex items-center gap-1 rounded-md bg-background/70 p-1 shadow-xs ring-1 ring-border/50 backdrop-blur-sm",
-                "transition-opacity duration-150",
-                showGenerateControls
-                  ? "opacity-100"
-                  : "pointer-events-none opacity-0"
-              )}
-            >
-              <Button
-                type="button"
-                size="xs"
-                variant="ghost-muted"
-                className="gap-0"
-                disabled={!canGenerate}
-                title={`Generate a commit message with ${agentLabel(commitAgent)}`}
-                onClick={() => void generate()}
-              >
-                {generating ? (
-                  <LoadingCursor label={null} />
-                ) : (
-                  <IconSparkles className="size-3.5" />
+            <SurfaceProvider value={controlsLevel}>
+              <div
+                data-surface={controlsLevel}
+                className={cn(
+                  "absolute right-2 bottom-2 z-10 flex items-center gap-1 rounded-md p-1",
+                  controlsSurface,
+                  "transition-opacity duration-150",
+                  showGenerateControls
+                    ? "opacity-100"
+                    : "pointer-events-none opacity-0"
                 )}
-                {/* The label is a hover affordance: at rest the control is just
-                    the sparkle, and it widens into its name on hover, focus, or
-                    while a draft is running. */}
-                <span
-                  className={cn(
-                    "max-w-0 overflow-hidden opacity-0 transition-[max-width,opacity,margin] duration-200 ease-out",
-                    "group-hover/button:ml-1 group-hover/button:max-w-24 group-hover/button:opacity-100",
-                    "group-focus-visible/button:ml-1 group-focus-visible/button:max-w-24 group-focus-visible/button:opacity-100",
-                    generating && "ml-1 max-w-24 opacity-100"
-                  )}
-                >
-                  {generating ? "Generating…" : "Generate"}
-                </span>
-              </Button>
-              {/* Pick which local agent CLI drafts the message. */}
-              <Select
-                value={commitAgent}
-                open={agentPickerOpen}
-                onOpenChange={setAgentPickerOpen}
-                onValueChange={(v) => v && setUiPrefs({ commitAgent: v })}
               >
-                <SelectTrigger
-                  size="sm"
-                  hideIcon
-                  className="h-6 w-auto gap-1 rounded-md border-0 bg-transparent px-1.5 text-xs text-muted-foreground shadow-none hover:bg-muted"
-                  aria-label="Commit message agent"
-                  title={`Draft with ${agentLabel(commitAgent)}`}
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="ghost-muted"
+                  className="gap-0"
+                  disabled={!canGenerate}
+                  title={`Generate a commit message with ${agentLabel(commitAgent)}`}
+                  onClick={() => void generate()}
                 >
-                  <AgentGlyph className="size-3.5 shrink-0" />
-                </SelectTrigger>
-                <SelectContent align="end">
-                  {COMMIT_AGENTS.map((a) => {
-                    const Icon = agentIcon(a.kind);
-                    return (
-                      <SelectItem key={a.kind} value={a.kind}>
-                        <Icon className="size-4 shrink-0 text-muted-foreground" />
-                        {a.label}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
+                  {generating ? (
+                    <LoadingCursor label={null} />
+                  ) : (
+                    <IconSparkles className="size-3.5" />
+                  )}
+                  {/* The label is a hover affordance: at rest the control is
+                      just the sparkle, and it widens into its name on hover,
+                      focus, or while a draft is running. */}
+                  <span
+                    className={cn(
+                      "max-w-0 overflow-hidden opacity-0 transition-[max-width,opacity,margin] duration-200 ease-out",
+                      "group-hover/button:ml-1 group-hover/button:max-w-24 group-hover/button:opacity-100",
+                      "group-focus-visible/button:ml-1 group-focus-visible/button:max-w-24 group-focus-visible/button:opacity-100",
+                      generating && "ml-1 max-w-24 opacity-100"
+                    )}
+                  >
+                    {generating ? "Generating…" : "Generate"}
+                  </span>
+                </Button>
+                {/* Pick which local agent CLI drafts the message. */}
+                <Select
+                  value={commitAgent}
+                  open={agentPickerOpen}
+                  onOpenChange={setAgentPickerOpen}
+                  onValueChange={(v) => v && setUiPrefs({ commitAgent: v })}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    hideIcon
+                    className="h-6 w-auto gap-1 rounded-md border-0 bg-transparent px-1.5 text-xs text-muted-foreground shadow-none hover:bg-elevate"
+                    aria-label="Commit message agent"
+                    title={`Draft with ${agentLabel(commitAgent)}`}
+                  >
+                    <AgentGlyph className="size-3.5 shrink-0" />
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    {COMMIT_AGENTS.map((a) => {
+                      const Icon = agentIcon(a.kind);
+                      return (
+                        <SelectItem key={a.kind} value={a.kind}>
+                          <Icon className="size-4 shrink-0 text-muted-foreground" />
+                          {a.label}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            </SurfaceProvider>
           )}
         </div>
         <div className="flex items-center gap-2">
