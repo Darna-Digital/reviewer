@@ -12,6 +12,7 @@ import type {
   TreeItem,
 } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
 import type { AppMode } from "@/lib/api/types";
+import { cn } from "@/lib/utils";
 import type { GitStatusEntry } from "@byconvo/core/repo";
 
 interface FileSidebarProps {
@@ -45,6 +46,9 @@ const TREE_UNSAFE_CSS = `
     background-clip: padding-box;
   }
 `;
+
+const CONTEXT_MENU_ITEM =
+  "flex w-full items-center rounded-sm px-2 py-1 text-left hover:bg-elevate";
 
 /**
  * Directory prefixes that must be expanded for `filePath` to be visible, e.g.
@@ -241,7 +245,7 @@ export function FileSidebar({
                 <button
                   key={kind}
                   role="menuitem"
-                  className="flex w-full items-center rounded-sm px-2 py-1 text-left hover:bg-muted"
+                  className={CONTEXT_MENU_ITEM}
                   onClick={() => {
                     context.close({ restoreFocus: false });
                     startCreate(item, kind);
@@ -256,7 +260,7 @@ export function FileSidebar({
           {onShowHistory !== undefined && (
             <button
               role="menuitem"
-              className="flex w-full items-center rounded-sm px-2 py-1 text-left hover:bg-muted"
+              className={CONTEXT_MENU_ITEM}
               onClick={() => {
                 context.close();
                 onShowHistory(item.path);
@@ -268,7 +272,7 @@ export function FileSidebar({
           {onRenamePath !== undefined && (
             <button
               role="menuitem"
-              className="flex w-full items-center rounded-sm px-2 py-1 text-left hover:bg-muted"
+              className={CONTEXT_MENU_ITEM}
               onClick={() => {
                 context.close({ restoreFocus: false });
                 modelRef.current?.startRenaming(item.path);
@@ -280,7 +284,7 @@ export function FileSidebar({
           {onDeletePath !== undefined && (
             <button
               role="menuitem"
-              className="flex w-full items-center rounded-sm px-2 py-1 text-left text-destructive hover:bg-muted"
+              className={cn(CONTEXT_MENU_ITEM, "text-destructive")}
               onClick={() => {
                 context.close();
                 void onDeletePath(item.path, item.kind === "directory");

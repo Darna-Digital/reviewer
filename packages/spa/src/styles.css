@@ -126,7 +126,12 @@
 
    `--elevate` is the substrate-relative hover/active tint. Menus paint rows
    with it rather than `--muted`, whose fixed value lands on top of (or below)
-   the sheet colour once a popup is nested a step or two in. */
+   the sheet colour once a popup is nested a step or two in.
+
+   Dark runs the ramp about twice as open as light. The same alpha buys far less
+   separation over a near-black sheet than it does over paper, and screen glare
+   eats what is left, so a tint that reads as a clear highlight in light
+   disappears in dark unless it is pushed. */
 :root {
   --elevate: rgb(var(--overlay) / 0.045);
   --elevate-strong: rgb(var(--overlay) / 0.075);
@@ -169,8 +174,8 @@
 }
 
 .dark {
-  --elevate: rgb(var(--overlay) / 0.07);
-  --elevate-strong: rgb(var(--overlay) / 0.11);
+  --elevate: rgb(var(--overlay) / 0.1);
+  --elevate-strong: rgb(var(--overlay) / 0.18);
   --surface-1: #171717;
   --surface-2: #1e1e1e;
   --surface-3: #252525;
@@ -1009,12 +1014,15 @@ diffs-container {
    theme (.dark or light) is active, so the tree follows the app theme. */
 file-tree-container {
   --trees-bg-override: var(--background);
-  --trees-bg-muted-override: var(--muted);
+  /* Rows take the same substrate-relative ramp as menu rows, two rungs apart so
+     hover and selection stay tellable. Both were `--muted` before — one fixed
+     value for the two states, which left the tree with no visible hover. */
+  --trees-bg-muted-override: var(--elevate);
   --trees-fg-override: var(--foreground);
   --trees-fg-muted-override: var(--muted-foreground);
   --trees-accent-override: var(--accent-foreground);
   --trees-border-color-override: var(--border);
-  --trees-selected-bg-override: var(--muted);
+  --trees-selected-bg-override: var(--elevate-strong);
   --trees-selected-fg-override: var(--foreground);
   /* Match the app's shadcn inputs (background fill + subtle border) rather than
      a solid muted block, so the tree's search field blends in instead of
