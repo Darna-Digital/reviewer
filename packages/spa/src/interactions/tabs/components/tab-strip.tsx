@@ -1,10 +1,10 @@
 /**
  * The open-file strip over the centre pane.
  *
- * Reads as an IDE's: the file name, italic while the tab is only a preview, a
- * pin marker when it is pinned, a dot when the buffer is unsaved, and a close
- * control that appears on the active tab or on hover. Middle-click closes, as
- * it does in every editor and browser.
+ * Reads as an IDE's: the file's type icon — the tree's own — then its name,
+ * italic while the tab is only a preview, a pin marker when it is pinned, a dot
+ * when the buffer is unsaved, and a close control that appears on the active tab
+ * or on hover. Middle-click closes, as it does in every editor and browser.
  *
  * The strip scrolls rather than shrinking its tabs to nothing, and pinned tabs
  * sort to the head so they stay reachable once it does. Tabs drag into any
@@ -14,14 +14,20 @@
  * A tab shows only the file's name; its path is a tooltip, and what acts on the
  * file — edit it, read its history — sits on the path bar under the pane.
  */
-import { IconPin, IconPinnedFilled, IconX } from "@tabler/icons-react";
+import { IconPin, IconPinnedFilled } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import {
+  TAB_STRIP,
+  TabClose,
+  tabChipClass,
+} from "@/components/layout/tab-chip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import {
   Tooltip,
   TooltipContent,
@@ -102,7 +108,10 @@ export function TabStrip({
         ref={stripRef}
         role="tablist"
         aria-label="Open files"
-        className="flex shrink-0 items-stretch overflow-x-auto border-b border-border bg-background"
+        className={cn(
+          TAB_STRIP,
+          "shrink-0 border-b border-border bg-background px-2 py-1"
+        )}
       >
         {ordered.map((tab, index) => {
           const isActive = tab.path === active;
@@ -119,13 +128,7 @@ export function TabStrip({
                 aria-selected={isActive}
                 tabIndex={isActive ? 0 : -1}
                 draggable
-                className={cn(
-                  "group/tab flex max-w-56 min-w-0 shrink-0 cursor-default items-center gap-1.5 border-r border-border px-3 py-1.5 text-xs",
-                  isActive
-                    ? "bg-elevate text-foreground"
-                    : "text-muted-foreground hover:bg-elevate/60",
-                  dragging === tab.path && "opacity-50"
-                )}
+                className={tabChipClass(isActive, dragging === tab.path)}
                 render={<div />}
                 onDragStart={(event) => {
                   draggingRef.current = tab.path;
@@ -179,42 +182,38 @@ export function TabStrip({
                   }
                 }}
               >
-                {tab.pinned && (
+                {tab.pinned ? (
                   <IconPinnedFilled
-                    className="size-3 shrink-0 text-muted-foreground"
+                    className="size-3.5 shrink-0 text-muted-foreground"
                     aria-label="Pinned"
                   />
+                ) : (
+                  <FileTypeIcon path={tab.path} />
                 )}
                 <span
-                  className={cn("truncate", tab.preview && "italic")}
+                  // The italic's slant overhangs its glyph box, so the last
+                  // letter needs a pixel of its own not to be clipped away.
+                  className={cn("truncate", tab.preview && "pr-px italic")}
                   // A preview tab is one the next single click may replace; the
                   // italic says so without needing a legend.
                 >
                   {pathName(tab.path)}
                 </span>
-                {dirty.has(tab.path) ? (
-                  <span
-                    className="size-1.5 shrink-0 rounded-full bg-primary"
-                    aria-label="Unsaved changes"
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    aria-label={`Close ${pathName(tab.path)}`}
-                    className={cn(
-                      "shrink-0 rounded p-0.5 hover:bg-elevate",
-                      isActive
-                        ? "opacity-70"
-                        : "opacity-0 group-hover/tab:opacity-70"
-                    )}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onClose(tab.path);
-                    }}
-                  >
-                    <IconX className="size-3" />
-                  </button>
-                )}
+                <TabClose
+                  label={`Close ${pathName(tab.path)}`}
+                  active={isActive}
+                  onClose={() => onClose(tab.path)}
+                >
+                  {dirty.has(tab.path) && (
+                    <span
+                      aria-label="Unsaved changes"
+                      className={cn(
+                        "size-1.5 rounded-full bg-primary group-hover/tab:opacity-0",
+                        isActive && "opacity-0"
+                      )}
+                    />
+                  )}
+                </TabClose>
               </TooltipTrigger>
               <TooltipContent
                 side="bottom"

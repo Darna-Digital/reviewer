@@ -153,6 +153,16 @@ export function ChatsPage() {
   const composing = chatId === undefined;
   const showList = !composing && !expanded && prefs.sidebarVisible;
 
+  /**
+   * Back to the list. A thread already has one to step out to, but the composer
+   * does not — nothing has been said yet, so there is no conversation for the
+   * list to sit beside, and the way back is to leave the composer.
+   */
+  const showSessions = () => {
+    setOverride(false);
+    if (composing) void navigate({ to: "/modes/agent-session" });
+  };
+
   return (
     <div className="flex h-full min-h-0">
       {showList && (
@@ -258,30 +268,33 @@ export function ChatsPage() {
       )}
       <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <PaneHeader
-          crumbs={
-            expanded && selected !== null
+          crumbs={[
+            // A thread with the pane to itself — a new one included — needs the
+            // way back said out loud, since the list it came from is not on
+            // screen to click.
+            ...(expanded
               ? [
                   <button
-                    key="inbox"
+                    key="sessions"
                     type="button"
-                    onClick={() => setOverride(false)}
+                    onClick={showSessions}
                     className="shrink-0 text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
                   >
-                    Inbox
+                    Sessions
                   </button>,
+                ]
+              : []),
+            ...(expanded && selected !== null
+              ? [
                   <span key="branch" className="truncate text-muted-foreground">
                     {branchLabel(selected.branch)}
                   </span>,
-                  <span key="thread" className="truncate font-medium">
-                    {selected.title}
-                  </span>,
                 ]
-              : [
-                  <span key="thread" className="truncate font-medium">
-                    {selected?.title ?? "New thread"}
-                  </span>,
-                ]
-          }
+              : []),
+            <span key="thread" className="truncate font-medium">
+              {selected?.title ?? "New thread"}
+            </span>,
+          ]}
           {...(selected !== null && !expanded
             ? { meta: branchLabel(selected.branch) }
             : {})}

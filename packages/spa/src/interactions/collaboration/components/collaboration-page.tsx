@@ -8,6 +8,7 @@ import { ChannelView } from "@/interactions/collaboration/components/channel-vie
 import { ChatView } from "@/interactions/collaboration/components/chat-view";
 import { DocsView } from "@/interactions/collaboration/components/docs-view";
 import { CollaborationSidebar } from "@/interactions/collaboration/components/collaboration-sidebar";
+import { CollaborationTabs } from "@/interactions/collaboration-tabs/components/collaboration-tabs";
 import { PeopleView } from "@/interactions/collaboration/components/people-view";
 import { ProjectView } from "@/interactions/collaboration/components/project-view";
 import { TaskListView } from "@/interactions/collaboration/components/task-list-view";
@@ -51,6 +52,7 @@ export function CollaborationPage() {
       {sidebarVisible && <CollaborationSidebar />}
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <CollaborationTabs />
         {project !== undefined ? (
           <ProjectView project={project} />
         ) : taskListProject !== undefined ? (

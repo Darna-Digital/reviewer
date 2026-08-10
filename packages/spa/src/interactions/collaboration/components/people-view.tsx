@@ -66,6 +66,7 @@ function AgentRows({ selectedId }: { selectedId?: string }) {
   return (
     <>
       <PaneHeader
+        foot
         crumbs={[
           <span key="title" className="font-medium">
             Agents
@@ -146,6 +147,7 @@ function MemberRows({ selectedId }: { selectedId?: string }) {
   return (
     <>
       <PaneHeader
+        foot
         crumbs={[
           <span key="title" className="font-medium">
             Members

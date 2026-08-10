@@ -1,21 +1,34 @@
 import { Fragment, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 /**
- * The header a two-pane surface wears — collaboration's panes, the inbox and
- * code mode's threads: a breadcrumb on the left, the subject's one-line context
+ * The bar a two-pane surface wears — collaboration's panes, the inbox and code
+ * mode's sessions: a breadcrumb on the left, the subject's one-line context
  * beside it, and the pane's actions on the right.
+ *
+ * `foot` puts it along the bottom instead, where code mode keeps the same trail
+ * — the pane's last line rather than its first. It stays ahead of the body in
+ * the markup, so the trail is still read before what it describes.
  */
 export function PaneHeader({
   crumbs,
   meta,
   actions,
+  foot = false,
 }: {
   crumbs: ReadonlyArray<ReactNode>;
   meta?: string;
   actions?: ReactNode;
+  foot?: boolean;
 }) {
   return (
-    <header className="flex h-11 shrink-0 items-center gap-2 border-b px-3">
+    <header
+      data-slot="pane-header"
+      className={cn(
+        "flex h-11 shrink-0 items-center gap-2 px-3",
+        foot ? "order-last border-t" : "border-b"
+      )}
+    >
       <nav
         aria-label="Breadcrumb"
         className="flex min-w-0 items-center gap-1.5 text-[13px]"

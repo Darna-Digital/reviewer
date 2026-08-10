@@ -76,6 +76,7 @@ export function ProjectView({ project }: { project: MockProject }) {
   return (
     <>
       <PaneHeader
+        foot
         crumbs={[
           <span key="section" className="text-muted-foreground">
             Projects

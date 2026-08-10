@@ -5,6 +5,7 @@ import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 import { RepoPicker } from "@/components/repo-picker";
+import { SearchMenu } from "@/interactions/search/components/search-menu";
 import { isDesktop } from "@/lib/desktop";
 import type {
   BranchInfo,
@@ -83,6 +84,8 @@ export function TopBar(props: TopBarProps) {
           onDeleteBranch={props.onDeleteBranch}
         />
       )}
+
+      <SearchMenu />
 
       <div className="ml-auto flex items-center gap-1">
         {showDiffStyleToggle && (

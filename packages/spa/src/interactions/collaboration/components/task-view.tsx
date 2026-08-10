@@ -86,7 +86,7 @@ export function TaskView({ task }: { task: MockTask }) {
 
   return (
     <>
-      <header className="flex h-11 shrink-0 items-center gap-2 border-b px-3">
+      <header className="order-last flex h-11 shrink-0 items-center gap-2 border-t px-3">
         <nav
           aria-label="Breadcrumb"
           className="flex min-w-0 items-center gap-1.5 text-[13px]"

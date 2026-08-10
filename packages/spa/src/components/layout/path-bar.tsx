@@ -6,15 +6,11 @@
  * folders open a submenu, files open in the pane above. The file's own controls
  * (edit it, read its history, save it) end the line on the right.
  */
-import {
-  IconFile,
-  IconFolder,
-  IconHistory,
-  IconPencil,
-} from "@tabler/icons-react";
+import { IconFolder, IconHistory, IconPencil } from "@tabler/icons-react";
 import { type ReactNode, useMemo } from "react";
 import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs";
 import { Button } from "@/components/ui/button";
+import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import {
   DropdownMenuItem,
   DropdownMenuSub,
@@ -53,10 +49,19 @@ export function PathBar({
     () =>
       path === null
         ? []
-        : pathSegments(path).map((segment) => ({
+        : pathSegments(path).map((segment, index, segments) => ({
             id: `path:${segment.path}`,
             label: segment.name,
-            mono: true,
+            // Only the file at the end of the trail wears a mark: the folders
+            // above it are the path, and a row of identical folder glyphs is
+            // noise rather than information.
+            ...(index === segments.length - 1
+              ? {
+                  icon: (props: { className?: string }) => (
+                    <FileTypeIcon path={segment.path} {...props} />
+                  ),
+                }
+              : {}),
             menu: () => (
               <FolderItems
                 paths={paths}
@@ -120,7 +125,7 @@ function FolderItems({ paths, dir, openPath, onOpenFile }: FolderItemsProps) {
             onClick={() => onOpenFile(entry.path)}
             className={cn(onTrail(entry.path) && "font-medium text-foreground")}
           >
-            <IconFile /> {entry.name}
+            <FileTypeIcon path={entry.path} /> {entry.name}
           </DropdownMenuItem>
         )
       )}
@@ -140,7 +145,7 @@ function FolderSubmenu({
       >
         <IconFolder /> {name}
       </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent>
+      <DropdownMenuSubContent className="max-h-[min(60vh,24rem)] overflow-y-auto">
         <FolderItems {...items} />
       </DropdownMenuSubContent>
     </DropdownMenuSub>

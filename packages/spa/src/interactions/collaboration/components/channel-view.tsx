@@ -45,6 +45,7 @@ export function ChannelView({ channel }: { channel: MockChannel }) {
   return (
     <>
       <PaneHeader
+        foot
         crumbs={[
           ...(project === undefined
             ? [

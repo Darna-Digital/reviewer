@@ -147,6 +147,7 @@ export function TaskListView({ project }: { project: MockProject }) {
   return (
     <>
       <PaneHeader
+        foot
         crumbs={[
           <Link
             key="project"

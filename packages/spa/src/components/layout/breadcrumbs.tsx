@@ -5,7 +5,7 @@
  * a crumb can instead carry a dropdown of what else sits at its level; the
  * trail is the pane's last line, so those open upwards.
  */
-import { IconChevronRight, type IconGitBranch } from "@tabler/icons-react";
+import { IconChevronRight } from "@tabler/icons-react";
 import { Fragment, type ReactNode, useState } from "react";
 import {
   DropdownMenu,
@@ -17,7 +17,8 @@ import { cn } from "@/lib/utils";
 export interface Crumb {
   id: string;
   label: string;
-  icon?: typeof IconGitBranch;
+  /** Leading glyph, sized by the trail rather than by the caller. */
+  icon?: React.ComponentType<{ className?: string }>;
   /** Short mono prefix shown before the label, e.g. a commit's short sha. */
   hint?: string;
   /** Render the label in mono — used for file paths. */
@@ -110,7 +111,11 @@ function CrumbMenu({
       >
         {children}
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="start" className="min-w-56">
+      <DropdownMenuContent
+        side="top"
+        align="start"
+        className="max-h-[min(60vh,24rem)] min-w-56 overflow-y-auto"
+      >
         {open && crumb.menu?.()}
       </DropdownMenuContent>
     </DropdownMenu>

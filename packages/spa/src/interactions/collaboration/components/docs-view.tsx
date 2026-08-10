@@ -15,6 +15,7 @@ export function DocsView({ project }: { project: MockProject }) {
   return (
     <>
       <PaneHeader
+        foot
         crumbs={[
           <Link
             key="project"

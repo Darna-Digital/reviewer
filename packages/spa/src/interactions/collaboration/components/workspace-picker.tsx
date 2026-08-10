@@ -68,7 +68,7 @@ export function WorkspacePicker() {
           />
         }
       >
-        <WorkspaceMark workspace={selected} className="size-4.5" />
+        <WorkspaceMark workspace={selected} className="size-4 text-[9px]" />
         <span className="truncate">{selected.name}</span>
         <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>

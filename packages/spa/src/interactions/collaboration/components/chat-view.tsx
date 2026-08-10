@@ -224,6 +224,7 @@ export function ChatView({ chat: initial }: { chat: MockChat }) {
   return (
     <>
       <PaneHeader
+        foot
         crumbs={[
           project === undefined ? (
             <span key="section" className="text-muted-foreground">

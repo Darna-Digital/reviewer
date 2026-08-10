@@ -21,6 +21,7 @@ import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { RepoPicker } from "@/components/repo-picker";
+import { SearchMenu } from "@/interactions/search/components/search-menu";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
@@ -125,6 +126,7 @@ export function WorkspaceShell() {
               onPush={() => void git.push()}
             />
           )}
+          {!collaborating && !inSession && <SearchMenu />}
           {/* The native shell keeps the account in the window bar above. */}
           {!isDesktop && <UserMenu className="ml-auto" />}
         </header>

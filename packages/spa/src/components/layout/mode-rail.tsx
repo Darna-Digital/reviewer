@@ -12,7 +12,6 @@ import {
   IconGitPullRequest,
   IconMessageCircle,
   IconPlayerPlay,
-  IconSettings,
   IconTerminal2,
 } from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
@@ -193,13 +192,6 @@ export function ModeRail() {
             }
           >
             <IconTerminal2 className="size-5" />
-          </RailButton>
-          <RailButton
-            to="/settings"
-            label="Settings"
-            active={pathname.startsWith("/settings")}
-          >
-            <IconSettings className="size-5" />
           </RailButton>
         </div>
       </div>

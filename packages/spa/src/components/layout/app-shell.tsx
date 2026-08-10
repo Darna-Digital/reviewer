@@ -7,7 +7,6 @@
  */
 import {
   IconColumns2,
-  IconFile,
   IconFolders,
   IconGitBranch,
   IconGitCommit,
@@ -49,7 +48,9 @@ import { ConflictView } from "@/components/git/conflict-view";
 import { PullRequestList } from "@/components/git/pull-request-list";
 import { BottomPanel } from "@/components/layout/bottom-panel";
 import type { Crumb } from "@/components/layout/breadcrumbs";
+import { EmptyPane } from "@/components/layout/empty-pane";
 import { PathBar } from "@/components/layout/path-bar";
+import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { TopBar } from "@/components/layout/top-bar";
@@ -592,8 +593,9 @@ export function AppShell() {
           list.push({
             id: "history-path",
             label: pathName(logFilters.path),
-            icon: IconFile,
-            mono: true,
+            icon: (props: { className?: string }) => (
+              <FileTypeIcon path={logFilters.path ?? ""} {...props} />
+            ),
           });
         }
         list.push({
@@ -613,7 +615,6 @@ export function AppShell() {
       list.push({
         id: "browse-mode",
         label: "Project",
-        icon: IconFolders,
         onClick: () => void navigate({ to: "/modes/code/browse" }),
       });
     }
@@ -777,14 +778,13 @@ export function AppShell() {
     }
     if (target === null) {
       return (
-        <div className="flex h-full flex-col items-center justify-center gap-1 text-sm">
-          <div className="font-medium">Nothing open</div>
-          <div className="text-muted-foreground">
-            {mode === "review"
-              ? "Pick a pull request from the sidebar to review it."
-              : "Pick a file from the tree, or a commit from the log."}
-          </div>
-        </div>
+        <EmptyPane
+          hint={
+            mode === "review"
+              ? "Pick a pull request from the sidebar to review it"
+              : "Pick a file from the tree, or a commit from the log"
+          }
+        />
       );
     }
     return (

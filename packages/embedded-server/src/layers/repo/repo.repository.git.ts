@@ -606,15 +606,24 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     out.trim()
   );
 
-  // Staging is per-path and tolerant because a path whose deletion is already
-  // staged is present in neither the worktree nor the index, so `git add`
-  // rejects its pathspec — and one rejected pathspec aborts the whole batch,
-  // staging nothing. Nothing is lost: only untracked paths actually need the
-  // add, and the pathspec form of `git commit` records the rest from disk.
+  const isUnmatchedPathspec = (error: GitError): boolean =>
+    error.stderr.includes("did not match any files");
+
+  // Staging is per-path because a path whose deletion is already staged is
+  // present in neither the worktree nor the index, so `git add` rejects its
+  // pathspec — and one rejected pathspec aborts the whole batch, staging
+  // nothing. That single rejection is safe to ignore: only untracked paths
+  // actually need the add, and the pathspec form of `git commit` records the
+  // rest from disk. Every other `add` failure (a held index.lock, an
+  // unreadable file) must propagate — swallowing it leaves untracked paths
+  // unstaged and turns the failure into a misleading "pathspec did not match
+  // any file(s) known to git" from the commit that follows.
   const stageOne = (path: string): Effect.Effect<void, GitFailure> =>
     run("add", "-A", "--", path).pipe(
       Effect.asVoid,
-      Effect.catchTag("GitError", () => Effect.void)
+      Effect.catchTag("GitError", (error) =>
+        isUnmatchedPathspec(error) ? Effect.void : Effect.fail(error)
+      )
     );
 
   const commit: RepoRepo["commit"] = (message, paths) =>

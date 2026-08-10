@@ -27,6 +27,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar";
 import { CollaborationSidebar } from "@/interactions/collaboration/components/collaboration-sidebar";
+import { CollaborationTabs } from "@/interactions/collaboration-tabs/components/collaboration-tabs";
 import { MessageComposer } from "@/interactions/collaboration/components/message-composer";
 import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-priority-icon";
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
@@ -174,7 +175,9 @@ export function InboxPage() {
       )}
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        <CollaborationTabs />
         <PaneHeader
+          foot
           crumbs={[
             ...(expanded
               ? [

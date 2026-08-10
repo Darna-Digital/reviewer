@@ -293,6 +293,7 @@ export function NewChatView() {
   return (
     <>
       <PaneHeader
+        foot
         crumbs={[
           <Link
             key="inbox"
