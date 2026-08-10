@@ -16,11 +16,16 @@ import {
   IconMessage,
   IconPlus,
 } from "@tabler/icons-react";
-import { Outlet, useNavigate, useParams } from "@tanstack/react-router";
+import {
+  Outlet,
+  useNavigate,
+  useParams,
+  useSearch,
+} from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { PaneHeader } from "@/components/layout/pane-header";
-import { ResizeHandle } from "@/components/layout/resize-handle";
+import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import {
   ALL_BRANCHES,
   branchLabel,
@@ -30,6 +35,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
+import { useWindowTabs } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { ChatRow } from "@/interactions/chats/components/chat-row";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
 import type { ChatSummary } from "@byconvo/core/chats";
@@ -44,7 +50,18 @@ export function ChatsPage() {
   const { chatId } = useParams({ strict: false });
   const prefs = useUiPrefs();
   const [listWidth, setListWidth] = useState(prefs.inboxListWidth);
-  const [expanded, setExpanded] = useState(false);
+  /**
+   * A session tab holds one conversation, so on one of those the thread is the
+   * whole pane and the list stays out of it — landing in the inbox you
+   * deliberately stepped past would be the surprise. The crumb is the way back,
+   * and choosing either way holds for the visit.
+   */
+  const { tabs, activeId } = useWindowTabs();
+  const startingNew = useSearch({ strict: false }).new === true;
+  const ownTab =
+    startingNew || tabs.find((tab) => tab.id === activeId)?.kind === "session";
+  const [override, setOverride] = useState<boolean | null>(null);
+  const expanded = override ?? ownTab;
 
   const [seenAt] = useState(prefs.inboxSeenAt);
   useEffect(() => {
@@ -230,10 +247,9 @@ export function ChatsPage() {
         </aside>
       )}
       {showList && (
-        <ResizeHandle
-          orientation="col"
-          value={listWidth}
-          min={240}
+        <SidebarResizeHandle
+          width={listWidth}
+          stored={prefs.inboxListWidth}
           max={() => Math.max(320, window.innerWidth - 480)}
           onResize={setListWidth}
           onResizeEnd={(w) => setUiPrefs({ inboxListWidth: w })}
@@ -248,7 +264,7 @@ export function ChatsPage() {
                   <button
                     key="inbox"
                     type="button"
-                    onClick={() => setExpanded(false)}
+                    onClick={() => setOverride(false)}
                     className="shrink-0 text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
                   >
                     Inbox
@@ -282,7 +298,7 @@ export function ChatsPage() {
                       size="icon"
                       className="size-7"
                       aria-label={expanded ? "Exit full width" : "Expand full"}
-                      onClick={() => setExpanded(!expanded)}
+                      onClick={() => setOverride(!expanded)}
                     >
                       {expanded ? (
                         <IconArrowsDiagonalMinimize2 className="size-4" />

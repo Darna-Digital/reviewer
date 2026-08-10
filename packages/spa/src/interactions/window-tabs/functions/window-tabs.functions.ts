@@ -8,14 +8,17 @@ import type {
 } from "../interfaces/window-tabs.interfaces";
 
 export const PROJECT_TAB_ID = "pinned-project";
+export const COLLABORATION_TAB_ID = "pinned-collaboration";
 export const SESSIONS_TAB_ID = "pinned-sessions";
 
 export const HOME_HREF = "/modes/code/commit";
+export const COLLABORATION_HREF = "/modes/collaboration";
 export const SESSIONS_HREF = "/modes/code/chats";
 /** `?new` holds the composer open instead of resuming the latest chat. */
 export const NEW_SESSION_HREF = "/modes/code/chats?new=true";
 
 const SESSIONS_PREFIX = "/modes/code/chats";
+const COLLABORATION_PREFIX = "/modes/collaboration";
 
 const TITLES: ReadonlyArray<readonly [string, string]> = [
   ["/modes/code/browse", "Project"],
@@ -44,6 +47,12 @@ const PINNED_TABS: ReadonlyArray<WindowTab> = [
     kind: "project",
   },
   {
+    id: COLLABORATION_TAB_ID,
+    href: COLLABORATION_HREF,
+    title: tabTitle(COLLABORATION_HREF),
+    kind: "collaboration",
+  },
+  {
     id: SESSIONS_TAB_ID,
     href: SESSIONS_HREF,
     title: "Sessions",
@@ -61,14 +70,21 @@ const firstSessionSlot = (tabs: ReadonlyArray<WindowTab>): number =>
 const inSessions = (pathname: string): boolean =>
   pathname.startsWith(SESSIONS_PREFIX);
 
-/** The strip a window opens with: the pinned pair, on Project. */
+const inCollaboration = (pathname: string): boolean =>
+  pathname.startsWith(COLLABORATION_PREFIX);
+
+/** A pinned tab that is named after wherever it has been left. */
+const followsLocation = (tab: WindowTab): boolean =>
+  tab.kind === "project" || tab.kind === "collaboration";
+
+/** The strip a window opens with: the pinned tabs, on Code. */
 export const initialWindowTabs = (): WindowTabsState => ({
   tabs: PINNED_TABS,
   activeId: PROJECT_TAB_ID,
 });
 
 /**
- * Restore the pinned pair at the head of a strip, each keeping where it was
+ * Restore the pinned tabs at the head of a strip, each keeping where it was
  * left, and drop anything that is neither pinned nor a session.
  */
 export function withPinnedTabs(
@@ -89,8 +105,8 @@ export const activeTab = (state: WindowTabsState): WindowTab | null =>
 /**
  * Where a location belongs. A session tab holds one conversation, so it keeps
  * anything inside Sessions; everything else lands on the pinned tab that owns
- * that half of the app, whichever tab you set off from — leaving Sessions from
- * a chat hands the window back to Project rather than overwriting the chat.
+ * that part of the app, whichever tab you set off from — leaving Sessions from
+ * a chat hands the window back to Code rather than overwriting the chat.
  */
 function tabForLocation(
   state: WindowTabsState,
@@ -100,15 +116,20 @@ function tabForLocation(
   const sessions = inSessions(pathname);
   if (current !== null && current.kind === "session" && sessions)
     return current;
-  const owner = sessions ? SESSIONS_TAB_ID : PROJECT_TAB_ID;
+  const owner = sessions
+    ? SESSIONS_TAB_ID
+    : inCollaboration(pathname)
+      ? COLLABORATION_TAB_ID
+      : PROJECT_TAB_ID;
   return state.tabs.find((tab) => tab.id === owner) ?? current;
 }
 
 /**
  * Follow navigation: the owning tab takes the window and remembers where it was
  * left. A no-op when it is already active and points there, so an unrelated
- * re-render never rewrites the strip. The project tab is named after the
- * surface it is on; Sessions and its conversations carry their own names.
+ * re-render never rewrites the strip. Code and Collaboration are named after
+ * the surface they are on; Sessions and its conversations carry their own
+ * names.
  */
 export function trackLocation(
   state: WindowTabsState,
@@ -117,7 +138,7 @@ export function trackLocation(
 ): WindowTabsState {
   const target = tabForLocation(state, pathname);
   if (target === null) return state;
-  const title = target.kind === "project" ? tabTitle(pathname) : target.title;
+  const title = followsLocation(target) ? tabTitle(pathname) : target.title;
   if (
     target.id === state.activeId &&
     target.href === href &&
@@ -170,7 +191,7 @@ export function renameTab(
 /**
  * Close a session tab. Closing the active one hands the window to its
  * right-hand neighbour (the left-hand one at the end of the strip). The pinned
- * pair does not close, so the strip is never empty.
+ * tabs do not close, so the strip is never empty.
  */
 export function closeTab(state: WindowTabsState, id: string): WindowTabsState {
   const at = state.tabs.findIndex((tab) => tab.id === id);

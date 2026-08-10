@@ -1,61 +1,33 @@
 /**
- * The collaboration mode's sidebar — collapsible sections, agents first and
- * members last, wrapped around favourites and a tree of projects that expand
- * into their tasks, docs and channels. Unread carries through the tree: a
- * channel that is waiting reads at full contrast, and a collapsed project
- * rolls its channels' counts up onto its own row so nothing waits out of
- * sight. It lives apart from the page so shared surfaces (the inbox) can keep
- * it on screen, and every row is a link so the selection survives navigating
- * away and back.
+ * The collaboration mode's sidebar — the inbox, then favourites and a tree of
+ * projects that expand into their tasks. It lives apart from the page so shared
+ * surfaces (the inbox) can keep it on screen, and every row is a link so the
+ * selection survives navigating away and back.
  */
 import {
   IconChevronDown,
   IconChevronRight,
   IconCircleCheck,
-  IconCloud,
-  IconFileText,
-  IconHash,
-  IconLock,
-  IconMessageCircle,
+  IconInbox,
 } from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, type CSSProperties, type ReactNode } from "react";
-import { ResizeHandle } from "@/components/layout/resize-handle";
-import { Avatar } from "@/components/ui/avatar";
+import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AddAgentButton } from "@/interactions/collaboration/components/agent-add-dialog";
-import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card";
 import {
-  AgentMark,
-  AgentStateDot,
-} from "@/interactions/threads/components/agent-mark";
-import {
-  agentName,
   DEFAULT_ID,
   DEFAULT_VIEW,
   FAVORITES,
-  findChannel,
-  findChat,
   findProject,
   findTask,
-  MEMBERS,
-  membershipOf,
   PROJECTS,
-  projectChannels,
   projectTasks,
-  VIEWER,
-  visibleChats,
   type CollaborationView,
-  type MockAgent,
-  type MockChannel,
-  type MockChat,
   type MockFavorite,
-  type MockPerson,
   type MockProject,
   type MockTask,
 } from "@/interactions/collaboration/data/collaboration.mock";
-import { useAgents } from "@/interactions/collaboration/data/use-agents";
-import { useChats } from "@/interactions/collaboration/data/use-chats";
+import { UNREAD_COUNT } from "@/interactions/inbox/data/inbox.mock";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
@@ -63,8 +35,6 @@ const ROW =
   "flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md pr-1.5 pl-1 text-[13px] outline-none focus-visible:ring-3 focus-visible:ring-ring/30";
 
 const INDENT = ["pl-1", "pl-5", "pl-9"];
-
-type PeopleView = Extract<CollaborationView, "agents" | "members">;
 
 interface FavoriteRow {
   view: MockFavorite["view"];
@@ -76,8 +46,6 @@ interface FavoriteRow {
 interface ProjectBranch {
   project: MockProject;
   tasks: ReadonlyArray<MockTask>;
-  chats: ReadonlyArray<MockChat>;
-  channels: ReadonlyArray<MockChannel>;
 }
 
 const projectMark = (project: MockProject) => (
@@ -86,17 +54,6 @@ const projectMark = (project: MockProject) => (
     style={{ "--mark": project.color } as CSSProperties}
   />
 );
-
-const unreadIn = (channels: ReadonlyArray<MockChannel>) =>
-  channels.reduce((total, channel) => total + channel.unread, 0);
-
-/** Only chats you are actually in can be unread — reading one is not owing it. */
-const unreadInChats = (chats: ReadonlyArray<MockChat>) =>
-  chats.reduce(
-    (total, chat) =>
-      total + (membershipOf(chat) === "joined" ? chat.unread : 0),
-    0
-  );
 
 function UnreadCount({ count }: { count: number }) {
   if (count === 0) return null;
@@ -107,51 +64,24 @@ function UnreadCount({ count }: { count: number }) {
   );
 }
 
-/** Somebody is waiting on you to let them in — not an unread, so not a count. */
-function PendingRequestDot({ count }: { count: number }) {
-  if (count === 0) return null;
-  return (
-    <span
-      title={count === 1 ? "1 join request" : `${count} join requests`}
-      className="ml-auto size-1.5 shrink-0 rounded-full bg-amber-500"
-    />
-  );
-}
-
-function Section({
-  title,
-  action,
-  children,
-}: {
-  title: string;
-  /** Sits opposite the title, revealed on hover like a Linear section. */
-  action?: ReactNode;
-  children: ReactNode;
-}) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="group/section flex flex-col gap-px px-2 pt-3">
-      <div className="flex items-center gap-1 pr-1">
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          aria-expanded={open}
-          className="flex h-6 items-center gap-1 rounded-md px-1.5 text-[0.6875rem] font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
-        >
-          {title}
-          <IconChevronDown
-            className={cn(
-              "size-3 transition-transform duration-100",
-              !open && "-rotate-90"
-            )}
-          />
-        </button>
-        {action !== undefined && (
-          <span className="ml-auto opacity-0 group-focus-within/section:opacity-100 group-hover/section:opacity-100">
-            {action}
-          </span>
-        )}
-      </div>
+    <div className="flex flex-col gap-px px-2 pt-3">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+        className="flex h-6 w-fit items-center gap-1 rounded-md px-1.5 text-[0.6875rem] font-medium text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+      >
+        {title}
+        <IconChevronDown
+          className={cn(
+            "size-3 transition-transform duration-100",
+            !open && "-rotate-90"
+          )}
+        />
+      </button>
       {open && children}
     </div>
   );
@@ -227,138 +157,36 @@ function TreeRow({
   );
 }
 
-function PresenceDot({ online }: { online: boolean }) {
-  return (
-    <span
-      className={cn(
-        "ml-auto size-1.5 shrink-0 rounded-full",
-        online ? "bg-emerald-500" : "bg-muted-foreground/40"
-      )}
-    />
-  );
-}
-
-function PersonRow({
-  person,
-  view,
-  active,
-}: {
-  person: MockPerson;
-  view: PeopleView;
-  active: boolean;
-}) {
-  return (
-    <TreeRow
-      depth={0}
-      icon={
-        <Avatar
-          name={person.name}
-          letters={1}
-          className="size-4.5 text-[0.5rem]"
-        />
-      }
-      label={person.name}
-      to="/modes/collaboration"
-      search={{ view, id: person.id }}
-      active={active}
-      trailing={<PresenceDot online={person.online} />}
-    />
-  );
-}
-
-function AgentRow({ agent, active }: { agent: MockAgent; active: boolean }) {
-  return (
-    <AgentHoverCard agent={agent} render={<div />}>
-      <TreeRow
-        depth={0}
-        icon={<AgentMark kind={agent.kind} className="size-4.5 rounded" />}
-        label={agentName(agent)}
-        to="/modes/collaboration"
-        search={{ view: "agents", id: agent.id }}
-        active={active}
-        trailing={
-          <span className="ml-auto flex items-center gap-1.5">
-            {agent.runtime === "cloud" && (
-              <IconCloud className="size-3.5 shrink-0 text-muted-foreground" />
-            )}
-            <AgentStateDot running={agent.running} />
-          </span>
-        }
-      />
-    </AgentHoverCard>
-  );
-}
+const INBOX_HREF = "/modes/collaboration/inbox";
 
 /**
- * A chat you have not joined still belongs in the tree — that is what public
- * means — but it stays at reading contrast and carries no unread, since nothing
- * in there is waiting on you until you are in it.
+ * The inbox, at the head of the sidebar. It is a destination rather than a
+ * section, but it reads as one — the same row a section title sits in, so the
+ * tree below it starts flat instead of under a lone outlier.
  */
-function ChatRow({ chat, active }: { chat: MockChat; active: boolean }) {
-  const membership = membershipOf(chat);
-  const mine = chat.initiator === VIEWER.name;
-
+function InboxRow({ active }: { active: boolean }) {
   return (
-    <TreeRow
-      depth={1}
-      icon={
-        chat.visibility === "private" ? (
-          <IconLock className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <IconMessageCircle className="size-4 shrink-0 text-muted-foreground" />
-        )
-      }
-      label={chat.title}
-      to="/modes/collaboration"
-      search={{ view: "chat", id: chat.id }}
-      active={active}
-      trailing={
-        mine && chat.requests.length > 0 ? (
-          <PendingRequestDot count={chat.requests.length} />
-        ) : membership === "joined" ? (
-          <UnreadCount count={chat.unread} />
-        ) : membership === "requested" ? (
-          <span className="ml-auto shrink-0 pl-1 text-[0.6875rem] text-muted-foreground">
-            asked
-          </span>
-        ) : undefined
-      }
-      strong={membership === "joined" && chat.unread > 0}
-    />
+    <div className="flex flex-col px-2 pt-3">
+      <Link
+        to={INBOX_HREF}
+        className={cn(
+          "flex h-6 items-center gap-1.5 rounded-md px-1.5 text-[0.6875rem] font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/30",
+          active
+            ? "text-foreground"
+            : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <IconInbox className="size-3.5 shrink-0" />
+        Inbox
+        <UnreadCount count={UNREAD_COUNT} />
+      </Link>
+    </div>
   );
 }
 
-function PeopleSection({
-  title,
-  people,
-  view,
-  isActive,
-}: {
-  title: string;
-  people: ReadonlyArray<MockPerson>;
-  view: PeopleView;
-  isActive: (view: CollaborationView, id?: string) => boolean;
-}) {
-  return (
-    <Section title={title}>
-      {people.map((person) => (
-        <PersonRow
-          key={person.id}
-          person={person}
-          view={view}
-          active={isActive(view, person.id)}
-        />
-      ))}
-    </Section>
-  );
-}
-
-/**
- * A project row plus its tasks, docs and channels when expanded. Collapsed, it
- * carries its channels' unread total so the count does not disappear with them.
- */
+/** A project row, and its tasks when expanded. */
 function ProjectBranchRows({
-  branch: { project, tasks, chats, channels },
+  branch: { project, tasks },
   expanded,
   onToggle,
   isActive,
@@ -379,58 +207,19 @@ function ProjectBranchRows({
         active={isActive("project", project.id)}
         expanded={expanded}
         onToggle={onToggle}
-        trailing={
-          expanded ? undefined : (
-            <UnreadCount count={unreadIn(channels) + unreadInChats(chats)} />
-          )
-        }
       />
       {expanded && (
-        <>
-          <TreeRow
-            depth={1}
-            icon={
-              <IconCircleCheck className="size-4 shrink-0 text-muted-foreground" />
-            }
-            label="Tasks"
-            to="/modes/collaboration"
-            search={{ view: "tasks", id: project.id }}
-            active={isActive("tasks", project.id)}
-            trailing={<UnreadCount count={tasks.length} />}
-          />
-          <TreeRow
-            depth={1}
-            icon={
-              <IconFileText className="size-4 shrink-0 text-muted-foreground" />
-            }
-            label="Docs"
-            to="/modes/collaboration"
-            search={{ view: "docs", id: project.id }}
-            active={isActive("docs", project.id)}
-          />
-          {chats.map((chat) => (
-            <ChatRow
-              key={chat.id}
-              chat={chat}
-              active={isActive("chat", chat.id)}
-            />
-          ))}
-          {channels.map((channel) => (
-            <TreeRow
-              key={channel.id}
-              depth={1}
-              icon={
-                <IconHash className="size-4 shrink-0 text-muted-foreground" />
-              }
-              label={channel.name}
-              to="/modes/collaboration"
-              search={{ view: "channel", id: channel.id }}
-              active={isActive("channel", channel.id)}
-              trailing={<UnreadCount count={channel.unread} />}
-              strong={channel.unread > 0}
-            />
-          ))}
-        </>
+        <TreeRow
+          depth={1}
+          icon={
+            <IconCircleCheck className="size-4 shrink-0 text-muted-foreground" />
+          }
+          label="Tasks"
+          to="/modes/collaboration"
+          search={{ view: "tasks", id: project.id }}
+          active={isActive("tasks", project.id)}
+          trailing={<UnreadCount count={tasks.length} />}
+        />
       )}
     </div>
   );
@@ -439,8 +228,6 @@ function ProjectBranchRows({
 export function CollaborationSidebar() {
   const prefs = useUiPrefs();
   const [width, setWidth] = useState(prefs.workspaceSidebarWidth);
-  const agents = useAgents();
-  useChats();
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const { pathname, search } = useRouterState({ select: (s) => s.location });
 
@@ -451,37 +238,20 @@ export function CollaborationSidebar() {
 
   const activeProjectId = !onCollaboration
     ? undefined
-    : view === "project" || view === "tasks" || view === "docs"
+    : view === "project" || view === "tasks"
       ? id
       : view === "task"
         ? findTask(id)?.projectId
-        : view === "channel"
-          ? findChannel(id)?.projectId
-          : view === "chat"
-            ? findChat(id)?.projectId
-            : undefined;
+        : undefined;
 
   const branches: ReadonlyArray<ProjectBranch> = PROJECTS.map((project) => ({
     project,
     tasks: projectTasks(project.id).filter((t) => t.status !== "done"),
-    chats: visibleChats(project.id),
-    channels: projectChannels(project.id),
   }));
 
   const favorites: ReadonlyArray<FavoriteRow> = FAVORITES.map((favorite) => {
-    if (favorite.view === "channel") {
-      const channel = findChannel(favorite.id);
-      return channel === undefined
-        ? null
-        : {
-            ...favorite,
-            label: channel.name,
-            icon: (
-              <IconHash className="size-4 shrink-0 text-muted-foreground" />
-            ),
-          };
-    }
-    const project = findProject(favorite.id);
+    const project =
+      favorite.view === "channel" ? undefined : findProject(favorite.id);
     if (project === undefined) return null;
     return {
       ...favorite,
@@ -509,15 +279,7 @@ export function CollaborationSidebar() {
     <>
       <aside className="flex shrink-0 flex-col border-r" style={{ width }}>
         <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
-          <Section title="Agents" action={<AddAgentButton compact />}>
-            {agents.map((agent) => (
-              <AgentRow
-                key={agent.id}
-                agent={agent}
-                active={isActive("agents", agent.id)}
-              />
-            ))}
-          </Section>
+          <InboxRow active={pathname.startsWith(INBOX_HREF)} />
 
           {favorites.length > 0 && (
             <Section title="Favorites">
@@ -546,24 +308,15 @@ export function CollaborationSidebar() {
               />
             ))}
           </Section>
-
-          <PeopleSection
-            title="Members"
-            people={MEMBERS}
-            view="members"
-            isActive={isActive}
-          />
         </ScrollArea>
       </aside>
 
-      <ResizeHandle
-        orientation="col"
-        value={width}
-        min={200}
+      <SidebarResizeHandle
+        width={width}
+        stored={prefs.workspaceSidebarWidth}
         max={() => Math.max(260, window.innerWidth - 480)}
         onResize={setWidth}
         onResizeEnd={(w) => setUiPrefs({ workspaceSidebarWidth: w })}
-        label="Resize sidebar"
       />
     </>
   );

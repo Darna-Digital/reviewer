@@ -7,7 +7,7 @@
  * is required except a title, so the fast path is type-and-create and every
  * property is a default you can override on the way past.
  */
-import { IconChevronDown, IconPlus } from "@tabler/icons-react";
+import { IconChevronDown, IconEdit } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -168,7 +168,7 @@ export function NewTaskButton() {
             />
           }
         >
-          <IconPlus className="size-5" />
+          <IconEdit className="size-5" />
         </TooltipTrigger>
         <TooltipContent side="bottom">New task</TooltipContent>
       </Tooltip>

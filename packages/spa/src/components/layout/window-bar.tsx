@@ -8,7 +8,15 @@
  */
 // The history arrows are parked for now, along with the icons they wore.
 // import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
-import { IconPlus, IconSitemap, IconWorld, IconX } from "@tabler/icons-react";
+import {
+  IconCode,
+  IconPlus,
+  IconSend,
+  IconSitemap,
+  IconUsersGroup,
+  IconWorld,
+  IconX,
+} from "@tabler/icons-react";
 // import { useCanGoBack } from "@tanstack/react-router";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -39,12 +47,25 @@ import {
 } from "@/interactions/window-tabs/functions/window-tabs.functions";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
-import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
+import type {
+  WindowTab,
+  WindowTabKind,
+} from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import { useChats } from "@/lib/queries";
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { setUiPrefs, useUiPrefs, type WorkMode } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
+import { activeWorkMode } from "@/lib/work-mode";
 
 const NO_DRAG = "[-webkit-app-region:no-drag]";
+
+/** What each pinned tab is: the icon it wears, and the mode it puts the app in. */
+const PINNED: Partial<
+  Record<WindowTabKind, { icon: typeof IconCode; mode: WorkMode }>
+> = {
+  project: { icon: IconCode, mode: "code" },
+  collaboration: { icon: IconUsersGroup, mode: "collaboration" },
+  sessions: { icon: IconSend, mode: "code" },
+};
 
 function BarButton({
   label,
@@ -105,6 +126,14 @@ export function WindowBar() {
 
   const go = (href: string) => void router.navigate({ href });
 
+  // Which mode the app is framed in follows the pinned tab you pick, so the
+  // surfaces both modes share — settings, the inbox — still know which one you
+  // came from.
+  const adoptMode = (tab: WindowTab) => {
+    const mode = PINNED[tab.kind]?.mode;
+    if (mode !== undefined) setUiPrefs({ workMode: mode });
+  };
+
   // Whichever tab owns the window's location is the active one, however the
   // window got there.
   useEffect(() => {
@@ -121,6 +150,7 @@ export function WindowBar() {
    * thread you have open, not a count of everything in the inbox.
    */
   const prefs = useUiPrefs();
+  const inCodeMode = activeWorkMode(location.pathname, prefs.workMode) === "code";
   const seenAt = prefs.inboxSeenAt;
   const unread = useMemo(
     () =>
@@ -186,6 +216,7 @@ export function WindowBar() {
       const target = tabAtPosition(windowTabsSnapshot().tabs, position);
       if (target === null) return;
       updateWindowTabs((state) => selectTab(state, target.id));
+      adoptMode(target);
       go(target.href);
     };
     window.addEventListener("keydown", onKey);
@@ -225,103 +256,122 @@ export function WindowBar() {
         {tabs.map((tab, index) => {
           const active = tab.id === activeId;
           const pinned = isPinnedTab(tab);
+          const Icon = PINNED[tab.kind]?.icon;
           return (
-            <div
-              key={tab.id}
-              role="tab"
-              aria-selected={active}
-              tabIndex={active ? 0 : -1}
-              title={tab.title}
-              draggable={!pinned}
-              className={cn(
-                "group/tab flex h-8 max-w-52 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-md pl-3 text-[0.8125rem] transition-colors",
-                // Without a ✕ to sit in it, the trailing padding matches the lead.
-                pinned ? "pr-3" : "pr-1.5",
-                active
-                  ? "bg-elevate-strong text-foreground"
-                  : "text-muted-foreground hover:bg-elevate",
-                dragging === tab.id && "opacity-50"
-              )}
-              onDragStart={(event) => {
-                draggingRef.current = tab.id;
-                setDragging(tab.id);
-                event.dataTransfer.effectAllowed = "move";
-                // Firefox refuses to start a drag without a payload.
-                event.dataTransfer.setData("text/plain", tab.id);
-              }}
-              onDragOver={(event) => {
-                const held = draggingRef.current;
-                if (held === null) return;
-                event.preventDefault();
-                event.dataTransfer.dropEffect = "move";
-                // Reorder as the pointer crosses each tab, so the strip shows
-                // where the drop will land instead of only revealing it after.
-                if (held !== tab.id) {
-                  updateWindowTabs((state) => moveTab(state, held, index));
-                }
-              }}
-              onDragEnd={endDrag}
-              onDrop={(event) => {
-                event.preventDefault();
-                endDrag();
-              }}
-              onClick={(event) => {
-                // Shift-click closes, so a tab can go without aiming for its ✕.
-                if (event.shiftKey && !pinned) {
-                  event.preventDefault();
-                  close(tab.id);
-                  return;
-                }
-                updateWindowTabs((state) => selectTab(state, tab.id));
-                if (!active) go(tab.href);
-              }}
-              onAuxClick={(event) => {
-                if (event.button === 1 && !pinned) {
-                  event.preventDefault();
-                  close(tab.id);
-                }
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  event.preventDefault();
-                  go(tab.href);
-                }
-              }}
-            >
-              <span className="truncate">{tab.title}</span>
-              {/* The dot shares the ✕'s slot, which the tab already reserves —
-                  so a thread going quiet neither resizes the tab nor leaves a
-                  hole. Reaching for the ✕ trades one for the other. */}
-              {!pinned && (
-                <span className="relative flex size-[1.125rem] shrink-0 items-center justify-center">
-                  {waiting(tab) && (
-                    <span
-                      aria-label="Waiting"
-                      className={cn(
-                        "size-1.5 rounded-full bg-sky-500 group-hover/tab:opacity-0",
-                        active && "opacity-0"
-                      )}
-                    />
-                  )}
-                  <button
-                    type="button"
-                    aria-label={`Close ${tab.title}`}
+            <Tooltip key={tab.id}>
+              <TooltipTrigger
+                render={
+                  <div
+                    role="tab"
+                    aria-selected={active}
+                    aria-label={tab.title}
+                    tabIndex={active ? 0 : -1}
+                    draggable={!pinned}
                     className={cn(
-                      "absolute inset-0 flex items-center justify-center rounded hover:bg-elevate-strong",
+                      "group/tab flex h-8 max-w-52 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-md text-[0.8125rem] transition-colors",
+                      // A pinned tab is its icon and nothing else, so it wears
+                      // the same square — and the same states — as the buttons
+                      // at the other end of the bar.
+                      pinned ? "w-8 justify-center" : "pr-1.5 pl-3",
                       active
-                        ? "opacity-70"
-                        : "opacity-0 group-hover/tab:opacity-70"
+                        ? "bg-elevate-strong text-foreground"
+                        : "text-muted-foreground hover:bg-elevate hover:text-foreground",
+                      dragging === tab.id && "opacity-50"
                     )}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      close(tab.id);
+                    onDragStart={(event) => {
+                      draggingRef.current = tab.id;
+                      setDragging(tab.id);
+                      event.dataTransfer.effectAllowed = "move";
+                      // Firefox refuses to start a drag without a payload.
+                      event.dataTransfer.setData("text/plain", tab.id);
                     }}
-                  >
-                    <IconX className="size-3.5" />
-                  </button>
-                </span>
-              )}
-            </div>
+                    onDragOver={(event) => {
+                      const held = draggingRef.current;
+                      if (held === null) return;
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "move";
+                      // Reorder as the pointer crosses each tab, so the strip
+                      // shows where the drop will land instead of only
+                      // revealing it after.
+                      if (held !== tab.id) {
+                        updateWindowTabs((state) =>
+                          moveTab(state, held, index)
+                        );
+                      }
+                    }}
+                    onDragEnd={endDrag}
+                    onDrop={(event) => {
+                      event.preventDefault();
+                      endDrag();
+                    }}
+                    onClick={(event) => {
+                      // Shift-click closes, so a tab can go without aiming for
+                      // its ✕.
+                      if (event.shiftKey && !pinned) {
+                        event.preventDefault();
+                        close(tab.id);
+                        return;
+                      }
+                      updateWindowTabs((state) => selectTab(state, tab.id));
+                      adoptMode(tab);
+                      if (!active) go(tab.href);
+                    }}
+                    onAuxClick={(event) => {
+                      if (event.button === 1 && !pinned) {
+                        event.preventDefault();
+                        close(tab.id);
+                      }
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        adoptMode(tab);
+                        go(tab.href);
+                      }
+                    }}
+                  />
+                }
+              >
+                {Icon !== undefined && <Icon className="size-5 shrink-0" />}
+                {!pinned && (
+                  <>
+                    <span className="truncate">{tab.title}</span>
+                    {/* The dot shares the ✕'s slot, which the tab already
+                        reserves — so a thread going quiet neither resizes the
+                        tab nor leaves a hole. Reaching for the ✕ trades one
+                        for the other. */}
+                    <span className="relative flex size-[1.125rem] shrink-0 items-center justify-center">
+                      {waiting(tab) && (
+                        <span
+                          aria-label="Waiting"
+                          className={cn(
+                            "size-1.5 rounded-full bg-sky-500 group-hover/tab:opacity-0",
+                            active && "opacity-0"
+                          )}
+                        />
+                      )}
+                      <button
+                        type="button"
+                        aria-label={`Close ${tab.title}`}
+                        className={cn(
+                          "absolute inset-0 flex items-center justify-center rounded hover:bg-elevate-strong",
+                          active
+                            ? "opacity-70"
+                            : "opacity-0 group-hover/tab:opacity-70"
+                        )}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          close(tab.id);
+                        }}
+                      >
+                        <IconX className="size-3.5" />
+                      </button>
+                    </span>
+                  </>
+                )}
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{tab.title}</TooltipContent>
+            </Tooltip>
           );
         })}
       </div>
@@ -329,26 +379,29 @@ export function WindowBar() {
         <IconPlus className="size-5" />
       </BarButton>
       <div className="flex-1" />
-      {/* The analysis pane, beside the browser: both are window-level surfaces
-          rather than routes, and both are a second thing to look at while the
-          canvas keeps the code. */}
-      <BarButton
-        label="Analysis"
-        pressed={prefs.plansPaneOpen}
-        onClick={() => setUiPrefs({ plansPaneOpen: !prefs.plansPaneOpen })}
-      >
-        <IconSitemap className="size-5" />
-      </BarButton>
-      {/* The pane the agents verify their DOM changes in — a window-level
-          surface like the strip itself, not something a route owns, so it sits
-          at the far end rather than among the tabs. */}
-      <BarButton
-        label="Browser"
-        pressed={prefs.browserPaneOpen}
-        onClick={() => setUiPrefs({ browserPaneOpen: !prefs.browserPaneOpen })}
-      >
-        <IconWorld className="size-5" />
-      </BarButton>
+      {/* Both panes are there to be read against the code — an analysis of it,
+          or the page it renders — so neither has anything to sit beside once
+          the window is on collaboration. */}
+      {inCodeMode && (
+        <>
+          <BarButton
+            label="Analysis"
+            pressed={prefs.plansPaneOpen}
+            onClick={() => setUiPrefs({ plansPaneOpen: !prefs.plansPaneOpen })}
+          >
+            <IconSitemap className="size-5" />
+          </BarButton>
+          <BarButton
+            label="Browser"
+            pressed={prefs.browserPaneOpen}
+            onClick={() =>
+              setUiPrefs({ browserPaneOpen: !prefs.browserPaneOpen })
+            }
+          >
+            <IconWorld className="size-5" />
+          </BarButton>
+        </>
+      )}
     </header>
   );
 }

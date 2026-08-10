@@ -22,9 +22,14 @@ const STORE_KEY = "byconvo-window-tabs";
 let sequence = 0;
 export const nextTabId = (): string => `tab-${(sequence += 1)}`;
 
-const KINDS: ReadonlyArray<WindowTabKind> = ["project", "sessions", "session"];
+const KINDS: ReadonlyArray<WindowTabKind> = [
+  "project",
+  "collaboration",
+  "sessions",
+  "session",
+];
 
-// A strip written before the pinned pair existed carries no `kind`, so every
+// A strip written before the pinned tabs existed carries no `kind`, so every
 // tab in it fails here and the restore falls back to a fresh pinned strip.
 const isTab = (value: unknown): value is WindowTab =>
   typeof value === "object" &&

@@ -51,6 +51,7 @@ import { BottomPanel } from "@/components/layout/bottom-panel";
 import type { Crumb } from "@/components/layout/breadcrumbs";
 import { PathBar } from "@/components/layout/path-bar";
 import { ResizeHandle } from "@/components/layout/resize-handle";
+import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { TopBar } from "@/components/layout/top-bar";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { FileSidebar } from "@/components/tree/file-sidebar";
@@ -985,14 +986,12 @@ export function AppShell() {
                 )}
               </div>
               {prefs.sidebarVisible && (
-                <ResizeHandle
-                  orientation="col"
-                  value={sidebarWidth}
-                  min={180}
+                <SidebarResizeHandle
+                  width={sidebarWidth}
+                  stored={prefs.sidebarWidth}
                   max={() => Math.max(240, window.innerWidth - 400)}
                   onResize={setSidebarWidth}
                   onResizeEnd={(w) => setUiPrefs({ sidebarWidth: w })}
-                  label="Resize sidebar"
                 />
               )}
               <main className="flex min-w-0 flex-1 flex-col overflow-hidden">

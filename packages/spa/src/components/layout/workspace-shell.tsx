@@ -4,15 +4,15 @@
  * content and the shared bottom dock — inside the window frame both shells
  * share. Code mode keeps the repo picker and branch switcher; collaboration
  * mode drops both, along with the dock and the mode rail, since its own sidebar
- * carries what the rail held. Each feature page renders its own header and body
- * into the `<Outlet />`.
+ * carries what the rail held. A session drops the rail and the picker too — it
+ * is one conversation, not a way around the project. Each feature page renders
+ * its own header and body into the `<Outlet />`.
  */
 import { Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { IconRepeat } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
-import { MockInboxPopover } from "@/interactions/inbox/components/mock-inbox-popover";
 import { ModeRail } from "@/components/layout/mode-rail";
 // Only code mode is offered for now, so the mode chip stays parked.
 // import { ModeSelector } from "@/components/layout/mode-selector";
@@ -51,6 +51,10 @@ export function WorkspaceShell() {
   // Collaboration mode hides the git chrome — no branch switcher, no dock.
   const collaborating =
     activeWorkMode(pathname, prefs.workMode) === "collaboration";
+  // A session is one conversation, held by its own tab: the rail and the repo
+  // picker are how you move around the project, and neither is what this
+  // surface is for.
+  const inSession = pathname.startsWith("/modes/code/chats");
 
   // The picker is this shell's own, so the command that raises it is too.
   const shellCommands = useMemo<ReadonlyArray<Command>>(
@@ -70,18 +74,11 @@ export function WorkspaceShell() {
 
   return (
     <WindowFrame>
-      {!collaborating && <ModeRail />}
+      {!collaborating && !inSession && <ModeRail />}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-11 shrink-0 items-center gap-2 px-2">
           {/* In the native shell the window bar above carries this. */}
           {!isDesktop && <SidebarToggle />}
-          {/* Without the rail this is the inbox's only door in. */}
-          {collaborating && (
-            <MockInboxPopover
-              side="bottom"
-              active={pathname.startsWith("/modes/collaboration/inbox")}
-            />
-          )}
           {/* <ModeSelector /> */}
           {collaborating && (
             <>
@@ -90,7 +87,7 @@ export function WorkspaceShell() {
               <CollaborationSearch />
             </>
           )}
-          {!collaborating && (
+          {!collaborating && !inSession && (
             <RepoPicker
               repo={repo.data ?? null}
               workspace={workspace.data}

@@ -12,11 +12,11 @@
  * pointer-anchored menu needs that a trigger-anchored one does not.
  */
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from "@/components/ui/context-menu";
 import type { VirtualAnchor } from "../functions/anchors";
 
 export interface SymbolMenuEntry {
@@ -38,13 +38,13 @@ export function SymbolMenu({ anchor, entries, onClose }: SymbolMenuProps) {
   const fixes = entries.filter((entry) => entry.group === "fix");
 
   return (
-    <DropdownMenu
+    <ContextMenu
       open
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
     >
-      <DropdownMenuContent
+      <ContextMenuContent
         anchor={anchor}
         side="bottom"
         align="start"
@@ -52,17 +52,17 @@ export function SymbolMenu({ anchor, entries, onClose }: SymbolMenuProps) {
         className="max-w-[26rem] min-w-[15rem]"
       >
         {navigation.map((entry) => (
-          <DropdownMenuItem key={entry.id} onClick={entry.run}>
+          <ContextMenuItem key={entry.id} onClick={entry.run}>
             {entry.label}
-          </DropdownMenuItem>
+          </ContextMenuItem>
         ))}
-        {fixes.length > 0 && <DropdownMenuSeparator />}
+        {fixes.length > 0 && <ContextMenuSeparator />}
         {fixes.map((entry) => (
-          <DropdownMenuItem key={entry.id} onClick={entry.run}>
+          <ContextMenuItem key={entry.id} onClick={entry.run}>
             {entry.label}
-          </DropdownMenuItem>
+          </ContextMenuItem>
         ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </ContextMenuContent>
+    </ContextMenu>
   );
 }

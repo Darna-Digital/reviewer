@@ -15,7 +15,7 @@ import {
 } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ResizeHandle } from "@/components/layout/resize-handle";
+import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { DevTerminal } from "@/interactions/local-dev/components/dev-terminal";
 import { Button } from "@/components/ui/button";
 import {
@@ -264,14 +264,12 @@ export function LocalDevPage() {
         </ScrollArea>
       </aside>
       {prefs.sidebarVisible && (
-        <ResizeHandle
-          orientation="col"
-          value={sidebarWidth}
-          min={180}
+        <SidebarResizeHandle
+          width={sidebarWidth}
+          stored={prefs.workspaceSidebarWidth}
           max={() => Math.max(240, window.innerWidth - 480)}
           onResize={setSidebarWidth}
           onResizeEnd={(w) => setUiPrefs({ workspaceSidebarWidth: w })}
-          label="Resize sidebar"
         />
       )}
 

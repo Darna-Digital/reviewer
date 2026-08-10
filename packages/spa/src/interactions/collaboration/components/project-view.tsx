@@ -1,9 +1,8 @@
 /**
- * A project's overview — the way into everything it owns. It deliberately does
- * not re-list every task: the Tasks view does that, so this pane shows the
- * handful of tasks actually moving, and the project's docs and channels.
+ * A project's overview. It deliberately does not re-list every task: the Tasks
+ * view does that, so this pane shows the handful actually moving.
  */
-import { IconArrowRight, IconDots, IconHash } from "@tabler/icons-react";
+import { IconArrowRight, IconDots } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import { type CSSProperties, type ReactNode } from "react";
 import { AvatarStack } from "@/components/ui/avatar";
@@ -13,8 +12,6 @@ import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee
 import { PaneBody, PaneHeader } from "@/components/layout/pane-header";
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
 import {
-  projectChannels,
-  projectDocs,
   projectTasks,
   UNASSIGNED,
   type MockProject,
@@ -67,8 +64,6 @@ function SeeAll({
 
 export function ProjectView({ project }: { project: MockProject }) {
   const tasks = projectTasks(project.id);
-  const channels = projectChannels(project.id);
-  const docs = projectDocs(project.id);
 
   const open = UP_NEXT_ORDER.flatMap((status) =>
     tasks.filter((t) => t.status === status)
@@ -153,68 +148,6 @@ export function ProjectView({ project }: { project: MockProject }) {
               Every task in this project is done.
             </p>
           )}
-
-          {docs.length > 0 && (
-            <>
-              <SectionHeading
-                title="Docs"
-                action={
-                  <SeeAll
-                    label="All docs"
-                    to="/modes/collaboration"
-                    search={{ view: "docs", id: project.id }}
-                  />
-                }
-              />
-              <ul role="list" className="@container mt-1">
-                {docs.map((doc) => (
-                  <li key={doc.id}>
-                    <Link
-                      to="/modes/collaboration"
-                      search={{ view: "docs", id: project.id }}
-                      className={ROW}
-                    >
-                      <span className="shrink-0 text-[0.8125rem]">
-                        {doc.title}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground @max-xs:hidden">
-                        {doc.summary}
-                      </span>
-                      <span className="ml-auto shrink-0 text-xs text-muted-foreground @max-sm:hidden">
-                        {doc.updated}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-
-          <SectionHeading title="Channels" />
-          <ul role="list" className="@container mt-1">
-            {channels.map((channel) => (
-              <li key={channel.id}>
-                <Link
-                  to="/modes/collaboration"
-                  search={{ view: "channel", id: channel.id }}
-                  className={ROW}
-                >
-                  <IconHash className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="shrink-0 text-[0.8125rem]">
-                    {channel.name}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-xs text-muted-foreground @max-xs:hidden">
-                    {channel.topic}
-                  </span>
-                  {channel.unread > 0 && (
-                    <span className="ml-auto shrink-0 text-[0.6875rem] font-medium tabular-nums">
-                      {channel.unread}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            ))}
-          </ul>
         </PaneBody>
       </ScrollArea>
     </>

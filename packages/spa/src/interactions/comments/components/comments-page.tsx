@@ -9,7 +9,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { ResizeHandle } from "@/components/layout/resize-handle";
+import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -496,14 +496,12 @@ export function CommentsPage() {
         </ScrollArea>
       </aside>
       {prefs.sidebarVisible && (
-        <ResizeHandle
-          orientation="col"
-          value={sidebarWidth}
-          min={180}
+        <SidebarResizeHandle
+          width={sidebarWidth}
+          stored={prefs.workspaceSidebarWidth}
           max={() => Math.max(240, window.innerWidth - 480)}
           onResize={setSidebarWidth}
           onResizeEnd={(w) => setUiPrefs({ workspaceSidebarWidth: w })}
-          label="Resize sidebar"
         />
       )}
       <section className="flex min-w-0 flex-1 flex-col">

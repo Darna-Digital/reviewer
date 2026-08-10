@@ -1,8 +1,8 @@
 /**
- * InboxPage — the item list beside the selected thread, filling the window.
- * Collaboration mode's prototype inbox, on mock data: a destination of its own
- * rather than a pane inside the workspace you came from. Code mode's inbox is
- * the real thing, over the repo's agent threads.
+ * InboxPage — the item list beside the selected thread. Collaboration mode's
+ * prototype inbox, on mock data. The mode's sidebar stays beside it — the inbox
+ * is reached from a row in that sidebar, so it is also the way back out. Code
+ * mode's inbox is the real thing, over the repo's agent threads.
  */
 import {
   IconArrowsDiagonal,
@@ -16,7 +16,7 @@ import { Link, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { ResizeHandle } from "@/components/layout/resize-handle";
+import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -30,6 +30,7 @@ import {
   findAgentById,
   managedBy,
 } from "@/interactions/collaboration/data/collaboration.mock";
+import { CollaborationSidebar } from "@/interactions/collaboration/components/collaboration-sidebar";
 import { NewChatView } from "@/interactions/collaboration/components/new-chat-view";
 import { MessageComposer } from "@/interactions/collaboration/components/message-composer";
 import { PaneHeader } from "@/components/layout/pane-header";
@@ -78,6 +79,7 @@ export function InboxPage() {
 
   return (
     <div className="flex h-full min-h-0">
+      {prefs.sidebarVisible && <CollaborationSidebar />}
       {showList && (
         <div
           className="flex shrink-0 flex-col border-r"
@@ -180,10 +182,9 @@ export function InboxPage() {
         </div>
       )}
       {showList && (
-        <ResizeHandle
-          orientation="col"
-          value={listWidth}
-          min={240}
+        <SidebarResizeHandle
+          width={listWidth}
+          stored={prefs.inboxListWidth}
           max={() => Math.max(320, window.innerWidth - 480)}
           onResize={setListWidth}
           onResizeEnd={(w) => setUiPrefs({ inboxListWidth: w })}

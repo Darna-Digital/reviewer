@@ -6,6 +6,7 @@ import type {
 import {
   chatIdOf,
   closeTab,
+  COLLABORATION_TAB_ID,
   initialWindowTabs,
   moveTab,
   openTab,
@@ -31,10 +32,11 @@ const show = (state: WindowTabsState) =>
   state.tabs
     .map((t) => `${t.id === state.activeId ? "*" : ""}${t.id}`)
     .join(" ")
-    .replaceAll(PROJECT_TAB_ID, "project")
+    .replaceAll(PROJECT_TAB_ID, "code")
+    .replaceAll(COLLABORATION_TAB_ID, "team")
     .replaceAll(SESSIONS_TAB_ID, "sessions");
 
-/** The pinned pair, then a session tab per id, with the last one active. */
+/** The pinned tabs, then a session tab per id, with the last one active. */
 const stripOf = (...ids: string[]): WindowTabsState => {
   let state = initialWindowTabs();
   for (const id of ids) state = openTab(state, session(id));
@@ -42,29 +44,31 @@ const stripOf = (...ids: string[]): WindowTabsState => {
 };
 
 describe("initialWindowTabs", () => {
-  it("opens on the pinned pair, showing the project", () => {
-    expect(show(initialWindowTabs())).toBe("*project sessions");
+  it("opens on the pinned tabs, showing Code", () => {
+    expect(show(initialWindowTabs())).toBe("*code team sessions");
   });
 });
 
 describe("withPinnedTabs", () => {
-  it("restores the pinned pair ahead of the sessions it was saved with", () => {
+  it("restores the pinned tabs ahead of the sessions they were saved with", () => {
     const saved = [
       session("a"),
-      { ...initialWindowTabs().tabs[1], href: "/modes/code/chats/z" },
+      { ...initialWindowTabs().tabs[2], href: "/modes/code/chats/z" },
     ];
     const tabs = withPinnedTabs(saved);
     expect(tabs.map((t) => t.id)).toEqual([
       PROJECT_TAB_ID,
+      COLLABORATION_TAB_ID,
       SESSIONS_TAB_ID,
       "a",
     ]);
-    expect(tabs[1].href).toBe("/modes/code/chats/z");
+    expect(tabs[2].href).toBe("/modes/code/chats/z");
   });
 
-  it("puts a pinned pair back when the saved strip has none", () => {
+  it("puts the pinned tabs back when the saved strip has none", () => {
     expect(withPinnedTabs([]).map((t) => t.id)).toEqual([
       PROJECT_TAB_ID,
+      COLLABORATION_TAB_ID,
       SESSIONS_TAB_ID,
     ]);
   });
@@ -75,12 +79,12 @@ describe("openTab", () => {
     let state = stripOf("a", "b", "c");
     state = selectTab(state, "a");
     state = openTab(state, session("d"));
-    expect(show(state)).toBe("project sessions a *d b c");
+    expect(show(state)).toBe("code team sessions a *d b c");
   });
 
-  it("never lands a session ahead of the pinned pair", () => {
+  it("never lands a session ahead of the pinned tabs", () => {
     const state = openTab(initialWindowTabs(), session("a"));
-    expect(show(state)).toBe("project sessions *a");
+    expect(show(state)).toBe("code team sessions *a");
   });
 });
 
@@ -91,8 +95,8 @@ describe("trackLocation", () => {
       "/modes/code/chats/abc",
       "/modes/code/chats/abc"
     );
-    expect(show(state)).toBe("project *sessions");
-    expect(state.tabs[1].href).toBe("/modes/code/chats/abc");
+    expect(show(state)).toBe("code team *sessions");
+    expect(state.tabs[2].href).toBe("/modes/code/chats/abc");
   });
 
   it("keeps a session tab on its own conversation", () => {
@@ -101,24 +105,24 @@ describe("trackLocation", () => {
       "/modes/code/chats/abc",
       "/modes/code/chats/abc"
     );
-    expect(show(state)).toBe("project sessions *a");
-    expect(state.tabs[2]).toMatchObject({
+    expect(show(state)).toBe("code team sessions *a");
+    expect(state.tabs[3]).toMatchObject({
       href: "/modes/code/chats/abc",
       title: "a",
     });
   });
 
-  it("leaving the chats hands a session tab back to the project", () => {
+  it("leaving the chats hands a session tab back to Code", () => {
     const state = trackLocation(
       stripOf("a"),
       "/modes/code/commit",
       "/modes/code/commit"
     );
-    expect(show(state)).toBe("*project sessions a");
-    expect(state.tabs[2].href).toBe("/modes/code/chats/a");
+    expect(show(state)).toBe("*code team sessions a");
+    expect(state.tabs[3].href).toBe("/modes/code/chats/a");
   });
 
-  it("names the project tab after the surface it is on", () => {
+  it("names the code tab after the surface it is on", () => {
     const state = trackLocation(
       initialWindowTabs(),
       "/modes/code/review/12",
@@ -126,8 +130,22 @@ describe("trackLocation", () => {
     );
     expect(state.tabs.map((t) => t.title)).toEqual([
       "Pull requests",
+      "Collaboration",
       "Sessions",
     ]);
+  });
+
+  it("hands collaboration to its own tab, named after where it lands", () => {
+    const state = trackLocation(
+      initialWindowTabs(),
+      "/modes/collaboration/inbox",
+      "/modes/collaboration/inbox"
+    );
+    expect(show(state)).toBe("code *team sessions");
+    expect(state.tabs[1]).toMatchObject({
+      href: "/modes/collaboration/inbox",
+      title: "Inbox",
+    });
   });
 
   it("leaves Sessions and its conversations under their own names", () => {
@@ -138,6 +156,7 @@ describe("trackLocation", () => {
     );
     expect(state.tabs.map((t) => t.title)).toEqual([
       "Local changes",
+      "Collaboration",
       "Sessions",
       "a",
     ]);
@@ -154,7 +173,7 @@ describe("trackLocation", () => {
 describe("renameTab", () => {
   it("takes the conversation's name", () => {
     const state = renameTab(stripOf("a"), "a", "Fix the parser");
-    expect(state.tabs[2].title).toBe("Fix the parser");
+    expect(state.tabs[3].title).toBe("Fix the parser");
   });
 
   it("is a no-op when the name has not moved", () => {
@@ -168,22 +187,23 @@ describe("closeTab", () => {
   it("hands the window to the right-hand neighbour", () => {
     let state = stripOf("a", "b", "c");
     state = selectTab(state, "b");
-    expect(show(closeTab(state, "b"))).toBe("project sessions a *c");
+    expect(show(closeTab(state, "b"))).toBe("code team sessions a *c");
   });
 
   it("falls back to the left at the end of the strip", () => {
     const state = stripOf("a", "b", "c");
-    expect(show(closeTab(state, "c"))).toBe("project sessions a *b");
+    expect(show(closeTab(state, "c"))).toBe("code team sessions a *b");
   });
 
   it("leaves the active tab alone when another closes", () => {
     const state = stripOf("a", "b", "c");
-    expect(show(closeTab(state, "a"))).toBe("project sessions b *c");
+    expect(show(closeTab(state, "a"))).toBe("code team sessions b *c");
   });
 
-  it("keeps the pinned pair", () => {
+  it("keeps the pinned tabs", () => {
     const state = stripOf("a");
     expect(closeTab(state, PROJECT_TAB_ID)).toBe(state);
+    expect(closeTab(state, COLLABORATION_TAB_ID)).toBe(state);
     expect(closeTab(state, SESSIONS_TAB_ID)).toBe(state);
   });
 });
@@ -191,21 +211,22 @@ describe("closeTab", () => {
 describe("moveTab", () => {
   it("drops a tab at the index, sliding the rest out of its way", () => {
     const state = stripOf("a", "b", "c");
-    expect(show(moveTab(state, "a", 4))).toBe("project sessions b *c a");
-    expect(show(moveTab(state, "c", 2))).toBe("project sessions *c a b");
+    expect(show(moveTab(state, "a", 5))).toBe("code team sessions b *c a");
+    expect(show(moveTab(state, "c", 3))).toBe("code team sessions *c a b");
   });
 
-  it("holds sessions behind the pinned pair, which does not move", () => {
+  it("holds sessions behind the pinned tabs, which do not move", () => {
     const state = stripOf("a", "b");
-    expect(show(moveTab(state, "b", 0))).toBe("project sessions *b a");
-    expect(moveTab(state, PROJECT_TAB_ID, 3)).toBe(state);
+    expect(show(moveTab(state, "b", 0))).toBe("code team sessions *b a");
+    expect(moveTab(state, PROJECT_TAB_ID, 4)).toBe(state);
+    expect(moveTab(state, COLLABORATION_TAB_ID, 4)).toBe(state);
   });
 
   it("clamps out-of-range targets and no-ops on a non-move", () => {
     const state = stripOf("a", "b", "c");
-    expect(show(moveTab(state, "a", 99))).toBe("project sessions b *c a");
-    expect(moveTab(state, "b", 3)).toBe(state);
-    expect(moveTab(state, "missing", 2)).toBe(state);
+    expect(show(moveTab(state, "a", 99))).toBe("code team sessions b *c a");
+    expect(moveTab(state, "b", 4)).toBe(state);
+    expect(moveTab(state, "missing", 3)).toBe(state);
   });
 });
 
@@ -213,7 +234,8 @@ describe("tabAtPosition", () => {
   it("counts 1-8 from the left and sends 9 to the last tab", () => {
     const { tabs } = stripOf("a", "b");
     expect(tabAtPosition(tabs, 1)?.id).toBe(PROJECT_TAB_ID);
-    expect(tabAtPosition(tabs, 3)?.id).toBe("a");
+    expect(tabAtPosition(tabs, 2)?.id).toBe(COLLABORATION_TAB_ID);
+    expect(tabAtPosition(tabs, 4)?.id).toBe("a");
     expect(tabAtPosition(tabs, 9)?.id).toBe("b");
   });
 
@@ -235,6 +257,7 @@ describe("tabTitle", () => {
   it("names the mode surface a location belongs to", () => {
     expect(tabTitle("/modes/code/browse/commit/abc123")).toBe("Project");
     expect(tabTitle("/modes/code/review/12")).toBe("Pull requests");
+    expect(tabTitle("/modes/collaboration")).toBe("Collaboration");
     expect(tabTitle("/settings")).toBe("Settings");
     expect(tabTitle("/somewhere-else")).toBe("Byconvo");
   });
