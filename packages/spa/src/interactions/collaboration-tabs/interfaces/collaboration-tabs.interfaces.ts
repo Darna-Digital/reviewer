@@ -3,7 +3,7 @@
  * mode, standing where code mode keeps its open files.
  *
  * A tab holds one surface the sidebar can reach — a project, its tasks, a task,
- * a channel, a chat, the docs, the people, the inbox — and follows navigation
+ * a chat, the docs, the people, the inbox — and follows navigation
  * the way a browser tab follows its address bar, so moving around replaces the
  * active tab rather than piling up new ones. `+` is what opens another.
  */
@@ -15,8 +15,8 @@ export type CollaborationTabKind = CollaborationView | "inbox";
 /** A surface, as the strip knows it: what kind it is, of what, and its name. */
 export interface CollaborationPlace {
   readonly kind: CollaborationTabKind;
-  /** The project, task, channel or chat on show; empty where a kind is one of
-   * a kind, as the inbox is. */
+  /** The project, task or chat on show; empty where a kind is one of a kind,
+   * as the inbox is. */
   readonly subject: string;
   readonly title: string;
 }

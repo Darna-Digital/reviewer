@@ -10,7 +10,6 @@ import {
   IconDots,
   IconGitBranch,
   IconLink,
-  IconMessage2,
   IconMoodPlus,
   IconPaperclip,
   IconPlus,
@@ -28,7 +27,6 @@ import { TaskStatusIcon } from "@/interactions/collaboration/components/task-sta
 import {
   findProject,
   PRIORITY_LABEL,
-  projectChannels,
   projectTasks,
   STATUS_LABEL,
   taskChildren,
@@ -75,7 +73,6 @@ function Property({ label, children }: { label: string; children: ReactNode }) {
 
 export function TaskView({ task }: { task: MockTask }) {
   const project = findProject(task.projectId);
-  const channel = projectChannels(task.projectId)[0];
   const children = taskChildren(task.id);
   const siblings = projectTasks(task.projectId).filter(
     (t) => t.parentId === task.parentId
@@ -324,19 +321,6 @@ export function TaskView({ task }: { task: MockTask }) {
                 <span className="min-w-0 truncate">{project?.name}</span>
               </Link>
             </Property>
-
-            {channel !== undefined && (
-              <Property label="Channel">
-                <Link
-                  to="/modes/collaboration"
-                  search={{ view: "channel", id: channel.id }}
-                  className={PROPERTY_ROW}
-                >
-                  <IconMessage2 className="size-4 shrink-0" />
-                  <span className="min-w-0 truncate">#{channel.name}</span>
-                </Link>
-              </Property>
-            )}
           </aside>
         </div>
       </ScrollArea>

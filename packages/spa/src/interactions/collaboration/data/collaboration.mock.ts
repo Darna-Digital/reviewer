@@ -1,9 +1,9 @@
 /**
  * Prototype data for the collaboration mode — no API behind it yet.
  *
- * Projects own the tree: every task and every channel carries the project it
+ * Projects own the tree: every task and every chat carries the project it
  * belongs to, so the sidebar can nest them and the panes can look either way
- * (project → its work, task/channel → its project) from the same arrays.
+ * (project → its work, task/chat → its project) from the same arrays.
  */
 import { agentShort } from "@/interactions/threads/interfaces/agents";
 import type { AgentKind } from "@byconvo/core/threads";
@@ -13,7 +13,6 @@ export type CollaborationView =
   | "tasks"
   | "task"
   | "docs"
-  | "channel"
   | "chat"
   | "agents"
   | "members";
@@ -59,14 +58,6 @@ export interface MockDoc {
   summary: string;
   author: string;
   updated: string;
-}
-
-export interface MockChannel {
-  id: string;
-  name: string;
-  topic: string;
-  unread: number;
-  projectId?: string;
 }
 
 /**
@@ -258,65 +249,6 @@ export const PROJECTS: ReadonlyArray<MockProject> = [
     summary: "A native wrapper with offline drafts.",
     lead: "Sam Okoro",
     target: "Oct 9",
-  },
-];
-
-export const CHANNELS: ReadonlyArray<MockChannel> = [
-  {
-    id: "atlas-incidents",
-    name: "atlas-incidents",
-    topic: "Pager traffic from the pipeline",
-    unread: 12,
-    projectId: "atlas",
-  },
-  {
-    id: "atlas-dev",
-    name: "atlas-dev",
-    topic: "Pipeline work in the open",
-    unread: 2,
-    projectId: "atlas",
-  },
-  {
-    id: "atlas-migration",
-    name: "atlas-migration",
-    topic: "Cutover planning and dry runs",
-    unread: 0,
-    projectId: "atlas",
-  },
-  {
-    id: "pricing-launch",
-    name: "pricing-launch",
-    topic: "Ship notes and rollbacks for the new tiers",
-    unread: 3,
-    projectId: "pricing",
-  },
-  {
-    id: "pricing-copy",
-    name: "pricing-copy",
-    topic: "Wording for the new tiers",
-    unread: 1,
-    projectId: "pricing",
-  },
-  {
-    id: "onboarding-research",
-    name: "onboarding-research",
-    topic: "Session notes from the first-run study",
-    unread: 0,
-    projectId: "onboarding",
-  },
-  {
-    id: "onboarding-design",
-    name: "onboarding-design",
-    topic: "Crits, mocks, and motion",
-    unread: 0,
-    projectId: "onboarding",
-  },
-  {
-    id: "mobile-beta",
-    name: "mobile-beta",
-    topic: "Field reports from the TestFlight build",
-    unread: 4,
-    projectId: "mobile",
   },
 ];
 
@@ -600,8 +532,7 @@ const SEED_CHATS: ReadonlyArray<MockChat> = [
 /**
  * Chats and their agent line-ups change from inside the panes — joining,
  * approving, bringing an agent in — so both publish, the way agents do. The
- * agent line-up is keyed by conversation id and covers channels too: a public
- * channel takes agents on exactly the same terms a chat does.
+ * agent line-up is keyed by conversation id.
  */
 let chats: ReadonlyArray<MockChat> = SEED_CHATS;
 
@@ -611,10 +542,6 @@ const SEED_CONVERSATION_AGENTS: Record<string, ReadonlyArray<string>> = {
   "pricing-wording": ["codex-nadia", "cloud-claude"],
   "onboarding-cuts": ["cloud-claude"],
   "mobile-conflicts": [],
-  "atlas-incidents": ["claude-rutenis", "cloud-opencode"],
-  "atlas-dev": ["claude-rutenis"],
-  "pricing-launch": ["codex-nadia"],
-  "onboarding-research": ["cloud-claude"],
 };
 
 let conversationAgents: Record<
@@ -1196,152 +1123,6 @@ export const MESSAGES: Record<string, ReadonlyArray<MockMessage>> = {
       body: "The awkward case is two devices offline at once. Last write in still wins, which is wrong but rare.",
     },
   ],
-  "atlas-incidents": [
-    {
-      id: "atlas-incidents-1",
-      author: "Nadia Alvi",
-      time: "9:12 AM",
-      day: "Today",
-      body: "Standup moved to 10:30 for the rest of the week.",
-    },
-    {
-      id: "atlas-incidents-2",
-      author: "Theo Brandt",
-      time: "9:20 AM",
-      day: "Today",
-      body: "Works for me. I will post notes in the thread after.",
-    },
-    {
-      id: "atlas-incidents-3",
-      author: seedAgentName("claude-rutenis"),
-      agentId: "claude-rutenis",
-      time: "9:41 AM",
-      day: "Today",
-      body: "Reviewed the four pull requests opened yesterday. Two still need a second pass — both touch the retry path.",
-    },
-  ],
-  "pricing-launch": [
-    {
-      id: "pricing-launch-1",
-      author: seedAgentName("codex-nadia"),
-      agentId: "codex-nadia",
-      time: "6:04 PM",
-      day: "Yesterday",
-      body: "Release run for v2.13.4 finished. No rollbacks queued.",
-    },
-    {
-      id: "pricing-launch-2",
-      author: seedAgentName("codex-nadia"),
-      agentId: "codex-nadia",
-      time: "7:02 AM",
-      day: "Today",
-      body: "v2.14.0 is on staging. Smoke suite green in 4m12s.",
-    },
-    {
-      id: "pricing-launch-3",
-      author: "Nadia Alvi",
-      time: "8:15 AM",
-      day: "Today",
-      body: "Holding the production push until the pricing copy lands.",
-    },
-  ],
-  "onboarding-research": [
-    {
-      id: "onboarding-research-1",
-      author: "Pager",
-      time: "2:44 AM",
-      day: "Today",
-      body: "Ingest latency over threshold for 6 minutes. Auto-resolved.",
-    },
-    {
-      id: "onboarding-research-2",
-      author: "Theo Brandt",
-      time: "8:03 AM",
-      day: "Today",
-      body: "Root cause was the retry storm from the batch job. Capping concurrency at 8 held it.",
-    },
-  ],
-  "atlas-dev": [
-    {
-      id: "atlas-dev-1",
-      author: "Theo Brandt",
-      time: "4:31 PM",
-      day: "Yesterday",
-      body: "Drain is running against the shadow queue. 40 minutes for a full pass.",
-    },
-    {
-      id: "atlas-dev-2",
-      author: seedAgentName("claude-rutenis"),
-      agentId: "claude-rutenis",
-      time: "9:02 AM",
-      day: "Today",
-      body: "The writer skips checkpoint ids it has already committed, so a repeat run is a no-op.",
-    },
-    {
-      id: "atlas-dev-3",
-      author: "Nadia Alvi",
-      time: "9:48 AM",
-      day: "Today",
-      body: "Then I will queue the backfill for tonight.",
-    },
-  ],
-  "atlas-migration": [
-    {
-      id: "atlas-migration-1",
-      author: "Nadia Alvi",
-      time: "11:15 AM",
-      day: "Monday",
-      body: "Cutover window is Thursday 22:00 to 02:00. Two dry runs before then.",
-    },
-  ],
-  "pricing-copy": [
-    {
-      id: "pricing-copy-1",
-      author: "Sam Okoro",
-      time: "1:22 PM",
-      day: "Today",
-      body: "Plan names are locked: Starter, Team, Scale.",
-    },
-    {
-      id: "pricing-copy-2",
-      author: "Nadia Alvi",
-      time: "1:40 PM",
-      day: "Today",
-      body: "Then the comparison rows can go in as they are. I will drop the adjectives.",
-    },
-  ],
-  "onboarding-design": [
-    {
-      id: "onboarding-design-1",
-      author: "Ines Faber",
-      time: "2:37 PM",
-      day: "Yesterday",
-      body: "Three options for the empty state are up. Option 2 is my pick, the copy needs a pass.",
-    },
-    {
-      id: "onboarding-design-2",
-      author: "Sam Okoro",
-      time: "2:51 PM",
-      day: "Yesterday",
-      body: "Agreed on 2. I will take the copy tomorrow morning.",
-    },
-  ],
-  "mobile-beta": [
-    {
-      id: "mobile-beta-1",
-      author: "Sam Okoro",
-      time: "10:05 AM",
-      day: "Today",
-      body: "Build 41 is on TestFlight. Drafts now survive a cold start.",
-    },
-    {
-      id: "mobile-beta-2",
-      author: "Ines Faber",
-      time: "10:31 AM",
-      day: "Today",
-      body: "Two taps to reach the composer from a cold launch. Feels right.",
-    },
-  ],
 };
 
 export const DOCS: ReadonlyArray<MockDoc> = [
@@ -1401,12 +1182,11 @@ export const DEFAULT_ID = PROJECTS[0]?.id ?? "";
 
 /** Favourites hold surfaces, never a single task — a task list stands in. */
 export interface MockFavorite {
-  view: Extract<CollaborationView, "project" | "tasks" | "channel">;
+  view: Extract<CollaborationView, "project" | "tasks">;
   id: string;
 }
 
 export const FAVORITES: ReadonlyArray<MockFavorite> = [
-  { view: "channel", id: "atlas-dev" },
   { view: "tasks", id: "atlas" },
   { view: "tasks", id: "pricing" },
   { view: "project", id: "onboarding" },
@@ -1475,9 +1255,6 @@ export function addTask(draft: TaskDraft): MockTask {
   return created;
 }
 
-export const projectChannels = (projectId: string) =>
-  CHANNELS.filter((c) => c.projectId === projectId);
-
 export const taskChildren = (taskId: string) =>
   tasks.filter((t) => t.parentId === taskId);
 
@@ -1488,8 +1265,6 @@ export const projectDocs = (projectId: string) =>
   DOCS.filter((d) => d.projectId === projectId);
 
 export const findProject = (id: string) => PROJECTS.find((p) => p.id === id);
-
-export const findChannel = (id: string) => CHANNELS.find((c) => c.id === id);
 
 export const findTask = (id: string) => tasks.find((t) => t.id === id);
 

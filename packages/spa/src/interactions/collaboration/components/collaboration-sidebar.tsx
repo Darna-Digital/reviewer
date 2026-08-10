@@ -250,8 +250,7 @@ export function CollaborationSidebar() {
   }));
 
   const favorites: ReadonlyArray<FavoriteRow> = FAVORITES.map((favorite) => {
-    const project =
-      favorite.view === "channel" ? undefined : findProject(favorite.id);
+    const project = findProject(favorite.id);
     if (project === undefined) return null;
     return {
       ...favorite,

@@ -1,8 +1,8 @@
 /**
  * The workspace search pill in the title bar. It opens onto everything the
- * sidebar holds — projects, tasks and channels — and jumps straight there.
+ * sidebar holds — projects and tasks — and jumps straight there.
  */
-import { IconHash, IconSearch } from "@tabler/icons-react";
+import { IconSearch } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/tooltip";
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
 import {
-  CHANNELS,
   PROJECTS,
   allTasks,
   type CollaborationView,
@@ -62,14 +61,6 @@ export function CollaborationSearch() {
       detail: t.key,
       icon: <TaskStatusIcon status={t.status} />,
     })),
-    ...CHANNELS.map((c) => ({
-      key: `channel-${c.id}`,
-      view: "channel" as const,
-      id: c.id,
-      label: c.name,
-      detail: c.topic,
-      icon: <IconHash className="size-4 shrink-0 text-muted-foreground" />,
-    })),
   ].filter(
     (hit) =>
       q.length === 0 ||
@@ -103,7 +94,7 @@ export function CollaborationSearch() {
           <Input
             autoFocus
             value={query}
-            placeholder="Search projects, tasks and channels"
+            placeholder="Search projects and tasks"
             onChange={(e) => setQuery(e.target.value)}
             className="h-8"
           />

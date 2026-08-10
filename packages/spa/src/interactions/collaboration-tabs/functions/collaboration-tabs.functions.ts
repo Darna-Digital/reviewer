@@ -6,7 +6,6 @@
 import {
   DEFAULT_ID,
   DEFAULT_VIEW,
-  findChannel,
   findChat,
   findProject,
   findTask,
@@ -40,8 +39,6 @@ function locationTitle(kind: CollaborationTabKind, id: string): string {
       return `${findProject(id)?.name ?? "Project"} docs`;
     case "task":
       return findTask(id)?.title ?? "Task";
-    case "channel":
-      return findChannel(id)?.name ?? "Channel";
     case "chat":
       return findChat(id)?.title ?? "Chat";
     case "agents":

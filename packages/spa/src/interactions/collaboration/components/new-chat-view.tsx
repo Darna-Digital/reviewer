@@ -1,6 +1,6 @@
 /**
- * New message — Slack's compose window: a To field that takes members, agents
- * and channels alike, with the message below it. Nothing sends yet.
+ * New message — Slack's compose window: a To field that takes members and
+ * agents alike, with the message below it. Nothing sends yet.
  */
 import {
   IconBolt,
@@ -41,7 +41,6 @@ import {
 import {
   agentName,
   callableBy,
-  CHANNELS,
   MEMBERS,
   PROJECTS,
   VIEWER,
@@ -51,7 +50,7 @@ import { cn } from "@/lib/utils";
 
 interface Recipient {
   id: string;
-  kind: "member" | "agent" | "channel";
+  kind: "member" | "agent";
   name: string;
   detail: string;
   /** Which CLI to draw, on an agent recipient. */
@@ -80,16 +79,7 @@ const recipients = (): ReadonlyArray<Recipient> => [
     agent: a.kind,
     cloud: a.runtime === "cloud",
   })),
-  ...CHANNELS.map((c) => ({
-    id: `channel-${c.id}`,
-    kind: "channel" as const,
-    name: c.name,
-    detail: c.topic,
-  })),
 ];
-
-const label = (recipient: Recipient) =>
-  recipient.kind === "channel" ? `#${recipient.name}` : recipient.name;
 
 function RecipientIcon({
   recipient,
@@ -98,13 +88,6 @@ function RecipientIcon({
   recipient: Recipient;
   className?: string;
 }) {
-  if (recipient.kind === "channel") {
-    return (
-      <IconHash
-        className={cn("size-4 shrink-0 text-muted-foreground", className)}
-      />
-    );
-  }
   if (recipient.agent !== undefined) {
     return (
       <AgentMark kind={recipient.agent} className={cn("size-5", className)} />
@@ -123,7 +106,7 @@ function Chip({
   return (
     <span className="flex h-6 items-center gap-1.5 rounded-md bg-muted py-1 pr-1 pl-1.5 text-[13px]">
       <RecipientIcon recipient={recipient} className="size-4" />
-      {label(recipient)}
+      {recipient.name}
       <button
         type="button"
         onClick={onRemove}
@@ -150,7 +133,7 @@ function RecipientRow({
       className="flex h-9 w-full items-center gap-2.5 px-3 text-left text-[13px] outline-none hover:bg-elevate focus-visible:bg-elevate"
     >
       <RecipientIcon recipient={recipient} />
-      <span className="shrink-0 font-medium">{label(recipient)}</span>
+      <span className="shrink-0 font-medium">{recipient.name}</span>
       {recipient.cloud === true && (
         <IconCloud
           className="size-3.5 shrink-0 text-muted-foreground"
@@ -335,9 +318,7 @@ export function NewChatView() {
                 }
               }}
               placeholder={
-                chosen.length === 0
-                  ? "#a-channel, a teammate or an agent"
-                  : undefined
+                chosen.length === 0 ? "A teammate or an agent" : undefined
               }
               className="h-7 min-w-40 flex-1 bg-transparent text-[13px] outline-none placeholder:text-muted-foreground"
             />
@@ -371,17 +352,6 @@ export function NewChatView() {
                 ))}
               </Group>
             )}
-            {group("channel").length > 0 && (
-              <Group title="Channels">
-                {group("channel").map((recipient) => (
-                  <RecipientRow
-                    key={recipient.id}
-                    recipient={recipient}
-                    onSelect={() => add(recipient)}
-                  />
-                ))}
-              </Group>
-            )}
             {matches.length === 0 && (
               <p className="px-3 py-3 text-[13px] text-muted-foreground">
                 Nobody matches that.
@@ -401,7 +371,7 @@ export function NewChatView() {
               placeholder={
                 chosen.length === 0
                   ? "Write a message"
-                  : `Message ${chosen.map(label).join(", ")}`
+                  : `Message ${chosen.map((c) => c.name).join(", ")}`
               }
               className="w-full resize-none bg-transparent px-3 pt-3 text-sm outline-none placeholder:text-muted-foreground"
             />

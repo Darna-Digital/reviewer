@@ -14,7 +14,7 @@ import {
   IconPhotoPlus,
   IconPlayerStopFilled,
 } from "@tabler/icons-react";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +33,12 @@ import type {
 import { useDraft } from "@/lib/chat-drafts";
 import { cn } from "@/lib/utils";
 import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces";
+import {
+  changedRange,
+  continueList,
+  shiftListIndent,
+  type ComposerSelection,
+} from "@/interactions/chats/functions/list-editing.functions";
 import { AttachmentChip, AttachmentGrid } from "./image-attachments";
 import {
   attachmentSource,
@@ -122,6 +128,25 @@ function SelectorMenu<T extends string>({
   );
 }
 
+/**
+ * Keep the caret visible after an edit the browser did not scroll for. Lines
+ * below the caret are measured off the line box; on the last line the exact
+ * scroll height is used instead, so soft-wrapped text still lands right.
+ */
+function scrollCaretIntoView(textarea: HTMLTextAreaElement) {
+  if (!textarea.value.slice(textarea.selectionEnd).includes("\n")) {
+    textarea.scrollTop = textarea.scrollHeight;
+    return;
+  }
+  const styles = getComputedStyle(textarea);
+  const lineHeight =
+    parseFloat(styles.lineHeight) || parseFloat(styles.fontSize) * 1.5;
+  const lines = textarea.value.slice(0, textarea.selectionEnd).split("\n");
+  const caretBottom = parseFloat(styles.paddingTop) + lines.length * lineHeight;
+  const overflow = caretBottom - (textarea.scrollTop + textarea.clientHeight);
+  if (overflow > 0) textarea.scrollTop += overflow;
+}
+
 export function ChatComposer({
   settings,
   onSettingsChange,
@@ -157,6 +182,35 @@ export function ChatComposer({
   // dragenter/dragleave fire per descendant, so count depth to know when the
   // pointer has truly left the composer (matches lib/terminal/image-drop.ts).
   const dragDepth = useRef(0);
+  // The draft store owns the text, so a list edit can only restore the caret
+  // once React has painted the rewritten value.
+  const pendingSelection = useRef<[number, number] | null>(null);
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    const selection = pendingSelection.current;
+    if (textarea === null || selection === null) return;
+    pendingSelection.current = null;
+    textarea.setSelectionRange(selection[0], selection[1]);
+    scrollCaretIntoView(textarea);
+  }, [text]);
+
+  const applyListEdit = (edit: ComposerSelection | null) => {
+    if (edit === null) return false;
+    const textarea = textareaRef.current;
+    if (textarea !== null) {
+      const [start, end, replacement] = changedRange(text, edit.text);
+      textarea.setSelectionRange(start, end);
+      if (document.execCommand("insertText", false, replacement)) {
+        textarea.setSelectionRange(edit.selectionStart, edit.selectionEnd);
+        scrollCaretIntoView(textarea);
+        return true;
+      }
+    }
+    pendingSelection.current = [edit.selectionStart, edit.selectionEnd];
+    setText(edit.text);
+    return true;
+  };
 
   // A send while a turn is running is accepted, not blocked: the server appends
   // the message to the thread and the agent picks it up when the turn settles.
@@ -271,14 +325,29 @@ export function ChatComposer({
           }
         }}
         onKeyDown={(e) => {
+          const selection = {
+            text,
+            selectionStart: e.currentTarget.selectionStart,
+            selectionEnd: e.currentTarget.selectionEnd,
+          };
           if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             void submit();
+            return;
+          }
+          if (e.key === "Enter" && e.shiftKey) {
+            if (applyListEdit(continueList(selection))) e.preventDefault();
+            return;
+          }
+          if (e.key === "Tab") {
+            const levels = e.shiftKey ? -1 : 1;
+            if (applyListEdit(shiftListIndent(selection, levels)))
+              e.preventDefault();
           }
         }}
-        rows={3}
+        rows={5}
         placeholder={placeholder ?? "Ask anything about this repository…"}
-        className="max-h-60 min-h-20 w-full resize-none bg-transparent px-4 pt-3 text-sm outline-none placeholder:text-muted-foreground"
+        className="max-h-60 min-h-28 w-full resize-none bg-transparent px-4 pt-3 text-sm outline-none placeholder:text-muted-foreground"
       />
       {dragging && (
         <div className="pointer-events-none absolute inset-1 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-primary bg-primary/10 text-sm font-medium text-foreground">

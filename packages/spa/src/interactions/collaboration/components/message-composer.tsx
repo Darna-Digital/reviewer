@@ -6,7 +6,7 @@ import {
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 
-/** The reply box shared by the channel panes and the inbox thread. */
+/** The reply box shared by the chat pane and the inbox thread. */
 export function MessageComposer({ placeholder }: { placeholder: string }) {
   return (
     <div className="mx-auto w-full max-w-3xl shrink-0 px-4 pb-4">

@@ -1,5 +1,5 @@
 /**
- * The transcript both a channel and a chat show. Consecutive posts from one
+ * The transcript a chat shows. Consecutive posts from one
  * author on one day read as a single block, and an agent wears its brand mark
  * plus the badge naming whose account it posts under — in a room where four
  * people can each bring their own Claude, "Claude" alone says nothing.

@@ -12,7 +12,6 @@
 import {
   IconCircleCheck,
   IconFileText,
-  IconHash,
   IconInbox,
   IconMessage,
   IconPlus,
@@ -62,7 +61,6 @@ const KIND_ICON: Partial<Record<CollaborationTabKind, typeof IconInbox>> = {
   inbox: IconInbox,
   tasks: IconCircleCheck,
   docs: IconFileText,
-  channel: IconHash,
   chat: IconMessage,
   agents: IconRobot,
   members: IconUsers,
