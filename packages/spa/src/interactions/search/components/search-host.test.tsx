@@ -22,7 +22,7 @@ const git = vi.hoisted(() => ({
   createBranch: vi.fn(),
 }));
 /** The page the host is mounted on; drives where a result opens. */
-let pathname = "/modes/code/chats";
+let pathname = "/modes/agent-session";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof RouterModule>()),
@@ -94,7 +94,7 @@ const dialog = () => screen.queryByRole("textbox", { name: /^Search/ });
 
 beforeEach(() => {
   vi.clearAllMocks();
-  pathname = "/modes/code/chats";
+  pathname = "/modes/agent-session";
 });
 
 afterEach(() => {

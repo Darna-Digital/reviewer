@@ -794,7 +794,7 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     title: "Backfill checkpoints",
     status: "doing",
     priority: "high",
-    assignee: "Nadia Alvi",
+    assignee: VIEWER.name,
     labels: ["pipeline"],
     updated: "Jul 27",
     description: [
@@ -814,6 +814,20 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
         author: seedAgentName("claude-rutenis"),
         time: "1d ago",
         body: "Dry run is clean. Nothing in the diff beyond the expected checkpoint rows.",
+      },
+      {
+        id: "atlas-2-a3",
+        kind: "comment",
+        author: "Nadia Alvi",
+        time: "2h ago",
+        body: "Handing this to you — the dry run is clean, so it is the second pass and the sign-off left.",
+      },
+      {
+        id: "atlas-2-a4",
+        kind: "comment",
+        author: "Theo Brandt",
+        time: "1h ago",
+        body: "One ask before it runs: sequence it after the drain, not alongside. Compaction reads the checkpoint table without a transaction.",
       },
     ],
   },
@@ -918,6 +932,20 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
         time: "6d ago",
         detail: "created the task",
       },
+      {
+        id: "pricing-1-a2",
+        kind: "status",
+        author: "Nadia Alvi",
+        time: "Yesterday",
+        detail: "moved from Todo to In Progress",
+      },
+      {
+        id: "pricing-1-a3",
+        kind: "comment",
+        author: "Nadia Alvi",
+        time: "Yesterday",
+        body: "Taking the copy pass myself. The Scale column is the only one with rows still in question.",
+      },
     ],
   },
   {
@@ -969,6 +997,13 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
         time: "3d ago",
         body: "Study notes back up cutting step 5 entirely — nobody read it.",
       },
+      {
+        id: "onboarding-1-a2",
+        kind: "comment",
+        author: "Ines Faber",
+        time: "4h ago",
+        body: "@Rūtenis the four-step version is in the design doc. Does the second screen still need the workspace name, or can we infer it from the invite?",
+      },
     ],
   },
   {
@@ -1014,7 +1049,15 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     description: [
       "Drafts survive a cold start. On conflict the local copy wins and the remote one is kept as a revision.",
     ],
-    activity: [],
+    activity: [
+      {
+        id: "mobile-1-a1",
+        kind: "comment",
+        author: "Sam Okoro",
+        time: "Yesterday",
+        body: "Conflict rule is written but untested against a cold start mid-sync. If you have a device on the beta build, that is the case I cannot reproduce.",
+      },
+    ],
   },
   {
     id: "mobile-2",

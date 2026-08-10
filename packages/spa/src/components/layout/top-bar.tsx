@@ -3,6 +3,7 @@ import { BranchSwitcher } from "@/components/layout/branch-switcher";
 // import { ModeSelector } from "@/components/layout/mode-selector";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
+import { UserMenu } from "@/components/layout/user-menu";
 import { RepoPicker } from "@/components/repo-picker";
 import { isDesktop } from "@/lib/desktop";
 import type {
@@ -90,6 +91,8 @@ export function TopBar(props: TopBarProps) {
             onChange={props.onDiffStyleChange}
           />
         )}
+        {/* The native shell keeps the account in the window bar above. */}
+        {!isDesktop && <UserMenu />}
       </div>
     </header>
   );

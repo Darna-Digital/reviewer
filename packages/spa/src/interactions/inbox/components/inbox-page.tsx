@@ -1,21 +1,22 @@
 /**
- * InboxPage — the item list beside the selected thread. Collaboration mode's
- * prototype inbox, on mock data. The mode's sidebar stays beside it — the inbox
- * is reached from a row in that sidebar, so it is also the way back out. Code
- * mode's inbox is the real thing, over the repo's agent threads.
+ * InboxPage — what your teammates need from you, beside the task each ping came
+ * from. Collaboration mode's prototype inbox, on mock data.
+ *
+ * A row is a person doing something to a task; opening it shows that task and
+ * the comments on it, so answering the ping and answering the task are the same
+ * act. The mode's sidebar stays alongside — the inbox is reached from a row in
+ * it, so it is also the way back out.
  */
 import {
   IconArrowsDiagonal,
   IconArrowsDiagonalMinimize2,
   IconChevronDown,
   IconDots,
-  IconSend,
-  IconUsers,
+  IconMessageCircle,
 } from "@tabler/icons-react";
-import { Link, useSearch } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,18 +25,18 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { AgentHoverCard } from "@/interactions/collaboration/components/agent-hover-card";
-import { AgentMark } from "@/interactions/threads/components/agent-mark";
-import {
-  findAgentById,
-  managedBy,
-} from "@/interactions/collaboration/data/collaboration.mock";
+import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar";
 import { CollaborationSidebar } from "@/interactions/collaboration/components/collaboration-sidebar";
-import { NewChatView } from "@/interactions/collaboration/components/new-chat-view";
 import { MessageComposer } from "@/interactions/collaboration/components/message-composer";
+import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-priority-icon";
+import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
+import { findProject } from "@/interactions/collaboration/data/collaboration.mock";
 import { PaneHeader } from "@/components/layout/pane-header";
 import {
   INBOX_ITEMS,
+  inboxComments,
+  inboxTask,
+  REASON_LABEL,
   type InboxFilter,
 } from "@/interactions/inbox/data/inbox.mock";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
@@ -47,20 +48,8 @@ const FILTERS: ReadonlyArray<{ value: InboxFilter; label: string }> = [
   { value: "mentions", label: "Mentions" },
 ];
 
-/** An agent author's mark, carrying the hover card that names whose it is. */
-function AgentAuthorMark({ agentId }: { agentId: string }) {
-  const agent = findAgentById(agentId);
-  if (agent === undefined) return null;
-  return (
-    <AgentHoverCard agent={agent}>
-      <AgentMark kind={agent.kind} className="mt-0.5 size-7 rounded-lg" />
-    </AgentHoverCard>
-  );
-}
-
 export function InboxPage() {
   const prefs = useUiPrefs();
-  const composing = useSearch({ strict: false }).compose === "chat";
   const [listWidth, setListWidth] = useState(prefs.inboxListWidth);
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -75,7 +64,11 @@ export function InboxPage() {
   const filterLabel =
     FILTERS.find((f) => f.value === filter)?.label ?? FILTERS[0]?.label;
 
-  const showList = !composing && !expanded && prefs.sidebarVisible;
+  const task = selected === undefined ? undefined : inboxTask(selected);
+  const comments = selected === undefined ? [] : inboxComments(selected);
+  const project = task === undefined ? undefined : findProject(task.projectId);
+
+  const showList = !expanded && prefs.sidebarVisible;
 
   return (
     <div className="flex h-full min-h-0">
@@ -114,65 +107,53 @@ export function InboxPage() {
                 ))}
               </PopoverContent>
             </Popover>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="New chat"
-              className={cn("size-7", composing && "bg-muted text-foreground")}
-              render={
-                <Link
-                  to="/modes/collaboration/inbox"
-                  search={{ compose: "chat" }}
-                />
-              }
-            >
-              <IconSend className="size-4" />
-            </Button>
           </header>
 
           <ScrollArea
             className="min-h-0 flex-1"
             viewportClassName="scroll-fade"
           >
-            {items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => setSelectedId(item.id)}
-                className={cn(
-                  "flex w-full gap-2.5 border-b px-3 py-2.5 text-left outline-none hover:bg-elevate",
-                  item.id === selected?.id && "bg-muted"
-                )}
-              >
-                {item.agentId === undefined ? (
+            {items.map((item) => {
+              const on = inboxTask(item);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setSelectedId(item.id)}
+                  className={cn(
+                    "flex w-full gap-2.5 border-b px-3 py-2.5 text-left outline-none hover:bg-elevate",
+                    item.id === selected?.id && "bg-muted"
+                  )}
+                >
                   <Avatar name={item.author} className="size-7" />
-                ) : (
-                  <AgentAuthorMark agentId={item.agentId} />
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline gap-2">
-                    <span className="truncate text-[13px] font-medium">
-                      {item.author}
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline gap-2">
+                      <span className="truncate text-[13px] font-medium">
+                        {item.author}
+                      </span>
+                      <span className="ml-auto shrink-0 text-xs text-muted-foreground tabular-nums">
+                        {item.time}
+                      </span>
                     </span>
-                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                      {item.time}
+                    <span className="flex min-w-0 items-center gap-1 text-xs whitespace-nowrap text-muted-foreground">
+                      <span className="shrink-0">
+                        {REASON_LABEL[item.reason]}
+                      </span>
+                      <span className="shrink-0 rounded bg-elevate px-1 py-px font-mono text-foreground">
+                        {on?.key}
+                      </span>
+                      <span className="truncate">{on?.title}</span>
+                    </span>
+                    <span className="mt-1 line-clamp-2 block text-[13px] text-muted-foreground">
+                      {item.preview}
                     </span>
                   </span>
-                  <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                    {item.reason}
-                    <span className="rounded bg-elevate px-1 py-px text-foreground">
-                      #{item.channel}
-                    </span>
-                  </span>
-                  <span className="mt-1 line-clamp-2 block text-[13px] text-muted-foreground">
-                    {item.preview}
-                  </span>
-                </span>
-                {item.unread && (
-                  <span className="mt-2 size-2 shrink-0 rounded-full bg-sky-500" />
-                )}
-              </button>
-            ))}
+                  {item.unread && (
+                    <span className="mt-2 size-2 shrink-0 rounded-full bg-sky-500" />
+                  )}
+                </button>
+              );
+            })}
             {items.length === 0 && (
               <div className="px-3 py-6 text-center text-sm text-muted-foreground">
                 Nothing here.
@@ -193,114 +174,132 @@ export function InboxPage() {
       )}
 
       <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        {composing ? (
-          <NewChatView />
-        ) : (
-          <>
-            <PaneHeader
-              crumbs={
-                expanded
-                  ? [
-                      <button
-                        key="inbox"
-                        type="button"
-                        onClick={() => setExpanded(false)}
-                        className="shrink-0 text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
-                      >
-                        Inbox
-                      </button>,
-                      <span
-                        key="channel"
-                        className="truncate text-muted-foreground"
-                      >
-                        #{selected?.channel}
-                      </span>,
-                      <span key="thread" className="truncate font-medium">
-                        Thread
-                      </span>,
-                    ]
-                  : [
-                      <span key="thread" className="truncate font-medium">
-                        Thread in #{selected?.channel}
-                      </span>,
-                    ]
-              }
-              actions={
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <IconUsers className="size-4" />
-                  <span className="text-xs tabular-nums">
-                    {selected?.thread.length ?? 0}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    aria-label={expanded ? "Exit full width" : "Expand full"}
-                    onClick={() => setExpanded(!expanded)}
+        <PaneHeader
+          crumbs={[
+            ...(expanded
+              ? [
+                  <button
+                    key="inbox"
+                    type="button"
+                    onClick={() => setExpanded(false)}
+                    className="shrink-0 text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
                   >
-                    {expanded ? (
-                      <IconArrowsDiagonalMinimize2 className="size-4" />
-                    ) : (
-                      <IconArrowsDiagonal className="size-4" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7"
-                    aria-label="Thread options"
-                  >
-                    <IconDots className="size-4" />
-                  </Button>
+                    Inbox
+                  </button>,
+                ]
+              : []),
+            <span key="project" className="truncate text-muted-foreground">
+              {project?.name}
+            </span>,
+            <span key="task" className="truncate font-medium">
+              {task?.key}
+            </span>,
+          ]}
+          actions={
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <IconMessageCircle className="size-4" />
+              <span className="text-xs tabular-nums">{comments.length}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="ml-1"
+                render={
+                  <Link
+                    to="/modes/collaboration"
+                    search={{ view: "task", id: task?.id }}
+                  />
+                }
+              >
+                Open task
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                aria-label={expanded ? "Exit full width" : "Expand full"}
+                onClick={() => setExpanded(!expanded)}
+              >
+                {expanded ? (
+                  <IconArrowsDiagonalMinimize2 className="size-4" />
+                ) : (
+                  <IconArrowsDiagonal className="size-4" />
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                aria-label="Task options"
+              >
+                <IconDots className="size-4" />
+              </Button>
+            </div>
+          }
+        />
+
+        <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
+          <div className="mx-auto flex w-full max-w-3xl flex-col px-4 py-4">
+            {task !== undefined && (
+              <>
+                <div className="flex items-start gap-2.5">
+                  <TaskStatusIcon status={task.status} className="mt-1" />
+                  <h1 className="min-w-0 flex-1 text-lg font-semibold text-balance">
+                    {task.title}
+                  </h1>
                 </div>
-              }
-            />
-
-            <ScrollArea
-              className="min-h-0 flex-1"
-              viewportClassName="scroll-fade"
-            >
-              <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-4">
-                {selected?.thread.map((m) => (
-                  <div key={m.id} className="flex gap-3">
-                    {m.agentId === undefined ? (
-                      <Avatar name={m.author} className="mt-0.5 size-7" />
-                    ) : (
-                      <AgentAuthorMark agentId={m.agentId} />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-[0.8125rem] font-medium">
-                          {m.author}
-                        </span>
-                        {m.agentId !== undefined && (
-                          <Badge variant="outline" className="h-4.5 px-1.5">
-                            {managedBy(m.agentId)}
-                          </Badge>
-                        )}
-                        <span className="text-xs text-muted-foreground">
-                          {m.time}
-                        </span>
-                      </div>
-                      {m.body.map((paragraph, index) => (
-                        <p
-                          key={index}
-                          className="mt-1 max-w-[70ch] text-sm text-pretty"
-                        >
-                          {paragraph}
-                        </p>
-                      ))}
-                    </div>
-                  </div>
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 pl-6.5 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1.5">
+                    <AssigneeAvatar name={task.assignee} />
+                    {task.assignee}
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <TaskPriorityIcon priority={task.priority} />
+                    {task.priority}
+                  </span>
+                  <span className="tabular-nums">Updated {task.updated}</span>
+                </div>
+                {task.description.map((paragraph, index) => (
+                  <p
+                    key={index}
+                    className="mt-3 max-w-[70ch] pl-6.5 text-sm text-pretty text-muted-foreground"
+                  >
+                    {paragraph}
+                  </p>
                 ))}
-              </div>
-            </ScrollArea>
+              </>
+            )}
 
-            <MessageComposer
-              placeholder={`Send reply to #${selected?.channel} thread`}
-            />
-          </>
-        )}
+            <ul role="list" className="mt-6 flex flex-col gap-5 border-t pt-5">
+              {comments.map((comment) => (
+                <li key={comment.id} className="flex gap-3">
+                  <Avatar name={comment.author} className="mt-0.5 size-7" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-[0.8125rem] font-medium">
+                        {comment.author}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {comment.time}
+                      </span>
+                    </div>
+                    <p className="mt-1 max-w-[70ch] text-sm text-pretty">
+                      {comment.body}
+                    </p>
+                  </div>
+                </li>
+              ))}
+              {comments.length === 0 && (
+                <li className="text-sm text-muted-foreground">
+                  Nothing said on this one yet.
+                </li>
+              )}
+            </ul>
+          </div>
+        </ScrollArea>
+
+        <MessageComposer
+          placeholder={`Comment on ${task?.key ?? "this task"}`}
+        />
       </section>
     </div>
   );

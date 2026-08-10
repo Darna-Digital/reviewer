@@ -43,7 +43,7 @@ interface RailLink {
 }
 
 /** Code mode's inbox is the repo's agent threads. */
-// const INBOX_MATCH = "/modes/code/chats";
+// const INBOX_MATCH = "/modes/agent-session";
 
 const REVIEW_LINKS: RailLink[] = [
   {

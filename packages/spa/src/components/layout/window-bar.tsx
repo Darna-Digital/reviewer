@@ -46,6 +46,7 @@ import {
   trackLocation,
 } from "@/interactions/window-tabs/functions/window-tabs.functions";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
+import { UserMenu } from "@/components/layout/user-menu";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
 import type {
   WindowTab,
@@ -150,7 +151,8 @@ export function WindowBar() {
    * thread you have open, not a count of everything in the inbox.
    */
   const prefs = useUiPrefs();
-  const inCodeMode = activeWorkMode(location.pathname, prefs.workMode) === "code";
+  const inCodeMode =
+    activeWorkMode(location.pathname, prefs.workMode) === "code";
   const seenAt = prefs.inboxSeenAt;
   const unread = useMemo(
     () =>
@@ -402,6 +404,7 @@ export function WindowBar() {
           </BarButton>
         </>
       )}
+      <UserMenu className={NO_DRAG} />
     </header>
   );
 }

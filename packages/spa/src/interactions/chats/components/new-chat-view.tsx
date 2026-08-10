@@ -46,7 +46,7 @@ export function NewChatView() {
       );
       if (started !== null) {
         void navigate({
-          to: "/modes/code/chats/$chatId",
+          to: "/modes/agent-session/$chatId",
           params: { chatId: started.id },
         });
       }

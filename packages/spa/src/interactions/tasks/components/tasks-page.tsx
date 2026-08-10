@@ -215,7 +215,7 @@ export function TasksPage() {
       toast.success(`Started ${agent} on ${card.key}`);
       setEditing(null);
       void navigate({
-        to: "/modes/code/chats/$chatId",
+        to: "/modes/agent-session/$chatId",
         params: { chatId: started.id },
       });
     } catch (error) {

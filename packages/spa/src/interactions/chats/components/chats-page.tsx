@@ -132,7 +132,7 @@ export function ChatsPage() {
   const remove = async (id: string) => {
     try {
       await actions.remove(id);
-      if (id === chatId) void navigate({ to: "/modes/code/chats" });
+      if (id === chatId) void navigate({ to: "/modes/agent-session" });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "delete failed");
     }
@@ -185,7 +185,7 @@ export function ChatsPage() {
               aria-label="New thread"
               onClick={() =>
                 void navigate({
-                  to: "/modes/code/chats",
+                  to: "/modes/agent-session",
                   search: { new: true },
                 })
               }

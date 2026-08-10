@@ -20,7 +20,10 @@ import {
   withPinnedTabs,
 } from "./window-tabs.functions";
 
-const session = (id: string, href = `/modes/code/chats/${id}`): WindowTab => ({
+const session = (
+  id: string,
+  href = `/modes/agent-session/${id}`
+): WindowTab => ({
   id,
   href,
   title: id,
@@ -53,7 +56,7 @@ describe("withPinnedTabs", () => {
   it("restores the pinned tabs ahead of the sessions they were saved with", () => {
     const saved = [
       session("a"),
-      { ...initialWindowTabs().tabs[2], href: "/modes/code/chats/z" },
+      { ...initialWindowTabs().tabs[2], href: "/modes/agent-session/z" },
     ];
     const tabs = withPinnedTabs(saved);
     expect(tabs.map((t) => t.id)).toEqual([
@@ -62,7 +65,16 @@ describe("withPinnedTabs", () => {
       SESSIONS_TAB_ID,
       "a",
     ]);
-    expect(tabs[2].href).toBe("/modes/code/chats/z");
+    expect(tabs[2].href).toBe("/modes/agent-session/z");
+  });
+
+  it("carries a strip saved before sessions moved to their own route", () => {
+    const tabs = withPinnedTabs([
+      { ...initialWindowTabs().tabs[2], href: "/modes/code/chats" },
+      { id: "a", href: "/modes/code/chats/abc", title: "a", kind: "session" },
+    ]);
+    expect(tabs[2].href).toBe("/modes/agent-session");
+    expect(tabs[3].href).toBe("/modes/agent-session/abc");
   });
 
   it("puts the pinned tabs back when the saved strip has none", () => {
@@ -92,22 +104,22 @@ describe("trackLocation", () => {
   it("hands the window to the tab that owns where it went", () => {
     const state = trackLocation(
       initialWindowTabs(),
-      "/modes/code/chats/abc",
-      "/modes/code/chats/abc"
+      "/modes/agent-session/abc",
+      "/modes/agent-session/abc"
     );
     expect(show(state)).toBe("code team *sessions");
-    expect(state.tabs[2].href).toBe("/modes/code/chats/abc");
+    expect(state.tabs[2].href).toBe("/modes/agent-session/abc");
   });
 
   it("keeps a session tab on its own conversation", () => {
     const state = trackLocation(
       stripOf("a"),
-      "/modes/code/chats/abc",
-      "/modes/code/chats/abc"
+      "/modes/agent-session/abc",
+      "/modes/agent-session/abc"
     );
     expect(show(state)).toBe("code team sessions *a");
     expect(state.tabs[3]).toMatchObject({
-      href: "/modes/code/chats/abc",
+      href: "/modes/agent-session/abc",
       title: "a",
     });
   });
@@ -119,7 +131,7 @@ describe("trackLocation", () => {
       "/modes/code/commit"
     );
     expect(show(state)).toBe("*code team sessions a");
-    expect(state.tabs[3].href).toBe("/modes/code/chats/a");
+    expect(state.tabs[3].href).toBe("/modes/agent-session/a");
   });
 
   it("names the code tab after the surface it is on", () => {
@@ -151,8 +163,8 @@ describe("trackLocation", () => {
   it("leaves Sessions and its conversations under their own names", () => {
     const state = trackLocation(
       stripOf("a"),
-      "/modes/code/chats/abc",
-      "/modes/code/chats/abc"
+      "/modes/agent-session/abc",
+      "/modes/agent-session/abc"
     );
     expect(state.tabs.map((t) => t.title)).toEqual([
       "Local changes",
@@ -247,8 +259,8 @@ describe("tabAtPosition", () => {
 
 describe("chatIdOf", () => {
   it("reads the conversation a session tab is showing", () => {
-    expect(chatIdOf("/modes/code/chats/abc123")).toBe("abc123");
-    expect(chatIdOf("/modes/code/chats?new=true")).toBeNull();
+    expect(chatIdOf("/modes/agent-session/abc123")).toBe("abc123");
+    expect(chatIdOf("/modes/agent-session?new=true")).toBeNull();
     expect(chatIdOf("/modes/code/commit")).toBeNull();
   });
 });

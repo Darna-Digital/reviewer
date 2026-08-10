@@ -32,14 +32,14 @@ export function ChatsInboxPopover({ active }: { active: boolean }) {
         <>
           <InboxPopoverHeader>
             <Link
-              to="/modes/code/chats"
+              to="/modes/agent-session"
               onClick={close}
               className={inboxPopoverLink}
             >
               All threads
             </Link>
             <Link
-              to="/modes/code/chats"
+              to="/modes/agent-session"
               search={{ new: true }}
               onClick={close}
               className={`ml-auto flex items-center gap-1.5 ${inboxPopoverLink}`}
@@ -58,7 +58,7 @@ export function ChatsInboxPopover({ active }: { active: boolean }) {
               {chats.slice(0, INBOX_PREVIEW_COUNT).map((chat) => (
                 <li key={chat.id} className="border-b last:border-b-0">
                   <Link
-                    to="/modes/code/chats/$chatId"
+                    to="/modes/agent-session/$chatId"
                     params={{ chatId: chat.id }}
                     onClick={close}
                     className="flex gap-2.5 px-3 py-2.5 outline-none hover:bg-elevate focus-visible:bg-elevate"

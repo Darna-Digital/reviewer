@@ -304,7 +304,7 @@ export function BrowserPane() {
       toast.success(
         `Assigned ${pending.length} comment${pending.length === 1 ? "" : "s"}`
       );
-      void navigate({ to: "/modes/code/chats/$chatId", params: { chatId } });
+      void navigate({ to: "/modes/agent-session/$chatId", params: { chatId } });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not assign comments"

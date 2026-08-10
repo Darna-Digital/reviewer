@@ -459,7 +459,7 @@ describe("hasFileViewer", () => {
   });
 
   it("rejects the workspace pages that have nothing to show a file in", () => {
-    expect(hasFileViewer("/modes/code/chats/c1")).toBe(false);
+    expect(hasFileViewer("/modes/agent-session/c1")).toBe(false);
     expect(hasFileViewer("/modes/code/tasks")).toBe(false);
     expect(hasFileViewer("/modes/collaboration")).toBe(false);
     expect(hasFileViewer("/settings")).toBe(false);

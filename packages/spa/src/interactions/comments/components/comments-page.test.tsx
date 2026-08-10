@@ -198,7 +198,7 @@ describe("CommentsPage", () => {
 
     expect(removeCode).toHaveBeenCalledTimes(2);
     expect(navigate).toHaveBeenCalledWith({
-      to: "/modes/code/chats/$chatId",
+      to: "/modes/agent-session/$chatId",
       params: { chatId: "chat-1" },
     });
   });

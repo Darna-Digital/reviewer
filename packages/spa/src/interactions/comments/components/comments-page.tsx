@@ -354,7 +354,7 @@ export function CommentsPage() {
       await Promise.all(assigned.map(remove));
       setSelectedId(null);
       toast.success(`Assigned ${count} comment${count === 1 ? "" : "s"}`);
-      void navigate({ to: "/modes/code/chats/$chatId", params: { chatId } });
+      void navigate({ to: "/modes/agent-session/$chatId", params: { chatId } });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not assign comments"

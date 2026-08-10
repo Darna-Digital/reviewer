@@ -41,7 +41,7 @@ describe("WindowFrame", () => {
   it("hosts the search for every code page, whichever shell renders it", () => {
     expect(mountedOn("/modes/code/commit")).toBe(true);
     cleanup();
-    expect(mountedOn("/modes/code/chats/abc")).toBe(true);
+    expect(mountedOn("/modes/agent-session/abc")).toBe(true);
   });
 
   it("leaves collaboration mode to its own search", () => {

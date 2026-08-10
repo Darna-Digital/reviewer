@@ -101,7 +101,7 @@ export function ChatRow({
         closeDelay={HOVER_CLOSE_DELAY_MS}
         render={
           <Link
-            to="/modes/code/chats/$chatId"
+            to="/modes/agent-session/$chatId"
             params={{ chatId: chat.id }}
             onPointerDown={() => {
               clicked.current = true;

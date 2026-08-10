@@ -13,11 +13,11 @@ export const SESSIONS_TAB_ID = "pinned-sessions";
 
 export const HOME_HREF = "/modes/code/commit";
 export const COLLABORATION_HREF = "/modes/collaboration";
-export const SESSIONS_HREF = "/modes/code/chats";
+export const SESSIONS_HREF = "/modes/agent-session";
 /** `?new` holds the composer open instead of resuming the latest chat. */
-export const NEW_SESSION_HREF = "/modes/code/chats?new=true";
+export const NEW_SESSION_HREF = "/modes/agent-session?new=true";
 
-const SESSIONS_PREFIX = "/modes/code/chats";
+const SESSIONS_PREFIX = "/modes/agent-session";
 const COLLABORATION_PREFIX = "/modes/collaboration";
 
 const TITLES: ReadonlyArray<readonly [string, string]> = [
@@ -83,6 +83,15 @@ export const initialWindowTabs = (): WindowTabsState => ({
   activeId: PROJECT_TAB_ID,
 });
 
+/** Sessions used to live under code mode, and a saved strip still says so. */
+const LEGACY_SESSIONS_PREFIX = "/modes/code/chats";
+
+/** Where a saved href points now — the route it named may since have moved. */
+export const currentHref = (href: string): string =>
+  href.startsWith(LEGACY_SESSIONS_PREFIX)
+    ? SESSIONS_PREFIX + href.slice(LEGACY_SESSIONS_PREFIX.length)
+    : href;
+
 /**
  * Restore the pinned tabs at the head of a strip, each keeping where it was
  * left, and drop anything that is neither pinned nor a session.
@@ -90,13 +99,14 @@ export const initialWindowTabs = (): WindowTabsState => ({
 export function withPinnedTabs(
   tabs: ReadonlyArray<WindowTab>
 ): ReadonlyArray<WindowTab> {
+  const saved = tabs.map((tab) => ({ ...tab, href: currentHref(tab.href) }));
   const pinned = PINNED_TABS.map((tab) => {
-    const saved = tabs.find((candidate) => candidate.id === tab.id);
-    return saved === undefined
+    const kept = saved.find((candidate) => candidate.id === tab.id);
+    return kept === undefined
       ? tab
-      : { ...tab, href: saved.href, title: saved.title };
+      : { ...tab, href: kept.href, title: kept.title };
   });
-  return [...pinned, ...tabs.filter((tab) => tab.kind === "session")];
+  return [...pinned, ...saved.filter((tab) => tab.kind === "session")];
 }
 
 export const activeTab = (state: WindowTabsState): WindowTab | null =>
@@ -233,7 +243,7 @@ export function tabAtPosition(
   return tabs[index] ?? null;
 }
 
-const CHAT_HREF = /^\/modes\/code\/chats\/([^/?#]+)/;
+const CHAT_HREF = /^\/modes\/agent-session\/([^/?#]+)/;
 
 /** The conversation a session tab is showing, if it has got one yet. */
 export function chatIdOf(href: string): string | null {

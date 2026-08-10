@@ -16,7 +16,9 @@ import { GitBottomDock } from "@/components/layout/git-bottom-dock";
 import { ModeRail } from "@/components/layout/mode-rail";
 // Only code mode is offered for now, so the mode chip stays parked.
 // import { ModeSelector } from "@/components/layout/mode-selector";
+import { AgentStrip } from "@/interactions/session-agents/components/agent-strip";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
+import { UserMenu } from "@/components/layout/user-menu";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { RepoPicker } from "@/components/repo-picker";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
@@ -54,7 +56,7 @@ export function WorkspaceShell() {
   // A session is one conversation, held by its own tab: the rail and the repo
   // picker are how you move around the project, and neither is what this
   // surface is for.
-  const inSession = pathname.startsWith("/modes/code/chats");
+  const inSession = pathname.startsWith("/modes/agent-session");
 
   // The picker is this shell's own, so the command that raises it is too.
   const shellCommands = useMemo<ReadonlyArray<Command>>(
@@ -96,7 +98,10 @@ export function WorkspaceShell() {
               onChosen={() => {}}
             />
           )}
-          {current !== null && !collaborating && (
+          {/* A session is answered by an agent, so the strip of them stands
+              where the git chrome would. */}
+          {inSession && <AgentStrip />}
+          {current !== null && !collaborating && !inSession && (
             <BranchSwitcher
               current={repo.data?.currentBranch ?? null}
               branches={branches.data ?? []}
@@ -120,6 +125,8 @@ export function WorkspaceShell() {
               onPush={() => void git.push()}
             />
           )}
+          {/* The native shell keeps the account in the window bar above. */}
+          {!isDesktop && <UserMenu className="ml-auto" />}
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

@@ -232,7 +232,7 @@ export function PlansPane() {
     );
     if (started === null) return null;
     void navigate({
-      to: "/modes/code/chats/$chatId",
+      to: "/modes/agent-session/$chatId",
       params: { chatId: started.id },
     });
     return started.id;
