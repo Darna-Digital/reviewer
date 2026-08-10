@@ -62,7 +62,6 @@ export const makeFileChatsRepository = Effect.gen(function* () {
         model: input.model,
         effort: input.effort,
         access: input.access,
-        mode: input.mode,
         branch: input.branch,
         sessionId: null,
         createdAt: now,
@@ -95,7 +94,6 @@ export const makeFileChatsRepository = Effect.gen(function* () {
         model: input.model ?? (providerChanged ? "" : existing.model),
         effort: input.effort ?? existing.effort,
         access: input.access ?? existing.access,
-        mode: input.mode ?? existing.mode,
         sessionId: providerChanged ? null : existing.sessionId,
         updatedAt: new Date().toISOString(),
       };

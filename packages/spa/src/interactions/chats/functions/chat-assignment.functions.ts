@@ -59,7 +59,6 @@ export const buildChatAssignmentSettings = (
     model: providerDefaultModel ?? firstDiscovered,
     effort: defaults?.effort ?? "high",
     access: defaults?.access ?? "fullAccess",
-    mode: defaults?.mode ?? "build",
   };
 };
 

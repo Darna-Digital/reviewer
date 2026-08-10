@@ -1,16 +1,14 @@
 /**
  * The chat composer — prompt textarea over a selector row: model picker,
- * effort, access level ("Full access"), Build/Plan mode, and send/stop.
+ * effort, access level ("Full access"), and send/stop.
  * Owns only the draft text; settings live with the caller (local state on the
  * new-thread page, the chat itself once it exists).
  */
 import {
   IconSend,
   IconChevronDown,
-  IconHammer,
   IconLock,
   IconLockOpen,
-  IconMap,
   IconPhotoPlus,
   IconPlayerStopFilled,
 } from "@tabler/icons-react";
@@ -27,7 +25,6 @@ import { Separator } from "@/components/ui/separator";
 import type {
   ChatAccess,
   ChatEffort,
-  ChatMode,
   ChatModelCatalog,
 } from "@byconvo/core/chats";
 import { useDraft } from "@/lib/chat-drafts";
@@ -73,11 +70,6 @@ const ACCESS: Array<{ value: ChatAccess; label: string; hint: string }> = [
     label: "Full access",
     hint: "Commands and edits without prompts",
   },
-];
-
-const MODES: Array<{ value: ChatMode; label: string; hint: string }> = [
-  { value: "build", label: "Build", hint: "Make changes" },
-  { value: "plan", label: "Plan", hint: "Read-only planning" },
 ];
 
 function SelectorMenu<T extends string>({
@@ -390,23 +382,6 @@ export function ChatComposer({
             )
           }
           ariaLabel="Access level"
-        />
-        <Separator
-          orientation="vertical"
-          className="mx-0.5 h-4 self-center data-vertical:self-center"
-        />
-        <SelectorMenu
-          options={MODES}
-          value={settings.mode}
-          onSelect={(mode) => onSettingsChange({ mode })}
-          icon={
-            settings.mode === "plan" ? (
-              <IconMap className="size-3.5 text-muted-foreground" />
-            ) : (
-              <IconHammer className="size-3.5 text-muted-foreground" />
-            )
-          }
-          ariaLabel="Agent mode"
         />
         <Separator
           orientation="vertical"

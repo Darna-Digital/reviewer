@@ -33,6 +33,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast: "cn-toast",
+          title: "line-clamp-2 break-words",
+          description: "line-clamp-3 break-words",
         },
       }}
       {...props}

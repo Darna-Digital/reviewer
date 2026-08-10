@@ -31,7 +31,6 @@ const chat = (overrides: Partial<Chat> = {}): Chat => ({
   model: "opus",
   effort: "medium",
   access: "supervised",
-  mode: "build",
   branch: "main",
   sessionId: null,
   createdAt: "2026-07-25T12:00:00.000Z",

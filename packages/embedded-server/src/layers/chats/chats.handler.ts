@@ -18,7 +18,6 @@ export const ChatsHandler = HttpApiBuilder.group(Api, "chats", (handlers) =>
           model: payload.model ?? defaults.model,
           effort: payload.effort ?? defaults.effort,
           access: payload.access ?? defaults.access,
-          mode: payload.mode ?? defaults.mode,
           branch: payload.branch ?? "",
         })
       )
@@ -34,7 +33,6 @@ export const ChatsHandler = HttpApiBuilder.group(Api, "chats", (handlers) =>
           model: payload.model,
           effort: payload.effort,
           access: payload.access,
-          mode: payload.mode,
         })
       )
     )

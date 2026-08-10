@@ -45,7 +45,6 @@ export function ChatView({ chatId }: { chatId: string }) {
     model: chat.model,
     effort: chat.effort,
     access: chat.access,
-    mode: chat.mode,
   };
 
   const send = async (text: string, images: ReadonlyArray<ChatImage>) => {

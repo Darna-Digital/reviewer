@@ -8,7 +8,6 @@ const catalog: ChatModelCatalog = {
     model: "claude-opus-4-8",
     effort: "high",
     access: "fullAccess",
-    mode: "build",
   },
   providers: [
     {

@@ -43,6 +43,5 @@ export const CHAT_MODEL_CATALOG: ChatModelCatalog = {
     model: "",
     effort: "high",
     access: "fullAccess",
-    mode: "build",
   },
 };

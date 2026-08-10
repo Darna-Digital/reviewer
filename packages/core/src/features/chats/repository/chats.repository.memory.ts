@@ -45,7 +45,6 @@ export const makeMemoryChatsRepository = (seed: ReadonlyArray<Chat> = []) =>
             model: input.model,
             effort: input.effort,
             access: input.access,
-            mode: input.mode,
             branch: input.branch,
             sessionId: null,
             createdAt: now(),
@@ -72,7 +71,6 @@ export const makeMemoryChatsRepository = (seed: ReadonlyArray<Chat> = []) =>
             model: input.model ?? (providerChanged ? "" : existing.model),
             effort: input.effort ?? existing.effort,
             access: input.access ?? existing.access,
-            mode: input.mode ?? existing.mode,
             sessionId: providerChanged ? null : existing.sessionId,
             updatedAt: now(),
           };

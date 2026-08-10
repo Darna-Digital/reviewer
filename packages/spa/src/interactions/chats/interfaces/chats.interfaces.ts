@@ -9,7 +9,6 @@ import type {
   ChatAccess,
   ChatEffort,
   ChatImageUpload,
-  ChatMode,
   ChatProviderKind,
 } from "@byconvo/core/chats";
 
@@ -24,7 +23,6 @@ export interface ChatSettings {
   readonly model: string;
   readonly effort: ChatEffort;
   readonly access: ChatAccess;
-  readonly mode: ChatMode;
 }
 
 export interface ChatsDependencies {
@@ -36,7 +34,6 @@ export interface ChatsDependencies {
       model: string;
       effort: ChatEffort;
       access: ChatAccess;
-      mode: ChatMode;
       branch?: string;
     }) => Promise<Chat>;
     readonly send: (

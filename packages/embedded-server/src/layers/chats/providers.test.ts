@@ -31,7 +31,6 @@ const chat = (overrides: Partial<Chat> = {}): Chat => ({
   model: "claude-opus-4-8",
   effort: "high",
   access: "fullAccess",
-  mode: "build",
   branch: "main",
   sessionId: null,
   createdAt: "",
@@ -58,13 +57,13 @@ describe("chatTurnProgram", () => {
     expect(p.stdin).toBe("hi");
   });
 
-  it("claude: resumes a known session and plan mode wins over access", () => {
-    const p = chatTurnProgram(chat({ mode: "plan" }), "hi", {
+  it("claude: resumes a known session and gates edits on acceptEdits", () => {
+    const p = chatTurnProgram(chat({ access: "acceptEdits" }), "hi", {
       id: "sid-1",
       resume: true,
     });
     const cmd = shellCommand(p);
-    expect(cmd).toContain("'--permission-mode' 'plan'");
+    expect(cmd).toContain("'--permission-mode' 'acceptEdits'");
     expect(cmd).not.toContain("--dangerously-skip-permissions");
     expect(cmd).toContain("'--resume' 'sid-1'");
   });
@@ -128,15 +127,13 @@ describe("chatTurnProgram", () => {
     expect(p.stdin).toBe("ship it");
   });
 
-  it("cursor: resumes an announced session and leaves plan mode read-only", () => {
+  it("cursor: resumes an announced session", () => {
     const p = chatTurnProgram(
-      chat({ provider: "cursor", model: "composer-2.5", mode: "plan" }),
+      chat({ provider: "cursor", model: "composer-2.5" }),
       "what would you do?",
       { id: "s-42", resume: true }
     );
-    const cmd = shellCommand(p);
-    expect(cmd).toContain("'--resume' 's-42'");
-    expect(cmd).not.toContain("--force");
+    expect(shellCommand(p)).toContain("'--resume' 's-42'");
   });
 
   it("cursor: supervised access never passes --force", () => {
