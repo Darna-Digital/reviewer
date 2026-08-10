@@ -7,7 +7,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { DiffStyle } from "@/lib/ui-prefs";
 
-type PreviewLineKind = "context" | "removed" | "added";
+type PreviewLineKind = "context" | "removed" | "added" | "filler";
 
 function PreviewLine({
   kind,
@@ -21,7 +21,8 @@ function PreviewLine({
       className={cn(
         "flex h-3 items-center gap-1 rounded-[3px] px-1",
         kind === "removed" && "bg-red-500/10",
-        kind === "added" && "bg-green-500/10"
+        kind === "added" && "bg-green-500/10",
+        kind === "filler" && "bg-muted-foreground/5"
       )}
     >
       <span
@@ -33,15 +34,17 @@ function PreviewLine({
       >
         {kind === "removed" ? "−" : kind === "added" ? "+" : ""}
       </span>
-      <span
-        className={cn(
-          "h-1 rounded-full",
-          width,
-          kind === "context" && "bg-muted-foreground/25",
-          kind === "removed" && "bg-red-500/50",
-          kind === "added" && "bg-green-500/50"
-        )}
-      />
+      {kind !== "filler" && (
+        <span
+          className={cn(
+            "h-1 rounded-full",
+            width,
+            kind === "context" && "bg-muted-foreground/25",
+            kind === "removed" && "bg-red-500/50",
+            kind === "added" && "bg-green-500/50"
+          )}
+        />
+      )}
     </div>
   );
 }
@@ -52,11 +55,13 @@ function HorizontalPreview() {
       <div className="flex-1 space-y-px border-r p-1">
         <PreviewLine kind="context" width="w-3/4" />
         <PreviewLine kind="removed" width="w-full" />
+        <PreviewLine kind="filler" width="w-5/6" />
         <PreviewLine kind="context" width="w-1/2" />
       </div>
       <div className="flex-1 space-y-px p-1">
         <PreviewLine kind="context" width="w-3/4" />
-        <PreviewLine kind="added" width="w-full" />
+        <PreviewLine kind="filler" width="w-full" />
+        <PreviewLine kind="added" width="w-5/6" />
         <PreviewLine kind="context" width="w-1/2" />
       </div>
     </div>
@@ -81,6 +86,8 @@ const OPTIONS = [
     detail: "Old and new side by side",
     icon: IconLayoutColumns,
     preview: HorizontalPreview,
+    // Two columns of lines need more room than the single stacked column.
+    width: "w-48",
   },
   {
     value: "unified",
@@ -88,6 +95,7 @@ const OPTIONS = [
     detail: "Changes stacked",
     icon: IconLayoutRows,
     preview: VerticalPreview,
+    width: "w-44",
   },
 ] as const;
 
@@ -128,7 +136,10 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
           </TooltipTrigger>
           <TooltipContent
             side="bottom"
-            className="w-44 flex-col items-stretch gap-1.5 rounded-xl p-2"
+            className={cn(
+              "flex-col items-stretch gap-1.5 rounded-xl p-2",
+              option.width
+            )}
           >
             <option.preview />
             <div className="flex flex-col gap-0.5 px-0.5">

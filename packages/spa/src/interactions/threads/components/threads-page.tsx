@@ -249,7 +249,7 @@ export function ThreadsPage() {
         )}
         {activity[t.id] && t.id !== activeId && (
           <span
-            className="size-1.5 shrink-0 rounded-full bg-sky-500"
+            className="size-1.5 shrink-0 rounded-full bg-brand-500"
             aria-label="activity"
           />
         )}

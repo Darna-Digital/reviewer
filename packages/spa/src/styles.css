@@ -75,6 +75,23 @@
   --shadow-surface-6: var(--shadow-6);
   --shadow-surface-7: var(--shadow-7);
   --shadow-surface-8: var(--shadow-8);
+  --shadow-raised: var(--elev-raised);
+  --shadow-floating: var(--elev-floating);
+  --shadow-overlay: var(--elev-overlay);
+  --shadow-button: var(--elev-button);
+  --shadow-button-contrast: var(--elev-button-contrast);
+  --shadow-element: var(--elev-element);
+  --color-hover: var(--overlay-hover);
+  --color-pressed: var(--overlay-pressed);
+  --color-button-neutral: var(--button-neutral);
+  --text-ui: 0.8125rem;
+  --text-ui--line-height: 1.25rem;
+  --text-ui--letter-spacing: -0.04px;
+  --text-meta: 0.6875rem;
+  --text-meta--line-height: 1rem;
+  --text-meta--letter-spacing: 0.05px;
+  --font-weight-book: 440;
+  --font-weight-plus: 530;
   --radius-sm: calc(var(--radius) * 0.5);
   --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
@@ -84,24 +101,24 @@
   --radius-4xl: calc(var(--radius) * 2);
 }
 
-/* The baby-blue accent ramp, anchored at brand-500 = oklch(0.69 0.16 265.2).
+/* The accent ramp, anchored at brand-500 = #00a6f4 = oklch(0.692 0.16 240.4).
    Absolute values — both themes pick rungs from it rather than redefining it,
    so a swatch named brand-500 is the same ink everywhere.
 
    Surfaces stay gray (chroma 0). Brand is only for small accents: filter dots,
    links, status marks — never wash into muted/accent/sidebar highlights. */
 :root {
-  --brand-50: oklch(0.977 0.012 265.2);
-  --brand-100: oklch(0.951 0.029 265.2);
-  --brand-200: oklch(0.905 0.058 265.2);
-  --brand-300: oklch(0.845 0.093 265.2);
-  --brand-400: oklch(0.768 0.132 265.2);
-  --brand-500: oklch(0.69 0.16 265.2);
-  --brand-600: oklch(0.598 0.175 265.2);
-  --brand-700: oklch(0.515 0.158 265.2);
-  --brand-800: oklch(0.438 0.128 265.2);
-  --brand-900: oklch(0.378 0.097 265.2);
-  --brand-950: oklch(0.275 0.067 265.2);
+  --brand-50: oklch(0.977 0.012 240.4);
+  --brand-100: oklch(0.951 0.029 240.4);
+  --brand-200: oklch(0.905 0.058 240.4);
+  --brand-300: oklch(0.845 0.093 240.4);
+  --brand-400: oklch(0.768 0.132 240.4);
+  --brand-500: oklch(0.692 0.16 240.4);
+  --brand-600: oklch(0.598 0.155 240.4);
+  --brand-700: oklch(0.515 0.13 240.4);
+  --brand-800: oklch(0.438 0.105 240.4);
+  --brand-900: oklch(0.378 0.08 240.4);
+  --brand-950: oklch(0.275 0.055 240.4);
 }
 
 /* The surface ladder — eight background/shadow pairs, one per elevation step
@@ -213,6 +230,206 @@
     0 48px 48px -24px var(--dm-drop), 0 96px 96px -48px var(--dm-drop);
 }
 
+/* The material every interactive control is cut from — one physical story told
+   in three parts, so a button, a switch and a menu all read as the same stuff.
+
+   1. Sheen. A raised face catches light on its top edge: a white gradient from
+      `--sheen-*` at the top fading to nothing at the bottom. An inset face
+      catches it on the *bottom* edge instead, so the same gradient runs the
+      other way — that reversal is the whole of what makes a switch track read
+      as a groove rather than a pill.
+   2. Ring. A 0.5px hairline in the shadow stack instead of a 1px border. It
+      does not take part in layout, so a control's box never grows by its edge,
+      and at 0.5px it describes the edge without drawing a line around it.
+   3. Overlay. Hover and press are a flat tint composited over whatever the
+      control already is, never a second background colour — so one pair of
+      values covers every variant, on any surface, in both themes. */
+:root {
+  /* The quiet button's own tone. Light: paper, so the chip reads as lifted off
+     the page by its ring and drop alone. Dark: a white veil, because a lighter
+     grey would fight the surface ladder it sits on top of. */
+  --button-neutral: #ffffff;
+  /* The groove has to sit *below* its own key, so the track is darker than the
+     thumb in both themes — the surface ladder can't supply this, since its top
+     rungs are the page's brightest tone and would put the two the wrong way
+     round in the light theme. */
+  --switch-track: oklch(0.87 0 0);
+  --switch-thumb: oklch(0.96 0 0);
+  --sheen-strong: rgb(255 255 255 / 0.2);
+  --sheen-soft: rgb(255 255 255 / 0.1);
+  --sheen-faint: rgb(255 255 255 / 0.02);
+  --sheen-none: rgb(255 255 255 / 0);
+  /* The filled button needs its own sheen rather than the shared white one,
+     because it is the only face whose fill inverts between themes. White over
+     near-black lights the top edge; white over the dark theme's near-white fill
+     has nowhere to go, so there the same "lit from above" reading has to come
+     from shading the bottom instead. */
+  --sheen-filled: linear-gradient(
+    180deg,
+    var(--sheen-strong) 0%,
+    var(--sheen-none) 100%
+  );
+  /* Only white-on-dark type needs its edge drawn back; the dark theme's filled
+     button carries dark ink, where the same shadow would just smudge it. */
+  --text-shadow-filled: 0 0.5px 0.5px rgb(0 0 0 / 0.3);
+  --overlay-hover: rgb(0 0 0 / 0.04);
+  --overlay-pressed: rgb(0 0 0 / 0.08);
+  --overlay-contrast-hover: rgb(255 255 255 / 0.12);
+  --overlay-contrast-pressed: rgb(255 255 255 / 0.24);
+  --elev-raised:
+    0 2px 4px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.08),
+    0 0 0 0.5px rgb(0 0 0 / 0.12);
+  --elev-floating:
+    0 8px 16px 0 rgb(0 0 0 / 0.04), 0 4px 8px 0 rgb(0 0 0 / 0.08),
+    0 0 0 0.5px rgb(0 0 0 / 0.12);
+  --elev-overlay:
+    0 16px 32px 0 rgb(0 0 0 / 0.04), 0 8px 16px 0 rgb(0 0 0 / 0.08),
+    0 0 0 0.5px rgb(0 0 0 / 0.12);
+  --elev-button:
+    0 1px 1.5px 0 rgb(0 0 0 / 0.1), 0 0 0 0.5px rgb(0 0 0 / 0.14);
+  /* No hairline and no inset lines on the filled button, unlike every other
+     face here. A ring around a saturated fill reads as a drawn border rather
+     than an edge, and the sheen already gives the shape its top and bottom —
+     so all that is left is a soft drop to lift it off the page. */
+  --elev-button-contrast: 0 1px 2px 0 rgb(0 0 0 / 0.1);
+  --elev-element: 0 0.5px 0.5px 0 rgb(0 0 0 / 0.4);
+  --elev-groove:
+    inset 0 1px 1px 0 rgb(0 0 0 / 0.08), inset 0 0.5px 0.5px 0 rgb(0 0 0 / 0.08),
+    inset 0 0 0 0.5px rgb(0 0 0 / 0.1);
+  --elev-groove-filled:
+    inset 0 2px 2px 0 rgb(0 0 0 / 0.1), inset 0 1px 1px 0 rgb(0 0 0 / 0.1),
+    inset 0 0 0 0.5px rgb(0 0 0 / 0.2);
+}
+
+/* Dark inverts what carries the edge. A black drop shadow is invisible against
+   a dark page, so the hairline flips to white and the drops deepen to do the
+   lifting the colour step no longer can. */
+.dark {
+  --button-neutral: rgb(255 255 255 / 0.06);
+  --sheen-filled: linear-gradient(
+    180deg,
+    rgb(0 0 0 / 0) 0%,
+    rgb(0 0 0 / 0.12) 100%
+  );
+  --text-shadow-filled: none;
+  --switch-track: oklch(0.44 0 0);
+  --switch-thumb: oklch(0.93 0 0);
+  --overlay-hover: rgb(255 255 255 / 0.06);
+  --overlay-pressed: rgb(255 255 255 / 0.1);
+  --overlay-contrast-hover: rgb(0 0 0 / 0.24);
+  --overlay-contrast-pressed: rgb(0 0 0 / 0.4);
+  --elev-raised:
+    0 2px 4px 0 rgb(0 0 0 / 0.3), 0 1px 2px 0 rgb(0 0 0 / 0.3),
+    0 0 0 0.5px rgb(255 255 255 / 0.16), 0 -0.5px 0 0 rgb(255 255 255 / 0.06);
+  --elev-floating:
+    0 8px 16px 0 rgb(0 0 0 / 0.3), 0 4px 8px 0 rgb(0 0 0 / 0.3),
+    0 0 0 0.5px rgb(255 255 255 / 0.16), 0 -0.5px 0 0 rgb(255 255 255 / 0.06);
+  --elev-overlay:
+    0 16px 32px 0 rgb(0 0 0 / 0.3), 0 8px 16px 0 rgb(0 0 0 / 0.3),
+    0 0 0 0.5px rgb(255 255 255 / 0.16), 0 -0.5px 0 0 rgb(255 255 255 / 0.06);
+  --elev-button:
+    0 1px 2px 0 rgb(0 0 0 / 0.4), 0 0 0 0.5px rgb(255 255 255 / 0.2),
+    0 -0.5px 0 0 rgb(255 255 255 / 0.1);
+  --elev-button-contrast: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --elev-groove:
+    inset 0 -0.5px 0 0 rgb(255 255 255 / 0.1),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.16);
+  --elev-groove-filled:
+    inset 0 -0.5px 0 0 rgb(255 255 255 / 0.1),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.16);
+}
+
+/* A raised face: sheen on top, hairline ring, hover/press tinted over both.
+   The tint is stacked as a further gradient layer rather than swapped into the
+   background colour, so the sheen underneath survives the hover. */
+@utility face-raised {
+  background-image: linear-gradient(
+    180deg,
+    var(--sheen-faint) 0%,
+    var(--sheen-none) 100%
+  );
+  box-shadow: var(--elev-button);
+  &:hover:not(:disabled) {
+    background-image:
+      linear-gradient(0deg, var(--overlay-hover), var(--overlay-hover)),
+      linear-gradient(180deg, var(--sheen-faint) 0%, var(--sheen-none) 100%);
+  }
+  &:active:not(:disabled) {
+    background-image:
+      linear-gradient(0deg, var(--overlay-pressed), var(--overlay-pressed)),
+      linear-gradient(180deg, var(--sheen-faint) 0%, var(--sheen-none) 100%);
+  }
+}
+
+/* The one loud face in the set. The sheen makes it a gradient — lighter at the
+   top, the fill's own colour at the bottom — and the text shadow gives the
+   white type back an edge against the lighter half. */
+@utility face-contrast {
+  background-image: var(--sheen-filled);
+  box-shadow: var(--elev-button-contrast);
+  text-shadow: var(--text-shadow-filled);
+  &:hover:not(:disabled) {
+    background-image:
+      linear-gradient(
+        0deg,
+        var(--overlay-contrast-hover),
+        var(--overlay-contrast-hover)
+      ),
+      var(--sheen-filled);
+  }
+  &:active:not(:disabled) {
+    background-image:
+      linear-gradient(
+        0deg,
+        var(--overlay-contrast-pressed),
+        var(--overlay-contrast-pressed)
+      ),
+      var(--sheen-filled);
+  }
+}
+
+/* No face at all until touched — the overlay is the entire appearance. */
+@utility face-quiet {
+  &:hover:not(:disabled) {
+    background-color: var(--overlay-hover);
+  }
+  &:active:not(:disabled) {
+    background-color: var(--overlay-pressed);
+  }
+}
+
+/* The switch is the one place the inset half of the story is told, so it owns
+   it: the track's sheen runs bottom-up and its shadow is inset, which is the
+   whole of what makes it read as a groove rather than a pill. The thumb is the
+   only raised part, so it alone carries the top-down sheen.
+
+   Both live here rather than in the component because the checked state has to
+   swap a multi-part inset shadow, and Tailwind's arbitrary `shadow-[…]` folds
+   its own ring/inset variables in around whatever it is handed — a stack of
+   three inset shadows comes out the other side as nothing at all. */
+.switch-track {
+  background-color: var(--switch-track);
+  background-image: linear-gradient(
+    180deg,
+    var(--sheen-none) 0%,
+    var(--sheen-strong) 100%
+  );
+  box-shadow: var(--elev-groove);
+}
+.switch-track:has(:checked) {
+  background-color: var(--primary);
+  box-shadow: var(--elev-groove-filled);
+}
+.switch-thumb {
+  background-color: var(--switch-thumb);
+  background-image: linear-gradient(
+    180deg,
+    var(--sheen-strong) 0%,
+    var(--sheen-none) 100%
+  );
+  box-shadow: var(--elev-element);
+}
+
 :root {
   --background: var(--canvas);
   --foreground: oklch(0.145 0 0);
@@ -220,7 +437,10 @@
   --card-foreground: oklch(0.145 0 0);
   --popover: var(--surface-3);
   --popover-foreground: oklch(0.145 0 0);
-  /* Filled actions stay near-black — never the baby-blue. */
+  /* Filled actions stay near-black — never the baby-blue. The accent is spent
+     on notification indicators, where a single dot has to carry meaning on its
+     own; a button already has its position, its label and its fill to say what
+     it is, so colour would be the fourth thing saying the same thing. */
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
   /* Brand as ink on light surfaces — links need more depth than brand-500. */
@@ -699,6 +919,19 @@
    from --diffs-bg, so overriding the root recomputes them against our bg. */
 diffs-container {
   --diffs-bg: var(--background);
+  /* Pierre's "modified" colour is its own blue (#009fff/#69b1ff), and the
+     gutter's add-a-comment button is painted with it. Take it to `--primary` so
+     that button flips near-black on light and near-white on dark like every
+     other filled control — its label reads `--diffs-bg`, so it inverts with it.
+
+     Both halves of selection are pinned back to pierre's blues on purpose: they
+     derive from the same variable, but as `color-mix(…65-75%, black)`, so
+     following the primary would drop a grey slab over the selected line and a
+     darker one over its gutter. The gutter takes a separate override from the
+     line — miss it and only half the row goes grey. */
+  --diffs-modified-color-override: var(--primary);
+  --diffs-bg-selection-override: light-dark(#009fff, #69b1ff);
+  --diffs-bg-selection-number-override: light-dark(#009fff, #69b1ff);
 }
 
 /* --- byconvo: file tree theming (pierre/trees web component) --------------- */

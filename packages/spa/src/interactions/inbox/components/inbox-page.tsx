@@ -150,7 +150,7 @@ export function InboxPage() {
                     </span>
                   </span>
                   {item.unread && (
-                    <span className="mt-2 size-2 shrink-0 rounded-full bg-sky-500" />
+                    <span className="mt-2 size-2 shrink-0 rounded-full bg-brand-500" />
                   )}
                 </button>
               );

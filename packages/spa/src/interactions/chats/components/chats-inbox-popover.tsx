@@ -81,7 +81,7 @@ export function ChatsInboxPopover({ active }: { active: boolean }) {
                         )}
                     </span>
                     {isChatUnread(chat, seenAt) && (
-                      <span className="mt-1.5 size-2 shrink-0 rounded-full bg-sky-500" />
+                      <span className="mt-1.5 size-2 shrink-0 rounded-full bg-brand-500" />
                     )}
                   </Link>
                 </li>

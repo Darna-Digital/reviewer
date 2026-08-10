@@ -124,11 +124,11 @@ export function ComponentsGallery() {
       <Section
         id="buttons"
         title="Buttons"
-        description="Two heights only — 28px for dense toolbars and 32px everywhere else. A view gets exactly one filled button; every other action steps down to outline, secondary, or ghost."
+        description="Four heights — 24, 28, 32, 36 — and a deliberately lopsided variant set. A view gets exactly one filled button; everything else recedes to a raised neutral chip or a ghost, which is why the quiet variants outnumber the loud one many times over in real screens."
       >
         <Subsection
           title="Variants"
-          hint="Shown together for reference. In a real view only one of these would be filled."
+          hint="Shown together for reference. In a real view only one of these would be filled — and the accent never fills any of them, because a button already has its position, label and fill to say what it is."
         >
           <SpecimenRow>
             <Specimen label="default">
@@ -142,6 +142,9 @@ export function ComponentsGallery() {
             </Specimen>
             <Specimen label="ghost">
               <Button variant="ghost">Cancel</Button>
+            </Specimen>
+            <Specimen label="ghost-muted">
+              <Button variant="ghost-muted">Commit &amp; push</Button>
             </Specimen>
             <Specimen label="destructive">
               <Button variant="destructive">Discard</Button>

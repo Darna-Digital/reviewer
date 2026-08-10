@@ -83,6 +83,9 @@ export const updateTabs = (
   emit();
 };
 
+/** The strip as it stands, for effects that read it outside a render. */
+export const readTabs = (): TabsState => state;
+
 const subscribe = (listener: () => void) => {
   listeners.add(listener);
   return () => listeners.delete(listener);

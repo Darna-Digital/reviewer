@@ -65,6 +65,7 @@ export function GitBottomDock() {
           tab={prefs.bottomTab}
           active={prefs.bottomVisible}
           onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
+          onCollapse={() => setUiPrefs({ bottomVisible: false })}
           branches={branches.data ?? []}
           remoteBranches={remoteBranches.data ?? []}
           currentBranch={repo.data?.currentBranch ?? null}

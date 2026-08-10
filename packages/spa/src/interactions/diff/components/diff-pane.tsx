@@ -267,9 +267,9 @@ function FileDiffSection({
              * patch, so there is nothing extra to expand. */}
             {meta.type !== "new" && meta.type !== "deleted" && (
               <Button
-                variant="ghost"
+                variant="ghost-muted"
                 size="xs"
-                className="gap-1 text-muted-foreground"
+                className="gap-1"
                 aria-pressed={expandUnchanged}
                 title={
                   expandUnchanged
@@ -290,9 +290,9 @@ function FileDiffSection({
               // Revert this file to HEAD. Available for every change type
               // (a deletion is restored, an addition removed).
               <Button
-                variant="ghost"
+                variant="ghost-muted"
                 size="xs"
-                className="gap-1 text-muted-foreground hover:text-destructive"
+                className="gap-1 hover:text-destructive hover:[&_svg]:text-destructive"
                 title={`Discard changes in ${meta.name}`}
                 onClick={() => {
                   if (
@@ -309,9 +309,9 @@ function FileDiffSection({
             )}
             {onShowFileHistory !== undefined && (
               <Button
-                variant="ghost"
+                variant="ghost-muted"
                 size="xs"
-                className="gap-1 text-muted-foreground"
+                className="gap-1"
                 title={`Show the commit history of ${meta.name}`}
                 onClick={() => onShowFileHistory(meta.name)}
               >
@@ -321,7 +321,7 @@ function FileDiffSection({
             )}
             {meta.type !== "deleted" && (
               <Button
-                variant="ghost"
+                variant="ghost-muted"
                 size="xs"
                 onClick={() => onEditFile(meta.name)}
               >

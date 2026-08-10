@@ -138,13 +138,15 @@ export function KitchenSinkPage() {
         <main className="flex min-w-0 flex-1 flex-col gap-20">
           <div>
             <h1 className="max-w-[24ch] text-4xl font-semibold tracking-tight text-balance">
-              Quiet by default, baby blue when it matters
+              Greyscale everywhere, blue only for what you have not seen
             </h1>
             <p className="mt-4 max-w-[56ch] text-base/7 text-pretty text-muted-foreground">
-              A white canvas, generous corners, hairline separation, and neutral
-              black-and-white actions — with one soft blue accent that does all
-              the pointing. Every value below is a token, so changing it once
-              moves the whole app.
+              Tight corners, hairline edges carried in the shadow rather than on
+              a border, and actions that are black on white or white on black.
+              The one saturated colour in the system is spent on a single dot
+              that means something arrived — which is why a dot that small can
+              carry it. Every value below is a token, so changing it once moves
+              the whole app.
             </p>
           </div>
 

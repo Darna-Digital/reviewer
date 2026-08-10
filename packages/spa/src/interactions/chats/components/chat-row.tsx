@@ -144,7 +144,7 @@ export function ChatRow({
             dot steps aside the moment the row is hovered. */}
         <span className="relative mt-1.5 size-4 shrink-0">
           {unread && (
-            <span className="absolute inset-0 m-auto size-2 rounded-full bg-sky-500 group-hover/row:opacity-0" />
+            <span className="absolute inset-0 m-auto size-2 rounded-full bg-brand-500 group-hover/row:opacity-0" />
           )}
           <button
             type="button"

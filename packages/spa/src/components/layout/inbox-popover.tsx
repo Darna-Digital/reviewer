@@ -79,7 +79,7 @@ export function InboxPopover({
       >
         <IconInbox className="size-5" />
         {waiting && (
-          <span className="absolute top-1 right-1 size-1.5 rounded-full bg-sky-500" />
+          <span className="absolute top-1 right-1 size-1.5 rounded-full bg-brand-500" />
         )}
       </PopoverTrigger>
       <PopoverContent

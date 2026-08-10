@@ -179,6 +179,14 @@ export const syncActive = (
   return openTab(state, path);
 };
 
+/**
+ * Which file to put back on screen when the strip has tabs but nothing names an
+ * open file — a session restored from storage, where the URL carries no file.
+ * The one that was in front, or the head of the strip once that is gone.
+ */
+export const tabToRestore = (state: TabsState): string | null =>
+  state.active ?? orderTabs(state.tabs)[0]?.path ?? null;
+
 /** Drop tabs for files that no longer exist, so a stale strip cannot outlive them. */
 export const pruneTabs = (
   state: TabsState,

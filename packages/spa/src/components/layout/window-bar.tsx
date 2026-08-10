@@ -347,7 +347,7 @@ export function WindowBar() {
                         <span
                           aria-label="Waiting"
                           className={cn(
-                            "size-1.5 rounded-full bg-sky-500 group-hover/tab:opacity-0",
+                            "size-1.5 rounded-full bg-brand-500 group-hover/tab:opacity-0",
                             active && "opacity-0"
                           )}
                         />

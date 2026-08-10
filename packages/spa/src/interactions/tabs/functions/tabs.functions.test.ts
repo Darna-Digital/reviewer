@@ -12,6 +12,7 @@ import {
   orderTabs,
   pruneTabs,
   syncActive,
+  tabToRestore,
   togglePin,
 } from "./tabs.functions";
 
@@ -265,6 +266,28 @@ describe("syncActive", () => {
   it("is a no-op when nothing changed", () => {
     const state = openTab(EMPTY_TABS, "a", "permanent");
     expect(syncActive(state, "a")).toBe(state);
+  });
+});
+
+describe("tabToRestore", () => {
+  it("has nothing to restore from an empty strip", () => {
+    expect(tabToRestore(EMPTY_TABS)).toBeNull();
+  });
+  it("restores the file that was in front", () => {
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    expect(tabToRestore(state)).toBe("b");
+  });
+  it("falls back to the head of the strip", () => {
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    expect(tabToRestore({ ...state, active: null })).toBe("a");
+  });
+  it("follows the strip's order rather than insertion order", () => {
+    let state = openTab(EMPTY_TABS, "a", "permanent");
+    state = openTab(state, "b", "permanent");
+    state = togglePin(state, "b");
+    expect(tabToRestore({ ...state, active: null })).toBe("b");
   });
 });
 

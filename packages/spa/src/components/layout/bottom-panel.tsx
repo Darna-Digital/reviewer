@@ -1,4 +1,5 @@
 import {
+  IconChevronDown,
   IconGitBranch,
   IconHistory,
   IconPlayerPlay,
@@ -6,7 +7,13 @@ import {
 } from "@tabler/icons-react";
 import { BranchTree } from "@/components/git/branch-tree";
 import { CommitHistory } from "@/components/git/commit-history";
+import { Button } from "@/components/ui/button";
 import { TabsSubtle, TabsSubtleItem } from "@/components/ui/tabs-subtle";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LocalDevPage } from "@/interactions/local-dev/components/local-dev-page";
 import { ThreadsPage } from "@/interactions/threads/components/threads-page";
@@ -36,6 +43,7 @@ interface BottomPanelProps {
   /** Whether the dock is expanded. While collapsed, no new panel mounts. */
   active: boolean;
   onTabChange: (tab: BottomTab) => void;
+  onCollapse: () => void;
   branches: ReadonlyArray<BranchInfo>;
   remoteBranches: ReadonlyArray<RemoteBranchInfo>;
   currentBranch: string | null;
@@ -80,7 +88,7 @@ export function BottomPanel(props: BottomPanelProps) {
       <div className="flex h-9 shrink-0 items-center border-b px-2">
         <TabsSubtle
           idPrefix="bottom-dock"
-          activeLabel
+          className="min-w-0"
           selectedIndex={selectedIndex}
           onSelect={(index) => {
             const next = TABS[index];
@@ -96,6 +104,24 @@ export function BottomPanel(props: BottomPanelProps) {
             />
           ))}
         </TabsSubtle>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost-muted"
+                size="icon-sm"
+                className="ml-auto"
+                aria-label="Collapse panel"
+                onClick={props.onCollapse}
+              />
+            }
+          >
+            <IconChevronDown className="size-4" />
+          </TooltipTrigger>
+          <TooltipContent side="top" align="end">
+            Collapse panel
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <ScrollArea

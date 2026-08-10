@@ -248,9 +248,11 @@ export function CommitPanel({
             </div>
           )}
         </div>
+        {/* Sized to the Generate/agent controls sitting inside the message box
+            above, so the whole panel keeps one row height. */}
         <div className="flex gap-2">
           <Button
-            size="sm"
+            size="xs"
             disabled={!canCommit}
             onClick={() => void commit(false)}
           >
@@ -263,8 +265,8 @@ export function CommitPanel({
             Commit
           </Button>
           <Button
-            size="sm"
-            variant="ghost"
+            size="xs"
+            variant="ghost-muted"
             disabled={!canCommit}
             onClick={() => void commit(true)}
           >

@@ -67,6 +67,7 @@ import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { TabStrip } from "@/interactions/tabs/components/tab-strip";
 import {
+  readTabs,
   scopeTabsTo,
   updateTabs,
   useTabs,
@@ -79,6 +80,7 @@ import {
   moveTab,
   pruneTabs,
   syncActive,
+  tabToRestore,
   togglePin,
 } from "@/interactions/tabs/functions/tabs.functions";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
@@ -472,12 +474,30 @@ export function AppShell() {
   useEffect(() => {
     scopeTabsTo(repoRoot);
   }, [repoRoot]);
+  // Browsing has nothing else to put in the centre pane, so the strip is the
+  // view: an open tab with no file on screen is a hole. A strip outlives the
+  // URL that opened its files — restored from storage, or left behind by
+  // navigation that dropped the file — so it names what belongs there.
+  const canRestore = mode === "browse" && target === null && !isFolder;
   // Re-syncs when the repository resolves as well as when the file changes:
   // pointing the store at a repository swaps in that repository's strip, which
   // would otherwise drop the file already on screen.
   useEffect(() => {
+    if (viewing === null && canRestore) {
+      const restored = tabToRestore(readTabs());
+      // Replaces rather than pushes, so Back leaves the strip behind instead of
+      // returning to a URL that reopens the same file.
+      if (restored !== null) {
+        void navigate({
+          to: ".",
+          search: (prev: Search) => ({ ...prev, file: restored }),
+          replace: true,
+        });
+        return;
+      }
+    }
     updateTabs((state) => syncActive(state, viewing));
-  }, [repoRoot, viewing]);
+  }, [repoRoot, viewing, canRestore, navigate]);
   // A strip restored from a previous session can name files that have since
   // been deleted or renamed.
   useEffect(() => {
@@ -1098,6 +1118,7 @@ export function AppShell() {
                 tab={prefs.bottomTab}
                 active={prefs.bottomVisible}
                 onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
+                onCollapse={() => setUiPrefs({ bottomVisible: false })}
                 branches={branches.data ?? []}
                 remoteBranches={remoteBranches.data ?? []}
                 currentBranch={repo.data?.currentBranch ?? null}

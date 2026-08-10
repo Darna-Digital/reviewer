@@ -6,7 +6,7 @@
  *
  * Visually modelled on the Pierre / diffs.com comment threads: a soft rounded
  * card, round author avatars, name + relative timestamp, replies nested under
- * the opening comment, and a blue "Add reply… / Resolve" action row. Built on
+ * the opening comment, and a muted "Add reply… / Resolve" action row. Built on
  * the shadcn primitives and theme tokens so it adapts to light & dark.
  */
 import { IconBrandGithub, IconCornerDownRight } from "@tabler/icons-react";
@@ -67,30 +67,34 @@ export function CommentComposer({
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <Textarea
         ref={ref}
         value={body}
         placeholder={placeholder}
-        className="min-h-20 resize-none bg-background text-sm"
+        className="min-h-20 resize-none"
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void submit();
           if (e.key === "Escape") onCancel();
         }}
       />
-      {error !== null && <p className="text-xs text-destructive">{error}</p>}
-      <div className="flex items-center justify-end gap-2">
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button
-          size="sm"
-          disabled={body.trim().length === 0 || busy}
-          onClick={() => void submit()}
-        >
-          {busy ? "Saving…" : submitLabel}
-        </Button>
+      <div className="flex items-center gap-1">
+        <p className="min-w-0 flex-1 truncate text-meta font-plus text-destructive">
+          {error}
+        </p>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            disabled={body.trim().length === 0 || busy}
+            onClick={() => void submit()}
+          >
+            {busy ? "Saving…" : submitLabel}
+          </Button>
+        </div>
       </div>
     </div>
   );
@@ -132,7 +136,7 @@ function CommentCard({
       <AuthorAvatar author={comment.author} source={comment.source} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          <span className="text-sm font-semibold text-foreground">
+          <span className="text-ui font-plus text-foreground">
             {comment.author}
           </span>
           {comment.source === "github" && (
@@ -141,11 +145,11 @@ function CommentCard({
               aria-label="GitHub"
             />
           )}
-          <span className="text-xs text-muted-foreground">
+          <span className="text-meta font-plus text-muted-foreground tabular-nums">
             {timeAgo(comment.createdAt)}
           </span>
         </div>
-        <div className="markdown mt-0.5 min-w-0 text-sm">
+        <div className="markdown mt-1 min-w-0 text-ui font-book">
           <Markdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight]}
@@ -158,7 +162,12 @@ function CommentCard({
   );
 }
 
-/** A blue, link-styled thread action (Add reply… / Resolve). */
+/**
+ * A quiet thread action (Add reply… / Resolve). Muted until hovered — the
+ * accent is already spent on the gutter's add-comment button and the line
+ * selection that got you here, and repeating it on every row of a thread would
+ * leave nothing louder for the action that actually starts a review.
+ */
 function ThreadAction({
   onClick,
   icon,
@@ -172,7 +181,7 @@ function ThreadAction({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 transition-colors hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
+      className="inline-flex items-center gap-1 rounded-sm text-ui text-muted-foreground transition-colors outline-offset-2 outline-ring hover:text-foreground focus-visible:outline-2"
     >
       {icon}
       {children}
@@ -224,7 +233,7 @@ export function CommentThread({
   };
 
   return (
-    <div className="my-2 mr-3 ml-12 max-w-2xl min-w-0 overflow-hidden rounded-xl border bg-card p-4 font-sans text-card-foreground shadow-sm">
+    <div className="my-2 mr-3 ml-12 max-w-2xl min-w-0 overflow-hidden rounded-md bg-surface-2 p-3 font-sans text-card-foreground shadow-raised">
       <div className="flex flex-col gap-4">
         {comments.map((comment, i) => (
           <div key={comment.id} className={i === 0 ? undefined : REPLY_INDENT}>
@@ -291,7 +300,7 @@ export function DraftCard({
   onSubmit: (body: string) => Promise<void>;
 }) {
   return (
-    <div className="my-2 mr-3 ml-12 max-w-2xl min-w-0 overflow-hidden rounded-xl border bg-card p-4 font-sans text-card-foreground shadow-sm">
+    <div className="my-2 mr-3 ml-12 max-w-2xl min-w-0 overflow-hidden rounded-md bg-surface-2 p-3 font-sans text-card-foreground shadow-raised">
       <CommentComposer onCancel={onCancel} onSubmit={onSubmit} />
     </div>
   );

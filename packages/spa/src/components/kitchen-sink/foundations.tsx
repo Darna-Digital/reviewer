@@ -29,7 +29,7 @@ const ROLE_TOKENS = [
   {
     token: "brand-500",
     swatch: "bg-brand-500",
-    role: "Small accents only — filter dots, links, status marks.",
+    role: "Notification indicators — unread, waiting, activity.",
   },
   {
     token: "accent",
@@ -69,12 +69,50 @@ const INK_TOKENS = [
 ];
 
 const RADII = [
-  { token: "rounded-md", radius: "rounded-md" },
-  { token: "rounded-lg", radius: "rounded-lg" },
-  { token: "rounded-xl", radius: "rounded-xl" },
-  { token: "rounded-2xl", radius: "rounded-2xl" },
-  { token: "rounded-3xl", radius: "rounded-3xl" },
-  { token: "rounded-full", radius: "rounded-full" },
+  { token: "rounded-sm", radius: "rounded-sm", role: "4px — xs controls" },
+  { token: "rounded-md", radius: "rounded-md", role: "6px — the default" },
+  { token: "rounded-lg", radius: "rounded-lg", role: "8px — cards, sheets" },
+  { token: "rounded-full", radius: "rounded-full", role: "Dots, avatars" },
+];
+
+/* The three faces every control is cut from, and the story each one tells.
+   Kept in the sink because the difference is easy to lose in a diff: it is one
+   gradient direction and one hairline apart. */
+const FACES = [
+  {
+    token: "face-contrast",
+    face: "face-contrast bg-primary text-primary-foreground",
+    role: "The one filled action. Sheen, no ring.",
+  },
+  {
+    token: "face-raised",
+    face: "face-raised bg-button-neutral text-foreground",
+    role: "Lifted off the page by a 0.5px ring and a drop.",
+  },
+  {
+    token: "face-quiet",
+    face: "face-quiet text-foreground",
+    role: "Nothing until hovered. The overlay is the whole look.",
+  },
+];
+
+const ELEVATIONS = [
+  { token: "shadow-button", shadow: "shadow-button", role: "Raised controls" },
+  { token: "shadow-raised", shadow: "shadow-raised", role: "Cards, comments" },
+  { token: "shadow-floating", shadow: "shadow-floating", role: "Menus" },
+  { token: "shadow-overlay", shadow: "shadow-overlay", role: "Dialogs" },
+];
+
+/* The interface scale — distinct from the display sizes above it. Two sizes and
+   two weights cover every control in the app; the tracking flips sign between
+   them because small type needs opening up where large type needs closing. */
+const UI_TYPE = [
+  { cls: "text-ui font-plus", token: "text-ui / font-plus (13 / 530)" },
+  { cls: "text-ui font-book", token: "text-ui / font-book (13 / 440)" },
+  {
+    cls: "text-meta font-plus text-muted-foreground",
+    token: "text-meta / font-plus (11 / 530)",
+  },
 ];
 
 const SURFACE_LADDER = [
@@ -91,7 +129,7 @@ const SURFACE_LADDER = [
 function SwatchTile({ swatch }: { swatch: string }) {
   return (
     <div
-      className={`h-14 w-full rounded-2xl inset-ring inset-ring-foreground/10 ${swatch}`}
+      className={`h-14 w-full rounded-lg inset-ring inset-ring-foreground/10 ${swatch}`}
     />
   );
 }
@@ -106,7 +144,7 @@ export function Foundations() {
       >
         <Subsection
           title="Accent ramp"
-          hint="Anchored at 500 = oklch(0.69 0.16 265.2). The pale rungs are surfaces, 500 is the accent mark, 700 is the accent as readable ink."
+          hint="Anchored at 500 = #00a6f4 = oklch(0.692 0.16 240.4). 500 is the indicator dot, 700 is the accent as readable ink. The deep rungs carry less chroma than the ramp's shape suggests because sRGB runs out of blue down there."
         >
           <div className="grid grid-cols-3 gap-x-3 gap-y-4 sm:grid-cols-6 lg:grid-cols-11">
             {BRAND_RAMP.map(({ step, swatch }) => (
@@ -140,7 +178,7 @@ export function Foundations() {
 
         <Subsection
           title="Surfaces"
-          hint="Neutrals carry a trace of the accent hue so greys never look muddy beside it."
+          hint="Pure neutrals, chroma 0. The accent never washes into a surface — it only ever appears as a mark on one."
         >
           <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-5">
             {SURFACE_TOKENS.map(({ token, swatch, role }) => (
@@ -154,6 +192,31 @@ export function Foundations() {
                     {role}
                   </p>
                 </div>
+              </div>
+            ))}
+          </div>
+        </Subsection>
+
+        <Subsection
+          title="The accent in use"
+          hint="One job: a dot that says something arrived and has not been seen. It is the only saturated thing on a screen of greys, which is the whole reason a 6px circle can carry that meaning at all. Every unread, waiting, and activity mark resolves through bg-brand-500 — never a raw Tailwind blue."
+        >
+          <div className="flex flex-col gap-3 border-t border-foreground/10 pt-4">
+            {[
+              { dot: true, label: "Unread thread", meta: "chat, inbox" },
+              { dot: true, label: "Agent waiting for input", meta: "window bar" },
+              { dot: false, label: "Read, nothing pending", meta: "at rest" },
+            ].map(({ dot, label, meta }) => (
+              <div key={label} className="flex items-center gap-3">
+                <span className="grid size-4 shrink-0 place-items-center">
+                  {dot && (
+                    <span className="size-2 rounded-full bg-brand-500" />
+                  )}
+                </span>
+                <p className="text-ui">{label}</p>
+                <p className="text-meta font-plus text-muted-foreground">
+                  {meta}
+                </p>
               </div>
             ))}
           </div>
@@ -229,6 +292,25 @@ export function Foundations() {
         </Subsection>
 
         <Subsection
+          title="Interface scale"
+          hint="What every control actually uses — separate from the display sizes above. Two sizes, two weights; 530 and 440 are variable-font positions between medium and regular, which is what keeps a dense toolbar from reading as bold."
+        >
+          <div className="flex flex-col gap-3 border-t border-foreground/10 pt-4">
+            {UI_TYPE.map(({ cls, token }) => (
+              <div
+                key={token}
+                className="flex flex-wrap items-baseline gap-x-4 gap-y-1"
+              >
+                <p className={cls}>Rebase the branch onto master</p>
+                <p className="font-mono text-sm text-muted-foreground sm:text-xs">
+                  {token}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Subsection>
+
+        <Subsection
           title="Numerals"
           hint="Anything that ticks gets tabular figures so the layout holds still."
         >
@@ -248,13 +330,47 @@ export function Foundations() {
         title="Shape and elevation"
         description="Corners are generous and depth is a ladder, not a shadow preset. Every popup lifts a fixed number of rungs above whatever it opened on, so a submenu still reads over its menu and a menu still reads inside a dialog."
       >
-        <Subsection title="Radius">
+        <Subsection
+          title="Radius"
+          hint="Tight. 6px is the default and 4px is for anything 24px tall; nothing between a control and a dialog is rounder than 8px."
+        >
           <SpecimenRow>
-            {RADII.map(({ token, radius }) => (
-              <Specimen key={token} label={token}>
+            {RADII.map(({ token, radius, role }) => (
+              <Specimen key={token} label={`${token} · ${role}`}>
                 <div
-                  className={`size-16 bg-brand-100 inset-ring inset-ring-brand-300 ${radius}`}
+                  className={`size-16 bg-muted inset-ring inset-ring-foreground/10 ${radius}`}
                 />
+              </Specimen>
+            ))}
+          </SpecimenRow>
+        </Subsection>
+
+        <Subsection
+          title="Faces"
+          hint="A raised face catches light on its top edge; an inset one catches it on the bottom, which is the only difference between a button and the switch's groove. Hover and press are a tint composited over whatever is already there, never a second background colour — so one pair of values covers every variant in both themes."
+        >
+          <SpecimenRow>
+            {FACES.map(({ token, face, role }) => (
+              <Specimen key={token} label={role}>
+                <button
+                  type="button"
+                  className={`inline-flex h-8 items-center justify-center rounded-md px-3 text-ui font-plus ${face}`}
+                >
+                  {token}
+                </button>
+              </Specimen>
+            ))}
+          </SpecimenRow>
+        </Subsection>
+
+        <Subsection
+          title="Elevation"
+          hint="A 0.5px hairline lives inside each shadow rather than on a border, so a control's box never grows by its edge. The filled button is the one exception — a ring around a saturated fill reads as a drawn border."
+        >
+          <SpecimenRow>
+            {ELEVATIONS.map(({ token, shadow, role }) => (
+              <Specimen key={token} label={`${token} · ${role}`}>
+                <div className={`size-16 rounded-lg bg-card ${shadow}`} />
               </Specimen>
             ))}
           </SpecimenRow>
@@ -268,7 +384,7 @@ export function Foundations() {
             {SURFACE_LADDER.map(({ level, role }) => (
               <div
                 key={level}
-                className={`flex flex-col gap-1 rounded-2xl p-4 ${surfaceClasses(level)}`}
+                className={`flex flex-col gap-1 rounded-lg p-4 ${surfaceClasses(level)}`}
               >
                 <p className="font-mono text-sm sm:text-xs">surface-{level}</p>
                 <p className="text-sm/5 text-pretty text-muted-foreground sm:text-xs/5">
