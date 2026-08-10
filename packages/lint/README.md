@@ -1,6 +1,6 @@
 # @byconvo/lint
 
-Shared ESLint and Prettier rules for the bemybond.com monorepo. Packages extend
+Shared ESLint and Prettier rules for the byconvo.com monorepo. Packages extend
 these so linting and formatting stay consistent across the workspace.
 
 ## Usage

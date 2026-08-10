@@ -16,7 +16,7 @@ const channel = (() => {
 
 const identities = {
   beta: {
-    appId: "com.bemybond.desktop.beta",
+    appId: "com.byconvo.desktop.beta",
     productName: "Byconvo Beta",
     publish: {
       provider: "github",
@@ -26,7 +26,7 @@ const identities = {
     },
   },
   prod: {
-    appId: "com.bemybond.desktop",
+    appId: "com.byconvo.desktop",
     productName: "Byconvo",
     publish: {
       provider: "github",

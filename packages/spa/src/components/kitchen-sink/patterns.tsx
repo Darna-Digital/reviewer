@@ -48,7 +48,7 @@ const THREADS = [
   },
   {
     title: "Investigate ECS auto-scaling failures",
-    repo: "bemybond",
+    repo: "byconvo",
     when: "1mo",
     state: "Waiting",
     dot: "bg-warning",

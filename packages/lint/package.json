@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Shared ESLint and Prettier rules for bemybond.com",
+  "description": "Shared ESLint and Prettier rules for byconvo.com",
   "exports": {
     "./eslint": "./eslint.config.js",
     "./prettier": "./prettier.config.js"
