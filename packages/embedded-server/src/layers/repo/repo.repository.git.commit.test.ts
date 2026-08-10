@@ -11,16 +11,26 @@ import { makeGitRepoRepository } from "./repo.repository.git.ts";
 
 const STAGED_DELETION = "packages/visual-picker/src/index.ts";
 const UNTRACKED = "packages/spa/src/new-file.ts";
+const LOCKED = "fatal: Unable to create '/repo/.git/index.lock': File exists.";
+
+interface FakeGitOptions {
+  readonly indexLocked?: boolean;
+}
 
 /**
  * Models the behaviour that caused the bug: a path already staged as a deletion
  * is in neither the worktree nor the index, so `git add` rejects its pathspec —
  * and a single rejected pathspec aborts the batch without staging anything.
  */
-const fakeGit = (): { git: GitExecShape; commands: Array<string> } => {
+const fakeGit = (
+  options?: FakeGitOptions
+): { git: GitExecShape; commands: Array<string> } => {
   const commands: Array<string> = [];
   const run = (...args: ReadonlyArray<string>) => {
     commands.push(args.join(" "));
+    if (args[0] === "add" && options?.indexLocked === true) {
+      return Effect.fail(new GitError({ args, exitCode: 128, stderr: LOCKED }));
+    }
     if (args[0] === "add" && args.includes(STAGED_DELETION)) {
       return Effect.fail(
         new GitError({
@@ -43,8 +53,8 @@ const fakeGit = (): { git: GitExecShape; commands: Array<string> } => {
   };
 };
 
-const runCommit = (paths: ReadonlyArray<string>) => {
-  const { git, commands } = fakeGit();
+const runCommit = (paths: ReadonlyArray<string>, options?: FakeGitOptions) => {
+  const { git, commands } = fakeGit(options);
   return Effect.runPromise(
     Effect.flatMap(makeGitRepoRepository, (repo) =>
       repo.commit("Remove visual picker", paths)
@@ -76,6 +86,12 @@ describe("commit", () => {
     expect(commands).toContain(`add -A -- ${UNTRACKED}`);
     expect(commands).toContain(
       `commit -m Remove visual picker -- ${STAGED_DELETION} ${UNTRACKED}`
+    );
+  });
+
+  it("surfaces a staging failure that is not a rejected pathspec", async () => {
+    await expect(runCommit([UNTRACKED], { indexLocked: true })).rejects.toThrow(
+      /index\.lock/
     );
   });
 });
