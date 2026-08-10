@@ -919,6 +919,12 @@
    from --diffs-bg, so overriding the root recomputes them against our bg. */
 diffs-container {
   --diffs-bg: var(--background);
+  /* The file header falls back to system-ui, and the buttons we render into it
+     inherit that — so the same `font-plus` that reads as medium in Inter came
+     out looking bold in SF Pro. The weight was never wrong; the typeface was.
+     The header is app chrome, so it takes the app's face. (Only the header: the
+     code itself stays on pierre's mono stack.) */
+  --diffs-header-font-family: var(--font-sans);
   /* Pierre's "modified" colour is its own blue (#009fff/#69b1ff), and the
      gutter's add-a-comment button is painted with it. Take it to `--primary` so
      that button flips near-black on light and near-white on dark like every
