@@ -223,7 +223,7 @@ export function RepoPicker({
         render={
           <Button
             variant="ghost"
-            size="sm"
+            size="chip"
             className="max-w-56 gap-2 px-3.5 py-1.5"
           />
         }
