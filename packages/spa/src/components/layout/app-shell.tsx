@@ -462,6 +462,7 @@ export function AppShell() {
   };
 
   const viewing = search.file ?? null;
+  const showFileTabs = mode !== "commit" || viewing !== null;
 
   // --- open-file tabs --------------------------------------------------------
   // The strip follows the open file rather than owning it: navigation arrives
@@ -1007,36 +1008,38 @@ export function AppShell() {
                     />
                   )}
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                  <TabStrip
-                    tabs={tabs.tabs}
-                    active={tabs.active}
-                    dirty={dirtyPaths}
-                    onSelect={selectTab}
-                    onKeep={(path) =>
-                      updateTabs((state) => keepTab(state, path))
-                    }
-                    onClose={closeTabAt}
-                    onTogglePin={(path) =>
-                      updateTabs((state) => togglePin(state, path))
-                    }
-                    onCloseOthers={(path) =>
-                      updateTabs((state) => {
-                        const next = closeOthers(state, path);
-                        setSearch({ file: next.active ?? undefined });
-                        return next;
-                      })
-                    }
-                    onCloseAll={() =>
-                      updateTabs((state) => {
-                        const next = closeAll(state);
-                        setSearch({ file: next.active ?? undefined });
-                        return next;
-                      })
-                    }
-                    onMove={(path, toIndex) =>
-                      updateTabs((state) => moveTab(state, path, toIndex))
-                    }
-                  />
+                  {showFileTabs && (
+                    <TabStrip
+                      tabs={tabs.tabs}
+                      active={tabs.active}
+                      dirty={dirtyPaths}
+                      onSelect={selectTab}
+                      onKeep={(path) =>
+                        updateTabs((state) => keepTab(state, path))
+                      }
+                      onClose={closeTabAt}
+                      onTogglePin={(path) =>
+                        updateTabs((state) => togglePin(state, path))
+                      }
+                      onCloseOthers={(path) =>
+                        updateTabs((state) => {
+                          const next = closeOthers(state, path);
+                          setSearch({ file: next.active ?? undefined });
+                          return next;
+                        })
+                      }
+                      onCloseAll={() =>
+                        updateTabs((state) => {
+                          const next = closeAll(state);
+                          setSearch({ file: next.active ?? undefined });
+                          return next;
+                        })
+                      }
+                      onMove={(path, toIndex) =>
+                        updateTabs((state) => moveTab(state, path, toIndex))
+                      }
+                    />
+                  )}
                   <div className="min-h-0 flex-1 overflow-hidden">
                     {renderCenter()}
                   </div>
