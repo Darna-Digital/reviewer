@@ -112,7 +112,7 @@ export function FileSidebar({
       selectedFile !== null ? [...ancestorDirs(selectedFile)] : undefined,
     initialSelectedPaths: selectedFile !== null ? [selectedFile] : undefined,
     flattenEmptyDirectories: true,
-    search: true,
+    search: mode !== "browse",
     unsafeCSS: TREE_UNSAFE_CSS,
     gitStatus: [...gitStatus],
     onSelectionChange: (selectedPaths) => {
