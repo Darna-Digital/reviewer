@@ -1,10 +1,11 @@
 /**
- * WindowBar — the strip along the top of the native window: the macOS traffic
- * lights, history navigation, and the tab strip.
+ * WindowBar — the strip along the top of the window: the macOS traffic lights,
+ * the tab strip, the pane toggles and the account.
  *
- * Native-shell only. In a browser tab all three already exist one level up —
- * the browser's own tabs, its back button, its chrome — so WindowFrame does not
- * render this there. Empty regions drag the window; every control opts back out.
+ * Drawn in both shells, so the app reads the same either way. Two things are
+ * the native window's alone: the lead gutter the traffic lights are drawn into,
+ * and the drag region — empty space moves the window, and every control opts
+ * back out of it.
  */
 // The history arrows are parked for now, along with the icons they wore.
 // import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
@@ -48,6 +49,7 @@ import {
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
+import { isDesktop } from "@/lib/desktop";
 import type {
   WindowTab,
   WindowTabKind,
@@ -228,11 +230,12 @@ export function WindowBar() {
   return (
     <header
       className={cn(
+        "flex h-11 shrink-0 items-center gap-1 pr-2",
         // The traffic lights are drawn by macOS over the bar's top-left; the
         // lead padding is what the window's own controls sit in, so it has to
         // clear them (see `trafficLightPosition` in the desktop main process).
-        "flex h-11 shrink-0 items-center gap-1 pr-2 pl-24",
-        "[-webkit-app-region:drag]"
+        // A browser tab has no controls there, so the bar starts at its edge.
+        isDesktop ? "pl-24 [-webkit-app-region:drag]" : "pl-2"
       )}
     >
       <SidebarToggle className={NO_DRAG} />
@@ -393,15 +396,19 @@ export function WindowBar() {
           >
             <IconSitemap className="size-5" />
           </BarButton>
-          <BarButton
-            label="Browser"
-            pressed={prefs.browserPaneOpen}
-            onClick={() =>
-              setUiPrefs({ browserPaneOpen: !prefs.browserPaneOpen })
-            }
-          >
-            <IconWorld className="size-5" />
-          </BarButton>
+          {/* The pane behind this is an Electron <webview>, which a browser tab
+              has no equivalent of — so there the button has nothing to open. */}
+          {isDesktop && (
+            <BarButton
+              label="Browser"
+              pressed={prefs.browserPaneOpen}
+              onClick={() =>
+                setUiPrefs({ browserPaneOpen: !prefs.browserPaneOpen })
+              }
+            >
+              <IconWorld className="size-5" />
+            </BarButton>
+          )}
         </>
       )}
       <UserMenu className={NO_DRAG} />

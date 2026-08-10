@@ -283,7 +283,7 @@ export function CommitPanel({
         </div>
         <div className="flex items-center gap-2">
           <Button
-            size="xs"
+            size="sm"
             disabled={!canCommit}
             onClick={() => void commit(false)}
           >
@@ -296,7 +296,7 @@ export function CommitPanel({
             Commit
           </Button>
           <Button
-            size="xs"
+            size="sm"
             variant="ghost-muted"
             disabled={!canCommit}
             onClick={() => void commit(true)}

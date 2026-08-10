@@ -17,8 +17,6 @@ import { ModeRail } from "@/components/layout/mode-rail";
 // Only code mode is offered for now, so the mode chip stays parked.
 // import { ModeSelector } from "@/components/layout/mode-selector";
 import { AgentStrip } from "@/interactions/session-agents/components/agent-strip";
-import { SidebarToggle } from "@/components/layout/sidebar-toggle";
-import { UserMenu } from "@/components/layout/user-menu";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { RepoPicker } from "@/components/repo-picker";
 import { SearchMenu } from "@/interactions/search/components/search-menu";
@@ -34,7 +32,6 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
-import { isDesktop } from "@/lib/desktop";
 import { useUiPrefs } from "@/lib/ui-prefs";
 import { activeWorkMode } from "@/lib/work-mode";
 
@@ -80,8 +77,6 @@ export function WorkspaceShell() {
       {!collaborating && !inSession && <ModeRail />}
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-11 shrink-0 items-center gap-2 px-2">
-          {/* In the native shell the window bar above carries this. */}
-          {!isDesktop && <SidebarToggle />}
           {/* <ModeSelector /> */}
           {collaborating && (
             <>
@@ -127,8 +122,6 @@ export function WorkspaceShell() {
             />
           )}
           {!collaborating && !inSession && <SearchMenu />}
-          {/* The native shell keeps the account in the window bar above. */}
-          {!isDesktop && <UserMenu className="ml-auto" />}
         </header>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t">
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">

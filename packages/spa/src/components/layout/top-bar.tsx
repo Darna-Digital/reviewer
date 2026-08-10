@@ -2,11 +2,8 @@ import { BranchSwitcher } from "@/components/layout/branch-switcher";
 // Only code mode is offered for now, so the mode chip stays parked.
 // import { ModeSelector } from "@/components/layout/mode-selector";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
-import { SidebarToggle } from "@/components/layout/sidebar-toggle";
-import { UserMenu } from "@/components/layout/user-menu";
 import { RepoPicker } from "@/components/repo-picker";
 import { SearchMenu } from "@/interactions/search/components/search-menu";
-import { isDesktop } from "@/lib/desktop";
 import type {
   BranchInfo,
   RemoteBranchInfo,
@@ -52,8 +49,6 @@ export function TopBar(props: TopBarProps) {
 
   return (
     <header className="flex h-11 shrink-0 items-center gap-2 px-2">
-      {/* In the native shell the window bar above carries this. */}
-      {!isDesktop && <SidebarToggle />}
       {/* <ModeSelector /> */}
 
       {/* Repo chip — opens the recents + folder-browser dropdown */}
@@ -94,8 +89,6 @@ export function TopBar(props: TopBarProps) {
             onChange={props.onDiffStyleChange}
           />
         )}
-        {/* The native shell keeps the account in the window bar above. */}
-        {!isDesktop && <UserMenu />}
       </div>
     </header>
   );
