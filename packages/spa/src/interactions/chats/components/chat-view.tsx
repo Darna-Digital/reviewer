@@ -8,10 +8,15 @@ import { toast } from "sonner";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { useChatStream } from "@/interactions/chats/adapters/chats.stream.adapter";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
+import {
+  setChatMode,
+  useChatMode,
+} from "@/interactions/chats/adapters/chat-mode.store";
 import type {
   ChatImage,
   ChatSettings,
 } from "@/interactions/chats/interfaces/chats.interfaces";
+import { modePrompt } from "@/interactions/chats/functions/chat-mode.functions";
 import { isChatRunning } from "@/interactions/chats/functions/chats.reducer";
 import { useChatModels } from "@/lib/queries";
 import { ChatComposer } from "./chat-composer";
@@ -22,6 +27,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   const { chat, error, status } = useChatStream(chatId);
   const models = useChatModels();
   const actions = useChatsActions();
+  const mode = useChatMode(chatId);
 
   if (error !== null) {
     return (
@@ -49,7 +55,7 @@ export function ChatView({ chatId }: { chatId: string }) {
 
   const send = async (text: string, images: ReadonlyArray<ChatImage>) => {
     try {
-      await actions.send(chat.id, text, images);
+      await actions.send(chat.id, modePrompt(mode, text), images);
     } catch (sendError) {
       toast.error(
         sendError instanceof Error ? sendError.message : "failed to send"
@@ -95,13 +101,19 @@ export function ChatView({ chatId }: { chatId: string }) {
             draftKey={chat.id}
             settings={settings}
             onSettingsChange={changeSettings}
+            mode={mode}
+            onModeChange={(next) => setChatMode(chat.id, next)}
             catalog={models.data}
             onSend={send}
             running={running}
             onStop={() => {
               void actions.stop(chat.id);
             }}
-            placeholder="Ask for follow-up changes or attach images…"
+            placeholder={
+              mode === "analysis"
+                ? "What should the analysis cover?"
+                : "Ask for follow-up changes or attach images…"
+            }
           />
         </div>
         <SessionContextBar projectLocked />

@@ -10,6 +10,7 @@
 import { PLAN_LAYERS } from "@byconvo/core/plans";
 import type { PlanEdge, PlanLayer, PlanNode } from "@byconvo/core/plans";
 import type {
+  Curve,
   GraphLayout,
   LabelAnchor,
   LaneBox,
@@ -135,19 +136,28 @@ export const groupByLane = (
     }));
 };
 
-const cubic = (from: Point, c1: Point, c2: Point, to: Point): string =>
+const cubic = ({ from, c1, c2, to }: Curve): string =>
   `M ${from.x} ${from.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${to.x} ${to.y}`;
 
-/** A cubic Bézier's own midpoint — where a label sits on the curve, not beside it. */
+/** A point on the curve itself — which is where a label belongs, not beside it. */
+export const cubicAt = ({ from, c1, c2, to }: Curve, t: number): Point => {
+  const u = 1 - t;
+  const w0 = u * u * u;
+  const w1 = 3 * u * u * t;
+  const w2 = 3 * u * t * t;
+  const w3 = t * t * t;
+  return {
+    x: w0 * from.x + w1 * c1.x + w2 * c2.x + w3 * to.x,
+    y: w0 * from.y + w1 * c1.y + w2 * c2.y + w3 * to.y,
+  };
+};
+
 export const cubicMidpoint = (
   from: Point,
   c1: Point,
   c2: Point,
   to: Point
-): Point => ({
-  x: (from.x + 3 * c1.x + 3 * c2.x + to.x) / 8,
-  y: (from.y + 3 * c1.y + 3 * c2.y + to.y) / 8,
-});
+): Point => cubicAt({ from, c1, c2, to }, 0.5);
 
 /** How far a same-lane label sits clear of the boxes, into the gutter. */
 const GUTTER_OFFSET = 12;
@@ -173,6 +183,7 @@ export const routeEdge = (
   text = ""
 ): {
   path: string;
+  curve: Curve;
   label: Point;
   labelAnchor: LabelAnchor;
   labelText: string;
@@ -181,11 +192,16 @@ export const routeEdge = (
     const start = { x: from.x + from.width, y: from.y + from.height / 2 };
     const end = { x: to.x, y: to.y + to.height / 2 };
     const reach = Math.max(48, (end.x - start.x) / 2);
-    const c1 = { x: start.x + reach, y: start.y };
-    const c2 = { x: end.x - reach, y: end.y };
+    const curve = {
+      from: start,
+      c1: { x: start.x + reach, y: start.y },
+      c2: { x: end.x - reach, y: end.y },
+      to: end,
+    };
     return {
-      path: cubic(start, c1, c2, end),
-      label: cubicMidpoint(start, c1, c2, end),
+      path: cubic(curve),
+      curve,
+      label: cubicAt(curve, 0.5),
       labelAnchor: "middle",
       labelText: fitLabel(text, GUTTER_ROOM),
     };
@@ -196,17 +212,21 @@ export const routeEdge = (
     const start = { x: from.x + from.width / 2, y: from.y + from.height };
     const end = { x: to.x + to.width / 2, y: to.y };
     const reach = Math.max(12, (end.y - start.y) / 2);
-    const c1 = { x: start.x, y: start.y + reach };
-    const c2 = { x: end.x, y: end.y - reach };
-    const middle = cubicMidpoint(start, c1, c2, end);
+    const curve = {
+      from: start,
+      c1: { x: start.x, y: start.y + reach },
+      c2: { x: end.x, y: end.y - reach },
+      to: end,
+    };
     return {
-      path: cubic(start, c1, c2, end),
+      path: cubic(curve),
+      curve,
       // The run between two stacked boxes is only a row gap tall, so a label
       // centred on it would sit on the boxes. It goes beside the line instead,
       // in the gutter the lanes already leave free.
       label: {
         x: from.x + from.width + GUTTER_OFFSET,
-        y: middle.y,
+        y: cubicAt(curve, 0.5).y,
       },
       labelAnchor: "start",
       labelText: fitLabel(text, GUTTER_ROOM - GUTTER_OFFSET),
@@ -217,11 +237,16 @@ export const routeEdge = (
     const start = { x: from.x + from.width, y: from.y + from.height / 2 };
     const end = { x: to.x + to.width, y: to.y + to.height / 2 };
     const bow = 44;
-    const c1 = { x: start.x + bow, y: start.y };
-    const c2 = { x: end.x + bow, y: end.y };
+    const curve = {
+      from: start,
+      c1: { x: start.x + bow, y: start.y },
+      c2: { x: end.x + bow, y: end.y },
+      to: end,
+    };
     return {
-      path: cubic(start, c1, c2, end),
-      label: cubicMidpoint(start, c1, c2, end),
+      path: cubic(curve),
+      curve,
+      label: cubicAt(curve, 0.5),
       labelAnchor: "start",
       labelText: fitLabel(text, GUTTER_ROOM),
     };
@@ -230,16 +255,208 @@ export const routeEdge = (
   const start = { x: from.x + from.width / 2, y: from.y + from.height };
   const end = { x: to.x + to.width / 2, y: to.y + to.height };
   const drop = Math.max(56, Math.abs(start.x - end.x) / 3);
-  const c1 = { x: start.x, y: start.y + drop };
-  const c2 = { x: end.x, y: end.y + drop };
+  const curve = {
+    from: start,
+    c1: { x: start.x, y: start.y + drop },
+    c2: { x: end.x, y: end.y + drop },
+    to: end,
+  };
   return {
-    path: cubic(start, c1, c2, end),
-    label: cubicMidpoint(start, c1, c2, end),
+    path: cubic(curve),
+    curve,
+    label: cubicAt(curve, 0.5),
     labelAnchor: "middle",
     // The loop runs below every box, so the label has the whole span it crosses.
     labelText: fitLabel(text, Math.abs(end.x - start.x)),
   };
 };
+
+/** The padding the drawn chip puts either side of a label's text. */
+const LABEL_PADDING_X = 4;
+
+/** How wide a label is drawn, chip and all — an estimate, as in `fitLabel`. */
+export const labelWidth = (text: string): number =>
+  text.length * LABEL_CHAR_WIDTH + LABEL_PADDING_X * 2;
+
+/**
+ * The room one label needs vertically: the chip is a `0.625rem` line in its own
+ * padding, and the couple of pixels over that are what keep two of them from
+ * meeting edge to edge.
+ */
+export const LABEL_ROW = 16;
+
+/**
+ * The clear air between two labels that had to be dealt out into rows. Stacked
+ * at a bare row apart they touch, and two chips touching read as one label
+ * wrapped onto a second line — the reader cannot tell that `stars + rail` and
+ * `initial model` are two edges. The gap is what says they are separate.
+ */
+export const LABEL_GAP = 10;
+
+/** Row to row, for labels moved off each other. */
+export const LABEL_PITCH = LABEL_ROW + LABEL_GAP;
+
+/**
+ * The box the chip is laid out inside. Deliberately wider than any label — the
+ * chip sizes itself to its text, so nothing here has to be right, only roomy —
+ * and it takes no pointer, so the slack around the chip is still canvas.
+ */
+export const LABEL_BOX_WIDTH = 240;
+export const LABEL_BOX_HEIGHT = LABEL_ROW;
+
+/**
+ * Where a label actually lands, which its anchor decides as much as its point.
+ * Measured at the full pitch rather than the chip's own height, so two labels
+ * count as colliding while they are merely too close to tell apart.
+ */
+const labelBox = (edge: RoutedEdge) => {
+  const width = labelWidth(edge.labelText);
+  const left =
+    edge.labelAnchor === "middle" ? edge.label.x - width / 2 : edge.label.x;
+  return {
+    left,
+    right: left + width,
+    top: edge.label.y - LABEL_PITCH / 2,
+    bottom: edge.label.y + LABEL_PITCH / 2,
+  };
+};
+
+type LabelBox = ReturnType<typeof labelBox>;
+
+const collide = (a: LabelBox, b: LabelBox): boolean =>
+  a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+
+/**
+ * Labels moved off each other, and only off each other.
+ *
+ * Two curves that fan out of one box have their midpoints a few pixels apart, so
+ * their labels land on top of one another and neither can be read — the halo that
+ * clears the wire behind a label does nothing about another label. The fix is a
+ * pass over what the routing produced rather than a change to the routing: where
+ * a label sits along its curve is a drawing decision, and every edge still owns
+ * its own path.
+ *
+ * Labels that collide — directly, or through a chain of them — are dealt out at
+ * one row apart, centred on where the group already was. Centring is what keeps
+ * this honest: the group as a whole stays with its curves instead of drifting
+ * downwards away from them, and a label alone in its cluster never moves at all.
+ *
+ * Rerun until nothing collides, since separating one cluster can push a label
+ * into a neighbouring one. Bounded, because a graph dense enough not to settle
+ * should end up drawn slightly imperfectly rather than not at all.
+ */
+const SPREAD_PASSES = 4;
+
+export const spreadLabels = (
+  edges: ReadonlyArray<RoutedEdge>
+): ReadonlyArray<RoutedEdge> => {
+  let spread = [...edges];
+
+  for (let pass = 0; pass < SPREAD_PASSES; pass += 1) {
+    // Empty labels are never drawn, so they are not in anyone's way.
+    const drawn = spread
+      .map((edge, index) => ({ edge, index, box: labelBox(edge) }))
+      .filter((entry) => entry.edge.labelText !== "");
+
+    const clusters: Array<Array<(typeof drawn)[number]>> = [];
+    for (const entry of drawn) {
+      const touching = clusters.filter((cluster) =>
+        cluster.some((member) => collide(member.box, entry.box))
+      );
+      if (touching.length === 0) {
+        clusters.push([entry]);
+        continue;
+      }
+      // Joining two clusters at once is what makes the grouping transitive: a
+      // label overlapping one member of each merges the three into one.
+      const [first, ...rest] = touching;
+      first.push(entry);
+      for (const other of rest) {
+        first.push(...other);
+        clusters.splice(clusters.indexOf(other), 1);
+      }
+    }
+
+    const crowded = clusters.filter((cluster) => cluster.length > 1);
+    if (crowded.length === 0) return spread;
+
+    const moved = [...spread];
+    for (const cluster of crowded) {
+      const ordered = [...cluster].sort(
+        (a, b) =>
+          a.edge.label.y - b.edge.label.y || a.edge.label.x - b.edge.label.x
+      );
+      const middle =
+        ordered.reduce((sum, entry) => sum + entry.edge.label.y, 0) /
+        ordered.length;
+      const first = middle - ((ordered.length - 1) * LABEL_PITCH) / 2;
+      ordered.forEach((entry, row) => {
+        moved[entry.index] = {
+          ...entry.edge,
+          label: { x: entry.edge.label.x, y: first + row * LABEL_PITCH },
+        };
+      });
+    }
+    spread = moved;
+  }
+
+  return spread;
+};
+
+/** A label is not flush against a box it is merely next to. */
+const NODE_CLEARANCE = 6;
+
+const overNode = (
+  edge: RoutedEdge,
+  nodes: ReadonlyArray<PositionedNode>
+): boolean => {
+  const box = labelBox(edge);
+  return nodes.some(
+    (node) =>
+      box.left - NODE_CLEARANCE < node.x + node.width &&
+      node.x < box.right + NODE_CLEARANCE &&
+      box.top < node.y + node.height &&
+      node.y < box.bottom
+  );
+};
+
+/**
+ * How far along its curve a label may be slid to get out from under a box, and
+ * in what order — outwards from the middle, alternating, so it ends up as near
+ * the middle of its own line as the boxes allow.
+ */
+const SLIDE_STEPS = [0.08, 0.16, 0.24, 0.32, 0.4].flatMap((step) => [
+  0.5 - step,
+  0.5 + step,
+]);
+
+/**
+ * Labels moved off the node boxes.
+ *
+ * An edge that skips a lane — backend straight to external, say — has the
+ * middle of its curve inside whichever lane it flew over, so its label is laid
+ * across a box that has nothing to do with it and is unreadable against the
+ * box's own text. Sliding along the curve is what keeps the fix honest: the
+ * label stays on its own line, just at the point of it that is in clear air —
+ * which for a lane-skipping edge is the gutter to one side of the box.
+ *
+ * Only labels that sit *on* the curve are moved. The ones set beside it are
+ * already placed in a gutter by the routing, and sliding those would take them
+ * away from the line they name.
+ */
+export const clearOfNodes = (
+  edges: ReadonlyArray<RoutedEdge>,
+  nodes: ReadonlyArray<PositionedNode>
+): ReadonlyArray<RoutedEdge> =>
+  edges.map((edge) => {
+    if (edge.labelText === "" || edge.labelAnchor !== "middle") return edge;
+    if (!overNode(edge, nodes)) return edge;
+    for (const t of SLIDE_STEPS) {
+      const slid = { ...edge, label: cubicAt(edge.curve, t) };
+      if (!overNode(slid, nodes)) return slid;
+    }
+    return edge;
+  });
 
 /**
  * Positions for every node, lane, and edge, plus the size of the whole drawing.
@@ -303,7 +520,7 @@ export const layoutPlanGraph = (
   return {
     nodes: positioned,
     lanes: laneBoxes,
-    edges: routed,
+    edges: spreadLabels(clearOfNodes(routed, positioned)),
     width: right + PADDING,
     // Back-edges loop below the last row, so the canvas has to reserve for them.
     height: bottom + PADDING * 2,

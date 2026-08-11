@@ -10,6 +10,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  NEW_SESSION,
+  setChatMode,
+} from "@/interactions/chats/adapters/chat-mode.store";
 
 export function NewSessionButton() {
   const navigate = useNavigate();
@@ -22,12 +26,15 @@ export function NewSessionButton() {
             size="icon"
             aria-label="New session"
             className="rounded-lg text-muted-foreground"
-            onClick={() =>
+            // A session minted here is for building, whatever the last one
+            // opened from the analysis pane was for.
+            onClick={() => {
+              setChatMode(NEW_SESSION, "build");
               void navigate({
                 to: "/modes/agent-session",
                 search: { new: true },
-              })
-            }
+              });
+            }}
           />
         }
       >

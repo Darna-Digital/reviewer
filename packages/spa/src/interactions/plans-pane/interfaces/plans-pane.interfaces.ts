@@ -46,10 +46,20 @@ export interface LaneBox {
  */
 export type LabelAnchor = "middle" | "start";
 
+/** The cubic an edge is drawn as: its two ends and its two control points. */
+export interface Curve {
+  readonly from: Point;
+  readonly c1: Point;
+  readonly c2: Point;
+  readonly to: Point;
+}
+
 export interface RoutedEdge {
   readonly edge: PlanEdge;
   /** SVG path data from the source node's face to the target's. */
   readonly path: string;
+  /** The same curve as points, so a label can be slid along it. */
+  readonly curve: Curve;
   readonly label: Point;
   readonly labelAnchor: LabelAnchor;
   /** The label as drawn — clipped to the room it has beside the wire. */

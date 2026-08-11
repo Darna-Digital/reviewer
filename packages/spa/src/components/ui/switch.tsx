@@ -20,7 +20,7 @@ function Switch({ className, ...props }: React.ComponentProps<"input">) {
       <span className="switch-thumb h-3.5 w-3.5 rounded-[3px] border-[0.5px] border-white/60 transition-transform duration-100 ease-out group-has-checked:translate-x-2.5" />
       <input
         type="checkbox"
-        className="absolute inset-0 size-full appearance-none focus:outline-hidden disabled:cursor-not-allowed"
+        className="absolute inset-0 size-full cursor-pointer appearance-none focus:outline-hidden disabled:cursor-not-allowed"
         {...props}
       />
     </div>

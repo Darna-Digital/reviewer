@@ -6,13 +6,17 @@
  * code goes: a tab in the strip, and the path and line in the URL. A file opened
  * from an analysis is opened `permanent`, since following a note is a deliberate
  * act and should not be thrown away by the next preview click.
+ *
+ * It also lands in the browser rather than in whichever code page you were on:
+ * reading a file the analysis points at is browsing the project, and commit and
+ * review mode are about a particular set of changes the file is not part of.
  */
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { updateTabs } from "@/interactions/tabs/adapters/tabs.store";
 import { openTab } from "@/interactions/tabs/functions/tabs.functions";
 import { requestCodeReveal } from "@/lib/code-reveal";
-import { CODE_HOME, hasFileViewer } from "../functions/plans-pane.functions";
+import { CODE_BROWSE, isBrowsingCode } from "../functions/plans-pane.functions";
 
 export function useOpenInEditor() {
   const navigate = useNavigate();
@@ -29,9 +33,9 @@ export function useOpenInEditor() {
         line: line ?? undefined,
       };
       void navigate(
-        hasFileViewer(pathname)
+        isBrowsingCode(pathname)
           ? { to: ".", search: (prev: object) => ({ ...prev, ...search }) }
-          : { to: CODE_HOME, search }
+          : { to: CODE_BROWSE, search }
       );
       // The params alone cannot ask twice for the line they already name, so
       // the reveal is requested outright — following the same link a second

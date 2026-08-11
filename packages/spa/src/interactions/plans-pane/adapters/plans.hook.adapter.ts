@@ -3,7 +3,6 @@
  * decisions live in `../functions`, which is where they can be tested.
  */
 import { useQueryClient } from "@tanstack/react-query";
-import type { NewReviewAnnotation } from "@byconvo/core/plans";
 import { api, fetchClient } from "@/lib/api/client";
 
 const LIST = "/api/plans";
@@ -52,15 +51,7 @@ export function usePlanActions() {
   };
 
   return {
-    annotate: async (id: string, input: NewReviewAnnotation) => {
-      const { data, error } = await fetchClient.POST(
-        "/api/plans/{id}/annotations",
-        { params: { path: { id } }, body: input }
-      );
-      if (error) failed(error, "failed to save the note");
-      await invalidate(id);
-      return data;
-    },
+    /** An agent's note, once the reader has acted on it. */
     removeAnnotation: async (id: string, annotationId: string) => {
       const { error } = await fetchClient.DELETE(
         "/api/plans/{id}/annotations/{annotationId}",
@@ -68,15 +59,6 @@ export function usePlanActions() {
       );
       if (error) failed(error, "failed to remove the note");
       await invalidate(id);
-    },
-    /** Freeze the analysis: the review notes go, the findings stay. */
-    save: async (id: string) => {
-      const { data, error } = await fetchClient.POST("/api/plans/{id}/save", {
-        params: { path: { id } },
-      });
-      if (error) failed(error, "failed to save the analysis");
-      await invalidate(id);
-      return data;
     },
     remove: async (id: string) => {
       const { error } = await fetchClient.DELETE(ONE, {

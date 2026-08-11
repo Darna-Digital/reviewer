@@ -171,6 +171,9 @@ function Wired({
 
 const graph = () => within(screen.getByLabelText("graph"));
 const notes = () => within(screen.getByLabelText("notes"));
+// A link prints its folders and its file in separate spans, so it is found by
+// the name the two make together rather than by a single run of text.
+const codeLink = (name: string) => notes().getByRole("button", { name });
 
 beforeEach(() => {
   openPlan(null);
@@ -196,9 +199,9 @@ describe("the drawing and the notes", () => {
     render(<Wired />);
     expect(graph().getByText("New branch button")).toBeDefined();
     expect(graph().getByText("createBranch")).toBeDefined();
-    expect(
-      graph().getByText("POST /branches", { selector: "text" })
-    ).toBeDefined();
+    expect(graph().getByTitle("POST /branches").textContent).toBe(
+      "POST /branches"
+    );
     expect(notes().getByText("the ref name is validated here")).toBeDefined();
   });
 
@@ -227,16 +230,10 @@ describe("the drawing and the notes", () => {
     expect(plansPaneSnapshot().focusRequest).toBe(before);
   });
 
-  it("counts a step's notes on its box", () => {
-    render(<Wired />);
-    const box = graph().getByText("createBranch").closest("button");
-    expect(box?.textContent).toContain("1");
-  });
-
   it("opens the line the code moved to, not the one recorded", async () => {
     const onOpenCode = vi.fn();
     render(<Wired staleness={relocated} onOpenCode={onOpenCode} />);
-    await userEvent.click(notes().getByText("src/branch.ts:40"));
+    await userEvent.click(codeLink("src/branch.ts:40"));
     expect(onOpenCode).toHaveBeenCalledWith("src/branch.ts", 40);
   });
 
@@ -312,7 +309,7 @@ describe("the drawing and the notes", () => {
   it("both opens the file and selects the step from a code link", async () => {
     const onOpenCode = vi.fn();
     render(<Wired staleness={relocated} onOpenCode={onOpenCode} />);
-    await userEvent.click(notes().getByText("src/branch.ts:40"));
+    await userEvent.click(codeLink("src/branch.ts:40"));
     expect(onOpenCode).toHaveBeenCalledWith("src/branch.ts", 40);
     expect(plansPaneSnapshot().selectedNodeId).toBe("svc");
   });
@@ -331,20 +328,86 @@ describe("the drawing and the notes", () => {
     render(<Wired staleness={relocated} />);
     // The note is anchored to the same line as its step, so the link belongs at
     // the head of the group rather than on both.
-    expect(notes().getAllByText("src/branch.ts:40")).toHaveLength(1);
+    expect(
+      notes().getAllByRole("button", { name: "src/branch.ts:40" })
+    ).toHaveLength(1);
   });
 
   it("keeps a clipped edge label readable in full on hover", () => {
     render(<Wired />);
-    // The drawn text is clipped to the lane gap; the title carries the whole of
-    // it, so nothing the analysis recorded is actually lost.
-    const label = graph().getByText(/^POST/, { selector: "text" });
-    expect(label.querySelector("title")?.textContent).toBe("POST /branches");
+    // The drawn text is clipped to the lane gap; the chip's title carries the
+    // whole of it, so nothing the analysis recorded is actually lost.
+    const label = graph().getByTitle("POST /branches");
+    expect(label.textContent).toMatch(/^POST/);
   });
 
   it("selects a step by its heading in the list", async () => {
     render(<Wired />);
     await userEvent.click(notes().getByText("createBranch"));
     expect(plansPaneSnapshot().selectedNodeId).toBe("svc");
+  });
+
+  /**
+   * Agents write in markdown — identifiers in backticks, the odd emphasis — so a
+   * note that shows its own source is a note nobody can read.
+   */
+  it("renders a note's markdown rather than its source", () => {
+    const withMarkup: Plan = {
+      ...plan,
+      annotations: [
+        { ...plan.annotations[0], body: "collapses to `[]` and **stops**" },
+      ],
+    };
+    render(
+      <PlanAnnotations
+        plan={withMarkup}
+        staleness={undefined}
+        selectedNodeId={null}
+        selectedAnnotationId={null}
+        onFocus={() => {}}
+        onOpenCode={() => {}}
+        onRemove={() => {}}
+      />
+    );
+    expect(screen.getByText("[]").tagName).toBe("CODE");
+    expect(screen.getByText("stops").tagName).toBe("STRONG");
+  });
+
+  /**
+   * A note that makes several points is written as a numbered list, which is what
+   * the pane's own list styling is for — so it has to arrive as a real list and
+   * not as a paragraph that happens to start with "1.".
+   */
+  it("renders a multi-point note as a numbered list", () => {
+    const withList: Plan = {
+      ...plan,
+      annotations: [
+        {
+          ...plan.annotations[0],
+          body: "1. Every failure collapses to nothing.\n2. Discovery never gates the turn.",
+        },
+      ],
+    };
+    render(
+      <PlanAnnotations
+        plan={withList}
+        staleness={undefined}
+        selectedNodeId={null}
+        selectedAnnotationId={null}
+        onFocus={() => {}}
+        onOpenCode={() => {}}
+        onRemove={() => {}}
+      />
+    );
+    // The step rows are list items of their own, so the points are read off the
+    // note's own list rather than off every `li` on screen.
+    const list = screen
+      .getByText("Every failure collapses to nothing.")
+      .closest("ol");
+    expect(list).not.toBeNull();
+    expect(Array.from(list!.children, (item) => item.textContent)).toEqual([
+      "Every failure collapses to nothing.",
+      "Discovery never gates the turn.",
+    ]);
   });
 });

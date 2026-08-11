@@ -13,10 +13,19 @@ import { useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
+import {
+  NEW_SESSION,
+  setChatMode,
+  useChatMode,
+} from "@/interactions/chats/adapters/chat-mode.store";
 import type {
   ChatImage,
   ChatSettings,
 } from "@/interactions/chats/interfaces/chats.interfaces";
+import {
+  modePrompt,
+  modeTitle,
+} from "@/interactions/chats/functions/chat-mode.functions";
 import { preferredChatModel } from "@/interactions/chats/functions/chat-model.functions";
 import { NEW_CHAT_DRAFT, setDraft } from "@/lib/chat-drafts";
 import { isDesktop } from "@/lib/desktop";
@@ -29,19 +38,21 @@ import { SessionContextBar } from "./session-context-bar";
  * Openers for the two things this app can do that a chat box does not advertise
  * — the analysis graph and the browser pane — each carrying the icon its own
  * surface is marked with, so the suggestion and the pane it ends in read as the
- * same feature. Picking one writes the prompt into the composer rather than
- * sending it, leaving the subject to be filled in.
+ * same feature. Neither one sends: the analysis opener flips the mode the
+ * composer is in, and the browser one types the opening of the prompt, leaving
+ * the subject to be filled in.
  */
 const SUGGESTIONS = [
   {
     icon: IconSitemap,
     label: "Create analysis of a feature",
-    prompt: "Create an analysis of ",
+    kind: "mode",
     desktopOnly: false,
   },
   {
     icon: IconWorld,
     label: "Preview changes in browser",
+    kind: "prompt",
     prompt: "Preview my changes in the browser and check ",
     desktopOnly: true,
   },
@@ -54,6 +65,7 @@ export function NewChatView() {
   const navigate = useNavigate();
   const [overrides, setOverrides] = useState<Partial<ChatSettings>>({});
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const mode = useChatMode(NEW_SESSION);
 
   const favorites = useUiPrefs().chatModelFavorites;
   const defaults = models.data?.defaults;
@@ -66,14 +78,24 @@ export function NewChatView() {
   };
 
   const send = async (text: string, images: ReadonlyArray<ChatImage>) => {
+    const branch = repo.data?.currentBranch ?? "";
+    const prompt = modePrompt(mode, text);
+    const title = modeTitle(mode, text);
     try {
-      const started = await actions.start(
-        settings,
-        repo.data?.currentBranch ?? "",
-        text,
-        images
-      );
+      const started =
+        title === null
+          ? await actions.start(settings, branch, prompt, images)
+          : await actions.startWithTitle(
+              settings,
+              branch,
+              title,
+              prompt,
+              images
+            );
       if (started !== null) {
+        // The session carries the mode it was opened in, so a follow-up in the
+        // conversation is still the same kind of work.
+        setChatMode(started.id, mode);
         void navigate({
           to: "/modes/agent-session/$chatId",
           params: { chatId: started.id },
@@ -89,22 +111,40 @@ export function NewChatView() {
 
   const suggestions = SUGGESTIONS.filter((s) => isDesktop || !s.desktopOnly);
 
-  // The prompt is an opening, not the whole question, so the caret lands at the
-  // end of it ready for the subject.
-  const applySuggestion = (prompt: string) => {
-    setDraft(NEW_CHAT_DRAFT, prompt);
+  const applySuggestion = (suggestion: (typeof SUGGESTIONS)[number]) => {
+    if (suggestion.kind === "mode") {
+      setChatMode(NEW_SESSION, "analysis");
+      composerRef.current?.focus();
+      return;
+    }
+    // The prompt is an opening, not the whole question, so the caret lands at
+    // the end of it ready for the subject.
+    setDraft(NEW_CHAT_DRAFT, suggestion.prompt);
     const textarea = composerRef.current;
     if (textarea === null) return;
     textarea.focus();
-    textarea.setSelectionRange(prompt.length, prompt.length);
+    textarea.setSelectionRange(
+      suggestion.prompt.length,
+      suggestion.prompt.length
+    );
   };
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-6 py-8">
       <div className="flex w-full max-w-3xl flex-col gap-5">
-        <h1 className="mb-6 text-center text-2xl font-medium tracking-tight">
-          What should we work on?
-        </h1>
+        <div className="mb-6 flex flex-col items-center gap-1.5">
+          <h1 className="text-center text-2xl font-medium tracking-tight">
+            {mode === "analysis"
+              ? "What should we analyse?"
+              : "What should we work on?"}
+          </h1>
+          {mode === "analysis" && (
+            <p className="max-w-md text-center text-sm text-pretty text-muted-foreground">
+              An agent reads the code and draws the flow, front to back, into
+              the analysis pane.
+            </p>
+          )}
+        </div>
         <div className="flex flex-col">
           {/* Lifted so the composer's own sheet occludes the strip sliding up
               underneath it, which is what makes the two read as one block. */}
@@ -115,25 +155,31 @@ export function NewChatView() {
               onSettingsChange={(patch) =>
                 setOverrides((prev) => ({ ...prev, ...patch }))
               }
+              mode={mode}
+              onModeChange={(next) => setChatMode(NEW_SESSION, next)}
               catalog={models.data}
               onSend={send}
               running={false}
-              placeholder="Ask anything, @tag files/folders, or describe a change…"
+              placeholder={
+                mode === "analysis"
+                  ? "How is a new branch created?"
+                  : "Ask anything, @tag files/folders, or describe a change…"
+              }
               textareaRef={composerRef}
             />
           </div>
           <SessionContextBar />
         </div>
-        <div className="flex flex-col gap-px">
-          {suggestions.map(({ icon: Icon, label, prompt }) => (
+        <div className="flex flex-col gap-px empty:hidden">
+          {suggestions.map((suggestion) => (
             <button
-              key={label}
+              key={suggestion.label}
               type="button"
-              onClick={() => applySuggestion(prompt)}
+              onClick={() => applySuggestion(suggestion)}
               className="flex h-9 items-center gap-2.5 rounded-lg px-2 text-left text-sm text-muted-foreground outline-none hover:bg-elevate hover:text-foreground focus-visible:bg-elevate focus-visible:text-foreground"
             >
-              <Icon className="size-4 shrink-0" />
-              <span className="min-w-0 truncate">{label}</span>
+              <suggestion.icon className="size-4 shrink-0" />
+              <span className="min-w-0 truncate">{suggestion.label}</span>
             </button>
           ))}
         </div>

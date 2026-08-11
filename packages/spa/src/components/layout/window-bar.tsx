@@ -48,6 +48,10 @@ import {
 } from "@/interactions/window-tabs/functions/window-tabs.functions";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
+import {
+  NEW_SESSION,
+  setChatMode,
+} from "@/interactions/chats/adapters/chat-mode.store";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
 import { isDesktop } from "@/lib/desktop";
 import type {
@@ -186,6 +190,9 @@ export function WindowBar() {
   }, [chats.data]);
 
   const openSession = () => {
+    // A session minted here is for building, whatever the last one opened from
+    // the analysis pane was for.
+    setChatMode(NEW_SESSION, "build");
     updateWindowTabs((state) =>
       openTab(state, {
         id: nextTabId(),

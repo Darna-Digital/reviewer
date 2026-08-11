@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   centerOn,
   clampZoom,
+  clearOfNodes,
   COLUMN_GAP,
   cubicMidpoint,
   fitLabel,
   fitViewport,
   groupByLane,
+  LABEL_ROW,
+  labelWidth,
   layoutPlanGraph,
   NODE_HEIGHT,
   NODE_WIDTH,
@@ -14,10 +17,14 @@ import {
   PADDING,
   ROW_GAP,
   routeEdge,
+  spreadLabels,
   zoomAt,
 } from "./plan-graph.functions";
 import type { PlanEdge, PlanNode } from "@byconvo/core/plans";
-import type { PositionedNode } from "../interfaces/plans-pane.interfaces";
+import type {
+  PositionedNode,
+  RoutedEdge,
+} from "../interfaces/plans-pane.interfaces";
 
 const node = (
   id: string,
@@ -170,6 +177,63 @@ describe("layoutPlanGraph", () => {
     expect(empty.nodes).toEqual([]);
     expect(empty.width).toBe(PADDING);
   });
+
+  /**
+   * Two edges that cross between the same pair of lanes have their midpoints at
+   * the *same* point — a forward curve's midpoint is the average of the two box
+   * centres, and swapping which row goes to which averages to the same number.
+   * So this is not a near miss the drawing gets away with: without the spread,
+   * one label is printed exactly on top of the other.
+   */
+  it("does not stack the labels of two crossing edges", () => {
+    const crossing = layoutPlanGraph(
+      [
+        node("ui", "frontend", { order: 0 }),
+        node("state", "frontend", { order: 1 }),
+        node("send", "transport", { order: 0 }),
+        node("catalog", "transport", { order: 1 }),
+      ],
+      [
+        { id: "e1", from: "ui", to: "catalog", label: "catalog", kind: "call" },
+        {
+          id: "e2",
+          from: "state",
+          to: "send",
+          label: "first send",
+          kind: "call",
+        },
+      ]
+    );
+    const [first, second] = crossing.edges;
+    expect(Math.abs(first.label.y - second.label.y)).toBeGreaterThanOrEqual(14);
+  });
+
+  /**
+   * The case from the drawing: `backend → external` flies over the data lane,
+   * so the middle of its curve — where its label would otherwise sit — is
+   * inside a box belonging to an entirely different step.
+   */
+  it("keeps the label of a lane-skipping edge off the box it flies over", () => {
+    const skipping = layoutPlanGraph(
+      [
+        node("shell", "backend"),
+        node("store", "data"),
+        node("cli", "external"),
+      ],
+      [{ id: "e1", from: "shell", to: "cli", label: "claude -p", kind: "call" }]
+    );
+    const [routed] = skipping.edges;
+    const flownOver = skipping.nodes.filter(
+      (entry) => entry.node.id === "store"
+    );
+    const half = labelWidth(routed.labelText) / 2;
+    for (const passed of flownOver) {
+      const clear =
+        routed.label.x + half <= passed.x ||
+        routed.label.x - half >= passed.x + passed.width;
+      expect(clear).toBe(true);
+    }
+  });
 });
 
 /** The `x y` the path ends on — where the arrowhead lands. */
@@ -315,6 +379,144 @@ describe("edge labels", () => {
 
   it("is empty when the edge carries no label", () => {
     expect(labelled(box(0, 0), box(400, 0), "")).toBe("");
+  });
+});
+
+/** A routed edge standing at a point, with a flat curve through it. */
+const at = (id: string, x: number, y: number, text: string): RoutedEdge => ({
+  edge: { id, from: "a", to: "b", label: text, kind: "call" },
+  path: "",
+  curve: {
+    from: { x: x - 100, y },
+    c1: { x: x - 50, y },
+    c2: { x: x + 50, y },
+    to: { x: x + 100, y },
+  },
+  label: { x, y },
+  labelAnchor: "middle",
+  labelText: text,
+});
+
+describe("spreadLabels", () => {
+  /** The same measure the spread uses, so a test failure is a real overlap. */
+  const overlapping = (edges: ReadonlyArray<RoutedEdge>) => {
+    const drawn = edges.filter((entry) => entry.labelText !== "");
+    const pairs: Array<[string, string]> = [];
+    for (const a of drawn) {
+      for (const b of drawn) {
+        if (a.edge.id >= b.edge.id) continue;
+        const halfA = (a.labelText.length * 5.2) / 2;
+        const halfB = (b.labelText.length * 5.2) / 2;
+        const apart =
+          Math.abs(a.label.x - b.label.x) >= halfA + halfB ||
+          Math.abs(a.label.y - b.label.y) >= 14;
+        if (!apart) pairs.push([a.edge.id, b.edge.id]);
+      }
+    }
+    return pairs;
+  };
+
+  it("pulls two labels off each other", () => {
+    const spread = spreadLabels([
+      at("e1", 100, 200, "first send"),
+      at("e2", 104, 203, "catalog"),
+    ]);
+    expect(overlapping(spread)).toEqual([]);
+  });
+
+  it("keeps the pair where the pair was", () => {
+    const before = [
+      at("e1", 100, 200, "first send"),
+      at("e2", 104, 203, "catalog"),
+    ];
+    const middle = (edges: ReadonlyArray<RoutedEdge>) =>
+      edges.reduce((sum, entry) => sum + entry.label.y, 0) / edges.length;
+    // Dealt out around where they already were, rather than pushed downwards
+    // off the curves they belong to.
+    expect(middle(spreadLabels(before))).toBeCloseTo(middle(before));
+  });
+
+  it("leaves a label that collides with nothing exactly where it is", () => {
+    const alone = at("e1", 100, 200, "send");
+    const spread = spreadLabels([alone, at("e2", 600, 40, "read")]);
+    expect(spread[0].label).toEqual(alone.label);
+  });
+
+  it("separates a chain of labels that only overlap their neighbours", () => {
+    const spread = spreadLabels([
+      at("e1", 100, 200, "one"),
+      at("e2", 104, 206, "two"),
+      at("e3", 108, 212, "three"),
+      at("e4", 112, 218, "four"),
+    ]);
+    expect(overlapping(spread)).toEqual([]);
+  });
+
+  it("does not move a label sideways", () => {
+    const before = [at("e1", 100, 200, "first"), at("e2", 104, 203, "second")];
+    expect(spreadLabels(before).map((entry) => entry.label.x)).toEqual([
+      100, 104,
+    ]);
+  });
+
+  it("ignores the edges that draw no label at all", () => {
+    const blank = [at("e1", 100, 200, ""), at("e2", 100, 200, "")];
+    expect(spreadLabels(blank)).toEqual(blank);
+  });
+
+  /**
+   * Dealt out at exactly a chip's height the two chips touch, and a reader
+   * takes them for one label wrapped onto a second line.
+   */
+  it("leaves clear air between two labels it stacked", () => {
+    const [first, second] = spreadLabels([
+      at("e1", 100, 200, "first send"),
+      at("e2", 104, 203, "catalog"),
+    ]);
+    expect(Math.abs(first.label.y - second.label.y)).toBeGreaterThan(LABEL_ROW);
+  });
+});
+
+describe("clearOfNodes", () => {
+  const flat: RoutedEdge = {
+    edge: { id: "e1", from: "a", to: "b", label: "claude -p", kind: "call" },
+    path: "",
+    curve: {
+      from: { x: 0, y: 100 },
+      c1: { x: 266, y: 100 },
+      c2: { x: 533, y: 100 },
+      to: { x: 800, y: 100 },
+    },
+    label: { x: 400, y: 100 },
+    labelAnchor: "middle",
+    labelText: "claude -p",
+  };
+
+  const boxAt = (x: number): PositionedNode => ({
+    node: node("mid", "transport"),
+    x,
+    y: 60,
+    width: NODE_WIDTH,
+    height: NODE_HEIGHT,
+  });
+
+  it("slides a label along its curve out from under a box", () => {
+    const [moved] = clearOfNodes([flat], [boxAt(340)]);
+    const half = labelWidth(moved.labelText) / 2;
+    expect(
+      moved.label.x + half <= 340 || moved.label.x - half >= 340 + NODE_WIDTH
+    ).toBe(true);
+    // Along the line it names, not off it.
+    expect(moved.label.y).toBeCloseTo(100, 5);
+  });
+
+  it("leaves a label that is already in clear air", () => {
+    expect(clearOfNodes([flat], [boxAt(700)])[0].label).toEqual(flat.label);
+  });
+
+  it("does not move a label the routing already set beside its line", () => {
+    const beside: RoutedEdge = { ...flat, labelAnchor: "start" };
+    expect(clearOfNodes([beside], [boxAt(340)])[0].label).toEqual(beside.label);
   });
 });
 

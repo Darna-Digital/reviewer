@@ -71,14 +71,6 @@ export const nodeStatus = (
 ): PlanAnchorStatus | null =>
   resolutionFor(staleness, "node", nodeId)?.status ?? null;
 
-export const annotationsForNode = (
-  annotations: ReadonlyArray<PlanAnnotation>,
-  nodeId: string | null
-): ReadonlyArray<PlanAnnotation> =>
-  nodeId === null
-    ? []
-    : annotations.filter((annotation) => annotation.nodeId === nodeId);
-
 /**
  * The notes in reading order: down the flow, node by node, with the analysis's
  * own note before whatever the human added under it, and anything pinned to no
@@ -104,9 +96,6 @@ export const orderedAnnotations = (
     return a.createdAt.localeCompare(b.createdAt);
   });
 };
-
-export const reviewAnnotations = (plan: Plan): ReadonlyArray<PlanAnnotation> =>
-  plan.annotations.filter((annotation) => annotation.origin === "review");
 
 /** The steps in the order the graph draws them: down the flow, lane by lane. */
 export const flowOrderedNodes = (plan: Plan): ReadonlyArray<PlanNode> =>
@@ -153,6 +142,19 @@ export const planOutline = (plan: Plan): ReadonlyArray<OutlineGroup> => {
     ...groups,
     { nodeId: null, label: "", kind: null, summary: "", annotations: loose },
   ];
+};
+
+/**
+ * A path split into the part that merely locates the file and the part that
+ * names it, so a link can print the folders quietly and the file itself plainly.
+ */
+export const splitPath = (
+  filePath: string
+): { folders: string; name: string } => {
+  const cut = filePath.lastIndexOf("/");
+  return cut === -1
+    ? { folders: "", name: filePath }
+    : { folders: filePath.slice(0, cut + 1), name: filePath.slice(cut + 1) };
 };
 
 /**
@@ -211,82 +213,22 @@ export const isBrokenAnchor = (status: PlanAnchorStatus): boolean =>
   status === "lost" || status === "missing";
 
 /**
- * Where a jump to code lands when the window is on a page that cannot show a
- * file.
+ * Where a jump to code lands: the project browser, whose tree is every file in
+ * the repository and whose centre pane is the file viewer.
+ *
+ * Not whichever page the window happened to be on. Commit mode's tree is the
+ * changed files and its pane is the worktree diff; a review's are the pull
+ * request's. A file an analysis points at belongs to neither, so opening one
+ * there put it on screen inside a context that disagreed with it — a file absent
+ * from the tree beside it, under a trail reading "Local changes".
  */
-export const CODE_HOME = "/modes/code/commit";
+export const CODE_BROWSE = "/modes/code/browse";
 
 /**
- * Whether this page has the file viewer the `file`/`line` search params drive.
- *
- * Listed by what does rather than by what doesn't: these are the routes under
- * `_app`, the shell that mounts the viewer. A new workspace page then falls to
- * the right side of this by default, where a forgotten exclusion would have sent
- * a jump into a page with nothing to receive it.
+ * Whether the window is already in the browser, in which case a jump only swaps
+ * the file over: a commit or a range being read under `/browse` is context the
+ * file sits inside rather than context it contradicts, so following a note there
+ * should not throw it away.
  */
-const FILE_VIEWER_ROUTES = [
-  "/modes/code/commit",
-  "/modes/code/browse",
-  "/modes/code/review",
-] as const;
-
-export const hasFileViewer = (pathname: string): boolean =>
-  FILE_VIEWER_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(`${route}/`)
-  );
-
-/** The prompt handed to an agent asked to work an analysis out. */
-export const buildAnalysisPrompt = (question: string): string =>
-  [
-    `Work out and record an analysis in byconvo's Plans pane: ${question.trim()}`,
-    "",
-    "Read the code first — do not guess at the flow. Then POST the analysis to",
-    "`/api/plans` on the byconvo server (see the byconvo-plans skill for the",
-    "schema). Lay the nodes out across the layers in the order the request",
-    "actually travels — `frontend` through `transport` to `backend` and `data` —",
-    "give every node an `anchor` of the file and line it stands for, and leave an",
-    "annotation at each place a reader would otherwise have to go digging.",
-  ].join("\n");
-
-/** The title the generated analysis is filed under. */
-export const buildAnalysisTitle = (question: string): string => {
-  const cleaned = question.replace(/\s+/g, " ").trim();
-  if (cleaned.length === 0) return "Analysis";
-  const titled = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-  return titled.length > 60 ? `${titled.slice(0, 60)}…` : titled;
-};
-
-/** The prompt for handing the notes left on an analysis to an agent. */
-export const buildPlanReviewPrompt = (
-  plan: Plan,
-  notes: ReadonlyArray<PlanAnnotation>
-): string => {
-  const byId = new Map(plan.nodes.map((node) => [node.id, node]));
-  const lines = notes
-    .map((note) => {
-      const node =
-        note.nodeId === null ? null : (byId.get(note.nodeId) ?? null);
-      const where =
-        note.anchor === null
-          ? null
-          : `${note.anchor.filePath}${note.anchor.line === null ? "" : `:${note.anchor.line}`}`;
-      return [
-        node === null ? "On the analysis" : `On "${node.label}"`,
-        where === null ? null : `Code: ${where}`,
-        note.body,
-      ]
-        .filter((part) => part !== null)
-        .join("\n");
-    })
-    .join("\n\n");
-  return [
-    `These notes were left on the analysis "${plan.title}":`,
-    "",
-    lines,
-    "",
-    "Address each one in the codebase.",
-  ].join("\n");
-};
-
-export const buildPlanReviewTitle = (count: number): string =>
-  `Address ${count} analysis note${count === 1 ? "" : "s"}`;
+export const isBrowsingCode = (pathname: string): boolean =>
+  pathname === CODE_BROWSE || pathname.startsWith(`${CODE_BROWSE}/`);

@@ -10,13 +10,6 @@ import { useCallback, useSyncExternalStore } from "react";
 /** Draft key for the new-thread composer on the /chats index. */
 export const NEW_CHAT_DRAFT = "new";
 
-/**
- * Draft key for the analysis composer in the plans pane. Its own key rather
- * than the new-thread one: the pane and the /chats index can be on screen at
- * the same time, and a half-written question is not a half-written message.
- */
-export const ANALYSIS_DRAFT = "plans-analysis";
-
 const STORE_KEY = "byconvo-chat-drafts";
 
 type Drafts = Record<string, string>;

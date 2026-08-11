@@ -7,21 +7,24 @@
  * store. That is also why the two-way sync needs no coordination: this component
  * renders the selection, and setting it is someone else's job.
  */
-import { IconAlertTriangle, IconFileCode } from "@tabler/icons-react";
+import { IconAlertTriangle } from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Plan, PlanStaleness } from "@byconvo/core/plans";
+import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import {
   centerOn,
   fitViewport,
+  LABEL_BOX_HEIGHT,
+  LABEL_BOX_WIDTH,
   layoutPlanGraph,
   NODE_HEIGHT,
   panBy,
   zoomAt,
 } from "../functions/plan-graph.functions";
 import {
-  annotationsForNode,
   isBrokenAnchor,
   nodeStatus,
+  splitPath,
   statusLabel,
 } from "../functions/plans-pane.functions";
 import { setViewport } from "../adapters/plans-pane.store";
@@ -109,9 +112,6 @@ export function PlanGraph({
 
   const dragging = useRef<{ x: number; y: number } | null>(null);
 
-  const noteCount = (nodeId: string) =>
-    annotationsForNode(plan.annotations, nodeId).length;
-
   return (
     <div
       ref={frame}
@@ -186,40 +186,19 @@ export function PlanGraph({
           ))}
 
           {layout.edges.map((routed) => (
-            <g key={routed.edge.id}>
-              <path
-                d={routed.path}
-                fill="none"
-                markerEnd="url(#plan-arrow)"
-                className={cn(
-                  "stroke-border",
-                  routed.edge.kind === "event" && "[stroke-dasharray:4_4]"
-                )}
-                strokeWidth={1.5}
-              />
-              {routed.labelText !== "" && (
-                <text
-                  x={routed.label.x}
-                  y={routed.label.y}
-                  textAnchor={routed.labelAnchor}
-                  className="fill-muted-foreground text-[0.625rem]"
-                  // A label sitting on the wire needs the wire cleared behind it.
-                  paintOrder="stroke"
-                  strokeWidth={6}
-                  stroke="var(--pane)"
-                >
-                  {/* Clipped to fit the gutter; the whole of it is on hover. */}
-                  <title>{routed.edge.label}</title>
-                  {routed.labelText}
-                </text>
-              )}
-            </g>
+            <path
+              key={routed.edge.id}
+              d={routed.path}
+              fill="none"
+              markerEnd="url(#plan-arrow)"
+              className="stroke-border"
+              strokeWidth={1.5}
+            />
           ))}
 
           {layout.nodes.map(({ node, x, y, width, height }) => {
             const status = nodeStatus(node.id, staleness);
             const broken = status !== null && isBrokenAnchor(status);
-            const notes = noteCount(node.id);
             const selected = node.id === selectedNodeId;
             return (
               <foreignObject
@@ -255,12 +234,6 @@ export function PlanGraph({
                     {broken && (
                       <IconAlertTriangle className="size-3 text-destructive" />
                     )}
-                    <span className="flex-1" />
-                    {notes > 0 && (
-                      <span className="rounded-full bg-elevate-strong px-1.5 text-[0.625rem] text-muted-foreground">
-                        {notes}
-                      </span>
-                    )}
                   </div>
                   <div className="truncate text-[0.8125rem] leading-5 font-medium">
                     {node.label}
@@ -272,9 +245,12 @@ export function PlanGraph({
                   ) : (
                     node.anchor !== null && (
                       <div className="flex items-center gap-1 truncate text-[0.6875rem] leading-4 text-muted-foreground">
-                        <IconFileCode className="size-3 shrink-0" />
+                        <FileTypeIcon
+                          path={node.anchor.filePath}
+                          className="size-3.5 shrink-0"
+                        />
                         <span className="truncate">
-                          {node.anchor.filePath.split("/").pop()}
+                          {splitPath(node.anchor.filePath).name}
                         </span>
                       </div>
                     )
@@ -283,6 +259,55 @@ export function PlanGraph({
               </foreignObject>
             );
           })}
+
+          {/* Last, so a label is over every wire and every box rather than
+              under the next thing the graph happens to draw. The layout keeps
+              them off the boxes where it can; this is what makes the ones it
+              cannot place elsewhere still readable. */}
+          {layout.edges.map(
+            (routed) =>
+              routed.labelText !== "" && (
+                /* The label clears the wire behind it with a chip, not with a
+                   stroke around its glyphs: a 6px stroke on letterforms spikes
+                   at every join and traces the outline of the word, which is
+                   what made these read as torn rather than as laid on top.
+
+                   It is HTML so the chip is exactly as wide as the text —
+                   nothing here has to guess at a width. The box around it is
+                   deliberately larger and takes no pointer, so only the chip
+                   itself is a target and the empty room stays part of the
+                   canvas you can drag. */
+                <foreignObject
+                  key={routed.edge.id}
+                  x={
+                    routed.labelAnchor === "middle"
+                      ? routed.label.x - LABEL_BOX_WIDTH / 2
+                      : routed.label.x
+                  }
+                  y={routed.label.y - LABEL_BOX_HEIGHT / 2}
+                  width={LABEL_BOX_WIDTH}
+                  height={LABEL_BOX_HEIGHT}
+                  className="pointer-events-none overflow-visible"
+                >
+                  <div
+                    className={cn(
+                      "flex h-full items-center",
+                      routed.labelAnchor === "middle"
+                        ? "justify-center"
+                        : "justify-start"
+                    )}
+                  >
+                    {/* Clipped to fit the gutter; the whole of it is on hover. */}
+                    <span
+                      title={routed.edge.label}
+                      className="pointer-events-auto rounded bg-pane px-1 py-0.5 text-[0.625rem] leading-none whitespace-nowrap text-muted-foreground"
+                    >
+                      {routed.labelText}
+                    </span>
+                  </div>
+                </foreignObject>
+              )
+          )}
         </g>
       </svg>
     </div>

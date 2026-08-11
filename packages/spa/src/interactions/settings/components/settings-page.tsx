@@ -111,7 +111,7 @@ export function SettingsPage() {
                   title="Theme"
                   detail={`Resolved: ${prefs.resolvedTheme}`}
                 >
-                  <div className="flex flex-wrap rounded-md border p-0.5">
+                  <div className="flex flex-wrap gap-0.5 rounded-md border p-0.5">
                     {THEME_OPTIONS.map((option) => (
                       <SegmentedOption
                         key={option.value}
@@ -125,7 +125,7 @@ export function SettingsPage() {
                   </div>
                 </SettingRow>
                 <SettingRow title="Diff layout">
-                  <div className="flex flex-wrap rounded-md border p-0.5">
+                  <div className="flex flex-wrap gap-0.5 rounded-md border p-0.5">
                     {DIFF_OPTIONS.map((option) => (
                       <SegmentedOption
                         key={option.value}

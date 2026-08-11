@@ -1,16 +1,18 @@
 /**
  * The chat composer — prompt textarea over a selector row: model picker,
- * effort, access level ("Full access"), and send/stop.
- * Owns only the draft text; settings live with the caller (local state on the
- * new-thread page, the chat itself once it exists).
+ * effort, mode, access level ("Full access"), and send/stop.
+ * Owns only the draft text; settings and mode live with the caller (local state
+ * on the new-thread page, the chat itself once it exists).
  */
 import {
   IconSend,
   IconChevronDown,
+  IconHammer,
   IconLock,
   IconLockOpen,
   IconPhotoPlus,
   IconPlayerStopFilled,
+  IconSitemap,
 } from "@tabler/icons-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -30,6 +32,7 @@ import type {
 import { useDraft } from "@/lib/chat-drafts";
 import { cn } from "@/lib/utils";
 import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces";
+import type { ChatMode } from "@/interactions/chats/functions/chat-mode.functions";
 import {
   changedRange,
   continueList,
@@ -47,6 +50,11 @@ import {
   type ComposerAttachment,
 } from "./attachments";
 import { ModelPicker } from "./model-picker";
+
+const MODES: Array<{ value: ChatMode; label: string; hint: string }> = [
+  { value: "build", label: "Build", hint: "Read, change and run the code" },
+  { value: "analysis", label: "Analysis", hint: "Draw the flow in the pane" },
+];
 
 const EFFORTS: Array<{ value: ChatEffort; label: string; hint: string }> = [
   { value: "low", label: "Low", hint: "Fast, minimal reasoning" },
@@ -142,6 +150,8 @@ function scrollCaretIntoView(textarea: HTMLTextAreaElement) {
 export function ChatComposer({
   settings,
   onSettingsChange,
+  mode,
+  onModeChange,
   catalog,
   onSend,
   running,
@@ -152,6 +162,8 @@ export function ChatComposer({
 }: {
   settings: ChatSettings;
   onSettingsChange: (patch: Partial<ChatSettings>) => void;
+  mode: ChatMode;
+  onModeChange: (mode: ChatMode) => void;
   catalog: ChatModelCatalog | undefined;
   /** Resolves once the send is accepted; the draft clears only on success. */
   onSend: (
@@ -365,6 +377,23 @@ export function ChatComposer({
           value={settings.effort}
           onSelect={(effort) => onSettingsChange({ effort })}
           ariaLabel="Reasoning effort"
+        />
+        <Separator
+          orientation="vertical"
+          className="mx-0.5 h-4 self-center data-vertical:self-center"
+        />
+        <SelectorMenu
+          options={MODES}
+          value={mode}
+          onSelect={onModeChange}
+          icon={
+            mode === "analysis" ? (
+              <IconSitemap className="size-3.5 text-muted-foreground" />
+            ) : (
+              <IconHammer className="size-3.5 text-muted-foreground" />
+            )
+          }
+          ariaLabel="Session mode"
         />
         <Separator
           orientation="vertical"

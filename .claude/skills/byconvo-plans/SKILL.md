@@ -11,8 +11,9 @@ backend, with notes pinned to the places a reader would otherwise have to go
 digging for.
 
 You produce one by reading the code and POSTing it to the byconvo server. The
-human then reads it in the pane, clicks through to the files, and leaves notes
-back on it.
+human then reads it in the pane and clicks through to the files; anything they
+want changed about it comes back to you as a follow-up in this session, which is
+answered by posting a new analysis.
 
 The server listens on `http://localhost:41811` (override with `$BYCONVO_PORT`)
 and serves the currently selected repository. Interactive docs:
@@ -66,7 +67,7 @@ it does not get an anchor.
   "annotations": [
     {
       "nodeId": "git-branch",
-      "body": "The ref name is validated here, not in the dialog — a name the UI accepts can still be rejected at this point.",
+      "body": "1. The ref name is validated here, not in the dialog — a name the UI accepts can still be rejected at this point.\n2. `git branch` is run with no `--track`, so a branch cut from a remote one starts with no upstream and the first push needs `-u`.",
       "anchor": { "filePath": "packages/embedded-server/src/layers/git/git-exec.ts", "line": 34 }
     }
   ]
@@ -87,7 +88,7 @@ The response is the stored plan, including the id it was filed under.
 | `nodes[].summary` | One line, shown in the box. Optional but nearly always worth it. |
 | `nodes[].order` | Rank within the lane, top to bottom. Defaults to declaration order. |
 | `nodes[].anchor` | `{ filePath, line }`, repo-relative POSIX path, one-based line. |
-| `edges[].kind` | `call`, `data`, or `event` — `event` draws dashed. |
+| `edges[].kind` | `call`, `data`, or `event`. Every wire is drawn the same; the kind is what the edge *is*, not how it looks. |
 | `edges[].label` | What travels along it. Short: it sits on the wire. |
 | `annotations[].nodeId` | The step the note belongs to, or omit for a note on the analysis as a whole. |
 
@@ -107,6 +108,31 @@ should check the response rather than assume everything you sent survived.
 - **Annotate the surprises**, not the obvious. "This handler validates" earns
   nothing; "validation happens here rather than in the dialog, so the UI can
   accept a name the server rejects" earns its place.
+
+### Writing a note
+
+Note bodies render as markdown in the pane, and **a note that makes more than
+one point is written as a numbered list** — one point per item, in the order a
+reader meets them. A wall of five findings welded into two sentences is the one
+formatting mistake that reliably makes an analysis unreadable: nobody can tell
+where one point ends and the next begins, and there is no way to refer to the
+third one.
+
+```
+1. Every failure path collapses to `[]` — non-zero exit, timeout, unparseable
+   output.
+2. Discovery is an enrichment, never a gate: nothing waits on it, so a broken
+   agent cannot take the other three down with it.
+```
+
+- **One point per item.** If an item needs a "and also", it is two items.
+- **A single point stays a sentence.** A one-item list is noise.
+- **Lead with the finding**, not with the setup: the item should be worth reading
+  as far as its first comma.
+- Wrap identifiers, paths and literals in backticks — they are set as code.
+  `**Bold**` is available and rarely needed; there are no headings in a note.
+- Keep items to a line or two. A point that needs a paragraph is usually a point
+  that belongs on a node of its own.
 
 ## The other endpoints
 
@@ -135,14 +161,13 @@ to rerun a stale analysis, post a new one** — do not try to patch the old one'
 anchors. The point of the flag is that the codebase moved far enough that the
 finding itself needs re-deriving.
 
-## Reading the notes left on an analysis
+## Notes left on an analysis
 
-The human's notes come back in the plan's `annotations` with `"origin":
-"review"` (yours are `"analysis"`). Treat a review note as an instruction about
-the code, the same way the `byconvo` skill treats an inline review comment —
-implement it, then remove it with `DELETE /api/plans/:id/annotations/:id`.
-
-Notes with `"origin": "analysis"` are your own findings. Leave them alone.
+Your own findings come back with `"origin": "analysis"`. A note with `"origin":
+"review"` was left against the code rather than against the drawing — treat it
+as an instruction, the same way the `byconvo` skill treats an inline review
+comment, and remove it with `DELETE /api/plans/:id/annotations/:id` once it is
+done.
 
 ## Notes
 

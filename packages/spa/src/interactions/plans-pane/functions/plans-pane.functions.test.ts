@@ -1,20 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   annotationTarget,
-  annotationsForNode,
-  buildAnalysisPrompt,
-  buildAnalysisTitle,
-  buildPlanReviewPrompt,
-  buildPlanReviewTitle,
   planOutline,
   sameTarget,
-  hasFileViewer,
+  isBrowsingCode,
   isBrokenAnchor,
   nodeStatus,
   nodeTarget,
   orderedAnnotations,
   resolutionFor,
-  reviewAnnotations,
+  splitPath,
   stalenessMessage,
   statusLabel,
 } from "./plans-pane.functions";
@@ -221,22 +216,6 @@ describe("nodeStatus", () => {
   });
 });
 
-describe("annotationsForNode", () => {
-  const notes = [
-    annotation("a1", { nodeId: "svc" }),
-    annotation("a2", { nodeId: "ui" }),
-    annotation("a3", { nodeId: null }),
-  ];
-
-  it("picks out the notes hanging off one node", () => {
-    expect(annotationsForNode(notes, "svc").map((n) => n.id)).toEqual(["a1"]);
-  });
-
-  it("is empty when nothing is selected", () => {
-    expect(annotationsForNode(notes, null)).toEqual([]);
-  });
-});
-
 describe("orderedAnnotations", () => {
   it("reads down the flow, analysis note before the replies under it", () => {
     const ordered = orderedAnnotations(
@@ -400,14 +379,16 @@ describe("sameTarget", () => {
   });
 });
 
-describe("reviewAnnotations", () => {
-  it("is only what the human added", () => {
-    const notes = reviewAnnotations(
-      plan({
-        annotations: [annotation("a1"), annotation("a2", { origin: "review" })],
-      })
-    );
-    expect(notes.map((entry) => entry.id)).toEqual(["a2"]);
+describe("splitPath", () => {
+  it("separates the folders from the file they hold", () => {
+    expect(splitPath("packages/core/src/chats.service.ts")).toEqual({
+      folders: "packages/core/src/",
+      name: "chats.service.ts",
+    });
+  });
+
+  it("leaves a bare filename whole", () => {
+    expect(splitPath("README.md")).toEqual({ folders: "", name: "README.md" });
   });
 });
 
@@ -451,79 +432,29 @@ describe("statusLabel", () => {
   });
 });
 
-describe("hasFileViewer", () => {
-  it("accepts the code pages that mount the viewer", () => {
-    expect(hasFileViewer("/modes/code/commit")).toBe(true);
-    expect(hasFileViewer("/modes/code/browse/commit/abc123")).toBe(true);
-    expect(hasFileViewer("/modes/code/review/42")).toBe(true);
+describe("isBrowsingCode", () => {
+  it("accepts the browser and whatever it is browsing", () => {
+    expect(isBrowsingCode("/modes/code/browse")).toBe(true);
+    expect(isBrowsingCode("/modes/code/browse/commit/abc123")).toBe(true);
+    expect(isBrowsingCode("/modes/code/browse/range")).toBe(true);
   });
 
-  it("rejects the workspace pages that have nothing to show a file in", () => {
-    expect(hasFileViewer("/modes/agent-session/c1")).toBe(false);
-    expect(hasFileViewer("/modes/code/tasks")).toBe(false);
-    expect(hasFileViewer("/modes/collaboration")).toBe(false);
-    expect(hasFileViewer("/settings")).toBe(false);
+  /**
+   * The pages a jump has to leave: both show a file, but each shows it as part of
+   * a set of changes the analysis's file is not in.
+   */
+  it("rejects the other code pages", () => {
+    expect(isBrowsingCode("/modes/code/commit")).toBe(false);
+    expect(isBrowsingCode("/modes/code/review/42")).toBe(false);
+  });
+
+  it("rejects the pages with no file viewer at all", () => {
+    expect(isBrowsingCode("/modes/agent-session/c1")).toBe(false);
+    expect(isBrowsingCode("/modes/collaboration")).toBe(false);
+    expect(isBrowsingCode("/settings")).toBe(false);
   });
 
   it("is not fooled by a page whose name merely starts the same way", () => {
-    expect(hasFileViewer("/modes/code/reviewers")).toBe(false);
-  });
-});
-
-describe("buildAnalysisTitle", () => {
-  it("capitalises the question and collapses its whitespace", () => {
-    expect(
-      buildAnalysisTitle("  analyse how a\n new branch  is created ")
-    ).toBe("Analyse how a new branch is created");
-  });
-
-  it("clips a long question rather than letting it run", () => {
-    const title = buildAnalysisTitle("x".repeat(200));
-    expect(title).toHaveLength(61);
-    expect(title.endsWith("…")).toBe(true);
-  });
-
-  it("has something to show for an empty question", () => {
-    expect(buildAnalysisTitle("   ")).toBe("Analysis");
-  });
-});
-
-describe("buildAnalysisPrompt", () => {
-  it("carries the question and tells the agent where to put the result", () => {
-    const prompt = buildAnalysisPrompt("  how is a branch created?  ");
-    expect(prompt).toContain("how is a branch created?");
-    expect(prompt).toContain("/api/plans");
-    expect(prompt).toContain("anchor");
-  });
-});
-
-describe("buildPlanReviewPrompt", () => {
-  const prompt = buildPlanReviewPrompt(
-    plan({ nodes: [node("svc", { label: "createBranch" })] }),
-    [
-      annotation("r1", {
-        nodeId: "svc",
-        origin: "review",
-        body: "should this reject slashes?",
-        anchor: anchor("src/branch.ts", 12),
-      }),
-      annotation("r2", { origin: "review", body: "the data lane is missing" }),
-    ]
-  );
-
-  it("names the node a note was left on and where its code is", () => {
-    expect(prompt).toContain('On "createBranch"');
-    expect(prompt).toContain("src/branch.ts:12");
-    expect(prompt).toContain("should this reject slashes?");
-  });
-
-  it("handles a note pinned to no node", () => {
-    expect(prompt).toContain("On the analysis");
-    expect(prompt).toContain("the data lane is missing");
-  });
-
-  it("titles the handoff by how many notes it carries", () => {
-    expect(buildPlanReviewTitle(1)).toBe("Address 1 analysis note");
-    expect(buildPlanReviewTitle(3)).toBe("Address 3 analysis notes");
+    expect(isBrowsingCode("/modes/code/browser")).toBe(false);
   });
 });

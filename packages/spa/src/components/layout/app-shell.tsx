@@ -64,7 +64,6 @@ import {
 } from "@/interactions/chats/functions/chat-assignment.functions";
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
-import { useOpenInEditor } from "@/interactions/plans-pane/adapters/open-in-editor.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { TabStrip } from "@/interactions/tabs/components/tab-strip";
 import {
@@ -79,6 +78,7 @@ import {
   closeTab,
   keepTab,
   moveTab,
+  openTab,
   pruneTabs,
   syncActive,
   tabToRestore,
@@ -125,6 +125,7 @@ type Search = {
   head?: string;
   file?: string;
   path?: string;
+  line?: number;
 };
 
 // Target key under which worktree/browse comments are stored, so a comment left
@@ -399,14 +400,25 @@ export function AppShell() {
     openFile(path);
     revealLine(lineNumber);
   };
-  // A comment picked out of the bar's list opens the way a note in the analysis
-  // pane does — a permanent tab, the line in the URL, and the reveal asked for
-  // outright so following the same comment twice scrolls both times.
-  const openInEditor = useOpenInEditor();
+  /**
+   * A comment picked out of the bar's list: a permanent tab, since picking a
+   * comment is deliberate, and the line revealed outright so following the same
+   * comment twice scrolls both times.
+   *
+   * It stays in the mode it was left in, unlike the analysis pane's jump — a
+   * comment belongs to the changes on screen, so pulling the window out to the
+   * browser would leave the review the comment came from.
+   */
   const openComment = (id: string) => {
     const comment = visibleComments.find((c) => c.id === id);
     if (comment === undefined) return;
-    openInEditor(comment.filePath, comment.lineNumber);
+    updateTabs((state) => openTab(state, comment.filePath, "permanent"));
+    setSearch({
+      file: comment.filePath,
+      path: comment.filePath,
+      line: comment.lineNumber,
+    });
+    revealLine(comment.lineNumber);
   };
 
   // A `line` in the URL is how another surface points at code — the comments

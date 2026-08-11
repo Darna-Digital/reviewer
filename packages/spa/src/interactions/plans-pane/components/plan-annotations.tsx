@@ -5,29 +5,31 @@
  * the steps nobody has written about, because this list is the drawing's index
  * and a step missing from it would read as a step missing from the analysis.
  *
- * The two kinds of note are told apart by weight rather than by a marker. A
- * finding the analysis left is the document: plain text, no container. A note
- * the reader added sits in a well beneath it, which reads as something laid on
- * top of the finding — which is what it is, and what saving clears.
+ * The two kinds of note are told apart by their ground rather than by a marker
+ * or by weaker ink. A finding the analysis left is the document: prose on the
+ * pane itself. A note the reader added sits in a well beneath it, signed, which
+ * reads as something laid on top of the finding — which is what it is.
+ *
+ * Notes carry their code link above the text, the way a step carries its own
+ * under its heading, so which link belongs to which body is never a guess.
  *
  * Clicking a row is the list-to-graph half of the sync; a file link jumps to the
  * code, at wherever that code now lives.
  */
-import {
-  IconAlertTriangle,
-  IconArrowNarrowRight,
-  IconFileCode,
-  IconTrash,
-} from "@tabler/icons-react";
+import { IconAlertTriangle, IconTrash } from "@tabler/icons-react";
 import { useEffect, useRef } from "react";
+import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { Plan, PlanAnnotation, PlanStaleness } from "@byconvo/core/plans";
 import { Button } from "@/components/ui/button";
+import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import {
   annotationTarget,
   isBrokenAnchor,
   nodeTarget,
   planOutline,
   sameTarget,
+  splitPath,
   statusLabel,
 } from "../functions/plans-pane.functions";
 import { KIND_LABEL, KIND_PILL, KIND_PILL_SHAPE } from "./plan-node-tone";
@@ -38,9 +40,34 @@ import type {
 import { cn } from "@/lib/utils";
 
 /**
- * The jump to code. It wears a file glyph because that is what it opens, and it
- * shrinks to its own text — a hover band running the width of the pane would
- * suggest the whole row is the link when only the path is.
+ * Note prose, rendered as markdown — agents write in backticks and emphasis, and
+ * a note showing its own source is a note nobody can read. A note that makes
+ * several points arrives as a numbered list (see the byconvo-plans skill), which
+ * `.plan-note` sets as the note's normal shape rather than as an aside.
+ *
+ * Full-strength ink, not muted: a finding is what the reader came here for, and
+ * the only thing set quieter than it is the summary of a step nobody wrote about.
+ */
+function NoteBody({ body }: { body: string }) {
+  return (
+    <div className="markdown plan-note min-w-0 text-[0.8125rem] text-foreground">
+      <Markdown remarkPlugins={[remarkGfm]}>{body}</Markdown>
+    </div>
+  );
+}
+
+/**
+ * The jump to code, set the way the app's own path trail sets one: sans with the
+ * file's type icon, and no mono. Mono is for code, and a path is a name — in mono
+ * at this size it read as a string of data rather than as a place.
+ *
+ * One weight and one tone for the whole path, the note's own. Emphasis inside a
+ * path is a distinction nobody asked for: the icon already says which file this
+ * is, and a bolded tail only breaks the line into two things to read.
+ *
+ * The folders are still the part that gives when there is no room, so a narrow
+ * pane clips `packages/spa/src/…` and never the filename and line, which are the
+ * only parts that tell two links apart.
  */
 function CodeLink({
   target,
@@ -50,30 +77,29 @@ function CodeLink({
   onOpen: () => void;
 }) {
   const broken = isBrokenAnchor(target.status);
+  const { folders, name } = splitPath(target.filePath);
   return (
     <button
       type="button"
       title={statusLabel(target.status)}
       className={cn(
-        "group/link -mx-1 flex max-w-full min-w-0 shrink-0 items-center gap-1 self-start rounded px-1 py-0.5 text-left text-[0.6875rem] hover:bg-elevate",
-        broken
-          ? "text-destructive"
-          : "text-muted-foreground hover:text-foreground"
+        "-mx-1.5 flex max-w-full min-w-0 items-center gap-1.5 self-start rounded-md px-1.5 py-1 text-left text-xs hover:bg-elevate",
+        broken ? "text-destructive" : "text-foreground"
       )}
       onClick={onOpen}
     >
       {broken ? (
-        <IconAlertTriangle className="size-3.5 shrink-0" />
+        <IconAlertTriangle className="size-4 shrink-0" />
       ) : (
-        <IconFileCode className="size-3.5 shrink-0" />
+        <FileTypeIcon path={target.filePath} className="size-4 shrink-0" />
       )}
-      <span className="min-w-0 truncate font-mono tabular-nums group-hover/link:underline">
-        {target.filePath}
-        {target.line !== null && `:${target.line}`}
+      <span className="flex min-w-0 items-baseline">
+        {folders !== "" && <span className="min-w-0 truncate">{folders}</span>}
+        <span className="shrink-0 tabular-nums">
+          {name}
+          {target.line !== null && `:${target.line}`}
+        </span>
       </span>
-      {target.status === "relocated" && (
-        <IconArrowNarrowRight className="size-3.5 shrink-0 opacity-60" />
-      )}
     </button>
   );
 }
@@ -99,13 +125,13 @@ function Note({
         onSelect();
       }}
       className={cn(
-        "flex flex-col gap-1",
-        mine && "rounded-lg bg-elevate p-2 pl-2.5"
+        "flex flex-col gap-1.5",
+        mine && "rounded-lg bg-elevate p-2.5"
       )}
     >
       {mine && (
         <div className="flex items-center gap-1.5">
-          <div className="min-w-0 flex-1 truncate text-[0.6875rem] font-medium text-foreground">
+          <div className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
             {annotation.author}
           </div>
           {onRemove !== null && (
@@ -124,15 +150,8 @@ function Note({
           )}
         </div>
       )}
-      <p
-        className={cn(
-          "text-[0.8125rem] leading-5 text-pretty whitespace-pre-wrap",
-          mine ? "text-foreground" : "text-muted-foreground"
-        )}
-      >
-        {annotation.body}
-      </p>
       {target !== null && <CodeLink target={target} onOpen={onOpen} />}
+      <NoteBody body={annotation.body} />
     </div>
   );
 }
@@ -184,7 +203,7 @@ function Group({
         role="button"
         tabIndex={0}
         aria-pressed={selected}
-        className="flex w-full cursor-default flex-col gap-1.5 px-3 py-2.5 text-left"
+        className="w-full cursor-default px-4 py-3.5 text-left"
         onClick={pick}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -193,67 +212,65 @@ function Group({
           }
         }}
       >
-        <div className="flex items-center gap-1.5">
-          {group.kind === null ? (
-            <div className="text-[0.8125rem] font-medium text-muted-foreground">
-              On the analysis
-            </div>
-          ) : (
-            <>
-              <div className={cn(KIND_PILL_SHAPE, KIND_PILL[group.kind])}>
-                {KIND_LABEL[group.kind]}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            {group.kind === null ? (
+              <div className="text-sm font-medium text-muted-foreground">
+                On the analysis
               </div>
-              <div className="min-w-0 flex-1 truncate text-[0.8125rem] font-medium">
-                {group.label}
-              </div>
-            </>
+            ) : (
+              <>
+                <div className={cn(KIND_PILL_SHAPE, KIND_PILL[group.kind])}>
+                  {KIND_LABEL[group.kind]}
+                </div>
+                <div className="min-w-0 flex-1 truncate text-sm font-medium">
+                  {group.label}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* A step nobody wrote about still says what it does, so the row earns
+            its place rather than reading as an empty heading. */}
+          {group.annotations.length === 0 && group.summary !== "" && (
+            <p className="text-[0.8125rem] leading-relaxed text-pretty text-muted-foreground">
+              {group.summary}
+            </p>
           )}
+
+          {step !== null && (
+            <CodeLink
+              target={step}
+              onOpen={() => onOpenCode(step.filePath, step.line)}
+            />
+          )}
+
           {group.annotations.length > 0 && (
-            <div className="shrink-0 text-[0.6875rem] text-muted-foreground tabular-nums">
-              {group.annotations.length}
+            <div className="flex flex-col gap-3">
+              {group.annotations.map((annotation) => {
+                const target = annotationTarget(annotation, staleness);
+                return (
+                  <Note
+                    key={annotation.id}
+                    annotation={annotation}
+                    // The step's own link is already at the head of the group.
+                    target={sameTarget(target, step) ? null : target}
+                    onSelect={() => onSelect(annotation.id)}
+                    onOpen={() =>
+                      target !== null &&
+                      onOpenCode(target.filePath, target.line)
+                    }
+                    onRemove={
+                      annotation.origin === "review"
+                        ? () => onRemove(annotation.id)
+                        : null
+                    }
+                  />
+                );
+              })}
             </div>
           )}
         </div>
-
-        {/* A step nobody wrote about still says what it does, so the row earns
-          its place rather than reading as an empty heading. */}
-        {group.annotations.length === 0 && group.summary !== "" && (
-          <p className="text-[0.8125rem] leading-5 text-pretty text-muted-foreground">
-            {group.summary}
-          </p>
-        )}
-
-        {step !== null && (
-          <CodeLink
-            target={step}
-            onOpen={() => onOpenCode(step.filePath, step.line)}
-          />
-        )}
-
-        {group.annotations.length > 0 && (
-          <div className="flex flex-col gap-2">
-            {group.annotations.map((annotation) => {
-              const target = annotationTarget(annotation, staleness);
-              return (
-                <Note
-                  key={annotation.id}
-                  annotation={annotation}
-                  // The step's own link is already at the head of the group.
-                  target={sameTarget(target, step) ? null : target}
-                  onSelect={() => onSelect(annotation.id)}
-                  onOpen={() =>
-                    target !== null && onOpenCode(target.filePath, target.line)
-                  }
-                  onRemove={
-                    annotation.origin === "review"
-                      ? () => onRemove(annotation.id)
-                      : null
-                  }
-                />
-              );
-            })}
-          </div>
-        )}
       </div>
     </li>
   );
@@ -280,7 +297,7 @@ export function PlanAnnotations({
 
   if (groups.length === 0) {
     return (
-      <p className="px-6 py-8 text-center text-[0.8125rem] text-pretty text-muted-foreground">
+      <p className="px-6 py-8 text-center text-sm text-pretty text-muted-foreground">
         This analysis has no steps yet.
       </p>
     );

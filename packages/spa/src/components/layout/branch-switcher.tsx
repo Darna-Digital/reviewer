@@ -343,7 +343,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
       >
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="chip" className="gap-1.5">
+            <Button variant="ghost" size="chip" className="gap-1.5 px-2">
               <IconGitBranch className="size-3.5 text-muted-foreground" />
               {currentName}
               <IconChevronDown className="size-3.5 text-muted-foreground" />

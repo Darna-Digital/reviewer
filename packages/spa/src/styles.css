@@ -60,6 +60,7 @@
   --color-elevate-strong: var(--elevate-strong);
   --color-frame: var(--frame);
   --color-frame-border: var(--frame-border);
+  --color-pane: var(--pane);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
@@ -99,7 +100,8 @@
    so a swatch named brand-500 is the same ink everywhere.
 
    Surfaces stay gray (chroma 0). Brand is only for small accents: filter dots,
-   links, status marks — never wash into muted/accent/sidebar highlights. */
+   links, status marks, the on-state of a switch — never wash into
+   muted/accent/sidebar highlights. */
 :root {
   --brand-50: oklch(0.977 0.012 240.4);
   --brand-100: oklch(0.951 0.029 240.4);
@@ -252,6 +254,7 @@
      rungs are the page's brightest tone and would put the two the wrong way
      round in the light theme. */
   --switch-track: oklch(0.87 0 0);
+  --switch-track-checked: var(--brand-500);
   --switch-thumb: oklch(0.96 0 0);
   --sheen-strong: rgb(255 255 255 / 0.2);
   --sheen-soft: rgb(255 255 255 / 0.1);
@@ -311,6 +314,7 @@
   );
   --text-shadow-filled: none;
   --switch-track: oklch(0.44 0 0);
+  --switch-track-checked: var(--brand-500);
   --switch-thumb: oklch(0.93 0 0);
   --overlay-hover: rgb(255 255 255 / 0.06);
   --overlay-pressed: rgb(255 255 255 / 0.1);
@@ -458,7 +462,7 @@
   box-shadow: var(--elev-groove);
 }
 .switch-track:has(:checked) {
-  background-color: var(--primary);
+  background-color: var(--switch-track-checked);
   box-shadow: var(--elev-groove-filled);
 }
 .switch-thumb {
@@ -702,6 +706,28 @@
    is deliberately no `.desktop.translucent` override here. */
 .plans-notes {
   background-color: var(--canvas);
+}
+
+/* A note is written as a numbered list of its points, so the list is the note's
+   normal shape rather than an aside inside a paragraph: the items are spaced
+   apart enough to be read as separate findings, and the numbers are set in the
+   quiet tone outside the text column, so a point that wraps hangs under its own
+   first word instead of under its number. */
+.plan-note :where(ol, ul) {
+  margin: 0;
+  padding-left: 1.5rem;
+}
+.plan-note :where(ol, ul) > li + li {
+  margin-top: 0.45rem;
+}
+.plan-note :where(ol, ul) > li::marker {
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+/* Nothing separates a note's items but the gap above, so a nested list keeps its
+   own indent without also inheriting that gap as a top margin. */
+.plan-note :where(li) > :where(ol, ul) {
+  margin-top: 0.45rem;
 }
 
 /* --- byconvo: agent brand marks ------------------------------------------- */

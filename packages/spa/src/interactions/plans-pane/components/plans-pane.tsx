@@ -5,6 +5,10 @@
  * the window rather than to a route, so it survives navigating around the app
  * and can send you to a file without losing what you were reading.
  *
+ * It reads analyses; it does not compose them. Asking for one is a session in
+ * analysis mode, so the "+" beside the picker hands over to the composer every
+ * other session starts from rather than keeping a second one here.
+ *
  * Three things share it — the picker, the drawing, and the notes — and the
  * selection in the store is the only thing they have in common. Everything they
  * decide (where a node sits, where a note now points, whether the analysis has
@@ -13,15 +17,12 @@
 import {
   IconAlertTriangle,
   IconChevronDown,
-  IconDeviceFloppy,
-  IconMessagePlus,
   IconPlus,
   IconRefresh,
   IconTrash,
-  IconX,
 } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { Button } from "@/components/ui/button";
@@ -30,22 +31,16 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
-import { ChatComposer } from "@/interactions/chats/components/chat-composer";
-import { preferredChatModel } from "@/interactions/chats/functions/chat-model.functions";
-import type {
-  ChatImage,
-  ChatSettings,
-} from "@/interactions/chats/interfaces/chats.interfaces";
-import type { ChatModelCatalog } from "@byconvo/core/chats";
-import { ANALYSIS_DRAFT, setDraft } from "@/lib/chat-drafts";
-import { useChatModels, useRepo } from "@/lib/queries";
+import {
+  NEW_SESSION,
+  setChatMode,
+} from "@/interactions/chats/adapters/chat-mode.store";
+import { NEW_CHAT_DRAFT, setDraft } from "@/lib/chat-drafts";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { useOpenInEditor } from "../adapters/open-in-editor.adapter";
@@ -63,12 +58,7 @@ import {
   usePlans,
 } from "../adapters/plans.hook.adapter";
 import {
-  buildAnalysisPrompt,
-  buildAnalysisTitle,
-  buildPlanReviewPrompt,
-  buildPlanReviewTitle,
   nodeTarget,
-  reviewAnnotations,
   stalenessMessage,
 } from "../functions/plans-pane.functions";
 import { PlanAnnotations } from "./plan-annotations";
@@ -83,120 +73,17 @@ const TONE_STYLES = {
   stale: "text-destructive",
 } as const;
 
-function ChromeButton({
-  label,
-  onClick,
-  disabled,
-  active,
-  children,
-}: {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  active?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={label}
-            aria-pressed={active}
-            disabled={disabled}
-            onClick={onClick}
-            className={cn(
-              "rounded-lg text-muted-foreground",
-              active === true && "bg-elevate-strong text-foreground"
-            )}
-          />
-        }
-      >
-        {children}
-      </TooltipTrigger>
-      <TooltipContent side="bottom">{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
-/**
- * Asking an agent for an analysis — the pane's only way to make a new one.
- *
- * Deliberately the new-thread page's own layout and composer rather than a
- * bespoke form: asking for an analysis *is* starting a session, so the thing
- * that picks the agent, the model and how much rope it gets should be the
- * control that does that everywhere else — down to the draft surviving a
- * navigation away and back.
- */
-function NewAnalysis({
-  settings,
-  onSettingsChange,
-  catalog,
-  onAsk,
-}: {
-  settings: ChatSettings;
-  onSettingsChange: (patch: Partial<ChatSettings>) => void;
-  catalog: ChatModelCatalog | undefined;
-  onAsk: (question: string, images: ReadonlyArray<ChatImage>) => Promise<void>;
-}) {
-  return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-1 px-6 text-center">
-        <p className="text-sm font-medium">Ask for an analysis</p>
-        <p className="text-sm text-pretty text-muted-foreground">
-          An agent reads the code and draws the flow — front to back — with
-          notes at the places worth knowing about.
-        </p>
-      </div>
-      <div className="mx-auto w-full max-w-3xl shrink-0 px-3 pb-3">
-        <ChatComposer
-          draftKey={ANALYSIS_DRAFT}
-          settings={settings}
-          onSettingsChange={onSettingsChange}
-          catalog={catalog}
-          onSend={onAsk}
-          running={false}
-          placeholder="How is a new branch created?"
-        />
-      </div>
-    </div>
-  );
-}
-
 export function PlansPane() {
   const prefs = useUiPrefs();
   const pane = usePlansPane();
-  const repo = useRepo();
   const navigate = useNavigate();
   const openInEditor = useOpenInEditor();
 
   const plans = usePlans();
   const view = usePlan(pane.planId);
   const actions = usePlanActions();
-  const chatActions = useChatsActions();
-  const chatModels = useChatModels();
 
   const frame = useRef<HTMLElement | null>(null);
-  const [composing, setComposing] = useState(false);
-  const [noteBody, setNoteBody] = useState("");
-  const [picking, setPicking] = useState(false);
-  const [overrides, setOverrides] = useState<Partial<ChatSettings>>({});
-
-  // Seeded the way the new-thread page seeds it, so the pane opens on the same
-  // agent and model the composer would offer anywhere else.
-  const defaults = chatModels.data?.defaults;
-  const preferred = preferredChatModel(
-    chatModels.data,
-    prefs.chatModelFavorites
-  );
-  const settings: ChatSettings = {
-    provider: overrides.provider ?? preferred?.provider ?? "claude",
-    model: overrides.model ?? preferred?.id ?? "",
-    effort: overrides.effort ?? defaults?.effort ?? "high",
-    access: overrides.access ?? defaults?.access ?? "fullAccess",
-  };
 
   const summaries = plans.data ?? [];
   const plan = view.data?.plan;
@@ -211,112 +98,23 @@ export function PlansPane() {
   }, [plans.data]);
 
   /**
-   * Hand work to a session with the agent the composer is set to. Every handoff
-   * the pane makes goes through here, so the pick applies to a rerun and to the
-   * notes as well as to the first analysis.
+   * Ask for an analysis: a new session, in analysis mode, with the question
+   * already typed if there is one to carry over. The composer there is the one
+   * that picks the agent, the model and how much rope it gets, which is why the
+   * pane no longer has one of its own.
    */
-  const handOff = async (
-    title: string,
-    prompt: string,
-    images: ReadonlyArray<ChatImage> = []
-  ) => {
-    const started = await chatActions.startWithTitle(
-      settings,
-      repo.data?.currentBranch ?? "",
-      title,
-      prompt,
-      images
-    );
-    if (started === null) return null;
-    void navigate({
-      to: "/modes/agent-session/$chatId",
-      params: { chatId: started.id },
-    });
-    return started.id;
-  };
-
-  const askForAnalysis = async (
-    question: string,
-    images: ReadonlyArray<ChatImage>
-  ) => {
-    try {
-      const chatId = await handOff(
-        buildAnalysisTitle(question),
-        buildAnalysisPrompt(question),
-        images
-      );
-      if (chatId === null) return;
-      setComposing(false);
-      toast.success("Working the analysis out — it appears here when it lands");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "could not start the analysis"
-      );
-      // The composer keeps the draft only when the send is rejected.
-      throw error;
+  const newAnalysis = (question?: string) => {
+    setChatMode(NEW_SESSION, "analysis");
+    if (question !== undefined && question !== "") {
+      setDraft(NEW_CHAT_DRAFT, question);
     }
+    void navigate({ to: "/modes/agent-session", search: { new: true } });
   };
 
-  const addNote = async () => {
-    const body = noteBody.trim();
-    if (plan === undefined || body.length === 0) return;
-    const anchor =
-      pane.selectedNodeId === null
-        ? null
-        : (plan.nodes.find((node) => node.id === pane.selectedNodeId)?.anchor ??
-          null);
+  const removePlan = async (id: string) => {
     try {
-      await actions.annotate(plan.id, {
-        nodeId: pane.selectedNodeId,
-        body,
-        anchor:
-          anchor === null
-            ? null
-            : { filePath: anchor.filePath, line: anchor.line },
-      });
-      setNoteBody("");
-      setPicking(false);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "could not save the note"
-      );
-    }
-  };
-
-  /**
-   * Saving freezes the analysis. The notes the reader left go with it — they
-   * were the conversation about the finding, not the finding — so they are
-   * handed to an agent first if there are any, which is the only chance to act
-   * on them.
-   */
-  const saveAnalysis = async () => {
-    if (plan === undefined) return;
-    const notes = reviewAnnotations(plan);
-    try {
-      if (notes.length > 0) {
-        await handOff(
-          buildPlanReviewTitle(notes.length),
-          buildPlanReviewPrompt(plan, notes)
-        );
-      }
-      await actions.save(plan.id);
-      toast.success(
-        notes.length > 0
-          ? `Saved — ${notes.length} note${notes.length === 1 ? "" : "s"} handed over`
-          : "Analysis saved"
-      );
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "could not save the analysis"
-      );
-    }
-  };
-
-  const removePlan = async () => {
-    if (plan === undefined) return;
-    try {
-      await actions.remove(plan.id);
-      openPlan(null);
+      await actions.remove(id);
+      if (id === pane.planId) openPlan(null);
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not delete the analysis"
@@ -347,89 +145,99 @@ export function PlansPane() {
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-7 min-w-0 flex-1 justify-start gap-1 rounded-lg px-2 text-xs"
+                className="h-7 max-w-56 min-w-0 justify-start gap-1 rounded-lg px-2 text-xs"
               />
             }
           >
             <span className="truncate">{plan?.title ?? "No analysis yet"}</span>
             <IconChevronDown className="size-3.5 shrink-0 opacity-60" />
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-72 p-1">
+          {/* Not the sheet's own `gap-4` — that is for stacked sections — but
+              not flush either: a hair between the rows is what keeps two
+              analyses from reading as one entry with a second line. */}
+          <PopoverContent align="start" className="w-72 gap-0.5 p-1">
             {summaries.length === 0 ? (
               <div className="px-2 py-3 text-center text-xs text-muted-foreground">
                 Nothing analysed yet.
               </div>
             ) : (
+              // Deleting one is the picker's job now: it is the only place every
+              // analysis is named, so it is the only place the choice of which
+              // to throw away can actually be made.
               summaries.map((summary) => (
-                <button
+                <div
                   key={summary.id}
-                  type="button"
                   className={cn(
-                    "flex w-full flex-col items-start gap-0.5 rounded-lg px-2 py-1.5 text-left hover:bg-elevate",
+                    "group/row flex items-center gap-1 rounded-lg pr-1 hover:bg-elevate",
                     summary.id === pane.planId && "bg-elevate-strong"
                   )}
-                  onClick={() => openPlan(summary.id)}
                 >
-                  <span className="w-full truncate text-[0.8125rem]">
-                    {summary.title}
-                  </span>
-                  <span className="text-[0.6875rem] text-muted-foreground">
-                    {summary.nodeCount} steps
-                    {summary.savedAt === null ? " · draft" : " · saved"}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 flex-col items-start gap-0.5 px-2 py-1.5 text-left"
+                    onClick={() => openPlan(summary.id)}
+                  >
+                    <span className="w-full truncate text-[0.8125rem]">
+                      {summary.title}
+                    </span>
+                    <span className="text-[0.6875rem] text-muted-foreground">
+                      {summary.nodeCount} steps
+                    </span>
+                  </button>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Delete ${summary.title}`}
+                    className="shrink-0 text-muted-foreground opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100"
+                    onClick={() => void removePlan(summary.id)}
+                  >
+                    <IconTrash className="size-3.5" />
+                  </Button>
+                </div>
               ))
             )}
           </PopoverContent>
         </Popover>
-        <ChromeButton
-          label="New analysis"
-          active={composing}
-          onClick={() => setComposing((open) => !open)}
-        >
-          <IconPlus className="size-4" />
-        </ChromeButton>
-        <ChromeButton
-          label="Add a note"
-          active={picking}
-          disabled={plan === undefined}
-          onClick={() => setPicking((open) => !open)}
-        >
-          <IconMessagePlus className="size-4" />
-        </ChromeButton>
-        <ChromeButton
-          label="Save analysis"
-          disabled={plan === undefined}
-          onClick={() => void saveAnalysis()}
-        >
-          <IconDeviceFloppy className="size-4" />
-        </ChromeButton>
-        <ChromeButton
-          label="Delete analysis"
-          disabled={plan === undefined}
-          onClick={() => void removePlan()}
-        >
-          <IconTrash className="size-4" />
-        </ChromeButton>
-        <ChromeButton
-          label="Close analysis pane"
-          onClick={() => setUiPrefs({ plansPaneOpen: false })}
-        >
-          <IconX className="size-4" />
-        </ChromeButton>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="New analysis"
+                className="shrink-0 rounded-lg text-muted-foreground"
+                onClick={() => newAnalysis()}
+              />
+            }
+          >
+            <IconPlus className="size-4" />
+          </TooltipTrigger>
+          <TooltipContent side="bottom">New analysis</TooltipContent>
+        </Tooltip>
+        <div className="flex-1" />
       </div>
 
-      {composing || plan === undefined ? (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <NewAnalysis
-            settings={settings}
-            onSettingsChange={(patch) =>
-              setOverrides((prev) => ({ ...prev, ...patch }))
-            }
-            catalog={chatModels.data}
-            onAsk={askForAnalysis}
-          />
-        </div>
+      {plan === undefined ? (
+        // Only once there is genuinely nothing to show: an analysis still on its
+        // way back would otherwise be announced as an empty pane.
+        summaries.length === 0 && (
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
+            <p className="text-sm font-medium">Nothing analysed yet</p>
+            <p className="text-sm text-pretty text-muted-foreground">
+              An agent reads the code and draws the flow — front to back — with
+              notes at the places worth knowing about.
+            </p>
+            <Button
+              variant="secondary"
+              size="sm"
+              className="mt-1"
+              onClick={() => newAnalysis()}
+            >
+              <IconPlus className="size-4" />
+              Ask for an analysis
+            </Button>
+          </div>
+        )
       ) : (
         <>
           {message !== null && message.tone !== "ok" && (
@@ -449,14 +257,9 @@ export function PlansPane() {
                 <button
                   type="button"
                   className="shrink-0 font-medium underline underline-offset-2"
-                  onClick={() => {
-                    // A rerun is the same question against today's code, so it
-                    // arrives already typed rather than as a blank box.
-                    if (plan.question !== "") {
-                      setDraft(ANALYSIS_DRAFT, plan.question);
-                    }
-                    setComposing(true);
-                  }}
+                  // A rerun is the same question against today's code, so it
+                  // arrives already typed rather than as a blank box.
+                  onClick={() => newAnalysis(plan.question)}
                 >
                   Rerun
                 </button>
@@ -475,48 +278,6 @@ export function PlansPane() {
             }
             onOpenNode={openNode}
           />
-
-          {picking && (
-            <div className="border-t border-frame-border p-2">
-              <Textarea
-                value={noteBody}
-                autoFocus
-                placeholder={
-                  pane.selectedNodeId === null
-                    ? "A note on this analysis…"
-                    : "A note on the selected step…"
-                }
-                className="min-h-14 text-sm"
-                onChange={(event) => setNoteBody(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") setPicking(false);
-                  if (
-                    event.key === "Enter" &&
-                    (event.metaKey || event.ctrlKey)
-                  ) {
-                    event.preventDefault();
-                    void addNote();
-                  }
-                }}
-              />
-              <div className="mt-1.5 flex justify-end gap-1.5">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPicking(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={noteBody.trim().length === 0}
-                  onClick={() => void addNote()}
-                >
-                  Note
-                </Button>
-              </div>
-            </div>
-          )}
 
           <ResizeHandle
             orientation="row"
