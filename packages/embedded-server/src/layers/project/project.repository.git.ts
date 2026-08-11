@@ -16,8 +16,10 @@ import { ChildProcessSpawner } from "effect/unstable/process";
 import {
   groupPathsByRepo,
   mergeCommits,
+  mergeMatches,
   prefixDiffPaths,
   projectPath,
+  splitProjectPath,
 } from "@byconvo/core/project";
 import { GitExec } from "@byconvo/core/ports/git-exec";
 import { makeGitRepoRepository } from "../repo/repo.repository.git.ts";
@@ -163,17 +165,48 @@ export const makeGitProjectRepository = Effect.gen(function* () {
   );
 
   const log: ProjectRepo["log"] = (query) =>
-    Effect.map(
-      // Each root is asked for a whole page: any of them could supply the whole
-      // merged page, so asking for a share of it would cut a busy root short.
-      // Skipping is applied after the merge for the same reason.
-      acrossRoots((_repo, git) =>
-        git.log({ ...query, limit: query.skip + query.limit, skip: 0 })
-      ),
-      ({ failed, ok }) => ({
+    Effect.gen(function* () {
+      // A path filter is named from the project (`backend/src/a.ts`), so only
+      // the root that owns it can answer, and it has to be asked in its own
+      // terms. A path no root claims is owned by none of them, and has no
+      // history — which is what git would say about it too.
+      const owner =
+        query.path === null ? null : splitProjectPath(yield* roots, query.path);
+      const answers = (repo: RepoEntry) =>
+        query.path === null || owner?.repo.path === repo.path;
+      const { failed, ok } = yield* acrossRoots((repo, git) =>
+        answers(repo)
+          ? // Each root is asked for a whole page: any of them could supply the
+            // whole merged page, so asking for a share of it would cut a busy
+            // root short. Skipping is applied after the merge for the same
+            // reason.
+            git.log({
+              ...query,
+              path: owner?.path ?? query.path,
+              limit: query.skip + query.limit,
+              skip: 0,
+            })
+          : Effect.succeed([])
+      );
+      return {
         commits: mergeCommits(
           ok.map(({ repo, value }) => ({ repo, commits: value }))
         ).slice(query.skip, query.skip + query.limit),
+        failed,
+      };
+    });
+
+  const search: ProjectRepo["search"] = (query) =>
+    Effect.map(
+      // A whole page per root, for the same reason the log asks for one: the
+      // matches may all come from a single root, and a share each would cut it
+      // short. The merge is what applies the limit.
+      acrossRoots((_repo, git) => git.search(query)),
+      ({ failed, ok }) => ({
+        ...mergeMatches(
+          ok.map(({ repo, value }) => ({ repo, matches: value })),
+          query.limit
+        ),
         failed,
       })
     );
@@ -215,6 +248,7 @@ export const makeGitProjectRepository = Effect.gen(function* () {
     worktreeDiff,
     branches,
     log,
+    search,
     commit,
   } satisfies ProjectRepo;
 });

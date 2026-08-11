@@ -2,17 +2,22 @@ import * as Effect from "effect/Effect";
 import {
   groupPathsByRepo,
   mergeCommits,
+  mergeMatches,
 } from "../functions/project.functions.ts";
 import type {
   ProjectBranches,
   ProjectChanges,
   ProjectFiles,
   ProjectLog,
+  ProjectMatches,
   RepoBranches,
   RepoChanges,
   RepoFailure,
 } from "../schema/project.schema.ts";
-import type { CommitInfo } from "../../repo/schema/repo.schema.ts";
+import type {
+  CommitInfo,
+  ContentMatch,
+} from "../../repo/schema/repo.schema.ts";
 import type { RepoEntry } from "../../workspace/schema/workspace.schema.ts";
 import type { ProjectRepo } from "./project.repository.ts";
 
@@ -25,6 +30,11 @@ export interface MemoryProjectSeed {
   readonly log?: ReadonlyArray<{
     readonly repo: RepoEntry;
     readonly commits: ReadonlyArray<CommitInfo>;
+  }>;
+  /** Each root's grep hits, named as that root knows them. */
+  readonly search?: ReadonlyArray<{
+    readonly repo: RepoEntry;
+    readonly matches: ReadonlyArray<ContentMatch>;
   }>;
   readonly failed?: ReadonlyArray<RepoFailure>;
 }
@@ -71,5 +81,16 @@ export const makeMemoryProjectRepository = (seed: MemoryProjectSeed = {}) =>
           ),
           failed,
         } satisfies ProjectLog),
+      search: (query) =>
+        Effect.succeed({
+          ...mergeMatches(
+            (seed.search ?? []).map(({ matches, repo }) => ({
+              repo,
+              matches: { matches, truncated: false },
+            })),
+            query.limit
+          ),
+          failed,
+        } satisfies ProjectMatches),
     };
   });

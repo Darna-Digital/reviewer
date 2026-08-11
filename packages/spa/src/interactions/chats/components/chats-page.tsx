@@ -12,11 +12,7 @@
  * moved since you last looked; the rows keep comparing against the mark this
  * visit started with, so nothing goes read out from under you.
  */
-import {
-  IconArrowsDiagonal,
-  IconArrowsDiagonalMinimize2,
-  IconClock,
-} from "@tabler/icons-react";
+import { IconClock } from "@tabler/icons-react";
 import {
   Outlet,
   useNavigate,
@@ -25,7 +21,6 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { PaneHeader } from "@/components/layout/pane-header";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +35,6 @@ import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapte
 import { useWindowTabs } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { ChatRow } from "@/interactions/chats/components/chat-row";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
-import { openSessionTab } from "@/interactions/chats/functions/open-session-tab";
 import { DATE_FILTERS, dateCutoff, type DateFilter } from "@/lib/date-filter";
 import { useChats } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
@@ -56,15 +50,13 @@ export function ChatsPage() {
   /**
    * A session tab holds one conversation, so on one of those the thread is the
    * whole pane and the list stays out of it — landing in the inbox you
-   * deliberately stepped past would be the surprise. The crumb is the way back,
-   * and choosing either way holds for the visit.
+   * deliberately stepped past would be the surprise. ⌘-clicking a row is how a
+   * conversation is lifted into one; the toolbar's crumb is the way back.
    */
   const { tabs, activeId } = useWindowTabs();
   const startingNew = useSearch({ strict: false }).new === true;
   const ownTab =
     startingNew || tabs.find((tab) => tab.id === activeId)?.kind === "session";
-  const [override, setOverride] = useState<boolean | null>(null);
-  const expanded = override ?? ownTab;
 
   const [seenAt] = useState(prefs.inboxSeenAt);
   useEffect(() => {
@@ -72,7 +64,6 @@ export function ChatsPage() {
   }, []);
 
   const summaries = useMemo(() => chats.data ?? [], [chats.data]);
-  const selected = summaries.find((c) => c.id === chatId) ?? null;
 
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const filtered = useMemo(() => {
@@ -93,33 +84,7 @@ export function ChatsPage() {
   // Starting a session gets the whole pane: there is nothing to pick from a list
   // yet, and the composer is the only thing on screen worth looking at.
   const composing = chatId === undefined;
-  const showList = !composing && !expanded && prefs.sidebarVisible;
-
-  /**
-   * Back to the list. A session already has one to step out to, but the composer
-   * does not — nothing has been said yet, so there is no conversation for the
-   * list to sit beside, and the way back is to leave the composer.
-   */
-  const showSessions = () => {
-    setOverride(false);
-    if (composing) void navigate({ to: "/modes/agent-session" });
-  };
-
-  /**
-   * ⌘-click is "open elsewhere" everywhere else, so here it lifts the same
-   * conversation into a tab of its own rather than widening this one.
-   */
-  const toggleExpanded = (event: React.MouseEvent) => {
-    if ((event.metaKey || event.ctrlKey) && selected !== null) {
-      openSessionTab(selected.id, selected.title);
-      // The conversation is already the one on screen, so there is nowhere to
-      // navigate — dropping the override lets the new tab settle into the full
-      // width a session tab gets by default.
-      setOverride(null);
-      return;
-    }
-    setOverride(!expanded);
-  };
+  const showList = !composing && !ownTab && prefs.sidebarVisible;
 
   return (
     <div className="flex h-full min-h-0">
@@ -206,54 +171,7 @@ export function ChatsPage() {
         />
       )}
       <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <PaneHeader
-          crumbs={[
-            // A session with the pane to itself — a new one included — needs the
-            // way back said out loud, since the list it came from is not on
-            // screen to click.
-            ...(expanded
-              ? [
-                  <button
-                    key="sessions"
-                    type="button"
-                    onClick={showSessions}
-                    className="shrink-0 text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
-                  >
-                    Sessions
-                  </button>,
-                ]
-              : []),
-            <span key="thread" className="truncate font-medium">
-              {selected?.title ?? "New session"}
-            </span>,
-          ]}
-          {...(selected !== null
-            ? {
-                actions: (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 text-muted-foreground"
-                    aria-label={
-                      expanded
-                        ? "Exit full width (⌘-click to open in a new tab)"
-                        : "Expand full (⌘-click to open in a new tab)"
-                    }
-                    onClick={toggleExpanded}
-                  >
-                    {expanded ? (
-                      <IconArrowsDiagonalMinimize2 className="size-4" />
-                    ) : (
-                      <IconArrowsDiagonal className="size-4" />
-                    )}
-                  </Button>
-                ),
-              }
-            : {})}
-        />
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <Outlet />
-        </div>
+        <Outlet />
       </section>
     </div>
   );

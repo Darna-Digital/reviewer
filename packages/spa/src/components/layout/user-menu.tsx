@@ -30,13 +30,13 @@ export function UserMenu({ className }: { className?: string }) {
         render={
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             aria-label={`Account — ${VIEWER.name}`}
             className={cn("rounded-full", className)}
           />
         }
       >
-        <Avatar name={VIEWER.name} letters={1} className="size-6" />
+        <Avatar name={VIEWER.name} letters={1} className="size-5" />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="end" className="w-64">

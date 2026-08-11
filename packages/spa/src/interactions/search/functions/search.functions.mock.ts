@@ -3,6 +3,7 @@ import type {
   GrepOptions,
   GrepResults,
   SearchDependencies,
+  SearchScope,
 } from "../interfaces/search.interfaces";
 
 export const contentMatch = (
@@ -17,14 +18,18 @@ export const contentMatch = (
 
 export function mockSearchDependencies(results?: GrepResults) {
   const calls = {
-    grep: [] as Array<{ query: string; options: GrepOptions }>,
+    grep: [] as Array<{
+      query: string;
+      options: GrepOptions;
+      scope: SearchScope;
+    }>,
   };
 
   const deps: SearchDependencies = {
     data: { minQueryLength: 2 },
     sideEffects: {
-      grep: async (query, options) => {
-        calls.grep.push({ query, options });
+      grep: async (query, options, scope) => {
+        calls.grep.push({ query, options, scope });
         return results ?? { matches: [contentMatch()], truncated: false };
       },
     },

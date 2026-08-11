@@ -1,13 +1,14 @@
 import * as Context from "effect/Context";
 import type * as Effect from "effect/Effect";
 import type { NoRepoSelected } from "../../../shared.ts";
-import type { LogQuery } from "../../repo/schema/repo.schema.ts";
+import type { LogQuery, SearchQuery } from "../../repo/schema/repo.schema.ts";
 import type {
   ProjectBranches,
   ProjectChanges,
   ProjectCommitResult,
   ProjectFiles,
   ProjectLog,
+  ProjectMatches,
 } from "../schema/project.schema.ts";
 
 /**
@@ -26,6 +27,10 @@ export interface ProjectRepo {
   readonly worktreeDiff: Effect.Effect<string, NoRepoSelected>;
   readonly branches: Effect.Effect<ProjectBranches, NoRepoSelected>;
   readonly log: (query: LogQuery) => Effect.Effect<ProjectLog, NoRepoSelected>;
+  /** Grep every root's working tree, with the hits named from the project. */
+  readonly search: (
+    query: SearchQuery
+  ) => Effect.Effect<ProjectMatches, NoRepoSelected>;
   /**
    * Commit the given project paths, one commit per root that owns any of them,
    * all carrying the same message. Each root's outcome is reported separately:

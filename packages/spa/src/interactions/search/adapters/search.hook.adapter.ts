@@ -12,7 +12,7 @@ import {
   isTypingTarget,
   nextShiftTap,
 } from "../functions/shortcuts.functions";
-import type { GrepOptions } from "../interfaces/search.interfaces";
+import type { GrepOptions, SearchScope } from "../interfaces/search.interfaces";
 
 /** One or two characters match most of the repository — wait for a real word. */
 export const MIN_QUERY_LENGTH = 2;
@@ -23,18 +23,23 @@ const MAX_MATCHES = 500;
 const searchFunctions = createSearchFunctions({
   data: { minQueryLength: MIN_QUERY_LENGTH },
   sideEffects: {
-    grep: async (query, options) => {
-      const { data, error } = await fetchClient.GET("/api/search", {
-        params: {
-          query: {
-            q: query,
-            case: options.caseSensitive ? "1" : "0",
-            word: options.wholeWord ? "1" : "0",
-            regex: options.regex ? "1" : "0",
-            limit: String(MAX_MATCHES),
-          },
+    grep: async (query, options, scope) => {
+      const params = {
+        query: {
+          q: query,
+          case: options.caseSensitive ? "1" : "0",
+          word: options.wholeWord ? "1" : "0",
+          regex: options.regex ? "1" : "0",
+          limit: String(MAX_MATCHES),
         },
-      });
+      };
+      // The project endpoint greps every root and names its hits from the
+      // project; the repo one answers for the root being followed. Both reply
+      // with the same matches/truncated pair, so only the URL differs.
+      const { data, error } =
+        scope === "project"
+          ? await fetchClient.GET("/api/project/search", { params })
+          : await fetchClient.GET("/api/search", { params });
       if (error !== undefined) throw error;
       return data ?? EMPTY_GREP_RESULTS;
     },
@@ -42,10 +47,11 @@ const searchFunctions = createSearchFunctions({
 });
 
 /**
- * The repo-wide content search behind the dialog's text mode. The query is
- * debounced here rather than in the dialog so a keystroke never fires a request
- * on its own, and the previous results stay on screen while the next ones load —
- * the list would otherwise blink empty on every letter.
+ * The content search behind the dialog's text mode, over whatever `scope`
+ * covers. The query is debounced here rather than in the dialog so a keystroke
+ * never fires a request on its own, and the previous results stay on screen
+ * while the next ones load — the list would otherwise blink empty on every
+ * letter.
  *
  * `enabled` only stops new requests; the results already fetched stay put, so a
  * dismissed dialog animates out still showing what it found.
@@ -53,7 +59,8 @@ const searchFunctions = createSearchFunctions({
 export function useGrepSearch(
   query: string,
   options: GrepOptions,
-  enabled = true
+  enabled = true,
+  scope: SearchScope = "repo"
 ) {
   const [debounced, setDebounced] = useState(query);
 
@@ -63,8 +70,10 @@ export function useGrepSearch(
   }, [query]);
 
   return useQuery({
-    queryKey: ["grep", debounced, options],
-    queryFn: () => searchFunctions.grep(debounced, options),
+    // The scope is part of the key: the same words searched across a project
+    // and inside one root are two different answers.
+    queryKey: ["grep", scope, debounced, options],
+    queryFn: () => searchFunctions.grep(debounced, options, scope),
     enabled,
     placeholderData: keepPreviousData,
     staleTime: 30_000,

@@ -12,6 +12,7 @@ import * as Schema from "effect/Schema";
 import {
   BranchInfo,
   CommitInfo,
+  ContentMatch,
   GitStatusEntry,
   RemoteBranchInfo,
   RepoStatus,
@@ -101,3 +102,15 @@ export const ProjectLog = Schema.Struct({
   failed: Schema.Array(RepoFailure),
 });
 export type ProjectLog = typeof ProjectLog.Type;
+
+/**
+ * Every root's content matches as one result, each path named from the project
+ * root the same way `ProjectFiles` names them — so a hit opens the file it came
+ * from without the dialog having to remember which repository ran the grep.
+ */
+export const ProjectMatches = Schema.Struct({
+  matches: Schema.Array(ContentMatch),
+  truncated: Schema.Boolean,
+  failed: Schema.Array(RepoFailure),
+});
+export type ProjectMatches = typeof ProjectMatches.Type;

@@ -23,7 +23,7 @@ export function NewSessionButton() {
         render={
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             aria-label="New session"
             className="rounded-lg text-muted-foreground"
             // A session minted here is for building, whatever the last one
@@ -38,7 +38,7 @@ export function NewSessionButton() {
           />
         }
       >
-        <IconPencilPlus className="size-5" />
+        <IconPencilPlus className="size-4" />
       </TooltipTrigger>
       <TooltipContent side="bottom">New session</TooltipContent>
     </Tooltip>

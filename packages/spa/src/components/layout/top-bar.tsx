@@ -53,7 +53,7 @@ export function TopBar(props: TopBarProps) {
   const current = repo?.currentBranch ?? null;
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-2 px-2">
+    <header className="flex h-9 shrink-0 items-center gap-2 px-2">
       {/* <ModeSelector /> */}
 
       {/* Project chip — opens the recents + folder-browser dropdown */}

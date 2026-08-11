@@ -4,6 +4,10 @@
  * root knows it and the same path as the project knows it.
  */
 import type { ProjectChanges, RepoChanges } from "../schema/project.schema.ts";
+import type {
+  ContentMatch,
+  ContentMatches,
+} from "../../repo/schema/repo.schema.ts";
 import type { RepoEntry } from "../../workspace/schema/workspace.schema.ts";
 
 /**
@@ -54,6 +58,35 @@ export const mergeCommits = <C extends { readonly authoredAt: string }>(
       return byDate !== 0 ? byDate : a.order - b.order;
     })
     .map(({ commit, repo }) => ({ commit, repo }));
+
+/**
+ * Every root's grep hits as one result, in project order, with each path named
+ * from the project root. Roots are kept whole rather than interleaved: matches
+ * are read grouped under their file, and a root's files belong together.
+ *
+ * Each root is asked for a full page, since any one of them could supply the
+ * whole result; the limit is applied to the merged list, and the result counts
+ * as truncated when a root said so or when the merge itself had to cut.
+ */
+export const mergeMatches = (
+  perRepo: ReadonlyArray<{
+    readonly repo: RepoEntry;
+    readonly matches: ContentMatches;
+  }>,
+  limit: number
+): ContentMatches => {
+  const all: Array<ContentMatch> = perRepo.flatMap(({ matches, repo }) =>
+    matches.matches.map((match) => ({
+      ...match,
+      path: projectPath(repo, match.path),
+    }))
+  );
+  return {
+    matches: all.slice(0, limit),
+    truncated:
+      all.length > limit || perRepo.some((entry) => entry.matches.truncated),
+  };
+};
 
 /** How many files are uncommitted across the whole project. */
 export const changedFileCount = (changes: ProjectChanges): number =>

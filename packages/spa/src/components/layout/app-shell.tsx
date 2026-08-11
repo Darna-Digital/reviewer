@@ -216,7 +216,7 @@ export function AppShell() {
   // so it keeps the paged per-branch log it always had.
   const multiRepo = isMultiRepo({ repos: workspace.data?.repos ?? [] });
   const projectBranchList = useProjectBranches();
-  const projectLog = usePagedProjectLog(multiRepo);
+  const projectLog = usePagedProjectLog(multiRepo, logFilters);
   // Which root the history is narrowed to, or null for all of them. Branch
   // names cannot narrow a merged history — one belongs to a single root — so
   // the root is what the filter offers instead.

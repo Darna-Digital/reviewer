@@ -61,6 +61,8 @@ export interface UiPrefs {
   commitAgent: CommitAgent;
   /** Model ids starred in the chat composer's model picker. */
   chatModelFavorites: string[];
+  /** Drag-resizable height of the chat composer's prompt box, in px. */
+  composerHeight: number;
   /** Whether the browser pane splits the canvas. Native shell only. */
   browserPaneOpen: boolean;
   /** Drag-resizable browser pane width, in px. */
@@ -90,7 +92,11 @@ const systemTheme = (): Theme =>
 const resolve = (pref: ThemePref): Theme =>
   pref === "system" ? systemTheme() : pref;
 
-const BOTTOM_TABS: ReadonlyArray<BottomTab> = ["history", "services", "threads"];
+const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
+  "history",
+  "services",
+  "threads",
+];
 
 const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   theme: "system",
@@ -113,6 +119,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   commitDetailsWidth: 320,
   commitAgent: "claude",
   chatModelFavorites: [],
+  composerHeight: 92,
   browserPaneOpen: false,
   browserPaneWidth: 480,
   browserPaneUrls: {},
@@ -170,6 +177,7 @@ function persist() {
       commitDetailsWidth,
       commitAgent,
       chatModelFavorites,
+      composerHeight,
       browserPaneOpen,
       browserPaneWidth,
       browserPaneUrls,
@@ -200,6 +208,7 @@ function persist() {
         commitDetailsWidth,
         commitAgent,
         chatModelFavorites,
+        composerHeight,
         browserPaneOpen,
         browserPaneWidth,
         browserPaneUrls,

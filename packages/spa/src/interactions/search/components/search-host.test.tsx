@@ -13,6 +13,12 @@ const FILES = [
   "packages/spa/src/components/layout/app-shell.tsx",
 ];
 
+/** A multi-root project's files, named from the project root. */
+const PROJECT_FILES = ["backend/src/server.ts", "frontend/src/queries.ts"];
+
+/** Whether the open project holds more than one git root. */
+let multiRepo = false;
+
 const navigate = vi.fn();
 const git = vi.hoisted(() => ({
   refresh: vi.fn(),
@@ -59,6 +65,8 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
 }));
 vi.mock("@/lib/queries", () => ({
   useFiles: () => ({ data: { paths: FILES, gitStatus: [] } }),
+  useProjectFiles: () => ({ data: { paths: PROJECT_FILES, gitStatus: [] } }),
+  useMultiRepo: () => multiRepo,
   useRepo: () => ({ data: { currentBranch: "main", github: null } }),
   useBranches: () => ({ data: BRANCHES }),
   useRemoteBranches: () => ({ data: [] }),
@@ -121,6 +129,7 @@ const dialog = () => screen.queryByRole("textbox", { name: /^Search/ });
 beforeEach(() => {
   vi.clearAllMocks();
   pathname = "/modes/agent-session";
+  multiRepo = false;
 });
 
 afterEach(() => {
@@ -230,6 +239,21 @@ describe("SearchHost", () => {
     expect(navigate).toHaveBeenCalledWith({
       to: "/modes/code/commit",
       search: { file: "packages/spa/src/lib/queries.ts" },
+    });
+  });
+
+  it("finds a file in any root of a multi-root project", async () => {
+    multiRepo = true;
+    const user = setup();
+
+    await user.keyboard("{Shift>}{/Shift}");
+    await user.keyboard("{Shift>}{/Shift}");
+    await user.type(dialog()!, "server");
+    await user.click(screen.getByRole("button", { name: /server\.ts/ }));
+
+    expect(navigate).toHaveBeenCalledWith({
+      to: "/modes/code/commit",
+      search: { file: "backend/src/server.ts" },
     });
   });
 

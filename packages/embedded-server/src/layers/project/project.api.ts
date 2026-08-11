@@ -7,9 +7,10 @@ import {
   ProjectCommitResult,
   ProjectFiles,
   ProjectLog,
+  ProjectMatches,
 } from "@byconvo/core/project";
 import * as Schema from "effect/Schema";
-import { LogQueryParams } from "@byconvo/core/repo";
+import { LogQueryParams, SearchQueryParams } from "@byconvo/core/repo";
 import { NoRepoSelected } from "@byconvo/core/shared";
 
 const noProject = [NoRepoSelected] as const;
@@ -50,6 +51,13 @@ export class ProjectApi extends HttpApiGroup.make("project")
     HttpApiEndpoint.get("log", "/project/log", {
       query: LogQueryParams,
       success: ProjectLog,
+      error: noProject,
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("search", "/project/search", {
+      query: SearchQueryParams,
+      success: ProjectMatches,
       error: noProject,
     })
   ) {}

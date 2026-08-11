@@ -13,18 +13,27 @@ describe("search functions", () => {
     const { deps, calls } = mockSearchDependencies();
     const fns = createSearchFunctions(deps);
 
-    await fns.grep("  useFiles  ", DEFAULT_GREP_OPTIONS);
+    await fns.grep("  useFiles  ", DEFAULT_GREP_OPTIONS, "repo");
 
     expect(calls.grep).toEqual([
-      { query: "useFiles", options: DEFAULT_GREP_OPTIONS },
+      { query: "useFiles", options: DEFAULT_GREP_OPTIONS, scope: "repo" },
     ]);
+  });
+
+  it("passes the scope through, so a project searches every root", async () => {
+    const { deps, calls } = mockSearchDependencies();
+    const fns = createSearchFunctions(deps);
+
+    await fns.grep("useFiles", DEFAULT_GREP_OPTIONS, "project");
+
+    expect(calls.grep[0]?.scope).toBe("project");
   });
 
   it("does not search for a query that is too short to be useful", async () => {
     const { deps, calls } = mockSearchDependencies();
     const fns = createSearchFunctions(deps);
 
-    const results = await fns.grep("u", DEFAULT_GREP_OPTIONS);
+    const results = await fns.grep("u", DEFAULT_GREP_OPTIONS, "repo");
 
     expect(results).toEqual({ matches: [], truncated: false });
     expect(calls.grep).toEqual([]);
@@ -34,7 +43,7 @@ describe("search functions", () => {
     const { deps, calls } = mockSearchDependencies();
     const fns = createSearchFunctions(deps);
 
-    await fns.grep("    ", DEFAULT_GREP_OPTIONS);
+    await fns.grep("    ", DEFAULT_GREP_OPTIONS, "repo");
 
     expect(calls.grep).toEqual([]);
   });

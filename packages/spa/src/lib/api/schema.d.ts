@@ -644,6 +644,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/project/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["project.search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/comments": {
         parameters: {
             query?: never;
@@ -3592,6 +3608,57 @@ export interface operations {
                                 parents: string[];
                             };
                         }[];
+                        failed: {
+                            repo: {
+                                name: string;
+                                path: string;
+                                branch: string | null;
+                            };
+                            reason: string;
+                        }[];
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+        };
+    };
+    "project.search": {
+        parameters: {
+            query: {
+                q: string;
+                case?: string;
+                word?: string;
+                regex?: string;
+                limit?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        matches: {
+                            path: string;
+                            line: number;
+                            column: number;
+                            text: string;
+                        }[];
+                        truncated: boolean;
                         failed: {
                             repo: {
                                 name: string;

@@ -286,8 +286,7 @@
   --elev-overlay:
     0 16px 32px 0 rgb(0 0 0 / 0.04), 0 8px 16px 0 rgb(0 0 0 / 0.08),
     0 0 0 0.5px rgb(0 0 0 / 0.12);
-  --elev-button:
-    0 1px 1.5px 0 rgb(0 0 0 / 0.1), 0 0 0 0.5px rgb(0 0 0 / 0.14);
+  --elev-button: 0 1px 1.5px 0 rgb(0 0 0 / 0.1), 0 0 0 0.5px rgb(0 0 0 / 0.14);
   /* No hairline and no inset lines on the filled button, unlike every other
      face here. A ring around a saturated fill reads as a drawn border rather
      than an edge, and the sheen already gives the shape its top and bottom —
@@ -295,8 +294,8 @@
   --elev-button-contrast: 0 1px 2px 0 rgb(0 0 0 / 0.1);
   --elev-element: 0 0.5px 0.5px 0 rgb(0 0 0 / 0.4);
   --elev-groove:
-    inset 0 1px 1px 0 rgb(0 0 0 / 0.08), inset 0 0.5px 0.5px 0 rgb(0 0 0 / 0.08),
-    inset 0 0 0 0.5px rgb(0 0 0 / 0.1);
+    inset 0 1px 1px 0 rgb(0 0 0 / 0.08),
+    inset 0 0.5px 0.5px 0 rgb(0 0 0 / 0.08), inset 0 0 0 0.5px rgb(0 0 0 / 0.1);
   --elev-groove-filled:
     inset 0 2px 2px 0 rgb(0 0 0 / 0.1), inset 0 1px 1px 0 rgb(0 0 0 / 0.1),
     inset 0 0 0 0.5px rgb(0 0 0 / 0.2);
@@ -1014,10 +1013,10 @@ diffs-container {
   --diffs-bg-selection-override: light-dark(#009fff, #69b1ff);
   --diffs-bg-selection-number-override: light-dark(#009fff, #69b1ff);
   /* One blue in three weights for the row you are commenting on: the gutter
-     deepest, the anchor line next, and the annotation the composer sits in only
-     a wash — so the line reads as the subject and the card as its overflow.
-     Pierre mixes the selection into whatever the line already is, so an
-     addition's green swung the anchor line off-hue from the neutral-based
+     the strongest, the anchor line next, and the annotation the composer sits
+     in the quietest — so the line reads as the subject and the card as its
+     overflow. Pierre mixes the selection into whatever the line already is, so
+     an addition's green swung the anchor line off-hue from the neutral-based
      annotation and the two blues stopped looking related. Both themes hold one
      hue across the ramp instead; diff-pane maps them onto the rows through the
      shadow root's `unsafe` layer.
@@ -1026,21 +1025,41 @@ diffs-container {
      so a few points of lightness below the page is all a rung costs. Diluting
      the same pale blue into the near-black canvas is what came out muddy — the
      gutter landed 0.23 OKLCH lightness above the page while keeping only 0.06
-     chroma, which is a lifted grey, not a blue. Dark names its rungs outright
-     on one hue: about half that lift, half again the chroma, so each weight
-     reads as blue rather than as a paler slab of the page. */
+     chroma, which is a lifted grey, not a blue.
+
+     Dark names its rungs outright and spends them differently: rather than
+     three weights it paints the anchor row as one flat band and lets the
+     annotation fall back to a whisper over the page, so the colour marks the
+     line and the composer card floats on near-neutral ground under it. Three
+     weights is a light-mode idea — over paper each rung costs a couple points
+     of lightness, but over near-black the annotation is the largest area on
+     screen and anything with real chroma or lift turns it into a slab framing
+     a darker card. */
   --diffs-selection-hue: 252;
+  --diffs-selection-row-bg: oklch(0.264 0.056 var(--diffs-selection-hue));
   --diffs-selection-gutter-bg: light-dark(
-    color-mix(in lab, var(--background) 68%, var(--diffs-bg-selection-override)),
-    oklch(0.323 0.086 var(--diffs-selection-hue))
+    color-mix(
+      in lab,
+      var(--background) 68%,
+      var(--diffs-bg-selection-override)
+    ),
+    var(--diffs-selection-row-bg)
   );
   --diffs-selection-line-bg: light-dark(
-    color-mix(in lab, var(--background) 78%, var(--diffs-bg-selection-override)),
-    oklch(0.281 0.062 var(--diffs-selection-hue))
+    color-mix(
+      in lab,
+      var(--background) 78%,
+      var(--diffs-bg-selection-override)
+    ),
+    var(--diffs-selection-row-bg)
   );
   --diffs-selection-annotation-bg: light-dark(
-    color-mix(in lab, var(--background) 93%, var(--diffs-bg-selection-override)),
-    oklch(0.225 0.028 var(--diffs-selection-hue))
+    color-mix(
+      in lab,
+      var(--background) 93%,
+      var(--diffs-bg-selection-override)
+    ),
+    oklch(0.214 0.018 var(--diffs-selection-hue))
   );
 }
 

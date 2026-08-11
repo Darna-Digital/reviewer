@@ -18,6 +18,7 @@ import { ModeRail } from "@/components/layout/mode-rail";
 // import { ModeSelector } from "@/components/layout/mode-selector";
 import { AgentStrip } from "@/interactions/session-agents/components/agent-strip";
 import { NewSessionButton } from "@/interactions/chats/components/new-session-button";
+import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
 import { SessionSearch } from "@/interactions/chats/components/session-search";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
@@ -90,7 +91,7 @@ export function WorkspaceShell() {
     <WindowFrame>
       {!collaborating && !inSession && <ModeRail />}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-11 shrink-0 items-center gap-2 px-2">
+        <header className="flex h-9 shrink-0 items-center gap-2 px-2">
           {/* <ModeSelector /> */}
           {collaborating && (
             <>
@@ -110,12 +111,14 @@ export function WorkspaceShell() {
             </>
           )}
           {/* A session's bar opens with the two things that act on the list —
-              minting one and finding one — and parks the agents answering it at
-              the far end, where they read as status rather than as controls. */}
+              minting one and finding one — then names the conversation those
+              act beside, and parks the agents answering it at the far end,
+              where they read as status rather than as controls. */}
           {inSession && (
             <>
               <NewSessionButton />
               <SessionSearch />
+              <SessionCrumbs />
               <div className="flex-1" />
               <AgentStrip />
             </>

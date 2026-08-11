@@ -20,10 +20,10 @@ export const DEFAULT_GREP_OPTIONS: GrepOptions = {
 };
 
 export function createSearchFunctions(d: SearchDependencies): SearchFunctions {
-  const grep: SearchFunctions["grep"] = async (query, options) => {
+  const grep: SearchFunctions["grep"] = async (query, options, scope) => {
     const trimmed = query.trim();
     if (trimmed.length < d.data.minQueryLength) return EMPTY_GREP_RESULTS;
-    return d.sideEffects.grep(trimmed, options);
+    return d.sideEffects.grep(trimmed, options, scope);
   };
 
   return { grep };

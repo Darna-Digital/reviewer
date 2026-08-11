@@ -4,6 +4,7 @@ import {
   filterCommitsByRepo,
   groupPathsByRepo,
   mergeCommits,
+  mergeMatches,
   prefixDiffPaths,
   projectIsOutOfSync,
   projectPath,
@@ -125,6 +126,65 @@ describe("mergeCommits", () => {
 
   it("is empty for a project with no history", () => {
     expect(mergeCommits([])).toEqual([]);
+  });
+});
+
+describe("mergeMatches", () => {
+  const hit = (path: string, line = 1) => ({
+    path,
+    line,
+    column: 1,
+    text: "openLocation",
+  });
+  const found = (
+    name: string,
+    paths: ReadonlyArray<string>,
+    truncated = false
+  ) => ({
+    repo: repo(name),
+    matches: { matches: paths.map((path) => hit(path)), truncated },
+  });
+
+  it("names every hit from the project root", () => {
+    const merged = mergeMatches([found("web-app", ["src/a.ts"])], 200);
+
+    expect(merged.matches[0]?.path).toBe("web-app/src/a.ts");
+  });
+
+  it("keeps each root's hits together, in project order", () => {
+    const merged = mergeMatches(
+      [
+        found("web-app", ["src/a.ts", "src/b.ts"]),
+        found("backend-app", ["src/c.ts"]),
+      ],
+      200
+    );
+
+    expect(merged.matches.map((match) => match.path)).toEqual([
+      "web-app/src/a.ts",
+      "web-app/src/b.ts",
+      "backend-app/src/c.ts",
+    ]);
+  });
+
+  it("cuts the merged list to the limit and says it did", () => {
+    const merged = mergeMatches(
+      [found("web-app", ["src/a.ts", "src/b.ts"]), found("api", ["src/c.ts"])],
+      2
+    );
+
+    expect(merged.matches).toHaveLength(2);
+    expect(merged.truncated).toBe(true);
+  });
+
+  it("is truncated when a root had more than it was allowed to return", () => {
+    const merged = mergeMatches([found("web-app", ["src/a.ts"], true)], 200);
+
+    expect(merged.truncated).toBe(true);
+  });
+
+  it("is empty, and whole, for a project nothing matched in", () => {
+    expect(mergeMatches([], 200)).toEqual({ matches: [], truncated: false });
   });
 });
 
