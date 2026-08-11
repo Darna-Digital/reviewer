@@ -43,8 +43,8 @@ import {
 import { api } from "@/lib/api/client";
 import { displayPath, pathName } from "@/lib/display-path";
 import { isDesktop, openDesktopDirectory } from "@/lib/desktop";
-import { repoAvatar } from "@/lib/repo-avatar";
 import { cn } from "@/lib/utils";
+import { ProjectAvatar } from "./project-avatar";
 import { useWorkspaceActions } from "../adapters/workspace.hook.adapter";
 import { folderHint, folderName, isOpenable } from "@byconvo/core/workspace";
 import type { WorkspaceInfo } from "@byconvo/core/workspace";
@@ -63,31 +63,13 @@ interface ProjectPickerProps {
   side?: "top" | "bottom";
 }
 
-function Avatar({
-  name,
-  className = "size-4 text-[9px]",
-}: {
-  name: string;
-  className?: string;
-}) {
-  const a = repoAvatar(name);
-  return (
-    <span
-      className={`flex shrink-0 items-center justify-center rounded-sm font-semibold text-white ${className}`}
-      style={{ backgroundColor: a.color }}
-    >
-      {a.initials}
-    </span>
-  );
-}
-
 /** Matches the branch dropdown's menu items, on buttons the menu doesn't own. */
 const rowClass =
-  "flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-hidden select-none hover:bg-elevate hover:text-foreground focus:bg-elevate focus:text-foreground";
+  "flex w-full min-w-0 items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm outline-hidden select-none hover:bg-elevate hover:text-foreground focus:bg-elevate focus:text-foreground";
 
-const sectionLabelClass = "px-2 py-1 text-xs text-muted-foreground";
+const sectionLabelClass = "px-2.5 pt-2 pb-1 text-xs text-muted-foreground";
 
-const emptyClass = "px-2 py-6 text-center text-sm text-muted-foreground";
+const emptyClass = "px-2.5 py-6 text-center text-sm text-muted-foreground";
 
 /**
  * A folder row: name over its path. Anywhere on the row is the tooltip's
@@ -219,7 +201,7 @@ export function ProjectPicker({
           />
         }
       >
-        {projectName !== null && <Avatar name={projectName} />}
+        {projectName !== null && <ProjectAvatar name={projectName} />}
         {projectName === null && (
           <IconFolder className="size-3.5 shrink-0 text-muted-foreground" />
         )}
@@ -234,7 +216,7 @@ export function ProjectPicker({
       >
         {!browsing && (
           <>
-            <div className="flex shrink-0 items-center gap-2 border-b px-2.5 py-2">
+            <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2.5">
               <IconSearch className="size-4 shrink-0 text-muted-foreground" />
               <input
                 ref={searchRef}

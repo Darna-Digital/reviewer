@@ -5,8 +5,8 @@
  */
 import { IconFolders, IconGitBranch } from "@tabler/icons-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { repoAvatar } from "@/lib/repo-avatar";
 import { folderName } from "@byconvo/core/workspace";
+import { ProjectAvatar } from "./project-avatar";
 import type { RepoEntry } from "@byconvo/core/workspace";
 
 interface ProjectReposProps {
@@ -32,33 +32,25 @@ export function ProjectRepos({ project, repos, onOpen }: ProjectReposProps) {
         </div>
         {repos.length > 0 && (
           <ul className="grid grid-cols-2 gap-2">
-            {repos.map((repo) => {
-              const avatar = repoAvatar(repo.name);
-              return (
-                <li key={repo.path}>
-                  <button
-                    className="flex w-full items-center gap-2 rounded-lg border p-3 text-left hover:bg-muted"
-                    onClick={() => onOpen(repo.path)}
-                  >
-                    <span
-                      className="flex size-7 items-center justify-center rounded-md text-xs font-semibold text-white"
-                      style={{ backgroundColor: avatar.color }}
-                    >
-                      {avatar.initials}
+            {repos.map((repo) => (
+              <li key={repo.path}>
+                <button
+                  className="flex w-full items-center gap-2.5 rounded-lg border p-3 text-left hover:bg-muted"
+                  onClick={() => onOpen(repo.path)}
+                >
+                  <ProjectAvatar name={repo.name} className="size-7 text-xs" />
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-1 truncate text-sm font-medium">
+                      <IconGitBranch className="size-3.5 text-muted-foreground" />
+                      {repo.name}
                     </span>
-                    <span className="min-w-0">
-                      <span className="flex items-center gap-1 truncate text-sm font-medium">
-                        <IconGitBranch className="size-3.5 text-muted-foreground" />
-                        {repo.name}
-                      </span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {repo.branch ?? "detached"}
-                      </span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {repo.branch ?? "detached"}
                     </span>
-                  </button>
-                </li>
-              );
-            })}
+                  </span>
+                </button>
+              </li>
+            ))}
           </ul>
         )}
       </div>
