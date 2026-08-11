@@ -24,6 +24,7 @@ import type {
   CommitInfo,
   RemoteBranchInfo,
 } from "@byconvo/core/repo";
+import type { RepoEntry } from "@byconvo/core/workspace";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +49,8 @@ interface BottomPanelProps {
   remoteBranches: ReadonlyArray<RemoteBranchInfo>;
   currentBranch: string | null;
   commits: ReadonlyArray<CommitInfo>;
+  /** Which root each commit came from, for a project of several. */
+  commitRepos?: ReadonlyMap<string, RepoEntry>;
   commitsLoading: boolean;
   commitsHaveMore: boolean;
   logRef: string | null;
@@ -167,6 +170,7 @@ export function BottomPanel(props: BottomPanelProps) {
             hasMore={props.commitsHaveMore}
             selectedCommitSha={props.selectedCommitSha}
             selectedFile={props.selectedCommitFile}
+            commitRepos={props.commitRepos}
             onLoadMore={props.onLoadMoreCommits}
             onRefChange={props.onLogRefChange}
             onQueryChange={props.onLogFiltersChange}

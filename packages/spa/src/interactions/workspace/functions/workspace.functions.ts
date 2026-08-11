@@ -78,5 +78,8 @@ export function createWorkspaceFunctions(
   const openRepo: WorkspaceFunctions["openRepo"] = (path) =>
     select(() => setRepo(path), "could not open repository");
 
-  return { openProject, openRepo };
+  const followRepo: WorkspaceFunctions["followRepo"] = async (path, current) =>
+    path === current ? true : (await openRepo(path)) !== null;
+
+  return { openProject, openRepo, followRepo };
 }

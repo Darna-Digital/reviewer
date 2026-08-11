@@ -64,6 +64,7 @@ import { useCommentsActions } from "@/interactions/comments/adapters/comments.ho
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
+import { isMultiRepo } from "@byconvo/core/workspace";
 import {
   useRepoCommands,
   useWorkspaceActions,
@@ -101,9 +102,11 @@ import {
   type LogQuery,
 } from "@/lib/api/types";
 import type { ReviewComment } from "@byconvo/core/comments";
+import type { CommitInfo } from "@byconvo/core/repo";
 import { pathName } from "@/lib/display-path";
 import { errorReason } from "@/lib/errors";
 import {
+  LOG_PAGE_SIZE,
   useBranches,
   useChatModels,
   useChats,
@@ -113,6 +116,7 @@ import {
   useFiles,
   useMergeState,
   usePagedLog,
+  useProjectLog,
   usePullComments,
   usePulls,
   useRemoteBranches,
@@ -204,6 +208,35 @@ export function AppShell() {
     logRef ?? repo.data?.currentBranch ?? null,
     logFilters
   );
+  // A project of several roots shows one history covering all of them, each
+  // row saying where it came from — a single-root project has nothing to say,
+  // so it keeps the paged per-branch log it always had.
+  const multiRepo = isMultiRepo({ repos: workspace.data?.repos ?? [] });
+  const projectLog = useProjectLog(LOG_PAGE_SIZE);
+  const projectHistory = useMemo(() => {
+    const entries = projectLog.data?.commits ?? [];
+    return {
+      commits: entries.map((entry) => entry.commit),
+      repos: new Map(entries.map((entry) => [entry.commit.sha, entry.repo])),
+    };
+  }, [projectLog.data]);
+  const history = multiRepo
+    ? {
+        commits: projectHistory.commits,
+        repos: projectHistory.repos,
+        loading: projectLog.isPending,
+        // The project log is read whole rather than paged: merging the roots
+        // means a page boundary in one is not one in the merged list.
+        hasMore: false,
+        loadMore: () => {},
+      }
+    : {
+        commits: log.commits,
+        repos: undefined,
+        loading: log.loading,
+        hasMore: log.hasMore,
+        loadMore: log.loadMore,
+      };
 
   // Callback-ref state, not a ref object: the file view renders into this node,
   // so it has to re-render once the node exists.
@@ -803,6 +836,32 @@ export function AppShell() {
     await workspaceActions.openRepo(path);
   };
 
+  /**
+   * Open a commit from the history. In a project of several roots the commit
+   * may belong to one that is not current, so the root is followed first —
+   * every view below reads git from the current root, and a sha means nothing
+   * to the wrong one.
+   */
+  const openCommit = async (commit: CommitInfo) => {
+    const owner = history.repos?.get(commit.sha) ?? null;
+    if (owner !== null) {
+      const followed = await workspaceActions.followRepo(
+        owner.path,
+        workspace.data?.current ?? null
+      );
+      if (!followed) return;
+    }
+    void navigate({
+      to: "/modes/code/browse/commit/$sha",
+      params: { sha: commit.sha },
+      search: (prev: Search) => ({
+        ...prev,
+        path: logFilters.path ?? undefined,
+        file: undefined,
+      }),
+    });
+  };
+
   // --- center pane -----------------------------------------------------------
   const renderCenter = () => {
     if (noRepo) {
@@ -1176,33 +1235,24 @@ export function AppShell() {
                 branches={branches.data ?? []}
                 remoteBranches={remoteBranches.data ?? []}
                 currentBranch={repo.data?.currentBranch ?? null}
-                commits={log.commits}
-                commitsLoading={log.loading}
-                commitsHaveMore={log.hasMore}
+                commits={history.commits}
+                commitRepos={history.repos}
+                commitsLoading={history.loading}
+                commitsHaveMore={history.hasMore}
                 logRef={logRef ?? repo.data?.currentBranch ?? null}
                 logFilters={logFilters}
                 selectedCommitSha={
                   browse?.kind === "commit" ? browse.sha : null
                 }
                 selectedCommitFile={viewing}
-                onLoadMoreCommits={log.loadMore}
+                onLoadMoreCommits={history.loadMore}
                 onLogRefChange={setLogRef}
                 onLogFiltersChange={setLogFilters}
                 onBranchCheckout={(b) => {
                   void git.checkout(b);
                   void navigate({ to: "/modes/code/commit" });
                 }}
-                onSelectCommit={(c) =>
-                  void navigate({
-                    to: "/modes/code/browse/commit/$sha",
-                    params: { sha: c.sha },
-                    search: (prev: Search) => ({
-                      ...prev,
-                      path: logFilters.path ?? undefined,
-                      file: undefined,
-                    }),
-                  })
-                }
+                onSelectCommit={(c) => void openCommit(c)}
                 onSelectCommitFile={(p) => openFile(p)}
               />
             </div>

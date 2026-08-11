@@ -5,6 +5,35 @@ import {
   multiRepoWorkspace,
 } from "./workspace.functions.mock";
 
+describe("followRepo", () => {
+  it("costs nothing when the root is already current", async () => {
+    const deps = createWorkspaceDependenciesMock();
+    const fns = createWorkspaceFunctions(deps);
+
+    expect(await fns.followRepo("/work/backend", "/work/backend")).toBe(true);
+    expect(deps.sideEffects.setRepo).not.toHaveBeenCalled();
+  });
+
+  it("switches to the root before it is acted on", async () => {
+    const deps = createWorkspaceDependenciesMock();
+    const fns = createWorkspaceFunctions(deps);
+
+    expect(await fns.followRepo("/work/frontend", "/work/backend")).toBe(true);
+    expect(deps.sideEffects.setRepo).toHaveBeenCalledWith("/work/frontend");
+  });
+
+  it("reports a root that could not be followed", async () => {
+    const deps = createWorkspaceDependenciesMock({
+      setRepo: vi.fn(async () => {
+        throw { reason: "gone" };
+      }),
+    });
+    expect(
+      await createWorkspaceFunctions(deps).followRepo("/work/gone", "/work/a")
+    ).toBe(false);
+  });
+});
+
 describe("repoCommands", () => {
   it("offers every root except the one already being followed", () => {
     const commands = repoCommands(multiRepoWorkspace);

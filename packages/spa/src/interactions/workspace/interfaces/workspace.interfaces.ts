@@ -50,4 +50,13 @@ export interface WorkspaceFunctions {
    * or null when the server refused it (already reported to the user).
    */
   readonly openRepo: (path: string) => Promise<WorkspaceInfo | null>;
+  /**
+   * Make `path` the current root before acting on something that belongs to
+   * it — a change or a commit in a project-wide list. Already being there is
+   * success and costs nothing. Returns whether the root can now be acted on.
+   */
+  readonly followRepo: (
+    path: string,
+    current: string | null
+  ) => Promise<boolean>;
 }
