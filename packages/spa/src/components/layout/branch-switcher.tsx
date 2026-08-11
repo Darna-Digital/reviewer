@@ -3,17 +3,14 @@
  * `GitWidget` to the shadcn (base-ui) `DropdownMenu` primitives. It keeps the
  * JetBrains-style feature set: a filter box, collapsible Recent / Local /
  * Remote sections, folder grouping by the first path segment, ahead/behind and
- * upstream badges, repo-level fetch/pull/push, and a per-branch action submenu
- * (checkout, compare, merge, rebase, rename, delete, …).
+ * upstream badges, and a per-branch action submenu (checkout, new branch from,
+ * compare, merge, rebase, rename, delete, …). Everything acts on a branch that
+ * was picked first, so there are no repo-wide actions at the menu's top level.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  IconArrowDown,
-  IconArrowUp,
   IconChevronDown,
   IconChevronRight,
-  IconCloud,
-  IconCloudDownload,
   IconFolder,
   IconGitBranch,
   IconPlus,
@@ -44,6 +41,9 @@ import { Input } from "@/components/ui/input";
 import { handleSearchKeyDown } from "@/components/ui/search-keydown";
 import { cn } from "@/lib/utils";
 import { useSurfaceBackground } from "@/lib/surface-context";
+import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
+import type { RepoBranches } from "@byconvo/core/project";
+import type { RepoEntry } from "@byconvo/core/workspace";
 import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo";
 
 interface BranchSwitcherProps {
@@ -58,12 +58,27 @@ interface BranchSwitcherProps {
   onMerge: (branch: string) => void;
   onRebase: (onto: string) => void;
   onFetch: () => void;
-  onPull: () => void;
   onPush: () => void;
   onRenameBranch: (from: string, to: string) => void;
   onDeleteBranch: (name: string) => void;
   /** Which way the menu opens — "top" for a bar pinned to the bottom. */
   side?: "top" | "bottom";
+  /**
+   * Every root's branches, when the project holds more than one. Their
+   * presence moves the menu's whole body one level up: the top level lists the
+   * roots, and each root expands into exactly the menu a single-repo project
+   * gets — Recent / Local / Remote, folders, the per-branch actions. The
+   * design does not change; it just starts once per repository.
+   */
+  repos?: ReadonlyArray<RepoBranches>;
+  /** The root the git views follow — marked, and the one actions run in. */
+  currentRepo?: RepoEntry | null;
+  /**
+   * Make `repoPath` the current root before acting in it. Actions run wherever
+   * the git views point, so acting in another root goes through this first;
+   * resolves false when the switch failed and the action must not run.
+   */
+  onFollowRepo?: (repoPath: string) => Promise<boolean>;
 }
 
 /**
@@ -77,9 +92,18 @@ type BranchPrompt =
       readonly kind: "create";
       readonly startPoint: string | null;
       readonly label: string;
+      readonly repoPath: string | null;
     }
-  | { readonly kind: "rename"; readonly from: string }
-  | { readonly kind: "delete"; readonly name: string };
+  | {
+      readonly kind: "rename";
+      readonly from: string;
+      readonly repoPath: string | null;
+    }
+  | {
+      readonly kind: "delete";
+      readonly name: string;
+      readonly repoPath: string | null;
+    };
 
 /** A branch the action submenu operates on, normalised across local/remote. */
 interface BranchTarget {
@@ -90,9 +114,6 @@ interface BranchTarget {
   readonly isCurrent: boolean;
   readonly isRemote: boolean;
 }
-
-/** Submenu holding the repo-wide remote operations, not the branch-scoped ones. */
-const REPO_ACTIONS_LABEL = "Git";
 
 /** Branch names make these labels long; the menu item tooltips the clipped ones. */
 const ActionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -160,110 +181,220 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
     setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const currentName = current ?? branches.find((b) => b.isCurrent)?.name ?? "—";
+  // The menu nests per root only once there are several; a single root keeps
+  // the flat body it has always had.
+  const multiRepo = (props.repos ?? []).length > 1;
+  const currentRepoPath = props.currentRepo?.path ?? null;
 
-  const recent = useMemo(
-    () => branches.filter((b) => matches(b.name)).slice(0, 5),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [branches, q]
-  );
-  const localGroups = useMemo(
-    () =>
-      groupByFolder(
-        branches.filter((b) => matches(b.name)),
-        (b) => b.name
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [branches, q]
-  );
-  const remoteGroups = useMemo(
-    () =>
-      groupByFolder(
-        remoteBranches.filter((b) => matches(b.name)),
-        (b) => b.name
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [remoteBranches, q]
-  );
-  const localCount = localGroups.reduce((n, g) => n + g.items.length, 0);
-  const remoteCount = remoteGroups.reduce((n, g) => n + g.items.length, 0);
+  /**
+   * Run `fn` in `repoPath`: directly when it is already the current root,
+   * otherwise after following it — the handlers behind these menu items act on
+   * whatever root the git views point at.
+   */
+  const inRepo = (repoPath: string | null) => (fn: () => void) => () => {
+    if (repoPath === null || repoPath === currentRepoPath) {
+      fn();
+      return;
+    }
+    void props.onFollowRepo?.(repoPath).then((ok) => {
+      if (ok) fn();
+    });
+  };
 
-  const showNew = matches("New Branch");
-  const repoActions = [
-    { label: "Fetch", run: props.onFetch, icon: IconCloudDownload },
-    { label: "Pull", run: props.onPull, icon: IconArrowDown },
-    { label: "Push", run: props.onPush, icon: IconArrowUp },
-  ].filter((a) => matches(REPO_ACTIONS_LABEL) || matches(a.label));
+  /**
+   * The Recent / Local / Remote body for one repository — exactly the menu a
+   * single-repo project shows. A multi-root project renders this once per
+   * root, inside that root's submenu; nothing about the body itself differs.
+   */
+  const renderSections = (
+    scope: ActionScope & {
+      readonly sectionBranches: ReadonlyArray<BranchInfo>;
+      readonly sectionRemotes: ReadonlyArray<RemoteBranchInfo>;
+      readonly keyPrefix: string;
+    }
+  ) => {
+    const recent = scope.sectionBranches
+      .filter((b) => matches(b.name))
+      .slice(0, 5);
+    const localGroups = groupByFolder(
+      scope.sectionBranches.filter((b) => matches(b.name)),
+      (b) => b.name
+    );
+    const remoteGroups = groupByFolder(
+      scope.sectionRemotes.filter((b) => matches(b.name)),
+      (b) => b.name
+    );
+    const localCount = localGroups.reduce((n, g) => n + g.items.length, 0);
+    const remoteCount = remoteGroups.reduce((n, g) => n + g.items.length, 0);
+    const k = scope.keyPrefix;
 
-  const newBranch = (startPoint: string | null, label: string) =>
-    setPrompt({ kind: "create", startPoint, label });
+    return (
+      <>
+        <Section
+          title="Recent"
+          count={recent.length}
+          collapsed={isCollapsed(`${k}recent`)}
+          onToggle={() => toggleSection(`${k}recent`)}
+        >
+          {recent.map((b) => (
+            <LocalRow key={`r-${b.name}`} branch={b} flat scope={scope} />
+          ))}
+        </Section>
 
-  /** The JetBrains-style action list for one branch. */
-  const renderActions = (t: BranchTarget) => (
-    <>
-      {!t.isCurrent && (
-        <DropdownMenuItem onClick={() => props.onCheckout(t.ref)}>
-          Checkout
-        </DropdownMenuItem>
-      )}
-      <DropdownMenuItem onClick={() => newBranch(t.ref, t.display)}>
-        <IconPlus className="size-3.5 text-muted-foreground" />
-        <ActionLabel>New Branch from ‘{t.display}’</ActionLabel>
-      </DropdownMenuItem>
-      {!t.isCurrent && (
-        <>
-          <DropdownMenuItem onClick={() => props.onCheckoutAndUpdate(t.ref)}>
-            Checkout and Update
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => props.onCompare(currentName, t.ref)}>
-            <ActionLabel>Compare with ‘{currentName}’</ActionLabel>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => props.onMerge(t.ref)}>
-            <ActionLabel>
-              Merge ‘{t.display}’ into ‘{currentName}’
-            </ActionLabel>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => props.onRebase(t.ref)}>
-            <ActionLabel>
-              Rebase ‘{currentName}’ onto ‘{t.display}’
-            </ActionLabel>
-          </DropdownMenuItem>
-        </>
-      )}
-      <DropdownMenuSeparator />
-      <DropdownMenuItem disabled={busy} onClick={props.onFetch}>
-        Update
-      </DropdownMenuItem>
-      <DropdownMenuItem disabled={busy} onClick={props.onPush}>
-        Push…
-      </DropdownMenuItem>
-      {!t.isRemote && (
-        <>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => setPrompt({ kind: "rename", from: t.ref })}
-          >
-            Rename…
-          </DropdownMenuItem>
-          {!t.isCurrent && (
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => setPrompt({ kind: "delete", name: t.ref })}
+        <Section
+          title="Local"
+          count={localCount}
+          collapsed={isCollapsed(`${k}local`)}
+          onToggle={() => toggleSection(`${k}local`)}
+        >
+          {localGroups.map((g) => (
+            <Folder
+              key={`l-${g.folder ?? "_"}`}
+              folder={g.folder}
+              forceOpen={q.length > 0}
             >
-              Delete
+              {g.items.map((b) => (
+                <LocalRow key={b.name} branch={b} scope={scope} />
+              ))}
+            </Folder>
+          ))}
+        </Section>
+
+        <Section
+          title="Remote"
+          count={remoteCount}
+          collapsed={isCollapsed(`${k}remote`)}
+          onToggle={() => toggleSection(`${k}remote`)}
+        >
+          {remoteGroups.map((g) => (
+            <Folder
+              key={`rm-${g.folder ?? "_"}`}
+              folder={g.folder}
+              forceOpen={q.length > 0}
+            >
+              {g.items.map((b) => (
+                <RemoteRow key={b.name} branch={b} scope={scope} />
+              ))}
+            </Folder>
+          ))}
+        </Section>
+
+        {recent.length === 0 && localCount === 0 && remoteCount === 0 && (
+          <div className="px-2 py-6 text-center text-sm text-muted-foreground">
+            No branches match “{query}”
+          </div>
+        )}
+      </>
+    );
+  };
+
+  const newBranch = (
+    startPoint: string | null,
+    label: string,
+    repoPath: string | null
+  ) => setPrompt({ kind: "create", startPoint, label, repoPath });
+
+  /**
+   * The repository the actions below run in. `repoPath` null means "the
+   * current root" — the single-repo case, and the current root's own scope in
+   * a project of several. `head` is that repository's checked-out branch, for
+   * the merge/rebase/compare labels.
+   */
+  interface ActionScope {
+    readonly repoPath: string | null;
+    readonly head: string;
+  }
+
+  /** The JetBrains-style action list for one branch, in one repository. */
+  const renderActions = (t: BranchTarget, scope: ActionScope) => {
+    const run = inRepo(scope.repoPath);
+    return (
+      <>
+        {!t.isCurrent && (
+          <DropdownMenuItem onClick={run(() => props.onCheckout(t.ref))}>
+            Checkout
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem
+          onClick={() => newBranch(t.ref, t.display, scope.repoPath)}
+        >
+          <IconPlus className="size-3.5 text-muted-foreground" />
+          <ActionLabel>New Branch from ‘{t.display}’</ActionLabel>
+        </DropdownMenuItem>
+        {!t.isCurrent && (
+          <>
+            <DropdownMenuItem
+              onClick={run(() => props.onCheckoutAndUpdate(t.ref))}
+            >
+              Checkout and Update
             </DropdownMenuItem>
-          )}
-        </>
-      )}
-    </>
-  );
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={run(() => props.onCompare(scope.head, t.ref))}
+            >
+              <ActionLabel>Compare with ‘{scope.head}’</ActionLabel>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={run(() => props.onMerge(t.ref))}>
+              <ActionLabel>
+                Merge ‘{t.display}’ into ‘{scope.head}’
+              </ActionLabel>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={run(() => props.onRebase(t.ref))}>
+              <ActionLabel>
+                Rebase ‘{scope.head}’ onto ‘{t.display}’
+              </ActionLabel>
+            </DropdownMenuItem>
+          </>
+        )}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem disabled={busy} onClick={run(() => props.onFetch())}>
+          Update
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={busy} onClick={run(() => props.onPush())}>
+          Push…
+        </DropdownMenuItem>
+        {!t.isRemote && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() =>
+                setPrompt({
+                  kind: "rename",
+                  from: t.ref,
+                  repoPath: scope.repoPath,
+                })
+              }
+            >
+              Rename…
+            </DropdownMenuItem>
+            {!t.isCurrent && (
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() =>
+                  setPrompt({
+                    kind: "delete",
+                    name: t.ref,
+                    repoPath: scope.repoPath,
+                  })
+                }
+              >
+                Delete
+              </DropdownMenuItem>
+            )}
+          </>
+        )}
+      </>
+    );
+  };
 
   const LocalRow = ({
     branch,
     flat,
+    scope,
   }: {
     branch: BranchInfo;
     flat?: boolean;
+    scope: ActionScope;
   }) => {
     const leaf = flat ? branch.name : splitFolder(branch.name)[1];
     return (
@@ -301,18 +432,27 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           )}
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent className="w-72">
-          {renderActions({
-            display: branch.name,
-            ref: branch.name,
-            isCurrent: branch.isCurrent,
-            isRemote: false,
-          })}
+          {renderActions(
+            {
+              display: branch.name,
+              ref: branch.name,
+              isCurrent: branch.isCurrent,
+              isRemote: false,
+            },
+            scope
+          )}
         </DropdownMenuSubContent>
       </DropdownMenuSub>
     );
   };
 
-  const RemoteRow = ({ branch }: { branch: RemoteBranchInfo }) => (
+  const RemoteRow = ({
+    branch,
+    scope,
+  }: {
+    branch: RemoteBranchInfo;
+    scope: ActionScope;
+  }) => (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
         <IconGitBranch className="size-3.5 text-muted-foreground" />
@@ -322,12 +462,15 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         </span>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="w-72">
-        {renderActions({
-          display: branch.name,
-          ref: branch.shortName,
-          isCurrent: false,
-          isRemote: true,
-        })}
+        {renderActions(
+          {
+            display: branch.name,
+            ref: branch.shortName,
+            isCurrent: false,
+            isRemote: true,
+          },
+          scope
+        )}
       </DropdownMenuSubContent>
     </DropdownMenuSub>
   );
@@ -343,17 +486,21 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
       >
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="chip" className="gap-1.5 px-2">
-              <IconGitBranch className="size-3.5 text-muted-foreground" />
-              {currentName}
-              <IconChevronDown className="size-3.5 text-muted-foreground" />
+            <Button
+              variant="ghost"
+              size="chip"
+              className="max-w-64 gap-1.5 px-2"
+            >
+              <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate">{currentName}</span>
+              <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
             </Button>
           }
         />
         <DropdownMenuContent
           align="start"
           side={props.side ?? "bottom"}
-          className="max-h-[70vh] w-72 overflow-auto p-0"
+          className="max-h-[70vh] w-72 overflow-x-hidden overflow-y-auto p-0"
         >
           {/* Filter box — a plain row, not a menu item, so typing never navigates. */}
           <BranchSearchRow>
@@ -371,85 +518,44 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           </BranchSearchRow>
 
           <div className="p-1">
-            {repoActions.length > 0 && (
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <IconCloud className="size-3.5 text-muted-foreground" />
-                  <span>{REPO_ACTIONS_LABEL}</span>
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="w-72">
-                  {repoActions.map(({ label, run, icon: Icon }) => (
-                    <DropdownMenuItem key={label} disabled={busy} onClick={run}>
-                      <Icon className="size-3.5 text-muted-foreground" />
-                      {label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-            )}
-
-            {showNew && (
-              <DropdownMenuItem onClick={() => newBranch(null, "")}>
-                <IconPlus className="size-3.5 text-muted-foreground" />
-                New Branch
-              </DropdownMenuItem>
-            )}
-            {showNew && <DropdownMenuSeparator />}
-
-            <Section
-              title="Recent"
-              count={recent.length}
-              collapsed={isCollapsed("recent")}
-              onToggle={() => toggleSection("recent")}
-            >
-              {recent.map((b) => (
-                <LocalRow key={`r-${b.name}`} branch={b} flat />
+            {multiRepo &&
+              props.repos?.map((entry) => (
+                <DropdownMenuSub key={entry.repo.path}>
+                  <DropdownMenuSubTrigger>
+                    <ProjectAvatar name={entry.repo.name} className="size-4" />
+                    <span
+                      className={cn(
+                        "min-w-0 flex-1 truncate",
+                        entry.repo.path === currentRepoPath && "font-medium"
+                      )}
+                    >
+                      {entry.repo.name}
+                    </span>
+                    {/* Capped, or a long branch name eats the row and overflows it. */}
+                    <span className="max-w-[50%] shrink-0 truncate text-xs text-muted-foreground">
+                      {entry.repo.branch ?? "detached"}
+                    </span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="max-h-[60vh] w-72 overflow-x-hidden overflow-y-auto p-1">
+                    {renderSections({
+                      repoPath: entry.repo.path,
+                      head: entry.repo.branch ?? "—",
+                      sectionBranches: entry.branches,
+                      sectionRemotes: entry.remoteBranches,
+                      keyPrefix: `${entry.repo.path}:`,
+                    })}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
               ))}
-            </Section>
 
-            <Section
-              title="Local"
-              count={localCount}
-              collapsed={isCollapsed("local")}
-              onToggle={() => toggleSection("local")}
-            >
-              {localGroups.map((g) => (
-                <Folder
-                  key={`l-${g.folder ?? "_"}`}
-                  folder={g.folder}
-                  forceOpen={q.length > 0}
-                >
-                  {g.items.map((b) => (
-                    <LocalRow key={b.name} branch={b} />
-                  ))}
-                </Folder>
-              ))}
-            </Section>
-
-            <Section
-              title="Remote"
-              count={remoteCount}
-              collapsed={isCollapsed("remote")}
-              onToggle={() => toggleSection("remote")}
-            >
-              {remoteGroups.map((g) => (
-                <Folder
-                  key={`rm-${g.folder ?? "_"}`}
-                  folder={g.folder}
-                  forceOpen={q.length > 0}
-                >
-                  {g.items.map((b) => (
-                    <RemoteRow key={b.name} branch={b} />
-                  ))}
-                </Folder>
-              ))}
-            </Section>
-
-            {recent.length === 0 && localCount === 0 && remoteCount === 0 && (
-              <div className="px-2 py-6 text-center text-sm text-muted-foreground">
-                No branches match “{query}”
-              </div>
-            )}
+            {!multiRepo &&
+              renderSections({
+                repoPath: null,
+                head: currentName,
+                sectionBranches: branches,
+                sectionRemotes: remoteBranches,
+                keyPrefix: "",
+              })}
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -457,9 +563,21 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
       <BranchPromptDialog
         prompt={prompt}
         onClose={() => setPrompt(null)}
-        onCreateBranch={props.onCreateBranch}
-        onRenameBranch={props.onRenameBranch}
-        onDeleteBranch={props.onDeleteBranch}
+        // The dialog confirms after the menu has closed, so the repo the
+        // prompt came from is followed here, not when it was opened.
+        onCreateBranch={(name, startPoint) =>
+          inRepo(prompt?.repoPath ?? null)(() =>
+            props.onCreateBranch(name, startPoint)
+          )()
+        }
+        onRenameBranch={(from, to) =>
+          inRepo(prompt?.repoPath ?? null)(() =>
+            props.onRenameBranch(from, to)
+          )()
+        }
+        onDeleteBranch={(name) =>
+          inRepo(prompt?.repoPath ?? null)(() => props.onDeleteBranch(name))()
+        }
       />
     </>
   );

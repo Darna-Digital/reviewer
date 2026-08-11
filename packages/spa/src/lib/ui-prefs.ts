@@ -10,8 +10,8 @@ export type Theme = "light" | "dark";
 export type DiffStyle = "split" | "unified";
 /** Agent CLIs that can draft a commit message (threads kinds minus terminal). */
 export type CommitAgent = "claude" | "opencode" | "codex" | "cursor";
-/** Active tab in the shared bottom dock (git + services + threads). */
-export type BottomTab = "branches" | "history" | "services" | "threads";
+/** Active tab in the shared bottom dock (history + services + threads). */
+export type BottomTab = "history" | "services" | "threads";
 /** Which way of working the app is framed around (UI only for now). */
 export type WorkMode = "code" | "collaboration";
 
@@ -61,6 +61,8 @@ export interface UiPrefs {
   commitAgent: CommitAgent;
   /** Model ids starred in the chat composer's model picker. */
   chatModelFavorites: string[];
+  /** Drag-resizable height of the chat composer's prompt box, in px. */
+  composerHeight: number;
   /** Whether the browser pane splits the canvas. Native shell only. */
   browserPaneOpen: boolean;
   /** Drag-resizable browser pane width, in px. */
@@ -91,7 +93,6 @@ const resolve = (pref: ThemePref): Theme =>
   pref === "system" ? systemTheme() : pref;
 
 const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
-  "branches",
   "history",
   "services",
   "threads",
@@ -105,7 +106,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   translucency: true,
   sidebarVisible: true,
   bottomVisible: true,
-  bottomTab: "branches",
+  bottomTab: "history",
   sidebarWidth: 288,
   workspaceSidebarWidth: 256,
   inboxListWidth: 320,
@@ -118,6 +119,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   commitDetailsWidth: 320,
   commitAgent: "claude",
   chatModelFavorites: [],
+  composerHeight: 92,
   browserPaneOpen: false,
   browserPaneWidth: 480,
   browserPaneUrls: {},
@@ -136,7 +138,7 @@ function load(): UiPrefs {
     } catch {
       // ignore malformed storage
     }
-    if (!BOTTOM_TABS.includes(prefs.bottomTab)) prefs.bottomTab = "branches";
+    if (!BOTTOM_TABS.includes(prefs.bottomTab)) prefs.bottomTab = "history";
     const stored = window.localStorage.getItem(THEME_KEY);
     if (stored === "light" || stored === "dark" || stored === "system")
       prefs.theme = stored;
@@ -175,6 +177,7 @@ function persist() {
       commitDetailsWidth,
       commitAgent,
       chatModelFavorites,
+      composerHeight,
       browserPaneOpen,
       browserPaneWidth,
       browserPaneUrls,
@@ -205,6 +208,7 @@ function persist() {
         commitDetailsWidth,
         commitAgent,
         chatModelFavorites,
+        composerHeight,
         browserPaneOpen,
         browserPaneWidth,
         browserPaneUrls,
@@ -249,7 +253,7 @@ export function setUiPrefs(patch: Partial<Omit<UiPrefs, "resolvedTheme">>) {
   emit();
 }
 
-/** Show the bottom dock and select a tab (Services / Threads / git). */
+/** Show the bottom dock and select a tab (History / Services / Threads). */
 export function openBottomTab(tab: BottomTab) {
   setUiPrefs({ bottomVisible: true, bottomTab: tab });
 }

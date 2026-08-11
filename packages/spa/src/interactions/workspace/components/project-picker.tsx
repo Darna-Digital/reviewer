@@ -1,4 +1,9 @@
-import { useQueryClient } from "@tanstack/react-query";
+/**
+ * The project chip in the top bar: recents, and a folder browser for opening
+ * something new. A project is a folder — a git repository, or a parent holding
+ * several (`backend`, `frontend`) — so the browser offers both, marking each
+ * folder with what it holds rather than only letting repositories through.
+ */
 import { useNavigate } from "@tanstack/react-router";
 import {
   IconArrowLeft,
@@ -6,12 +11,11 @@ import {
   IconChevronDown,
   IconFolder,
   IconFolderOpen,
+  IconFolders,
   IconGitBranch,
   IconSearch,
 } from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
-import { api, fetchClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import {
@@ -36,53 +40,36 @@ import {
   truncatedTooltipClass,
   useClipGate,
 } from "@/components/ui/truncated-text";
+import { api } from "@/lib/api/client";
 import { displayPath, pathName } from "@/lib/display-path";
 import { isDesktop, openDesktopDirectory } from "@/lib/desktop";
-import { repoAvatar } from "@/lib/repo-avatar";
 import { cn } from "@/lib/utils";
-import type { RepoInfo } from "@byconvo/core/repo";
+import { ProjectAvatar } from "./project-avatar";
+import { useWorkspaceActions } from "../adapters/workspace.hook.adapter";
+import { folderHint, folderName, isOpenable } from "@byconvo/core/workspace";
 import type { WorkspaceInfo } from "@byconvo/core/workspace";
 
-interface RepoPickerProps {
-  repo: RepoInfo | null;
+interface ProjectPickerProps {
   workspace: WorkspaceInfo | undefined;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /**
-   * Called after a repository is opened, instead of the default jump to the
-   * commit view. The workspace pages pass this so switching repo keeps you on
-   * the current page (now scoped to the newly-opened repo).
+   * Called after a project is opened, instead of the default jump to the
+   * commit view. The workspace pages pass this so switching project keeps you
+   * on the current page (now scoped to the newly-opened project).
    */
   onChosen?: () => void;
   /** Which way the popover opens — "top" for a bar pinned to the bottom. */
   side?: "top" | "bottom";
 }
 
-function Avatar({
-  name,
-  className = "size-4 text-[9px]",
-}: {
-  name: string;
-  className?: string;
-}) {
-  const a = repoAvatar(name);
-  return (
-    <span
-      className={`flex shrink-0 items-center justify-center rounded-sm font-semibold text-white ${className}`}
-      style={{ backgroundColor: a.color }}
-    >
-      {a.initials}
-    </span>
-  );
-}
-
 /** Matches the branch dropdown's menu items, on buttons the menu doesn't own. */
 const rowClass =
-  "flex w-full min-w-0 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm outline-hidden select-none hover:bg-elevate hover:text-foreground focus:bg-elevate focus:text-foreground";
+  "flex w-full min-w-0 items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm outline-hidden select-none hover:bg-elevate hover:text-foreground focus:bg-elevate focus:text-foreground";
 
-const sectionLabelClass = "px-2 py-1 text-xs text-muted-foreground";
+const sectionLabelClass = "px-2.5 pt-2 pb-1 text-xs text-muted-foreground";
 
-const emptyClass = "px-2 py-6 text-center text-sm text-muted-foreground";
+const emptyClass = "px-2.5 py-6 text-center text-sm text-muted-foreground";
 
 /**
  * A folder row: name over its path. Anywhere on the row is the tooltip's
@@ -142,18 +129,15 @@ function PathRow({
   );
 }
 
-/** The repo chip in the top bar; opening it reveals a recents + folder browser
- * dropdown (a Popover, so the folder browser's controls don't auto-close it). */
-export function RepoPicker({
-  repo,
+export function ProjectPicker({
   workspace,
   open,
   onOpenChange,
   onChosen,
   side,
-}: RepoPickerProps) {
-  const queryClient = useQueryClient();
+}: ProjectPickerProps) {
   const navigate = useNavigate();
+  const actions = useWorkspaceActions();
   const [path, setPath] = useState<string | null>(null);
   const [browsing, setBrowsing] = useState(false);
   const [query, setQuery] = useState("");
@@ -177,23 +161,10 @@ export function RepoPicker({
   }, [open]);
 
   const choose = async (target: string) => {
-    const { data, error } = await fetchClient.POST("/api/workspace", {
-      body: { path: target },
-    });
-    if (error) {
-      toast.error(
-        (error as { message?: string; reason?: string }).message ??
-          (error as { reason?: string }).reason ??
-          "could not open repository"
-      );
-      return;
-    }
-    if (data !== undefined) {
-      queryClient.setQueryData(["get", "/api/workspace"], data);
-    }
-    await queryClient.invalidateQueries();
+    const opened = await actions.openProject(target);
+    if (opened === null) return;
     onOpenChange(false);
-    // Workspace pages stay put (now scoped to the new repo); the git-review
+    // Workspace pages stay put (now scoped to the new project); the git-review
     // shell defaults to jumping into the commit view.
     if (onChosen !== undefined) onChosen();
     else void navigate({ to: "/modes/code/commit", search: {} });
@@ -207,7 +178,7 @@ export function RepoPicker({
   };
 
   const home = workspace?.home;
-  const recents = workspace?.recents ?? [];
+  const recents = useMemo(() => workspace?.recents ?? [], [workspace]);
   const filteredRecents = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (q.length === 0) return recents;
@@ -216,6 +187,8 @@ export function RepoPicker({
 
   const data = browse.data;
   const entries = data?.entries ?? [];
+  const projectName =
+    workspace?.project == null ? null : folderName(workspace.project);
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
@@ -228,11 +201,11 @@ export function RepoPicker({
           />
         }
       >
-        {repo !== null && <Avatar name={repo.name} />}
-        {repo === null && (
+        {projectName !== null && <ProjectAvatar name={projectName} />}
+        {projectName === null && (
           <IconFolder className="size-3.5 shrink-0 text-muted-foreground" />
         )}
-        <span className="truncate">{repo?.name ?? "Choose project"}</span>
+        <span className="truncate">{projectName ?? "Choose project"}</span>
         <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
       </PopoverTrigger>
       <PopoverContent
@@ -243,7 +216,7 @@ export function RepoPicker({
       >
         {!browsing && (
           <>
-            <div className="flex shrink-0 items-center gap-2 border-b px-2.5 py-2">
+            <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2.5">
               <IconSearch className="size-4 shrink-0 text-muted-foreground" />
               <input
                 ref={searchRef}
@@ -263,7 +236,7 @@ export function RepoPicker({
                   <div className={sectionLabelClass}>Recent</div>
                 )}
                 {filteredRecents.map((recent) => {
-                  const isCurrent = recent === workspace?.current;
+                  const isCurrent = recent === workspace?.project;
                   return (
                     <PathRow
                       key={recent}
@@ -375,45 +348,65 @@ export function RepoPicker({
                   entries.length === 0 && (
                     <div className={emptyClass}>No folders found.</div>
                   )}
-                {entries.map((entry) => (
-                  <div
-                    key={entry.path}
-                    className={cn(rowClass, "pr-1 focus-within:bg-elevate")}
-                  >
-                    <button
-                      type="button"
-                      data-search-row
-                      className="flex min-w-0 flex-1 items-center gap-2 rounded-md text-left outline-hidden"
-                      onClick={() => setPath(entry.path)}
+                {entries.map((entry) => {
+                  const hint = folderHint(entry);
+                  return (
+                    <div
+                      key={entry.path}
+                      className={cn(rowClass, "pr-1 focus-within:bg-elevate")}
                     >
-                      {entry.isGitRepo ? (
-                        <IconGitBranch className="size-4 shrink-0 text-muted-foreground" />
-                      ) : (
-                        <IconFolder className="size-4 shrink-0 text-muted-foreground" />
-                      )}
-                      <span className="truncate">{entry.name}</span>
-                    </button>
-                    {entry.isGitRepo && (
                       <button
                         type="button"
-                        className="shrink-0 rounded-md px-2 py-1 text-xs text-muted-foreground outline-hidden hover:bg-elevate-strong hover:text-foreground focus:bg-elevate-strong focus:text-foreground"
-                        onClick={() => void choose(entry.path)}
+                        data-search-row
+                        className="flex min-w-0 flex-1 items-center gap-2 rounded-md text-left outline-hidden"
+                        onClick={() => setPath(entry.path)}
                       >
-                        Open
+                        {entry.isGitRepo ? (
+                          <IconGitBranch className="size-4 shrink-0 text-muted-foreground" />
+                        ) : entry.repoCount > 0 ? (
+                          <IconFolders className="size-4 shrink-0 text-muted-foreground" />
+                        ) : (
+                          <IconFolder className="size-4 shrink-0 text-muted-foreground" />
+                        )}
+                        <span className="truncate">{entry.name}</span>
+                        {hint !== null && !entry.isGitRepo && (
+                          <span className="shrink-0 text-xs text-muted-foreground">
+                            {hint}
+                          </span>
+                        )}
                       </button>
-                    )}
-                  </div>
-                ))}
+                      {/* A folder of repositories opens as a project too — that
+                          is the multi-root case, not a wrong turn. */}
+                      {isOpenable(entry) && (
+                        <button
+                          type="button"
+                          className="shrink-0 rounded-md px-2 py-1 text-xs text-muted-foreground outline-hidden hover:bg-elevate-strong hover:text-foreground focus:bg-elevate-strong focus:text-foreground"
+                          onClick={() => void choose(entry.path)}
+                        >
+                          Open
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </ScrollArea>
 
-            {data !== undefined && data.isGitRepo && (
+            {data !== undefined && isOpenable(data) && (
               <div className="shrink-0 border-t p-1">
                 <PathRow
                   icon={
-                    <IconGitBranch className="size-4 h-lh shrink-0 text-muted-foreground" />
+                    data.isGitRepo ? (
+                      <IconGitBranch className="size-4 h-lh shrink-0 text-muted-foreground" />
+                    ) : (
+                      <IconFolders className="size-4 h-lh shrink-0 text-muted-foreground" />
+                    )
                   }
-                  label="Open this repository"
+                  label={
+                    data.isGitRepo
+                      ? "Open this repository"
+                      : `Open this folder — ${folderHint(data)}`
+                  }
                   path={displayPath(data.path, home)}
                   emphasized
                   onClick={() => void choose(data.path)}

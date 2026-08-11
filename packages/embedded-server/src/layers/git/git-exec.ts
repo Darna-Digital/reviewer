@@ -23,96 +23,109 @@ export {
   type GitFailure,
 } from "@byconvo/core/ports/git-exec";
 
-export const make = Effect.gen(function* () {
-  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
-  const workspace = yield* WorkspaceContext;
+/**
+ * A GitExec running in whatever root `resolveRoot` yields. The selected repo is
+ * the usual answer; a project view that reads every root it holds asks for one
+ * of these per root instead, so the same query code serves both.
+ */
+export const makeIn = (resolveRoot: Effect.Effect<string, NoRepoSelected>) =>
+  Effect.gen(function* () {
+    const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
 
-  const spawn = (
-    args: ReadonlyArray<string>
-  ): Effect.Effect<
-    { stdout: string; stderr: string; exitCode: number },
-    GitFailure
-  > =>
-    Effect.scoped(
-      Effect.gen(function* () {
-        const repoPath = yield* workspace.requireCurrent;
-        const handle = yield* spawner.spawn(
-          ChildProcess.make("git", args as Array<string>, { cwd: repoPath })
-        );
-        const [stdout, stderr, exitCode] = yield* Effect.all(
-          [
-            Stream.mkString(Stream.decodeText(handle.stdout)),
-            Stream.mkString(Stream.decodeText(handle.stderr)),
-            handle.exitCode,
-          ],
-          { concurrency: "unbounded" }
-        );
-        return { stdout, stderr, exitCode };
-      })
-    ).pipe(
-      // Spawn/IO failures (git missing, decode errors) become GitError so the
-      // public error channel stays schema-friendly; NoRepoSelected passes through.
-      Effect.catch(
-        (error): Effect.Effect<never, GitFailure> =>
-          Effect.fail(
-            error instanceof NoRepoSelected
-              ? error
-              : new GitError({
+    const spawn = (
+      args: ReadonlyArray<string>
+    ): Effect.Effect<
+      { stdout: string; stderr: string; exitCode: number },
+      GitFailure
+    > =>
+      Effect.scoped(
+        Effect.gen(function* () {
+          const repoPath = yield* resolveRoot;
+          const handle = yield* spawner.spawn(
+            ChildProcess.make("git", args as Array<string>, { cwd: repoPath })
+          );
+          const [stdout, stderr, exitCode] = yield* Effect.all(
+            [
+              Stream.mkString(Stream.decodeText(handle.stdout)),
+              Stream.mkString(Stream.decodeText(handle.stderr)),
+              handle.exitCode,
+            ],
+            { concurrency: "unbounded" }
+          );
+          return { stdout, stderr, exitCode };
+        })
+      ).pipe(
+        // Spawn/IO failures (git missing, decode errors) become GitError so the
+        // public error channel stays schema-friendly; NoRepoSelected passes through.
+        Effect.catch(
+          (error): Effect.Effect<never, GitFailure> =>
+            Effect.fail(
+              error instanceof NoRepoSelected
+                ? error
+                : new GitError({
+                    args,
+                    exitCode: -1,
+                    stderr:
+                      error instanceof Error ? error.message : String(error),
+                  })
+            )
+        )
+      );
+
+    // Some git commands report the reason for a non-zero exit on stdout, not
+    // stderr — e.g. `commit` prints "nothing to commit, working tree clean" to
+    // stdout. Fall back to stdout so the GitError never carries an empty message.
+    const failureText = (stderr: string, stdout: string): string =>
+      stderr.trim().length > 0 ? stderr : stdout;
+
+    const run: GitExecShape["run"] = (...args) =>
+      spawn(args).pipe(
+        Effect.flatMap(({ exitCode, stderr, stdout }) =>
+          exitCode !== 0
+            ? Effect.fail(
+                new GitError({
                   args,
-                  exitCode: -1,
-                  stderr:
-                    error instanceof Error ? error.message : String(error),
+                  exitCode,
+                  stderr: failureText(stderr, stdout),
                 })
-          )
-      )
-    );
+              )
+            : Effect.succeed(stdout)
+        )
+      );
 
-  // Some git commands report the reason for a non-zero exit on stdout, not
-  // stderr — e.g. `commit` prints "nothing to commit, working tree clean" to
-  // stdout. Fall back to stdout so the GitError never carries an empty message.
-  const failureText = (stderr: string, stdout: string): string =>
-    stderr.trim().length > 0 ? stderr : stdout;
+    const runVerbose: GitExecShape["runVerbose"] = (...args) =>
+      spawn(args).pipe(
+        Effect.flatMap(({ exitCode, stderr, stdout }) =>
+          exitCode !== 0
+            ? Effect.fail(
+                new GitError({
+                  args,
+                  exitCode,
+                  stderr: failureText(stderr, stdout),
+                })
+              )
+            : Effect.succeed(`${stdout}${stderr}`.trim())
+        )
+      );
 
-  const run: GitExecShape["run"] = (...args) =>
-    spawn(args).pipe(
-      Effect.flatMap(({ exitCode, stderr, stdout }) =>
-        exitCode !== 0
-          ? Effect.fail(
-              new GitError({
-                args,
-                exitCode,
-                stderr: failureText(stderr, stdout),
-              })
-            )
-          : Effect.succeed(stdout)
-      )
-    );
+    const runTolerant: GitExecShape["runTolerant"] = (...args) =>
+      spawn(args).pipe(Effect.map(({ stdout }) => stdout));
 
-  const runVerbose: GitExecShape["runVerbose"] = (...args) =>
-    spawn(args).pipe(
-      Effect.flatMap(({ exitCode, stderr, stdout }) =>
-        exitCode !== 0
-          ? Effect.fail(
-              new GitError({
-                args,
-                exitCode,
-                stderr: failureText(stderr, stdout),
-              })
-            )
-          : Effect.succeed(`${stdout}${stderr}`.trim())
-      )
-    );
+    const lines: GitExecShape["lines"] = (...args) =>
+      run(...args).pipe(
+        Effect.map((out) => out.split("\n").filter((line) => line.length > 0))
+      );
 
-  const runTolerant: GitExecShape["runTolerant"] = (...args) =>
-    spawn(args).pipe(Effect.map(({ stdout }) => stdout));
+    return GitExec.of({ run, runVerbose, runTolerant, lines });
+  });
 
-  const lines: GitExecShape["lines"] = (...args) =>
-    run(...args).pipe(
-      Effect.map((out) => out.split("\n").filter((line) => line.length > 0))
-    );
+/** A GitExec pinned to one root — how a project view reads each of its own. */
+export const makeAt = (root: string) => makeIn(Effect.succeed(root));
 
-  return GitExec.of({ run, runVerbose, runTolerant, lines });
-});
+/** The default: git runs wherever the workspace's selected repository is. */
+export const make = Effect.flatMap(WorkspaceContext, (workspace) =>
+  makeIn(workspace.requireCurrent)
+);
 
 export const layer: Layer.Layer<
   GitExec,

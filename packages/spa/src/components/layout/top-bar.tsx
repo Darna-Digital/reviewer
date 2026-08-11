@@ -2,14 +2,15 @@ import { BranchSwitcher } from "@/components/layout/branch-switcher";
 // Only code mode is offered for now, so the mode chip stays parked.
 // import { ModeSelector } from "@/components/layout/mode-selector";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
-import { RepoPicker } from "@/components/repo-picker";
+import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
 import { SearchMenu } from "@/interactions/search/components/search-menu";
 import type {
   BranchInfo,
   RemoteBranchInfo,
   RepoInfo,
 } from "@byconvo/core/repo";
-import type { WorkspaceInfo } from "@byconvo/core/workspace";
+import type { RepoEntry, WorkspaceInfo } from "@byconvo/core/workspace";
+import type { RepoBranches } from "@byconvo/core/project";
 import type { DiffStyle } from "@/lib/ui-prefs";
 
 interface TopBarProps {
@@ -33,7 +34,11 @@ interface TopBarProps {
   onDeleteBranch: (name: string) => void;
   onFetch: () => void;
   onPush: () => void;
-  onPull: () => void;
+  /** Each root's branches, when the project holds several. */
+  projectBranches?: ReadonlyArray<RepoBranches>;
+  currentRepo?: RepoEntry | null;
+  /** Make `repoPath` current before acting in it; false when it failed. */
+  onFollowRepo?: (repoPath: string) => Promise<boolean>;
 }
 
 export function TopBar(props: TopBarProps) {
@@ -48,12 +53,11 @@ export function TopBar(props: TopBarProps) {
   const current = repo?.currentBranch ?? null;
 
   return (
-    <header className="flex h-11 shrink-0 items-center gap-2 px-2">
+    <header className="flex h-9 shrink-0 items-center gap-2 px-2">
       {/* <ModeSelector /> */}
 
-      {/* Repo chip — opens the recents + folder-browser dropdown */}
-      <RepoPicker
-        repo={repo}
+      {/* Project chip — opens the recents + folder-browser dropdown */}
+      <ProjectPicker
         workspace={props.workspace}
         open={props.pickerOpen}
         onOpenChange={props.onPickerOpenChange}
@@ -73,10 +77,12 @@ export function TopBar(props: TopBarProps) {
           onMerge={props.onMerge}
           onRebase={props.onRebase}
           onFetch={props.onFetch}
-          onPull={props.onPull}
           onPush={props.onPush}
           onRenameBranch={props.onRenameBranch}
           onDeleteBranch={props.onDeleteBranch}
+          repos={props.projectBranches}
+          currentRepo={props.currentRepo}
+          onFollowRepo={props.onFollowRepo}
         />
       )}
 

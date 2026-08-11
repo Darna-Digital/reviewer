@@ -2,8 +2,9 @@
  * SearchHost — mounts the search dialog and its keyboard gestures for a shell,
  * so ⌘K, ⇧⇧ and ⌘⇧F work on every code-mode page rather than only on the ones
  * that show a diff. What it offers is assembled here: the code-mode commands,
- * whatever the mounted pages registered, the repository's file list, and its
- * branches for the checkout list.
+ * whatever the mounted pages registered, the file list of the project (every
+ * root it holds) or of the one repository it is, and the branches for the
+ * checkout list.
  *
  * A result opens where it can be read — in place when the page already shows
  * files, otherwise on the local-changes page.
@@ -11,7 +12,13 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
-import { useBranches, useFiles, useRemoteBranches } from "@/lib/queries";
+import {
+  useBranches,
+  useFiles,
+  useMultiRepo,
+  useProjectFiles,
+  useRemoteBranches,
+} from "@/lib/queries";
 import { useCodeCommands } from "../adapters/code-commands.hook.adapter";
 import {
   openSearch,
@@ -40,7 +47,12 @@ export function SearchHost() {
   const { open, mode } = useSearchState();
   const codeCommands = useCodeCommands();
   const pageCommands = useRegisteredCommands();
+  // A multi-root project searches all of its roots, and names what it finds
+  // from the project root, so a file in `backend` is as reachable as one in
+  // `frontend` — and the path a hit carries is the one the viewer opens.
+  const multiRepo = useMultiRepo();
   const files = useFiles();
+  const projectFiles = useProjectFiles(multiRepo);
   const local = useBranches();
   const remote = useRemoteBranches();
   const git = useGitActions();
@@ -82,7 +94,8 @@ export function SearchHost() {
         onOpenChange={setSearchOpen}
         onModeChange={setSearchMode}
         commands={commands}
-        files={files.data?.paths ?? []}
+        files={(multiRepo ? projectFiles.data?.paths : files.data?.paths) ?? []}
+        scope={multiRepo ? "project" : "repo"}
         branches={branches}
         onOpenFile={(file) => show({ file })}
         onOpenLocation={(file, line) => show({ file, line })}

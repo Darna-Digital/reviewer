@@ -9,6 +9,7 @@ import { LanguageApi } from "./layers/language/language.api.ts";
 import { TasksApi } from "./layers/tasks/tasks.api.ts";
 import { LocalDevApi } from "./layers/local-dev/local-dev.api.ts";
 import { PlansApi } from "./layers/plans/plans.api.ts";
+import { ProjectApi } from "./layers/project/project.api.ts";
 import { RepoApi } from "./layers/repo/repo.api.ts";
 import { ThreadsApi } from "./layers/threads/threads.api.ts";
 import { VisualCommentsApi } from "./layers/visual-comments/visual-comments.api.ts";
@@ -17,6 +18,7 @@ import { WorkspaceApi } from "./layers/workspace/workspace.api.ts";
 export class Api extends HttpApi.make("byconvo")
   .add(WorkspaceApi)
   .add(RepoApi)
+  .add(ProjectApi)
   .add(CommentsApi)
   .add(GitHubApi)
   .add(GitMessageApi)

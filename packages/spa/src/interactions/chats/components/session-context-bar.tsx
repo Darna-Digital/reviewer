@@ -11,7 +11,9 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
-import { RepoPicker } from "@/components/repo-picker";
+import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
+import { activeRepo } from "@byconvo/core/workspace";
+import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import {
   Tooltip,
   TooltipContent,
@@ -20,6 +22,7 @@ import {
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import {
   useBranches,
+  useProjectBranches,
   useRemoteBranches,
   useRepo,
   useWorkspace,
@@ -66,6 +69,11 @@ export function SessionContextBar({
   const navigate = useNavigate();
   const repo = useRepo();
   const workspace = useWorkspace();
+  const workspaceActions = useWorkspaceActions();
+  const projectBranchList = useProjectBranches();
+  /** Make a root current before a menu action runs in it. */
+  const followRepo = (repoPath: string) =>
+    workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
   const git = useGitActions();
@@ -78,8 +86,7 @@ export function SessionContextBar({
       {projectLocked && current !== null ? (
         <LockedProject name={current.name} />
       ) : (
-        <RepoPicker
-          repo={current}
+        <ProjectPicker
           workspace={workspace.data}
           open={pickerOpen}
           onOpenChange={setPickerOpen}
@@ -104,8 +111,10 @@ export function SessionContextBar({
         onRebase={(o) => void git.rebase(o)}
         onRenameBranch={(from, to) => void git.renameBranch(from, to)}
         onDeleteBranch={(name) => void git.deleteBranch(name)}
+        repos={projectBranchList.data?.repos}
+        currentRepo={activeRepo(workspace.data ?? { repos: [], current: null })}
+        onFollowRepo={followRepo}
         onFetch={() => void git.fetch()}
-        onPull={() => void git.pull()}
         onPush={() => void git.push()}
       />
     </div>

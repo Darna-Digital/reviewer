@@ -2,6 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { fetchClient } from "@/lib/api/client";
+import { useWorkspace } from "@/lib/queries";
+import { isMultiRepo } from "@byconvo/core/workspace";
 import type { CommitAgent } from "@/lib/ui-prefs";
 import { createGitActionsFunctions } from "../functions/git-actions.functions";
 import {
@@ -33,6 +35,11 @@ const unwrap = async <T>(
  */
 export function useGitActions() {
   const queryClient = useQueryClient();
+  // Committing spans the roots only when there is more than one to span; a
+  // single-root project keeps the plain commit, which says the same thing
+  // without a per-root breakdown.
+  const workspace = useWorkspace();
+  const acrossRoots = isMultiRepo({ repos: workspace.data?.repos ?? [] });
 
   const notify = useCallback(
     (kind: NoticeKind, text: string) =>
@@ -48,6 +55,16 @@ export function useGitActions() {
       createGitActionsFunctions({
         data: {},
         sideEffects: {
+          commitAcrossRepos: acrossRoots
+            ? async (message, paths) => {
+                const result = await unwrap(
+                  fetchClient.POST("/api/project/commit", {
+                    body: { message, paths: [...paths] },
+                  })
+                );
+                return result.results;
+              }
+            : null,
           commit: (message, paths) =>
             unwrap(
               fetchClient.POST("/api/commit", {
@@ -59,7 +76,7 @@ export function useGitActions() {
           refresh,
         },
       }),
-    [notify, refresh]
+    [notify, refresh, acrossRoots]
   );
 
   const post =

@@ -6,6 +6,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api, fetchClient } from "@/lib/api/client";
+import { isMultiRepo } from "@byconvo/core/workspace";
 import type { DiffTarget, LogQuery } from "@/lib/api/types";
 
 export const useWorkspace = () => api.useQuery("get", "/api/workspace");
@@ -16,6 +17,73 @@ export const useBranches = () => api.useQuery("get", "/api/branches");
 export const useRemoteBranches = () =>
   api.useQuery("get", "/api/remote-branches");
 export const useComments = () => api.useQuery("get", "/api/comments");
+
+// --- Project-wide git (every root the open project holds) ------------------
+// The `/api/repo`-backed hooks above answer for the selected repository; these
+// answer for the whole project, each entry carrying the root it came from.
+
+/** Whether the open project holds more than one root — which reads to use. */
+export const useMultiRepo = (): boolean => {
+  const workspace = useWorkspace();
+  return isMultiRepo({ repos: workspace.data?.repos ?? [] });
+};
+
+/** Every root's files, named from the project root so the tree nests them. */
+export const useProjectFiles = (enabled: boolean) =>
+  api.useQuery("get", "/api/project/files", {}, { enabled });
+
+/** Every root's uncommitted diff as one diff, with project-relative paths. */
+export const useProjectDiff = (enabled: boolean) =>
+  api.useQuery("get", "/api/project/diff", {}, { enabled });
+
+/** Uncommitted work in every root — the commit view's per-repository groups. */
+export const useProjectChanges = () =>
+  api.useQuery("get", "/api/project/changes");
+
+/** Every root's branches — the branch popup's per-repository sections. */
+export const useProjectBranches = () =>
+  api.useQuery("get", "/api/project/branches");
+
+/**
+ * Every root's history merged, one page at a time — the project-wide twin of
+ * `usePagedLog`, with the same append-only paging so scrolling walks back
+ * through the merged history instead of stopping at the first page.
+ *
+ * The filters mean the same thing in every root, so they go out unchanged and
+ * the server applies them per root before merging: an author or a message
+ * searched for here is searched for across the whole project.
+ */
+export const usePagedProjectLog = (enabled: boolean, filters: LogQuery) => {
+  const query = useInfiniteQuery({
+    queryKey: ["project-log-pages", filters],
+    enabled,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const { data, error } = await fetchClient.GET("/api/project/log", {
+        params: { query: logSearchParams(null, filters, pageParam) },
+      });
+      if (error !== undefined) throw error;
+      return data?.commits ?? [];
+    },
+    // A short page is the end of the merged history; a full one may have more.
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length < LOG_PAGE_SIZE
+        ? undefined
+        : pages.reduce((count, page) => count + page.length, 0),
+  });
+
+  const entries = useMemo(
+    () => (query.data?.pages ?? []).flat(),
+    [query.data?.pages]
+  );
+
+  return {
+    entries,
+    loading: query.isPending,
+    hasMore: query.hasNextPage,
+    loadMore: query.fetchNextPage,
+  };
+};
 
 /** The in-progress merge/rebase operation and its remaining conflicts. */
 export const useMergeState = () => api.useQuery("get", "/api/merge-state");

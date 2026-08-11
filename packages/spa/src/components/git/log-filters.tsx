@@ -28,7 +28,9 @@ import {
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { ALL_REFS, logRefLabel, type LogQuery } from "@/lib/api/types";
 import { pathName } from "@/lib/display-path";
+import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
 import type { BranchInfo } from "@byconvo/core/repo";
+import type { RepoEntry } from "@byconvo/core/workspace";
 import { cn } from "@/lib/utils";
 
 /** Parse a `YYYY-MM-DD` string as a local date (no timezone shift). */
@@ -57,7 +59,22 @@ interface LogFiltersProps {
   query: LogQuery;
   onRefChange: (ref: string) => void;
   onQueryChange: (query: LogQuery) => void;
+  /**
+   * The project's roots, when it holds more than one. Their presence swaps the
+   * branch selector for a repository one: the history covers every root, and a
+   * branch name belongs to a single one of them, so narrowing by branch is not
+   * a question this list can answer — narrowing by root is.
+   */
+  repos?: ReadonlyArray<RepoEntry>;
+  /** The root the history is narrowed to, or null for all of them. */
+  repoFilter?: string | null;
+  /** The project's own name — the avatar shown when no root is chosen. */
+  projectName?: string;
+  onRepoFilterChange?: (repoPath: string | null) => void;
 }
+
+/** The "no root chosen" option's value — a combobox needs a real string. */
+const ALL_REPOS = "\u0000all-repos";
 
 const blank = (value: string): string | null =>
   value.trim().length > 0 ? value.trim() : null;
@@ -73,6 +90,10 @@ export function LogFilters({
   query,
   onRefChange,
   onQueryChange,
+  repos,
+  repoFilter = null,
+  projectName,
+  onRepoFilterChange,
 }: LogFiltersProps) {
   const [grep, setGrep] = useState(query.grep ?? "");
   const [author, setAuthor] = useState(query.author ?? "");
@@ -104,35 +125,106 @@ export function LogFilters({
     ...branches.map((b) => b.name),
   ];
 
+  const byRepo = repos !== undefined && repos.length > 1;
+  const repoItems = [ALL_REPOS, ...(repos ?? []).map((repo) => repo.path)];
+  const repoNameOf = (path: string) =>
+    repos?.find((repo) => repo.path === path)?.name ?? pathName(path);
+
   return (
     <div className="flex flex-wrap items-center gap-2 border-b p-2">
-      <Combobox<string>
-        value={refName}
-        items={refItems}
-        onValueChange={(value) => {
-          if (value !== null) onRefChange(value);
-        }}
-      >
-        <ComboboxTrigger size="sm" className="w-48 text-xs" aria-label="Branch">
-          {refName === ALL_REFS ? (
-            <IconGitFork className="size-3.5 shrink-0 text-muted-foreground" />
-          ) : (
-            <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
-          )}
-          <ComboboxValue>{(value: string) => logRefLabel(value)}</ComboboxValue>
-        </ComboboxTrigger>
-        <ComboboxContent className="w-72">
-          <ComboboxInput placeholder="Search branches…" />
-          <ComboboxEmpty>No branches found.</ComboboxEmpty>
-          <ComboboxList>
-            {(name: string) => (
-              <ComboboxItem key={name} value={name}>
-                <TruncatedText text={logRefLabel(name)} />
-              </ComboboxItem>
+      {byRepo && (
+        <Combobox<string>
+          value={repoFilter ?? ALL_REPOS}
+          items={repoItems}
+          onValueChange={(value) => {
+            if (value === null) return;
+            onRepoFilterChange?.(value === ALL_REPOS ? null : value);
+          }}
+        >
+          <ComboboxTrigger
+            size="sm"
+            className="w-48 text-xs"
+            aria-label="Repository"
+          >
+            <ProjectAvatar
+              name={
+                repoFilter === null
+                  ? (projectName ?? "")
+                  : repoNameOf(repoFilter)
+              }
+              className="size-4 text-[8px]"
+            />
+            <ComboboxValue>
+              {(value: string) =>
+                value === ALL_REPOS ? "All repositories" : repoNameOf(value)
+              }
+            </ComboboxValue>
+          </ComboboxTrigger>
+          <ComboboxContent className="w-72">
+            <ComboboxInput placeholder="Search repositories…" />
+            <ComboboxEmpty>No repositories found.</ComboboxEmpty>
+            <ComboboxList>
+              {(path: string) => (
+                <ComboboxItem key={path} value={path}>
+                  {/* One flex row: the item wraps its children in a truncating
+                      block, so a second child would stack under the first. */}
+                  <span className="flex min-w-0 items-center gap-2">
+                    <ProjectAvatar
+                      name={
+                        path === ALL_REPOS
+                          ? (projectName ?? "")
+                          : repoNameOf(path)
+                      }
+                      className="size-4 text-[8px]"
+                    />
+                    <span className="truncate">
+                      {path === ALL_REPOS
+                        ? "All repositories"
+                        : repoNameOf(path)}
+                    </span>
+                  </span>
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+      )}
+
+      {!byRepo && (
+        <Combobox<string>
+          value={refName}
+          items={refItems}
+          onValueChange={(value) => {
+            if (value !== null) onRefChange(value);
+          }}
+        >
+          <ComboboxTrigger
+            size="sm"
+            className="w-48 text-xs"
+            aria-label="Branch"
+          >
+            {refName === ALL_REFS ? (
+              <IconGitFork className="size-3.5 shrink-0 text-muted-foreground" />
+            ) : (
+              <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
             )}
-          </ComboboxList>
-        </ComboboxContent>
-      </Combobox>
+            <ComboboxValue>
+              {(value: string) => logRefLabel(value)}
+            </ComboboxValue>
+          </ComboboxTrigger>
+          <ComboboxContent className="w-72">
+            <ComboboxInput placeholder="Search branches…" />
+            <ComboboxEmpty>No branches found.</ComboboxEmpty>
+            <ComboboxList>
+              {(name: string) => (
+                <ComboboxItem key={name} value={name}>
+                  <TruncatedText text={logRefLabel(name)} />
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+      )}
 
       {query.path !== null && (
         <div

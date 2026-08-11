@@ -18,18 +18,25 @@ import { ModeRail } from "@/components/layout/mode-rail";
 // import { ModeSelector } from "@/components/layout/mode-selector";
 import { AgentStrip } from "@/interactions/session-agents/components/agent-strip";
 import { NewSessionButton } from "@/interactions/chats/components/new-session-button";
+import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
 import { SessionSearch } from "@/interactions/chats/components/session-search";
 import { WindowFrame } from "@/components/layout/window-frame";
-import { RepoPicker } from "@/components/repo-picker";
+import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
+import {
+  useRepoCommands,
+  useWorkspaceActions,
+} from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { SearchMenu } from "@/interactions/search/components/search-menu";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
+import { activeRepo } from "@byconvo/core/workspace";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import {
   useBranches,
+  useProjectBranches,
   useRemoteBranches,
   useRepo,
   useWorkspace,
@@ -42,6 +49,11 @@ export function WorkspaceShell() {
   const navigate = useNavigate();
   const repo = useRepo();
   const workspace = useWorkspace();
+  const workspaceActions = useWorkspaceActions();
+  const projectBranchList = useProjectBranches();
+  /** Make a root current before a menu action runs in it. */
+  const followRepo = (repoPath: string) =>
+    workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
   const git = useGitActions();
@@ -62,23 +74,24 @@ export function WorkspaceShell() {
   const shellCommands = useMemo<ReadonlyArray<Command>>(
     () => [
       {
-        id: "repo-switch",
-        label: "Switch Repository…",
-        group: "Repository",
+        id: "project-switch",
+        label: "Open Project…",
+        group: "Project",
         icon: IconRepeat,
-        keywords: "open change project picker",
+        keywords: "open change repository folder picker switch",
         run: () => setPickerOpen(true),
       },
     ],
     []
   );
   useRegisterCommands("workspace-shell", shellCommands);
+  useRepoCommands(workspace.data);
 
   return (
     <WindowFrame>
       {!collaborating && !inSession && <ModeRail />}
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-11 shrink-0 items-center gap-2 px-2">
+        <header className="flex h-9 shrink-0 items-center gap-2 px-2">
           {/* <ModeSelector /> */}
           {collaborating && (
             <>
@@ -88,21 +101,24 @@ export function WorkspaceShell() {
             </>
           )}
           {!collaborating && !inSession && (
-            <RepoPicker
-              repo={repo.data ?? null}
-              workspace={workspace.data}
-              open={pickerOpen}
-              onOpenChange={setPickerOpen}
-              onChosen={() => {}}
-            />
+            <>
+              <ProjectPicker
+                workspace={workspace.data}
+                open={pickerOpen}
+                onOpenChange={setPickerOpen}
+                onChosen={() => {}}
+              />
+            </>
           )}
           {/* A session's bar opens with the two things that act on the list —
-              minting one and finding one — and parks the agents answering it at
-              the far end, where they read as status rather than as controls. */}
+              minting one and finding one — then names the conversation those
+              act beside, and parks the agents answering it at the far end,
+              where they read as status rather than as controls. */}
           {inSession && (
             <>
               <NewSessionButton />
               <SessionSearch />
+              <SessionCrumbs />
               <div className="flex-1" />
               <AgentStrip />
             </>
@@ -126,8 +142,12 @@ export function WorkspaceShell() {
               onRebase={(o) => void git.rebase(o)}
               onRenameBranch={(from, to) => void git.renameBranch(from, to)}
               onDeleteBranch={(name) => void git.deleteBranch(name)}
+              repos={projectBranchList.data?.repos}
+              currentRepo={activeRepo(
+                workspace.data ?? { repos: [], current: null }
+              )}
+              onFollowRepo={followRepo}
               onFetch={() => void git.fetch()}
-              onPull={() => void git.pull()}
               onPush={() => void git.push()}
             />
           )}

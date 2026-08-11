@@ -8,11 +8,14 @@
  * The two dots the row does keep are the ones that change: the turn state, and
  * whether the session moved since you last looked.
  *
+ * ⌘-click is "open elsewhere", as everywhere else: the conversation is lifted
+ * into a window tab of its own, which is where a session gets the full width.
+ *
  * The conversation tail is fetched only once a card opens, so scrolling past a
  * hundred rows costs nothing.
  */
 import { IconMessage, IconX } from "@tabler/icons-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import {
   PreviewCard,
@@ -20,6 +23,7 @@ import {
   PreviewCardTrigger,
 } from "@/components/ui/preview-card";
 import { agentLabel } from "@/interactions/threads/interfaces/agents";
+import { openSessionTab } from "@/interactions/chats/functions/open-session-tab";
 import type { ChatMessage, ChatSummary } from "@byconvo/core/chats";
 import { useChatPreview } from "@/lib/queries";
 import { timeAgo } from "@/lib/relative-time";
@@ -78,6 +82,7 @@ export function ChatRow({
   unread: boolean;
   onDelete: () => void;
 }) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   // Opening a session shouldn't leave a preview of it hovering over the view —
   // a click closes the card and holds it shut until the pointer leaves.
@@ -112,6 +117,18 @@ export function ChatRow({
             }}
             onPointerLeave={() => {
               clicked.current = false;
+            }}
+            // The tab is opened here rather than left to the browser: a
+            // ⌘-click on a link opens a window Electron would hand to the
+            // system browser, which is not what "a tab of its own" means here.
+            onClick={(event) => {
+              if (!(event.metaKey || event.ctrlKey)) return;
+              event.preventDefault();
+              openSessionTab(chat.id, chat.title);
+              void navigate({
+                to: "/modes/agent-session/$chatId",
+                params: { chatId: chat.id },
+              });
             }}
             className={cn(
               "group/row flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-sm outline-none hover:bg-elevate focus-visible:bg-elevate",

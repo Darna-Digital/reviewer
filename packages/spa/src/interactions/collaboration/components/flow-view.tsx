@@ -150,7 +150,7 @@ function TaskCard({
       {...drag.handleProps(task.id)}
       style={{ width: CARD_WIDTH }}
       className={cn(
-        "bg-pane flex shrink-0 cursor-grab flex-col gap-2 rounded-xl border p-2.5 transition-shadow active:cursor-grabbing",
+        "flex shrink-0 cursor-grab flex-col gap-2 rounded-xl border bg-pane p-2.5 transition-shadow active:cursor-grabbing",
         drag.dragging === task.id && "opacity-40",
         focused ? "border-brand-500 shadow-md" : "hover:shadow-sm",
         conflicts.length > 0 && !focused && "border-destructive/50"

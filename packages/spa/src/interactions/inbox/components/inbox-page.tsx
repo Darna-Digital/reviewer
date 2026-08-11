@@ -83,7 +83,7 @@ export function InboxPage() {
           className="flex shrink-0 flex-col border-r"
           style={{ width: listWidth }}
         >
-          <header className="flex h-11 shrink-0 items-center justify-between border-b px-2">
+          <header className="flex h-9 shrink-0 items-center justify-between border-b px-2">
             <Popover open={filterOpen} onOpenChange={setFilterOpen}>
               <PopoverTrigger
                 render={

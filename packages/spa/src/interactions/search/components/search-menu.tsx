@@ -30,7 +30,7 @@ export function SearchMenu() {
               render={
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="icon-sm"
                   aria-label="Search"
                   className="text-muted-foreground"
                 />
@@ -38,7 +38,7 @@ export function SearchMenu() {
             />
           }
         >
-          <IconSearch className="size-5" />
+          <IconSearch className="size-4" />
         </TooltipTrigger>
         <TooltipContent side="bottom">Search</TooltipContent>
       </Tooltip>

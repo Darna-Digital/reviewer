@@ -8,8 +8,8 @@
 import {
   IconFolders,
   IconGitCommit,
-  IconGitFork,
   IconGitPullRequest,
+  IconHistory,
   IconPlayerPlay,
   IconTerminal2,
 } from "@tabler/icons-react";
@@ -118,9 +118,7 @@ export function ModeRail() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const hasGitHub = repo.data?.github != null;
 
-  const gitActive =
-    prefs.bottomVisible &&
-    (prefs.bottomTab === "branches" || prefs.bottomTab === "history");
+  const historyActive = prefs.bottomVisible && prefs.bottomTab === "history";
   const servicesActive = prefs.bottomVisible && prefs.bottomTab === "services";
   const threadsActive = prefs.bottomVisible && prefs.bottomTab === "threads";
 
@@ -149,19 +147,13 @@ export function ModeRail() {
         )}
         <div className="mt-auto flex flex-col items-center gap-1">
           <RailButton
-            label="Branches & History"
-            active={gitActive}
-            onClick={() => {
-              const gitTab =
-                prefs.bottomTab === "history" ? "history" : "branches";
-              if (prefs.bottomVisible && gitActive) {
-                setUiPrefs({ bottomVisible: false });
-                return;
-              }
-              openBottomTab(gitTab);
-            }}
+            label="History"
+            active={historyActive}
+            onClick={() =>
+              toggleBottomTab("history", prefs.bottomTab, prefs.bottomVisible)
+            }
           >
-            <IconGitFork className="size-5" />
+            <IconHistory className="size-5" />
           </RailButton>
           <RailButton
             label="Services"

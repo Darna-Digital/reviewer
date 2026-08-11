@@ -77,7 +77,7 @@ export function CollaborationSearch() {
               render={
                 <Button
                   variant="ghost"
-                  size="icon"
+                  size="icon-sm"
                   aria-label="Search"
                   className="rounded-lg text-muted-foreground"
                 />
@@ -85,7 +85,7 @@ export function CollaborationSearch() {
             />
           }
         >
-          <IconSearch className="size-5" />
+          <IconSearch className="size-4" />
         </TooltipTrigger>
         <TooltipContent side="bottom">Search</TooltipContent>
       </Tooltip>

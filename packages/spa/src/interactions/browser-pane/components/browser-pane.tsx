@@ -327,7 +327,7 @@ export function BrowserPane() {
       className="browser-pane flex min-h-0 shrink-0 flex-col overflow-hidden rounded-xl border border-frame-border"
       style={{ width: prefs.browserPaneWidth }}
     >
-      <div className="flex h-11 shrink-0 items-center gap-1 border-b border-frame-border px-1.5">
+      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-frame-border px-1.5">
         <ChromeButton
           label="Back"
           disabled={!pane.canGoBack}

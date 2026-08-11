@@ -19,7 +19,6 @@ import {
   IconRepeat,
   IconTerminal2,
 } from "@tabler/icons-react";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   useNavigate,
   useParams,
@@ -31,7 +30,6 @@ import { toast } from "sonner";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { CommitPanel } from "@/components/commit-panel";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
-import { RepoList } from "@/components/repo-list";
 import {
   ReviewAssignBar,
   type AssignTarget,
@@ -65,6 +63,13 @@ import {
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
+import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
+import { activeRepo, folderName, isMultiRepo } from "@byconvo/core/workspace";
+import { filterCommitsByRepo } from "@byconvo/core/project";
+import {
+  useRepoCommands,
+  useWorkspaceActions,
+} from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { TabStrip } from "@/interactions/tabs/components/tab-strip";
 import {
   readTabs,
@@ -98,6 +103,7 @@ import {
   type LogQuery,
 } from "@/lib/api/types";
 import type { ReviewComment } from "@byconvo/core/comments";
+import type { CommitInfo } from "@byconvo/core/repo";
 import { pathName } from "@/lib/display-path";
 import { errorReason } from "@/lib/errors";
 import {
@@ -110,6 +116,10 @@ import {
   useFiles,
   useMergeState,
   usePagedLog,
+  useProjectBranches,
+  useProjectDiff,
+  useProjectFiles,
+  usePagedProjectLog,
   usePullComments,
   usePulls,
   useRemoteBranches,
@@ -139,7 +149,6 @@ export function AppShell() {
   const git = useGitActions();
   const comments = useCommentsActions();
   const chatActions = useChatsActions();
-  const queryClient = useQueryClient();
 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const params = useParams({ strict: false });
@@ -153,6 +162,7 @@ export function AppShell() {
 
   // --- queries ---------------------------------------------------------------
   const workspace = useWorkspace();
+  const workspaceActions = useWorkspaceActions();
   const repo = useRepo();
   const chatModels = useChatModels();
   const chats = useChats();
@@ -201,6 +211,38 @@ export function AppShell() {
     logRef ?? repo.data?.currentBranch ?? null,
     logFilters
   );
+  // A project of several roots shows one history covering all of them, each
+  // row saying where it came from — a single-root project has nothing to say,
+  // so it keeps the paged per-branch log it always had.
+  const multiRepo = isMultiRepo({ repos: workspace.data?.repos ?? [] });
+  const projectBranchList = useProjectBranches();
+  const projectLog = usePagedProjectLog(multiRepo, logFilters);
+  // Which root the history is narrowed to, or null for all of them. Branch
+  // names cannot narrow a merged history — one belongs to a single root — so
+  // the root is what the filter offers instead.
+  const [logRepo, setLogRepo] = useState<string | null>(null);
+  const projectHistory = useMemo(() => {
+    const entries = filterCommitsByRepo(projectLog.entries, logRepo);
+    return {
+      commits: entries.map((entry) => entry.commit),
+      repos: new Map(entries.map((entry) => [entry.commit.sha, entry.repo])),
+    };
+  }, [projectLog.entries, logRepo]);
+  const history = multiRepo
+    ? {
+        commits: projectHistory.commits,
+        repos: projectHistory.repos,
+        loading: projectLog.loading,
+        hasMore: projectLog.hasMore,
+        loadMore: projectLog.loadMore,
+      }
+    : {
+        commits: log.commits,
+        repos: undefined,
+        loading: log.loading,
+        hasMore: log.hasMore,
+        loadMore: log.loadMore,
+      };
 
   // Callback-ref state, not a ref object: the file view renders into this node,
   // so it has to re-render once the node exists.
@@ -218,13 +260,17 @@ export function AppShell() {
     prefs.reviewPullsHeight
   );
 
-  const isFolder =
-    workspace.data?.current != null && workspace.data.isGitRepo === false;
+  // A project with no git root at all: there is nothing repo-scoped to show,
+  // so the centre pane says so instead of rendering an empty tree.
+  const noRepo =
+    workspace.data?.project != null && workspace.data.current === null;
 
   // Open the picker automatically only once the workspace has loaded with no
-  // repository selected (not during the initial undefined loading state).
+  // project open (not during the initial undefined loading state). A project
+  // that simply holds no repository is open — the centre pane explains it
+  // rather than the picker blocking the view.
   useEffect(() => {
-    if (workspace.isSuccess && workspace.data.current === null)
+    if (workspace.isSuccess && workspace.data.project === null)
       setPickerOpen(true);
   }, [workspace.isSuccess, workspace.data]);
 
@@ -268,9 +314,19 @@ export function AppShell() {
   const targetKey = target === null ? "none" : diffTargetKey(target);
 
   const diff = useDiffText(target);
+  // The uncommitted diff of every root at once, its paths named from the
+  // project so they line up with the tree. Only the worktree target: a commit
+  // or a range belongs to one root, and is read from that root as before.
+  const projectDiff = useProjectDiff(multiRepo && target?.kind === "worktree");
+  const diffText =
+    multiRepo && target?.kind === "worktree"
+      ? (projectDiff.data ?? null)
+      : typeof diff.data === "string"
+        ? diff.data
+        : null;
   const parsedFiles = useMemo(
-    () => diffFns.parseFiles(typeof diff.data === "string" ? diff.data : null),
-    [diff.data, diffFns]
+    () => diffFns.parseFiles(diffText),
+    [diffText, diffFns]
   );
   const pullComments = usePullComments(
     target?.kind === "pull" ? target.pull.number : null
@@ -290,11 +346,17 @@ export function AppShell() {
   useEffect(() => setDraft(null), [targetKey, search.file]);
 
   // --- derived tree / comments (memoised: these run over the whole repo) -----
+  // Paths are named from the project root once it holds more than one
+  // repository, so the tree nests the roots as folders without being told to
+  // and a file opens without anything being switched first. A single-root
+  // project reads the repository's own listing, where the two are the same.
+  const projectFiles = useProjectFiles(multiRepo);
+  const listing = multiRepo ? projectFiles.data : files.data;
   const gitStatus = useMemo(
-    () => files.data?.gitStatus ?? [],
-    [files.data?.gitStatus]
+    () => listing?.gitStatus ?? [],
+    [listing?.gitStatus]
   );
-  const allPaths = useMemo(() => files.data?.paths ?? [], [files.data?.paths]);
+  const allPaths = useMemo(() => listing?.paths ?? [], [listing?.paths]);
   const treePaths = useMemo(
     () =>
       diffFns.treePaths({
@@ -493,11 +555,38 @@ export function AppShell() {
   useEffect(() => {
     scopeTabsTo(repoRoot);
   }, [repoRoot]);
+  /**
+   * Drop the view state that belongs to the root being left behind: the URL is
+   * repo-relative (the open file, the commit, the pull request) and so is the
+   * branch the history follows, and the root arriving has never heard of any
+   * of it. Called before the switch so nothing refetches against the old ref.
+   */
+  const leaveRepo = useCallback(() => {
+    setLogRef(null);
+    // Browse, not commit: moving between a project's roots is navigation, and
+    // it lands you in the arriving root's tree rather than in a review of
+    // whatever happens to be uncommitted there.
+    void navigate({ to: "/modes/code/browse", search: {} });
+  }, [navigate]);
+  // The safety net for a move this shell did not start — the command palette,
+  // say. Only a move between roots of the same project resets: the first
+  // resolve on load has nothing to leave, and opening a whole project is the
+  // picker's move to land wherever it means to.
+  const openProject = workspace.data?.project ?? null;
+  const previous = useRef({ root: repoRoot, project: openProject });
+  useEffect(() => {
+    const was = previous.current;
+    if (was.root === repoRoot) return;
+    previous.current = { root: repoRoot, project: openProject };
+    const movedWithinProject =
+      was.root !== null && repoRoot !== null && was.project === openProject;
+    if (movedWithinProject) leaveRepo();
+  }, [repoRoot, openProject, leaveRepo]);
   // Browsing has nothing else to put in the centre pane, so the strip is the
   // view: an open tab with no file on screen is a hole. A strip outlives the
   // URL that opened its files — restored from storage, or left behind by
   // navigation that dropped the file — so it names what belongs there.
-  const canRestore = mode === "browse" && target === null && !isFolder;
+  const canRestore = mode === "browse" && target === null && !noRepo;
   // Re-syncs when the repository resolves as well as when the file changes:
   // pointing the store at a repository swaps in that repository's strip, which
   // would otherwise drop the file already on screen.
@@ -577,11 +666,11 @@ export function AppShell() {
   );
 
   const buildCrumbs = (): ReadonlyArray<Crumb> => {
-    if (isFolder) {
+    if (noRepo) {
       return [
         {
-          id: "folder",
-          label: `${workspace.data?.childRepos.length ?? 0} repositories`,
+          id: "project",
+          label: pathName(workspace.data?.project ?? ""),
           icon: IconFolders,
         },
       ];
@@ -730,7 +819,7 @@ export function AppShell() {
         label: prefs.bottomVisible ? "Hide Bottom Panel" : "Show Bottom Panel",
         group: "View",
         icon: IconLayoutBottombarExpand,
-        keywords: "branches history services threads toggle",
+        keywords: "history services threads toggle",
         run: () => setUiPrefs({ bottomVisible: !prefs.bottomVisible }),
       },
       {
@@ -750,26 +839,67 @@ export function AppShell() {
         run: () => openBottomTab("threads"),
       },
       {
-        id: "repo-switch",
-        label: "Switch Repository…",
-        group: "Repository",
+        id: "project-switch",
+        label: "Open Project…",
+        group: "Project",
         icon: IconRepeat,
-        keywords: "open change project picker",
+        keywords: "open change repository folder picker switch",
         run: () => setPickerOpen(true),
       },
     ],
     [prefs.diffStyle, prefs.bottomVisible]
   );
   useRegisterCommands("code-shell", shellCommands);
+  useRepoCommands(workspace.data, leaveRepo);
+
+  /** Follow another of the open project's roots, staying where we are. */
+  const chooseRepo = async (path: string) => {
+    leaveRepo();
+    await workspaceActions.openRepo(path);
+  };
+
+  /**
+   * Point the git views at one of the project's roots. Branch actions run
+   * wherever they point, and a branch name means something different — or
+   * nothing — in another root, so acting in one goes through this first.
+   */
+  const followRepo = (repoPath: string) =>
+    workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
+
+  /**
+   * Open a commit from the history. In a project of several roots the commit
+   * may belong to one that is not current, so the root is followed first —
+   * every view below reads git from the current root, and a sha means nothing
+   * to the wrong one.
+   */
+  const openCommit = async (commit: CommitInfo) => {
+    const owner = history.repos?.get(commit.sha) ?? null;
+    if (owner !== null) {
+      const followed = await workspaceActions.followRepo(
+        owner.path,
+        workspace.data?.current ?? null
+      );
+      if (!followed) return;
+    }
+    void navigate({
+      to: "/modes/code/browse/commit/$sha",
+      params: { sha: commit.sha },
+      search: (prev: Search) => ({
+        ...prev,
+        path: logFilters.path ?? undefined,
+        file: undefined,
+      }),
+    });
+  };
 
   // --- center pane -----------------------------------------------------------
   const renderCenter = () => {
-    if (isFolder) {
+    if (noRepo) {
       return (
-        <RepoList
-          folder={workspace.data!.current!}
-          repos={workspace.data!.childRepos}
-          onOpen={(path) => void choose(path)}
+        <ProjectRepos
+          project={workspace.data!.project!}
+          repos={workspace.data!.repos}
+          onOpen={(path) => void chooseRepo(path)}
         />
       );
     }
@@ -862,25 +992,6 @@ export function AppShell() {
     );
   };
 
-  const choose = async (path: string) => {
-    const { data, error } = await fetchClient.POST("/api/workspace", {
-      body: { path },
-    });
-    if (error) {
-      toast.error(
-        (error as { message?: string; reason?: string }).message ??
-          (error as { reason?: string }).reason ??
-          "could not open repository"
-      );
-      return;
-    }
-    if (data !== undefined) {
-      queryClient.setQueryData(["get", "/api/workspace"], data);
-    }
-    await queryClient.invalidateQueries();
-    void navigate({ to: "/modes/code/commit", search: {} });
-  };
-
   const crumbs = buildCrumbs();
 
   return (
@@ -922,7 +1033,13 @@ export function AppShell() {
             onDeleteBranch={(name) => void git.deleteBranch(name)}
             onFetch={() => void git.fetch()}
             onPush={() => void git.push()}
-            onPull={() => void git.pull()}
+            projectBranches={
+              multiRepo ? (projectBranchList.data?.repos ?? []) : undefined
+            }
+            currentRepo={activeRepo(
+              workspace.data ?? { repos: [], current: null }
+            )}
+            onFollowRepo={followRepo}
           />
 
           {/* Everything below the toolbar sits in a bordered panel, so the
@@ -1151,35 +1268,29 @@ export function AppShell() {
                 onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
                 onCollapse={() => setUiPrefs({ bottomVisible: false })}
                 branches={branches.data ?? []}
-                remoteBranches={remoteBranches.data ?? []}
                 currentBranch={repo.data?.currentBranch ?? null}
-                commits={log.commits}
-                commitsLoading={log.loading}
-                commitsHaveMore={log.hasMore}
+                commits={history.commits}
+                commitRepos={history.repos}
+                repos={multiRepo ? (workspace.data?.repos ?? []) : undefined}
+                repoFilter={logRepo}
+                projectName={
+                  workspace.data?.project == null
+                    ? undefined
+                    : folderName(workspace.data.project)
+                }
+                onRepoFilterChange={setLogRepo}
+                commitsLoading={history.loading}
+                commitsHaveMore={history.hasMore}
                 logRef={logRef ?? repo.data?.currentBranch ?? null}
                 logFilters={logFilters}
                 selectedCommitSha={
                   browse?.kind === "commit" ? browse.sha : null
                 }
                 selectedCommitFile={viewing}
-                onLoadMoreCommits={log.loadMore}
+                onLoadMoreCommits={history.loadMore}
                 onLogRefChange={setLogRef}
                 onLogFiltersChange={setLogFilters}
-                onBranchCheckout={(b) => {
-                  void git.checkout(b);
-                  void navigate({ to: "/modes/code/commit" });
-                }}
-                onSelectCommit={(c) =>
-                  void navigate({
-                    to: "/modes/code/browse/commit/$sha",
-                    params: { sha: c.sha },
-                    search: (prev: Search) => ({
-                      ...prev,
-                      path: logFilters.path ?? undefined,
-                      file: undefined,
-                    }),
-                  })
-                }
+                onSelectCommit={(c) => void openCommit(c)}
                 onSelectCommitFile={(p) => openFile(p)}
               />
             </div>

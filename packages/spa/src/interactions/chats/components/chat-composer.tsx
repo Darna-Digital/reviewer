@@ -3,6 +3,10 @@
  * effort, mode, access level ("Full access"), and send/stop.
  * Owns only the draft text; settings and mode live with the caller (local state
  * on the new-thread page, the chat itself once it exists).
+ *
+ * The prompt box rests at a few lines and is dragged taller by its top edge —
+ * the height is the app's, not this thread's, so a box pulled open for one long
+ * prompt is still open at the next.
  */
 import {
   IconSend,
@@ -23,7 +27,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ResizeHandle } from "@/components/layout/resize-handle";
 import { Separator } from "@/components/ui/separator";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import type {
   ChatAccess,
   ChatEffort,
@@ -181,6 +187,8 @@ export function ChatComposer({
   // The prompt lives in the shared draft store (keyed per chat) rather than
   // local state, so leaving and returning to a thread keeps what you typed.
   const [text, setText] = useDraft(draftKey);
+  const prefs = useUiPrefs();
+  const [promptHeight, setPromptHeight] = useState(prefs.composerHeight);
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -266,186 +274,200 @@ export function ChatComposer({
   };
 
   return (
-    <div
-      className={cn(
-        "relative rounded-lg border bg-background shadow-sm focus-within:border-ring/60",
-        dragging && "border-primary"
-      )}
-      onDragEnter={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return;
-        e.preventDefault();
-        dragDepth.current += 1;
-        setDragging(true);
-      }}
-      onDragOver={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "copy";
-      }}
-      onDragLeave={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return;
-        dragDepth.current = Math.max(0, dragDepth.current - 1);
-        if (dragDepth.current === 0) setDragging(false);
-      }}
-      onDrop={(e) => {
-        if (!e.dataTransfer.types.includes("Files")) return;
-        e.preventDefault();
-        dragDepth.current = 0;
-        setDragging(false);
-        void addFiles(Array.from(e.dataTransfer.files));
-      }}
-    >
-      {attachments.length > 0 && (
-        <AttachmentGrid className="px-3 pt-3">
-          {attachments.map((attachment) => (
-            <AttachmentChip
-              key={attachment.id}
-              attachment={{
-                ...attachment,
-                source: attachmentSource(attachment),
-              }}
-              onRemove={() => removeAttachment(attachment.id)}
-            />
-          ))}
-        </AttachmentGrid>
-      )}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        multiple
-        className="hidden"
-        onChange={(e) => {
-          void addFiles(Array.from(e.target.files ?? []));
-          e.target.value = "";
-        }}
+    <div className="flex flex-col">
+      <ResizeHandle
+        orientation="row"
+        value={promptHeight}
+        min={56}
+        max={() => Math.max(56, window.innerHeight * 0.6)}
+        direction={-1}
+        onResize={setPromptHeight}
+        onResizeEnd={(height) => setUiPrefs({ composerHeight: height })}
+        label="Resize the message box"
       />
-      <textarea
-        ref={textareaRef}
-        autoFocus
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onPaste={(e) => {
-          const files = Array.from(e.clipboardData.files);
-          if (files.some(isImageFile)) {
-            e.preventDefault();
-            void addFiles(files);
-          }
+      <div
+        className={cn(
+          "relative rounded-lg border bg-background shadow-sm focus-within:border-ring/60",
+          dragging && "border-primary"
+        )}
+        onDragEnter={(e) => {
+          if (!e.dataTransfer.types.includes("Files")) return;
+          e.preventDefault();
+          dragDepth.current += 1;
+          setDragging(true);
         }}
-        onKeyDown={(e) => {
-          const selection = {
-            text,
-            selectionStart: e.currentTarget.selectionStart,
-            selectionEnd: e.currentTarget.selectionEnd,
-          };
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            void submit();
-            return;
-          }
-          if (e.key === "Enter" && e.shiftKey) {
-            if (applyListEdit(continueList(selection))) e.preventDefault();
-            return;
-          }
-          if (e.key === "Tab") {
-            const levels = e.shiftKey ? -1 : 1;
-            if (applyListEdit(shiftListIndent(selection, levels)))
+        onDragOver={(e) => {
+          if (!e.dataTransfer.types.includes("Files")) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+        }}
+        onDragLeave={(e) => {
+          if (!e.dataTransfer.types.includes("Files")) return;
+          dragDepth.current = Math.max(0, dragDepth.current - 1);
+          if (dragDepth.current === 0) setDragging(false);
+        }}
+        onDrop={(e) => {
+          if (!e.dataTransfer.types.includes("Files")) return;
+          e.preventDefault();
+          dragDepth.current = 0;
+          setDragging(false);
+          void addFiles(Array.from(e.dataTransfer.files));
+        }}
+      >
+        {attachments.length > 0 && (
+          <AttachmentGrid className="px-3 pt-3">
+            {attachments.map((attachment) => (
+              <AttachmentChip
+                key={attachment.id}
+                attachment={{
+                  ...attachment,
+                  source: attachmentSource(attachment),
+                }}
+                onRemove={() => removeAttachment(attachment.id)}
+              />
+            ))}
+          </AttachmentGrid>
+        )}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            void addFiles(Array.from(e.target.files ?? []));
+            e.target.value = "";
+          }}
+        />
+        <textarea
+          ref={textareaRef}
+          autoFocus
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onPaste={(e) => {
+            const files = Array.from(e.clipboardData.files);
+            if (files.some(isImageFile)) {
               e.preventDefault();
-          }
-        }}
-        rows={5}
-        placeholder={placeholder ?? "Ask anything about this repository…"}
-        className="max-h-60 min-h-28 w-full resize-none bg-transparent px-4 pt-3 text-sm outline-none placeholder:text-muted-foreground"
-      />
-      {dragging && (
-        <div className="pointer-events-none absolute inset-1 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-primary bg-primary/10 text-sm font-medium text-foreground">
-          Drop images to attach them
-        </div>
-      )}
-      <div className="flex items-center gap-1 px-2 pb-2">
-        <ModelPicker
-          catalog={catalog}
-          model={settings.model}
-          onSelect={(model, provider) => onSettingsChange({ model, provider })}
+              void addFiles(files);
+            }
+          }}
+          onKeyDown={(e) => {
+            const selection = {
+              text,
+              selectionStart: e.currentTarget.selectionStart,
+              selectionEnd: e.currentTarget.selectionEnd,
+            };
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              void submit();
+              return;
+            }
+            if (e.key === "Enter" && e.shiftKey) {
+              if (applyListEdit(continueList(selection))) e.preventDefault();
+              return;
+            }
+            if (e.key === "Tab") {
+              const levels = e.shiftKey ? -1 : 1;
+              if (applyListEdit(shiftListIndent(selection, levels)))
+                e.preventDefault();
+            }
+          }}
+          style={{ height: promptHeight }}
+          placeholder={placeholder ?? "Ask anything about this repository…"}
+          className="w-full resize-none bg-transparent px-4 pt-3 text-sm outline-none placeholder:text-muted-foreground"
         />
-        <Separator
-          orientation="vertical"
-          className="mx-0.5 h-4 self-center data-vertical:self-center"
-        />
-        <SelectorMenu
-          options={EFFORTS}
-          value={settings.effort}
-          onSelect={(effort) => onSettingsChange({ effort })}
-          ariaLabel="Reasoning effort"
-        />
-        <Separator
-          orientation="vertical"
-          className="mx-0.5 h-4 self-center data-vertical:self-center"
-        />
-        <SelectorMenu
-          options={MODES}
-          value={mode}
-          onSelect={onModeChange}
-          icon={
-            mode === "analysis" ? (
-              <IconSitemap className="size-3.5 text-muted-foreground" />
-            ) : (
-              <IconHammer className="size-3.5 text-muted-foreground" />
-            )
-          }
-          ariaLabel="Session mode"
-        />
-        <Separator
-          orientation="vertical"
-          className="mx-0.5 h-4 self-center data-vertical:self-center"
-        />
-        <SelectorMenu
-          options={ACCESS}
-          value={settings.access}
-          onSelect={(access) => onSettingsChange({ access })}
-          icon={
-            settings.access === "fullAccess" ? (
-              <IconLockOpen className="size-3.5 text-muted-foreground" />
-            ) : (
-              <IconLock className="size-3.5 text-muted-foreground" />
-            )
-          }
-          ariaLabel="Access level"
-        />
-        <Separator
-          orientation="vertical"
-          className="mx-0.5 h-4 self-center data-vertical:self-center"
-        />
-        <Button
-          size="icon"
-          variant="ghost"
-          className="size-7"
-          aria-label="Attach images"
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <IconPhotoPlus className="size-4 text-muted-foreground" />
-        </Button>
-        <div className="flex-1" />
-        {running && onStop !== undefined && (
+        {dragging && (
+          <div className="pointer-events-none absolute inset-1 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-primary bg-primary/10 text-sm font-medium text-foreground">
+            Drop images to attach them
+          </div>
+        )}
+        <div className="flex items-center gap-1 px-2 pb-2">
+          <ModelPicker
+            catalog={catalog}
+            model={settings.model}
+            onSelect={(model, provider) =>
+              onSettingsChange({ model, provider })
+            }
+          />
+          <Separator
+            orientation="vertical"
+            className="mx-0.5 h-4 self-center data-vertical:self-center"
+          />
+          <SelectorMenu
+            options={EFFORTS}
+            value={settings.effort}
+            onSelect={(effort) => onSettingsChange({ effort })}
+            ariaLabel="Reasoning effort"
+          />
+          <Separator
+            orientation="vertical"
+            className="mx-0.5 h-4 self-center data-vertical:self-center"
+          />
+          <SelectorMenu
+            options={MODES}
+            value={mode}
+            onSelect={onModeChange}
+            icon={
+              mode === "analysis" ? (
+                <IconSitemap className="size-3.5 text-muted-foreground" />
+              ) : (
+                <IconHammer className="size-3.5 text-muted-foreground" />
+              )
+            }
+            ariaLabel="Session mode"
+          />
+          <Separator
+            orientation="vertical"
+            className="mx-0.5 h-4 self-center data-vertical:self-center"
+          />
+          <SelectorMenu
+            options={ACCESS}
+            value={settings.access}
+            onSelect={(access) => onSettingsChange({ access })}
+            icon={
+              settings.access === "fullAccess" ? (
+                <IconLockOpen className="size-3.5 text-muted-foreground" />
+              ) : (
+                <IconLock className="size-3.5 text-muted-foreground" />
+              )
+            }
+            ariaLabel="Access level"
+          />
+          <Separator
+            orientation="vertical"
+            className="mx-0.5 h-4 self-center data-vertical:self-center"
+          />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-7"
+            aria-label="Attach images"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <IconPhotoPlus className="size-4 text-muted-foreground" />
+          </Button>
+          <div className="flex-1" />
+          {running && onStop !== undefined && (
+            <Button
+              size="icon"
+              className="size-7 rounded-full"
+              variant="secondary"
+              aria-label="Stop generation"
+              onClick={onStop}
+            >
+              <IconPlayerStopFilled className="size-3.5" />
+            </Button>
+          )}
           <Button
             size="icon"
             className="size-7 rounded-full"
-            variant="secondary"
-            aria-label="Stop generation"
-            onClick={onStop}
+            aria-label="Send message"
+            disabled={!canSend}
+            onClick={() => void submit()}
           >
-            <IconPlayerStopFilled className="size-3.5" />
+            <IconSend className="size-4" />
           </Button>
-        )}
-        <Button
-          size="icon"
-          className="size-7 rounded-full"
-          aria-label="Send message"
-          disabled={!canSend}
-          onClick={() => void submit()}
-        >
-          <IconSend className="size-4" />
-        </Button>
+        </div>
       </div>
     </div>
   );

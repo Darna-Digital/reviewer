@@ -94,7 +94,7 @@ function BarButton({
         render={
           <Button
             variant="ghost"
-            size="icon"
+            size="icon-sm"
             aria-label={label}
             aria-pressed={pressed}
             disabled={disabled}
@@ -252,7 +252,7 @@ export function WindowBar() {
   return (
     <header
       className={cn(
-        "flex h-11 shrink-0 items-center gap-1 pr-2",
+        "flex h-10 shrink-0 items-center gap-1 pr-2",
         // The traffic lights are drawn by macOS over the bar's top-left; the
         // lead padding is what the window's own controls sit in, so it has to
         // clear them (see `trafficLightPosition` in the desktop main process).
@@ -295,11 +295,11 @@ export function WindowBar() {
                     tabIndex={active ? 0 : -1}
                     draggable={!pinned}
                     className={cn(
-                      "group/tab flex h-8 max-w-52 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-md text-[0.8125rem] transition-colors",
+                      "group/tab flex h-7 max-w-52 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-md text-[0.8125rem] transition-colors",
                       // A pinned tab is its icon and nothing else, so it wears
                       // the same square — and the same states — as the buttons
                       // at the other end of the bar.
-                      pinned ? "w-8 justify-center" : "pr-1.5 pl-3",
+                      pinned ? "w-7 justify-center" : "pr-1 pl-2.5",
                       active
                         ? "bg-elevate-strong text-foreground"
                         : "text-muted-foreground hover:bg-elevate hover:text-foreground",
@@ -359,7 +359,7 @@ export function WindowBar() {
                   />
                 }
               >
-                {Icon !== undefined && <Icon className="size-5 shrink-0" />}
+                {Icon !== undefined && <Icon className="size-4 shrink-0" />}
                 {!pinned && (
                   <>
                     <span className="truncate">{tab.title}</span>
@@ -403,7 +403,7 @@ export function WindowBar() {
         })}
       </div>
       <BarButton label="New session" onClick={openSession}>
-        <IconPlus className="size-5" />
+        <IconPlus className="size-4" />
       </BarButton>
       <div className="flex-1" />
       {/* Both panes are there to be read against the code — an analysis of it,
@@ -416,7 +416,7 @@ export function WindowBar() {
             pressed={prefs.plansPaneOpen}
             onClick={() => setUiPrefs({ plansPaneOpen: !prefs.plansPaneOpen })}
           >
-            <IconSitemap className="size-5" />
+            <IconSitemap className="size-4" />
           </BarButton>
           {/* The pane behind this is an Electron <webview>, which a browser tab
               has no equivalent of — so there the button has nothing to open. */}
@@ -428,7 +428,7 @@ export function WindowBar() {
                 setUiPrefs({ browserPaneOpen: !prefs.browserPaneOpen })
               }
             >
-              <IconWorld className="size-5" />
+              <IconWorld className="size-4" />
             </BarButton>
           )}
         </>
