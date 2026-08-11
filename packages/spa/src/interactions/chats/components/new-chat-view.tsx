@@ -163,7 +163,7 @@ export function NewChatView() {
               placeholder={
                 mode === "analysis"
                   ? "How is a new branch created?"
-                  : "Ask anything, @tag files/folders, or describe a change…"
+                  : "Ask anything, or describe a change…"
               }
               textareaRef={composerRef}
             />
