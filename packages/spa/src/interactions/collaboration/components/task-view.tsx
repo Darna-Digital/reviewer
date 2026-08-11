@@ -1,10 +1,12 @@
 /**
- * A single task, laid out the way Linear lays out an issue: the description and
- * its activity in the main column, properties down the right, and the position
- * in the list plus its arrows in the header.
+ * A single task. The properties down the right side are the whole model in one
+ * column: which horizon it sits in, what position it holds there, what has to
+ * happen first, and how much time has actually gone into it. There is no field
+ * for how important it is, because there is nothing honest to put in one.
  */
 import {
   IconSend,
+  IconAlertTriangle,
   IconChevronDown,
   IconChevronUp,
   IconDots,
@@ -20,23 +22,47 @@ import { Link } from "@tanstack/react-router";
 import type { CSSProperties, ReactNode } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar";
-import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-priority-icon";
+import { announceMove } from "@/interactions/collaboration/components/announce-move";
+import { ScopeGlyph } from "@/interactions/collaboration/components/scope-glyph";
+import {
+  SpentLabel,
+  TrackButton,
+} from "@/interactions/collaboration/components/task-time";
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
+import { ClaimButton } from "@/interactions/collaboration/components/up-for-grabs";
 import {
   findProject,
-  PRIORITY_LABEL,
-  projectTasks,
+  findScope,
+  moveTaskTo,
+  SCOPES,
+  setTaskStatus,
   STATUS_LABEL,
+  STATUS_MEANING,
+  STATUS_ORDER,
   taskChildren,
   type MockActivity,
   type MockTask,
 } from "@/interactions/collaboration/data/collaboration.mock";
+import { useTasks } from "@/interactions/collaboration/data/use-tasks";
+import {
+  blocking,
+  blockersOf,
+  conflictsFor,
+  isUpForGrabs,
+  laneTasks,
+} from "@/interactions/collaboration/functions/task-flow.functions";
 import { cn } from "@/lib/utils";
 
 const PROPERTY_ROW =
-  "flex h-7 items-center gap-2 rounded-md px-1.5 text-[13px] outline-none hover:bg-elevate focus-visible:ring-3 focus-visible:ring-ring/30";
+  "flex h-7 w-full items-center gap-2 rounded-md px-1.5 text-[13px] outline-none hover:bg-elevate focus-visible:ring-3 focus-visible:ring-ring/30";
 
 function ActivityEntry({ entry }: { entry: MockActivity }) {
   if (entry.kind === "comment") {
@@ -71,15 +97,48 @@ function Property({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-export function TaskView({ task }: { task: MockTask }) {
-  const project = findProject(task.projectId);
-  const children = taskChildren(task.id);
-  const siblings = projectTasks(task.projectId).filter(
-    (t) => t.parentId === task.parentId
+function TaskChip({ task }: { task: MockTask }) {
+  const scope = findScope(task.scopeId);
+  return (
+    <Link
+      to="/modes/collaboration"
+      search={{ view: "task", id: task.id }}
+      className={cn(PROPERTY_ROW, "h-auto flex-col items-start gap-0 py-1")}
+    >
+      <span className="flex w-full min-w-0 items-center gap-1.5">
+        <TaskStatusIcon status={task.status} className="size-3.5" />
+        <span className="shrink-0 font-mono text-[0.6875rem] text-muted-foreground">
+          {task.key}
+        </span>
+        <span className="min-w-0 truncate">{task.title}</span>
+      </span>
+      <span className="pl-5 text-[0.6875rem] text-muted-foreground">
+        {task.status === "done" ? "Landed" : (scope?.name ?? "No horizon")}
+      </span>
+    </Link>
   );
-  const index = siblings.findIndex((t) => t.id === task.id);
+}
+
+export function TaskView({ task: selected }: { task: MockTask }) {
+  const tasks = useTasks();
+  const task = tasks.find((entry) => entry.id === selected.id) ?? selected;
+
+  const project = findProject(task.projectId);
+  const scope = findScope(task.scopeId);
+  const children = taskChildren(task.id);
+  const siblings = laneTasks(
+    tasks,
+    task.projectId,
+    task.scopeId,
+    task.parentId
+  );
+  const index = siblings.findIndex((entry) => entry.id === task.id);
   const previous = siblings[index - 1];
   const next = siblings[index + 1];
+
+  const conflicts = conflictsFor(tasks, task);
+  const waits = blockersOf(tasks, task);
+  const blocks = blocking(tasks, task);
 
   return (
     <>
@@ -179,6 +238,51 @@ export function TaskView({ task }: { task: MockTask }) {
               {task.title}
             </h1>
 
+            {conflicts.map((conflict) => (
+              <div
+                key={conflict.blocker.id}
+                className="mt-4 flex max-w-[70ch] items-start gap-2.5 rounded-xl border border-destructive/40 bg-destructive/5 px-3 py-2.5"
+              >
+                <IconAlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
+                <div className="min-w-0 text-[13px]">
+                  <p>
+                    Planned for {scope?.name ?? "this horizon"}, waiting on{" "}
+                    <Link
+                      to="/modes/collaboration"
+                      search={{ view: "task", id: conflict.blocker.id }}
+                      className="font-medium underline underline-offset-2"
+                    >
+                      {conflict.blocker.key}
+                    </Link>
+                    {conflict.reason === "later-scope"
+                      ? ` — which does not start until ${findScope(conflict.blocker.scopeId)?.name ?? "a later horizon"}.`
+                      : " — which is further down this same horizon."}{" "}
+                    This order cannot happen.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      announceMove(
+                        moveTaskTo(
+                          task.id,
+                          conflict.blocker.scopeId,
+                          laneTasks(
+                            tasks,
+                            task.projectId,
+                            conflict.blocker.scopeId,
+                            task.parentId
+                          ).length
+                        )
+                      )
+                    }
+                    className="mt-1.5 rounded-md text-xs font-medium text-destructive underline underline-offset-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+                  >
+                    Move it after {conflict.blocker.key}
+                  </button>
+                </div>
+              </div>
+            ))}
+
             <div className="mt-4 flex flex-col gap-3">
               {task.description.map((paragraph) => (
                 <p
@@ -270,23 +374,137 @@ export function TaskView({ task }: { task: MockTask }) {
             </div>
           </div>
 
-          <aside className="flex w-56 shrink-0 flex-col gap-6 max-lg:w-full">
-            <Property label="Properties">
-              <div className="flex flex-col">
-                <button type="button" className={PROPERTY_ROW}>
+          <aside className="flex w-60 shrink-0 flex-col gap-6 max-lg:w-full">
+            <Property label="Status">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<button type="button" className={PROPERTY_ROW} />}
+                >
                   <TaskStatusIcon status={task.status} />
                   {STATUS_LABEL[task.status]}
-                </button>
-                <button type="button" className={PROPERTY_ROW}>
-                  <TaskPriorityIcon priority={task.priority} />
-                  {PRIORITY_LABEL[task.priority]}
-                </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-64">
+                  {STATUS_ORDER.map((status) => (
+                    <DropdownMenuItem
+                      key={status}
+                      onClick={() => setTaskStatus(task.id, status)}
+                      className="items-start"
+                    >
+                      <TaskStatusIcon status={status} className="mt-0.5" />
+                      <span className="flex min-w-0 flex-col">
+                        <span>{STATUS_LABEL[status]}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {STATUS_MEANING[status]}
+                        </span>
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </Property>
+
+            <Property label="Horizon">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<button type="button" className={PROPERTY_ROW} />}
+                >
+                  {scope !== undefined && <ScopeGlyph kind={scope.kind} />}
+                  <span className="min-w-0 truncate">
+                    {scope?.name ?? "No horizon"}
+                  </span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="min-w-56">
+                  {SCOPES.map((entry) => (
+                    <DropdownMenuItem
+                      key={entry.id}
+                      onClick={() =>
+                        announceMove(
+                          moveTaskTo(
+                            task.id,
+                            entry.id,
+                            laneTasks(
+                              tasks,
+                              task.projectId,
+                              entry.id,
+                              task.parentId
+                            ).length
+                          )
+                        )
+                      }
+                      className="items-start"
+                    >
+                      <ScopeGlyph kind={entry.kind} className="mt-0.5" />
+                      <span className="flex min-w-0 flex-col">
+                        <span>{entry.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {entry.window}
+                        </span>
+                      </span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <p className="px-1.5 text-xs text-muted-foreground">
+                {task.status === "done"
+                  ? "Landed — out of the sequence."
+                  : index < 0
+                    ? "Not in the sequence."
+                    : previous === undefined
+                      ? `First in line, ${scope?.left ?? ""}`
+                      : `After ${previous.key}, ${scope?.left ?? ""}`}
+              </p>
+            </Property>
+
+            <Property label="Time spent">
+              <div className={cn(PROPERTY_ROW, "gap-2 hover:bg-transparent")}>
+                <TrackButton task={task} />
+                <SpentLabel task={task} className="text-[13px]" />
+                {task.spent === 0 && (
+                  <span className="text-[13px] text-muted-foreground">
+                    Nothing yet
+                  </span>
+                )}
+              </div>
+              <p className="px-1.5 text-xs text-muted-foreground">
+                Measured, never estimated.
+              </p>
+            </Property>
+
+            <Property label="Assignee">
+              {isUpForGrabs(tasks, task) ? (
+                <div className={cn(PROPERTY_ROW, "gap-2 hover:bg-transparent")}>
+                  <ClaimButton task={task} />
+                  <span className="text-[13px] text-muted-foreground">
+                    Up for grabs
+                  </span>
+                </div>
+              ) : (
                 <button type="button" className={PROPERTY_ROW}>
                   <AssigneeAvatar name={task.assignee} className="size-4" />
                   <span className="min-w-0 truncate">{task.assignee}</span>
                 </button>
-              </div>
+              )}
             </Property>
+
+            {waits.length > 0 && (
+              <Property label="Waits on">
+                <div className="flex flex-col">
+                  {waits.map((blocker) => (
+                    <TaskChip key={blocker.id} task={blocker} />
+                  ))}
+                </div>
+              </Property>
+            )}
+
+            {blocks.length > 0 && (
+              <Property label="Blocks">
+                <div className="flex flex-col">
+                  {blocks.map((blocked) => (
+                    <TaskChip key={blocked.id} task={blocked} />
+                  ))}
+                </div>
+              </Property>
+            )}
 
             <Property label="Labels">
               <div className="flex flex-wrap items-center gap-1">
@@ -300,7 +518,10 @@ export function TaskView({ task }: { task: MockTask }) {
                 ))}
                 <button
                   type="button"
-                  className={cn(PROPERTY_ROW, "h-6 text-muted-foreground")}
+                  className={cn(
+                    PROPERTY_ROW,
+                    "h-6 w-auto text-muted-foreground"
+                  )}
                 >
                   <IconTag className="size-4" />
                   Add label

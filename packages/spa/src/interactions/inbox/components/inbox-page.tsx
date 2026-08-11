@@ -29,9 +29,12 @@ import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee
 import { CollaborationSidebar } from "@/interactions/collaboration/components/collaboration-sidebar";
 import { CollaborationTabs } from "@/interactions/collaboration-tabs/components/collaboration-tabs";
 import { MessageComposer } from "@/interactions/collaboration/components/message-composer";
-import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-priority-icon";
+import { ScopeGlyph } from "@/interactions/collaboration/components/scope-glyph";
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
-import { findProject } from "@/interactions/collaboration/data/collaboration.mock";
+import {
+  findProject,
+  findScope,
+} from "@/interactions/collaboration/data/collaboration.mock";
 import { PaneHeader } from "@/components/layout/pane-header";
 import {
   INBOX_ITEMS,
@@ -68,6 +71,7 @@ export function InboxPage() {
   const task = selected === undefined ? undefined : inboxTask(selected);
   const comments = selected === undefined ? [] : inboxComments(selected);
   const project = task === undefined ? undefined : findProject(task.projectId);
+  const scope = task === undefined ? undefined : findScope(task.scopeId);
 
   const showList = !expanded && prefs.sidebarVisible;
 
@@ -255,10 +259,12 @@ export function InboxPage() {
                     <AssigneeAvatar name={task.assignee} />
                     {task.assignee}
                   </span>
-                  <span className="flex items-center gap-1.5">
-                    <TaskPriorityIcon priority={task.priority} />
-                    {task.priority}
-                  </span>
+                  {scope !== undefined && (
+                    <span className="flex items-center gap-1.5">
+                      <ScopeGlyph kind={scope.kind} />
+                      {scope.name}
+                    </span>
+                  )}
                   <span className="tabular-nums">Updated {task.updated}</span>
                 </div>
                 {task.description.map((paragraph, index) => (

@@ -8,6 +8,7 @@ import {
   DEFAULT_VIEW,
   findChat,
   findProject,
+  findScope,
   findTask,
   type CollaborationView,
 } from "@/interactions/collaboration/data/collaboration.mock";
@@ -35,6 +36,10 @@ function locationTitle(kind: CollaborationTabKind, id: string): string {
       return findProject(id)?.name ?? "Project";
     case "tasks":
       return `${findProject(id)?.name ?? "Project"} tasks`;
+    case "flow":
+      return `${findProject(id)?.name ?? "Project"} flow`;
+    case "outlook":
+      return `Outlook · ${findScope(id)?.name ?? "This week"}`;
     case "docs":
       return `${findProject(id)?.name ?? "Project"} docs`;
     case "task":

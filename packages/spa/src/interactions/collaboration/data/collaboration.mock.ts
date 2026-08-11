@@ -5,27 +5,69 @@
  * belongs to, so the sidebar can nest them and the panes can look either way
  * (project → its work, task/chat → its project) from the same arrays.
  */
+import {
+  laneTasks,
+  pushInto,
+  type Displacement,
+} from "@/interactions/collaboration/functions/task-flow.functions";
 import { agentShort } from "@/interactions/threads/interfaces/agents";
 import type { AgentKind } from "@byconvo/core/threads";
 
 export type CollaborationView =
   | "project"
   | "tasks"
+  | "flow"
+  | "outlook"
   | "task"
   | "docs"
   | "chat"
   | "agents"
   | "members";
 
-export type TaskStatus = "todo" | "doing" | "review" | "done";
+/**
+ * `figuring` is the honest one. A task nobody has worked out yet is not "todo"
+ * and not "in progress" — somebody is spending real time deciding what the work
+ * even is, and the board should say so rather than let it sit in a lane that
+ * implies the shape is known.
+ */
+export type TaskStatus = "todo" | "figuring" | "doing" | "review" | "done";
 
 export const UNASSIGNED = "Unassigned";
 
-export type TaskPriority = "urgent" | "high" | "medium" | "low" | "none";
+/**
+ * A horizon, not a rank. Work is either in a stretch of time or it is out of
+ * scope; there is no "high priority" to hide behind, because a horizon has an
+ * end and a rank does not.
+ */
+export type ScopeKind =
+  | "day"
+  | "week"
+  | "month"
+  | "quarter"
+  | "duration"
+  | "out";
+
+export interface MockScope {
+  id: string;
+  kind: ScopeKind;
+  name: string;
+  /** The dates it covers, spelled out. */
+  window: string;
+  /** What is left of it, as a person would say it aloud. */
+  left: string;
+  /**
+   * How many things somebody said this horizon holds. A decision about how much
+   * to take on, never a guess at how long anything takes — which is why work
+   * can be pushed out of it without an estimate existing anywhere.
+   */
+  capacity: number | null;
+  /** How far through the horizon we already are, 0–1. */
+  elapsed: number;
+}
 
 export interface MockActivity {
   id: string;
-  kind: "created" | "priority" | "status" | "comment";
+  kind: "created" | "scope" | "status" | "comment";
   author: string;
   time: string;
   /** What happened, for everything but a comment. */
@@ -43,7 +85,14 @@ export interface MockTask {
   parentId?: string;
   title: string;
   status: TaskStatus;
-  priority: TaskPriority;
+  /** Which horizon it sits in. */
+  scopeId: string;
+  /** Its place in that horizon. Only one task can be first. */
+  sequence: number;
+  /** Tasks that have to land before this one can start. */
+  blockedBy: ReadonlyArray<string>;
+  /** Minutes actually tracked. Never an estimate — this is only ever the past. */
+  spent: number;
   assignee: string;
   labels: ReadonlyArray<string>;
   updated: string;
@@ -174,6 +223,7 @@ export interface MockViewer {
 }
 
 export const STATUS_ORDER: ReadonlyArray<TaskStatus> = [
+  "figuring",
   "doing",
   "review",
   "todo",
@@ -182,18 +232,91 @@ export const STATUS_ORDER: ReadonlyArray<TaskStatus> = [
 
 export const STATUS_LABEL: Record<TaskStatus, string> = {
   todo: "Todo",
+  figuring: "Figuring out",
   doing: "In Progress",
   review: "In Review",
   done: "Done",
 };
 
-export const PRIORITY_LABEL: Record<TaskPriority, string> = {
-  urgent: "Urgent",
-  high: "High",
-  medium: "Medium",
-  low: "Low",
-  none: "No priority",
+export const STATUS_MEANING: Record<TaskStatus, string> = {
+  todo: "Nobody has started.",
+  figuring: "Somebody is working out what the work is.",
+  doing: "The work itself is under way.",
+  review: "Written, waiting on someone else to look.",
+  done: "Landed.",
 };
+
+/**
+ * The horizons, nearest first. A dynamic one slots in by when it ends, so
+ * "Cutover window" sits between this week and this month without anybody
+ * choosing where to file it. `out` is last and belongs to no timeline.
+ */
+export const SCOPES: ReadonlyArray<MockScope> = [
+  {
+    id: "today",
+    kind: "day",
+    name: "Today",
+    window: "Tue 11 Aug",
+    left: "5 hours left",
+    capacity: 4,
+    elapsed: 0.58,
+  },
+  {
+    id: "week",
+    kind: "week",
+    name: "This week",
+    window: "Mon 10 – Sun 16 Aug",
+    left: "4 days left",
+    capacity: 3,
+    elapsed: 0.3,
+  },
+  {
+    id: "cutover",
+    kind: "duration",
+    name: "Cutover window",
+    window: "Sun 17 – Fri 22 Aug",
+    left: "starts in 6 days",
+    capacity: 2,
+    elapsed: 0,
+  },
+  {
+    id: "month",
+    kind: "month",
+    name: "This month",
+    window: "August",
+    left: "20 days left",
+    capacity: 4,
+    elapsed: 0.34,
+  },
+  {
+    id: "quarter",
+    kind: "quarter",
+    name: "This quarter",
+    window: "Jul – Sep",
+    left: "7 weeks left",
+    capacity: 6,
+    elapsed: 0.51,
+  },
+  {
+    id: "out",
+    kind: "out",
+    name: "Out of scope",
+    window: "No horizon",
+    left: "Nobody is waiting on these",
+    capacity: null,
+    elapsed: 0,
+  },
+];
+
+export const findScope = (id: string) => SCOPES.find((s) => s.id === id);
+
+/** Where a scope sits on the timeline; an unknown one lands at the end. */
+export const scopeRank = (id: string): number => {
+  const at = SCOPES.findIndex((s) => s.id === id);
+  return at < 0 ? SCOPES.length : at;
+};
+
+export const DEFAULT_SCOPE = SCOPES[1]?.id ?? "week";
 
 export const WORKSPACES: ReadonlyArray<MockWorkspace> = [
   {
@@ -674,7 +797,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     projectId: "atlas",
     title: "Drain the legacy queue before the cutover",
     status: "review",
-    priority: "urgent",
+    scopeId: "today",
+    sequence: 1,
+    blockedBy: [],
+    spent: 380,
     assignee: "Theo Brandt",
     labels: ["pipeline", "cutover"],
     updated: "Jul 28",
@@ -693,10 +819,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
       },
       {
         id: "atlas-1-a2",
-        kind: "priority",
+        kind: "scope",
         author: "Nadia Alvi",
         time: "2d ago",
-        detail: "set priority to Urgent",
+        detail: "pulled this into Today, first",
       },
       {
         id: "atlas-1-a3",
@@ -720,7 +846,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     projectId: "atlas",
     title: "Backfill checkpoints",
     status: "doing",
-    priority: "high",
+    scopeId: "today",
+    sequence: 2,
+    blockedBy: ["atlas-1"],
+    spent: 95,
     assignee: VIEWER.name,
     labels: ["pipeline"],
     updated: "Jul 27",
@@ -764,7 +893,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     projectId: "atlas",
     title: "Web infra",
     status: "todo",
-    priority: "medium",
+    scopeId: "month",
+    sequence: 1,
+    blockedBy: [],
+    spent: 0,
     assignee: "Theo Brandt",
     labels: ["infra"],
     updated: "Jul 22",
@@ -780,7 +912,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     parentId: "atlas-3",
     title: "spa",
     status: "todo",
-    priority: "medium",
+    scopeId: "month",
+    sequence: 1,
+    blockedBy: [],
+    spent: 0,
     assignee: seedAgentName("cursor-theo"),
     labels: [],
     updated: "Jul 22",
@@ -794,7 +929,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     parentId: "atlas-3",
     title: "website",
     status: "todo",
-    priority: "low",
+    scopeId: "month",
+    sequence: 2,
+    blockedBy: [],
+    spent: 0,
     assignee: "Ines Faber",
     labels: [],
     updated: "Jul 22",
@@ -808,7 +946,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     parentId: "atlas-3",
     title: "central-server",
     status: "todo",
-    priority: "medium",
+    scopeId: "month",
+    sequence: 3,
+    blockedBy: [],
+    spent: 0,
     assignee: UNASSIGNED,
     labels: [],
     updated: "Jul 22",
@@ -821,7 +962,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     projectId: "atlas",
     title: "Cap retry concurrency at 8",
     status: "done",
-    priority: "high",
+    scopeId: "week",
+    sequence: 3,
+    blockedBy: [],
+    spent: 185,
     assignee: "Theo Brandt",
     labels: ["pipeline", "incident"],
     updated: "Jul 21",
@@ -844,7 +988,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     projectId: "pricing",
     title: "Comparison table copy",
     status: "doing",
-    priority: "high",
+    scopeId: "today",
+    sequence: 1,
+    blockedBy: [],
+    spent: 130,
     assignee: "Nadia Alvi",
     labels: ["copy"],
     updated: "Jul 26",
@@ -881,7 +1028,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     projectId: "pricing",
     title: "Annual toggle",
     status: "done",
-    priority: "medium",
+    scopeId: "week",
+    sequence: 1,
+    blockedBy: [],
+    spent: 220,
     assignee: "Ines Faber",
     labels: ["ui/ux"],
     updated: "Jul 24",
@@ -893,8 +1043,11 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     key: "BYC-203",
     projectId: "pricing",
     title: "Scopes instead of task priorities",
-    status: "todo",
-    priority: "low",
+    status: "figuring",
+    scopeId: "month",
+    sequence: 1,
+    blockedBy: [],
+    spent: 60,
     assignee: UNASSIGNED,
     labels: ["ui/ux"],
     updated: "Jul 24",
@@ -909,7 +1062,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     projectId: "onboarding",
     title: "Collapse steps 3 to 6",
     status: "doing",
-    priority: "high",
+    scopeId: "week",
+    sequence: 2,
+    blockedBy: ["onboarding-2"],
+    spent: 265,
     assignee: "Ines Faber",
     labels: ["ui/ux"],
     updated: "Jul 25",
@@ -938,8 +1094,11 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     key: "BYC-192",
     projectId: "onboarding",
     title: "Auth and multitenancy",
-    status: "todo",
-    priority: "urgent",
+    status: "figuring",
+    scopeId: "week",
+    sequence: 1,
+    blockedBy: [],
+    spent: 90,
     assignee: "Theo Brandt",
     labels: ["infra"],
     updated: "Jul 22",
@@ -954,7 +1113,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     projectId: "onboarding",
     title: "Skip-for-now path",
     status: "todo",
-    priority: "none",
+    scopeId: "out",
+    sequence: 1,
+    blockedBy: [],
+    spent: 0,
     assignee: UNASSIGNED,
     labels: [],
     updated: "Jul 20",
@@ -969,7 +1131,10 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     projectId: "mobile",
     title: "Offline draft store",
     status: "doing",
-    priority: "medium",
+    scopeId: "week",
+    sequence: 1,
+    blockedBy: [],
+    spent: 310,
     assignee: "Sam Okoro",
     labels: ["mobile"],
     updated: "Jul 21",
@@ -992,11 +1157,197 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     projectId: "mobile",
     title: "Push notification permissions",
     status: "todo",
-    priority: "low",
+    scopeId: "out",
+    sequence: 1,
+    blockedBy: [],
+    spent: 0,
     assignee: UNASSIGNED,
     labels: ["mobile"],
     updated: "Jul 18",
     description: ["Ask on first mention, never at launch."],
+    activity: [],
+  },
+  {
+    id: "atlas-5",
+    key: "BYC-231",
+    projectId: "atlas",
+    title: "Why compaction reads without a transaction",
+    status: "figuring",
+    scopeId: "today",
+    sequence: 3,
+    blockedBy: [],
+    spent: 45,
+    assignee: VIEWER.name,
+    labels: ["pipeline"],
+    updated: "Aug 11",
+    description: [
+      "Not a task yet — a question. Either the read is safe because compaction only ever trails the drain, or it is not and the sequencing has to be enforced rather than agreed.",
+      "It sits in Today because the answer decides whether BYC-218 can run tonight, not because anyone thinks it is an hour of work.",
+    ],
+    activity: [
+      {
+        id: "atlas-5-a1",
+        kind: "status",
+        author: VIEWER.name,
+        time: "45m ago",
+        detail: "moved from Todo to Figuring out",
+      },
+    ],
+  },
+  {
+    id: "atlas-11",
+    key: "BYC-232",
+    projectId: "atlas",
+    title: "Point runbook step 4 at the new ingest path",
+    status: "todo",
+    scopeId: "today",
+    sequence: 4,
+    blockedBy: [],
+    spent: 0,
+    assignee: UNASSIGNED,
+    labels: ["cutover", "docs"],
+    updated: "Aug 11",
+    description: [
+      "One link and one paragraph. Nobody holds it and nothing is in its way, so it is there for whoever gets to it first.",
+    ],
+    activity: [],
+  },
+  {
+    id: "atlas-6",
+    key: "BYC-228",
+    projectId: "atlas",
+    title: "Second dry run against the real read path",
+    status: "todo",
+    scopeId: "week",
+    sequence: 1,
+    blockedBy: ["atlas-2"],
+    spent: 0,
+    assignee: "Theo Brandt",
+    labels: ["cutover"],
+    updated: "Aug 8",
+    description: ["The first one was against the shadow queue."],
+    activity: [],
+  },
+  {
+    id: "atlas-7",
+    key: "BYC-226",
+    projectId: "atlas",
+    title: "Retire the old worker",
+    status: "todo",
+    scopeId: "week",
+    sequence: 2,
+    blockedBy: ["atlas-8"],
+    spent: 0,
+    assignee: "Nadia Alvi",
+    labels: ["pipeline"],
+    updated: "Aug 7",
+    description: [
+      "Nothing writes to it after the switch, so this is deleting the deployment and its alarms.",
+    ],
+    activity: [],
+  },
+  {
+    id: "atlas-8",
+    key: "BYC-235",
+    projectId: "atlas",
+    title: "Freeze writes and switch the read path",
+    status: "figuring",
+    scopeId: "cutover",
+    sequence: 1,
+    blockedBy: ["atlas-1"],
+    spent: 70,
+    assignee: "Theo Brandt",
+    labels: ["cutover"],
+    updated: "Aug 9",
+    description: [
+      "The freeze window is the part nobody has written down yet — how long, who calls it, and what the read path does while it holds.",
+    ],
+    activity: [],
+  },
+  {
+    id: "pricing-4",
+    key: "BYC-233",
+    projectId: "pricing",
+    title: "Enterprise tier and the contact-us path",
+    status: "figuring",
+    scopeId: "quarter",
+    sequence: 1,
+    blockedBy: ["pricing-1"],
+    spent: 55,
+    assignee: "Sam Okoro",
+    labels: ["copy"],
+    updated: "Aug 6",
+    description: [
+      "Nobody has decided whether this is a plan on the page or a form behind it.",
+    ],
+    activity: [],
+  },
+  {
+    id: "onboarding-4",
+    key: "BYC-230",
+    projectId: "onboarding",
+    title: "Rework the invite flow around workspaces",
+    status: "todo",
+    scopeId: "quarter",
+    sequence: 1,
+    blockedBy: ["onboarding-2"],
+    spent: 0,
+    assignee: UNASSIGNED,
+    labels: ["ui/ux"],
+    updated: "Aug 5",
+    description: ["Follows whatever multitenancy turns out to be."],
+    activity: [],
+  },
+  {
+    id: "mobile-3",
+    key: "BYC-221",
+    projectId: "mobile",
+    title: "Native shell for iOS",
+    status: "figuring",
+    scopeId: "quarter",
+    sequence: 2,
+    blockedBy: [],
+    spent: 120,
+    assignee: "Sam Okoro",
+    labels: ["mobile"],
+    updated: "Jul 31",
+    description: [
+      "The wrapper is decided; what it wraps on a cold start is not.",
+    ],
+    activity: [],
+  },
+  {
+    id: "atlas-9",
+    key: "BYC-171",
+    projectId: "atlas",
+    title: "Rewrite the checkpoint format doc",
+    status: "todo",
+    scopeId: "out",
+    sequence: 1,
+    blockedBy: [],
+    spent: 0,
+    assignee: UNASSIGNED,
+    labels: ["docs"],
+    updated: "Jul 14",
+    description: [
+      "Worth doing, in nobody's horizon. It sits here instead of at the bottom of a list pretending to be low priority.",
+    ],
+    activity: [],
+  },
+  {
+    id: "atlas-10",
+    key: "BYC-179",
+    projectId: "atlas",
+    title: "Shadow-run the drain for a full week",
+    status: "done",
+    scopeId: "week",
+    sequence: 4,
+    blockedBy: [],
+    spent: 240,
+    assignee: "Nadia Alvi",
+    labels: ["pipeline"],
+    updated: "Jul 30",
+    description: ["Seven passes, no duplicate writes."],
     activity: [],
   },
 ];
@@ -1182,13 +1533,13 @@ export const DEFAULT_ID = PROJECTS[0]?.id ?? "";
 
 /** Favourites hold surfaces, never a single task — a task list stands in. */
 export interface MockFavorite {
-  view: Extract<CollaborationView, "project" | "tasks">;
+  view: Extract<CollaborationView, "project" | "tasks" | "flow">;
   id: string;
 }
 
 export const FAVORITES: ReadonlyArray<MockFavorite> = [
+  { view: "flow", id: "atlas" },
   { view: "tasks", id: "atlas" },
-  { view: "tasks", id: "pricing" },
   { view: "project", id: "onboarding" },
 ];
 
@@ -1206,13 +1557,25 @@ export const CHAT_PROMPTS: ReadonlyArray<string> = [
  */
 let tasks: ReadonlyArray<MockTask> = SEED_TASKS;
 
+const taskListeners = new Set<() => void>();
+
+const emitTasks = () => {
+  revision += 1;
+  for (const listener of taskListeners) listener();
+};
+
+export const subscribeToTasks = (listener: () => void): (() => void) => {
+  taskListeners.add(listener);
+  return () => taskListeners.delete(listener);
+};
+
 export const allTasks = (): ReadonlyArray<MockTask> => tasks;
 
 export interface TaskDraft {
   projectId: string;
   title: string;
   status: TaskStatus;
-  priority: TaskPriority;
+  scopeId: string;
   assignee: string;
   description: string;
 }
@@ -1228,13 +1591,17 @@ const nextTaskKey = (): string => {
 
 export function addTask(draft: TaskDraft): MockTask {
   const key = nextTaskKey();
+  const lane = laneTasks(tasks, draft.projectId, draft.scopeId);
   const created: MockTask = {
     id: `task-${key.toLowerCase()}`,
     key,
     projectId: draft.projectId,
     title: draft.title,
     status: draft.status,
-    priority: draft.priority,
+    scopeId: draft.scopeId,
+    sequence: lane.length + 1,
+    blockedBy: [],
+    spent: 0,
     assignee: draft.assignee,
     labels: [],
     updated: new Date().toLocaleDateString("en-US", {
@@ -1252,7 +1619,79 @@ export function addTask(draft: TaskDraft): MockTask {
     ],
   };
   tasks = [created, ...tasks];
+  emitTasks();
   return created;
+}
+
+/**
+ * Drag lands here: a horizon and a position, which is the whole of planning.
+ * It answers with whatever it had to push out of the way, because that is the
+ * part a person needs to see and agree to.
+ */
+let undoable: ReadonlyArray<MockTask> | null = null;
+
+export function moveTaskTo(
+  taskId: string,
+  scopeId: string,
+  index: number
+): ReadonlyArray<Displacement> {
+  const before = tasks;
+  const result = pushInto(tasks, taskId, scopeId, index);
+  if (result.tasks === tasks) return [];
+  undoable = before;
+  tasks = result.tasks;
+  emitTasks();
+  return result.displaced;
+}
+
+export function undoLastMove(): void {
+  if (undoable === null) return;
+  tasks = undoable;
+  undoable = null;
+  emitTasks();
+}
+
+/** Taking something nobody holds. The only way work gets an owner here. */
+export function claimTask(taskId: string): void {
+  tasks = tasks.map((task) =>
+    task.id === taskId ? { ...task, assignee: VIEWER.name } : task
+  );
+  emitTasks();
+}
+
+export function setTaskStatus(taskId: string, status: TaskStatus): void {
+  tasks = tasks.map((task) =>
+    task.id === taskId ? { ...task, status } : task
+  );
+  emitTasks();
+}
+
+/**
+ * One clock, because a person only works on one thing at a time. Starting
+ * somewhere else stops what was running and banks what it cost, so the total on
+ * a task is always time somebody actually spent rather than time they meant to.
+ */
+let tracking: { taskId: string; startedAt: number } | null = null;
+
+export const trackingNow = (): { taskId: string; startedAt: number } | null =>
+  tracking;
+
+const bankTracked = () => {
+  if (tracking === null) return;
+  const minutes = Math.round((Date.now() - tracking.startedAt) / 60_000);
+  const { taskId } = tracking;
+  tracking = null;
+  if (minutes <= 0) return;
+  tasks = tasks.map((task) =>
+    task.id === taskId ? { ...task, spent: task.spent + minutes } : task
+  );
+};
+
+export function toggleTracking(taskId: string): void {
+  const wasTracking = tracking?.taskId === taskId;
+  bankTracked();
+  if (!wasTracking) tracking = { taskId, startedAt: Date.now() };
+  emitTasks();
 }
 
 export const taskChildren = (taskId: string) =>

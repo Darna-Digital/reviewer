@@ -6,6 +6,8 @@
 import { useSearch } from "@tanstack/react-router";
 import { ChatView } from "@/interactions/collaboration/components/chat-view";
 import { DocsView } from "@/interactions/collaboration/components/docs-view";
+import { FlowView } from "@/interactions/collaboration/components/flow-view";
+import { OutlookView } from "@/interactions/collaboration/components/outlook-view";
 import { CollaborationSidebar } from "@/interactions/collaboration/components/collaboration-sidebar";
 import { CollaborationTabs } from "@/interactions/collaboration-tabs/components/collaboration-tabs";
 import { PeopleView } from "@/interactions/collaboration/components/people-view";
@@ -40,6 +42,7 @@ export function CollaborationPage() {
 
   const project = view === "project" ? findProject(id) : undefined;
   const taskListProject = view === "tasks" ? findProject(id) : undefined;
+  const flowProject = view === "flow" ? findProject(id) : undefined;
   const docsProject = view === "docs" ? findProject(id) : undefined;
   const chat = view === "chat" ? findChat(id) : undefined;
   const task = view === "task" ? findTask(id) : undefined;
@@ -54,6 +57,10 @@ export function CollaborationPage() {
           <ProjectView project={project} />
         ) : taskListProject !== undefined ? (
           <TaskListView project={taskListProject} />
+        ) : flowProject !== undefined ? (
+          <FlowView project={flowProject} />
+        ) : view === "outlook" ? (
+          <OutlookView scopeId={id} />
         ) : docsProject !== undefined ? (
           <DocsView project={docsProject} />
         ) : chat !== undefined ? (

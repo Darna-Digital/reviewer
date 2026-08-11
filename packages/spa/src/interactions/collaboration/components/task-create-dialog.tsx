@@ -34,34 +34,23 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar";
-import { TaskPriorityIcon } from "@/interactions/collaboration/components/task-priority-icon";
+import { ScopeGlyph } from "@/interactions/collaboration/components/scope-glyph";
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
 import {
   addTask,
   agentName,
   allAgents,
+  DEFAULT_SCOPE,
+  findScope,
   MEMBERS,
   PROJECTS,
+  SCOPES,
+  STATUS_LABEL,
+  STATUS_ORDER,
   UNASSIGNED,
   type MockProject,
-  type TaskPriority,
   type TaskStatus,
 } from "@/interactions/collaboration/data/collaboration.mock";
-
-const STATUSES: ReadonlyArray<{ value: TaskStatus; label: string }> = [
-  { value: "todo", label: "Todo" },
-  { value: "doing", label: "In Progress" },
-  { value: "review", label: "In Review" },
-  { value: "done", label: "Done" },
-];
-
-const PRIORITIES: ReadonlyArray<{ value: TaskPriority; label: string }> = [
-  { value: "none", label: "No priority" },
-  { value: "urgent", label: "Urgent" },
-  { value: "high", label: "High" },
-  { value: "medium", label: "Medium" },
-  { value: "low", label: "Low" },
-];
 
 const ASSIGNEES: ReadonlyArray<string> = [
   UNASSIGNED,
@@ -115,19 +104,17 @@ export function NewTaskButton() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<TaskStatus>("todo");
-  const [priority, setPriority] = useState<TaskPriority>("none");
+  const [scopeId, setScopeId] = useState(DEFAULT_SCOPE);
   const [assignee, setAssignee] = useState(UNASSIGNED);
 
   const project = PROJECTS.find((p) => p.id === projectId) ?? PROJECTS[0];
-  const statusLabel = STATUSES.find((s) => s.value === status)?.label ?? "Todo";
-  const priorityLabel =
-    PRIORITIES.find((p) => p.value === priority)?.label ?? "No priority";
+  const scope = findScope(scopeId);
 
   const reset = () => {
     setTitle("");
     setDescription("");
     setStatus("todo");
-    setPriority("none");
+    setScopeId(DEFAULT_SCOPE);
     setAssignee(UNASSIGNED);
   };
 
@@ -137,7 +124,7 @@ export function NewTaskButton() {
       projectId: project.id,
       title: title.trim(),
       status,
-      priority,
+      scopeId,
       assignee,
       description,
     });
@@ -215,34 +202,37 @@ export function NewTaskButton() {
         <div className="flex flex-wrap items-center gap-1.5 px-4 py-3">
           <Picker
             label="Status"
-            menu={STATUSES.map((s) => (
-              <DropdownMenuItem
-                key={s.value}
-                onClick={() => setStatus(s.value)}
-              >
-                <TaskStatusIcon status={s.value} />
-                {s.label}
+            menu={STATUS_ORDER.map((value) => (
+              <DropdownMenuItem key={value} onClick={() => setStatus(value)}>
+                <TaskStatusIcon status={value} />
+                {STATUS_LABEL[value]}
               </DropdownMenuItem>
             ))}
           >
             <TaskStatusIcon status={status} />
-            {statusLabel}
+            {STATUS_LABEL[status]}
           </Picker>
 
           <Picker
-            label="Priority"
-            menu={PRIORITIES.map((p) => (
+            label="Horizon"
+            menu={SCOPES.map((entry) => (
               <DropdownMenuItem
-                key={p.value}
-                onClick={() => setPriority(p.value)}
+                key={entry.id}
+                onClick={() => setScopeId(entry.id)}
+                className="items-start"
               >
-                <TaskPriorityIcon priority={p.value} />
-                {p.label}
+                <ScopeGlyph kind={entry.kind} className="mt-0.5" />
+                <span className="flex min-w-0 flex-col">
+                  <span>{entry.name}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {entry.window}
+                  </span>
+                </span>
               </DropdownMenuItem>
             ))}
           >
-            <TaskPriorityIcon priority={priority} />
-            {priorityLabel}
+            {scope !== undefined && <ScopeGlyph kind={scope.kind} />}
+            {scope?.name ?? "No horizon"}
           </Picker>
 
           <Picker

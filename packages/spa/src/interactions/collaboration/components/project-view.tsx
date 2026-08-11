@@ -10,16 +10,21 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AssigneeAvatar } from "@/interactions/collaboration/components/assignee-avatar";
 import { PaneBody, PaneHeader } from "@/components/layout/pane-header";
+import { ScopeGlyph } from "@/interactions/collaboration/components/scope-glyph";
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
 import {
+  findScope,
   projectTasks,
+  SCOPES,
   UNASSIGNED,
   type MockProject,
-  type TaskStatus,
 } from "@/interactions/collaboration/data/collaboration.mock";
-
-/** Open work, most-moved first — the order "Up next" picks from. */
-const UP_NEXT_ORDER: ReadonlyArray<TaskStatus> = ["doing", "review", "todo"];
+import {
+  formatSpent,
+  landedTasks,
+  scopeTasks,
+  totalSpent,
+} from "@/interactions/collaboration/functions/task-flow.functions";
 
 const UP_NEXT_LIMIT = 5;
 
@@ -48,7 +53,7 @@ function SeeAll({
 }: {
   label: string;
   to: string;
-  search: { view: "tasks" | "docs"; id: string };
+  search: { view: "tasks" | "flow" | "docs"; id: string };
 }) {
   return (
     <Link
@@ -65,10 +70,11 @@ function SeeAll({
 export function ProjectView({ project }: { project: MockProject }) {
   const tasks = projectTasks(project.id);
 
-  const open = UP_NEXT_ORDER.flatMap((status) =>
-    tasks.filter((t) => t.status === status)
+  const sequence = SCOPES.filter((scope) => scope.kind !== "out").flatMap(
+    (scope) => scopeTasks(tasks, project.id, scope.id)
   );
-  const upNext = open.slice(0, UP_NEXT_LIMIT);
+  const upNext = sequence.slice(0, UP_NEXT_LIMIT);
+  const landed = landedTasks(tasks, project.id);
   const people = [
     ...new Set(tasks.map((t) => t.assignee).filter((a) => a !== UNASSIGNED)),
   ];
@@ -114,9 +120,9 @@ export function ProjectView({ project }: { project: MockProject }) {
             title="Up next"
             action={
               <SeeAll
-                label={`All ${tasks.length} tasks`}
+                label="The whole flow"
                 to="/modes/collaboration"
-                search={{ view: "tasks", id: project.id }}
+                search={{ view: "flow", id: project.id }}
               />
             }
           />
@@ -136,8 +142,12 @@ export function ProjectView({ project }: { project: MockProject }) {
                     <span className="min-w-0 flex-1 truncate text-[0.8125rem]">
                       {task.title}
                     </span>
-                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums @max-sm:hidden">
-                      {task.updated}
+                    <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground @max-sm:hidden">
+                      <ScopeGlyph
+                        kind={findScope(task.scopeId)?.kind ?? "out"}
+                        className="size-3.5"
+                      />
+                      {findScope(task.scopeId)?.name}
                     </span>
                     <AssigneeAvatar name={task.assignee} />
                   </Link>
@@ -146,8 +156,39 @@ export function ProjectView({ project }: { project: MockProject }) {
             </ul>
           ) : (
             <p className="mt-1 px-2 py-3 text-[0.8125rem] text-muted-foreground">
-              Every task in this project is done.
+              Nothing is in any horizon.
             </p>
+          )}
+
+          <SectionHeading title="Where the time went" />
+          <p className="mt-1 max-w-[70ch] text-[0.8125rem] text-muted-foreground">
+            {landed.length === 0
+              ? "Nothing has landed yet, so there is nothing to look back on."
+              : `${formatSpent(totalSpent(landed))} across ${landed.length} landed ${landed.length === 1 ? "task" : "tasks"}, and ${formatSpent(totalSpent(tasks) - totalSpent(landed))} into work still in a horizon.`}
+          </p>
+          {landed.length > 0 && (
+            <ul role="list" className="mt-1">
+              {landed.map((task) => (
+                <li key={task.id}>
+                  <Link
+                    to="/modes/collaboration"
+                    search={{ view: "task", id: task.id }}
+                    className={ROW}
+                  >
+                    <TaskStatusIcon status={task.status} />
+                    <span className="w-16 shrink-0 font-mono text-xs text-muted-foreground @max-xs:hidden">
+                      {task.key}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate text-[0.8125rem] text-muted-foreground">
+                      {task.title}
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                      {formatSpent(task.spent)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
           )}
         </PaneBody>
       </ScrollArea>

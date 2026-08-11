@@ -9,6 +9,8 @@ import {
   IconChevronRight,
   IconCircleCheck,
   IconInbox,
+  IconTelescope,
+  IconTimeline,
 } from "@tabler/icons-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, type CSSProperties, type ReactNode } from "react";
@@ -16,6 +18,7 @@ import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DEFAULT_ID,
+  DEFAULT_SCOPE,
   DEFAULT_VIEW,
   FAVORITES,
   findProject,
@@ -159,19 +162,28 @@ function TreeRow({
 
 const INBOX_HREF = "/modes/collaboration/inbox";
 
+const HEAD_ROW =
+  "flex h-6 items-center gap-1.5 rounded-md px-1.5 text-[0.6875rem] font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/30";
+
 /**
- * The inbox, at the head of the sidebar. It is a destination rather than a
- * section, but it reads as one — the same row a section title sits in, so the
- * tree below it starts flat instead of under a lone outlier.
+ * The two places that belong to nobody's project: what came in, and what the
+ * workspace has said it will do. They are destinations rather than sections but
+ * read as ones, so the tree below them starts flat instead of under outliers.
  */
-function InboxRow({ active }: { active: boolean }) {
+function WorkspaceRows({
+  inboxActive,
+  outlookActive,
+}: {
+  inboxActive: boolean;
+  outlookActive: boolean;
+}) {
   return (
     <div className="flex flex-col px-2 pt-3">
       <Link
         to={INBOX_HREF}
         className={cn(
-          "flex h-6 items-center gap-1.5 rounded-md px-1.5 text-[0.6875rem] font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/30",
-          active
+          HEAD_ROW,
+          inboxActive
             ? "text-foreground"
             : "text-muted-foreground hover:text-foreground"
         )}
@@ -179,6 +191,19 @@ function InboxRow({ active }: { active: boolean }) {
         <IconInbox className="size-3.5 shrink-0" />
         Inbox
         <UnreadCount count={UNREAD_COUNT} />
+      </Link>
+      <Link
+        to="/modes/collaboration"
+        search={{ view: "outlook", id: DEFAULT_SCOPE }}
+        className={cn(
+          HEAD_ROW,
+          outlookActive
+            ? "text-foreground"
+            : "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <IconTelescope className="size-3.5 shrink-0" />
+        Outlook
       </Link>
     </div>
   );
@@ -209,17 +234,29 @@ function ProjectBranchRows({
         onToggle={onToggle}
       />
       {expanded && (
-        <TreeRow
-          depth={1}
-          icon={
-            <IconCircleCheck className="size-4 shrink-0 text-muted-foreground" />
-          }
-          label="Tasks"
-          to="/modes/collaboration"
-          search={{ view: "tasks", id: project.id }}
-          active={isActive("tasks", project.id)}
-          trailing={<UnreadCount count={tasks.length} />}
-        />
+        <>
+          <TreeRow
+            depth={1}
+            icon={
+              <IconTimeline className="size-4 shrink-0 text-muted-foreground" />
+            }
+            label="Flow"
+            to="/modes/collaboration"
+            search={{ view: "flow", id: project.id }}
+            active={isActive("flow", project.id)}
+          />
+          <TreeRow
+            depth={1}
+            icon={
+              <IconCircleCheck className="size-4 shrink-0 text-muted-foreground" />
+            }
+            label="Tasks"
+            to="/modes/collaboration"
+            search={{ view: "tasks", id: project.id }}
+            active={isActive("tasks", project.id)}
+            trailing={<UnreadCount count={tasks.length} />}
+          />
+        </>
       )}
     </div>
   );
@@ -238,7 +275,7 @@ export function CollaborationSidebar() {
 
   const activeProjectId = !onCollaboration
     ? undefined
-    : view === "project" || view === "tasks"
+    : view === "project" || view === "tasks" || view === "flow"
       ? id
       : view === "task"
         ? findTask(id)?.projectId
@@ -254,10 +291,15 @@ export function CollaborationSidebar() {
     if (project === undefined) return null;
     return {
       ...favorite,
-      label: favorite.view === "tasks" ? `${project.name} tasks` : project.name,
+      label:
+        favorite.view === "project"
+          ? project.name
+          : `${project.name} ${favorite.view}`,
       icon:
         favorite.view === "tasks" ? (
           <IconCircleCheck className="size-4 shrink-0 text-muted-foreground" />
+        ) : favorite.view === "flow" ? (
+          <IconTimeline className="size-4 shrink-0 text-muted-foreground" />
         ) : (
           projectMark(project)
         ),
@@ -278,7 +320,10 @@ export function CollaborationSidebar() {
     <>
       <aside className="flex shrink-0 flex-col border-r" style={{ width }}>
         <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
-          <InboxRow active={pathname.startsWith(INBOX_HREF)} />
+          <WorkspaceRows
+            inboxActive={pathname.startsWith(INBOX_HREF)}
+            outlookActive={onCollaboration && view === "outlook"}
+          />
 
           {favorites.length > 0 && (
             <Section title="Favorites">
