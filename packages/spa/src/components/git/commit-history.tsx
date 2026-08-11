@@ -33,6 +33,10 @@ interface CommitHistoryProps {
    * would be noise.
    */
   commitRepos?: ReadonlyMap<string, RepoEntry>;
+  /** The project's roots, when it holds several — drives the repo filter. */
+  repos?: ReadonlyArray<RepoEntry>;
+  repoFilter?: string | null;
+  onRepoFilterChange?: (repoPath: string | null) => void;
   /** File open from the selected commit, highlighted in its changed-file tree. */
   selectedFile: string | null;
   onLoadMore: () => void;
@@ -59,6 +63,9 @@ export function CommitHistory({
   selectedCommitSha,
   selectedFile,
   commitRepos,
+  repos,
+  repoFilter,
+  onRepoFilterChange,
   onLoadMore,
   onRefChange,
   onQueryChange,
@@ -150,6 +157,9 @@ export function CommitHistory({
         query={query}
         onRefChange={onRefChange}
         onQueryChange={onQueryChange}
+        repos={repos}
+        repoFilter={repoFilter}
+        onRepoFilterChange={onRepoFilterChange}
       />
 
       <div className="flex min-h-0 flex-1">

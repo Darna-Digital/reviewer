@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   changedFileCount,
+  filterCommitsByRepo,
   groupPathsByRepo,
   mergeCommits,
   prefixDiffPaths,
@@ -246,5 +247,27 @@ describe("groupPathsByRepo", () => {
 
   it("is empty for an empty selection", () => {
     expect(groupPathsByRepo(repos, [])).toEqual([]);
+  });
+});
+
+describe("filterCommitsByRepo", () => {
+  const commits = [
+    { repo: repo("backend"), commit: { sha: "a" } },
+    { repo: repo("frontend"), commit: { sha: "b" } },
+    { repo: repo("backend"), commit: { sha: "c" } },
+  ];
+
+  it("keeps only the chosen root's commits", () => {
+    expect(
+      filterCommitsByRepo(commits, "/work/backend").map((e) => e.commit.sha)
+    ).toEqual(["a", "c"]);
+  });
+
+  it("leaves the history whole when no root is chosen", () => {
+    expect(filterCommitsByRepo(commits, null)).toHaveLength(3);
+  });
+
+  it("is empty for a root the history knows nothing about", () => {
+    expect(filterCommitsByRepo(commits, "/work/mobile")).toEqual([]);
   });
 });

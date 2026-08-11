@@ -6,6 +6,7 @@ import {
   IconTerminal2,
 } from "@tabler/icons-react";
 import { BranchTree } from "@/components/git/branch-tree";
+import { ProjectBranchTree } from "@/interactions/workspace/components/project-branch-tree";
 import { CommitHistory } from "@/components/git/commit-history";
 import { Button } from "@/components/ui/button";
 import { TabsSubtle, TabsSubtleItem } from "@/components/ui/tabs-subtle";
@@ -25,6 +26,7 @@ import type {
   RemoteBranchInfo,
 } from "@byconvo/core/repo";
 import type { RepoEntry } from "@byconvo/core/workspace";
+import type { RepoBranches } from "@byconvo/core/project";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
@@ -51,6 +53,16 @@ interface BottomPanelProps {
   commits: ReadonlyArray<CommitInfo>;
   /** Which root each commit came from, for a project of several. */
   commitRepos?: ReadonlyMap<string, RepoEntry>;
+  /** The project's roots and the one the history is narrowed to, if any. */
+  repos?: ReadonlyArray<RepoEntry>;
+  /** Each root's branches, when the project holds several — nests the panel. */
+  projectBranches?: ReadonlyArray<RepoBranches>;
+  /** The root the git views follow, so its section opens first. */
+  currentRepo?: string | null;
+  /** Check out `ref` in `repoPath`, following that root first if need be. */
+  onRepoBranchCheckout?: (repoPath: string, ref: string) => void;
+  repoFilter?: string | null;
+  onRepoFilterChange?: (repoPath: string | null) => void;
   commitsLoading: boolean;
   commitsHaveMore: boolean;
   logRef: string | null;
@@ -138,16 +150,26 @@ export function BottomPanel(props: BottomPanelProps) {
         )}
         viewportClassName="scroll-fade"
       >
-        {props.active && props.tab === "branches" && (
-          <BranchTree
-            branches={props.branches}
-            remoteBranches={props.remoteBranches}
-            currentBranch={props.currentBranch}
-            selectedRef={props.logRef}
-            onSelect={selectRef}
-            onCheckout={props.onBranchCheckout}
-          />
-        )}
+        {props.active &&
+          props.tab === "branches" &&
+          (props.projectBranches !== undefined ? (
+            <ProjectBranchTree
+              repos={props.projectBranches}
+              currentRepo={props.currentRepo ?? null}
+              selectedRef={props.logRef}
+              onSelect={(_repoPath, ref) => selectRef(ref)}
+              onCheckout={props.onRepoBranchCheckout ?? (() => {})}
+            />
+          ) : (
+            <BranchTree
+              branches={props.branches}
+              remoteBranches={props.remoteBranches}
+              currentBranch={props.currentBranch}
+              selectedRef={props.logRef}
+              onSelect={selectRef}
+              onCheckout={props.onBranchCheckout}
+            />
+          ))}
       </ScrollArea>
 
       <div
@@ -171,6 +193,9 @@ export function BottomPanel(props: BottomPanelProps) {
             selectedCommitSha={props.selectedCommitSha}
             selectedFile={props.selectedCommitFile}
             commitRepos={props.commitRepos}
+            repos={props.repos}
+            repoFilter={props.repoFilter}
+            onRepoFilterChange={props.onRepoFilterChange}
             onLoadMore={props.onLoadMoreCommits}
             onRefChange={props.onLogRefChange}
             onQueryChange={props.onLogFiltersChange}

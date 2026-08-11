@@ -65,6 +65,7 @@ import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
 import { isMultiRepo } from "@byconvo/core/workspace";
+import { filterCommitsByRepo } from "@byconvo/core/project";
 import {
   useRepoCommands,
   useWorkspaceActions,
@@ -116,6 +117,7 @@ import {
   useFiles,
   useMergeState,
   usePagedLog,
+  useProjectBranches,
   useProjectDiff,
   useProjectFiles,
   useProjectLog,
@@ -214,14 +216,22 @@ export function AppShell() {
   // row saying where it came from — a single-root project has nothing to say,
   // so it keeps the paged per-branch log it always had.
   const multiRepo = isMultiRepo({ repos: workspace.data?.repos ?? [] });
+  const projectBranchList = useProjectBranches();
   const projectLog = useProjectLog(LOG_PAGE_SIZE);
+  // Which root the history is narrowed to, or null for all of them. Branch
+  // names cannot narrow a merged history — one belongs to a single root — so
+  // the root is what the filter offers instead.
+  const [logRepo, setLogRepo] = useState<string | null>(null);
   const projectHistory = useMemo(() => {
-    const entries = projectLog.data?.commits ?? [];
+    const entries = filterCommitsByRepo(
+      projectLog.data?.commits ?? [],
+      logRepo
+    );
     return {
       commits: entries.map((entry) => entry.commit),
       repos: new Map(entries.map((entry) => [entry.commit.sha, entry.repo])),
     };
-  }, [projectLog.data]);
+  }, [projectLog.data, logRepo]);
   const history = multiRepo
     ? {
         commits: projectHistory.commits,
@@ -855,6 +865,19 @@ export function AppShell() {
   };
 
   /**
+   * Check out a branch in one of the project's roots. The root is followed
+   * first: checkout runs wherever the git views are pointed, and a branch name
+   * means something different — or nothing — in another root.
+   */
+  const checkoutIn = async (repoPath: string, ref: string) => {
+    const followed = await workspaceActions.followRepo(
+      repoPath,
+      workspace.data?.current ?? null
+    );
+    if (followed) void git.checkout(ref);
+  };
+
+  /**
    * Open a commit from the history. In a project of several roots the commit
    * may belong to one that is not current, so the root is followed first —
    * every view below reads git from the current root, and a sha means nothing
@@ -1255,6 +1278,16 @@ export function AppShell() {
                 currentBranch={repo.data?.currentBranch ?? null}
                 commits={history.commits}
                 commitRepos={history.repos}
+                repos={multiRepo ? (workspace.data?.repos ?? []) : undefined}
+                repoFilter={logRepo}
+                onRepoFilterChange={setLogRepo}
+                projectBranches={
+                  multiRepo ? (projectBranchList.data?.repos ?? []) : undefined
+                }
+                currentRepo={workspace.data?.current ?? null}
+                onRepoBranchCheckout={(repoPath, ref) =>
+                  void checkoutIn(repoPath, ref)
+                }
                 commitsLoading={history.loading}
                 commitsHaveMore={history.hasMore}
                 logRef={logRef ?? repo.data?.currentBranch ?? null}

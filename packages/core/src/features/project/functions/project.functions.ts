@@ -156,3 +156,16 @@ export const prefixDiffPaths = (diff: string, prefix: string): string => {
     })
     .join("\n");
 };
+
+/**
+ * Narrow a merged history to one root, or leave it whole. The filter is by
+ * root path rather than name because a name is only unique within a project,
+ * and the same list is read while the project is being changed underneath it.
+ */
+export const filterCommitsByRepo = <C>(
+  commits: ReadonlyArray<{ readonly repo: RepoEntry; readonly commit: C }>,
+  repoPath: string | null
+): ReadonlyArray<{ readonly repo: RepoEntry; readonly commit: C }> =>
+  repoPath === null
+    ? commits
+    : commits.filter((entry) => entry.repo.path === repoPath);
