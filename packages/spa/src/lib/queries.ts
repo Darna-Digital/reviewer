@@ -37,11 +37,47 @@ export const useProjectChanges = () =>
 export const useProjectBranches = () =>
   api.useQuery("get", "/api/project/branches");
 
-/** Every root's history merged, newest first. */
-export const useProjectLog = (limit = LOG_PAGE_SIZE) =>
-  api.useQuery("get", "/api/project/log", {
-    params: { query: { limit: String(limit) } },
+/**
+ * Every root's history merged, one page at a time — the project-wide twin of
+ * `usePagedLog`, with the same append-only paging so scrolling walks back
+ * through the merged history instead of stopping at the first page.
+ */
+export const usePagedProjectLog = (enabled: boolean) => {
+  const query = useInfiniteQuery({
+    queryKey: ["project-log-pages"],
+    enabled,
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }) => {
+      const { data, error } = await fetchClient.GET("/api/project/log", {
+        params: {
+          query: {
+            limit: String(LOG_PAGE_SIZE),
+            ...(pageParam > 0 ? { skip: String(pageParam) } : {}),
+          },
+        },
+      });
+      if (error !== undefined) throw error;
+      return data?.commits ?? [];
+    },
+    // A short page is the end of the merged history; a full one may have more.
+    getNextPageParam: (lastPage, pages) =>
+      lastPage.length < LOG_PAGE_SIZE
+        ? undefined
+        : pages.reduce((count, page) => count + page.length, 0),
   });
+
+  const entries = useMemo(
+    () => (query.data?.pages ?? []).flat(),
+    [query.data?.pages]
+  );
+
+  return {
+    entries,
+    loading: query.isPending,
+    hasMore: query.hasNextPage,
+    loadMore: query.fetchNextPage,
+  };
+};
 
 /** The in-progress merge/rebase operation and its remaining conflicts. */
 export const useMergeState = () => api.useQuery("get", "/api/merge-state");

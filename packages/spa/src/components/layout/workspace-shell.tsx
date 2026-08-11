@@ -50,14 +50,9 @@ export function WorkspaceShell() {
   const workspace = useWorkspace();
   const workspaceActions = useWorkspaceActions();
   const projectBranchList = useProjectBranches();
-  /** Check out in one of the project's roots, following that root first. */
-  const checkoutIn = async (repoPath: string, ref: string) => {
-    const followed = await workspaceActions.followRepo(
-      repoPath,
-      workspace.data?.current ?? null
-    );
-    if (followed) void git.checkout(ref);
-  };
+  /** Make a root current before a menu action runs in it. */
+  const followRepo = (repoPath: string) =>
+    workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
   const git = useGitActions();
@@ -148,7 +143,7 @@ export function WorkspaceShell() {
               currentRepo={activeRepo(
                 workspace.data ?? { repos: [], current: null }
               )}
-              onRepoCheckout={(repoPath, ref) => void checkoutIn(repoPath, ref)}
+              onFollowRepo={followRepo}
               onFetch={() => void git.fetch()}
               onPull={() => void git.pull()}
               onPush={() => void git.push()}

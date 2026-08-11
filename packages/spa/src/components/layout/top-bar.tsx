@@ -38,8 +38,8 @@ interface TopBarProps {
   /** Each root's branches, when the project holds several. */
   projectBranches?: ReadonlyArray<RepoBranches>;
   currentRepo?: RepoEntry | null;
-  /** Check out `ref` in `repoPath`, following that root first. */
-  onRepoCheckout?: (repoPath: string, ref: string) => void;
+  /** Make `repoPath` current before acting in it; false when it failed. */
+  onFollowRepo?: (repoPath: string) => Promise<boolean>;
 }
 
 export function TopBar(props: TopBarProps) {
@@ -84,7 +84,7 @@ export function TopBar(props: TopBarProps) {
           onDeleteBranch={props.onDeleteBranch}
           repos={props.projectBranches}
           currentRepo={props.currentRepo}
-          onRepoCheckout={props.onRepoCheckout}
+          onFollowRepo={props.onFollowRepo}
         />
       )}
 

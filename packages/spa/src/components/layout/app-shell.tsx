@@ -107,7 +107,6 @@ import type { CommitInfo } from "@byconvo/core/repo";
 import { pathName } from "@/lib/display-path";
 import { errorReason } from "@/lib/errors";
 import {
-  LOG_PAGE_SIZE,
   useBranches,
   useChatModels,
   useChats,
@@ -120,7 +119,7 @@ import {
   useProjectBranches,
   useProjectDiff,
   useProjectFiles,
-  useProjectLog,
+  usePagedProjectLog,
   usePullComments,
   usePulls,
   useRemoteBranches,
@@ -217,30 +216,25 @@ export function AppShell() {
   // so it keeps the paged per-branch log it always had.
   const multiRepo = isMultiRepo({ repos: workspace.data?.repos ?? [] });
   const projectBranchList = useProjectBranches();
-  const projectLog = useProjectLog(LOG_PAGE_SIZE);
+  const projectLog = usePagedProjectLog(multiRepo);
   // Which root the history is narrowed to, or null for all of them. Branch
   // names cannot narrow a merged history — one belongs to a single root — so
   // the root is what the filter offers instead.
   const [logRepo, setLogRepo] = useState<string | null>(null);
   const projectHistory = useMemo(() => {
-    const entries = filterCommitsByRepo(
-      projectLog.data?.commits ?? [],
-      logRepo
-    );
+    const entries = filterCommitsByRepo(projectLog.entries, logRepo);
     return {
       commits: entries.map((entry) => entry.commit),
       repos: new Map(entries.map((entry) => [entry.commit.sha, entry.repo])),
     };
-  }, [projectLog.data, logRepo]);
+  }, [projectLog.entries, logRepo]);
   const history = multiRepo
     ? {
         commits: projectHistory.commits,
         repos: projectHistory.repos,
-        loading: projectLog.isPending,
-        // The project log is read whole rather than paged: merging the roots
-        // means a page boundary in one is not one in the merged list.
-        hasMore: false,
-        loadMore: () => {},
+        loading: projectLog.loading,
+        hasMore: projectLog.hasMore,
+        loadMore: projectLog.loadMore,
       }
     : {
         commits: log.commits,
@@ -869,12 +863,10 @@ export function AppShell() {
    * first: checkout runs wherever the git views are pointed, and a branch name
    * means something different — or nothing — in another root.
    */
+  const followRepo = (repoPath: string) =>
+    workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
   const checkoutIn = async (repoPath: string, ref: string) => {
-    const followed = await workspaceActions.followRepo(
-      repoPath,
-      workspace.data?.current ?? null
-    );
-    if (followed) void git.checkout(ref);
+    if (await followRepo(repoPath)) void git.checkout(ref);
   };
 
   /**
@@ -1051,7 +1043,7 @@ export function AppShell() {
             currentRepo={activeRepo(
               workspace.data ?? { repos: [], current: null }
             )}
-            onRepoCheckout={(repoPath, ref) => void checkoutIn(repoPath, ref)}
+            onFollowRepo={followRepo}
           />
 
           {/* Everything below the toolbar sits in a bordered panel, so the
