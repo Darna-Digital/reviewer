@@ -20,7 +20,12 @@ import { AgentStrip } from "@/interactions/session-agents/components/agent-strip
 import { NewSessionButton } from "@/interactions/chats/components/new-session-button";
 import { SessionSearch } from "@/interactions/chats/components/session-search";
 import { WindowFrame } from "@/components/layout/window-frame";
-import { RepoPicker } from "@/components/repo-picker";
+import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
+import { RepoSwitcher } from "@/interactions/workspace/components/repo-switcher";
+import {
+  useRepoCommands,
+  useWorkspaceActions,
+} from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { SearchMenu } from "@/interactions/search/components/search-menu";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
@@ -42,6 +47,7 @@ export function WorkspaceShell() {
   const navigate = useNavigate();
   const repo = useRepo();
   const workspace = useWorkspace();
+  const workspaceActions = useWorkspaceActions();
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
   const git = useGitActions();
@@ -62,17 +68,18 @@ export function WorkspaceShell() {
   const shellCommands = useMemo<ReadonlyArray<Command>>(
     () => [
       {
-        id: "repo-switch",
-        label: "Switch Repository…",
-        group: "Repository",
+        id: "project-switch",
+        label: "Open Project…",
+        group: "Project",
         icon: IconRepeat,
-        keywords: "open change project picker",
+        keywords: "open change repository folder picker switch",
         run: () => setPickerOpen(true),
       },
     ],
     []
   );
   useRegisterCommands("workspace-shell", shellCommands);
+  useRepoCommands(workspace.data);
 
   return (
     <WindowFrame>
@@ -88,13 +95,18 @@ export function WorkspaceShell() {
             </>
           )}
           {!collaborating && !inSession && (
-            <RepoPicker
-              repo={repo.data ?? null}
-              workspace={workspace.data}
-              open={pickerOpen}
-              onOpenChange={setPickerOpen}
-              onChosen={() => {}}
-            />
+            <>
+              <ProjectPicker
+                workspace={workspace.data}
+                open={pickerOpen}
+                onOpenChange={setPickerOpen}
+                onChosen={() => {}}
+              />
+              <RepoSwitcher
+                workspace={workspace.data}
+                onSelect={(path) => void workspaceActions.openRepo(path)}
+              />
+            </>
           )}
           {/* A session's bar opens with the two things that act on the list —
               minting one and finding one — and parks the agents answering it at

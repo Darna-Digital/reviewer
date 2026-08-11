@@ -2,7 +2,8 @@ import { BranchSwitcher } from "@/components/layout/branch-switcher";
 // Only code mode is offered for now, so the mode chip stays parked.
 // import { ModeSelector } from "@/components/layout/mode-selector";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
-import { RepoPicker } from "@/components/repo-picker";
+import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
+import { RepoSwitcher } from "@/interactions/workspace/components/repo-switcher";
 import { SearchMenu } from "@/interactions/search/components/search-menu";
 import type {
   BranchInfo,
@@ -34,6 +35,8 @@ interface TopBarProps {
   onFetch: () => void;
   onPush: () => void;
   onPull: () => void;
+  /** Follow another of the open project's git roots. */
+  onSelectRepo: (path: string) => void;
 }
 
 export function TopBar(props: TopBarProps) {
@@ -51,13 +54,15 @@ export function TopBar(props: TopBarProps) {
     <header className="flex h-11 shrink-0 items-center gap-2 px-2">
       {/* <ModeSelector /> */}
 
-      {/* Repo chip — opens the recents + folder-browser dropdown */}
-      <RepoPicker
-        repo={repo}
+      {/* Project chip — opens the recents + folder-browser dropdown */}
+      <ProjectPicker
         workspace={props.workspace}
         open={props.pickerOpen}
         onOpenChange={props.onPickerOpenChange}
       />
+
+      {/* Repository chip — only for a project holding more than one root */}
+      <RepoSwitcher workspace={props.workspace} onSelect={props.onSelectRepo} />
 
       {/* Branch switcher */}
       {repo !== null && (

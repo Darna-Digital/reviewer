@@ -1,13 +1,19 @@
 /**
- * WorkspaceContext — the mutable "which repository is being reviewed" state,
- * shared across features (Git exec, comments, GitHub all read the current
- * repo from here). It is the server's analogue of a database connection in the
- * darna-stack: a single infra service the feature repositories build on.
+ * WorkspaceContext — the mutable "what is open" state, shared across features
+ * (Git exec, comments, GitHub all read the current repo from here). It is the
+ * server's analogue of a database connection in the darna-stack: a single infra
+ * service the feature repositories build on.
  *
- * The selection is validated against git, persisted to ~/.byconvo/state.json
- * together with a recents list, and seeded at boot from BYCONVO_REPO / cwd.
- * Only primitives (paths) cross this boundary — domain shapes live in the
- * workspace feature's schema.
+ * Two things are open at once. The **project** is the folder the user picked;
+ * it may be a repository itself or a parent holding several side by side. The
+ * **current repo** is the one git runs in — always one of the project's roots.
+ * For a single-repo project the two are the same path, which is why every
+ * repo-scoped feature keeps working untouched.
+ *
+ * Both are persisted to ~/.byconvo/state.json, together with a recents list of
+ * projects and the root each project was last left on, and seeded at boot from
+ * BYCONVO_REPO / cwd. Only primitives (paths) cross this boundary — domain
+ * shapes live in the workspace feature's schema.
  */
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
@@ -19,18 +25,35 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { homedir } from "node:os";
 import { resolve as pathResolve } from "node:path";
 import { NoRepoSelected } from "@byconvo/core/shared";
-import { InvalidRepo } from "@byconvo/core/workspace";
-import { getCurrentRepo, setCurrentRepo } from "./current-repo.ts";
+import { chooseRepo, InvalidRepo } from "@byconvo/core/workspace";
+import {
+  getCurrentProject,
+  getCurrentRepo,
+  setCurrentProject,
+  setCurrentRepo,
+} from "./current-repo.ts";
+import { scanRepos } from "./repo-scan.ts";
 
 export interface WorkspaceContextShape {
   /** The selected repo root, or fail with NoRepoSelected when none is set. */
   readonly requireCurrent: Effect.Effect<string, NoRepoSelected>;
-  /** The selected repo/folder root, or null when nothing is selected. */
+  /** The selected repo root, or null when the project holds none. */
   readonly current: Effect.Effect<string | null>;
-  /** Recently opened repository roots, most-recent first. */
+  /** The open project folder, or null when nothing is open. */
+  readonly project: Effect.Effect<string | null>;
+  /** The open project folder, or fail with NoRepoSelected when none is. */
+  readonly requireProject: Effect.Effect<string, NoRepoSelected>;
+  /** Recently opened projects, most-recent first. */
   readonly recents: Effect.Effect<ReadonlyArray<string>>;
-  /** Record an already-resolved root as the current selection and persist it. */
-  readonly select: (root: string) => Effect.Effect<void>;
+  /**
+   * Open an already-resolved folder as the project: its roots are discovered,
+   * the one it was last left on (or its first) becomes current, and both are
+   * persisted. Returns the root that ended up current — null for a folder
+   * holding none.
+   */
+  readonly selectProject: (project: string) => Effect.Effect<string | null>;
+  /** Point the git views at one of the open project's roots, and remember it. */
+  readonly selectRepo: (repo: string) => Effect.Effect<void>;
   /** The user's home directory (for the picker's default browse root). */
   readonly home: string;
 }
@@ -45,8 +68,12 @@ const STATE_FILE = `${STATE_DIR}/state.json`;
 const MAX_RECENTS = 10;
 
 interface PersistedState {
+  /** The open project folder. */
   readonly current: string | null;
+  /** Recently opened projects, most-recent first. */
   readonly recents: ReadonlyArray<string>;
+  /** The root each project was last left on, keyed by project path. */
+  readonly repos: Readonly<Record<string, string>>;
 }
 
 export interface InitialSelection {
@@ -107,12 +134,30 @@ export const make = (initial: InitialSelection | null) =>
     const fs = yield* FileSystem.FileSystem;
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
 
+    const EMPTY_STATE: PersistedState = {
+      current: null,
+      recents: [],
+      repos: {},
+    };
+
+    // State written before projects existed has no `repos` map; its `current`
+    // was a repository, which is a project holding exactly itself, so it reads
+    // back correctly with nothing to migrate.
     const readState: Effect.Effect<PersistedState> = Effect.gen(function* () {
       const present = yield* fs.exists(STATE_FILE);
-      if (!present) return { current: null, recents: [] };
+      if (!present) return EMPTY_STATE;
       const raw = yield* fs.readFileString(STATE_FILE);
       try {
         const parsed = JSON.parse(raw);
+        const repos =
+          typeof parsed?.repos === "object" && parsed.repos !== null
+            ? Object.fromEntries(
+                Object.entries(parsed.repos as Record<string, unknown>).filter(
+                  (entry): entry is [string, string] =>
+                    typeof entry[1] === "string"
+                )
+              )
+            : {};
         return {
           current: typeof parsed?.current === "string" ? parsed.current : null,
           recents: Array.isArray(parsed?.recents)
@@ -120,11 +165,12 @@ export const make = (initial: InitialSelection | null) =>
                 (entry: unknown): entry is string => typeof entry === "string"
               )
             : [],
+          repos,
         };
       } catch {
-        return { current: null, recents: [] };
+        return EMPTY_STATE;
       }
-    }).pipe(Effect.catch(() => Effect.succeed({ current: null, recents: [] })));
+    }).pipe(Effect.catch(() => Effect.succeed(EMPTY_STATE)));
 
     const writeState = (state: PersistedState) =>
       Effect.gen(function* () {
@@ -152,41 +198,95 @@ export const make = (initial: InitialSelection | null) =>
           )
         : null;
 
-    const initialCurrent = explicitValid ?? persistedValid ?? fallbackValid;
+    const initialProject = explicitValid ?? persistedValid ?? fallbackValid;
     const recentsRef = yield* Ref.make<ReadonlyArray<string>>(
       persisted.recents
     );
-    // `current-repo.ts` is the single store for the selection: an Effect Ref
-    // couldn't be read by the PTY socket / chat runtime, which run outside the
-    // Effect runtime, so those (and this service) share the one module snapshot.
-    setCurrentRepo(initialCurrent);
+    const rememberedRef = yield* Ref.make<Readonly<Record<string, string>>>(
+      persisted.repos
+    );
+
+    /** Persist whatever is open now, alongside recents and the per-project roots. */
+    const persist = Effect.gen(function* () {
+      yield* writeState({
+        current: getCurrentProject(),
+        recents: yield* Ref.get(recentsRef),
+        repos: yield* Ref.get(rememberedRef),
+      });
+    });
+
+    /** Open `project` on the root it was last left on, or on its first. */
+    const openRoots = (project: string) =>
+      Effect.gen(function* () {
+        const repos = yield* scanRepos(fs, project);
+        const remembered = yield* Ref.get(rememberedRef);
+        const chosen = chooseRepo(repos, remembered[project] ?? null);
+        // `current-repo.ts` is the single store for the selection: an Effect Ref
+        // couldn't be read by the PTY socket / chat runtime, which run outside
+        // the Effect runtime, so those (and this service) share the one module
+        // snapshot. The project moves first so a listener woken by the repo
+        // change already sees the project it belongs to.
+        setCurrentProject(project);
+        setCurrentRepo(chosen);
+        return chosen;
+      });
+
+    if (initialProject !== null) yield* openRoots(initialProject);
 
     const current: Effect.Effect<string | null> = Effect.sync(getCurrentRepo);
+    const project: Effect.Effect<string | null> =
+      Effect.sync(getCurrentProject);
 
-    const select: WorkspaceContextShape["select"] = (root) =>
+    const selectProject: WorkspaceContextShape["selectProject"] = (root) =>
       Effect.gen(function* () {
-        setCurrentRepo(root);
-        const recents = yield* Ref.updateAndGet(recentsRef, (existing) =>
+        const chosen = yield* openRoots(root);
+        yield* Ref.update(recentsRef, (existing) =>
           [root, ...existing.filter((entry) => entry !== root)].slice(
             0,
             MAX_RECENTS
           )
         );
-        yield* writeState({ current: root, recents });
+        if (chosen !== null) {
+          yield* Ref.update(rememberedRef, (existing) => ({
+            ...existing,
+            [root]: chosen,
+          }));
+        }
+        yield* persist;
+        return chosen;
       });
 
-    return WorkspaceContext.of({
-      home: homedir(),
-      current,
-      recents: Ref.get(recentsRef),
-      requireCurrent: current.pipe(
+    const selectRepo: WorkspaceContextShape["selectRepo"] = (repo) =>
+      Effect.gen(function* () {
+        setCurrentRepo(repo);
+        const open = getCurrentProject();
+        if (open !== null) {
+          yield* Ref.update(rememberedRef, (existing) => ({
+            ...existing,
+            [open]: repo,
+          }));
+        }
+        yield* persist;
+      });
+
+    const orNoSelection = (path: Effect.Effect<string | null>) =>
+      path.pipe(
         Effect.flatMap((selected) =>
           selected === null
             ? Effect.fail(new NoRepoSelected())
             : Effect.succeed(selected)
         )
-      ),
-      select,
+      );
+
+    return WorkspaceContext.of({
+      home: homedir(),
+      current,
+      project,
+      recents: Ref.get(recentsRef),
+      requireCurrent: orNoSelection(current),
+      requireProject: orNoSelection(project),
+      selectProject,
+      selectRepo,
     });
   });
 
@@ -198,32 +298,44 @@ export const layer = (
   FileSystem.FileSystem | ChildProcessSpawner.ChildProcessSpawner
 > => Layer.effect(WorkspaceContext)(make(initial));
 
-/** Test seam: an in-memory context with no filesystem/git/persistence. */
+/**
+ * Test seam: an in-memory context with no filesystem/git/persistence. The
+ * seeded folder stands in for a single-repo project, where the project and the
+ * current root are the same path.
+ */
 export const makeMemory = (initial: string | null = null) =>
   Effect.gen(function* () {
+    const projectRef = yield* Ref.make<string | null>(initial);
     const currentRef = yield* Ref.make<string | null>(initial);
     const recentsRef = yield* Ref.make<ReadonlyArray<string>>(
       initial === null ? [] : [initial]
     );
+    const orNoSelection = (path: Effect.Effect<string | null>) =>
+      path.pipe(
+        Effect.flatMap((selected) =>
+          selected === null
+            ? Effect.fail(new NoRepoSelected())
+            : Effect.succeed(selected)
+        )
+      );
     return WorkspaceContext.of({
       home: "/home/test",
       current: Ref.get(currentRef),
+      project: Ref.get(projectRef),
       recents: Ref.get(recentsRef),
-      requireCurrent: Ref.get(currentRef).pipe(
-        Effect.flatMap((current) =>
-          current === null
-            ? Effect.fail(new NoRepoSelected())
-            : Effect.succeed(current)
-        )
-      ),
-      select: (root) =>
+      requireCurrent: orNoSelection(Ref.get(currentRef)),
+      requireProject: orNoSelection(Ref.get(projectRef)),
+      selectProject: (root) =>
         Effect.gen(function* () {
+          yield* Ref.set(projectRef, root);
           yield* Ref.set(currentRef, root);
           yield* Ref.update(recentsRef, (existing) => [
             root,
             ...existing.filter((entry) => entry !== root),
           ]);
+          return root;
         }),
+      selectRepo: (repo) => Ref.set(currentRef, repo),
     });
   });
 

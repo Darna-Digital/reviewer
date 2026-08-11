@@ -28,7 +28,9 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
-import { RepoPicker } from "@/components/repo-picker";
+import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
+import { RepoSwitcher } from "@/interactions/workspace/components/repo-switcher";
+import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { AgentMark } from "@/interactions/threads/components/agent-mark";
 import { PaneHeader } from "@/components/layout/pane-header";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
@@ -245,6 +247,7 @@ export function NewChatView() {
   const [repoOpen, setRepoOpen] = useState(false);
   const repo = useRepo();
   const workspace = useWorkspace();
+  const workspaceActions = useWorkspaceActions();
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
   const git = useGitActions();
@@ -443,12 +446,16 @@ export function NewChatView() {
               upward from this bar. */}
           {toAgent && (
             <div className="mt-1 flex h-10 items-center gap-1 rounded-xl border px-1.5">
-              <RepoPicker
-                repo={repo.data ?? null}
+              <ProjectPicker
                 workspace={workspace.data}
                 open={repoOpen}
                 onOpenChange={setRepoOpen}
                 onChosen={() => {}}
+                side="top"
+              />
+              <RepoSwitcher
+                workspace={workspace.data}
+                onSelect={(path) => void workspaceActions.openRepo(path)}
                 side="top"
               />
               {repo.data !== undefined && (

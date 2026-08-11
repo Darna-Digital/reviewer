@@ -24,7 +24,7 @@
  */
 import type { IncomingMessage } from "node:http";
 import type { WebSocket } from "ws";
-import { onCurrentRepoChange } from "../workspace/current-repo.ts";
+import { onCurrentProjectChange } from "../workspace/current-repo.ts";
 import { loadNodePty } from "./node-pty.ts";
 
 export const DEV_PTY_PATH = "/api/local-dev/pty";
@@ -83,8 +83,13 @@ export interface DevProcessManager {
   ) => boolean;
   /** Stop a running process (its output is retained as `exited`). */
   readonly stop: (commandId: string) => void;
-  /** Stop and forget every process owned by a repository (repo-switch sweep). */
+  /** Stop and forget every process owned by a repository. */
   readonly stopRepo: (repoPath: string) => void;
+  /**
+   * Stop and forget every process owned by a folder or anything under it — the
+   * project-switch sweep, which has to reach each root a project holds.
+   */
+  readonly stopUnder: (folder: string) => void;
   /** Statuses of every process owned by a repository. */
   readonly statuses: (repoPath: string) => ReadonlyArray<DevRunStatus>;
   readonly get: (commandId: string) => DevRunStatus | null;
@@ -263,9 +268,9 @@ export const createDevProcessManager = (deps: {
     }
   };
 
-  const stopRepo = (repoPath: string): void => {
+  const stopWhere = (owned: (repoPath: string) => boolean): void => {
     for (const [id, proc] of processes) {
-      if (proc.repoPath !== repoPath) continue;
+      if (!owned(proc.repoPath)) continue;
       if (proc.status === "running") {
         try {
           proc.pty.kill();
@@ -277,6 +282,12 @@ export const createDevProcessManager = (deps: {
     }
   };
 
+  const stopRepo = (repoPath: string): void =>
+    stopWhere((owner) => owner === repoPath);
+
+  const stopUnder = (folder: string): void =>
+    stopWhere((owner) => owner === folder || owner.startsWith(`${folder}/`));
+
   const statuses = (repoPath: string): ReadonlyArray<DevRunStatus> =>
     [...processes.values()]
       .filter((proc) => proc.repoPath === repoPath)
@@ -287,7 +298,7 @@ export const createDevProcessManager = (deps: {
     return proc === undefined ? null : statusOf(proc);
   };
 
-  return { start, attach, stop, stopRepo, statuses, get };
+  return { start, attach, stop, stopRepo, stopUnder, statuses, get };
 };
 
 const realSpawn: SpawnFn = (file, args, opts) => {
@@ -303,10 +314,12 @@ const realSpawn: SpawnFn = (file, args, opts) => {
 /** The production registry, shared across requests and the WebSocket handler. */
 export const devProcessManager = createDevProcessManager({ spawn: realSpawn });
 
-// Each repository owns its running processes: when the user selects a different
-// repo, stop the previous repo's dev commands.
-onCurrentRepoChange((_next, prev) => {
-  if (prev !== null) devProcessManager.stopRepo(prev);
+// Each project owns its running processes: when the user opens a different one,
+// stop the dev commands of every root the previous project held. Moving between
+// the roots of one project deliberately leaves them running — a backend and a
+// frontend served side by side is the whole point of opening the parent folder.
+onCurrentProjectChange((_next, prev) => {
+  if (prev !== null) devProcessManager.stopUnder(prev);
 });
 
 /**

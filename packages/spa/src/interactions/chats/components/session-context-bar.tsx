@@ -11,7 +11,9 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
-import { RepoPicker } from "@/components/repo-picker";
+import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
+import { RepoSwitcher } from "@/interactions/workspace/components/repo-switcher";
+import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import {
   Tooltip,
   TooltipContent,
@@ -66,6 +68,7 @@ export function SessionContextBar({
   const navigate = useNavigate();
   const repo = useRepo();
   const workspace = useWorkspace();
+  const workspaceActions = useWorkspaceActions();
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
   const git = useGitActions();
@@ -78,12 +81,17 @@ export function SessionContextBar({
       {projectLocked && current !== null ? (
         <LockedProject name={current.name} />
       ) : (
-        <RepoPicker
-          repo={current}
+        <ProjectPicker
           workspace={workspace.data}
           open={pickerOpen}
           onOpenChange={setPickerOpen}
           onChosen={() => {}}
+        />
+      )}
+      {!projectLocked && (
+        <RepoSwitcher
+          workspace={workspace.data}
+          onSelect={(path) => void workspaceActions.openRepo(path)}
         />
       )}
       <BranchSwitcher

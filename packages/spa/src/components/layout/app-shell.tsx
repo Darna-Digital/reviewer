@@ -19,7 +19,6 @@ import {
   IconRepeat,
   IconTerminal2,
 } from "@tabler/icons-react";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   useNavigate,
   useParams,
@@ -31,7 +30,6 @@ import { toast } from "sonner";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { CommitPanel } from "@/components/commit-panel";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
-import { RepoList } from "@/components/repo-list";
 import {
   ReviewAssignBar,
   type AssignTarget,
@@ -65,6 +63,11 @@ import {
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
+import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
+import {
+  useRepoCommands,
+  useWorkspaceActions,
+} from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { TabStrip } from "@/interactions/tabs/components/tab-strip";
 import {
   readTabs,
@@ -139,7 +142,6 @@ export function AppShell() {
   const git = useGitActions();
   const comments = useCommentsActions();
   const chatActions = useChatsActions();
-  const queryClient = useQueryClient();
 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const params = useParams({ strict: false });
@@ -153,6 +155,7 @@ export function AppShell() {
 
   // --- queries ---------------------------------------------------------------
   const workspace = useWorkspace();
+  const workspaceActions = useWorkspaceActions();
   const repo = useRepo();
   const chatModels = useChatModels();
   const chats = useChats();
@@ -218,13 +221,17 @@ export function AppShell() {
     prefs.reviewPullsHeight
   );
 
-  const isFolder =
-    workspace.data?.current != null && workspace.data.isGitRepo === false;
+  // A project with no git root at all: there is nothing repo-scoped to show,
+  // so the centre pane says so instead of rendering an empty tree.
+  const noRepo =
+    workspace.data?.project != null && workspace.data.current === null;
 
   // Open the picker automatically only once the workspace has loaded with no
-  // repository selected (not during the initial undefined loading state).
+  // project open (not during the initial undefined loading state). A project
+  // that simply holds no repository is open — the centre pane explains it
+  // rather than the picker blocking the view.
   useEffect(() => {
-    if (workspace.isSuccess && workspace.data.current === null)
+    if (workspace.isSuccess && workspace.data.project === null)
       setPickerOpen(true);
   }, [workspace.isSuccess, workspace.data]);
 
@@ -493,11 +500,31 @@ export function AppShell() {
   useEffect(() => {
     scopeTabsTo(repoRoot);
   }, [repoRoot]);
+  /**
+   * Drop the view state that belongs to the root being left behind: the URL is
+   * repo-relative (the open file, the commit, the pull request) and so is the
+   * branch the history follows, and the root arriving has never heard of any
+   * of it. Called before the switch so nothing refetches against the old ref.
+   */
+  const leaveRepo = useCallback(() => {
+    setLogRef(null);
+    void navigate({ to: "/modes/code/commit", search: {} });
+  }, [navigate]);
+  // The safety net for a move this shell did not start — opening another
+  // project, say. Only a move between roots resets: the first resolve on load
+  // has nothing to leave.
+  const previousRoot = useRef(repoRoot);
+  useEffect(() => {
+    if (previousRoot.current === repoRoot) return;
+    const moved = previousRoot.current !== null && repoRoot !== null;
+    previousRoot.current = repoRoot;
+    if (moved) leaveRepo();
+  }, [repoRoot, leaveRepo]);
   // Browsing has nothing else to put in the centre pane, so the strip is the
   // view: an open tab with no file on screen is a hole. A strip outlives the
   // URL that opened its files — restored from storage, or left behind by
   // navigation that dropped the file — so it names what belongs there.
-  const canRestore = mode === "browse" && target === null && !isFolder;
+  const canRestore = mode === "browse" && target === null && !noRepo;
   // Re-syncs when the repository resolves as well as when the file changes:
   // pointing the store at a repository swaps in that repository's strip, which
   // would otherwise drop the file already on screen.
@@ -577,11 +604,11 @@ export function AppShell() {
   );
 
   const buildCrumbs = (): ReadonlyArray<Crumb> => {
-    if (isFolder) {
+    if (noRepo) {
       return [
         {
-          id: "folder",
-          label: `${workspace.data?.childRepos.length ?? 0} repositories`,
+          id: "project",
+          label: pathName(workspace.data?.project ?? ""),
           icon: IconFolders,
         },
       ];
@@ -750,26 +777,33 @@ export function AppShell() {
         run: () => openBottomTab("threads"),
       },
       {
-        id: "repo-switch",
-        label: "Switch Repository…",
-        group: "Repository",
+        id: "project-switch",
+        label: "Open Project…",
+        group: "Project",
         icon: IconRepeat,
-        keywords: "open change project picker",
+        keywords: "open change repository folder picker switch",
         run: () => setPickerOpen(true),
       },
     ],
     [prefs.diffStyle, prefs.bottomVisible]
   );
   useRegisterCommands("code-shell", shellCommands);
+  useRepoCommands(workspace.data, leaveRepo);
+
+  /** Follow another of the open project's roots, staying where we are. */
+  const chooseRepo = async (path: string) => {
+    leaveRepo();
+    await workspaceActions.openRepo(path);
+  };
 
   // --- center pane -----------------------------------------------------------
   const renderCenter = () => {
-    if (isFolder) {
+    if (noRepo) {
       return (
-        <RepoList
-          folder={workspace.data!.current!}
-          repos={workspace.data!.childRepos}
-          onOpen={(path) => void choose(path)}
+        <ProjectRepos
+          project={workspace.data!.project!}
+          repos={workspace.data!.repos}
+          onOpen={(path) => void chooseRepo(path)}
         />
       );
     }
@@ -862,25 +896,6 @@ export function AppShell() {
     );
   };
 
-  const choose = async (path: string) => {
-    const { data, error } = await fetchClient.POST("/api/workspace", {
-      body: { path },
-    });
-    if (error) {
-      toast.error(
-        (error as { message?: string; reason?: string }).message ??
-          (error as { reason?: string }).reason ??
-          "could not open repository"
-      );
-      return;
-    }
-    if (data !== undefined) {
-      queryClient.setQueryData(["get", "/api/workspace"], data);
-    }
-    await queryClient.invalidateQueries();
-    void navigate({ to: "/modes/code/commit", search: {} });
-  };
-
   const crumbs = buildCrumbs();
 
   return (
@@ -923,6 +938,7 @@ export function AppShell() {
             onFetch={() => void git.fetch()}
             onPush={() => void git.push()}
             onPull={() => void git.pull()}
+            onSelectRepo={(path) => void chooseRepo(path)}
           />
 
           {/* Everything below the toolbar sits in a bordered panel, so the

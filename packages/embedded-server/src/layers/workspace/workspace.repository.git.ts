@@ -1,7 +1,8 @@
 /**
  * Git/filesystem-backed workspace repository — the real implementation, the
- * darna-stack ".db" equivalent. Ports the selection / browse / file-IO logic
- * from the old `core/Workspace.ts`, mapping platform errors to StorageError.
+ * darna-stack ".db" equivalent. Owns opening a project (a folder, which may
+ * hold several git roots), moving between those roots, browsing the filesystem
+ * and file IO, mapping platform errors to StorageError.
  */
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
@@ -11,11 +12,11 @@ import { homedir } from "node:os";
 import { resolve as pathResolve } from "node:path";
 import { NoRepoSelected, StorageError } from "@byconvo/core/shared";
 import { InvalidRepo, mediaTypeFor, PathExists } from "@byconvo/core/workspace";
+import { countRepos, isGitRoot, scanRepos } from "./repo-scan.ts";
 import { resolveWorkspace, WorkspaceContext } from "./workspace-context.ts";
 import type {
   BrowseEntry,
   BrowsePayload,
-  RepoEntry,
   WorkspaceInfo,
   WorkspaceRepo,
 } from "@byconvo/core/workspace";
@@ -31,65 +32,16 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
   const tryFs = <A, R>(effect: Effect.Effect<A, PlatformError, R>) =>
     effect.pipe(Effect.mapError(toStorageError));
 
-  /** Git repos within `dir`, searched up to `depth` levels deep. */
-  const scanChildRepos = (
-    dir: string,
-    depth: number
-  ): Effect.Effect<Array<RepoEntry>> =>
-    Effect.gen(function* () {
-      const names = yield* fs
-        .readDirectory(dir)
-        .pipe(Effect.catch(() => Effect.succeed([])));
-      const repos: Array<RepoEntry> = [];
-      for (const name of [...names].sort((a, b) => a.localeCompare(b))) {
-        if (name.startsWith(".") || name === "node_modules") continue;
-        const childPath = `${dir}/${name}`;
-        const stat = yield* fs
-          .stat(childPath)
-          .pipe(Effect.catch(() => Effect.succeed(null)));
-        if (stat === null || stat.type !== "Directory") continue;
-        const isGitRepo = yield* fs
-          .exists(`${childPath}/.git`)
-          .pipe(Effect.catch(() => Effect.succeed(false)));
-        if (isGitRepo) {
-          repos.push({ name, path: childPath });
-          continue;
-        }
-        if (depth > 1) {
-          const nested = yield* scanChildRepos(childPath, depth - 1);
-          for (const repo of nested)
-            repos.push({ name: `${name}/${repo.name}`, path: repo.path });
-        }
-      }
-      return repos;
-    });
-
-  const describe = (
-    current: string | null
-  ): Effect.Effect<{
-    isGitRepo: boolean;
-    childRepos: ReadonlyArray<RepoEntry>;
-  }> =>
-    current === null
-      ? Effect.succeed({ isGitRepo: false, childRepos: [] })
-      : Effect.gen(function* () {
-          const isGitRepo = yield* fs
-            .exists(`${current}/.git`)
-            .pipe(Effect.catch(() => Effect.succeed(false)));
-          if (isGitRepo) return { isGitRepo: true, childRepos: [] };
-          const childRepos = yield* scanChildRepos(current, 2);
-          return { isGitRepo: false, childRepos };
-        });
-
+  /** The open project as the SPA sees it: its roots, rescanned on every read
+   * so a repository cloned into the folder shows up without reopening it. */
   const info: WorkspaceRepo["info"] = Effect.gen(function* () {
-    const current = yield* ctx.current;
-    const recents = yield* ctx.recents;
-    const described = yield* describe(current);
+    const project = yield* ctx.project;
     return {
-      current,
-      recents,
+      project,
+      repos: project === null ? [] : yield* scanRepos(fs, project),
+      current: yield* ctx.current,
+      recents: yield* ctx.recents,
       home: homedir(),
-      ...described,
     } satisfies WorkspaceInfo;
   });
 
@@ -103,15 +55,29 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
           new InvalidRepo({ path, reason: "not a directory" })
         );
       }
-      yield* ctx.select(root);
-      const recents = yield* ctx.recents;
-      const described = yield* describe(root);
-      return {
-        current: root,
-        recents,
-        home: homedir(),
-        ...described,
-      } satisfies WorkspaceInfo;
+      yield* ctx.selectProject(root);
+      return yield* info;
+    });
+
+  const selectRepo: WorkspaceRepo["selectRepo"] = (path) =>
+    Effect.gen(function* () {
+      const project = yield* ctx.project;
+      if (project === null) {
+        return yield* Effect.fail(
+          new InvalidRepo({ path, reason: "no project is open" })
+        );
+      }
+      const repos = yield* scanRepos(fs, project);
+      if (!repos.some((repo) => repo.path === path)) {
+        return yield* Effect.fail(
+          new InvalidRepo({
+            path,
+            reason: "not a repository in the open project",
+          })
+        );
+      }
+      yield* ctx.selectRepo(path);
+      return yield* info;
     });
 
   const browse: WorkspaceRepo["browse"] = (requested) =>
@@ -126,17 +92,26 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
           .stat(childPath)
           .pipe(Effect.catch(() => Effect.succeed(null)));
         if (stat === null || stat.type !== "Directory") continue;
-        const isGitRepo = yield* fs
-          .exists(`${childPath}/.git`)
-          .pipe(Effect.catch(() => Effect.succeed(false)));
-        entries.push({ name, path: childPath, isGitRepo });
+        const isRepo = yield* isGitRoot(fs, childPath);
+        // A folder of repositories is openable too, so the picker has to be
+        // able to tell one from an ordinary directory before you step into it.
+        entries.push({
+          name,
+          path: childPath,
+          isGitRepo: isRepo,
+          repoCount: isRepo ? 1 : yield* countRepos(fs, childPath),
+        });
       }
       const parent =
         path === "/" ? null : path.slice(0, path.lastIndexOf("/")) || "/";
-      const isGitRepo = yield* fs
-        .exists(`${path}/.git`)
-        .pipe(Effect.catch(() => Effect.succeed(false)));
-      return { path, parent, isGitRepo, entries } satisfies BrowsePayload;
+      const isRepo = yield* isGitRoot(fs, path);
+      return {
+        path,
+        parent,
+        isGitRepo: isRepo,
+        repoCount: isRepo ? 1 : yield* countRepos(fs, path),
+        entries,
+      } satisfies BrowsePayload;
     });
 
   /** Resolve a repo-relative path, refusing anything that escapes the root. */
@@ -212,6 +187,7 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
   return {
     info,
     setCurrent,
+    selectRepo,
     browse,
     readFile,
     readFileBytes,
