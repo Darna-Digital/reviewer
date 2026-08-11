@@ -10,6 +10,8 @@ const trimmed = (value: string | undefined): string | null =>
 export const ProjectHandler = HttpApiBuilder.group(Api, "project", (handlers) =>
   handlers
     .handle("changes", () => Effect.flatMap(ProjectService, (s) => s.changes))
+    .handle("files", () => Effect.flatMap(ProjectService, (s) => s.files))
+    .handle("diff", () => Effect.flatMap(ProjectService, (s) => s.worktreeDiff))
     .handle("branches", () => Effect.flatMap(ProjectService, (s) => s.branches))
     .handle("log", ({ query }) => {
       // `ref` is deliberately ignored: a branch name belongs to one root, and

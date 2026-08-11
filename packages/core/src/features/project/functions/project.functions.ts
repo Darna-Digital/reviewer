@@ -89,3 +89,43 @@ export const projectTotals = (
     }),
     { changed: 0, ahead: 0, behind: 0, conflicted: 0 }
   );
+
+/**
+ * Rewrite a repository's diff so its paths read from the project root:
+ * `a/src/a.ts` becomes `a/web-app/src/a.ts`. Prefixing lets one root's diff be
+ * concatenated with another's and parsed as a single project diff, with every
+ * path matching the tree it will be shown against.
+ *
+ * Only the path-bearing headers are touched. `/dev/null` stands for "no file
+ * on this side" rather than a path, so it is left alone.
+ */
+export const prefixDiffPaths = (diff: string, prefix: string): string => {
+  if (prefix.length === 0 || diff.length === 0) return diff;
+  const path = (side: string, rest: string) =>
+    rest === "/dev/null" ? rest : `${side}${prefix}/${rest.slice(side.length)}`;
+  return diff
+    .split("\n")
+    .map((line) => {
+      if (line.startsWith("diff --git a/")) {
+        // Both paths sit on one line, and either may contain spaces; splitting
+        // on " b/" would break a file called `a b/c`. Rewriting each `a/`-`b/`
+        // pair positionally keeps such names intact.
+        const body = line.slice("diff --git ".length);
+        const half = body.indexOf(" b/");
+        if (half === -1) return line;
+        const left = body.slice(0, half);
+        const right = body.slice(half + 1);
+        return `diff --git ${path("a/", left)} ${path("b/", right)}`;
+      }
+      if (line.startsWith("--- ")) return `--- ${path("a/", line.slice(4))}`;
+      if (line.startsWith("+++ ")) return `+++ ${path("b/", line.slice(4))}`;
+      if (line.startsWith("rename from ")) {
+        return `rename from ${prefix}/${line.slice("rename from ".length)}`;
+      }
+      if (line.startsWith("rename to ")) {
+        return `rename to ${prefix}/${line.slice("rename to ".length)}`;
+      }
+      return line;
+    })
+    .join("\n");
+};

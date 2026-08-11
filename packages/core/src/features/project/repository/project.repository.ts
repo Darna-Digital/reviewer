@@ -5,6 +5,7 @@ import type { LogQuery } from "../../repo/schema/repo.schema.ts";
 import type {
   ProjectBranches,
   ProjectChanges,
+  ProjectFiles,
   ProjectLog,
 } from "../schema/project.schema.ts";
 
@@ -15,6 +16,13 @@ import type {
  */
 export interface ProjectRepo {
   readonly changes: Effect.Effect<ProjectChanges, NoRepoSelected>;
+  /** Every root's files, named from the project root. */
+  readonly files: Effect.Effect<ProjectFiles, NoRepoSelected>;
+  /**
+   * Every root's uncommitted diff, concatenated with its paths moved under the
+   * root they came from, so the whole project parses as one diff.
+   */
+  readonly worktreeDiff: Effect.Effect<string, NoRepoSelected>;
   readonly branches: Effect.Effect<ProjectBranches, NoRepoSelected>;
   readonly log: (query: LogQuery) => Effect.Effect<ProjectLog, NoRepoSelected>;
 }

@@ -3,8 +3,10 @@ import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 import {
   ProjectBranches,
   ProjectChanges,
+  ProjectFiles,
   ProjectLog,
 } from "@byconvo/core/project";
+import * as Schema from "effect/Schema";
 import { LogQueryParams } from "@byconvo/core/repo";
 import { NoRepoSelected } from "@byconvo/core/shared";
 
@@ -14,6 +16,18 @@ export class ProjectApi extends HttpApiGroup.make("project")
   .add(
     HttpApiEndpoint.get("changes", "/project/changes", {
       success: ProjectChanges,
+      error: noProject,
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("files", "/project/files", {
+      success: ProjectFiles,
+      error: noProject,
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("diff", "/project/diff", {
+      success: Schema.String,
       error: noProject,
     })
   )

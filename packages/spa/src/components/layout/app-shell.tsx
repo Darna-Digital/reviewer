@@ -116,6 +116,8 @@ import {
   useFiles,
   useMergeState,
   usePagedLog,
+  useProjectDiff,
+  useProjectFiles,
   useProjectLog,
   usePullComments,
   usePulls,
@@ -308,9 +310,19 @@ export function AppShell() {
   const targetKey = target === null ? "none" : diffTargetKey(target);
 
   const diff = useDiffText(target);
+  // The uncommitted diff of every root at once, its paths named from the
+  // project so they line up with the tree. Only the worktree target: a commit
+  // or a range belongs to one root, and is read from that root as before.
+  const projectDiff = useProjectDiff(multiRepo && target?.kind === "worktree");
+  const diffText =
+    multiRepo && target?.kind === "worktree"
+      ? (projectDiff.data ?? null)
+      : typeof diff.data === "string"
+        ? diff.data
+        : null;
   const parsedFiles = useMemo(
-    () => diffFns.parseFiles(typeof diff.data === "string" ? diff.data : null),
-    [diff.data, diffFns]
+    () => diffFns.parseFiles(diffText),
+    [diffText, diffFns]
   );
   const pullComments = usePullComments(
     target?.kind === "pull" ? target.pull.number : null
@@ -330,11 +342,17 @@ export function AppShell() {
   useEffect(() => setDraft(null), [targetKey, search.file]);
 
   // --- derived tree / comments (memoised: these run over the whole repo) -----
+  // Paths are named from the project root once it holds more than one
+  // repository, so the tree nests the roots as folders without being told to
+  // and a file opens without anything being switched first. A single-root
+  // project reads the repository's own listing, where the two are the same.
+  const projectFiles = useProjectFiles(multiRepo);
+  const listing = multiRepo ? projectFiles.data : files.data;
   const gitStatus = useMemo(
-    () => files.data?.gitStatus ?? [],
-    [files.data?.gitStatus]
+    () => listing?.gitStatus ?? [],
+    [listing?.gitStatus]
   );
-  const allPaths = useMemo(() => files.data?.paths ?? [], [files.data?.paths]);
+  const allPaths = useMemo(() => listing?.paths ?? [], [listing?.paths]);
   const treePaths = useMemo(
     () =>
       diffFns.treePaths({

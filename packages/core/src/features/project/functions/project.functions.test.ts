@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   changedFileCount,
   mergeCommits,
+  prefixDiffPaths,
   projectIsOutOfSync,
   projectPath,
   projectTotals,
@@ -163,5 +164,56 @@ describe("projectTotals", () => {
         ])
       )
     ).toEqual({ changed: 3, ahead: 1, behind: 3, conflicted: 1 });
+  });
+});
+
+describe("prefixDiffPaths", () => {
+  const diff = [
+    "diff --git a/src/a.ts b/src/a.ts",
+    "index 111..222 100644",
+    "--- a/src/a.ts",
+    "+++ b/src/a.ts",
+    "@@ -1 +1 @@",
+    "-old",
+    "+new",
+  ].join("\n");
+
+  it("moves every path under the root it came from", () => {
+    expect(prefixDiffPaths(diff, "web-app").split("\n")).toEqual([
+      "diff --git a/web-app/src/a.ts b/web-app/src/a.ts",
+      "index 111..222 100644",
+      "--- a/web-app/src/a.ts",
+      "+++ b/web-app/src/a.ts",
+      "@@ -1 +1 @@",
+      "-old",
+      "+new",
+    ]);
+  });
+
+  it("leaves /dev/null alone — it names no file to move", () => {
+    const added = ["--- /dev/null", "+++ b/src/new.ts"].join("\n");
+    expect(prefixDiffPaths(added, "web-app").split("\n")).toEqual([
+      "--- /dev/null",
+      "+++ b/web-app/src/new.ts",
+    ]);
+  });
+
+  it("moves both sides of a rename", () => {
+    const renamed = ["rename from src/a.ts", "rename to src/b.ts"].join("\n");
+    expect(prefixDiffPaths(renamed, "api").split("\n")).toEqual([
+      "rename from api/src/a.ts",
+      "rename to api/src/b.ts",
+    ]);
+  });
+
+  it("keeps a path containing a space intact", () => {
+    const spaced = "diff --git a/my file.ts b/my file.ts";
+    expect(prefixDiffPaths(spaced, "web-app")).toBe(
+      "diff --git a/web-app/my file.ts b/web-app/my file.ts"
+    );
+  });
+
+  it("leaves the diff alone without a prefix", () => {
+    expect(prefixDiffPaths(diff, "")).toBe(diff);
   });
 });

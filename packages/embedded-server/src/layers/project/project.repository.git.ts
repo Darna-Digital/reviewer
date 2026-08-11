@@ -13,7 +13,11 @@
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import { ChildProcessSpawner } from "effect/unstable/process";
-import { mergeCommits } from "@byconvo/core/project";
+import {
+  mergeCommits,
+  prefixDiffPaths,
+  projectPath,
+} from "@byconvo/core/project";
 import { GitExec } from "@byconvo/core/ports/git-exec";
 import { makeGitRepoRepository } from "../repo/repo.repository.git.ts";
 import { makeAt } from "../git/git-exec.ts";
@@ -110,6 +114,36 @@ export const makeGitProjectRepository = Effect.gen(function* () {
     })
   );
 
+  const files: ProjectRepo["files"] = Effect.map(
+    acrossRoots((_repo, git) => git.files),
+    ({ failed, ok }) => ({
+      // Naming every path from the project root is what makes the tree nest
+      // the roots as folders: no grouping logic, just paths that already say
+      // where they live.
+      paths: ok.flatMap(({ repo, value }) =>
+        value.paths.map((path) => projectPath(repo, path))
+      ),
+      gitStatus: ok.flatMap(({ repo, value }) =>
+        value.gitStatus.map((entry) => ({
+          ...entry,
+          path: projectPath(repo, entry.path),
+        }))
+      ),
+      failed,
+    })
+  );
+
+  const worktreeDiff: ProjectRepo["worktreeDiff"] = Effect.map(
+    acrossRoots((repo, git) =>
+      Effect.map(git.worktreeDiff, (diff) => prefixDiffPaths(diff, repo.name))
+    ),
+    ({ ok }) =>
+      ok
+        .map(({ value }) => value)
+        .filter((diff) => diff.trim().length > 0)
+        .join("\n")
+  );
+
   const branches: ProjectRepo["branches"] = Effect.map(
     acrossRoots((_repo, git) =>
       Effect.all({ local: git.branches, remote: git.remoteBranches })
@@ -142,5 +176,5 @@ export const makeGitProjectRepository = Effect.gen(function* () {
       })
     );
 
-  return { changes, branches, log } satisfies ProjectRepo;
+  return { changes, files, worktreeDiff, branches, log } satisfies ProjectRepo;
 });

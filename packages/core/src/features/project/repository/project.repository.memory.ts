@@ -3,6 +3,7 @@ import { mergeCommits } from "../functions/project.functions.ts";
 import type {
   ProjectBranches,
   ProjectChanges,
+  ProjectFiles,
   ProjectLog,
   RepoBranches,
   RepoChanges,
@@ -13,6 +14,8 @@ import type { RepoEntry } from "../../workspace/schema/workspace.schema.ts";
 import type { ProjectRepo } from "./project.repository.ts";
 
 export interface MemoryProjectSeed {
+  readonly files?: ReadonlyArray<string>;
+  readonly worktreeDiff?: string;
   readonly changes?: ReadonlyArray<RepoChanges>;
   readonly branches?: ReadonlyArray<RepoBranches>;
   /** Each root's own history, newest first — merged on read, as git's is. */
@@ -27,6 +30,17 @@ export const makeMemoryProjectRepository = (seed: MemoryProjectSeed = {}) =>
   Effect.sync((): ProjectRepo => {
     const failed = seed.failed ?? [];
     return {
+      files: Effect.succeed({
+        paths: seed.files ?? [],
+        gitStatus: (seed.changes ?? []).flatMap((entry) =>
+          entry.files.map((file) => ({
+            ...file,
+            path: `${entry.repo.name}/${file.path}`,
+          }))
+        ),
+        failed,
+      } satisfies ProjectFiles),
+      worktreeDiff: Effect.succeed(seed.worktreeDiff ?? ""),
       changes: Effect.succeed({
         repos: seed.changes ?? [],
         failed,

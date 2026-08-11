@@ -21,6 +21,14 @@ export const useComments = () => api.useQuery("get", "/api/comments");
 // The `/api/repo`-backed hooks above answer for the selected repository; these
 // answer for the whole project, each entry carrying the root it came from.
 
+/** Every root's files, named from the project root so the tree nests them. */
+export const useProjectFiles = (enabled: boolean) =>
+  api.useQuery("get", "/api/project/files", {}, { enabled });
+
+/** Every root's uncommitted diff as one diff, with project-relative paths. */
+export const useProjectDiff = (enabled: boolean) =>
+  api.useQuery("get", "/api/project/diff", {}, { enabled });
+
 /** Uncommitted work in every root — the commit view's per-repository groups. */
 export const useProjectChanges = () =>
   api.useQuery("get", "/api/project/changes");

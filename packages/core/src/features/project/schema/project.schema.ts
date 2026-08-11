@@ -64,6 +64,18 @@ export const ProjectBranches = Schema.Struct({
 });
 export type ProjectBranches = typeof ProjectBranches.Type;
 
+/**
+ * Every root's files as the project sees them: paths prefixed with the root
+ * they belong to, so `web-app/src/a.ts` and `backend-app/src/a.ts` are two
+ * files and the tree nests them under their roots without being told to.
+ */
+export const ProjectFiles = Schema.Struct({
+  paths: Schema.Array(Schema.String),
+  gitStatus: Schema.Array(GitStatusEntry),
+  failed: Schema.Array(RepoFailure),
+});
+export type ProjectFiles = typeof ProjectFiles.Type;
+
 export const ProjectLog = Schema.Struct({
   commits: Schema.Array(ProjectCommit),
   failed: Schema.Array(RepoFailure),

@@ -114,10 +114,18 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
       } satisfies BrowsePayload;
     });
 
-  /** Resolve a repo-relative path, refusing anything that escapes the root. */
-  const resolveInRepo = (relPath: string) =>
+  /**
+   * Resolve a path the views use against the project root, refusing anything
+   * that escapes it.
+   *
+   * The project root, not the selected repository: paths are named from the
+   * project (`web-app/src/a.ts`), so a file in any of its roots opens without
+   * anything being switched first. A project holding one repository has the
+   * two roots at the same path, so this is exactly what it always did.
+   */
+  const resolveInProject = (relPath: string) =>
     Effect.gen(function* () {
-      const root = yield* ctx.requireCurrent;
+      const root = yield* ctx.requireProject;
       const cleaned = relPath.replace(/^\/+/, "");
       const resolved = pathResolve(`${root}/${cleaned}`);
       if (resolved !== root && !resolved.startsWith(`${root}/`)) {
@@ -128,14 +136,14 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
 
   const readFile: WorkspaceRepo["readFile"] = (relPath) =>
     Effect.gen(function* () {
-      const { name, resolved } = yield* resolveInRepo(relPath);
+      const { name, resolved } = yield* resolveInProject(relPath);
       const contents = yield* tryFs(fs.readFileString(resolved));
       return { name, contents };
     });
 
   const readFileBytes: WorkspaceRepo["readFileBytes"] = (relPath) =>
     Effect.gen(function* () {
-      const { name, resolved } = yield* resolveInRepo(relPath);
+      const { name, resolved } = yield* resolveInProject(relPath);
       const bytes = yield* tryFs(fs.readFile(resolved));
       return {
         name,
@@ -153,13 +161,13 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
 
   const writeFile: WorkspaceRepo["writeFile"] = (relPath, contents) =>
     Effect.gen(function* () {
-      const { resolved } = yield* resolveInRepo(relPath);
+      const { resolved } = yield* resolveInProject(relPath);
       yield* tryFs(fs.writeFileString(resolved, contents));
     });
 
   const createPath: WorkspaceRepo["createPath"] = (relPath, kind) =>
     Effect.gen(function* () {
-      const { resolved } = yield* resolveInRepo(relPath);
+      const { resolved } = yield* resolveInProject(relPath);
       if (yield* tryFs(fs.exists(resolved))) {
         return yield* Effect.fail(new PathExists({ path: relPath }));
       }
@@ -172,14 +180,14 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
 
   const deletePath: WorkspaceRepo["deletePath"] = (relPath) =>
     Effect.gen(function* () {
-      const { resolved } = yield* resolveInRepo(relPath);
+      const { resolved } = yield* resolveInProject(relPath);
       yield* tryFs(fs.remove(resolved, { recursive: true }));
     });
 
   const renamePath: WorkspaceRepo["renamePath"] = (fromRel, toRel) =>
     Effect.gen(function* () {
-      const from = yield* resolveInRepo(fromRel);
-      const to = yield* resolveInRepo(toRel);
+      const from = yield* resolveInProject(fromRel);
+      const to = yield* resolveInProject(toRel);
       yield* makeParentDirectory(to.resolved);
       yield* tryFs(fs.rename(from.resolved, to.resolved));
     });
