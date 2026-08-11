@@ -38,6 +38,61 @@ export const splitProjectPath = (
   return null;
 };
 
+/** Where a path the views use lives, and how to speak about it either way. */
+export interface ProjectLocation {
+  /** The root that holds the path. */
+  readonly repo: RepoEntry;
+  /** The path as that root knows it — what a git or a language server needs. */
+  readonly path: string;
+  /**
+   * What the root's own paths are named with from the project: `web-app` for a
+   * root inside the project, and the empty string for a project that is itself
+   * the repository, whose paths are already the project's.
+   */
+  readonly prefix: string;
+}
+
+/** A root's own path, named from the project: `src/a.ts` → `web-app/src/a.ts`. */
+export const prefixProjectPath = (prefix: string, path: string): string =>
+  prefix.length === 0 ? path : `${prefix}/${path}`;
+
+/**
+ * Locate a path against the project's roots: the root that holds it, the path
+ * as that root knows it, and the prefix that puts its answers back into the
+ * project's terms.
+ *
+ * Resolving through the project root — rather than matching root names, as
+ * `splitProjectPath` does — is what makes this work for both of the namings a
+ * project produces. A project holding several roots names a file
+ * `web-app/src/a.ts`; a project that is itself a repository names the same file
+ * `src/a.ts`, and gets the empty prefix, so a caller that prefixes what comes
+ * back is right in both cases.
+ *
+ * Null when no root holds the path: a file outside every root, or a stale path
+ * naming a root that has since gone.
+ */
+export const locateProjectPath = (
+  project: string,
+  repos: ReadonlyArray<RepoEntry>,
+  path: string
+): ProjectLocation | null => {
+  const root = project.replace(/\/+$/, "");
+  const absolute = `${root}/${path.replace(/^\/+/, "")}`;
+  // Longest root first, so a nested root (`apps/web`) wins over the one that
+  // holds it, exactly as the name-based split does.
+  const ordered = [...repos].sort((a, b) => b.path.length - a.path.length);
+  for (const repo of ordered) {
+    const owned = repo.path.replace(/\/+$/, "");
+    if (!absolute.startsWith(`${owned}/`)) continue;
+    return {
+      repo,
+      path: absolute.slice(owned.length + 1),
+      prefix: owned === root ? "" : repo.name,
+    };
+  }
+  return null;
+};
+
 /**
  * Every root's commits as one history, newest first. Git already sorts each
  * root's own log, so this is a merge on author date; commits sharing a date
