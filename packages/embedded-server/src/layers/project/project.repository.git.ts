@@ -14,6 +14,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import {
+  groupPathsByRepo,
   mergeCommits,
   prefixDiffPaths,
   projectPath,
@@ -28,6 +29,7 @@ import type {
   ProjectRepo,
   RepoBranches,
   RepoChanges,
+  RepoCommitResult,
   RepoFailure,
 } from "@byconvo/core/project";
 import type { RepoEntry } from "@byconvo/core/workspace";
@@ -176,5 +178,43 @@ export const makeGitProjectRepository = Effect.gen(function* () {
       })
     );
 
-  return { changes, files, worktreeDiff, branches, log } satisfies ProjectRepo;
+  const commit: ProjectRepo["commit"] = (message, paths) =>
+    Effect.gen(function* () {
+      const repos = yield* roots;
+      const groups = groupPathsByRepo(repos, paths);
+      // Sequential, not concurrent: a person reading the outcome wants the
+      // roots reported in project order, and committing is cheap enough that
+      // there is nothing to win by racing them.
+      return {
+        results: yield* Effect.forEach(groups, (group) =>
+          Effect.flatMap(repoAt(group.repo.path), (git) =>
+            git.commit(message, group.paths)
+          ).pipe(
+            Effect.map(
+              (sha): RepoCommitResult => ({
+                repo: group.repo,
+                sha,
+                reason: null,
+              })
+            ),
+            Effect.catch((error) =>
+              Effect.succeed({
+                repo: group.repo,
+                sha: null,
+                reason: reasonOf(error),
+              } satisfies RepoCommitResult)
+            )
+          )
+        ),
+      };
+    });
+
+  return {
+    changes,
+    files,
+    worktreeDiff,
+    branches,
+    log,
+    commit,
+  } satisfies ProjectRepo;
 });

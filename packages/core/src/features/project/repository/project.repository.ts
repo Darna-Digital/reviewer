@@ -5,6 +5,7 @@ import type { LogQuery } from "../../repo/schema/repo.schema.ts";
 import type {
   ProjectBranches,
   ProjectChanges,
+  ProjectCommitResult,
   ProjectFiles,
   ProjectLog,
 } from "../schema/project.schema.ts";
@@ -25,6 +26,16 @@ export interface ProjectRepo {
   readonly worktreeDiff: Effect.Effect<string, NoRepoSelected>;
   readonly branches: Effect.Effect<ProjectBranches, NoRepoSelected>;
   readonly log: (query: LogQuery) => Effect.Effect<ProjectLog, NoRepoSelected>;
+  /**
+   * Commit the given project paths, one commit per root that owns any of them,
+   * all carrying the same message. Each root's outcome is reported separately:
+   * a commit that lands in one root and fails in another has to say so, not
+   * read as a single success or a single failure.
+   */
+  readonly commit: (
+    message: string,
+    paths: ReadonlyArray<string>
+  ) => Effect.Effect<ProjectCommitResult, NoRepoSelected>;
 }
 
 export class ProjectRepository extends Context.Service<

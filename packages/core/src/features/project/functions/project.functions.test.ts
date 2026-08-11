@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   changedFileCount,
+  groupPathsByRepo,
   mergeCommits,
   prefixDiffPaths,
   projectIsOutOfSync,
@@ -215,5 +216,35 @@ describe("prefixDiffPaths", () => {
 
   it("leaves the diff alone without a prefix", () => {
     expect(prefixDiffPaths(diff, "")).toBe(diff);
+  });
+});
+
+describe("groupPathsByRepo", () => {
+  const repos = [repo("backend"), repo("frontend")];
+
+  it("splits a selection into the roots that own it", () => {
+    expect(
+      groupPathsByRepo(repos, [
+        "backend/a.txt",
+        "frontend/src/app.ts",
+        "backend/b.txt",
+      ])
+    ).toEqual([
+      { repo: repo("backend"), paths: ["a.txt", "b.txt"] },
+      { repo: repo("frontend"), paths: ["src/app.ts"] },
+    ]);
+  });
+
+  it("leaves out a root nothing was selected from", () => {
+    const groups = groupPathsByRepo(repos, ["frontend/src/app.ts"]);
+    expect(groups.map((group) => group.repo.name)).toEqual(["frontend"]);
+  });
+
+  it("drops a path no root claims rather than guessing", () => {
+    expect(groupPathsByRepo(repos, ["mobile/a.ts"])).toEqual([]);
+  });
+
+  it("is empty for an empty selection", () => {
+    expect(groupPathsByRepo(repos, [])).toEqual([]);
   });
 });

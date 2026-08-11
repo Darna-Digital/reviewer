@@ -1,5 +1,8 @@
 import * as Effect from "effect/Effect";
-import { mergeCommits } from "../functions/project.functions.ts";
+import {
+  groupPathsByRepo,
+  mergeCommits,
+} from "../functions/project.functions.ts";
 import type {
   ProjectBranches,
   ProjectChanges,
@@ -41,6 +44,17 @@ export const makeMemoryProjectRepository = (seed: MemoryProjectSeed = {}) =>
         failed,
       } satisfies ProjectFiles),
       worktreeDiff: Effect.succeed(seed.worktreeDiff ?? ""),
+      commit: (_message, paths) =>
+        Effect.succeed({
+          results: groupPathsByRepo(
+            (seed.changes ?? []).map((entry) => entry.repo),
+            paths
+          ).map((group, index) => ({
+            repo: group.repo,
+            sha: `commit${index}`,
+            reason: null,
+          })),
+        }),
       changes: Effect.succeed({
         repos: seed.changes ?? [],
         failed,

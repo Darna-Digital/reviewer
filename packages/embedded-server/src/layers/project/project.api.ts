@@ -3,6 +3,8 @@ import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 import {
   ProjectBranches,
   ProjectChanges,
+  ProjectCommitBody,
+  ProjectCommitResult,
   ProjectFiles,
   ProjectLog,
 } from "@byconvo/core/project";
@@ -34,6 +36,13 @@ export class ProjectApi extends HttpApiGroup.make("project")
   .add(
     HttpApiEndpoint.get("branches", "/project/branches", {
       success: ProjectBranches,
+      error: noProject,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("commit", "/project/commit", {
+      payload: ProjectCommitBody,
+      success: ProjectCommitResult,
       error: noProject,
     })
   )

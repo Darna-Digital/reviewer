@@ -91,6 +91,33 @@ export const projectTotals = (
   );
 
 /**
+ * Split project paths into the roots that own them, in project order, keeping
+ * only the roots that got any. This is what turns one selection spanning
+ * `backend` and `frontend` into the commits each of them needs; a path no root
+ * claims is dropped rather than guessed at.
+ */
+export const groupPathsByRepo = (
+  repos: ReadonlyArray<RepoEntry>,
+  paths: ReadonlyArray<string>
+): ReadonlyArray<{
+  readonly repo: RepoEntry;
+  readonly paths: ReadonlyArray<string>;
+}> => {
+  const byRoot = new Map<string, Array<string>>();
+  for (const path of paths) {
+    const split = splitProjectPath(repos, path);
+    if (split === null) continue;
+    const held = byRoot.get(split.repo.path);
+    if (held === undefined) byRoot.set(split.repo.path, [split.path]);
+    else held.push(split.path);
+  }
+  return repos.flatMap((repo) => {
+    const held = byRoot.get(repo.path);
+    return held === undefined ? [] : [{ repo, paths: held }];
+  });
+};
+
+/**
  * Rewrite a repository's diff so its paths read from the project root:
  * `a/src/a.ts` becomes `a/web-app/src/a.ts`. Prefixing lets one root's diff be
  * concatenated with another's and parsed as a single project diff, with every

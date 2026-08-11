@@ -76,6 +76,26 @@ export const ProjectFiles = Schema.Struct({
 });
 export type ProjectFiles = typeof ProjectFiles.Type;
 
+/** Files to commit, named from the project root, and the message for them. */
+export const ProjectCommitBody = Schema.Struct({
+  message: Schema.String,
+  paths: Schema.Array(Schema.String),
+});
+export type ProjectCommitBody = typeof ProjectCommitBody.Type;
+
+/** What one root did with the commit: a sha, or why it did not get one. */
+export const RepoCommitResult = Schema.Struct({
+  repo: RepoEntry,
+  sha: Schema.NullOr(Schema.String),
+  reason: Schema.NullOr(Schema.String),
+});
+export type RepoCommitResult = typeof RepoCommitResult.Type;
+
+export const ProjectCommitResult = Schema.Struct({
+  results: Schema.Array(RepoCommitResult),
+});
+export type ProjectCommitResult = typeof ProjectCommitResult.Type;
+
 export const ProjectLog = Schema.Struct({
   commits: Schema.Array(ProjectCommit),
   failed: Schema.Array(RepoFailure),

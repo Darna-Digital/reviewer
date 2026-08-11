@@ -6,6 +6,13 @@
  */
 export type NoticeKind = "ok" | "err";
 
+/** What one root did with a project-wide commit. */
+export interface RepoCommitOutcome {
+  readonly repo: { readonly name: string };
+  readonly sha: string | null;
+  readonly reason: string | null;
+}
+
 export interface GitActionsDependencies {
   data: Record<string, never>;
   sideEffects: {
@@ -13,6 +20,17 @@ export interface GitActionsDependencies {
       message: string,
       paths: ReadonlyArray<string>
     ) => Promise<{ sha: string }>;
+    /**
+     * Commit across the project's roots — one message, one commit per root
+     * that owns any of the selected paths. Null for a project holding a single
+     * root, where the plain commit above says the same thing more directly.
+     */
+    readonly commitAcrossRepos:
+      | ((
+          message: string,
+          paths: ReadonlyArray<string>
+        ) => Promise<ReadonlyArray<RepoCommitOutcome>>)
+      | null;
     readonly push: () => Promise<{ output: string }>;
     readonly notify: (kind: NoticeKind, text: string) => void;
     readonly refresh: () => void;

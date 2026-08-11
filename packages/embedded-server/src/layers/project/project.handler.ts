@@ -13,6 +13,11 @@ export const ProjectHandler = HttpApiBuilder.group(Api, "project", (handlers) =>
     .handle("files", () => Effect.flatMap(ProjectService, (s) => s.files))
     .handle("diff", () => Effect.flatMap(ProjectService, (s) => s.worktreeDiff))
     .handle("branches", () => Effect.flatMap(ProjectService, (s) => s.branches))
+    .handle("commit", ({ payload }) =>
+      Effect.flatMap(ProjectService, (s) =>
+        s.commit(payload.message, payload.paths)
+      )
+    )
     .handle("log", ({ query }) => {
       // `ref` is deliberately ignored: a branch name belongs to one root, and
       // the project's history is every root's HEAD. The rest of the filters
