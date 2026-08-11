@@ -36,6 +36,8 @@ interface CommitHistoryProps {
   /** The project's roots, when it holds several — drives the repo filter. */
   repos?: ReadonlyArray<RepoEntry>;
   repoFilter?: string | null;
+  /** The project's own name, for the "all repositories" avatar. */
+  projectName?: string;
   onRepoFilterChange?: (repoPath: string | null) => void;
   /** File open from the selected commit, highlighted in its changed-file tree. */
   selectedFile: string | null;
@@ -65,6 +67,7 @@ export function CommitHistory({
   commitRepos,
   repos,
   repoFilter,
+  projectName,
   onRepoFilterChange,
   onLoadMore,
   onRefChange,
@@ -159,6 +162,7 @@ export function CommitHistory({
         onQueryChange={onQueryChange}
         repos={repos}
         repoFilter={repoFilter}
+        projectName={projectName}
         onRepoFilterChange={onRepoFilterChange}
       />
 

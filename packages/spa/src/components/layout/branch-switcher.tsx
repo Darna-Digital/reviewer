@@ -177,11 +177,6 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
   // A project of one root has nothing to list: its branches are already the
   // sections below, and repeating them as a submenu would just be noise.
   const otherRepos = (props.repos ?? []).length > 1 ? (props.repos ?? []) : [];
-  /** Sections say which root they belong to once there is more than one. */
-  const sectionTitle = (label: string) =>
-    otherRepos.length > 0 && props.currentRepo != null
-      ? `${label} in ${props.currentRepo.name}`
-      : label;
 
   const recent = useMemo(
     () => branches.filter((b) => matches(b.name)).slice(0, 5),
@@ -485,7 +480,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
             )}
 
             <Section
-              title={sectionTitle("Recent")}
+              title="Recent"
               count={recent.length}
               collapsed={isCollapsed("recent")}
               onToggle={() => toggleSection("recent")}
@@ -496,7 +491,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
             </Section>
 
             <Section
-              title={sectionTitle("Local")}
+              title="Local"
               count={localCount}
               collapsed={isCollapsed("local")}
               onToggle={() => toggleSection("local")}
@@ -515,7 +510,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
             </Section>
 
             <Section
-              title={sectionTitle("Remote")}
+              title="Remote"
               count={remoteCount}
               collapsed={isCollapsed("remote")}
               onToggle={() => toggleSection("remote")}

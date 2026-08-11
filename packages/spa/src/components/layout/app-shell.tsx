@@ -64,7 +64,7 @@ import { useCommentsActions } from "@/interactions/comments/adapters/comments.ho
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
-import { activeRepo, isMultiRepo } from "@byconvo/core/workspace";
+import { activeRepo, folderName, isMultiRepo } from "@byconvo/core/workspace";
 import { filterCommitsByRepo } from "@byconvo/core/project";
 import {
   useRepoCommands,
@@ -1286,6 +1286,11 @@ export function AppShell() {
                 commitRepos={history.repos}
                 repos={multiRepo ? (workspace.data?.repos ?? []) : undefined}
                 repoFilter={logRepo}
+                projectName={
+                  workspace.data?.project == null
+                    ? undefined
+                    : folderName(workspace.data.project)
+                }
                 onRepoFilterChange={setLogRepo}
                 projectBranches={
                   multiRepo ? (projectBranchList.data?.repos ?? []) : undefined

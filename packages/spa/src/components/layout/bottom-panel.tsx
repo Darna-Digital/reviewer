@@ -62,6 +62,8 @@ interface BottomPanelProps {
   /** Check out `ref` in `repoPath`, following that root first if need be. */
   onRepoBranchCheckout?: (repoPath: string, ref: string) => void;
   repoFilter?: string | null;
+  /** The project's own name, for the "all repositories" avatar. */
+  projectName?: string;
   onRepoFilterChange?: (repoPath: string | null) => void;
   commitsLoading: boolean;
   commitsHaveMore: boolean;
@@ -195,6 +197,7 @@ export function BottomPanel(props: BottomPanelProps) {
             commitRepos={props.commitRepos}
             repos={props.repos}
             repoFilter={props.repoFilter}
+            projectName={props.projectName}
             onRepoFilterChange={props.onRepoFilterChange}
             onLoadMore={props.onLoadMoreCommits}
             onRefChange={props.onLogRefChange}

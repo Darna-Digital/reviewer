@@ -1,7 +1,6 @@
 import {
   IconCalendar,
   IconFile,
-  IconFolders,
   IconGitBranch,
   IconGitFork,
   IconSearch,
@@ -69,6 +68,8 @@ interface LogFiltersProps {
   repos?: ReadonlyArray<RepoEntry>;
   /** The root the history is narrowed to, or null for all of them. */
   repoFilter?: string | null;
+  /** The project's own name — the avatar shown when no root is chosen. */
+  projectName?: string;
   onRepoFilterChange?: (repoPath: string | null) => void;
 }
 
@@ -91,6 +92,7 @@ export function LogFilters({
   onQueryChange,
   repos,
   repoFilter = null,
+  projectName,
   onRepoFilterChange,
 }: LogFiltersProps) {
   const [grep, setGrep] = useState(query.grep ?? "");
@@ -144,14 +146,14 @@ export function LogFilters({
             className="w-48 text-xs"
             aria-label="Repository"
           >
-            {repoFilter === null ? (
-              <IconFolders className="size-3.5 shrink-0 text-muted-foreground" />
-            ) : (
-              <ProjectAvatar
-                name={repoNameOf(repoFilter)}
-                className="size-3.5 text-[8px]"
-              />
-            )}
+            <ProjectAvatar
+              name={
+                repoFilter === null
+                  ? (projectName ?? "")
+                  : repoNameOf(repoFilter)
+              }
+              className="size-4 text-[8px]"
+            />
             <ComboboxValue>
               {(value: string) =>
                 value === ALL_REPOS ? "All repositories" : repoNameOf(value)
@@ -164,19 +166,23 @@ export function LogFilters({
             <ComboboxList>
               {(path: string) => (
                 <ComboboxItem key={path} value={path}>
-                  {path === ALL_REPOS ? (
-                    <IconFolders className="size-3.5 shrink-0 text-muted-foreground" />
-                  ) : (
+                  {/* One flex row: the item wraps its children in a truncating
+                      block, so a second child would stack under the first. */}
+                  <span className="flex min-w-0 items-center gap-2">
                     <ProjectAvatar
-                      name={repoNameOf(path)}
-                      className="size-3.5 text-[8px]"
+                      name={
+                        path === ALL_REPOS
+                          ? (projectName ?? "")
+                          : repoNameOf(path)
+                      }
+                      className="size-4 text-[8px]"
                     />
-                  )}
-                  <TruncatedText
-                    text={
-                      path === ALL_REPOS ? "All repositories" : repoNameOf(path)
-                    }
-                  />
+                    <span className="truncate">
+                      {path === ALL_REPOS
+                        ? "All repositories"
+                        : repoNameOf(path)}
+                    </span>
+                  </span>
                 </ComboboxItem>
               )}
             </ComboboxList>
