@@ -50,9 +50,12 @@ import {
   conflictsFor,
   firstThing,
   formatSpent,
+  formatWaited,
+  growth,
   isUpForGrabs,
   landedTasks,
   laneTasks,
+  openSymptoms,
   totalSpent,
   upForGrabs,
 } from "@/interactions/collaboration/functions/task-flow.functions";
@@ -131,6 +134,13 @@ function TaskCard({
     (blocker) => blocker.status !== "done"
   );
   const grabbable = isUpForGrabs(tasks, task);
+  const symptoms = openSymptoms(tasks, task);
+  const drift = [
+    growth(task) > 0 ? `grew ${growth(task)}×` : null,
+    task.pushes > 0 ? `pushed ${task.pushes}×` : null,
+    task.waited > 0 ? `waited ${formatWaited(task.waited)}` : null,
+    symptoms.length > 0 ? `${symptoms.length} symptoms` : null,
+  ].filter((entry) => entry !== null);
 
   return (
     <div
@@ -184,6 +194,12 @@ function TaskCard({
           )
         )}
       </Link>
+
+      {drift.length > 0 && (
+        <p className="truncate text-[0.6875rem] text-muted-foreground/80">
+          {drift.join(" · ")}
+        </p>
+      )}
 
       <div className="flex items-center gap-1.5">
         <TaskStatusIcon status={task.status} />

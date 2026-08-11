@@ -65,6 +65,26 @@ export interface MockScope {
   elapsed: number;
 }
 
+/**
+ * What a task turned out to be, as opposed to what somebody thought it was.
+ *
+ * Discovery is the most common event in software and no tracker has a verb for
+ * it, so people record it as a slipped date instead. Here it is a first-class
+ * entry: something was found, and it either split off work of its own, made
+ * this task bigger, or turned a settled thing back into a question.
+ */
+export type DiscoveryEffect = "split" | "grew" | "question";
+
+export interface MockDiscovery {
+  id: string;
+  found: string;
+  by: string;
+  when: string;
+  effect: DiscoveryEffect;
+  /** The task it spawned, when it split off. */
+  spawned?: string;
+}
+
 export interface MockActivity {
   id: string;
   kind: "created" | "scope" | "status" | "comment";
@@ -93,6 +113,24 @@ export interface MockTask {
   blockedBy: ReadonlyArray<string>;
   /** Minutes actually tracked. Never an estimate — this is only ever the past. */
   spent: number;
+  /**
+   * Minutes the task sat unable to move. Kept apart from time worked, because
+   * "three weeks" is usually six hours of work and nineteen days of waiting,
+   * and only one of those is anybody's speed.
+   */
+  waited: number;
+  /**
+   * How many times it has been moved to a later horizon. The honest version of
+   * a slipped date: nobody has to have estimated anything for this to be true.
+   */
+  pushes: number;
+  /** What was learned while doing it. */
+  discoveries: ReadonlyArray<MockDiscovery>;
+  /**
+   * Set on a bug that exists because another task was not actually finished.
+   * Landing is not the same as being done, and this is how the difference shows.
+   */
+  symptomOf?: string;
   assignee: string;
   labels: ReadonlyArray<string>;
   updated: string;
@@ -801,6 +839,27 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: [],
     spent: 380,
+    waited: 0,
+    pushes: 1,
+    discoveries: [
+      {
+        id: "atlas-1-d1",
+        found:
+          "Compaction reads the checkpoint table without a transaction, so the drain cannot run alongside it.",
+        by: "Theo Brandt",
+        when: "2d ago",
+        effect: "split",
+        spawned: "atlas-5",
+      },
+      {
+        id: "atlas-1-d2",
+        found:
+          "The shadow queue has 40 minutes of backlog nobody accounted for.",
+        by: "Theo Brandt",
+        when: "1d ago",
+        effect: "grew",
+      },
+    ],
     assignee: "Theo Brandt",
     labels: ["pipeline", "cutover"],
     updated: "Jul 28",
@@ -850,6 +909,18 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 2,
     blockedBy: ["atlas-1"],
     spent: 95,
+    waited: 2760,
+    pushes: 2,
+    discoveries: [
+      {
+        id: "atlas-2-d1",
+        found:
+          "The dry-run window was a week short, so the first pass proved less than we thought.",
+        by: VIEWER.name,
+        when: "1d ago",
+        effect: "grew",
+      },
+    ],
     assignee: VIEWER.name,
     labels: ["pipeline"],
     updated: "Jul 27",
@@ -897,6 +968,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: [],
     spent: 0,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: "Theo Brandt",
     labels: ["infra"],
     updated: "Jul 22",
@@ -916,6 +990,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: [],
     spent: 0,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: seedAgentName("cursor-theo"),
     labels: [],
     updated: "Jul 22",
@@ -933,6 +1010,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 2,
     blockedBy: [],
     spent: 0,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: "Ines Faber",
     labels: [],
     updated: "Jul 22",
@@ -950,6 +1030,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 3,
     blockedBy: [],
     spent: 0,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: UNASSIGNED,
     labels: [],
     updated: "Jul 22",
@@ -966,6 +1049,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 3,
     blockedBy: [],
     spent: 185,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: "Theo Brandt",
     labels: ["pipeline", "incident"],
     updated: "Jul 21",
@@ -992,6 +1078,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: [],
     spent: 130,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: "Nadia Alvi",
     labels: ["copy"],
     updated: "Jul 26",
@@ -1032,6 +1121,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: [],
     spent: 220,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: "Ines Faber",
     labels: ["ui/ux"],
     updated: "Jul 24",
@@ -1048,6 +1140,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: [],
     spent: 60,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: UNASSIGNED,
     labels: ["ui/ux"],
     updated: "Jul 24",
@@ -1066,6 +1161,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 2,
     blockedBy: ["onboarding-2"],
     spent: 265,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: "Ines Faber",
     labels: ["ui/ux"],
     updated: "Jul 25",
@@ -1099,6 +1197,26 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: [],
     spent: 90,
+    waited: 0,
+    pushes: 3,
+    discoveries: [
+      {
+        id: "onboarding-2-d1",
+        found:
+          "One account can belong to several workspaces, which the invite flow never had to know.",
+        by: "Theo Brandt",
+        when: "6d ago",
+        effect: "grew",
+      },
+      {
+        id: "onboarding-2-d2",
+        found:
+          "Whether a workspace can be created during first run is still open.",
+        by: "Ines Faber",
+        when: "3d ago",
+        effect: "question",
+      },
+    ],
     assignee: "Theo Brandt",
     labels: ["infra"],
     updated: "Jul 22",
@@ -1117,6 +1235,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: [],
     spent: 0,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: UNASSIGNED,
     labels: [],
     updated: "Jul 20",
@@ -1135,6 +1256,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: [],
     spent: 310,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: "Sam Okoro",
     labels: ["mobile"],
     updated: "Jul 21",
@@ -1161,6 +1285,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: [],
     spent: 0,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: UNASSIGNED,
     labels: ["mobile"],
     updated: "Jul 18",
@@ -1177,6 +1304,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 3,
     blockedBy: [],
     spent: 45,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: VIEWER.name,
     labels: ["pipeline"],
     updated: "Aug 11",
@@ -1204,6 +1334,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 4,
     blockedBy: [],
     spent: 0,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: UNASSIGNED,
     labels: ["cutover", "docs"],
     updated: "Aug 11",
@@ -1222,6 +1355,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: ["atlas-2"],
     spent: 0,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: "Theo Brandt",
     labels: ["cutover"],
     updated: "Aug 8",
@@ -1238,6 +1374,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 2,
     blockedBy: ["atlas-8"],
     spent: 0,
+    waited: 5760,
+    pushes: 2,
+    discoveries: [],
     assignee: "Nadia Alvi",
     labels: ["pipeline"],
     updated: "Aug 7",
@@ -1256,6 +1395,18 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: ["atlas-1"],
     spent: 70,
+    waited: 0,
+    pushes: 0,
+    discoveries: [
+      {
+        id: "atlas-8-d1",
+        found:
+          "Nobody has written down who calls the freeze or what the read path does while it holds.",
+        by: "Theo Brandt",
+        when: "2d ago",
+        effect: "question",
+      },
+    ],
     assignee: "Theo Brandt",
     labels: ["cutover"],
     updated: "Aug 9",
@@ -1274,6 +1425,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: ["pricing-1"],
     spent: 55,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: "Sam Okoro",
     labels: ["copy"],
     updated: "Aug 6",
@@ -1292,6 +1446,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: ["onboarding-2"],
     spent: 0,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: UNASSIGNED,
     labels: ["ui/ux"],
     updated: "Aug 5",
@@ -1308,6 +1465,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 2,
     blockedBy: [],
     spent: 120,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: "Sam Okoro",
     labels: ["mobile"],
     updated: "Jul 31",
@@ -1326,11 +1486,45 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 1,
     blockedBy: [],
     spent: 0,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: UNASSIGNED,
     labels: ["docs"],
     updated: "Jul 14",
     description: [
       "Worth doing, in nobody's horizon. It sits here instead of at the bottom of a list pretending to be low priority.",
+    ],
+    activity: [],
+  },
+  {
+    id: "atlas-12",
+    key: "BYC-236",
+    projectId: "atlas",
+    title: "Duplicate rows after a retry storm",
+    status: "doing",
+    scopeId: "today",
+    sequence: 5,
+    blockedBy: [],
+    spent: 55,
+    waited: 0,
+    pushes: 0,
+    discoveries: [
+      {
+        id: "atlas-12-d1",
+        found:
+          "The cap held the storm but never added backoff, so retries still overlap on the same checkpoint.",
+        by: "Nadia Alvi",
+        when: "3h ago",
+        effect: "grew",
+      },
+    ],
+    symptomOf: "atlas-4",
+    assignee: "Nadia Alvi",
+    labels: ["pipeline", "incident"],
+    updated: "Aug 11",
+    description: [
+      "Not a new bug so much as the old one still being true. BYC-181 landed three weeks ago and this is the second thing to come back out of it.",
     ],
     activity: [],
   },
@@ -1344,6 +1538,9 @@ const SEED_TASKS: ReadonlyArray<MockTask> = [
     sequence: 4,
     blockedBy: [],
     spent: 240,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: "Nadia Alvi",
     labels: ["pipeline"],
     updated: "Jul 30",
@@ -1602,6 +1799,9 @@ export function addTask(draft: TaskDraft): MockTask {
     sequence: lane.length + 1,
     blockedBy: [],
     spent: 0,
+    waited: 0,
+    pushes: 0,
+    discoveries: [],
     assignee: draft.assignee,
     labels: [],
     updated: new Date().toLocaleDateString("en-US", {
@@ -1636,12 +1836,58 @@ export function moveTaskTo(
   index: number
 ): ReadonlyArray<Displacement> {
   const before = tasks;
+  const moved = tasks.find((task) => task.id === taskId);
   const result = pushInto(tasks, taskId, scopeId, index);
   if (result.tasks === tasks) return [];
+
+  const outward = new Set(result.displaced.map((move) => move.task.id));
+  if (moved !== undefined && scopeRank(scopeId) > scopeRank(moved.scopeId)) {
+    outward.add(taskId);
+  }
+
   undoable = before;
-  tasks = result.tasks;
+  tasks = result.tasks.map((task) =>
+    outward.has(task.id) ? { ...task, pushes: task.pushes + 1 } : task
+  );
   emitTasks();
   return result.displaced;
+}
+
+/** The verb no tracker has: something turned up that nobody knew about. */
+export function recordDiscovery(
+  taskId: string,
+  found: string,
+  effect: DiscoveryEffect
+): void {
+  const trimmed = found.trim();
+  if (trimmed === "") return;
+  tasks = tasks.map((task) =>
+    task.id === taskId
+      ? {
+          ...task,
+          status: effect === "question" ? "figuring" : task.status,
+          discoveries: [
+            ...task.discoveries,
+            {
+              id: `${task.id}-d${task.discoveries.length + 1}`,
+              found: trimmed,
+              by: VIEWER.name,
+              when: "just now",
+              effect,
+            },
+          ],
+        }
+      : task
+  );
+  emitTasks();
+}
+
+/** Time is a memory, not a timesheet — so it can be corrected without ceremony. */
+export function adjustSpent(taskId: string, minutes: number): void {
+  tasks = tasks.map((task) =>
+    task.id === taskId ? { ...task, spent: Math.max(0, minutes) } : task
+  );
+  emitTasks();
 }
 
 export function undoLastMove(): void {

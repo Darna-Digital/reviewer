@@ -7,6 +7,7 @@
 import {
   IconSend,
   IconAlertTriangle,
+  IconHourglass,
   IconChevronDown,
   IconChevronUp,
   IconDots,
@@ -36,11 +37,13 @@ import {
   SpentLabel,
   TrackButton,
 } from "@/interactions/collaboration/components/task-time";
+import { TaskDiscoveries } from "@/interactions/collaboration/components/task-discoveries";
 import { TaskStatusIcon } from "@/interactions/collaboration/components/task-status-icon";
 import { ClaimButton } from "@/interactions/collaboration/components/up-for-grabs";
 import {
   findProject,
   findScope,
+  findTask,
   moveTaskTo,
   SCOPES,
   setTaskStatus,
@@ -48,6 +51,7 @@ import {
   STATUS_MEANING,
   STATUS_ORDER,
   taskChildren,
+  VIEWER,
   type MockActivity,
   type MockTask,
 } from "@/interactions/collaboration/data/collaboration.mock";
@@ -55,9 +59,18 @@ import { useTasks } from "@/interactions/collaboration/data/use-tasks";
 import {
   blocking,
   blockersOf,
+  certaintyOf,
+  CERTAINTY_LABEL,
   conflictsFor,
+  formatSpent,
+  formatWaited,
+  growth,
   isUpForGrabs,
   laneTasks,
+  nextDecision,
+  openSymptoms,
+  paceFor,
+  symptomsOf,
 } from "@/interactions/collaboration/functions/task-flow.functions";
 import { cn } from "@/lib/utils";
 
@@ -139,6 +152,15 @@ export function TaskView({ task: selected }: { task: MockTask }) {
   const conflicts = conflictsFor(tasks, task);
   const waits = blockersOf(tasks, task);
   const blocks = blocking(tasks, task);
+  const certainty = certaintyOf(tasks, task);
+  const decision = nextDecision(tasks, task);
+  const symptoms = symptomsOf(tasks, task);
+  const cause =
+    task.symptomOf === undefined ? undefined : findTask(task.symptomOf);
+  const pace =
+    task.assignee === VIEWER.name
+      ? paceFor(tasks, task.assignee, task.labels)
+      : undefined;
 
   return (
     <>
@@ -237,6 +259,63 @@ export function TaskView({ task: selected }: { task: MockTask }) {
             <h1 className="max-w-[50ch] text-xl font-semibold tracking-tight text-balance">
               {task.title}
             </h1>
+
+            <div className="mt-3 flex max-w-[70ch] flex-wrap items-center gap-x-2 gap-y-1 text-[13px]">
+              <span
+                className={cn(
+                  "font-medium",
+                  certainty === "unknown" &&
+                    "text-violet-600 dark:text-violet-400"
+                )}
+              >
+                {CERTAINTY_LABEL[certainty]}.
+              </span>
+              {certainty === "unknown" && decision !== undefined && (
+                <span className="text-muted-foreground">
+                  {decision.id === task.id ? (
+                    "There is no date to give until it is worked out — only the date we will know one."
+                  ) : (
+                    <>
+                      The answer arrives when{" "}
+                      <Link
+                        to="/modes/collaboration"
+                        search={{ view: "task", id: decision.id }}
+                        className="underline underline-offset-2"
+                      >
+                        {decision.key}
+                      </Link>{" "}
+                      stops being figured out.
+                    </>
+                  )}
+                </span>
+              )}
+              {task.pushes > 0 && (
+                <span className="text-muted-foreground">
+                  Moved to a later horizon {task.pushes}{" "}
+                  {task.pushes === 1 ? "time" : "times"}.
+                </span>
+              )}
+              {growth(task) > 0 && (
+                <span className="text-muted-foreground">
+                  Grew {growth(task)} {growth(task) === 1 ? "time" : "times"}{" "}
+                  since it was written.
+                </span>
+              )}
+            </div>
+
+            {cause !== undefined && (
+              <p className="mt-3 max-w-[70ch] text-[13px] text-muted-foreground">
+                A symptom of{" "}
+                <Link
+                  to="/modes/collaboration"
+                  search={{ view: "task", id: cause.id }}
+                  className="font-medium text-foreground underline underline-offset-2"
+                >
+                  {cause.key} {cause.title}
+                </Link>
+                , which landed but did not finish.
+              </p>
+            )}
 
             {conflicts.map((conflict) => (
               <div
@@ -344,6 +423,8 @@ export function TaskView({ task: selected }: { task: MockTask }) {
                 Add sub-issues
               </button>
             </div>
+
+            <TaskDiscoveries task={task} />
 
             <div className="mt-8 border-t pt-6">
               <h2 className="text-sm font-medium">Activity</h2>
@@ -455,19 +536,40 @@ export function TaskView({ task: selected }: { task: MockTask }) {
               </p>
             </Property>
 
-            <Property label="Time spent">
+            <Property label="Time">
               <div className={cn(PROPERTY_ROW, "gap-2 hover:bg-transparent")}>
                 <TrackButton task={task} />
-                <SpentLabel task={task} className="text-[13px]" />
+                <SpentLabel task={task} precise className="text-[13px]" />
                 {task.spent === 0 && (
                   <span className="text-[13px] text-muted-foreground">
-                    Nothing yet
+                    Nothing worked yet
                   </span>
                 )}
+                <span className="text-xs text-muted-foreground">worked</span>
               </div>
-              <p className="px-1.5 text-xs text-muted-foreground">
-                Measured, never estimated.
+              {task.waited > 0 && (
+                <div className={cn(PROPERTY_ROW, "gap-2 hover:bg-transparent")}>
+                  <span className="grid size-6 place-items-center">
+                    <IconHourglass className="size-3.5 text-muted-foreground" />
+                  </span>
+                  <span className="text-[13px] tabular-nums">
+                    {formatWaited(task.waited)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">waited</span>
+                </div>
+              )}
+              <p className="px-1.5 text-xs text-pretty text-muted-foreground">
+                {task.waited > 0
+                  ? `${formatSpent(task.spent)} of work spread over ${formatWaited(task.waited)} of waiting. Only the first number is anybody's speed.`
+                  : "Measured, never estimated. Rounded, because breaks and switches make the minutes a fiction."}
               </p>
+              {pace !== undefined && (
+                <p className="px-1.5 text-xs text-pretty text-muted-foreground">
+                  Work you have labelled this way took you{" "}
+                  {formatSpent(pace.low)}–{formatSpent(pace.high)} across{" "}
+                  {pace.count} tasks. Only you see this.
+                </p>
+              )}
             </Property>
 
             <Property label="Assignee">
@@ -503,6 +605,21 @@ export function TaskView({ task: selected }: { task: MockTask }) {
                     <TaskChip key={blocked.id} task={blocked} />
                   ))}
                 </div>
+              </Property>
+            )}
+
+            {symptoms.length > 0 && (
+              <Property label="Symptoms">
+                <div className="flex flex-col">
+                  {symptoms.map((symptom) => (
+                    <TaskChip key={symptom.id} task={symptom} />
+                  ))}
+                </div>
+                <p className="px-1.5 text-xs text-pretty text-muted-foreground">
+                  {openSymptoms(tasks, task).length > 0
+                    ? "Still producing symptoms, so this landed without finishing."
+                    : "All of them closed."}
+                </p>
               </Property>
             )}
 

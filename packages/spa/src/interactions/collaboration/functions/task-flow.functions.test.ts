@@ -6,8 +6,14 @@ import {
   firstThing,
   formatSpent,
   isUpForGrabs,
+  certaintyOf,
+  formatRough,
+  growth,
   laneTasks,
   moveTask,
+  nextDecision,
+  openSymptoms,
+  paceFor,
   pushInto,
   readHorizon,
   withinHorizon,
@@ -28,6 +34,9 @@ const task = (
   sequence,
   blockedBy: [],
   spent: 0,
+  waited: 0,
+  pushes: 0,
+  discoveries: [],
   assignee: "Unassigned",
   labels: [],
   updated: "Aug 11",
@@ -274,7 +283,131 @@ describe("horizons nesting", () => {
       unclaimed: 1,
       impossible: 1,
       tracked: 60,
+      grown: 0,
+      pushed: 0,
+      unfinished: 0,
+      waited: 0,
     });
+  });
+});
+
+describe("what reality did to the plan", () => {
+  const discovery = (effect: "split" | "grew" | "question") => ({
+    id: `d-${effect}`,
+    found: effect,
+    by: "Theo Brandt",
+    when: "1d ago",
+    effect,
+  });
+
+  it("counts growth but not open questions as things reality added", () => {
+    const grown = task("grown", "today", 1, {
+      discoveries: [
+        discovery("grew"),
+        discovery("split"),
+        discovery("question"),
+      ],
+    });
+    expect(growth(grown)).toBe(2);
+  });
+
+  it("knows landed work is not finished while it still breaks", () => {
+    const tasks = [
+      task("feature", "week", 1, { status: "done" }),
+      task("bug", "today", 1, { symptomOf: "feature" }),
+      task("closed", "today", 2, { symptomOf: "feature", status: "done" }),
+    ];
+    expect(openSymptoms(tasks, tasks[0]).map((t) => t.id)).toEqual(["bug"]);
+  });
+
+  it("counts the unfinished and the pushed in a horizon", () => {
+    const tasks = [
+      task("feature", "week", 1, { status: "done" }),
+      task("bug", "today", 1, { symptomOf: "feature", pushes: 2 }),
+      task("shoved", "week", 2, {
+        pushes: 3,
+        discoveries: [discovery("grew")],
+      }),
+      task("calm", "week", 3, { pushes: 1 }),
+    ];
+    const reading = readHorizon(tasks, "week");
+    expect(reading.unfinished).toBe(1);
+    expect(reading.pushed).toBe(2);
+    expect(reading.grown).toBe(1);
+  });
+});
+
+describe("what can honestly be said", () => {
+  it("is unknown while anybody is still working it out", () => {
+    const tasks = [task("open", "today", 1, { status: "figuring" })];
+    expect(certaintyOf(tasks, tasks[0])).toBe("unknown");
+    expect(nextDecision(tasks, tasks[0])?.id).toBe("open");
+  });
+
+  it("is unknown when the thing it waits on is still a question", () => {
+    const tasks = [
+      task("blocked", "week", 1, {
+        status: "todo",
+        blockedBy: ["unclear"],
+      }),
+      task("unclear", "week", 2, { status: "figuring" }),
+    ];
+    expect(certaintyOf(tasks, tasks[0])).toBe("unknown");
+    expect(nextDecision(tasks, tasks[0])?.id).toBe("unclear");
+  });
+
+  it("separates merely waiting from not knowing", () => {
+    const tasks = [
+      task("blocked", "week", 1, { blockedBy: ["busy"] }),
+      task("busy", "today", 1, { status: "doing" }),
+    ];
+    expect(certaintyOf(tasks, tasks[0])).toBe("waiting");
+    expect(nextDecision(tasks, tasks[0])).toBeUndefined();
+  });
+
+  it("has nothing left to say about landed work", () => {
+    expect(certaintyOf([], task("done", "today", 1, { status: "done" }))).toBe(
+      "landed"
+    );
+  });
+});
+
+describe("paceFor", () => {
+  const landed = (id: string, spent: number, assignee: string) =>
+    task(id, "week", 1, {
+      status: "done",
+      spent,
+      assignee,
+      labels: ["pipeline"],
+    });
+
+  it("is a range from that person's own finished work", () => {
+    const tasks = [
+      landed("a", 60, "Theo Brandt"),
+      landed("b", 300, "Theo Brandt"),
+      landed("c", 9000, "Nadia Alvi"),
+    ];
+    expect(paceFor(tasks, "Theo Brandt", ["pipeline"])).toEqual({
+      low: 60,
+      high: 300,
+      count: 2,
+    });
+  });
+
+  it("says nothing from a single anecdote", () => {
+    expect(
+      paceFor([landed("a", 60, "Theo Brandt")], "Theo Brandt", ["pipeline"])
+    ).toBeUndefined();
+  });
+});
+
+describe("formatRough", () => {
+  it("stops the minutes pretending to be exact", () => {
+    expect(formatRough(0)).toBe("—");
+    expect(formatRough(20)).toBe("~30m");
+    expect(formatRough(95)).toBe("~1.5h");
+    expect(formatRough(380)).toBe("~6h");
+    expect(formatRough(2760)).toBe("~6d");
   });
 });
 

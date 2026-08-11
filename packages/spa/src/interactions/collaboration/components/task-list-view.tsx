@@ -40,6 +40,7 @@ import {
   conflictsFor,
   firstThing,
   formatSpent,
+  growth,
   isUpForGrabs,
   landedTasks,
   laneTasks,
@@ -93,6 +94,10 @@ function TaskRow({
 }) {
   const conflicts = conflictsFor(tasks, task);
   const grabbable = isUpForGrabs(tasks, task);
+  const drift = [
+    growth(task) > 0 ? `grew ${growth(task)}×` : null,
+    task.pushes > 0 ? `pushed ${task.pushes}×` : null,
+  ].filter((entry) => entry !== null);
 
   return (
     <div
@@ -130,6 +135,11 @@ function TaskRow({
           >
             <IconAlertTriangle className="size-3" />
             after {conflicts[0].blocker.key}
+          </span>
+        )}
+        {drift.length > 0 && (
+          <span className="shrink-0 text-[0.6875rem] text-muted-foreground/80 max-sm:hidden">
+            {drift.join(" · ")}
           </span>
         )}
         <SpentLabel task={task} />

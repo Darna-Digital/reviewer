@@ -245,6 +245,13 @@ export interface HorizonReading {
   unclaimed: number;
   impossible: number;
   tracked: number;
+  /** Things reality added to this plan after somebody wrote it down. */
+  grown: number;
+  /** Work that has already been moved to a later horizon at least twice. */
+  pushed: number;
+  /** Landed work still producing symptoms, which means it did not finish. */
+  unfinished: number;
+  waited: number;
 }
 
 export function readHorizon(
@@ -260,6 +267,12 @@ export function readHorizon(
     impossible: inside.filter((task) => conflictsFor(tasks, task).length > 0)
       .length,
     tracked: totalSpent(inside),
+    grown: inside.reduce((sum, task) => sum + growth(task), 0),
+    pushed: inside.filter((task) => task.pushes >= 2).length,
+    unfinished: inside.filter(
+      (task) => task.status === "done" && openSymptoms(tasks, task).length > 0
+    ).length,
+    waited: totalWaited(inside),
   };
 }
 
@@ -329,6 +342,112 @@ export function pushInto(
   return { tasks: next, displaced };
 }
 
+/**
+ * How much bigger a task turned out to be than it was when somebody wrote it
+ * down. Not a percentage against an estimate that never existed — a count of
+ * the times reality added something.
+ */
+export const growth = (task: MockTask): number =>
+  task.discoveries.filter((entry) => entry.effect !== "question").length;
+
+export const openQuestions = (task: MockTask): number =>
+  task.discoveries.filter((entry) => entry.effect === "question").length;
+
+export const symptomsOf = (
+  tasks: ReadonlyArray<MockTask>,
+  task: MockTask
+): ReadonlyArray<MockTask> =>
+  tasks.filter((candidate) => candidate.symptomOf === task.id);
+
+/**
+ * Landing is not the same as being done. A task that keeps producing symptoms
+ * was a feature somebody stopped working on, not a feature that finished.
+ */
+export const openSymptoms = (
+  tasks: ReadonlyArray<MockTask>,
+  task: MockTask
+): ReadonlyArray<MockTask> =>
+  symptomsOf(tasks, task).filter((symptom) => symptom.status !== "done");
+
+/**
+ * How much can honestly be said about a task. Deliberately not a percentage and
+ * deliberately not a date: the useful distinction is whether anybody has worked
+ * the thing out yet, because everything downstream of that is a guess.
+ */
+export type Certainty = "unknown" | "waiting" | "moving" | "ready" | "landed";
+
+export const CERTAINTY_LABEL: Record<Certainty, string> = {
+  unknown: "Nobody has worked this out yet",
+  waiting: "Worked out, waiting on something else",
+  moving: "Under way",
+  ready: "Worked out, nobody has started",
+  landed: "Landed",
+};
+
+export function certaintyOf(
+  tasks: ReadonlyArray<MockTask>,
+  task: MockTask
+): Certainty {
+  if (task.status === "done") return "landed";
+  const blockers = blockersOf(tasks, task).filter(
+    (blocker) => blocker.status !== "done"
+  );
+  if (task.status === "figuring") return "unknown";
+  if (blockers.some((blocker) => blocker.status === "figuring")) {
+    return "unknown";
+  }
+  if (blockers.length > 0) return "waiting";
+  if (task.status === "doing" || task.status === "review") return "moving";
+  return "ready";
+}
+
+/**
+ * The question a plan can actually answer. "When will it be done" has no honest
+ * answer while something is still being figured out — but "when will we know"
+ * does, and it points at the specific thing that has to be decided first.
+ */
+export function nextDecision(
+  tasks: ReadonlyArray<MockTask>,
+  task: MockTask
+): MockTask | undefined {
+  if (task.status === "figuring") return task;
+  return blockersOf(tasks, task).find(
+    (blocker) => blocker.status === "figuring"
+  );
+}
+
+export interface Pace {
+  low: number;
+  high: number;
+  count: number;
+}
+
+/**
+ * What work like this has cost this person before — their own actuals, never
+ * anybody else's, and never a number to hold them to. Two samples is the floor,
+ * because one is an anecdote.
+ */
+export function paceFor(
+  tasks: ReadonlyArray<MockTask>,
+  person: string,
+  labels: ReadonlyArray<string>
+): Pace | undefined {
+  const like = tasks.filter(
+    (task) =>
+      task.status === "done" &&
+      task.assignee === person &&
+      task.spent > 0 &&
+      task.labels.some((label) => labels.includes(label))
+  );
+  if (like.length < 2) return undefined;
+  const spent = like.map((task) => task.spent);
+  return {
+    low: Math.min(...spent),
+    high: Math.max(...spent),
+    count: like.length,
+  };
+}
+
 /** Tracked minutes, as somebody would say them. Never a fraction of anything. */
 export function formatSpent(minutes: number): string {
   if (minutes <= 0) return "—";
@@ -338,8 +457,34 @@ export function formatSpent(minutes: number): string {
   return rest === 0 ? `${hours}h` : `${hours}h ${rest}m`;
 }
 
+/**
+ * Time as somebody remembers it rather than as a stopwatch recorded it. Breaks
+ * and context switches make the minutes a fiction, so anywhere the number is
+ * not the point it is rounded until it stops pretending to be exact.
+ */
+export function formatRough(minutes: number): string {
+  if (minutes <= 0) return "—";
+  if (minutes < 45) return "~30m";
+  const hours = minutes / 60;
+  if (hours < 2) return `~${(Math.round(hours * 2) / 2).toString()}h`;
+  if (hours < 8) return `~${Math.round(hours)}h`;
+  const days = Math.round(hours / 8);
+  return days === 1 ? "~a day" : `~${days}d`;
+}
+
+/** Waiting is measured in days off, because that is how it is felt. */
+export function formatWaited(minutes: number): string {
+  if (minutes <= 0) return "—";
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  return `${Math.round(hours / 24)}d`;
+}
+
 export const totalSpent = (tasks: ReadonlyArray<MockTask>): number =>
   tasks.reduce((sum, task) => sum + task.spent, 0);
+
+export const totalWaited = (tasks: ReadonlyArray<MockTask>): number =>
+  tasks.reduce((sum, task) => sum + task.waited, 0);
 
 /** A count of things in a state is a fact. It is never called progress. */
 export function countByStatus(

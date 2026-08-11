@@ -32,9 +32,13 @@ import {
 import { useTasks } from "@/interactions/collaboration/data/use-tasks";
 import {
   beyondHorizon,
+  certaintyOf,
   conflictsFor,
-  formatSpent,
+  formatRough,
+  formatWaited,
+  growth,
   isUpForGrabs,
+  nextDecision,
   readHorizon,
   withinHorizon,
 } from "@/interactions/collaboration/functions/task-flow.functions";
@@ -129,6 +133,14 @@ export function OutlookView({ scopeId }: { scopeId: string }) {
   const later = beyondHorizon(tasks, horizon.id);
   const shelved = tasks.filter((task) => task.scopeId === "out");
 
+  const unknown = inside
+    .filter((task) => certaintyOf(tasks, task) === "unknown")
+    .map((task) => ({ task, decides: nextDecision(tasks, task) }))
+    .filter(
+      (entry): entry is { task: MockTask; decides: MockTask } =>
+        entry.decides !== undefined
+    );
+
   const byProject = PROJECTS.map((project) => ({
     project,
     tasks: inside
@@ -190,9 +202,14 @@ export function OutlookView({ scopeId }: { scopeId: string }) {
               tone="quiet"
             />
             <Reading
-              label="nobody has worked out yet"
-              value={String(reading.figuring)}
-              tone={reading.figuring > 0 ? "warn" : "quiet"}
+              label="worked"
+              value={formatRough(reading.tracked)}
+              tone="quiet"
+            />
+            <Reading
+              label="spent waiting"
+              value={formatWaited(reading.waited)}
+              tone="quiet"
             />
             <Reading
               label="nobody holds"
@@ -204,24 +221,79 @@ export function OutlookView({ scopeId }: { scopeId: string }) {
                 ) : undefined
               }
             />
+          </div>
+
+          <h2 className="mt-8 text-[0.8125rem] font-medium">
+            Why a date would be a guess
+          </h2>
+          <p className="mt-1 max-w-[70ch] text-[13px] text-pretty text-muted-foreground">
+            Nobody here estimated anything, so none of this is a missed promise.
+            It is what has already happened to the plan.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-x-10 gap-y-5 rounded-xl border px-4 py-4">
+            <Reading
+              label="nobody has worked out yet"
+              value={String(reading.figuring)}
+              tone={reading.figuring > 0 ? "warn" : "quiet"}
+            />
+            <Reading
+              label="things reality added"
+              value={String(reading.grown)}
+              tone={reading.grown > 0 ? "warn" : "quiet"}
+            />
+            <Reading
+              label="pushed twice or more"
+              value={String(reading.pushed)}
+              tone={reading.pushed > 0 ? "warn" : "quiet"}
+            />
             <Reading
               label="orders that cannot happen"
               value={String(reading.impossible)}
               tone={reading.impossible > 0 ? "warn" : "quiet"}
             />
             <Reading
-              label="tracked so far"
-              value={formatSpent(reading.tracked)}
-              tone="quiet"
+              label="landed but still breaking"
+              value={String(reading.unfinished)}
+              tone={reading.unfinished > 0 ? "warn" : "quiet"}
             />
           </div>
 
-          {reading.figuring > 0 && (
-            <p className="mt-3 max-w-[70ch] text-[13px] text-pretty text-muted-foreground">
-              {reading.figuring} of these {reading.total} are still being
-              figured out, so this is a plan with {reading.figuring} unknowns in
-              it rather than {reading.total} decided pieces of work.
-            </p>
+          {unknown.length > 0 && (
+            <section className="mt-6 rounded-xl border border-violet-500/30 bg-violet-500/5 px-4 py-3.5">
+              <h3 className="text-[0.8125rem] font-medium">
+                When we will know
+              </h3>
+              <p className="mt-1 max-w-[70ch] text-[13px] text-pretty text-muted-foreground">
+                {unknown.length} of these {reading.total} have no honest date,
+                because nobody has worked them out yet. What can be given
+                instead is the thing that has to be decided first — answer these
+                and the rest of the plan stops being a guess.
+              </p>
+              <ul role="list" className="mt-2.5 flex flex-col gap-1">
+                {unknown.map(({ task, decides }) => (
+                  <li
+                    key={task.id}
+                    className="flex flex-wrap items-center gap-x-2 text-[13px]"
+                  >
+                    <Link
+                      to="/modes/collaboration"
+                      search={{ view: "task", id: task.id }}
+                      className="flex min-w-0 items-center gap-1.5 outline-none hover:underline focus-visible:underline"
+                    >
+                      <TaskStatusIcon status={task.status} />
+                      <span className="truncate">{task.title}</span>
+                    </Link>
+                    <span className="text-muted-foreground">
+                      {decides.id === task.id
+                        ? "being worked out now"
+                        : `waits on ${decides.key} being worked out`}
+                      {growth(task) > 0 && ` · already grew ${growth(task)}×`}
+                      {task.pushes > 0 && ` · pushed ${task.pushes}×`}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
 
           {byProject.map(({ project, tasks: rows }) => (

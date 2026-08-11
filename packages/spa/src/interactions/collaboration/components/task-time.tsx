@@ -12,14 +12,25 @@ import {
 import { toggleTracking } from "@/interactions/collaboration/data/collaboration.mock";
 import type { MockTask } from "@/interactions/collaboration/data/collaboration.mock";
 import { useLiveSpent } from "@/interactions/collaboration/data/use-tasks";
-import { formatSpent } from "@/interactions/collaboration/functions/task-flow.functions";
+import {
+  formatRough,
+  formatSpent,
+} from "@/interactions/collaboration/functions/task-flow.functions";
 import { cn } from "@/lib/utils";
 
+/**
+ * Rounded by default. Breaks and context switches make the minutes a fiction,
+ * so only the task's own page — where somebody can correct it — shows the exact
+ * figure, and a clock that is actually running stays precise because it is
+ * measuring the present rather than remembering the past.
+ */
 export function SpentLabel({
   task,
+  precise = false,
   className,
 }: {
   task: MockTask;
+  precise?: boolean;
   className?: string;
 }) {
   const { minutes, running, seconds } = useLiveSpent(task);
@@ -34,7 +45,7 @@ export function SpentLabel({
         className
       )}
     >
-      {formatSpent(minutes)}
+      {precise || running ? formatSpent(minutes) : formatRough(minutes)}
       {running && (
         <span className="opacity-70">:{String(seconds).padStart(2, "0")}</span>
       )}
