@@ -508,18 +508,25 @@ export function AppShell() {
    */
   const leaveRepo = useCallback(() => {
     setLogRef(null);
-    void navigate({ to: "/modes/code/commit", search: {} });
+    // Browse, not commit: moving between a project's roots is navigation, and
+    // it lands you in the arriving root's tree rather than in a review of
+    // whatever happens to be uncommitted there.
+    void navigate({ to: "/modes/code/browse", search: {} });
   }, [navigate]);
-  // The safety net for a move this shell did not start — opening another
-  // project, say. Only a move between roots resets: the first resolve on load
-  // has nothing to leave.
-  const previousRoot = useRef(repoRoot);
+  // The safety net for a move this shell did not start — the command palette,
+  // say. Only a move between roots of the same project resets: the first
+  // resolve on load has nothing to leave, and opening a whole project is the
+  // picker's move to land wherever it means to.
+  const openProject = workspace.data?.project ?? null;
+  const previous = useRef({ root: repoRoot, project: openProject });
   useEffect(() => {
-    if (previousRoot.current === repoRoot) return;
-    const moved = previousRoot.current !== null && repoRoot !== null;
-    previousRoot.current = repoRoot;
-    if (moved) leaveRepo();
-  }, [repoRoot, leaveRepo]);
+    const was = previous.current;
+    if (was.root === repoRoot) return;
+    previous.current = { root: repoRoot, project: openProject };
+    const movedWithinProject =
+      was.root !== null && repoRoot !== null && was.project === openProject;
+    if (movedWithinProject) leaveRepo();
+  }, [repoRoot, openProject, leaveRepo]);
   // Browsing has nothing else to put in the centre pane, so the strip is the
   // view: an open tab with no file on screen is a hole. A strip outlives the
   // URL that opened its files — restored from storage, or left behind by

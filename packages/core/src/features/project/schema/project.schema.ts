@@ -1,0 +1,71 @@
+/**
+ * The project's git state seen whole, across every root it holds.
+ *
+ * The `repo` feature answers for one repository — the one currently selected.
+ * This one answers for all of them at once, which is what the views a person
+ * works in actually need: a commit view listing the changes in `backend` and
+ * `frontend` together, a branch popup showing where each root sits, one history
+ * covering the lot. Each entry carries the root it came from, so a row can say
+ * where it belongs and an action on it knows which repository to run in.
+ */
+import * as Schema from "effect/Schema";
+import {
+  BranchInfo,
+  CommitInfo,
+  GitStatusEntry,
+  RemoteBranchInfo,
+  RepoStatus,
+} from "../../repo/schema/repo.schema.ts";
+import { RepoEntry } from "../../workspace/schema/workspace.schema.ts";
+
+/** One root's uncommitted work — the commit view's per-repository group. */
+export const RepoChanges = Schema.Struct({
+  repo: RepoEntry,
+  status: RepoStatus,
+  files: Schema.Array(GitStatusEntry),
+});
+export type RepoChanges = typeof RepoChanges.Type;
+
+/** One root's branches — the branch popup's per-repository section. */
+export const RepoBranches = Schema.Struct({
+  repo: RepoEntry,
+  branches: Schema.Array(BranchInfo),
+  remoteBranches: Schema.Array(RemoteBranchInfo),
+});
+export type RepoBranches = typeof RepoBranches.Type;
+
+/** A commit, and the root whose history it belongs to. */
+export const ProjectCommit = Schema.Struct({
+  repo: RepoEntry,
+  commit: CommitInfo,
+});
+export type ProjectCommit = typeof ProjectCommit.Type;
+
+/**
+ * A root that could not be read — a repository mid-clone, or one whose git
+ * data is broken. Named rather than dropped, so a project view says which root
+ * is missing instead of quietly shrinking.
+ */
+export const RepoFailure = Schema.Struct({
+  repo: RepoEntry,
+  reason: Schema.String,
+});
+export type RepoFailure = typeof RepoFailure.Type;
+
+export const ProjectChanges = Schema.Struct({
+  repos: Schema.Array(RepoChanges),
+  failed: Schema.Array(RepoFailure),
+});
+export type ProjectChanges = typeof ProjectChanges.Type;
+
+export const ProjectBranches = Schema.Struct({
+  repos: Schema.Array(RepoBranches),
+  failed: Schema.Array(RepoFailure),
+});
+export type ProjectBranches = typeof ProjectBranches.Type;
+
+export const ProjectLog = Schema.Struct({
+  commits: Schema.Array(ProjectCommit),
+  failed: Schema.Array(RepoFailure),
+});
+export type ProjectLog = typeof ProjectLog.Type;
