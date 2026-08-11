@@ -3,14 +3,14 @@ import { BranchSwitcher } from "@/components/layout/branch-switcher";
 // import { ModeSelector } from "@/components/layout/mode-selector";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
-import { RepoSwitcher } from "@/interactions/workspace/components/repo-switcher";
 import { SearchMenu } from "@/interactions/search/components/search-menu";
 import type {
   BranchInfo,
   RemoteBranchInfo,
   RepoInfo,
 } from "@byconvo/core/repo";
-import type { WorkspaceInfo } from "@byconvo/core/workspace";
+import type { RepoEntry, WorkspaceInfo } from "@byconvo/core/workspace";
+import type { RepoBranches } from "@byconvo/core/project";
 import type { DiffStyle } from "@/lib/ui-prefs";
 
 interface TopBarProps {
@@ -35,8 +35,11 @@ interface TopBarProps {
   onFetch: () => void;
   onPush: () => void;
   onPull: () => void;
-  /** Follow another of the open project's git roots. */
-  onSelectRepo: (path: string) => void;
+  /** Each root's branches, when the project holds several. */
+  projectBranches?: ReadonlyArray<RepoBranches>;
+  currentRepo?: RepoEntry | null;
+  /** Check out `ref` in `repoPath`, following that root first. */
+  onRepoCheckout?: (repoPath: string, ref: string) => void;
 }
 
 export function TopBar(props: TopBarProps) {
@@ -61,9 +64,6 @@ export function TopBar(props: TopBarProps) {
         onOpenChange={props.onPickerOpenChange}
       />
 
-      {/* Repository chip — only for a project holding more than one root */}
-      <RepoSwitcher workspace={props.workspace} onSelect={props.onSelectRepo} />
-
       {/* Branch switcher */}
       {repo !== null && (
         <BranchSwitcher
@@ -82,6 +82,9 @@ export function TopBar(props: TopBarProps) {
           onPush={props.onPush}
           onRenameBranch={props.onRenameBranch}
           onDeleteBranch={props.onDeleteBranch}
+          repos={props.projectBranches}
+          currentRepo={props.currentRepo}
+          onRepoCheckout={props.onRepoCheckout}
         />
       )}
 

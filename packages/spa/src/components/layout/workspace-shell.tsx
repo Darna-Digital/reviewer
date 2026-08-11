@@ -21,7 +21,6 @@ import { NewSessionButton } from "@/interactions/chats/components/new-session-bu
 import { SessionSearch } from "@/interactions/chats/components/session-search";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
-import { RepoSwitcher } from "@/interactions/workspace/components/repo-switcher";
 import {
   useRepoCommands,
   useWorkspaceActions,
@@ -30,11 +29,13 @@ import { SearchMenu } from "@/interactions/search/components/search-menu";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
+import { activeRepo } from "@byconvo/core/workspace";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import {
   useBranches,
+  useProjectBranches,
   useRemoteBranches,
   useRepo,
   useWorkspace,
@@ -48,6 +49,15 @@ export function WorkspaceShell() {
   const repo = useRepo();
   const workspace = useWorkspace();
   const workspaceActions = useWorkspaceActions();
+  const projectBranchList = useProjectBranches();
+  /** Check out in one of the project's roots, following that root first. */
+  const checkoutIn = async (repoPath: string, ref: string) => {
+    const followed = await workspaceActions.followRepo(
+      repoPath,
+      workspace.data?.current ?? null
+    );
+    if (followed) void git.checkout(ref);
+  };
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
   const git = useGitActions();
@@ -102,10 +112,6 @@ export function WorkspaceShell() {
                 onOpenChange={setPickerOpen}
                 onChosen={() => {}}
               />
-              <RepoSwitcher
-                workspace={workspace.data}
-                onSelect={(path) => void workspaceActions.openRepo(path)}
-              />
             </>
           )}
           {/* A session's bar opens with the two things that act on the list —
@@ -138,6 +144,11 @@ export function WorkspaceShell() {
               onRebase={(o) => void git.rebase(o)}
               onRenameBranch={(from, to) => void git.renameBranch(from, to)}
               onDeleteBranch={(name) => void git.deleteBranch(name)}
+              repos={projectBranchList.data?.repos}
+              currentRepo={activeRepo(
+                workspace.data ?? { repos: [], current: null }
+              )}
+              onRepoCheckout={(repoPath, ref) => void checkoutIn(repoPath, ref)}
               onFetch={() => void git.fetch()}
               onPull={() => void git.pull()}
               onPush={() => void git.push()}

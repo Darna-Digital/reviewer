@@ -64,7 +64,7 @@ import { useCommentsActions } from "@/interactions/comments/adapters/comments.ho
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
-import { isMultiRepo } from "@byconvo/core/workspace";
+import { activeRepo, isMultiRepo } from "@byconvo/core/workspace";
 import { filterCommitsByRepo } from "@byconvo/core/project";
 import {
   useRepoCommands,
@@ -1045,7 +1045,13 @@ export function AppShell() {
             onFetch={() => void git.fetch()}
             onPush={() => void git.push()}
             onPull={() => void git.pull()}
-            onSelectRepo={(path) => void chooseRepo(path)}
+            projectBranches={
+              multiRepo ? (projectBranchList.data?.repos ?? []) : undefined
+            }
+            currentRepo={activeRepo(
+              workspace.data ?? { repos: [], current: null }
+            )}
+            onRepoCheckout={(repoPath, ref) => void checkoutIn(repoPath, ref)}
           />
 
           {/* Everything below the toolbar sits in a bordered panel, so the

@@ -12,7 +12,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
-import { RepoSwitcher } from "@/interactions/workspace/components/repo-switcher";
+import { activeRepo } from "@byconvo/core/workspace";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import {
   Tooltip,
@@ -22,6 +22,7 @@ import {
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import {
   useBranches,
+  useProjectBranches,
   useRemoteBranches,
   useRepo,
   useWorkspace,
@@ -69,6 +70,15 @@ export function SessionContextBar({
   const repo = useRepo();
   const workspace = useWorkspace();
   const workspaceActions = useWorkspaceActions();
+  const projectBranchList = useProjectBranches();
+  /** Check out in one of the project's roots, following that root first. */
+  const checkoutIn = async (repoPath: string, ref: string) => {
+    const followed = await workspaceActions.followRepo(
+      repoPath,
+      workspace.data?.current ?? null
+    );
+    if (followed) void git.checkout(ref);
+  };
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
   const git = useGitActions();
@@ -86,12 +96,6 @@ export function SessionContextBar({
           open={pickerOpen}
           onOpenChange={setPickerOpen}
           onChosen={() => {}}
-        />
-      )}
-      {!projectLocked && (
-        <RepoSwitcher
-          workspace={workspace.data}
-          onSelect={(path) => void workspaceActions.openRepo(path)}
         />
       )}
       <BranchSwitcher
@@ -112,6 +116,9 @@ export function SessionContextBar({
         onRebase={(o) => void git.rebase(o)}
         onRenameBranch={(from, to) => void git.renameBranch(from, to)}
         onDeleteBranch={(name) => void git.deleteBranch(name)}
+        repos={projectBranchList.data?.repos}
+        currentRepo={activeRepo(workspace.data ?? { repos: [], current: null })}
+        onRepoCheckout={(repoPath, ref) => void checkoutIn(repoPath, ref)}
         onFetch={() => void git.fetch()}
         onPull={() => void git.pull()}
         onPush={() => void git.push()}

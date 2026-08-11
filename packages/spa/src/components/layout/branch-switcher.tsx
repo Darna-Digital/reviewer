@@ -44,6 +44,9 @@ import { Input } from "@/components/ui/input";
 import { handleSearchKeyDown } from "@/components/ui/search-keydown";
 import { cn } from "@/lib/utils";
 import { useSurfaceBackground } from "@/lib/surface-context";
+import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
+import type { RepoBranches } from "@byconvo/core/project";
+import type { RepoEntry } from "@byconvo/core/workspace";
 import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo";
 
 interface BranchSwitcherProps {
@@ -64,6 +67,17 @@ interface BranchSwitcherProps {
   onDeleteBranch: (name: string) => void;
   /** Which way the menu opens — "top" for a bar pinned to the bottom. */
   side?: "top" | "bottom";
+  /**
+   * Every root's branches, when the project holds more than one. Their presence
+   * puts a repository block above the branch sections — each root opening onto
+   * its own branches — which is where the IDEs keep the roots and why byconvo
+   * needs no separate repository control beside this one.
+   */
+  repos?: ReadonlyArray<RepoBranches>;
+  /** The root these sections belong to, named in their titles. */
+  currentRepo?: RepoEntry | null;
+  /** Check out `ref` in `repoPath`, following that root first. */
+  onRepoCheckout?: (repoPath: string, ref: string) => void;
 }
 
 /**
@@ -160,6 +174,14 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
     setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const currentName = current ?? branches.find((b) => b.isCurrent)?.name ?? "—";
+  // A project of one root has nothing to list: its branches are already the
+  // sections below, and repeating them as a submenu would just be noise.
+  const otherRepos = (props.repos ?? []).length > 1 ? (props.repos ?? []) : [];
+  /** Sections say which root they belong to once there is more than one. */
+  const sectionTitle = (label: string) =>
+    otherRepos.length > 0 && props.currentRepo != null
+      ? `${label} in ${props.currentRepo.name}`
+      : label;
 
   const recent = useMemo(
     () => branches.filter((b) => matches(b.name)).slice(0, 5),
@@ -396,8 +418,74 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
             )}
             {showNew && <DropdownMenuSeparator />}
 
+            {/* The roots, each opening onto its own branches. */}
+            {otherRepos.length > 0 && (
+              <>
+                {props.repos?.map((entry) => (
+                  <DropdownMenuSub key={entry.repo.path}>
+                    <DropdownMenuSubTrigger>
+                      <ProjectAvatar
+                        name={entry.repo.name}
+                        className="size-4"
+                      />
+                      <span
+                        className={cn(
+                          "truncate",
+                          entry.repo.path === props.currentRepo?.path &&
+                            "font-medium"
+                        )}
+                      >
+                        {entry.repo.name}
+                      </span>
+                      <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                        {entry.repo.branch ?? "detached"}
+                      </span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-72">
+                      <div className="px-2 py-1 text-xs text-muted-foreground">
+                        Branches in {entry.repo.name}
+                      </div>
+                      {entry.branches.map((b) => (
+                        <DropdownMenuItem
+                          key={`${entry.repo.path}:${b.name}`}
+                          onClick={() =>
+                            props.onRepoCheckout?.(entry.repo.path, b.name)
+                          }
+                        >
+                          {b.isCurrent ? (
+                            <IconStarFilled className="size-3.5 text-amber-500" />
+                          ) : (
+                            <IconGitBranch className="size-3.5 text-muted-foreground" />
+                          )}
+                          <span
+                            className={cn(
+                              "truncate",
+                              b.isCurrent && "font-medium"
+                            )}
+                          >
+                            {b.name}
+                          </span>
+                          {b.upstream !== null && (
+                            <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                              {b.upstream}
+                            </span>
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                      {entry.branches.length === 0 && (
+                        <div className="px-2 py-3 text-center text-sm text-muted-foreground">
+                          No branches.
+                        </div>
+                      )}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                ))}
+                <DropdownMenuSeparator />
+              </>
+            )}
+
             <Section
-              title="Recent"
+              title={sectionTitle("Recent")}
               count={recent.length}
               collapsed={isCollapsed("recent")}
               onToggle={() => toggleSection("recent")}
@@ -408,7 +496,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
             </Section>
 
             <Section
-              title="Local"
+              title={sectionTitle("Local")}
               count={localCount}
               collapsed={isCollapsed("local")}
               onToggle={() => toggleSection("local")}
@@ -427,7 +515,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
             </Section>
 
             <Section
-              title="Remote"
+              title={sectionTitle("Remote")}
               count={remoteCount}
               collapsed={isCollapsed("remote")}
               onToggle={() => toggleSection("remote")}

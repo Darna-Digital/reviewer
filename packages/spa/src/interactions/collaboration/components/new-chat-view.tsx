@@ -29,13 +29,14 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
-import { RepoSwitcher } from "@/interactions/workspace/components/repo-switcher";
+import { activeRepo } from "@byconvo/core/workspace";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { AgentMark } from "@/interactions/threads/components/agent-mark";
 import { PaneHeader } from "@/components/layout/pane-header";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import {
   useBranches,
+  useProjectBranches,
   useRemoteBranches,
   useRepo,
   useWorkspace,
@@ -248,6 +249,15 @@ export function NewChatView() {
   const repo = useRepo();
   const workspace = useWorkspace();
   const workspaceActions = useWorkspaceActions();
+  const projectBranchList = useProjectBranches();
+  /** Check out in one of the project's roots, following that root first. */
+  const checkoutIn = async (repoPath: string, ref: string) => {
+    const followed = await workspaceActions.followRepo(
+      repoPath,
+      workspace.data?.current ?? null
+    );
+    if (followed) void git.checkout(ref);
+  };
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
   const git = useGitActions();
@@ -453,11 +463,6 @@ export function NewChatView() {
                 onChosen={() => {}}
                 side="top"
               />
-              <RepoSwitcher
-                workspace={workspace.data}
-                onSelect={(path) => void workspaceActions.openRepo(path)}
-                side="top"
-              />
               {repo.data !== undefined && (
                 <BranchSwitcher
                   current={repo.data.currentBranch ?? null}
@@ -473,6 +478,13 @@ export function NewChatView() {
                   onRebase={(o) => void git.rebase(o)}
                   onRenameBranch={(from, to) => void git.renameBranch(from, to)}
                   onDeleteBranch={(name) => void git.deleteBranch(name)}
+                  repos={projectBranchList.data?.repos}
+                  currentRepo={activeRepo(
+                    workspace.data ?? { repos: [], current: null }
+                  )}
+                  onRepoCheckout={(repoPath, ref) =>
+                    void checkoutIn(repoPath, ref)
+                  }
                   onFetch={() => void git.fetch()}
                   onPull={() => void git.pull()}
                   onPush={() => void git.push()}
