@@ -819,7 +819,7 @@ export function AppShell() {
         label: prefs.bottomVisible ? "Hide Bottom Panel" : "Show Bottom Panel",
         group: "View",
         icon: IconLayoutBottombarExpand,
-        keywords: "branches history services threads toggle",
+        keywords: "history services threads toggle",
         run: () => setUiPrefs({ bottomVisible: !prefs.bottomVisible }),
       },
       {
@@ -859,15 +859,12 @@ export function AppShell() {
   };
 
   /**
-   * Check out a branch in one of the project's roots. The root is followed
-   * first: checkout runs wherever the git views are pointed, and a branch name
-   * means something different — or nothing — in another root.
+   * Point the git views at one of the project's roots. Branch actions run
+   * wherever they point, and a branch name means something different — or
+   * nothing — in another root, so acting in one goes through this first.
    */
   const followRepo = (repoPath: string) =>
     workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
-  const checkoutIn = async (repoPath: string, ref: string) => {
-    if (await followRepo(repoPath)) void git.checkout(ref);
-  };
 
   /**
    * Open a commit from the history. In a project of several roots the commit
@@ -1036,7 +1033,6 @@ export function AppShell() {
             onDeleteBranch={(name) => void git.deleteBranch(name)}
             onFetch={() => void git.fetch()}
             onPush={() => void git.push()}
-            onPull={() => void git.pull()}
             projectBranches={
               multiRepo ? (projectBranchList.data?.repos ?? []) : undefined
             }
@@ -1272,7 +1268,6 @@ export function AppShell() {
                 onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
                 onCollapse={() => setUiPrefs({ bottomVisible: false })}
                 branches={branches.data ?? []}
-                remoteBranches={remoteBranches.data ?? []}
                 currentBranch={repo.data?.currentBranch ?? null}
                 commits={history.commits}
                 commitRepos={history.repos}
@@ -1284,13 +1279,6 @@ export function AppShell() {
                     : folderName(workspace.data.project)
                 }
                 onRepoFilterChange={setLogRepo}
-                projectBranches={
-                  multiRepo ? (projectBranchList.data?.repos ?? []) : undefined
-                }
-                currentRepo={workspace.data?.current ?? null}
-                onRepoBranchCheckout={(repoPath, ref) =>
-                  void checkoutIn(repoPath, ref)
-                }
                 commitsLoading={history.loading}
                 commitsHaveMore={history.hasMore}
                 logRef={logRef ?? repo.data?.currentBranch ?? null}
@@ -1302,10 +1290,6 @@ export function AppShell() {
                 onLoadMoreCommits={history.loadMore}
                 onLogRefChange={setLogRef}
                 onLogFiltersChange={setLogFilters}
-                onBranchCheckout={(b) => {
-                  void git.checkout(b);
-                  void navigate({ to: "/modes/code/commit" });
-                }}
                 onSelectCommit={(c) => void openCommit(c)}
                 onSelectCommitFile={(p) => openFile(p)}
               />

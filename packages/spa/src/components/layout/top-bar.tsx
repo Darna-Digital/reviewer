@@ -34,7 +34,6 @@ interface TopBarProps {
   onDeleteBranch: (name: string) => void;
   onFetch: () => void;
   onPush: () => void;
-  onPull: () => void;
   /** Each root's branches, when the project holds several. */
   projectBranches?: ReadonlyArray<RepoBranches>;
   currentRepo?: RepoEntry | null;
@@ -78,7 +77,6 @@ export function TopBar(props: TopBarProps) {
           onMerge={props.onMerge}
           onRebase={props.onRebase}
           onFetch={props.onFetch}
-          onPull={props.onPull}
           onPush={props.onPush}
           onRenameBranch={props.onRenameBranch}
           onDeleteBranch={props.onDeleteBranch}

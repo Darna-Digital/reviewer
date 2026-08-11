@@ -1018,20 +1018,29 @@ diffs-container {
      a wash — so the line reads as the subject and the card as its overflow.
      Pierre mixes the selection into whatever the line already is, so an
      addition's green swung the anchor line off-hue from the neutral-based
-     annotation and the two blues stopped looking related. These mix from the
-     background instead, which keeps one hue across the ramp; diff-pane maps
-     them onto the rows through the shadow root's `unsafe` layer. */
+     annotation and the two blues stopped looking related. Both themes hold one
+     hue across the ramp instead; diff-pane maps them onto the rows through the
+     shadow root's `unsafe` layer.
+
+     Light tints white with the selection blue: paper carries chroma for free,
+     so a few points of lightness below the page is all a rung costs. Diluting
+     the same pale blue into the near-black canvas is what came out muddy — the
+     gutter landed 0.23 OKLCH lightness above the page while keeping only 0.06
+     chroma, which is a lifted grey, not a blue. Dark names its rungs outright
+     on one hue: about half that lift, half again the chroma, so each weight
+     reads as blue rather than as a paler slab of the page. */
+  --diffs-selection-hue: 252;
   --diffs-selection-gutter-bg: light-dark(
     color-mix(in lab, var(--background) 68%, var(--diffs-bg-selection-override)),
-    color-mix(in lab, var(--background) 58%, var(--diffs-bg-selection-override))
+    oklch(0.323 0.086 var(--diffs-selection-hue))
   );
   --diffs-selection-line-bg: light-dark(
     color-mix(in lab, var(--background) 78%, var(--diffs-bg-selection-override)),
-    color-mix(in lab, var(--background) 68%, var(--diffs-bg-selection-override))
+    oklch(0.281 0.062 var(--diffs-selection-hue))
   );
   --diffs-selection-annotation-bg: light-dark(
     color-mix(in lab, var(--background) 93%, var(--diffs-bg-selection-override)),
-    color-mix(in lab, var(--background) 88%, var(--diffs-bg-selection-override))
+    oklch(0.225 0.028 var(--diffs-selection-hue))
   );
 }
 

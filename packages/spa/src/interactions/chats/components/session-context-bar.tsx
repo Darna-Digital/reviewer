@@ -115,7 +115,6 @@ export function SessionContextBar({
         currentRepo={activeRepo(workspace.data ?? { repos: [], current: null })}
         onFollowRepo={followRepo}
         onFetch={() => void git.fetch()}
-        onPull={() => void git.pull()}
         onPush={() => void git.push()}
       />
     </div>

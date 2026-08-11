@@ -3,17 +3,14 @@
  * `GitWidget` to the shadcn (base-ui) `DropdownMenu` primitives. It keeps the
  * JetBrains-style feature set: a filter box, collapsible Recent / Local /
  * Remote sections, folder grouping by the first path segment, ahead/behind and
- * upstream badges, repo-level fetch/pull/push, and a per-branch action submenu
- * (checkout, compare, merge, rebase, rename, delete, …).
+ * upstream badges, and a per-branch action submenu (checkout, new branch from,
+ * compare, merge, rebase, rename, delete, …). Everything acts on a branch that
+ * was picked first, so there are no repo-wide actions at the menu's top level.
  */
 import { useEffect, useRef, useState } from "react";
 import {
-  IconArrowDown,
-  IconArrowUp,
   IconChevronDown,
   IconChevronRight,
-  IconCloud,
-  IconCloudDownload,
   IconFolder,
   IconGitBranch,
   IconPlus,
@@ -61,7 +58,6 @@ interface BranchSwitcherProps {
   onMerge: (branch: string) => void;
   onRebase: (onto: string) => void;
   onFetch: () => void;
-  onPull: () => void;
   onPush: () => void;
   onRenameBranch: (from: string, to: string) => void;
   onDeleteBranch: (name: string) => void;
@@ -118,9 +114,6 @@ interface BranchTarget {
   readonly isCurrent: boolean;
   readonly isRemote: boolean;
 }
-
-/** Submenu holding the repo-wide remote operations, not the branch-scoped ones. */
-const REPO_ACTIONS_LABEL = "Git";
 
 /** Branch names make these labels long; the menu item tooltips the clipped ones. */
 const ActionLabel = ({ children }: { children: React.ReactNode }) => (
@@ -294,13 +287,6 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
       </>
     );
   };
-
-  const showNew = matches("New Branch");
-  const repoActions = [
-    { label: "Fetch", run: props.onFetch, icon: IconCloudDownload },
-    { label: "Pull", run: props.onPull, icon: IconArrowDown },
-    { label: "Push", run: props.onPush, icon: IconArrowUp },
-  ].filter((a) => matches(REPO_ACTIONS_LABEL) || matches(a.label));
 
   const newBranch = (
     startPoint: string | null,
@@ -500,17 +486,21 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
       >
         <DropdownMenuTrigger
           render={
-            <Button variant="ghost" size="chip" className="gap-1.5 px-2">
-              <IconGitBranch className="size-3.5 text-muted-foreground" />
-              {currentName}
-              <IconChevronDown className="size-3.5 text-muted-foreground" />
+            <Button
+              variant="ghost"
+              size="chip"
+              className="max-w-64 gap-1.5 px-2"
+            >
+              <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
+              <span className="truncate">{currentName}</span>
+              <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
             </Button>
           }
         />
         <DropdownMenuContent
           align="start"
           side={props.side ?? "bottom"}
-          className="max-h-[70vh] w-72 overflow-auto p-0"
+          className="max-h-[70vh] w-72 overflow-x-hidden overflow-y-auto p-0"
         >
           {/* Filter box — a plain row, not a menu item, so typing never navigates. */}
           <BranchSearchRow>
@@ -528,31 +518,6 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           </BranchSearchRow>
 
           <div className="p-1">
-            {repoActions.length > 0 && (
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <IconCloud className="size-3.5 text-muted-foreground" />
-                  <span>{REPO_ACTIONS_LABEL}</span>
-                </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="w-72">
-                  {repoActions.map(({ label, run, icon: Icon }) => (
-                    <DropdownMenuItem key={label} disabled={busy} onClick={run}>
-                      <Icon className="size-3.5 text-muted-foreground" />
-                      {label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuSubContent>
-              </DropdownMenuSub>
-            )}
-
-            {showNew && (
-              <DropdownMenuItem onClick={() => newBranch(null, "", null)}>
-                <IconPlus className="size-3.5 text-muted-foreground" />
-                New Branch
-              </DropdownMenuItem>
-            )}
-            {showNew && <DropdownMenuSeparator />}
-
             {multiRepo &&
               props.repos?.map((entry) => (
                 <DropdownMenuSub key={entry.repo.path}>
@@ -560,17 +525,18 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
                     <ProjectAvatar name={entry.repo.name} className="size-4" />
                     <span
                       className={cn(
-                        "truncate",
+                        "min-w-0 flex-1 truncate",
                         entry.repo.path === currentRepoPath && "font-medium"
                       )}
                     >
                       {entry.repo.name}
                     </span>
-                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                    {/* Capped, or a long branch name eats the row and overflows it. */}
+                    <span className="max-w-[50%] shrink-0 truncate text-xs text-muted-foreground">
                       {entry.repo.branch ?? "detached"}
                     </span>
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="max-h-[60vh] w-72 overflow-auto p-1">
+                  <DropdownMenuSubContent className="max-h-[60vh] w-72 overflow-x-hidden overflow-y-auto p-1">
                     {renderSections({
                       repoPath: entry.repo.path,
                       head: entry.repo.branch ?? "—",

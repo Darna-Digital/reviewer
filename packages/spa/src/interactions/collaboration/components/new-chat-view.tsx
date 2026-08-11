@@ -479,7 +479,6 @@ export function NewChatView() {
                   )}
                   onFollowRepo={followRepo}
                   onFetch={() => void git.fetch()}
-                  onPull={() => void git.pull()}
                   onPush={() => void git.push()}
                 />
               )}
