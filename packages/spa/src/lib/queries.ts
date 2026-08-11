@@ -17,6 +17,24 @@ export const useRemoteBranches = () =>
   api.useQuery("get", "/api/remote-branches");
 export const useComments = () => api.useQuery("get", "/api/comments");
 
+// --- Project-wide git (every root the open project holds) ------------------
+// The `/api/repo`-backed hooks above answer for the selected repository; these
+// answer for the whole project, each entry carrying the root it came from.
+
+/** Uncommitted work in every root — the commit view's per-repository groups. */
+export const useProjectChanges = () =>
+  api.useQuery("get", "/api/project/changes");
+
+/** Every root's branches — the branch popup's per-repository sections. */
+export const useProjectBranches = () =>
+  api.useQuery("get", "/api/project/branches");
+
+/** Every root's history merged, newest first. */
+export const useProjectLog = (limit = LOG_PAGE_SIZE) =>
+  api.useQuery("get", "/api/project/log", {
+    params: { query: { limit: String(limit) } },
+  });
+
 /** The in-progress merge/rebase operation and its remaining conflicts. */
 export const useMergeState = () => api.useQuery("get", "/api/merge-state");
 
