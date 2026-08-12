@@ -15,9 +15,10 @@ import type {
 } from "../schema/language.schema.ts";
 
 /**
- * The language backend as the service sees it: repository-relative paths in,
+ * The language backend as the service sees it: project-relative paths in,
  * LSP-shaped answers out. The implementation owns provider selection and the
- * absolute repository root; neither leaks past this boundary.
+ * absolute root of the repository the path falls in; neither leaks past this
+ * boundary.
  *
  * `contents` is the editor's unsaved buffer, or null to analyse the file on
  * disk.

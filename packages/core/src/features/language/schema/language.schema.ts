@@ -3,7 +3,7 @@
  * maps onto them without loss.
  *
  * Deliberate deviations, both to keep the HTTP API self-describing:
- *   - `Location` carries a repository-relative `path` instead of LSP's `uri`;
+ *   - `Location` carries a project-relative `path` instead of LSP's `uri`;
  *     every other byconvo feature (comments, diffs) is path-addressed.
  *   - severities and reference kinds are named strings rather than LSP's
  *     integers, so the generated OpenAPI schema reads as an enum.
@@ -25,7 +25,7 @@ export const Range = Schema.Struct({ start: Position, end: Position });
 export type Range = typeof Range.Type;
 
 export const Location = Schema.Struct({
-  /** Repository-relative POSIX path. */
+  /** Project-relative POSIX path. */
   path: Schema.String,
   range: Range,
 });
