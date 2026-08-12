@@ -1,5 +1,7 @@
 {
   "include": ["**/*.ts", "**/*.tsx"],
+  /* The capture tooling runs on Node, not in the bundle — see scripts/tsconfig.json. */
+  "exclude": ["scripts"],
   "compilerOptions": {
     "target": "ES2022",
     "jsx": "react-jsx",

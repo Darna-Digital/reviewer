@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useSyncExternalStore, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { Asciify } from "#/components/canvasui/Asciify";
 import {
@@ -10,31 +10,29 @@ import {
 import { ArrowRight } from "#/components/icons";
 import { Logo } from "#/components/logo";
 import { SiteHeader } from "#/components/site-header";
+import { SpaSnapshot } from "#/components/spa-snapshot";
 import { AgentsShowcase } from "#/components/showcase/agents";
 import { CollaborationShowcase } from "#/components/showcase/collaboration";
 import { GitShowcase } from "#/components/showcase/git";
 import { LocalDevShowcase } from "#/components/showcase/local-dev";
 import { PlansShowcase } from "#/components/showcase/plans";
 import { ReviewShowcase } from "#/components/showcase/review";
+import { usePrefersDark } from "#/hooks/use-prefers-dark";
 
-export const Route = createFileRoute("/")({ component: Home });
+const HERO_SNAPSHOT = {
+  src: "/spa-snapshots/hero.json",
+  width: 1600,
+  height: 1000,
+};
 
-const DARK_SCHEME = "(prefers-color-scheme: dark)";
+export const Route = createFileRoute("/")({
+  component: Home,
+  head: () => ({
+    links: [{ rel: "preload", as: "fetch", href: HERO_SNAPSHOT.src }],
+  }),
+});
+
 const ASCII_INK_DARK: [number, number, number] = [0.32, 0.32, 0.32];
-
-function subscribeToScheme(onChange: () => void) {
-  const query = window.matchMedia(DARK_SCHEME);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-}
-
-function usePrefersDark() {
-  return useSyncExternalStore(
-    subscribeToScheme,
-    () => window.matchMedia(DARK_SCHEME).matches,
-    () => false
-  );
-}
 
 function CtaButton({
   href,
@@ -84,10 +82,7 @@ function Home() {
       <SiteHeader />
 
       <div className="relative isolate overflow-hidden bg-white dark:bg-neutral-950">
-        <Asciify
-          className="relative"
-          ink={prefersDark ? ASCII_INK_DARK : null}
-        >
+        <Asciify className="relative" ink={prefersDark ? ASCII_INK_DARK : null}>
           <div className="relative">
             <div className="pointer-events-none absolute inset-0">
               <video
@@ -140,19 +135,13 @@ function Home() {
 
             <div className="relative z-10 -mt-52 flex justify-center pb-24 sm:pb-32 lg:-mt-[26rem]">
               <div className="hero-app-shadow w-full max-w-[1760px] shrink-0 px-6">
-                <picture>
-                  <source
-                    media={DARK_SCHEME}
-                    srcSet="/byconvo-app-screenshot-dark.png"
-                  />
-                  <img
-                    alt="byconvo reviewing a diff, with the file tree, commit box and project history"
-                    className="block w-full"
-                    height={1203}
-                    src="/byconvo-app-screenshot-light.png"
-                    width={1992}
-                  />
-                </picture>
+                <SpaSnapshot
+                  className="rounded-xl ring-1 ring-black/10 dark:ring-white/10"
+                  height={HERO_SNAPSHOT.height}
+                  label="byconvo reviewing a commit, with the file tree, the split diff and the project history"
+                  src={HERO_SNAPSHOT.src}
+                  width={HERO_SNAPSHOT.width}
+                />
               </div>
             </div>
           </div>
