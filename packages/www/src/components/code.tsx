@@ -54,14 +54,14 @@ type TokenKind =
   | "plain";
 
 const TOKEN_CLASS: Record<TokenKind, string> = {
-  comment: "text-[#6e7781] italic",
-  string: "text-[#0a3069]",
-  number: "text-[#0550ae]",
-  keyword: "text-[#cf222e]",
-  call: "text-[#8250df]",
-  type: "text-[#953800]",
-  punctuation: "text-[#57606a]",
-  plain: "text-[#24292f]",
+  comment: "text-[#6e7781] italic dark:text-[#8b949e]",
+  string: "text-[#0a3069] dark:text-[#a5d6ff]",
+  number: "text-[#0550ae] dark:text-[#79c0ff]",
+  keyword: "text-[#cf222e] dark:text-[#ff7b72]",
+  call: "text-[#8250df] dark:text-[#d2a8ff]",
+  type: "text-[#953800] dark:text-[#ffa657]",
+  punctuation: "text-[#57606a] dark:text-[#8b949e]",
+  plain: "text-[#24292f] dark:text-[#e6edf3]",
 };
 
 const TOKEN_PATTERN =
@@ -115,14 +115,16 @@ export interface CodeLine {
 
 const LINE_CLASS: Record<DiffKind, string> = {
   context: "",
-  added: "bg-[#dafbe1]",
-  removed: "bg-[#ffebe9]",
+  added: "bg-[#dafbe1] dark:bg-[#3fb950]/12",
+  removed: "bg-[#ffebe9] dark:bg-[#f85149]/12",
 };
 
 const GUTTER_CLASS: Record<DiffKind, string> = {
-  context: "text-neutral-400",
-  added: "bg-[#aceebb]/60 text-[#1a7f37]",
-  removed: "bg-[#ffcecb]/70 text-[#cf222e]",
+  context: "text-neutral-400 dark:text-neutral-600",
+  added:
+    "bg-[#aceebb]/60 text-[#1a7f37] dark:bg-[#3fb950]/20 dark:text-[#3fb950]",
+  removed:
+    "bg-[#ffcecb]/70 text-[#cf222e] dark:bg-[#f85149]/20 dark:text-[#f85149]",
 };
 
 const DIFF_MARK: Record<DiffKind, string> = {
@@ -153,7 +155,7 @@ export function CodeLines({
             )}
             {diff ? (
               <span
-                className={`w-4 shrink-0 select-none ${kind === "context" ? "text-neutral-300" : GUTTER_CLASS[kind]}`}
+                className={`w-4 shrink-0 select-none ${kind === "context" ? "text-neutral-300 dark:text-neutral-700" : GUTTER_CLASS[kind]}`}
               >
                 {DIFF_MARK[kind]}
               </span>

@@ -1,38 +1,95 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useSyncExternalStore, type ReactNode } from "react";
 
 import { Asciify } from "#/components/canvasui/Asciify";
-import { FeatureSection } from "#/components/feature-section";
+import {
+  Container,
+  FeatureSection,
+  SectionDivider,
+} from "#/components/feature-section";
 import { ArrowRight } from "#/components/icons";
+import { Logo } from "#/components/logo";
 import { SiteHeader } from "#/components/site-header";
 import { AgentsShowcase } from "#/components/showcase/agents";
 import { CollaborationShowcase } from "#/components/showcase/collaboration";
 import { GitShowcase } from "#/components/showcase/git";
-import { HeroApp } from "#/components/showcase/hero-app";
 import { LocalDevShowcase } from "#/components/showcase/local-dev";
 import { PlansShowcase } from "#/components/showcase/plans";
 import { ReviewShowcase } from "#/components/showcase/review";
 
 export const Route = createFileRoute("/")({ component: Home });
 
-const STATEMENT = [
-  { text: "byconvo reviews" },
-  { mark: "01" },
-  { text: "what the agent wrote, runs" },
-  { mark: "02" },
-  { text: "it on your machine, and keeps" },
-  { mark: "03" },
-  { text: "the conversation on the line it belongs to." },
-];
+const DARK_SCHEME = "(prefers-color-scheme: dark)";
+const ASCII_INK_DARK: [number, number, number] = [0.32, 0.32, 0.32];
+
+function subscribeToScheme(onChange: () => void) {
+  const query = window.matchMedia(DARK_SCHEME);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+function usePrefersDark() {
+  return useSyncExternalStore(
+    subscribeToScheme,
+    () => window.matchMedia(DARK_SCHEME).matches,
+    () => false
+  );
+}
+
+function CtaButton({
+  href,
+  variant = "primary",
+  children,
+}: {
+  href: string;
+  variant?: "primary" | "secondary";
+  children: ReactNode;
+}) {
+  const tone =
+    variant === "primary"
+      ? "bg-neutral-900 text-white hover:bg-neutral-900/90 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+      : "bg-white text-neutral-900 shadow-sm ring-1 ring-black/10 ring-inset hover:bg-neutral-50 dark:bg-white/5 dark:text-white dark:shadow-none dark:ring-white/15 dark:hover:bg-white/10";
+  return (
+    <a
+      className={`group inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-[15px] font-medium whitespace-nowrap transition-colors ${tone}`}
+      href={href}
+    >
+      {children}
+    </a>
+  );
+}
+
+function StatementWord({ word, index }: { word: string; index: string }) {
+  return (
+    <>
+      <span className="relative isolate inline-block">
+        {word}
+        <span
+          aria-hidden="true"
+          className="absolute -inset-x-1 top-1/2 -z-10 h-7 -translate-y-1/2 rounded-lg bg-black/6 md:h-9 dark:bg-white/10"
+        />
+      </span>
+      <span className="relative top-1 inline-flex justify-center pr-1 pl-2 align-top font-mono text-[10px] leading-none text-neutral-500">
+        {index}
+      </span>
+    </>
+  );
+}
 
 function Home() {
+  const prefersDark = usePrefersDark();
+
   return (
     <>
       <SiteHeader />
 
-      <div className="relative isolate overflow-hidden bg-white">
-        <Asciify className="relative">
-          <div className="min-h-[calc(62svh_-_var(--spacing-header))]">
-            <div className="pointer-events-none absolute inset-0 mask-b-from-75%">
+      <div className="relative isolate overflow-hidden bg-white dark:bg-neutral-950">
+        <Asciify
+          className="relative"
+          ink={prefersDark ? ASCII_INK_DARK : null}
+        >
+          <div className="relative">
+            <div className="pointer-events-none absolute inset-0">
               <video
                 className="size-full object-cover"
                 autoPlay
@@ -52,55 +109,68 @@ function Home() {
                   type='video/mp4; codecs="avc1.640032"'
                 />
               </video>
-              <div className="absolute inset-0 bg-gradient-to-b from-white via-white/40 to-transparent" />
+              <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.45)_0%,rgba(255,255,255,0.12)_18%,rgba(255,255,255,0)_40%,rgba(255,255,255,0.55)_78%,white_93%)] dark:bg-[linear-gradient(to_bottom,rgba(10,10,10,0.72)_0%,rgba(10,10,10,0.62)_18%,rgba(10,10,10,0.6)_40%,rgba(10,10,10,0.85)_78%,#0a0a0a_93%)]" />
             </div>
 
-            <section className="relative mx-auto max-w-7xl px-4 pt-20 pb-24 text-neutral-900 sm:pt-24 sm:pb-32 md:px-8">
-              <h1 className="mb-6 text-3xl font-semibold tracking-tight sm:text-4xl">
-                <span className="block">Tools for conversation</span>
-                <span className="block">based development.</span>
-              </h1>
-              <p className="mb-8 max-w-xl text-lg text-neutral-700">
-                Engineered for writing reliable, maintainable and testable code.
-              </p>
-              <a
-                className="group inline-flex h-10 items-center gap-2 rounded-md bg-neutral-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-neutral-900/90"
-                href="/download"
-              >
-                Get byconvo
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-              </a>
+            <section className="relative">
+              <Container>
+                <div className="flex flex-col items-start justify-between gap-6 pt-16 pb-80 text-neutral-900 lg:flex-row lg:items-end lg:gap-0 lg:pt-32 lg:pb-[34rem] dark:text-white">
+                  <h1 className="max-w-lg text-5xl leading-[1.02] font-medium tracking-[-0.02em] text-balance sm:text-[56px] md:text-[64px] lg:max-w-3xl lg:text-[72px]">
+                    Tools for conversation based development.
+                  </h1>
+                  <div className="flex flex-col items-start gap-5 lg:items-end">
+                    <p className="max-w-lg text-base text-balance text-neutral-700 lg:text-right dark:text-neutral-300">
+                      Engineered for writing reliable, maintainable and testable
+                      code — with the agents you already run, on your own
+                      machine.
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <CtaButton href="/docs" variant="secondary">
+                        Read the docs
+                      </CtaButton>
+                      <CtaButton href="/download">
+                        Get byconvo
+                        <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+                      </CtaButton>
+                    </div>
+                  </div>
+                </div>
+              </Container>
             </section>
+
+            <div className="relative z-10 -mt-52 flex justify-center pb-24 sm:pb-32 lg:-mt-[26rem]">
+              <div className="hero-app-shadow w-full max-w-[1760px] shrink-0 px-6">
+                <picture>
+                  <source
+                    media={DARK_SCHEME}
+                    srcSet="/byconvo-app-screenshot-dark.png"
+                  />
+                  <img
+                    alt="byconvo reviewing a diff, with the file tree, commit box and project history"
+                    className="block w-full"
+                    height={1203}
+                    src="/byconvo-app-screenshot-light.png"
+                    width={1992}
+                  />
+                </picture>
+              </div>
+            </div>
           </div>
         </Asciify>
-
-        <div className="relative -mt-16 mb-16 sm:-mt-20 sm:mb-24">
-          <div className="mx-auto max-w-7xl px-4 md:px-8">
-            <HeroApp />
-          </div>
-        </div>
       </div>
 
-      <section className="border-t border-black/8 py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl px-4 md:px-8">
-          <p className="max-w-4xl text-2xl leading-snug font-medium tracking-tight text-balance text-neutral-400 sm:text-4xl">
-            {STATEMENT.map((part) =>
-              part.mark ? (
-                <span
-                  className="mx-1.5 align-super font-mono text-xs text-neutral-900 sm:text-sm"
-                  key={part.mark}
-                >
-                  {part.mark}
-                </span>
-              ) : (
-                <span className="text-neutral-900" key={part.text}>
-                  {part.text}{" "}
-                </span>
-              )
-            )}
+      <section className="py-16 md:py-32">
+        <Container>
+          <p className="max-w-3xl text-[24px] leading-snug font-medium tracking-tight text-pretty text-neutral-900 sm:text-[32px] dark:text-neutral-100">
+            byconvo <StatementWord index="01" word="reviews" />
+            what the agent wrote, <StatementWord index="02" word="runs" />
+            it on your machine, and <StatementWord index="03" word="keeps" />
+            the conversation on the line it belongs to.
           </p>
-        </div>
+        </Container>
       </section>
+
+      <SectionDivider />
 
       <FeatureSection
         capabilities={[
@@ -119,6 +189,8 @@ function Home() {
       >
         <ReviewShowcase />
       </FeatureSection>
+
+      <SectionDivider />
 
       <FeatureSection
         capabilities={[
@@ -139,6 +211,8 @@ function Home() {
         <AgentsShowcase />
       </FeatureSection>
 
+      <SectionDivider />
+
       <FeatureSection
         capabilities={[
           "Front-to-back flow graph",
@@ -155,6 +229,8 @@ function Home() {
       >
         <PlansShowcase />
       </FeatureSection>
+
+      <SectionDivider />
 
       <FeatureSection
         capabilities={[
@@ -174,6 +250,8 @@ function Home() {
         <CollaborationShowcase />
       </FeatureSection>
 
+      <SectionDivider />
+
       <FeatureSection
         capabilities={[
           "Run configurations",
@@ -190,6 +268,8 @@ function Home() {
       >
         <LocalDevShowcase />
       </FeatureSection>
+
+      <SectionDivider />
 
       <FeatureSection
         capabilities={[
@@ -209,24 +289,61 @@ function Home() {
         <GitShowcase />
       </FeatureSection>
 
-      <section className="border-t border-black/8 py-20 sm:py-28">
-        <div className="mx-auto max-w-7xl px-4 md:px-8">
-          <h2 className="max-w-2xl text-2xl font-semibold tracking-tight text-balance text-neutral-900 sm:text-3xl">
-            Engineered for writing reliable, maintainable and testable code.
-          </h2>
-          <p className="mt-4 max-w-xl text-base text-neutral-600 sm:text-lg">
-            byconvo runs on your machine, against your repository, with the
-            agents you already run.
-          </p>
-          <a
-            className="group mt-8 inline-flex h-10 items-center gap-2 rounded-md bg-neutral-900 px-4 text-sm font-semibold text-white transition-colors hover:bg-neutral-900/90"
-            href="/download"
-          >
-            Get byconvo
-            <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-          </a>
-        </div>
-      </section>
+      <footer className="w-full overflow-hidden bg-gradient-to-b from-neutral-100 to-white dark:from-neutral-900 dark:to-neutral-950">
+        <Container className="relative">
+          <div className="absolute top-0 left-1/2 h-px w-screen -translate-x-1/2 bg-black/8 dark:bg-white/10" />
+
+          <div className="flex flex-col items-start gap-6 py-20 md:gap-10 md:py-36">
+            <h2 className="text-4xl leading-[1.05] font-medium tracking-[-0.02em] text-neutral-900 md:text-[48px] dark:text-white">
+              <span className="block">Tools for conversation</span>
+              <span className="block">based development.</span>
+            </h2>
+            <p className="max-w-xl text-base text-balance text-neutral-600 dark:text-neutral-400">
+              byconvo runs on your machine, against your repository, with the
+              agents you already run.
+            </p>
+            <div className="flex items-center gap-3">
+              <CtaButton href="/docs" variant="secondary">
+                Read the docs
+              </CtaButton>
+              <CtaButton href="/download">
+                Get byconvo
+                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
+              </CtaButton>
+            </div>
+          </div>
+
+          <div
+            className="h-px w-full bg-black/8 dark:bg-white/10"
+            role="separator"
+          />
+
+          <div className="flex flex-col items-start justify-between gap-6 py-10 md:flex-row md:items-center">
+            <a aria-label="byconvo home" className="flex shrink-0" href="/">
+              <Logo className="h-6 w-auto" />
+            </a>
+            <nav aria-label="Footer" className="flex items-center gap-6">
+              {[
+                { label: "Changelog", href: "/changelog" },
+                { label: "Docs", href: "/docs" },
+                { label: "Pricing", href: "/pricing" },
+                { label: "Download", href: "/download" },
+              ].map((link) => (
+                <a
+                  className="text-sm text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+                  href={link.href}
+                  key={link.href}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+            <p className="text-xs text-neutral-400 dark:text-neutral-500">
+              © 2026 Darna Digital. All rights reserved.
+            </p>
+          </div>
+        </Container>
+      </footer>
     </>
   );
 }

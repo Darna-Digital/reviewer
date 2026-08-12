@@ -25,6 +25,8 @@ export interface AsciifyOptions {
   glyphs?: number[];
   /** Paper color behind the glyphs as [r, g, b] in 0-1 range, or "auto" to match the page background. */
   background?: [number, number, number] | "auto";
+  /** Flat color for the glyphs as [r, g, b] in 0-1 range. Omit to take the colour from the content. */
+  ink?: [number, number, number] | null;
   /** Opacity of the background behind the glyphs (0 to 1). */
   backgroundOpacity?: number;
   /** Contrast applied to character density before picking a glyph. */
@@ -83,6 +85,7 @@ const DEFAULTS: Required<AsciifyOptions> = {
   charset: "ascii",
   glyphs: [],
   background: [0, 0, 0],
+  ink: null,
   backgroundOpacity: 0,
   contrast: 1,
   brightness: 0,
@@ -128,6 +131,8 @@ uniform float uSoftness;
 uniform vec2 uPointer;
 uniform float uActive;
 uniform vec3 uBg;
+uniform vec3 uInk;
+uniform float uInkAmount;
 uniform float uBackingLum;
 uniform float uBgOpacity;
 uniform float uLod;
@@ -230,7 +235,7 @@ void main () {
     vec3 haloColor = clamp(
       uBg + (soft.rgb - uBg) / max(abs(softLum - uBackingLum), 0.2),
       0.0, 1.0);
-    vec3 col = mix(haloColor, inkColor, on);
+    vec3 col = mix(mix(haloColor, inkColor, on), uInk, uInkAmount);
     float alpha = ink.a
       * max(mix(clamp(uBgOpacity, 0.0, 1.0), 1.0, on), halo * (1.0 - on));
     outColor = vec4(col * alpha, alpha);
@@ -253,7 +258,7 @@ void main () {
   vec3 glyphColor = clamp(
     uBg + (pixel.rgb - uBg) / max(abs(lum - uBackingLum), 0.2),
     0.0, 1.0);
-  vec3 col = mix(uBg, glyphColor, on);
+  vec3 col = mix(mix(uBg, glyphColor, on), uInk, uInkAmount);
   float alpha = pixel.a * mix(clamp(uBgOpacity, 0.0, 1.0), 1.0, on);
   outColor = vec4(col * alpha, alpha);
 }`;
@@ -1084,6 +1089,9 @@ function initializeAsciify(
     gl!.uniform1f(uniforms.uActive, pointer.active);
     const bg = config.background === "auto" ? backingRgb : config.background;
     gl!.uniform3f(uniforms.uBg, bg[0], bg[1], bg[2]);
+    const ink = config.ink ?? [0, 0, 0];
+    gl!.uniform3f(uniforms.uInk, ink[0], ink[1], ink[2]);
+    gl!.uniform1f(uniforms.uInkAmount, config.ink ? 1 : 0);
     gl!.uniform1f(uniforms.uBackingLum, backingLum);
     gl!.uniform1f(uniforms.uBgOpacity, config.backgroundOpacity);
     gl!.uniform1f(uniforms.uContrast, Math.max(config.contrast, 0));

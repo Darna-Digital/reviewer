@@ -66,31 +66,31 @@ const MESSAGES = [
 export function CollaborationShowcase() {
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)]">
-      <div className="grid gap-3 rounded-xl border border-black/10 bg-neutral-50/70 p-3 shadow-xl shadow-black/5 sm:grid-cols-3">
+      <div className="grid gap-3 rounded-xl border border-black/10 bg-neutral-50/70 p-3 shadow-xl shadow-black/5 sm:grid-cols-3 dark:border-white/10 dark:bg-neutral-900 dark:shadow-none">
         {COLUMNS.map((column) => (
           <div key={column.title}>
             <div className="flex items-center gap-2 px-1 pb-2">
-              <span className="text-[11px] font-medium text-neutral-700">
+              <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300">
                 {column.title}
               </span>
-              <span className="font-mono text-[10px] text-neutral-400">
+              <span className="font-mono text-[10px] text-neutral-400 dark:text-neutral-500">
                 {column.cards.length}
               </span>
             </div>
             <ul className="flex flex-col gap-2">
               {column.cards.map((card) => (
                 <li
-                  className="rounded-lg border border-black/8 bg-white p-2.5 shadow-sm"
+                  className="rounded-lg border border-black/8 bg-white p-2.5 shadow-sm dark:border-white/10 dark:bg-neutral-800 dark:shadow-none"
                   key={card.key}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-[10px] text-neutral-400">
+                    <span className="font-mono text-[10px] text-neutral-400 dark:text-neutral-500">
                       {card.key}
                     </span>
                     {card.assignee ? (
                       <span className="ml-auto flex items-center gap-1">
                         {card.agent ? (
-                          <span className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[9px] font-medium text-neutral-500">
+                          <span className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[9px] font-medium text-neutral-500 dark:bg-white/10 dark:text-neutral-400">
                             agent
                           </span>
                         ) : null}
@@ -100,13 +100,13 @@ export function CollaborationShowcase() {
                         />
                       </span>
                     ) : (
-                      <span className="ml-auto rounded-full border border-dashed border-black/15 px-1.5 py-0.5 text-[9px] text-neutral-400">
+                      <span className="ml-auto rounded-full border border-dashed border-black/15 px-1.5 py-0.5 text-[9px] text-neutral-400 dark:border-white/20 dark:text-neutral-500">
                         unassigned
                       </span>
                     )}
                   </div>
                   <p
-                    className={`mt-1.5 text-xs leading-snug ${card.done ? "text-neutral-400 line-through" : "text-neutral-800"}`}
+                    className={`mt-1.5 text-xs leading-snug ${card.done ? "text-neutral-400 line-through dark:text-neutral-500" : "text-neutral-800 dark:text-neutral-200"}`}
                   >
                     {card.title}
                   </p>
@@ -117,11 +117,15 @@ export function CollaborationShowcase() {
         ))}
       </div>
 
-      <div className="flex flex-col overflow-hidden rounded-xl border border-black/10 bg-white shadow-xl shadow-black/5">
-        <div className="flex items-center gap-2 border-b border-black/8 bg-neutral-50/70 px-3 py-2 text-[11px]">
-          <Message className="size-3.5 text-neutral-400" />
-          <span className="font-medium text-neutral-800">T-28</span>
-          <span className="text-neutral-500">2 people · 1 agent</span>
+      <div className="flex flex-col overflow-hidden rounded-xl border border-black/10 bg-white shadow-xl shadow-black/5 dark:border-white/10 dark:bg-neutral-900 dark:shadow-none">
+        <div className="flex items-center gap-2 border-b border-black/8 bg-neutral-50/70 px-3 py-2 text-[11px] dark:border-white/8 dark:bg-white/3">
+          <Message className="size-3.5 text-neutral-400 dark:text-neutral-500" />
+          <span className="font-medium text-neutral-800 dark:text-neutral-200">
+            T-28
+          </span>
+          <span className="text-neutral-500 dark:text-neutral-400">
+            2 people · 1 agent
+          </span>
         </div>
         <div className="flex flex-1 flex-col gap-3 p-3">
           {MESSAGES.map((message) => (
@@ -129,24 +133,24 @@ export function CollaborationShowcase() {
               <Avatar initials={message.initials} />
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[11px] font-medium text-neutral-800">
+                  <span className="text-[11px] font-medium text-neutral-800 dark:text-neutral-200">
                     {message.author}
                   </span>
                   {message.agent ? (
-                    <span className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[9px] font-medium text-neutral-500">
+                    <span className="rounded-full bg-neutral-100 px-1.5 py-0.5 text-[9px] font-medium text-neutral-500 dark:bg-white/10 dark:text-neutral-400">
                       agent
                     </span>
                   ) : null}
                 </div>
-                <p className="mt-1 text-xs leading-relaxed text-neutral-700">
+                <p className="mt-1 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300">
                   {message.body}
                 </p>
               </div>
             </div>
           ))}
         </div>
-        <div className="border-t border-black/8 p-3">
-          <div className="rounded-md border border-black/10 bg-neutral-50 px-2.5 py-2 text-[11px] text-neutral-400">
+        <div className="border-t border-black/8 p-3 dark:border-white/8">
+          <div className="rounded-md border border-black/10 bg-neutral-50 px-2.5 py-2 text-[11px] text-neutral-400 dark:border-white/10 dark:bg-white/4 dark:text-neutral-500">
             Message the task…
           </div>
         </div>
