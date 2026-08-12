@@ -3,9 +3,11 @@ import {
   changedFileCount,
   filterCommitsByRepo,
   groupPathsByRepo,
+  locateProjectPath,
   mergeCommits,
   mergeMatches,
   prefixDiffPaths,
+  prefixProjectPath,
   projectIsOutOfSync,
   projectPath,
   projectTotals,
@@ -87,6 +89,69 @@ describe("splitProjectPath", () => {
 
   it("does not match a root that is only a name prefix", () => {
     expect(splitProjectPath([repo("web")], "web-app/src/a.ts")).toBeNull();
+  });
+});
+
+describe("locateProjectPath", () => {
+  const repos = [repo("web-app"), repo("backend-app")];
+
+  it("finds the root a project path lives in", () => {
+    expect(locateProjectPath("/work", repos, "web-app/src/a.ts")).toEqual({
+      repo: repo("web-app"),
+      path: "src/a.ts",
+      prefix: "web-app",
+    });
+  });
+
+  it("prefers the deepest root holding the path", () => {
+    const nested: ReadonlyArray<RepoEntry> = [
+      { name: "apps", path: "/work/apps", branch: "main" },
+      { name: "apps/web", path: "/work/apps/web", branch: "main" },
+    ];
+    expect(locateProjectPath("/work", nested, "apps/web/src/a.ts")).toEqual({
+      repo: nested[1],
+      path: "src/a.ts",
+      prefix: "apps/web",
+    });
+  });
+
+  it("leaves a project that is itself the repository unprefixed", () => {
+    const itself: RepoEntry = {
+      name: "byconvo",
+      path: "/work",
+      branch: "main",
+    };
+    expect(locateProjectPath("/work", [itself], "src/a.ts")).toEqual({
+      repo: itself,
+      path: "src/a.ts",
+      prefix: "",
+    });
+  });
+
+  it("ignores a trailing slash on the project", () => {
+    expect(locateProjectPath("/work/", repos, "web-app/src/a.ts")?.path).toBe(
+      "src/a.ts"
+    );
+  });
+
+  it("does not match a root that is only a name prefix", () => {
+    expect(
+      locateProjectPath("/work", [repo("web")], "web-app/a.ts")
+    ).toBeNull();
+  });
+
+  it("is null when no root holds the path", () => {
+    expect(locateProjectPath("/work", repos, "src/a.ts")).toBeNull();
+  });
+});
+
+describe("prefixProjectPath", () => {
+  it("names a root's own path from the project", () => {
+    expect(prefixProjectPath("web-app", "src/a.ts")).toBe("web-app/src/a.ts");
+  });
+
+  it("leaves a path alone when the project is the root", () => {
+    expect(prefixProjectPath("", "src/a.ts")).toBe("src/a.ts");
   });
 });
 
