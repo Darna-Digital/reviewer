@@ -43,6 +43,8 @@ export const Route = createFileRoute("/")({
 
 const ASCII_INK_DARK: [number, number, number] = [0.42, 0.42, 0.42];
 
+const VIDEO_CREDIT_TOOLTIP_ID = "background-video-credit";
+
 function CtaButton({
   href,
   variant = "primary",
@@ -83,6 +85,27 @@ function StatementWord({ word, index }: { word: string; index: string }) {
   );
 }
 
+function VideoCredit() {
+  return (
+    <span className="group absolute right-6 bottom-6 z-20 inline-flex">
+      <button
+        aria-describedby={VIDEO_CREDIT_TOOLTIP_ID}
+        className="cursor-default rounded-full bg-white/60 px-3 py-1 font-mono text-[10px] tracking-wide text-neutral-600 ring-1 ring-black/5 backdrop-blur-sm transition-colors hover:text-neutral-900 dark:bg-white/5 dark:text-neutral-400 dark:ring-white/10 dark:hover:text-white"
+        type="button"
+      >
+        Video copyright
+      </button>
+      <span
+        className="pointer-events-none absolute top-1/2 right-[calc(100%+0.5rem)] -translate-y-1/2 translate-x-1 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs whitespace-nowrap text-white opacity-0 shadow-lg transition duration-150 group-focus-within:translate-x-0 group-focus-within:opacity-100 group-hover:translate-x-0 group-hover:opacity-100 dark:bg-white dark:text-neutral-950"
+        id={VIDEO_CREDIT_TOOLTIP_ID}
+        role="tooltip"
+      >
+        【=◈︿◈=】porter robinson - worlds
+      </span>
+    </span>
+  );
+}
+
 function Home() {
   const prefersDark = usePrefersDark();
 
@@ -116,7 +139,7 @@ function Home() {
           </Asciify>
         </div>
 
-        <section className="relative">
+        <section className="relative mt-8 lg:mt-16">
           <Container>
             <div className="flex flex-col items-start gap-5 pt-24 pb-72 text-neutral-900 lg:pt-48 lg:pb-[30rem] dark:text-white">
               <h1 className="max-w-lg text-5xl leading-[1.02] font-medium tracking-[-0.02em] text-balance sm:text-[56px] md:text-[64px] lg:max-w-3xl lg:text-[72px]">
@@ -144,6 +167,8 @@ function Home() {
             </div>
           </Container>
         </div>
+
+        <VideoCredit />
       </div>
 
       <section className="py-16 md:py-32">

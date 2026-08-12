@@ -1,4 +1,5 @@
 import { Logo } from "#/components/logo";
+import { useScrolled } from "#/hooks/use-scrolled";
 
 const NAV_LINKS = [
   { label: "Changelog", href: "/changelog" },
@@ -7,9 +8,19 @@ const NAV_LINKS = [
 ];
 
 export function SiteHeader() {
+  const scrolled = useScrolled();
+  const backdrop = scrolled
+    ? "border-black/8 bg-white/80 backdrop-blur-md dark:border-white/10 dark:bg-neutral-950/80"
+    : "border-transparent bg-transparent";
+  const navTone = scrolled
+    ? "text-neutral-700 dark:text-neutral-300"
+    : "text-neutral-900 dark:text-neutral-100";
+
   return (
-    <header className="sticky top-0 z-40">
-      <div className="h-header border-b border-black/8 bg-white dark:border-white/10 dark:bg-neutral-950">
+    <header className="sticky top-0 z-40 -mb-header">
+      <div
+        className={`h-header border-b transition-colors duration-200 ${backdrop}`}
+      >
         <div className="mx-auto flex h-full max-w-[1248px] items-center gap-6 px-6">
           <a aria-label="byconvo home" className="flex shrink-0" href="/">
             <Logo className="h-7 w-auto" />
@@ -21,7 +32,7 @@ export function SiteHeader() {
             {NAV_LINKS.map((link) => (
               <a
                 key={link.href}
-                className="flex h-7 items-center rounded-md px-2 text-sm whitespace-nowrap text-neutral-600 transition-colors hover:bg-black/5 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-white/8 dark:hover:text-white"
+                className={`flex h-7 items-center rounded-md px-2 text-sm whitespace-nowrap transition-colors hover:bg-black/5 hover:text-neutral-900 dark:hover:bg-white/8 dark:hover:text-white ${navTone}`}
                 href={link.href}
               >
                 {link.label}
