@@ -21,5 +21,8 @@ allowBuilds:
   electron: true
   electron-winstaller: true
   esbuild: true
+  lightningcss: true
   msgpackr-extract: true
+  sharp: true
   unrs-resolver: true
+  workerd: true
