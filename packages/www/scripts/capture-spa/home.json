@@ -1,0 +1,64 @@
+{
+  "defaults": {
+    "selector": ".app-frame",
+    "focus": ".app-canvas",
+    "width": 1440,
+    "height": 900,
+    "settle": 2000,
+    "waitFor": ".app-canvas"
+  },
+  "captures": [
+    {
+      "name": "hero",
+      "out": "public/spa-snapshots/hero.json",
+      "url": "http://localhost:41812/modes/code/browse/commit/347962df5ceb186e3a1b4e2569d4469857fb2f91",
+      "focus": null,
+      "width": 1600,
+      "height": 1000,
+      "waitFor": "diffs-container"
+    },
+    {
+      "name": "review",
+      "out": "public/spa-snapshots/review.json",
+      "url": "http://localhost:41812/modes/code/browse/commit/347962df5ceb186e3a1b4e2569d4469857fb2f91",
+      "state": "./state/review.json",
+      "waitFor": "diffs-container",
+      "prepare": "./prepare/open-comment.ts"
+    },
+    {
+      "name": "agents",
+      "out": "public/spa-snapshots/agents.json",
+      "url": "http://localhost:41812/modes/agent-session",
+      "state": "./state/session.json"
+    },
+    {
+      "name": "plans",
+      "out": "public/spa-snapshots/plans.json",
+      "url": "http://localhost:41812/modes/code/browse/commit/347962df5ceb186e3a1b4e2569d4469857fb2f91",
+      "state": "./state/plans.json",
+      "focus": ".app-canvas, .app-canvas ~ div",
+      "waitFor": "diffs-container"
+    },
+    {
+      "name": "collaboration",
+      "out": "public/spa-snapshots/collaboration.json",
+      "url": "http://localhost:41812/modes/collaboration",
+      "state": "./state/collaboration.json",
+      "settle": 5000
+    },
+    {
+      "name": "local-dev",
+      "out": "public/spa-snapshots/local-dev.json",
+      "url": "http://localhost:41812/modes/code/browse?file=packages/spa/src/interactions/local-dev/functions/local-dev.functions.ts",
+      "state": "./state/services.json",
+      "waitFor": "diffs-container",
+      "settle": 3000
+    },
+    {
+      "name": "git",
+      "out": "public/spa-snapshots/git.json",
+      "url": "http://localhost:41812/modes/code/browse",
+      "state": "./state/history.json"
+    }
+  ]
+}

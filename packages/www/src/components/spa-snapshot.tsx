@@ -81,10 +81,49 @@ function restoreScroll(root: ShadowRoot | Element) {
   }
 }
 
-function useSnapshot(src: string) {
+const NEARBY_PX = 600;
+const THROTTLE_MS = 100;
+
+/** Sections further down the page fetch their snapshot as they come into range. */
+function useNearViewport(ref: React.RefObject<Element | null>, eager: boolean) {
+  const [near, setNear] = useState(eager);
+
+  useEffect(() => {
+    if (near) return;
+    const element = ref.current;
+    if (!element) return;
+
+    let checkedAt = 0;
+    const check = () => {
+      const box = element.getBoundingClientRect();
+      if (box.top < innerHeight + NEARBY_PX && box.bottom > -NEARBY_PX) {
+        setNear(true);
+      }
+    };
+    const onScroll = () => {
+      const now = performance.now();
+      if (now - checkedAt < THROTTLE_MS) return;
+      checkedAt = now;
+      check();
+    };
+
+    check();
+    addEventListener("scroll", onScroll, { passive: true });
+    addEventListener("resize", onScroll, { passive: true });
+    return () => {
+      removeEventListener("scroll", onScroll);
+      removeEventListener("resize", onScroll);
+    };
+  }, [near, ref]);
+
+  return near;
+}
+
+function useSnapshot(src: string, enabled: boolean) {
   const [snapshot, setSnapshot] = useState<SpaSnapshotFile | null>(null);
 
   useEffect(() => {
+    if (!enabled) return;
     const controller = new AbortController();
     void (async () => {
       try {
@@ -96,7 +135,7 @@ function useSnapshot(src: string) {
       }
     })();
     return () => controller.abort();
-  }, [src]);
+  }, [src, enabled]);
 
   return snapshot;
 }
@@ -106,34 +145,42 @@ export function SpaSnapshot({
   label,
   width,
   height,
+  eager = false,
   className = "",
 }: {
   src: string;
   label: string;
   width: number;
   height: number;
+  /** Set on the hero: it is on screen at load, so it should not wait. */
+  eager?: boolean;
   className?: string;
 }) {
-  const snapshot = useSnapshot(src);
-  const prefersDark = usePrefersDark();
-  const variant = snapshot?.variants[prefersDark ? "dark" : "light"] ?? null;
-
   const containerRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0);
 
-  const frameWidth = variant?.rootWidth ?? width;
-  const frameHeight = variant?.rootHeight ?? height;
+  const near = useNearViewport(containerRef, eager);
+  const snapshot = useSnapshot(src, near);
+  const prefersDark = usePrefersDark();
+  const variant = snapshot?.variants[prefersDark ? "dark" : "light"] ?? null;
+
+  const frame = variant?.focus ?? {
+    left: 0,
+    top: 0,
+    width: variant?.rootWidth ?? width,
+    height: variant?.rootHeight ?? height,
+  };
 
   useLayoutEffect(() => {
     const container = containerRef.current;
     if (!container) return;
     const observer = new ResizeObserver(([entry]) => {
-      if (entry) setScale(entry.contentRect.width / frameWidth);
+      if (entry) setScale(entry.contentRect.width / frame.width);
     });
     observer.observe(container);
     return () => observer.disconnect();
-  }, [frameWidth]);
+  }, [frame.width]);
 
   useLayoutEffect(() => {
     const host = hostRef.current;
@@ -163,18 +210,20 @@ export function SpaSnapshot({
       className={`relative overflow-hidden ${className}`}
       ref={containerRef}
       role="img"
-      style={{ aspectRatio: `${frameWidth} / ${frameHeight}` }}
+      style={{ aspectRatio: `${frame.width} / ${frame.height}` }}
     >
       {/* `inert` keeps focus out; `pointer-events-none` keeps the app's own
           scroll containers from swallowing the page's wheel events. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute top-0 left-0 origin-top-left"
+        className="pointer-events-none absolute origin-top-left"
         inert
         ref={hostRef}
         style={{
-          width: `${frameWidth}px`,
-          height: `${frameHeight}px`,
+          width: `${variant?.rootWidth ?? width}px`,
+          height: `${variant?.rootHeight ?? height}px`,
+          left: `${-frame.left * scale}px`,
+          top: `${-frame.top * scale}px`,
           transform: `scale(${scale})`,
           visibility: mounted ? "visible" : "hidden",
         }}

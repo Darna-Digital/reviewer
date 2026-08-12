@@ -1,0 +1,9 @@
+{
+  "byconvo-ui": {
+    "bottomVisible": false,
+    "sidebarVisible": false,
+    "plansPaneOpen": true,
+    "plansPaneWidth": 760,
+    "plansNotesHeight": 240
+  }
+}

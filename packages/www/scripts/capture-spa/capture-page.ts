@@ -16,8 +16,15 @@ interface RuleScope {
 export async function capturePage(
   options: CaptureOptions
 ): Promise<SpaSnapshotVariant> {
-  const { selector, exclude, width, height, fonts, inlineAssetMaxBytes } =
-    options;
+  const {
+    selector,
+    focus,
+    exclude,
+    width,
+    height,
+    fonts,
+    inlineAssetMaxBytes,
+  } = options;
 
   const STATE_PSEUDO =
     /:(?:hover|active|focus|focus-visible|focus-within|visited|target|any-link|link|checked|indeterminate|disabled|enabled|placeholder-shown|autofill|open|popover-open|user-valid|user-invalid|-webkit-[\w-]+|-moz-[\w-]+)\b/g;
@@ -454,6 +461,30 @@ export async function capturePage(
 
   const rect = root.getBoundingClientRect();
 
+  /** Several selectors frame the box that spans them all — a canvas plus a side pane. */
+  const focusRegion = () => {
+    if (!focus) return null;
+    const targets = [
+      ...(root.matches(focus) ? [root] : []),
+      ...root.querySelectorAll(focus),
+    ];
+    if (!targets.length) {
+      warnings.push(
+        `Nothing matched --focus ${focus}; framing the whole capture`
+      );
+      return null;
+    }
+    const boxes = targets.map((target) => target.getBoundingClientRect());
+    const left = Math.min(...boxes.map((box) => box.left));
+    const top = Math.min(...boxes.map((box) => box.top));
+    return {
+      left: Math.round(left - rect.left),
+      top: Math.round(top - rect.top),
+      width: Math.round(Math.max(...boxes.map((box) => box.right)) - left),
+      height: Math.round(Math.max(...boxes.map((box) => box.bottom)) - top),
+    };
+  };
+
   return {
     html: clone.outerHTML,
     css,
@@ -463,6 +494,7 @@ export async function capturePage(
     bodyAttrs: attributesOf(document.body),
     rootWidth: Math.round(rect.width),
     rootHeight: Math.round(rect.height),
+    focus: focusRegion(),
     viewport: { width, height },
     nodes: countNodes(clone) + 1,
     droppedNodes,

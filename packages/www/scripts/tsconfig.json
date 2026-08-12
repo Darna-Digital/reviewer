@@ -4,6 +4,7 @@
   "exclude": [],
   "compilerOptions": {
     "types": ["node"],
-    "erasableSyntaxOnly": true
+    "erasableSyntaxOnly": true,
+    "moduleDetection": "force"
   }
 }

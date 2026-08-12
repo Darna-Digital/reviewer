@@ -13,6 +13,12 @@ export default [
     },
   },
   {
-    ignores: ["eslint.config.js", "prettier.config.js", "src/routeTree.gen.ts"],
+    ignores: [
+      "eslint.config.js",
+      "prettier.config.js",
+      // Snippets evaluated inside the captured page, not modules of this app.
+      "scripts/capture-spa/prepare/**",
+      "src/routeTree.gen.ts",
+    ],
   },
 ];

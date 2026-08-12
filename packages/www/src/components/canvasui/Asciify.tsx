@@ -76,6 +76,7 @@ const CHARSETS: Record<AsciifyCharset, number[]> = {
 
 const MAX_GLYPHS = 16;
 const FALLBACK_CAPTURE_DELAY = 500;
+const POINTER_REACH = 0.25;
 
 const DEFAULTS: Required<AsciifyOptions> = {
   radius: 0.4,
@@ -1194,7 +1195,8 @@ function initializeAsciify(
   });
   intersection.observe(output);
 
-  const listenTarget = output.parentElement ?? output;
+  const listenTarget = window;
+  const leaveTarget = document.documentElement;
 
   const contentObserver = htmlInCanvas
     ? null
@@ -1238,9 +1240,16 @@ function initializeAsciify(
 
   function onPointerMove(event: PointerEvent) {
     const rect = output.getBoundingClientRect();
-    pointer.tx = (event.clientX - rect.left) / Math.max(rect.width, 1);
-    pointer.ty = 1 - (event.clientY - rect.top) / Math.max(rect.height, 1);
-    pointer.target = 1;
+    const x = (event.clientX - rect.left) / Math.max(rect.width, 1);
+    const y = (event.clientY - rect.top) / Math.max(rect.height, 1);
+    const withinReach =
+      x > -POINTER_REACH &&
+      x < 1 + POINTER_REACH &&
+      y > -POINTER_REACH &&
+      y < 1 + POINTER_REACH;
+    pointer.tx = x;
+    pointer.ty = 1 - y;
+    pointer.target = withinReach ? 1 : 0;
     queueFallbackCapture();
     start();
   }
@@ -1254,7 +1263,7 @@ function initializeAsciify(
   listenTarget.addEventListener("pointermove", onPointerMove, {
     passive: true,
   });
-  listenTarget.addEventListener("pointerleave", onPointerLeave, {
+  leaveTarget.addEventListener("pointerleave", onPointerLeave, {
     passive: true,
   });
   content.addEventListener("scroll", scheduleTextMask, {
@@ -1310,7 +1319,7 @@ function initializeAsciify(
       schemeQuery.removeEventListener("change", onThemeShift);
       motionQuery.removeEventListener("change", onMotionChange);
       listenTarget.removeEventListener("pointermove", onPointerMove);
-      listenTarget.removeEventListener("pointerleave", onPointerLeave);
+      leaveTarget.removeEventListener("pointerleave", onPointerLeave);
       content.removeEventListener("scroll", onContentScroll, true);
       content.removeEventListener("scroll", scheduleTextMask, {
         capture: true,

@@ -9,14 +9,14 @@
     "dev": "vite dev --port 3000",
     "generate-routes": "tsr generate",
     "capture:spa": "node scripts/capture-spa/cli.ts",
-    "capture:hero": "node scripts/capture-spa/cli.ts --url http://localhost:41812/modes/code/browse/commit/347962df5ceb186e3a1b4e2569d4469857fb2f91 --out public/spa-snapshots/hero.json --wait-for diffs-container",
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "pnpm run build && wrangler deploy",
     "lint": "eslint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,css}\"",
-    "typecheck": "tsc --noEmit && tsc -p scripts --noEmit"
+    "typecheck": "tsc --noEmit && tsc -p scripts --noEmit",
+    "capture:home": "node scripts/capture-spa/cli.ts --manifest scripts/capture-spa/home.json"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.2.8",

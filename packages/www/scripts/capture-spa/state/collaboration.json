@@ -1,0 +1,17 @@
+{
+  "byconvo-collaboration-tabs": {
+    "tabs": [
+      {
+        "id": "collab-tab-1",
+        "href": "/modes/collaboration",
+        "kind": "project",
+        "subject": "atlas",
+        "title": "Atlas rewrite"
+      }
+    ],
+    "activeId": "collab-tab-1"
+  },
+  "byconvo-ui": {
+    "workspaceSidebarWidth": 250
+  }
+}

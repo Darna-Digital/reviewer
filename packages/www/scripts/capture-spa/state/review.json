@@ -1,0 +1,8 @@
+{
+  "byconvo-ui": {
+    "bottomVisible": false,
+    "sidebarVisible": true,
+    "sidebarWidth": 300,
+    "diffStyle": "split"
+  }
+}

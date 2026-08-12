@@ -10,7 +10,7 @@ export function Logo({ className }: { className?: string }) {
         className={className}
         height={315}
         src="/byconvo-logo-horizontal-black.svg"
-        width={1233}
+        width={1278}
       />
     </picture>
   );

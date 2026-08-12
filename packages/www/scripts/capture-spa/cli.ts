@@ -2,23 +2,22 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
-import { delay, launchBrowser } from "./browser.ts";
-import { capturePage } from "./capture-page.ts";
-import type {
-  CaptureOptions,
-  SpaSnapshotFile,
-  SpaSnapshotScheme,
-  SpaSnapshotVariant,
-} from "../../src/lib/spa-snapshot.ts";
+import { launchBrowser } from "./browser.ts";
+import { captureSnapshot, parseClickSpec } from "./capture.ts";
+import type { CaptureConfig } from "./capture.ts";
+import type { SpaSnapshotScheme } from "../../src/lib/spa-snapshot.ts";
 
-const USAGE = `Capture a live byconvo SPA view as inert DOM + CSS.
+const USAGE = `Capture live byconvo SPA views as inert DOM + CSS.
 
 Usage
   pnpm capture:spa --url <page> --out <file.json> [options]
+  pnpm capture:spa --manifest <file.json>          capture a whole set
 
 Options
   --url        Page to capture            (default http://localhost:41812/)
   --selector   Element to capture         (default .app-frame)
+  --focus      Element(s) to frame the render on — several frame the box that
+               spans them all; the whole --selector subtree is still captured
   --out        JSON to write              (default public/spa-snapshots/hero.json)
   --width      Capture viewport width     (default 1600)
   --height     Capture viewport height    (default 1000)
@@ -28,24 +27,54 @@ Options
   --exclude    Selector to drop from the capture (repeatable)
   --fonts      skip | inline              (default skip — the site ships Inter)
   --state      JSON file of localStorage entries to seed the app's UI state
-  --prepare    JS file run in the page (awaited) to set the view up before capture
+  --prepare    TS file run in the page (awaited) to set the view up
+  --click      [selector@]x,y — a real click before capturing (repeatable)
+  --manifest   JSON file of { defaults, captures } to run in one browser
+  --only       With --manifest: capture just this named entry (repeatable)
   --headed     Show the browser while capturing
 `;
 
+interface ManifestEntry {
+  name?: string;
+  url?: string;
+  selector?: string;
+  focus?: string;
+  out?: string;
+  width?: number;
+  height?: number;
+  scheme?: string;
+  waitFor?: string;
+  settle?: number;
+  exclude?: Array<string>;
+  fonts?: string;
+  clicks?: Array<string>;
+  state?: string;
+  prepare?: string;
+}
+
+interface Manifest {
+  defaults?: ManifestEntry;
+  captures: Array<ManifestEntry>;
+}
+
 const { values } = parseArgs({
   options: {
-    url: { type: "string", default: "http://localhost:41812/" },
-    selector: { type: "string", default: ".app-frame" },
-    out: { type: "string", default: "public/spa-snapshots/hero.json" },
-    width: { type: "string", default: "1600" },
-    height: { type: "string", default: "1000" },
-    scheme: { type: "string", default: "both" },
+    url: { type: "string" },
+    selector: { type: "string" },
+    focus: { type: "string" },
+    out: { type: "string" },
+    width: { type: "string" },
+    height: { type: "string" },
+    scheme: { type: "string" },
     "wait-for": { type: "string" },
-    settle: { type: "string", default: "1500" },
-    exclude: { type: "string", multiple: true, default: [] },
-    fonts: { type: "string", default: "skip" },
+    settle: { type: "string" },
+    exclude: { type: "string", multiple: true },
+    fonts: { type: "string" },
     state: { type: "string" },
     prepare: { type: "string" },
+    click: { type: "string", multiple: true },
+    manifest: { type: "string" },
+    only: { type: "string", multiple: true },
     headed: { type: "boolean", default: false },
     help: { type: "boolean", default: false },
   },
@@ -56,100 +85,107 @@ if (values.help) {
   process.exit(0);
 }
 
-const width = Number(values.width);
-const height = Number(values.height);
-const settle = Number(values.settle);
-const schemes: Array<SpaSnapshotScheme> =
-  values.scheme === "both"
+const readJson = async <T>(path: string): Promise<T> =>
+  JSON.parse(await readFile(path, "utf8")) as T;
+
+const schemesOf = (scheme: string | undefined): Array<SpaSnapshotScheme> =>
+  scheme === undefined || scheme === "both"
     ? ["light", "dark"]
-    : [values.scheme as SpaSnapshotScheme];
-const outFile = resolve(process.cwd(), values.out);
+    : [scheme as SpaSnapshotScheme];
 
-const captureOptions: CaptureOptions = {
-  selector: values.selector,
-  exclude: values.exclude,
-  width,
-  height,
-  fonts: values.fonts === "inline" ? "inline" : "skip",
-  inlineAssetMaxBytes: 512 * 1024,
-};
-
-const seededState: Record<string, string> = values.state
-  ? JSON.parse(await readFile(resolve(process.cwd(), values.state), "utf8"))
-  : {};
-
-const prepareSource = values.prepare
-  ? await readFile(resolve(process.cwd(), values.prepare), "utf8")
-  : null;
-
-/** The app reads its stored state before first paint, so seed it pre-navigation. */
-const initScript = (scheme: SpaSnapshotScheme) => {
-  const entries = {
-    ...seededState,
-    "byconvo-theme": scheme,
-    "byconvo-ui": JSON.stringify({
-      ...JSON.parse(seededState["byconvo-ui"] ?? "{}"),
-      translucency: false,
-    }),
+async function toConfig(
+  entry: ManifestEntry,
+  base: string
+): Promise<CaptureConfig> {
+  const path = (value: string) => resolve(base, value);
+  return {
+    name: entry.name ?? entry.out ?? "capture",
+    url: entry.url ?? "http://localhost:41812/",
+    selector: entry.selector ?? ".app-frame",
+    focus: entry.focus ?? null,
+    out: resolve(process.cwd(), entry.out ?? "public/spa-snapshots/hero.json"),
+    width: entry.width ?? 1600,
+    height: entry.height ?? 1000,
+    schemes: schemesOf(entry.scheme),
+    waitFor: entry.waitFor ?? null,
+    settle: entry.settle ?? 1500,
+    exclude: entry.exclude ?? [],
+    fonts: entry.fonts === "inline" ? "inline" : "skip",
+    clicks: (entry.clicks ?? []).map(parseClickSpec),
+    state: entry.state ? await readJson(path(entry.state)) : {},
+    prepare: entry.prepare ? await readFile(path(entry.prepare), "utf8") : null,
   };
-  return `try {
-  for (const [key, value] of ${JSON.stringify(Object.entries(entries))}) {
-    localStorage.setItem(key, value);
+}
+
+async function plan(): Promise<Array<CaptureConfig>> {
+  if (!values.manifest) {
+    const entry: ManifestEntry = {
+      name: "capture",
+      ...(values.url && { url: values.url }),
+      ...(values.selector && { selector: values.selector }),
+      ...(values.focus && { focus: values.focus }),
+      ...(values.out && { out: values.out }),
+      ...(values.width && { width: Number(values.width) }),
+      ...(values.height && { height: Number(values.height) }),
+      ...(values.scheme && { scheme: values.scheme }),
+      ...(values["wait-for"] && { waitFor: values["wait-for"] }),
+      ...(values.settle && { settle: Number(values.settle) }),
+      ...(values.exclude && { exclude: values.exclude }),
+      ...(values.fonts && { fonts: values.fonts }),
+      ...(values.click && { clicks: values.click }),
+      ...(values.state && { state: values.state }),
+      ...(values.prepare && { prepare: values.prepare }),
+    };
+    return [await toConfig(entry, process.cwd())];
   }
-} catch {}`;
-};
+
+  const manifestPath = resolve(process.cwd(), values.manifest);
+  const manifest = await readJson<Manifest>(manifestPath);
+  const base = dirname(manifestPath);
+  const wanted = values.only;
+  return Promise.all(
+    manifest.captures
+      .filter((entry) => !wanted || wanted.includes(entry.name ?? ""))
+      .map((entry) => toConfig({ ...manifest.defaults, ...entry }, base))
+  );
+}
+
+const configs = await plan();
+if (!configs.length) {
+  process.stderr.write("Nothing to capture\n");
+  process.exit(1);
+}
 
 const kb = (value: number) => `${Math.round(value / 1024)}kb`;
-
 const browser = await launchBrowser({ headed: values.headed });
-const variants = {} as Record<SpaSnapshotScheme, SpaSnapshotVariant>;
 
 try {
-  for (const scheme of schemes) {
-    const page = await browser.openPage({
-      width,
-      height,
-      scheme,
-      initScript: initScript(scheme),
-    });
-    await page.goto(values.url);
-    await page.waitForSelector(values.selector, 30_000);
-    if (values["wait-for"]) {
-      await page.waitForSelector(values["wait-for"], 30_000);
-    }
-    if (prepareSource) {
-      await page.evaluate(`(async () => {${prepareSource}})()`);
-    }
-    await delay(settle);
-
-    const variant = await page.evaluate<SpaSnapshotVariant>(
-      `(${capturePage.toString()})(${JSON.stringify(captureOptions)})`
+  for (const config of configs) {
+    process.stdout.write(`${config.name} ← ${config.url}\n`);
+    const payload = await captureSnapshot(
+      browser,
+      config,
+      (scheme, variant) => {
+        const framed = variant.focus
+          ? ` framed ${variant.focus.width}×${variant.focus.height}`
+          : "";
+        process.stdout.write(
+          `  ${scheme}: ${variant.nodes} nodes, ${kb(variant.html.length)} html, ` +
+            `${kb(variant.css.length)} css, ${variant.rootWidth}×${variant.rootHeight}${framed}\n`
+        );
+        for (const warning of variant.warnings) {
+          process.stdout.write(`  ! ${warning}\n`);
+        }
+      }
     );
-    await page.close();
 
-    variants[scheme] = variant;
+    const json = JSON.stringify(payload);
+    await mkdir(dirname(config.out), { recursive: true });
+    await writeFile(config.out, `${json}\n`);
     process.stdout.write(
-      `${scheme}: ${variant.nodes} nodes, ${kb(variant.html.length)} html, ` +
-        `${kb(variant.css.length)} css, ${variant.rootWidth}×${variant.rootHeight}\n`
+      `  wrote ${relative(process.cwd(), config.out)} (${kb(json.length)})\n`
     );
-    for (const warning of variant.warnings) {
-      process.stdout.write(`  ! ${warning}\n`);
-    }
   }
 } finally {
   await browser.close();
 }
-
-const payload: SpaSnapshotFile = {
-  url: values.url,
-  selector: values.selector,
-  capturedAt: new Date().toISOString(),
-  variants,
-};
-
-const json = JSON.stringify(payload);
-await mkdir(dirname(outFile), { recursive: true });
-await writeFile(outFile, `${json}\n`);
-process.stdout.write(
-  `wrote ${relative(process.cwd(), outFile)} (${kb(json.length)})\n`
-);

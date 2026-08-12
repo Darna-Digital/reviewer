@@ -20,6 +20,7 @@ const PORT_FILE_TIMEOUT_MS = 20_000;
 const COMMAND_TIMEOUT_MS = 120_000;
 const NAVIGATION_TIMEOUT_MS = 60_000;
 const SELECTOR_POLL_MS = 100;
+const HOVER_SETTLE_MS = 120;
 
 interface CdpMessage {
   id?: number;
@@ -42,6 +43,9 @@ export interface CapturePage {
   goto: (url: string) => Promise<void>;
   waitForSelector: (selector: string, timeoutMs: number) => Promise<void>;
   evaluate: <T>(expression: string) => Promise<T>;
+  /** A real browser click, so it hit-tests into shadow DOM the way a user does. */
+  click: (x: number, y: number) => Promise<void>;
+  elementOrigin: (selector: string) => Promise<{ x: number; y: number } | null>;
   close: () => Promise<unknown>;
 }
 
@@ -265,6 +269,36 @@ export async function launchBrowser({
           throw new Error(`Timed out waiting for ${selector}`);
         },
         evaluate,
+        async click(x, y) {
+          // Move first: gutter affordances only render under the pointer, so a
+          // bare press lands on nothing.
+          await send("Input.dispatchMouseEvent", {
+            type: "mouseMoved",
+            x,
+            y,
+            button: "none",
+          });
+          await delay(HOVER_SETTLE_MS);
+          for (const type of ["mousePressed", "mouseReleased"]) {
+            await send("Input.dispatchMouseEvent", {
+              type,
+              x,
+              y,
+              button: "left",
+              buttons: type === "mousePressed" ? 1 : 0,
+              clickCount: 1,
+            });
+          }
+        },
+        elementOrigin: (selector) =>
+          evaluate<{ x: number; y: number } | null>(
+            `(() => {
+              const element = document.querySelector(${JSON.stringify(selector)});
+              if (!element) return null;
+              const rect = element.getBoundingClientRect();
+              return { x: rect.left, y: rect.top };
+            })()`
+          ),
         close: () => connection.send("Target.closeTarget", { targetId }),
       };
     },
