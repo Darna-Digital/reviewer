@@ -1,4 +1,10 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --spacing-header: 3.5rem;
+}
 
 * {
   box-sizing: border-box;
@@ -12,4 +18,5 @@ body,
 
 body {
   margin: 0;
+  background-color: white;
 }
