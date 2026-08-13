@@ -70,6 +70,23 @@ export const filterChats = (
   );
 };
 
+/**
+ * The project filter to actually apply. A stored filter outlives the project it
+ * names — a session list it once narrowed can be emptied, and a filter pointing
+ * at nothing would leave the list permanently blank. It steps aside instead,
+ * but only once there are sessions to check it against: mid-load everything is
+ * absent, and that is not the same as gone.
+ */
+export const resolveProjectFilter = (
+  projects: ReadonlyArray<ProjectOption>,
+  project: ProjectFilter
+): ProjectFilter =>
+  project === ALL_PROJECTS ||
+  projects.length === 0 ||
+  projects.some((option) => option.path === project)
+    ? project
+    : ALL_PROJECTS;
+
 /** The label for the project control — the project's name, or "All projects". */
 export const projectFilterLabel = (
   chats: ReadonlyArray<ChatSummary>,

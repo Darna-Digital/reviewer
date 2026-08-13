@@ -5,6 +5,7 @@ import {
   filterChats,
   projectFilterLabel,
   projectsOf,
+  resolveProjectFilter,
 } from "./chat-filters.functions";
 
 const chat = (
@@ -90,6 +91,23 @@ describe("filterChats", () => {
         (c) => c.id
       )
     ).toEqual(["c-side"]);
+  });
+});
+
+describe("resolveProjectFilter", () => {
+  const projects = projectsOf(chats);
+
+  it("keeps a filter whose project still has sessions", () => {
+    expect(resolveProjectFilter(projects, "/home/side")).toBe("/home/side");
+    expect(resolveProjectFilter(projects, ALL_PROJECTS)).toBe(ALL_PROJECTS);
+  });
+
+  it("steps aside for a project with nothing left in it", () => {
+    expect(resolveProjectFilter(projects, "/home/gone")).toBe(ALL_PROJECTS);
+  });
+
+  it("holds the filter while the sessions are still loading", () => {
+    expect(resolveProjectFilter([], "/home/side")).toBe("/home/side");
   });
 });
 

@@ -12,7 +12,9 @@
  * the "Recents" heading and only appear under the pointer: a time window, and
  * the project, which is the axis that arrived with the list spanning all of
  * them. A chosen filter keeps its control visible, so the list is never quietly
- * narrower than it looks.
+ * narrower than it looks, and it is kept across visits — narrowing to a project
+ * says what you are working on, which does not stop being true when you open a
+ * session.
  *
  * Arriving marks the inbox seen, so the rail's dot only stands for sessions that
  * moved since you last looked; the rows keep comparing against the mark this
@@ -45,8 +47,13 @@ import {
   ALL_PROJECTS,
   filterChats,
   projectsOf,
+  resolveProjectFilter,
   type ProjectFilter,
 } from "@/interactions/chats/functions/chat-filters.functions";
+import {
+  setChatFilters,
+  useChatFilters,
+} from "@/interactions/chats/adapters/chat-filters.store";
 import { DATE_FILTERS, type DateFilter } from "@/lib/date-filter";
 import { useChats } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
@@ -77,16 +84,16 @@ export function ChatsPage() {
 
   const summaries = useMemo(() => chats.data ?? [], [chats.data]);
 
-  const [dateFilter, setDateFilter] = useState<DateFilter>("all");
-  const [projectFilter, setProjectFilter] =
-    useState<ProjectFilter>(ALL_PROJECTS);
+  // Derived from the sessions themselves: a project is offered while it has
+  // something to show, and the menu needs nothing fetched to draw itself.
+  const projects = useMemo(() => projectsOf(summaries), [summaries]);
+  const stored = useChatFilters();
+  const dateFilter = stored.date;
+  const projectFilter = resolveProjectFilter(projects, stored.project);
   const filtered = useMemo(
     () => filterChats(summaries, { project: projectFilter, date: dateFilter }),
     [summaries, projectFilter, dateFilter]
   );
-  // Derived from the sessions themselves: a project is offered while it has
-  // something to show, and the menu needs nothing fetched to draw itself.
-  const projects = useMemo(() => projectsOf(summaries), [summaries]);
 
   const remove = async (id: string) => {
     try {
@@ -147,7 +154,7 @@ export function ChatsPage() {
                         <DropdownMenuRadioGroup
                           value={projectFilter}
                           onValueChange={(v) =>
-                            setProjectFilter(v as ProjectFilter)
+                            setChatFilters({ project: v as ProjectFilter })
                           }
                         >
                           <DropdownMenuRadioItem value={ALL_PROJECTS}>
@@ -190,7 +197,9 @@ export function ChatsPage() {
                     <DropdownMenuContent align="start" className="min-w-40">
                       <DropdownMenuRadioGroup
                         value={dateFilter}
-                        onValueChange={(v) => setDateFilter(v as DateFilter)}
+                        onValueChange={(v) =>
+                          setChatFilters({ date: v as DateFilter })
+                        }
                       >
                         {DATE_FILTERS.map((d) => (
                           <DropdownMenuRadioItem key={d.value} value={d.value}>
