@@ -2,8 +2,10 @@
  * Transitions over the window-tab strip. All of it is decidable from the state
  * and a tab id, so none of it needs a rendered strip — or a router — to test.
  */
+import type { WorkMode } from "@/lib/ui-prefs";
 import type {
   WindowTab,
+  WindowTabKind,
   WindowTabsState,
 } from "../interfaces/window-tabs.interfaces";
 
@@ -60,6 +62,23 @@ const PINNED_TABS: ReadonlyArray<WindowTab> = [
 ];
 
 export const isPinnedTab = (tab: WindowTab): boolean => tab.kind !== "session";
+
+/**
+ * The way of working a tab frames the app in. A session belongs to whichever
+ * mode you were already in — a conversation is had about both — so it names
+ * none and leaves the frame as it found it.
+ */
+export function workModeOf(kind: WindowTabKind): WorkMode | null {
+  switch (kind) {
+    case "project":
+    case "sessions":
+      return "code";
+    case "collaboration":
+      return "collaboration";
+    case "session":
+      return null;
+  }
+}
 
 /** Pinned tabs always lead the strip, so their count is also the first slot a
  * session tab may take. */

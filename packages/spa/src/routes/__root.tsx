@@ -11,6 +11,7 @@ import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { isDesktop } from "@/lib/desktop";
+import { isPreviewWindow } from "@/lib/preview-window";
 import type { RouterContext } from "../router";
 import appCss from "../styles.css?url";
 
@@ -69,7 +70,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <TooltipProvider delay={300}>{children ?? <Outlet />}</TooltipProvider>
         <Toaster />
         {/* Devtools only in the browser, not inside the Electron shell. */}
-        {!isDesktop && (
+        {/* Devtools only in the browser, not inside the Electron shell — and
+            never in a preview frame, which would boot a second set of panels
+            for a picture of a page. */}
+        {!isDesktop && !isPreviewWindow && (
           <TanStackDevtools
             config={{ position: "bottom-right" }}
             plugins={[
