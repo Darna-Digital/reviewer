@@ -402,8 +402,8 @@ export function ThreadsPage() {
             </header>
 
             {/* Every visited terminal stays mounted; only the active one shows.
-                No surface of its own — the terminal renders transparent onto
-                whatever the panel sits on (see lib/terminal/xterm-engine). */}
+                No surface of its own — the terminal paints the canvas tone it
+                sits on (see lib/terminal/xterm-engine). */}
             <div className="relative min-h-0 flex-1">
               {summaries
                 .filter((t) => mountedIds.includes(t.id))

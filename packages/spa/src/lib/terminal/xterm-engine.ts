@@ -20,10 +20,18 @@
  *     (xterm's built-in palette is tuned for a black background, so on the app's
  *     light theme the default blues/yellows/bright-white were near-invisible).
  *
- * The background is deliberately transparent in both themes: a terminal paints
- * no surface of its own and takes whatever it is mounted on — the app canvas,
- * and through it the native window's vibrancy — so it never shows as a black
- * rectangle punched through a light window (or the reverse).
+ * A terminal carries no colour of its own: its background is read from the app's
+ * own `--canvas` token at mount, so it is always the tone of the panel around it
+ * in either theme. That is how VS Code does it too — the terminal background
+ * comes from the workbench theme rather than from a terminal-specific colour.
+ *
+ * It is a real colour and not `allowTransparency`, deliberately. The glyph atlas
+ * every GPU renderer draws from is rasterised with
+ * `getContext('2d', { alpha: allowTransparency })`: on an opaque canvas the
+ * browser lays text down with subpixel antialiasing, on a transparent one it
+ * falls back to grayscale and glyphs come out thin and soft. Transparency also
+ * leaves cells the renderer never clears, which is what makes a full-screen
+ * agent TUI smear as it repaints.
  *
  * The engine is imported lazily by callers so xterm never runs during
  * SSR/prerender.
@@ -36,18 +44,15 @@ export type TerminalTheme = "light" | "dark";
 /**
  * Full ANSI palette per theme. The 16 colours are Tailwind hues (the app's own
  * palette) picked to stay legible on each background, plus a matching selection
- * tint and a cursor-accent that reads against the cursor block. `cursorAccent`
- * is the character under the cursor, so it stays the surface tone the theme
- * actually sits on even though the background itself is transparent.
+ * tint. The background is filled in from the live `--canvas` token (see
+ * `surfaceColor`); these entries only carry what the token cannot.
  */
-const TRANSPARENT = "#00000000";
+type TerminalPalette = Omit<ITheme, "background" | "cursorAccent">;
 
-const THEMES: Record<TerminalTheme, ITheme> = {
+const THEMES: Record<TerminalTheme, TerminalPalette> = {
   dark: {
-    background: TRANSPARENT,
     foreground: "#e5e5e5",
     cursor: "#e5e5e5",
-    cursorAccent: "#0a0a0a",
     selectionBackground: "#ffffff40",
     black: "#2b2b2b",
     red: "#f87171",
@@ -67,10 +72,8 @@ const THEMES: Record<TerminalTheme, ITheme> = {
     brightWhite: "#fafafa",
   },
   light: {
-    background: TRANSPARENT,
     foreground: "#171717",
     cursor: "#171717",
-    cursorAccent: "#ffffff",
     selectionBackground: "#00000026",
     black: "#1f2937",
     red: "#dc2626",
@@ -91,7 +94,35 @@ const THEMES: Record<TerminalTheme, ITheme> = {
   },
 };
 
-export const terminalTheme = (theme: TerminalTheme): ITheme => THEMES[theme];
+/** What `--canvas` resolves to before a document exists, per theme. */
+const SURFACE_FALLBACK: Record<TerminalTheme, string> = {
+  dark: "#0a0a0a",
+  light: "#ffffff",
+};
+
+/**
+ * The tone of the surface a terminal sits on, taken from the app's own
+ * `--canvas` token so the two can never drift. Read through a probe element
+ * because the token may be authored in a colour space xterm cannot parse
+ * (`oklch`), while a computed `background-color` always comes back as `rgb()`.
+ */
+const surfaceColor = (theme: TerminalTheme): string => {
+  if (typeof document === "undefined") return SURFACE_FALLBACK[theme];
+  const probe = document.createElement("div");
+  probe.style.cssText =
+    "position:absolute;visibility:hidden;background-color:var(--canvas)";
+  document.body.appendChild(probe);
+  const measured = getComputedStyle(probe).backgroundColor;
+  probe.remove();
+  return /^rgba?\(\s*\d/.test(measured) ? measured : SURFACE_FALLBACK[theme];
+};
+
+export const terminalTheme = (theme: TerminalTheme): ITheme => {
+  const surface = surfaceColor(theme);
+  // `cursorAccent` is the character under the block cursor, so it is the
+  // surface showing through rather than a colour of its own.
+  return { ...THEMES[theme], background: surface, cursorAccent: surface };
+};
 
 /** Base xterm options shared by every terminal in the app. */
 const baseOptions = (theme: TerminalTheme) =>
@@ -103,11 +134,12 @@ const baseOptions = (theme: TerminalTheme) =>
     // hairline seams through an agent's borders).
     lineHeight: 1.0,
     cursorBlink: true,
-    // Let the surface behind the terminal through — without this every renderer
-    // fills each cell with an opaque background first.
-    allowTransparency: true,
     // Required by the Unicode 11 addon's width provider.
     allowProposedApi: true,
+    // A glyph wider than its cell (powerline separators, nerd-font marks) is
+    // squeezed to fit instead of bleeding into its neighbour, which is what
+    // leaves an agent's status line looking chewed. VS Code ships this on.
+    rescaleOverlappingGlyphs: true,
     // Keep bold text bold without silently remapping it to the bright palette,
     // which muddies an agent TUI's deliberate colour choices.
     drawBoldTextInBrightColors: false,
