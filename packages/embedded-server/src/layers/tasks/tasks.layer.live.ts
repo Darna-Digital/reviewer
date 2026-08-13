@@ -4,8 +4,8 @@ import {
   TasksService,
   makeTasksService,
 } from "@byconvo/core/tasks";
-import { makeFileTasksRepository } from "./tasks.repository.file.ts";
+import { makeSqliteTasksRepository } from "./tasks.repository.sqlite.ts";
 
 export const TasksLive = Layer.effect(TasksService)(makeTasksService).pipe(
-  Layer.provide(Layer.effect(TasksRepository)(makeFileTasksRepository))
+  Layer.provide(Layer.effect(TasksRepository)(makeSqliteTasksRepository))
 );

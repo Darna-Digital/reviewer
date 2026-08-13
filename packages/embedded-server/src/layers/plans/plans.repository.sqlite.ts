@@ -1,21 +1,17 @@
 /**
- * File-backed store for analyses — one JSON document per plan under
- * `.byconvo/plans/`, rather than one array file the way comments are kept.
+ * SQLite-backed store for analyses.
  *
- * A plan is a document a human reads and an agent rewrites; a directory keeps
- * each one's history its own, so a saved analysis diffs as itself instead of as
- * a hunk in the middle of every other analysis.
+ * The file-backed version kept one JSON document per plan so a saved analysis
+ * diffed as itself rather than as a hunk in the middle of every other one.
+ * A row per plan keeps that property — and drops the part of it that was never
+ * wanted: plan ids arrived straight off the URL and had to be scrubbed before
+ * they could be turned into a filename. A bound parameter is not a path, so
+ * there is nothing left to escape.
  */
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
-import {
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
-import { NotFound, StorageError } from "@byconvo/core/shared";
+import { readFileSync } from "node:fs";
+import { NotFound } from "@byconvo/core/shared";
 import {
   Plan,
   PlanSources,
@@ -26,90 +22,31 @@ import {
   summarizePlan,
 } from "@byconvo/core/plans";
 import type { PlanSourcesShape, PlansRepo } from "@byconvo/core/plans";
+import { inRepo } from "../db/db.service.ts";
+import { documentTable } from "../db/documents.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 
-const plansDir = (repoPath: string) => `${repoPath}/.byconvo/plans`;
-
-/**
- * Plan ids reach here straight off the URL, so the filename is built from a
- * conservative slug rather than from the id itself — a `..` in a path segment
- * would otherwise be a way to name any file on the machine.
- */
-const fileNameFor = (id: string) => `${id.replace(/[^a-zA-Z0-9_-]/g, "")}.json`;
-
-const planPath = (repoPath: string, id: string) =>
-  `${plansDir(repoPath)}/${fileNameFor(id)}`;
-
-const decodePlan = Schema.decodeUnknownSync(Plan);
-
-const readPlan = (repoPath: string, id: string): Plan | null => {
-  try {
-    return decodePlan(JSON.parse(readFileSync(planPath(repoPath, id), "utf8")));
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return null;
-    }
-    throw error;
-  }
-};
-
-const writePlan = (repoPath: string, plan: Plan) => {
-  mkdirSync(plansDir(repoPath), { recursive: true });
-  writeFileSync(
-    planPath(repoPath, plan.id),
-    `${JSON.stringify(plan, null, 2)}\n`
-  );
-};
-
-const readAll = (repoPath: string): ReadonlyArray<Plan> => {
-  let names: ReadonlyArray<string>;
-  try {
-    names = readdirSync(plansDir(repoPath));
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return [];
-    }
-    throw error;
-  }
-  return names
-    .filter((name) => name.endsWith(".json"))
-    .flatMap((name) => {
-      // One unreadable document is not a reason for the picker to fail: an
-      // analysis written by an older schema should drop out of the list, not
-      // take the rest of them with it.
-      try {
-        const raw = readFileSync(`${plansDir(repoPath)}/${name}`, "utf8");
-        return [decodePlan(JSON.parse(raw))];
-      } catch {
-        return [];
-      }
-    });
-};
+export const plans = documentTable<Plan>({
+  table: "plan",
+  sortColumn: "updated_at",
+  direction: "desc",
+  decode: Schema.decodeUnknownSync(Plan),
+});
 
 // Module-scoped so ids stay unique across the per-request repositories.
 let counter = 0;
 
-export const makeFilePlansRepository = Effect.gen(function* () {
+export const makeSqlitePlansRepository = Effect.gen(function* () {
   const ctx = yield* WorkspaceContext;
   const sources = yield* PlanSources;
-
-  const withRepo = <A>(f: (repoPath: string) => A) =>
-    Effect.flatMap(ctx.requireCurrent, (repoPath) =>
-      Effect.try({
-        try: () => f(repoPath),
-        catch: (error) =>
-          error instanceof NotFound
-            ? error
-            : new StorageError({
-                reason: error instanceof Error ? error.message : String(error),
-              }),
-      })
-    );
+  const withRepo = inRepo(ctx);
 
   const require = (id: string) =>
     withRepo((repoPath) => {
-      const plan = readPlan(repoPath, id);
-      if (plan === null) throw new NotFound({ reason: `plan ${id} not found` });
+      const plan = plans.find(repoPath, id);
+      if (plan === undefined) {
+        throw new NotFound({ reason: `plan ${id} not found` });
+      }
       return plan;
     });
 
@@ -117,17 +54,13 @@ export const makeFilePlansRepository = Effect.gen(function* () {
     Effect.flatMap(require(id), (plan) =>
       withRepo((repoPath) => {
         const next = change(plan);
-        writePlan(repoPath, next);
+        plans.put(repoPath, next.id, next.updatedAt, next);
         return next;
       })
     );
 
   const repo: PlansRepo = {
-    list: withRepo((repoPath) =>
-      readAll(repoPath)
-        .map(summarizePlan)
-        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    ),
+    list: withRepo((repoPath) => plans.list(repoPath).map(summarizePlan)),
 
     get: require,
 
@@ -146,7 +79,7 @@ export const makeFilePlansRepository = Effect.gen(function* () {
           annotationId: (index) => `${id}-a${index}`,
         });
         return yield* withRepo((repoPath) => {
-          writePlan(repoPath, plan);
+          plans.put(repoPath, plan.id, plan.updatedAt, plan);
           return plan;
         });
       }),
@@ -190,10 +123,7 @@ export const makeFilePlansRepository = Effect.gen(function* () {
         ),
       })),
 
-    remove: (id) =>
-      withRepo((repoPath) => {
-        rmSync(planPath(repoPath, id), { force: true });
-      }),
+    remove: (id) => withRepo((repoPath) => plans.remove(repoPath, id)),
   };
   return repo;
 });

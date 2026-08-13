@@ -66,8 +66,25 @@ export const ChatTurn = Schema.Struct({
   totalCostUsd: Schema.NullOr(Schema.Number),
 });
 export type ChatTurn = typeof ChatTurn.Type;
+/**
+ * Where a chat lives. Sessions are stored centrally rather than per
+ * repository, so every one of them carries the repository its agent runs in
+ * and the project that repository was opened under — which is what lets the
+ * sessions list show all projects at once and filter down to one.
+ */
+export const ChatOrigin = Schema.Struct({
+  /** The project folder, which may hold several repositories. */
+  projectPath: Schema.String,
+  projectName: Schema.String,
+  /** The git root the agent's process runs in. */
+  repoPath: Schema.String,
+  /** Project-relative name, so a nested root reads as `apps/web`. */
+  repoName: Schema.String,
+});
+export type ChatOrigin = typeof ChatOrigin.Type;
 export const Chat = Schema.Struct({
   id: Schema.String,
+  origin: ChatOrigin,
   title: Schema.String,
   provider: ChatProviderKind,
   model: Schema.String,
@@ -84,6 +101,7 @@ export const Chat = Schema.Struct({
 export type Chat = typeof Chat.Type;
 export const ChatSummary = Schema.Struct({
   id: Schema.String,
+  origin: ChatOrigin,
   title: Schema.String,
   provider: ChatProviderKind,
   model: Schema.String,

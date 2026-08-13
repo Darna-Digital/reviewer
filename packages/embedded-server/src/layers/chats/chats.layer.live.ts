@@ -4,10 +4,10 @@ import {
   ChatsService,
   makeChatsService,
 } from "@byconvo/core/chats";
-import { makeFileChatsRepository } from "./chats.repository.file.ts";
+import { makeSqliteChatsRepository } from "./chats.repository.sqlite.ts";
 import { liveLayer as chatRuntimeLive } from "./chats.runtime.service.ts";
 
 export const ChatsLive = Layer.effect(ChatsService)(makeChatsService).pipe(
-  Layer.provide(Layer.effect(ChatsRepository)(makeFileChatsRepository)),
+  Layer.provide(Layer.effect(ChatsRepository)(makeSqliteChatsRepository)),
   Layer.provide(chatRuntimeLive)
 );

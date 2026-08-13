@@ -4,6 +4,12 @@ import { isChatUnread, unreadChatCount } from "./chat-unread.functions";
 
 const chat = (id: string, updatedAt: string): ChatSummary => ({
   id,
+  origin: {
+    projectPath: "/home/dev",
+    projectName: "dev",
+    repoPath: "/home/dev/api",
+    repoName: "api",
+  },
   title: id,
   provider: "claude",
   model: "claude-opus-4-8",

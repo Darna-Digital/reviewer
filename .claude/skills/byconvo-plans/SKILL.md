@@ -171,7 +171,8 @@ done.
 
 ## Notes
 
-- Analyses persist per-repo as one JSON document each under `.byconvo/plans/`,
-  so they survive restarts and can be committed if the team wants them kept.
+- Analyses persist per-repo in byconvo's local database
+  (`~/.byconvo/byconvo.db`), so they survive restarts. Read and write them
+  through the API above rather than touching the database.
 - If the API call fails, the byconvo server probably isn't running — say so
   rather than guessing; do not start it yourself.

@@ -8,15 +8,19 @@
  * The two dots the row does keep are the ones that change: the turn state, and
  * whether the session moved since you last looked.
  *
+ * The list spans every project, but which one a session came from is the card's
+ * to say, not the row's — a name on every row is noise on all of them.
+ *
  * ⌘-click is "open elsewhere", as everywhere else: the conversation is lifted
  * into a window tab of its own, which is where a session gets the full width.
  *
  * The conversation tail is fetched only once a card opens, so scrolling past a
  * hundred rows costs nothing.
  */
-import { IconMessage, IconX } from "@tabler/icons-react";
+import { IconFolder, IconMessage, IconX } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   PreviewCard,
   PreviewCardContent,
@@ -141,14 +145,15 @@ export function ChatRow({
         <span className="min-w-0 flex-1 truncate">{chat.title}</span>
         {/* The unread dot and the delete control share the same column: the
             dot steps aside the moment the row is hovered. */}
-        <span className="relative size-4 shrink-0">
+        <span className="relative -mr-1 size-7 shrink-0">
           {unread && (
             <span className="absolute inset-0 m-auto size-2 rounded-full bg-brand-500 group-hover/row:opacity-0" />
           )}
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             aria-label="Delete session"
-            className="absolute inset-0 grid place-items-center text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive"
+            className="absolute inset-0 text-muted-foreground opacity-0 transition-[background,box-shadow,color,opacity] group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -156,7 +161,7 @@ export function ChatRow({
             }}
           >
             <IconX className="size-3.5" />
-          </button>
+          </Button>
         </span>
       </PreviewCardTrigger>
       <PreviewCardContent side="right" align="start" className="w-80 gap-2 p-3">
@@ -184,6 +189,17 @@ export function ChatRow({
             {chat.messageCount === 1
               ? "1 message"
               : `${chat.messageCount} messages`}
+          </span>
+          {/* Where the session's agent actually runs. In a project holding
+              several git roots that is the part worth naming, so the root is
+              shown whenever it isn't just the project over again. */}
+          <span className="ml-auto flex min-w-0 items-center gap-1.5">
+            <IconFolder className="size-3.5 shrink-0" />
+            <span className="truncate" title={chat.origin.repoPath}>
+              {chat.origin.repoName === chat.origin.projectName
+                ? chat.origin.projectName
+                : `${chat.origin.projectName}/${chat.origin.repoName}`}
+            </span>
           </span>
         </div>
       </PreviewCardContent>

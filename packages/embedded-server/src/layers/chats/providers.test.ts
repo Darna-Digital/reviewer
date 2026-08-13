@@ -26,6 +26,12 @@ const msg = (
 
 const chat = (overrides: Partial<Chat> = {}): Chat => ({
   id: "c-1",
+  origin: {
+    projectPath: "/repo",
+    projectName: "repo",
+    repoPath: "/repo",
+    repoName: "repo",
+  },
   title: "t",
   provider: "claude",
   model: "claude-opus-4-8",

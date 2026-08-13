@@ -5,6 +5,7 @@ export const summarizeChat = (chat: Chat): ChatSummary => {
   const last = chat.messages.at(-1);
   return {
     id: chat.id,
+    origin: chat.origin,
     title: chat.title,
     provider: chat.provider,
     model: chat.model,

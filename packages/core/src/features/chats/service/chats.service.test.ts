@@ -4,6 +4,7 @@ import { describe, expect, vi } from "vitest";
 import { memoryLayer as terminalMemory } from "../../../ports/terminal-exec.ts";
 import { ChatsMemory } from "../layer/chats.layer.memory.ts";
 import { CHAT_MODEL_CATALOG } from "../functions/chats.catalog.ts";
+import { MEMORY_CHAT_ORIGIN } from "../repository/chats.repository.memory.ts";
 import type { Chat } from "../schema/chats.schema.ts";
 import { ChatsService } from "./chats.service.ts";
 
@@ -154,6 +155,7 @@ describe("ChatsService", () => {
     () => {
       const seeded: Chat = {
         id: "c-seed-1",
+        origin: MEMORY_CHAT_ORIGIN,
         title: "My chat",
         provider: "claude",
         model: "claude-opus-4-8",
@@ -186,6 +188,7 @@ describe("ChatsService", () => {
     () => {
       const seeded: Chat = {
         id: "c-seed-2",
+        origin: MEMORY_CHAT_ORIGIN,
         title: "My chat",
         provider: "claude",
         model: "claude-opus-4-8",
@@ -214,6 +217,7 @@ describe("ChatsService", () => {
   it.effect("a same-provider settings patch keeps the native session", () => {
     const seeded: Chat = {
       id: "c-seed-3",
+      origin: MEMORY_CHAT_ORIGIN,
       title: "My chat",
       provider: "claude",
       model: "claude-opus-4-8",

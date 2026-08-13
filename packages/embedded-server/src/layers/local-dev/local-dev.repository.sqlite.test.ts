@@ -1,12 +1,16 @@
 import { NodeFileSystem } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { afterAll, describe, expect } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect } from "vitest";
 import { DevCommandsRepository } from "@byconvo/core/local-dev";
+import { closeDatabase, openDatabase } from "../db/database.ts";
 import { memoryLayer } from "../workspace/workspace-context.ts";
-import { makeFileDevCommandsRepository } from "./local-dev.repository.file.ts";
+import {
+  devCommands,
+  makeSqliteDevCommandsRepository,
+} from "./local-dev.repository.sqlite.ts";
 
 /** A real project folder holding two git roots — what the store is for. */
 const project = mkdtempSync(`${tmpdir()}/byconvo-local-dev-`);
@@ -15,23 +19,19 @@ const api = `${project}/api`;
 for (const root of [web, api]) mkdirSync(`${root}/.git`, { recursive: true });
 afterAll(() => rmSync(project, { recursive: true, force: true }));
 
-const FileRepo = Layer.effect(DevCommandsRepository)(
-  makeFileDevCommandsRepository
+const Repo = Layer.effect(DevCommandsRepository)(
+  makeSqliteDevCommandsRepository
 ).pipe(
   Layer.provide(Layer.mergeAll(memoryLayer(project), NodeFileSystem.layer))
 );
 
-const storedIn = (root: string): ReadonlyArray<{ id: string }> => {
-  try {
-    return JSON.parse(
-      readFileSync(`${root}/.byconvo/dev-commands.json`, "utf8")
-    );
-  } catch {
-    return [];
-  }
-};
+beforeEach(() => openDatabase(":memory:"));
+afterEach(closeDatabase);
 
-describe("FileDevCommandsRepository", () => {
+const storedIn = (root: string): ReadonlyArray<{ id: string }> =>
+  devCommands.list(root);
+
+describe("SqliteDevCommandsRepository", () => {
   it.effect("keeps each root's commands with the root that runs them", () =>
     Effect.gen(function* () {
       const repo = yield* DevCommandsRepository;
@@ -52,13 +52,10 @@ describe("FileDevCommandsRepository", () => {
 
       const all = yield* repo.list;
       expect(all.map((c) => c.repo)).toEqual(["api", "web"]);
-
-      yield* repo.remove(front.id);
-      yield* repo.remove(back.id);
-    }).pipe(Effect.provide(FileRepo))
+    }).pipe(Effect.provide(Repo))
   );
 
-  it.effect("moving a command rewrites both roots' files", () =>
+  it.effect("moving a command re-scopes it rather than duplicating it", () =>
     Effect.gen(function* () {
       const repo = yield* DevCommandsRepository;
       const created = yield* repo.create({
@@ -70,8 +67,7 @@ describe("FileDevCommandsRepository", () => {
       expect(moved.repoPath).toBe(api);
       expect(storedIn(web)).toHaveLength(0);
       expect(storedIn(api).map((c) => c.id)).toEqual([created.id]);
-      yield* repo.remove(created.id);
-    }).pipe(Effect.provide(FileRepo))
+    }).pipe(Effect.provide(Repo))
   );
 
   it.effect("refuses a root the project does not hold", () =>
@@ -81,6 +77,6 @@ describe("FileDevCommandsRepository", () => {
         repo.create({ name: "web", command: "pnpm dev", repoPath: "/nowhere" })
       );
       expect(failure._tag).toBe("NotFound");
-    }).pipe(Effect.provide(FileRepo))
+    }).pipe(Effect.provide(Repo))
   );
 });

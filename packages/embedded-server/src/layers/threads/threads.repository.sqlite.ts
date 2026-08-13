@@ -1,53 +1,23 @@
 /**
- * File-backed terminal-thread store — persists threads (with their run history)
- * to `.byconvo/threads.json` inside the selected repository, and runs commands
- * through TerminalExec scoped to that repo.
+ * SQLite-backed terminal-thread store — threads (with their run history) are
+ * scoped to the repository they were started in, and commands run through
+ * TerminalExec scoped to that repo.
  */
 import * as Effect from "effect/Effect";
-import * as Schema from "effect/Schema";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { NotFound, StorageError } from "@byconvo/core/shared";
+import { NotFound } from "@byconvo/core/shared";
+import { inRepo } from "../db/db.service.ts";
 import { TerminalExec } from "../terminal/terminal-exec.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 import {
   agentCommand,
   agentDefaultTitle,
-  Thread,
   type CreateThreadInput,
   type RenameThreadInput,
+  type Thread,
   type ThreadEntry,
   type ThreadsRepo,
 } from "@byconvo/core/threads";
-
-const ThreadsFile = Schema.Array(Thread);
-
-const threadsPath = (repoPath: string) => `${repoPath}/.byconvo/threads.json`;
-
-const readThreads = (repoPath: string): ReadonlyArray<Thread> => {
-  try {
-    const raw = readFileSync(threadsPath(repoPath), "utf8");
-    const parsed = JSON.parse(raw);
-    // Default fields added after entries were first written.
-    const normalized = Array.isArray(parsed)
-      ? parsed.map((t) =>
-          t !== null && typeof t === "object"
-            ? { branch: "", initialPrompt: "", agentSessionId: null, ...t }
-            : t
-        )
-      : parsed;
-    return Schema.decodeUnknownSync(ThreadsFile)(normalized);
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return [];
-    }
-    throw error;
-  }
-};
-
-const writeThreads = (repoPath: string, threads: ReadonlyArray<Thread>) => {
-  mkdirSync(`${repoPath}/.byconvo`, { recursive: true });
-  writeFileSync(threadsPath(repoPath), `${JSON.stringify(threads, null, 2)}\n`);
-};
+import { findThread, putThread, threads } from "./store.ts";
 
 const summarize = (thread: Thread) => ({
   id: thread.id,
@@ -80,43 +50,28 @@ const nextId = (prefix: string) => {
   return `${prefix}-${Date.now().toString(36)}-${counter}`;
 };
 
-export const makeFileThreadsRepository = Effect.gen(function* () {
+export const makeSqliteThreadsRepository = Effect.gen(function* () {
   const ctx = yield* WorkspaceContext;
   const terminal = yield* TerminalExec;
+  const withRepo = inRepo(ctx);
 
-  const withFile = <A>(f: (repoPath: string) => A) =>
-    Effect.flatMap(ctx.requireCurrent, (repoPath) =>
-      Effect.try({
-        try: () => f(repoPath),
-        // A thrown NotFound is a real 404, not a storage failure — preserve it.
-        catch: (error) =>
-          error instanceof NotFound
-            ? error
-            : new StorageError({
-                reason: error instanceof Error ? error.message : String(error),
-              }),
-      })
-    );
-
-  const requireThread = (repoPath: string, id: string) => {
-    const thread = readThreads(repoPath).find((t) => t.id === id);
+  const requireThread = (repoPath: string, id: string): Thread => {
+    const thread = findThread(repoPath, id);
     if (thread === undefined) {
       throw new NotFound({ reason: `thread ${id} not found` });
     }
     return thread;
   };
 
-  const list: ThreadsRepo["list"] = withFile((repoPath) =>
-    [...readThreads(repoPath)]
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-      .map(summarize)
+  const list: ThreadsRepo["list"] = withRepo((repoPath) =>
+    threads.list(repoPath).map(summarize)
   );
 
   const get: ThreadsRepo["get"] = (id) =>
-    withFile((repoPath) => requireThread(repoPath, id));
+    withRepo((repoPath) => requireThread(repoPath, id));
 
   const create: ThreadsRepo["create"] = (input: CreateThreadInput) =>
-    withFile((repoPath) => {
+    withRepo((repoPath) => {
       const now = new Date().toISOString();
       const created: Thread = {
         id: nextId("t"),
@@ -133,12 +88,12 @@ export const makeFileThreadsRepository = Effect.gen(function* () {
         updatedAt: now,
         entries: [],
       };
-      writeThreads(repoPath, [created, ...readThreads(repoPath)]);
+      putThread(repoPath, created);
       return created;
     });
 
   const rename: ThreadsRepo["rename"] = (id, input: RenameThreadInput) =>
-    withFile((repoPath) => {
+    withRepo((repoPath) => {
       const existing = requireThread(repoPath, id);
       const updated: Thread = {
         ...existing,
@@ -148,27 +103,19 @@ export const makeFileThreadsRepository = Effect.gen(function* () {
         taskKey: input.taskKey === undefined ? existing.taskKey : input.taskKey,
         updatedAt: new Date().toISOString(),
       };
-      writeThreads(
-        repoPath,
-        readThreads(repoPath).map((t) => (t.id === id ? updated : t))
-      );
+      putThread(repoPath, updated);
       return updated;
     });
 
   const remove: ThreadsRepo["remove"] = (id) =>
-    withFile((repoPath) => {
-      writeThreads(
-        repoPath,
-        readThreads(repoPath).filter((t) => t.id !== id)
-      );
-    });
+    withRepo((repoPath) => threads.remove(repoPath, id));
 
   const run: ThreadsRepo["run"] = (id, input) =>
     Effect.gen(function* () {
       // Fetch first (fails NotFound before spawning) and to read the agent.
-      const thread = yield* withFile((repoPath) => requireThread(repoPath, id));
+      const thread = yield* withRepo((repoPath) => requireThread(repoPath, id));
       const result = yield* terminal.run(agentCommand(thread.agent, input));
-      return yield* withFile((repoPath) => {
+      return yield* withRepo((repoPath) => {
         const existing = requireThread(repoPath, id);
         const entry: ThreadEntry = {
           id: nextId("e"),
@@ -180,7 +127,7 @@ export const makeFileThreadsRepository = Effect.gen(function* () {
           exitCode: result.exitCode,
           createdAt: new Date().toISOString(),
         };
-        const updated: Thread = {
+        putThread(repoPath, {
           ...existing,
           // Reflect what's running in the title.
           title:
@@ -189,11 +136,7 @@ export const makeFileThreadsRepository = Effect.gen(function* () {
               : existing.title,
           updatedAt: entry.createdAt,
           entries: [...existing.entries, entry],
-        };
-        writeThreads(
-          repoPath,
-          readThreads(repoPath).map((t) => (t.id === id ? updated : t))
-        );
+        });
         return entry;
       });
     });

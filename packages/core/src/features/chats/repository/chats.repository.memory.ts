@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as Ref from "effect/Ref";
 import { NotFound } from "../../../shared.ts";
-import type { Chat } from "../schema/chats.schema.ts";
+import type { Chat, ChatOrigin } from "../schema/chats.schema.ts";
 import {
   DEFAULT_CHAT_TITLE,
   summarizeChat,
@@ -11,6 +11,14 @@ import type {
   CreateChatInput,
   UpdateChatInput,
 } from "./chats.repository.ts";
+
+/** The single project an in-memory repository pretends to hold. */
+export const MEMORY_CHAT_ORIGIN: ChatOrigin = {
+  projectPath: "/memory",
+  projectName: "memory",
+  repoPath: "/memory",
+  repoName: "memory",
+};
 
 export const makeMemoryChatsRepository = (seed: ReadonlyArray<Chat> = []) =>
   Effect.gen(function* () {
@@ -37,6 +45,7 @@ export const makeMemoryChatsRepository = (seed: ReadonlyArray<Chat> = []) =>
         Effect.gen(function* () {
           const created: Chat = {
             id: nextId("c"),
+            origin: MEMORY_CHAT_ORIGIN,
             title:
               input.title.trim().length > 0
                 ? input.title.trim()
