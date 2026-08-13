@@ -15,7 +15,7 @@ import { BrowserPane } from "@/interactions/browser-pane/components/browser-pane
 import { PlansPane } from "@/interactions/plans-pane/components/plans-pane";
 import { SearchHost } from "@/interactions/search/components/search-host";
 import { isDesktop } from "@/lib/desktop";
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { setUiPrefs, toggleBottomVisible, useUiPrefs } from "@/lib/ui-prefs";
 import { activeWorkMode } from "@/lib/work-mode";
 
 export function WindowFrame({ children }: { children: React.ReactNode }) {
@@ -44,6 +44,26 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
   });
   const prefs = useUiPrefs();
   const inCodeMode = activeWorkMode(pathname, prefs.workMode) === "code";
+
+  // ⌘B expands or collapses the bottom dock. Every code page carries the dock —
+  // the git shell embeds its own, the workspace shell mounts `GitBottomDock` —
+  // so the shortcut belongs to the frame under both rather than to either one;
+  // living in the git shell alone left it dead on sessions, services and docs.
+  // Capture phase, so a field that stops its own keydown (the menu search) can't
+  // swallow it either.
+  useEffect(() => {
+    if (!inCodeMode) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) {
+        return;
+      }
+      if (event.key.toLowerCase() !== "b") return;
+      event.preventDefault();
+      toggleBottomVisible();
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [inCodeMode]);
 
   return (
     <>

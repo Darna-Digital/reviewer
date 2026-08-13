@@ -186,18 +186,6 @@ export function AppShell() {
   const hasGitHub = repo.data?.github != null;
   const pulls = usePulls(hasGitHub);
 
-  // Cmd/Ctrl+B toggles the bottom panel. The mode jumps that used to live on
-  // Cmd+1/2/3 are gone — those digits belong to the window's tab strip now.
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey)) return;
-      if (e.key.toLowerCase() !== "b") return;
-      e.preventDefault();
-      setUiPrefs({ bottomVisible: !prefs.bottomVisible });
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [prefs.bottomVisible]);
   // The in-progress merge/rebase, if any — drives the conflict banner + resolver.
   const mergeState = useMergeState();
   const conflictedPaths = useMemo(
