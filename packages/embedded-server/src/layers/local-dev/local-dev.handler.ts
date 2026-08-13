@@ -12,7 +12,7 @@ const ok = { ok: true } as const;
 /** Merge a stored definition with its (optional) runtime status into a view. */
 const toView = (
   command: DevCommand,
-  status: DevRunStatus | undefined
+  status: DevRunStatus | null
 ): DevCommandView => ({
   ...command,
   status: status?.status ?? "stopped",
@@ -28,19 +28,21 @@ export const LocalDevHandler = HttpApiBuilder.group(
         Effect.gen(function* () {
           const dev = yield* LocalDevService;
           const runtime = yield* DevRuntime;
-          const ctx = yield* WorkspaceContext;
-          const repoPath = yield* ctx.requireCurrent;
           const commands = yield* dev.list;
-          const statuses = yield* runtime.statuses(repoPath);
-          const byId = new Map(statuses.map((s) => [s.commandId, s]));
-          return commands.map((command) =>
-            toView(command, byId.get(command.id))
+          return yield* Effect.forEach(commands, (command) =>
+            Effect.map(runtime.status(command.id), (status) =>
+              toView(command, status)
+            )
           );
         })
       )
       .handle("create", ({ payload }) =>
         Effect.flatMap(LocalDevService, (s) =>
-          s.create({ name: payload.name, command: payload.command })
+          s.create({
+            name: payload.name,
+            command: payload.command,
+            repoPath: payload.repoPath,
+          })
         )
       )
       .handle("get", ({ params }) =>
@@ -51,6 +53,7 @@ export const LocalDevHandler = HttpApiBuilder.group(
           s.update(params.id, {
             name: payload.name,
             command: payload.command,
+            repoPath: payload.repoPath,
           })
         )
       )
@@ -68,12 +71,10 @@ export const LocalDevHandler = HttpApiBuilder.group(
         Effect.gen(function* () {
           const dev = yield* LocalDevService;
           const runtime = yield* DevRuntime;
-          const ctx = yield* WorkspaceContext;
-          const repoPath = yield* ctx.requireCurrent;
           const command = yield* dev.get(params.id);
           const status = yield* runtime.start({
             commandId: command.id,
-            repoPath,
+            repoPath: command.repoPath,
             command: command.command,
           });
           return toView(command, status);
@@ -82,18 +83,22 @@ export const LocalDevHandler = HttpApiBuilder.group(
       .handle("stop", ({ params }) =>
         Effect.flatMap(DevRuntime, (r) => r.stop(params.id)).pipe(Effect.as(ok))
       )
-      .handle("startAll", () =>
+      .handle("startAll", ({ payload }) =>
         Effect.gen(function* () {
           const dev = yield* LocalDevService;
           const runtime = yield* DevRuntime;
-          const ctx = yield* WorkspaceContext;
-          const repoPath = yield* ctx.requireCurrent;
           const commands = yield* dev.list;
+          // Each command runs in the root it belongs to, so a project's backend
+          // and frontend come up together from one Run all.
+          const scoped =
+            payload.repoPath === undefined
+              ? commands
+              : commands.filter((c) => c.repoPath === payload.repoPath);
           const views: DevCommandView[] = [];
-          for (const command of commands) {
+          for (const command of scoped) {
             const status = yield* runtime.start({
               commandId: command.id,
-              repoPath,
+              repoPath: command.repoPath,
               command: command.command,
             });
             views.push(toView(command, status));
@@ -101,12 +106,15 @@ export const LocalDevHandler = HttpApiBuilder.group(
           return views;
         })
       )
-      .handle("stopAll", () =>
+      .handle("stopAll", ({ payload }) =>
         Effect.gen(function* () {
           const runtime = yield* DevRuntime;
           const ctx = yield* WorkspaceContext;
-          const repoPath = yield* ctx.requireCurrent;
-          yield* runtime.stopAll(repoPath);
+          if (payload.repoPath !== undefined) {
+            yield* runtime.stopRepo(payload.repoPath);
+            return ok;
+          }
+          yield* runtime.stopProject(yield* ctx.requireProject);
           return ok;
         })
       )

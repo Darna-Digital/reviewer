@@ -7112,6 +7112,8 @@ export interface operations {
                         command: string;
                         createdAt: string;
                         updatedAt: string;
+                        repo: string;
+                        repoPath: string;
                         /** @enum {string} */
                         status: "stopped" | "running" | "exited";
                         exitCode: (number) | null;
@@ -7159,6 +7161,7 @@ export interface operations {
                 "application/json": {
                     name: string;
                     command: string;
+                    repoPath: string;
                 };
             };
         };
@@ -7175,6 +7178,8 @@ export interface operations {
                         command: string;
                         createdAt: string;
                         updatedAt: string;
+                        repo: string;
+                        repoPath: string;
                     };
                 };
             };
@@ -7230,6 +7235,8 @@ export interface operations {
                         command: string;
                         createdAt: string;
                         updatedAt: string;
+                        repo: string;
+                        repoPath: string;
                     };
                 };
             };
@@ -7327,6 +7334,7 @@ export interface operations {
                 "application/json": {
                     name?: string;
                     command?: string;
+                    repoPath?: string;
                 };
             };
         };
@@ -7343,6 +7351,8 @@ export interface operations {
                         command: string;
                         createdAt: string;
                         updatedAt: string;
+                        repo: string;
+                        repoPath: string;
                     };
                 };
             };
@@ -7398,6 +7408,8 @@ export interface operations {
                         command: string;
                         createdAt: string;
                         updatedAt: string;
+                        repo: string;
+                        repoPath: string;
                         /** @enum {string} */
                         status: "stopped" | "running" | "exited";
                         exitCode: (number) | null;
@@ -7491,7 +7503,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    repoPath?: string;
+                };
+            };
+        };
         responses: {
             /** @description Success */
             200: {
@@ -7505,6 +7523,8 @@ export interface operations {
                         command: string;
                         createdAt: string;
                         updatedAt: string;
+                        repo: string;
+                        repoPath: string;
                         /** @enum {string} */
                         status: "stopped" | "running" | "exited";
                         exitCode: (number) | null;
@@ -7547,7 +7567,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    repoPath?: string;
+                };
+            };
+        };
         responses: {
             /** @description Success */
             200: {

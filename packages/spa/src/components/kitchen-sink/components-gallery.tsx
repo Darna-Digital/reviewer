@@ -34,6 +34,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -68,6 +69,85 @@ const RADIO_CLASSES =
   "col-start-1 row-start-1 appearance-none rounded-full border border-border bg-background checked:border-primary checked:bg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:border-border disabled:bg-muted disabled:checked:bg-muted dark:bg-white/5 dark:disabled:bg-white/10 forced-colors:appearance-auto";
 
 const REVIEWERS = ["Anyone on the team", "Only me", "Nobody yet"];
+
+const TOAST_MOCKS: readonly { label: string; fire: () => void }[] = [
+  {
+    label: "Success",
+    fire: () => toast.success("Pushed to origin/master"),
+  },
+  {
+    label: "Error",
+    fire: () =>
+      toast.error("Push rejected", {
+        description: "The remote has commits you do not have.",
+      }),
+  },
+  {
+    label: "Warning",
+    fire: () => toast.warning("Working tree has uncommitted changes"),
+  },
+  {
+    label: "Info",
+    fire: () =>
+      toast.info("Branch is up to date", {
+        description: "Nothing to fetch from origin.",
+      }),
+  },
+  {
+    label: "Plain",
+    fire: () =>
+      toast("Drafting a commit message", {
+        icon: <IconSparkles className="size-4" />,
+      }),
+  },
+  {
+    label: "Loading",
+    fire: () => toast.loading("Rebasing onto master…"),
+  },
+  {
+    label: "With action",
+    fire: () =>
+      toast.error("Could not switch branch", {
+        description: "Stash or commit your changes first.",
+        action: { label: "Stash", onClick: () => toast.success("Stashed") },
+      }),
+  },
+  {
+    label: "Long line",
+    fire: () =>
+      toast.warning(
+        "warning: fetch updated the current branch head. fast-forwarding your working tree from commit fb863a957b2935d84b7f1528cb862b4170f895e2."
+      ),
+  },
+  {
+    label: "Long + description",
+    fire: () =>
+      toast.error(
+        "failed to push some refs to git@github.com:darna-digital/byconvo.git",
+        {
+          description:
+            "Updates were rejected because the tip of your current branch is behind its remote counterpart. Integrate the remote changes (e.g. 'git pull --rebase') before pushing again. See the 'Note about fast-forwards' section of 'git push --help' for details.",
+        }
+      ),
+  },
+  {
+    label: "Unbroken token",
+    fire: () =>
+      toast.error("Cannot resolve path", {
+        description:
+          "packages/spa/src/interactions/collaboration/components/announce-move-into-the-deepest-possible-directory.ts",
+      }),
+  },
+  {
+    label: "Stack of four",
+    fire: () => {
+      toast.success("Fetched origin");
+      toast.info("Rebased 3 commits");
+      toast.warning("1 file left conflicted");
+      toast.error("Push rejected");
+    },
+  },
+];
 
 function Field({
   label,
@@ -533,9 +613,11 @@ export function ComponentsGallery() {
                 master
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-56">
-                <DropdownMenuLabel>Switch to</DropdownMenuLabel>
-                <DropdownMenuItem>task/inline-diff-comments</DropdownMenuItem>
-                <DropdownMenuItem>fix/safari-hover-shift</DropdownMenuItem>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel>Switch to</DropdownMenuLabel>
+                  <DropdownMenuItem>task/inline-diff-comments</DropdownMenuItem>
+                  <DropdownMenuItem>fix/safari-hover-shift</DropdownMenuItem>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem variant="destructive">
                   <IconTrash />
@@ -588,41 +670,25 @@ export function ComponentsGallery() {
               </TooltipContent>
             </Tooltip>
           </Specimen>
-
-          <Specimen label="Toast">
-            <div className="flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => toast.success("Pushed to origin/master")}
-              >
-                Success
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  toast.error("Push rejected", {
-                    description: "The remote has commits you do not have.",
-                  })
-                }
-              >
-                Error
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  toast("Drafting a commit message", {
-                    icon: <IconSparkles className="size-4" />,
-                  })
-                }
-              >
-                Plain
-              </Button>
-            </div>
-          </Specimen>
         </SpecimenRow>
+
+        <Subsection
+          title="Toasts"
+          hint="Fire one of each. The long ones are the interesting cases: a toast never grows past its own width, and an unbroken sha or path breaks rather than pushing the card open."
+        >
+          <div className="flex flex-wrap gap-2">
+            {TOAST_MOCKS.map((mock) => (
+              <Button
+                key={mock.label}
+                size="sm"
+                variant="outline"
+                onClick={mock.fire}
+              >
+                {mock.label}
+              </Button>
+            ))}
+          </div>
+        </Subsection>
       </Section>
     </>
   );

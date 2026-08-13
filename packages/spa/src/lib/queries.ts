@@ -131,7 +131,7 @@ export const useDoc = (id: string | null) =>
 
 export const useTasks = () => api.useQuery("get", "/api/tasks/board");
 
-/** Saved Local Dev commands for the selected repo, with their runtime status. */
+/** Saved Local Dev commands across the project's repos, with runtime status. */
 export const useDevCommands = () =>
   api.useQuery("get", "/api/local-dev/commands");
 
