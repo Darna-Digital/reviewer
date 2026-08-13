@@ -92,15 +92,18 @@ const KIND_TONE: Record<string, { fill: string; text: string }> = {
 const ANCHOR_STATUS = {
   fresh: {
     label: "fresh",
-    className: "bg-[#e6f2ea] text-[#2b6b45] dark:bg-[#1a3626] dark:text-[#8ed4a6]",
+    className:
+      "bg-[#e6f2ea] text-[#2b6b45] dark:bg-[#1a3626] dark:text-[#8ed4a6]",
   },
   relocated: {
     label: "moved to :112",
-    className: "bg-[#fdf3dc] text-[#8a6516] dark:bg-[#42351a] dark:text-[#e6ca82]",
+    className:
+      "bg-[#fdf3dc] text-[#8a6516] dark:bg-[#42351a] dark:text-[#e6ca82]",
   },
   lost: {
     label: "line gone",
-    className: "bg-[#fbe9e7] text-[#b3261e] dark:bg-[#4a1f1c] dark:text-[#f0a099]",
+    className:
+      "bg-[#fbe9e7] text-[#b3261e] dark:bg-[#4a1f1c] dark:text-[#f0a099]",
   },
 } as const;
 

@@ -82,7 +82,8 @@ const PULLS = [
 const STATE_TONE: Record<string, string> = {
   Open: "bg-[#e6f2ea] text-[#2b6b45] dark:bg-[#1a3626] dark:text-[#8ed4a6]",
   Merged: "bg-[#f0eaf9] text-[#5b3d8c] dark:bg-[#2e2547] dark:text-[#c4b0ea]",
-  Draft: "bg-neutral-100 text-neutral-500 dark:bg-white/10 dark:text-neutral-400",
+  Draft:
+    "bg-neutral-100 text-neutral-500 dark:bg-white/10 dark:text-neutral-400",
 };
 
 const ROOTS = ["byconvo", "client-portal", "darna-site"];
