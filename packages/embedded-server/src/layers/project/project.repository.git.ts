@@ -242,6 +242,33 @@ export const makeGitProjectRepository = Effect.gen(function* () {
       };
     });
 
+  // Discarding is the commit's mirror image: the same split into the roots that
+  // own the paths, so a selection spanning `backend` and `frontend` reverts in
+  // both. Failures propagate — a discard that quietly did nothing is worse than
+  // one that says it could not.
+  const discard: ProjectRepo["discard"] = (paths) =>
+    Effect.gen(function* () {
+      const groups = groupPathsByRepo(yield* roots, paths);
+      yield* Effect.forEach(
+        groups,
+        (group) =>
+          Effect.flatMap(repoAt(group.repo.path), (git) =>
+            git.discard(group.paths)
+          ),
+        { discard: true }
+      );
+    });
+
+  const discardHunk: ProjectRepo["discardHunk"] = (path, hunkIndex) =>
+    Effect.gen(function* () {
+      const owner = splitProjectPath(yield* roots, path);
+      // A path no root claims has no diff to revert a hunk of, which is what
+      // git would say about it too.
+      if (owner === null) return;
+      const git = yield* repoAt(owner.repo.path);
+      yield* git.discardHunk(owner.path, hunkIndex);
+    });
+
   return {
     changes,
     files,
@@ -250,5 +277,7 @@ export const makeGitProjectRepository = Effect.gen(function* () {
     log,
     search,
     commit,
+    discard,
+    discardHunk,
   } satisfies ProjectRepo;
 });

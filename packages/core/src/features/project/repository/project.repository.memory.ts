@@ -65,6 +65,8 @@ export const makeMemoryProjectRepository = (seed: MemoryProjectSeed = {}) =>
             reason: null,
           })),
         }),
+      discard: () => Effect.void,
+      discardHunk: () => Effect.void,
       changes: Effect.succeed({
         repos: seed.changes ?? [],
         failed,

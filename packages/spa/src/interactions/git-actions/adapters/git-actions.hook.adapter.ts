@@ -114,6 +114,10 @@ export function useGitActions() {
      * Discard the worktree changes for the given paths, reverting them to HEAD
      * (modifications and deletions are restored; new files are removed). This is
      * irreversible — callers should confirm before invoking.
+     *
+     * Paths spanning several roots are named from the project, so they revert
+     * through the project's endpoint, which splits them back into the roots
+     * that own them — the same way committing them does.
      */
     discard: (paths: ReadonlyArray<string>) =>
       fns.runOp(
@@ -121,9 +125,17 @@ export function useGitActions() {
           ? `Discarded changes in ${paths[0]}`
           : `Discarded changes in ${paths.length} files`,
         () =>
-          unwrap(
-            fetchClient.POST("/api/discard", { body: { paths: [...paths] } })
-          )
+          acrossRoots
+            ? unwrap(
+                fetchClient.POST("/api/project/discard", {
+                  body: { paths: [...paths] },
+                })
+              )
+            : unwrap(
+                fetchClient.POST("/api/discard", {
+                  body: { paths: [...paths] },
+                })
+              )
       ),
 
     /**
@@ -133,11 +145,17 @@ export function useGitActions() {
      */
     discardHunk: (path: string, hunkIndex: number) =>
       fns.runOp(`Discarded a change in ${path}`, () =>
-        unwrap(
-          fetchClient.POST("/api/discard-hunk", {
-            body: { path, hunkIndex },
-          })
-        )
+        acrossRoots
+          ? unwrap(
+              fetchClient.POST("/api/project/discard-hunk", {
+                body: { path, hunkIndex },
+              })
+            )
+          : unwrap(
+              fetchClient.POST("/api/discard-hunk", {
+                body: { path, hunkIndex },
+              })
+            )
       ),
 
     checkout: (branch: string) =>

@@ -246,3 +246,41 @@ describe("GitProjectRepository.log", () => {
     }).pipe(Effect.provide(layer));
   });
 });
+
+describe("GitProjectRepository.discard", () => {
+  it.effect("reverts each root's paths in that root's own terms", () => {
+    const { layer, runs } = withGit(() => "");
+    return Effect.gen(function* () {
+      const project = yield* ProjectRepository;
+      yield* project.discard(["backend/src/server.ts", "frontend/src/app.tsx"]);
+      const reverts = runs.filter((run) => run.args[0] === "checkout");
+      expect(reverts.map((run) => [run.cwd, run.args.at(-1)])).toEqual([
+        ["/work/backend", "src/server.ts"],
+        ["/work/frontend", "src/app.tsx"],
+      ]);
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("touches nothing for a path no root claims", () => {
+    const { layer, runs } = withGit(() => "");
+    return Effect.gen(function* () {
+      const project = yield* ProjectRepository;
+      yield* project.discard(["mobile/src/app.tsx"]);
+      expect(runs).toEqual([]);
+    }).pipe(Effect.provide(layer));
+  });
+});
+
+describe("GitProjectRepository.discardHunk", () => {
+  it.effect("asks only the root that owns the file", () => {
+    const { layer, runs } = withGit(() => "");
+    return Effect.gen(function* () {
+      const project = yield* ProjectRepository;
+      yield* project.discardHunk("frontend/src/app.tsx", 0);
+      const diffs = runs.filter((run) => run.args[0] === "diff");
+      expect(diffs.map((run) => [run.cwd, run.args.at(-1)])).toEqual([
+        ["/work/frontend", "src/app.tsx"],
+      ]);
+    }).pipe(Effect.provide(layer));
+  });
+});

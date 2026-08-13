@@ -2,8 +2,9 @@ import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import { agentCommand } from "../../threads/functions/agents.ts";
 import type { GitFailure } from "../../../ports/git-exec.ts";
-import { GitExec } from "../../../ports/git-exec.ts";
 import { TerminalError, TerminalExec } from "../../../ports/terminal-exec.ts";
+import { hasChanges } from "../functions/git-message.functions.ts";
+import { GitMessageChanges } from "./git-message.changes.ts";
 import type { CommitAgent } from "../schema/git-message.schema.ts";
 
 const MAX_DIFF_CHARS = 16000;
@@ -58,20 +59,17 @@ export class GitMessageService extends Context.Service<
   GitMessageServiceShape
 >()("GitMessageService") {}
 export const makeGitMessageService = Effect.gen(function* () {
-  const { lines, run } = yield* GitExec;
+  const source = yield* GitMessageChanges;
   const terminal = yield* TerminalExec;
   const generate: GitMessageServiceShape["generate"] = (paths, agent) =>
     Effect.gen(function* () {
-      const diff = yield* run(
-        ...(paths.length === 0
-          ? ["diff", "HEAD"]
-          : ["diff", "HEAD", "--", ...paths])
-      ).pipe(Effect.catchTag("GitError", () => Effect.succeed("")));
-      const untracked = yield* lines(
-        ...(paths.length === 0
-          ? ["ls-files", "--others", "--exclude-standard"]
-          : ["ls-files", "--others", "--exclude-standard", "--", ...paths])
-      ).pipe(Effect.catchTag("GitError", () => Effect.succeed([] as const)));
+      const collected = yield* source.collect(paths);
+      if (!hasChanges(collected)) {
+        return yield* Effect.fail(
+          new TerminalError({ reason: "no changes to summarize" })
+        );
+      }
+      const { branch, diff, untracked } = collected;
       const truncated =
         diff.length > MAX_DIFF_CHARS
           ? `${diff.slice(0, MAX_DIFF_CHARS)}\n…[diff truncated]`
@@ -81,15 +79,6 @@ export const makeGitMessageService = Effect.gen(function* () {
           ? `\n\nNew untracked files:\n${untracked.map((f) => `  ${f}`).join("\n")}`
           : "";
       const changes = `${truncated}${newFiles}`.trim();
-      if (changes.length === 0) {
-        return yield* Effect.fail(
-          new TerminalError({ reason: "no changes to summarize" })
-        );
-      }
-      const branch = yield* run("rev-parse", "--abbrev-ref", "HEAD").pipe(
-        Effect.map((b) => b.trim()),
-        Effect.catchTag("GitError", () => Effect.succeed(""))
-      );
       const prompt = buildPrompt(changes, branchSlug(branch));
       const { stdout, stderr, exitCode } = yield* terminal.run(
         agentCommand(agent, prompt)

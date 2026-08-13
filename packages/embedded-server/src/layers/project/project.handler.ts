@@ -20,6 +20,16 @@ export const ProjectHandler = HttpApiBuilder.group(Api, "project", (handlers) =>
         s.commit(payload.message, payload.paths)
       )
     )
+    .handle("discard", ({ payload }) =>
+      Effect.flatMap(ProjectService, (s) => s.discard(payload.paths)).pipe(
+        Effect.as({ ok: true })
+      )
+    )
+    .handle("discardHunk", ({ payload }) =>
+      Effect.flatMap(ProjectService, (s) =>
+        s.discardHunk(payload.path, payload.hunkIndex)
+      ).pipe(Effect.as({ ok: true }))
+    )
     .handle("log", ({ query }) => {
       // `ref` is deliberately ignored: a branch name belongs to one root, and
       // the project's history is every root's HEAD. The rest of the filters

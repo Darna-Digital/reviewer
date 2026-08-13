@@ -1,5 +1,6 @@
 import * as Context from "effect/Context";
 import type * as Effect from "effect/Effect";
+import type { GitFailure } from "../../../ports/git-exec.ts";
 import type { NoRepoSelected } from "../../../shared.ts";
 import type { LogQuery, SearchQuery } from "../../repo/schema/repo.schema.ts";
 import type {
@@ -41,6 +42,19 @@ export interface ProjectRepo {
     message: string,
     paths: ReadonlyArray<string>
   ) => Effect.Effect<ProjectCommitResult, NoRepoSelected>;
+  /**
+   * Discard the given project paths' worktree changes, each in the root that
+   * owns it. A path no root claims is dropped rather than guessed at, exactly
+   * as the commit drops it.
+   */
+  readonly discard: (
+    paths: ReadonlyArray<string>
+  ) => Effect.Effect<void, GitFailure>;
+  /** Discard one hunk of a project path's diff, in the root that owns it. */
+  readonly discardHunk: (
+    path: string,
+    hunkIndex: number
+  ) => Effect.Effect<void, GitFailure>;
 }
 
 export class ProjectRepository extends Context.Service<

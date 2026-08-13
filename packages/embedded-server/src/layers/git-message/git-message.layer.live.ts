@@ -1,11 +1,14 @@
 import * as Layer from "effect/Layer";
 import {
+  GitMessageChanges,
   GitMessageService,
   makeGitMessageService,
 } from "@byconvo/core/git-message";
+import { makeWorkspaceChanges } from "./git-message.changes.ts";
 
-// GitExec and TerminalExec are global singletons (InfraLive), so the live
-// service needs no extra wiring of its own.
+// The changes are collected the workspace's way — one root, or every root a
+// multi-root project holds — while everything it builds on (GitExec,
+// TerminalExec, the workspace context) is a global singleton from InfraLive.
 export const GitMessageLive = Layer.effect(GitMessageService)(
   makeGitMessageService
-);
+).pipe(Layer.provide(Layer.effect(GitMessageChanges)(makeWorkspaceChanges)));

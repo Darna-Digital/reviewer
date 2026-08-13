@@ -10,10 +10,18 @@ import {
   ProjectMatches,
 } from "@byconvo/core/project";
 import * as Schema from "effect/Schema";
-import { LogQueryParams, SearchQueryParams } from "@byconvo/core/repo";
-import { NoRepoSelected } from "@byconvo/core/shared";
+import {
+  Discard,
+  DiscardHunk,
+  LogQueryParams,
+  SearchQueryParams,
+} from "@byconvo/core/repo";
+import { GitError } from "@byconvo/core/ports/git-exec";
+import { NoRepoSelected, Ok } from "@byconvo/core/shared";
 
 const noProject = [NoRepoSelected] as const;
+/** Reverting runs git in each root, so a root's own failure has to be sayable. */
+const gitError = [GitError, NoRepoSelected] as const;
 
 export class ProjectApi extends HttpApiGroup.make("project")
   .add(
@@ -45,6 +53,20 @@ export class ProjectApi extends HttpApiGroup.make("project")
       payload: ProjectCommitBody,
       success: ProjectCommitResult,
       error: noProject,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("discard", "/project/discard", {
+      payload: Discard,
+      success: Ok,
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("discardHunk", "/project/discard-hunk", {
+      payload: DiscardHunk,
+      success: Ok,
+      error: gitError,
     })
   )
   .add(
