@@ -19,9 +19,17 @@ export function previewedHref(documentUrl: string): string | null {
   return new URL(documentUrl).searchParams.get(PREVIEW_PARAM);
 }
 
+/**
+ * The URL a preview document is loaded from — and so what everything in it
+ * resolved its assets against, before it rewrote its own address.
+ */
+export function previewRootUrl(documentUrl: string): string {
+  return new URL("/", documentUrl).toString();
+}
+
 /** The root URL that renders `href` as a preview, resolved against the app. */
 export function previewWindowUrl(href: string, documentUrl: string): string {
-  const url = new URL("/", documentUrl);
+  const url = new URL(previewRootUrl(documentUrl));
   url.searchParams.set(PREVIEW_PARAM, href);
   return url.toString();
 }
@@ -34,6 +42,24 @@ function claimPreviewLocation(): string | null {
 }
 
 export const isPreviewWindow = claimPreviewLocation() !== null;
+
+/**
+ * Nothing in a preview may hold the keyboard. It is a page rendered in a frame
+ * parked off the side of a window someone is using, and a composer or a search
+ * field autofocusing itself on the way up takes their typing with it — and
+ * hands it back on the next capture, which the window reads as having been
+ * away and refetches everything on.
+ */
+if (isPreviewWindow && typeof document !== "undefined") {
+  document.addEventListener(
+    "focusin",
+    (event) => {
+      if (event.target instanceof HTMLElement) event.target.blur();
+      window.parent.focus();
+    },
+    true
+  );
+}
 
 export const previewUrl = (href: string): string =>
   previewWindowUrl(href, window.location.href);

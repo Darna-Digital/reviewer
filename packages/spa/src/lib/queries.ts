@@ -9,14 +9,54 @@ import { api, fetchClient } from "@/lib/api/client";
 import { isMultiRepo } from "@byconvo/core/workspace";
 import type { DiffTarget, LogQuery } from "@/lib/api/types";
 
-export const useWorkspace = () => api.useQuery("get", "/api/workspace");
-export const useRepo = () => api.useQuery("get", "/api/repo");
-export const useFiles = () => api.useQuery("get", "/api/files");
-export const useStatus = () => api.useQuery("get", "/api/status");
-export const useBranches = () => api.useQuery("get", "/api/branches");
+/**
+ * How long an answer is worth reusing, and what makes it worth asking again.
+ *
+ * Two different things used to be answered by the same setting. A tab switch
+ * unmounts one shell and mounts another, and with nothing held fresh every hook
+ * in the new one re-asked the server: thirty-odd requests for one click, six at
+ * a time down a keep-alive connection, for data the window had been given a
+ * moment earlier. Coming back to the window is the opposite case — files change
+ * under the app while you are in an editor, and the answer really is stale.
+ *
+ * So navigation reads from the cache and focus is what refetches. Writes are
+ * unaffected either way: every mutation already invalidates what it touched.
+ */
+const GIT_DATA = {
+  staleTime: 30_000,
+  // However fresh git's answer is, it was true of a tree that anything else on
+  // the machine can have changed since — so returning to the window asks again.
+  refetchOnWindowFocus: "always",
+} as const;
+
+/** Written only through this app, and invalidated by whatever writes it. */
+const OWN_DATA = { staleTime: 30_000 } as const;
+
+/**
+ * History: git data, but paged. Refetching one of these on focus refetches
+ * every page scrolled so far, so it is left to go stale on its own rather than
+ * being forced — what a new commit changes is the first page, and that is what
+ * committing already invalidates.
+ */
+const HISTORY = { staleTime: 30_000 } as const;
+
+/** A catalog, not a reading: it is the same answer for the whole session. */
+const CATALOG = { staleTime: Infinity } as const;
+
+/** Answered over the network by someone else, and slow enough to show it. */
+const REMOTE = { staleTime: 60_000, refetchOnWindowFocus: false } as const;
+
+export const useWorkspace = () =>
+  api.useQuery("get", "/api/workspace", {}, GIT_DATA);
+export const useRepo = () => api.useQuery("get", "/api/repo", {}, GIT_DATA);
+export const useFiles = () => api.useQuery("get", "/api/files", {}, GIT_DATA);
+export const useStatus = () => api.useQuery("get", "/api/status", {}, GIT_DATA);
+export const useBranches = () =>
+  api.useQuery("get", "/api/branches", {}, GIT_DATA);
 export const useRemoteBranches = () =>
-  api.useQuery("get", "/api/remote-branches");
-export const useComments = () => api.useQuery("get", "/api/comments");
+  api.useQuery("get", "/api/remote-branches", {}, GIT_DATA);
+export const useComments = () =>
+  api.useQuery("get", "/api/comments", {}, OWN_DATA);
 
 // --- Project-wide git (every root the open project holds) ------------------
 // The `/api/repo`-backed hooks above answer for the selected repository; these
@@ -30,19 +70,19 @@ export const useMultiRepo = (): boolean => {
 
 /** Every root's files, named from the project root so the tree nests them. */
 export const useProjectFiles = (enabled: boolean) =>
-  api.useQuery("get", "/api/project/files", {}, { enabled });
+  api.useQuery("get", "/api/project/files", {}, { ...GIT_DATA, enabled });
 
 /** Every root's uncommitted diff as one diff, with project-relative paths. */
 export const useProjectDiff = (enabled: boolean) =>
-  api.useQuery("get", "/api/project/diff", {}, { enabled });
+  api.useQuery("get", "/api/project/diff", {}, { ...GIT_DATA, enabled });
 
 /** Uncommitted work in every root — the commit view's per-repository groups. */
 export const useProjectChanges = () =>
-  api.useQuery("get", "/api/project/changes");
+  api.useQuery("get", "/api/project/changes", {}, GIT_DATA);
 
 /** Every root's branches — the branch popup's per-repository sections. */
 export const useProjectBranches = () =>
-  api.useQuery("get", "/api/project/branches");
+  api.useQuery("get", "/api/project/branches", {}, GIT_DATA);
 
 /**
  * Every root's history merged, one page at a time — the project-wide twin of
@@ -56,6 +96,7 @@ export const useProjectBranches = () =>
 export const usePagedProjectLog = (enabled: boolean, filters: LogQuery) => {
   const query = useInfiniteQuery({
     queryKey: ["project-log-pages", filters],
+    ...HISTORY,
     enabled,
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
@@ -86,17 +127,20 @@ export const usePagedProjectLog = (enabled: boolean, filters: LogQuery) => {
 };
 
 /** The in-progress merge/rebase operation and its remaining conflicts. */
-export const useMergeState = () => api.useQuery("get", "/api/merge-state");
+export const useMergeState = () =>
+  api.useQuery("get", "/api/merge-state", {}, GIT_DATA);
 
 // --- Threads / Chats / Docs / Tasks (workspace features) ------------------
 
-export const useThreads = () => api.useQuery("get", "/api/threads");
+export const useThreads = () =>
+  api.useQuery("get", "/api/threads", {}, OWN_DATA);
 
 /** Agent chats (structured conversations, distinct from terminal threads). */
-export const useChats = () => api.useQuery("get", "/api/chats");
+export const useChats = () => api.useQuery("get", "/api/chats", {}, OWN_DATA);
 
 /** The static provider/model catalog behind the composer's model picker. */
-export const useChatModels = () => api.useQuery("get", "/api/chats/models");
+export const useChatModels = () =>
+  api.useQuery("get", "/api/chats/models", {}, CATALOG);
 
 const CHAT_STALE_MS = 15_000;
 
@@ -124,24 +168,25 @@ export const useThread = (id: string | null) =>
     "get",
     "/api/threads/{id}",
     { params: { path: { id: id ?? "" } } },
-    { enabled: id !== null }
+    { ...OWN_DATA, enabled: id !== null }
   );
 
-export const useDocs = () => api.useQuery("get", "/api/docs");
+export const useDocs = () => api.useQuery("get", "/api/docs", {}, OWN_DATA);
 
 export const useDoc = (id: string | null) =>
   api.useQuery(
     "get",
     "/api/docs/{id}",
     { params: { path: { id: id ?? "" } } },
-    { enabled: id !== null }
+    { ...OWN_DATA, enabled: id !== null }
   );
 
-export const useTasks = () => api.useQuery("get", "/api/tasks/board");
+export const useTasks = () =>
+  api.useQuery("get", "/api/tasks/board", {}, OWN_DATA);
 
 /** Saved Local Dev commands across the project's repos, with runtime status. */
 export const useDevCommands = () =>
-  api.useQuery("get", "/api/local-dev/commands");
+  api.useQuery("get", "/api/local-dev/commands", {}, OWN_DATA);
 
 /** The base/ours/theirs index stages of a conflicted file. */
 export const useConflictBlobs = (path: string | null) =>
@@ -153,16 +198,18 @@ export const useConflictBlobs = (path: string | null) =>
   );
 
 export const usePulls = (enabled: boolean) =>
-  api.useQuery("get", "/api/github/pulls", {}, { enabled });
+  api.useQuery("get", "/api/github/pulls", {}, { ...REMOTE, enabled });
 
+/**
+ * A commit is immutable once it exists, so the one thing that could make this
+ * answer wrong is the sha changing — and that is a different key.
+ */
 export const useCommitDetail = (sha: string | null) =>
   api.useQuery(
     "get",
     "/api/commit/{sha}",
     { params: { path: { sha: sha ?? "" } } },
-    {
-      enabled: sha !== null,
-    }
+    { ...CATALOG, enabled: sha !== null }
   );
 
 export const usePullComments = (pullNumber: number | null) =>
@@ -170,7 +217,7 @@ export const usePullComments = (pullNumber: number | null) =>
     "get",
     "/api/github/pulls/{number}/comments",
     { params: { path: { number: String(pullNumber ?? "") } } },
-    { enabled: pullNumber !== null }
+    { ...REMOTE, enabled: pullNumber !== null }
   );
 
 /** How many commits one page of history holds. */
@@ -207,6 +254,7 @@ const logSearchParams = (
 export const usePagedLog = (ref: string | null, filters: LogQuery) => {
   const query = useInfiniteQuery({
     queryKey: ["log-pages", ref, filters],
+    ...HISTORY,
     enabled: ref !== null,
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
@@ -242,10 +290,10 @@ export const useDiffText = (target: DiffTarget | null) => {
     "get",
     "/api/diff",
     {},
-    {
-      enabled: target?.kind === "worktree",
-    }
+    { ...GIT_DATA, enabled: target?.kind === "worktree" }
   );
+  // A commit's diff, like the commit itself, cannot change under the key it is
+  // held at; only the worktree's can.
   const commit = api.useQuery(
     "get",
     "/api/diff",
@@ -254,7 +302,7 @@ export const useDiffText = (target: DiffTarget | null) => {
         query: { commit: target?.kind === "commit" ? target.sha : "" },
       },
     },
-    { enabled: target?.kind === "commit" }
+    { ...CATALOG, enabled: target?.kind === "commit" }
   );
   const range = api.useQuery(
     "get",
@@ -267,7 +315,7 @@ export const useDiffText = (target: DiffTarget | null) => {
             : { base: "", head: "" },
       },
     },
-    { enabled: target?.kind === "range" }
+    { ...GIT_DATA, enabled: target?.kind === "range" }
   );
   const pull = api.useQuery(
     "get",
@@ -279,7 +327,7 @@ export const useDiffText = (target: DiffTarget | null) => {
         },
       },
     },
-    { enabled: target?.kind === "pull" }
+    { ...REMOTE, enabled: target?.kind === "pull" }
   );
 
   switch (target?.kind) {
@@ -301,7 +349,7 @@ export const useFileBytes = (path: string | null) =>
     "get",
     "/api/file/raw",
     { params: { query: { path: path ?? "" } } },
-    { enabled: path !== null, retry: false }
+    { ...GIT_DATA, enabled: path !== null, retry: false }
   );
 
 export const useFile = (path: string | null) =>
@@ -312,5 +360,5 @@ export const useFile = (path: string | null) =>
     // A file read either succeeds or it doesn't — retrying a missing/unreadable
     // path (e.g. a staged-then-deleted "AD" ghost that has no worktree content)
     // just hangs the viewer on "Loading", so fail fast and surface the error.
-    { enabled: path !== null, retry: false }
+    { ...GIT_DATA, enabled: path !== null, retry: false }
   );

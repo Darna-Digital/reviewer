@@ -14,6 +14,14 @@ import type { PreviewZoom } from "../interfaces/tab-preview.interfaces";
  */
 export const PREVIEW_ZOOM: PreviewZoom = 0.3;
 
+/**
+ * The window the pictures are taken in. A desktop shape, in the launchpad's own
+ * proportions, so what comes back fills a card rather than being cropped into
+ * one.
+ */
+export const MILL_WIDTH = 1280;
+export const MILL_HEIGHT = 800;
+
 /** Preview boxes are the shape of a window, so a page fills one as it would. */
 export const PREVIEW_ASPECT = "16 / 10";
 
@@ -32,51 +40,24 @@ export function previewFrameStyle(zoom: PreviewZoom): CSSProperties {
 export const OVERVIEW_TRANSITION_MS = 260;
 
 /**
- * The first preview starts with the panel rather than after it: the launchpad is
- * the previews, and a grid that arrives empty and fills in later reads as the
- * app being slow rather than as care being taken. Frames stay warm once booted,
- * so this is only ever paid the first time a tab is looked at.
+ * The longest the launchpad will stay up waiting for a page it was asked for.
+ * Covering the window while the page it is about to show loads is what keeps
+ * the last one from flashing past; covering it indefinitely is a hang.
  */
-export const PREVIEW_INTENT_MS = 0;
+export const PICK_COVER_CEILING_MS = 1_200;
+
+/** A promise that settles after `ms`, for racing something slower against. */
+export const wait = (ms: number): Promise<void> =>
+  new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 
 /**
- * Each card starts a frame behind the one before it. A dozen whole apps booting
- * in the same tick locks the window up long enough to be felt — including by the
- * slide itself — so they are spread just far enough apart to keep it moving,
- * which still lands them all inside the animation.
- */
-const BOOT_STAGGER_MS = 20;
-
-export const staggeredBootMs = (index: number): number =>
-  PREVIEW_INTENT_MS + index * BOOT_STAGGER_MS;
-
-/**
- * Cards past this many keep their title and drop the live view. Every frame is
- * an app left running for as long as the overview is open, and a strip long
- * enough to reach this is one you are reading titles off anyway.
+ * Cards past this many keep their title and drop the picture. A strip long
+ * enough to reach this is one you are reading titles off anyway, and every
+ * extra card is another page the renderer has to work its way round to.
  */
 export const LIVE_PREVIEW_LIMIT = 12;
-
-/**
- * How many booted frames are held at once. A frame that is kept costs the
- * memory of an idle app and saves the whole of its boot, so the ones you have
- * just been looking at are worth keeping and the rest are not.
- */
-export const WARM_PREVIEW_LIMIT = 6;
-
-/**
- * Move `key` to the head of the warm list, dropping whatever falls off the end.
- * Returns the list unchanged when it is already at the head, so a preview being
- * shown again does not make every other frame re-render.
- */
-export function keepWarm(
-  warm: ReadonlyArray<string>,
-  key: string,
-  limit = WARM_PREVIEW_LIMIT
-): ReadonlyArray<string> {
-  if (warm[0] === key) return warm;
-  return [key, ...warm.filter((held) => held !== key)].slice(0, limit);
-}
 
 /** The shortest the launchpad is worth being: a row of cards and its header. */
 export const LAUNCHPAD_MIN_HEIGHT = 220;

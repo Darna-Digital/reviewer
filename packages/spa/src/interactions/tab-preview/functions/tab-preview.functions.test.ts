@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
-  keepWarm,
   LAUNCHPAD_MIN_HEIGHT,
-  LIVE_PREVIEW_LIMIT,
   launchpadHeightCss,
   launchpadMaxHeight,
-  OVERVIEW_TRANSITION_MS,
+  MILL_HEIGHT,
+  MILL_WIDTH,
+  PREVIEW_ASPECT,
   previewFrameStyle,
   PREVIEW_ZOOM,
-  staggeredBootMs,
 } from "./tab-preview.functions";
 
 describe("previewFrameStyle", () => {
@@ -26,44 +25,15 @@ describe("previewFrameStyle", () => {
   });
 });
 
-describe("keepWarm", () => {
-  it("holds the frames most recently shown", () => {
-    expect(keepWarm(keepWarm([], "a"), "b")).toEqual(["b", "a"]);
+describe("the window pictures are taken in", () => {
+  it("is the shape a card shows them in, so nothing is cropped to fit", () => {
+    const [wide, tall] = PREVIEW_ASPECT.split("/").map(Number);
+
+    expect(MILL_WIDTH / MILL_HEIGHT).toBeCloseTo(wide / tall);
   });
 
-  it("drops the coldest frame once the cache is full", () => {
-    const full = ["c", "b", "a"];
-
-    expect(keepWarm(full, "d", 3)).toEqual(["d", "c", "b"]);
-  });
-
-  it("moves a frame back to the head instead of holding it twice", () => {
-    expect(keepWarm(["c", "b", "a"], "a", 3)).toEqual(["a", "c", "b"]);
-  });
-
-  it("leaves the list alone when the same frame is shown again", () => {
-    const warm = ["a", "b"];
-
-    expect(keepWarm(warm, "a")).toBe(warm);
-  });
-});
-
-describe("staggeredBootMs", () => {
-  it("starts the first preview with the panel, not after it", () => {
-    expect(staggeredBootMs(0)).toBe(0);
-  });
-
-  it("has every preview up well inside the slide", () => {
-    expect(staggeredBootMs(LIVE_PREVIEW_LIMIT)).toBeLessThan(
-      OVERVIEW_TRANSITION_MS
-    );
-  });
-
-  it("starts each card after the one before it, never together", () => {
-    expect(staggeredBootMs(3) - staggeredBootMs(2)).toBe(
-      staggeredBootMs(2) - staggeredBootMs(1)
-    );
-    expect(staggeredBootMs(1)).toBeGreaterThan(staggeredBootMs(0));
+  it("is a desktop, so a page lays itself out as the tab holds it", () => {
+    expect(MILL_WIDTH).toBeGreaterThanOrEqual(1024);
   });
 });
 

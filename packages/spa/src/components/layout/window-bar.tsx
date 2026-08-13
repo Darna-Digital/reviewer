@@ -36,6 +36,7 @@ import {
   chatIdOf,
   isPinnedTab,
   moveTab,
+  NEW_SESSION_HREF,
   renameTab,
   tabAtPosition,
   trackLocation,
@@ -100,7 +101,7 @@ export function WindowBar() {
   // const canGoBack = useCanGoBack();
   const location = useRouterState({ select: (s) => s.location });
   const { tabs, activeId } = useWindowTabs();
-  const { select, close, openSession } = useWindowTabActions();
+  const { select, close, openSession, prime } = useWindowTabActions();
   const overviewOpen = useTabOverview();
   /**
    * The tab being dragged. It lives in a ref as well as state because the first
@@ -161,6 +162,20 @@ export function WindowBar() {
       }, state)
     );
   }, [chats.data]);
+
+  // Every tab in the strip, and the session the ✛ would mint, loaded while the
+  // window has nothing else to do. A tab is already open as far as you are
+  // concerned — clicking it should show the page, not start fetching it — and
+  // waiting for the pointer to reach the tab is too late for a click that
+  // follows straight after.
+  useEffect(() => {
+    const warm = () => {
+      for (const tab of tabs) prime(tab.href);
+      prime(NEW_SESSION_HREF);
+    };
+    const idle = window.requestIdleCallback(warm, { timeout: 2_000 });
+    return () => window.cancelIdleCallback(idle);
+  }, [tabs, prime]);
 
   // ⌘T mints a session, the same as the ✛ at the end of the strip, and ⌘L
   // expands the launchpad, the same as the button in the middle of the bar. ⇧
@@ -252,6 +267,7 @@ export function WindowBar() {
                       aria-label={tab.title}
                       tabIndex={active ? 0 : -1}
                       draggable={!pinned}
+                      onPointerEnter={() => prime(tab.href)}
                       className={cn(
                         "group/tab flex h-7 max-w-52 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-md text-[0.8125rem] transition-colors",
                         // A pinned tab is its icon and nothing else, so it wears

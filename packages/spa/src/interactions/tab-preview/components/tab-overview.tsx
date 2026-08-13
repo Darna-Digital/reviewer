@@ -14,7 +14,7 @@
  * asks for waits for the slide to finish rather than landing in the middle of it.
  */
 import { IconChevronUp, IconPlus, IconX } from "@tabler/icons-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useEntered, usePresence } from "@/hooks/use-presence";
 import { useWindowTabActions } from "@/interactions/window-tabs/adapters/window-tab-actions";
@@ -25,8 +25,10 @@ import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tab
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import {
+  beginPick,
   closeTabOverview,
   setOverviewResizing,
+  useOverviewIdle,
   useOverviewResizing,
   useTabOverview,
 } from "../adapters/tab-overview.store";
@@ -36,35 +38,22 @@ import {
   launchpadMaxHeight,
   LIVE_PREVIEW_LIMIT,
   OVERVIEW_TRANSITION_MS,
-  staggeredBootMs,
+  PICK_COVER_CEILING_MS,
   PREVIEW_ASPECT,
   PREVIEW_ZOOM,
+  wait,
 } from "../functions/tab-preview.functions";
 import { TabPreviewFrame } from "./tab-preview-frame";
+import { TabSnapshotMill } from "./tab-snapshot-mill";
 
 const EASE = "ease-[cubic-bezier(0.22,1,0.36,1)]";
 
 /** One source of truth for the slide, so the page and the panel move together. */
 const SLIDE = { transitionDuration: `${OVERVIEW_TRANSITION_MS}ms` };
 
-/**
- * Run once the panel has finished collapsing. Picking a tab is a route change
- * and often a mode change with it — a re-render of the whole canvas — and doing
- * that while the slide is running is what makes the slide stutter. The page is
- * behind the panel until the panel has gone, so there is nothing to see in the
- * wait.
- */
-function afterCollapse(run: () => void): void {
-  const instant = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  if (instant) {
-    run();
-    return;
-  }
-  window.setTimeout(run, OVERVIEW_TRANSITION_MS);
-}
-
 export function TabOverview() {
   const expanded = useTabOverview();
+  const idle = useOverviewIdle();
   const present = usePresence(expanded, OVERVIEW_TRANSITION_MS);
   const entered = useEntered(expanded);
   const { tabs, activeId } = useWindowTabs();
@@ -80,10 +69,29 @@ export function TabOverview() {
     return () => window.removeEventListener("keydown", onKey);
   }, [expanded]);
 
-  const pick = (act: () => void) => {
-    closeTabOverview();
-    afterCollapse(act);
+  /**
+   * Picking a tab navigates at once and collapses when the page has arrived,
+   * rather than waiting out the slide and only then starting to load. The two
+   * run in the time the slower of them takes: a page already in hand is behind
+   * the panel by the time it has moved, and a page that needs a moment is
+   * waited for behind the panel rather than in front of the last one — which is
+   * what made picking a session flash the page you were leaving.
+   *
+   * The wait is capped: a navigation that stalls is not a reason to leave the
+   * launchpad covering the window.
+   */
+  const pick = (act: () => Promise<void>) => {
+    beginPick();
+    void Promise.race([act(), wait(PICK_COVER_CEILING_MS)])
+      .catch(() => {})
+      .finally(closeTabOverview);
   };
+
+  // Only the cards that show a picture are worth taking one of, and the one
+  // you are already on is the one to start with.
+  const shown = useMemo(() => tabs.slice(0, LIVE_PREVIEW_LIMIT), [tabs]);
+  const hrefs = useMemo(() => shown.map((tab) => tab.href), [shown]);
+  const from = shown.findIndex((tab) => tab.id === activeId);
 
   return (
     <div
@@ -115,10 +123,8 @@ export function TabOverview() {
               key={tab.id}
               tab={tab}
               active={tab.id === activeId}
-              shown={expanded}
-              bootDelayMs={
-                index < LIVE_PREVIEW_LIMIT ? staggeredBootMs(index) : null
-              }
+              previewed={index < LIVE_PREVIEW_LIMIT}
+              onPrime={() => actions.prime(tab.href)}
               onSelect={() => pick(() => actions.select(tab))}
               onClose={() => actions.close(tab.id)}
             />
@@ -128,6 +134,7 @@ export function TabOverview() {
       </div>
       <CollapseHandle />
       <LaunchpadResize height={height} />
+      <TabSnapshotMill hrefs={hrefs} from={from} running={idle} />
     </div>
   );
 }
@@ -238,22 +245,23 @@ export function TabOverviewScrim() {
 function TabCard({
   tab,
   active,
-  shown,
-  bootDelayMs,
+  previewed,
+  onPrime,
   onSelect,
   onClose,
 }: {
   readonly tab: WindowTab;
   readonly active: boolean;
-  /** Whether the panel is open — a card in a collapsed panel is not on screen. */
-  readonly shown: boolean;
-  /** When this card's frame starts, or null for a card that stays a title. */
-  readonly bootDelayMs: number | null;
+  /** Whether this card shows a picture, or stays a title in a plain box. */
+  readonly previewed: boolean;
+  readonly onPrime: () => void;
   readonly onSelect: () => void;
   readonly onClose: () => void;
 }) {
   return (
     <div
+      onPointerEnter={onPrime}
+      onFocus={onPrime}
       className={cn(
         // The card is the frame's container, and the frame is embedded
         // content: the control that picks the tab is laid over it rather
@@ -265,18 +273,12 @@ function TabCard({
         EASE
       )}
     >
-      {bootDelayMs === null ? (
+      {previewed ? (
+        <TabPreviewFrame target={tab} zoom={PREVIEW_ZOOM} />
+      ) : (
         <div
           style={{ aspectRatio: PREVIEW_ASPECT }}
           className="w-full bg-background"
-        />
-      ) : (
-        <TabPreviewFrame
-          target={tab}
-          zoom={PREVIEW_ZOOM}
-          bootDelayMs={bootDelayMs}
-          cacheKey={`grid:${tab.id}`}
-          active={shown}
         />
       )}
       <div className="flex h-9 items-center gap-2 border-t border-border bg-elevate px-2.5 text-xs">

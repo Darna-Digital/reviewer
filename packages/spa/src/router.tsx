@@ -11,13 +11,32 @@ import { routeTree } from "./routeTree.gen";
 // to reload the whole app. Chromium *does* fire a `focus` event on the window
 // when the BrowserWindow regains OS focus, so listen for that too.
 if (typeof window !== "undefined") {
+  // Only a focus the app actually left counts. A `focus` event also fires when
+  // the keyboard comes back from a frame *inside* the page — a tab preview
+  // rendering itself — and the app was never away, so refetching everything
+  // there is a storm for nothing. `hasFocus()` is true for the whole document
+  // tree including its frames, which is exactly the distinction wanted.
+  let away = !document.hasFocus();
+
   focusManager.setEventListener((handleFocus) => {
-    const onFocus = () => handleFocus(true);
-    const onVisibility = () => handleFocus();
+    const onFocus = () => {
+      if (!away) return;
+      away = false;
+      handleFocus(true);
+    };
+    const onBlur = () => {
+      away = !document.hasFocus();
+    };
+    const onVisibility = () => {
+      away = document.hidden;
+      handleFocus();
+    };
     window.addEventListener("focus", onFocus, false);
+    window.addEventListener("blur", onBlur, false);
     window.addEventListener("visibilitychange", onVisibility, false);
     return () => {
       window.removeEventListener("focus", onFocus);
+      window.removeEventListener("blur", onBlur);
       window.removeEventListener("visibilitychange", onVisibility);
     };
   });
@@ -46,7 +65,11 @@ export function getRouter() {
         }
       : {
           queries: {
-            staleTime: 0,
+            // Nothing is re-asked for just because a component mounted again —
+            // navigating is not new information. What a query is actually
+            // worth holding is set where it is declared (`lib/queries.ts`);
+            // this is the floor for anything that doesn't say.
+            staleTime: 30_000,
             gcTime: 5 * 60_000,
             retry: true,
             refetchOnWindowFocus: true,

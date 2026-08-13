@@ -12,6 +12,7 @@ import { useSyncExternalStore } from "react";
 
 let expanded = false;
 let resizing = false;
+let picking = false;
 const listeners = new Set<() => void>();
 
 function emit(): void {
@@ -19,13 +20,26 @@ function emit(): void {
 }
 
 function set(next: boolean): void {
-  if (next === expanded) return;
+  if (next === expanded && !picking) return;
   expanded = next;
+  picking = false;
   emit();
 }
 
 export const closeTabOverview = (): void => set(false);
 export const toggleTabOverview = (): void => set(!expanded);
+
+/**
+ * A tab has been picked and the window is on its way there, with the panel
+ * still covering it. Everything the launchpad was doing for its own sake stops
+ * here rather than when the panel finally goes: the page being loaded is the
+ * only thing worth the main thread now.
+ */
+export function beginPick(): void {
+  if (picking) return;
+  picking = true;
+  emit();
+}
 
 export function setOverviewResizing(next: boolean): void {
   if (next === resizing) return;
@@ -49,5 +63,13 @@ export const useOverviewResizing = (): boolean =>
   useSyncExternalStore(
     subscribe,
     () => resizing,
+    () => false
+  );
+
+/** Open, and not already on its way somewhere — the only time previews run. */
+export const useOverviewIdle = (): boolean =>
+  useSyncExternalStore(
+    subscribe,
+    () => expanded && !picking,
     () => false
   );
