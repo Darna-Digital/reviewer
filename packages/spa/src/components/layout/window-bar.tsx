@@ -178,8 +178,8 @@ export function WindowBar() {
   }, [tabs, prime]);
 
   // ⌘T mints a session, the same as the ✛ at the end of the strip, and ⌘L
-  // expands the launchpad, the same as the button in the middle of the bar. ⇧
-  // and ⌥ are left alone so each chord stays exactly the one it is.
+  // expands the launchpad, the same as the button at the head of the bar. ⇧ and
+  // ⌥ are left alone so each chord stays exactly the one it is.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) {
@@ -219,12 +219,6 @@ export function WindowBar() {
         isDesktop && "[-webkit-app-region:drag]"
       )}
     >
-      {/* The bar is three parts, and the two ends are the same width whatever
-          is in them: that is what puts the launchpad on the window's own centre
-          line — under the chevron that collapses it — rather than in the middle
-          of whatever the strip has left over. The strip lives inside the lead
-          half, so opening tabs fills that half and stops at the launchpad
-          instead of pushing it along. */}
       <div className="flex min-w-0 flex-1 items-center gap-1">
         {/* The traffic lights are drawn by macOS over the bar's top-left, so the
             lead gutter is what the window's own controls sit in (see
@@ -234,6 +228,15 @@ export function WindowBar() {
           aria-hidden
           className={isDesktop ? "w-24 shrink-0" : "w-2 shrink-0"}
         />
+        {/* The launchpad rides the bar rather than the strip: it is a place the
+            window goes to, not a page it holds open. */}
+        <BarButton
+          label="Launchpad"
+          pressed={overviewOpen}
+          onClick={toggleTabOverview}
+        >
+          <IconStack2 className="size-4" />
+        </BarButton>
         <SidebarToggle className={NO_DRAG} />
         {/* <BarButton
         label="Back"
@@ -377,28 +380,10 @@ export function WindowBar() {
           <IconPlus className="size-4" />
         </BarButton>
       </div>
-      <button
-        type="button"
-        aria-pressed={overviewOpen}
-        onClick={toggleTabOverview}
-        className={cn(
-          "flex h-7 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-[0.8125rem] transition-all duration-150",
-          overviewOpen
-            ? "bg-elevate-strong text-foreground"
-            : "text-muted-foreground hover:bg-elevate hover:text-foreground",
-          "active:scale-95 motion-reduce:transition-none",
-          NO_DRAG
-        )}
-      >
-        <IconStack2 className="size-4 shrink-0" />
-        Launchpad
-      </button>
-      {/* The trailing half keeps its content whatever the window's width: it is
-          the strip in the other half that gives way first. Its own inset is a
-          gutter like the lead one rather than padding — padding would be added
-          to this half's width after the two were divided, and the launchpad
-          would sit half a gutter off centre. */}
-      <div className="flex flex-1 items-center justify-end gap-1">
+      {/* The trailing end keeps its content whatever the window's width: it is
+          the strip that gives way first. Its inset is a gutter like the lead
+          one rather than padding, so both ends of the bar read the same. */}
+      <div className="flex shrink-0 items-center justify-end gap-1">
         {/* Both panes are there to be read against something else the window is
             showing, and in the native shell there is always something — the
             browser pane is a window of its own, and an analysis is opened from
