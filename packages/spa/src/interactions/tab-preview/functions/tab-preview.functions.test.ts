@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  LAUNCHPAD_DISMISS_HEIGHT,
   LAUNCHPAD_MIN_HEIGHT,
   launchpadHeightCss,
   launchpadMaxHeight,
@@ -48,6 +49,19 @@ describe("launchpadHeightCss", () => {
 
   it("never collapses past a row of cards", () => {
     expect(launchpadHeightCss(10)).toContain(`${LAUNCHPAD_MIN_HEIGHT}px`);
+  });
+});
+
+describe("dragging the launchpad shut", () => {
+  it("only closes well past the floor, so an ordinary resize cannot", () => {
+    expect(LAUNCHPAD_DISMISS_HEIGHT).toBeLessThan(LAUNCHPAD_MIN_HEIGHT);
+    expect(LAUNCHPAD_MIN_HEIGHT - LAUNCHPAD_DISMISS_HEIGHT).toBeGreaterThan(50);
+  });
+
+  it("leaves the panel at its floor for the stretch before that", () => {
+    expect(launchpadHeightCss(LAUNCHPAD_DISMISS_HEIGHT + 1)).toContain(
+      `${LAUNCHPAD_MIN_HEIGHT}px`
+    );
   });
 });
 

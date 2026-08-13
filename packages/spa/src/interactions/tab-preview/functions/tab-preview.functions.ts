@@ -62,6 +62,16 @@ export const LIVE_PREVIEW_LIMIT = 12;
 /** The shortest the launchpad is worth being: a row of cards and its header. */
 export const LAUNCHPAD_MIN_HEIGHT = 220;
 
+/**
+ * Dragged shorter than this, the launchpad closes instead of sitting at its
+ * floor. Pulling the seam up to nothing is how you say you are done with it,
+ * and a panel that refuses to go any smaller has nowhere to put that.
+ *
+ * Well clear of the floor, so the last stretch of an ordinary resize is not
+ * spent worrying about dismissing it by accident.
+ */
+export const LAUNCHPAD_DISMISS_HEIGHT = 140;
+
 /** How much of the pushed page stays on screen however far the panel is dragged. */
 export const LAUNCHPAD_PAGE_FLOOR = 192;
 

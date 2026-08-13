@@ -1,5 +1,5 @@
 /**
- * The launchpad: every open tab as a live card, laid out in a grid.
+ * The launchpad: every open tab as a card, laid out in a grid.
  *
  * It slides out of the window bar and pushes the page down rather than covering
  * it, so the app reads as having made room for the tabs instead of having been
@@ -9,9 +9,13 @@
  * Pushing is a transform on the page, not a size given to it: the canvas keeps
  * the height it had and slides off the bottom of the window, so a page holding a
  * few thousand lines of diff is composited down rather than laid out again on
- * every frame. Everything else the panel does is bent around the same rule —
- * nothing that costs a layout runs while it is moving, and the navigation a card
- * asks for waits for the slide to finish rather than landing in the middle of it.
+ * every frame. The cards follow the same rule — each is a picture of its tab
+ * (see `tab-snapshot-mill`) rather than the tab itself, so a grid of them costs
+ * a paint instead of a dozen running apps.
+ *
+ * Picking a tab starts its navigation at once and keeps the panel over the
+ * window until the page has arrived, so the two happen in the time one of them
+ * takes and the page being left never flashes past on the way.
  */
 import { IconChevronUp, IconPlus, IconX } from "@tabler/icons-react";
 import { useEffect, useMemo } from "react";
@@ -27,12 +31,14 @@ import { cn } from "@/lib/utils";
 import {
   beginPick,
   closeTabOverview,
+  isTabOverviewOpen,
   setOverviewResizing,
   useOverviewIdle,
   useOverviewResizing,
   useTabOverview,
 } from "../adapters/tab-overview.store";
 import {
+  LAUNCHPAD_DISMISS_HEIGHT,
   LAUNCHPAD_MIN_HEIGHT,
   launchpadHeightCss,
   launchpadMaxHeight,
@@ -198,7 +204,7 @@ function CollapseHandle() {
 }
 
 /** The seam between the launchpad and the page it pushed, dragged to trade one
- * for the other. */
+ * for the other — or dragged shut. */
 function LaunchpadResize({ height }: { readonly height: number }) {
   return (
     <div className="absolute inset-x-0 bottom-0 flex">
@@ -206,11 +212,27 @@ function LaunchpadResize({ height }: { readonly height: number }) {
         orientation="row"
         label="Resize launchpad"
         value={height}
-        min={LAUNCHPAD_MIN_HEIGHT}
+        // The drag is allowed below the panel's own floor so the gesture has
+        // somewhere to go: that last stretch is what closes it.
+        min={LAUNCHPAD_DISMISS_HEIGHT}
         max={() => launchpadMaxHeight(window.innerHeight)}
-        onResize={(launchpadHeight) => {
+        onResize={(dragged) => {
+          // The pointer is still down after the panel has gone, and the rest of
+          // the gesture is no longer about a panel that is on its way out.
+          if (!isTabOverviewOpen()) return;
+          if (dragged <= LAUNCHPAD_DISMISS_HEIGHT) {
+            // Let go of the drag before the close, so the page slides back up
+            // with the panel rather than snapping there without it.
+            setOverviewResizing(false);
+            closeTabOverview();
+            return;
+          }
           setOverviewResizing(true);
-          setUiPrefs({ launchpadHeight });
+          // Stored at the floor rather than under it, so the next drag starts
+          // from the height the panel is actually showing.
+          setUiPrefs({
+            launchpadHeight: Math.max(dragged, LAUNCHPAD_MIN_HEIGHT),
+          });
         }}
         onResizeEnd={() => setOverviewResizing(false)}
       />
@@ -266,7 +288,11 @@ function TabCard({
         // The card is the frame's container, and the frame is embedded
         // content: the control that picks the tab is laid over it rather
         // than wrapped around it.
-        "group/card relative overflow-hidden rounded-lg border transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:shadow-lg motion-reduce:transition-none",
+        //
+        // Hover is the border and nothing else. A grid of cards that each lift
+        // under the pointer reads as a page of things being nudged, and the
+        // border already says which one you are on.
+        "group/card relative overflow-hidden rounded-lg border transition-colors duration-200 motion-reduce:transition-none",
         active
           ? "border-brand-500 ring-1 ring-brand-500"
           : "border-border hover:border-muted-foreground/40",
@@ -315,7 +341,7 @@ function NewSessionCard({ onClick }: { readonly onClick: () => void }) {
       type="button"
       onClick={onClick}
       className={cn(
-        "flex min-h-32 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground transition-[transform,color,border-color] duration-200 hover:-translate-y-0.5 hover:border-muted-foreground/40 hover:text-foreground motion-reduce:transition-none",
+        "flex min-h-32 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border text-xs text-muted-foreground transition-colors duration-200 hover:border-muted-foreground/40 hover:text-foreground motion-reduce:transition-none",
         EASE
       )}
     >

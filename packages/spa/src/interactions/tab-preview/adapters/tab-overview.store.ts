@@ -30,6 +30,13 @@ export const closeTabOverview = (): void => set(false);
 export const toggleTabOverview = (): void => set(!expanded);
 
 /**
+ * Whether the panel is open right now, for handlers that run outside React's
+ * render cycle — a drag reads the value it was given when the pointer went
+ * down, which is already wrong by the time the drag has closed the panel.
+ */
+export const isTabOverviewOpen = (): boolean => expanded;
+
+/**
  * A tab has been picked and the window is on its way there, with the panel
  * still covering it. Everything the launchpad was doing for its own sake stops
  * here rather than when the panel finally goes: the page being loaded is the
