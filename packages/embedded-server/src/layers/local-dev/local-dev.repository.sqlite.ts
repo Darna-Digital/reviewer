@@ -1,17 +1,20 @@
 /**
- * File-backed dev-command store — one `.byconvo/dev-commands.json` per git root
- * the open project holds, so a project of a `backend` and a `frontend` keeps
- * each one's commands with the repository they run in, and a root cloned into
- * the folder brings its own along. Reads cover every root at once; a write only
- * touches the root that owns the command. Mirrors the terminal-threads file
- * repository.
+ * SQLite-backed dev-command store — commands belong to the git root they run
+ * in, so a project of a `backend` and a `frontend` keeps each one's commands
+ * with its repository, and a root cloned into the folder brings its own along.
+ *
+ * The roots are re-scanned on every read rather than remembered, which is what
+ * makes a freshly cloned repository show up without the user re-opening the
+ * project. Reads cover every root at once; a write only touches the root that
+ * owns the command.
  */
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Schema from "effect/Schema";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { NotFound, StorageError } from "@byconvo/core/shared";
+import { NotFound } from "@byconvo/core/shared";
 import { DevCommandDefinition } from "@byconvo/core/local-dev";
+import { attempt } from "../db/db.service.ts";
+import { documentTable } from "../db/documents.ts";
 import { scanRepos } from "../workspace/repo-scan.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 import type {
@@ -22,37 +25,14 @@ import type {
 } from "@byconvo/core/local-dev";
 import type { RepoEntry } from "@byconvo/core/workspace";
 
-const DevCommandsFile = Schema.Array(DevCommandDefinition);
+export const devCommands = documentTable<DevCommandDefinition>({
+  table: "dev_command",
+  sortColumn: "created_at",
+  direction: "asc",
+  decode: Schema.decodeUnknownSync(DevCommandDefinition),
+});
 
-const commandsPath = (repoPath: string) =>
-  `${repoPath}/.byconvo/dev-commands.json`;
-
-const readCommands = (
-  repoPath: string
-): ReadonlyArray<DevCommandDefinition> => {
-  try {
-    const raw = readFileSync(commandsPath(repoPath), "utf8");
-    return Schema.decodeUnknownSync(DevCommandsFile)(JSON.parse(raw));
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return [];
-    }
-    throw error;
-  }
-};
-
-const writeCommands = (
-  repoPath: string,
-  commands: ReadonlyArray<DevCommandDefinition>
-) => {
-  mkdirSync(`${repoPath}/.byconvo`, { recursive: true });
-  writeFileSync(
-    commandsPath(repoPath),
-    `${JSON.stringify(commands, null, 2)}\n`
-  );
-};
-
-const inRepo = (
+const inRepoEntry = (
   repo: RepoEntry,
   definition: DevCommandDefinition
 ): DevCommand => ({ ...definition, repo: repo.name, repoPath: repo.path });
@@ -64,7 +44,7 @@ const nextId = () => {
   return `d-${Date.now().toString(36)}-${counter}`;
 };
 
-export const makeFileDevCommandsRepository = Effect.gen(function* () {
+export const makeSqliteDevCommandsRepository = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const ctx = yield* WorkspaceContext;
 
@@ -74,18 +54,9 @@ export const makeFileDevCommandsRepository = Effect.gen(function* () {
   );
 
   const withRoots = <A>(f: (repos: ReadonlyArray<RepoEntry>) => A) =>
-    Effect.flatMap(roots, (repos) =>
-      Effect.try({
-        try: () => f(repos),
-        // A thrown NotFound is a real 404, not a storage failure — preserve it.
-        catch: (error) =>
-          error instanceof NotFound
-            ? error
-            : new StorageError({
-                reason: error instanceof Error ? error.message : String(error),
-              }),
-      })
-    );
+    // The scope here is the project's scan, not a selected root: a project can
+    // hold several repositories, and its dev commands are listed together.
+    Effect.flatMap(roots, (repos) => attempt(() => f(repos)));
 
   const requireRoot = (repos: ReadonlyArray<RepoEntry>, repoPath: string) => {
     const repo = repos.find((entry) => entry.path === repoPath);
@@ -97,10 +68,10 @@ export const makeFileDevCommandsRepository = Effect.gen(function* () {
     return repo;
   };
 
-  /** The command with that id, and the root whose file holds it. */
+  /** The command with that id, and the root that owns it. */
   const requireCommand = (repos: ReadonlyArray<RepoEntry>, id: string) => {
     for (const repo of repos) {
-      const definition = readCommands(repo.path).find((c) => c.id === id);
+      const definition = devCommands.find(repo.path, id);
       if (definition !== undefined) return { repo, definition };
     }
     throw new NotFound({ reason: `dev command ${id} not found` });
@@ -108,16 +79,16 @@ export const makeFileDevCommandsRepository = Effect.gen(function* () {
 
   const list: DevCommandsRepo["list"] = withRoots((repos) =>
     repos.flatMap((repo) =>
-      [...readCommands(repo.path)]
-        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
-        .map((definition) => inRepo(repo, definition))
+      devCommands
+        .list(repo.path)
+        .map((definition) => inRepoEntry(repo, definition))
     )
   );
 
   const get: DevCommandsRepo["get"] = (id) =>
     withRoots((repos) => {
       const { repo, definition } = requireCommand(repos, id);
-      return inRepo(repo, definition);
+      return inRepoEntry(repo, definition);
     });
 
   const create: DevCommandsRepo["create"] = (input: CreateDevCommandInput) =>
@@ -131,8 +102,8 @@ export const makeFileDevCommandsRepository = Effect.gen(function* () {
         createdAt: now,
         updatedAt: now,
       };
-      writeCommands(repo.path, [...readCommands(repo.path), created]);
-      return inRepo(repo, created);
+      devCommands.put(repo.path, created.id, created.createdAt, created);
+      return inRepoEntry(repo, created);
     });
 
   const update: DevCommandsRepo["update"] = (
@@ -157,28 +128,17 @@ export const makeFileDevCommandsRepository = Effect.gen(function* () {
         input.repoPath === undefined || input.repoPath === repo.path
           ? repo
           : requireRoot(repos, input.repoPath);
-      if (target.path !== repo.path) {
-        writeCommands(
-          repo.path,
-          readCommands(repo.path).filter((c) => c.id !== id)
-        );
-        writeCommands(target.path, [...readCommands(target.path), updated]);
-        return inRepo(target, updated);
-      }
-      writeCommands(
-        repo.path,
-        readCommands(repo.path).map((c) => (c.id === id ? updated : c))
-      );
-      return inRepo(repo, updated);
+      // Moving a command between roots is a re-scope, not a second row: `put`
+      // upserts on the id, so the old root's copy is not left behind.
+      if (target.path !== repo.path) devCommands.remove(repo.path, id);
+      devCommands.put(target.path, id, updated.createdAt, updated);
+      return inRepoEntry(target, updated);
     });
 
   const remove: DevCommandsRepo["remove"] = (id) =>
     withRoots((repos) => {
       const { repo } = requireCommand(repos, id);
-      writeCommands(
-        repo.path,
-        readCommands(repo.path).filter((c) => c.id !== id)
-      );
+      devCommands.remove(repo.path, id);
     });
 
   return { list, get, create, update, remove } satisfies DevCommandsRepo;

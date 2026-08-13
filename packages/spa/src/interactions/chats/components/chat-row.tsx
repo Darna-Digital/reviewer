@@ -8,13 +8,17 @@
  * The two dots the row does keep are the ones that change: the turn state, and
  * whether the session moved since you last looked.
  *
+ * The list spans every project, so a row also says which one it came from —
+ * but only while more than one is on screen. Narrowed to a single project, the
+ * label would repeat what the filter already says, so it steps aside.
+ *
  * ⌘-click is "open elsewhere", as everywhere else: the conversation is lifted
  * into a window tab of its own, which is where a session gets the full width.
  *
  * The conversation tail is fetched only once a card opens, so scrolling past a
  * hundred rows costs nothing.
  */
-import { IconMessage, IconX } from "@tabler/icons-react";
+import { IconFolder, IconMessage, IconX } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import {
@@ -75,11 +79,14 @@ export function ChatRow({
   chat,
   active,
   unread,
+  showProject = false,
   onDelete,
 }: {
   chat: ChatSummary;
   active: boolean;
   unread: boolean;
+  /** Whether to name the session's project on the row. */
+  showProject?: boolean;
   onDelete: () => void;
 }) {
   const navigate = useNavigate();
@@ -139,6 +146,14 @@ export function ChatRow({
       >
         <TurnStateDot state={chat.turnState} />
         <span className="min-w-0 flex-1 truncate">{chat.title}</span>
+        {showProject && (
+          <span
+            className="shrink-0 truncate text-xs text-muted-foreground group-hover/row:opacity-0"
+            title={chat.origin.projectPath}
+          >
+            {chat.origin.projectName}
+          </span>
+        )}
         {/* The unread dot and the delete control share the same column: the
             dot steps aside the moment the row is hovered. */}
         <span className="relative size-4 shrink-0">
@@ -184,6 +199,17 @@ export function ChatRow({
             {chat.messageCount === 1
               ? "1 message"
               : `${chat.messageCount} messages`}
+          </span>
+          {/* Where the session's agent actually runs. In a project holding
+              several git roots that is the part worth naming, so the root is
+              shown whenever it isn't just the project over again. */}
+          <span className="ml-auto flex min-w-0 items-center gap-1.5">
+            <IconFolder className="size-3.5 shrink-0" />
+            <span className="truncate" title={chat.origin.repoPath}>
+              {chat.origin.repoName === chat.origin.projectName
+                ? chat.origin.projectName
+                : `${chat.origin.projectName}/${chat.origin.repoName}`}
+            </span>
           </span>
         </div>
       </PreviewCardContent>

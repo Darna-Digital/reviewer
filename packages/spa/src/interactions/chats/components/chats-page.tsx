@@ -1,18 +1,24 @@
 /**
- * ChatsPage — the sessions surface: every session in the repo listed beside the
- * routed conversation (the new-session composer on the index, a conversation on
- * /agent-session/$chatId).
+ * ChatsPage — the sessions surface: every session, from every project, listed
+ * beside the routed conversation (the new-session composer on the index, a
+ * conversation on /agent-session/$chatId).
+ *
+ * Sessions are stored centrally, so this list is not the open project's — it is
+ * all of them, newest first, and a conversation started in another project
+ * opens and answers here exactly like one started in this one.
  *
  * The sidebar is the list and nothing else — minting a session and searching for
- * one both live in the toolbar above it. The one control it does carry hangs off
- * the "Recents" heading and only appears under the pointer: a time window, which
- * is the filter that stays useful once branch is no longer how these are sorted.
+ * one both live in the toolbar above it. The two controls it does carry hang off
+ * the "Recents" heading and only appear under the pointer: a time window, and
+ * the project, which is the axis that arrived with the list spanning all of
+ * them. A chosen filter keeps its control visible, so the list is never quietly
+ * narrower than it looks.
  *
  * Arriving marks the inbox seen, so the rail's dot only stands for sessions that
  * moved since you last looked; the rows keep comparing against the mark this
  * visit started with, so nothing goes read out from under you.
  */
-import { IconClock } from "@tabler/icons-react";
+import { IconClock, IconFolder } from "@tabler/icons-react";
 import {
   Outlet,
   useNavigate,
@@ -35,7 +41,14 @@ import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapte
 import { useWindowTabs } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { ChatRow } from "@/interactions/chats/components/chat-row";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
-import { DATE_FILTERS, dateCutoff, type DateFilter } from "@/lib/date-filter";
+import {
+  ALL_PROJECTS,
+  filterChats,
+  projectsOf,
+  showsProject,
+  type ProjectFilter,
+} from "@/interactions/chats/functions/chat-filters.functions";
+import { DATE_FILTERS, type DateFilter } from "@/lib/date-filter";
 import { useChats } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
@@ -66,11 +79,17 @@ export function ChatsPage() {
   const summaries = useMemo(() => chats.data ?? [], [chats.data]);
 
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
-  const filtered = useMemo(() => {
-    const cutoff = dateCutoff(dateFilter);
-    if (cutoff === 0) return summaries;
-    return summaries.filter((c) => Date.parse(c.updatedAt) >= cutoff);
-  }, [summaries, dateFilter]);
+  const [projectFilter, setProjectFilter] =
+    useState<ProjectFilter>(ALL_PROJECTS);
+  const filters = { project: projectFilter, date: dateFilter };
+  const filtered = useMemo(
+    () => filterChats(summaries, { project: projectFilter, date: dateFilter }),
+    [summaries, projectFilter, dateFilter]
+  );
+  // Derived from the sessions themselves: a project is offered while it has
+  // something to show, and the menu needs nothing fetched to draw itself.
+  const projects = useMemo(() => projectsOf(summaries), [summaries]);
+  const withProject = showsProject(summaries, filters);
 
   const remove = async (id: string) => {
     try {
@@ -107,6 +126,51 @@ export function ChatsPage() {
                   <h2 className="text-xs font-medium text-muted-foreground">
                     Recents
                   </h2>
+                  {projects.length > 1 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label="Filter by project"
+                            className={cn(
+                              "relative size-6 text-muted-foreground opacity-0 transition-opacity group-hover/heading:opacity-100 focus-visible:opacity-100",
+                              projectFilter !== ALL_PROJECTS && "opacity-100"
+                            )}
+                          />
+                        }
+                      >
+                        <IconFolder className="size-3.5" />
+                        {projectFilter !== ALL_PROJECTS && (
+                          <span className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-brand-500" />
+                        )}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" className="min-w-48">
+                        <DropdownMenuRadioGroup
+                          value={projectFilter}
+                          onValueChange={(v) =>
+                            setProjectFilter(v as ProjectFilter)
+                          }
+                        >
+                          <DropdownMenuRadioItem value={ALL_PROJECTS}>
+                            All projects
+                          </DropdownMenuRadioItem>
+                          {projects.map((project) => (
+                            <DropdownMenuRadioItem
+                              key={project.path}
+                              value={project.path}
+                            >
+                              <span className="truncate">{project.name}</span>
+                              <span className="ml-auto pl-3 text-xs text-muted-foreground tabular-nums">
+                                {project.count}
+                              </span>
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={
@@ -142,7 +206,7 @@ export function ChatsPage() {
                 </div>
                 {filtered.length === 0 ? (
                   <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-                    No sessions in this window.
+                    No sessions match these filters.
                   </p>
                 ) : (
                   filtered.map((c) => (
@@ -151,6 +215,7 @@ export function ChatsPage() {
                       chat={c}
                       active={c.id === chatId}
                       unread={isChatUnread(c, seenAt)}
+                      showProject={withProject}
                       onDelete={() => void remove(c.id)}
                     />
                   ))

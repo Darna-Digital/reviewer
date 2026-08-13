@@ -4,10 +4,10 @@ import {
   ThreadsService,
   makeThreadsService,
 } from "@byconvo/core/threads";
-import { makeFileThreadsRepository } from "./threads.repository.file.ts";
+import { makeSqliteThreadsRepository } from "./threads.repository.sqlite.ts";
 
 export const ThreadsLive = Layer.effect(ThreadsService)(
   makeThreadsService
 ).pipe(
-  Layer.provide(Layer.effect(ThreadsRepository)(makeFileThreadsRepository))
+  Layer.provide(Layer.effect(ThreadsRepository)(makeSqliteThreadsRepository))
 );

@@ -26,6 +26,9 @@ import { homedir } from "node:os";
 import { resolve as pathResolve } from "node:path";
 import { NoRepoSelected } from "@byconvo/core/shared";
 import { chooseRepo, InvalidRepo } from "@byconvo/core/workspace";
+import type { RepoEntry } from "@byconvo/core/workspace";
+import { importLegacyJson } from "../db/legacy-import.ts";
+import { rememberProject } from "../db/scope.ts";
 import {
   getCurrentProject,
   getCurrentRepo,
@@ -215,10 +218,33 @@ export const make = (initial: InitialSelection | null) =>
       });
     });
 
+    /**
+     * Register the project and every root it holds, and take across anything
+     * those roots still keep in `.byconvo/*.json`.
+     *
+     * Both are per-root on purpose: a folder holding a `backend` and a
+     * `frontend` is one project made of two repositories, and each of them
+     * carries its own history. Neither call fails an open — a project that
+     * cannot be recorded is still a project the user can work in.
+     */
+    const adoptRoots = (project: string, repos: ReadonlyArray<RepoEntry>) =>
+      Effect.sync(() => {
+        try {
+          rememberProject(project, repos);
+          for (const repo of repos) importLegacyJson(repo.path);
+        } catch (error) {
+          console.warn(
+            "byconvo: could not register the open project —",
+            error instanceof Error ? error.message : error
+          );
+        }
+      });
+
     /** Open `project` on the root it was last left on, or on its first. */
     const openRoots = (project: string) =>
       Effect.gen(function* () {
         const repos = yield* scanRepos(fs, project);
+        yield* adoptRoots(project, repos);
         const remembered = yield* Ref.get(rememberedRef);
         const chosen = chooseRepo(repos, remembered[project] ?? null);
         // `current-repo.ts` is the single store for the selection: an Effect Ref

@@ -4,12 +4,12 @@ import {
   LocalDevService,
   makeLocalDevService,
 } from "@byconvo/core/local-dev";
-import { makeFileDevCommandsRepository } from "./local-dev.repository.file.ts";
+import { makeSqliteDevCommandsRepository } from "./local-dev.repository.sqlite.ts";
 
 export const LocalDevLive = Layer.effect(LocalDevService)(
   makeLocalDevService
 ).pipe(
   Layer.provide(
-    Layer.effect(DevCommandsRepository)(makeFileDevCommandsRepository)
+    Layer.effect(DevCommandsRepository)(makeSqliteDevCommandsRepository)
   )
 );

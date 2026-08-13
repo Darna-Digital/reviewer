@@ -7,7 +7,8 @@ description: Fetch the local review comments left in the byconvo tool — inline
 
 The byconvo tool lets a human leave inline review comments on files (like GitHub
 code review), on the working tree, a specific commit, or a commit range. They are
-saved in `.byconvo/comments.json`.
+saved in byconvo's local database (`~/.byconvo/byconvo.db`), scoped to the
+repository they were left in.
 
 The byconvo server exposes them over HTTP. This skill walks you through fetching
 them, implementing each one in the code, and **resolving** it — which in byconvo
@@ -130,5 +131,6 @@ don't start a dev server yourself.
 - Never delete a comment you didn't implement — deletion is the "resolved" signal,
   and it's irreversible (the comment is gone for good, not archived).
 - If you can't implement a comment, leave it in place and tell the user why.
-- Comments persist per-repo in `.byconvo/comments.json`, so they survive restarts;
-  only your DELETE removes them.
+- Comments persist per-repo in byconvo's database, so they survive restarts;
+  only your DELETE removes them. Read them through the API above — the database
+  is byconvo's to write.

@@ -4726,6 +4726,12 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        origin: {
+                            projectPath: string;
+                            projectName: string;
+                            repoPath: string;
+                            repoName: string;
+                        };
                         title: string;
                         /** @enum {string} */
                         provider: "claude" | "codex" | "opencode" | "cursor";
@@ -4799,6 +4805,12 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        origin: {
+                            projectPath: string;
+                            projectName: string;
+                            repoPath: string;
+                            repoName: string;
+                        };
                         title: string;
                         /** @enum {string} */
                         provider: "claude" | "codex" | "opencode" | "cursor";
@@ -4964,6 +4976,12 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        origin: {
+                            projectPath: string;
+                            projectName: string;
+                            repoPath: string;
+                            repoName: string;
+                        };
                         title: string;
                         /** @enum {string} */
                         provider: "claude" | "codex" | "opencode" | "cursor";
@@ -5126,6 +5144,12 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        origin: {
+                            projectPath: string;
+                            projectName: string;
+                            repoPath: string;
+                            repoName: string;
+                        };
                         title: string;
                         /** @enum {string} */
                         provider: "claude" | "codex" | "opencode" | "cursor";
@@ -5235,6 +5259,12 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        origin: {
+                            projectPath: string;
+                            projectName: string;
+                            repoPath: string;
+                            repoName: string;
+                        };
                         title: string;
                         /** @enum {string} */
                         provider: "claude" | "codex" | "opencode" | "cursor";

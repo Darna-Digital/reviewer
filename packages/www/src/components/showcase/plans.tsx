@@ -40,8 +40,8 @@ const NODES = [
     x: 660,
     y: 96,
     kind: "store",
-    label: ".byconvo/comments.json",
-    summary: "Worktree store, committed with the code",
+    label: "~/.byconvo/byconvo.db",
+    summary: "Local store, scoped to the repository",
     anchor: "embedded-server/repository:24",
   },
 ];

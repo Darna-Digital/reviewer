@@ -4,10 +4,10 @@ import {
   CommentsService,
   makeCommentsService,
 } from "@byconvo/core/comments";
-import { makeFileCommentsRepository } from "./comments.repository.file.ts";
+import { makeSqliteCommentsRepository } from "./comments.repository.sqlite.ts";
 
 export const CommentsLive = Layer.effect(CommentsService)(
   makeCommentsService
 ).pipe(
-  Layer.provide(Layer.effect(CommentsRepository)(makeFileCommentsRepository))
+  Layer.provide(Layer.effect(CommentsRepository)(makeSqliteCommentsRepository))
 );

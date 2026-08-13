@@ -1,8 +1,10 @@
 /**
  * The session search pill in the title bar — the same gesture and the same
  * shape code and collaboration modes use, rather than a box on permanent
- * display in the sidebar. It searches titles and last messages, which is the
- * pair the old inline filter matched on.
+ * display in the sidebar. It searches titles and last messages — the pair the
+ * old inline filter matched on — and, now that sessions from every project are
+ * in one list, the project name too, so "api" finds that project's sessions
+ * without first narrowing the sidebar to it.
  */
 import { IconSearch } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
@@ -36,7 +38,9 @@ export function SessionSearch() {
     q.length === 0
       ? sessions
       : sessions.filter((c) =>
-          `${c.title}\n${c.lastMessage ?? ""}`.toLowerCase().includes(q)
+          `${c.title}\n${c.lastMessage ?? ""}\n${c.origin.projectName}`
+            .toLowerCase()
+            .includes(q)
         );
 
   return (
@@ -87,6 +91,12 @@ export function SessionSearch() {
                 className="flex h-8 items-center gap-2 rounded-md px-1.5 text-[13px] outline-none hover:bg-elevate focus-visible:bg-elevate"
               >
                 <span className="min-w-0 flex-1 truncate">{hit.title}</span>
+                <span
+                  className="shrink-0 text-xs text-muted-foreground"
+                  title={hit.origin.projectPath}
+                >
+                  {hit.origin.projectName}
+                </span>
                 <span className="shrink-0 text-xs text-muted-foreground">
                   {timeAgo(hit.updatedAt)}
                 </span>

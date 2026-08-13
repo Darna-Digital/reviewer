@@ -70,6 +70,7 @@ export function useChatsActions() {
   const prependChat = (chat: Chat) => {
     const summary: ChatSummary = {
       id: chat.id,
+      origin: chat.origin,
       title: chat.title,
       provider: chat.provider,
       model: chat.model,

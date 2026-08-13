@@ -2,8 +2,10 @@
  * byconvo server entry point — a Node HTTP server exposing the HttpApi under
  * /api. Replaces the darna-stack Cloudflare worker: same HttpApi, served with
  * `@effect/platform-node` instead of a Worker runtime. No Postgres, no
- * Cloudflare — the repository is selected at runtime and persisted to
- * ~/.byconvo/state.json (BYCONVO_REPO / cwd seed the initial selection).
+ * Cloudflare — feature state lives in one local SQLite file
+ * (~/.byconvo/byconvo.db), and the repository is selected at runtime and
+ * persisted to ~/.byconvo/state.json (BYCONVO_REPO / cwd seed the initial
+ * selection).
  *
  * Composition mirrors darna's worker: feature controllers are provided to the
  * API layer, and the (stateless) feature services are provided per-request with
@@ -48,6 +50,7 @@ import { VisualCommentsHandler } from "./layers/visual-comments/visual-comments.
 import { VisualCommentsLive } from "./layers/visual-comments/visual-comments.layer.live.ts";
 import { WorkspaceHandler } from "./layers/workspace/workspace.handler.ts";
 import { WorkspaceLive } from "./layers/workspace/workspace.layer.live.ts";
+import { layer as databaseLayer } from "./layers/db/db.service.ts";
 import { layer as gitExecLayer } from "./layers/git/git-exec.ts";
 import { layer as gitHubClientLayer } from "./layers/github/github-client.ts";
 import { attachPtyServer } from "./layers/terminal/pty-socket.ts";
@@ -113,12 +116,17 @@ const RequestServices = Layer.mergeAll(
 
 /**
  * Global singletons, built once so the selected-repo state persists across
- * requests: the workspace context (mutable selection), the git executor and the
- * GitHub client.
+ * requests: the database, the workspace context (mutable selection), the git
+ * executor and the GitHub client.
+ *
+ * The database comes first — opening a project imports whatever its roots still
+ * keep in `.byconvo/*.json`, so the file has to be there (and migrated) before
+ * the workspace context seeds its initial selection.
  */
 const InfraLive = gitHubClientLayer.pipe(
   Layer.provideMerge(Layer.mergeAll(gitExecLayer, terminalExecLayer)),
   Layer.provideMerge(workspaceContextLayer(initial)),
+  Layer.provideMerge(databaseLayer),
   Layer.provide(FetchHttpClient.layer)
 );
 

@@ -29,7 +29,6 @@ import {
   chmodSync,
   existsSync,
   mkdirSync,
-  readFileSync,
   statSync,
   writeFileSync,
 } from "node:fs";
@@ -56,6 +55,14 @@ import {
   startBrowserBridge,
 } from "../browser/browser-bridge.ts";
 import { CHAT_STREAM_PATH, startChatStream } from "../chats/chat-runtime.ts";
+import { findCardByKey } from "../tasks/store.ts";
+import {
+  clearThreadInitialPrompt,
+  patchThread,
+  readThreadAgentSessionId,
+  readThreadInitialPrompt,
+  readThreadTaskKey,
+} from "../threads/store.ts";
 import {
   getCurrentProject,
   getCurrentRepo,
@@ -267,100 +274,6 @@ export const killPtySession = (id: string): void => {
   }
 };
 
-/**
- * Environment a session's program inherits. Exposes the thread id and the local
- * API origin so an agent CLI can always look up its own thread / linked task
- * (GET /api/threads/{id}, GET /api/tasks/resolve/{ref}); the linked task at spawn
- * time is also passed directly for convenience.
- */
-/** The one-shot initial prompt stored on a thread, or "" if none. */
-const readThreadInitialPrompt = (repoPath: string, id: string): string => {
-  try {
-    const raw = JSON.parse(
-      readFileSync(`${repoPath}/.byconvo/threads.json`, "utf8")
-    );
-    if (!Array.isArray(raw)) return "";
-    const thread = raw.find(
-      (t) => t !== null && typeof t === "object" && t.id === id
-    );
-    return thread !== undefined && typeof thread.initialPrompt === "string"
-      ? thread.initialPrompt
-      : "";
-  } catch {
-    return "";
-  }
-};
-
-/** Clear a thread's initial prompt after it has been delivered (best-effort). */
-const clearThreadInitialPrompt = (repoPath: string, id: string): void => {
-  try {
-    const path = `${repoPath}/.byconvo/threads.json`;
-    const raw = JSON.parse(readFileSync(path, "utf8"));
-    if (!Array.isArray(raw)) return;
-    let changed = false;
-    const next = raw.map((t) => {
-      if (
-        t !== null &&
-        typeof t === "object" &&
-        t.id === id &&
-        t.initialPrompt
-      ) {
-        changed = true;
-        return { ...t, initialPrompt: "" };
-      }
-      return t;
-    });
-    if (changed) writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
-  } catch {
-    // best-effort
-  }
-};
-
-/** The agent's stored native session id for a thread, or null if none yet. */
-const readThreadAgentSessionId = (
-  repoPath: string,
-  id: string
-): string | null => {
-  try {
-    const raw = JSON.parse(
-      readFileSync(`${repoPath}/.byconvo/threads.json`, "utf8")
-    );
-    if (!Array.isArray(raw)) return null;
-    const thread = raw.find(
-      (t) => t !== null && typeof t === "object" && t.id === id
-    );
-    return thread !== undefined && typeof thread.agentSessionId === "string"
-      ? thread.agentSessionId
-      : null;
-  } catch {
-    return null;
-  }
-};
-
-/** Merge `patch` into a thread record on disk, preserving all other fields. */
-const patchThread = (
-  repoPath: string,
-  id: string,
-  patch: Record<string, unknown>
-): void => {
-  try {
-    const path = `${repoPath}/.byconvo/threads.json`;
-    const raw = JSON.parse(readFileSync(path, "utf8"));
-    if (!Array.isArray(raw)) return;
-    let changed = false;
-    const next = raw.map((t) => {
-      if (t !== null && typeof t === "object" && t.id === id) {
-        changed = true;
-        return { ...t, ...patch };
-      }
-      return t;
-    });
-    if (changed) writeFileSync(path, `${JSON.stringify(next, null, 2)}\n`);
-  } catch {
-    // best-effort
-  }
-};
-
 // Poll for the native session id opencode/codex minted, then persist it so the
 // thread can be resumed after this process dies. Sessions may only appear once
 // the user sends a first message, so we keep checking for a while.
@@ -399,6 +312,12 @@ const startSessionCapture = (
   }, CAPTURE_INTERVAL_MS);
 };
 
+/**
+ * Environment a session's program inherits. Exposes the thread id and the local
+ * API origin so an agent CLI can always look up its own thread / linked task
+ * (GET /api/threads/{id}, GET /api/tasks/resolve/{ref}); the linked task at spawn
+ * time is also passed directly for convenience.
+ */
 const buildSessionEnv = (
   repoPath: string,
   threadId: string
@@ -407,40 +326,15 @@ const buildSessionEnv = (
     BYCONVO_THREAD_ID: threadId,
     BYCONVO_API: `http://localhost:${process.env["BYCONVO_PORT"] ?? 41811}`,
   };
-  const readJson = (path: string): unknown => {
-    try {
-      return JSON.parse(readFileSync(path, "utf8"));
-    } catch {
-      return undefined;
-    }
-  };
-  const threads = readJson(`${repoPath}/.byconvo/threads.json`);
-  const thread = Array.isArray(threads)
-    ? (threads.find(
-        (t): t is { id: string; taskKey?: unknown } =>
-          typeof t === "object" &&
-          t !== null &&
-          (t as { id?: string }).id === threadId
-      ) ?? undefined)
-    : undefined;
-  const taskKey =
-    thread !== undefined && typeof thread.taskKey === "string"
-      ? thread.taskKey
-      : null;
+  const taskKey = readThreadTaskKey(repoPath, threadId);
   if (taskKey === null) return env;
 
   env["BYCONVO_TASK_KEY"] = taskKey;
-  const board = readJson(`${repoPath}/.byconvo/tasks.json`) as
-    | { cards?: ReadonlyArray<Record<string, unknown>> }
-    | undefined;
-  const card = board?.cards?.find((c) => c["key"] === taskKey);
+  const card = findCardByKey(repoPath, taskKey);
   if (card !== undefined) {
-    const title = typeof card["title"] === "string" ? card["title"] : "";
-    const desc =
-      typeof card["description"] === "string" ? card["description"] : "";
-    if (title.length > 0) env["BYCONVO_TASK_TITLE"] = title;
+    if (card.title.length > 0) env["BYCONVO_TASK_TITLE"] = card.title;
     env["BYCONVO_TASK"] =
-      `${taskKey} ${title}${desc.length > 0 ? ` — ${desc}` : ""}`.trim();
+      `${taskKey} ${card.title}${card.description.length > 0 ? ` — ${card.description}` : ""}`.trim();
   }
   return env;
 };

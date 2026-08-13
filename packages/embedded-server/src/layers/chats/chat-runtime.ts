@@ -27,10 +27,7 @@ import {
   writesDiscoverableSessions,
 } from "../terminal/agent-session-capture.ts";
 import { saveDroppedImage } from "../terminal/dropped-image.ts";
-import {
-  getCurrentRepo,
-  onCurrentRepoChange,
-} from "../workspace/current-repo.ts";
+import { onCurrentRepoChange } from "../workspace/current-repo.ts";
 import {
   chatTurnProgram,
   withAttachedImages,
@@ -73,7 +70,8 @@ interface LiveTurn {
   readonly chatId: string;
   readonly turnId: string;
   readonly assistantMessageId: string;
-  /** Captured at start so a mid-turn repo switch still persists correctly. */
+  /** The chat's own git root — where the agent runs, whichever root (or
+   * project) the user has selected while the turn streams. */
   readonly repoPath: string;
   readonly provider: Chat["provider"];
   /** Spawn time — the floor for scanning freshly-minted CLI session files. */
@@ -158,12 +156,7 @@ const AT_MOST_LOST_ON_CRASH_MS = 1500;
 
 const checkpointLanded = (live: LiveTurn, text: string): boolean => {
   try {
-    saveStreamingText(
-      live.repoPath,
-      live.chatId,
-      live.assistantMessageId,
-      text
-    );
+    saveStreamingText(live.chatId, live.assistantMessageId, text);
     return true;
   } catch {
     return false;
@@ -187,7 +180,7 @@ const flushTextCompletedBefore = (
   activity: ChatActivity
 ): void => {
   flushText(live);
-  appendActivity(live.repoPath, live.chatId, activity);
+  appendActivity(live.chatId, activity);
 };
 
 const scheduleTextFlush = (live: LiveTurn): void => {
@@ -202,15 +195,9 @@ const STALE_TURN_MESSAGE = "the server stopped while this turn was running";
 
 const isBackedByALiveProcess = (chatId: string) => liveTurns.has(chatId);
 
-const settledStaleTurnsOrNoneIfUnreadable = (
-  repoPath: string
-): ReadonlyArray<string> => {
+const settledStaleTurnsOrNoneIfUnreadable = (): ReadonlyArray<string> => {
   try {
-    return settleStaleTurns(
-      repoPath,
-      isBackedByALiveProcess,
-      STALE_TURN_MESSAGE
-    );
+    return settleStaleTurns(isBackedByALiveProcess, STALE_TURN_MESSAGE);
   } catch {
     return [];
   }
@@ -218,18 +205,16 @@ const settledStaleTurnsOrNoneIfUnreadable = (
 
 /**
  * A turn the store still calls "running" with no process behind it spins the
- * sidebar forever and blocks the composer. Settling the whole repo at once
- * repairs chats the user never reopens.
+ * sidebar forever and blocks the composer. Chats are stored centrally, so one
+ * pass settles every project's — including chats the user never reopens.
  */
-export const repairStaleTurns = (repoPath: string): void => {
-  for (const chatId of settledStaleTurnsOrNoneIfUnreadable(repoPath)) {
-    broadcastChatSnapshot(repoPath, chatId);
+export const repairStaleTurns = (): void => {
+  for (const chatId of settledStaleTurnsOrNoneIfUnreadable()) {
+    broadcastChatSnapshot(chatId);
   }
 };
 
-onCurrentRepoChange((next) => {
-  if (next !== null) repairStaleTurns(next);
-});
+onCurrentRepoChange(() => repairStaleTurns());
 
 const checkpointEveryLiveTurnSynchronously = () => {
   for (const live of liveTurns.values()) flushText(live);
@@ -248,7 +233,7 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
  * in-flight assistant text merged in, and — after a server restart that
  * orphaned a "running" turn — that stale turn settled as interrupted.
  */
-const snapshotChat = (repoPath: string, chat: Chat): Chat => {
+const snapshotChat = (chat: Chat): Chat => {
   const live = liveTurns.get(chat.id);
   if (live !== undefined) {
     const text = live.parser.text();
@@ -260,7 +245,7 @@ const snapshotChat = (repoPath: string, chat: Chat): Chat => {
     };
   }
   if (chat.latestTurn !== null && chat.latestTurn.state === "running") {
-    const settled = completeTurn(repoPath, chat.id, {
+    const settled = completeTurn(chat.id, {
       turnId: chat.latestTurn.id,
       assistantMessageId: chat.messages.findLast((m) => m.streaming)?.id ?? "",
       text: chat.messages.findLast((m) => m.streaming)?.text ?? "",
@@ -279,15 +264,12 @@ const snapshotChat = (repoPath: string, chat: Chat): Chat => {
  * out-of-band mutation (a settings/provider patch) so open composers reflect
  * the new state immediately instead of waiting for the next turn or reconnect.
  */
-export const broadcastChatSnapshot = (
-  repoPath: string,
-  chatId: string
-): void => {
+export const broadcastChatSnapshot = (chatId: string): void => {
   const sockets = watchers.get(chatId);
   if (sockets === undefined || sockets.size === 0) return;
-  const chat = findChat(repoPath, chatId);
+  const chat = findChat(chatId);
   if (chat === undefined) return;
-  const snapshot = snapshotChat(repoPath, chat);
+  const snapshot = snapshotChat(chat);
   for (const ws of sockets) send(ws, { snapshot });
 };
 
@@ -296,9 +278,9 @@ const handleStreamEvent = (live: LiveTurn, event: TurnEvent): void => {
     case "session": {
       // Persist once confirmed by the CLI so a pre-init failure retries with
       // a fresh id instead of resuming a session that never existed.
-      const chat = findChat(live.repoPath, live.chatId);
+      const chat = findChat(live.chatId);
       if (chat !== undefined && chat.sessionId === null) {
-        saveSessionId(live.repoPath, live.chatId, event.sessionId);
+        saveSessionId(live.chatId, event.sessionId);
       }
       return;
     }
@@ -342,7 +324,7 @@ const handleStreamEvent = (live: LiveTurn, event: TurnEvent): void => {
 const captureMintedSession = (live: LiveTurn): void => {
   if (!writesDiscoverableSessions(live.provider)) return;
   try {
-    const chat = findChat(live.repoPath, live.chatId);
+    const chat = findChat(live.chatId);
     if (chat === undefined || chat.sessionId !== null) return;
     const found = recentAgentSessions(
       live.provider,
@@ -351,7 +333,7 @@ const captureMintedSession = (live: LiveTurn): void => {
     );
     if (found.length === 0) return;
     const newest = found.reduce((a, b) => (b.mtimeMs > a.mtimeMs ? b : a));
-    saveSessionId(live.repoPath, live.chatId, newest.id);
+    saveSessionId(live.chatId, newest.id);
   } catch {
     // best-effort — an uncaptured session just means the next turn starts fresh
   }
@@ -387,7 +369,7 @@ const finalizeTurn = (live: LiveTurn, exitCode: number | null): void => {
   const endedAt = new Date().toISOString();
   const text = live.parser.text();
 
-  const updated = completeTurn(live.repoPath, live.chatId, {
+  const updated = completeTurn(live.chatId, {
     turnId: live.turnId,
     assistantMessageId: live.assistantMessageId,
     text,
@@ -413,7 +395,7 @@ const finalizeTurn = (live: LiveTurn, exitCode: number | null): void => {
     text,
   });
   // Pick up anything the user queued while this turn was running.
-  flushPending(live.repoPath, live.chatId);
+  flushPending(live.chatId);
 };
 
 /** Decode each uploaded image to a temp file the CLI can read; keep only the
@@ -437,7 +419,6 @@ const imageAttachments = (
  * begins: an immediate send and the flush of messages queued during a turn.
  */
 const launchTurn = (input: {
-  repoPath: string;
   chat: Chat;
   started: Chat;
   turnId: string;
@@ -446,7 +427,10 @@ const launchTurn = (input: {
   imagePaths: ReadonlyArray<string>;
   historyMessages?: ReadonlyArray<ChatMessage>;
 }): void => {
-  const { repoPath, chat, started, turnId, assistantMessageId } = input;
+  const { chat, started, turnId, assistantMessageId } = input;
+  // The agent runs in the chat's own root, not in whatever the user has
+  // selected right now — a session opened from another project still works.
+  const repoPath = chat.origin.repoPath;
   // Some agents let us mint the session id up-front; the rest mint their own,
   // so a fresh chat launches without one and the id is captured later.
   const session: ChatTurnSession =
@@ -539,13 +523,12 @@ const launchTurn = (input: {
  * launched; progress flows over the chat WebSocket.
  */
 export const startChatTurn = (
-  repoPath: string,
   chatId: string,
   text: string,
   images: ReadonlyArray<ChatImageUpload> = []
 ): StartTurnResult => {
   if (liveTurns.has(chatId)) return { ok: false, reason: "busy" };
-  const chat = findChat(repoPath, chatId);
+  const chat = findChat(chatId);
   if (chat === undefined) return { ok: false, reason: "not-found" };
 
   const saved = saveImages(images);
@@ -577,7 +560,7 @@ export const startChatTurn = (
     errorMessage: null,
     totalCostUsd: null,
   };
-  const started = appendTurnStart(repoPath, chatId, {
+  const started = appendTurnStart(chatId, {
     turn,
     userMessage,
     assistantMessage,
@@ -585,7 +568,6 @@ export const startChatTurn = (
   if (started === undefined) return { ok: false, reason: "not-found" };
 
   launchTurn({
-    repoPath,
     chat,
     started,
     turnId,
@@ -602,12 +584,11 @@ export const startChatTurn = (
  * up. No process is spawned here — flushPending() starts the follow-up turn.
  */
 export const queueChatTurn = (
-  repoPath: string,
   chatId: string,
   text: string,
   images: ReadonlyArray<ChatImageUpload> = []
 ): StartTurnResult => {
-  const chat = findChat(repoPath, chatId);
+  const chat = findChat(chatId);
   if (chat === undefined) return { ok: false, reason: "not-found" };
 
   const saved = saveImages(images);
@@ -625,7 +606,7 @@ export const queueChatTurn = (
     pending: true,
     ...(attachments.length > 0 ? { attachments } : {}),
   };
-  const updated = appendPendingMessage(repoPath, chatId, userMessage);
+  const updated = appendPendingMessage(chatId, userMessage);
   if (updated === undefined) return { ok: false, reason: "not-found" };
   if (saved.length > 0) {
     pendingImagePaths.set(
@@ -634,7 +615,7 @@ export const queueChatTurn = (
     );
   }
   broadcast(chatId, { type: "message-appended", message: userMessage });
-  flushPending(repoPath, chatId);
+  flushPending(chatId);
   return { ok: true };
 };
 
@@ -644,9 +625,9 @@ export const queueChatTurn = (
  * the last one standing — a turn finalizing, a socket attaching after a
  * restart, a message landing just as its turn settled — can call it freely.
  */
-const flushPending = (repoPath: string, chatId: string): void => {
+const flushPending = (chatId: string): void => {
   if (liveTurns.has(chatId)) return;
-  const chat = findChat(repoPath, chatId);
+  const chat = findChat(chatId);
   if (chat === undefined) return;
   const queued = chat.messages.filter(
     (m) => m.role === "user" && m.pending === true
@@ -680,7 +661,7 @@ const flushPending = (repoPath: string, chatId: string): void => {
     errorMessage: null,
     totalCostUsd: null,
   };
-  const started = startPendingTurn(repoPath, chatId, {
+  const started = startPendingTurn(chatId, {
     turn,
     assistantMessage,
     consumeIds,
@@ -689,7 +670,6 @@ const flushPending = (repoPath: string, chatId: string): void => {
   for (const id of consumeIds) pendingImagePaths.delete(id);
 
   launchTurn({
-    repoPath,
     chat,
     started,
     turnId,
@@ -720,8 +700,7 @@ const ignoringAnAlreadyDeadChild = (act: () => void) => {
 export const stopChatTurn = (chatId: string): boolean => {
   const live = liveTurns.get(chatId);
   if (live === undefined) {
-    const repoPath = getCurrentRepo();
-    if (repoPath !== null) repairStaleTurns(repoPath);
+    repairStaleTurns();
     return false;
   }
   live.interrupted = true;
@@ -757,16 +736,15 @@ export const startChatStream = (
 ): void => {
   const url = new URL(request.url ?? "", "http://localhost");
   const chatId = url.searchParams.get("chat") ?? "";
-  const repoPath = getCurrentRepo();
-  if (chatId.length === 0 || repoPath === null) {
-    send(ws, { error: "no chat selected or no repository open" });
+  if (chatId.length === 0) {
+    send(ws, { error: "no chat selected" });
     ws.close();
     return;
   }
-  repairStaleTurns(repoPath);
+  repairStaleTurns();
   let chat: Chat | undefined;
   try {
-    chat = findChat(repoPath, chatId);
+    chat = findChat(chatId);
   } catch {
     chat = undefined;
   }
@@ -776,7 +754,7 @@ export const startChatStream = (
     return;
   }
 
-  send(ws, { snapshot: snapshotChat(repoPath, chat) });
+  send(ws, { snapshot: snapshotChat(chat) });
   const sockets = watchers.get(chatId) ?? new Set<WebSocket>();
   sockets.add(ws);
   watchers.set(chatId, sockets);
@@ -789,7 +767,7 @@ export const startChatStream = (
   startHeartbeat();
   // A restart can leave queued messages with no turn to pick them up (the
   // in-flight turn was settled as interrupted on snapshot). Start them now.
-  flushPending(repoPath, chatId);
+  flushPending(chatId);
 };
 
 /** Test seam: reset all in-memory runtime state. */

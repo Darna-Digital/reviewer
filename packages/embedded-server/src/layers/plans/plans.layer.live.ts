@@ -7,14 +7,14 @@ import {
 } from "@byconvo/core/plans";
 import {
   makeFilePlanSources,
-  makeFilePlansRepository,
-} from "./plans.repository.file.ts";
+  makeSqlitePlansRepository,
+} from "./plans.repository.sqlite.ts";
 
 const SourcesLive = Layer.effect(PlanSources)(makeFilePlanSources);
 
 export const PlansLive = Layer.effect(PlansService)(makePlansService).pipe(
   Layer.provide(
-    Layer.effect(PlansRepository)(makeFilePlansRepository).pipe(
+    Layer.effect(PlansRepository)(makeSqlitePlansRepository).pipe(
       Layer.provideMerge(SourcesLive)
     )
   )

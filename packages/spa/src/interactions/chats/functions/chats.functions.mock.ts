@@ -12,6 +12,12 @@ import type {
 
 export const chat = (overrides: Partial<Chat> = {}): Chat => ({
   id: "c-1",
+  origin: {
+    projectPath: "/home/dev",
+    projectName: "dev",
+    repoPath: "/home/dev/api",
+    repoName: "api",
+  },
   title: "New thread",
   provider: "claude",
   model: "claude-opus-4-8",
