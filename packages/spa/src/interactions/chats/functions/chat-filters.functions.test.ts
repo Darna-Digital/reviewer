@@ -5,7 +5,6 @@ import {
   filterChats,
   projectFilterLabel,
   projectsOf,
-  showsProject,
 } from "./chat-filters.functions";
 
 const chat = (
@@ -91,20 +90,6 @@ describe("filterChats", () => {
         (c) => c.id
       )
     ).toEqual(["c-side"]);
-  });
-});
-
-describe("showsProject", () => {
-  it("labels rows only when more than one project is on screen", () => {
-    expect(showsProject(chats, { project: ALL_PROJECTS, date: "all" })).toBe(
-      true
-    );
-    expect(showsProject(chats, { project: "/home/dev", date: "all" })).toBe(
-      false
-    );
-    expect(
-      showsProject(chats.slice(0, 2), { project: ALL_PROJECTS, date: "all" })
-    ).toBe(false);
   });
 });
 

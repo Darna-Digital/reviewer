@@ -45,7 +45,6 @@ import {
   ALL_PROJECTS,
   filterChats,
   projectsOf,
-  showsProject,
   type ProjectFilter,
 } from "@/interactions/chats/functions/chat-filters.functions";
 import { DATE_FILTERS, type DateFilter } from "@/lib/date-filter";
@@ -81,7 +80,6 @@ export function ChatsPage() {
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [projectFilter, setProjectFilter] =
     useState<ProjectFilter>(ALL_PROJECTS);
-  const filters = { project: projectFilter, date: dateFilter };
   const filtered = useMemo(
     () => filterChats(summaries, { project: projectFilter, date: dateFilter }),
     [summaries, projectFilter, dateFilter]
@@ -89,7 +87,6 @@ export function ChatsPage() {
   // Derived from the sessions themselves: a project is offered while it has
   // something to show, and the menu needs nothing fetched to draw itself.
   const projects = useMemo(() => projectsOf(summaries), [summaries]);
-  const withProject = showsProject(summaries, filters);
 
   const remove = async (id: string) => {
     try {
@@ -215,7 +212,6 @@ export function ChatsPage() {
                       chat={c}
                       active={c.id === chatId}
                       unread={isChatUnread(c, seenAt)}
-                      showProject={withProject}
                       onDelete={() => void remove(c.id)}
                     />
                   ))

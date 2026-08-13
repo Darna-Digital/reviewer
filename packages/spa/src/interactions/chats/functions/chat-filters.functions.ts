@@ -70,17 +70,6 @@ export const filterChats = (
   );
 };
 
-/**
- * Whether the rows need to say which project they belong to. One project on
- * screen is one the user already knows they are looking at.
- */
-export const showsProject = (
-  chats: ReadonlyArray<ChatSummary>,
-  filters: ChatFilters
-): boolean =>
-  filters.project === ALL_PROJECTS &&
-  new Set(chats.map((chat) => chat.origin.projectPath)).size > 1;
-
 /** The label for the project control — the project's name, or "All projects". */
 export const projectFilterLabel = (
   chats: ReadonlyArray<ChatSummary>,

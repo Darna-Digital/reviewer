@@ -8,9 +8,8 @@
  * The two dots the row does keep are the ones that change: the turn state, and
  * whether the session moved since you last looked.
  *
- * The list spans every project, so a row also says which one it came from —
- * but only while more than one is on screen. Narrowed to a single project, the
- * label would repeat what the filter already says, so it steps aside.
+ * The list spans every project, but which one a session came from is the card's
+ * to say, not the row's — a name on every row is noise on all of them.
  *
  * ⌘-click is "open elsewhere", as everywhere else: the conversation is lifted
  * into a window tab of its own, which is where a session gets the full width.
@@ -21,6 +20,7 @@
 import { IconFolder, IconMessage, IconX } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   PreviewCard,
   PreviewCardContent,
@@ -79,14 +79,11 @@ export function ChatRow({
   chat,
   active,
   unread,
-  showProject = false,
   onDelete,
 }: {
   chat: ChatSummary;
   active: boolean;
   unread: boolean;
-  /** Whether to name the session's project on the row. */
-  showProject?: boolean;
   onDelete: () => void;
 }) {
   const navigate = useNavigate();
@@ -146,24 +143,17 @@ export function ChatRow({
       >
         <TurnStateDot state={chat.turnState} />
         <span className="min-w-0 flex-1 truncate">{chat.title}</span>
-        {showProject && (
-          <span
-            className="shrink-0 truncate text-xs text-muted-foreground group-hover/row:opacity-0"
-            title={chat.origin.projectPath}
-          >
-            {chat.origin.projectName}
-          </span>
-        )}
         {/* The unread dot and the delete control share the same column: the
             dot steps aside the moment the row is hovered. */}
-        <span className="relative size-4 shrink-0">
+        <span className="relative -mr-1 size-7 shrink-0">
           {unread && (
             <span className="absolute inset-0 m-auto size-2 rounded-full bg-brand-500 group-hover/row:opacity-0" />
           )}
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             aria-label="Delete session"
-            className="absolute inset-0 grid place-items-center text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive"
+            className="absolute inset-0 text-muted-foreground opacity-0 transition-[background,box-shadow,color,opacity] group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -171,7 +161,7 @@ export function ChatRow({
             }}
           >
             <IconX className="size-3.5" />
-          </button>
+          </Button>
         </span>
       </PreviewCardTrigger>
       <PreviewCardContent side="right" align="start" className="w-80 gap-2 p-3">
