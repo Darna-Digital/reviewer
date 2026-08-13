@@ -5,10 +5,23 @@
  * (the server replays a fresh snapshot each time, so no state is lost), except
  * after a server-reported `{error}` (unknown chat / no repo), which is
  * terminal for this id.
+ *
+ * A conversation you have already opened (or hovered, so the sidebar's preview
+ * fetched it) is in the query cache, so the socket starts from it rather than
+ * from nothing: switching back to a session shows it at once and the snapshot,
+ * when it lands a moment later, replaces it in place instead of a loader. A
+ * session with nothing cached falls back to the REST read — the same request
+ * the preview makes, deduplicated — so whichever of the two arrives first is
+ * what fills the view.
  */
-import { useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { chatStreamUrl } from "@/lib/api/client";
+import { chatQueryOptions } from "@/lib/queries";
 import type { Chat } from "@byconvo/core/chats";
 import type { ChatWireEvent } from "../interfaces/chats.interfaces";
 import { applyChatEvent } from "../functions/chats.reducer";
@@ -28,21 +41,38 @@ interface ChatStreamState {
 const STALE_AFTER_MS = 45_000;
 const WATCHDOG_MS = 5_000;
 
+const cachedChat = (client: QueryClient, id: string | null): Chat | null =>
+  id === null
+    ? null
+    : (client.getQueryData<Chat>(chatQueryOptions(id).queryKey) ?? null);
+
 export function useChatStream(chatId: string | null): ChatStreamState {
-  const [chat, setChat] = useState<Chat | null>(null);
+  const queryClient = useQueryClient();
+  const [chat, setChat] = useState<Chat | null>(() =>
+    cachedChat(queryClient, chatId)
+  );
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<ChatStreamStatus>("connecting");
-  const queryClient = useQueryClient();
   // The sidebar list mirrors turn state — refresh it when a turn settles.
   const invalidateList = useRef(() => {
     void queryClient.invalidateQueries({ queryKey: ["get", "/api/chats"] });
   });
 
   useEffect(() => {
-    setChat(null);
+    const id = chatId;
+    setChat(cachedChat(queryClient, id));
     setError(null);
     setStatus("connecting");
-    if (chatId === null) return;
+    if (id === null) return;
+
+    // What the next visit starts from. Held here and written on the way out
+    // rather than on every delta, so a streaming reply doesn't rewrite the
+    // cache a hundred times to save one paint later.
+    let latest: Chat | null = cachedChat(queryClient, id);
+    const remember = (next: Chat | null): Chat | null => {
+      latest = next;
+      return next;
+    };
 
     let ws: WebSocket | null = null;
     let closed = false;
@@ -52,7 +82,7 @@ export function useChatStream(chatId: string | null): ChatStreamState {
 
     const connect = () => {
       if (closed) return;
-      ws = new WebSocket(chatStreamUrl(chatId));
+      ws = new WebSocket(chatStreamUrl(id));
       ws.onopen = () => {
         attempts = 0;
         lastFrameAt = Date.now();
@@ -71,10 +101,10 @@ export function useChatStream(chatId: string | null): ChatStreamState {
           return;
         }
         if (frame.snapshot !== undefined) {
-          setChat(frame.snapshot);
+          setChat(remember(frame.snapshot));
         } else if (frame.event !== undefined) {
           const event = frame.event;
-          setChat((prev) => applyChatEvent(prev, event));
+          setChat((prev) => remember(applyChatEvent(prev, event)));
           if (event.type === "turn-completed" || event.type === "turn-started")
             invalidateList.current();
         } else if (frame.error !== undefined) {
@@ -110,8 +140,17 @@ export function useChatStream(chatId: string | null): ChatStreamState {
       clearInterval(watchdog);
       if (retryTimer !== null) clearTimeout(retryTimer);
       ws?.close();
+      if (latest !== null) {
+        queryClient.setQueryData(chatQueryOptions(id).queryKey, latest);
+      }
     };
-  }, [chatId]);
+  }, [chatId, queryClient]);
 
-  return { chat, error, status };
+  const rest = useQuery({
+    ...chatQueryOptions(chatId ?? ""),
+    enabled: chatId !== null && chat === null && error === null,
+    retry: false,
+  });
+
+  return { chat: chat ?? rest.data ?? null, error, status };
 }

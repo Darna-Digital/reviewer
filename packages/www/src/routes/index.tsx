@@ -213,7 +213,7 @@ function Home() {
           "Codex",
           "opencode",
           "Cursor",
-          "Terminal threads",
+          "Terminal sessions",
           "Custom CLIs",
           "Per-branch sessions",
           "Work log",

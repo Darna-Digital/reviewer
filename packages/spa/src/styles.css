@@ -758,9 +758,21 @@
 .dark [data-agent="opencode"] {
   --agent: #f7f7f4;
 }
-/* A terminal thread is not a brand — it keeps the text colour it inherits. */
+/* A terminal session is not a brand — it keeps the text colour it inherits. */
 [data-agent="terminal"] {
   --agent: currentColor;
+}
+
+/* --- byconvo: terminals carry no surface of their own ---------------------- */
+/* xterm.css paints `.xterm-viewport` solid black ("required in order for the
+   scroll bar to appear fully opaque" on macOS), which is the one surface the
+   theme's transparent background can't reach — on the light theme it reads as a
+   black rectangle punched into the panel. Drop it so the canvas behind the
+   terminal (and through it the window's vibrancy) is what shows. The host class
+   is what wins the cascade against xterm's own rule regardless of which
+   stylesheet the bundler emits first. */
+.terminal-surface .xterm .xterm-viewport {
+  background-color: transparent;
 }
 
 /* --- byconvo: streaming "working" text ------------------------------------ */

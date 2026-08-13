@@ -16,7 +16,7 @@ export const agentLabel: Record<AgentKind, string> = {
   cursor: "Cursor",
 };
 export const agentDefaultTitle = (agent: AgentKind): string =>
-  agent === "terminal" ? "New thread" : agentLabel[agent];
+  agent === "terminal" ? "New session" : agentLabel[agent];
 export const agentCommand = (agent: AgentKind, input: string): string => {
   switch (agent) {
     case "terminal":

@@ -819,7 +819,7 @@ export function AppShell() {
         label: prefs.bottomVisible ? "Hide Bottom Panel" : "Show Bottom Panel",
         group: "View",
         icon: IconLayoutBottombarExpand,
-        keywords: "history services threads toggle",
+        keywords: "history services sessions terminal toggle",
         run: () => setUiPrefs({ bottomVisible: !prefs.bottomVisible }),
       },
       {
@@ -832,10 +832,10 @@ export function AppShell() {
       },
       {
         id: "view-threads",
-        label: "Open Terminal Threads",
+        label: "Open Terminal Sessions",
         group: "View",
         icon: IconTerminal2,
-        keywords: "terminal shell agent cli",
+        keywords: "terminal shell session cli",
         run: () => openBottomTab("threads"),
       },
       {

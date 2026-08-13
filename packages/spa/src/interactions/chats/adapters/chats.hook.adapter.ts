@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { fetchClient } from "@/lib/api/client";
+import { chatQueryOptions } from "@/lib/queries";
 import type { Chat, ChatSummary } from "@byconvo/core/chats";
 import { createChatsFunctions } from "../functions/chats.functions";
 import type {
@@ -144,6 +145,9 @@ export function useChatsActions() {
     },
     remove: async (id: string) => {
       await fns.remove(id);
+      // Drop the conversation the live view seeds itself from, so a deleted
+      // session can't be reopened from cache.
+      queryClient.removeQueries({ queryKey: chatQueryOptions(id).queryKey });
       invalidate();
     },
   };

@@ -20,6 +20,11 @@
  *     (xterm's built-in palette is tuned for a black background, so on the app's
  *     light theme the default blues/yellows/bright-white were near-invisible).
  *
+ * The background is deliberately transparent in both themes: a terminal paints
+ * no surface of its own and takes whatever it is mounted on — the app canvas,
+ * and through it the native window's vibrancy — so it never shows as a black
+ * rectangle punched through a light window (or the reverse).
+ *
  * The engine is imported lazily by callers so xterm never runs during
  * SSR/prerender.
  */
@@ -31,11 +36,15 @@ export type TerminalTheme = "light" | "dark";
 /**
  * Full ANSI palette per theme. The 16 colours are Tailwind hues (the app's own
  * palette) picked to stay legible on each background, plus a matching selection
- * tint and a cursor-accent that reads against the cursor block.
+ * tint and a cursor-accent that reads against the cursor block. `cursorAccent`
+ * is the character under the cursor, so it stays the surface tone the theme
+ * actually sits on even though the background itself is transparent.
  */
+const TRANSPARENT = "#00000000";
+
 const THEMES: Record<TerminalTheme, ITheme> = {
   dark: {
-    background: "#0a0a0a",
+    background: TRANSPARENT,
     foreground: "#e5e5e5",
     cursor: "#e5e5e5",
     cursorAccent: "#0a0a0a",
@@ -58,7 +67,7 @@ const THEMES: Record<TerminalTheme, ITheme> = {
     brightWhite: "#fafafa",
   },
   light: {
-    background: "#ffffff",
+    background: TRANSPARENT,
     foreground: "#171717",
     cursor: "#171717",
     cursorAccent: "#ffffff",
@@ -94,6 +103,9 @@ const baseOptions = (theme: TerminalTheme) =>
     // hairline seams through an agent's borders).
     lineHeight: 1.0,
     cursorBlink: true,
+    // Let the surface behind the terminal through — without this every renderer
+    // fills each cell with an opaque background first.
+    allowTransparency: true,
     // Required by the Unicode 11 addon's width provider.
     allowProposedApi: true,
     // Keep bold text bold without silently remapping it to the bright palette,

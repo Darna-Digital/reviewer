@@ -2,9 +2,15 @@
  * Live terminal sessions over WebSocket. Each connection to `/api/threads/pty`
  * spawns a real PTY (node-pty) running the thread's program — the login shell for
  * a plain terminal, or an agent CLI (Claude Code / opencode / Codex / Cursor) in
- * its normal interactive mode — scoped to the currently selected repository. This is
+ * its normal interactive mode — started in the open project folder. This is
  * the byconvo (web) equivalent of embedding a terminal like libghostty: the
  * frontend renders an xterm.js terminal and streams bytes both ways.
+ *
+ * The project folder, not the selected repository: a project holding several
+ * repositories (`backend`, `frontend`) opens at the level you can `cd` into any
+ * of them from, and a session stays put when the repository selection moves
+ * underneath it. Thread bookkeeping still lives in the selected repository's
+ * `.byconvo/threads.json`, which is where the threads feature keeps it.
  *
  * It is attached straight onto the Node HTTP server's `upgrade` event rather than
  * going through the Effect HttpApi, since a PTY is a long-lived bidirectional
@@ -50,7 +56,10 @@ import {
   startBrowserBridge,
 } from "../browser/browser-bridge.ts";
 import { CHAT_STREAM_PATH, startChatStream } from "../chats/chat-runtime.ts";
-import { getCurrentRepo } from "../workspace/current-repo.ts";
+import {
+  getCurrentProject,
+  getCurrentRepo,
+} from "../workspace/current-repo.ts";
 import {
   recentAgentSessions,
   writesDiscoverableSessions,
@@ -141,6 +150,13 @@ const loadNodePty = (): NodePty | null => {
   ptyModule = null;
   return ptyModule;
 };
+
+/** Where a session's program runs — the project folder holding every root. */
+const sessionCwd = (): string =>
+  getCurrentProject() ?? getCurrentRepo() ?? process.cwd();
+
+/** Where a thread's record lives — `.byconvo/` in the selected repository. */
+const threadStore = (): string => getCurrentRepo() ?? process.cwd();
 
 const parseAgent = (value: string | null): AgentKind =>
   value !== null && (AGENT_KINDS as ReadonlyArray<string>).includes(value)
@@ -355,6 +371,7 @@ const startSessionCapture = (
   session: PtySession,
   agent: DiscoverableAgent,
   cwd: string,
+  repoPath: string,
   id: string
 ): void => {
   const since = Date.now() - 2000; // small skew for fs mtime granularity
@@ -376,7 +393,7 @@ const startSessionCapture = (
     if (found.length > 0) {
       // Newest matching session is the one this launch created.
       const newest = found.reduce((a, b) => (b.mtimeMs > a.mtimeMs ? b : a));
-      patchThread(cwd, id, { agentSessionId: newest.id });
+      patchThread(repoPath, id, { agentSessionId: newest.id });
       stop();
     }
   }, CAPTURE_INTERVAL_MS);
@@ -504,17 +521,17 @@ const startSession = async (ws: WebSocket, request: IncomingMessage) => {
     const existing = sessions.get(id);
     if (existing !== undefined && !existing.exited) {
       attachClient(existing, ws, cols, rows);
-      const cwd = getCurrentRepo() ?? process.cwd();
-      patchThread(cwd, id, { updatedAt: new Date().toISOString() });
+      patchThread(threadStore(), id, { updatedAt: new Date().toISOString() });
       return;
     }
   }
 
-  const cwd = getCurrentRepo() ?? process.cwd();
+  const cwd = sessionCwd();
+  const repoPath = threadStore();
   // A one-shot prompt to type into the program once it's ready (e.g. a task
   // comment handed to an agent). Only on a fresh spawn, never on re-attach.
   const initialPrompt =
-    id !== null && id.length > 0 ? readThreadInitialPrompt(cwd, id) : "";
+    id !== null && id.length > 0 ? readThreadInitialPrompt(repoPath, id) : "";
 
   // Resolve native session resume so the agent's conversation survives this PTY
   // dying (server restart / app reopen). We only reach here on a fresh spawn —
@@ -522,7 +539,7 @@ const startSession = async (ws: WebSocket, request: IncomingMessage) => {
   let sessionArgs = "";
   let captureAgent: DiscoverableAgent | null = null;
   if (id !== null && id.length > 0 && agent !== "terminal") {
-    const stored = readThreadAgentSessionId(cwd, id);
+    const stored = readThreadAgentSessionId(repoPath, id);
     if (stored !== null) {
       // Resume the session we already know about.
       sessionArgs = agentSessionArgs(agent, {
@@ -540,7 +557,7 @@ const startSession = async (ws: WebSocket, request: IncomingMessage) => {
           sessionId: minted,
           resume: false,
         });
-        patchThread(cwd, id, { agentSessionId: minted });
+        patchThread(repoPath, id, { agentSessionId: minted });
       }
     } else if (writesDiscoverableSessions(agent)) {
       // opencode/codex mint their own id — start fresh, capture it afterwards.
@@ -602,7 +619,7 @@ const startSession = async (ws: WebSocket, request: IncomingMessage) => {
         // dark theme. This is synchronous at spawn, unlike the OSC 11 query
         // whose browser→server round-trip can miss the CLI's detection window.
         COLORFGBG: theme === "dark" ? "15;0" : "0;15",
-        ...(id !== null && id.length > 0 ? buildSessionEnv(cwd, id) : {}),
+        ...(id !== null && id.length > 0 ? buildSessionEnv(repoPath, id) : {}),
       },
     });
   } catch (error) {
@@ -626,13 +643,13 @@ const startSession = async (ws: WebSocket, request: IncomingMessage) => {
   const persistent = id !== null && id.length > 0;
   if (persistent) {
     sessions.set(id, session);
-    patchThread(cwd, id, { updatedAt: new Date().toISOString() });
+    patchThread(repoPath, id, { updatedAt: new Date().toISOString() });
   }
 
   // For opencode/codex we couldn't preset the session id, so discover the one
   // the CLI just minted and persist it for next time.
   if (persistent && id !== null && captureAgent !== null) {
-    startSessionCapture(session, captureAgent, cwd, id);
+    startSessionCapture(session, captureAgent, cwd, repoPath, id);
   }
 
   // Deliver the initial prompt once the program's output settles (it has booted
@@ -666,7 +683,7 @@ const startSession = async (ws: WebSocket, request: IncomingMessage) => {
         // pty already gone
       }
     }, 350);
-    if (persistent && id !== null) clearThreadInitialPrompt(cwd, id);
+    if (persistent && id !== null) clearThreadInitialPrompt(repoPath, id);
   };
   // Claude Code can take several seconds to become input-ready on first launch.
   if (!promptDone) capTimer = setTimeout(flushPrompt, 8000);

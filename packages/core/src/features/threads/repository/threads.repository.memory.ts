@@ -24,7 +24,7 @@ const summarize = (thread: Thread) => ({
       ? thread.entries[thread.entries.length - 1].command
       : null,
 });
-const DEFAULT_TITLE = "New thread";
+const DEFAULT_TITLE = "New session";
 const titleFromCommand = (command: string) => {
   const first = command.trim().split(/\s+/)[0] ?? "";
   return first.length > 0 ? first.slice(0, 60) : "terminal";

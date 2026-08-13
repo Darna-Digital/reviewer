@@ -62,7 +62,7 @@ export const CLAUDE_LOGIN_HINT = [
     "gets revoked, and there's no fallback credential for non-interactive runs " +
     "like this one.",
   "",
-  "Fix (quick): open a terminal (or a Claude Code terminal thread), run " +
+  "Fix (quick): open a terminal (or a Claude Code terminal session), run " +
     "`claude`, then `/login`, and send your message again. This refreshes the " +
     "interactive token but will lapse again later.",
   "",

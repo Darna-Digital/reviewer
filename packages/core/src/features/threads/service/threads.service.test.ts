@@ -16,7 +16,7 @@ describe("ThreadsService", () => {
         taskKey: null,
       });
       expect(created.id).not.toBe("");
-      expect(created.title).toBe("New thread");
+      expect(created.title).toBe("New session");
       expect(created.agent).toBe("terminal");
       const all = yield* threads.list;
       expect(all.map((t) => t.id)).toContain(created.id);

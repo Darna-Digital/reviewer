@@ -385,7 +385,7 @@ export function LocalDevPage() {
               </div>
             </header>
 
-            <div className="relative min-h-0 flex-1 bg-background p-1">
+            <div className="relative min-h-0 flex-1 p-1">
               {active.status === "stopped" ? (
                 <div className="flex h-full flex-col items-center justify-center gap-2 text-sm">
                   <div className="text-muted-foreground">Not running</div>

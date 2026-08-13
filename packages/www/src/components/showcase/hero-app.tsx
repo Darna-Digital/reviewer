@@ -19,7 +19,7 @@ const RAIL_TOP = [
 const RAIL_BOTTOM = [
   { icon: History, label: "History" },
   { icon: Play, label: "Services" },
-  { icon: Terminal, label: "Terminal threads" },
+  { icon: Terminal, label: "Terminal sessions" },
 ];
 
 const TREE = [
@@ -221,7 +221,7 @@ export function HeroApp() {
                 Services
               </span>
               <span className="text-neutral-400 dark:text-neutral-500">
-                Terminal threads
+                Terminal sessions
               </span>
             </PaneHeader>
             <div className="py-1">

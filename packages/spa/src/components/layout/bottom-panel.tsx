@@ -28,7 +28,7 @@ const TABS: ReadonlyArray<{
 }> = [
   { id: "history", label: "History", icon: IconHistory },
   { id: "services", label: "Services", icon: IconPlayerPlay },
-  { id: "threads", label: "Terminal threads", icon: IconTerminal2 },
+  { id: "threads", label: "Terminal sessions", icon: IconTerminal2 },
 ];
 
 interface BottomPanelProps {

@@ -144,7 +144,7 @@ export function DevTerminal({
 
   return (
     <div className="relative h-full min-h-0 w-full">
-      <div ref={hostRef} className="h-full w-full" />
+      <div ref={hostRef} className="terminal-surface h-full w-full" />
       {error !== null ? (
         <div className="absolute inset-x-0 bottom-0 bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
           {error}

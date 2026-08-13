@@ -3,7 +3,7 @@ import type { ThreadsDependencies } from "../interfaces/threads.interfaces";
 
 const thread = (over: Partial<Thread> = {}): Thread => ({
   id: "t-1",
-  title: "New thread",
+  title: "New session",
   agent: "terminal",
   branch: "main",
   taskKey: null,
@@ -47,7 +47,7 @@ export function mockThreadsDependencies() {
       create: async (input) => {
         calls.create.push(input);
         return thread({
-          title: input.title ?? "New thread",
+          title: input.title ?? "New session",
           agent: input.agent,
           taskKey: input.taskKey ?? null,
         });

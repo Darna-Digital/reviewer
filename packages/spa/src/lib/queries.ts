@@ -3,7 +3,7 @@
  * `api.queryOptions(...)`; components use these hooks. Centralising them keeps
  * query keys consistent so mutations/invalidation hit the right caches.
  */
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api, fetchClient } from "@/lib/api/client";
 import { isMultiRepo } from "@byconvo/core/workspace";
@@ -98,18 +98,26 @@ export const useChats = () => api.useQuery("get", "/api/chats");
 /** The static provider/model catalog behind the composer's model picker. */
 export const useChatModels = () => api.useQuery("get", "/api/chats/models");
 
+const CHAT_STALE_MS = 15_000;
+
 /**
- * One chat's full record. The live view streams over a WebSocket instead; this
- * is the cheap REST read behind the sidebar's hover preview, so it only fires
- * once a preview card actually opens.
+ * One chat's full record, under the key everything that holds a conversation
+ * shares: the hover preview's REST read, the route's prefetch on intent and the
+ * live view, which seeds itself from this cache and writes its latest snapshot
+ * back — so reopening a session you have already seen paints from it instead of
+ * waiting on the socket.
  */
-export const useChatPreview = (id: string, enabled: boolean) =>
-  api.useQuery(
+export const chatQueryOptions = (id: string) =>
+  api.queryOptions(
     "get",
     "/api/chats/{id}",
     { params: { path: { id } } },
-    { enabled, staleTime: 15_000 }
+    { staleTime: CHAT_STALE_MS }
   );
+
+/** The sidebar's hover preview — fetched only once a card is primed. */
+export const useChatPreview = (id: string, enabled: boolean) =>
+  useQuery({ ...chatQueryOptions(id), enabled });
 
 export const useThread = (id: string | null) =>
   api.useQuery(

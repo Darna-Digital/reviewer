@@ -60,7 +60,7 @@ const ensureLiveTerminal = (
   if (existing !== undefined) return existing;
 
   const host = document.createElement("div");
-  host.className = "h-full w-full";
+  host.className = "terminal-surface h-full w-full";
   const live: LiveTerminal = {
     host,
     status: "connecting",

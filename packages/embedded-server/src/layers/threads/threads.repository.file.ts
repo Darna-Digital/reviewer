@@ -71,7 +71,7 @@ const titleFromCommand = (command: string) => {
   return first.length > 0 ? first.slice(0, 60) : "terminal";
 };
 
-const DEFAULT_TITLE = "New thread";
+const DEFAULT_TITLE = "New session";
 
 // Module-scoped so ids stay unique across per-request repository instances.
 let counter = 0;

@@ -1,14 +1,15 @@
 /**
- * ThreadsPage — terminal threads. A Threads Sidebar on the left lists
- * every repo-scoped terminal (plain shell or an agent CLI); the panel body on
- * the right shows the one selected thread's live terminal with a toolbar
- * (title + rename).
+ * ThreadsPage — terminal sessions. A sidebar on the left lists every session;
+ * the panel body on the right shows the one selected session's live terminal
+ * with a toolbar (title + rename). Every new session is a plain shell started
+ * in the project folder — agent CLIs are run from Chats, not from here — though
+ * an older session created against an agent still shows its mark.
  *
  * The sidebar filters the list by branch (grouped like agent chats, defaulting
  * to the current checkout), a time window, and a free-text search over titles
- * and last commands. Backgrounded terminals keep running: every visited
- * thread's terminal stays mounted (just hidden) so its PTY session survives
- * switching, and a hidden terminal that emits a bell shows an activity dot.
+ * and last commands. Backgrounded sessions keep running: every visited
+ * session's terminal stays mounted (just hidden) so its PTY survives
+ * switching, and a hidden session that emits a bell shows an activity dot.
  */
 import {
   IconGitBranch,
@@ -19,12 +20,6 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
@@ -40,44 +35,12 @@ import {
   disposeLiveTerminal,
 } from "@/interactions/threads/components/terminal";
 import { useThreadsActions } from "@/interactions/threads/adapters/threads.hook.adapter";
-import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents";
-import type { AgentKind, ThreadSummary } from "@byconvo/core/threads";
+import { agentLabel } from "@/interactions/threads/interfaces/agents";
+import type { ThreadSummary } from "@byconvo/core/threads";
 import { dateCutoff, type DateFilter } from "@/lib/date-filter";
 import { useBranches, useRepo, useThreads } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
-
-function NewTerminalMenu({
-  onPick,
-  trigger,
-}: {
-  onPick: (agent: AgentKind) => void;
-  trigger: React.ReactElement;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger render={trigger} />
-      <DropdownMenuContent align="end" className="w-auto min-w-56">
-        {AGENTS.map((agent) => {
-          const Icon = agentIcon(agent.kind);
-          return (
-            <DropdownMenuItem
-              key={agent.kind}
-              onClick={() => onPick(agent.kind)}
-              className="gap-3 whitespace-nowrap"
-            >
-              <Icon className="size-4 shrink-0 text-muted-foreground" />
-              <span className="font-medium">{agent.label}</span>
-              <span className="ml-auto pl-4 text-xs text-muted-foreground">
-                {agent.hint}
-              </span>
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
 
 export function ThreadsPage() {
   const threads = useThreads();
@@ -100,7 +63,7 @@ export function ThreadsPage() {
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
   const [search, setSearch] = useState("");
   const activeBranch = branchFilter ?? (currentBranch || ALL_BRANCHES);
-  // New threads land in the filtered branch (or the current branch under "All").
+  // New sessions land in the filtered branch (or the current branch under "All").
   const newThreadBranch =
     activeBranch === ALL_BRANCHES ? currentBranch : activeBranch;
 
@@ -177,13 +140,18 @@ export function ThreadsPage() {
   const active = summaries.find((t) => t.id === activeId) ?? null;
   const ActiveIcon = agentIcon(active?.agent ?? "terminal");
 
-  const createThread = async (agent: AgentKind) => {
+  const createThread = async () => {
     try {
-      const created = await actions.create(agent, "", null, newThreadBranch);
+      const created = await actions.create(
+        "terminal",
+        "",
+        null,
+        newThreadBranch
+      );
       setActiveId(created.id);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "could not create thread"
+        error instanceof Error ? error.message : "could not create session"
       );
     }
   };
@@ -258,24 +226,25 @@ export function ThreadsPage() {
             {t.taskKey}
           </span>
         )}
-        <button
-          type="button"
-          aria-label="Close terminal"
-          className="shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover/row:opacity-100 hover:text-destructive"
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={`Close ${t.title}`}
+          className="shrink-0 text-muted-foreground opacity-0 transition-[background,box-shadow,color,opacity] group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100"
           onClick={(e) => {
             e.stopPropagation();
             void closeThread(t.id);
           }}
         >
           <IconX className="size-3.5" />
-        </button>
+        </Button>
       </div>
     );
   };
 
   return (
     <div className="flex h-full min-h-0">
-      {/* Threads sidebar (drag-resizable) */}
+      {/* Sessions sidebar (drag-resizable) */}
       <aside
         className={cn(
           "flex shrink-0 flex-col border-r",
@@ -285,16 +254,16 @@ export function ThreadsPage() {
       >
         <div className="flex items-center gap-1.5 border-b p-2">
           <SidebarSearch
-            label="Search terminals"
-            placeholder="Search terminals…"
+            label="Search sessions"
+            placeholder="Search sessions…"
             value={search}
             onChange={setSearch}
           />
-          {/* Filters — branch (groups threads, defaulting to the current
-              checkout; new terminals land in the selected branch) and time
+          {/* Filters — branch (groups sessions, defaulting to the current
+              checkout; new sessions land in the selected branch) and time
               window, combined behind one dropdown. */}
           <SidebarFilterMenu
-            label="Filter terminals"
+            label="Filter sessions"
             branchValue={activeBranch}
             branches={filterBranches}
             onBranchChange={setBranchFilter}
@@ -302,19 +271,15 @@ export function ThreadsPage() {
             onDateChange={setDateFilter}
             active={filtersActive}
           />
-          <NewTerminalMenu
-            onPick={(a) => void createThread(a)}
-            trigger={
-              <Button
-                size="icon"
-                variant="ghost"
-                className="size-7 shrink-0"
-                aria-label="New terminal"
-              >
-                <IconPlus className="size-4" />
-              </Button>
-            }
-          />
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-7 shrink-0"
+            aria-label="New session"
+            onClick={() => void createThread()}
+          >
+            <IconPlus className="size-4" />
+          </Button>
         </div>
         <ScrollArea
           className="min-h-0 flex-1"
@@ -322,12 +287,12 @@ export function ThreadsPage() {
         >
           {summaries.length === 0 ? (
             <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-              No terminals yet. Start one from the + menu.
+              No sessions yet. Start one with the + button.
             </p>
           ) : !hasMatches ? (
             <div className="flex flex-col items-center gap-2 px-3 py-6 text-center">
               <p className="text-xs text-muted-foreground">
-                No terminals match these filters.
+                No sessions match these filters.
               </p>
               {filtersActive && (
                 <Button
@@ -382,18 +347,18 @@ export function ThreadsPage() {
       <section className="flex min-w-0 flex-1 flex-col">
         {active === null ? (
           <div className="flex h-full flex-col items-center justify-center gap-2 text-sm">
-            <div className="font-medium">No terminal open</div>
+            <div className="font-medium">No session open</div>
             <div className="text-muted-foreground">
-              Start a terminal, Claude Code, opencode, or Codex thread.
+              Start a terminal in the project folder.
             </div>
-            <NewTerminalMenu
-              onPick={(a) => void createThread(a)}
-              trigger={
-                <Button size="sm" variant="outline" className="mt-1">
-                  <IconPlus className="size-4" /> New terminal
-                </Button>
-              }
-            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-1"
+              onClick={() => void createThread()}
+            >
+              <IconPlus className="size-4" /> New session
+            </Button>
           </div>
         ) : (
           <>
@@ -436,8 +401,10 @@ export function ThreadsPage() {
               )}
             </header>
 
-            {/* Every visited terminal stays mounted; only the active one shows. */}
-            <div className="relative min-h-0 flex-1 bg-background">
+            {/* Every visited terminal stays mounted; only the active one shows.
+                No surface of its own — the terminal renders transparent onto
+                whatever the panel sits on (see lib/terminal/xterm-engine). */}
+            <div className="relative min-h-0 flex-1">
               {summaries
                 .filter((t) => mountedIds.includes(t.id))
                 .map((t) => (

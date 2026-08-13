@@ -58,7 +58,7 @@ export const CURSOR_LOGIN_HINT = [
     "credential it answers with a login prompt instead of a reply — that's " +
     "what this turn hit.",
   "",
-  "Fix (quick): open a terminal (or a Cursor terminal thread), run " +
+  "Fix (quick): open a terminal (or a Cursor terminal session), run " +
     "`cursor-agent login`, and send your message again.",
   "",
   "Fix (durable, and what CI uses): create an API key in Cursor's dashboard " +

@@ -165,7 +165,7 @@ export function ModeRail() {
             <IconPlayerPlay className="size-5" />
           </RailButton>
           <RailButton
-            label="Terminal threads"
+            label="Terminal sessions"
             active={threadsActive}
             onClick={() =>
               toggleBottomTab("threads", prefs.bottomTab, prefs.bottomVisible)

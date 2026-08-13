@@ -1,7 +1,8 @@
 /**
- * Agent presets for the threads UI — the "New thread" menu and the labels shown
- * in the sidebar/header. Mirrors the server's agent set; the server owns how
- * each agent's input is turned into a command.
+ * Agent presets — the labels and marks every agent-picking surface draws from
+ * (chats, tasks, review assignment, and the mark an older terminal session
+ * created against an agent still carries). Mirrors the server's agent set; the
+ * server owns how each agent's input is turned into a command.
  */
 import type { AgentKind } from "@byconvo/core/threads";
 

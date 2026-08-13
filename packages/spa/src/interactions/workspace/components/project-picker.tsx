@@ -55,7 +55,7 @@ interface ProjectPickerProps {
   onOpenChange: (open: boolean) => void;
   /**
    * Called after a project is opened, instead of the default jump to the
-   * commit view. The workspace pages pass this so switching project keeps you
+   * browse view. The workspace pages pass this so switching project keeps you
    * on the current page (now scoped to the newly-opened project).
    */
   onChosen?: () => void;
@@ -165,9 +165,10 @@ export function ProjectPicker({
     if (opened === null) return;
     onOpenChange(false);
     // Workspace pages stay put (now scoped to the new project); the git-review
-    // shell defaults to jumping into the commit view.
+    // shell lands in the arriving project's tree, the same as moving between
+    // roots does, rather than in a review of whatever is uncommitted there.
     if (onChosen !== undefined) onChosen();
-    else void navigate({ to: "/modes/code/commit", search: {} });
+    else void navigate({ to: "/modes/code/browse", search: {} });
   };
 
   const chooseDirectory = async () => {
