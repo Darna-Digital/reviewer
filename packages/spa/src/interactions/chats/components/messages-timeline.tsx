@@ -5,7 +5,15 @@
  * Auto-follows the stream unless the reader has scrolled up.
  */
 import { IconAlertCircle, IconPlayerStopFilled } from "@tabler/icons-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { Chat, ChatActivity, ChatMessage } from "@byconvo/core/chats";
 import { ThinkingIndicator } from "@/components/ui/thinking-indicator";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -185,11 +193,31 @@ const AssistantMessage = memo(function AssistantMessageRow({
   );
 });
 
+/**
+ * How much of a conversation is built when it opens, and how much more each
+ * time the reader climbs past the top of it.
+ *
+ * A session opens at the bottom, so everything above the last few turns is
+ * off-screen — and building it anyway means parsing and highlighting the
+ * markdown of the whole session before the first frame. That cost scales with
+ * how long the session ran, which is why the ones worth coming back to were the
+ * slowest to open. Counted from the start of the conversation rather than the
+ * end, so a reply streaming in at the bottom never pushes an older message the
+ * reader has already uncovered back out of the timeline.
+ */
+const OPENING_MESSAGES = 8;
+const OLDER_MESSAGES_STEP = 16;
+/** How near the top the reader gets before the next block is built. */
+const BUILD_OLDER_WITHIN_PX = 600;
+
 export function MessagesTimeline({ chat }: { chat: Chat }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const pinnedToBottom = useRef(true);
   const lastUserMessageId = useRef<string | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
+  const [unbuilt, setUnbuilt] = useState(() =>
+    Math.max(0, chat.messages.length - OPENING_MESSAGES)
+  );
 
   // Keyed on the message list, not on the chat: the rail is redrawn when what
   // was said changes, and not when the reader merely scrolls past it (which
@@ -230,7 +258,27 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
   }, [firstSectionId]);
   useEffect(() => () => cancelAnimationFrame(syncFrame.current), []);
 
-  const scrollToSection = (id: string) => {
+  /**
+   * Building the block above the one being read moves everything down by its
+   * height, so the reader's place is held from the bottom of the timeline
+   * instead of the top and restored once it is laid out — otherwise uncovering
+   * older messages would throw the page they were reading off the screen.
+   */
+  const heldFromBottom = useRef<number | null>(null);
+  const buildOlder = useCallback(
+    (upTo: number) => {
+      const next = Math.max(0, upTo);
+      // Nothing to build is also nothing to hold a place through: an anchor set
+      // here would be restored against whatever moved the timeline next.
+      if (next >= unbuilt) return;
+      const el = scrollRef.current;
+      if (el !== null) heldFromBottom.current = el.scrollHeight - el.scrollTop;
+      setUnbuilt(next);
+    },
+    [unbuilt]
+  );
+
+  const revealSection = (id: string) => {
     const el = scrollRef.current;
     if (el === null) return;
     const anchor = el.querySelector<HTMLElement>(
@@ -248,12 +296,49 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
     );
   };
 
+  // The rail spans the whole conversation, so a tick can name a question that
+  // is not built yet: build back as far as it and jump once it is there.
+  const pendingSection = useRef<string | null>(null);
+  const scrollToSection = (id: string) => {
+    const index = chat.messages.findIndex((message) => message.id === id);
+    if (index !== -1 && index < unbuilt) {
+      pendingSection.current = id;
+      buildOlder(index);
+      return;
+    }
+    revealSection(id);
+  };
+
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el === null) return;
+    if (heldFromBottom.current !== null) {
+      el.scrollTop = el.scrollHeight - heldFromBottom.current;
+      heldFromBottom.current = null;
+    }
+    const jumpTo = pendingSection.current;
+    if (jumpTo !== null) {
+      pendingSection.current = null;
+      revealSection(jumpTo);
+      return;
+    }
+    // A timeline shorter than its viewport leaves nothing to scroll towards, so
+    // the next block is built here rather than waiting for a scroll the reader
+    // has no way to make.
+    if (unbuilt > 0 && el.scrollHeight <= el.clientHeight) {
+      buildOlder(unbuilt - OLDER_MESSAGES_STEP);
+    }
+  }, [unbuilt, buildOlder]);
+
   // Track whether the reader is at the bottom; only then auto-follow.
   const onScroll = () => {
     const el = scrollRef.current;
     if (el === null) return;
     pinnedToBottom.current =
       el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+    if (unbuilt > 0 && el.scrollTop < BUILD_OLDER_WITHIN_PX) {
+      buildOlder(unbuilt - OLDER_MESSAGES_STEP);
+    }
     queueSectionSync();
   };
   useEffect(() => {
@@ -321,7 +406,10 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
         viewportClassName="scroll-fade overscroll-contain"
       >
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6">
-          {chat.messages.map(renderMessage)}
+          {(unbuilt === 0
+            ? chat.messages
+            : chat.messages.slice(unbuilt)
+          ).map(renderMessage)}
           {turnError !== null && <TurnError message={turnError} />}
         </div>
       </ScrollArea>

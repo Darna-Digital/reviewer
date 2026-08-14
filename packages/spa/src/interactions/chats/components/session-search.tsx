@@ -1,15 +1,15 @@
 /**
- * The session search pill in the title bar — the same gesture and the same
- * shape code and collaboration modes use, rather than a box on permanent
- * display in the sidebar. It searches titles and last messages — the pair the
- * old inline filter matched on — and, now that sessions from every project are
- * in one list, the project name too, so "api" finds that project's sessions
- * without first narrowing the sidebar to it.
+ * Finding a session, from the sessions rail — a gesture, as it is in code and
+ * collaboration modes, rather than a box on permanent display in the sidebar.
+ * It searches titles and last messages — the pair the old inline filter matched
+ * on — and, now that sessions from every project are in one list, the project
+ * name too, so "api" finds that project's sessions without first narrowing the
+ * sidebar to it.
  */
 import { IconSearch } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { RailButton } from "@/components/layout/rail";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -17,11 +17,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { useChats } from "@/lib/queries";
 import { timeAgo } from "@/lib/relative-time";
 
@@ -51,26 +46,16 @@ export function SessionSearch() {
         if (!next) setQuery("");
       }}
     >
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <PopoverTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Search sessions"
-                  className="rounded-lg text-muted-foreground"
-                />
-              }
-            />
-          }
-        >
-          <IconSearch className="size-4" />
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Search sessions</TooltipContent>
-      </Tooltip>
-      <PopoverContent align="start" className="w-96 gap-0 overflow-hidden p-0">
+      <RailButton label="Search sessions" render={<PopoverTrigger />}>
+        <IconSearch className="size-5" />
+      </RailButton>
+      {/* Hung off the rail rather than under it: the trigger is a column on the
+          window's left edge, so the list opens beside it, aligned to its top. */}
+      <PopoverContent
+        side="right"
+        align="start"
+        className="w-96 gap-0 overflow-hidden p-0"
+      >
         <div className="border-b p-2">
           <Input
             autoFocus

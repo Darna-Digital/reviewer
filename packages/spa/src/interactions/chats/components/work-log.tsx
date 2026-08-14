@@ -18,6 +18,7 @@ import {
   IconWorld,
 } from "@tabler/icons-react";
 import { useState } from "react";
+import { Disclosure } from "@/components/ui/disclosure";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { cn } from "@/lib/utils";
 import { elapsedMs, type WorkStep } from "../functions/work-log.functions";
@@ -135,29 +136,22 @@ function WorkStepRow({ step, last }: { step: WorkStep; last: boolean }) {
         </button>
 
         {expandable && (
-          <div
-            className={cn(
-              "grid transition-[grid-template-rows] duration-200 ease-out",
-              open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-            )}
-          >
-            <div className="overflow-hidden">
-              <div className="flex flex-col gap-2 pt-1.5 pb-2">
-                {step.input !== null && (
-                  <Payload
-                    title={step.thinking ? "Reasoning" : "Input"}
-                    body={step.input}
-                  />
-                )}
-                {step.output !== null && (
-                  <Payload
-                    title={step.thinking ? "Reasoning" : "Output"}
-                    body={step.output}
-                  />
-                )}
-              </div>
+          <Disclosure open={open}>
+            <div className="flex flex-col gap-2 pt-1.5 pb-2">
+              {step.input !== null && (
+                <Payload
+                  title={step.thinking ? "Reasoning" : "Input"}
+                  body={step.input}
+                />
+              )}
+              {step.output !== null && (
+                <Payload
+                  title={step.thinking ? "Reasoning" : "Output"}
+                  body={step.output}
+                />
+              )}
             </div>
-          </div>
+          </Disclosure>
         )}
       </div>
     </div>
@@ -203,24 +197,17 @@ export function WorkLog({
           {summary}
         </span>
       </button>
-      <div
-        className={cn(
-          "grid transition-[grid-template-rows] duration-200 ease-out",
-          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-        )}
-      >
-        <div className="overflow-hidden">
-          <div className="flex flex-col pt-1 pl-1.5">
-            {steps.map((step, i) => (
-              <WorkStepRow
-                key={step.id}
-                step={step}
-                last={i === steps.length - 1}
-              />
-            ))}
-          </div>
+      <Disclosure open={open}>
+        <div className="flex flex-col pt-1 pl-1.5">
+          {steps.map((step, i) => (
+            <WorkStepRow
+              key={step.id}
+              step={step}
+              last={i === steps.length - 1}
+            />
+          ))}
         </div>
-      </div>
+      </Disclosure>
     </div>
   );
 }

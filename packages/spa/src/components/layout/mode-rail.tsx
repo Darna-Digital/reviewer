@@ -13,16 +13,10 @@ import {
   IconPlayerPlay,
   IconTerminal2,
 } from "@tabler/icons-react";
-import { Link, useRouterState } from "@tanstack/react-router";
-import { buttonVariants } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { useRouterState } from "@tanstack/react-router";
+import { Rail, RailButton, RailFoot } from "@/components/layout/rail";
 // The Sessions tab is the way into the threads now, so the rail's inbox is parked.
 // import { ChatsInboxPopover } from "@/interactions/chats/components/chats-inbox-popover";
-import { cn } from "@/lib/utils";
 import { useRepo } from "@/lib/queries";
 import {
   openBottomTab,
@@ -65,44 +59,6 @@ const GIT_LINKS: RailLink[] = [
   },
 ];
 
-function RailButton({
-  label,
-  active,
-  onClick,
-  to,
-  children,
-}: {
-  label: string;
-  active?: boolean;
-  onClick?: () => void;
-  to?: string;
-  children: React.ReactNode;
-}) {
-  const className = cn(
-    buttonVariants({ variant: "ghost", size: "icon" }),
-    "relative text-muted-foreground [-webkit-app-region:no-drag]",
-    active && "bg-muted text-foreground"
-  );
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        className={className}
-        aria-label={label}
-        render={
-          to ? (
-            <Link to={to} onClick={onClick} />
-          ) : (
-            <button type="button" onClick={onClick} />
-          )
-        }
-      >
-        {children}
-      </TooltipTrigger>
-      <TooltipContent side="right">{label}</TooltipContent>
-    </Tooltip>
-  );
-}
-
 /** Show a bottom-dock tab, or hide the dock if that tab is already active. */
 function toggleBottomTab(tab: BottomTab, current: BottomTab, visible: boolean) {
   if (visible && current === tab) {
@@ -134,47 +90,37 @@ export function ModeRail() {
   );
 
   return (
-    <nav className="relative flex h-full w-12 shrink-0 flex-col items-center py-2">
-      {/* The rail's right edge is drawn over its last pixel column rather than
-          as a `border-r`, which would take that pixel out of the content box
-          and centre every icon half a pixel left of where the toolbar's own
-          `px-2` puts them — the icons visibly stepping sideways on the way in
-          and out of collaboration mode, which has no rail. */}
-      <div className="absolute top-0 right-0 h-full w-px bg-border" />
-      <div className="flex w-full flex-1 flex-col items-center gap-1">
-        {GIT_LINKS.filter((l) => l.github !== true || hasGitHub).map(
-          renderLink
-        )}
-        <div className="mt-auto flex flex-col items-center gap-1">
-          <RailButton
-            label="History"
-            active={historyActive}
-            onClick={() =>
-              toggleBottomTab("history", prefs.bottomTab, prefs.bottomVisible)
-            }
-          >
-            <IconHistory className="size-5" />
-          </RailButton>
-          <RailButton
-            label="Services"
-            active={servicesActive}
-            onClick={() =>
-              toggleBottomTab("services", prefs.bottomTab, prefs.bottomVisible)
-            }
-          >
-            <IconPlayerPlay className="size-5" />
-          </RailButton>
-          <RailButton
-            label="Terminal sessions"
-            active={threadsActive}
-            onClick={() =>
-              toggleBottomTab("threads", prefs.bottomTab, prefs.bottomVisible)
-            }
-          >
-            <IconTerminal2 className="size-5" />
-          </RailButton>
-        </div>
-      </div>
-    </nav>
+    <Rail label="Project">
+      {GIT_LINKS.filter((l) => l.github !== true || hasGitHub).map(renderLink)}
+      <RailFoot>
+        <RailButton
+          label="History"
+          active={historyActive}
+          onClick={() =>
+            toggleBottomTab("history", prefs.bottomTab, prefs.bottomVisible)
+          }
+        >
+          <IconHistory className="size-5" />
+        </RailButton>
+        <RailButton
+          label="Services"
+          active={servicesActive}
+          onClick={() =>
+            toggleBottomTab("services", prefs.bottomTab, prefs.bottomVisible)
+          }
+        >
+          <IconPlayerPlay className="size-5" />
+        </RailButton>
+        <RailButton
+          label="Terminal sessions"
+          active={threadsActive}
+          onClick={() =>
+            toggleBottomTab("threads", prefs.bottomTab, prefs.bottomVisible)
+          }
+        >
+          <IconTerminal2 className="size-5" />
+        </RailButton>
+      </RailFoot>
+    </Rail>
   );
 }

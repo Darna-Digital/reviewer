@@ -17,12 +17,10 @@ import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { AgentStrip } from "@/interactions/session-agents/components/agent-strip";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
-import { NewSessionButton } from "@/interactions/chats/components/new-session-button";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
 import { SearchMenu } from "@/interactions/search/components/search-menu";
 import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
-import { SessionSearch } from "@/interactions/chats/components/session-search";
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
@@ -65,16 +63,13 @@ export function AppHeader({
 
   // A session is one conversation, held by its own tab: the project picker and
   // the branch switcher are how you move around a repository, and neither is
-  // what this surface is for.
+  // what this surface is for. Minting a session and finding one act on the list
+  // rather than on the conversation, and are in the rail with the rest of what
+  // moves you about — so this names the conversation, and parks the agents
+  // answering it at the far end, where they read as status rather than control.
   if (route.kind === "session") {
     return (
       <header className="flex h-9 shrink-0 items-center gap-2 px-2">
-        {/* Opens with the two things that act on the list — minting one and
-            finding one — then names the conversation those act beside, and
-            parks the agents answering it at the far end, where they read as
-            status rather than as controls. */}
-        <NewSessionButton />
-        <SessionSearch />
         <SessionCrumbs />
         <div className="flex-1" />
         <AgentStrip />

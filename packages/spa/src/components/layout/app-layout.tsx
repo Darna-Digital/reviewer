@@ -21,6 +21,7 @@ import { useMemo, useState } from "react";
 import { AppHeader } from "@/components/layout/app-header";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
 import { ModeRail } from "@/components/layout/mode-rail";
+import { SessionsRail } from "@/components/layout/sessions-rail";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
@@ -40,9 +41,11 @@ export function AppLayout() {
   const gitChrome = showsGitChrome(route);
   const current = workspace.data?.current ?? null;
 
-  // The rail is how you move around a project. A session is one conversation
-  // and collaboration carries its own sidebar, so neither wants it.
-  const showRail = route.kind !== "session" && route.kind !== "collaboration";
+  // Both rails are the same column carrying different things — code's git
+  // surfaces, sessions' new-and-find — so crossing between them leaves the page
+  // beside it exactly where it was. Collaboration is the one surface without
+  // one: its own sidebar carries the equivalent.
+  const railed = route.kind !== "collaboration";
 
   /** Pages that are meaningless without a repository open behind them. */
   const needsRepo =
@@ -81,7 +84,8 @@ export function AppLayout() {
      */
     <DiffWorkerPoolProvider>
       <WindowFrame>
-        {showRail && <ModeRail />}
+        {railed &&
+          (route.kind === "session" ? <SessionsRail /> : <ModeRail />)}
         <div className="flex min-w-0 flex-1 flex-col">
           <AppHeader
             route={route}
