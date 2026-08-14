@@ -218,14 +218,48 @@ export function DiffConnectors({
     if (host != null) resize.observe(host);
     schedule();
     window.addEventListener("resize", schedule);
+
     const scroller = section.closest(".diff-pane");
+
+    /**
+     * Whether this file is near enough the viewport to be worth measuring,
+     * kept by an observer rather than asked on every scroll event.
+     *
+     * The ribbons do have to follow the scroll — the row window shifts under
+     * virtualization, so they move even when their count does not — but the
+     * *visibility test* does not need the scroll. It used to: every file in the
+     * diff put its own listener on the shared pane and each one called
+     * `getBoundingClientRect` to decide whether to bother, so a review of
+     * ninety files forced ninety synchronous layouts per scroll event before
+     * any ribbon was drawn. An IntersectionObserver answers the same question
+     * off the main thread's critical path, and the handler below reads a
+     * boolean instead.
+     */
+    let near = false;
+    const visibility = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[entries.length - 1];
+        if (entry === undefined) return;
+        const wasNear = near;
+        near = entry.isIntersecting;
+        // Coming into view is itself a reason to draw: the file may have
+        // materialised its rows while it was outside the margin.
+        if (near && !wasNear) schedule();
+      },
+      // Matches the library's own wake-ahead, so a file's ribbons are ready by
+      // the time its code is.
+      { root: scroller ?? null, rootMargin: "1000px 0px" }
+    );
+    visibility.observe(section);
+
     const onScroll = () => {
-      const rect = section.getBoundingClientRect();
-      if (rect.bottom > 0 && rect.top < window.innerHeight) schedule();
+      if (near) schedule();
     };
     scroller?.addEventListener("scroll", onScroll, { passive: true });
+
     return () => {
       resize.disconnect();
+      visibility.disconnect();
       observer.current = null;
       window.removeEventListener("resize", schedule);
       scroller?.removeEventListener("scroll", onScroll);
