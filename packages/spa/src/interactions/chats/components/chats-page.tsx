@@ -1,7 +1,7 @@
 /**
  * ChatsPage — the sessions surface: every session, from every project, listed
- * beside the routed conversation (an empty pane on the index, a conversation on
- * /agent-session/$chatId).
+ * beside the routed conversation (the newest of them on the way in, whichever
+ * you pick after that).
  *
  * Sessions are stored centrally, so this list is not the open project's — it is
  * all of them, newest first, and a conversation started in another project
@@ -27,27 +27,21 @@ import {
   useParams,
   useSearch,
 } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
+import { useChatListQuery } from "@/interactions/chats/adapters/chat-list-query.hook.adapter";
 import { useWindowTabs } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { ChatRow } from "@/interactions/chats/components/chat-row";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
-import {
-  chatListFilters,
-  resolveProjectFilter,
-} from "@/interactions/chats/functions/chat-filters.functions";
-import { useChatFilters } from "@/interactions/chats/adapters/chat-filters.store";
-import { useChatPages, useChatProjects } from "@/lib/queries";
+import { useChatPages } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
-import type { ChatProjectTally } from "@byconvo/core/chats";
 
 /** How close to the foot of the loaded list fetches the next page. */
 const LOAD_MORE_WITHIN_PX = 400;
-const EMPTY_PROJECTS: ReadonlyArray<ChatProjectTally> = [];
 
 export function ChatsPage() {
   const actions = useChatsActions();
@@ -73,30 +67,42 @@ export function ChatsPage() {
 
   // Starting a session gets the whole pane: the composer is the only thing on
   // screen worth looking at, and it is the one place under here that asks for
-  // that — landing on the surface with no session open shows the list, which is
-  // the whole point of coming to it.
+  // that.
   const composing = useSearch({ strict: false }).new === true;
   const showList = !composing && !ownTab && prefs.sidebarVisible;
-
-  // Over every session rather than over the pages loaded so far: a project the
-  // reader has not scrolled to is still a project they can narrow to.
-  const projectList = useChatProjects();
-  const projects = projectList.data ?? EMPTY_PROJECTS;
-  const stored = useChatFilters();
-  const dateFilter = stored.date;
-  const projectFilter = resolveProjectFilter(projects, stored.project);
+  /** The surface with the list on it and nothing yet opened from it. */
+  const landing = !composing && !ownTab && chatId === undefined;
 
   // The filters go to the server with the page — see `useChatPages`.
-  const filters = useMemo(
-    () => chatListFilters(projectFilter, dateFilter),
-    [projectFilter, dateFilter]
-  );
-  // Not fetched at all where the list is not shown: the composer and a session
-  // in its own tab are whole pages that happen to hang off this one.
+  const filters = useChatListQuery();
+  // Not fetched at all where there is neither a list to fill nor a session to
+  // land on: the composer and a session in its own tab are whole pages that
+  // happen to hang off this one.
   const { sessions, loading, hasMore, loadMore } = useChatPages(
     filters,
-    showList
+    showList || landing
   );
+
+  /**
+   * Landing on the surface opens the newest session the filters leave in the
+   * list — the first row, since it arrives newest-first. The empty pane beside
+   * a list is a page asking you to click the thing it is already pointing at,
+   * and the one you were last in is nearly always the one you came back for.
+   *
+   * It is the *filtered* list's newest, so narrowing to a project and coming
+   * back lands in that project's work rather than in whatever ran last
+   * somewhere else. `replace` keeps the pane you passed through out of the
+   * history, which you would otherwise land back on and be moved off again.
+   */
+  useEffect(() => {
+    const latest = sessions[0];
+    if (!landing || latest === undefined) return;
+    void navigate({
+      to: "/modes/agent-session/$chatId",
+      params: { chatId: latest.id },
+      replace: true,
+    });
+  }, [landing, sessions, navigate]);
 
   /**
    * Fetch the next page as its foot comes into reach, rather than at the very
