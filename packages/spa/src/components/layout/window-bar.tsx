@@ -172,6 +172,10 @@ export function WindowBar() {
   const pinnedCount = strip.filter(isPinnedTab).length;
   const { select, close, openSession, prime } = useWindowTabActions();
   const overviewOpen = useTabOverview();
+  // The launchpad is where the window is while it is up, so none of the tabs
+  // behind it is the one being looked at. The strip keeps its roving focus on
+  // the tab the window will return to.
+  const showingId = overviewOpen ? null : activeId;
   /**
    * Take the window to a tab from the strip. The launchpad is a place the
    * window goes to rather than a page it holds open, so picking a tab from
@@ -295,7 +299,15 @@ export function WindowBar() {
   return (
     <header
       className={cn(
-        "flex h-9 shrink-0 items-center",
+        // 46px: the 36px band every surface keeps, with 5px of frame above and
+        // below it. Its middle is 23, which is where the traffic lights sit —
+        // macOS lands a light on an even pixel, so the centre of a 14px one
+        // falls on an odd pixel, and only every fourth height puts the bar's own
+        // middle there to meet it. The row rides a pixel below that line: the
+        // lights are circles among squares and read low against them at a true
+        // 23, so the squares give way rather than the bar being rebuilt around
+        // a line the lights cannot reach.
+        "flex h-11.5 shrink-0 items-center pt-0.5",
         isDesktop && "[-webkit-app-region:drag]"
       )}
     >
@@ -339,7 +351,7 @@ export function WindowBar() {
           )}
         >
           {strip.map((tab, at) => {
-            const active = tab.id === activeId;
+            const active = tab.id === showingId;
             const pinned = isPinnedTab(tab);
             return (
               <BarTooltip
@@ -354,7 +366,7 @@ export function WindowBar() {
                       role="tab"
                       aria-selected={active}
                       aria-label={tab.title}
-                      tabIndex={active ? 0 : -1}
+                      tabIndex={tab.id === activeId ? 0 : -1}
                       draggable={!pinned}
                       onPointerEnter={() => prime(tab.href)}
                       className={cn(

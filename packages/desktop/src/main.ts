@@ -232,10 +232,11 @@ async function createWindow(): Promise<void> {
     title: "Byconvo",
     icon: brandIcon,
     titleBarStyle: "hiddenInset",
-    // Center the traffic lights in the 36px (h-9) WindowBar and inset them to
-    // the system spacing; the bar's `pl-24` is what leaves room for them. The
-    // hiddenInset default is tuned for a ~28px toolbar, sitting too high here.
-    trafficLightPosition: { x: 20, y: 12 },
+    // Measured off screenshots rather than reasoned about: macOS lands a 14px
+    // light on an even pixel, snapping this inset down to reach one, so its
+    // centre falls on an odd pixel — and 23 is the one the WindowBar rides its
+    // controls on. The bar's lead gutter is what leaves room for them.
+    trafficLightPosition: { x: 20, y: 16 },
     webPreferences: {
       preload: resolve(__dirname, "preload.js"),
       contextIsolation: true,

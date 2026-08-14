@@ -9,7 +9,7 @@
  * drawing their own column is how the page beneath ends up stepping sideways on
  * the way across.
  *
- * It measures 36px inside its edge — the same as the window bar's height, the
+ * It measures 36px inside its edge — the same as the window bar's band, the
  * header's, and the tab strip's inside its rule — with a 28px button in it,
  * the square the project chip beside it and the tabs above it are. The 37 is
  * that 36 plus the edge, so the band reads the same whichever way it is turned.
