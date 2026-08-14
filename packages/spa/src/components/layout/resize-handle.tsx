@@ -20,8 +20,14 @@ interface ResizeHandleProps {
    * "row" → a horizontal divider dragged vertically (row-resize).
    */
   orientation: "col" | "row";
-  /** Current panel size in px. Captured fresh at the start of each drag. */
-  value: number;
+  /**
+   * Current panel size in px. Captured fresh at the start of each drag.
+   *
+   * A function when the panel's size does not live in React state — see
+   * `usePanelSize`, where the drag writes straight to the DOM and there is no
+   * re-render to carry a new number down here.
+   */
+  value: number | (() => number);
   /** Lower bound, in px. */
   min: number;
   /** Upper bound, in px — a function so it can track the live viewport. */
@@ -62,7 +68,7 @@ export function ResizeHandle({
       event.preventDefault();
       const axis = orientation === "col" ? "clientX" : "clientY";
       const start = event[axis];
-      const startSize = value;
+      const startSize = typeof value === "function" ? value() : value;
       const cursorClass =
         orientation === "col" ? "is-resizing-col" : "is-resizing-row";
       document.body.classList.add(cursorClass);

@@ -10,6 +10,7 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { WindowBar } from "@/components/layout/window-bar";
 import { BrowserPane } from "@/interactions/browser-pane/components/browser-pane";
 import { PlansPane } from "@/interactions/plans-pane/components/plans-pane";
@@ -50,6 +51,18 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
   });
   const prefs = useUiPrefs();
   const inCodeMode = activeWorkMode(pathname, prefs.workMode) === "code";
+
+  // Both side panes hang off the frame, so dragging either used to re-render
+  // the entire window — and, because these two wrote straight to the prefs,
+  // also serialise and store every preference in the app on each pointer frame.
+  // The panes read their width from a CSS variable now, and the prefs are
+  // written once, when the drag ends. See `usePanelSize`.
+  const plansPane = usePanelSize("plans-w", prefs.plansPaneWidth, "width");
+  const browserPane = usePanelSize(
+    "browser-w",
+    prefs.browserPaneWidth,
+    "width"
+  );
 
   // ⌘B expands or collapses the bottom dock. Every code page carries the dock —
   // the git shell embeds its own, the workspace shell mounts `GitBottomDock` —
@@ -105,11 +118,14 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
                 <ResizeHandle
                   orientation="col"
                   label="Resize analysis"
-                  value={prefs.plansPaneWidth}
+                  value={plansPane.current}
                   min={380}
                   max={() => Math.max(380, window.innerWidth - 480)}
                   direction={-1}
-                  onResize={(plansPaneWidth) => setUiPrefs({ plansPaneWidth })}
+                  onResize={plansPane.onResize}
+                  onResizeEnd={(plansPaneWidth) =>
+                    setUiPrefs({ plansPaneWidth })
+                  }
                 />
                 <PlansPane />
               </div>
@@ -119,11 +135,12 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
                 <ResizeHandle
                   orientation="col"
                   label="Resize browser"
-                  value={prefs.browserPaneWidth}
+                  value={browserPane.current}
                   min={320}
                   max={() => Math.max(320, window.innerWidth - 480)}
                   direction={-1}
-                  onResize={(browserPaneWidth) =>
+                  onResize={browserPane.onResize}
+                  onResizeEnd={(browserPaneWidth) =>
                     setUiPrefs({ browserPaneWidth })
                   }
                 />

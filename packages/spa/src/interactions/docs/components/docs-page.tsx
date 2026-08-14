@@ -10,6 +10,7 @@ import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -24,7 +25,12 @@ export function DocsPage() {
   const docs = useDocs();
   const actions = useDocsActions();
   const prefs = useUiPrefs();
-  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth);
+  // Not React state — see `usePanelSize`.
+  const sidebar = usePanelSize(
+    "workspace-sidebar-w",
+    prefs.workspaceSidebarWidth,
+    "width"
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [loadedId, setLoadedId] = useState<string | null>(null);
@@ -117,7 +123,7 @@ export function DocsPage() {
           "flex shrink-0 flex-col border-r",
           !prefs.sidebarVisible && "hidden"
         )}
-        style={{ width: sidebarWidth }}
+        style={sidebar.style}
       >
         <div className="flex items-center justify-between px-3 py-2">
           <span className="text-sm font-medium">Docs &amp; plans</span>
@@ -185,10 +191,10 @@ export function DocsPage() {
       </aside>
       {prefs.sidebarVisible && (
         <SidebarResizeHandle
-          width={sidebarWidth}
+          width={sidebar.current}
           stored={prefs.workspaceSidebarWidth}
           max={() => Math.max(240, window.innerWidth - 480)}
-          onResize={setSidebarWidth}
+          onResize={sidebar.onResize}
           onResizeEnd={(w) => setUiPrefs({ workspaceSidebarWidth: w })}
         />
       )}

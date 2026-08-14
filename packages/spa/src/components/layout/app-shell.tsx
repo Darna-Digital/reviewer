@@ -51,6 +51,7 @@ import { PathBar } from "@/components/layout/path-bar";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { TopBar } from "@/components/layout/top-bar";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { FileSidebar } from "@/components/tree/file-sidebar";
@@ -240,12 +241,17 @@ export function AppShell() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [draft, setDraft] = useState<DraftLocation | null>(null);
 
-  // Live panel sizes for smooth dragging; seeded from (and committed back to)
-  // the persisted prefs so they survive reloads. See `ResizeHandle`.
-  const [sidebarWidth, setSidebarWidth] = useState(prefs.sidebarWidth);
-  const [bottomHeight, setBottomHeight] = useState(prefs.bottomHeight);
-  const [reviewPullsHeight, setReviewPullsHeight] = useState(
-    prefs.reviewPullsHeight
+  // Panel sizes live in the DOM, not in this component's state: a drag reports
+  // a new size on every pointer frame, and re-rendering this shell — the tree,
+  // the diff and every file section in it, the dock — for each of them was the
+  // jankiest thing in the app. The drag now writes a CSS variable and only the
+  // final size is committed back to the prefs. See `usePanelSize`.
+  const sidebar = usePanelSize("sidebar-w", prefs.sidebarWidth, "width");
+  const bottom = usePanelSize("bottom-h", prefs.bottomHeight, "height");
+  const reviewPulls = usePanelSize(
+    "review-pulls-h",
+    prefs.reviewPullsHeight,
+    "height"
   );
 
   // A project with no git root at all: there is nothing repo-scoped to show,
@@ -1041,7 +1047,7 @@ export function AppShell() {
                   "flex shrink-0 flex-col overflow-hidden border-r",
                   !prefs.sidebarVisible && "hidden"
                 )}
-                style={{ width: sidebarWidth }}
+                style={sidebar.style}
               >
                 {mode === "review" && (
                   <>
@@ -1067,18 +1073,16 @@ export function AppShell() {
                         selectedPull === null ? "flex-1" : "shrink-0 border-b"
                       }
                       style={
-                        selectedPull === null
-                          ? undefined
-                          : { height: reviewPullsHeight }
+                        selectedPull === null ? undefined : reviewPulls.style
                       }
                     />
                     {selectedPull !== null && (
                       <ResizeHandle
                         orientation="row"
-                        value={reviewPullsHeight}
+                        value={reviewPulls.current}
                         min={80}
                         max={() => Math.max(120, window.innerHeight - 320)}
-                        onResize={setReviewPullsHeight}
+                        onResize={reviewPulls.onResize}
                         onResizeEnd={(h) =>
                           setUiPrefs({ reviewPullsHeight: h })
                         }
@@ -1127,10 +1131,10 @@ export function AppShell() {
               </div>
               {prefs.sidebarVisible && (
                 <SidebarResizeHandle
-                  width={sidebarWidth}
+                  width={sidebar.current}
                   stored={prefs.sidebarWidth}
                   max={() => Math.max(240, window.innerWidth - 400)}
-                  onResize={setSidebarWidth}
+                  onResize={sidebar.onResize}
                   onResizeEnd={(w) => setUiPrefs({ sidebarWidth: w })}
                 />
               )}
@@ -1233,11 +1237,11 @@ export function AppShell() {
             {prefs.bottomVisible && (
               <ResizeHandle
                 orientation="row"
-                value={bottomHeight}
+                value={bottom.current}
                 min={120}
                 max={() => Math.max(160, window.innerHeight - 200)}
                 direction={-1}
-                onResize={setBottomHeight}
+                onResize={bottom.onResize}
                 onResizeEnd={(h) => setUiPrefs({ bottomHeight: h })}
                 label="Resize bottom panel"
               />
@@ -1247,7 +1251,7 @@ export function AppShell() {
                 "shrink-0 overflow-hidden border-t",
                 !prefs.bottomVisible && "hidden"
               )}
-              style={{ height: bottomHeight }}
+              style={bottom.style}
               hidden={!prefs.bottomVisible}
             >
               <BottomPanel

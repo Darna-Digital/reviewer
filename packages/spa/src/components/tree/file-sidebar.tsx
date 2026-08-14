@@ -1,6 +1,6 @@
 import { FileTree, useFileTree } from "@pierre/trees/react";
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import {
   draftPath,
@@ -101,8 +101,13 @@ export function FileSidebar({
   // selection-change events don't loop back through `onFileSelect`.
   const syncingSelectionRef = useRef(false);
 
+  // Copied for the tree, which wants mutable arrays — but copied once per new
+  // listing rather than once per render, for the same reason as the keys below.
+  const treePaths = useMemo(() => [...paths], [paths]);
+  const treeGitStatus = useMemo(() => [...gitStatus], [gitStatus]);
+
   const { model } = useFileTree({
-    paths: [...paths],
+    paths: treePaths,
     // Browse shows the whole project, so it starts collapsed and reveals the open
     // file by expanding just its ancestors (see the reveal effect below). The
     // commit/review modes show a small changed-file set, so they start expanded.
@@ -114,7 +119,7 @@ export function FileSidebar({
     flattenEmptyDirectories: true,
     search: mode !== "browse",
     unsafeCSS: TREE_UNSAFE_CSS,
-    gitStatus: [...gitStatus],
+    gitStatus: treeGitStatus,
     onSelectionChange: (selectedPaths) => {
       if (syncingSelectionRef.current) return;
       const first = selectedPaths.at(0);
@@ -176,7 +181,12 @@ export function FileSidebar({
     return true;
   };
 
-  const pathsKey = paths.join("\n");
+  // Both keys are folds over the whole repository — every tracked path, every
+  // changed file — and they were being rebuilt on every render of this
+  // component, which is every render of the shell above it. Opening a menu or
+  // dragging a panel handle was enough to join fifty thousand strings. They
+  // change only when their input array is replaced, which is what the memo says.
+  const pathsKey = useMemo(() => paths.join("\n"), [paths]);
   useEffect(() => {
     // Rebuilding collapses the tree; seed the open file's ancestors as expanded
     // so it doesn't flash closed. Selection/scroll/focus is re-applied by the
@@ -191,7 +201,10 @@ export function FileSidebar({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathsKey, model]);
 
-  const statusKey = gitStatus.map((e) => `${e.path}:${e.status}`).join("\n");
+  const statusKey = useMemo(
+    () => gitStatus.map((e) => `${e.path}:${e.status}`).join("\n"),
+    [gitStatus]
+  );
   useEffect(() => {
     model.setGitStatus([...gitStatus]);
     // eslint-disable-next-line react-hooks/exhaustive-deps

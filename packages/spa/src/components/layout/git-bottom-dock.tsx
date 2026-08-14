@@ -10,6 +10,7 @@ import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { BottomPanel } from "@/components/layout/bottom-panel";
 import { ResizeHandle } from "@/components/layout/resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { emptyLogQuery, type LogQuery } from "@/lib/api/types";
 import { useBranches, usePagedLog, useRepo } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
@@ -26,7 +27,9 @@ export function GitBottomDock() {
 
   const [logRef, setLogRef] = useState<string | null>(null);
   const [logFilters, setLogFilters] = useState<LogQuery>(emptyLogQuery);
-  const [bottomHeight, setBottomHeight] = useState(prefs.bottomHeight);
+  // Not React state: the dock holds the history list and the terminals, and a
+  // drag re-rendering them per pointer frame is the jank. See `usePanelSize`.
+  const dock = usePanelSize("bottom-h", prefs.bottomHeight, "height");
 
   const ref = logRef ?? repo.data?.currentBranch ?? null;
   const log = usePagedLog(ref, logFilters);
@@ -36,11 +39,11 @@ export function GitBottomDock() {
       {prefs.bottomVisible && (
         <ResizeHandle
           orientation="row"
-          value={bottomHeight}
+          value={dock.current}
           min={120}
           max={() => Math.max(160, window.innerHeight - 200)}
           direction={-1}
-          onResize={setBottomHeight}
+          onResize={dock.onResize}
           onResizeEnd={(h) => setUiPrefs({ bottomHeight: h })}
           label="Resize bottom panel"
         />
@@ -50,7 +53,7 @@ export function GitBottomDock() {
           "shrink-0 overflow-hidden border-t",
           !prefs.bottomVisible && "hidden"
         )}
-        style={{ height: bottomHeight }}
+        style={dock.style}
         hidden={!prefs.bottomVisible}
       >
         <BottomPanel

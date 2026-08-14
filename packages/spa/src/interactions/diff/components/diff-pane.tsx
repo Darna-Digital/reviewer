@@ -13,7 +13,7 @@ import {
   IconArrowsMinimize,
   IconHistory,
 } from "@tabler/icons-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
@@ -36,6 +36,10 @@ import { useDiffLanguage } from "@/interactions/language/components/use-diff-lan
 import type { DiagnosticsAnnotationMeta } from "@/interactions/language/components/language-layer";
 import { fetchClient } from "@/lib/api/client";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
+import {
+  useStableCallback,
+  useStableOptionalCallback,
+} from "@/lib/stable-callback";
 import { diffTargetKey, type DiffTarget } from "@/lib/api/types";
 import type { CommentSide, ReviewComment } from "@byconvo/core/comments";
 import type { DiffStyle, Theme } from "@/lib/ui-prefs";
@@ -155,7 +159,8 @@ interface FileDiffSectionProps {
   connectorsEnabled: boolean;
   /** Render this file whole (all unchanged lines expanded) instead of hunks. */
   expandUnchanged: boolean;
-  onToggleExpandUnchanged: () => void;
+  /** Takes the file's name, so the parent needs no per-file closure. */
+  onToggleExpandUnchanged: (name: string) => void;
   loadDiffFiles: FileDiffContentsLoader;
   annotations: ReadonlyArray<DiffLineAnnotation<AnnotationMeta>>;
   selectedLines: SelectedLineRange | null;
@@ -174,7 +179,18 @@ interface FileDiffSectionProps {
   onOpenLocation: (path: string, lineNumber: number) => void;
 }
 
-function FileDiffSection({
+/**
+ * One file's diff, memoised — the pane renders one of these per changed file,
+ * and each of them highlights, lays out and virtualizes a whole file.
+ *
+ * Without the memo every render of the pane re-rendered every file: selecting
+ * a file in the tree, opening a comment draft, or a background refetch settling
+ * did the work of the entire diff again, and a review of eighty files paid for
+ * eighty of them to redraw so that one could. The props are all stable by
+ * construction (see `DiffPane`), so what re-renders now is the file that
+ * actually changed.
+ */
+const FileDiffSection = memo(function FileDiffSection({
   file,
   theme,
   diffStyle,
@@ -279,7 +295,7 @@ function FileDiffSection({
                     ? `Collapse ${meta.name} to its changed lines`
                     : `Show all of ${meta.name}`
                 }
-                onClick={onToggleExpandUnchanged}
+                onClick={() => onToggleExpandUnchanged(file.name)}
               >
                 {expandUnchanged ? (
                   <IconArrowsMinimize className="size-3.5" />
@@ -403,7 +419,10 @@ function FileDiffSection({
       {language.card}
     </section>
   );
-}
+});
+
+/** A file with no comments, draft or hunk control — one array, not one each. */
+const NO_ANNOTATIONS: ReadonlyArray<DiffLineAnnotation<AnnotationMeta>> = [];
 
 export function DiffPane({
   files,
@@ -416,18 +435,36 @@ export function DiffPane({
   comments,
   draft,
   selectedFile,
-  onDraftOpen,
-  onDraftCancel,
-  onEditFile,
-  onShowFileHistory,
-  onDiscardFile,
-  onDiscardHunk,
-  onCommentSubmit,
-  onCommentDelete,
-  onCommentEdit,
-  onCommentReply,
-  onOpenLocation,
+  onDraftOpen: rawOnDraftOpen,
+  onDraftCancel: rawOnDraftCancel,
+  onEditFile: rawOnEditFile,
+  onShowFileHistory: rawOnShowFileHistory,
+  onDiscardFile: rawOnDiscardFile,
+  onDiscardHunk: rawOnDiscardHunk,
+  onCommentSubmit: rawOnCommentSubmit,
+  onCommentDelete: rawOnCommentDelete,
+  onCommentEdit: rawOnCommentEdit,
+  onCommentReply: rawOnCommentReply,
+  onOpenLocation: rawOnOpenLocation,
 }: DiffPaneProps) {
+  // Every handler arrives from the shell as a fresh closure on each of its
+  // renders, which would hand each memoised file section a changed prop and
+  // undo the memo entirely. Pinned here, in one place, rather than asking the
+  // shell to hand-memoise a dozen callbacks — see `useStableCallback`. The
+  // optional ones keep their absence, which is what decides whether a control
+  // is rendered at all.
+  const onDraftOpen = useStableCallback(rawOnDraftOpen);
+  const onDraftCancel = useStableCallback(rawOnDraftCancel);
+  const onEditFile = useStableCallback(rawOnEditFile);
+  const onOpenLocation = useStableCallback(rawOnOpenLocation);
+  const onCommentSubmit = useStableCallback(rawOnCommentSubmit);
+  const onCommentDelete = useStableCallback(rawOnCommentDelete);
+  const onCommentEdit = useStableCallback(rawOnCommentEdit);
+  const onCommentReply = useStableCallback(rawOnCommentReply);
+  const onShowFileHistory = useStableOptionalCallback(rawOnShowFileHistory);
+  const onDiscardFile = useStableOptionalCallback(rawOnDiscardFile);
+  const onDiscardHunk = useStableOptionalCallback(rawOnDiscardHunk);
+
   const connectorsEnabled = connectors && diffStyle === "split";
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -684,9 +721,9 @@ export function DiffPane({
             diffStyle={diffStyle}
             connectorsEnabled={connectorsEnabled}
             expandUnchanged={expandedFiles.has(file.name)}
-            onToggleExpandUnchanged={() => toggleExpanded(file.name)}
+            onToggleExpandUnchanged={toggleExpanded}
             loadDiffFiles={loadDiffFiles}
-            annotations={annotationsByFile.get(file.name) ?? []}
+            annotations={annotationsByFile.get(file.name) ?? NO_ANNOTATIONS}
             selectedLines={
               draft !== null && draft.filePath === file.name
                 ? {

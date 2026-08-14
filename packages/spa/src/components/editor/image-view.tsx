@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { CodeView } from "@/components/editor/code-view";
 import { ResizeHandle } from "@/components/layout/resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { useFileBytes } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs, type Theme } from "@/lib/ui-prefs";
@@ -79,7 +80,8 @@ function Preview({ path }: { path: string }) {
 
 export function ImageView({ path, theme }: { path: string; theme: Theme }) {
   const prefs = useUiPrefs();
-  const [sourceWidth, setSourceWidth] = useState(prefs.svgSourceWidth);
+  // Not React state — see `usePanelSize`.
+  const source = usePanelSize("svg-source-w", prefs.svgSourceWidth, "width");
 
   if (!isSvgPath(path)) return <Preview path={path} />;
 
@@ -89,16 +91,16 @@ export function ImageView({ path, theme }: { path: string; theme: Theme }) {
         className="flex min-h-0 shrink-0 flex-col overflow-hidden"
         // Capped as a share of the pane so the preview keeps its side in a
         // narrow window, where the stored pixel width would push it off-screen.
-        style={{ width: sourceWidth, maxWidth: "60%" }}
+        style={{ ...source.style, maxWidth: "60%" }}
       >
         <CodeView path={path} theme={theme} />
       </div>
       <ResizeHandle
         orientation="col"
-        value={sourceWidth}
+        value={source.current}
         min={240}
         max={() => Math.max(320, window.innerWidth - 360)}
-        onResize={setSourceWidth}
+        onResize={source.onResize}
         onResizeEnd={(w) => setUiPrefs({ svgSourceWidth: w })}
         label="Resize source pane"
       />

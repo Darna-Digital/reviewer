@@ -4,9 +4,7 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { TanStackDevtools } from "@tanstack/react-devtools";
-import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
+import { Suspense, lazy } from "react";
 
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,6 +12,16 @@ import { isDesktop } from "@/lib/desktop";
 import { isPreviewWindow } from "@/lib/preview-window";
 import type { RouterContext } from "../router";
 import appCss from "../styles.css?url";
+
+/**
+ * Dev only, and dead code in a release: `import.meta.env.DEV` is replaced with
+ * a literal `false` at build time, so the whole conditional — and the dynamic
+ * import inside it — is dropped before the panels can reach the bundle. See
+ * `@/components/devtools`.
+ */
+const Devtools = import.meta.env.DEV
+  ? lazy(() => import("@/components/devtools"))
+  : null;
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
@@ -69,21 +77,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <TooltipProvider delay={300}>{children ?? <Outlet />}</TooltipProvider>
         <Toaster />
-        {/* Devtools only in the browser, not inside the Electron shell. */}
         {/* Devtools only in the browser, not inside the Electron shell — and
             never in a preview frame, which would boot a second set of panels
-            for a picture of a page. */}
-        {!isDesktop && !isPreviewWindow && (
-          <TanStackDevtools
-            config={{ position: "bottom-right" }}
-            plugins={[
-              {
-                name: "TanStack Router",
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              { name: "TanStack Query", render: <ReactQueryDevtoolsPanel /> },
-            ]}
-          />
+            for a picture of a page. In a release build `Devtools` is null and
+            the panels were never bundled at all. */}
+        {Devtools !== null && !isDesktop && !isPreviewWindow && (
+          <Suspense fallback={null}>
+            <Devtools />
+          </Suspense>
         )}
         <Scripts />
       </body>

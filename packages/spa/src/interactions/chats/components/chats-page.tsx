@@ -30,6 +30,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -65,7 +66,9 @@ export function ChatsPage() {
   const navigate = useNavigate();
   const { chatId } = useParams({ strict: false });
   const prefs = useUiPrefs();
-  const [listWidth, setListWidth] = useState(prefs.inboxListWidth);
+  // Not React state: a drag would otherwise re-render this whole page, and
+  // its list of sessions, on every pointer frame. See `usePanelSize`.
+  const list = usePanelSize("chats-list-w", prefs.inboxListWidth, "width");
   /**
    * A session tab holds one conversation, so on one of those the thread is the
    * whole pane and the list stays out of it — landing in the inbox you
@@ -112,10 +115,7 @@ export function ChatsPage() {
   return (
     <div className="flex h-full min-h-0">
       {showList && (
-        <aside
-          className="flex shrink-0 flex-col border-r"
-          style={{ width: listWidth }}
-        >
+        <aside className="flex shrink-0 flex-col border-r" style={list.style}>
           <ScrollArea
             className="min-h-0 flex-1"
             viewportClassName="scroll-fade"
@@ -232,10 +232,10 @@ export function ChatsPage() {
       )}
       {showList && (
         <SidebarResizeHandle
-          width={listWidth}
+          width={list.current}
           stored={prefs.inboxListWidth}
           max={() => Math.max(320, window.innerWidth - 480)}
-          onResize={setListWidth}
+          onResize={list.onResize}
           onResizeEnd={(w) => setUiPrefs({ inboxListWidth: w })}
           label="Resize the session list"
         />

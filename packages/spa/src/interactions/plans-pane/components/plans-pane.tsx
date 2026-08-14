@@ -25,6 +25,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { ResizeHandle } from "@/components/layout/resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -85,6 +86,13 @@ export function PlansPane() {
 
   const frame = useRef<HTMLElement | null>(null);
 
+  // The pane's own width is dragged by a handle in the window frame, so both
+  // read the same variable; the notes' height is dragged here. Neither is React
+  // state — a drag that re-rendered this pane would relay out the whole graph
+  // on every pointer frame. See `usePanelSize`.
+  const plansPaneWidth = usePanelSize("plans-w", prefs.plansPaneWidth, "width");
+  const notes = usePanelSize("plans-notes-h", prefs.plansNotesHeight, "height");
+
   const summaries = plans.data ?? [];
   const plan = view.data?.plan;
   const staleness = view.data?.staleness;
@@ -136,7 +144,8 @@ export function PlansPane() {
       ref={frame}
       aria-label="Analysis"
       className="plans-pane flex min-h-0 shrink-0 flex-col overflow-hidden rounded-xl border border-frame-border"
-      style={{ width: prefs.plansPaneWidth }}
+      // Same variable the frame's handle drags — see `usePanelSize`.
+      style={plansPaneWidth.style}
     >
       <div className="flex h-9 shrink-0 items-center gap-1 border-b border-frame-border px-1.5">
         <Popover>
@@ -282,7 +291,7 @@ export function PlansPane() {
           <ResizeHandle
             orientation="row"
             label="Resize notes"
-            value={prefs.plansNotesHeight}
+            value={notes.current}
             min={72}
             // Bounded by the pane rather than the window: the frame, the window
             // bar and the pane's own chrome are all above it, so a viewport
@@ -291,11 +300,12 @@ export function PlansPane() {
               Math.max(72, (frame.current?.clientHeight ?? 0) - GRAPH_FLOOR)
             }
             direction={-1}
-            onResize={(plansNotesHeight) => setUiPrefs({ plansNotesHeight })}
+            onResize={notes.onResize}
+            onResizeEnd={(plansNotesHeight) => setUiPrefs({ plansNotesHeight })}
           />
           <div
             className="plans-notes min-h-0 shrink-0 overflow-y-auto border-t border-frame-border"
-            style={{ height: prefs.plansNotesHeight }}
+            style={notes.style}
           >
             <PlanAnnotations
               plan={plan}
