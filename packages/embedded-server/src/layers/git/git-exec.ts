@@ -57,18 +57,17 @@ export const makeIn = (resolveRoot: Effect.Effect<string, NoRepoSelected>) =>
       ).pipe(
         // Spawn/IO failures (git missing, decode errors) become GitError so the
         // public error channel stays schema-friendly; NoRepoSelected passes through.
-        Effect.catch(
-          (error): Effect.Effect<never, GitFailure> =>
-            Effect.fail(
-              error instanceof NoRepoSelected
-                ? error
-                : new GitError({
-                    args,
-                    exitCode: -1,
-                    stderr:
-                      error instanceof Error ? error.message : String(error),
-                  })
-            )
+        Effect.catch((error): Effect.Effect<never, GitFailure> =>
+          Effect.fail(
+            error instanceof NoRepoSelected
+              ? error
+              : new GitError({
+                  args,
+                  exitCode: -1,
+                  stderr:
+                    error instanceof Error ? error.message : String(error),
+                })
+          )
         )
       );
 

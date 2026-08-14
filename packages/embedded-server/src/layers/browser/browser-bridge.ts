@@ -24,12 +24,7 @@ export const BROWSER_BRIDGE_PATH = "/api/browser/bridge";
 const REPLY_TIMEOUT_MS = 15_000;
 
 export type BrowserOp =
-  | "state"
-  | "navigate"
-  | "snapshot"
-  | "eval"
-  | "screenshot"
-  | "console";
+  "state" | "navigate" | "snapshot" | "eval" | "screenshot" | "console";
 
 export class BrowserBridgeError extends Error {}
 

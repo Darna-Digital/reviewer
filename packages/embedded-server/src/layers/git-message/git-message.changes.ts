@@ -57,13 +57,11 @@ export const makeWorkspaceChanges = Effect.gen(function* () {
     Effect.flatMap(gitAt(repo.path), (git) =>
       collectDraftChanges(git, paths)
     ).pipe(
-      Effect.map(
-        (changes): DraftChanges => ({
-          diff: prefixDiffPaths(changes.diff, repo.name),
-          untracked: changes.untracked.map((path) => projectPath(repo, path)),
-          branch: changes.branch,
-        })
-      ),
+      Effect.map((changes): DraftChanges => ({
+        diff: prefixDiffPaths(changes.diff, repo.name),
+        untracked: changes.untracked.map((path) => projectPath(repo, path)),
+        branch: changes.branch,
+      })),
       Effect.catch(() => Effect.succeed(null))
     );
 

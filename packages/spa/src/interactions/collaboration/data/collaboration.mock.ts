@@ -49,12 +49,7 @@ export const UNASSIGNED = "Unassigned";
  * end and a rank does not.
  */
 export type ScopeKind =
-  | "day"
-  | "week"
-  | "month"
-  | "quarter"
-  | "duration"
-  | "out";
+  "day" | "week" | "month" | "quarter" | "duration" | "out";
 
 export interface MockScope {
   id: string;

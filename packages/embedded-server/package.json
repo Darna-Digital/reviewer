@@ -19,20 +19,20 @@
   "dependencies": {
     "@byconvo/core": "workspace:*",
     "@effect/platform-node": "4.0.0-beta.74",
+    "@lydell/node-pty": "1.2.0-beta.12",
     "@types/ws": "^8.18.1",
     "effect": "4.0.0-beta.74",
-    "@lydell/node-pty": "1.2.0-beta.12",
-    "ws": "^8.21.0"
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@byconvo/lint": "workspace:*",
     "@effect/vitest": "4.0.0-beta.74",
-    "@types/node": "^22.15.0",
-    "esbuild": "^0.28.1",
-    "eslint": "^9",
-    "prettier": "^3.8.3",
-    "tsx": "^4.19.0",
+    "@types/node": "^22.20.1",
+    "esbuild": "^0.28.2",
+    "eslint": "^9.39.5",
+    "prettier": "^3.9.6",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3",
-    "vitest": "^4.0.0"
+    "vitest": "^4.1.10"
   }
 }

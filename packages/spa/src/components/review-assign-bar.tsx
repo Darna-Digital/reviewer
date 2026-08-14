@@ -214,7 +214,7 @@ export function ReviewAssignBar({
               <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
             </PopoverTrigger>
             <PopoverContent side="top" align="start" className="w-80 gap-0 p-1">
-              <div className="scroll-fade flex max-h-72 min-w-0 flex-col gap-3 overflow-x-hidden overflow-y-auto py-1">
+              <div className="flex max-h-72 min-w-0 scroll-fade flex-col gap-3 overflow-x-hidden overflow-y-auto py-1">
                 {byFile.map(([file, inFile]) => (
                   <div key={file} className="flex min-w-0 flex-col gap-0.5">
                     <FileHeading file={file} />
@@ -267,7 +267,7 @@ export function ReviewAssignBar({
               {/* Native overflow (not ScrollArea) so max-height actually scrolls —
                   Base UI ScrollArea's size-full viewport won't constrain under a
                   max-h parent, so content is clipped with nowhere to scroll. */}
-              <div className="scroll-fade max-h-64 min-w-0 overflow-x-hidden overflow-y-auto">
+              <div className="max-h-64 min-w-0 scroll-fade overflow-x-hidden overflow-y-auto">
                 {agents.length > 0 && (
                   <div className="px-2 pt-1 pb-0.5 text-xs text-muted-foreground">
                     New chat
