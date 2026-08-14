@@ -15,7 +15,6 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
-import { AgentStrip } from "@/interactions/session-agents/components/agent-strip";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
@@ -65,14 +64,11 @@ export function AppHeader({
   // the branch switcher are how you move around a repository, and neither is
   // what this surface is for. Minting a session and finding one act on the list
   // rather than on the conversation, and are in the rail with the rest of what
-  // moves you about — so this names the conversation, and parks the agents
-  // answering it at the far end, where they read as status rather than control.
+  // moves you about — so this only names the conversation.
   if (route.kind === "session") {
     return (
       <header className="flex h-9 shrink-0 items-center gap-2 px-2">
         <SessionCrumbs />
-        <div className="flex-1" />
-        <AgentStrip />
       </header>
     );
   }

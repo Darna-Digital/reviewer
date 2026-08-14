@@ -7,8 +7,15 @@
  * step back into, and navigating in place would spend the tab holding it. A
  * session yet to be sent wears the same trail, so the way back out of a blank
  * composer is where it is everywhere else.
+ *
+ * On the list itself the trail is the one word: there is nothing to step back
+ * to, and a crumb that leads where you already are is a promise it cannot keep.
+ *
+ * Every crumb is the one weight. Marking the last one bold retypesets the whole
+ * trail whenever the title changes, so the crumbs beside it move — colour
+ * carries the distinction instead, and nothing shifts.
  */
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { updateWindowTabs } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import {
   SESSIONS_HREF,
@@ -29,8 +36,13 @@ export function SessionCrumbs() {
     enabled: chatId !== undefined,
   });
 
+  const startingNew = useSearch({ strict: false }).new === true;
   const title =
-    chatId === undefined ? "New session" : (chat.data?.title ?? "Session");
+    chatId !== undefined
+      ? (chat.data?.title ?? "Session")
+      : startingNew
+        ? "New session"
+        : null;
 
   const showList = () => {
     updateWindowTabs((state) => selectTab(state, SESSIONS_TAB_ID));
@@ -42,15 +54,21 @@ export function SessionCrumbs() {
       aria-label="Breadcrumb"
       className="flex min-w-0 items-center gap-1.5 text-[13px]"
     >
-      <button
-        type="button"
-        onClick={showList}
-        className="shrink-0 text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
-      >
-        Sessions
-      </button>
-      <span className="text-muted-foreground/50">/</span>
-      <span className="truncate font-medium">{title}</span>
+      {title === null ? (
+        <span className="shrink-0">Sessions</span>
+      ) : (
+        <>
+          <button
+            type="button"
+            onClick={showList}
+            className="shrink-0 text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
+          >
+            Sessions
+          </button>
+          <span className="text-muted-foreground/50">/</span>
+          <span className="truncate">{title}</span>
+        </>
+      )}
     </nav>
   );
 }

@@ -47,11 +47,19 @@ export function AppLayout() {
   const pathname = useRouterState({
     select: (s) => (s.resolvedLocation ?? s.location).pathname,
   });
+  // Selected down to the one flag rather than taken as the whole search: this
+  // re-renders the shell on every change of its value, and a search object is a
+  // fresh one on every navigation.
+  const startingNew = useRouterState({
+    select: (s) =>
+      ((s.resolvedLocation ?? s.location).search as { new?: boolean }).new ===
+      true,
+  });
   const prefs = useUiPrefs();
   const workspace = useWorkspace();
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const route = shellRoute(pathname, prefs.workMode);
+  const route = shellRoute(pathname, prefs.workMode, startingNew);
   const gitChrome = showsGitChrome(route);
   const current = workspace.data?.current ?? null;
 

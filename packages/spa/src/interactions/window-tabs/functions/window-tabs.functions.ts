@@ -116,6 +116,14 @@ const inCollaboration = (pathname: string): boolean =>
 const followsLocation = (tab: WindowTab): boolean =>
   tab.kind === "project" || tab.kind === "collaboration";
 
+/**
+ * Whether a tab remembers where it was left. Sessions does not: it is the way
+ * to the list, and a tab that kept the conversation you last read would be a
+ * way back into that one instead — the list reachable only by leaving it. A
+ * conversation worth keeping open has a tab of its own to be lifted into.
+ */
+const keepsLocation = (tab: WindowTab): boolean => tab.kind !== "sessions";
+
 /** Whether a location is a pinned tab's to hold. */
 function ownsLocation(tab: WindowTab, pathname: string): boolean {
   if (inSessions(pathname)) return tab.kind === "sessions";
@@ -153,7 +161,9 @@ export function withPinnedTabs(
   const saved = tabs.map((tab) => ({ ...tab, href: currentHref(tab.href) }));
   const pinned = PINNED_TABS.map((tab) => {
     const kept = saved.find((candidate) => candidate.id === tab.id);
-    return kept === undefined || !ownsLocation(tab, kept.href)
+    return kept === undefined ||
+      !keepsLocation(tab) ||
+      !ownsLocation(tab, kept.href)
       ? tab
       : { ...tab, href: kept.href, title: kept.title };
   });
@@ -200,7 +210,8 @@ function tabForLocation(
  * left. A no-op when it is already active and points there, so an unrelated
  * re-render never rewrites the strip. Code and Collaboration are named after
  * the surface they are on; Sessions and its conversations carry their own
- * names.
+ * names. Sessions takes the window without taking the location — it goes on
+ * pointing at the list, wherever inside it you are.
  */
 export function trackLocation(
   state: WindowTabsState,
@@ -210,9 +221,10 @@ export function trackLocation(
   const target = tabForLocation(state, pathname);
   if (target === null) return state;
   const title = followsLocation(target) ? tabTitle(pathname) : target.title;
+  const at = keepsLocation(target) ? href : SESSIONS_HREF;
   if (
     target.id === state.activeId &&
-    target.href === href &&
+    target.href === at &&
     target.title === title
   ) {
     return state;
@@ -220,7 +232,7 @@ export function trackLocation(
   return {
     activeId: target.id,
     tabs: state.tabs.map((tab) =>
-      tab.id === target.id ? { ...tab, href, title } : tab
+      tab.id === target.id ? { ...tab, href: at, title } : tab
     ),
   };
 }

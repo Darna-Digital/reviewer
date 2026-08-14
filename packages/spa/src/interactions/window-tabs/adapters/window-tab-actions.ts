@@ -22,11 +22,7 @@ import {
   workModeOf,
 } from "../functions/window-tabs.functions";
 import type { WindowTab } from "../interfaces/window-tabs.interfaces";
-import {
-  nextTabId,
-  updateWindowTabs,
-  windowTabsSnapshot,
-} from "./window-tabs.store";
+import { nextTabId, updateWindowTabs } from "./window-tabs.store";
 
 type RouterHandle = ReturnType<typeof useRouter>;
 
@@ -100,7 +96,10 @@ function makeWindowTabActions(router: RouterHandle): WindowTabActions {
       // you came from.
       const mode = workModeOf(tab.kind);
       if (mode !== null) setUiPrefs({ workMode: mode });
-      const held = windowTabsSnapshot().activeId === tab.id;
+      // Against the location rather than against which tab is active: Sessions
+      // holds the window while you read a conversation without giving up its
+      // own href, so picking it there is a click that has somewhere to go.
+      const held = router.state.location.href === tab.href;
       updateWindowTabs((state) => selectTab(state, tab.id));
       return held ? Promise.resolve() : go(tab.href);
     },

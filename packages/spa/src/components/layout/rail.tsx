@@ -9,9 +9,10 @@
  * drawing their own column is how the page beneath ends up stepping sideways on
  * the way across.
  *
- * Its buttons are the header's square — the same size as the project chip
- * beside them, inset by the same amount the header's own centring gives that
- * chip — so the first one in the column reads as part of the row it starts.
+ * It measures 36px inside its edge — the same as the window bar's height, the
+ * header's, and the tab strip's inside its rule — with a 28px button in it,
+ * the square the project chip beside it and the tabs above it are. The 37 is
+ * that 36 plus the edge, so the band reads the same whichever way it is turned.
  */
 import { Link } from "@tanstack/react-router";
 import { buttonVariants } from "@/components/ui/button";
@@ -32,14 +33,8 @@ export function Rail({
   return (
     <nav
       aria-label={label}
-      className="relative flex h-full w-9 shrink-0 flex-col items-center py-1"
+      className="relative flex h-full w-[37px] shrink-0 flex-col items-center border-r border-border py-1"
     >
-      {/* The rail's right edge is drawn over its last pixel column rather than
-          as a `border-r`, which would take that pixel out of the content box
-          and centre every icon half a pixel left of where the toolbar's own
-          `px-2` puts them — the icons visibly stepping sideways on the way in
-          and out of collaboration mode, which has no rail. */}
-      <div className="absolute top-0 right-0 h-full w-px bg-border" />
       <div className="flex w-full flex-1 flex-col items-center gap-1">
         {children}
       </div>

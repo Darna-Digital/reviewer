@@ -1,6 +1,7 @@
 /**
- * SessionsRail — the sessions surface's left rail: the two things that act on
- * the list, minting a session and finding one.
+ * SessionsRail — the sessions surface's left rail: everything that acts on the
+ * list, rather than on the conversation beside it — minting a session, finding
+ * one, and narrowing which of them the list holds.
  *
  * They were in the toolbar, which left the sessions surface a rail short of
  * every code page: crossing between the two slid the whole window sideways by
@@ -10,6 +11,7 @@
  */
 import { Rail } from "@/components/layout/rail";
 import { NewSessionButton } from "@/interactions/chats/components/new-session-button";
+import { SessionFilters } from "@/interactions/chats/components/session-filters";
 import { SessionSearch } from "@/interactions/chats/components/session-search";
 
 export function SessionsRail() {
@@ -17,6 +19,7 @@ export function SessionsRail() {
     <Rail label="Sessions">
       <NewSessionButton />
       <SessionSearch />
+      <SessionFilters />
     </Rail>
   );
 }

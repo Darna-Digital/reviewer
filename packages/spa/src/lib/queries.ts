@@ -164,9 +164,9 @@ const CHAT_PAGE_SIZE = 30;
 
 /**
  * How many sessions the surfaces that only want the newest ones ask for: the
- * strip's unread dot, the tab titles, and the redirect into the last session
- * you had open. All three are questions about the top of the list, so they read
- * its first page rather than all of it.
+ * strip's unread dot, the tab titles, and the inbox popover. All of them are
+ * questions about the top of the list, so they read its first page rather than
+ * all of it.
  */
 const RECENT_CHATS = 30;
 

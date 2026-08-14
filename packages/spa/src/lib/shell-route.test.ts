@@ -32,6 +32,10 @@ describe("shellRoute", () => {
   it("recognises sessions, collaboration and settings", () => {
     expect(shellRoute("/modes/agent-session", "code")).toEqual({
       kind: "session",
+      composing: false,
+    });
+    expect(shellRoute("/modes/agent-session", "code", true)).toEqual({
+      kind: "session",
       composing: true,
     });
     expect(shellRoute("/modes/agent-session/abc", "code")).toEqual({

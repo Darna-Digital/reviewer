@@ -127,7 +127,7 @@ export function CollaborationTabs() {
   };
 
   return (
-    <div className="flex h-9 min-w-0 shrink-0 items-center gap-1 border-b border-border bg-background px-2 py-1">
+    <div className="flex min-w-0 shrink-0 items-center gap-1 border-b border-border bg-background px-2 py-1">
       <div role="tablist" aria-label="Open surfaces" className={TAB_STRIP}>
         {tabs.map((tab, index) => {
           const active = tab.id === activeId && onCollaboration;

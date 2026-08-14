@@ -295,7 +295,7 @@ export function WindowBar() {
   return (
     <header
       className={cn(
-        "flex h-10 shrink-0 items-center",
+        "flex h-9 shrink-0 items-center",
         isDesktop && "[-webkit-app-region:drag]"
       )}
     >

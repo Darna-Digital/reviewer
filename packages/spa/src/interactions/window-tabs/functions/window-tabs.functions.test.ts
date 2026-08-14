@@ -69,7 +69,8 @@ describe("withPinnedTabs", () => {
       SESSIONS_TAB_ID,
       "a",
     ]);
-    expect(tabs[2].href).toBe("/modes/agent-session/z");
+    // Sessions is restored on the list, not on the conversation it was left on.
+    expect(tabs[2].href).toBe("/modes/agent-session");
   });
 
   it("carries a strip saved before sessions moved to their own route", () => {
@@ -108,11 +109,21 @@ describe("trackLocation", () => {
   it("hands the window to the tab that owns where it went", () => {
     const state = trackLocation(
       initialWindowTabs(),
+      "/modes/code/review/12",
+      "/modes/code/review/12"
+    );
+    expect(show(state)).toBe("*code team sessions");
+    expect(state.tabs[0].href).toBe("/modes/code/review/12");
+  });
+
+  it("takes the window into Sessions without taking it off the list", () => {
+    const state = trackLocation(
+      initialWindowTabs(),
       "/modes/agent-session/abc",
       "/modes/agent-session/abc"
     );
     expect(show(state)).toBe("code team *sessions");
-    expect(state.tabs[2].href).toBe("/modes/agent-session/abc");
+    expect(state.tabs[2].href).toBe("/modes/agent-session");
   });
 
   it("keeps a session tab on its own conversation", () => {

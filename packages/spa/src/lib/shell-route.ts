@@ -19,11 +19,11 @@ export type ShellRoute =
   | {
       readonly kind: "session";
       /**
-       * The blank composer rather than a conversation — the sessions path with
-       * no session on it. Everything the shell puts around a session is about
-       * one that exists: a rail for moving between them, a trail naming the one
-       * you are in. Before there is a session, all of it is chrome around an
-       * empty page, so the composer gets the window to itself.
+       * The blank composer rather than the list or a conversation. Everything
+       * the shell puts around a session is about one that exists: a rail for
+       * moving between them, a trail naming the one you are in. Before there is
+       * a session, all of it is chrome around an empty page, so the composer
+       * gets the window to itself.
        */
       readonly composing: boolean;
     }
@@ -36,18 +36,19 @@ const CODE_WORKSPACE_PAGES = ["docs", "tasks", "threads", "local-dev"];
 /**
  * `pathname` classified. `workMode` is the preference the collaboration/code
  * switch remembers, consulted only where the path itself does not say.
+ * `startingNew` is the sessions index's `?new`, which the path cannot carry.
  */
 export function shellRoute(
   pathname: string,
-  workMode: "code" | "collaboration"
+  workMode: "code" | "collaboration",
+  startingNew = false
 ): ShellRoute {
   if (pathname.startsWith("/settings")) return { kind: "settings" };
   if (pathname.startsWith("/modes/agent-session")) {
-    // `/modes/agent-session` is the composer; a conversation carries its id.
-    // The index redirects to the newest session from its loader, so the bare
-    // path only ever commits when the composer really is what renders.
-    const rest = pathname.slice("/modes/agent-session".length);
-    return { kind: "session", composing: rest.replace(/\/+$/, "") === "" };
+    // The bare path is the list, which wears the shell like any other page; the
+    // composer is the one thing under here that asks for the window to itself,
+    // and it says so in the search rather than in the path.
+    return { kind: "session", composing: startingNew };
   }
   if (pathname.startsWith("/modes/collaboration")) {
     return { kind: "collaboration" };
