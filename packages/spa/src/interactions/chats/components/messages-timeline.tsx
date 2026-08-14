@@ -212,6 +212,7 @@ const BUILD_OLDER_WITHIN_PX = 600;
 
 export function MessagesTimeline({ chat }: { chat: Chat }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const pinnedToBottom = useRef(true);
   const lastUserMessageId = useRef<string | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
@@ -330,6 +331,33 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
     }
   }, [unbuilt, buildOlder]);
 
+  const followBottom = useCallback(() => {
+    const el = scrollRef.current;
+    if (el === null || !pinnedToBottom.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, []);
+
+  // Before the first paint, so a session opens showing its latest message
+  // rather than the top of the conversation jumping down a frame later.
+  useLayoutEffect(followBottom, [followBottom]);
+
+  /**
+   * Landing at the bottom is not one scroll but several: an opened session
+   * keeps growing after it is laid out as images decode, older blocks are built
+   * and the composer restores a draft that takes the height back. Each of those
+   * leaves a reader who never scrolled short of the end, so the bottom is held
+   * for as long as they are still at it.
+   */
+  useEffect(() => {
+    const el = scrollRef.current;
+    const content = contentRef.current;
+    if (el === null || content === null) return;
+    const observer = new ResizeObserver(followBottom);
+    observer.observe(el);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [followBottom]);
+
   // Track whether the reader is at the bottom; only then auto-follow.
   const onScroll = () => {
     const el = scrollRef.current;
@@ -342,8 +370,6 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
     queueSectionSync();
   };
   useEffect(() => {
-    const el = scrollRef.current;
-    if (el === null) return;
     // When the reader sends a new message, always jump to the bottom so they
     // can see their own question — even if they'd scrolled up beforehand.
     let latestUserMessageId: string | null = null;
@@ -357,9 +383,9 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
       lastUserMessageId.current = latestUserMessageId;
     }
     if (sentNewMessage) pinnedToBottom.current = true;
-    if (pinnedToBottom.current) el.scrollTop = el.scrollHeight;
+    followBottom();
     queueSectionSync();
-  }, [chat, queueSectionSync]);
+  }, [chat, followBottom, queueSectionSync]);
 
   // Regrouped only when the activity log changes, and reusing the array a turn
   // already had when its own entries did not — so a tool call landing in the
@@ -405,7 +431,10 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
         className="min-h-0 flex-1"
         viewportClassName="scroll-fade overscroll-contain"
       >
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6">
+        <div
+          ref={contentRef}
+          className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6"
+        >
           {(unbuilt === 0 ? chat.messages : chat.messages.slice(unbuilt)).map(
             renderMessage
           )}

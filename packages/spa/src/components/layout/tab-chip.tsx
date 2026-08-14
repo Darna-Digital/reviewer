@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 export const tabChipClass = (active: boolean, dragging = false) =>
   cn(
-    "group/tab flex h-8 max-w-56 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-md pr-1.5 pl-2.5 text-[0.8125rem] transition-colors",
+    "group/tab flex h-7 max-w-56 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-md pr-1.5 pl-2.5 text-[0.8125rem] transition-colors",
     active
       ? "bg-elevate-strong text-foreground"
       : "text-muted-foreground hover:bg-elevate hover:text-foreground",

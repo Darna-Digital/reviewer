@@ -85,7 +85,7 @@ export function ModeRail() {
       label={label}
       active={pathname.startsWith(match)}
     >
-      <Icon className="size-5" />
+      <Icon className="size-4" />
     </RailButton>
   );
 
@@ -100,7 +100,7 @@ export function ModeRail() {
             toggleBottomTab("history", prefs.bottomTab, prefs.bottomVisible)
           }
         >
-          <IconHistory className="size-5" />
+          <IconHistory className="size-4" />
         </RailButton>
         <RailButton
           label="Services"
@@ -109,7 +109,7 @@ export function ModeRail() {
             toggleBottomTab("services", prefs.bottomTab, prefs.bottomVisible)
           }
         >
-          <IconPlayerPlay className="size-5" />
+          <IconPlayerPlay className="size-4" />
         </RailButton>
         <RailButton
           label="Terminal sessions"
@@ -118,7 +118,7 @@ export function ModeRail() {
             toggleBottomTab("threads", prefs.bottomTab, prefs.bottomVisible)
           }
         >
-          <IconTerminal2 className="size-5" />
+          <IconTerminal2 className="size-4" />
         </RailButton>
       </RailFoot>
     </Rail>

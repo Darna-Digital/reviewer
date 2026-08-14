@@ -109,8 +109,14 @@ export interface LanguageLayerOptions {
   getContainer: () => ParentNode | null;
   /** Apply edits landing in files other than the open one. */
   onApplyForeignEdits?: (edits: ReadonlyArray<FileEdits>) => void;
-  /** Underline the tokens diagnostics cover. Off where line numbers are ambiguous. */
-  paintTokens?: boolean;
+  /**
+   * Whether a line number in the DOM is this file's own line number. False in a
+   * diff, where a deletion row carries the line it had in the *other* file — so
+   * everything that resolves a position by reading the rendered code, rather
+   * than from a token event, has to stay off there: the underlines under
+   * problem tokens, and the right-click menu.
+   */
+  lineNumbersMatchFile?: boolean;
   /** Unsaved buffer to analyse, or null to analyse the file on disk. */
   contents?: string | null;
   /** Turn the whole layer off — no requests, no marks, no card. */
@@ -155,7 +161,7 @@ export function useLanguageLayer({
   onApplyForeignEdits,
   contents = null,
   enabled = true,
-  paintTokens = true,
+  lineNumbersMatchFile = true,
   onOpenLocation,
 }: LanguageLayerOptions): LanguageLayer {
   // Nothing is asked of the language server until the code is on screen. The
@@ -186,8 +192,8 @@ export function useLanguageLayer({
   const containerRef = useRef<HTMLElement | null>(null);
   const diagnosticsRef = useRef(diagnostics);
   diagnosticsRef.current = diagnostics;
-  const paintRef = useRef(paintTokens);
-  paintRef.current = paintTokens;
+  const paintRef = useRef(lineNumbersMatchFile);
+  paintRef.current = lineNumbersMatchFile;
 
   const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -220,10 +226,10 @@ export function useLanguageLayer({
   );
 
   useEffect(() => {
-    if (containerRef.current !== null && paintTokens) {
+    if (containerRef.current !== null && lineNumbersMatchFile) {
       paintDiagnostics(containerRef.current, diagnostics);
     }
-  }, [diagnostics, paintTokens]);
+  }, [diagnostics, lineNumbersMatchFile]);
 
   const closeCard = useCallback(() => {
     clearTimers();
@@ -373,9 +379,11 @@ export function useLanguageLayer({
   const symbolMenu = useSymbolMenu({
     editor,
     path,
-    // Both of these need a buffer: one types into it, the other applies a fix
-    // to it. A read-only view has neither.
-    enabled: enabled && editor !== null,
+    // The menu finds its symbol by reading the rendered code, so it goes where
+    // the line numbers there are this file's own. It does not need a buffer:
+    // usages and definition are read-only questions, and the fixes it also
+    // carries leave themselves out when there is nothing to apply them to.
+    enabled: enabled && lineNumbersMatchFile,
     getContainer,
     onOpen: closeCard,
     onFindUsages: useCallback(

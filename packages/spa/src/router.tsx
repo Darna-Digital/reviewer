@@ -46,6 +46,19 @@ export interface RouterContext {
   queryClient: QueryClient;
 }
 
+/**
+ * Scroll restoration is off for conversations, which open at their latest
+ * message and never anywhere else.
+ *
+ * Restoration remembers a scrolled element by its position in the DOM — an
+ * nth-child path — and carries the last page's entries forward onto whatever
+ * still matches on the next one. Every session page has the same shape, so the
+ * conversation you left handed its scroll offset to the conversation you
+ * opened, dropping you into the middle of it, and the timeline's own scroll to
+ * the bottom had already run by then.
+ */
+const sessionRoutePrefix = "/modes/agent-session/";
+
 export function getRouter() {
   // A preview fetches each thing once and then holds still: it is a picture of
   // the page, and every refetch in it is work the window it hangs over is
@@ -82,7 +95,8 @@ export function getRouter() {
   const router = createTanStackRouter({
     routeTree,
     context: { queryClient } satisfies RouterContext,
-    scrollRestoration: true,
+    scrollRestoration: ({ location }) =>
+      !location.pathname.startsWith(sessionRoutePrefix),
     // A preview window is never navigated: it renders the one page it was
     // opened for, so there is nothing for an intent to preload.
     defaultPreload: isPreviewWindow ? false : "intent",

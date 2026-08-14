@@ -42,7 +42,7 @@ export function SessionSearch() {
       }}
     >
       <RailButton label="Search sessions" render={<PopoverTrigger />}>
-        <IconSearch className="size-5" />
+        <IconSearch className="size-4" />
       </RailButton>
       {/* Hung off the rail rather than under it: the trigger is a column on the
           window's left edge, so the list opens beside it, aligned to its top. */}

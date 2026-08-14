@@ -97,7 +97,9 @@ export function useDiffLanguage({
     editor: null,
     getContainer,
     enabled: enabled && seen,
-    paintTokens: false,
+    // Two files are interleaved here, so a rendered line number is only this
+    // file's on the additions side.
+    lineNumbersMatchFile: false,
     onOpenLocation: useCallback(
       (location: Location) =>
         onOpenLocation(location.path, location.range.start.line + 1),

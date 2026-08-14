@@ -8,6 +8,10 @@
  * one, and moving between them moves only what is in it. Two surfaces each
  * drawing their own column is how the page beneath ends up stepping sideways on
  * the way across.
+ *
+ * Its buttons are the header's square — the same size as the project chip
+ * beside them, inset by the same amount the header's own centring gives that
+ * chip — so the first one in the column reads as part of the row it starts.
  */
 import { Link } from "@tanstack/react-router";
 import { buttonVariants } from "@/components/ui/button";
@@ -28,7 +32,7 @@ export function Rail({
   return (
     <nav
       aria-label={label}
-      className="relative flex h-full w-12 shrink-0 flex-col items-center py-2"
+      className="relative flex h-full w-9 shrink-0 flex-col items-center py-1"
     >
       {/* The rail's right edge is drawn over its last pixel column rather than
           as a `border-r`, which would take that pixel out of the content box
@@ -74,7 +78,7 @@ export function RailButton({
   children: React.ReactNode;
 }) {
   const className = cn(
-    buttonVariants({ variant: "ghost", size: "icon" }),
+    buttonVariants({ variant: "ghost", size: "icon-sm" }),
     "relative text-muted-foreground [-webkit-app-region:no-drag]",
     active === true && "bg-muted text-foreground"
   );

@@ -43,7 +43,7 @@ export function NewSessionButton() {
         void navigate(NEW_SESSION_ROUTE);
       }}
     >
-      <IconPencilPlus className="size-5" />
+      <IconPencilPlus className="size-4" />
     </RailButton>
   );
 }

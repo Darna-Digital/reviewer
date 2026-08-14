@@ -110,7 +110,7 @@ export function TabStrip({
         aria-label="Open files"
         className={cn(
           TAB_STRIP,
-          "shrink-0 border-b border-border bg-background px-2 py-1"
+          "h-9 shrink-0 border-b border-border bg-background px-2 py-1"
         )}
       >
         {ordered.map((tab, index) => {
@@ -218,9 +218,7 @@ export function TabStrip({
               <TooltipContent
                 side="bottom"
                 align="start"
-                // A path has no spaces to break at, so it would otherwise run
-                // straight out of the popup instead of wrapping inside it.
-                className="max-w-[min(32rem,var(--available-width,32rem))] font-mono break-all whitespace-normal"
+                className="max-w-none whitespace-nowrap"
               >
                 {tab.path}
               </TooltipContent>

@@ -27,7 +27,11 @@ interface MenuState {
 }
 
 export interface SymbolMenuOptions {
-  /** Null in a read-only view; the hook is disabled then. */
+  /**
+   * Null in a read-only view. Navigation is a read-only question and works
+   * either way; the fixes need a buffer to apply to, so they are left out of
+   * the menu — and never asked for — when there is no editor.
+   */
   readonly editor: Editor<undefined> | null;
   readonly path: string;
   readonly enabled?: boolean;
@@ -160,7 +164,7 @@ export function useSymbolMenu({
   const close = useCallback(() => setState(null), []);
 
   useEffect(() => {
-    if (!enabled || editor === null) return;
+    if (!enabled) return;
 
     // A menu waiting on a gesture that this view outlives would open into a
     // tree that is no longer here.
@@ -199,6 +203,7 @@ export function useSymbolMenu({
         setState({ anchor, token, actions: pending.actions })
       );
 
+      if (editor === null) return;
       const position = positionOfToken(token);
       void requestCodeActions(
         path,
