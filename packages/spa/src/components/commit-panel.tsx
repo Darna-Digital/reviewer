@@ -1,6 +1,7 @@
 import { IconSparkles } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { agentIcon } from "@/interactions/threads/components/agent-icons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -61,8 +62,14 @@ export function CommitPanel({
 }: CommitPanelProps) {
   const { commitFilesHeight, commitMessageHeight, commitAgent } = useUiPrefs();
   // Live heights for smooth dragging; committed back to prefs on release.
-  const [filesHeight, setFilesHeight] = useState(commitFilesHeight);
-  const [messageHeight, setMessageHeight] = useState(commitMessageHeight);
+  // Neither is React state — a drag would re-render the changed-file list on
+  // every pointer frame. See `usePanelSize`.
+  const files = usePanelSize("commit-files-h", commitFilesHeight, "height");
+  const messageBox = usePanelSize(
+    "commit-message-h",
+    commitMessageHeight,
+    "height"
+  );
   const [message, setMessage] = useState("");
   const [generating, setGenerating] = useState(false);
   const [composerFocused, setComposerFocused] = useState(false);
@@ -152,18 +159,15 @@ export function CommitPanel({
           expands the list into the tree above it. */}
       <ResizeHandle
         orientation="row"
-        value={filesHeight}
+        value={files.current}
         min={80}
         max={() => Math.max(120, window.innerHeight - 320)}
         direction={-1}
-        onResize={setFilesHeight}
+        onResize={files.onResize}
         onResizeEnd={(h) => setUiPrefs({ commitFilesHeight: h })}
         label="Resize changed files"
       />
-      <ScrollArea
-        style={{ height: filesHeight }}
-        viewportClassName="scroll-fade px-3 pt-2"
-      >
+      <ScrollArea style={files.style} viewportClassName="scroll-fade px-3 pt-2">
         {changes.map((c) => (
           <label
             key={c.path}
@@ -189,11 +193,11 @@ export function CommitPanel({
       {/* Drag the message box's top border to grow/shrink the composer. */}
       <ResizeHandle
         orientation="row"
-        value={messageHeight}
+        value={messageBox.current}
         min={48}
         max={() => Math.max(80, window.innerHeight - 360)}
         direction={-1}
-        onResize={setMessageHeight}
+        onResize={messageBox.onResize}
         onResizeEnd={(h) => setUiPrefs({ commitMessageHeight: h })}
         label="Resize commit message"
       />
@@ -217,7 +221,7 @@ export function CommitPanel({
             placeholder="Commit message..."
             wrap="off"
             className="pb-12 text-sm"
-            style={{ height: messageHeight }}
+            style={messageBox.style}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === "Enter")

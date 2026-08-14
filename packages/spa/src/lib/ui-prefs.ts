@@ -4,6 +4,7 @@
  * localStorage-backed store instead of the URL.
  */
 import { useSyncExternalStore } from "react";
+import { isPreviewWindow } from "@/lib/preview-window";
 
 export type ThemePref = "light" | "dark" | "system";
 export type Theme = "light" | "dark";
@@ -78,6 +79,8 @@ export interface UiPrefs {
   plansPaneWidth: number;
   /** Drag-resizable height of the notes list under the analysis graph, in px. */
   plansNotesHeight: number;
+  /** Drag-resizable height of the launchpad panel, in px. */
+  launchpadHeight: number;
 }
 
 const STORE_KEY = "byconvo-ui";
@@ -126,6 +129,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   plansPaneOpen: false,
   plansPaneWidth: 560,
   plansNotesHeight: 220,
+  launchpadHeight: 380,
 };
 
 function load(): UiPrefs {
@@ -154,7 +158,9 @@ function emit() {
 }
 
 function persist() {
-  if (typeof window === "undefined") return;
+  // A preview shares the window's storage: what a page does while being looked
+  // at — marking the inbox read, sizing a pane — is not the window's doing.
+  if (typeof window === "undefined" || isPreviewWindow) return;
   try {
     const {
       theme,
@@ -184,6 +190,7 @@ function persist() {
       plansPaneOpen,
       plansPaneWidth,
       plansNotesHeight,
+      launchpadHeight,
     } = state;
     window.localStorage.setItem(
       STORE_KEY,
@@ -215,6 +222,7 @@ function persist() {
         plansPaneOpen,
         plansPaneWidth,
         plansNotesHeight,
+        launchpadHeight,
       })
     );
     window.localStorage.setItem(THEME_KEY, state.theme);

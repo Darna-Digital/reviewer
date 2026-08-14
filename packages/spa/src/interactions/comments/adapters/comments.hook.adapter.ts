@@ -1,8 +1,17 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo } from "react";
-import { fetchClient } from "@/lib/api/client";
+import { useMemo, useRef } from "react";
+import { api, fetchClient } from "@/lib/api/client";
 import type { ReviewComment } from "@byconvo/core/comments";
 import { createCommentsFunctions } from "../functions/comments.functions";
+import {
+  optimisticComment,
+  optimisticId,
+  optimisticPullComment,
+  withComment,
+  withConfirmed,
+  withEditedBody,
+  withoutComment,
+} from "../functions/optimistic-comments.functions";
 import type {
   CommentsFunctions,
   DraftLocation,
@@ -88,30 +97,195 @@ export function useCommentsActions() {
   const invalidate = (key: string) =>
     queryClient.invalidateQueries({ queryKey: ["get", key] });
 
+  // The canonical key the `useComments` hook reads under, taken from the client
+  // rather than written out here — a hand-built key that drifts from it would
+  // fail silently, as an optimistic edit that simply never appears.
+  const localCommentsKey = api.queryOptions(
+    "get",
+    "/api/comments",
+    {}
+  ).queryKey;
+
+  /** The same, for one pull request's comments — keyed by its number. */
+  const pullCommentsKey = (pullNumber: number) =>
+    api.queryOptions("get", "/api/github/pulls/{number}/comments", {
+      params: { path: { number: String(pullNumber) } },
+    }).queryKey;
+
+  type Comments = ReadonlyArray<ReviewComment>;
+  type CacheKey = ReturnType<typeof pullCommentsKey> | typeof localCommentsKey;
+
+  /** Edit a list on screen now. Returns the list as it was, to put back. */
+  const edit = (
+    key: CacheKey,
+    change: (list: Comments) => Comments
+  ): Comments => {
+    const before = queryClient.getQueryData<Comments>(key) ?? [];
+    queryClient.setQueryData<Comments>(key, change(before));
+    return before;
+  };
+
+  const restore = (key: CacheKey, before: Comments) =>
+    queryClient.setQueryData<Comments>(key, before);
+
+  /**
+   * A refetch already in flight would land after the optimistic edit and undo
+   * it, so it is cancelled first. Not awaited: waiting on it would put the
+   * round-trip back in front of the comment appearing, which is the entire
+   * thing being removed here.
+   */
+  const holdRefetches = (key: CacheKey) =>
+    void queryClient.cancelQueries({ queryKey: key });
+
+  // Only has to be unique within this session — it never reaches the server.
+  const pending = useRef(0);
+
   return {
     submit: async (
       ctx: SubmitContext,
       location: DraftLocation,
       body: string
     ) => {
-      const created = await fns.submit(ctx, location, body);
-      void invalidate(
-        ctx.mode === "review"
-          ? "/api/github/pulls/{number}/comments"
-          : "/api/comments"
-      );
-      return created;
+      pending.current += 1;
+      const id = optimisticId(pending.current);
+      const createdAt = new Date().toISOString();
+
+      // A pull request comment goes to GitHub rather than to disk. It still
+      // appears at once — waiting on somebody else's server is the thing being
+      // removed — but it is marked unacknowledged until GitHub confirms it,
+      // because unlike a local write this one can genuinely fail.
+      const pull = ctx.mode === "review" ? ctx.selectedPull : null;
+      const key =
+        pull === null ? localCommentsKey : pullCommentsKey(pull.number);
+      const placeholder =
+        pull === null
+          ? optimisticComment({
+              id,
+              filePath: location.filePath,
+              side: location.side,
+              lineNumber: location.lineNumber,
+              body,
+              target: ctx.targetKey,
+              // Filled in by the server; shown for the moment before it answers.
+              author: "you",
+              createdAt,
+            })
+          : optimisticPullComment({
+              id,
+              filePath: location.filePath,
+              side: location.side,
+              lineNumber: location.lineNumber,
+              body,
+              pullNumber: pull.number,
+              createdAt,
+            });
+
+      holdRefetches(key);
+      const before = edit(key, (list) => withComment(list, placeholder));
+      try {
+        const created = await fns.submit(ctx, location, body);
+        edit(key, (list) => withConfirmed(list, id, created));
+        return created;
+      } catch (error) {
+        // Put it back, then reconcile: concurrent edits (assigning a review
+        // removes every comment at once) can interleave, and only the server
+        // knows what actually survived.
+        restore(key, before);
+        void invalidate(
+          pull === null
+            ? "/api/comments"
+            : "/api/github/pulls/{number}/comments"
+        );
+        throw error;
+      }
     },
+
     remove: async (comment: ReviewComment) => {
-      const removed = await fns.remove(comment);
-      if (removed) void invalidate("/api/comments");
-      return removed;
+      if (comment.source !== "local") return fns.remove(comment);
+      holdRefetches(localCommentsKey);
+      const before = edit(localCommentsKey, (list) =>
+        withoutComment(list, comment.id)
+      );
+      try {
+        const removed = await fns.remove(comment);
+        void invalidate("/api/comments");
+        return removed;
+      } catch (error) {
+        // Put it back, then reconcile: concurrent edits (assigning a review
+        // removes every comment at once) can interleave, and only the server
+        // knows what actually survived.
+        restore(localCommentsKey, before);
+        void invalidate("/api/comments");
+        throw error;
+      }
     },
+
     update: async (comment: ReviewComment, body: string) => {
-      const updated = await fns.update(comment, body);
-      if (updated !== null) void invalidate("/api/comments");
-      return updated;
+      if (comment.source !== "local") return fns.update(comment, body);
+      holdRefetches(localCommentsKey);
+      const before = edit(localCommentsKey, (list) =>
+        withEditedBody(list, comment.id, body)
+      );
+      try {
+        const updated = await fns.update(comment, body);
+        if (updated !== null) {
+          edit(localCommentsKey, (list) =>
+            withConfirmed(list, comment.id, updated)
+          );
+        }
+        return updated;
+      } catch (error) {
+        // Put it back, then reconcile: concurrent edits (assigning a review
+        // removes every comment at once) can interleave, and only the server
+        // knows what actually survived.
+        restore(localCommentsKey, before);
+        void invalidate("/api/comments");
+        throw error;
+      }
     },
-    reply: fns.reply,
+
+    /**
+     * A reply is the same bargain as a new pull comment: shown at once,
+     * anchored to the line its parent sits on so it joins that thread rather
+     * than opening one of its own, and marked unacknowledged until GitHub
+     * names it.
+     */
+    reply: async (
+      selectedPull: SubmitContext["selectedPull"],
+      comment: ReviewComment,
+      body: string
+    ) => {
+      if (selectedPull === null || comment.source !== "github") {
+        return fns.reply(selectedPull, comment, body);
+      }
+      pending.current += 1;
+      const key = pullCommentsKey(selectedPull.number);
+      const placeholder = optimisticPullComment({
+        id: optimisticId(pending.current),
+        filePath: comment.filePath,
+        side: comment.side,
+        lineNumber: comment.lineNumber,
+        body,
+        pullNumber: selectedPull.number,
+        createdAt: new Date().toISOString(),
+      });
+      holdRefetches(key);
+      const before = edit(key, (list) => withComment(list, placeholder));
+      try {
+        const created = await fns.reply(selectedPull, comment, body);
+        // `reply` answers null when it cannot identify the parent; there is
+        // then nothing to confirm, so the placeholder comes back out.
+        edit(key, (list) =>
+          created === null
+            ? withoutComment(list, placeholder.id)
+            : withConfirmed(list, placeholder.id, created)
+        );
+        return created;
+      } catch (error) {
+        restore(key, before);
+        void invalidate("/api/github/pulls/{number}/comments");
+        throw error;
+      }
+    },
   };
 }

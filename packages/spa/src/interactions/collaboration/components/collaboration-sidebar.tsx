@@ -15,6 +15,7 @@ import {
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState, type CSSProperties, type ReactNode } from "react";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DEFAULT_ID,
@@ -264,7 +265,12 @@ function ProjectBranchRows({
 
 export function CollaborationSidebar() {
   const prefs = useUiPrefs();
-  const [width, setWidth] = useState(prefs.workspaceSidebarWidth);
+  // Not React state — see `usePanelSize`.
+  const sidebar = usePanelSize(
+    "workspace-sidebar-w",
+    prefs.workspaceSidebarWidth,
+    "width"
+  );
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const { pathname, search } = useRouterState({ select: (s) => s.location });
 
@@ -318,7 +324,7 @@ export function CollaborationSidebar() {
 
   return (
     <>
-      <aside className="flex shrink-0 flex-col border-r" style={{ width }}>
+      <aside className="flex shrink-0 flex-col border-r" style={sidebar.style}>
         <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
           <WorkspaceRows
             inboxActive={pathname.startsWith(INBOX_HREF)}
@@ -356,10 +362,10 @@ export function CollaborationSidebar() {
       </aside>
 
       <SidebarResizeHandle
-        width={width}
+        width={sidebar.current}
         stored={prefs.workspaceSidebarWidth}
         max={() => Math.max(260, window.innerWidth - 480)}
-        onResize={setWidth}
+        onResize={sidebar.onResize}
         onResizeEnd={(w) => setUiPrefs({ workspaceSidebarWidth: w })}
       />
     </>

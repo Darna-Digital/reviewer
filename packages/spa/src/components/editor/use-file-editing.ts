@@ -13,8 +13,8 @@
  * diagnostics both see exactly what the user is looking at.
  */
 import { type FileContents } from "@pierre/diffs";
-import { Editor } from "@pierre/diffs/editor";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Editor, type EditorOptions } from "@pierre/diffs/edit";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   deleteLinesEdits,
@@ -28,7 +28,23 @@ import { fetchClient } from "@/lib/api/client";
 const DIAGNOSTICS_DEBOUNCE_MS = 600;
 
 export interface FileEditing {
-  readonly editor: Editor<undefined>;
+  /**
+   * The live editor, or null before the editable view has asked for one.
+   *
+   * The view owns the moment of creation now: `File` calls the factory below
+   * when it opens an edit session, rather than being handed an instance that
+   * existed whether or not anyone was editing. Everything reading the buffer
+   * copes with there not being one yet.
+   */
+  readonly editor: Editor<undefined> | null;
+  /**
+   * Hands the editable view an editor built to its specification. Given to
+   * `EditProvider`; `File` calls it with the options for the session it is
+   * opening, and this adds the ones this hook needs to mirror the buffer.
+   */
+  readonly createEditor: (
+    options: EditorOptions<undefined>
+  ) => Editor<undefined>;
   /**
    * Subscribe to buffer changes. The editor keeps a single `onChange`, and
    * `setOptions` merges by key — so a second feature registering its own would
@@ -67,12 +83,17 @@ export function useFileEditing(
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listeners = useRef(new Set<() => void>());
 
-  // One editor instance for the lifetime of this view. `File` attaches it
-  // (editor.edit) once `contentEditable` is set and the editor is in context.
-  const editor = useMemo(() => new Editor<undefined>(), []);
+  const [editor, setEditor] = useState<Editor<undefined> | null>(null);
 
-  useEffect(() => {
-    editor.setOptions({
+  /**
+   * Build the editor the view asked for, with this hook's own listeners folded
+   * in. The view's options come first so ours win: it merges by key, and a
+   * single `onChange` is all an editor keeps — the buffer mirror, the dirty
+   * flag and the debounced hand-off to the analyser all hang off ours.
+   */
+  const createEditor = useCallback((options: EditorOptions<undefined>) => {
+    const created = new Editor<undefined>({
+      ...options,
       onFocus: () => {
         focusedRef.current = true;
       },
@@ -93,6 +114,14 @@ export function useFileEditing(
         }, DIAGNOSTICS_DEBOUNCE_MS);
       },
     });
+    setEditor(created);
+    return created;
+  }, []);
+
+  // The editor belongs to the session the view opened, so it is torn down with
+  // it rather than with this hook.
+  useEffect(() => {
+    if (editor === null) return;
     return () => {
       if (debounce.current !== null) clearTimeout(debounce.current);
       editor.cleanUp();
@@ -135,10 +164,12 @@ export function useFileEditing(
   // current selection touches.
   const runCommand = useCallback(
     (kind: "toggle" | "duplicate" | "delete") => {
+      // Nothing to command until the view has opened an edit session.
+      if (editor === null) return;
       const state = editor.getState();
       const selections = state.selections ?? [];
       if (selections.length === 0) return;
-      const lines = state.file.contents.split("\n");
+      const lines = editor.getText().split("\n");
       const targeted = new Set<number>();
       for (const sel of selections) {
         const lo = Math.min(sel.start.line, sel.end.line);
@@ -207,6 +238,7 @@ export function useFileEditing(
 
   return {
     editor,
+    createEditor,
     subscribe,
     dirty,
     saving,

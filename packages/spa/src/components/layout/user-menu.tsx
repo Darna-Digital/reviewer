@@ -18,7 +18,7 @@ import {
   DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { VIEWER } from "@/interactions/collaboration/data/collaboration.mock";
+import { VIEWER } from "@/interactions/collaboration/data/viewer.mock";
 import { cn } from "@/lib/utils";
 
 export function UserMenu({ className }: { className?: string }) {

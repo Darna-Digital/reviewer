@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ResizeHandle } from "@/components/layout/resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Separator } from "@/components/ui/separator";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import type {
@@ -188,7 +189,8 @@ export function ChatComposer({
   // local state, so leaving and returning to a thread keeps what you typed.
   const [text, setText] = useDraft(draftKey);
   const prefs = useUiPrefs();
-  const [promptHeight, setPromptHeight] = useState(prefs.composerHeight);
+  // Not React state — see `usePanelSize`.
+  const prompt = usePanelSize("composer-h", prefs.composerHeight, "height");
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
   const [dragging, setDragging] = useState(false);
@@ -277,11 +279,11 @@ export function ChatComposer({
     <div className="flex flex-col">
       <ResizeHandle
         orientation="row"
-        value={promptHeight}
+        value={prompt.current}
         min={56}
         max={() => Math.max(56, window.innerHeight * 0.6)}
         direction={-1}
-        onResize={setPromptHeight}
+        onResize={prompt.onResize}
         onResizeEnd={(height) => setUiPrefs({ composerHeight: height })}
         label="Resize the message box"
       />
@@ -372,7 +374,7 @@ export function ChatComposer({
                 e.preventDefault();
             }
           }}
-          style={{ height: promptHeight }}
+          style={prompt.style}
           placeholder={placeholder ?? "Ask anything about this repository…"}
           className="w-full resize-none bg-transparent px-4 pt-3 text-sm outline-none placeholder:text-muted-foreground"
         />

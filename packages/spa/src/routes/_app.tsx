@@ -1,7 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AppShell } from "@/components/layout/app-shell";
+import { AppLayout } from "@/components/layout/app-layout";
 
-/** Cross-mode view state lives in typed search params (no `useState` soup). */
+/**
+ * The app's only layout route. Every page in the app is a child of this one,
+ * so the frame, rail, header and dock it renders are mounted once and stay put
+ * while pages come and go beneath them — see `AppLayout`.
+ *
+ * Cross-page view state lives in typed search params (no `useState` soup).
+ */
 export interface AppSearch {
   /** Open file overlay path. */
   file?: string;
@@ -24,5 +30,5 @@ export const Route = createFileRoute("/_app")({
     base: typeof search["base"] === "string" ? search["base"] : undefined,
     head: typeof search["head"] === "string" ? search["head"] : undefined,
   }),
-  component: AppShell,
+  component: AppLayout,
 });

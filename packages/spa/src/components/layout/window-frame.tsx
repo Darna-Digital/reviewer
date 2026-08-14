@@ -10,11 +10,18 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { WindowBar } from "@/components/layout/window-bar";
 import { BrowserPane } from "@/interactions/browser-pane/components/browser-pane";
 import { PlansPane } from "@/interactions/plans-pane/components/plans-pane";
 import { SearchHost } from "@/interactions/search/components/search-host";
+import {
+  TabOverview,
+  TabOverviewPush,
+  TabOverviewScrim,
+} from "@/interactions/tab-preview/components/tab-overview";
 import { isDesktop } from "@/lib/desktop";
+import { isPreviewWindow } from "@/lib/preview-window";
 import { setUiPrefs, toggleBottomVisible, useUiPrefs } from "@/lib/ui-prefs";
 import { activeWorkMode } from "@/lib/work-mode";
 
@@ -45,6 +52,18 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
   const prefs = useUiPrefs();
   const inCodeMode = activeWorkMode(pathname, prefs.workMode) === "code";
 
+  // Both side panes hang off the frame, so dragging either used to re-render
+  // the entire window — and, because these two wrote straight to the prefs,
+  // also serialise and store every preference in the app on each pointer frame.
+  // The panes read their width from a CSS variable now, and the prefs are
+  // written once, when the drag ends. See `usePanelSize`.
+  const plansPane = usePanelSize("plans-w", prefs.plansPaneWidth, "width");
+  const browserPane = usePanelSize(
+    "browser-w",
+    prefs.browserPaneWidth,
+    "width"
+  );
+
   // ⌘B expands or collapses the bottom dock. Every code page carries the dock —
   // the git shell embeds its own, the workspace shell mounts `GitBottomDock` —
   // so the shortcut belongs to the frame under both rather than to either one;
@@ -65,50 +84,71 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [inCodeMode]);
 
+  // A preview is the page and nothing around it: the chrome belongs to the
+  // window it is being previewed in, and the panes beside it are its own.
+  if (isPreviewWindow) {
+    return (
+      <div className="app-canvas flex h-svh w-full overflow-hidden text-foreground">
+        {children}
+      </div>
+    );
+  }
+
   return (
     <>
       {inCodeMode && <SearchHost />}
       <div className="app-frame flex h-svh w-full flex-col overflow-hidden text-foreground">
         <WindowBar />
-        {/* Two sheets on the frame rather than one split in half: the gap
-            between them is the frame's own material, so the seam reads as the
-            window showing through instead of a painted divider. */}
-        <div className="mx-1.5 mb-1.5 flex min-h-0 min-w-0 flex-1 gap-1.5 overflow-hidden">
-          <div className="app-canvas flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-frame-border">
-            {children}
-          </div>
-          {prefs.plansPaneOpen && (
-            // The handle rides inside the pane's own group so the flex gap
-            // counts once — one seam, the same width as the frame's inset.
-            <div className="flex min-h-0 shrink-0">
-              <ResizeHandle
-                orientation="col"
-                label="Resize analysis"
-                value={prefs.plansPaneWidth}
-                min={380}
-                max={() => Math.max(380, window.innerWidth - 480)}
-                direction={-1}
-                onResize={(plansPaneWidth) => setUiPrefs({ plansPaneWidth })}
-              />
-              <PlansPane />
+        {/* Everything under the bar shares one box: the launchpad slides down
+            into the top of it and the page is pushed out of the bottom, so the
+            window clips both without either being given a size. */}
+        <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+          <TabOverview />
+          {/* Two sheets on the frame rather than one split in half: the gap
+              between them is the frame's own material, so the seam reads as the
+              window showing through instead of a painted divider. */}
+          <TabOverviewPush>
+            <div className="app-canvas flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-frame-border">
+              {children}
             </div>
-          )}
-          {isDesktop && prefs.browserPaneOpen && (
-            <div className="flex min-h-0 shrink-0">
-              <ResizeHandle
-                orientation="col"
-                label="Resize browser"
-                value={prefs.browserPaneWidth}
-                min={320}
-                max={() => Math.max(320, window.innerWidth - 480)}
-                direction={-1}
-                onResize={(browserPaneWidth) =>
-                  setUiPrefs({ browserPaneWidth })
-                }
-              />
-              <BrowserPane />
-            </div>
-          )}
+            {prefs.plansPaneOpen && (
+              // The handle rides inside the pane's own group so the flex gap
+              // counts once — one seam, the same width as the frame's inset.
+              <div className="flex min-h-0 shrink-0">
+                <ResizeHandle
+                  orientation="col"
+                  label="Resize analysis"
+                  value={plansPane.current}
+                  min={380}
+                  max={() => Math.max(380, window.innerWidth - 480)}
+                  direction={-1}
+                  onResize={plansPane.onResize}
+                  onResizeEnd={(plansPaneWidth) =>
+                    setUiPrefs({ plansPaneWidth })
+                  }
+                />
+                <PlansPane />
+              </div>
+            )}
+            {isDesktop && prefs.browserPaneOpen && (
+              <div className="flex min-h-0 shrink-0">
+                <ResizeHandle
+                  orientation="col"
+                  label="Resize browser"
+                  value={browserPane.current}
+                  min={320}
+                  max={() => Math.max(320, window.innerWidth - 480)}
+                  direction={-1}
+                  onResize={browserPane.onResize}
+                  onResizeEnd={(browserPaneWidth) =>
+                    setUiPrefs({ browserPaneWidth })
+                  }
+                />
+                <BrowserPane />
+              </div>
+            )}
+            <TabOverviewScrim />
+          </TabOverviewPush>
         </div>
       </div>
     </>

@@ -1,8 +1,13 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "CommonJS",
-    "moduleResolution": "Node",
+    // "Node" selected the `node10` resolver, which TypeScript 6 rejects
+    // outright and 7 has removed. `node16` is its supported successor, and it
+    // requires the matching module setting. The package declares no `"type"`,
+    // so Node16 still emits CommonJS — which is what Electron loads this
+    // `main` as.
+    "module": "node16",
+    "moduleResolution": "node16",
     "lib": ["ES2023"],
     "strict": true,
     "esModuleInterop": true,

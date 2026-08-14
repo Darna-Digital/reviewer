@@ -18,6 +18,7 @@ import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -54,7 +55,8 @@ const FILTERS: ReadonlyArray<{ value: InboxFilter; label: string }> = [
 
 export function InboxPage() {
   const prefs = useUiPrefs();
-  const [listWidth, setListWidth] = useState(prefs.inboxListWidth);
+  // Not React state — see `usePanelSize`.
+  const list = usePanelSize("inbox-list-w", prefs.inboxListWidth, "width");
   const [filter, setFilter] = useState<InboxFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedId, setSelectedId] = useState(INBOX_ITEMS[0]?.id ?? "");
@@ -79,10 +81,7 @@ export function InboxPage() {
     <div className="flex h-full min-h-0">
       {prefs.sidebarVisible && <CollaborationSidebar />}
       {showList && (
-        <div
-          className="flex shrink-0 flex-col border-r"
-          style={{ width: listWidth }}
-        >
+        <div className="flex shrink-0 flex-col border-r" style={list.style}>
           <header className="flex h-9 shrink-0 items-center justify-between border-b px-2">
             <Popover open={filterOpen} onOpenChange={setFilterOpen}>
               <PopoverTrigger
@@ -169,10 +168,10 @@ export function InboxPage() {
       )}
       {showList && (
         <SidebarResizeHandle
-          width={listWidth}
+          width={list.current}
           stored={prefs.inboxListWidth}
           max={() => Math.max(320, window.innerWidth - 480)}
-          onResize={setListWidth}
+          onResize={list.onResize}
           onResizeEnd={(w) => setUiPrefs({ inboxListWidth: w })}
           label="Resize the message list"
         />

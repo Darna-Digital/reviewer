@@ -19,6 +19,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useState } from "react";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -110,6 +111,10 @@ function ChromeButton({
 export function BrowserPane() {
   const pane = useBrowserPane();
   const prefs = useUiPrefs();
+  // Dragged by a handle in the window frame, which writes the same variable —
+  // so resizing the pane never re-renders it (or the `<webview>` inside it).
+  // See `usePanelSize`.
+  const width = usePanelSize("browser-w", prefs.browserPaneWidth, "width");
   const repo = useRepo();
   const repoRoot = repo.data?.root ?? "";
 
@@ -325,7 +330,7 @@ export function BrowserPane() {
     <aside
       aria-label="Browser"
       className="browser-pane flex min-h-0 shrink-0 flex-col overflow-hidden rounded-xl border border-frame-border"
-      style={{ width: prefs.browserPaneWidth }}
+      style={width.style}
     >
       <div className="flex h-9 shrink-0 items-center gap-1 border-b border-frame-border px-1.5">
         <ChromeButton

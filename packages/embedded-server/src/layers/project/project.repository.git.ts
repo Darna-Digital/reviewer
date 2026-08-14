@@ -107,13 +107,11 @@ export const makeGitProjectRepository = Effect.gen(function* () {
       Effect.all({ files: git.files, status: git.status })
     ),
     ({ failed, ok }) => ({
-      repos: ok.map(
-        ({ repo, value }): RepoChanges => ({
-          repo,
-          status: value.status,
-          files: value.files.gitStatus,
-        })
-      ),
+      repos: ok.map(({ repo, value }): RepoChanges => ({
+        repo,
+        status: value.status,
+        files: value.files.gitStatus,
+      })),
       failed,
     })
   );
@@ -153,13 +151,11 @@ export const makeGitProjectRepository = Effect.gen(function* () {
       Effect.all({ local: git.branches, remote: git.remoteBranches })
     ),
     ({ failed, ok }) => ({
-      repos: ok.map(
-        ({ repo, value }): RepoBranches => ({
-          repo,
-          branches: value.local,
-          remoteBranches: value.remote,
-        })
-      ),
+      repos: ok.map(({ repo, value }): RepoBranches => ({
+        repo,
+        branches: value.local,
+        remoteBranches: value.remote,
+      })),
       failed,
     })
   );
@@ -223,13 +219,11 @@ export const makeGitProjectRepository = Effect.gen(function* () {
           Effect.flatMap(repoAt(group.repo.path), (git) =>
             git.commit(message, group.paths)
           ).pipe(
-            Effect.map(
-              (sha): RepoCommitResult => ({
-                repo: group.repo,
-                sha,
-                reason: null,
-              })
-            ),
+            Effect.map((sha): RepoCommitResult => ({
+              repo: group.repo,
+              sha,
+              reason: null,
+            })),
             Effect.catch((error) =>
               Effect.succeed({
                 repo: group.repo,

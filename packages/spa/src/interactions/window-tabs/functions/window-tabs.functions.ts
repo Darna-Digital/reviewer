@@ -2,8 +2,11 @@
  * Transitions over the window-tab strip. All of it is decidable from the state
  * and a tab id, so none of it needs a rendered strip — or a router — to test.
  */
+import { isFeatureEnabled } from "@byconvo/feature-flags";
+import type { WorkMode } from "@/lib/ui-prefs";
 import type {
   WindowTab,
+  WindowTabKind,
   WindowTabsState,
 } from "../interfaces/window-tabs.interfaces";
 
@@ -38,6 +41,20 @@ export function tabTitle(pathname: string): string {
   );
 }
 
+const COLLABORATION_TAB: WindowTab = {
+  id: COLLABORATION_TAB_ID,
+  href: COLLABORATION_HREF,
+  title: tabTitle(COLLABORATION_HREF),
+  kind: "collaboration",
+};
+
+const SESSIONS_TAB: WindowTab = {
+  id: SESSIONS_TAB_ID,
+  href: SESSIONS_HREF,
+  title: "Sessions",
+  kind: "sessions",
+};
+
 const PINNED_TABS: ReadonlyArray<WindowTab> = [
   {
     id: PROJECT_TAB_ID,
@@ -45,21 +62,44 @@ const PINNED_TABS: ReadonlyArray<WindowTab> = [
     title: tabTitle(HOME_HREF),
     kind: "project",
   },
-  {
-    id: COLLABORATION_TAB_ID,
-    href: COLLABORATION_HREF,
-    title: tabTitle(COLLABORATION_HREF),
-    kind: "collaboration",
-  },
-  {
-    id: SESSIONS_TAB_ID,
-    href: SESSIONS_HREF,
-    title: "Sessions",
-    kind: "sessions",
-  },
+  ...(isFeatureEnabled("collaboration-button") ? [COLLABORATION_TAB] : []),
+  SESSIONS_TAB,
 ];
 
 export const isPinnedTab = (tab: WindowTab): boolean => tab.kind !== "session";
+
+/**
+ * The tabs the strip shows. With its button switched off Sessions stays in the
+ * strip — the launchpad goes on listing it, and a conversation still has
+ * somewhere to be handed back to — but leads the window no more than the
+ * launchpad does, so it is left out of the bar and of ⌘<digit> with it. It comes
+ * back for as long as the window is on it: a bar showing a page while
+ * highlighting none of its tabs reads as having lost its place.
+ */
+export function stripTabs({
+  tabs,
+  activeId,
+}: WindowTabsState): ReadonlyArray<WindowTab> {
+  if (isFeatureEnabled("sessions-button")) return tabs;
+  return tabs.filter((tab) => tab.kind !== "sessions" || tab.id === activeId);
+}
+
+/**
+ * The way of working a tab frames the app in. A session belongs to whichever
+ * mode you were already in — a conversation is had about both — so it names
+ * none and leaves the frame as it found it.
+ */
+export function workModeOf(kind: WindowTabKind): WorkMode | null {
+  switch (kind) {
+    case "project":
+    case "sessions":
+      return "code";
+    case "collaboration":
+      return "collaboration";
+    case "session":
+      return null;
+  }
+}
 
 /** Pinned tabs always lead the strip, so their count is also the first slot a
  * session tab may take. */
@@ -75,6 +115,13 @@ const inCollaboration = (pathname: string): boolean =>
 /** A pinned tab that is named after wherever it has been left. */
 const followsLocation = (tab: WindowTab): boolean =>
   tab.kind === "project" || tab.kind === "collaboration";
+
+/** Whether a location is a pinned tab's to hold. */
+function ownsLocation(tab: WindowTab, pathname: string): boolean {
+  if (inSessions(pathname)) return tab.kind === "sessions";
+  if (inCollaboration(pathname)) return tab.kind === "collaboration";
+  return tab.kind === "project";
+}
 
 /** The strip a window opens with: the pinned tabs, on Code. */
 export const initialWindowTabs = (): WindowTabsState => ({
@@ -94,6 +141,11 @@ export const currentHref = (href: string): string =>
 /**
  * Restore the pinned tabs at the head of a strip, each keeping where it was
  * left, and drop anything that is neither pinned nor a session.
+ *
+ * A tab only keeps a location that is still its own. A strip saved while a
+ * feature was switched off can have left one of its locations on the wrong tab,
+ * and a tab restored pointing outside its own part of the app is a tab that
+ * takes you somewhere other than where it says.
  */
 export function withPinnedTabs(
   tabs: ReadonlyArray<WindowTab>
@@ -101,12 +153,17 @@ export function withPinnedTabs(
   const saved = tabs.map((tab) => ({ ...tab, href: currentHref(tab.href) }));
   const pinned = PINNED_TABS.map((tab) => {
     const kept = saved.find((candidate) => candidate.id === tab.id);
-    return kept === undefined
+    return kept === undefined || !ownsLocation(tab, kept.href)
       ? tab
       : { ...tab, href: kept.href, title: kept.title };
   });
   return [...pinned, ...saved.filter((tab) => tab.kind === "session")];
 }
+
+export const tabById = (
+  { tabs }: WindowTabsState,
+  id: string
+): WindowTab | null => tabs.find((tab) => tab.id === id) ?? null;
 
 export const activeTab = (state: WindowTabsState): WindowTab | null =>
   state.tabs.find((tab) => tab.id === state.activeId) ?? null;
@@ -116,6 +173,11 @@ export const activeTab = (state: WindowTabsState): WindowTab | null =>
  * anything inside Sessions; everything else lands on the pinned tab that owns
  * that part of the app, whichever tab you set off from — leaving Sessions from
  * a chat hands the window back to Code rather than overwriting the chat.
+ *
+ * A switched-off feature has no tab to hand its locations to, and they are not
+ * the active tab's to take instead: a strip that let them in would rename
+ * whichever tab you were on and point it somewhere it does not belong, so Code
+ * reached by URL alone would send you back to Collaboration.
  */
 function tabForLocation(
   state: WindowTabsState,
@@ -130,7 +192,7 @@ function tabForLocation(
     : inCollaboration(pathname)
       ? COLLABORATION_TAB_ID
       : PROJECT_TAB_ID;
-  return state.tabs.find((tab) => tab.id === owner) ?? current;
+  return state.tabs.find((tab) => tab.id === owner) ?? null;
 }
 
 /**
@@ -231,15 +293,16 @@ export function moveTab(
 }
 
 /**
- * The tab a ⌘<digit> jumps to. 1–8 count from the left; 9 is the last tab
- * however many there are, which is the convention every browser follows.
+ * The session standing in that slot of a strip, counting from 1. The pinned
+ * tabs are skipped: each is on a digit of its own, so the conversations are
+ * counted among themselves and none of them moves when a pinned tab is
+ * switched on or off.
  */
-export function tabAtPosition(
+export function sessionAtSlot(
   tabs: ReadonlyArray<WindowTab>,
-  position: number
+  slot: number
 ): WindowTab | null {
-  const index = position >= 9 ? tabs.length - 1 : position - 1;
-  return tabs[index] ?? null;
+  return tabs.filter((tab) => !isPinnedTab(tab))[slot - 1] ?? null;
 }
 
 const CHAT_HREF = /^\/modes\/agent-session\/([^/?#]+)/;

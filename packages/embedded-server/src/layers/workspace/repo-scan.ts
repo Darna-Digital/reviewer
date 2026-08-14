@@ -61,7 +61,24 @@ export const readBranch = (
     return parseHeadRef(head);
   });
 
-/** The git roots inside `dir`, searched up to `depth` levels deep. */
+/**
+ * How many directory entries are examined at once. The scan is two filesystem
+ * calls per entry (is it a directory, does it hold a `.git`) and it runs on
+ * every project-scoped read — the file tree, the diff, the branches, the log,
+ * each of which asks for the roots afresh. Walked one entry at a time, a
+ * project folder's worth of round-trips is latency every one of those requests
+ * pays before it starts. Bounded rather than unbounded so a wide folder cannot
+ * exhaust the process's file descriptors.
+ */
+const SCAN_CONCURRENCY = 16;
+
+/**
+ * The git roots inside `dir`, searched up to `depth` levels deep.
+ *
+ * Entries are examined concurrently but reported in name order: `Effect.forEach`
+ * keeps results in input order, so the roots a project holds stay in the same
+ * order between reads and the views above do not shuffle.
+ */
 const rootsUnder = (
   fs: FileSystem.FileSystem,
   dir: string,
@@ -69,20 +86,22 @@ const rootsUnder = (
 ): Effect.Effect<ReadonlyArray<string>> =>
   Effect.gen(function* () {
     const names = yield* orElse(fs.readDirectory(dir), [] as Array<string>);
-    const roots: Array<string> = [];
-    for (const name of [...names].sort((a, b) => a.localeCompare(b))) {
-      if (skipped(name)) continue;
-      const childPath = `${dir}/${name}`;
-      const stat = yield* orElse(fs.stat(childPath), null);
-      if (stat === null || stat.type !== "Directory") continue;
-      if (yield* isGitRoot(fs, childPath)) {
-        roots.push(childPath);
-        continue;
-      }
-      if (depth > 1)
-        roots.push(...(yield* rootsUnder(fs, childPath, depth - 1)));
-    }
-    return roots;
+    const candidates = [...names]
+      .sort((a, b) => a.localeCompare(b))
+      .filter((name) => !skipped(name));
+    const found = yield* Effect.forEach(
+      candidates,
+      (name): Effect.Effect<ReadonlyArray<string>> =>
+        Effect.gen(function* () {
+          const childPath = `${dir}/${name}`;
+          const stat = yield* orElse(fs.stat(childPath), null);
+          if (stat === null || stat.type !== "Directory") return [];
+          if (yield* isGitRoot(fs, childPath)) return [childPath];
+          return depth > 1 ? yield* rootsUnder(fs, childPath, depth - 1) : [];
+        }),
+      { concurrency: SCAN_CONCURRENCY }
+    );
+    return found.flat();
   });
 
 /**
@@ -99,12 +118,17 @@ export const scanRepos = (
     const paths = (yield* isGitRoot(fs, project))
       ? [project]
       : yield* rootsUnder(fs, project, depth);
-    return yield* Effect.forEach(paths, (path) =>
-      Effect.map(readBranch(fs, path), (branch) => ({
-        name: repoName(project, path),
-        path,
-        branch,
-      }))
+    // Each root's branch is two more reads (`.git`, then `HEAD`) and they are
+    // wholly independent, so they go out together rather than one root at a time.
+    return yield* Effect.forEach(
+      paths,
+      (path) =>
+        Effect.map(readBranch(fs, path), (branch) => ({
+          name: repoName(project, path),
+          path,
+          branch,
+        })),
+      { concurrency: SCAN_CONCURRENCY }
     );
   });
 

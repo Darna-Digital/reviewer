@@ -171,46 +171,40 @@ export function SearchDialog({
   const rows = useMemo<ReadonlyArray<Row>>(() => {
     if (mode === "commands" || mode === "git") {
       /** The commands the dialog itself owns — the ways into its other lists. */
-      const openers = submenusIn(mode, query).map(
-        (submenu): Command => ({
-          id: `open-${submenu.mode}`,
-          label: submenu.label,
-          group: submenu.group,
-          icon: submenu.icon,
-          keywords: submenu.keywords,
-          hint: submenu.hint,
-          run: () => onModeChange(submenu.mode),
-        })
-      );
+      const openers = submenusIn(mode, query).map((submenu): Command => ({
+        id: `open-${submenu.mode}`,
+        label: submenu.label,
+        group: submenu.group,
+        icon: submenu.icon,
+        keywords: submenu.keywords,
+        hint: submenu.hint,
+        run: () => onModeChange(submenu.mode),
+      }));
       const leadsDeeper = new Set(openers.map((command) => command.id));
       return filterCommands(
         [...openers, ...commandsIn(mode, commands, query)],
         query
-      ).map(
-        (command): Row => ({
-          key: `command:${command.id}`,
-          group: command.group,
-          label: command.label,
-          icon: command.icon,
-          hint: command.hint,
-          run: command.run,
-          closeOnRun: !leadsDeeper.has(command.id),
-        })
-      );
+      ).map((command): Row => ({
+        key: `command:${command.id}`,
+        group: command.group,
+        label: command.label,
+        icon: command.icon,
+        hint: command.hint,
+        run: command.run,
+        closeOnRun: !leadsDeeper.has(command.id),
+      }));
     }
     if (mode === "branches") {
-      return filterBranches(branches, query).map(
-        (branch): Row => ({
-          key: `branch:${branch.group}:${branch.name}`,
-          group: branch.group,
-          icon: IconGitBranch,
-          mono: true,
-          label: branch.name,
-          hint: branch.hint,
-          run: () => onCheckout(branch.ref),
-          closeOnRun: true,
-        })
-      );
+      return filterBranches(branches, query).map((branch): Row => ({
+        key: `branch:${branch.group}:${branch.name}`,
+        group: branch.group,
+        icon: IconGitBranch,
+        mono: true,
+        label: branch.name,
+        hint: branch.hint,
+        run: () => onCheckout(branch.ref),
+        closeOnRun: true,
+      }));
     }
     if (mode === "files") {
       return filterFiles(files, query).map((path): Row => {
@@ -232,19 +226,15 @@ export function SearchDialog({
       });
     }
     return groupByFile(results.matches).flatMap((file) =>
-      file.matches.map(
-        (match): Row => ({
-          key: matchKey(match),
-          group: file.path,
-          mono: true,
-          lead: match.line,
-          label: (
-            <MatchText text={match.text} query={query} options={options} />
-          ),
-          run: () => onOpenLocation(match.path, match.line),
-          closeOnRun: true,
-        })
-      )
+      file.matches.map((match): Row => ({
+        key: matchKey(match),
+        group: file.path,
+        mono: true,
+        lead: match.line,
+        label: <MatchText text={match.text} query={query} options={options} />,
+        run: () => onOpenLocation(match.path, match.line),
+        closeOnRun: true,
+      }))
     );
   }, [
     mode,

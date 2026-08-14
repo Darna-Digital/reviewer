@@ -8,7 +8,7 @@
  * bottom-up so they can be applied sequentially without invalidating positions.
  */
 import { getFiletypeFromFileName } from "@pierre/diffs";
-import type { TextEdit } from "@pierre/diffs/editor";
+import type { TextEdit } from "@pierre/diffs/edit";
 
 // Line-comment token by Shiki filetype id (see getFiletypeFromFileName).
 const HASH = new Set([

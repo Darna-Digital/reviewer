@@ -9,7 +9,7 @@
  * the menu only ever offers something that will actually apply.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Editor } from "@pierre/diffs/editor";
+import type { Editor } from "@pierre/diffs/edit";
 import type { CodeActionItem, FileEdits } from "@byconvo/core/language";
 import { pointerAnchor, type VirtualAnchor } from "../functions/anchors";
 import { requestCodeActions } from "../adapters/language.hook.adapter";
@@ -203,7 +203,7 @@ export function useSymbolMenu({
       void requestCodeActions(
         path,
         { start: position, end: position },
-        editor.getState().file.contents
+        editor.getText()
       )
         .then((result) => {
           pending.actions = result.actions;

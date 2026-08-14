@@ -171,7 +171,7 @@ export function SidebarFilterMenu({
             </div>
             {/* Native overflow (not ScrollArea) so intrinsic content width
                 can't blow past the popup and defeat truncate on long labels. */}
-            <div className="scroll-fade max-h-64 min-w-0 overflow-x-hidden overflow-y-auto p-1">
+            <div className="max-h-64 min-w-0 scroll-fade overflow-x-hidden overflow-y-auto p-1">
               {!showAll && shownBranches.length === 0 ? (
                 <p className="px-2.5 py-4 text-center text-xs text-muted-foreground">
                   No branches match.

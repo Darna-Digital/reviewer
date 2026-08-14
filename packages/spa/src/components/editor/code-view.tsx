@@ -1,5 +1,5 @@
 import { type LineAnnotation } from "@pierre/diffs";
-import { EditorProvider, File, Virtualizer } from "@pierre/diffs/react";
+import { EditProvider, File, Virtualizer } from "@pierre/diffs/react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -44,7 +44,9 @@ type AnnotationMeta =
       readonly kind: "comments";
       readonly comments: ReadonlyArray<ReviewComment>;
     }
-  | { readonly kind: "draft" }
+  // See `diff-pane`: the body travels with the draft so a composer reopened
+  // after a refused write comes back holding what was typed.
+  | { readonly kind: "draft"; readonly body?: string }
   | DiagnosticsAnnotationMeta;
 
 interface CodeViewProps {
@@ -176,7 +178,13 @@ export function CodeView({
       out.push({ lineNumber, metadata: { kind: "comments", comments: group } });
     }
     if (draft !== null && draft.filePath === path) {
-      out.push({ lineNumber: draft.lineNumber, metadata: { kind: "draft" } });
+      out.push({
+        lineNumber: draft.lineNumber,
+        metadata:
+          draft.body === undefined
+            ? { kind: "draft" }
+            : { kind: "draft", body: draft.body },
+      });
     }
     // Diagnostics share the annotation slot with comments; a line can carry
     // both, and `@pierre/diffs` stacks them in order.
@@ -225,7 +233,10 @@ export function CodeView({
           hang over the bottom of the pane (the assign bar), and scrolling a
           little past the end is how an editor behaves anyway. */}
       <Virtualizer className="h-full overflow-auto pb-20">
-        <EditorProvider editor={buffer.editor}>
+        {/* The editable view builds its own editor from this factory when a
+            session opens, rather than being handed one that exists whether or
+            not anyone is editing — see `useFileEditing`. */}
+        <EditProvider createEditor={buffer.createEditor}>
           <section className="diff-file" data-file-anchor={path}>
             {/* Remount per file, and when editing is switched on or off: the
             underlying File instance neither re-highlights on a `file` prop
@@ -264,7 +275,7 @@ export function CodeView({
                 ...language.viewOptions,
                 unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}`,
               }}
-              contentEditable={editing}
+              edit={editing}
               /* The editable view snapshots the rendered code when the editor
                attaches, so a worker highlight landing afterwards would never
                reach it; `useLangReady` primes the main-thread highlighter for
@@ -295,6 +306,9 @@ export function CodeView({
                         return onCommentSubmit === undefined ? null : (
                           <DraftCard
                             onCancel={() => onDraftCancel?.()}
+                            {...(meta.body === undefined
+                              ? {}
+                              : { initialBody: meta.body })}
                             onSubmit={(body) =>
                               onCommentSubmit(
                                 {
@@ -320,7 +334,7 @@ export function CodeView({
               }
             />
           </section>
-        </EditorProvider>
+        </EditProvider>
         {actionsSlot !== null &&
           actionsSlot !== undefined &&
           createPortal(

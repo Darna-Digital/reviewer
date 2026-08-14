@@ -6,6 +6,7 @@
  * repositories, so it is stored under a single key.
  */
 import { useSyncExternalStore } from "react";
+import { isPreviewWindow } from "@/lib/preview-window";
 import {
   initialWindowTabs,
   NEW_SESSION_TITLE,
@@ -73,7 +74,9 @@ let state: WindowTabsState = load();
 const listeners = new Set<() => void>();
 
 function persist() {
-  if (typeof window === "undefined") return;
+  // A preview shares the window's storage: the strip it draws is a picture of
+  // this one, and must never write back over it.
+  if (typeof window === "undefined" || isPreviewWindow) return;
   try {
     window.localStorage.setItem(STORE_KEY, JSON.stringify(state));
   } catch {

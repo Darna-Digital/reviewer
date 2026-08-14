@@ -28,18 +28,16 @@ export const makeGitHubProvider = Effect.gen(function* () {
       `/repos/${owner}/${repo}/pulls?state=open&per_page=50`
     )) as any;
     if (!Array.isArray(data)) return [];
-    return data.map(
-      (pr: any): PullRequestInfo => ({
-        number: pr.number,
-        title: pr.title ?? "",
-        author: pr.user?.login ?? "",
-        baseRef: pr.base?.ref ?? "",
-        headRef: pr.head?.ref ?? "",
-        headSha: pr.head?.sha ?? "",
-        url: pr.html_url ?? "",
-        updatedAt: pr.updated_at ?? "",
-      })
-    );
+    return data.map((pr: any): PullRequestInfo => ({
+      number: pr.number,
+      title: pr.title ?? "",
+      author: pr.user?.login ?? "",
+      baseRef: pr.base?.ref ?? "",
+      headRef: pr.head?.ref ?? "",
+      headSha: pr.head?.sha ?? "",
+      url: pr.html_url ?? "",
+      updatedAt: pr.updated_at ?? "",
+    }));
   });
 
   const pullFiles = (owner: string, repo: string, pullNumber: number) =>

@@ -19,7 +19,7 @@ export interface CollaborationSearch {
   id?: string;
 }
 
-export const Route = createFileRoute("/_workspace/modes/collaboration")({
+export const Route = createFileRoute("/_app/modes/collaboration")({
   validateSearch: (search: Record<string, unknown>): CollaborationSearch => ({
     view: VIEWS.includes(search["view"] as CollaborationView)
       ? (search["view"] as CollaborationView)

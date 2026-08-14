@@ -10,10 +10,7 @@
  */
 
 export type WindowTabKind =
-  | "project"
-  | "collaboration"
-  | "sessions"
-  | "session";
+  "project" | "collaboration" | "sessions" | "session";
 
 export interface WindowTab {
   /** Stable across navigation, so a tab keeps its slot as its href changes. */

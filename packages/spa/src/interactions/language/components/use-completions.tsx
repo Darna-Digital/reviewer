@@ -12,7 +12,7 @@
  * thing.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { Editor } from "@pierre/diffs/editor";
+import type { Editor } from "@pierre/diffs/edit";
 import type { CompletionItem } from "@byconvo/core/language";
 import { caretRect } from "@/lib/code-root";
 import { rectAnchor, type VirtualAnchor } from "../functions/anchors";
@@ -95,13 +95,16 @@ export function useCompletions({
     ) {
       return null;
     }
-    const lines = state.file.contents.split("\n");
+    // 1.3.5 moved the buffer off `EditorState` (now just selections + view);
+    // the document is read from the editor itself.
+    const contents = editor.getText();
+    const lines = contents.split("\n");
     const lineText = lines[selection.start.line] ?? "";
     return {
       line: selection.start.line,
       character: selection.start.character,
       lineText,
-      contents: state.file.contents,
+      contents,
     };
   }, [editor]);
 
@@ -207,7 +210,7 @@ export function useCompletions({
         path,
         { line: open.line, character: open.character },
         { label: item.label, source: item.source, data: item.data },
-        editor.getState().file.contents
+        editor.getText()
       )
         .then((resolution) => {
           const here = resolution.additionalEdits.filter(

@@ -11,6 +11,7 @@ import type { RepoEntry } from "@byconvo/core/workspace";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { ResizeHandle } from "@/components/layout/resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { CommitDetailsPanel } from "./commit-details-panel";
 import { GraphCell } from "./commit-graph";
 import { LogFilters } from "./log-filters";
@@ -79,7 +80,13 @@ export function CommitHistory({
   const rowRefs = useRef(new Map<string, HTMLElement>());
   const [activeSha, setActiveSha] = useState<string | null>(null);
   const prefs = useUiPrefs();
-  const [detailsWidth, setDetailsWidth] = useState(prefs.commitDetailsWidth);
+  // Not React state — a drag would re-render the commit list per pointer
+  // frame. See `usePanelSize`.
+  const details = usePanelSize(
+    "commit-details-w",
+    prefs.commitDetailsWidth,
+    "width"
+  );
 
   // Nearing the end of the loaded page pulls the next one, so scrolling walks
   // back through history instead of stopping at the first page. An observer on
@@ -265,17 +272,17 @@ export function CommitHistory({
           <>
             <ResizeHandle
               orientation="col"
-              value={detailsWidth}
+              value={details.current}
               min={220}
               max={() => Math.max(280, window.innerWidth - 360)}
               direction={-1}
-              onResize={setDetailsWidth}
+              onResize={details.onResize}
               onResizeEnd={(w) => setUiPrefs({ commitDetailsWidth: w })}
               label="Resize commit details"
             />
             <div
               className="shrink-0 overflow-hidden border-l"
-              style={{ width: detailsWidth }}
+              style={details.style}
             >
               <CommitDetailsPanel
                 sha={selectedCommitSha}

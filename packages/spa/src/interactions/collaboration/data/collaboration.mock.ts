@@ -11,7 +11,16 @@ import {
   type Displacement,
 } from "@/interactions/collaboration/functions/task-flow.functions";
 import { agentShort } from "@/interactions/threads/interfaces/agents";
+import { VIEWER } from "@/interactions/collaboration/data/viewer.mock";
 import type { AgentKind } from "@byconvo/core/threads";
+
+// The signed-in account lives in its own module so the app shell's user menu can
+// read it without pulling this dataset in behind it (see `viewer.mock`); it is
+// re-exported here so everything reading the prototype data keeps one import.
+export {
+  VIEWER,
+  type MockViewer,
+} from "@/interactions/collaboration/data/viewer.mock";
 
 export type CollaborationView =
   | "project"
@@ -40,12 +49,7 @@ export const UNASSIGNED = "Unassigned";
  * end and a rank does not.
  */
 export type ScopeKind =
-  | "day"
-  | "week"
-  | "month"
-  | "quarter"
-  | "duration"
-  | "out";
+  "day" | "week" | "month" | "quarter" | "duration" | "out";
 
 export interface MockScope {
   id: string;
@@ -255,11 +259,6 @@ export interface MockWorkspace {
   color: string;
 }
 
-export interface MockViewer {
-  name: string;
-  email: string;
-}
-
 export const STATUS_ORDER: ReadonlyArray<TaskStatus> = [
   "figuring",
   "doing",
@@ -371,12 +370,6 @@ export const WORKSPACES: ReadonlyArray<MockWorkspace> = [
   },
   { id: "personal", name: "Personal", detail: "Just you", color: "#E2707F" },
 ];
-
-/** Whoever is signed in — the account the workspace picker hangs off. */
-export const VIEWER: MockViewer = {
-  name: "Rūtenis Raila",
-  email: "rutenis@darnadigital.com",
-};
 
 export const PROJECTS: ReadonlyArray<MockProject> = [
   {

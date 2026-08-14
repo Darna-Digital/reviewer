@@ -28,6 +28,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import { DevTerminal } from "@/interactions/local-dev/components/dev-terminal";
 import { Button } from "@/components/ui/button";
 import {
@@ -134,7 +135,12 @@ export function LocalDevPage() {
     }));
   }, [items, repos]);
 
-  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth);
+  // Not React state — see `usePanelSize`.
+  const sidebar = usePanelSize(
+    "workspace-sidebar-w",
+    prefs.workspaceSidebarWidth,
+    "width"
+  );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -235,7 +241,7 @@ export function LocalDevPage() {
           "flex shrink-0 flex-col border-r",
           !prefs.sidebarVisible && "hidden"
         )}
-        style={{ width: sidebarWidth }}
+        style={sidebar.style}
       >
         <div className="flex items-center justify-between gap-1 px-3 py-2">
           <span className="text-sm font-medium">Services</span>
@@ -310,10 +316,10 @@ export function LocalDevPage() {
       </aside>
       {prefs.sidebarVisible && (
         <SidebarResizeHandle
-          width={sidebarWidth}
+          width={sidebar.current}
           stored={prefs.workspaceSidebarWidth}
           max={() => Math.max(240, window.innerWidth - 480)}
-          onResize={setSidebarWidth}
+          onResize={sidebar.onResize}
           onResizeEnd={(w) => setUiPrefs({ workspaceSidebarWidth: w })}
         />
       )}

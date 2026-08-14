@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TextEdit } from "@pierre/diffs/editor";
+import type { TextEdit } from "@pierre/diffs/edit";
 import {
   deleteLinesEdits,
   duplicateLinesEdits,

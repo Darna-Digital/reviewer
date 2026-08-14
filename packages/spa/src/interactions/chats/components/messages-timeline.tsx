@@ -5,11 +5,15 @@
  * Auto-follows the stream unless the reader has scrolled up.
  */
 import { IconAlertCircle, IconPlayerStopFilled } from "@tabler/icons-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Chat, ChatActivity, ChatMessage } from "@byconvo/core/chats";
 import { ThinkingIndicator } from "@/components/ui/thinking-indicator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toConversationSections } from "../functions/conversation-sections.functions";
+import {
+  groupActivitiesByTurn,
+  type ActivitiesByTurn,
+} from "../functions/turn-activities.functions";
 import { activeWorkStep, toWorkSteps } from "../functions/work-log.functions";
 import { AttachmentGrid, AttachmentPreview } from "./image-attachments";
 import { ChatMarkdown } from "./chat-markdown";
@@ -86,14 +90,119 @@ function easeScrollTo(viewport: HTMLElement, top: number) {
   requestAnimationFrame(frame);
 }
 
+/**
+ * Every row below is memoised, and that is the whole point of this file's
+ * shape.
+ *
+ * A conversation is the one surface here that re-renders continuously: a
+ * streamed reply lands a token at a time, and scrolling it moves the rail's
+ * active section on every frame. Rendered plainly — `messages.map(...)` — each
+ * of those updates re-rendered all N messages, which means re-parsing and
+ * re-highlighting the markdown of the entire conversation. The cost scaled with
+ * how much had been said rather than with what had changed, so the longer a
+ * session ran the worse it got, in the exact place a session is read.
+ *
+ * The reducer already makes the fix available: appending a delta rebuilds the
+ * message array but returns every untouched message by identity, so `memo` on
+ * a row is an accurate test of "did this message move". A token now re-renders
+ * one row, and a scroll re-renders none.
+ */
+const EMPTY_ACTIVITIES: ReadonlyArray<ChatActivity> = [];
+
+const UserMessage = memo(function UserMessageRow({
+  message,
+  isSectionAnchor,
+}: {
+  message: ChatMessage;
+  /** Whether the rail counts this prompt as opening a section. */
+  isSectionAnchor: boolean;
+}) {
+  const attachments = message.attachments ?? [];
+  return (
+    <Message align="end">
+      <div
+        data-section-id={isSectionAnchor ? message.id : undefined}
+        className="flex max-w-[80%] flex-col items-end gap-2"
+      >
+        {attachments.length > 0 && (
+          <AttachmentGrid className="justify-end">
+            {attachments.map((attachment, i) => (
+              <AttachmentPreview
+                key={`${attachment.name}-${i}`}
+                attachment={attachment}
+              />
+            ))}
+          </AttachmentGrid>
+        )}
+        {message.text.length > 0 && (
+          <MessageBubble>{message.text}</MessageBubble>
+        )}
+      </div>
+    </Message>
+  );
+});
+
+const AssistantMessage = memo(function AssistantMessageRow({
+  message,
+  activities,
+  streaming,
+}: {
+  message: ChatMessage;
+  activities: ReadonlyArray<ChatActivity>;
+  /**
+   * Resolved by the caller rather than passed down as the chat's `running`
+   * flag: a settled message is never streaming whatever the turn is doing, so
+   * resolving it here would hand every row a prop that flips at the end of
+   * every turn and re-render the whole conversation for it.
+   */
+  streaming: boolean;
+}) {
+  const steps = toWorkSteps(activities, streaming);
+  // While a tool runs, name it; while the model is generating text, there is
+  // genuinely nothing to name, so the indicator cycles instead of inventing.
+  const active = streaming ? activeWorkStep(steps) : undefined;
+  return (
+    <Message align="start">
+      <div className="flex w-full min-w-0 flex-col">
+        {steps.length > 0 && <WorkLog steps={steps} running={streaming} />}
+        {message.text.length > 0 ? (
+          <ChatMarkdown text={message.text} />
+        ) : streaming ? null : message.streaming ? (
+          // A streaming message whose turn is gone (interrupted/server died).
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <IconPlayerStopFilled className="size-3.5" /> Stopped before
+            replying.
+          </div>
+        ) : null}
+        {streaming && (
+          <ThinkingIndicator
+            className="py-1"
+            {...(active !== undefined ? { label: active.summary } : {})}
+          />
+        )}
+      </div>
+    </Message>
+  );
+});
+
 export function MessagesTimeline({ chat }: { chat: Chat }) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const pinnedToBottom = useRef(true);
   const lastUserMessageId = useRef<string | null>(null);
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
 
-  const sections = toConversationSections(chat.messages);
-  const sectionIds = new Set(sections.map((section) => section.id));
+  // Keyed on the message list, not on the chat: the rail is redrawn when what
+  // was said changes, and not when the reader merely scrolls past it (which
+  // sets `activeSectionId`, and so re-renders this component, several times a
+  // second). Both walks read every message and run regexes over every reply.
+  const sections = useMemo(
+    () => toConversationSections(chat.messages),
+    [chat.messages]
+  );
+  const sectionIds = useMemo(
+    () => new Set(sections.map((section) => section.id)),
+    [sections]
+  );
   const firstSectionId = sections[0]?.id ?? null;
 
   const syncFrame = useRef(0);
@@ -167,12 +276,19 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
     queueSectionSync();
   }, [chat, queueSectionSync]);
 
-  const activitiesByTurn = new Map<string, ChatActivity[]>();
-  for (const activity of chat.activities) {
-    const group = activitiesByTurn.get(activity.turnId) ?? [];
-    group.push(activity);
-    activitiesByTurn.set(activity.turnId, group);
-  }
+  // Regrouped only when the activity log changes, and reusing the array a turn
+  // already had when its own entries did not — so a tool call landing in the
+  // running turn leaves every other turn's row untouched. See
+  // `groupActivitiesByTurn`.
+  const previousGroups = useRef<ActivitiesByTurn>(new Map());
+  const activitiesByTurn = useMemo(() => {
+    const grouped = groupActivitiesByTurn(
+      chat.activities,
+      previousGroups.current
+    );
+    previousGroups.current = grouped;
+    return grouped;
+  }, [chat.activities]);
 
   const running = chat.latestTurn?.state === "running";
   const turnError =
@@ -180,65 +296,21 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
       ? chat.latestTurn.errorMessage
       : null;
 
-  const renderMessage = (message: ChatMessage) => {
-    if (message.role === "user") {
-      const attachments = message.attachments ?? [];
-      return (
-        <Message key={message.id} align="end">
-          <div
-            data-section-id={
-              sectionIds.has(message.id) ? message.id : undefined
-            }
-            className="flex max-w-[80%] flex-col items-end gap-2"
-          >
-            {attachments.length > 0 && (
-              <AttachmentGrid className="justify-end">
-                {attachments.map((attachment, i) => (
-                  <AttachmentPreview
-                    key={`${attachment.name}-${i}`}
-                    attachment={attachment}
-                  />
-                ))}
-              </AttachmentGrid>
-            )}
-            {message.text.length > 0 && (
-              <MessageBubble>{message.text}</MessageBubble>
-            )}
-          </div>
-        </Message>
-      );
-    }
-    const streaming = message.streaming && running;
-    const steps = toWorkSteps(
-      activitiesByTurn.get(message.turnId) ?? [],
-      streaming
+  const renderMessage = (message: ChatMessage) =>
+    message.role === "user" ? (
+      <UserMessage
+        key={message.id}
+        message={message}
+        isSectionAnchor={sectionIds.has(message.id)}
+      />
+    ) : (
+      <AssistantMessage
+        key={message.id}
+        message={message}
+        activities={activitiesByTurn.get(message.turnId) ?? EMPTY_ACTIVITIES}
+        streaming={message.streaming && running}
+      />
     );
-    // While a tool runs, name it; while the model is generating text, there is
-    // genuinely nothing to name, so the indicator cycles instead of inventing.
-    const active = streaming ? activeWorkStep(steps) : undefined;
-    return (
-      <Message key={message.id} align="start">
-        <div className="flex w-full min-w-0 flex-col">
-          {steps.length > 0 && <WorkLog steps={steps} running={streaming} />}
-          {message.text.length > 0 ? (
-            <ChatMarkdown text={message.text} />
-          ) : streaming ? null : message.streaming ? (
-            // A streaming message whose turn is gone (interrupted/server died).
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <IconPlayerStopFilled className="size-3.5" /> Stopped before
-              replying.
-            </div>
-          ) : null}
-          {streaming && (
-            <ThinkingIndicator
-              className="py-1"
-              {...(active !== undefined ? { label: active.summary } : {})}
-            />
-          )}
-        </div>
-      </Message>
-    );
-  };
 
   return (
     <div className="@container relative flex min-h-0 flex-1 flex-col">

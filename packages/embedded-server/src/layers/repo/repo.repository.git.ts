@@ -279,15 +279,20 @@ export const makeGitRepoRepository = Effect.gen(function* () {
   const { lines, run, runTolerant, runVerbose } = git;
 
   const info: RepoRepo["info"] = Effect.gen(function* () {
-    const root = (yield* run("rev-parse", "--show-toplevel")).trim();
-    const currentBranch = (yield* run(
-      "rev-parse",
-      "--abbrev-ref",
-      "HEAD"
-    )).trim();
-    const remoteUrl = yield* run("remote", "get-url", "origin").pipe(
-      Effect.map((out) => out.trim()),
-      Effect.catchTag("GitError", () => Effect.succeed(null))
+    const [root, currentBranch, remoteUrl] = yield* Effect.all(
+      [
+        run("rev-parse", "--show-toplevel").pipe(
+          Effect.map((out) => out.trim())
+        ),
+        run("rev-parse", "--abbrev-ref", "HEAD").pipe(
+          Effect.map((out) => out.trim())
+        ),
+        run("remote", "get-url", "origin").pipe(
+          Effect.map((out) => out.trim()),
+          Effect.catchTag("GitError", () => Effect.succeed(null))
+        ),
+      ],
+      { concurrency: "unbounded" }
     );
     const name = root.split("/").at(-1) ?? root;
     return {
@@ -299,28 +304,28 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     };
   });
 
+  // Four independent reads of the same tree, so they go out together: run one
+  // after another they add up to the slowest thing the file list waits on, and
+  // the file list is what every page in the app opens with.
   const files: RepoRepo["files"] = Effect.gen(function* () {
-    const tracked = yield* lines("ls-files");
-    const untracked = yield* lines(
-      "ls-files",
-      "--others",
-      "--exclude-standard"
-    );
-    const envFiles = yield* lines(
-      "ls-files",
-      "--others",
-      "--",
-      ":(glob)**/.env*",
-      ":(exclude,glob)**/node_modules/**"
-    );
-    // `--untracked-files=all` is load-bearing: by default git collapses a
-    // wholly-untracked directory into one `?? dir/` entry, so every new file
-    // inside it would be counted as changed but never resolve to a path in the
-    // tree — the files silently vanish from the diff view.
-    const statusLines = yield* lines(
-      "status",
-      "--porcelain",
-      "--untracked-files=all"
+    const [tracked, untracked, envFiles, statusLines] = yield* Effect.all(
+      [
+        lines("ls-files"),
+        lines("ls-files", "--others", "--exclude-standard"),
+        lines(
+          "ls-files",
+          "--others",
+          "--",
+          ":(glob)**/.env*",
+          ":(exclude,glob)**/node_modules/**"
+        ),
+        // `--untracked-files=all` is load-bearing: by default git collapses a
+        // wholly-untracked directory into one `?? dir/` entry, so every new
+        // file inside it would be counted as changed but never resolve to a
+        // path in the tree — the files silently vanish from the diff view.
+        lines("status", "--porcelain", "--untracked-files=all"),
+      ],
+      { concurrency: "unbounded" }
     );
     const gitStatus = statusLines
       .map(parseStatusLine)

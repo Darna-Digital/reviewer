@@ -19,8 +19,8 @@ export function SidebarResizeHandle({
   onResizeEnd,
   label = "Resize sidebar",
 }: {
-  /** The live width the drag writes to. */
-  width: number;
+  /** The live width the drag measures from — see `ResizeHandle`'s `value`. */
+  width: number | (() => number);
   /** The width the sidebar keeps when the drag closes it instead. */
   stored: number;
   max: () => number;

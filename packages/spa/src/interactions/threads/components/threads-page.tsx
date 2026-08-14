@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
+import { usePanelSize } from "@/components/layout/use-panel-size";
 import {
   ALL_BRANCHES,
   branchLabel,
@@ -57,7 +58,12 @@ export function ThreadsPage() {
     [branchesQuery.data]
   );
 
-  const [sidebarWidth, setSidebarWidth] = useState(prefs.workspaceSidebarWidth);
+  // Not React state — see `usePanelSize`.
+  const sidebar = usePanelSize(
+    "workspace-sidebar-w",
+    prefs.workspaceSidebarWidth,
+    "width"
+  );
   // Branch the sidebar is filtered to (null → follow the current branch).
   const [branchFilter, setBranchFilter] = useState<string | null>(null);
   const [dateFilter, setDateFilter] = useState<DateFilter>("all");
@@ -250,7 +256,7 @@ export function ThreadsPage() {
           "flex shrink-0 flex-col border-r",
           !prefs.sidebarVisible && "hidden"
         )}
-        style={{ width: sidebarWidth }}
+        style={sidebar.style}
       >
         <div className="flex items-center gap-1.5 border-b p-2">
           <SidebarSearch
@@ -335,10 +341,10 @@ export function ThreadsPage() {
       </aside>
       {prefs.sidebarVisible && (
         <SidebarResizeHandle
-          width={sidebarWidth}
+          width={sidebar.current}
           stored={prefs.workspaceSidebarWidth}
           max={() => Math.max(240, window.innerWidth - 480)}
-          onResize={setSidebarWidth}
+          onResize={sidebar.onResize}
           onResizeEnd={(w) => setUiPrefs({ workspaceSidebarWidth: w })}
         />
       )}

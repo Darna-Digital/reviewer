@@ -18,14 +18,16 @@ import { AuthorAvatar } from "@/interactions/comments/components/author-avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { timeAgo } from "@/lib/relative-time";
-import type { CommentSide, ReviewComment } from "@byconvo/core/comments";
+import { cn } from "@/lib/utils";
+import { isOptimisticId } from "@/interactions/comments/functions/optimistic-comments.functions";
+import type { ReviewComment } from "@byconvo/core/comments";
 
-/** Where a draft (or new) comment is anchored. */
-export interface DraftLocation {
-  readonly filePath: string;
-  readonly side: CommentSide;
-  readonly lineNumber: number;
-}
+/**
+ * Where a draft (or new) comment is anchored. Declared with the rest of the
+ * feature's types and re-exported here, which is where the views reach for it —
+ * it used to be declared in both places, and the two were free to drift.
+ */
+export type { DraftLocation } from "@/interactions/comments/interfaces/comments.interfaces";
 
 /** Indent (avatar + gap) used to nest replies under the opening comment. */
 const REPLY_INDENT = "ml-10";
@@ -144,8 +146,15 @@ function CommentCard({
     );
   }
 
+  // Written, shown, and not yet acknowledged by whoever stores it. A local
+  // comment passes through this state too fast to see; a GitHub one is a round
+  // trip to their servers, so the card says so rather than showing a comment
+  // that looks filed when it is still in flight — and rather than inventing the
+  // author, which only GitHub can name. See `optimistic-comments.functions`.
+  const pending = isOptimisticId(comment.id);
+
   return (
-    <div className="flex gap-3">
+    <div className={cn("flex gap-3", pending && "opacity-60")}>
       <AuthorAvatar author={comment.author} source={comment.source} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
@@ -157,7 +166,7 @@ function CommentCard({
             />
           )}
           <span className="type-meta text-muted-foreground tabular-nums">
-            {timeAgo(comment.createdAt)}
+            {pending ? "Sending…" : timeAgo(comment.createdAt)}
           </span>
         </div>
         <div className="markdown mt-1 min-w-0 type-body">
@@ -221,8 +230,15 @@ export function CommentThread({
   const [resolving, setResolving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  const lastGithub = [...comments].reverse().find((c) => c.source === "github");
-  const localComments = comments.filter((c) => c.source === "local");
+  // Actions target a comment by id, and a comment still in flight does not have
+  // its real one yet — replying to a pending GitHub comment would address a
+  // parent GitHub has never heard of, and editing or resolving a pending local
+  // one would name a row the server has not written. So the actions look past
+  // anything unacknowledged; they come back as soon as it is confirmed, which
+  // for a local comment is too fast to notice.
+  const settled = comments.filter((c) => !isOptimisticId(c.id));
+  const lastGithub = [...settled].reverse().find((c) => c.source === "github");
+  const localComments = settled.filter((c) => c.source === "local");
   const editableComment =
     onEdit === undefined
       ? undefined
@@ -306,13 +322,20 @@ export function CommentThread({
 export function DraftCard({
   onCancel,
   onSubmit,
+  initialBody,
 }: {
   onCancel: () => void;
   onSubmit: (body: string) => Promise<void>;
+  /** Text to reopen with — a refused write handing the words back. */
+  initialBody?: string;
 }) {
   return (
     <div className={COMMENT_CARD}>
-      <CommentComposer onCancel={onCancel} onSubmit={onSubmit} />
+      <CommentComposer
+        onCancel={onCancel}
+        onSubmit={onSubmit}
+        {...(initialBody === undefined ? {} : { initialBody })}
+      />
     </div>
   );
 }

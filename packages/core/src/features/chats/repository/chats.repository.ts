@@ -31,11 +31,7 @@ export interface UpdateChatInput {
   readonly access?: ChatAccess;
 }
 export type ChatsFailure =
-  | NoRepoSelected
-  | NotFound
-  | StorageError
-  | TerminalError
-  | ChatBusy;
+  NoRepoSelected | NotFound | StorageError | TerminalError | ChatBusy;
 export interface ChatsRepo {
   readonly list: Effect.Effect<ReadonlyArray<ChatSummary>, ChatsFailure>;
   readonly get: (id: string) => Effect.Effect<Chat, ChatsFailure>;

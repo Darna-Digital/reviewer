@@ -192,26 +192,22 @@ export const branchChoices = (
   return [
     ...[...local]
       .sort((a, b) => Number(b.isCurrent) - Number(a.isCurrent))
-      .map(
-        (branch): BranchChoice => ({
-          name: branch.name,
-          ref: branch.name,
-          group: "Local",
-          isCurrent: branch.isCurrent,
-          hint: branch.isCurrent ? "current" : trackingHint(branch),
-        })
-      ),
+      .map((branch): BranchChoice => ({
+        name: branch.name,
+        ref: branch.name,
+        group: "Local",
+        isCurrent: branch.isCurrent,
+        hint: branch.isCurrent ? "current" : trackingHint(branch),
+      })),
     ...remote
       .filter((branch) => !tracked.has(branch.shortName))
-      .map(
-        (branch): BranchChoice => ({
-          name: branch.name,
-          ref: branch.shortName,
-          group: "Remote",
-          isCurrent: false,
-          hint: branch.remote,
-        })
-      ),
+      .map((branch): BranchChoice => ({
+        name: branch.name,
+        ref: branch.shortName,
+        group: "Remote",
+        isCurrent: false,
+        hint: branch.remote,
+      })),
   ];
 };
 
