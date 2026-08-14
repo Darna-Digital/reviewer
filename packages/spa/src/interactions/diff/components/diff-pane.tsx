@@ -192,7 +192,7 @@ interface FileDiffSectionProps {
  * construction (see `DiffPane`), so what re-renders now is the file that
  * actually changed.
  */
-const FileDiffSection = memo(function FileDiffSection({
+const FileDiffSection = memo(function FileDiffSectionView({
   file,
   theme,
   diffStyle,

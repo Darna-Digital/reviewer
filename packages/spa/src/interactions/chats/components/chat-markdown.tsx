@@ -19,7 +19,7 @@ import remarkGfm from "remark-gfm";
 const REMARK_PLUGINS = [remarkGfm];
 const REHYPE_PLUGINS = [rehypeHighlight];
 
-export const ChatMarkdown = memo(function ChatMarkdown({
+export const ChatMarkdown = memo(function ChatMarkdownBody({
   text,
 }: {
   text: string;

@@ -109,7 +109,7 @@ function easeScrollTo(viewport: HTMLElement, top: number) {
  */
 const EMPTY_ACTIVITIES: ReadonlyArray<ChatActivity> = [];
 
-const UserMessage = memo(function UserMessage({
+const UserMessage = memo(function UserMessageRow({
   message,
   isSectionAnchor,
 }: {
@@ -142,7 +142,7 @@ const UserMessage = memo(function UserMessage({
   );
 });
 
-const AssistantMessage = memo(function AssistantMessage({
+const AssistantMessage = memo(function AssistantMessageRow({
   message,
   activities,
   streaming,

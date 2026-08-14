@@ -6,17 +6,24 @@ import { loadTypeScript, resetTypeScriptCache } from "./ts-module.ts";
 
 const FIXTURE_VERSION = "0.0.0-fixture";
 
-/** A stand-in `typescript` package, recognisable by its version. */
-const plantCompiler = (directory: string) => {
+/**
+ * A stand-in `typescript` package, recognisable by its version. It exports the
+ * members the loader probes for, because a package that resolves but has no
+ * compiler API is deliberately rejected — see the last test in this file.
+ */
+const plantCompiler = (directory: string, api = true) => {
   const packageDir = join(directory, "node_modules", "typescript");
   mkdirSync(packageDir, { recursive: true });
   writeFileSync(
     join(packageDir, "package.json"),
     JSON.stringify({ name: "typescript", version: FIXTURE_VERSION })
   );
+  const compilerApi = api
+    ? ", createLanguageService: () => {}, findConfigFile: () => {}, sys: {}"
+    : "";
   writeFileSync(
     join(packageDir, "index.js"),
-    `module.exports = { version: ${JSON.stringify(FIXTURE_VERSION)} }\n`
+    `module.exports = { version: ${JSON.stringify(FIXTURE_VERSION)}${compilerApi} }\n`
   );
 };
 
@@ -65,5 +72,22 @@ describe("loadTypeScript", () => {
     expect(loadTypeScript(packageDir)).toBe(first);
     resetTypeScriptCache();
     expect(loadTypeScript(packageDir)).not.toBe(first);
+  });
+
+  // TypeScript 7 installs under the same name but exports only its version:
+  // the in-process compiler API this provider drives is gone. Resolving it and
+  // handing it on would crash on the first call, so it is refused here, with a
+  // reason the settings screen can show.
+  it("refuses a compiler that exposes no in-process API", () => {
+    const workspaceDir = mkdtempSync(join(tmpdir(), "byconvo-ts-module-"));
+    workspace = workspaceDir;
+    const packageDir = join(workspaceDir, "packages", "app");
+    mkdirSync(packageDir, { recursive: true });
+    plantCompiler(packageDir, false);
+
+    const lookup = loadTypeScript(packageDir);
+
+    expect(lookup.module).toBeNull();
+    expect(lookup.detail).toContain("no in-process compiler API");
   });
 });

@@ -18,6 +18,20 @@
  * dependency graph — `require("typescript")` succeeds there from any directory
  * on the machine, including ones with no `node_modules` at all. Only the
  * bundled server on plain node resolves the way this module intends.
+ *
+ * Resolving the package is not enough on its own. TypeScript 7 is the native
+ * port: its npm package still installs under `typescript`, but its main entry
+ * exports `version` and nothing else — the in-process compiler API this
+ * provider is built on was dropped, and what replaces it talks to a Go process
+ * over IPC. So a repository pinned to 7 resolves happily and then fails on the
+ * first `ts.findConfigFile`. {@link hasCompilerApi} catches that here, where it
+ * becomes "unavailable, and here is why" instead of a crash mid-hover.
+ *
+ * It is also why byconvo pins itself to TypeScript 6 rather than taking 7 with
+ * the rest of its dependencies: this provider needs the classic API, both to
+ * type against and to run its tests on, and the API is what the repositories
+ * being reviewed ship anyway. (`typescript-eslint` refuses 7 outright as well,
+ * so the whole workspace holds at 6 until both catch up.)
  */
 import { createRequire } from "node:module";
 import type * as TSModule from "typescript";
@@ -38,6 +52,22 @@ const cache = new Map<string, TypeScriptLookup>();
 const reasonOf = (error: unknown) =>
   error instanceof Error ? (error.message.split("\n")[0] ?? "") : String(error);
 
+/**
+ * Whether a resolved module is a compiler this provider can drive. One entry
+ * point per capability the project and the provider reach for, so a package
+ * that is `typescript` in name only is rejected before it is handed on.
+ */
+const hasCompilerApi = (module: unknown): boolean => {
+  const candidate = module as Partial<TypeScriptModule> | null;
+  return (
+    candidate !== null &&
+    typeof candidate === "object" &&
+    typeof candidate.createLanguageService === "function" &&
+    typeof candidate.findConfigFile === "function" &&
+    typeof candidate.sys === "object"
+  );
+};
+
 const load = (
   fromDirectory: string,
   env: NodeJS.ProcessEnv
@@ -51,6 +81,12 @@ const load = (
 
   try {
     const module = requireFrom(specifier) as TypeScriptModule;
+    if (!hasCompilerApi(module)) {
+      return {
+        module: null,
+        detail: `TypeScript ${module.version} (${origin}) exposes no in-process compiler API — version 7 dropped it, so analysis needs a repository on TypeScript 6 or earlier`,
+      };
+    }
     return { module, detail: `TypeScript ${module.version} (${origin})` };
   } catch (error) {
     return {

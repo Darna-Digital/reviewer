@@ -24,9 +24,9 @@
   "devDependencies": {
     "@byconvo/lint": "workspace:*",
     "@effect/vitest": "4.0.0-beta.74",
-    "eslint": "^9.39.5",
+    "eslint": "^10.8.1",
     "prettier": "^3.9.6",
-    "typescript": "^6.0.3",
+    "typescript": "~6.0.3",
     "vitest": "^4.1.10"
   }
 }

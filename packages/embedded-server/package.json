@@ -19,7 +19,7 @@
   "dependencies": {
     "@byconvo/core": "workspace:*",
     "@effect/platform-node": "4.0.0-beta.74",
-    "@lydell/node-pty": "1.2.0-beta.12",
+    "@lydell/node-pty": "1.2.0-beta.15",
     "@types/ws": "^8.18.1",
     "effect": "4.0.0-beta.74",
     "ws": "^8.21.3"
@@ -29,10 +29,10 @@
     "@effect/vitest": "4.0.0-beta.74",
     "@types/node": "^22.20.1",
     "esbuild": "^0.28.2",
-    "eslint": "^9.39.5",
+    "eslint": "^10.8.1",
     "prettier": "^3.9.6",
     "tsx": "^4.23.12",
-    "typescript": "^6.0.3",
+    "typescript": "~6.0.3",
     "vitest": "^4.1.10"
   }
 }

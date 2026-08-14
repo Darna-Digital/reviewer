@@ -66,14 +66,14 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.5",
-    "eslint": "^9.39.5",
+    "eslint": "^10.8.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^30.0.1",
     "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "shadcn": "^4.17.0",
-    "typescript": "^6.0.3",
+    "typescript": "~6.0.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
   }
