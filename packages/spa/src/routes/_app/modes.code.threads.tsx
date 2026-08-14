@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { openBottomTab } from "@/lib/ui-prefs";
 
 /** Legacy /threads route — opens the Threads bottom-dock tab. */
-export const Route = createFileRoute("/_workspace/modes/code/threads")({
+export const Route = createFileRoute("/_app/modes/code/threads")({
   component: OpenThreadsTab,
 });
 

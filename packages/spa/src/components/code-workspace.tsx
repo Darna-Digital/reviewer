@@ -1,9 +1,20 @@
 /**
- * AppShell — the single IDE orchestrator. It reads the navigation/selection
- * state from the type-safe TanStack route (mode, commit sha, range, pull, open
- * file) instead of the old `App.tsx`'s ~30 `useState`s, pulls data through
- * TanStack Query, derives the diff/tree via the composable `diff` functions, and
- * runs mutations through the composable `git-actions` / `comments` adapters.
+ * The code surface — the file tree beside the diff, the file viewer, the
+ * conflict resolver, the tab strip and the trail.
+ *
+ * It is a page, not a shell. It used to be `AppShell`: a layout route that
+ * carried the window frame, the mode rail, the toolbar and the bottom dock as
+ * well as all of this, with a second shell (`WorkspaceShell`) carrying its own
+ * copies of the same chrome for the sessions and workspace pages. They were
+ * siblings in the route tree, so every trip between a diff and a conversation
+ * threw one of them away whole. The chrome now lives once, in `AppLayout`, and
+ * this renders into it.
+ *
+ * It reads its navigation and selection state from the type-safe route (mode,
+ * commit sha, range, pull, open file) rather than holding it, pulls data
+ * through TanStack Query, derives the diff/tree via the composable `diff`
+ * functions, and runs mutations through the composable `git-actions` /
+ * `comments` adapters.
  */
 import {
   IconColumns2,
@@ -16,7 +27,6 @@ import {
   IconHistory,
   IconLayoutBottombarExpand,
   IconPlayerPlay,
-  IconRepeat,
   IconTerminal2,
 } from "@tabler/icons-react";
 import {
@@ -29,7 +39,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { CommitPanel } from "@/components/commit-panel";
-import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
 import {
   ReviewAssignBar,
   type AssignTarget,
@@ -40,11 +49,9 @@ import {
 } from "@/interactions/diff/components/diff-pane";
 import { CodeView } from "@/components/editor/code-view";
 import { ImageView, isImagePath } from "@/components/editor/image-view";
-import { ModeRail } from "@/components/layout/mode-rail";
 import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
 import { PullRequestList } from "@/components/git/pull-request-list";
-import { BottomPanel } from "@/components/layout/bottom-panel";
 import type { Crumb } from "@/components/layout/breadcrumbs";
 import { EmptyPane } from "@/components/layout/empty-pane";
 import { PathBar } from "@/components/layout/path-bar";
@@ -52,8 +59,6 @@ import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
-import { TopBar } from "@/components/layout/top-bar";
-import { WindowFrame } from "@/components/layout/window-frame";
 import { FileSidebar } from "@/components/tree/file-sidebar";
 import { assignToChat } from "@/interactions/chats/adapters/assign-to-chat.adapter";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
@@ -65,8 +70,7 @@ import { useCommentsActions } from "@/interactions/comments/adapters/comments.ho
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
-import { activeRepo, folderName, isMultiRepo } from "@byconvo/core/workspace";
-import { filterCommitsByRepo } from "@byconvo/core/project";
+import { isMultiRepo } from "@byconvo/core/workspace";
 import {
   useRepoCommands,
   useWorkspaceActions,
@@ -96,19 +100,15 @@ import { fetchClient } from "@/lib/api/client";
 import {
   ALL_REFS,
   diffTargetKey,
-  emptyLogQuery,
   fileHistoryQuery,
   logRefLabel,
   type AppMode,
   type DiffTarget,
-  type LogQuery,
 } from "@/lib/api/types";
 import type { ReviewComment } from "@byconvo/core/comments";
-import type { CommitInfo } from "@byconvo/core/repo";
 import { pathName } from "@/lib/display-path";
 import { errorReason } from "@/lib/errors";
 import {
-  useBranches,
   useChatModels,
   useChats,
   useComments,
@@ -116,17 +116,18 @@ import {
   useDiffText,
   useFiles,
   useMergeState,
-  usePagedLog,
-  useProjectBranches,
   useProjectDiff,
   useProjectFiles,
-  usePagedProjectLog,
   usePullComments,
   usePulls,
-  useRemoteBranches,
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
+import {
+  resetHistoryFilters,
+  setHistoryQuery,
+  useHistoryFilters,
+} from "@/interactions/history/history-filters.store";
 import { useCodeReveal } from "@/lib/code-reveal";
 import { openBottomTab, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
@@ -143,7 +144,7 @@ type Search = {
 // while browsing a file shows up again in commit mode.
 const WORKTREE_KEY = diffTargetKey({ kind: "worktree" });
 
-export function AppShell() {
+export function CodeWorkspace() {
   const navigate = useNavigate();
   const prefs = useUiPrefs();
   const diffFns = useDiffFunctions();
@@ -168,8 +169,6 @@ export function AppShell() {
   const chatModels = useChatModels();
   const chats = useChats();
   const files = useFiles();
-  const branches = useBranches();
-  const remoteBranches = useRemoteBranches();
   const localComments = useComments();
   // Files carrying a local worktree comment (left here or while browsing). Commit
   // mode surfaces these in the tree even when the file has no git changes.
@@ -193,52 +192,17 @@ export function AppShell() {
     () => (mergeState.data?.conflicted ?? []).map((c) => c.path),
     [mergeState.data]
   );
-  const [logFilters, setLogFilters] = useState<LogQuery>(emptyLogQuery);
-  // The branch whose history the bottom panel shows; falls back to HEAD.
-  const [logRef, setLogRef] = useState<string | null>(null);
-  const log = usePagedLog(
-    logRef ?? repo.data?.currentBranch ?? null,
-    logFilters
-  );
-  // A project of several roots shows one history covering all of them, each
-  // row saying where it came from — a single-root project has nothing to say,
-  // so it keeps the paged per-branch log it always had.
+  // The history dock lives in the layout above this page and owns its own
+  // paging; what is read here is the filter it is on, which the trail and the
+  // per-file diff filter both reflect. See `history-filters.store`.
+  const { ref: logRef, query: logFilters } = useHistoryFilters();
   const multiRepo = isMultiRepo({ repos: workspace.data?.repos ?? [] });
-  const projectBranchList = useProjectBranches();
-  const projectLog = usePagedProjectLog(multiRepo, logFilters);
-  // Which root the history is narrowed to, or null for all of them. Branch
-  // names cannot narrow a merged history — one belongs to a single root — so
-  // the root is what the filter offers instead.
-  const [logRepo, setLogRepo] = useState<string | null>(null);
-  const projectHistory = useMemo(() => {
-    const entries = filterCommitsByRepo(projectLog.entries, logRepo);
-    return {
-      commits: entries.map((entry) => entry.commit),
-      repos: new Map(entries.map((entry) => [entry.commit.sha, entry.repo])),
-    };
-  }, [projectLog.entries, logRepo]);
-  const history = multiRepo
-    ? {
-        commits: projectHistory.commits,
-        repos: projectHistory.repos,
-        loading: projectLog.loading,
-        hasMore: projectLog.hasMore,
-        loadMore: projectLog.loadMore,
-      }
-    : {
-        commits: log.commits,
-        repos: undefined,
-        loading: log.loading,
-        hasMore: log.hasMore,
-        loadMore: log.loadMore,
-      };
 
   // Callback-ref state, not a ref object: the file view renders into this node,
   // so it has to re-render once the node exists.
   const [fileActionsSlot, setFileActionsSlot] = useState<HTMLElement | null>(
     null
   );
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [draft, setDraft] = useState<DraftLocation | null>(null);
 
   // Panel sizes live in the DOM, not in this component's state: a drag reports
@@ -247,7 +211,6 @@ export function AppShell() {
   // jankiest thing in the app. The drag now writes a CSS variable and only the
   // final size is committed back to the prefs. See `usePanelSize`.
   const sidebar = usePanelSize("sidebar-w", prefs.sidebarWidth, "width");
-  const bottom = usePanelSize("bottom-h", prefs.bottomHeight, "height");
   const reviewPulls = usePanelSize(
     "review-pulls-h",
     prefs.reviewPullsHeight,
@@ -258,15 +221,6 @@ export function AppShell() {
   // so the centre pane says so instead of rendering an empty tree.
   const noRepo =
     workspace.data?.project != null && workspace.data.current === null;
-
-  // Open the picker automatically only once the workspace has loaded with no
-  // project open (not during the initial undefined loading state). A project
-  // that simply holds no repository is open — the centre pane explains it
-  // rather than the picker blocking the view.
-  useEffect(() => {
-    if (workspace.isSuccess && workspace.data.project === null)
-      setPickerOpen(true);
-  }, [workspace.isSuccess, workspace.data]);
 
   // --- selection / diff target ----------------------------------------------
   const selectedPull = useMemo(() => {
@@ -506,7 +460,7 @@ export function AppShell() {
   // Show one file's past: the log filters down to it (following renames) and
   // the dock swings open on History.
   const showFileHistory = (path: string) => {
-    setLogFilters(fileHistoryQuery(path));
+    setHistoryQuery(fileHistoryQuery(path));
     openBottomTab("history");
   };
 
@@ -556,7 +510,7 @@ export function AppShell() {
    * of it. Called before the switch so nothing refetches against the old ref.
    */
   const leaveRepo = useCallback(() => {
-    setLogRef(null);
+    resetHistoryFilters();
     // Browse, not commit: moving between a project's roots is navigation, and
     // it lands you in the arriving root's tree rather than in a review of
     // whatever happens to be uncommitted there.
@@ -855,14 +809,6 @@ export function AppShell() {
         keywords: "terminal shell session cli",
         run: () => openBottomTab("threads"),
       },
-      {
-        id: "project-switch",
-        label: "Open Project…",
-        group: "Project",
-        icon: IconRepeat,
-        keywords: "open change repository folder picker switch",
-        run: () => setPickerOpen(true),
-      },
     ],
     [prefs.diffStyle, prefs.bottomVisible]
   );
@@ -873,40 +819,6 @@ export function AppShell() {
   const chooseRepo = async (path: string) => {
     leaveRepo();
     await workspaceActions.openRepo(path);
-  };
-
-  /**
-   * Point the git views at one of the project's roots. Branch actions run
-   * wherever they point, and a branch name means something different — or
-   * nothing — in another root, so acting in one goes through this first.
-   */
-  const followRepo = (repoPath: string) =>
-    workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
-
-  /**
-   * Open a commit from the history. In a project of several roots the commit
-   * may belong to one that is not current, so the root is followed first —
-   * every view below reads git from the current root, and a sha means nothing
-   * to the wrong one.
-   */
-  const openCommit = async (commit: CommitInfo) => {
-    const owner = history.repos?.get(commit.sha) ?? null;
-    if (owner !== null) {
-      const followed = await workspaceActions.followRepo(
-        owner.path,
-        workspace.data?.current ?? null
-      );
-      if (!followed) return;
-    }
-    void navigate({
-      to: "/modes/code/browse/commit/$sha",
-      params: { sha: commit.sha },
-      search: (prev: Search) => ({
-        ...prev,
-        path: logFilters.path ?? undefined,
-        file: undefined,
-      }),
-    });
   };
 
   // --- center pane -----------------------------------------------------------
@@ -1012,306 +924,179 @@ export function AppShell() {
   const crumbs = buildCrumbs();
 
   return (
-    // One Shiki worker pool shared by every diff/file surface below (diff
-    // pane, file viewer, editor, conflict view) — see DiffWorkerPoolProvider.
-    <DiffWorkerPoolProvider>
-      <WindowFrame>
-        <ModeRail />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar
-            repo={repo.data ?? null}
-            workspace={workspace.data}
-            branches={branches.data ?? []}
-            remoteBranches={remoteBranches.data ?? []}
-            diffStyle={prefs.diffStyle}
-            showDiffStyleToggle={viewing === null && target !== null}
-            busy={false}
-            pickerOpen={pickerOpen}
-            onPickerOpenChange={setPickerOpen}
-            onDiffStyleChange={(diffStyle) => setUiPrefs({ diffStyle })}
-            onCheckout={(b) => {
-              void git.checkout(b);
-              void navigate({ to: "/modes/code/commit" });
-            }}
-            onCheckoutAndUpdate={(b) => {
-              void git.checkoutAndUpdate(b);
-              void navigate({ to: "/modes/code/commit" });
-            }}
-            onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
-            onCompare={(base, head) =>
-              void navigate({
-                to: "/modes/code/browse/range",
-                search: { base, head },
-              })
-            }
-            onMerge={(b) => void git.merge(b)}
-            onRebase={(o) => void git.rebase(o)}
-            onRenameBranch={(from, to) => void git.renameBranch(from, to)}
-            onDeleteBranch={(name) => void git.deleteBranch(name)}
-            onFetch={() => void git.fetch()}
-            onPush={() => void git.push()}
-            projectBranches={
-              multiRepo ? (projectBranchList.data?.repos ?? []) : undefined
-            }
-            currentRepo={activeRepo(
-              workspace.data ?? { repos: [], current: null }
-            )}
-            onFollowRepo={followRepo}
-          />
-
-          {/* Everything below the toolbar sits in a bordered panel, so the
-            toolbar strip stays clean. */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t">
-            <div className="flex min-h-0 flex-1">
-              {/* Review mode stacks the pull request picker above the selected
+    <div className="flex min-h-0 flex-1">
+      {/* Review mode stacks the pull request picker above the selected
                   PR's file tree; the other modes are just the tree. */}
-              <div
-                className={cn(
-                  "flex shrink-0 flex-col overflow-hidden border-r",
-                  !prefs.sidebarVisible && "hidden"
-                )}
-                style={sidebar.style}
-              >
-                {mode === "review" && (
-                  <>
-                    <PullRequestList
-                      pulls={pulls.data ?? []}
-                      error={
-                        pulls.error
-                          ? errorReason(
-                              pulls.error,
-                              "Could not load pull requests"
-                            )
-                          : null
-                      }
-                      loading={pulls.isPending}
-                      selectedNumber={selectedPull?.number ?? null}
-                      onSelect={(p) =>
-                        void navigate({
-                          to: "/modes/code/review/$pull",
-                          params: { pull: String(p.number) },
-                        })
-                      }
-                      className={
-                        selectedPull === null ? "flex-1" : "shrink-0 border-b"
-                      }
-                      style={
-                        selectedPull === null ? undefined : reviewPulls.style
-                      }
-                    />
-                    {selectedPull !== null && (
-                      <ResizeHandle
-                        orientation="row"
-                        value={reviewPulls.current}
-                        min={80}
-                        max={() => Math.max(120, window.innerHeight - 320)}
-                        onResize={reviewPulls.onResize}
-                        onResizeEnd={(h) =>
-                          setUiPrefs({ reviewPullsHeight: h })
-                        }
-                        label="Resize pull request list"
-                      />
-                    )}
-                  </>
-                )}
-                {(mode !== "review" || selectedPull !== null) && (
-                  <div className="min-h-0 flex-1 overflow-hidden">
-                    <FileSidebar
-                      key={mode}
-                      mode={mode}
-                      paths={sidebarPaths}
-                      gitStatus={treeGitStatus}
-                      loading={
-                        mode === "review" ? diff.isPending : files.isPending
-                      }
-                      selectedFile={
-                        mode === "browse" ? viewing : (search.path ?? null)
-                      }
-                      onFileSelect={onFileSelect}
-                      onDeletePath={mode === "review" ? undefined : deletePath}
-                      onRenamePath={mode === "review" ? undefined : renamePath}
-                      onCreatePath={
-                        mode === "review" ? undefined : fileActions.create
-                      }
-                      onShowHistory={showFileHistory}
-                      footer={
-                        mode === "commit" && changedFiles.length > 0 ? (
-                          <CommitPanel
-                            changes={changedFiles}
-                            busy={false}
-                            onCommit={(m, p, push) =>
-                              git.commitChanges(m, p, push)
-                            }
-                            onGenerate={(p, agent) =>
-                              git.generateCommitMessage(p, agent)
-                            }
-                          />
-                        ) : undefined
-                      }
-                    />
-                  </div>
-                )}
-              </div>
-              {prefs.sidebarVisible && (
-                <SidebarResizeHandle
-                  width={sidebar.current}
-                  stored={prefs.sidebarWidth}
-                  max={() => Math.max(240, window.innerWidth - 400)}
-                  onResize={sidebar.onResize}
-                  onResizeEnd={(w) => setUiPrefs({ sidebarWidth: w })}
-                />
-              )}
-              <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
-                {mode === "commit" &&
-                  mergeState.data != null &&
-                  mergeState.data.operation !== "none" && (
-                    <ConflictBanner
-                      state={mergeState.data}
-                      selectedPath={search.path ?? null}
-                      onSelectFile={openConflict}
-                      onAbort={() => void git.abortMerge()}
-                      onContinue={() => void git.continueMerge()}
-                    />
-                  )}
-                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                  {showFileTabs && (
-                    <TabStrip
-                      tabs={tabs.tabs}
-                      active={tabs.active}
-                      dirty={dirtyPaths}
-                      onSelect={selectTab}
-                      onKeep={(path) =>
-                        updateTabs((state) => keepTab(state, path))
-                      }
-                      onClose={closeTabAt}
-                      onTogglePin={(path) =>
-                        updateTabs((state) => togglePin(state, path))
-                      }
-                      onCloseOthers={(path) =>
-                        updateTabs((state) => {
-                          const next = closeOthers(state, path);
-                          setSearch({ file: next.active ?? undefined });
-                          return next;
-                        })
-                      }
-                      onCloseAll={() =>
-                        updateTabs((state) => {
-                          const next = closeAll(state);
-                          setSearch({ file: next.active ?? undefined });
-                          return next;
-                        })
-                      }
-                      onMove={(path, toIndex) =>
-                        updateTabs((state) => moveTab(state, path, toIndex))
-                      }
-                    />
-                  )}
-                  {/* The assign bar floats over the code itself, so it clears
-                      the path bar and stops at the panes' edge rather than the
-                      window's. */}
-                  <div className="relative min-h-0 flex-1 overflow-hidden">
-                    {renderCenter()}
-                    {visibleComments.length > 0 && (
-                      <ReviewAssignBar
-                        comments={visibleComments.map((comment) => ({
-                          id: comment.id,
-                          file: comment.filePath,
-                          line: comment.lineNumber,
-                          body: comment.body,
-                        }))}
-                        chats={chats.data ?? []}
-                        onAssign={assignReview}
-                        onOpenComment={openComment}
-                        className="absolute inset-x-3 bottom-8"
-                      />
-                    )}
-                  </div>
-                  {/* The trail closes the pane, and only once it says more than
-                      which mode you are in. */}
-                  {(crumbs.length > 1 || viewing !== null) && (
-                    <PathBar
-                      crumbs={crumbs}
-                      path={viewing}
-                      paths={allPaths}
-                      onOpenFile={openFile}
-                      onEdit={
-                        viewing !== null &&
-                        !isImagePath(viewing) &&
-                        editingFile !== viewing
-                          ? () => editFile(viewing)
-                          : undefined
-                      }
-                      onShowHistory={
-                        viewing === null
-                          ? undefined
-                          : () => showFileHistory(viewing)
-                      }
-                      actions={
-                        <div
-                          ref={setFileActionsSlot}
-                          className="flex items-center gap-1"
-                        />
-                      }
-                    />
-                  )}
-                </div>
-              </main>
-            </div>
-            {prefs.bottomVisible && (
+      <div
+        className={cn(
+          "flex shrink-0 flex-col overflow-hidden border-r",
+          !prefs.sidebarVisible && "hidden"
+        )}
+        style={sidebar.style}
+      >
+        {mode === "review" && (
+          <>
+            <PullRequestList
+              pulls={pulls.data ?? []}
+              error={
+                pulls.error
+                  ? errorReason(pulls.error, "Could not load pull requests")
+                  : null
+              }
+              loading={pulls.isPending}
+              selectedNumber={selectedPull?.number ?? null}
+              onSelect={(p) =>
+                void navigate({
+                  to: "/modes/code/review/$pull",
+                  params: { pull: String(p.number) },
+                })
+              }
+              className={selectedPull === null ? "flex-1" : "shrink-0 border-b"}
+              style={selectedPull === null ? undefined : reviewPulls.style}
+            />
+            {selectedPull !== null && (
               <ResizeHandle
                 orientation="row"
-                value={bottom.current}
-                min={120}
-                max={() => Math.max(160, window.innerHeight - 200)}
-                direction={-1}
-                onResize={bottom.onResize}
-                onResizeEnd={(h) => setUiPrefs({ bottomHeight: h })}
-                label="Resize bottom panel"
+                value={reviewPulls.current}
+                min={80}
+                max={() => Math.max(120, window.innerHeight - 320)}
+                onResize={reviewPulls.onResize}
+                onResizeEnd={(h) => setUiPrefs({ reviewPullsHeight: h })}
+                label="Resize pull request list"
               />
             )}
-            <div
-              className={cn(
-                "shrink-0 overflow-hidden border-t",
-                !prefs.bottomVisible && "hidden"
-              )}
-              style={bottom.style}
-              hidden={!prefs.bottomVisible}
-            >
-              <BottomPanel
-                tab={prefs.bottomTab}
-                active={prefs.bottomVisible}
-                onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
-                onCollapse={() => setUiPrefs({ bottomVisible: false })}
-                branches={branches.data ?? []}
-                currentBranch={repo.data?.currentBranch ?? null}
-                commits={history.commits}
-                commitRepos={history.repos}
-                repos={multiRepo ? (workspace.data?.repos ?? []) : undefined}
-                repoFilter={logRepo}
-                projectName={
-                  workspace.data?.project == null
-                    ? undefined
-                    : folderName(workspace.data.project)
-                }
-                onRepoFilterChange={setLogRepo}
-                commitsLoading={history.loading}
-                commitsHaveMore={history.hasMore}
-                logRef={logRef ?? repo.data?.currentBranch ?? null}
-                logFilters={logFilters}
-                selectedCommitSha={
-                  browse?.kind === "commit" ? browse.sha : null
-                }
-                selectedCommitFile={viewing}
-                onLoadMoreCommits={history.loadMore}
-                onLogRefChange={setLogRef}
-                onLogFiltersChange={setLogFilters}
-                onSelectCommit={(c) => void openCommit(c)}
-                onSelectCommitFile={(p) => openFile(p)}
-              />
-            </div>
+          </>
+        )}
+        {(mode !== "review" || selectedPull !== null) && (
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <FileSidebar
+              key={mode}
+              mode={mode}
+              paths={sidebarPaths}
+              gitStatus={treeGitStatus}
+              loading={mode === "review" ? diff.isPending : files.isPending}
+              selectedFile={mode === "browse" ? viewing : (search.path ?? null)}
+              onFileSelect={onFileSelect}
+              onDeletePath={mode === "review" ? undefined : deletePath}
+              onRenamePath={mode === "review" ? undefined : renamePath}
+              onCreatePath={mode === "review" ? undefined : fileActions.create}
+              onShowHistory={showFileHistory}
+              footer={
+                mode === "commit" && changedFiles.length > 0 ? (
+                  <CommitPanel
+                    changes={changedFiles}
+                    busy={false}
+                    onCommit={(m, p, push) => git.commitChanges(m, p, push)}
+                    onGenerate={(p, agent) =>
+                      git.generateCommitMessage(p, agent)
+                    }
+                  />
+                ) : undefined
+              }
+            />
           </div>
+        )}
+      </div>
+      {prefs.sidebarVisible && (
+        <SidebarResizeHandle
+          width={sidebar.current}
+          stored={prefs.sidebarWidth}
+          max={() => Math.max(240, window.innerWidth - 400)}
+          onResize={sidebar.onResize}
+          onResizeEnd={(w) => setUiPrefs({ sidebarWidth: w })}
+        />
+      )}
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+        {mode === "commit" &&
+          mergeState.data != null &&
+          mergeState.data.operation !== "none" && (
+            <ConflictBanner
+              state={mergeState.data}
+              selectedPath={search.path ?? null}
+              onSelectFile={openConflict}
+              onAbort={() => void git.abortMerge()}
+              onContinue={() => void git.continueMerge()}
+            />
+          )}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          {showFileTabs && (
+            <TabStrip
+              tabs={tabs.tabs}
+              active={tabs.active}
+              dirty={dirtyPaths}
+              onSelect={selectTab}
+              onKeep={(path) => updateTabs((state) => keepTab(state, path))}
+              onClose={closeTabAt}
+              onTogglePin={(path) =>
+                updateTabs((state) => togglePin(state, path))
+              }
+              onCloseOthers={(path) =>
+                updateTabs((state) => {
+                  const next = closeOthers(state, path);
+                  setSearch({ file: next.active ?? undefined });
+                  return next;
+                })
+              }
+              onCloseAll={() =>
+                updateTabs((state) => {
+                  const next = closeAll(state);
+                  setSearch({ file: next.active ?? undefined });
+                  return next;
+                })
+              }
+              onMove={(path, toIndex) =>
+                updateTabs((state) => moveTab(state, path, toIndex))
+              }
+            />
+          )}
+          {/* The assign bar floats over the code itself, so it clears
+                      the path bar and stops at the panes' edge rather than the
+                      window's. */}
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            {renderCenter()}
+            {visibleComments.length > 0 && (
+              <ReviewAssignBar
+                comments={visibleComments.map((comment) => ({
+                  id: comment.id,
+                  file: comment.filePath,
+                  line: comment.lineNumber,
+                  body: comment.body,
+                }))}
+                chats={chats.data ?? []}
+                onAssign={assignReview}
+                onOpenComment={openComment}
+                className="absolute inset-x-3 bottom-8"
+              />
+            )}
+          </div>
+          {/* The trail closes the pane, and only once it says more than
+                      which mode you are in. */}
+          {(crumbs.length > 1 || viewing !== null) && (
+            <PathBar
+              crumbs={crumbs}
+              path={viewing}
+              paths={allPaths}
+              onOpenFile={openFile}
+              onEdit={
+                viewing !== null &&
+                !isImagePath(viewing) &&
+                editingFile !== viewing
+                  ? () => editFile(viewing)
+                  : undefined
+              }
+              onShowHistory={
+                viewing === null ? undefined : () => showFileHistory(viewing)
+              }
+              actions={
+                <div
+                  ref={setFileActionsSlot}
+                  className="flex items-center gap-1"
+                />
+              }
+            />
+          )}
         </div>
-      </WindowFrame>
-    </DiffWorkerPoolProvider>
+      </main>
+    </div>
   );
 }
