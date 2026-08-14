@@ -44,7 +44,9 @@ type AnnotationMeta =
       readonly kind: "comments";
       readonly comments: ReadonlyArray<ReviewComment>;
     }
-  | { readonly kind: "draft" }
+  // See `diff-pane`: the body travels with the draft so a composer reopened
+  // after a refused write comes back holding what was typed.
+  | { readonly kind: "draft"; readonly body?: string }
   | DiagnosticsAnnotationMeta;
 
 interface CodeViewProps {
@@ -176,7 +178,13 @@ export function CodeView({
       out.push({ lineNumber, metadata: { kind: "comments", comments: group } });
     }
     if (draft !== null && draft.filePath === path) {
-      out.push({ lineNumber: draft.lineNumber, metadata: { kind: "draft" } });
+      out.push({
+        lineNumber: draft.lineNumber,
+        metadata:
+          draft.body === undefined
+            ? { kind: "draft" }
+            : { kind: "draft", body: draft.body },
+      });
     }
     // Diagnostics share the annotation slot with comments; a line can carry
     // both, and `@pierre/diffs` stacks them in order.
@@ -295,6 +303,9 @@ export function CodeView({
                         return onCommentSubmit === undefined ? null : (
                           <DraftCard
                             onCancel={() => onDraftCancel?.()}
+                            {...(meta.body === undefined
+                              ? {}
+                              : { initialBody: meta.body })}
                             onSubmit={(body) =>
                               onCommentSubmit(
                                 {

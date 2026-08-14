@@ -12,11 +12,24 @@
  * back a different id than the one we invented, putting the list back when the
  * write genuinely fails — are testable without a query client or a server.
  *
- * Only local comments get this treatment. A GitHub comment is a real network
- * write to somebody else's system, with its own failure modes and its own id;
- * pretending it has landed would be a lie often enough to matter.
+ * GitHub comments get the same treatment, with one difference that matters. A
+ * local write is to a database on this machine and essentially cannot fail; a
+ * GitHub write is a request to somebody else's system that can fail for
+ * ordinary reasons — no token, rate limit, a line whose position has gone stale
+ * since the diff was fetched. It still should not make you wait. So it appears
+ * immediately and is marked as unacknowledged until GitHub confirms it, which
+ * is both instant and true: `isOptimisticId` is what the thread reads to say
+ * so, and the id it tests is replaced the moment the real one arrives.
+ *
+ * The author is the other difference. GitHub names the commenter in its
+ * response and there is no way to know that login beforehand, so a pending
+ * GitHub comment carries no author rather than a guessed one — the thread shows
+ * it as sending until the real name lands.
  */
 import type { ReviewComment } from "@byconvo/core/comments";
+
+/** The `target` a pull request's comments are stored under. */
+export const pullTarget = (pullNumber: number): string => `pr-${pullNumber}`;
 
 /**
  * The id an optimistic comment carries until the server names it. Prefixed so
@@ -40,6 +53,31 @@ export const optimisticComment = (input: {
   author: string;
   createdAt: string;
 }): ReviewComment => ({ ...input, source: "local" });
+
+/**
+ * The same, for a pull request comment. No author: GitHub names the commenter
+ * in its response, and inventing one here would put a wrong name on screen for
+ * as long as the request takes. The thread reads the pending id instead.
+ */
+export const optimisticPullComment = (input: {
+  id: string;
+  filePath: string;
+  side: ReviewComment["side"];
+  lineNumber: number;
+  body: string;
+  pullNumber: number;
+  createdAt: string;
+}): ReviewComment => ({
+  id: input.id,
+  filePath: input.filePath,
+  side: input.side,
+  lineNumber: input.lineNumber,
+  body: input.body,
+  author: "",
+  createdAt: input.createdAt,
+  target: pullTarget(input.pullNumber),
+  source: "github",
+});
 
 /** `comment` appended to `list` — where the thread it joins expects it. */
 export const withComment = (

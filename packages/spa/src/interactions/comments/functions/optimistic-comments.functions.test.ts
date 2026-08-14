@@ -4,6 +4,8 @@ import {
   isOptimisticId,
   optimisticComment,
   optimisticId,
+  optimisticPullComment,
+  pullTarget,
   withComment,
   withConfirmed,
   withEditedBody,
@@ -30,7 +32,7 @@ describe("optimisticId", () => {
 });
 
 describe("optimisticComment", () => {
-  it("is a local comment — a GitHub one is never faked", () => {
+  it("shows as a local comment straight away", () => {
     const drafted = optimisticComment({
       id: optimisticId(1),
       filePath: "src/a.ts",
@@ -42,6 +44,38 @@ describe("optimisticComment", () => {
       createdAt: "2026-07-25T12:00:00.000Z",
     });
     expect(drafted.source).toBe("local");
+    expect(drafted.body).toBe("looks good");
+  });
+});
+
+describe("optimisticPullComment", () => {
+  const drafted = optimisticPullComment({
+    id: optimisticId(7),
+    filePath: "src/a.ts",
+    side: "deletions",
+    lineNumber: 12,
+    body: "why this way?",
+    pullNumber: 42,
+    createdAt: "2026-07-25T12:00:00.000Z",
+  });
+
+  it("lands under the pull request's own target", () => {
+    expect(drafted.target).toBe(pullTarget(42));
+    expect(drafted.source).toBe("github");
+  });
+
+  it("carries no author — only GitHub can name the commenter", () => {
+    expect(drafted.author).toBe("");
+  });
+
+  it("is recognisable as unacknowledged, so the thread can say so", () => {
+    expect(isOptimisticId(drafted.id)).toBe(true);
+  });
+
+  it("keeps the side it was left on, so it joins the right thread", () => {
+    expect(drafted.side).toBe("deletions");
+    expect(drafted.lineNumber).toBe(12);
+    expect(drafted.filePath).toBe("src/a.ts");
   });
 });
 

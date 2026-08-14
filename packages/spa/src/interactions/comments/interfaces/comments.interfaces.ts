@@ -12,6 +12,14 @@ export interface DraftLocation {
   readonly filePath: string;
   readonly side: CommentSide;
   readonly lineNumber: number;
+  /**
+   * What was already typed here, when the composer is being reopened rather
+   * than started. A comment now appears the moment it is written and the
+   * composer closes behind it, so the one case that needs this is the write
+   * coming back refused — GitHub can, for ordinary reasons — where the words
+   * have to come back with the composer instead of being lost with the request.
+   */
+  readonly body?: string;
 }
 
 export interface SubmitContext {

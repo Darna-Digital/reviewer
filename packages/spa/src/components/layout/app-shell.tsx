@@ -766,20 +766,43 @@ export function AppShell() {
     git.refresh();
   };
 
-  const submitComment = async (location: DraftLocation, body: string) => {
-    await comments.submit({ mode, selectedPull, targetKey }, location, body);
+  /**
+   * Send a comment and close the composer behind it.
+   *
+   * The composer closes first, not last. The comment is already on the line by
+   * the time this returns to the caller — it is written into the list before
+   * the request goes out — so leaving the draft open until the server answers
+   * would sit an empty second composer under a comment that is already there.
+   *
+   * A refused write is the case worth handling: the comment rolls back off the
+   * line, and the composer reopens holding what was typed, so the words survive
+   * a failure that had nothing to do with them.
+   */
+  const sendComment = async (
+    ctx: Parameters<typeof comments.submit>[0],
+    location: DraftLocation,
+    body: string
+  ) => {
     setDraft(null);
+    try {
+      await comments.submit(ctx, location, body);
+    } catch (error) {
+      setDraft({ ...location, body });
+      toast.error(errorReason(error, "Could not save the comment"));
+    }
   };
+
+  const submitComment = (location: DraftLocation, body: string) =>
+    sendComment({ mode, selectedPull, targetKey }, location, body);
+
   // Comments left on a file in the viewer (browse, or commit mode) always store
   // against the worktree, regardless of the active mode/diff target.
-  const submitFileComment = async (location: DraftLocation, body: string) => {
-    await comments.submit(
+  const submitFileComment = (location: DraftLocation, body: string) =>
+    sendComment(
       { mode: "commit", selectedPull: null, targetKey: WORKTREE_KEY },
       location,
       body
     );
-    setDraft(null);
-  };
   const deleteComment = async (comment: ReviewComment) => {
     await comments.remove(comment);
   };

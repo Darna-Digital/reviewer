@@ -51,7 +51,9 @@ type AnnotationMeta =
       readonly kind: "comments";
       readonly comments: ReadonlyArray<ReviewComment>;
     }
-  | { readonly kind: "draft" }
+  // The body travels with the draft so a composer reopened after a refused
+  // write comes back holding what was typed. Absent for a fresh draft.
+  | { readonly kind: "draft"; readonly body?: string }
   | { readonly kind: "hunk"; readonly hunkIndex: number }
   | DiagnosticsAnnotationMeta;
 
@@ -388,6 +390,7 @@ const FileDiffSection = memo(function FileDiffSection({
             return (
               <DraftCard
                 onCancel={onDraftCancel}
+                {...(meta.body === undefined ? {} : { initialBody: meta.body })}
                 onSubmit={(body) =>
                   onCommentSubmit(
                     {
@@ -661,7 +664,10 @@ export function DiffPane({
       arr.push({
         side: draft.side,
         lineNumber: draft.lineNumber,
-        metadata: { kind: "draft" },
+        metadata:
+          draft.body === undefined
+            ? { kind: "draft" }
+            : { kind: "draft", body: draft.body },
       });
       result.set(draft.filePath, arr);
     }
