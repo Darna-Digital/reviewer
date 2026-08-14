@@ -1,5 +1,5 @@
 import { type LineAnnotation } from "@pierre/diffs";
-import { EditorProvider, File, Virtualizer } from "@pierre/diffs/react";
+import { EditProvider, File, Virtualizer } from "@pierre/diffs/react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -233,7 +233,10 @@ export function CodeView({
           hang over the bottom of the pane (the assign bar), and scrolling a
           little past the end is how an editor behaves anyway. */}
       <Virtualizer className="h-full overflow-auto pb-20">
-        <EditorProvider editor={buffer.editor}>
+        {/* The editable view builds its own editor from this factory when a
+            session opens, rather than being handed one that exists whether or
+            not anyone is editing — see `useFileEditing`. */}
+        <EditProvider createEditor={buffer.createEditor}>
           <section className="diff-file" data-file-anchor={path}>
             {/* Remount per file, and when editing is switched on or off: the
             underlying File instance neither re-highlights on a `file` prop
@@ -272,7 +275,7 @@ export function CodeView({
                 ...language.viewOptions,
                 unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}`,
               }}
-              contentEditable={editing}
+              edit={editing}
               /* The editable view snapshots the rendered code when the editor
                attaches, so a worker highlight landing afterwards would never
                reach it; `useLangReady` primes the main-thread highlighter for
@@ -331,7 +334,7 @@ export function CodeView({
               }
             />
           </section>
-        </EditorProvider>
+        </EditProvider>
         {actionsSlot !== null &&
           actionsSlot !== undefined &&
           createPortal(
