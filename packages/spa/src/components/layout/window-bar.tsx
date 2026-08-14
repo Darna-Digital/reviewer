@@ -18,8 +18,10 @@ import {
 } from "@tabler/icons-react";
 // import { useCanGoBack } from "@tanstack/react-router";
 import { useRouterState } from "@tanstack/react-router";
+import { isFeatureEnabled } from "@byconvo/feature-flags";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   Tooltip,
   TooltipContent,
@@ -37,13 +39,23 @@ import {
   isPinnedTab,
   moveTab,
   NEW_SESSION_HREF,
+  PROJECT_TAB_ID,
   renameTab,
-  tabAtPosition,
+  sessionAtSlot,
+  SESSIONS_TAB_ID,
+  stripTabs,
+  tabById,
   trackLocation,
 } from "@/interactions/window-tabs/functions/window-tabs.functions";
+import {
+  barShortcut,
+  sessionDigit,
+  type BarShortcut,
+} from "@/components/layout/window-bar.shortcuts";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import { UserMenu } from "@/components/layout/user-menu";
 import {
+  closeTabOverview,
   toggleTabOverview,
   useTabOverview,
 } from "@/interactions/tab-preview/adapters/tab-overview.store";
@@ -57,14 +69,57 @@ import { activeWorkMode } from "@/lib/work-mode";
 
 const NO_DRAG = "[-webkit-app-region:no-drag]";
 
+const sessionsEnabled = isFeatureEnabled("sessions-button");
+
+const LAUNCHPAD_KEYS = "⌘1";
+const PROJECT_KEYS = "⌘2";
+const SESSIONS_KEYS = "⌘3";
+const NEW_SESSION_KEYS = "⌘T";
+
+/** A chord as its keycaps: one per glyph, the way the style guide sets them. */
+function Shortcut({ keys }: { keys: string }) {
+  return (
+    <KbdGroup>
+      {Array.from(keys).map((key) => (
+        <Kbd key={key}>{key}</Kbd>
+      ))}
+    </KbdGroup>
+  );
+}
+
+function BarTooltip({
+  label,
+  keys,
+  children,
+  disabled,
+}: {
+  label: string;
+  keys?: string | null;
+  children: React.ReactNode;
+  disabled?: boolean;
+}) {
+  return (
+    <Tooltip disabled={disabled}>
+      {children}
+      <TooltipContent side="bottom">
+        {label}
+        {keys != null && <Shortcut keys={keys} />}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 function BarButton({
   label,
+  keys,
   onClick,
   disabled,
   pressed,
   children,
 }: {
   label: string;
+  /** The chord that does the same thing, set in keycaps beside the label. */
+  keys?: string;
   onClick: () => void;
   disabled?: boolean;
   /** Set on toggles, so the button both announces and shows its state. */
@@ -72,7 +127,7 @@ function BarButton({
   children: React.ReactNode;
 }) {
   return (
-    <Tooltip>
+    <BarTooltip label={label} keys={keys}>
       <TooltipTrigger
         render={
           <Button
@@ -92,17 +147,42 @@ function BarButton({
       >
         {children}
       </TooltipTrigger>
-      <TooltipContent side="bottom">{label}</TooltipContent>
-    </Tooltip>
+    </BarTooltip>
   );
 }
+
+/**
+ * The chord that takes the window to a tab: a named place keeps its own digit,
+ * a session takes the next one along until the digits run out.
+ */
+const tabKeys = (tab: WindowTab, slot: number): string | null => {
+  if (tab.id === PROJECT_TAB_ID) return PROJECT_KEYS;
+  if (tab.id === SESSIONS_TAB_ID) return sessionsEnabled ? SESSIONS_KEYS : null;
+  const digit = sessionDigit(slot);
+  return digit === null ? null : `⌘${digit}`;
+};
 
 export function WindowBar() {
   // const canGoBack = useCanGoBack();
   const location = useRouterState({ select: (s) => s.location });
-  const { tabs, activeId } = useWindowTabs();
+  const windowTabs = useWindowTabs();
+  const { tabs, activeId } = windowTabs;
+  const strip = useMemo(() => stripTabs(windowTabs), [windowTabs]);
+  // The pinned tabs lead the strip, so what follows them is slot 1 onwards.
+  const pinnedCount = strip.filter(isPinnedTab).length;
   const { select, close, openSession, prime } = useWindowTabActions();
   const overviewOpen = useTabOverview();
+  /**
+   * Take the window to a tab from the strip. The launchpad is a place the
+   * window goes to rather than a page it holds open, so picking a tab from
+   * behind it answers it as much as picking one of its own cards does — and
+   * unlike a card, the strip is not what the panel is covering, so it goes
+   * straight away rather than waiting out the navigation.
+   */
+  const show = (tab: WindowTab) => {
+    closeTabOverview();
+    void select(tab);
+  };
   /**
    * The tab being dragged. It lives in a ref as well as state because the first
    * `dragover` can arrive in the same task as the `dragstart` that set it, and
@@ -171,42 +251,40 @@ export function WindowBar() {
   useEffect(() => {
     const warm = () => {
       for (const tab of tabs) prime(tab.href);
-      prime(NEW_SESSION_HREF);
+      if (sessionsEnabled) prime(NEW_SESSION_HREF);
     };
     const idle = window.requestIdleCallback(warm, { timeout: 2_000 });
     return () => window.cancelIdleCallback(idle);
   }, [tabs, prime]);
 
-  // ⌘T mints a session, the same as the ✛ at the end of the strip, and ⌘L
-  // expands the launchpad, the same as the button at the head of the bar. ⇧ and
-  // ⌥ are left alone so each chord stays exactly the one it is.
+  // Every chord does what pressing the control beside it does. The strip is
+  // read from the store rather than this render's copy: two presses in a row
+  // arrive before React has re-rendered for the first.
   useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) {
-        return;
+    const run = (shortcut: BarShortcut) => {
+      switch (shortcut.kind) {
+        case "new-session":
+          return void openSession();
+        case "launchpad":
+          return toggleTabOverview();
+        case "tab": {
+          const tab = tabById(windowTabsSnapshot(), shortcut.tabId);
+          return tab === null ? undefined : show(tab);
+        }
+        case "session": {
+          const tab = sessionAtSlot(
+            stripTabs(windowTabsSnapshot()),
+            shortcut.slot
+          );
+          return tab === null ? undefined : show(tab);
+        }
       }
-      const key = event.key.toLowerCase();
-      if (key !== "t" && key !== "l") return;
-      event.preventDefault();
-      if (key === "t") openSession();
-      else toggleTabOverview();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
-
-  // ⌘1–⌘8 jump to that tab and ⌘9 to the last one, as in every browser. The
-  // strip is read from the store rather than this render's copy: two presses in
-  // a row arrive before React has re-rendered for the first.
-  useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.altKey) return;
-      const position = Number(event.key);
-      if (!Number.isInteger(position) || position < 1 || position > 9) return;
+      const shortcut = barShortcut(event);
+      if (shortcut === null) return;
       event.preventDefault();
-      const target = tabAtPosition(windowTabsSnapshot().tabs, position);
-      if (target === null) return;
-      select(target);
+      run(shortcut);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -232,6 +310,7 @@ export function WindowBar() {
             window goes to, not a page it holds open. */}
         <BarButton
           label="Launchpad"
+          keys={LAUNCHPAD_KEYS}
           pressed={overviewOpen}
           onClick={toggleTabOverview}
         >
@@ -257,11 +336,16 @@ export function WindowBar() {
             NO_DRAG
           )}
         >
-          {tabs.map((tab, index) => {
+          {strip.map((tab, at) => {
             const active = tab.id === activeId;
             const pinned = isPinnedTab(tab);
             return (
-              <Tooltip key={tab.id} disabled={dragging !== null}>
+              <BarTooltip
+                key={tab.id}
+                label={tab.title}
+                keys={tabKeys(tab, at + 1 - pinnedCount)}
+                disabled={dragging !== null}
+              >
                 <TooltipTrigger
                   render={
                     <div
@@ -296,10 +380,19 @@ export function WindowBar() {
                         event.dataTransfer.dropEffect = "move";
                         // Reorder as the pointer crosses each tab, so the strip
                         // shows where the drop will land instead of only
-                        // revealing it after.
+                        // revealing it after. The slot is the crossed tab's own
+                        // in the strip's state, which is not where it is drawn:
+                        // a switched-off tab is missing from the bar but still
+                        // holds its place behind it.
                         if (held !== tab.id) {
-                          updateWindowTabs((state) =>
-                            moveTab(state, held, index)
+                          updateWindowTabs((current) =>
+                            moveTab(
+                              current,
+                              held,
+                              current.tabs.findIndex(
+                                (candidate) => candidate.id === tab.id
+                              )
+                            )
                           );
                         }
                       }}
@@ -316,7 +409,7 @@ export function WindowBar() {
                           close(tab.id);
                           return;
                         }
-                        select(tab);
+                        show(tab);
                       }}
                       onAuxClick={(event) => {
                         if (event.button === 1 && !pinned) {
@@ -327,7 +420,7 @@ export function WindowBar() {
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
-                          select(tab);
+                          show(tab);
                         }
                       }}
                     />
@@ -371,14 +464,19 @@ export function WindowBar() {
                     </>
                   )}
                 </TooltipTrigger>
-                <TooltipContent side="bottom">{tab.title}</TooltipContent>
-              </Tooltip>
+              </BarTooltip>
             );
           })}
         </div>
-        <BarButton label="New session" onClick={openSession}>
-          <IconPlus className="size-4" />
-        </BarButton>
+        {sessionsEnabled && (
+          <BarButton
+            label="New session"
+            keys={NEW_SESSION_KEYS}
+            onClick={openSession}
+          >
+            <IconPlus className="size-4" />
+          </BarButton>
+        )}
       </div>
       {/* The trailing end keeps its content whatever the window's width: it is
           the strip that gives way first. Its inset is a gutter like the lead

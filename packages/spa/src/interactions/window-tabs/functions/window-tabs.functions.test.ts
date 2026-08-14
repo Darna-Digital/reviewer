@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type {
   WindowTab,
   WindowTabsState,
@@ -13,12 +13,16 @@ import {
   PROJECT_TAB_ID,
   renameTab,
   selectTab,
+  sessionAtSlot,
   SESSIONS_TAB_ID,
-  tabAtPosition,
   tabTitle,
   trackLocation,
   withPinnedTabs,
 } from "./window-tabs.functions";
+
+// The transitions below are about the strip's shape, not about which features
+// are switched on, so they are stated against the full set of pinned tabs.
+vi.mock("@byconvo/feature-flags", () => ({ isFeatureEnabled: () => true }));
 
 const session = (
   id: string,
@@ -242,18 +246,16 @@ describe("moveTab", () => {
   });
 });
 
-describe("tabAtPosition", () => {
-  it("counts 1-8 from the left and sends 9 to the last tab", () => {
+describe("sessionAtSlot", () => {
+  it("counts the sessions from 1, past the pinned tabs ahead of them", () => {
     const { tabs } = stripOf("a", "b");
-    expect(tabAtPosition(tabs, 1)?.id).toBe(PROJECT_TAB_ID);
-    expect(tabAtPosition(tabs, 2)?.id).toBe(COLLABORATION_TAB_ID);
-    expect(tabAtPosition(tabs, 4)?.id).toBe("a");
-    expect(tabAtPosition(tabs, 9)?.id).toBe("b");
+    expect(sessionAtSlot(tabs, 1)?.id).toBe("a");
+    expect(sessionAtSlot(tabs, 2)?.id).toBe("b");
   });
 
-  it("has nothing at a position past the end", () => {
-    const { tabs } = stripOf("a");
-    expect(tabAtPosition(tabs, 5)).toBeNull();
+  it("has nothing at a slot past the last session", () => {
+    expect(sessionAtSlot(stripOf("a").tabs, 2)).toBeNull();
+    expect(sessionAtSlot(stripOf().tabs, 1)).toBeNull();
   });
 });
 

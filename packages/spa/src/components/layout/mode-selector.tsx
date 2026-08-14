@@ -5,6 +5,7 @@
  */
 import { IconCheck, IconChevronDown } from "@tabler/icons-react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { isFeatureEnabled } from "@byconvo/feature-flags";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,12 +28,16 @@ const MODES: ReadonlyArray<{
     detail: "Focus on technical details in a detailed view",
     to: "/modes/code/browse",
   },
-  {
-    mode: "collaboration",
-    title: "Collaboration",
-    detail: "Collaborate with humans and agents",
-    to: "/modes/collaboration",
-  },
+  ...(isFeatureEnabled("collaboration-button")
+    ? [
+        {
+          mode: "collaboration" as WorkMode,
+          title: "Collaboration",
+          detail: "Collaborate with humans and agents",
+          to: "/modes/collaboration",
+        },
+      ]
+    : []),
 ];
 
 export function ModeSelector() {

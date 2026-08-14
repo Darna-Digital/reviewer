@@ -18,6 +18,7 @@
  * takes and the page being left never flashes past on the way.
  */
 import { IconChevronUp, IconPlus, IconX } from "@tabler/icons-react";
+import { isFeatureEnabled } from "@byconvo/feature-flags";
 import { useEffect, useMemo } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useEntered, usePresence } from "@/hooks/use-presence";
@@ -135,7 +136,9 @@ export function TabOverview() {
               onClose={() => actions.close(tab.id)}
             />
           ))}
-          <NewSessionCard onClick={() => pick(actions.openSession)} />
+          {isFeatureEnabled("sessions-button") && (
+            <NewSessionCard onClick={() => pick(actions.openSession)} />
+          )}
         </div>
       </div>
       <CollapseHandle />
