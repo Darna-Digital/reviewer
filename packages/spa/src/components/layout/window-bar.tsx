@@ -62,7 +62,7 @@ import {
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
 import { isDesktop } from "@/lib/desktop";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
-import { useChats } from "@/lib/queries";
+import { useRecentChats } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { activeWorkMode } from "@/lib/work-mode";
@@ -203,7 +203,9 @@ export function WindowBar() {
     );
   }, [location.href, location.pathname]);
 
-  const chats = useChats();
+  // The top of the list answers both questions below: a session that moved is
+  // at the top of it by definition, and a tab is minted from a new session.
+  const chats = useRecentChats();
 
   /**
    * Threads touched since the inbox was last looked at. Only a session tab
@@ -217,7 +219,7 @@ export function WindowBar() {
   const unread = useMemo(
     () =>
       new Set(
-        (chats.data ?? [])
+        (chats.data?.items ?? [])
           .filter((chat) => isChatUnread(chat, seenAt))
           .map((chat) => chat.id)
       ),
@@ -231,7 +233,7 @@ export function WindowBar() {
   // A session tab is minted before its conversation exists, so it takes the
   // chat's name once the list has one to give.
   useEffect(() => {
-    const summaries = chats.data;
+    const summaries = chats.data?.items;
     if (summaries === undefined) return;
     updateWindowTabs((state) =>
       state.tabs.reduce((next, tab) => {

@@ -159,10 +159,8 @@ export const makeChatsService = Effect.gen(function* () {
   // Reading the list is the one call every client makes on load, which makes it
   // the reliable place to settle turns a crash left "running" — the sidebar
   // then can't show a spinner for work that ended when the process died.
-  const list: ChatsRepo["list"] = Effect.flatMap(
-    runtime.repairStale,
-    () => repo.list
-  );
+  const list: ChatsRepo["list"] = (input) =>
+    Effect.flatMap(runtime.repairStale, () => repo.list(input));
   const stop: ChatsServiceShape["stop"] = (id) =>
     Effect.gen(function* () {
       yield* repo.get(id);

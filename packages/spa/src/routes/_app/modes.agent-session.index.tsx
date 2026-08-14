@@ -1,6 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { NewChatView } from "@/interactions/chats/components/new-chat-view";
-import { api } from "@/lib/api/client";
+import { recentChatsOptions } from "@/lib/queries";
 
 /** Whether to force the new-thread composer instead of resuming a chat. */
 export interface ChatsIndexSearch {
@@ -18,11 +18,10 @@ export const Route = createFileRoute("/_app/modes/agent-session/")({
   // `?new` asks for a fresh session or there are no sessions yet.
   loader: async ({ context, deps }) => {
     if (deps.forceNew) return;
-    const chats = await context.queryClient.ensureQueryData(
-      api.queryOptions("get", "/api/chats")
-    );
-    // The chats list is already sorted newest-first by the server.
-    const latest = chats[0];
+    const recent =
+      await context.queryClient.ensureQueryData(recentChatsOptions());
+    // The list arrives newest-first, so the first page's first row is the one.
+    const latest = recent.items[0];
     if (latest) {
       throw redirect({
         to: "/modes/agent-session/$chatId",

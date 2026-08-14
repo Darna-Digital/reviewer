@@ -32,9 +32,11 @@ describe("shellRoute", () => {
   it("recognises sessions, collaboration and settings", () => {
     expect(shellRoute("/modes/agent-session", "code")).toEqual({
       kind: "session",
+      composing: true,
     });
     expect(shellRoute("/modes/agent-session/abc", "code")).toEqual({
       kind: "session",
+      composing: false,
     });
     expect(shellRoute("/modes/collaboration", "code")).toEqual({
       kind: "collaboration",
@@ -63,7 +65,7 @@ describe("showsGitChrome", () => {
   it("is on for the code and workspace surfaces, off for the rest", () => {
     expect(showsGitChrome({ kind: "code", mode: "commit" })).toBe(true);
     expect(showsGitChrome({ kind: "workspace" })).toBe(true);
-    expect(showsGitChrome({ kind: "session" })).toBe(false);
+    expect(showsGitChrome({ kind: "session", composing: false })).toBe(false);
     expect(showsGitChrome({ kind: "collaboration" })).toBe(false);
     expect(showsGitChrome({ kind: "settings" })).toBe(false);
   });

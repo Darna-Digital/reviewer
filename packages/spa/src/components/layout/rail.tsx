@@ -54,6 +54,8 @@ export function RailButton({
   label,
   active,
   onClick,
+  onPointerEnter,
+  onFocus,
   to,
   render,
   children,
@@ -61,6 +63,10 @@ export function RailButton({
   label: string;
   active?: boolean;
   onClick?: () => void;
+  /** Where a button navigates, this is how it preloads on intent — the same
+   * moment a `Link` beside it would. */
+  onPointerEnter?: () => void;
+  onFocus?: () => void;
   to?: string;
   /** The control the button is, where it is neither a link nor a plain button —
    * a popover's trigger, say, which has to be the element the popup hangs off. */
@@ -77,6 +83,8 @@ export function RailButton({
       <TooltipTrigger
         className={className}
         aria-label={label}
+        onPointerEnter={onPointerEnter}
+        onFocus={onFocus}
         render={
           render ??
           (to !== undefined ? (

@@ -1,52 +1,27 @@
 /**
- * The two filters the sessions list carries.
+ * The two filters the sessions list carries, as the query that fetches it.
  *
  * Sessions are stored centrally, so the list holds every project's
  * conversations at once. Recency was enough while it only ever held one
  * project's; the project itself is the other axis that got interesting the
  * moment they arrived together.
  *
- * Both are pure functions over the summaries the list already has — the
- * projects to choose from are derived from the sessions themselves, so a
- * project only appears while it has something to show, and nothing has to be
- * fetched to draw the menu.
+ * Both used to be applied to the loaded list. They are now part of what is
+ * asked for, because the list arrives a page at a time: filtering in the client
+ * would search the pages scrolled to so far and present that as the whole
+ * answer — a session further down would read as one that does not exist. So
+ * these turn a stored filter into the query, and the database does the
+ * narrowing over all of them. See `useChatPages`.
  */
 import { dateCutoff, type DateFilter } from "@/lib/date-filter";
-import type { ChatSummary } from "@byconvo/core/chats";
+import type { ChatListFilters } from "@/lib/queries";
+import type { ChatProjectTally } from "@byconvo/core/chats";
 
 /** `all` is the unfiltered case; anything else is a project's absolute path. */
 export type ProjectFilter = string;
 export const ALL_PROJECTS: ProjectFilter = "all";
 
-export interface ProjectOption {
-  /** The project folder's absolute path — the filter's value. */
-  readonly path: string;
-  readonly name: string;
-  readonly count: number;
-}
-
-/**
- * The projects represented in `chats`, by name, each with how many sessions it
- * holds. Two projects can share a folder name (`~/work/api`, `~/side/api`), so
- * the path stays the identity and only the label is the name.
- */
-export const projectsOf = (
-  chats: ReadonlyArray<ChatSummary>
-): ReadonlyArray<ProjectOption> => {
-  const counts = new Map<string, ProjectOption>();
-  for (const chat of chats) {
-    const existing = counts.get(chat.origin.projectPath);
-    counts.set(chat.origin.projectPath, {
-      path: chat.origin.projectPath,
-      name: chat.origin.projectName,
-      count: (existing?.count ?? 0) + 1,
-    });
-  }
-  return [...counts.values()].sort(
-    (a, b) => a.name.localeCompare(b.name) || a.path.localeCompare(b.path)
-  );
-};
-
+/** What the list remembers between visits. */
 export interface ChatFilters {
   readonly project: ProjectFilter;
   readonly date: DateFilter;
@@ -57,28 +32,43 @@ export const NO_FILTERS: ChatFilters = {
   date: "all",
 };
 
-export const filterChats = (
-  chats: ReadonlyArray<ChatSummary>,
-  filters: ChatFilters
-): ReadonlyArray<ChatSummary> => {
-  const cutoff = dateCutoff(filters.date);
-  return chats.filter(
-    (chat) =>
-      (filters.project === ALL_PROJECTS ||
-        chat.origin.projectPath === filters.project) &&
-      (cutoff === 0 || Date.parse(chat.updatedAt) >= cutoff)
-  );
+/**
+ * The window's cutoff is rounded down to the minute before it becomes part of
+ * what is asked for. "Past 7 days" is seven days before *now*, which is a
+ * different instant every millisecond — and since the query is keyed on what it
+ * asks for, an unrounded cutoff would make every visit to the list a cache miss
+ * and leave a spent entry behind each time. A minute is far finer than any of
+ * these windows and answers the same question.
+ */
+const CUTOFF_PRECISION_MS = 60_000;
+
+/** The stored filters as what the list asks the server for. */
+export const chatListFilters = (
+  project: ProjectFilter,
+  date: DateFilter
+): ChatListFilters => {
+  const cutoff = dateCutoff(date);
+  return {
+    search: "",
+    project: project === ALL_PROJECTS ? null : project,
+    since:
+      cutoff === 0
+        ? null
+        : new Date(
+            Math.floor(cutoff / CUTOFF_PRECISION_MS) * CUTOFF_PRECISION_MS
+          ).toISOString(),
+  };
 };
 
 /**
  * The project filter to actually apply. A stored filter outlives the project it
  * names — a session list it once narrowed can be emptied, and a filter pointing
  * at nothing would leave the list permanently blank. It steps aside instead,
- * but only once there are sessions to check it against: mid-load everything is
+ * but only once there are projects to check it against: mid-load everything is
  * absent, and that is not the same as gone.
  */
 export const resolveProjectFilter = (
-  projects: ReadonlyArray<ProjectOption>,
+  projects: ReadonlyArray<ChatProjectTally>,
   project: ProjectFilter
 ): ProjectFilter =>
   project === ALL_PROJECTS ||
@@ -86,14 +76,3 @@ export const resolveProjectFilter = (
   projects.some((option) => option.path === project)
     ? project
     : ALL_PROJECTS;
-
-/** The label for the project control — the project's name, or "All projects". */
-export const projectFilterLabel = (
-  chats: ReadonlyArray<ChatSummary>,
-  project: ProjectFilter
-): string => {
-  if (project === ALL_PROJECTS) return "All projects";
-  return (
-    projectsOf(chats).find((option) => option.path === project)?.name ?? project
-  );
-};

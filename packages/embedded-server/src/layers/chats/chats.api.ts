@@ -2,8 +2,10 @@ import * as Schema from "effect/Schema";
 import {
   ChatBusy,
   Chat,
+  ChatListQuery,
   ChatModelCatalog,
-  ChatSummary,
+  ChatPage,
+  ChatProjectTally,
   ChatIdParam,
   NewChat,
   SendChatMessage,
@@ -28,8 +30,10 @@ const errors = [
 
 export class ChatsApi extends HttpApiGroup.make("chats")
   .add(
+    // A page of the sessions list, filtered and cursored — see `ChatListQuery`.
     HttpApiEndpoint.get("list", "/chats", {
-      success: Schema.Array(ChatSummary),
+      query: ChatListQuery,
+      success: ChatPage,
       error: errors,
     })
   )
@@ -38,6 +42,14 @@ export class ChatsApi extends HttpApiGroup.make("chats")
     // "models" never parses as a chat id.
     HttpApiEndpoint.get("models", "/chats/models", {
       success: ChatModelCatalog,
+      error: errors,
+    })
+  )
+  .add(
+    // Likewise ahead of /chats/:id. The filter menu's projects, over every
+    // session rather than over the pages the client happens to hold.
+    HttpApiEndpoint.get("projects", "/chats/projects", {
+      success: Schema.Array(ChatProjectTally),
       error: errors,
     })
   )

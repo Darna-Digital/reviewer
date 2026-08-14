@@ -1,15 +1,22 @@
 import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
 import { Api } from "../../api.ts";
-import { CHAT_MODEL_CATALOG, ChatsService } from "@byconvo/core/chats";
+import {
+  CHAT_MODEL_CATALOG,
+  ChatsService,
+  parseChatListQuery,
+} from "@byconvo/core/chats";
 
 const ok = { ok: true } as const;
 const defaults = CHAT_MODEL_CATALOG.defaults;
 
 export const ChatsHandler = HttpApiBuilder.group(Api, "chats", (handlers) =>
   handlers
-    .handle("list", () => Effect.flatMap(ChatsService, (s) => s.list))
+    .handle("list", ({ query }) =>
+      Effect.flatMap(ChatsService, (s) => s.list(parseChatListQuery(query)))
+    )
     .handle("models", () => Effect.flatMap(ChatsService, (s) => s.models))
+    .handle("projects", () => Effect.flatMap(ChatsService, (s) => s.projects))
     .handle("create", ({ payload }) =>
       Effect.flatMap(ChatsService, (s) =>
         s.create({

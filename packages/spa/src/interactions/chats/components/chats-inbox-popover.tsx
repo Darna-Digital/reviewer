@@ -13,13 +13,13 @@ import {
 } from "@/components/layout/inbox-popover";
 import { AgentMark } from "@/interactions/threads/components/agent-mark";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
-import { useChats } from "@/lib/queries";
+import { useRecentChats } from "@/lib/queries";
 import { timeAgo } from "@/lib/relative-time";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 
 export function ChatsInboxPopover({ active }: { active: boolean }) {
   const seenAt = useUiPrefs().inboxSeenAt;
-  const chats = useChats().data ?? [];
+  const chats = useRecentChats().data?.items ?? [];
   const unread = chats.filter((chat) => isChatUnread(chat, seenAt));
 
   return (

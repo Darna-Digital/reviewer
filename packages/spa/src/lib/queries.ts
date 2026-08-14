@@ -135,8 +135,127 @@ export const useMergeState = () =>
 export const useThreads = () =>
   api.useQuery("get", "/api/threads", {}, OWN_DATA);
 
-/** Agent chats (structured conversations, distinct from terminal threads). */
-export const useChats = () => api.useQuery("get", "/api/chats", {}, OWN_DATA);
+/**
+ * The sessions list — every project's conversations, newest first, a page at a
+ * time.
+ *
+ * The filters go to the server with the page rather than being applied to what
+ * came back. Narrowing here would only ever search the pages already scrolled
+ * to, so a session that had not been reached yet would read as one that does
+ * not exist — the list would answer "nothing matches" about a list it has not
+ * finished reading. See `ChatListQuery`.
+ */
+export interface ChatListFilters {
+  /** Free text over title, last message and project name. */
+  readonly search: string;
+  /** A project's absolute path; null is every project. */
+  readonly project: string | null;
+  /** ISO timestamp; null is any time. */
+  readonly since: string | null;
+}
+
+export const NO_CHAT_FILTERS: ChatListFilters = {
+  search: "",
+  project: null,
+  since: null,
+};
+
+const CHAT_PAGE_SIZE = 30;
+
+/**
+ * How many sessions the surfaces that only want the newest ones ask for: the
+ * strip's unread dot, the tab titles, and the redirect into the last session
+ * you had open. All three are questions about the top of the list, so they read
+ * its first page rather than all of it.
+ */
+const RECENT_CHATS = 30;
+
+export const recentChatsOptions = () =>
+  api.queryOptions(
+    "get",
+    "/api/chats",
+    { params: { query: { limit: String(RECENT_CHATS) } } },
+    OWN_DATA
+  );
+
+/** The newest sessions — the top of the list, not all of it. */
+export const useRecentChats = () => useQuery(recentChatsOptions());
+
+/** Every project holding a session, for the list's filter menu. */
+export const useChatProjects = () =>
+  api.useQuery("get", "/api/chats/projects", {}, OWN_DATA);
+
+/** How many hits the search popover shows — one screenful, not a second list. */
+const SEARCH_HITS = 12;
+
+/**
+ * The search popover's own read: the whole list is no longer in the client to
+ * be filtered, and a search that only looked at the pages already scrolled to
+ * would answer "nothing matches" about sessions it had simply not fetched.
+ */
+export const useChatSearch = (search: string, enabled: boolean) => {
+  const text = search.trim();
+  return api.useQuery(
+    "get",
+    "/api/chats",
+    {
+      params: {
+        query: {
+          limit: String(SEARCH_HITS),
+          ...(text.length === 0 ? {} : { q: text }),
+        },
+      },
+    },
+    { ...OWN_DATA, enabled, placeholderData: (previous) => previous }
+  );
+};
+
+const chatListQuery = (filters: ChatListFilters, cursor: string | null) => ({
+  limit: String(CHAT_PAGE_SIZE),
+  ...(cursor === null ? {} : { cursor }),
+  ...(filters.search.trim().length === 0 ? {} : { q: filters.search.trim() }),
+  ...(filters.project === null ? {} : { project: filters.project }),
+  ...(filters.since === null ? {} : { since: filters.since }),
+});
+
+/**
+ * The list itself, paged as the reader scrolls.
+ *
+ * Keyed under the same prefix as every other read of `/api/chats`, so the one
+ * `invalidateQueries(["get", "/api/chats"])` that a new session, a settled turn
+ * or a deletion already fires still refreshes it.
+ */
+export const useChatPages = (filters: ChatListFilters, enabled = true) => {
+  const query = useInfiniteQuery({
+    queryKey: ["get", "/api/chats", "pages", filters],
+    ...OWN_DATA,
+    enabled,
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }) => {
+      const { data, error } = await fetchClient.GET("/api/chats", {
+        params: { query: chatListQuery(filters, pageParam) },
+      });
+      if (error !== undefined) throw error;
+      return data;
+    },
+    // Only the server can say the list has ended: with a `WHERE` clause behind
+    // it, a page can come back short and still have more after it.
+    getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
+  });
+
+  const sessions = useMemo(
+    () => (query.data?.pages ?? []).flatMap((page) => page?.items ?? []),
+    [query.data?.pages]
+  );
+
+  return {
+    sessions,
+    loading: query.isPending,
+    hasMore: query.hasNextPage,
+    loadingMore: query.isFetchingNextPage,
+    loadMore: query.fetchNextPage,
+  };
+};
 
 /** The static provider/model catalog behind the composer's model picker. */
 export const useChatModels = () =>

@@ -15,17 +15,22 @@ import {
   SESSIONS_TAB_ID,
   selectTab,
 } from "@/interactions/window-tabs/functions/window-tabs.functions";
-import { useChats } from "@/lib/queries";
+import { useQuery } from "@tanstack/react-query";
+import { chatQueryOptions } from "@/lib/queries";
 
 export function SessionCrumbs() {
   const { chatId } = useParams({ strict: false });
-  const chats = useChats();
   const navigate = useNavigate();
+  // The conversation's own record rather than the list's copy of it: the list
+  // arrives a page at a time, and the trail must name a session however far
+  // down it was — this is the cache the route already warms on the way in.
+  const chat = useQuery({
+    ...chatQueryOptions(chatId ?? ""),
+    enabled: chatId !== undefined,
+  });
 
   const title =
-    chatId === undefined
-      ? "New session"
-      : (chats.data?.find((chat) => chat.id === chatId)?.title ?? "Session");
+    chatId === undefined ? "New session" : (chat.data?.title ?? "Session");
 
   const showList = () => {
     updateWindowTabs((state) => selectTab(state, SESSIONS_TAB_ID));

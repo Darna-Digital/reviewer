@@ -8,13 +8,17 @@
  * opens and answers here exactly like one started in this one.
  *
  * The sidebar is the list and nothing else — minting a session and searching for
- * one both live in the toolbar above it. The two controls it does carry hang off
+ * one both live in the rail beside it. The two controls it does carry hang off
  * the "Recents" heading and only appear under the pointer: a time window, and
  * the project, which is the axis that arrived with the list spanning all of
  * them. A chosen filter keeps its control visible, so the list is never quietly
  * narrower than it looks, and it is kept across visits — narrowing to a project
  * says what you are working on, which does not stop being true when you open a
  * session.
+ *
+ * The list is fetched a page at a time and grows as it is scrolled, so both
+ * filters — and the toolbar's search — are part of what is asked for rather
+ * than applied to what came back. See `useChatPages`.
  *
  * Arriving marks the inbox seen, so the rail's dot only stands for sessions that
  * moved since you last looked; the rows keep comparing against the mark this
@@ -27,7 +31,7 @@ import {
   useParams,
   useSearch,
 } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
@@ -46,8 +50,7 @@ import { ChatRow } from "@/interactions/chats/components/chat-row";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
 import {
   ALL_PROJECTS,
-  filterChats,
-  projectsOf,
+  chatListFilters,
   resolveProjectFilter,
   type ProjectFilter,
 } from "@/interactions/chats/functions/chat-filters.functions";
@@ -56,12 +59,16 @@ import {
   useChatFilters,
 } from "@/interactions/chats/adapters/chat-filters.store";
 import { DATE_FILTERS, type DateFilter } from "@/lib/date-filter";
-import { useChats } from "@/lib/queries";
+import { useChatPages, useChatProjects } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
+import type { ChatProjectTally } from "@byconvo/core/chats";
+
+/** How close to the foot of the loaded list fetches the next page. */
+const LOAD_MORE_WITHIN_PX = 400;
+const EMPTY_PROJECTS: ReadonlyArray<ChatProjectTally> = [];
 
 export function ChatsPage() {
-  const chats = useChats();
   const actions = useChatsActions();
   const navigate = useNavigate();
   const { chatId } = useParams({ strict: false });
@@ -85,18 +92,54 @@ export function ChatsPage() {
     setUiPrefs({ inboxSeenAt: new Date().toISOString() });
   }, []);
 
-  const summaries = useMemo(() => chats.data ?? [], [chats.data]);
+  // Starting a session gets the whole pane: there is nothing to pick from a list
+  // yet, and the composer is the only thing on screen worth looking at.
+  const composing = chatId === undefined;
+  const showList = !composing && !ownTab && prefs.sidebarVisible;
 
-  // Derived from the sessions themselves: a project is offered while it has
-  // something to show, and the menu needs nothing fetched to draw itself.
-  const projects = useMemo(() => projectsOf(summaries), [summaries]);
+  // Over every session rather than over the pages loaded so far: a project the
+  // reader has not scrolled to is still a project they can narrow to.
+  const projectList = useChatProjects();
+  const projects = projectList.data ?? EMPTY_PROJECTS;
   const stored = useChatFilters();
   const dateFilter = stored.date;
   const projectFilter = resolveProjectFilter(projects, stored.project);
-  const filtered = useMemo(
-    () => filterChats(summaries, { project: projectFilter, date: dateFilter }),
-    [summaries, projectFilter, dateFilter]
+
+  // The filters go to the server with the page — see `useChatPages`.
+  const filters = useMemo(
+    () => chatListFilters(projectFilter, dateFilter),
+    [projectFilter, dateFilter]
   );
+  // Not fetched at all where the list is not shown: the composer and a session
+  // in its own tab are whole pages that happen to hang off this one.
+  const { sessions, loading, hasMore, loadMore } = useChatPages(
+    filters,
+    showList
+  );
+
+  /**
+   * Fetch the next page as its foot comes into reach, rather than at the very
+   * bottom — the page is on its way before the reader arrives, so a list of a
+   * thousand sessions scrolls like a list that was all there.
+   */
+  const listViewport = useRef<HTMLDivElement | null>(null);
+  const onListScroll = () => {
+    const el = listViewport.current;
+    if (el === null || !hasMore) return;
+    if (
+      el.scrollHeight - el.scrollTop - el.clientHeight <
+      LOAD_MORE_WITHIN_PX
+    ) {
+      void loadMore();
+    }
+  };
+  // A window taller than the first page has nothing to scroll towards, so the
+  // next one is asked for here instead.
+  useEffect(() => {
+    const el = listViewport.current;
+    if (el === null || !hasMore || loading) return;
+    if (el.scrollHeight <= el.clientHeight) void loadMore();
+  }, [hasMore, loading, sessions.length, loadMore]);
 
   const remove = async (id: string) => {
     try {
@@ -107,11 +150,6 @@ export function ChatsPage() {
     }
   };
 
-  // Starting a session gets the whole pane: there is nothing to pick from a list
-  // yet, and the composer is the only thing on screen worth looking at.
-  const composing = chatId === undefined;
-  const showList = !composing && !ownTab && prefs.sidebarVisible;
-
   return (
     <div className="flex h-full min-h-0">
       {showList && (
@@ -119,8 +157,10 @@ export function ChatsPage() {
           <ScrollArea
             className="min-h-0 flex-1"
             viewportClassName="scroll-fade"
+            onViewportScroll={onListScroll}
+            viewportRef={listViewport}
           >
-            {summaries.length === 0 ? (
+            {sessions.length === 0 && !loading ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">
                 No sessions yet. Send a message to start one.
               </p>
@@ -210,12 +250,12 @@ export function ChatsPage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                {filtered.length === 0 ? (
+                {sessions.length === 0 && !loading ? (
                   <p className="px-2 py-4 text-center text-sm text-muted-foreground">
                     No sessions match these filters.
                   </p>
                 ) : (
-                  filtered.map((c) => (
+                  sessions.map((c) => (
                     <ChatRow
                       key={c.id}
                       chat={c}
@@ -224,6 +264,14 @@ export function ChatsPage() {
                       onDelete={() => void remove(c.id)}
                     />
                   ))
+                )}
+                {/* The foot of the loaded list. Scrolling near it fetches the
+                    next page, so the list simply keeps going; it says so only
+                    while a page is actually in flight. */}
+                {hasMore && (
+                  <p className="px-2 py-3 text-center text-xs text-muted-foreground">
+                    Loading more…
+                  </p>
                 )}
               </div>
             )}

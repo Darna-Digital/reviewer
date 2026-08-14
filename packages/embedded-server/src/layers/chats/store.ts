@@ -23,13 +23,18 @@ import { randomUUID } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import {
   DEFAULT_CHAT_TITLE,
+  decodeChatCursor,
+  encodeChatCursor,
   titleFromPrompt,
   type Chat,
   type ChatActivity,
   type ChatAttachment,
   type ChatMessage,
+  type ChatPage,
+  type ChatProjectTally,
   type ChatSummary,
   type ChatTurn,
+  type ListChatsInput,
 } from "@byconvo/core/chats";
 import {
   allRows,
@@ -174,48 +179,151 @@ export const findChat = (id: string): Chat | undefined => {
 };
 
 /**
- * Every chat in the database, newest first — the sessions list spans projects,
- * so this is deliberately not scoped to the open one.
- *
- * The counts and the preview line come out of SQL rather than out of a loaded
- * transcript: listing a hundred conversations must not mean reading a hundred
- * conversations.
+ * The message count and the preview line, joined per chat rather than looked up
+ * per row: listing a hundred conversations must not mean reading a hundred
+ * conversations, and it must not mean a hundred queries either.
  */
-export const listChatSummaries = (): ReadonlyArray<ChatSummary> => {
-  const rows = allRows<ChatRow>(
-    `${CHAT_COLUMNS} ORDER BY chat.updated_at DESC`
+const SUMMARY_SOURCE = `
+  WITH tally AS (
+    SELECT chat_id, COUNT(*) AS message_count FROM chat_message GROUP BY chat_id
+  ),
+  last_message AS (
+    SELECT m.chat_id, m.text FROM chat_message m
+    JOIN (SELECT chat_id, MAX(seq) AS seq FROM chat_message GROUP BY chat_id) last
+      ON last.chat_id = m.chat_id AND last.seq = m.seq
+  )
+  SELECT chat.*, repo.name AS repo_name, repo.project_path,
+         project.name AS project_name,
+         COALESCE(tally.message_count, 0) AS message_count,
+         last_message.text AS last_message
+  FROM chat
+  LEFT JOIN repo ON repo.path = chat.repo_path
+  LEFT JOIN project ON project.path = repo.project_path
+  LEFT JOIN tally ON tally.chat_id = chat.id
+  LEFT JOIN last_message ON last_message.chat_id = chat.id
+`;
+
+/** A chat whose repository was never registered is grouped under the
+ * repository itself, exactly as `originOf` labels it — so the filter's values
+ * and the rows it matches agree about which project a session belongs to. */
+const PROJECT_OF_CHAT = `COALESCE(repo.project_path, chat.repo_path)`;
+
+interface SummaryRow extends ChatRow {
+  readonly message_count: number;
+  readonly last_message: string | null;
+}
+
+const toSummary = (row: SummaryRow): ChatSummary => ({
+  id: row.id,
+  origin: originOf(row),
+  title: row.title,
+  provider: row.provider as ChatSummary["provider"],
+  model: row.model,
+  branch: row.branch,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+  messageCount: row.message_count,
+  lastMessage: row.last_message?.slice(0, 120) ?? null,
+  turnState:
+    row.latest_turn === null
+      ? null
+      : (JSON.parse(row.latest_turn) as ChatTurn).state,
+});
+
+/**
+ * One page of the sessions list, newest first — deliberately spanning every
+ * project, since that is what the surface shows.
+ *
+ * Filtering happens here rather than in the client for the reason paging does:
+ * the client only ever holds the pages it has scrolled to, so narrowing there
+ * would search a prefix of the list and present it as the whole answer.
+ *
+ * A row past the end of the page is asked for and thrown away — it is how the
+ * cursor knows whether there is another page, which a short page cannot say
+ * once a `WHERE` clause is involved.
+ */
+export const listChatSummaries = (input: ListChatsInput): ChatPage => {
+  const clauses: string[] = [];
+  const values: Array<string | number> = [];
+
+  const position = decodeChatCursor(input.cursor);
+  if (position !== null) {
+    clauses.push(
+      `(chat.updated_at < ? OR (chat.updated_at = ? AND chat.id < ?))`
+    );
+    values.push(position.updatedAt, position.updatedAt, position.id);
+  }
+  if (input.projectPath !== null) {
+    clauses.push(`${PROJECT_OF_CHAT} = ?`);
+    values.push(input.projectPath);
+  }
+  if (input.since !== null) {
+    clauses.push(`chat.updated_at >= ?`);
+    values.push(input.since);
+  }
+  if (input.search !== null) {
+    // The preview the row shows is clipped to 120 characters; the search reads
+    // the message itself, so finding a session by something said in it does not
+    // depend on how early it was said.
+    const like = `%${input.search.toLowerCase()}%`;
+    clauses.push(
+      `(LOWER(chat.title) LIKE ?
+        OR LOWER(COALESCE(last_message.text, '')) LIKE ?
+        OR LOWER(COALESCE(project.name, chat.repo_path)) LIKE ?)`
+    );
+    values.push(like, like, like);
+  }
+
+  const where = clauses.length === 0 ? "" : `WHERE ${clauses.join(" AND ")}`;
+  const rows = allRows<SummaryRow>(
+    `${SUMMARY_SOURCE} ${where}
+     ORDER BY chat.updated_at DESC, chat.id DESC
+     LIMIT ?`,
+    ...values,
+    input.limit + 1
   );
-  const counts = allRows<{ chat_id: string; message_count: number }>(
-    `SELECT chat_id, COUNT(*) AS message_count
-     FROM chat_message GROUP BY chat_id`
+
+  const items = rows.slice(0, input.limit).map(toSummary);
+  const last = items[items.length - 1];
+  return {
+    items,
+    nextCursor:
+      rows.length > input.limit && last !== undefined
+        ? encodeChatCursor(last)
+        : null,
+  };
+};
+
+/**
+ * Every project holding a session, with how many it holds — the filter menu's
+ * own query. Derived from all of them rather than from the pages fetched so
+ * far, so the menu says the same thing however far the reader has scrolled.
+ */
+export const listChatProjects = (): ReadonlyArray<ChatProjectTally> => {
+  const rows = allRows<{
+    project_path: string;
+    project_name: string | null;
+    repo_path: string;
+    count: number;
+  }>(
+    `SELECT ${PROJECT_OF_CHAT} AS project_path,
+            project.name AS project_name,
+            MIN(chat.repo_path) AS repo_path,
+            COUNT(*) AS count
+     FROM chat
+     LEFT JOIN repo ON repo.path = chat.repo_path
+     LEFT JOIN project ON project.path = repo.project_path
+     GROUP BY project_path, project.name`
   );
-  const previews = allRows<{ chat_id: string; text: string }>(
-    `SELECT m.chat_id, m.text FROM chat_message m
-     JOIN (SELECT chat_id, MAX(seq) AS seq FROM chat_message GROUP BY chat_id) last
-       ON last.chat_id = m.chat_id AND last.seq = m.seq`
-  );
-  const lastMessages = new Map(previews.map((row) => [row.chat_id, row.text]));
-  const byChat = new Map(counts.map((row) => [row.chat_id, row]));
-  return rows.map((row) => {
-    const tally = byChat.get(row.id);
-    const turn =
-      row.latest_turn === null
-        ? null
-        : (JSON.parse(row.latest_turn) as ChatTurn);
-    return {
-      id: row.id,
-      origin: originOf(row),
-      title: row.title,
-      provider: row.provider as ChatSummary["provider"],
-      model: row.model,
-      branch: row.branch,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      messageCount: tally?.message_count ?? 0,
-      lastMessage: lastMessages.get(row.id)?.slice(0, 120) ?? null,
-      turnState: turn?.state ?? null,
-    } satisfies ChatSummary;
-  });
+  return rows
+    .map((row) => ({
+      path: row.project_path,
+      name: row.project_name ?? unknownOrigin(row.repo_path).projectName,
+      count: row.count,
+    }))
+    .sort(
+      (a, b) => a.name.localeCompare(b.name) || a.path.localeCompare(b.path)
+    );
 };
 
 // --- Writes -----------------------------------------------------------------

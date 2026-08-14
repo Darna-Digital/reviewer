@@ -31,6 +31,15 @@ const terminalReturning = (seen: string[] = []) =>
     return { stdout, stderr: "", exitCode: 0 };
   });
 
+/** The whole list, unfiltered — what `list` meant before it was paged. */
+const everything = {
+  limit: 100,
+  cursor: null,
+  search: null,
+  projectPath: null,
+  since: null,
+} as const;
+
 const newChat = {
   title: "",
   provider: "claude",
@@ -48,8 +57,8 @@ describe("ChatsService", () => {
       expect(created.id).not.toBe("");
       expect(created.title).toBe("New thread");
       expect(created.sessionId).toBeNull();
-      const all = yield* chats.list;
-      expect(all.map((c) => c.id)).toContain(created.id);
+      const { items } = yield* chats.list(everything);
+      expect(items.map((c) => c.id)).toContain(created.id);
     }).pipe(Effect.provide(layer));
   });
   it.effect("send trims the prompt and hands the turn to the runtime", () => {
@@ -248,8 +257,8 @@ describe("ChatsService", () => {
       const created = yield* chats.create(newChat);
       yield* chats.remove(created.id);
       expect(runtime.calls.kill).toEqual([created.id]);
-      const all = yield* chats.list;
-      expect(all).toHaveLength(0);
+      const { items } = yield* chats.list(everything);
+      expect(items).toHaveLength(0);
     }).pipe(Effect.provide(layer));
   });
   it.effect("models offers nothing when no CLI answers", () => {

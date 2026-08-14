@@ -884,6 +884,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chats/projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["chats.projects"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chats/{id}": {
         parameters: {
             query?: never;
@@ -4711,7 +4727,13 @@ export interface operations {
     };
     "chats.list": {
         parameters: {
-            query?: never;
+            query?: {
+                limit?: string;
+                cursor?: string;
+                q?: string;
+                project?: string;
+                since?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4725,24 +4747,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        id: string;
-                        origin: {
-                            projectPath: string;
-                            projectName: string;
-                            repoPath: string;
-                            repoName: string;
-                        };
-                        title: string;
-                        /** @enum {string} */
-                        provider: "claude" | "codex" | "opencode" | "cursor";
-                        model: string;
-                        branch: string;
-                        createdAt: string;
-                        updatedAt: string;
-                        messageCount: number;
-                        lastMessage: string | null;
-                        turnState: ("running" | "completed" | "interrupted" | "error") | null;
-                    }[];
+                        items: {
+                            id: string;
+                            origin: {
+                                projectPath: string;
+                                projectName: string;
+                                repoPath: string;
+                                repoName: string;
+                            };
+                            title: string;
+                            /** @enum {string} */
+                            provider: "claude" | "codex" | "opencode" | "cursor";
+                            model: string;
+                            branch: string;
+                            createdAt: string;
+                            updatedAt: string;
+                            messageCount: number;
+                            lastMessage: string | null;
+                            turnState: ("running" | "completed" | "interrupted" | "error") | null;
+                        }[];
+                        nextCursor: string | null;
+                    };
                 };
             };
             /** @description NotFound */
@@ -4926,6 +4951,57 @@ export interface operations {
                             access: "supervised" | "acceptEdits" | "fullAccess";
                         };
                     };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
+            /** @description NoRepoSelected | ChatBusy */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                };
+            };
+            /** @description StorageError | TerminalError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                };
+            };
+        };
+    };
+    "chats.projects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        path: string;
+                        name: string;
+                        count: number;
+                    }[];
                 };
             };
             /** @description NotFound */

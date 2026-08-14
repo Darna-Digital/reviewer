@@ -6,9 +6,17 @@ import {
   DEFAULT_CHAT_TITLE,
   summarizeChat,
 } from "../functions/chats.functions.ts";
+import {
+  byRecency,
+  decodeChatCursor,
+  encodeChatCursor,
+  isAfterCursor,
+  matchesChatFilters,
+} from "../functions/chats.paging.ts";
 import type {
   ChatsRepo,
   CreateChatInput,
+  ListChatsInput,
   UpdateChatInput,
 } from "./chats.repository.ts";
 
@@ -36,10 +44,44 @@ export const makeMemoryChatsRepository = (seed: ReadonlyArray<Chat> = []) =>
       }
       return Effect.succeed(chat);
     };
+    const summaries = Ref.get(store).pipe(
+      Effect.map((chats) => chats.map(summarizeChat).sort(byRecency))
+    );
     const repo: ChatsRepo = {
-      list: Ref.get(store).pipe(
-        Effect.map((chats) => chats.map(summarizeChat))
-      ),
+      list: (input: ListChatsInput) =>
+        Effect.map(summaries, (all) => {
+          const position = decodeChatCursor(input.cursor);
+          const matching = all.filter(
+            (chat) =>
+              matchesChatFilters(chat, input) &&
+              (position === null || isAfterCursor(chat, position))
+          );
+          const items = matching.slice(0, input.limit);
+          const last = items[items.length - 1];
+          return {
+            items,
+            nextCursor:
+              last === undefined || matching.length <= input.limit
+                ? null
+                : encodeChatCursor(last),
+          };
+        }),
+      projects: Effect.map(summaries, (all) => {
+        const tallies = new Map<string, { name: string; count: number }>();
+        for (const chat of all) {
+          const seen = tallies.get(chat.origin.projectPath);
+          tallies.set(chat.origin.projectPath, {
+            name: chat.origin.projectName,
+            count: (seen?.count ?? 0) + 1,
+          });
+        }
+        return [...tallies]
+          .map(([path, tally]) => ({ path, ...tally }))
+          .sort(
+            (a, b) =>
+              a.name.localeCompare(b.name) || a.path.localeCompare(b.path)
+          );
+      }),
       get: (id) => Effect.flatMap(Ref.get(store), (chats) => find(chats, id)),
       create: (input: CreateChatInput) =>
         Effect.gen(function* () {

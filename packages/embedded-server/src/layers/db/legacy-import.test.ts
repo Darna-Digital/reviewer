@@ -11,6 +11,16 @@ import { closeDatabase, openDatabase } from "./database.ts";
 import { importLegacyJson } from "./legacy-import.ts";
 import { rememberProject } from "./scope.ts";
 
+/** The whole list, unfiltered — what `listChatSummaries` meant before paging. */
+const allChats = () =>
+  listChatSummaries({
+    limit: 100,
+    cursor: null,
+    search: null,
+    projectPath: null,
+    since: null,
+  }).items;
+
 let project: string;
 let api: string;
 let web: string;
@@ -80,7 +90,7 @@ describe("legacy .byconvo import", () => {
     expect(importLegacyJson(api)).toContain("chats");
     expect(importLegacyJson(web)).toContain("chats");
 
-    const listed = listChatSummaries();
+    const listed = allChats();
     expect(listed.map((c) => c.title).sort()).toEqual(["api chat", "web chat"]);
     // Both roots belong to one project, so both chats group under it.
     expect(new Set(listed.map((c) => c.origin.projectPath))).toEqual(
@@ -89,7 +99,7 @@ describe("legacy .byconvo import", () => {
 
     // A second open imports nothing — the record says it is already done.
     expect(importLegacyJson(api)).toEqual([]);
-    expect(listChatSummaries()).toHaveLength(2);
+    expect(allChats()).toHaveLength(2);
   });
 
   it("keeps a conversation's message order", () => {
@@ -201,7 +211,7 @@ describe("legacy .byconvo import", () => {
       "plans",
       "dev-commands",
     ]);
-    expect(listChatSummaries()).toEqual([]);
+    expect(allChats()).toEqual([]);
     expect(importLegacyJson(web)).toEqual([]);
   });
 

@@ -1,123 +1,64 @@
-import { describe, expect, it } from "vitest";
-import type { ChatSummary } from "@byconvo/core/chats";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ChatProjectTally } from "@byconvo/core/chats";
 import {
   ALL_PROJECTS,
-  filterChats,
-  projectFilterLabel,
-  projectsOf,
+  chatListFilters,
   resolveProjectFilter,
 } from "./chat-filters.functions";
 
-const chat = (
-  id: string,
-  projectPath: string,
-  projectName: string,
-  updatedAt: string,
-  repoName = "api"
-): ChatSummary => ({
-  id,
-  origin: {
-    projectPath,
-    projectName,
-    repoPath: `${projectPath}/${repoName}`,
-    repoName,
-  },
-  title: id,
-  provider: "claude",
-  model: "opus",
-  branch: "main",
-  createdAt: updatedAt,
-  updatedAt,
-  messageCount: 1,
-  lastMessage: null,
-  turnState: null,
-});
-
-const NOW = "2026-08-13T12:00:00.000Z";
-const LAST_YEAR = "2025-08-13T12:00:00.000Z";
-
-const chats = [
-  chat("c-api", "/home/dev", "dev", NOW, "api"),
-  // Same project, a second git root — a multi-repo project is still one project.
-  chat("c-web", "/home/dev", "dev", NOW, "web"),
-  chat("c-side", "/home/side", "side", LAST_YEAR),
+const projects: ReadonlyArray<ChatProjectTally> = [
+  { path: "/home/dev", name: "dev", count: 2 },
+  { path: "/home/side", name: "side", count: 1 },
 ];
 
-describe("projectsOf", () => {
-  it("counts a multi-root project's sessions under the one project", () => {
-    expect(projectsOf(chats)).toEqual([
-      { path: "/home/dev", name: "dev", count: 2 },
-      { path: "/home/side", name: "side", count: 1 },
-    ]);
-  });
-
-  it("keeps two projects that share a folder name apart", () => {
-    const shared = [
-      chat("c-1", "/work/api", "api", NOW),
-      chat("c-2", "/side/api", "api", NOW),
-    ];
-    expect(projectsOf(shared).map((p) => p.path)).toEqual([
-      "/side/api",
-      "/work/api",
-    ]);
-  });
-
-  it("has nothing to offer for an empty list", () => {
-    expect(projectsOf([])).toEqual([]);
-  });
+afterEach(() => {
+  vi.useRealTimers();
 });
 
-describe("filterChats", () => {
-  it("passes everything through by default", () => {
-    expect(
-      filterChats(chats, { project: ALL_PROJECTS, date: "all" })
-    ).toHaveLength(3);
-  });
-
-  it("narrows to one project, across all of its roots", () => {
-    const filtered = filterChats(chats, {
-      project: "/home/dev",
-      date: "all",
+describe("chatListFilters", () => {
+  it("asks for everything when neither filter is set", () => {
+    expect(chatListFilters(ALL_PROJECTS, "all")).toEqual({
+      search: "",
+      project: null,
+      since: null,
     });
-    expect(filtered.map((c) => c.id)).toEqual(["c-api", "c-web"]);
   });
 
-  it("combines the project and the time window", () => {
-    expect(filterChats(chats, { project: "/home/side", date: "30d" })).toEqual(
-      []
+  it("carries the chosen project's path", () => {
+    expect(chatListFilters("/home/side", "all").project).toBe("/home/side");
+  });
+
+  it("turns a time window into the cutoff the server compares against", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-13T12:00:00.000Z"));
+    expect(chatListFilters(ALL_PROJECTS, "7d").since).toBe(
+      "2026-08-06T12:00:00.000Z"
     );
-    expect(
-      filterChats(chats, { project: "/home/side", date: "all" }).map(
-        (c) => c.id
-      )
-    ).toEqual(["c-side"]);
+  });
+
+  // The query is keyed on what it asks for, so a cutoff that moved every
+  // millisecond would make every visit to the list a fresh cache entry.
+  it("holds the cutoff still between ticks of the clock", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-13T12:00:00.000Z"));
+    const first = chatListFilters(ALL_PROJECTS, "30d").since;
+    vi.setSystemTime(new Date("2026-08-13T12:00:12.345Z"));
+    expect(chatListFilters(ALL_PROJECTS, "30d").since).toBe(first);
   });
 });
 
 describe("resolveProjectFilter", () => {
-  const projects = projectsOf(chats);
-
-  it("keeps a filter whose project still has sessions", () => {
+  it("keeps a filter naming a project that still has sessions", () => {
     expect(resolveProjectFilter(projects, "/home/side")).toBe("/home/side");
-    expect(resolveProjectFilter(projects, ALL_PROJECTS)).toBe(ALL_PROJECTS);
   });
 
-  it("steps aside for a project with nothing left in it", () => {
+  it("steps aside when the project it names has none left", () => {
     expect(resolveProjectFilter(projects, "/home/gone")).toBe(ALL_PROJECTS);
   });
 
-  it("holds the filter while the sessions are still loading", () => {
+  // Mid-load every project is absent, which is not the same as gone: dropping
+  // the filter then would silently widen the list the moment it arrives.
+  it("holds the filter while the projects are still unknown", () => {
     expect(resolveProjectFilter([], "/home/side")).toBe("/home/side");
-  });
-});
-
-describe("projectFilterLabel", () => {
-  it("names the chosen project, or says all of them", () => {
-    expect(projectFilterLabel(chats, ALL_PROJECTS)).toBe("All projects");
-    expect(projectFilterLabel(chats, "/home/side")).toBe("side");
-  });
-
-  it("falls back to the path for a project with nothing left in it", () => {
-    expect(projectFilterLabel(chats, "/home/gone")).toBe("/home/gone");
   });
 });

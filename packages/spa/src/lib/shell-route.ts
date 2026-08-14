@@ -16,7 +16,17 @@ export type ShellRoute =
   | { readonly kind: "code"; readonly mode: "commit" | "browse" | "review" }
   /** A workspace page that still sits over a repository: docs, tasks, threads, services. */
   | { readonly kind: "workspace" }
-  | { readonly kind: "session" }
+  | {
+      readonly kind: "session";
+      /**
+       * The blank composer rather than a conversation — the sessions path with
+       * no session on it. Everything the shell puts around a session is about
+       * one that exists: a rail for moving between them, a trail naming the one
+       * you are in. Before there is a session, all of it is chrome around an
+       * empty page, so the composer gets the window to itself.
+       */
+      readonly composing: boolean;
+    }
   | { readonly kind: "collaboration" }
   | { readonly kind: "settings" };
 
@@ -32,7 +42,13 @@ export function shellRoute(
   workMode: "code" | "collaboration"
 ): ShellRoute {
   if (pathname.startsWith("/settings")) return { kind: "settings" };
-  if (pathname.startsWith("/modes/agent-session")) return { kind: "session" };
+  if (pathname.startsWith("/modes/agent-session")) {
+    // `/modes/agent-session` is the composer; a conversation carries its id.
+    // The index redirects to the newest session from its loader, so the bare
+    // path only ever commits when the composer really is what renders.
+    const rest = pathname.slice("/modes/agent-session".length);
+    return { kind: "session", composing: rest.replace(/\/+$/, "") === "" };
+  }
   if (pathname.startsWith("/modes/collaboration")) {
     return { kind: "collaboration" };
   }

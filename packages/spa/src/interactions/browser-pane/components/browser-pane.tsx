@@ -61,7 +61,7 @@ import {
   useVisualCommentActions,
   useVisualComments,
 } from "@/interactions/visual-comments/adapters/visual-comments.hook.adapter";
-import { useChatModels, useChats, useRepo } from "@/lib/queries";
+import { useChatModels, useRecentChats, useRepo } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -136,7 +136,7 @@ export function BrowserPane() {
   const visualComments = useVisualCommentActions();
   const chatActions = useChatsActions();
   const chatModels = useChatModels();
-  const chats = useChats();
+  const chats = useRecentChats();
 
   // The pane opens where it was left for this repository, and remembers each
   // page it settles on. A repo with no remembered page opens blank.
@@ -416,7 +416,7 @@ export function BrowserPane() {
               line: null,
               body: comment.body,
             }))}
-            chats={chats.data ?? []}
+            chats={chats.data?.items ?? []}
             onAssign={assign}
             className="absolute inset-x-2 bottom-3"
           />

@@ -30,9 +30,23 @@ import type { Command } from "@/interactions/search/interfaces/search.interfaces
 import { useWorkspace } from "@/lib/queries";
 import { shellRoute, showsGitChrome } from "@/lib/shell-route";
 import { useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 export function AppLayout() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  /**
+   * The page that is *on screen*, not the one being navigated to.
+   *
+   * `location` changes the moment a navigation starts, while the outlet below
+   * goes on rendering the old page until the new one's code and data are in
+   * hand. Shaping the shell from `location` therefore stripped the chrome off
+   * the page you were still reading — the rail and the trail leaving ahead of
+   * the conversation they belonged to, which read as the app coming apart for a
+   * moment. `resolvedLocation` is the one the outlet is actually showing, so
+   * the frame and the page change together or not at all.
+   */
+  const pathname = useRouterState({
+    select: (s) => (s.resolvedLocation ?? s.location).pathname,
+  });
   const prefs = useUiPrefs();
   const workspace = useWorkspace();
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -41,11 +55,18 @@ export function AppLayout() {
   const gitChrome = showsGitChrome(route);
   const current = workspace.data?.current ?? null;
 
+  /**
+   * The blank composer is the one page the shell gets out of the way of
+   * entirely: no rail, no trail, nothing but the question and the box. See
+   * `ShellRoute`.
+   */
+  const bare = route.kind === "session" && route.composing;
+
   // Both rails are the same column carrying different things — code's git
   // surfaces, sessions' new-and-find — so crossing between them leaves the page
   // beside it exactly where it was. Collaboration is the one surface without
   // one: its own sidebar carries the equivalent.
-  const railed = route.kind !== "collaboration";
+  const railed = route.kind !== "collaboration" && !bare;
 
   /** Pages that are meaningless without a repository open behind them. */
   const needsRepo =
@@ -84,15 +105,23 @@ export function AppLayout() {
      */
     <DiffWorkerPoolProvider>
       <WindowFrame>
-        {railed &&
-          (route.kind === "session" ? <SessionsRail /> : <ModeRail />)}
+        {railed && (route.kind === "session" ? <SessionsRail /> : <ModeRail />)}
         <div className="flex min-w-0 flex-1 flex-col">
-          <AppHeader
-            route={route}
-            pickerOpen={pickerOpen}
-            onPickerOpenChange={setPickerOpen}
-          />
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-t">
+          {!bare && (
+            <AppHeader
+              route={route}
+              pickerOpen={pickerOpen}
+              onPickerOpenChange={setPickerOpen}
+            />
+          )}
+          {/* The rule under the header goes with the header: on the composer it
+              would be a line drawn across the top of an empty page. */}
+          <div
+            className={cn(
+              "flex min-h-0 flex-1 flex-col overflow-hidden",
+              !bare && "border-t"
+            )}
+          >
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               {/* The pages that sit *over* a repository say so when there
                   isn't one. The code surfaces answer for themselves — a

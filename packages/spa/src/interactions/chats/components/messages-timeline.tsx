@@ -406,10 +406,9 @@ export function MessagesTimeline({ chat }: { chat: Chat }) {
         viewportClassName="scroll-fade overscroll-contain"
       >
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6">
-          {(unbuilt === 0
-            ? chat.messages
-            : chat.messages.slice(unbuilt)
-          ).map(renderMessage)}
+          {(unbuilt === 0 ? chat.messages : chat.messages.slice(unbuilt)).map(
+            renderMessage
+          )}
           {turnError !== null && <TurnError message={turnError} />}
         </div>
       </ScrollArea>

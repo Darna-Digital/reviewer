@@ -113,6 +113,56 @@ export const ChatSummary = Schema.Struct({
   turnState: Schema.NullOr(ChatTurnState),
 });
 export type ChatSummary = typeof ChatSummary.Type;
+
+/**
+ * What the sessions list asks for: a window of the conversations, newest first,
+ * already narrowed to what the reader is looking at.
+ *
+ * The filters travel with the page rather than being applied to it afterwards.
+ * A list that arrives a page at a time can only be filtered by whoever holds
+ * all of it, and that is the database — narrowing in the client would search
+ * the pages fetched so far and quietly call that the answer.
+ *
+ * Every field is a string because these are URL parameters; the store parses
+ * them. `cursor` is opaque to the client: it hands back whatever the last page
+ * gave it.
+ */
+export const ChatListQuery = Schema.Struct({
+  limit: Schema.optionalKey(Schema.String),
+  cursor: Schema.optionalKey(Schema.String),
+  /** Matches title, last message, and the project's name. */
+  q: Schema.optionalKey(Schema.String),
+  /** A project's absolute path; absent means every project. */
+  project: Schema.optionalKey(Schema.String),
+  /** ISO timestamp — only sessions touched at or after it. */
+  since: Schema.optionalKey(Schema.String),
+});
+export type ChatListQuery = typeof ChatListQuery.Type;
+
+/**
+ * A page of sessions. `nextCursor` is null at the end of the list, which is the
+ * only thing that tells the client to stop: a short page does not mean the end
+ * when the database is filtering.
+ */
+export const ChatPage = Schema.Struct({
+  items: Schema.Array(ChatSummary),
+  nextCursor: Schema.NullOr(Schema.String),
+});
+export type ChatPage = typeof ChatPage.Type;
+
+/**
+ * A project the sessions list can be narrowed to, and how many it holds. Drawn
+ * from every session rather than from the loaded pages, so the menu offers the
+ * same projects however far the reader has scrolled.
+ */
+export const ChatProjectTally = Schema.Struct({
+  /** The project folder's absolute path — the filter's value. */
+  path: Schema.String,
+  name: Schema.String,
+  count: Schema.Number,
+});
+export type ChatProjectTally = typeof ChatProjectTally.Type;
+
 export const ChatModel = Schema.Struct({
   id: Schema.String,
   label: Schema.String,

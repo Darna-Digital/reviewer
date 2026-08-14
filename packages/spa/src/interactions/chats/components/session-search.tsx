@@ -5,6 +5,13 @@
  * on — and, now that sessions from every project are in one list, the project
  * name too, so "api" finds that project's sessions without first narrowing the
  * sidebar to it.
+ *
+ * The search is the server's, over every session. The sidebar holds only the
+ * pages it has been scrolled through, so a search run against what the client
+ * had would go quiet on exactly the old conversations this is for — and the
+ * message it matches is the whole message, not the clipped preview the row
+ * shows. Hits keep showing while the next answer is in flight, so typing
+ * narrows a list rather than blinking an empty one between keystrokes.
  */
 import { IconSearch } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
@@ -17,26 +24,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useChats } from "@/lib/queries";
+import { useChatSearch } from "@/lib/queries";
 import { timeAgo } from "@/lib/relative-time";
 
-const MAX_HITS = 12;
-
 export function SessionSearch() {
-  const chats = useChats();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-
-  const sessions = chats.data ?? [];
-  const q = query.trim().toLowerCase();
-  const hits =
-    q.length === 0
-      ? sessions
-      : sessions.filter((c) =>
-          `${c.title}\n${c.lastMessage ?? ""}\n${c.origin.projectName}`
-            .toLowerCase()
-            .includes(q)
-        );
+  const results = useChatSearch(query, open);
+  const hits = results.data?.items ?? [];
 
   return (
     <Popover
@@ -67,7 +62,7 @@ export function SessionSearch() {
         </div>
         <ScrollArea className="max-h-80" viewportClassName="scroll-fade">
           <div className="flex flex-col p-1.5">
-            {hits.slice(0, MAX_HITS).map((hit) => (
+            {hits.map((hit) => (
               <Link
                 key={hit.id}
                 to="/modes/agent-session/$chatId"

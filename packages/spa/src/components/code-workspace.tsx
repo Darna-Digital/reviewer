@@ -110,7 +110,7 @@ import { pathName } from "@/lib/display-path";
 import { errorReason } from "@/lib/errors";
 import {
   useChatModels,
-  useChats,
+  useRecentChats,
   useComments,
   useCommitDetail,
   useDiffText,
@@ -167,7 +167,7 @@ export function CodeWorkspace() {
   const workspaceActions = useWorkspaceActions();
   const repo = useRepo();
   const chatModels = useChatModels();
-  const chats = useChats();
+  const chats = useRecentChats();
   const files = useFiles();
   const localComments = useComments();
   // Files carrying a local worktree comment (left here or while browsing). Commit
@@ -1062,7 +1062,7 @@ export function CodeWorkspace() {
                   line: comment.lineNumber,
                   body: comment.body,
                 }))}
-                chats={chats.data ?? []}
+                chats={chats.data?.items ?? []}
                 onAssign={assignReview}
                 onOpenComment={openComment}
                 className="absolute inset-x-3 bottom-8"

@@ -1,6 +1,7 @@
 export * from "./errors.ts";
 export * from "./functions/chats.catalog.ts";
 export * from "./functions/chats.functions.ts";
+export * from "./functions/chats.paging.ts";
 export * from "./functions/chats.providers.ts";
 export * from "./layer/chats.layer.memory.ts";
 export * from "./repository/chats.repository.memory.ts";
