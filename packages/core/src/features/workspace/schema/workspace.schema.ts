@@ -44,7 +44,10 @@ export const BrowsePayload = Schema.Struct({
 export type BrowsePayload = typeof BrowsePayload.Type;
 export const FileContent = Schema.Struct({
   name: Schema.String,
+  /** Empty for a binary file — there is no text to hand a viewer. */
   contents: Schema.String,
+  binary: Schema.Boolean,
+  sizeBytes: Schema.Number,
 });
 export type FileContent = typeof FileContent.Type;
 const MEDIA_TYPES: Record<string, string> = {

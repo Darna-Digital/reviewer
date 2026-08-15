@@ -73,12 +73,11 @@ const bundledServerEntry = app.isPackaged
 const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
 // The Byconvo brand logo, used for the window and the macOS dock icon so the
-// app no longer shows Electron's default icon. This is the dock-grid variant:
-// the artwork sits inside ~80% of the tile with transparent margin, so macOS
-// renders it at the same size as other dock icons rather than full-bleed.
+// app no longer shows Electron's default icon. The artwork fills the whole
+// tile, matching the bundle `.icns` generated from the same source.
 // Resolved relative to `dist/` (../assets) so it works in packaged builds too.
 const brandIcon = nativeImage.createFromPath(
-  resolve(__dirname, "..", "assets", "byconvo-dock-icon.png")
+  resolve(__dirname, "..", "assets", "byconvo-icon.png")
 );
 
 let serverProcess: ChildProcess | null = null;
@@ -300,11 +299,9 @@ app.whenReady().then(async () => {
 
   if (!isDev) registerRendererProtocol();
 
-  // Packaged builds get their dock icon from the bundle `.icns` (CFBundleIconFile),
-  // which macOS renders identically whether the app is running or not. A runtime
-  // `dock.setIcon` override is drawn full-bleed instead — losing the grid margin —
-  // so we only set it in dev, where there is no bundle icon to fall back on.
-  if (isDev && process.platform === "darwin" && !brandIcon.isEmpty()) {
+  // Packaged builds also carry the icon in the bundle `.icns` (CFBundleIconFile);
+  // setting it at runtime covers dev, where there is no bundle to fall back on.
+  if (process.platform === "darwin" && !brandIcon.isEmpty()) {
     app.dock?.setIcon(brandIcon);
   }
 

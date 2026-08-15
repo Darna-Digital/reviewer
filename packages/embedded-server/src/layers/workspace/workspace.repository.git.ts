@@ -24,6 +24,11 @@ import type {
 const toStorageError = (error: PlatformError) =>
   new StorageError({ reason: error.message });
 
+// Git's own heuristic: a NUL byte in the first 8k means "not text".
+const BINARY_SNIFF_BYTES = 8000;
+const looksBinary = (bytes: Uint8Array) =>
+  bytes.subarray(0, BINARY_SNIFF_BYTES).includes(0);
+
 export const makeGitWorkspaceRepository = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
@@ -137,8 +142,14 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
   const readFile: WorkspaceRepo["readFile"] = (relPath) =>
     Effect.gen(function* () {
       const { name, resolved } = yield* resolveInProject(relPath);
-      const contents = yield* tryFs(fs.readFileString(resolved));
-      return { name, contents };
+      const bytes = yield* tryFs(fs.readFile(resolved));
+      const binary = looksBinary(bytes);
+      return {
+        name,
+        contents: binary ? "" : new TextDecoder().decode(bytes),
+        binary,
+        sizeBytes: bytes.byteLength,
+      };
     });
 
   const readFileBytes: WorkspaceRepo["readFileBytes"] = (relPath) =>

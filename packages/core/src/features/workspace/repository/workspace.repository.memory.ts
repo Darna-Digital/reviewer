@@ -127,7 +127,12 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
               new StorageError({ reason: `no such file: ${relPath}` })
             );
           }
-          return { name: relPath.split("/").at(-1) ?? relPath, contents };
+          return {
+            name: relPath.split("/").at(-1) ?? relPath,
+            contents,
+            binary: false,
+            sizeBytes: contents.length,
+          };
         }),
       readFileBytes: (relPath) =>
         Effect.gen(function* () {

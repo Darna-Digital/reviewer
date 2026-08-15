@@ -1869,6 +1869,8 @@ export interface operations {
                     "application/json": {
                         name: string;
                         contents: string;
+                        binary: boolean;
+                        sizeBytes: number;
                     };
                 };
             };

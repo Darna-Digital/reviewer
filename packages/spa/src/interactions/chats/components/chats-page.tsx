@@ -153,11 +153,6 @@ export function ChatsPage() {
               </p>
             ) : (
               <div className="flex flex-col gap-px px-2 pt-2 pb-2">
-                <div className="flex h-7 items-center pr-1 pl-2">
-                  <h2 className="text-xs font-medium text-muted-foreground">
-                    Recents
-                  </h2>
-                </div>
                 {sessions.length === 0 && !loading ? (
                   <p className="px-2 py-4 text-center text-sm text-muted-foreground">
                     No sessions match these filters.

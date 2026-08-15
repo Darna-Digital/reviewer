@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { CodeView } from "@/components/editor/code-view";
+import { UnsupportedFile } from "@/components/editor/unsupported-file";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
@@ -33,7 +34,9 @@ export const isSvgPath = (path: string) => extensionOf(path) === "svg";
 function Preview({ path }: { path: string }) {
   const bytes = useFileBytes(path);
   const [natural, setNatural] = useState<string | null>(null);
+  const [undecodable, setUndecodable] = useState(false);
 
+  if (undecodable) return <UnsupportedFile path={path} />;
   if (bytes.isPending) {
     return (
       <div className="p-8">
@@ -68,6 +71,10 @@ function Preview({ path }: { path: string }) {
               `${e.currentTarget.naturalWidth} × ${e.currentTarget.naturalHeight}`
             )
           }
+          // A listed extension the browser still can't decode (a corrupt file,
+          // an exotic TIFF-flavoured .ico) reads as an unopenable file, not as
+          // a broken image icon.
+          onError={() => setUndecodable(true)}
         />
       </div>
       <div className="flex h-8 shrink-0 items-center gap-3 border-t px-3 text-xs text-muted-foreground">

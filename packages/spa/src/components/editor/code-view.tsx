@@ -25,6 +25,7 @@ import {
   useHighlightPrimed,
   useLangReady,
 } from "@/components/editor/highlighter";
+import { UnsupportedFile } from "@/components/editor/unsupported-file";
 import { useFileEditing } from "@/components/editor/use-file-editing";
 import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
@@ -221,6 +222,11 @@ export function CodeView({
     return (
       <div className="p-8 text-sm text-destructive">Could not open {path}</div>
     );
+  }
+  // Binary content has no lines to render — handing it to the viewer throws
+  // from inside its own line lookup, taking the pane down with it.
+  if (file.data.binary) {
+    return <UnsupportedFile path={path} sizeBytes={file.data.sizeBytes} />;
   }
 
   return (
