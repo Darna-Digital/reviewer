@@ -1,93 +1,81 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import {
+  BACKGROUND_REFRESH_MS,
   captureOrder,
-  snapshotOf,
+  isSnapshotDue,
+  isSnapshotWorthKeeping,
   SNAPSHOT_MAX_CHARS,
-  withBase,
+  SNAPSHOT_REFRESH_MS,
+  type TabSnapshot,
 } from "./tab-snapshot.functions";
+import type { PreviewCapture } from "./preview-capture.functions";
 
-const ROOT = "http://localhost:41812/";
-
-const documentOf = (body: string, head = ""): Document => {
-  const parsed = new DOMParser().parseFromString(
-    `<!doctype html><html><head>${head}</head><body>${body}</body></html>`,
-    "text/html"
-  );
-  return parsed;
-};
-
-describe("withBase", () => {
-  it("resolves the page's own assets against the app it came from", () => {
-    expect(withBase("<html><head><title>a</title></head></html>", ROOT)).toBe(
-      `<html><head><base href="${ROOT}"><title>a</title></head></html>`
-    );
-  });
-
-  it("keeps a quoted base out of the attribute it is written into", () => {
-    expect(withBase("<head></head>", 'http://x/"onload="evil')).toContain(
-      "&quot;onload=&quot;"
-    );
-  });
-
-  it("still leads with the base when the page has no head to put it in", () => {
-    expect(withBase("<html><body>a</body></html>", ROOT)).toMatch(/^<base/);
-  });
+const capture = (patch: Partial<PreviewCapture> = {}): PreviewCapture => ({
+  html: "<div>hi</div>",
+  shadowSheets: {},
+  rootAttrs: {},
+  bodyAttrs: {},
+  width: 1280,
+  height: 800,
+  ...patch,
 });
 
-describe("snapshotOf", () => {
-  it("keeps the markup as a document a frame can render on its own", () => {
-    const html = snapshotOf(documentOf("<p>hello</p>"), ROOT);
-
-    expect(html).toContain("<!doctype html>");
-    expect(html).toContain("<p>hello</p>");
-    expect(html).toContain(`<base href="${ROOT}">`);
-  });
-
-  it("drops the scripts, which no snapshot frame would run anyway", () => {
-    const html = snapshotOf(
-      documentOf("<p>hi</p><script>window.x = 1</script>"),
-      ROOT
-    );
-
-    expect(html).not.toContain("window.x");
-  });
-
-  it("drops the loading hints, which point at work already done", () => {
-    const html = snapshotOf(
-      documentOf("<p>hi</p>", '<link rel="modulepreload" href="/entry.js">'),
-      ROOT
-    );
-
-    expect(html).not.toContain("modulepreload");
-  });
-
-  it("keeps the stylesheet the page is drawn with", () => {
-    const html = snapshotOf(
-      documentOf("<p>hi</p>", '<link rel="stylesheet" href="/styles.css">'),
-      ROOT
-    );
-
-    expect(html).toContain("styles.css");
+describe("isSnapshotWorthKeeping", () => {
+  it("keeps a page that was rendered at a size worth scaling down", () => {
+    expect(isSnapshotWorthKeeping(capture())).toBe(true);
   });
 
   it("refuses a page too large to be worth holding a picture of", () => {
-    const huge = documentOf(`<p>${"x".repeat(SNAPSHOT_MAX_CHARS)}</p>`);
+    expect(
+      isSnapshotWorthKeeping(
+        capture({ html: "x".repeat(SNAPSHOT_MAX_CHARS + 1) })
+      )
+    ).toBe(false);
+  });
 
-    expect(snapshotOf(huge, ROOT)).toBeNull();
+  it("refuses a page that was never laid out, which has nothing to show", () => {
+    expect(isSnapshotWorthKeeping(capture({ width: 0 }))).toBe(false);
+    expect(isSnapshotWorthKeeping(capture({ height: 0 }))).toBe(false);
   });
 });
 
 describe("captureOrder", () => {
-  it("starts at the tab being looked at and comes back round to the rest", () => {
+  it("starts at the section being looked at and comes back round to the rest", () => {
     expect(captureOrder(["a", "b", "c", "d"], 2)).toEqual(["c", "d", "a", "b"]);
   });
 
-  it("starts at the beginning when nothing is active", () => {
+  it("starts at the beginning when the window is on none of them", () => {
     expect(captureOrder(["a", "b"], -1)).toEqual(["a", "b"]);
   });
 
-  it("has nothing to do with no tabs open", () => {
+  it("has nothing to do with nothing to photograph", () => {
     expect(captureOrder([], 0)).toEqual([]);
+  });
+});
+
+describe("isSnapshotDue", () => {
+  const drawn = (at: number): TabSnapshot => ({ ...capture(), at });
+
+  it("always wants a section that has never been drawn", () => {
+    expect(isSnapshotDue(undefined, 0, false)).toBe(true);
+    expect(isSnapshotDue(undefined, 1_000_000, true)).toBe(true);
+  });
+
+  it("leaves a picture alone until its own clock is up", () => {
+    const at = 10_000;
+    expect(isSnapshotDue(drawn(at), at + SNAPSHOT_REFRESH_MS - 1, true)).toBe(
+      false
+    );
+    expect(isSnapshotDue(drawn(at), at + SNAPSHOT_REFRESH_MS, true)).toBe(true);
+  });
+
+  it("comes round for a watched panel sooner than a shut one", () => {
+    const at = 10_000;
+    const now = at + SNAPSHOT_REFRESH_MS;
+    expect(isSnapshotDue(drawn(at), now, true)).toBe(true);
+    expect(isSnapshotDue(drawn(at), now, false)).toBe(false);
+    expect(isSnapshotDue(drawn(at), at + BACKGROUND_REFRESH_MS, false)).toBe(
+      true
+    );
   });
 });

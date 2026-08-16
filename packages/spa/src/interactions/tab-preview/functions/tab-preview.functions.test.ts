@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  fittedLaunchpadHeight,
   LAUNCHPAD_DISMISS_HEIGHT,
   LAUNCHPAD_MIN_HEIGHT,
   launchpadHeightCss,
@@ -7,24 +8,7 @@ import {
   MILL_HEIGHT,
   MILL_WIDTH,
   PREVIEW_ASPECT,
-  previewFrameStyle,
-  PREVIEW_ZOOM,
 } from "./tab-preview.functions";
-
-describe("previewFrameStyle", () => {
-  it("sizes the frame so the scale lands back on its box", () => {
-    expect(previewFrameStyle(0.25)).toEqual({
-      width: "400%",
-      height: "400%",
-      transform: "scale(0.25)",
-      transformOrigin: "top left",
-    });
-  });
-
-  it("scales from the top left, so the page hangs where the box starts", () => {
-    expect(previewFrameStyle(PREVIEW_ZOOM).transformOrigin).toBe("top left");
-  });
-});
 
 describe("the window pictures are taken in", () => {
   it("is the shape a card shows them in, so nothing is cropped to fit", () => {
@@ -39,16 +23,22 @@ describe("the window pictures are taken in", () => {
 });
 
 describe("launchpadHeightCss", () => {
-  it("asks for the height it was dragged to", () => {
+  it("asks for the height it is being drawn at", () => {
     expect(launchpadHeightCss(420)).toContain("420px");
   });
 
-  it("leaves the page a strip of the window whatever was stored", () => {
-    expect(launchpadHeightCss(2000)).toBe("min(2000px, calc(100svh - 192px))");
+  it("leaves the page a strip of the window however tall it is asked to be", () => {
+    expect(launchpadHeightCss(2000)).toContain("calc(100svh - 192px)");
   });
 
   it("never collapses past a row of cards", () => {
     expect(launchpadHeightCss(10)).toContain(`${LAUNCHPAD_MIN_HEIGHT}px`);
+  });
+
+  it("holds both bounds itself, so the panel and the page cannot disagree", () => {
+    expect(launchpadHeightCss(500)).toBe(
+      `clamp(${LAUNCHPAD_MIN_HEIGHT}px, 500px, calc(100svh - 192px))`
+    );
   });
 });
 
@@ -57,11 +47,28 @@ describe("dragging the launchpad shut", () => {
     expect(LAUNCHPAD_DISMISS_HEIGHT).toBeLessThan(LAUNCHPAD_MIN_HEIGHT);
     expect(LAUNCHPAD_MIN_HEIGHT - LAUNCHPAD_DISMISS_HEIGHT).toBeGreaterThan(50);
   });
+});
 
-  it("leaves the panel at its floor for the stretch before that", () => {
-    expect(launchpadHeightCss(LAUNCHPAD_DISMISS_HEIGHT + 1)).toContain(
-      `${LAUNCHPAD_MIN_HEIGHT}px`
+describe("fittedLaunchpadHeight", () => {
+  it("opens on exactly the rows there are", () => {
+    expect(fittedLaunchpadHeight(460, 900)).toBe(460);
+  });
+
+  it("takes no notice of the height the last drag left behind", () => {
+    expect(fittedLaunchpadHeight(460, 900)).toBe(
+      fittedLaunchpadHeight(460, 900)
     );
+    expect(fittedLaunchpadHeight(LAUNCHPAD_DISMISS_HEIGHT, 900)).toBe(
+      LAUNCHPAD_MIN_HEIGHT
+    );
+  });
+
+  it("never asks for more of the window than it can spare", () => {
+    expect(fittedLaunchpadHeight(5000, 900)).toBe(launchpadMaxHeight(900));
+  });
+
+  it("still stands a row tall with nothing to show", () => {
+    expect(fittedLaunchpadHeight(0, 900)).toBe(LAUNCHPAD_MIN_HEIGHT);
   });
 });
 

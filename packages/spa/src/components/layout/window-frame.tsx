@@ -20,6 +20,7 @@ import {
   TabOverviewPush,
   TabOverviewScrim,
 } from "@/interactions/tab-preview/components/tab-overview";
+import { TabSnapshotMill } from "@/interactions/tab-preview/components/tab-snapshot-mill";
 import { isDesktop } from "@/lib/desktop";
 import { isPreviewWindow } from "@/lib/preview-window";
 import { setUiPrefs, toggleBottomVisible, useUiPrefs } from "@/lib/ui-prefs";
@@ -151,6 +152,10 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
           </TabOverviewPush>
         </div>
       </div>
+      {/* Outside the frame, and running from the moment the window has settled
+          rather than from the moment the launchpad is asked for: the pictures
+          are taken in the gaps, so opening the panel is not the wait. */}
+      <TabSnapshotMill />
     </>
   );
 }

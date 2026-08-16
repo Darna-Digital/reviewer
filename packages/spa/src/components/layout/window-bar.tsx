@@ -9,13 +9,7 @@
  */
 // The history arrows are parked for now, along with the icons they wore.
 // import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
-import {
-  IconPlus,
-  IconSitemap,
-  IconStack2,
-  IconWorld,
-  IconX,
-} from "@tabler/icons-react";
+import { IconPlus, IconSitemap, IconWorld, IconX } from "@tabler/icons-react";
 // import { useCanGoBack } from "@tanstack/react-router";
 import { useRouterState } from "@tanstack/react-router";
 import { isFeatureEnabled } from "@byconvo/feature-flags";
@@ -69,11 +63,24 @@ import { activeWorkMode } from "@/lib/work-mode";
 
 const NO_DRAG = "[-webkit-app-region:no-drag]";
 
+/**
+ * How much of the bar the window's own controls have.
+ *
+ * macOS holds the lights 20px off the window's edge, and they run 52px wide, so
+ * they end at 72. The gutter gives the group that same 20px on its other side:
+ * the lights are a thing on the bar with equal air either way round, rather than
+ * a thing the bar starts after.
+ *
+ * The 20 is measured to the edge of the first control, not to the mark inside
+ * it — a chip's fill is what stands next to the lights. That edge is the row's
+ * own gap along from the gutter, so the gutter is 92 less those 4.
+ */
+const LEAD_GUTTER = "w-22";
+
 const sessionsEnabled = isFeatureEnabled("sessions-button");
 
-const LAUNCHPAD_KEYS = "⌘1";
-const PROJECT_KEYS = "⌘2";
-const SESSIONS_KEYS = "⌘3";
+const PROJECT_KEYS = "⌘1";
+const SESSIONS_KEYS = "⌘2";
 const NEW_SESSION_KEYS = "⌘T";
 
 /** A chord as its keycaps: one per glyph, the way the style guide sets them. */
@@ -318,18 +325,8 @@ export function WindowBar() {
             has no controls there, so the bar starts at its edge. */}
         <div
           aria-hidden
-          className={isDesktop ? "w-24 shrink-0" : "w-2 shrink-0"}
+          className={cn("shrink-0", isDesktop ? LEAD_GUTTER : "w-2")}
         />
-        {/* The launchpad rides the bar rather than the strip: it is a place the
-            window goes to, not a page it holds open. */}
-        <BarButton
-          label="Launchpad"
-          keys={LAUNCHPAD_KEYS}
-          pressed={overviewOpen}
-          onClick={toggleTabOverview}
-        >
-          <IconStack2 className="size-4" />
-        </BarButton>
         <SidebarToggle className={NO_DRAG} />
         {/* <BarButton
         label="Back"
@@ -345,8 +342,12 @@ export function WindowBar() {
         <div
           role="tablist"
           aria-label="Open tabs"
+          // No inset of its own: the strip stands off the sidebar toggle by the
+          // row's gap, the same as the tabs stand off each other. An extra
+          // margin here made the one button before the strip the only thing on
+          // the bar with more room around it than its neighbours.
           className={cn(
-            "ml-1 flex min-w-0 items-center gap-1 overflow-x-auto",
+            "flex min-w-0 items-center gap-1 overflow-x-auto",
             NO_DRAG
           )}
         >

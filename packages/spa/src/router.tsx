@@ -1,6 +1,7 @@
 import { focusManager, QueryClient } from "@tanstack/react-query";
 import { createRouter as createTanStackRouter } from "@tanstack/react-router";
 import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
+import { answerPreviewNavigation } from "@/interactions/tab-preview/adapters/preview-navigation";
 import { isPreviewWindow } from "@/lib/preview-window";
 import { routeTree } from "./routeTree.gen";
 
@@ -60,19 +61,27 @@ export interface RouterContext {
 const sessionRoutePrefix = "/modes/agent-session/";
 
 export function getRouter() {
-  // A preview fetches each thing once and then holds still: it is a picture of
-  // the page, and every refetch in it is work the window it hangs over is
-  // already doing for real.
+  // A preview asks for nothing on its own account: a refetch on a timer, on
+  // focus or on a reconnection is work the window it hangs over is already
+  // doing for real, and doing it twice is what a picture is meant to avoid.
+  //
+  // Arriving somewhere is the exception, and has to be. The frame holds one
+  // page now and is steered from section to section rather than reloaded (see
+  // `preview-navigation`), so a document that re-asked for nothing would show
+  // every section as it stood the first time it was ever visited — the cards
+  // would go stale and stay stale for as long as the window is open. So the
+  // one thing that re-asks is a navigation onto data older than a few seconds,
+  // which is exactly the mill coming round for a fresh picture.
   const queryClient = new QueryClient({
     defaultOptions: isPreviewWindow
       ? {
           queries: {
-            staleTime: Infinity,
+            staleTime: 5_000,
             gcTime: 5 * 60_000,
             retry: false,
             refetchInterval: false,
             refetchOnWindowFocus: false,
-            refetchOnMount: false,
+            refetchOnMount: true,
             refetchOnReconnect: false,
           },
         }
@@ -97,12 +106,17 @@ export function getRouter() {
     context: { queryClient } satisfies RouterContext,
     scrollRestoration: ({ location }) =>
       !location.pathname.startsWith(sessionRoutePrefix),
-    // A preview window is never navigated: it renders the one page it was
-    // opened for, so there is nothing for an intent to preload.
+    // Nothing in a preview is ever hovered or focused, so there is no intent in
+    // there to preload on. It is navigated, but only ever straight to the one
+    // section being photographed.
     defaultPreload: isPreviewWindow ? false : "intent",
   });
 
   setupRouterSsrQueryIntegration({ router, queryClient });
+
+  // The window it hangs in takes it from section to section rather than
+  // reloading the frame for each one.
+  if (isPreviewWindow) answerPreviewNavigation(router);
 
   return router;
 }

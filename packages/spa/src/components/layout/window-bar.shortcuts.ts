@@ -2,12 +2,15 @@
  * The chords the window bar answers, read apart from the bar itself so they can
  * be settled without a rendered strip.
  *
- * ⌘<digit> runs along the bar in the order it is drawn: 1, 2 and 3 are the
- * three places it leads with — the launchpad, Code and Sessions — and 4 onwards
- * are the conversations after them, ⌘4 being the first. The three are fixed
- * rather than counted, so opening and closing sessions never moves them, and a
- * session keeps its digit for as long as it keeps its slot. ⌘T, minting a
- * session, is the one chord left on a letter, as in a browser.
+ * ⌘<digit> runs along the bar in the order it is drawn: 1 and 2 are the two
+ * places it leads with — Code and Sessions — and 3 onwards are the
+ * conversations after them, ⌘3 being the first. The two are fixed rather than
+ * counted, so opening and closing sessions never moves them, and a session
+ * keeps its digit for as long as it keeps its slot.
+ *
+ * The launchpad is off the bar — it is reached by the handle under it — so it is
+ * off the run of digits too: it answers to ⌘L, beside ⌘T for a new session, the
+ * two chords that are about the window rather than about a place in it.
  */
 import { isFeatureEnabled } from "@byconvo/feature-flags";
 import {
@@ -28,7 +31,7 @@ type Chord = Pick<
   "key" | "metaKey" | "ctrlKey" | "altKey" | "shiftKey"
 >;
 
-const FIRST_SESSION_DIGIT = 4;
+const FIRST_SESSION_DIGIT = 3;
 const LAST_DIGIT = 9;
 
 /** The digit a session in that slot answers to, once the bar has run out. */
@@ -47,10 +50,8 @@ const sessionsEnabled = (): boolean => isFeatureEnabled("sessions-button");
 const placeAt = (digit: number): BarShortcut | null => {
   switch (digit) {
     case 1:
-      return { kind: "launchpad" };
-    case 2:
       return { kind: "tab", tabId: PROJECT_TAB_ID };
-    case 3:
+    case 2:
       return sessionsEnabled() ? { kind: "tab", tabId: SESSIONS_TAB_ID } : null;
     default:
       return digit >= FIRST_SESSION_DIGIT && digit <= LAST_DIGIT
@@ -59,11 +60,16 @@ const placeAt = (digit: number): BarShortcut | null => {
   }
 };
 
+const DIGIT = /^[0-9]$/;
+
 export function barShortcut(event: Chord): BarShortcut | null {
   if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) {
     return null;
   }
   const key = event.key.toLowerCase();
+  if (key === "l") return { kind: "launchpad" };
   if (key === "t") return sessionsEnabled() ? { kind: "new-session" } : null;
-  return placeAt(Number(key));
+  // Tested rather than coerced: `Number(" ")` is a digit, and Space is not a
+  // chord this bar has any business answering.
+  return DIGIT.test(key) ? placeAt(Number(key)) : null;
 }

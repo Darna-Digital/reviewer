@@ -20,6 +20,26 @@ export function usePresence(open: boolean, exitMs: number): boolean {
 }
 
 /**
+ * True once `open` has been true for the length of its arriving transition, and
+ * false again the moment it is not — the mirror of `usePresence`, for content
+ * that should wait out the animation rather than ride it.
+ */
+export function useSettled(open: boolean, enterMs: number): boolean {
+  const [settled, setSettled] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setSettled(false);
+      return;
+    }
+    const timer = window.setTimeout(() => setSettled(true), enterMs);
+    return () => window.clearTimeout(timer);
+  }, [open, enterMs]);
+
+  return open && settled;
+}
+
+/**
  * True from the frame after `open`. Content mounted already in its open state
  * has nothing to transition from, so it is rendered closed and opened once the
  * browser has seen it there.
