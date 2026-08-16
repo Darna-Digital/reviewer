@@ -681,15 +681,12 @@ function SectionCard({
           : "border-border hover:border-muted-foreground/40"
       )}
     >
-      {previewed ? (
-        <TabPreviewFrame target={section} />
-      ) : (
-        <div
-          style={{ aspectRatio: PREVIEW_ASPECT }}
-          className="w-full bg-background"
-        />
-      )}
-      <div className="flex h-9 items-center gap-2 border-t border-border bg-elevate px-2.5 text-xs">
+      {/* The title leads the card the way a tab leads its page: you read what
+          the thing is and then look at it, rather than looking first and being
+          told after. It is also where the strip puts the same title, so a card
+          and the tab it stands for are labelled at the same edge — and at the
+          same height, h-7 being what a tab stands at up there. */}
+      <div className="flex h-7 items-center gap-2 border-b border-border bg-elevate px-2.5 text-xs">
         <Icon className="size-3.5 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate">{section.title}</span>
         {/* Above the sheet that picks the section, which covers the whole card
@@ -707,6 +704,14 @@ function SectionCard({
           </button>
         )}
       </div>
+      {previewed ? (
+        <TabPreviewFrame target={section} />
+      ) : (
+        <div
+          style={{ aspectRatio: PREVIEW_ASPECT }}
+          className="w-full bg-background"
+        />
+      )}
       <button
         type="button"
         aria-label={`Show ${section.title}`}
@@ -732,15 +737,15 @@ function NewSessionCard({ onSelect }: { readonly onSelect: () => void }) {
         "group/card flex flex-col overflow-hidden rounded-lg border border-dashed border-border text-left transition-colors duration-200 outline-none hover:border-muted-foreground/40 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
       )}
     >
+      <div className="flex h-7 w-full items-center gap-2 border-b border-border bg-elevate px-2.5 text-xs">
+        <IconPlus className="size-3.5 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate">New session</span>
+      </div>
       <div
         style={{ aspectRatio: PREVIEW_ASPECT }}
         className="flex w-full items-center justify-center bg-background text-muted-foreground group-hover/card:text-foreground"
       >
         <IconPlus className="size-5" />
-      </div>
-      <div className="flex h-9 w-full items-center gap-2 border-t border-border bg-elevate px-2.5 text-xs">
-        <IconPlus className="size-3.5 text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate">New session</span>
       </div>
     </button>
   );
