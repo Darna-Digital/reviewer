@@ -336,13 +336,6 @@ export function TabOverview() {
         }}
         className={cn(
           "min-h-0 flex-1 overflow-y-auto transition-opacity motion-reduce:transition-none",
-          // A grid taller than the panel dissolves at whichever edge it runs
-          // past, rather than being cut off at one: the panel's edges are the
-          // bar it came out of and the seam it stands on, and a row sliced in
-          // half at either reads as a mistake rather than as more to come. The
-          // collapse tab is outside the mask, so it stays crisp over content
-          // going soft behind it.
-          "scroll-fade [--scroll-fade-size:6px]",
           shown && !expanded ? "opacity-0" : "opacity-100",
           EASE
         )}
