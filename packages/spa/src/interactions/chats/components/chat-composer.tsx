@@ -36,7 +36,7 @@ import type {
   ChatEffort,
   ChatModelCatalog,
 } from "@byconvo/core/chats";
-import { useDraft } from "@/lib/chat-drafts";
+import { useDraft } from "@/lib/composer-drafts";
 import { cn } from "@/lib/utils";
 import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces";
 import type { ChatMode } from "@/interactions/chats/functions/chat-mode.functions";

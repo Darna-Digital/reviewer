@@ -130,6 +130,25 @@ export const usePagedProjectLog = (enabled: boolean, filters: LogQuery) => {
 export const useMergeState = () =>
   api.useQuery("get", "/api/merge-state", {}, GIT_DATA);
 
+/**
+ * The commit message the agent CLI is drafting for the open project, if any.
+ * The draft is the server's, not this page's — it is asked for on every mount
+ * because the run it reports may have been started by a page that is gone —
+ * and is watched while it runs, which is the only stretch it changes over.
+ */
+export const useCommitDraft = () =>
+  api.useQuery(
+    "get",
+    "/api/git-message/draft",
+    {},
+    {
+      staleTime: 0,
+      refetchInterval: (query) =>
+        query.state.data?.status === "running" ? 1_000 : false,
+      refetchOnWindowFocus: "always",
+    }
+  );
+
 // --- Threads / Chats / Docs / Tasks (workspace features) ------------------
 
 export const useThreads = () =>

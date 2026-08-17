@@ -1348,6 +1348,22 @@ file-tree-container {
 .resize-handle-row[data-dragging]::after {
   background: var(--primary);
 }
+/* A seam that lies where the pointer passes on its way to everything else — the
+   launchpad's, along the top of the page — holds off before lighting up, so
+   crossing it is not an event. Pressing it is one, and the line is there at
+   once.
+
+   The drag drops the transition rather than zeroing its delay: a transition
+   still counting out its delay is kept, not restarted, when the value it is
+   heading for has not changed — so a `transition-delay: 0s` here would sit and
+   wait out the second the hover had already started. */
+.resize-handle-quiet:hover::after {
+  transition-delay: 1s;
+}
+.resize-handle-quiet[data-dragging]::after {
+  background: var(--primary);
+  transition: none;
+}
 
 /* While dragging, force the resize cursor everywhere and suppress selection. */
 body.is-resizing-col,

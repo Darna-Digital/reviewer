@@ -16,8 +16,8 @@ const chord = (key: string) =>
   });
 
 describe("a switched-off sessions button", () => {
-  it("takes Sessions off ⌘3, as it is off the bar", () => {
-    expect(chord("3")).toBeNull();
+  it("takes Sessions off ⌘2, as it is off the bar", () => {
+    expect(chord("2")).toBeNull();
   });
 
   it("takes minting a session off ⌘T with it", () => {
@@ -25,8 +25,11 @@ describe("a switched-off sessions button", () => {
   });
 
   it("leaves the digits either side of it where they are", () => {
-    expect(chord("1")).toEqual({ kind: "launchpad" });
-    expect(chord("2")).toEqual({ kind: "tab", tabId: PROJECT_TAB_ID });
-    expect(chord("4")).toEqual({ kind: "session", slot: 1 });
+    expect(chord("1")).toEqual({ kind: "tab", tabId: PROJECT_TAB_ID });
+    expect(chord("3")).toEqual({ kind: "session", slot: 1 });
+  });
+
+  it("leaves the launchpad on ⌘L, which is nothing to do with sessions", () => {
+    expect(chord("l")).toEqual({ kind: "launchpad" });
   });
 });

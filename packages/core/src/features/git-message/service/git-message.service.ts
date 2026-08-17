@@ -1,3 +1,4 @@
+import * as Cause from "effect/Cause";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import { agentCommand } from "../../threads/functions/agents.ts";
@@ -5,7 +6,8 @@ import type { GitFailure } from "../../../ports/git-exec.ts";
 import { TerminalError, TerminalExec } from "../../../ports/terminal-exec.ts";
 import { hasChanges } from "../functions/git-message.functions.ts";
 import { GitMessageChanges } from "./git-message.changes.ts";
-import type { CommitAgent } from "../schema/git-message.schema.ts";
+import { CommitDrafts, IDLE_DRAFT } from "./git-message.drafts.ts";
+import type { CommitAgent, CommitDraft } from "../schema/git-message.schema.ts";
 
 const MAX_DIFF_CHARS = 16000;
 export const DEFAULT_COMMIT_AGENT: CommitAgent = "claude";
@@ -48,11 +50,45 @@ const cleanMessage = (raw: string): string => {
   }
   return text;
 };
+const runningDraft = (
+  agent: CommitAgent,
+  paths: ReadonlyArray<string>
+): CommitDraft => ({
+  status: "running",
+  message: null,
+  error: null,
+  agent,
+  paths,
+});
+const readyDraft = (
+  agent: CommitAgent,
+  paths: ReadonlyArray<string>,
+  message: string
+): CommitDraft => ({ status: "ready", message, error: null, agent, paths });
+const failedDraft = (
+  agent: CommitAgent,
+  paths: ReadonlyArray<string>,
+  error: string
+): CommitDraft => ({ status: "error", message: null, error, agent, paths });
+
 export interface GitMessageServiceShape {
   readonly generate: (
     paths: ReadonlyArray<string>,
     agent: CommitAgent
   ) => Effect.Effect<string, GitFailure | TerminalError>;
+  /**
+   * Draft in the background: the agent CLI is left running detached from the
+   * request, so the message is there to be read whenever the client asks next.
+   * A scope already drafting keeps its run — the answer is the draft as it
+   * stands, not a second CLI.
+   */
+  readonly start: (
+    scope: string,
+    paths: ReadonlyArray<string>,
+    agent: CommitAgent
+  ) => Effect.Effect<CommitDraft>;
+  readonly draft: (scope: string) => Effect.Effect<CommitDraft>;
+  readonly clear: (scope: string) => Effect.Effect<CommitDraft>;
 }
 export class GitMessageService extends Context.Service<
   GitMessageService,
@@ -61,6 +97,7 @@ export class GitMessageService extends Context.Service<
 export const makeGitMessageService = Effect.gen(function* () {
   const source = yield* GitMessageChanges;
   const terminal = yield* TerminalExec;
+  const drafts = yield* CommitDrafts;
   const generate: GitMessageServiceShape["generate"] = (paths, agent) =>
     Effect.gen(function* () {
       const collected = yield* source.collect(paths);
@@ -103,5 +140,31 @@ export const makeGitMessageService = Effect.gen(function* () {
             })
           );
     });
-  return GitMessageService.of({ generate });
+
+  const start: GitMessageServiceShape["start"] = (scope, paths, agent) =>
+    Effect.gen(function* () {
+      const claimed = yield* drafts.claim(scope, runningDraft(agent, paths));
+      if (claimed === null) return yield* drafts.get(scope);
+      yield* generate(paths, agent).pipe(
+        Effect.match({
+          onSuccess: (message) => readyDraft(agent, paths, message),
+          onFailure: (failure) => failedDraft(agent, paths, failure.message),
+        }),
+        // A defect would otherwise leave the slot running forever, with the
+        // client watching a draft that has already stopped existing.
+        Effect.catchCause((cause) =>
+          Effect.succeed(failedDraft(agent, paths, Cause.pretty(cause)))
+        ),
+        Effect.flatMap((settled) => drafts.put(scope, settled)),
+        Effect.forkDetach
+      );
+      return claimed;
+    });
+
+  return GitMessageService.of({
+    generate,
+    start,
+    draft: drafts.get,
+    clear: (scope) => Effect.as(drafts.clear(scope), IDLE_DRAFT),
+  });
 });

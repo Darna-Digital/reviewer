@@ -1,7 +1,5 @@
 import * as Schema from "effect/Schema";
 
-export const GeneratedMessage = Schema.Struct({ message: Schema.String });
-export type GeneratedMessage = typeof GeneratedMessage.Type;
 export const CommitAgent = Schema.Literals([
   "claude",
   "opencode",
@@ -14,3 +12,25 @@ export const GenerateBody = Schema.Struct({
   agent: Schema.optionalKey(CommitAgent),
 });
 export type GenerateBody = typeof GenerateBody.Type;
+
+export const DraftStatus = Schema.Literals([
+  "idle",
+  "running",
+  "ready",
+  "error",
+]);
+export type DraftStatus = typeof DraftStatus.Type;
+
+/**
+ * A drafting run and whatever it has produced so far. The agent CLI outlives
+ * the request that asked for it, so this — not the response to that request —
+ * is what a client reads its message off, however many reloads later.
+ */
+export const CommitDraft = Schema.Struct({
+  status: DraftStatus,
+  message: Schema.NullOr(Schema.String),
+  error: Schema.NullOr(Schema.String),
+  agent: Schema.NullOr(CommitAgent),
+  paths: Schema.Array(Schema.String),
+});
+export type CommitDraft = typeof CommitDraft.Type;

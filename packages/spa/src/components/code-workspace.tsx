@@ -113,6 +113,7 @@ import {
   useRecentChats,
   useComments,
   useCommitDetail,
+  useCommitDraft,
   useDiffText,
   useFiles,
   useMergeState,
@@ -185,6 +186,11 @@ export function CodeWorkspace() {
 
   const hasGitHub = repo.data?.github != null;
   const pulls = usePulls(hasGitHub);
+
+  // Watched from here rather than from the commit panel: the drafting agent CLI
+  // keeps running while the user is in another mode, and this is what is still
+  // mounted to notice it finish.
+  const commitDraft = useCommitDraft();
 
   // The in-progress merge/rebase, if any — drives the conflict banner + resolver.
   const mergeState = useMergeState();
@@ -986,10 +992,15 @@ export function CodeWorkspace() {
                   <CommitPanel
                     changes={changedFiles}
                     busy={false}
+                    project={workspace.data?.project ?? ""}
                     onCommit={(m, p, push) => git.commitChanges(m, p, push)}
-                    onGenerate={(p, agent) =>
-                      git.generateCommitMessage(p, agent)
-                    }
+                    onGenerate={(p, agent) => git.startCommitMessage(p, agent)}
+                    draft={commitDraft.data}
+                    onDraftSettled={(settled) => {
+                      if (settled.status === "error" && settled.error !== null)
+                        toast.error(settled.error);
+                      void git.clearCommitDraft();
+                    }}
                   />
                 ) : undefined
               }

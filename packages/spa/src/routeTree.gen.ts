@@ -20,6 +20,7 @@ import { Route as AppModesAgentSessionChatIdRouteImport } from './routes/_app/mo
 import { Route as AppModesCodeIndexRouteImport } from './routes/_app/modes.code.index'
 import { Route as AppModesCodeCommitRouteImport } from './routes/_app/modes.code.commit'
 import { Route as AppModesCodeDocsRouteImport } from './routes/_app/modes.code.docs'
+import { Route as AppModesCodeHistoryRouteImport } from './routes/_app/modes.code.history'
 import { Route as AppModesCodeLocalDevRouteImport } from './routes/_app/modes.code.local-dev'
 import { Route as AppModesCodeTasksRouteImport } from './routes/_app/modes.code.tasks'
 import { Route as AppModesCodeThreadsRouteImport } from './routes/_app/modes.code.threads'
@@ -86,6 +87,11 @@ const AppModesCodeDocsRoute = AppModesCodeDocsRouteImport.update({
   path: '/modes/code/docs',
   getParentRoute: () => AppRoute,
 } as any)
+const AppModesCodeHistoryRoute = AppModesCodeHistoryRouteImport.update({
+  id: '/modes/code/history',
+  path: '/modes/code/history',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppModesCodeLocalDevRoute = AppModesCodeLocalDevRouteImport.update({
   id: '/modes/code/local-dev',
   path: '/modes/code/local-dev',
@@ -143,6 +149,7 @@ export interface FileRoutesByFullPath {
   '/modes/agent-session/$chatId': typeof AppModesAgentSessionChatIdRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
   '/modes/code/docs': typeof AppModesCodeDocsRoute
+  '/modes/code/history': typeof AppModesCodeHistoryRoute
   '/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
   '/modes/code/tasks': typeof AppModesCodeTasksRoute
   '/modes/code/threads': typeof AppModesCodeThreadsRoute
@@ -163,6 +170,7 @@ export interface FileRoutesByTo {
   '/modes/agent-session/$chatId': typeof AppModesAgentSessionChatIdRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
   '/modes/code/docs': typeof AppModesCodeDocsRoute
+  '/modes/code/history': typeof AppModesCodeHistoryRoute
   '/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
   '/modes/code/tasks': typeof AppModesCodeTasksRoute
   '/modes/code/threads': typeof AppModesCodeThreadsRoute
@@ -186,6 +194,7 @@ export interface FileRoutesById {
   '/_app/modes/agent-session/$chatId': typeof AppModesAgentSessionChatIdRoute
   '/_app/modes/code/commit': typeof AppModesCodeCommitRoute
   '/_app/modes/code/docs': typeof AppModesCodeDocsRoute
+  '/_app/modes/code/history': typeof AppModesCodeHistoryRoute
   '/_app/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
   '/_app/modes/code/tasks': typeof AppModesCodeTasksRoute
   '/_app/modes/code/threads': typeof AppModesCodeThreadsRoute
@@ -209,6 +218,7 @@ export interface FileRouteTypes {
     | '/modes/agent-session/$chatId'
     | '/modes/code/commit'
     | '/modes/code/docs'
+    | '/modes/code/history'
     | '/modes/code/local-dev'
     | '/modes/code/tasks'
     | '/modes/code/threads'
@@ -229,6 +239,7 @@ export interface FileRouteTypes {
     | '/modes/agent-session/$chatId'
     | '/modes/code/commit'
     | '/modes/code/docs'
+    | '/modes/code/history'
     | '/modes/code/local-dev'
     | '/modes/code/tasks'
     | '/modes/code/threads'
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/_app/modes/agent-session/$chatId'
     | '/_app/modes/code/commit'
     | '/_app/modes/code/docs'
+    | '/_app/modes/code/history'
     | '/_app/modes/code/local-dev'
     | '/_app/modes/code/tasks'
     | '/_app/modes/code/threads'
@@ -348,6 +360,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppModesCodeDocsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/modes/code/history': {
+      id: '/_app/modes/code/history'
+      path: '/modes/code/history'
+      fullPath: '/modes/code/history'
+      preLoaderRoute: typeof AppModesCodeHistoryRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/modes/code/local-dev': {
       id: '/_app/modes/code/local-dev'
       path: '/modes/code/local-dev'
@@ -434,6 +453,7 @@ interface AppRouteChildren {
   AppModesCollaborationRoute: typeof AppModesCollaborationRoute
   AppModesCodeCommitRoute: typeof AppModesCodeCommitRoute
   AppModesCodeDocsRoute: typeof AppModesCodeDocsRoute
+  AppModesCodeHistoryRoute: typeof AppModesCodeHistoryRoute
   AppModesCodeLocalDevRoute: typeof AppModesCodeLocalDevRoute
   AppModesCodeTasksRoute: typeof AppModesCodeTasksRoute
   AppModesCodeThreadsRoute: typeof AppModesCodeThreadsRoute
@@ -453,6 +473,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppModesCollaborationRoute: AppModesCollaborationRoute,
   AppModesCodeCommitRoute: AppModesCodeCommitRoute,
   AppModesCodeDocsRoute: AppModesCodeDocsRoute,
+  AppModesCodeHistoryRoute: AppModesCodeHistoryRoute,
   AppModesCodeLocalDevRoute: AppModesCodeLocalDevRoute,
   AppModesCodeTasksRoute: AppModesCodeTasksRoute,
   AppModesCodeThreadsRoute: AppModesCodeThreadsRoute,

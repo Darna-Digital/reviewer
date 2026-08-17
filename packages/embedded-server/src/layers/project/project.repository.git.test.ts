@@ -12,6 +12,7 @@ import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { describe, expect } from "vitest";
 import { ProjectRepository } from "@byconvo/core/project";
+import { subcommandOf } from "../git/git-exec.ts";
 import { memoryLayer } from "../workspace/workspace-context.ts";
 import { makeGitProjectRepository } from "./project.repository.git.ts";
 import type { SearchQuery } from "@byconvo/core/repo";
@@ -54,6 +55,10 @@ interface Run {
 /** Returned in place of output by a root git cannot be run in at all. */
 const UNREADABLE = Symbol("unreadable");
 
+/** What was asked, past the lock flags GitExec puts in front of a read. */
+const asked = (args: ReadonlyArray<string>): ReadonlyArray<string> =>
+  args.filter((arg) => arg !== "--no-optional-locks");
+
 /**
  * A git that replies from `stdout(run)` and records every invocation, so a
  * test can assert on which root was asked what. A root answering `UNREADABLE`
@@ -69,7 +74,7 @@ const fakeSpawner = (stdout: (run: Run) => string | typeof UNREADABLE) => {
     }
     const run: Run = {
       cwd: String(command.options.cwd ?? ""),
-      args: [...command.args],
+      args: asked(command.args),
     };
     runs.push(run);
     const out = stdout(run);
@@ -216,7 +221,7 @@ describe("GitProjectRepository.log", () => {
       return Effect.gen(function* () {
         const project = yield* ProjectRepository;
         const page = yield* project.log(logQuery("frontend/src/app.tsx"));
-        const logs = runs.filter((run) => run.args[0] === "log");
+        const logs = runs.filter((run) => subcommandOf(run.args) === "log");
         expect(logs.map((run) => run.cwd)).toEqual(["/work/frontend"]);
         expect(logs[0]?.args.at(-1)).toBe("src/app.tsx");
         expect(page.commits.map((entry) => entry.repo.name)).toEqual([
@@ -231,7 +236,7 @@ describe("GitProjectRepository.log", () => {
     return Effect.gen(function* () {
       const project = yield* ProjectRepository;
       yield* project.log(logQuery(null));
-      const logs = runs.filter((run) => run.args[0] === "log");
+      const logs = runs.filter((run) => subcommandOf(run.args) === "log");
       expect(logs.map((run) => run.cwd).sort()).toEqual(ROOTS);
     }).pipe(Effect.provide(layer));
   });
@@ -241,7 +246,9 @@ describe("GitProjectRepository.log", () => {
     return Effect.gen(function* () {
       const project = yield* ProjectRepository;
       const page = yield* project.log(logQuery("mobile/src/app.tsx"));
-      expect(runs.filter((run) => run.args[0] === "log")).toEqual([]);
+      expect(runs.filter((run) => subcommandOf(run.args) === "log")).toEqual(
+        []
+      );
       expect(page.commits).toEqual([]);
     }).pipe(Effect.provide(layer));
   });
@@ -253,7 +260,9 @@ describe("GitProjectRepository.discard", () => {
     return Effect.gen(function* () {
       const project = yield* ProjectRepository;
       yield* project.discard(["backend/src/server.ts", "frontend/src/app.tsx"]);
-      const reverts = runs.filter((run) => run.args[0] === "checkout");
+      const reverts = runs.filter(
+        (run) => subcommandOf(run.args) === "checkout"
+      );
       expect(reverts.map((run) => [run.cwd, run.args.at(-1)])).toEqual([
         ["/work/backend", "src/server.ts"],
         ["/work/frontend", "src/app.tsx"],
@@ -277,7 +286,7 @@ describe("GitProjectRepository.discardHunk", () => {
     return Effect.gen(function* () {
       const project = yield* ProjectRepository;
       yield* project.discardHunk("frontend/src/app.tsx", 0);
-      const diffs = runs.filter((run) => run.args[0] === "diff");
+      const diffs = runs.filter((run) => subcommandOf(run.args) === "diff");
       expect(diffs.map((run) => [run.cwd, run.args.at(-1)])).toEqual([
         ["/work/frontend", "src/app.tsx"],
       ]);

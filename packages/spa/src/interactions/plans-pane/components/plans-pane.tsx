@@ -41,7 +41,7 @@ import {
   NEW_SESSION,
   setChatMode,
 } from "@/interactions/chats/adapters/chat-mode.store";
-import { NEW_CHAT_DRAFT, setDraft } from "@/lib/chat-drafts";
+import { NEW_CHAT_DRAFT, setDraft } from "@/lib/composer-drafts";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { useOpenInEditor } from "../adapters/open-in-editor.adapter";

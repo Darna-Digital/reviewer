@@ -12,7 +12,7 @@ import {
   NEW_SESSION,
   setChatMode,
 } from "@/interactions/chats/adapters/chat-mode.store";
-import { setUiPrefs } from "@/lib/ui-prefs";
+import { setUiPrefs, type WorkMode } from "@/lib/ui-prefs";
 import {
   closeTab,
   NEW_SESSION_HREF,
@@ -33,6 +33,12 @@ export interface WindowTabActions {
    * window while it navigates knows when it is safe to get out of the way.
    */
   readonly select: (tab: WindowTab) => Promise<void>;
+  /**
+   * Take the window to a place in the app rather than to a tab. The launchpad
+   * picks sections, and which tab ends up holding one is the strip's own
+   * business — see `trackLocation`.
+   */
+  readonly visit: (href: string, mode: WorkMode) => Promise<void>;
   readonly close: (id: string) => void;
   /** Mint a session tab and go to its composer. */
   readonly openSession: () => Promise<void>;
@@ -102,6 +108,10 @@ function makeWindowTabActions(router: RouterHandle): WindowTabActions {
       const held = router.state.location.href === tab.href;
       updateWindowTabs((state) => selectTab(state, tab.id));
       return held ? Promise.resolve() : go(tab.href);
+    },
+    visit: (href, mode) => {
+      setUiPrefs({ workMode: mode });
+      return go(href);
     },
     close: (id) => {
       updateWindowTabs((state) => {

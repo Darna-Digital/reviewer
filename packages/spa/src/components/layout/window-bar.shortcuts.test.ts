@@ -16,22 +16,30 @@ const chord = (key: string, held: Partial<KeyboardEvent> = {}) =>
   });
 
 describe("the window bar's chords", () => {
-  it("puts the three places it leads with on ⌘1, ⌘2 and ⌘3", () => {
-    expect(chord("1")).toEqual({ kind: "launchpad" });
-    expect(chord("2")).toEqual({ kind: "tab", tabId: PROJECT_TAB_ID });
-    expect(chord("3")).toEqual({ kind: "tab", tabId: SESSIONS_TAB_ID });
+  it("puts the two places it leads with on ⌘1 and ⌘2", () => {
+    expect(chord("1")).toEqual({ kind: "tab", tabId: PROJECT_TAB_ID });
+    expect(chord("2")).toEqual({ kind: "tab", tabId: SESSIONS_TAB_ID });
   });
 
-  it("carries on along the sessions from ⌘4", () => {
-    expect(chord("4")).toEqual({ kind: "session", slot: 1 });
-    expect(chord("5")).toEqual({ kind: "session", slot: 2 });
-    expect(chord("9")).toEqual({ kind: "session", slot: 6 });
+  it("carries on along the sessions from ⌘3", () => {
+    expect(chord("3")).toEqual({ kind: "session", slot: 1 });
+    expect(chord("4")).toEqual({ kind: "session", slot: 2 });
+    expect(chord("9")).toEqual({ kind: "session", slot: 7 });
   });
 
-  it("runs out at ⌘9, and has nothing on ⌘0", () => {
-    expect(sessionDigit(6)).toBe(9);
-    expect(sessionDigit(7)).toBeNull();
+  it("leaves the launchpad on ⌘L, off the run of places", () => {
+    expect(chord("l")).toEqual({ kind: "launchpad" });
     expect(chord("0")).toBeNull();
+  });
+
+  it("runs out at ⌘9", () => {
+    expect(sessionDigit(7)).toBe(9);
+    expect(sessionDigit(8)).toBeNull();
+  });
+
+  it("reads a digit rather than coercing one out of any key", () => {
+    expect(chord(" ")).toBeNull();
+    expect(chord("")).toBeNull();
   });
 
   it("holds the three to ⌘ alone, whatever else is pressed with it", () => {
@@ -46,9 +54,15 @@ describe("the window bar's chords", () => {
     expect(chord("T", { shiftKey: true })).toBeNull();
   });
 
+  it("holds the launchpad to ⌘ alone as well", () => {
+    expect(chord("L", { shiftKey: true })).toBeNull();
+    expect(chord("l", { altKey: true })).toBeNull();
+  });
+
   it("answers Ctrl the same as ⌘", () => {
     expect(chord("1", { metaKey: false, ctrlKey: true })).toEqual({
-      kind: "launchpad",
+      kind: "tab",
+      tabId: PROJECT_TAB_ID,
     });
   });
 

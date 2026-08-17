@@ -1,69 +1,90 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { TabPreviewFrame } from "./tab-preview-frame";
 import { putSnapshot } from "../adapters/tab-snapshots.store";
-import { PREVIEW_ZOOM } from "../functions/tab-preview.functions";
+import type { PreviewCapture } from "../functions/preview-capture.functions";
 
-const TITLE = "Local changes preview";
+const CARD_WIDTH = 320;
+
+/** jsdom lays nothing out; the card measures its box to know what to scale to. */
+beforeAll(() => {
+  window.ResizeObserver = class {
+    constructor(private readonly report: ResizeObserverCallback) {}
+    observe() {
+      this.report(
+        [{ contentRect: { width: CARD_WIDTH } } as ResizeObserverEntry],
+        this
+      );
+    }
+    unobserve() {}
+    disconnect() {}
+  };
+});
 
 afterEach(cleanup);
 
 let unique = 0;
 const href = () => `/modes/code/commit?case=${(unique += 1)}`;
 
-const show = (at: string) =>
-  render(
-    <TabPreviewFrame
-      target={{ href: at, title: "Local changes" }}
-      zoom={PREVIEW_ZOOM}
-    />
-  );
+const capture = (patch: Partial<PreviewCapture> = {}): PreviewCapture => ({
+  html: "<div>captured</div>",
+  shadowSheets: {},
+  rootAttrs: { class: "dark" },
+  bodyAttrs: {},
+  width: 1280,
+  height: 800,
+  ...patch,
+});
 
-const frameFor = (
-  at: string,
-  html = "<!doctype html><p>hi</p>"
-): HTMLIFrameElement => {
-  putSnapshot(at, html, 0);
-  show(at);
-  const frame = screen.getByTitle(TITLE);
-  if (!(frame instanceof HTMLIFrameElement)) throw new Error("not a frame");
-  return frame;
+const show = (at: string) =>
+  render(<TabPreviewFrame target={{ href: at, title: "Local changes" }} />);
+
+const hostFor = (at: string, patch?: Partial<PreviewCapture>) => {
+  putSnapshot(at, capture(patch), 0);
+  const { container } = show(at);
+  const host = container.querySelector<HTMLElement>("[inert]");
+  if (host === null) throw new Error("no host");
+  return host;
 };
 
 describe("TabPreviewFrame", () => {
-  it("shows the tab's name until there is a picture of it", () => {
-    const at = href();
-    show(at);
+  it("shows the section's name until there is a picture of it", () => {
+    show(href());
 
-    expect(screen.queryByTitle(TITLE)).toBeNull();
     expect(screen.getByText("Local changes")).toBeTruthy();
   });
 
-  it("draws the picture it was given rather than loading the page again", () => {
-    const frame = frameFor(href(), "<!doctype html><p>captured</p>");
+  it("hangs the picture in a shadow root rather than a document of its own", () => {
+    const host = hostFor(href());
 
-    expect(frame.getAttribute("src")).toBeNull();
-    expect(frame.srcdoc).toContain("captured");
+    expect(host.shadowRoot).not.toBeNull();
+    expect(host.querySelector("iframe")).toBeNull();
   });
 
-  it("lets nothing in the picture run", () => {
-    const frame = frameFor(href());
+  it("scales the window it was rendered in down into the card", () => {
+    const host = hostFor(href());
 
-    expect(frame.getAttribute("sandbox")).toBe("allow-same-origin");
+    expect(host.style.width).toBe("1280px");
+    expect(host.style.transform).toBe(`scale(${CARD_WIDTH / 1280})`);
+    expect(host.style.transformOrigin).toBe("top left");
   });
 
   it("leaves the page to be looked at rather than used", () => {
-    const frame = frameFor(href());
+    const host = hostFor(href());
 
-    expect(frame.getAttribute("aria-hidden")).toBe("true");
-    expect(frame.tabIndex).toBe(-1);
+    expect(host.getAttribute("aria-hidden")).toBe("true");
+    expect(host.hasAttribute("inert")).toBe(true);
   });
 
-  it("draws a window wider than the box it is shown in", () => {
-    const frame = frameFor(href());
+  it("keeps a page rendered at another size in its own proportions", () => {
+    const at = href();
+    putSnapshot(at, capture({ width: 1000, height: 1000 }), 0);
+    const { container } = show(at);
 
-    expect(parseFloat(frame.style.width)).toBeGreaterThan(100);
-    expect(frame.style.transform).toBe(`scale(${PREVIEW_ZOOM})`);
+    expect(container.firstElementChild).toHaveProperty(
+      "style.aspectRatio",
+      "1000 / 1000"
+    );
   });
 });
