@@ -1,24 +1,14 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { openBottomTab } from "@/lib/ui-prefs";
+import { createFileRoute } from "@tanstack/react-router";
 
 /**
- * Branch history — the local changes page with the History dock pulled up.
+ * Branch history, with the window to itself.
  *
- * The log lives in a dock rather than on a page of its own, and a dock is not
- * somewhere you can be sent. This is the location that stands for it, so the
- * launchpad has a card to show and picking it lands you where the picture was
- * taken.
+ * There is nothing to render here, and that is the point: the history lives in
+ * the dock, the dock lives in the layout above the outlet, and a location that
+ * built a second copy of it down here would be a page that threw away the list's
+ * place and its filters on the way in. So this route is the location and nothing
+ * else — `AppLayout` reads it and gives the canvas to the dock. See `shellRoute`.
  */
 export const Route = createFileRoute("/_app/modes/code/history")({
-  component: OpenHistoryTab,
+  component: () => null,
 });
-
-function OpenHistoryTab() {
-  const navigate = useNavigate();
-  useEffect(() => {
-    openBottomTab("history");
-    void navigate({ to: "/modes/code/commit", replace: true });
-  }, [navigate]);
-  return null;
-}

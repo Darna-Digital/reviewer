@@ -17,12 +17,7 @@
  * window until the page has arrived, so the two happen in the time one of them
  * takes and the page being left never flashes past on the way.
  */
-import {
-  IconChevronDown,
-  IconChevronUp,
-  IconPlus,
-  IconX,
-} from "@tabler/icons-react";
+import { IconChevronUp, IconPlus, IconX } from "@tabler/icons-react";
 import { useRouterState } from "@tanstack/react-router";
 import {
   useCallback,
@@ -30,13 +25,13 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useEntered, usePresence, useSettled } from "@/hooks/use-presence";
@@ -48,8 +43,8 @@ import {
   closeTabOverview,
   isOverviewResizing,
   isTabOverviewOpen,
+  openTabOverview,
   setOverviewResizing,
-  toggleTabOverview,
   useOverviewResizing,
   useTabOverview,
 } from "../adapters/tab-overview.store";
@@ -64,6 +59,7 @@ import {
   LAUNCHPAD_DISMISS_HEIGHT,
   LAUNCHPAD_MIN_HEIGHT,
   launchpadHeightCss,
+  launchpadMaxHeight,
   fittedLaunchpadHeight,
   LIVE_PREVIEW_LIMIT,
   OVERVIEW_TRANSITION_MS,
@@ -109,18 +105,17 @@ const REGRID_MS = OVERVIEW_TRANSITION_MS + 80;
 const PARKED = "-translate-y-[calc(100%+1px)]";
 
 /**
- * Both ways in and out of the launchpad wear the same tab: it is the frame's
- * material rather than a surface of its own — thin, blurred, and dark enough
- * over a page to be read against it.
+ * The way out of the launchpad wears a tab: it is the frame's material rather
+ * than a surface of its own — thin, blurred, and dark enough over a page to be
+ * read against it.
  *
- * A tab rather than a pill, because it is attached to something. Closed, it
- * hangs off the bottom of the bar; open, it stands on the bottom of the panel.
- * Either way the edge it is fixed to is square and the free side takes the
- * frame's own radius.
+ * A tab rather than a pill, because it is attached to something: it stands on
+ * the bottom of the panel, square along that edge and rounded on the free side,
+ * where it takes the frame's own radius.
  *
  * The attached edge keeps its border, laid over the line where the page's own
  * sheet begins. Dropping it and letting that line run through was the tidier
- * idea and the worse tab: the sides then meet nothing at the top, and what
+ * idea and the worse tab: the sides then meet nothing at the bottom, and what
  * should read as one closed shape reads as two strokes and a hole. A border all
  * the way round is what makes it a tab.
  *
@@ -131,13 +126,7 @@ const PARKED = "-translate-y-[calc(100%+1px)]";
  * only its colour under the pointer is worth animating.
  */
 const HANDLE =
-  "flex w-9 items-center justify-center border border-frame-border/70 bg-background/60 text-muted-foreground shadow-xs transition-[background-color,color] duration-200 supports-backdrop-filter:backdrop-blur-md hover:bg-background/80 hover:text-foreground motion-reduce:transition-none";
-
-/** Hung off the line under the bar: square along the top, rounded below. */
-const HANDLE_UNDER = "top-0 h-5 rounded-b-md";
-
-/** Stood on the line the panel ends at: the same the other way up. */
-const HANDLE_OVER = "bottom-0 h-5 rounded-t-md";
+  "bottom-0 flex h-5 w-9 items-center justify-center rounded-t-md border border-frame-border/70 bg-background/60 text-muted-foreground shadow-xs transition-[background-color,color] duration-200 supports-backdrop-filter:backdrop-blur-md hover:bg-background/80 hover:text-foreground motion-reduce:transition-none";
 
 /** Which card the window is already on, by the longest location it answers to. */
 const sectionAt = (
@@ -348,7 +337,7 @@ export function TabOverview() {
               <h2 className="mb-2 px-0.5 text-xs font-medium text-muted-foreground">
                 {group.title}
               </h2>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-3">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(26rem,1fr))] gap-3">
                 {group.sections.map((section) => (
                   <SectionCard
                     key={section.id}
@@ -427,111 +416,98 @@ export function TabOverviewPush({ children }: { children: React.ReactNode }) {
       )}
     >
       {children}
-      <LaunchpadHandle />
+      {/* Only while there is no panel: open, the page's top edge is the panel's
+          bottom edge, where the seam that sizes it already stands. */}
+      {!expanded && <LaunchpadExpand />}
     </div>
   );
 }
 
 /**
- * How far down the window counts as reaching for the launchpad: the bar, and
- * the first strip of the page under it. Read off the pointer's own position
- * rather than a hover region, which would have to lie over the page to be
- * hovered and would take the clicks meant for whatever is under it.
+ * How long the pointer has to rest on the seam before it is told what it is on.
+ * The launchpad's seam lies where the pointer passes on its way to everything
+ * else, so it holds off before lighting up — and what it says holds off with it,
+ * arriving on the line rather than ahead of it. The wait is `resize-handle-quiet`'s.
  */
-const HANDLE_REACH = 96;
-
-/** Whether the pointer is up in the top of the window, where the handle is. */
-function usePointerNearTop(): boolean {
-  const [near, setNear] = useState(false);
-
-  // Crossing the line is the event, not moving about on either side of it: this
-  // listener sees every pointer move in the window, and telling React about all
-  // of them means a render attempt per move — including through the slide.
-  const was = useRef(false);
-  useEffect(() => {
-    const onMove = (event: PointerEvent) => {
-      const now = event.clientY <= HANDLE_REACH;
-      if (now === was.current) return;
-      was.current = now;
-      setNear(now);
-    };
-    window.addEventListener("pointermove", onMove, { passive: true });
-    return () => window.removeEventListener("pointermove", onMove);
-  }, []);
-
-  return near;
-}
+const SEAM_HINT_DELAY = 1_000;
 
 /**
- * The way in: a pill hanging off the underside of the bar, in the middle of the
- * window.
+ * The way in: the same seam that sizes the launchpad, in the same place, before
+ * there is a launchpad to size. It lies along the top of the page — the edge the
+ * panel will come out of — and pulling it down brings the panel with it, so the
+ * launchpad is opened at the height it is opened to.
  *
  * It rides the page rather than the bar, so it goes down with it when the
- * launchpad pushes — the launchpad is what is above the page, and the handle is
- * the top of the page saying so. Once the panel is up, the way back out is the
- * pill on its bottom edge, in this one's place, so this one gets out of the way.
+ * launchpad pushes; once the panel is up, the seam on its bottom edge stands
+ * exactly here, and this one gets out of the way rather than lie under it.
  *
- * It shows itself only when reached for. A control that is always there is one
- * more thing in front of the page, and this one is over the page rather than in
- * the chrome — so it waits for the pointer to come up to the top of the window,
- * and answers the chord and the keyboard whether it is showing or not.
+ * A pull shorter than the dismiss height leaves the panel where it was, and the
+ * same height in the other direction is what shuts it again — the gesture is
+ * reversible at the point it began, without the pointer having to be let go of.
+ * Let go of without a pull at all, it opens the launchpad on its own rows: the
+ * seam answers a click as the handle it replaced did, since a control you can
+ * only drag is one you have to be told about.
+ *
+ * And told is what the tooltip is for. It hangs off the seam where the handle's
+ * hung under the bar, and carries ⌘L: the launchpad has no button on the bar, so
+ * the two edges it is dragged by are the only places the chord is written down.
  */
-function LaunchpadHandle() {
-  const expanded = useTabOverview();
-  const near = usePointerNearTop();
-  const shown = near && !expanded;
-
+function LaunchpadExpand() {
   return (
-    <HandleTooltip label="Launchpad" side="bottom" disabled={!shown}>
-      <button
-        type="button"
-        aria-label="Launchpad"
-        aria-expanded={expanded}
-        onClick={toggleTabOverview}
-        className={cn(
-          "absolute left-1/2 z-30 -translate-x-1/2",
-          HANDLE,
-          HANDLE_UNDER,
-          // Tabbed to rather than reached for, it shows itself the same way:
-          // the keyboard has no pointer to bring up here.
-          shown
-            ? "opacity-100"
-            : "pointer-events-none opacity-0 focus-visible:pointer-events-auto focus-visible:opacity-100"
-        )}
-      >
-        <IconChevronDown className="size-4" />
-      </button>
-    </HandleTooltip>
-  );
-}
-
-/**
- * Both handles say the same chord, so both say it the same way: the launchpad
- * has no button on the bar to carry ⌘L, and these are where it is learnt.
- */
-function HandleTooltip({
-  label,
-  side,
-  disabled,
-  children,
-}: {
-  readonly label: string;
-  readonly side: "top" | "bottom";
-  readonly disabled?: boolean;
-  readonly children: React.ReactElement;
-}) {
-  return (
-    <Tooltip disabled={disabled}>
-      <TooltipTrigger render={children} />
-      <TooltipContent side={side}>
-        {label}
-        <KbdGroup>
-          {Array.from(LAUNCHPAD_KEYS).map((glyph) => (
-            <Kbd key={glyph}>{glyph}</Kbd>
-          ))}
-        </KbdGroup>
-      </TooltipContent>
-    </Tooltip>
+    <TooltipProvider delay={SEAM_HINT_DELAY}>
+      <Tooltip>
+        <TooltipTrigger
+          render={<div className="absolute inset-x-0 top-0 z-30 flex" />}
+        >
+          <ResizeHandle
+            orientation="row"
+            label="Launchpad"
+            hint={null}
+            className="resize-handle-quiet"
+            // Nothing is open, so the drag starts from no panel at all and the
+            // number it reports is how far down the pointer has come.
+            value={0}
+            min={0}
+            max={() => launchpadMaxHeight(window.innerHeight)}
+            onResize={(dragged) => {
+              if (dragged <= LAUNCHPAD_DISMISS_HEIGHT) {
+                // Pulled open and then pulled back: the same edge that dismisses
+                // a panel is the one it has not yet cleared.
+                if (isTabOverviewOpen()) {
+                  setOverviewResizing(false);
+                  closeTabOverview();
+                }
+                return;
+              }
+              // Before the opening, so the panel arrives under the pointer rather
+              // than sliding to meet it — and so the fit to its own rows stands
+              // aside for a height the gesture is already deciding.
+              setOverviewResizing(true);
+              openTabOverview();
+              drawLaunchpadHeight(dragged);
+            }}
+            onResizeEnd={(dragged, moved) => {
+              setOverviewResizing(false);
+              if (isTabOverviewOpen()) {
+                setUiPrefs({
+                  launchpadHeight: Math.max(dragged, LAUNCHPAD_MIN_HEIGHT),
+                });
+              } else if (!moved) {
+                openTabOverview();
+              }
+            }}
+          />
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          Launchpad
+          <KbdGroup>
+            {Array.from(LAUNCHPAD_KEYS).map((glyph) => (
+              <Kbd key={glyph}>{glyph}</Kbd>
+            ))}
+          </KbdGroup>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -543,24 +519,33 @@ function HandleTooltip({
  * closes the panel rather than starting a drag of the fifty pixels the seam
  * gives up to it. Its tooltip goes over the launchpad rather than under it —
  * below is the page the panel is covering, which is not where the panel's own
- * labels belong.
+ * labels belong. It carries ⌘L with it: the launchpad has no button on the bar,
+ * and this is the one place the chord is written down.
  */
 function CollapseHandle() {
   return (
-    <HandleTooltip label="Collapse launchpad" side="top">
-      <button
-        type="button"
-        aria-label="Collapse launchpad"
-        onClick={closeTabOverview}
-        className={cn(
-          "absolute left-1/2 z-20 -translate-x-1/2",
-          HANDLE,
-          HANDLE_OVER
-        )}
-      >
-        <IconChevronUp className="size-4" />
-      </button>
-    </HandleTooltip>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            aria-label="Collapse launchpad"
+            onClick={closeTabOverview}
+            className={cn("absolute left-1/2 z-20 -translate-x-1/2", HANDLE)}
+          >
+            <IconChevronUp className="size-4" />
+          </button>
+        }
+      />
+      <TooltipContent side="top">
+        Collapse launchpad
+        <KbdGroup>
+          {Array.from(LAUNCHPAD_KEYS).map((glyph) => (
+            <Kbd key={glyph}>{glyph}</Kbd>
+          ))}
+        </KbdGroup>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -568,8 +553,10 @@ function CollapseHandle() {
  * The seam between the launchpad and the page it pushed. It takes room away and
  * gives none back: the panel opens at the height its rows come to, so there is
  * nothing above that to drag into but empty panel — and dragged far enough up,
- * it goes altogether. Making it bigger again is the handle's job, which fits it
- * to the rows afresh.
+ * it goes altogether. Making it bigger again is the opening's job: the same seam
+ * pulled down from a shut panel opens it wherever it is let go of, and a click
+ * on it fits it to the rows afresh. Clicked while the panel is up, it shuts it —
+ * one edge, pressed the same way, whichever side of it the panel is on.
  */
 function LaunchpadResize({
   ceiling,
@@ -604,16 +591,23 @@ function LaunchpadResize({
           setOverviewResizing(true);
           drawLaunchpadHeight(dragged);
         }}
-        onResizeEnd={(dragged) => {
+        onResizeEnd={(dragged, moved) => {
           setOverviewResizing(false);
+          if (!isTabOverviewOpen()) return;
+          // Pressed and let go of where it stood, which is the way the seam is
+          // shut: the same click that pulls the panel out of this edge puts it
+          // back, and the chevron in the middle of the edge is spared having to
+          // be aimed at.
+          if (!moved) {
+            closeTabOverview();
+            return;
+          }
           // Remembered once, where it was dropped. Storing it per frame meant
           // serialising every preference in the app sixty times a second, for a
           // number only the last of those was ever going to keep.
-          if (isTabOverviewOpen()) {
-            setUiPrefs({
-              launchpadHeight: Math.max(dragged, LAUNCHPAD_MIN_HEIGHT),
-            });
-          }
+          setUiPrefs({
+            launchpadHeight: Math.max(dragged, LAUNCHPAD_MIN_HEIGHT),
+          });
         }}
       />
     </div>

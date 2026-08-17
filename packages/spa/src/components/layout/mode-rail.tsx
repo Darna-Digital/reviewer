@@ -13,11 +13,13 @@ import {
   IconPlayerPlay,
   IconTerminal2,
 } from "@tabler/icons-react";
-import { useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { restoreDock, showDockPage } from "@/components/layout/dock-expansion";
 import { Rail, RailButton, RailFoot } from "@/components/layout/rail";
 // The Sessions tab is the way into the threads now, so the rail's inbox is parked.
 // import { ChatsInboxPopover } from "@/interactions/chats/components/chats-inbox-popover";
 import { useRepo } from "@/lib/queries";
+import { shellRoute } from "@/lib/shell-route";
 import {
   openBottomTab,
   setUiPrefs,
@@ -71,12 +73,28 @@ function toggleBottomTab(tab: BottomTab, current: BottomTab, visible: boolean) {
 export function ModeRail() {
   const prefs = useUiPrefs();
   const repo = useRepo();
+  const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const hasGitHub = repo.data?.github != null;
 
-  const historyActive = prefs.bottomVisible && prefs.bottomTab === "history";
-  const servicesActive = prefs.bottomVisible && prefs.bottomTab === "services";
-  const threadsActive = prefs.bottomVisible && prefs.bottomTab === "threads";
+  // Which surface has the window to itself, if one has. A rail button is how you
+  // get from one of them to another, so on a page it moves between the pages
+  // rather than dropping the window back into the drawer for every click; the
+  // one you are already on is the click that puts it down.
+  const route = shellRoute(pathname, "code");
+  const expandedTab = route.kind === "dock" ? route.tab : null;
+  const active = (tab: BottomTab): boolean =>
+    expandedTab === null
+      ? prefs.bottomVisible && prefs.bottomTab === tab
+      : expandedTab === tab;
+  const pick = (tab: BottomTab) => {
+    if (expandedTab === null) {
+      toggleBottomTab(tab, prefs.bottomTab, prefs.bottomVisible);
+      return;
+    }
+    if (expandedTab === tab) restoreDock(navigate, tab);
+    else showDockPage(navigate, tab);
+  };
 
   const renderLink = ({ to, label, icon: Icon, match }: RailLink) => (
     <RailButton
@@ -95,28 +113,22 @@ export function ModeRail() {
       <RailFoot>
         <RailButton
           label="History"
-          active={historyActive}
-          onClick={() =>
-            toggleBottomTab("history", prefs.bottomTab, prefs.bottomVisible)
-          }
+          active={active("history")}
+          onClick={() => pick("history")}
         >
           <IconHistory className="size-4" />
         </RailButton>
         <RailButton
           label="Services"
-          active={servicesActive}
-          onClick={() =>
-            toggleBottomTab("services", prefs.bottomTab, prefs.bottomVisible)
-          }
+          active={active("services")}
+          onClick={() => pick("services")}
         >
           <IconPlayerPlay className="size-4" />
         </RailButton>
         <RailButton
           label="Terminal sessions"
-          active={threadsActive}
-          onClick={() =>
-            toggleBottomTab("threads", prefs.bottomTab, prefs.bottomVisible)
-          }
+          active={active("threads")}
+          onClick={() => pick("threads")}
         >
           <IconTerminal2 className="size-4" />
         </RailButton>

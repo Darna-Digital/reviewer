@@ -12,10 +12,21 @@
  * above every page, and selections navigate by route rather than calling back
  * into whatever is rendering it. It stays mounted while collapsed so Services
  * and Threads keep their PTYs.
+ *
+ * Sitting there is also what makes a surface's full-page form free. Expanded, the
+ * dock is given the canvas and the page below is put away — same component, same
+ * mount, so the history keeps its place and the terminals keep running across a
+ * gesture that would otherwise be a page swap. See `dock-expansion`.
  */
-import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import {
+  useNavigate,
+  useParams,
+  useRouter,
+  useSearch,
+} from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
 import { BottomPanel } from "@/components/layout/bottom-panel";
+import { expandDock, keepDockDrawer } from "@/components/layout/dock-expansion";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { filterCommitsByRepo } from "@byconvo/core/project";
@@ -35,15 +46,29 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { setUiPrefs, useUiPrefs, type BottomTab } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import type { CommitInfo } from "@byconvo/core/repo";
 
-export function GitBottomDock() {
+export function GitBottomDock({
+  /**
+   * The surface the window has been given over to, when the location is one of
+   * the dock's pages. It names the tab as well as the shape: a page says which
+   * surface it is in its URL, so the preference is not consulted while one is up.
+   */
+  expandedTab,
+}: {
+  readonly expandedTab?: BottomTab;
+}) {
   const prefs = useUiPrefs();
   const navigate = useNavigate();
+  const router = useRouter();
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
+
+  const expanded = expandedTab !== undefined;
+  const tab = expandedTab ?? prefs.bottomTab;
+  const shown = expanded || prefs.bottomVisible;
 
   const repo = useRepo();
   const branches = useBranches();
@@ -98,6 +123,16 @@ export function GitBottomDock() {
       };
 
   /**
+   * Picking something out of a surface that has the window to itself is asking
+   * for the page that shows it, so the surface takes the drawer's share of the
+   * window on the way — the history goes on standing under the diff it was used
+   * to find, which is what it does when the drawer was never left.
+   */
+  const leaving = () => {
+    if (expanded) keepDockDrawer(tab);
+  };
+
+  /**
    * Open a commit from the history. In a project of several roots the commit
    * may belong to one that is not current, so that root is followed first —
    * every git view reads from the current root, and a sha means nothing to the
@@ -112,6 +147,7 @@ export function GitBottomDock() {
       );
       if (!followed) return;
     }
+    leaving();
     void navigate({
       to: "/modes/code/browse/commit/$sha",
       params: { sha: commit.sha },
@@ -125,7 +161,9 @@ export function GitBottomDock() {
 
   return (
     <>
-      {prefs.bottomVisible && (
+      {/* A page has no seam to drag: it is as tall as the window, and the height
+          the drawer was left at is waiting for it to be put back down. */}
+      {!expanded && prefs.bottomVisible && (
         <ResizeHandle
           orientation="row"
           value={dock.current}
@@ -139,17 +177,20 @@ export function GitBottomDock() {
       )}
       <div
         className={cn(
-          "shrink-0 overflow-hidden border-t",
-          !prefs.bottomVisible && "hidden"
+          "overflow-hidden",
+          expanded ? "min-h-0 flex-1" : "shrink-0 border-t",
+          !shown && "hidden"
         )}
-        style={dock.style}
-        hidden={!prefs.bottomVisible}
+        style={expanded ? undefined : dock.style}
+        hidden={!shown}
       >
         <BottomPanel
-          tab={prefs.bottomTab}
-          active={prefs.bottomVisible}
-          onTabChange={(tab) => setUiPrefs({ bottomTab: tab })}
+          tab={tab}
+          active={shown}
+          expanded={expanded}
+          onTabChange={(next) => setUiPrefs({ bottomTab: next })}
           onCollapse={() => setUiPrefs({ bottomVisible: false })}
+          onExpand={() => expandDock(navigate, tab, router.state.location.href)}
           branches={branches.data ?? []}
           currentBranch={repo.data?.currentBranch ?? null}
           commits={history.commits}
@@ -172,9 +213,10 @@ export function GitBottomDock() {
           onLogRefChange={setHistoryRef}
           onLogFiltersChange={setHistoryQuery}
           onSelectCommit={(c) => void openCommit(c)}
-          onSelectCommitFile={(p) =>
-            void navigate({ to: "/modes/code/browse", search: { file: p } })
-          }
+          onSelectCommitFile={(p) => {
+            leaving();
+            void navigate({ to: "/modes/code/browse", search: { file: p } });
+          }}
         />
       </div>
     </>

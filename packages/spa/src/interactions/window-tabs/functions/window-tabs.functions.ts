@@ -3,6 +3,7 @@
  * and a tab id, so none of it needs a rendered strip — or a router — to test.
  */
 import { isFeatureEnabled } from "@byconvo/feature-flags";
+import { dockPages } from "@/lib/shell-route";
 import type { WorkMode } from "@/lib/ui-prefs";
 import type {
   WindowTab,
@@ -27,6 +28,12 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
   ["/modes/code/browse", "Project"],
   ["/modes/code/commit", "Local changes"],
   ["/modes/code/review", "Pull requests"],
+  // The dock's surfaces, when one of them is the whole page. Named where they
+  // are named everywhere else, so a card, a tab and a trail agree.
+  ...dockPages.map((page): readonly [string, string] => [
+    page.href,
+    page.title,
+  ]),
   ["/modes/code/docs", "Docs"],
   ["/modes/code/tasks", "Tasks"],
   ["/modes/collaboration/inbox", "Inbox"],

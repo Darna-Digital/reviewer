@@ -80,7 +80,21 @@ export function AppLayout() {
   const needsRepo =
     route.kind === "workspace" ||
     route.kind === "session" ||
-    route.kind === "collaboration";
+    route.kind === "collaboration" ||
+    route.kind === "dock";
+
+  /**
+   * One of the dock's surfaces, with the window to itself. The dock is already
+   * mounted above the outlet for every git page, so this is a shape rather than
+   * a page swap: it takes the canvas, and the outlet is put away behind it.
+   *
+   * Not while there is no repository to read — that case has something to say,
+   * and it is said in the middle of the window rather than by a dock with
+   * nothing in it.
+   */
+  const expandedTab =
+    route.kind === "dock" && current !== null ? route.tab : undefined;
+  const dockExpanded = expandedTab !== undefined;
 
   // The picker is the shell's, so the command that raises it is too.
   const shellCommands = useMemo<ReadonlyArray<Command>>(
@@ -130,7 +144,16 @@ export function AppLayout() {
               !bare && "border-t"
             )}
           >
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {/* Put away rather than unmounted: the outlet is where the router
+                keeps whatever the location matched, and a dock page matches a
+                route that draws nothing. */}
+            <div
+              className={
+                dockExpanded
+                  ? "hidden"
+                  : "flex min-h-0 flex-1 flex-col overflow-hidden"
+              }
+            >
               {/* The pages that sit *over* a repository say so when there
                   isn't one. The code surfaces answer for themselves — a
                   project can be open while holding no git root, and they
@@ -150,7 +173,9 @@ export function AppLayout() {
                 the same dock throughout, which is what lets a terminal opened
                 on the services tab still be running when you come back to it
                 from a diff. */}
-            {current !== null && gitChrome && <GitBottomDock />}
+            {current !== null && gitChrome && (
+              <GitBottomDock expandedTab={expandedTab} />
+            )}
           </div>
         </div>
       </WindowFrame>

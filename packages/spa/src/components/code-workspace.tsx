@@ -54,6 +54,8 @@ import { ConflictView } from "@/components/git/conflict-view";
 import { PullRequestList } from "@/components/git/pull-request-list";
 import type { Crumb } from "@/components/layout/breadcrumbs";
 import { EmptyPane } from "@/components/layout/empty-pane";
+import { NoPullRequests, NoReviewRemote } from "@/components/git/review-empty";
+import { firstPullRequest } from "@/components/git/pull-requests.functions";
 import { PathBar } from "@/components/layout/path-bar";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
@@ -245,6 +247,33 @@ export function CodeWorkspace() {
       }
     );
   }, [params.pull, pulls.data]);
+
+  /**
+   * The pull request review mode opens on: the one at the top of the sidebar.
+   *
+   * A list beside an empty pane is a gate in front of the thing you came for —
+   * the pane cannot show a diff until something is picked, and nine times in ten
+   * the something is the one at the top. So the window goes there itself, and the
+   * list stays what it is: the way between them.
+   *
+   * Replaced rather than pushed. `/modes/code/review` is a place the window
+   * passes through, and left in the history it would be a Back that lands you
+   * where you have just been sent from.
+   */
+  const firstPull = useMemo(
+    () => firstPullRequest(pulls.data ?? []),
+    [pulls.data]
+  );
+  useEffect(() => {
+    if (mode !== "review" || params.pull !== undefined || firstPull === null) {
+      return;
+    }
+    void navigate({
+      to: "/modes/code/review/$pull",
+      params: { pull: String(firstPull.number) },
+      replace: true,
+    });
+  }, [mode, params.pull, firstPull, navigate]);
 
   const browse = useMemo(() => {
     if (params.sha !== undefined) {
@@ -827,6 +856,24 @@ export function CodeWorkspace() {
     await workspaceActions.openRepo(path);
   };
 
+  /**
+   * Review mode with nothing open, which is either a project with no pull
+   * requests or a moment on the way to one.
+   *
+   * Nothing at all while the list is still coming, while it has failed — the
+   * sidebar carries that error, and a second telling of it in the middle of the
+   * window is not a second thing to do about it — and while the window is on its
+   * way to the pull it will open on. An empty state that is about to be replaced
+   * reads worse than the moment of nothing it fills.
+   */
+  const reviewPane = () => {
+    if (!hasGitHub) return <NoReviewRemote />;
+    if (pulls.isPending || pulls.error != null || firstPull !== null) {
+      return null;
+    }
+    return <NoPullRequests />;
+  };
+
   // --- center pane -----------------------------------------------------------
   const renderCenter = () => {
     if (noRepo) {
@@ -882,14 +929,9 @@ export function CodeWorkspace() {
       );
     }
     if (target === null) {
+      if (mode === "review") return reviewPane();
       return (
-        <EmptyPane
-          hint={
-            mode === "review"
-              ? "Pick a pull request from the sidebar to review it"
-              : "Pick a file from the tree, or a commit from the log"
-          }
-        />
+        <EmptyPane hint="Pick a file from the tree, or a commit from the log" />
       );
     }
     return (
@@ -949,7 +991,10 @@ export function CodeWorkspace() {
                   ? errorReason(pulls.error, "Could not load pull requests")
                   : null
               }
-              loading={pulls.isPending}
+              // A query that was never enabled is pending for as long as the
+              // window is open, and a list that says it is loading forever is
+              // worse than one that says it is empty.
+              loading={hasGitHub && pulls.isPending}
               selectedNumber={selectedPull?.number ?? null}
               onSelect={(p) =>
                 void navigate({

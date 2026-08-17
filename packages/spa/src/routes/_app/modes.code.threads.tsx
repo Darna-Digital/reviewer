@@ -1,17 +1,10 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { openBottomTab } from "@/lib/ui-prefs";
+import { createFileRoute } from "@tanstack/react-router";
 
-/** Legacy /threads route — opens the Threads bottom-dock tab. */
+/**
+ * Terminals, with the window to itself. Rendered by the dock in the layout rather
+ * than from here — a second copy would be a second set of PTYs. See
+ * `modes.code.history` and `shellRoute`.
+ */
 export const Route = createFileRoute("/_app/modes/code/threads")({
-  component: OpenThreadsTab,
+  component: () => null,
 });
-
-function OpenThreadsTab() {
-  const navigate = useNavigate();
-  useEffect(() => {
-    openBottomTab("threads");
-    void navigate({ to: "/modes/code/commit", replace: true });
-  }, [navigate]);
-  return null;
-}

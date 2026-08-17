@@ -7,10 +7,12 @@
  * — the surfaces reached from a rail, a dock or nowhere at all — so each of
  * those gets a card, showing that place as it looks right now.
  *
- * A place is a location and nothing else, so a dock that has to be open for the
- * section to make sense is a location too — `/modes/code/history` is the local
- * changes page with the history dock pulled up, and picking the card leaves the
- * window exactly where the picture was taken.
+ * A place is a location and nothing else, which is why the dock's three surfaces
+ * are pages of their own: `/modes/code/history` is the branch history with the
+ * window to itself, and the card shows that page rather than the page the drawer
+ * happened to be lying over. Picking it leaves the window exactly where the
+ * picture was taken, and its own trail is the way back down into the drawer —
+ * see `dock-expansion`.
  *
  * The sessions half is the exception, and is a list of tabs on purpose: a
  * conversation is not a place in the app, it is one of however many you have on
@@ -28,7 +30,8 @@ import {
 } from "@tabler/icons-react";
 import { isFeatureEnabled } from "@byconvo/feature-flags";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
-import type { WorkMode } from "@/lib/ui-prefs";
+import { dockPage } from "@/lib/shell-route";
+import type { BottomTab, WorkMode } from "@/lib/ui-prefs";
 
 export interface LaunchpadSection {
   /**
@@ -60,6 +63,22 @@ export interface LaunchpadGroup {
 /** Sections the project has to be on GitHub to have anything to show. */
 const GITHUB_SECTIONS = new Set(["/modes/code/review"]);
 
+/** A card for one of the dock's surfaces, named and located where it is named
+ * and located everywhere else. */
+const dockSection = (
+  tab: BottomTab,
+  icon: LaunchpadSection["icon"]
+): LaunchpadSection => {
+  const page = dockPage(tab);
+  return {
+    id: page.href,
+    href: page.href,
+    title: page.title,
+    icon,
+    mode: "code",
+  };
+};
+
 const CODE_SECTIONS: ReadonlyArray<LaunchpadSection> = [
   {
     id: "/modes/code/commit",
@@ -68,13 +87,7 @@ const CODE_SECTIONS: ReadonlyArray<LaunchpadSection> = [
     icon: IconGitCommit,
     mode: "code",
   },
-  {
-    id: "/modes/code/history",
-    href: "/modes/code/history",
-    title: "Branch history",
-    icon: IconHistory,
-    mode: "code",
-  },
+  dockSection("history", IconHistory),
   {
     id: "/modes/code/browse",
     href: "/modes/code/browse",
@@ -89,20 +102,8 @@ const CODE_SECTIONS: ReadonlyArray<LaunchpadSection> = [
     icon: IconGitPullRequest,
     mode: "code",
   },
-  {
-    id: "/modes/code/local-dev",
-    href: "/modes/code/local-dev",
-    title: "Services",
-    icon: IconPlayerPlay,
-    mode: "code",
-  },
-  {
-    id: "/modes/code/threads",
-    href: "/modes/code/threads",
-    title: "Terminals",
-    icon: IconTerminal2,
-    mode: "code",
-  },
+  dockSection("services", IconPlayerPlay),
+  dockSection("threads", IconTerminal2),
 ];
 
 /**
