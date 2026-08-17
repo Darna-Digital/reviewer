@@ -5,9 +5,9 @@
  * branch.
  *
  * It keeps the historical project-chip shape — project mark, project label, and
- * chevron — while the menu behind it now chooses local vs cloud. Unbadged means
- * local, which is where sessions run unless you say otherwise; the cloud badge
- * is what says you did.
+ * chevron — while the menu behind it now chooses local vs cloud. The badge on
+ * the project mark mirrors that choice: a computer for local and a cloud for a
+ * workspace environment.
  *
  * The cloud environments are placeholders — nothing runs there yet, so choosing
  * one only moves this control's own selection.
@@ -127,10 +127,7 @@ export function DeviceSwitcher({
 }
 
 /**
- * The project's own mark, badged when the work has been sent somewhere other
- * than this machine. Local is where a session runs unless you say otherwise, so
- * it carries no badge at all: the mark stays the project's, and the cloud is
- * what interrupts it.
+ * The project's own mark, badged with the place where the session runs.
  */
 function RuntimeMark({
   project,
@@ -154,16 +151,18 @@ function RuntimeMark({
   return (
     <span className="relative flex shrink-0">
       <ProjectAvatar name={project} />
-      {cloud && (
-        <span
-          className={cn(
-            "absolute -right-1 -bottom-1 flex items-center justify-center rounded-full p-px",
-            surface
-          )}
-        >
+      <span
+        className={cn(
+          "absolute -right-1 -bottom-1 flex items-center justify-center rounded-full p-px",
+          surface
+        )}
+      >
+        {cloud ? (
           <IconCloud className="size-3 text-muted-foreground" />
-        </span>
-      )}
+        ) : (
+          <IconDeviceLaptop className="size-3 text-muted-foreground" />
+        )}
+      </span>
     </span>
   );
 }
