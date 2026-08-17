@@ -1,9 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
-import { fetchClient } from "@/lib/api/client";
+import { api, fetchClient } from "@/lib/api/client";
 import { useWorkspace } from "@/lib/queries";
 import { isMultiRepo } from "@byconvo/core/workspace";
+import type { CommitDraft } from "@byconvo/core/git-message";
 import type { CommitAgent } from "@/lib/ui-prefs";
 import { createGitActionsFunctions } from "../functions/git-actions.functions";
 import {
@@ -27,6 +28,8 @@ const unwrap = async <T>(
   }
   return data as T;
 };
+
+const draftKey = api.queryOptions("get", "/api/git-message/draft", {}).queryKey;
 
 /**
  * All imperative git actions, wired to the typed API, sonner toasts and
@@ -88,26 +91,40 @@ export function useGitActions() {
     commitChanges: fns.commitChanges,
 
     /**
-     * Ask a locally installed agent CLI (claude/opencode/codex) to draft a
-     * commit message for the selected paths. Returns the message, or null when
-     * generation failed (the error is surfaced as a toast so callers can simply
-     * ignore the null).
+     * Set a locally installed agent CLI (claude/opencode/codex) drafting a
+     * commit message for the selected paths. The CLI runs on the server and
+     * outlives the request that started it, so this answers with the run rather
+     * than the message; the message is read off `useCommitDraft` when it lands,
+     * by whichever page is around to read it.
      */
-    generateCommitMessage: async (
+    startCommitMessage: async (
       paths: ReadonlyArray<string>,
       agent: CommitAgent
-    ): Promise<string | null> => {
+    ): Promise<void> => {
       try {
-        const { message } = await unwrap(
+        const draft = await unwrap(
           fetchClient.POST("/api/git-message/generate", {
             body: { paths: [...paths], agent },
           })
         );
-        return message;
+        queryClient.setQueryData<CommitDraft>(draftKey, draft);
       } catch (cause) {
         notify("err", errorText(cause));
-        return null;
       }
+    },
+
+    /**
+     * Drop the finished draft now that the composer holds it — otherwise every
+     * later mount would put the same message back over whatever was typed
+     * since. A clear that fails is not worth a toast: the message is in hand.
+     */
+    clearCommitDraft: async (): Promise<void> => {
+      const { data } = await fetchClient.POST(
+        "/api/git-message/draft/clear",
+        {}
+      );
+      if (data !== undefined)
+        queryClient.setQueryData<CommitDraft>(draftKey, data);
     },
 
     /**

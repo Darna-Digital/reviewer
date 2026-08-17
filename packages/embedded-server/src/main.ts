@@ -15,6 +15,7 @@
  */
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node";
 import * as Layer from "effect/Layer";
+import { commitDraftsLayer } from "@byconvo/core/git-message";
 import { FetchHttpClient, HttpRouter } from "effect/unstable/http";
 import { HttpApiBuilder, HttpApiScalar } from "effect/unstable/httpapi";
 import { createServer } from "node:http";
@@ -117,14 +118,17 @@ const RequestServices = Layer.mergeAll(
 /**
  * Global singletons, built once so the selected-repo state persists across
  * requests: the database, the workspace context (mutable selection), the git
- * executor and the GitHub client.
+ * executor, the GitHub client and the commit-message drafts (a drafting agent
+ * CLI outlives the request that started it, so its slot has to outlive it too).
  *
  * The database comes first — opening a project imports whatever its roots still
  * keep in `.byconvo/*.json`, so the file has to be there (and migrated) before
  * the workspace context seeds its initial selection.
  */
 const InfraLive = gitHubClientLayer.pipe(
-  Layer.provideMerge(Layer.mergeAll(gitExecLayer, terminalExecLayer)),
+  Layer.provideMerge(
+    Layer.mergeAll(gitExecLayer, terminalExecLayer, commitDraftsLayer)
+  ),
   Layer.provideMerge(workspaceContextLayer(initial)),
   Layer.provideMerge(databaseLayer),
   Layer.provide(FetchHttpClient.layer)

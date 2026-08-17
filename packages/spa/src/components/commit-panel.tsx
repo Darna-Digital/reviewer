@@ -1,5 +1,5 @@
 import { IconSparkles } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { agentIcon } from "@/interactions/threads/components/agent-icons";
@@ -16,7 +16,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents";
+import type { CommitDraft } from "@byconvo/core/git-message";
 import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo";
+import { useCommitMessage } from "@/lib/commit-drafts";
 import { STATUS_COLOR } from "@/lib/git-status";
 import {
   ELEVATION,
@@ -33,16 +35,22 @@ const COMMIT_AGENTS = AGENTS.filter((a) => a.kind !== "terminal");
 interface CommitPanelProps {
   changes: ReadonlyArray<GitStatusEntry>;
   busy: boolean;
+  /** Which project's composer this is — the message is kept per project. */
+  project: string;
   onCommit: (
     message: string,
     paths: ReadonlyArray<string>,
     andPush: boolean
   ) => Promise<unknown>;
-  /** Draft a commit message for the chosen paths with the chosen agent CLI. */
+  /** Set an agent CLI drafting a message for the chosen paths, in background. */
   onGenerate?: (
     paths: ReadonlyArray<string>,
     agent: CommitAgent
-  ) => Promise<string | null>;
+  ) => Promise<void>;
+  /** The server's drafting run — running, finished, or nothing yet. */
+  draft?: CommitDraft;
+  /** Told once the panel has taken a finished draft, so it can be dropped. */
+  onDraftSettled?: (draft: CommitDraft) => void;
 }
 
 const STATUS_LETTER: Record<GitFileStatus, string> = {
@@ -57,8 +65,11 @@ const STATUS_LETTER: Record<GitFileStatus, string> = {
 export function CommitPanel({
   changes,
   busy,
+  project,
   onCommit,
   onGenerate,
+  draft,
+  onDraftSettled,
 }: CommitPanelProps) {
   const { commitFilesHeight, commitMessageHeight, commitAgent } = useUiPrefs();
   // Live heights for smooth dragging; committed back to prefs on release.
@@ -70,8 +81,8 @@ export function CommitPanel({
     commitMessageHeight,
     "height"
   );
-  const [message, setMessage] = useState("");
-  const [generating, setGenerating] = useState(false);
+  const [message, setMessage] = useCommitMessage(project);
+  const generating = draft?.status === "running";
   const [composerFocused, setComposerFocused] = useState(false);
   // The picker's popup is portalled, so opening it takes focus out of the
   // composer -- track it so the controls it belongs to do not vanish.
@@ -133,14 +144,30 @@ export function CommitPanel({
 
   const generate = async () => {
     if (!canGenerate || onGenerate === undefined) return;
-    setGenerating(true);
-    try {
-      const generated = await onGenerate(chosen, commitAgent);
-      if (generated !== null && generated.length > 0) setMessage(generated);
-    } finally {
-      setGenerating(false);
-    }
+    await onGenerate(chosen, commitAgent);
   };
+
+  // A draft that finished while this panel was unmounted is waiting on the
+  // server, so it is taken on arrival *or* on mount — the same code either way.
+  // The stamp is what stops the take from repeating over the moment between the
+  // draft landing and the server being told the message is in hand; a slot that
+  // empties or starts running again forgets it, so the next draft is taken even
+  // when it reads exactly like the last one.
+  const taken = useRef("");
+  useEffect(() => {
+    if (draft === undefined) return;
+    if (draft.status === "idle" || draft.status === "running") {
+      taken.current = "";
+      return;
+    }
+    const stamp = `${draft.status}:${draft.message ?? draft.error ?? ""}`;
+    if (taken.current === stamp) return;
+    taken.current = stamp;
+    if (draft.status === "ready" && draft.message !== null) {
+      setMessage(draft.message);
+    }
+    onDraftSettled?.(draft);
+  }, [draft, setMessage, onDraftSettled]);
 
   const AgentGlyph = agentIcon(commitAgent);
   const showGenerateControls = composerFocused || agentPickerOpen || generating;

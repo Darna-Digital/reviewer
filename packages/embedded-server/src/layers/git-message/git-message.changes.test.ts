@@ -11,7 +11,7 @@ import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { describe, expect } from "vitest";
 import { GitMessageChanges } from "@byconvo/core/git-message";
-import { layer as gitExecLayer } from "../git/git-exec.ts";
+import { layer as gitExecLayer, subcommandOf } from "../git/git-exec.ts";
 import { memoryLayer } from "../workspace/workspace-context.ts";
 import { makeWorkspaceChanges } from "./git-message.changes.ts";
 
@@ -49,6 +49,10 @@ interface Run {
 /** Returned in place of output by a root git cannot be run in at all. */
 const UNREADABLE = Symbol("unreadable");
 
+/** What was asked, past the lock flags GitExec puts in front of a read. */
+const asked = (args: ReadonlyArray<string>): ReadonlyArray<string> =>
+  args.filter((arg) => arg !== "--no-optional-locks");
+
 const fakeSpawner = (stdout: (run: Run) => string | typeof UNREADABLE) => {
   const runs: Array<Run> = [];
   const spawner = ChildProcessSpawner.make((command) => {
@@ -57,7 +61,7 @@ const fakeSpawner = (stdout: (run: Run) => string | typeof UNREADABLE) => {
     }
     const run: Run = {
       cwd: String(command.options.cwd ?? ""),
-      args: [...command.args],
+      args: asked(command.args),
     };
     runs.push(run);
     const out = stdout(run);
@@ -130,9 +134,10 @@ const answer =
   ({ args, cwd }: Run) => {
     const root = perRoot[cwd];
     if (root === undefined) return "";
-    if (args[0] === "diff") return root.diff;
-    if (args[0] === "ls-files") return root.untracked ?? "";
-    if (args[0] === "rev-parse") return "feature/DAR-144-add-thing\n";
+    if (subcommandOf(args) === "diff") return root.diff;
+    if (subcommandOf(args) === "ls-files") return root.untracked ?? "";
+    if (subcommandOf(args) === "rev-parse")
+      return "feature/DAR-144-add-thing\n";
     return "";
   };
 
@@ -154,7 +159,7 @@ describe("workspace commit-message changes", () => {
           ),
           layer
         );
-        const diffs = runs.filter((run) => run.args[0] === "diff");
+        const diffs = runs.filter((run) => subcommandOf(run.args) === "diff");
         expect(diffs.map((run) => run.cwd)).toEqual(MULTI_ROOTS);
         expect(diffs.map((run) => run.args.at(-1))).toEqual([
           "src/server.ts",
@@ -216,7 +221,7 @@ describe("workspace commit-message changes", () => {
         ),
         layer
       );
-      const diffs = runs.filter((run) => run.args[0] === "diff");
+      const diffs = runs.filter((run) => subcommandOf(run.args) === "diff");
       expect(diffs.map((run) => run.cwd)).toEqual([PROJECT]);
       expect(diffs[0]?.args.at(-1)).toBe("src/a.ts");
       expect(changes.diff).toContain("diff --git a/src/a.ts b/src/a.ts");

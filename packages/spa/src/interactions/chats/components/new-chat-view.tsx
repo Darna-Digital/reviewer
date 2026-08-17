@@ -27,7 +27,7 @@ import {
   modeTitle,
 } from "@/interactions/chats/functions/chat-mode.functions";
 import { preferredChatModel } from "@/interactions/chats/functions/chat-model.functions";
-import { NEW_CHAT_DRAFT, setDraft } from "@/lib/chat-drafts";
+import { NEW_CHAT_DRAFT, setDraft } from "@/lib/composer-drafts";
 import { isDesktop } from "@/lib/desktop";
 import { useChatModels, useRepo } from "@/lib/queries";
 import { useUiPrefs } from "@/lib/ui-prefs";
