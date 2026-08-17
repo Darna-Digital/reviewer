@@ -54,6 +54,9 @@ import { setUiPrefs, useUiPrefs, type BottomTab } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import type { CommitInfo } from "@byconvo/core/repo";
 
+/** Below this the drag reads as closing the dock rather than sizing it. */
+const COLLAPSE_HEIGHT = 120;
+
 export function GitBottomDock({
   /**
    * The surface the window has been given over to, when the location is one of
@@ -179,11 +182,20 @@ export function GitBottomDock({
         <ResizeHandle
           orientation="row"
           value={dock.current}
-          min={120}
+          min={COLLAPSE_HEIGHT}
           max={() => Math.max(160, window.innerHeight - 200)}
           direction={-1}
           onResize={dock.onResize}
-          onResizeEnd={(h) => setUiPrefs({ bottomHeight: h })}
+          onResizeEnd={(height) => {
+            if (height > COLLAPSE_HEIGHT) {
+              setUiPrefs({ bottomHeight: height });
+              return;
+            }
+            // Keep the useful height the dock had before it was dragged shut,
+            // so opening it again does not bring back the collapsed sliver.
+            dock.onResize(prefs.bottomHeight);
+            setUiPrefs({ bottomVisible: false });
+          }}
           label="Resize bottom panel"
         />
       )}
