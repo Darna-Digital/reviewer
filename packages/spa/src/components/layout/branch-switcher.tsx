@@ -13,31 +13,27 @@ import {
   IconChevronRight,
   IconFolder,
   IconGitBranch,
-  IconPlus,
   IconSearch,
   IconStarFilled,
 } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+import {
+  useBranchActionControls,
+  type BranchActionScope,
+} from "@/components/layout/branch-actions";
+import {
+  groupBranchesByFolder,
+  splitBranchFolder,
+} from "@/components/layout/branch-groups";
 import { handleSearchKeyDown } from "@/components/ui/search-keydown";
 import { cn } from "@/lib/utils";
 import { useSurfaceBackground } from "@/lib/surface-context";
@@ -81,79 +77,8 @@ interface BranchSwitcherProps {
   onFollowRepo?: (repoPath: string) => Promise<boolean>;
 }
 
-/**
- * A pending branch action that needs user input or confirmation, surfaced as a
- * shadcn `Dialog`. The menu fires these into state (a native `window.prompt`
- * triggered from inside the closing dropdown gets suppressed by the browser's
- * focus transition, so the create/rename never ran).
- */
-type BranchPrompt =
-  | {
-      readonly kind: "create";
-      readonly startPoint: string | null;
-      readonly label: string;
-      readonly repoPath: string | null;
-    }
-  | {
-      readonly kind: "rename";
-      readonly from: string;
-      readonly repoPath: string | null;
-    }
-  | {
-      readonly kind: "delete";
-      readonly name: string;
-      readonly repoPath: string | null;
-    };
-
-/** A branch the action submenu operates on, normalised across local/remote. */
-interface BranchTarget {
-  /** Full display name, e.g. "task/BMB-207" or "origin/feature". */
-  readonly display: string;
-  /** The ref to check out — a local name, or a remote's short (tracking) name. */
-  readonly ref: string;
-  readonly isCurrent: boolean;
-  readonly isRemote: boolean;
-}
-
-/** Branch names make these labels long; the menu item tooltips the clipped ones. */
-const ActionLabel = ({ children }: { children: React.ReactNode }) => (
-  <span className="min-w-0 flex-1 truncate">{children}</span>
-);
-
-/** Split "task/BMB-1" → ["task", "BMB-1"]; "main" → [null, "main"]. */
-const splitFolder = (name: string): [string | null, string] => {
-  const slash = name.indexOf("/");
-  if (slash < 0) return [null, name];
-  return [name.slice(0, slash), name.slice(slash + 1)];
-};
-
-interface FolderGroup<T> {
-  readonly folder: string | null;
-  readonly items: ReadonlyArray<T>;
-}
-
-/** Group rows by their first path segment, preserving order. */
-const groupByFolder = <T,>(
-  rows: ReadonlyArray<T>,
-  nameOf: (row: T) => string
-): ReadonlyArray<FolderGroup<T>> => {
-  const groups: Array<{ folder: string | null; items: Array<T> }> = [];
-  const index = new Map<string | null, number>();
-  for (const row of rows) {
-    const [folder] = splitFolder(nameOf(row));
-    let at = index.get(folder);
-    if (at === undefined) {
-      at = groups.length;
-      index.set(folder, at);
-      groups.push({ folder, items: [] });
-    }
-    groups[at].items.push(row);
-  }
-  return groups;
-};
-
 export function BranchSwitcher(props: BranchSwitcherProps) {
-  const { current, branches, remoteBranches, busy } = props;
+  const { current, branches, remoteBranches } = props;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   // Recent + Local open by default, Remote collapsed — like JetBrains.
@@ -162,7 +87,6 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
     local: false,
     remote: true,
   });
-  const [prompt, setPrompt] = useState<BranchPrompt | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // base-ui highlights the first item on open; pull focus back to the filter.
@@ -185,21 +109,10 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
   // the flat body it has always had.
   const multiRepo = (props.repos ?? []).length > 1;
   const currentRepoPath = props.currentRepo?.path ?? null;
-
-  /**
-   * Run `fn` in `repoPath`: directly when it is already the current root,
-   * otherwise after following it — the handlers behind these menu items act on
-   * whatever root the git views point at.
-   */
-  const inRepo = (repoPath: string | null) => (fn: () => void) => () => {
-    if (repoPath === null || repoPath === currentRepoPath) {
-      fn();
-      return;
-    }
-    void props.onFollowRepo?.(repoPath).then((ok) => {
-      if (ok) fn();
-    });
-  };
+  const actions = useBranchActionControls({
+    ...props,
+    currentRepoPath,
+  });
 
   /**
    * The Recent / Local / Remote body for one repository — exactly the menu a
@@ -207,7 +120,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
    * root, inside that root's submenu; nothing about the body itself differs.
    */
   const renderSections = (
-    scope: ActionScope & {
+    scope: BranchActionScope & {
       readonly sectionBranches: ReadonlyArray<BranchInfo>;
       readonly sectionRemotes: ReadonlyArray<RemoteBranchInfo>;
       readonly keyPrefix: string;
@@ -216,11 +129,11 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
     const recent = scope.sectionBranches
       .filter((b) => matches(b.name))
       .slice(0, 5);
-    const localGroups = groupByFolder(
+    const localGroups = groupBranchesByFolder(
       scope.sectionBranches.filter((b) => matches(b.name)),
       (b) => b.name
     );
-    const remoteGroups = groupByFolder(
+    const remoteGroups = groupBranchesByFolder(
       scope.sectionRemotes.filter((b) => matches(b.name)),
       (b) => b.name
     );
@@ -288,105 +201,6 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
     );
   };
 
-  const newBranch = (
-    startPoint: string | null,
-    label: string,
-    repoPath: string | null
-  ) => setPrompt({ kind: "create", startPoint, label, repoPath });
-
-  /**
-   * The repository the actions below run in. `repoPath` null means "the
-   * current root" — the single-repo case, and the current root's own scope in
-   * a project of several. `head` is that repository's checked-out branch, for
-   * the merge/rebase/compare labels.
-   */
-  interface ActionScope {
-    readonly repoPath: string | null;
-    readonly head: string;
-  }
-
-  /** The JetBrains-style action list for one branch, in one repository. */
-  const renderActions = (t: BranchTarget, scope: ActionScope) => {
-    const run = inRepo(scope.repoPath);
-    return (
-      <>
-        {!t.isCurrent && (
-          <DropdownMenuItem onClick={run(() => props.onCheckout(t.ref))}>
-            Checkout
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuItem
-          onClick={() => newBranch(t.ref, t.display, scope.repoPath)}
-        >
-          <IconPlus className="size-3.5 text-muted-foreground" />
-          <ActionLabel>New Branch from ‘{t.display}’</ActionLabel>
-        </DropdownMenuItem>
-        {!t.isCurrent && (
-          <>
-            <DropdownMenuItem
-              onClick={run(() => props.onCheckoutAndUpdate(t.ref))}
-            >
-              Checkout and Update
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={run(() => props.onCompare(scope.head, t.ref))}
-            >
-              <ActionLabel>Compare with ‘{scope.head}’</ActionLabel>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={run(() => props.onMerge(t.ref))}>
-              <ActionLabel>
-                Merge ‘{t.display}’ into ‘{scope.head}’
-              </ActionLabel>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={run(() => props.onRebase(t.ref))}>
-              <ActionLabel>
-                Rebase ‘{scope.head}’ onto ‘{t.display}’
-              </ActionLabel>
-            </DropdownMenuItem>
-          </>
-        )}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem disabled={busy} onClick={run(() => props.onFetch())}>
-          Update
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={busy} onClick={run(() => props.onPush())}>
-          Push…
-        </DropdownMenuItem>
-        {!t.isRemote && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() =>
-                setPrompt({
-                  kind: "rename",
-                  from: t.ref,
-                  repoPath: scope.repoPath,
-                })
-              }
-            >
-              Rename…
-            </DropdownMenuItem>
-            {!t.isCurrent && (
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() =>
-                  setPrompt({
-                    kind: "delete",
-                    name: t.ref,
-                    repoPath: scope.repoPath,
-                  })
-                }
-              >
-                Delete
-              </DropdownMenuItem>
-            )}
-          </>
-        )}
-      </>
-    );
-  };
-
   const LocalRow = ({
     branch,
     flat,
@@ -394,9 +208,9 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
   }: {
     branch: BranchInfo;
     flat?: boolean;
-    scope: ActionScope;
+    scope: BranchActionScope;
   }) => {
-    const leaf = flat ? branch.name : splitFolder(branch.name)[1];
+    const leaf = flat ? branch.name : splitBranchFolder(branch.name)[1];
     return (
       <DropdownMenuSub>
         <DropdownMenuSubTrigger
@@ -432,7 +246,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           )}
         </DropdownMenuSubTrigger>
         <DropdownMenuSubContent className="w-72">
-          {renderActions(
+          {actions.actionItems(
             {
               display: branch.name,
               ref: branch.name,
@@ -451,18 +265,18 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
     scope,
   }: {
     branch: RemoteBranchInfo;
-    scope: ActionScope;
+    scope: BranchActionScope;
   }) => (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger>
         <IconGitBranch className="size-3.5 text-muted-foreground" />
-        <span className="truncate">{splitFolder(branch.name)[1]}</span>
+        <span className="truncate">{splitBranchFolder(branch.name)[1]}</span>
         <span className="ml-auto shrink-0 text-xs text-muted-foreground">
           {branch.remote}
         </span>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="w-72">
-        {renderActions(
+        {actions.actionItems(
           {
             display: branch.name,
             ref: branch.shortName,
@@ -560,177 +374,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <BranchPromptDialog
-        prompt={prompt}
-        onClose={() => setPrompt(null)}
-        // The dialog confirms after the menu has closed, so the repo the
-        // prompt came from is followed here, not when it was opened.
-        onCreateBranch={(name, startPoint) =>
-          inRepo(prompt?.repoPath ?? null)(() =>
-            props.onCreateBranch(name, startPoint)
-          )()
-        }
-        onRenameBranch={(from, to) =>
-          inRepo(prompt?.repoPath ?? null)(() =>
-            props.onRenameBranch(from, to)
-          )()
-        }
-        onDeleteBranch={(name) =>
-          inRepo(prompt?.repoPath ?? null)(() => props.onDeleteBranch(name))()
-        }
-      />
-    </>
-  );
-}
-
-/**
- * The shadcn dialog that backs every branch action needing input — create,
- * "new branch from", rename — plus the delete confirmation.
- * Keyed by the prompt so the text field resets to the right default each time.
- */
-function BranchPromptDialog({
-  prompt,
-  onClose,
-  onCreateBranch,
-  onRenameBranch,
-  onDeleteBranch,
-}: {
-  prompt: BranchPrompt | null;
-  onClose: () => void;
-  onCreateBranch: (name: string, startPoint: string | null) => void;
-  onRenameBranch: (from: string, to: string) => void;
-  onDeleteBranch: (name: string) => void;
-}) {
-  return (
-    <Dialog open={prompt !== null} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent showCloseButton={false}>
-        {prompt?.kind === "delete" ? (
-          <DeleteConfirm
-            name={prompt.name}
-            onConfirm={() => {
-              onDeleteBranch(prompt.name);
-              onClose();
-            }}
-          />
-        ) : prompt !== null ? (
-          <BranchNameForm
-            key={prompt.kind === "rename" ? prompt.from : prompt.kind}
-            prompt={prompt}
-            onSubmit={(value) => {
-              if (prompt.kind === "create") {
-                onCreateBranch(value, prompt.startPoint);
-                onClose();
-                return;
-              }
-              if (prompt.kind === "rename" && value !== prompt.from)
-                onRenameBranch(prompt.from, value);
-              onClose();
-            }}
-          />
-        ) : null}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/** Title/label/submit copy for each text-entry prompt. */
-const PROMPT_COPY = (prompt: BranchPrompt) => {
-  switch (prompt.kind) {
-    case "create":
-      return prompt.startPoint === null
-        ? {
-            title: "New branch",
-            label: "Branch name",
-            action: "Create",
-            initial: "",
-          }
-        : {
-            title: `New branch from ‘${prompt.label}’`,
-            label: "Branch name",
-            action: "Create",
-            initial: "",
-          };
-    case "rename":
-      return {
-        title: `Rename ‘${prompt.from}’`,
-        label: "New name",
-        action: "Rename",
-        initial: prompt.from,
-      };
-    default:
-      return { title: "", label: "", action: "", initial: "" };
-  }
-};
-
-function BranchNameForm({
-  prompt,
-  onSubmit,
-}: {
-  prompt: BranchPrompt;
-  onSubmit: (value: string) => void;
-}) {
-  const copy = PROMPT_COPY(prompt);
-  const [value, setValue] = useState(copy.initial);
-  const trimmed = value.trim();
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Select the existing text on open so rename can be typed over immediately.
-  useEffect(() => {
-    inputRef.current?.select();
-  }, []);
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (trimmed) onSubmit(trimmed);
-      }}
-    >
-      <DialogHeader>
-        <DialogTitle>{copy.title}</DialogTitle>
-        <DialogDescription className="sr-only">{copy.label}</DialogDescription>
-      </DialogHeader>
-      <Input
-        ref={inputRef}
-        autoFocus
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder={copy.label}
-        className="my-4"
-      />
-      <DialogFooter>
-        <DialogClose render={<Button variant="outline" type="button" />}>
-          Cancel
-        </DialogClose>
-        <Button type="submit" disabled={trimmed.length === 0}>
-          {copy.action}
-        </Button>
-      </DialogFooter>
-    </form>
-  );
-}
-
-function DeleteConfirm({
-  name,
-  onConfirm,
-}: {
-  name: string;
-  onConfirm: () => void;
-}) {
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>Delete branch</DialogTitle>
-        <DialogDescription>
-          Delete branch ‘{name}’? This cannot be undone.
-        </DialogDescription>
-      </DialogHeader>
-      <DialogFooter>
-        <DialogClose render={<Button variant="outline" />}>Cancel</DialogClose>
-        <Button variant="destructive" onClick={onConfirm}>
-          Delete
-        </Button>
-      </DialogFooter>
+      {actions.dialog}
     </>
   );
 }

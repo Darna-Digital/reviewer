@@ -18,6 +18,7 @@ import { Route as AppModesCollaborationRouteImport } from './routes/_app/modes.c
 import { Route as AppModesAgentSessionIndexRouteImport } from './routes/_app/modes.agent-session.index'
 import { Route as AppModesAgentSessionChatIdRouteImport } from './routes/_app/modes.agent-session.$chatId'
 import { Route as AppModesCodeIndexRouteImport } from './routes/_app/modes.code.index'
+import { Route as AppModesCodeBranchesRouteImport } from './routes/_app/modes.code.branches'
 import { Route as AppModesCodeCommitRouteImport } from './routes/_app/modes.code.commit'
 import { Route as AppModesCodeDocsRouteImport } from './routes/_app/modes.code.docs'
 import { Route as AppModesCodeHistoryRouteImport } from './routes/_app/modes.code.history'
@@ -75,6 +76,11 @@ const AppModesAgentSessionChatIdRoute =
 const AppModesCodeIndexRoute = AppModesCodeIndexRouteImport.update({
   id: '/modes/code/',
   path: '/modes/code/',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppModesCodeBranchesRoute = AppModesCodeBranchesRouteImport.update({
+  id: '/modes/code/branches',
+  path: '/modes/code/branches',
   getParentRoute: () => AppRoute,
 } as any)
 const AppModesCodeCommitRoute = AppModesCodeCommitRouteImport.update({
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/modes/agent-session': typeof AppModesAgentSessionRouteWithChildren
   '/modes/collaboration': typeof AppModesCollaborationRoute
   '/modes/agent-session/$chatId': typeof AppModesAgentSessionChatIdRoute
+  '/modes/code/branches': typeof AppModesCodeBranchesRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
   '/modes/code/docs': typeof AppModesCodeDocsRoute
   '/modes/code/history': typeof AppModesCodeHistoryRoute
@@ -168,6 +175,7 @@ export interface FileRoutesByTo {
   '/': typeof AppIndexRoute
   '/modes/collaboration': typeof AppModesCollaborationRoute
   '/modes/agent-session/$chatId': typeof AppModesAgentSessionChatIdRoute
+  '/modes/code/branches': typeof AppModesCodeBranchesRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
   '/modes/code/docs': typeof AppModesCodeDocsRoute
   '/modes/code/history': typeof AppModesCodeHistoryRoute
@@ -192,6 +200,7 @@ export interface FileRoutesById {
   '/_app/modes/agent-session': typeof AppModesAgentSessionRouteWithChildren
   '/_app/modes/collaboration': typeof AppModesCollaborationRoute
   '/_app/modes/agent-session/$chatId': typeof AppModesAgentSessionChatIdRoute
+  '/_app/modes/code/branches': typeof AppModesCodeBranchesRoute
   '/_app/modes/code/commit': typeof AppModesCodeCommitRoute
   '/_app/modes/code/docs': typeof AppModesCodeDocsRoute
   '/_app/modes/code/history': typeof AppModesCodeHistoryRoute
@@ -216,6 +225,7 @@ export interface FileRouteTypes {
     | '/modes/agent-session'
     | '/modes/collaboration'
     | '/modes/agent-session/$chatId'
+    | '/modes/code/branches'
     | '/modes/code/commit'
     | '/modes/code/docs'
     | '/modes/code/history'
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/'
     | '/modes/collaboration'
     | '/modes/agent-session/$chatId'
+    | '/modes/code/branches'
     | '/modes/code/commit'
     | '/modes/code/docs'
     | '/modes/code/history'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/_app/modes/agent-session'
     | '/_app/modes/collaboration'
     | '/_app/modes/agent-session/$chatId'
+    | '/_app/modes/code/branches'
     | '/_app/modes/code/commit'
     | '/_app/modes/code/docs'
     | '/_app/modes/code/history'
@@ -344,6 +356,13 @@ declare module '@tanstack/react-router' {
       path: '/modes/code'
       fullPath: '/modes/code/'
       preLoaderRoute: typeof AppModesCodeIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/modes/code/branches': {
+      id: '/_app/modes/code/branches'
+      path: '/modes/code/branches'
+      fullPath: '/modes/code/branches'
+      preLoaderRoute: typeof AppModesCodeBranchesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/modes/code/commit': {
@@ -451,6 +470,7 @@ interface AppRouteChildren {
   AppIndexRoute: typeof AppIndexRoute
   AppModesAgentSessionRoute: typeof AppModesAgentSessionRouteWithChildren
   AppModesCollaborationRoute: typeof AppModesCollaborationRoute
+  AppModesCodeBranchesRoute: typeof AppModesCodeBranchesRoute
   AppModesCodeCommitRoute: typeof AppModesCodeCommitRoute
   AppModesCodeDocsRoute: typeof AppModesCodeDocsRoute
   AppModesCodeHistoryRoute: typeof AppModesCodeHistoryRoute
@@ -471,6 +491,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppIndexRoute: AppIndexRoute,
   AppModesAgentSessionRoute: AppModesAgentSessionRouteWithChildren,
   AppModesCollaborationRoute: AppModesCollaborationRoute,
+  AppModesCodeBranchesRoute: AppModesCodeBranchesRoute,
   AppModesCodeCommitRoute: AppModesCodeCommitRoute,
   AppModesCodeDocsRoute: AppModesCodeDocsRoute,
   AppModesCodeHistoryRoute: AppModesCodeHistoryRoute,

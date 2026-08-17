@@ -1,6 +1,6 @@
 /**
- * The bottom dock — history, services and terminal sessions — for the whole
- * app.
+ * The bottom dock — branches, history, services and terminal sessions — for
+ * the whole app.
  *
  * There used to be two of these: this one for the workspace pages, and a second
  * copy assembled inline by the code shell, kept in step with it by hand. They
@@ -25,12 +25,14 @@ import {
   useSearch,
 } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
+import { BranchesPanel } from "@/components/git/branches-panel";
 import { BottomPanel } from "@/components/layout/bottom-panel";
 import { expandDock, keepDockDrawer } from "@/components/layout/dock-expansion";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { filterCommitsByRepo } from "@byconvo/core/project";
-import { folderName, isMultiRepo } from "@byconvo/core/workspace";
+import { activeRepo, folderName, isMultiRepo } from "@byconvo/core/workspace";
+import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import {
   resetHistoryFilters,
@@ -43,6 +45,8 @@ import {
   useBranches,
   usePagedLog,
   usePagedProjectLog,
+  useProjectBranches,
+  useRemoteBranches,
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
@@ -72,8 +76,11 @@ export function GitBottomDock({
 
   const repo = useRepo();
   const branches = useBranches();
+  const remoteBranches = useRemoteBranches();
+  const projectBranches = useProjectBranches();
   const workspace = useWorkspace();
   const workspaceActions = useWorkspaceActions();
+  const git = useGitActions();
 
   // Held outside the dock so a file's "Show history", asked for from the page
   // below, can reach it — see `history-filters.store`.
@@ -130,6 +137,11 @@ export function GitBottomDock({
    */
   const leaving = () => {
     if (expanded) keepDockDrawer(tab);
+  };
+
+  /** A branch action that opens a code page leaves Branches in the drawer. */
+  const leavingBranches = () => {
+    if (expanded) keepDockDrawer("branches");
   };
 
   /**
@@ -191,6 +203,50 @@ export function GitBottomDock({
           onTabChange={(next) => setUiPrefs({ bottomTab: next })}
           onCollapse={() => setUiPrefs({ bottomVisible: false })}
           onExpand={() => expandDock(navigate, tab, router.state.location.href)}
+          branchPanel={
+            <BranchesPanel
+              current={repo.data?.currentBranch ?? null}
+              branches={branches.data ?? []}
+              remoteBranches={remoteBranches.data ?? []}
+              busy={false}
+              onCheckout={(branch) => {
+                leavingBranches();
+                void git.checkout(branch);
+                void navigate({ to: "/modes/code/commit" });
+              }}
+              onCheckoutAndUpdate={(branch) => {
+                leavingBranches();
+                void git.checkoutAndUpdate(branch);
+                void navigate({ to: "/modes/code/commit" });
+              }}
+              onCreateBranch={(name, startPoint) =>
+                void git.createBranch(name, startPoint)
+              }
+              onCompare={(base, head) => {
+                leavingBranches();
+                void navigate({
+                  to: "/modes/code/browse/range",
+                  search: { base, head },
+                });
+              }}
+              onMerge={(branch) => void git.merge(branch)}
+              onRebase={(onto) => void git.rebase(onto)}
+              onFetch={() => void git.fetch()}
+              onPush={() => void git.push()}
+              onRenameBranch={(from, to) => void git.renameBranch(from, to)}
+              onDeleteBranch={(name) => void git.deleteBranch(name)}
+              repos={projectBranches.data?.repos}
+              currentRepo={activeRepo(
+                workspace.data ?? { repos: [], current: null }
+              )}
+              onFollowRepo={(repoPath) =>
+                workspaceActions.followRepo(
+                  repoPath,
+                  workspace.data?.current ?? null
+                )
+              }
+            />
+          }
           branches={branches.data ?? []}
           currentBranch={repo.data?.currentBranch ?? null}
           commits={history.commits}

@@ -56,13 +56,18 @@ export interface DockPage {
 }
 
 /**
- * The three of them, keyed by the surface they show.
+ * The four of them, keyed by the surface they show.
  *
  * Held here rather than beside the drawer because the classification above is
  * the same knowledge read the other way round: a location is a dock page
  * exactly when it is one of these.
  */
 const DOCK_PAGES: Record<BottomTab, DockPage> = {
+  branches: {
+    tab: "branches",
+    href: "/modes/code/branches",
+    title: "Branches",
+  },
   history: {
     tab: "history",
     href: "/modes/code/history",

@@ -30,6 +30,10 @@ describe("shellRoute", () => {
   });
 
   it("names the dock surface a dock page stands for", () => {
+    expect(shellRoute("/modes/code/branches", "code")).toEqual({
+      kind: "dock",
+      tab: "branches",
+    });
     expect(shellRoute("/modes/code/history", "code")).toEqual({
       kind: "dock",
       tab: "history",

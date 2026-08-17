@@ -7,6 +7,7 @@
  */
 import {
   IconFolder,
+  IconGitBranch,
   IconGitCommit,
   IconGitPullRequest,
   IconHistory,
@@ -111,6 +112,13 @@ export function ModeRail() {
     <Rail label="Project">
       {GIT_LINKS.filter((l) => l.github !== true || hasGitHub).map(renderLink)}
       <RailFoot>
+        <RailButton
+          label="Branches"
+          active={active("branches")}
+          onClick={() => pick("branches")}
+        >
+          <IconGitBranch className="size-4" />
+        </RailButton>
         <RailButton
           label="History"
           active={active("history")}

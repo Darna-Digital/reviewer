@@ -7,7 +7,7 @@
  * — the surfaces reached from a rail, a dock or nowhere at all — so each of
  * those gets a card, showing that place as it looks right now.
  *
- * A place is a location and nothing else, which is why the dock's three surfaces
+ * A place is a location and nothing else, which is why the dock's four surfaces
  * are pages of their own: `/modes/code/history` is the branch history with the
  * window to itself, and the card shows that page rather than the page the drawer
  * happened to be lying over. Picking it leaves the window exactly where the
@@ -20,6 +20,7 @@
  */
 import {
   IconFolder,
+  IconGitBranch,
   IconGitCommit,
   IconGitPullRequest,
   IconHistory,
@@ -94,6 +95,7 @@ const CODE_SECTIONS: ReadonlyArray<LaunchpadSection> = [
     icon: IconGitCommit,
     mode: "code",
   },
+  dockSection("branches", IconGitBranch),
   dockSection("history", IconHistory),
   {
     id: "/modes/code/review",

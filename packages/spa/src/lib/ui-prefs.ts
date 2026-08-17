@@ -11,8 +11,8 @@ export type Theme = "light" | "dark";
 export type DiffStyle = "split" | "unified";
 /** Agent CLIs that can draft a commit message (threads kinds minus terminal). */
 export type CommitAgent = "claude" | "opencode" | "codex" | "cursor";
-/** Active tab in the shared bottom dock (history + services + threads). */
-export type BottomTab = "history" | "services" | "threads";
+/** Active tab in the shared bottom dock (git + services + threads). */
+export type BottomTab = "branches" | "history" | "services" | "threads";
 /** Which way of working the app is framed around (UI only for now). */
 export type WorkMode = "code" | "collaboration";
 
@@ -96,6 +96,7 @@ const resolve = (pref: ThemePref): Theme =>
   pref === "system" ? systemTheme() : pref;
 
 const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
+  "branches",
   "history",
   "services",
   "threads",
