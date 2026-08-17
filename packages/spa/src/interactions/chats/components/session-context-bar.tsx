@@ -1,9 +1,8 @@
 /**
- * The composer's second level — the strip tucked under it naming which branch
- * the session will act on. The project is the title bar's question, not the
- * composer's, so only the branch is asked here; it reuses the toolbar's own
- * switcher rather than restating it, so switching from here is the same switch,
- * with the same menus, made where the question is asked.
+ * The composer's second level — the strip tucked under it naming where the
+ * session will land, read outside in: the project/runtime, then the branch it
+ * is on. The branch reuses the toolbar's own switcher, so switching from here is
+ * the same switch, with the same menus, made where the question is asked.
  *
  * It wires itself from the repo queries instead of taking a dozen props, since
  * the switcher wants its whole git surface and the composer has no reason to
@@ -11,7 +10,8 @@
  */
 import { useNavigate } from "@tanstack/react-router";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
-import { activeRepo } from "@byconvo/core/workspace";
+import { DeviceSwitcher } from "@/components/layout/device-switcher";
+import { activeRepo, folderName } from "@byconvo/core/workspace";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import {
@@ -39,6 +39,15 @@ export function SessionContextBar() {
 
   return (
     <div className="-mt-3 flex items-center gap-1 rounded-b-lg border border-t-0 bg-elevate px-2 pt-4 pb-1.5">
+      <DeviceSwitcher
+        device={workspace.data?.device}
+        project={
+          workspace.data?.project === null ||
+          workspace.data?.project === undefined
+            ? undefined
+            : folderName(workspace.data.project)
+        }
+      />
       <BranchSwitcher
         current={current?.currentBranch ?? null}
         branches={branches.data ?? []}

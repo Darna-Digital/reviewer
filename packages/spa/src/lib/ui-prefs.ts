@@ -250,7 +250,14 @@ function applyTranslucency() {
   document.documentElement.classList.toggle("translucent", state.translucency);
 }
 
-export function setUiPrefs(patch: Partial<Omit<UiPrefs, "resolvedTheme">>) {
+type UiPrefsPatch = Partial<Omit<UiPrefs, "resolvedTheme">>;
+
+export function setUiPrefs(patch: UiPrefsPatch) {
+  const changed = (Object.keys(patch) as Array<keyof UiPrefsPatch>).some(
+    (key) => !Object.is(state[key], patch[key])
+  );
+  if (!changed) return;
+
   state = { ...state, ...patch };
   if (patch.theme !== undefined) {
     state.resolvedTheme = resolve(patch.theme);

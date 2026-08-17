@@ -24,6 +24,7 @@ import type {
   RepoStatus,
   RepoRepo,
   SearchQuery,
+  Worktree,
 } from "@byconvo/core/repo";
 
 /** Map a porcelain v2 unmerged `XY` field to a conflict kind. */
@@ -110,6 +111,39 @@ export const splitDiffIntoHunks = (
   flush();
   return { header, hunks };
 };
+
+/**
+ * Parse `git worktree list --porcelain`: blank-line separated records, each
+ * opening with `worktree <path>` and carrying `branch refs/heads/<name>` unless
+ * the checkout is detached or bare. Git lists the main working tree first,
+ * which is the only way the format says which one it is.
+ */
+export const parseWorktrees = (
+  out: string,
+  currentRoot: string
+): ReadonlyArray<Worktree> =>
+  out
+    .split("\n\n")
+    .flatMap((record): Array<Worktree> => {
+      const fields = record.trim().split("\n");
+      const path = fields
+        .find((line) => line.startsWith("worktree "))
+        ?.slice("worktree ".length);
+      if (path === undefined || fields.includes("bare")) return [];
+      const ref = fields
+        .find((line) => line.startsWith("branch "))
+        ?.slice("branch ".length);
+      return [
+        {
+          path,
+          name: path.split("/").at(-1) ?? path,
+          branch: ref?.replace(/^refs\/heads\//, "") ?? null,
+          isMain: false,
+          isCurrent: path === currentRoot,
+        },
+      ];
+    })
+    .map((worktree, index) => ({ ...worktree, isMain: index === 0 }));
 
 /** Long enough to read a match in context; minified files would otherwise ship megabytes. */
 const MAX_MATCH_LINE_LENGTH = 400;
@@ -419,6 +453,19 @@ export const makeGitRepoRepository = Effect.gen(function* () {
         },
       ];
     });
+  });
+
+  const worktrees: RepoRepo["worktrees"] = Effect.gen(function* () {
+    const [root, listing] = yield* Effect.all(
+      [
+        run("rev-parse", "--show-toplevel").pipe(
+          Effect.map((out) => out.trim())
+        ),
+        run("worktree", "list", "--porcelain"),
+      ],
+      { concurrency: "unbounded" }
+    );
+    return parseWorktrees(listing, root);
   });
 
   const remoteBranches: RepoRepo["remoteBranches"] = Effect.gen(function* () {
@@ -903,6 +950,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     status,
     branches,
     remoteBranches,
+    worktrees,
     log,
     search,
     commitDetail,

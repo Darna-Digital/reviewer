@@ -1,20 +1,38 @@
 import { cn } from "@/lib/utils";
 
-function Kbd({ className, ...props }: React.ComponentProps<"kbd">) {
+/**
+ * One key of a chord.
+ *
+ * Every cap is the same 20px square, whatever glyph it holds: ⇧ and ⌘ are far
+ * wider than a letter, and padding around them made a chord read as keys of
+ * assorted sizes rather than as a row. Only a cap spelling a word — `esc` —
+ * grows, and it grows from that square.
+ *
+ * The fill is the substrate-relative tint, so a cap sits a rung above whatever
+ * it lands on — a tooltip, a menu, the dialog's footer — and needs no ring to
+ * draw its edge. It was a fixed colour with a ring before, which is why it had
+ * a second set of colours for tooltips and still read as a box drawn on top of
+ * one rather than as part of it.
+ */
+function Kbd({ className, children, ...props }: React.ComponentProps<"kbd">) {
+  const spelled = typeof children === "string" && children.length > 1;
   return (
     <kbd
       data-slot="kbd"
       className={cn(
-        "pointer-events-none inline-flex h-5 w-fit min-w-5 items-center justify-center gap-1 rounded-sm px-1.5 font-sans text-[0.6875rem] font-medium select-none",
-        "bg-muted text-muted-foreground ring-1 ring-foreground/10",
+        "pointer-events-none inline-flex h-5 items-center justify-center gap-1 rounded-sm font-sans text-[0.6875rem] font-medium select-none",
+        spelled ? "min-w-5 px-1.5" : "w-5",
+        // The tint that lifts the cap in dark lands near the muted grey the
+        // glyph is set in, so dark sets the glyph brighter rather than the cap
+        // darker: a recessed key is what made the old dark caps read as holes.
+        "bg-elevate-strong text-muted-foreground dark:text-foreground/85",
         "[&_svg:not([class*='size-'])]:size-3",
-        // Inside tooltips: slightly recessed keycaps on the elevated surface.
-        "[[data-slot=tooltip-content]_&]:bg-foreground/[0.06] [[data-slot=tooltip-content]_&]:text-muted-foreground [[data-slot=tooltip-content]_&]:ring-foreground/10",
-        "dark:[[data-slot=tooltip-content]_&]:bg-background/45 dark:[[data-slot=tooltip-content]_&]:ring-white/12",
         className
       )}
       {...props}
-    />
+    >
+      {children}
+    </kbd>
   );
 }
 

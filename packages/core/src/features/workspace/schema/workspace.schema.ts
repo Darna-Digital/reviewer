@@ -24,6 +24,8 @@ export const WorkspaceInfo = Schema.Struct({
   /** Recently opened projects, most-recent first. */
   recents: Schema.Array(Schema.String),
   home: Schema.String,
+  /** The machine everything here runs on, as its owner named it. */
+  device: Schema.String,
 });
 export type WorkspaceInfo = typeof WorkspaceInfo.Type;
 export const BrowseEntry = Schema.Struct({

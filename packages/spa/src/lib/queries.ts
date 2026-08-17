@@ -55,6 +55,8 @@ export const useBranches = () =>
   api.useQuery("get", "/api/branches", {}, GIT_DATA);
 export const useRemoteBranches = () =>
   api.useQuery("get", "/api/remote-branches", {}, GIT_DATA);
+export const useWorktrees = () =>
+  api.useQuery("get", "/api/worktrees", {}, GIT_DATA);
 export const useComments = () =>
   api.useQuery("get", "/api/comments", {}, OWN_DATA);
 

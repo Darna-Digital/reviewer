@@ -196,6 +196,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/worktrees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["repo.worktrees"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/log": {
         parameters: {
             query?: never;
@@ -1717,6 +1733,7 @@ export interface operations {
                         current: string | null;
                         recents: string[];
                         home: string;
+                        device: string;
                     };
                 };
             };
@@ -1762,6 +1779,7 @@ export interface operations {
                         current: string | null;
                         recents: string[];
                         home: string;
+                        device: string;
                     };
                 };
             };
@@ -1816,6 +1834,7 @@ export interface operations {
                         current: string | null;
                         recents: string[];
                         home: string;
+                        device: string;
                     };
                 };
             };
@@ -2364,6 +2383,50 @@ export interface operations {
                         sha: string;
                         committedAt: string;
                         subject: string;
+                    }[];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description GitError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitError"];
+                };
+            };
+        };
+    };
+    "repo.worktrees": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        path: string;
+                        name: string;
+                        branch: string | null;
+                        isMain: boolean;
+                        isCurrent: boolean;
                     }[];
                 };
             };

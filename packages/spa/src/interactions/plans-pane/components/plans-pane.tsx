@@ -20,6 +20,7 @@ import {
   IconPlus,
   IconRefresh,
   IconTrash,
+  IconX,
 } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
@@ -224,6 +225,22 @@ export function PlansPane() {
           <TooltipContent side="bottom">New analysis</TooltipContent>
         </Tooltip>
         <div className="flex-1" />
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Close analysis"
+                className="shrink-0 rounded-lg text-muted-foreground"
+                onClick={() => setUiPrefs({ plansPaneOpen: false })}
+              />
+            }
+          >
+            <IconX className="size-4" />
+          </TooltipTrigger>
+          <TooltipContent side="bottom">Close analysis</TooltipContent>
+        </Tooltip>
       </div>
 
       {plan === undefined ? (

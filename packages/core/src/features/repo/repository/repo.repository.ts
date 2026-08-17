@@ -16,6 +16,7 @@ import type {
   RepoStatus,
   LogQuery,
   SearchQuery,
+  Worktree,
 } from "../schema/repo.schema.ts";
 
 export interface RepoRepo {
@@ -27,6 +28,7 @@ export interface RepoRepo {
     ReadonlyArray<RemoteBranchInfo>,
     GitFailure
   >;
+  readonly worktrees: Effect.Effect<ReadonlyArray<Worktree>, GitFailure>;
   readonly log: (
     query: LogQuery
   ) => Effect.Effect<ReadonlyArray<CommitInfo>, GitFailure>;

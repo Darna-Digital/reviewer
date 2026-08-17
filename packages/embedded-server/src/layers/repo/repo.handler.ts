@@ -18,6 +18,7 @@ export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
     .handle("remoteBranches", () =>
       Effect.flatMap(RepoService, (s) => s.remoteBranches)
     )
+    .handle("worktrees", () => Effect.flatMap(RepoService, (s) => s.worktrees))
     .handle("log", ({ query }) => {
       const q: LogQuery = {
         ref: query.ref ?? "HEAD",

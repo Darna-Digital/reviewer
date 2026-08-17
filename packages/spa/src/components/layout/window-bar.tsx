@@ -1,6 +1,6 @@
 /**
  * WindowBar — the strip along the top of the window: the macOS traffic lights,
- * the tab strip, the pane toggles and the account.
+ * the tab strip, the window menu and the account.
  *
  * Drawn in both shells, so the app reads the same either way. Two things are
  * the native window's alone: the lead gutter the traffic lights are drawn into,
@@ -10,6 +10,8 @@
 // The history arrows are parked for now, along with the icons they wore.
 // import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
 import {
+  IconCommand,
+  IconDots,
   IconLayoutGrid,
   IconPlus,
   IconSitemap,
@@ -21,6 +23,12 @@ import { useRouterState } from "@tanstack/react-router";
 import { isFeatureEnabled } from "@byconvo/feature-flags";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Orb } from "@/components/ui/orb";
 import {
@@ -66,7 +74,9 @@ import {
   useProjectPickerOpen,
 } from "@/interactions/workspace/adapters/project-picker.store";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
+import { ROW_TOOLTIP_PLACEMENT } from "@/components/ui/truncated-text";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
+import { openSearch } from "@/interactions/search/adapters/search.store";
 import { useThinkingChatIds } from "@/interactions/chats/adapters/thinking-chats.hook.adapter";
 import { isDesktop } from "@/lib/desktop";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
@@ -101,13 +111,14 @@ const PROJECT_PICKER_KEYS = "⌘⇧P";
 const SESSIONS_KEYS = "⌘2";
 const NEW_SESSION_KEYS = "⌘T";
 const LAUNCHPAD_KEYS = "⌘L";
+const COMMANDS_KEYS = "⌘K";
 const ANALYSIS_KEYS = "⌘⇧A";
 const BROWSER_KEYS = "⌘⇧B";
 
 /** A chord as its keycaps: one per glyph, the way the style guide sets them. */
 function Shortcut({ keys }: { keys: string }) {
   return (
-    <KbdGroup>
+    <KbdGroup className="shrink-0">
       {Array.from(keys).map((key) => (
         <Kbd key={key}>{key}</Kbd>
       ))}
@@ -115,11 +126,17 @@ function Shortcut({ keys }: { keys: string }) {
   );
 }
 
-/** What the bar says about a control: its name, and the chord that runs it. */
+/**
+ * What the bar says about a control: its name, and the chord that runs it.
+ *
+ * A long tab title is cut at the tooltip's own width rather than wrapped: the
+ * chord sits at the end of the line, and a second line of title pushed it away
+ * from the name it belongs to.
+ */
 function BarLabel({ label, keys }: { label: string; keys?: string | null }) {
   return (
     <TooltipContent side="bottom">
-      {label}
+      <span className="min-w-0 truncate">{label}</span>
       {keys != null && <Shortcut keys={keys} />}
     </TooltipContent>
   );
@@ -140,6 +157,41 @@ function BarTooltip({
     <Tooltip disabled={disabled}>
       {children}
       <BarLabel label={label} keys={keys} />
+    </Tooltip>
+  );
+}
+
+/**
+ * A row of the window menu: its name, and its chord on hover rather than set
+ * along the row. The keycaps are cut for a tooltip's surface, and a menu that
+ * held them would be a second place on the bar where a chord is written — so
+ * the row says what it does and the tooltip says how else to do it, exactly as
+ * the buttons either side of the strip do.
+ */
+function MenuRow({
+  label,
+  keys,
+  onClick,
+  children,
+}: {
+  label: string;
+  keys: string;
+  onClick: () => void;
+  /** The row's icon; the label follows it. */
+  children: React.ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<DropdownMenuItem onClick={onClick} />}>
+        {children}
+        {label}
+      </TooltipTrigger>
+      {/* Flush off the row's edge, where every other row tooltip in the app
+          sits, so it never covers the rows under it. */}
+      <TooltipContent {...ROW_TOOLTIP_PLACEMENT}>
+        {label}
+        <Shortcut keys={keys} />
+      </TooltipContent>
     </Tooltip>
   );
 }
@@ -260,7 +312,7 @@ export function WindowBar() {
   // showing, and in the native shell there is always something — the browser
   // pane is a window of its own, and an analysis is opened from either mode. A
   // browser tab has no <webview> to put behind the second, and only reads an
-  // analysis beside the code. A pane the window cannot show is off the bar,
+  // analysis beside the code. A pane the window cannot show is off the menu,
   // and its chord does nothing.
   const paneAvailable = (pane: BarPane): boolean =>
     pane === "browser" ? isDesktop : isDesktop || inCodeMode;
@@ -585,37 +637,65 @@ export function WindowBar() {
           the strip that gives way first. Its inset is a gutter like the lead
           one rather than padding, so both ends of the bar read the same. */}
       <div className="flex shrink-0 items-center justify-end gap-1">
-        {/* The three things the window puts over or beside the page, each on
-            its own square with its chord in the tooltip — the same button the
-            tabs at the other end of the bar wear. */}
-        {paneAvailable("browser") && (
-          <BarButton
-            label="Browser"
-            keys={BROWSER_KEYS}
-            pressed={prefs.browserPaneOpen}
-            onClick={() => togglePane("browser")}
+        {/* Everything the window can put over or beside the page, under one
+            handle: each row names itself, and hovering it says which chord
+            does the same. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Window menu"
+                className={cn("text-muted-foreground", NO_DRAG)}
+              />
+            }
           >
-            <IconWorld className="size-4" />
-          </BarButton>
-        )}
-        {paneAvailable("analysis") && (
-          <BarButton
-            label="Analysis"
-            keys={ANALYSIS_KEYS}
-            pressed={prefs.plansPaneOpen}
-            onClick={() => togglePane("analysis")}
-          >
-            <IconSitemap className="size-4" />
-          </BarButton>
-        )}
-        <BarButton
-          label="Launchpad"
-          keys={LAUNCHPAD_KEYS}
-          pressed={overviewOpen}
-          onClick={toggleTabOverview}
-        >
-          <IconLayoutGrid className="size-4" />
-        </BarButton>
+            <IconDots className="size-4" />
+          </DropdownMenuTrigger>
+
+          {/* Narrower than a menu's default: these rows are four short names,
+              and the chords that would have set the width are in the tooltips
+              rather than along them. */}
+          <DropdownMenuContent align="end" className="min-w-48">
+            <MenuRow
+              label="Launchpad"
+              keys={LAUNCHPAD_KEYS}
+              onClick={toggleTabOverview}
+            >
+              <IconLayoutGrid className="size-4 shrink-0" />
+            </MenuRow>
+            {/* The palette is code mode's, and so is the host that answers ⌘K:
+                off it there is nothing behind the row to open. */}
+            {inCodeMode && (
+              <MenuRow
+                label="Command menu"
+                keys={COMMANDS_KEYS}
+                onClick={() => openSearch("commands")}
+              >
+                <IconCommand className="size-4 shrink-0" />
+              </MenuRow>
+            )}
+            {paneAvailable("analysis") && (
+              <MenuRow
+                label="Analysis"
+                keys={ANALYSIS_KEYS}
+                onClick={() => togglePane("analysis")}
+              >
+                <IconSitemap className="size-4 shrink-0" />
+              </MenuRow>
+            )}
+            {paneAvailable("browser") && (
+              <MenuRow
+                label="Browser"
+                keys={BROWSER_KEYS}
+                onClick={() => togglePane("browser")}
+              >
+                <IconWorld className="size-4 shrink-0" />
+              </MenuRow>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <UserMenu className={NO_DRAG} />
         <div aria-hidden className="w-2 shrink-0" />
       </div>

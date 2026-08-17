@@ -18,7 +18,7 @@
  */
 import {
   IconColumns2,
-  IconFolders,
+  IconFolder,
   IconGitBranch,
   IconGitCommit,
   IconGitCompare,
@@ -35,7 +35,13 @@ import {
   useRouterState,
   useSearch,
 } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { CommitPanel } from "@/components/commit-panel";
@@ -654,7 +660,7 @@ export function CodeWorkspace() {
         {
           id: "project",
           label: pathName(workspace.data?.project ?? ""),
-          icon: IconFolders,
+          icon: IconFolder,
         },
       ];
     }

@@ -503,7 +503,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           className="max-h-[70vh] w-72 overflow-x-hidden overflow-y-auto p-0"
         >
           {/* Filter box — a plain row, not a menu item, so typing never navigates. */}
-          <BranchSearchRow>
+          <MenuFilterRow>
             <IconSearch className="size-4 shrink-0 text-muted-foreground" />
             <input
               ref={searchRef}
@@ -515,7 +515,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
               aria-label="Search branches"
               className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
-          </BranchSearchRow>
+          </MenuFilterRow>
 
           <div className="p-1">
             {multiRepo &&
@@ -739,8 +739,12 @@ function DeleteConfirm({
  * The pinned filter row. It scrolls under the branch list, so it has to repaint
  * the menu's own surface — read from context rather than hardcoded, so it still
  * matches when the menu opens at a deeper elevation (inside a dialog, say).
+ *
+ * Exported for the worktree menu beside this one: the two answer neighbouring
+ * questions in the same bar, and a filter row that sat a pixel differently in
+ * one of them would be the thing you noticed.
  */
-function BranchSearchRow({ children }: { children: React.ReactNode }) {
+export function MenuFilterRow({ children }: { children: React.ReactNode }) {
   const surface = useSurfaceBackground();
   return (
     <div

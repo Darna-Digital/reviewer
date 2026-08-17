@@ -38,6 +38,23 @@ export const BranchInfo = Schema.Struct({
   subject: Schema.String,
 });
 export type BranchInfo = typeof BranchInfo.Type;
+/**
+ * One checkout of the repository — the main working tree, or a linked one git
+ * keeps elsewhere on disk. A branch is checked out in at most one of them, so
+ * the pair (worktree, branch) is what actually says where work lands.
+ */
+export const Worktree = Schema.Struct({
+  path: Schema.String,
+  /** The leaf folder the checkout lives in — what a picker shows. */
+  name: Schema.String,
+  /** Null when the checkout is on a detached HEAD. */
+  branch: Schema.NullOr(Schema.String),
+  /** The repository's original checkout, the one `.git` lives in. */
+  isMain: Schema.Boolean,
+  /** The checkout the app currently has open. */
+  isCurrent: Schema.Boolean,
+});
+export type Worktree = typeof Worktree.Type;
 export const RemoteBranchInfo = Schema.Struct({
   name: Schema.String,
   remote: Schema.String,

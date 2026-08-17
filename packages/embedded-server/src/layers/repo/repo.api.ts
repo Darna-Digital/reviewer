@@ -33,6 +33,7 @@ import {
   RenameBranch,
   ResolveConflict,
   SearchQueryParams,
+  Worktree,
 } from "@byconvo/core/repo";
 
 const gitError = [GitError, NoRepoSelected] as const;
@@ -62,6 +63,12 @@ export class RepoApi extends HttpApiGroup.make("repo")
   .add(
     HttpApiEndpoint.get("remoteBranches", "/remote-branches", {
       success: Schema.Array(RemoteBranchInfo),
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("worktrees", "/worktrees", {
+      success: Schema.Array(Worktree),
       error: gitError,
     })
   )

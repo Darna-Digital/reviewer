@@ -19,7 +19,7 @@
  * the go, and the launchpad is where you see them all at once.
  */
 import {
-  IconFolders,
+  IconFolder,
   IconGitCommit,
   IconGitPullRequest,
   IconHistory,
@@ -81,6 +81,13 @@ const dockSection = (
 
 const CODE_SECTIONS: ReadonlyArray<LaunchpadSection> = [
   {
+    id: "/modes/code/browse",
+    href: "/modes/code/browse",
+    title: "Browse",
+    icon: IconFolder,
+    mode: "code",
+  },
+  {
     id: "/modes/code/commit",
     href: "/modes/code/commit",
     title: "Local changes",
@@ -88,13 +95,6 @@ const CODE_SECTIONS: ReadonlyArray<LaunchpadSection> = [
     mode: "code",
   },
   dockSection("history", IconHistory),
-  {
-    id: "/modes/code/browse",
-    href: "/modes/code/browse",
-    title: "Browse",
-    icon: IconFolders,
-    mode: "code",
-  },
   {
     id: "/modes/code/review",
     href: "/modes/code/review",

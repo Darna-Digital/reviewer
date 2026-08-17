@@ -33,6 +33,8 @@ import { shellRoute, showsGitChrome } from "@/lib/shell-route";
 import { useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
+const SESSIONS_PREFIX = "/modes/agent-session";
+
 export function AppLayout() {
   /**
    * The page that is *on screen*, not the one being navigated to.
@@ -44,18 +46,36 @@ export function AppLayout() {
    * the conversation they belonged to, which read as the app coming apart for a
    * moment. `resolvedLocation` is the one the outlet is actually showing, so
    * the frame and the page change together or not at all.
+   *
+   * Sessions is the exception. Its pinned tab is a surface switch, and leaving a
+   * large diff visible after that click reads as the old page flashing under
+   * the new tab. While that route resolves, draw the Sessions shell and withhold
+   * the old outlet instead.
    */
-  const pathname = useRouterState({
+  const resolvedPathname = useRouterState({
     select: (s) => (s.resolvedLocation ?? s.location).pathname,
   });
+  const targetPathname = useRouterState({
+    select: (s) => s.location.pathname,
+  });
+  const pendingIntoSessions =
+    targetPathname.startsWith(SESSIONS_PREFIX) &&
+    !resolvedPathname.startsWith(SESSIONS_PREFIX);
+  const pathname = pendingIntoSessions ? targetPathname : resolvedPathname;
   // Selected down to the one flag rather than taken as the whole search: this
   // re-renders the shell on every change of its value, and a search object is a
   // fresh one on every navigation.
-  const startingNew = useRouterState({
+  const resolvedStartingNew = useRouterState({
     select: (s) =>
       ((s.resolvedLocation ?? s.location).search as { new?: boolean }).new ===
       true,
   });
+  const targetStartingNew = useRouterState({
+    select: (s) => (s.location.search as { new?: boolean }).new === true,
+  });
+  const startingNew = pendingIntoSessions
+    ? targetStartingNew
+    : resolvedStartingNew;
   const prefs = useUiPrefs();
   const workspace = useWorkspace();
 
@@ -160,6 +180,8 @@ export function AppLayout() {
                     Open one from the repo picker above to use this workspace.
                   </div>
                 </div>
+              ) : pendingIntoSessions ? (
+                <div className="flex min-h-0 flex-1 flex-col" />
               ) : (
                 <Outlet />
               )}
