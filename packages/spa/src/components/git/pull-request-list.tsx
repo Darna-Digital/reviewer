@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { dateCutoff, type DateFilter } from "@/lib/date-filter";
 import { cn } from "@/lib/utils";
 import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
+import { groupPullsByBase } from "./pull-requests.functions";
 
 interface PullRequestListProps {
   pulls: ReadonlyArray<PullRequestInfo>;
@@ -61,12 +62,10 @@ export function PullRequestList({
   }, [pulls, dateFilter, search]);
 
   const groups = useMemo(() => {
-    const present = [...new Set(filtered.map((p) => p.baseRef))].sort();
-    const basesToShow = baseFilter === ALL_BRANCHES ? present : [baseFilter];
-    return basesToShow.map((base) => ({
-      base,
-      pulls: filtered.filter((p) => p.baseRef === base),
-    }));
+    const grouped = groupPullsByBase(filtered);
+    return baseFilter === ALL_BRANCHES
+      ? grouped
+      : grouped.filter((group) => group.base === baseFilter);
   }, [filtered, baseFilter]);
 
   const hasMatches = groups.some((g) => g.pulls.length > 0);

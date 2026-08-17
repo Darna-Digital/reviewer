@@ -15,6 +15,7 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
+import { DockRestore } from "@/components/layout/dock-restore";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
@@ -145,6 +146,7 @@ export function AppHeader({
       <SearchMenu />
 
       <div className="ml-auto flex items-center gap-1">
+        {route.kind === "dock" && <DockRestore tab={route.tab} />}
         {showDiffStyleToggle && (
           <DiffStyleToggle
             value={prefs.diffStyle}

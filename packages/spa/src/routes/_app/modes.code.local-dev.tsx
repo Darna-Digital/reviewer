@@ -1,17 +1,10 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { openBottomTab } from "@/lib/ui-prefs";
+import { createFileRoute } from "@tanstack/react-router";
 
-/** Legacy /local-dev route — opens the Services bottom-dock tab. */
+/**
+ * Services, with the window to itself. Rendered by the dock in the layout rather
+ * than from here — a second copy would be a second set of running commands. See
+ * `modes.code.history` and `shellRoute`.
+ */
 export const Route = createFileRoute("/_app/modes/code/local-dev")({
-  component: OpenServicesTab,
+  component: () => null,
 });
-
-function OpenServicesTab() {
-  const navigate = useNavigate();
-  useEffect(() => {
-    openBottomTab("services");
-    void navigate({ to: "/modes/code/commit", replace: true });
-  }, [navigate]);
-  return null;
-}

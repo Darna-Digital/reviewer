@@ -9,6 +9,7 @@
  */
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { restoreDock } from "@/components/layout/dock-expansion";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { WindowBar } from "@/components/layout/window-bar";
@@ -23,6 +24,7 @@ import {
 import { TabSnapshotMill } from "@/interactions/tab-preview/components/tab-snapshot-mill";
 import { isDesktop } from "@/lib/desktop";
 import { isPreviewWindow } from "@/lib/preview-window";
+import { shellRoute } from "@/lib/shell-route";
 import { setUiPrefs, toggleBottomVisible, useUiPrefs } from "@/lib/ui-prefs";
 import { activeWorkMode } from "@/lib/work-mode";
 
@@ -71,6 +73,12 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
   // living in the git shell alone left it dead on sessions, services and docs.
   // Capture phase, so a field that stops its own keydown (the menu search) can't
   // swallow it either.
+  //
+  // On one of the dock's own pages there is no drawer to collapse and the page
+  // *is* the dock, so the chord means the smaller of the two: put it back down
+  // on the page it was expanded from.
+  const route = shellRoute(pathname, prefs.workMode);
+  const dockPageTab = route.kind === "dock" ? route.tab : null;
   useEffect(() => {
     if (!inCodeMode) return;
     const onKey = (event: KeyboardEvent) => {
@@ -79,11 +87,12 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
       }
       if (event.key.toLowerCase() !== "b") return;
       event.preventDefault();
-      toggleBottomVisible();
+      if (dockPageTab === null) toggleBottomVisible();
+      else restoreDock(navigate, dockPageTab);
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [inCodeMode]);
+  }, [inCodeMode, dockPageTab, navigate]);
 
   // A preview is the page and nothing around it: the chrome belongs to the
   // window it is being previewed in, and the panes beside it are its own.

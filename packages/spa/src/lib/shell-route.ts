@@ -11,11 +11,18 @@
  *
  * Pure, so the classification is testable without a router.
  */
+import type { BottomTab } from "@/lib/ui-prefs";
 
 export type ShellRoute =
   | { readonly kind: "code"; readonly mode: "commit" | "browse" | "review" }
-  /** A workspace page that still sits over a repository: docs, tasks, threads, services. */
+  /** A workspace page that still sits over a repository: docs, tasks. */
   | { readonly kind: "workspace" }
+  /**
+   * One of the dock's surfaces with the window to itself rather than a drawer's
+   * worth of it. The layout gives the canvas to the dock and the page beneath is
+   * put away — see `AppLayout`.
+   */
+  | { readonly kind: "dock"; readonly tab: BottomTab }
   | {
       readonly kind: "session";
       /**
@@ -31,7 +38,52 @@ export type ShellRoute =
   | { readonly kind: "settings" };
 
 /** Pages under `/modes/code/` that are workspace pages rather than the diff. */
-const CODE_WORKSPACE_PAGES = ["docs", "tasks", "threads", "local-dev"];
+const CODE_WORKSPACE_PAGES = ["docs", "tasks"];
+
+/** Where the window goes back to when a dock page is put down and nowhere else
+ * has been asked for. */
+export const BROWSE_HREF = "/modes/code/browse";
+
+/**
+ * A dock surface as a page of its own: where it lives, and what it is called
+ * wherever it is named — the launchpad's card, the window bar's tab, and the
+ * trail along the foot of the page itself.
+ */
+export interface DockPage {
+  readonly tab: BottomTab;
+  readonly href: string;
+  readonly title: string;
+}
+
+/**
+ * The three of them, keyed by the surface they show.
+ *
+ * Held here rather than beside the drawer because the classification above is
+ * the same knowledge read the other way round: a location is a dock page
+ * exactly when it is one of these.
+ */
+const DOCK_PAGES: Record<BottomTab, DockPage> = {
+  history: {
+    tab: "history",
+    href: "/modes/code/history",
+    title: "Branch history",
+  },
+  services: {
+    tab: "services",
+    href: "/modes/code/local-dev",
+    title: "Services",
+  },
+  threads: {
+    tab: "threads",
+    href: "/modes/code/threads",
+    title: "Terminals",
+  },
+};
+
+/** Every dock page, in the order the drawer's strip holds their surfaces. */
+export const dockPages: ReadonlyArray<DockPage> = Object.values(DOCK_PAGES);
+
+export const dockPage = (tab: BottomTab): DockPage => DOCK_PAGES[tab];
 
 /**
  * `pathname` classified. `workMode` is the preference the collaboration/code
@@ -57,6 +109,10 @@ export function shellRoute(
   if (pathname.startsWith("/modes/code/")) {
     const rest = pathname.slice("/modes/code/".length);
     const page = rest.split("/")[0] ?? "";
+    const dock = dockPages.find(
+      (surface) => surface.href === `/modes/code/${page}`
+    );
+    if (dock !== undefined) return { kind: "dock", tab: dock.tab };
     if (CODE_WORKSPACE_PAGES.includes(page)) return { kind: "workspace" };
     if (page === "browse") return { kind: "code", mode: "browse" };
     if (page === "review") return { kind: "code", mode: "review" };
@@ -72,4 +128,4 @@ export function shellRoute(
 
 /** Whether the page beneath the layout is one of the git/code surfaces. */
 export const showsGitChrome = (route: ShellRoute): boolean =>
-  route.kind === "code" || route.kind === "workspace";
+  route.kind === "code" || route.kind === "workspace" || route.kind === "dock";

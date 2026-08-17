@@ -14,6 +14,9 @@ import {
 } from "react";
 import { cn } from "@/lib/utils";
 
+/** How far the pointer may wander and still have been holding still. */
+const CLICK_SLOP = 4;
+
 interface ResizeHandleProps {
   /**
    * "col" → a vertical divider dragged horizontally (col-resize).
@@ -41,10 +44,27 @@ interface ResizeHandleProps {
   direction?: 1 | -1;
   /** Called continuously during the drag with the clamped size. */
   onResize: (next: number) => void;
-  /** Called once when the drag ends with the final clamped size. */
-  onResizeEnd?: (next: number) => void;
+  /**
+   * Called once when the drag ends with the final clamped size, and with
+   * whether the pointer travelled at all: a press that went nowhere is a click
+   * on the seam, which a panel may answer however it likes.
+   *
+   * Told rather than worked out from the size, which a drag against a bound
+   * leaves exactly where it found it — and a click on the seam of a panel
+   * already at its ceiling would be indistinguishable from a pull into it. The
+   * click cannot be caught as one either: the drag lays a shield over the
+   * window, so the pointer comes up on that rather than on the handle and no
+   * click event is ever dispatched here.
+   */
+  onResizeEnd?: (next: number, moved: boolean) => void;
   className?: string;
   label?: string;
+  /**
+   * What the browser says about the handle on a hover. Given `null` where the
+   * seam has a tooltip of its own: the native one arrives on its own schedule
+   * and would sit under the real one saying the same thing twice.
+   */
+  hint?: string | null;
 }
 
 export function ResizeHandle({
@@ -57,6 +77,7 @@ export function ResizeHandle({
   onResizeEnd,
   className,
   label = "Resize panel",
+  hint = "Drag to resize",
 }: ResizeHandleProps) {
   // Only the handle actually being dragged should light up. The body cursor
   // class is global (so the resize cursor shows everywhere mid-drag), but the
@@ -88,9 +109,14 @@ export function ResizeHandle({
       document.body.appendChild(shield);
 
       let latest = startSize;
+      let moved = false;
       const onMove = (move: PointerEvent) => {
-        const delta = (move[axis] - start) * direction;
-        latest = Math.min(Math.max(startSize + delta, min), max());
+        const travelled = move[axis] - start;
+        if (Math.abs(travelled) > CLICK_SLOP) moved = true;
+        latest = Math.min(
+          Math.max(startSize + travelled * direction, min),
+          max()
+        );
         onResize(latest);
       };
       const onUp = () => {
@@ -101,7 +127,7 @@ export function ResizeHandle({
         window.removeEventListener("pointerup", onUp);
         window.removeEventListener("pointercancel", onUp);
         window.removeEventListener("blur", onUp);
-        onResizeEnd?.(latest);
+        onResizeEnd?.(latest, moved);
       };
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
@@ -119,7 +145,7 @@ export function ResizeHandle({
       role="separator"
       aria-orientation={orientation === "col" ? "vertical" : "horizontal"}
       aria-label={label}
-      title="Drag to resize"
+      title={hint ?? undefined}
       data-dragging={dragging || undefined}
       onPointerDown={onPointerDown}
       className={cn(

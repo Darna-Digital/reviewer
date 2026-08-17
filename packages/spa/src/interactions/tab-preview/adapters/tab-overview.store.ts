@@ -2,7 +2,8 @@
  * Whether the launchpad is expanded. It is neither navigation nor a preference
  * — it closes with the next thing you pick — so it is held in a tiny store
  * rather than the URL or localStorage, and read from both ends of the frame:
- * the handle under the bar opens it, the frame's canvas gives way to it.
+ * the seam along the top of the page opens it, the frame's canvas gives way to
+ * it.
  *
  * The drag that resizes it is held here too, for the same reason the panel's
  * height is not: the page being pushed has to drop its slide transition for as
@@ -38,6 +39,7 @@ function set(next: boolean): void {
 }
 
 export const closeTabOverview = (): void => set(false);
+export const openTabOverview = (): void => set(true);
 export const toggleTabOverview = (): void => set(!expanded);
 
 /**
