@@ -17,7 +17,7 @@
  */
 import { Outlet, useRouterState } from "@tanstack/react-router";
 import { IconRepeat } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { AppHeader } from "@/components/layout/app-header";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
 import { ModeRail } from "@/components/layout/mode-rail";
@@ -25,6 +25,7 @@ import { SessionsRail } from "@/components/layout/sessions-rail";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
+import { openProjectPicker } from "@/interactions/workspace/adapters/project-picker.store";
 import { useRepoCommands } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { useWorkspace } from "@/lib/queries";
@@ -57,7 +58,6 @@ export function AppLayout() {
   });
   const prefs = useUiPrefs();
   const workspace = useWorkspace();
-  const [pickerOpen, setPickerOpen] = useState(false);
 
   const route = shellRoute(pathname, prefs.workMode, startingNew);
   const gitChrome = showsGitChrome(route);
@@ -96,7 +96,8 @@ export function AppLayout() {
     route.kind === "dock" && current !== null ? route.tab : undefined;
   const dockExpanded = expandedTab !== undefined;
 
-  // The picker is the shell's, so the command that raises it is too.
+  // The picker rides the window bar, but the command that raises it belongs
+  // with the rest of the shell's.
   const shellCommands = useMemo<ReadonlyArray<Command>>(
     () => [
       {
@@ -105,7 +106,7 @@ export function AppLayout() {
         group: "Project",
         icon: IconRepeat,
         keywords: "open change repository folder picker switch",
-        run: () => setPickerOpen(true),
+        run: openProjectPicker,
       },
     ],
     []
@@ -129,13 +130,7 @@ export function AppLayout() {
       <WindowFrame>
         {railed && (route.kind === "session" ? <SessionsRail /> : <ModeRail />)}
         <div className="flex min-w-0 flex-1 flex-col">
-          {!bare && (
-            <AppHeader
-              route={route}
-              pickerOpen={pickerOpen}
-              onPickerOpenChange={setPickerOpen}
-            />
-          )}
+          {!bare && <AppHeader route={route} />}
           {/* The rule under the header goes with the header: on the composer it
               would be a line drawn across the top of an empty page. */}
           <div

@@ -21,6 +21,7 @@ import { IconFolder, IconMessage, IconX } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Orb } from "@/components/ui/orb";
 import {
   PreviewCard,
   PreviewCardContent,
@@ -40,15 +41,21 @@ const PREVIEW_TURNS = 3;
 export function TurnStateDot({ state }: { state: ChatSummary["turnState"] }) {
   if (state === null || state === "completed") return null;
   return (
-    <span
-      className={cn(
-        "size-1.5 shrink-0 rounded-full",
-        state === "running" && "animate-pulse bg-brand-500",
-        state === "error" && "bg-destructive",
-        state === "interrupted" && "bg-brand-500"
+    // A settled turn is a dot and a running one is the orb, so the two sit in
+    // the same box — the title starts at one place whatever the row is saying.
+    <span className="flex size-3.5 shrink-0 items-center justify-center">
+      {state === "running" ? (
+        <Orb size={14} label="turn running" />
+      ) : (
+        <span
+          className={cn(
+            "size-1.5 rounded-full",
+            state === "error" ? "bg-destructive" : "bg-brand-500"
+          )}
+          aria-label={`turn ${state}`}
+        />
       )}
-      aria-label={`turn ${state}`}
-    />
+    </span>
   );
 }
 

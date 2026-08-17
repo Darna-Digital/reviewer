@@ -9,13 +9,20 @@
  */
 // The history arrows are parked for now, along with the icons they wore.
 // import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
-import { IconPlus, IconSitemap, IconWorld, IconX } from "@tabler/icons-react";
+import {
+  IconLayoutGrid,
+  IconPlus,
+  IconSitemap,
+  IconWorld,
+  IconX,
+} from "@tabler/icons-react";
 // import { useCanGoBack } from "@tanstack/react-router";
 import { useRouterState } from "@tanstack/react-router";
 import { isFeatureEnabled } from "@byconvo/feature-flags";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { Orb } from "@/components/ui/orb";
 import {
   Tooltip,
   TooltipContent,
@@ -44,6 +51,7 @@ import {
 import {
   barShortcut,
   sessionDigit,
+  type BarPane,
   type BarShortcut,
 } from "@/components/layout/window-bar.shortcuts";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
@@ -53,10 +61,16 @@ import {
   toggleTabOverview,
   useTabOverview,
 } from "@/interactions/tab-preview/adapters/tab-overview.store";
+import {
+  setProjectPickerOpen,
+  useProjectPickerOpen,
+} from "@/interactions/workspace/adapters/project-picker.store";
+import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
+import { useThinkingChatIds } from "@/interactions/chats/adapters/thinking-chats.hook.adapter";
 import { isDesktop } from "@/lib/desktop";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
-import { useRecentChats } from "@/lib/queries";
+import { useRecentChats, useWorkspace } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { activeWorkMode } from "@/lib/work-mode";
@@ -79,9 +93,16 @@ const LEAD_GUTTER = "w-22";
 
 const sessionsEnabled = isFeatureEnabled("sessions-button");
 
+/** Stay on the page the project was switched from, now scoped to the new one. */
+const stayPut = () => {};
+
 const PROJECT_KEYS = "⌘1";
+const PROJECT_PICKER_KEYS = "⌘⇧P";
 const SESSIONS_KEYS = "⌘2";
 const NEW_SESSION_KEYS = "⌘T";
+const LAUNCHPAD_KEYS = "⌘L";
+const ANALYSIS_KEYS = "⌘⇧A";
+const BROWSER_KEYS = "⌘⇧B";
 
 /** A chord as its keycaps: one per glyph, the way the style guide sets them. */
 function Shortcut({ keys }: { keys: string }) {
@@ -91,6 +112,16 @@ function Shortcut({ keys }: { keys: string }) {
         <Kbd key={key}>{key}</Kbd>
       ))}
     </KbdGroup>
+  );
+}
+
+/** What the bar says about a control: its name, and the chord that runs it. */
+function BarLabel({ label, keys }: { label: string; keys?: string | null }) {
+  return (
+    <TooltipContent side="bottom">
+      {label}
+      {keys != null && <Shortcut keys={keys} />}
+    </TooltipContent>
   );
 }
 
@@ -108,10 +139,7 @@ function BarTooltip({
   return (
     <Tooltip disabled={disabled}>
       {children}
-      <TooltipContent side="bottom">
-        {label}
-        {keys != null && <Shortcut keys={keys} />}
-      </TooltipContent>
+      <BarLabel label={label} keys={keys} />
     </Tooltip>
   );
 }
@@ -226,6 +254,24 @@ export function WindowBar() {
   const prefs = useUiPrefs();
   const inCodeMode =
     activeWorkMode(location.pathname, prefs.workMode) === "code";
+  const workspace = useWorkspace();
+  const pickerOpen = useProjectPickerOpen();
+  // Both panes are there to be read against something else the window is
+  // showing, and in the native shell there is always something — the browser
+  // pane is a window of its own, and an analysis is opened from either mode. A
+  // browser tab has no <webview> to put behind the second, and only reads an
+  // analysis beside the code. A pane the window cannot show is off the bar,
+  // and its chord does nothing.
+  const paneAvailable = (pane: BarPane): boolean =>
+    pane === "browser" ? isDesktop : isDesktop || inCodeMode;
+  const togglePane = (pane: BarPane) => {
+    if (!paneAvailable(pane)) return;
+    setUiPrefs(
+      pane === "browser"
+        ? { browserPaneOpen: !prefs.browserPaneOpen }
+        : { plansPaneOpen: !prefs.plansPaneOpen }
+    );
+  };
   const seenAt = prefs.inboxSeenAt;
   const unread = useMemo(
     () =>
@@ -236,9 +282,16 @@ export function WindowBar() {
       ),
     [chats.data, seenAt]
   );
+  const thinking = useThinkingChatIds();
+  const chatOf = (tab: WindowTab): string | null =>
+    tab.kind === "session" ? chatIdOf(tab.href) : null;
   const waiting = (tab: WindowTab): boolean => {
-    const chatId = tab.kind === "session" ? chatIdOf(tab.href) : null;
+    const chatId = chatOf(tab);
     return chatId !== null && unread.has(chatId);
+  };
+  const working = (tab: WindowTab): boolean => {
+    const chatId = chatOf(tab);
+    return chatId !== null && thinking.has(chatId);
   };
 
   // A session tab is minted before its conversation exists, so it takes the
@@ -280,6 +333,10 @@ export function WindowBar() {
           return void openSession();
         case "launchpad":
           return toggleTabOverview();
+        case "project-picker":
+          return setProjectPickerOpen(true);
+        case "pane":
+          return togglePane(shortcut.pane);
         case "tab": {
           const tab = tabById(windowTabsSnapshot(), shortcut.tabId);
           return tab === null ? undefined : show(tab);
@@ -338,6 +395,22 @@ export function WindowBar() {
       <BarButton label="Forward" onClick={() => router.history.forward()}>
         <IconArrowRight className="size-5" />
       </BarButton> */}
+
+        {/* The project the window is on leads the strip: every tab behind it is
+            a place within that project, so the chip names them all rather than
+            being one more thing on the page under them. Switching project keeps
+            a session or a board where it is; on the code surfaces it lands in
+            the arriving project's tree, as it always has. */}
+        <div className={cn("flex min-w-0 shrink-0", NO_DRAG)}>
+          <ProjectPicker
+            workspace={workspace.data}
+            open={pickerOpen}
+            onOpenChange={setProjectPickerOpen}
+            onChosen={inCodeMode ? undefined : stayPut}
+            onWindowBar
+            tooltip={<BarLabel label="Projects" keys={PROJECT_PICKER_KEYS} />}
+          />
+        </div>
 
         <div
           role="tablist"
@@ -445,19 +518,34 @@ export function WindowBar() {
                   {!pinned && (
                     <>
                       <span className="truncate">{tab.title}</span>
-                      {/* The dot shares the ✕'s slot, which the tab already
-                        reserves — so a thread going quiet neither resizes the
-                        tab nor leaves a hole. Reaching for the ✕ trades one
-                        for the other. */}
+                      {/* What the thread is doing shares the ✕'s slot, which
+                        the tab already reserves — so a thread going quiet
+                        neither resizes the tab nor leaves a hole. Reaching for
+                        the ✕ trades one for the other.
+
+                        An agent still working outranks a thread waiting to be
+                        read: the orb says the tab is going to change again,
+                        which is the more useful of the two. */}
                       <span className="relative flex size-[1.125rem] shrink-0 items-center justify-center">
-                        {waiting(tab) && (
-                          <span
-                            aria-label="Waiting"
+                        {working(tab) ? (
+                          <Orb
+                            size={18}
+                            label="Working"
                             className={cn(
-                              "size-1.5 rounded-full bg-brand-500 group-hover/tab:opacity-0",
+                              "group-hover/tab:opacity-0",
                               active && "opacity-0"
                             )}
                           />
+                        ) : (
+                          waiting(tab) && (
+                            <span
+                              aria-label="Waiting"
+                              className={cn(
+                                "size-1.5 rounded-full bg-brand-500 group-hover/tab:opacity-0",
+                                active && "opacity-0"
+                              )}
+                            />
+                          )
                         )}
                         <button
                           type="button"
@@ -497,31 +585,37 @@ export function WindowBar() {
           the strip that gives way first. Its inset is a gutter like the lead
           one rather than padding, so both ends of the bar read the same. */}
       <div className="flex shrink-0 items-center justify-end gap-1">
-        {/* Both panes are there to be read against something else the window is
-            showing, and in the native shell there is always something — the
-            browser pane is a window of its own, and an analysis is opened from
-            either mode. A browser tab has no <webview> to put behind the
-            second, and only reads an analysis beside the code. */}
-        {(isDesktop || inCodeMode) && (
-          <BarButton
-            label="Analysis"
-            pressed={prefs.plansPaneOpen}
-            onClick={() => setUiPrefs({ plansPaneOpen: !prefs.plansPaneOpen })}
-          >
-            <IconSitemap className="size-4" />
-          </BarButton>
-        )}
-        {isDesktop && (
+        {/* The three things the window puts over or beside the page, each on
+            its own square with its chord in the tooltip — the same button the
+            tabs at the other end of the bar wear. */}
+        {paneAvailable("browser") && (
           <BarButton
             label="Browser"
+            keys={BROWSER_KEYS}
             pressed={prefs.browserPaneOpen}
-            onClick={() =>
-              setUiPrefs({ browserPaneOpen: !prefs.browserPaneOpen })
-            }
+            onClick={() => togglePane("browser")}
           >
             <IconWorld className="size-4" />
           </BarButton>
         )}
+        {paneAvailable("analysis") && (
+          <BarButton
+            label="Analysis"
+            keys={ANALYSIS_KEYS}
+            pressed={prefs.plansPaneOpen}
+            onClick={() => togglePane("analysis")}
+          >
+            <IconSitemap className="size-4" />
+          </BarButton>
+        )}
+        <BarButton
+          label="Launchpad"
+          keys={LAUNCHPAD_KEYS}
+          pressed={overviewOpen}
+          onClick={toggleTabOverview}
+        >
+          <IconLayoutGrid className="size-4" />
+        </BarButton>
         <UserMenu className={NO_DRAG} />
         <div aria-hidden className="w-2 shrink-0" />
       </div>

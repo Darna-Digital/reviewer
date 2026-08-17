@@ -18,7 +18,6 @@ import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { DockRestore } from "@/components/layout/dock-restore";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
-import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
 import { SearchMenu } from "@/interactions/search/components/search-menu";
 import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
@@ -35,15 +34,7 @@ import {
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import type { ShellRoute } from "@/lib/shell-route";
 
-export function AppHeader({
-  route,
-  pickerOpen,
-  onPickerOpenChange,
-}: {
-  route: ShellRoute;
-  pickerOpen: boolean;
-  onPickerOpenChange: (open: boolean) => void;
-}) {
+export function AppHeader({ route }: { route: ShellRoute }) {
   const navigate = useNavigate();
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
@@ -61,11 +52,11 @@ export function AppHeader({
   const followRepo = (repoPath: string) =>
     workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
 
-  // A session is one conversation, held by its own tab: the project picker and
-  // the branch switcher are how you move around a repository, and neither is
-  // what this surface is for. Minting a session and finding one act on the list
-  // rather than on the conversation, and are in the rail with the rest of what
-  // moves you about — so this only names the conversation.
+  // A session is one conversation, held by its own tab: the branch switcher is
+  // how you move around a repository, which is not what this surface is for.
+  // Minting a session and finding one act on the list rather than on the
+  // conversation, and are in the rail with the rest of what moves you about —
+  // so this only names the conversation.
   if (route.kind === "session") {
     return (
       <header className="flex h-9 shrink-0 items-center gap-2 px-2">
@@ -75,7 +66,7 @@ export function AppHeader({
   }
 
   // Collaboration drops the git chrome entirely — its own sidebar carries what
-  // the branch switcher and the picker would have said.
+  // the branch switcher would have said.
   if (route.kind === "collaboration") {
     return (
       <header className="flex h-9 shrink-0 items-center gap-2 px-2">
@@ -101,13 +92,6 @@ export function AppHeader({
 
   return (
     <header className="flex h-9 shrink-0 items-center gap-2 px-2">
-      {/* Project chip — opens the recents + folder-browser dropdown */}
-      <ProjectPicker
-        workspace={workspace.data}
-        open={pickerOpen}
-        onOpenChange={onPickerOpenChange}
-      />
-
       {repo.data != null && (
         <BranchSwitcher
           current={repo.data.currentBranch}

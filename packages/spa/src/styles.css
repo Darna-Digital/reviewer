@@ -832,6 +832,67 @@
   }
 }
 
+/* --- byconvo: agent orb --------------------------------------------------- */
+/* The "S2" lattice from aicss.dev/components/orbs — see components/ui/orb.tsx
+   for the geometry. The dots take `currentColor`, so the orb is the colour of
+   whatever it stands in. */
+@keyframes orb-wave {
+  0% {
+    opacity: var(--orb-rest);
+    transform: scale(1);
+    animation-timing-function: cubic-bezier(0.66, 0, 0.34, 1);
+  }
+  28% {
+    opacity: 1;
+    transform: scale(1.18);
+    animation-timing-function: cubic-bezier(0.66, 0, 0.34, 1);
+  }
+  56%,
+  100% {
+    opacity: var(--orb-rest);
+    transform: scale(1);
+  }
+}
+.orb {
+  contain: strict;
+  position: relative;
+  display: block;
+  flex: none;
+  overflow: hidden;
+}
+.orb-lattice {
+  --orb-rest: 0.14;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  transform-origin: 0 0;
+  /* Scaled first, then nudged in the stage's own units to centre the 15px the
+     lattice actually occupies inside the 28px it is tuned on. */
+  transform: scale(var(--orb-k)) translate(6.5px, 6.5px);
+}
+.dark .orb-lattice {
+  --orb-rest: 0.2;
+}
+.orb-cell {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: var(--orb-rest);
+  animation: orb-wave 1.7s cubic-bezier(0.66, 0, 0.34, 1) infinite both;
+}
+/* Held still, the resting opacity is too faint to read as anything at all, so
+   the frozen frame is a legible lattice rather than the trough of the wave. */
+@media (prefers-reduced-motion: reduce) {
+  .orb-cell {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+
 /* --- byconvo: review-comment markdown bodies ------------------------------ */
 /* Comment bodies live in a narrow gutter, so wrap aggressively: long words,
    URLs and inline code must break rather than force the card to overflow. */

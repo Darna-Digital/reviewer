@@ -61,6 +61,18 @@ interface ProjectPickerProps {
   onChosen?: () => void;
   /** Which way the popover opens — "top" for a bar pinned to the bottom. */
   side?: "top" | "bottom";
+  /**
+   * Set on the window bar, where the chip is sized to the tab strip it leads
+   * rather than to the header row it used to sit in: the strip's type, the
+   * strip's inset, and a mark the size of a tab's icon.
+   */
+  onWindowBar?: boolean;
+  /**
+   * A `TooltipContent` for the chip, so a bar that labels its controls can
+   * label this one the same way. It is held back while the dropdown is up,
+   * which is what the chip has to say by then.
+   */
+  tooltip?: React.ReactNode;
 }
 
 /** Matches the branch dropdown's menu items, on buttons the menu doesn't own. */
@@ -135,6 +147,8 @@ export function ProjectPicker({
   onOpenChange,
   onChosen,
   side,
+  onWindowBar,
+  tooltip,
 }: ProjectPickerProps) {
   const navigate = useNavigate();
   const actions = useWorkspaceActions();
@@ -191,24 +205,45 @@ export function ProjectPicker({
   const projectName =
     workspace?.project == null ? null : folderName(workspace.project);
 
+  const chip = (
+    <Button
+      variant="ghost"
+      size="chip"
+      className={cn(
+        "max-w-56 gap-2 px-2 py-1.5",
+        onWindowBar && "max-w-44 gap-1.5 py-0 pr-1.5 pl-2 text-[0.8125rem]"
+      )}
+    />
+  );
+
+  const chipContent = (
+    <>
+      {projectName !== null && (
+        <ProjectAvatar
+          name={projectName}
+          className={onWindowBar ? "size-4" : undefined}
+        />
+      )}
+      {projectName === null && (
+        <IconFolder className="size-3.5 shrink-0 text-muted-foreground" />
+      )}
+      <span className="truncate">{projectName ?? "Choose project"}</span>
+      <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
+    </>
+  );
+
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="chip"
-            className="max-w-56 gap-2 px-2 py-1.5"
-          />
-        }
-      >
-        {projectName !== null && <ProjectAvatar name={projectName} />}
-        {projectName === null && (
-          <IconFolder className="size-3.5 shrink-0 text-muted-foreground" />
-        )}
-        <span className="truncate">{projectName ?? "Choose project"}</span>
-        <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-      </PopoverTrigger>
+      {tooltip === undefined ? (
+        <PopoverTrigger render={chip}>{chipContent}</PopoverTrigger>
+      ) : (
+        <Tooltip disabled={open}>
+          <TooltipTrigger render={<PopoverTrigger render={chip} />}>
+            {chipContent}
+          </TooltipTrigger>
+          {tooltip}
+        </Tooltip>
+      )}
       <PopoverContent
         align="start"
         side={side ?? "bottom"}

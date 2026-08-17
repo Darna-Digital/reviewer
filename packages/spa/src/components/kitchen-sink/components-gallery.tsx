@@ -18,6 +18,8 @@ import {
 } from "@/components/kitchen-sink/kitchen-sink-primitives";
 import { Badge } from "@/components/ui/badge";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
+import { ThinkingIndicator } from "@/components/ui/thinking-indicator";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -393,6 +395,23 @@ export function ComponentsGallery() {
               </li>
             ))}
           </ul>
+        </Subsection>
+
+        <Subsection
+          title="Agent orb"
+          hint="Every wait an agent is responsible for wears this: the chat's thinking line, a running work-log step, a tab whose conversation is mid-turn. A plain data fetch keeps the caret."
+        >
+          <SpecimenRow>
+            <Specimen label="14 — inline">
+              <Orb size={14} label="Working" />
+            </Specimen>
+            <Specimen label="16 — beside a label">
+              <ThinkingIndicator />
+            </Specimen>
+            <Specimen label="20 — default">
+              <Orb label="Working" />
+            </Specimen>
+          </SpecimenRow>
         </Subsection>
       </Section>
 

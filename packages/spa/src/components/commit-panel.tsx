@@ -6,6 +6,7 @@ import { agentIcon } from "@/interactions/threads/components/agent-icons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -278,7 +279,7 @@ export function CommitPanel({
                   onClick={() => void generate()}
                 >
                   {generating ? (
-                    <LoadingCursor label={null} />
+                    <Orb size={14} />
                   ) : (
                     <IconSparkles className="size-3.5" />
                   )}
