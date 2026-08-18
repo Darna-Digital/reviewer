@@ -19,7 +19,10 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { PaneHeader } from "@/components/layout/pane-header";
-import { SidebarSearch } from "@/components/layout/sidebar-filters";
+import {
+  branchLabel,
+  SidebarSearch,
+} from "@/components/layout/sidebar-filters";
 import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -240,7 +243,7 @@ export function ReviewsPage() {
             <section key={group.base} className="mb-3">
               <h2 className="flex items-center gap-1.5 px-3 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                 <IconGitBranch className="size-3 shrink-0" />
-                <span className="truncate">{group.base}</span>
+                <span className="truncate">{branchLabel(group.base)}</span>
                 <span className="ml-auto tabular-nums">
                   {group.items.length}
                 </span>
