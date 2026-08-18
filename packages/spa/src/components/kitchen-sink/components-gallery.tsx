@@ -66,6 +66,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const RADIO_CLASSES =
   "col-start-1 row-start-1 appearance-none rounded-full border border-border bg-background checked:border-primary checked:bg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:border-border disabled:bg-muted disabled:checked:bg-muted dark:bg-white/5 dark:disabled:bg-white/10 forced-colors:appearance-auto";
@@ -390,7 +391,7 @@ export function ComponentsGallery() {
                 key={label}
                 className="flex items-center gap-2 text-base sm:text-sm"
               >
-                <span className={`size-2 shrink-0 rounded-full ${dot}`} />
+                <span className={cn("size-2 shrink-0 rounded-full", dot)} />
                 {label}
               </li>
             ))}

@@ -267,7 +267,7 @@ export function CommentThread({
     <div className={COMMENT_CARD}>
       <div className="flex flex-col gap-3">
         {comments.map((comment, i) => (
-          <div key={comment.id} className={i === 0 ? undefined : REPLY_INDENT}>
+          <div key={comment.id} className={cn(i > 0 && REPLY_INDENT)}>
             <CommentCard
               comment={comment}
               editing={editingId === comment.id}
@@ -282,7 +282,7 @@ export function CommentThread({
         ))}
       </div>
 
-      <div className={`mt-2 ${REPLY_INDENT}`}>
+      <div className={cn("mt-2", REPLY_INDENT)}>
         {replying && onReply !== undefined && lastGithub !== undefined ? (
           <CommentComposer
             submitLabel="Reply"

@@ -1,5 +1,6 @@
 import { PaneHeader } from "#/components/app-window";
 import { Sparkle, Terminal } from "#/components/icons";
+import { cn } from "#/lib/utils";
 
 const AGENTS = [
   { label: "Claude Code", hint: "claude -p", active: true },
@@ -75,7 +76,10 @@ export function AgentsShowcase() {
           <ul>
             {AGENTS.map((agent) => (
               <li
-                className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${agent.active ? "bg-neutral-100 dark:bg-white/8" : ""}`}
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-2 py-1.5",
+                  agent.active && "bg-neutral-100 dark:bg-white/8"
+                )}
                 key={agent.label}
               >
                 <span className="grid size-5 place-items-center rounded-[5px] bg-neutral-900 text-white dark:bg-white dark:text-neutral-950">

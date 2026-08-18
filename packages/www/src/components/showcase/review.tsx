@@ -2,6 +2,7 @@ import { PaneHeader } from "#/components/app-window";
 import { CodeLines, codeLines } from "#/components/code";
 import { GitPullRequest, Message } from "#/components/icons";
 import { Avatar } from "#/components/showcase/avatar";
+import { cn } from "#/lib/utils";
 
 const TARGETS = [
   { label: "Local changes", count: 4 },
@@ -31,20 +32,22 @@ export function ReviewShowcase() {
       <div className="flex flex-wrap gap-1.5 border-b border-black/8 bg-neutral-50/70 px-3 py-2 dark:border-white/8 dark:bg-white/3">
         {TARGETS.map((target) => (
           <span
-            className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] ${
+            className={cn(
+              "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px]",
               target.active
                 ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-950"
                 : "text-neutral-600 ring-1 ring-black/8 ring-inset dark:text-neutral-400 dark:ring-white/10"
-            }`}
+            )}
             key={target.label}
           >
             {target.label}
             <span
-              className={
+              className={cn(
+                "font-mono text-[10px]",
                 target.active
-                  ? "font-mono text-[10px] text-white/60 dark:text-neutral-950/60"
-                  : "font-mono text-[10px] text-neutral-400 dark:text-neutral-500"
-              }
+                  ? "text-white/60 dark:text-neutral-950/60"
+                  : "text-neutral-400 dark:text-neutral-500"
+              )}
             >
               {target.count}
             </span>

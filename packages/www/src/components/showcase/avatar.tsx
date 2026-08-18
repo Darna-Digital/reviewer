@@ -1,3 +1,5 @@
+import { cn } from "#/lib/utils";
+
 const TONES = [
   "bg-[#e8eef9] text-[#31518c] dark:bg-[#1c2a45] dark:text-[#a8c5f0]",
   "bg-[#fbeae4] text-[#9a4a25] dark:bg-[#43261a] dark:text-[#f0b088]",
@@ -20,7 +22,11 @@ export function Avatar({
     ];
   return (
     <span
-      className={`grid shrink-0 place-items-center rounded-full font-semibold ${tone} ${className}`}
+      className={cn(
+        "grid shrink-0 place-items-center rounded-full font-semibold",
+        tone,
+        className
+      )}
     >
       {initials}
     </span>

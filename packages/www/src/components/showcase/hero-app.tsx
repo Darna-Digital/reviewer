@@ -9,6 +9,7 @@ import {
   Terminal,
 } from "#/components/icons";
 import { Avatar } from "#/components/showcase/avatar";
+import { cn } from "#/lib/utils";
 
 const RAIL_TOP = [
   { icon: Folders, label: "Browse the project" },
@@ -105,7 +106,12 @@ export function HeroApp() {
             {RAIL_TOP.map(({ icon: Glyph, label, active }) => (
               <span
                 aria-label={label}
-                className={`grid size-7 place-items-center rounded-md ${active ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-950" : "text-neutral-400 dark:text-neutral-500"}`}
+                className={cn(
+                  "grid size-7 place-items-center rounded-md",
+                  active
+                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-950"
+                    : "text-neutral-400 dark:text-neutral-500"
+                )}
                 key={label}
               >
                 <Glyph className="size-4" />
@@ -134,17 +140,21 @@ export function HeroApp() {
                 style={{ paddingLeft: `${12 + entry.depth * 12}px` }}
               >
                 <span
-                  className={
+                  className={cn(
+                    "truncate",
                     entry.kind === "dir"
-                      ? "truncate text-neutral-500"
-                      : "truncate text-neutral-800 dark:text-neutral-200"
-                  }
+                      ? "text-neutral-500"
+                      : "text-neutral-800 dark:text-neutral-200"
+                  )}
                 >
                   {entry.name}
                 </span>
                 {"status" in entry ? (
                   <span
-                    className={`ml-auto font-mono text-[10px] ${STATUS_TONE[entry.status]}`}
+                    className={cn(
+                      "ml-auto font-mono text-[10px]",
+                      STATUS_TONE[entry.status]
+                    )}
                   >
                     {entry.status}
                   </span>

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { cn } from "#/lib/utils";
+
 const KEYWORDS = new Set([
   "as",
   "async",
@@ -145,17 +147,25 @@ export function CodeLines({
       {lines.map((line, index) => {
         const kind = line.kind ?? "context";
         return (
-          <div className={`flex ${LINE_CLASS[kind]}`} key={index}>
+          <div className={cn("flex", LINE_CLASS[kind])} key={index}>
             {line.number === undefined ? null : (
               <span
-                className={`w-9 shrink-0 pr-2 text-right tabular-nums select-none ${GUTTER_CLASS[kind]}`}
+                className={cn(
+                  "w-9 shrink-0 pr-2 text-right tabular-nums select-none",
+                  GUTTER_CLASS[kind]
+                )}
               >
                 {line.number}
               </span>
             )}
             {diff ? (
               <span
-                className={`w-4 shrink-0 select-none ${kind === "context" ? "text-neutral-300 dark:text-neutral-700" : GUTTER_CLASS[kind]}`}
+                className={cn(
+                  "w-4 shrink-0 select-none",
+                  kind === "context"
+                    ? "text-neutral-300 dark:text-neutral-700"
+                    : GUTTER_CLASS[kind]
+                )}
               >
                 {DIFF_MARK[kind]}
               </span>

@@ -220,7 +220,7 @@ export function ProjectPicker({
       {projectName !== null && (
         <ProjectAvatar
           name={projectName}
-          className={onWindowBar ? "size-4" : undefined}
+          className={cn(onWindowBar && "size-4")}
         />
       )}
       {projectName === null && (
