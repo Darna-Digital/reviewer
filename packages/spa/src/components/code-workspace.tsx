@@ -50,7 +50,10 @@ import { CodeView } from "@/components/editor/code-view";
 import { ImageView, isImagePath } from "@/components/editor/image-view";
 import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
-import { mergeWarning } from "@/interactions/reviews/components/worktree-actions";
+import {
+  discardWarning,
+  mergeWarning,
+} from "@/interactions/reviews/components/worktree-actions";
 import { useTaskActions } from "@/interactions/reviews/adapters/reviews.hook.adapter";
 import {
   diffSourceKey,
@@ -500,6 +503,26 @@ export function CodeWorkspace() {
     const path = treeOf(of);
     if (path !== null) void workspaceActions.followRepo(path, inTree);
   };
+
+  /**
+   * Give a worktree up. Offered from the row that names it rather than from a
+   * control on the trail, so it is only ever reachable while looking at the one
+   * it would remove.
+   */
+  const discardSource = (of: DiffSource) => {
+    if (of.kind !== "worktree") return;
+    const { worktree } = of;
+    if (!window.confirm(discardWarning(worktree))) return;
+    void worktreeActions
+      .discard(worktree.branch, worktree.ahead > 0)
+      .then((done) => {
+        // Reading something that has just stopped existing is a gap, so the
+        // window leaves — but only if it was that one being read.
+        if (done && selectedWorktree?.branch === worktree.branch) {
+          void navigate({ to: REVIEWS_HREF });
+        }
+      });
+  };
   const worktreeChanges = useWorktreeChanges(selectedWorktree?.branch ?? null);
   // Its own slot: your changes and somebody's worktree can be drafting at once.
   const worktreeDraft = useCommitDraft(selectedWorktree?.branch ?? null);
@@ -855,6 +878,7 @@ export function CodeWorkspace() {
             checkedOut={checkedOut === null ? null : diffSourceKey(checkedOut)}
             onSelect={openSource}
             onCheckout={checkOut}
+            onDiscard={discardSource}
           />
         ),
       });

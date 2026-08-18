@@ -18,6 +18,7 @@ import {
   IconGitMerge,
   IconRefresh,
   IconSearch,
+  IconTrash,
 } from "@tabler/icons-react";
 import { useMemo, useRef, useState } from "react";
 import {
@@ -67,6 +68,7 @@ const SourceItem = ({
   checkedOut,
   onSelect,
   onCheckout,
+  onDiscard,
 }: {
   source: DiffSource;
   current: boolean;
@@ -74,6 +76,7 @@ const SourceItem = ({
   checkedOut: boolean;
   onSelect: () => void;
   onCheckout: () => void;
+  onDiscard: () => void;
 }) => {
   const Icon = diffSourceIcon(source);
   const hint = diffSourceHint(source);
@@ -113,6 +116,18 @@ const SourceItem = ({
           <IconArrowBarToRight className="size-4 shrink-0 text-muted-foreground" />
           {checkedOut ? "Working here" : "Check out"}
         </DropdownMenuItem>
+        {/* Only a worktree can be given up. The checkout the project was opened
+            on is the project — there is no version of this app where getting
+            rid of it is one of the things on offer. */}
+        {source.kind === "worktree" && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={onDiscard}>
+              <IconTrash className="size-4 shrink-0" />
+              Discard worktree
+            </DropdownMenuItem>
+          </>
+        )}
       </DropdownMenuSubContent>
     </DropdownMenuSub>
   );
@@ -130,6 +145,7 @@ export function DiffSourceItems({
   checkedOut,
   onSelect,
   onCheckout,
+  onDiscard,
 }: {
   sources: ReadonlyArray<DiffSource>;
   current: string;
@@ -137,6 +153,7 @@ export function DiffSourceItems({
   checkedOut: string | null;
   onSelect: (source: DiffSource) => void;
   onCheckout: (source: DiffSource) => void;
+  onDiscard: (source: DiffSource) => void;
 }) {
   const kinds: ReadonlyArray<DiffSource["kind"]> = [
     "local",
@@ -163,6 +180,7 @@ export function DiffSourceItems({
                 checkedOut={diffSourceKey(source) === checkedOut}
                 onSelect={() => onSelect(source)}
                 onCheckout={() => onCheckout(source)}
+                onDiscard={() => onDiscard(source)}
               />
             ))}
           </DropdownMenuGroup>
