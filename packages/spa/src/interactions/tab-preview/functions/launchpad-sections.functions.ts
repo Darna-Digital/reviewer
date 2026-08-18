@@ -62,7 +62,7 @@ export interface LaunchpadGroup {
 }
 
 /** Sections the project has to be on GitHub to have anything to show. */
-const GITHUB_SECTIONS = new Set(["/modes/code/review"]);
+const GITHUB_SECTIONS = new Set<string>();
 
 /** A card for one of the dock's surfaces, named and located where it is named
  * and located everywhere else. */
@@ -89,18 +89,18 @@ const CODE_SECTIONS: ReadonlyArray<LaunchpadSection> = [
     mode: "code",
   },
   {
-    id: "/modes/code/commit",
-    href: "/modes/code/commit",
-    title: "Local changes",
+    id: "/modes/code/review",
+    href: "/modes/code/review",
+    title: "Review",
     icon: IconGitCommit,
     mode: "code",
   },
   dockSection("branches", IconGitBranch),
   dockSection("history", IconHistory),
   {
-    id: "/modes/code/review",
-    href: "/modes/code/review",
-    title: "Pull requests",
+    id: "/modes/code/reviews",
+    href: "/modes/code/reviews",
+    title: "Reviews",
     icon: IconGitPullRequest,
     mode: "code",
   },

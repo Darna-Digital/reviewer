@@ -2,9 +2,16 @@
 import * as Schema from "effect/Schema";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 import { GitError } from "@byconvo/core/ports/git-exec";
-import { NoRepoSelected, DiffText, Ok } from "@byconvo/core/shared";
+import {
+  NoRepoSelected,
+  DiffText,
+  Ok,
+  NotFound,
+  StorageError,
+} from "@byconvo/core/shared";
 import {
   BranchInfo,
+  BranchTarget,
   CommandOutput,
   CommitDetail,
   CommitInfo,
@@ -13,6 +20,8 @@ import {
   ContentMatches,
   FilesPayload,
   MergeState,
+  LocalTask,
+  MergeOutcome,
   RemoteBranchInfo,
   RepoInfo,
   RepoStatus,
@@ -32,11 +41,17 @@ import {
   Rebase,
   RenameBranch,
   ResolveConflict,
+  NewWorktree,
+  RemoveWorktree,
   SearchQueryParams,
+  SetBranchTarget,
+  TaskRef,
   Worktree,
 } from "@byconvo/core/repo";
 
 const gitError = [GitError, NoRepoSelected] as const;
+/** Reading or writing a branch's target touches git *and* the local store. */
+const targetError = [GitError, NoRepoSelected, NotFound, StorageError] as const;
 
 export class RepoApi extends HttpApiGroup.make("repo")
   .add(
@@ -70,6 +85,61 @@ export class RepoApi extends HttpApiGroup.make("repo")
     HttpApiEndpoint.get("worktrees", "/worktrees", {
       success: Schema.Array(Worktree),
       error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("addWorktree", "/worktrees", {
+      payload: NewWorktree,
+      success: Worktree,
+      error: targetError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("removeWorktree", "/worktrees/remove", {
+      payload: RemoveWorktree,
+      success: Ok,
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("branchTargets", "/branch-targets", {
+      success: Schema.Array(BranchTarget),
+      error: targetError,
+    })
+  )
+  /** The worktrees of this repository, read as the pull requests they are. */
+  .add(
+    HttpApiEndpoint.get("localTasks", "/local-tasks", {
+      success: Schema.Array(LocalTask),
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("mergeTask", "/local-tasks/merge", {
+      payload: TaskRef,
+      success: MergeOutcome,
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("discardTask", "/local-tasks/discard", {
+      payload: TaskRef,
+      success: MergeOutcome,
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("updateTask", "/local-tasks/update", {
+      payload: TaskRef,
+      success: CommandOutput,
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("setBranchTarget", "/branch-targets", {
+      payload: SetBranchTarget,
+      success: BranchTarget,
+      error: targetError,
     })
   )
   .add(
@@ -217,6 +287,6 @@ export class RepoApi extends HttpApiGroup.make("repo")
     HttpApiEndpoint.post("deleteBranch", "/branch/delete", {
       payload: DeleteBranch,
       success: Ok,
-      error: gitError,
+      error: targetError,
     })
   ) {}

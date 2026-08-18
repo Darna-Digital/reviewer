@@ -20,10 +20,8 @@ import {
   IconColumns2,
   IconFolder,
   IconGitBranch,
-  IconGitCommit,
   IconGitCompare,
   IconGitFork,
-  IconGitPullRequest,
   IconHistory,
   IconLayoutBottombarExpand,
   IconPlayerPlay,
@@ -35,13 +33,8 @@ import {
   useRouterState,
   useSearch,
 } from "@tanstack/react-router";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { CommitPanel } from "@/components/commit-panel";
@@ -57,19 +50,42 @@ import { CodeView } from "@/components/editor/code-view";
 import { ImageView, isImagePath } from "@/components/editor/image-view";
 import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
-import { PullRequestList } from "@/components/git/pull-request-list";
+import {
+  WorktreeActions,
+  discardWarning,
+  mergeWarning,
+} from "@/interactions/reviews/components/worktree-actions";
+import { CheckoutButton } from "@/interactions/reviews/components/checkout-button";
+import { useTaskActions } from "@/interactions/reviews/adapters/reviews.hook.adapter";
+import {
+  diffSourceKey,
+  diffSourceLabel,
+  diffSources,
+  LOCAL_SOURCE,
+  type DiffSource,
+} from "@/interactions/reviews/functions/reviews.functions";
+import {
+  CompareItems,
+  DiffSourceItems,
+  diffSourceIcon,
+} from "@/interactions/reviews/components/diff-source-menu";
 import type { Crumb } from "@/components/layout/breadcrumbs";
 import { EmptyPane } from "@/components/layout/empty-pane";
-import { NoPullRequests, NoReviewRemote } from "@/components/git/review-empty";
-import { firstPullRequest } from "@/components/git/pull-requests.functions";
 import { PathBar } from "@/components/layout/path-bar";
+import { useHeaderTrailSlot } from "@/components/layout/header-trail";
+import {
+  REVIEW_HREF,
+  REVIEWS_HREF,
+  reviewHref,
+  reviewSourceOf,
+} from "@/lib/shell-route";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
-import { ResizeHandle } from "@/components/layout/resize-handle";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { FileSidebar } from "@/components/tree/file-sidebar";
 import { assignToChat } from "@/interactions/chats/adapters/assign-to-chat.adapter";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
+import type { ChatPlace } from "@/interactions/chats/interfaces/chats.interfaces";
 import {
   buildReviewAssignmentPrompt,
   buildReviewAssignmentTitle,
@@ -129,9 +145,13 @@ import {
   useProjectFiles,
   usePullComments,
   usePulls,
+  useBranchTargets,
+  useBranches,
+  useLocalTasks,
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
+import { targetOf } from "@/interactions/worktrees/functions/worktrees.functions";
 import {
   resetHistoryFilters,
   setHistoryQuery,
@@ -165,11 +185,17 @@ export function CodeWorkspace() {
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
 
-  const mode: AppMode = pathname.startsWith("/modes/code/review")
-    ? "review"
-    : pathname.startsWith("/modes/code/browse")
-      ? "browse"
-      : "commit";
+  /**
+   * One route carries all three sources now, so the mode is which *kind* of
+   * source is named: your own changes are read one way, somebody else's
+   * another, and browsing is neither.
+   */
+  const routeSource = reviewSourceOf(pathname);
+  const mode: AppMode = pathname.startsWith("/modes/code/browse")
+    ? "browse"
+    : routeSource === null || routeSource.kind === "local"
+      ? "commit"
+      : "review";
 
   // --- queries ---------------------------------------------------------------
   const workspace = useWorkspace();
@@ -225,11 +251,6 @@ export function CodeWorkspace() {
   // jankiest thing in the app. The drag now writes a CSS variable and only the
   // final size is committed back to the prefs. See `usePanelSize`.
   const sidebar = usePanelSize("sidebar-w", prefs.sidebarWidth, "width");
-  const reviewPulls = usePanelSize(
-    "review-pulls-h",
-    prefs.reviewPullsHeight,
-    "height"
-  );
 
   // A project with no git root at all: there is nothing repo-scoped to show,
   // so the centre pane says so instead of rendering an empty tree.
@@ -238,8 +259,8 @@ export function CodeWorkspace() {
 
   // --- selection / diff target ----------------------------------------------
   const selectedPull = useMemo(() => {
-    if (params.pull === undefined) return null;
-    const n = Number(params.pull);
+    if (routeSource?.kind !== "pull") return null;
+    const n = routeSource.number;
     return (
       pulls.data?.find((p) => p.number === n) ?? {
         number: n,
@@ -252,34 +273,20 @@ export function CodeWorkspace() {
         updatedAt: "",
       }
     );
-  }, [params.pull, pulls.data]);
+  }, [routeSource, pulls.data]);
 
-  /**
-   * The pull request review mode opens on: the one at the top of the sidebar.
-   *
-   * A list beside an empty pane is a gate in front of the thing you came for —
-   * the pane cannot show a diff until something is picked, and nine times in ten
-   * the something is the one at the top. So the window goes there itself, and the
-   * list stays what it is: the way between them.
-   *
-   * Replaced rather than pushed. `/modes/code/review` is a place the window
-   * passes through, and left in the history it would be a Back that lands you
-   * where you have just been sent from.
-   */
-  const firstPull = useMemo(
-    () => firstPullRequest(pulls.data ?? []),
-    [pulls.data]
+  const worktrees = useLocalTasks();
+  const worktreeActions = useTaskActions();
+  /** The worktree under review, when the route names one. */
+  const selectedWorktree = useMemo(
+    () =>
+      routeSource?.kind !== "worktree"
+        ? null
+        : ((worktrees.data ?? []).find(
+            (entry) => entry.branch === routeSource.branch
+          ) ?? null),
+    [routeSource, worktrees.data]
   );
-  useEffect(() => {
-    if (mode !== "review" || params.pull !== undefined || firstPull === null) {
-      return;
-    }
-    void navigate({
-      to: "/modes/code/review/$pull",
-      params: { pull: String(firstPull.number) },
-      replace: true,
-    });
-  }, [mode, params.pull, firstPull, navigate]);
 
   const browse = useMemo(() => {
     if (params.sha !== undefined) {
@@ -295,12 +302,100 @@ export function CodeWorkspace() {
     return null;
   }, [params.sha, search.base, search.head]);
 
+  /**
+   * What the local changes are read against. Aiming a branch is recorded once
+   * and meant to hold: a task opened in a worktree of its own already said what
+   * it is for, so arriving at its changes should not ask again. The URL still
+   * wins when it says anything — including the empty string, which is how the
+   * trail drops back to what is merely uncommitted.
+   */
+  const branches = useBranches();
+  const branchTargets = useBranchTargets();
+  const aim = targetOf(
+    branchTargets.data ?? [],
+    repo.data?.currentBranch ?? null
+  );
+  const reading = search.target ?? aim ?? null;
+
   const target: DiffTarget | null = diffFns.deriveTarget({
     mode,
     selectedPull,
+    selectedTask: selectedWorktree,
     browse,
+    // A task under review answers to the URL alone. The branch's own aim is
+    // about the changes in *this* checkout, and letting it reach across would
+    // read somebody else's task against whatever this window happens to be on.
+    target: mode === "review" ? (search.target ?? null) : reading,
   });
   const targetKey = target === null ? "none" : diffTargetKey(target);
+
+  /**
+   * Everything the diff view could be showing, and which of them it is.
+   *
+   * The route says which one, and the trail is how it is changed: picking a
+   * crumb navigates, so the URL follows the choice instead of being the way the
+   * choice has to be made.
+   */
+  const sources = useMemo(
+    () => diffSources(pulls.data ?? [], worktrees.data ?? []),
+    [pulls.data, worktrees.data]
+  );
+  const source: DiffSource =
+    selectedWorktree !== null
+      ? { kind: "worktree", worktree: selectedWorktree }
+      : selectedPull !== null
+        ? { kind: "pull", pull: selectedPull }
+        : LOCAL_SOURCE;
+
+  const openSource = (next: DiffSource) =>
+    void navigate({
+      to: reviewHref(
+        next.kind === "local"
+          ? { kind: "local" }
+          : next.kind === "worktree"
+            ? { kind: "worktree", branch: next.worktree.branch }
+            : { kind: "pull", number: next.pull.number }
+      ),
+      search: {},
+    });
+
+  /**
+   * What the source is read against, when that is something you can change.
+   *
+   * `own` is the answer it falls back to; a pull request has one but it is
+   * GitHub's, so it is named and not offered. Local changes have none — read
+   * against nothing, they are simply what is uncommitted — which is why that is
+   * the entry the menu offers instead.
+   */
+  const comparable =
+    source.kind === "pull"
+      ? null
+      : source.kind === "worktree"
+        ? {
+            against: search.target ?? null,
+            own: source.worktree.base,
+            exclude: source.worktree.branch,
+            shown: search.target ?? source.worktree.base,
+          }
+        : {
+            against: reading === null || reading.length === 0 ? null : reading,
+            own: null,
+            exclude: repo.data?.currentBranch ?? null,
+            shown: reading === null || reading.length === 0 ? null : reading,
+          };
+
+  const compareAgainst = (branch: string | null) => {
+    if (source.kind === "worktree") {
+      void navigate({
+        to: reviewHref({ kind: "worktree", branch: source.worktree.branch }),
+        search: branch === null ? {} : { target: branch },
+      });
+      return;
+    }
+    // Empty, not absent: absent would only let the branch's own aim answer
+    // again, and this is how you say you meant otherwise.
+    void navigate({ to: REVIEW_HREF, search: { target: branch ?? "" } });
+  };
 
   const diff = useDiffText(target);
   // The uncommitted diff of every root at once, its paths named from the
@@ -385,6 +480,47 @@ export function CodeWorkspace() {
   );
 
   // --- review → agent: hand the comments in view (local + GitHub) to an agent.
+  /**
+   * The tree this diff can be run in, and whether the window is already in it.
+   *
+   * A worktree's is its own directory. The changes in front of you belong to
+   * the checkout the project was opened on, which is where the button leads
+   * back to when the window is off following a worktree. A pull request has no
+   * tree here at all — nothing to check out until somebody fetches it — so the
+   * trail simply ends without the offer.
+   */
+  const mainRoot = workspace.data?.currentRoot ?? null;
+  const inTree = workspace.data?.current ?? null;
+  const sourceTree =
+    selectedWorktree !== null
+      ? { path: selectedWorktree.path, branch: selectedWorktree.branch }
+      : source.kind === "local" && mainRoot !== null
+        ? {
+            path: mainRoot,
+            branch:
+              (workspace.data?.repos ?? []).find(
+                (entry) => entry.path === mainRoot
+              )?.branch ?? "",
+          }
+        : null;
+  // Nothing to offer about the tree you are already standing in.
+  const checkout =
+    sourceTree === null || sourceTree.path === inTree ? null : sourceTree;
+  const [checkingOut, setCheckingOut] = useState(false);
+
+  /**
+   * Where the comments' agent is to work.
+   *
+   * The diff you are reading decides it, not the checkout the window is on: a
+   * note left on a worktree's diff is about the files in that worktree, and an
+   * agent started here would edit a different copy of them. A pull request has
+   * no checkout of its own, so it falls back to this one.
+   */
+  const assignPlace: ChatPlace =
+    selectedWorktree === null
+      ? { branch: repo.data?.currentBranch ?? "" }
+      : { branch: selectedWorktree.branch, repoPath: selectedWorktree.path };
+
   const assignReview = async (dest: AssignTarget) => {
     if (visibleComments.length === 0) return;
     const count = visibleComments.length;
@@ -394,7 +530,7 @@ export function CodeWorkspace() {
       const chatId = await assignToChat(chatActions, {
         target: dest,
         catalog: chatModels.data,
-        branch: repo.data?.currentBranch ?? "",
+        place: assignPlace,
         title: buildReviewAssignmentTitle(count),
         prompt,
       });
@@ -533,8 +669,11 @@ export function CodeWorkspace() {
     setSearch({ path, file: undefined });
   };
 
+  const headerTrail = useHeaderTrailSlot();
   const viewing = search.file ?? null;
-  const showFileTabs = mode !== "commit" || viewing !== null;
+  /** Local changes, a worktree and a pull request are all read the same way. */
+  const showsDiff = mode === "commit" || mode === "review";
+  const showFileTabs = !showsDiff || viewing !== null;
 
   // --- open-file tabs --------------------------------------------------------
   // The strip follows the open file rather than owning it: navigation arrives
@@ -666,25 +805,52 @@ export function CodeWorkspace() {
     }
     const openPath = viewing;
     const list: Crumb[] = [];
-    if (mode === "commit") {
+    if (mode === "commit" || mode === "review") {
+      // One trail for all three, because it is one view: the first crumb names
+      // what is on screen and carries every other thing it could be, so moving
+      // between your own changes, a task and a pull request is a menu rather
+      // than a mode.
       list.push({
-        id: "commit-mode",
-        label: "Local changes",
-        icon: IconGitCommit,
-        onClick: () => void navigate({ to: "/modes/code/commit" }),
+        id: "diff-source",
+        label: diffSourceLabel(source),
+        // Only a pull request's number. A task's destination is the next crumb
+        // along, and printing it here said the same branch name twice in a row.
+        hint: source.kind === "pull" ? `#${source.pull.number}` : undefined,
+        icon: diffSourceIcon(source),
+        menu: () => (
+          <DiffSourceItems
+            sources={sources}
+            current={diffSourceKey(source)}
+            onSelect={openSource}
+          />
+        ),
       });
-    } else if (mode === "review") {
-      list.push({
-        id: "review-mode",
-        label: "Pull requests",
-        icon: IconGitPullRequest,
-        onClick: () => void navigate({ to: "/modes/code/review" }),
-      });
-      if (selectedPull !== null) {
+      if (source.kind === "pull") {
+        // GitHub decides what a pull request is read against, so this one is
+        // told rather than offered.
         list.push({
-          id: "pull",
-          label: selectedPull.title,
-          hint: `#${selectedPull.number}`,
+          id: "diff-against",
+          label: `vs ${source.pull.baseRef}`,
+          icon: IconGitCompare,
+        });
+      } else if (comparable !== null && comparable.shown !== null) {
+        // Only when there is something to say. Read against nothing, your own
+        // changes are simply what is uncommitted — a crumb saying so is a
+        // comparison crumb naming the absence of a comparison.
+        const shown = comparable.shown;
+        list.push({
+          id: "diff-against",
+          label: `vs ${shown}`,
+          icon: IconGitCompare,
+          menu: () => (
+            <CompareItems
+              branches={(branches.data ?? []).map((entry) => entry.name)}
+              against={comparable.against}
+              own={comparable.own}
+              exclude={comparable.exclude}
+              onSelect={compareAgainst}
+            />
+          ),
         });
       }
     } else if (browse !== null) {
@@ -862,24 +1028,6 @@ export function CodeWorkspace() {
     await workspaceActions.openRepo(path);
   };
 
-  /**
-   * Review mode with nothing open, which is either a project with no pull
-   * requests or a moment on the way to one.
-   *
-   * Nothing at all while the list is still coming, while it has failed — the
-   * sidebar carries that error, and a second telling of it in the middle of the
-   * window is not a second thing to do about it — and while the window is on its
-   * way to the pull it will open on. An empty state that is about to be replaced
-   * reads worse than the moment of nothing it fills.
-   */
-  const reviewPane = () => {
-    if (!hasGitHub) return <NoReviewRemote />;
-    if (pulls.isPending || pulls.error != null || firstPull !== null) {
-      return null;
-    }
-    return <NoPullRequests />;
-  };
-
   // --- center pane -----------------------------------------------------------
   const renderCenter = () => {
     if (noRepo) {
@@ -935,7 +1083,14 @@ export function CodeWorkspace() {
       );
     }
     if (target === null) {
-      if (mode === "review") return reviewPane();
+      // The route names a worktree that is not there any more — merged,
+      // discarded, or a window tab restored into a different project. Nothing
+      // while the list that would prove it is still coming.
+      if (mode === "review") {
+        return worktrees.isPending ? null : (
+          <EmptyPane hint="That worktree is gone. Pick another from Reviews" />
+        );
+      }
       return (
         <EmptyPane hint="Pick a file from the tree, or a commit from the log" />
       );
@@ -977,10 +1132,83 @@ export function CodeWorkspace() {
 
   const crumbs = buildCrumbs();
 
+  /**
+   * The trail, wherever it goes. Above a diff it is what picks the diff, so it
+   * goes up into the header to stand beside the branch picker; everywhere else
+   * it is a report of where you are, and closes the pane instead.
+   */
+  // A lone crumb naming the mode says nothing, so browsing keeps its trail to
+  // itself until it does — but above a diff the first crumb is the picker that
+  // chooses the diff, and there is no view without it.
+  const trail = (showsDiff || crumbs.length > 1 || viewing !== null) && (
+    <PathBar
+      crumbs={crumbs}
+      path={viewing}
+      paths={allPaths}
+      onOpenFile={openFile}
+      placement={showsDiff ? "inline" : "bottom"}
+      onEdit={
+        viewing !== null && !isImagePath(viewing) && editingFile !== viewing
+          ? () => editFile(viewing)
+          : undefined
+      }
+      onShowHistory={
+        viewing === null ? undefined : () => showFileHistory(viewing)
+      }
+      trailEnd={
+        showsDiff && checkout !== null ? (
+          <CheckoutButton
+            branch={checkout.branch}
+            busy={checkingOut}
+            onOpen={() => {
+              setCheckingOut(true);
+              void workspaceActions
+                .followRepo(checkout.path, inTree)
+                .finally(() => setCheckingOut(false));
+            }}
+          />
+        ) : undefined
+      }
+      actions={
+        <div ref={setFileActionsSlot} className="flex items-center gap-1" />
+      }
+      viewActions={
+        selectedWorktree === null ? undefined : (
+          <WorktreeActions
+            worktree={selectedWorktree}
+            busy={worktreeActions.busy === selectedWorktree.branch}
+            onUpdate={() =>
+              void worktreeActions.update(selectedWorktree.branch)
+            }
+            onDiscard={() => {
+              if (!window.confirm(discardWarning(selectedWorktree))) return;
+              void worktreeActions
+                .discard(selectedWorktree.branch, selectedWorktree.ahead > 0)
+                .then((done) => {
+                  if (done) void navigate({ to: REVIEWS_HREF });
+                });
+            }}
+            onMerge={() => {
+              const warning = mergeWarning(selectedWorktree);
+              if (warning !== null && !window.confirm(warning)) return;
+              void worktreeActions
+                .merge(selectedWorktree.branch)
+                .then((merged) => {
+                  // What it was showing no longer exists, so the pane goes back
+                  // to the list rather than pointing at a gap.
+                  if (merged) void navigate({ to: REVIEWS_HREF });
+                });
+            }}
+          />
+        )
+      }
+    />
+  );
+
   return (
     <div className="flex min-h-0 flex-1">
-      {/* Review mode stacks the pull request picker above the selected
-                  PR's file tree; the other modes are just the tree. */}
+      {/* Rendered where the header lent room for it, not where it is built. */}
+      {showsDiff && headerTrail !== null && createPortal(trail, headerTrail)}
       <div
         className={cn(
           "flex shrink-0 flex-col overflow-hidden border-r",
@@ -988,43 +1216,11 @@ export function CodeWorkspace() {
         )}
         style={sidebar.style}
       >
-        {mode === "review" && (
-          <>
-            <PullRequestList
-              pulls={pulls.data ?? []}
-              error={
-                pulls.error
-                  ? errorReason(pulls.error, "Could not load pull requests")
-                  : null
-              }
-              // A query that was never enabled is pending for as long as the
-              // window is open, and a list that says it is loading forever is
-              // worse than one that says it is empty.
-              loading={hasGitHub && pulls.isPending}
-              selectedNumber={selectedPull?.number ?? null}
-              onSelect={(p) =>
-                void navigate({
-                  to: "/modes/code/review/$pull",
-                  params: { pull: String(p.number) },
-                })
-              }
-              className={selectedPull === null ? "flex-1" : "shrink-0 border-b"}
-              style={selectedPull === null ? undefined : reviewPulls.style}
-            />
-            {selectedPull !== null && (
-              <ResizeHandle
-                orientation="row"
-                value={reviewPulls.current}
-                min={80}
-                max={() => Math.max(120, window.innerHeight - 320)}
-                onResize={reviewPulls.onResize}
-                onResizeEnd={(h) => setUiPrefs({ reviewPullsHeight: h })}
-                label="Resize pull request list"
-              />
-            )}
-          </>
-        )}
-        {(mode !== "review" || selectedPull !== null) && (
+        {/* Reading somebody else's work, the tree lists the files that
+            changed — so with nothing changed there is nothing for it to be, and
+            an empty tree is not empty on screen, it is a search box with no
+            answer under it. */}
+        {(mode !== "review" || sidebarPaths.length > 0 || diff.isPending) && (
           <div className="min-h-0 flex-1 overflow-hidden">
             <FileSidebar
               key={mode}
@@ -1125,38 +1321,14 @@ export function CodeWorkspace() {
                   body: comment.body,
                 }))}
                 chats={chats.data?.items ?? []}
+                branch={assignPlace.branch}
                 onAssign={assignReview}
                 onOpenComment={openComment}
                 className="absolute inset-x-3 bottom-8"
               />
             )}
           </div>
-          {/* The trail closes the pane, and only once it says more than
-                      which mode you are in. */}
-          {(crumbs.length > 1 || viewing !== null) && (
-            <PathBar
-              crumbs={crumbs}
-              path={viewing}
-              paths={allPaths}
-              onOpenFile={openFile}
-              onEdit={
-                viewing !== null &&
-                !isImagePath(viewing) &&
-                editingFile !== viewing
-                  ? () => editFile(viewing)
-                  : undefined
-              }
-              onShowHistory={
-                viewing === null ? undefined : () => showFileHistory(viewing)
-              }
-              actions={
-                <div
-                  ref={setFileActionsSlot}
-                  className="flex items-center gap-1"
-                />
-              }
-            />
-          )}
+          {showsDiff ? null : trail}
         </div>
       </main>
     </div>

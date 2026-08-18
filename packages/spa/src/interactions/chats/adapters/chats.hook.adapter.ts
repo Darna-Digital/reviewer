@@ -6,6 +6,7 @@ import type { Chat, ChatPage, ChatSummary } from "@byconvo/core/chats";
 import { createChatsFunctions } from "../functions/chats.functions";
 import type {
   ChatImage,
+  ChatPlace,
   ChatSettings,
   ChatsFunctions,
 } from "../interfaces/chats.interfaces";
@@ -112,11 +113,11 @@ export function useChatsActions() {
   return {
     start: async (
       settings: ChatSettings,
-      branch: string,
+      place: ChatPlace,
       text: string,
       images: ReadonlyArray<ChatImage> = []
     ) => {
-      const started = await fns.start(settings, branch, text, images);
+      const started = await fns.start(settings, place, text, images);
       if (started !== null) {
         prependChat(started);
         invalidate();
@@ -125,14 +126,14 @@ export function useChatsActions() {
     },
     startWithTitle: async (
       settings: ChatSettings,
-      branch: string,
+      place: ChatPlace,
       title: string,
       text: string,
       images: ReadonlyArray<ChatImage> = []
     ) => {
       const started = await fns.startWithTitle(
         settings,
-        branch,
+        place,
         title,
         text,
         images

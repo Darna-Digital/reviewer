@@ -18,7 +18,6 @@ import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { DockRestore } from "@/components/layout/dock-restore";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
-import { SearchMenu } from "@/interactions/search/components/search-menu";
 import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
@@ -31,8 +30,9 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
+import { setHeaderTrailSlot } from "@/components/layout/header-trail";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
-import type { ShellRoute } from "@/lib/shell-route";
+import { REVIEW_HREF, type ShellRoute } from "@/lib/shell-route";
 
 export function AppHeader({ route }: { route: ShellRoute }) {
   const navigate = useNavigate();
@@ -84,8 +84,7 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   const showDiffStyleToggle =
     route.kind === "code" &&
     search.file === undefined &&
-    (route.mode === "commit" ||
-      (route.mode === "review" && params.pull !== undefined) ||
+    (route.mode === "review" ||
       (route.mode === "browse" &&
         (params.sha !== undefined ||
           (search.base !== undefined && search.head !== undefined))));
@@ -100,11 +99,11 @@ export function AppHeader({ route }: { route: ShellRoute }) {
           busy={false}
           onCheckout={(b) => {
             void git.checkout(b);
-            void navigate({ to: "/modes/code/commit" });
+            void navigate({ to: REVIEW_HREF });
           }}
           onCheckoutAndUpdate={(b) => {
             void git.checkoutAndUpdate(b);
-            void navigate({ to: "/modes/code/commit" });
+            void navigate({ to: REVIEW_HREF });
           }}
           onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
           onCompare={(base, head) =>
@@ -127,9 +126,15 @@ export function AppHeader({ route }: { route: ShellRoute }) {
         />
       )}
 
-      <SearchMenu />
+      {/* Lent to the page beneath, which hangs its trail here when the trail
+          is what steers the page rather than what reports on it. Empty
+          otherwise, and it costs nothing then. */}
+      <div
+        ref={setHeaderTrailSlot}
+        className="flex min-w-0 flex-1 items-center gap-2"
+      />
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         {route.kind === "dock" && <DockRestore tab={route.tab} />}
         {showDiffStyleToggle && (
           <DiffStyleToggle

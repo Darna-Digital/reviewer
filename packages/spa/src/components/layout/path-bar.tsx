@@ -1,10 +1,15 @@
 /**
- * The centre pane's last line: where you are, and what acts on it.
+ * The centre pane's trail: where you are, and what acts on it.
  *
  * The trail runs from the mode you are in through every folder of the open
  * file, and each of those folders is a dropdown of what else sits beside it —
- * folders open a submenu, files open in the pane above. The file's own controls
- * (edit it, read its history, save it) end the line on the right.
+ * folders open a submenu, files open in the pane. The view's own controls (edit
+ * it, read its history, save it) end the line on the right.
+ *
+ * It closes the pane while it only reports where you are. Above a diff it also
+ * chooses what the diff *is* — the same job the branch picker does — so that
+ * view hands it to the header to stand beside the picker, and it renders bare:
+ * no height, no rule, no inset of its own, because the row it joins has them.
  */
 import { IconFolder, IconHistory, IconPencil } from "@tabler/icons-react";
 import { type ReactNode, useMemo } from "react";
@@ -32,8 +37,19 @@ export interface PathBarProps {
    * for editing. */
   readonly onEdit?: () => void;
   readonly onShowHistory?: () => void;
-  /** The open view's own controls, e.g. Save and its problem count. */
+  /**
+   * What ends the trail — read as its last word rather than as a control off
+   * on the right, because it acts on what the crumbs just named.
+   */
+  readonly trailEnd?: ReactNode;
+  /** The open file's own controls, e.g. Save and its problem count. */
   readonly actions?: ReactNode;
+  /** What acts on the whole view rather than the file in it, e.g. merging the
+   * worktree being read. Sits past the file's controls, behind a rule, because
+   * it outlives whichever file happens to be open. */
+  readonly viewActions?: ReactNode;
+  /** `inline` fills a row somebody else drew; `bottom` draws its own. */
+  readonly placement?: "inline" | "bottom";
 }
 
 export function PathBar({
@@ -43,7 +59,10 @@ export function PathBar({
   onOpenFile,
   onEdit,
   onShowHistory,
+  trailEnd,
   actions,
+  viewActions,
+  placement = "bottom",
 }: PathBarProps) {
   const folderCrumbs = useMemo<ReadonlyArray<Crumb>>(
     () =>
@@ -75,8 +94,19 @@ export function PathBar({
   );
 
   return (
-    <div className="flex h-7 shrink-0 items-center gap-2 border-t px-2">
-      <Breadcrumbs crumbs={[...crumbs, ...folderCrumbs]} />
+    <div
+      className={cn(
+        "flex min-w-0 items-center gap-2",
+        placement === "inline" ? "flex-1" : "h-7 shrink-0 border-t px-2"
+      )}
+    >
+      <Breadcrumbs
+        crumbs={[...crumbs, ...folderCrumbs]}
+        // Beside the branch picker the crumbs are its peers and are built to
+        // its measure; along the foot of the pane they are a caption.
+        size={placement === "inline" ? "md" : "sm"}
+      />
+      {trailEnd}
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {onShowHistory !== undefined && (
           <Button variant="ghost" size="xs" onClick={onShowHistory}>
@@ -88,6 +118,14 @@ export function PathBar({
           <Button variant="ghost" size="xs" onClick={onEdit}>
             <IconPencil /> Edit
           </Button>
+        )}
+        {viewActions !== undefined && (
+          <>
+            {(onShowHistory !== undefined || onEdit !== undefined) && (
+              <span className="mx-1 h-3.5 w-px bg-border" />
+            )}
+            {viewActions}
+          </>
         )}
       </div>
     </div>

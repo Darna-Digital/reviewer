@@ -8,6 +8,7 @@ import {
   IconChevronRight,
   IconFolder,
   IconGitBranch,
+  IconGitFork,
   IconPlus,
   IconRefresh,
   IconSearch,
@@ -32,6 +33,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
+import { heldElsewhere } from "@/interactions/worktrees/functions/worktrees.functions";
+import { useWorktrees } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import type { RepoBranches } from "@byconvo/core/project";
 import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo";
@@ -388,6 +391,7 @@ function LocalBranchRow({
   readonly onSelect: () => void;
   readonly onCheckout: (target: BranchActionTarget) => void;
 }) {
+  const holder = heldElsewhere(useWorktrees().data ?? [], branch.name);
   return (
     <BranchRowMenu
       target={{
@@ -405,14 +409,26 @@ function LocalBranchRow({
       icon={
         branch.isCurrent ? (
           <IconStarFilled className="size-3.5 text-amber-500" />
+        ) : holder !== null ? (
+          <IconGitFork className="size-3.5 text-muted-foreground" />
         ) : (
           <IconGitBranch className="size-3.5 text-muted-foreground" />
         )
       }
       label={displayName}
       suffix={
-        branch.ahead > 0 || branch.behind > 0 ? (
+        holder !== null || branch.ahead > 0 || branch.behind > 0 ? (
           <span className="flex items-center gap-1 text-xs tabular-nums">
+            {/* Where the branch already is. Without it the row looks checkout-
+              able and the refusal only turns up in the menu. */}
+            {holder !== null && (
+              <span
+                className="truncate text-muted-foreground"
+                title={`Open in worktree ‘${holder.name}’`}
+              >
+                {holder.name}
+              </span>
+            )}
             {branch.ahead > 0 && (
               <span
                 className="text-emerald-600 dark:text-emerald-400"

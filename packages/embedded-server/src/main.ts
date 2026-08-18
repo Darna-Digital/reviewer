@@ -43,6 +43,8 @@ import { PlansHandler } from "./layers/plans/plans.handler.ts";
 import { PlansLive } from "./layers/plans/plans.layer.live.ts";
 import { ProjectHandler } from "./layers/project/project.handler.ts";
 import { ProjectLive } from "./layers/project/project.layer.live.ts";
+import { BranchTargetsLive } from "./layers/branch-targets/branch-targets.layer.live.ts";
+import { LocalTasksLive } from "./layers/local-tasks/local-tasks.layer.live.ts";
 import { RepoHandler } from "./layers/repo/repo.handler.ts";
 import { RepoLive } from "./layers/repo/repo.layer.live.ts";
 import { ThreadsHandler } from "./layers/threads/threads.handler.ts";
@@ -96,9 +98,10 @@ const ApiLive = Layer.mergeAll(
 );
 
 /** Stateless feature services, resolved per request. */
-const RequestServices = Layer.mergeAll(
+const FeatureServices = Layer.mergeAll(
   WorkspaceLive,
   RepoLive,
+  BranchTargetsLive,
   ProjectLive,
   CommentsLive,
   GitHubLive,
@@ -113,6 +116,16 @@ const RequestServices = Layer.mergeAll(
   BrowserRuntimeLive,
   PlansLive,
   VisualCommentsLive
+);
+
+/**
+ * Local tasks read git, the recorded aims and the dev commands all at once, so
+ * unlike its siblings it is built *on* the others rather than beside them —
+ * `provideMerge` hands it the very same instances the handlers get, which
+ * matters for the dev runtime, whose whole job is remembering what is running.
+ */
+const RequestServices = LocalTasksLive.pipe(
+  Layer.provideMerge(FeatureServices)
 );
 
 /**

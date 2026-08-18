@@ -1,4 +1,5 @@
 import type {
+  ChatPlace,
   ChatsDependencies,
   ChatsFunctions,
 } from "../interfaces/chats.interfaces";
@@ -12,7 +13,7 @@ export function createChatsFunctions(d: ChatsDependencies): ChatsFunctions {
 
   const start = async (
     settings: Parameters<ChatsFunctions["start"]>[0],
-    branch: string,
+    place: ChatPlace,
     text: string,
     images: Parameters<ChatsFunctions["start"]>[3] = [],
     title?: string
@@ -24,7 +25,8 @@ export function createChatsFunctions(d: ChatsDependencies): ChatsFunctions {
     // a title, while regular chats let the server name the chat from the prompt.
     const created = await d.sideEffects.create({
       ...settings,
-      branch,
+      branch: place.branch,
+      ...(place.repoPath === undefined ? {} : { repoPath: place.repoPath }),
       ...(trimmedTitle !== undefined && trimmedTitle.length > 0
         ? { title: trimmedTitle }
         : {}),
@@ -33,10 +35,10 @@ export function createChatsFunctions(d: ChatsDependencies): ChatsFunctions {
   };
 
   return {
-    start: (settings, branch, text, images) =>
-      start(settings, branch, text, images),
-    startWithTitle: (settings, branch, title, text, images) =>
-      start(settings, branch, text, images, title),
+    start: (settings, place, text, images) =>
+      start(settings, place, text, images),
+    startWithTitle: (settings, place, title, text, images) =>
+      start(settings, place, text, images, title),
     send,
     updateSettings: (id, patch) => d.sideEffects.update(id, patch),
     rename: async (id, title) => {

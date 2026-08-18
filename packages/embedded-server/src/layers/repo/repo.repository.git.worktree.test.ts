@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseWorktrees } from "./repo.repository.git.ts";
+import {
+  parseWorktrees,
+  worktreeName,
+  worktreesRoot,
+} from "./repo.repository.git.ts";
 
 const listing = [
   ["worktree /work/app", "HEAD abc123", "branch refs/heads/main"].join("\n"),
@@ -49,5 +53,25 @@ describe("parseWorktrees", () => {
 
   it("reads a trailing newline as the end of the last record", () => {
     expect(parseWorktrees(`${listing}\n\n`, "/work/app")).toHaveLength(3);
+  });
+});
+
+describe("worktreeName", () => {
+  it("flattens a branch name so it cannot nest folders", () => {
+    expect(worktreeName("fix/login")).toBe("fix-login");
+  });
+
+  it("keeps a plain name as it is", () => {
+    expect(worktreeName("task-git-worktrees")).toBe("task-git-worktrees");
+  });
+
+  it("falls back rather than naming a folder after nothing", () => {
+    expect(worktreeName("///")).toBe("work");
+  });
+});
+
+describe("worktreesRoot", () => {
+  it("puts worktrees in a dot-folder beside the repository, where no scan walks", () => {
+    expect(worktreesRoot("/work/app")).toBe("/work/.app-worktrees");
   });
 });

@@ -15,7 +15,7 @@ export const PROJECT_TAB_ID = "pinned-project";
 export const COLLABORATION_TAB_ID = "pinned-collaboration";
 export const SESSIONS_TAB_ID = "pinned-sessions";
 
-export const HOME_HREF = "/modes/code/commit";
+export const HOME_HREF = "/modes/code/review";
 export const COLLABORATION_HREF = "/modes/collaboration";
 export const SESSIONS_HREF = "/modes/agent-session";
 /** `?new` holds the composer open instead of resuming the latest chat. */
@@ -26,8 +26,10 @@ const COLLABORATION_PREFIX = "/modes/collaboration";
 
 const TITLES: ReadonlyArray<readonly [string, string]> = [
   ["/modes/code/browse", "Project"],
-  ["/modes/code/commit", "Local changes"],
-  ["/modes/code/review", "Pull requests"],
+  // Longest first: `/reviews` starts with `/review`, and a prefix match reads
+  // the list as the diff view otherwise.
+  ["/modes/code/reviews", "Reviews"],
+  ["/modes/code/review", "Review"],
   // The dock's surfaces, when one of them is the whole page. Named where they
   // are named everywhere else, so a card, a tab and a trail agree.
   ...dockPages.map((page): readonly [string, string] => [

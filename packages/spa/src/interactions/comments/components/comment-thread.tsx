@@ -30,7 +30,7 @@ import type { ReviewComment } from "@byconvo/core/comments";
 export type { DraftLocation } from "@/interactions/comments/interfaces/comments.interfaces";
 
 /** Indent (avatar + gap) used to nest replies under the opening comment. */
-const REPLY_INDENT = "ml-10";
+const REPLY_INDENT = "ml-9";
 
 /**
  * The card a thread and a draft both sit in. Capped at 400px rather than
@@ -40,7 +40,7 @@ const REPLY_INDENT = "ml-10";
  * scan — the same cap opencode puts on its line comments.
  */
 const COMMENT_CARD =
-  "my-2 mr-3 ml-12 w-full max-w-100 min-w-0 overflow-hidden rounded-md bg-surface-2 p-3 font-sans text-card-foreground shadow-raised";
+  "group/thread my-2 mr-3 ml-12 w-full max-w-100 min-w-0 overflow-hidden rounded-md bg-surface-2 p-2.5 font-sans text-card-foreground shadow-raised";
 
 export function CommentComposer({
   onCancel,
@@ -154,10 +154,14 @@ function CommentCard({
   const pending = isOptimisticId(comment.id);
 
   return (
-    <div className={cn("flex gap-3", pending && "opacity-60")}>
-      <AuthorAvatar author={comment.author} source={comment.source} />
+    <div className={cn("flex gap-2.5", pending && "opacity-60")}>
+      <AuthorAvatar
+        author={comment.author}
+        source={comment.source}
+        className="size-6"
+      />
       <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
           <span className="type-ui text-foreground">{comment.author}</span>
           {comment.source === "github" && (
             <IconBrandGithub
@@ -165,11 +169,11 @@ function CommentCard({
               aria-label="GitHub"
             />
           )}
-          <span className="type-meta text-muted-foreground tabular-nums">
+          <span className="type-meta text-muted-foreground/70 tabular-nums">
             {pending ? "Sending…" : timeAgo(comment.createdAt)}
           </span>
         </div>
-        <div className="markdown mt-1 min-w-0 type-body">
+        <div className="markdown mt-0.5 min-w-0 type-body">
           <Markdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight]}
@@ -261,7 +265,7 @@ export function CommentThread({
 
   return (
     <div className={COMMENT_CARD}>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         {comments.map((comment, i) => (
           <div key={comment.id} className={i === 0 ? undefined : REPLY_INDENT}>
             <CommentCard
@@ -278,7 +282,7 @@ export function CommentThread({
         ))}
       </div>
 
-      <div className={`mt-3 ${REPLY_INDENT}`}>
+      <div className={`mt-2 ${REPLY_INDENT}`}>
         {replying && onReply !== undefined && lastGithub !== undefined ? (
           <CommentComposer
             submitLabel="Reply"
@@ -291,7 +295,12 @@ export function CommentThread({
           />
         ) : (
           showActions && (
-            <div className="flex items-center gap-4">
+            // Faint until you reach for the thread. What a note says is what
+            // you came to read; what can be done about it is the second
+            // question, and a row of full-strength verbs under every comment
+            // answers it before it is asked. Focus reveals them too, so they
+            // stay reachable from the keyboard.
+            <div className="flex items-center gap-4 opacity-0 transition-opacity group-focus-within/thread:opacity-100 group-hover/thread:opacity-100">
               {canEdit && editableComment !== undefined && (
                 <ThreadAction onClick={() => setEditingId(editableComment.id)}>
                   Edit

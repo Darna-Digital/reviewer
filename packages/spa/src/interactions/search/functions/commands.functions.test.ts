@@ -26,16 +26,13 @@ describe("buildCodeCommands", () => {
     expect(calls.goTo).toEqual(["/modes/code/browse", "/settings"]);
   });
 
-  it("only offers pull requests when the repo has a GitHub remote", () => {
+  it("offers the reviews list with or without a GitHub remote — worktrees are on it too", () => {
     const withHub = mockCodeCommandDependencies({ hasGitHub: true });
     const withoutHub = mockCodeCommandDependencies({ hasGitHub: false });
 
-    expect(buildCodeCommands(withHub.deps).map((c) => c.id)).toContain(
-      "go-review"
-    );
-    expect(buildCodeCommands(withoutHub.deps).map((c) => c.id)).not.toContain(
-      "go-review"
-    );
+    for (const { deps } of [withHub, withoutHub]) {
+      expect(buildCodeCommands(deps).map((c) => c.id)).toContain("go-reviews");
+    }
   });
 
   it("runs the git action behind each git command", () => {

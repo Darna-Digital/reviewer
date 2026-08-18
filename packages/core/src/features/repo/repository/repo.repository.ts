@@ -29,6 +29,18 @@ export interface RepoRepo {
     GitFailure
   >;
   readonly worktrees: Effect.Effect<ReadonlyArray<Worktree>, GitFailure>;
+  /**
+   * Open `branch` in a checkout of its own, creating the branch off `target`
+   * when it does not exist yet. Answers with the checkout it made.
+   */
+  readonly addWorktree: (
+    branch: string,
+    target: string | null
+  ) => Effect.Effect<Worktree, GitFailure>;
+  readonly removeWorktree: (
+    path: string,
+    force: boolean
+  ) => Effect.Effect<void, GitFailure>;
   readonly log: (
     query: LogQuery
   ) => Effect.Effect<ReadonlyArray<CommitInfo>, GitFailure>;
@@ -44,6 +56,11 @@ export interface RepoRepo {
     base: string,
     head: string
   ) => Effect.Effect<string, GitFailure>;
+  /**
+   * The branch's whole work, read against what it is aimed at: everything since
+   * the merge base, including what is written but not committed.
+   */
+  readonly targetDiff: (target: string) => Effect.Effect<string, GitFailure>;
   readonly commitDiff: (sha: string) => Effect.Effect<string, GitFailure>;
   readonly diffFileContents: (
     target: DiffFileTarget,

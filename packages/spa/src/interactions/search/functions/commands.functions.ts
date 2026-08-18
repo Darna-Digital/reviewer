@@ -13,8 +13,8 @@ import type { Command } from "../interfaces/search.interfaces";
 
 /** The pages the command list can send you to. */
 export type CodeRoute =
-  | "/modes/code/commit"
   | "/modes/code/review"
+  | "/modes/code/reviews"
   | "/modes/code/browse"
   | "/settings";
 
@@ -48,25 +48,21 @@ export const buildCodeCommands = (
   const { goTo, ...git } = d.sideEffects;
   return [
     {
-      id: "go-commit",
-      label: "Go to Local Changes",
+      id: "go-review",
+      label: "Go to Review",
       group: "Navigation",
       icon: IconGitCommit,
-      keywords: "commit working tree changes",
-      run: () => goTo("/modes/code/commit"),
+      keywords: "commit working tree changes diff local",
+      run: () => goTo("/modes/code/review"),
     },
-    ...(d.data.hasGitHub
-      ? [
-          {
-            id: "go-review",
-            label: "Go to Pull Requests",
-            group: "Navigation",
-            icon: IconGitPullRequest,
-            keywords: "review pr github",
-            run: () => goTo("/modes/code/review"),
-          },
-        ]
-      : []),
+    {
+      id: "go-reviews",
+      label: "Go to Reviews",
+      group: "Navigation",
+      icon: IconGitPullRequest,
+      keywords: "review pr github pull requests worktrees",
+      run: () => goTo("/modes/code/reviews"),
+    },
     {
       id: "go-browse",
       label: "Browse the Project",

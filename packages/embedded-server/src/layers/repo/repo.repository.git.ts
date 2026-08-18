@@ -145,6 +145,27 @@ export const parseWorktrees = (
     })
     .map((worktree, index) => ({ ...worktree, isMain: index === 0 }));
 
+/**
+ * The directory a branch's worktree goes in. Derived, never asked for: the
+ * branch is the thing the user named, and the folder is only where it had to
+ * live. Slashes in a branch name would otherwise nest folders, so they flatten.
+ */
+export const worktreeName = (branch: string): string =>
+  branch.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "work";
+
+/**
+ * Where a repository keeps its linked worktrees: a dot-folder beside the main
+ * one. Beside rather than inside because a worktree under the repository would
+ * be walked by the file tree and the project scanner alike; dot-prefixed
+ * because the scanner skips those, so a project holding several roots does not
+ * grow a new one every time a task starts.
+ */
+export const worktreesRoot = (mainPath: string): string => {
+  const parent = mainPath.split("/").slice(0, -1).join("/");
+  const name = mainPath.split("/").at(-1) ?? "repo";
+  return `${parent}/.${name}-worktrees`;
+};
+
 /** Long enough to read a match in context; minified files would otherwise ship megabytes. */
 const MAX_MATCH_LINE_LENGTH = 400;
 
@@ -468,6 +489,51 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     return parseWorktrees(listing, root);
   });
 
+  /** The repository's original worktree — the one git lists first. */
+  const mainWorktree = Effect.gen(function* () {
+    const listing = yield* run("worktree", "list", "--porcelain");
+    const first = parseWorktrees(listing, "")[0];
+    return first?.path ?? (yield* run("rev-parse", "--show-toplevel")).trim();
+  });
+
+  /** Tolerant on purpose: a branch that is not there is an answer, not a failure. */
+  const localBranchExists = (branch: string) =>
+    runTolerant("rev-parse", "--verify", `refs/heads/${branch}`).pipe(
+      Effect.map((out) => out.trim().length > 0)
+    );
+
+  const addWorktree: RepoRepo["addWorktree"] = (branch, target) =>
+    Effect.gen(function* () {
+      const main = yield* mainWorktree;
+      const path = `${worktreesRoot(main)}/${worktreeName(branch)}`;
+      // An existing branch is checked out into the new tree; a new one is cut
+      // from the target in the same call, which is the whole reason the target
+      // is asked for at the moment a task starts.
+      const args = (yield* localBranchExists(branch))
+        ? (["worktree", "add", path, branch] as const)
+        : ([
+            "worktree",
+            "add",
+            "-b",
+            branch,
+            path,
+            ...(target === null ? [] : [target]),
+          ] as const);
+      yield* run(...args);
+      return {
+        path,
+        name: worktreeName(branch),
+        branch,
+        isMain: false,
+        isCurrent: false,
+      };
+    });
+
+  const removeWorktree: RepoRepo["removeWorktree"] = (path, force) =>
+    run("worktree", "remove", ...(force ? ["--force"] : []), path).pipe(
+      Effect.asVoid
+    );
+
   const remoteBranches: RepoRepo["remoteBranches"] = Effect.gen(function* () {
     const refLines = yield* lines(
       "for-each-ref",
@@ -592,8 +658,21 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     Effect.catchTag("GitError", () => Effect.succeed(""))
   );
 
+  const mergeBaseWith = (target: string) =>
+    Effect.map(run("merge-base", target, "HEAD"), (out) => out.trim());
+
   const rangeDiff: RepoRepo["rangeDiff"] = (base, head) =>
     run("diff", `${base}...${head}`);
+
+  /**
+   * Everything the branch has done, read against what it is aimed at. Diffing
+   * the merge base rather than the target itself keeps the target's own later
+   * commits out of it — the three-dot answer — and diffing it against the
+   * working tree rather than HEAD keeps work that is written but not yet
+   * committed in, which is what a task still being worked on consists of.
+   */
+  const targetDiff: RepoRepo["targetDiff"] = (target) =>
+    Effect.flatMap(mergeBaseWith(target), (base) => run("diff", base));
 
   const commitDiff: RepoRepo["commitDiff"] = (sha) =>
     run("show", "--format=", "--patch", sha);
@@ -630,6 +709,22 @@ export const makeGitRepoRepository = Effect.gen(function* () {
           const newContents = yield* showFile(target.sha, path);
           return { oldContents, newContents };
         }
+        case "branch": {
+          // Same two sides the branch diff has: the merge base, and the file as
+          // it sits on disk right now.
+          const base = yield* mergeBaseWith(target.target);
+          const oldContents = yield* showFile(base, oldPath);
+          const root = (yield* run("rev-parse", "--show-toplevel")).trim();
+          const newContents = yield* fs
+            .readFileString(`${root}/${path}`)
+            .pipe(Effect.catch(() => Effect.succeed<string | null>(null)));
+          return { oldContents, newContents };
+        }
+        // Read in the task's own worktree, which this repository is not — the
+        // tasks service answers it, and reaching here at all is a caller that
+        // asked the wrong one.
+        case "task":
+          return { oldContents: null, newContents: null };
         case "range": {
           // `rangeDiff` uses the three-dot form, whose old side is the merge
           // base — resolve the same commit so line numbers line up.
@@ -951,10 +1046,13 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     branches,
     remoteBranches,
     worktrees,
+    addWorktree,
+    removeWorktree,
     log,
     search,
     commitDetail,
     worktreeDiff,
+    targetDiff,
     rangeDiff,
     commitDiff,
     diffFileContents,
