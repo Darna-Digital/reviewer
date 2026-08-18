@@ -96,18 +96,25 @@ export function useTaskActions() {
         }
       },
 
-      /** Bring the base into the task, in the task's own worktree. */
-      update: async (branch: string): Promise<boolean> => {
+      /**
+       * Bring another branch into the worktree, in the worktree itself. `base`
+       * null means whatever it is aimed at.
+       */
+      update: async (branch: string, base: string | null): Promise<boolean> => {
         setBusy(branch);
         try {
           const { error } = await fetchClient.POST("/api/local-tasks/update", {
-            body: { branch },
+            body: { branch, ...(base === null ? {} : { base }) },
           });
           if (error !== undefined) {
             toast.error(failureText(error));
             return false;
           }
-          toast.success(`Updated ${branch} from its base`);
+          toast.success(
+            base === null
+              ? `Updated ${branch} from its base`
+              : `Updated ${branch} from ${base}`
+          );
           await queryClient.invalidateQueries();
           return true;
         } finally {

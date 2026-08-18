@@ -512,6 +512,16 @@ export function CodeWorkspace() {
    * to put it on — so the choice is made once, on the row, rather than twice in
    * two controls.
    */
+  /**
+   * Bring a branch into the worktree. The way out of the one state that blocks
+   * a merge, offered on the same row the merge is, so being told "update it
+   * first" and doing so are the same gesture in the same place.
+   */
+  const updateFrom = (base: string) => {
+    if (selectedWorktree === null) return;
+    void worktreeActions.update(selectedWorktree.branch, base);
+  };
+
   const mergeInto = (base: string) => {
     if (selectedWorktree === null) return;
     const warning = mergeWarning(selectedWorktree);
@@ -879,6 +889,7 @@ export function CodeWorkspace() {
               own={comparable.own}
               exclude={comparable.exclude}
               onSelect={compareAgainst}
+              {...(selectedWorktree === null ? {} : { onUpdate: updateFrom })}
               {...(selectedWorktree !== null && selectedWorktree.ahead > 0
                 ? { onMerge: mergeInto }
                 : {})}

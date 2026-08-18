@@ -16,6 +16,7 @@ import {
   IconGitCommit,
   IconGitCompare,
   IconGitMerge,
+  IconRefresh,
   IconSearch,
 } from "@tabler/icons-react";
 import { useMemo, useRef, useState } from "react";
@@ -225,6 +226,7 @@ export function CompareItems({
   own,
   exclude,
   onSelect,
+  onUpdate,
   onMerge,
 }: {
   branches: ReadonlyArray<string>;
@@ -234,6 +236,12 @@ export function CompareItems({
   /** The branch the changes are *on* — diffing it with itself says nothing. */
   exclude: string | null;
   onSelect: (branch: string | null) => void;
+  /**
+   * Bring that branch into the work. Offered wherever the work has a worktree
+   * to bring it into — including before there are any commits, since falling
+   * behind starts the moment somebody else pushes.
+   */
+  onUpdate?: (branch: string) => void;
   /** Omitted where there is nothing to land — no commits, or not a worktree. */
   onMerge?: (branch: string) => void;
 }) {
@@ -277,7 +285,7 @@ export function CompareItems({
             />
           </>
         );
-        if (onMerge === undefined) {
+        if (onUpdate === undefined && onMerge === undefined) {
           return (
             <DropdownMenuItem
               key={branch}
@@ -305,12 +313,27 @@ export function CompareItems({
                   Read against ‘{branch}’
                 </span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onMerge(branch)}>
-                <IconGitMerge className="size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate">
-                  Merge into ‘{branch}’
-                </span>
-              </DropdownMenuItem>
+              {/* Between reading and landing, because that is where it falls:
+                  a branch you are behind cannot be merged into, and this is the
+                  one thing that changes that. Naming the same branch all three
+                  actions name is the point — catching up and landing are one
+                  choice made twice, not two questions. */}
+              {onUpdate !== undefined && (
+                <DropdownMenuItem onClick={() => onUpdate(branch)}>
+                  <IconRefresh className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">
+                    Update from ‘{branch}’
+                  </span>
+                </DropdownMenuItem>
+              )}
+              {onMerge !== undefined && (
+                <DropdownMenuItem onClick={() => onMerge(branch)}>
+                  <IconGitMerge className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">
+                    Merge into ‘{branch}’
+                  </span>
+                </DropdownMenuItem>
+              )}
             </DropdownMenuSubContent>
           </DropdownMenuSub>
         );

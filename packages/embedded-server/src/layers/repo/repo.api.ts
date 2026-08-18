@@ -147,7 +147,7 @@ export class RepoApi extends HttpApiGroup.make("repo")
   )
   .add(
     HttpApiEndpoint.post("updateTask", "/local-tasks/update", {
-      payload: TaskRef,
+      payload: MergeTaskRef,
       success: CommandOutput,
       error: gitError,
     })

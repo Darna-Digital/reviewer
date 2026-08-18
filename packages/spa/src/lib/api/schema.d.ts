@@ -3043,6 +3043,7 @@ export interface operations {
             content: {
                 "application/json": {
                     branch: string;
+                    base?: string | null;
                 };
             };
         };

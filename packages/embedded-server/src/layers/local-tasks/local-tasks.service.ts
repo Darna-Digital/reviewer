@@ -92,8 +92,19 @@ export interface LocalTasksServiceShape {
     branch: string,
     base: string | null
   ) => Effect.Effect<MergeOutcome, GitFailure>;
-  /** Bring the base into the task, in the task's own worktree. */
-  readonly update: (branch: string) => Effect.Effect<string, GitFailure>;
+  /**
+   * Bring another branch into the worktree, in the worktree itself — where
+   * whoever is working there can settle any conflicts.
+   *
+   * `base` names what to bring in; null means what the branch is aimed at. It
+   * is the way out of the one state that blocks a merge, and it takes the same
+   * branch the merge would, so catching up and landing are the same choice made
+   * twice rather than two different questions.
+   */
+  readonly update: (
+    branch: string,
+    base: string | null
+  ) => Effect.Effect<string, GitFailure>;
   /**
    * Stop working on it here: the worktree goes, and with it the services it was
    * running.
@@ -330,12 +341,15 @@ export const make: Effect.Effect<
       return { oldContents, newContents };
     });
 
-  const update: LocalTasksServiceShape["update"] = (branch) =>
+  const update: LocalTasksServiceShape["update"] = (branch, base) =>
     Effect.gen(function* () {
       const task = yield* find(branch);
       if (task === undefined) return "";
       const at = yield* gitAt(task.path);
-      return yield* at.runVerbose("merge", task.base);
+      return yield* at.runVerbose(
+        "merge",
+        base !== null && base.length > 0 ? base : task.base
+      );
     });
 
   const discard: LocalTasksServiceShape["discard"] = (branch) =>
