@@ -17,9 +17,10 @@ import { ChildProcessSpawner } from "effect/unstable/process";
 import { BranchTargetsService } from "@byconvo/core/branch-targets";
 import { GitExec, type GitFailure } from "@byconvo/core/ports/git-exec";
 import { RepoService } from "@byconvo/core/repo";
-import type { LocalTask } from "@byconvo/core/repo";
+import type { GitStatusEntry, LocalTask } from "@byconvo/core/repo";
 import { LocalDevService } from "@byconvo/core/local-dev";
 import { makeAt } from "../git/git-exec.ts";
+import { parseStatusLine } from "../repo/repo.repository.git.ts";
 import { DevRuntime } from "../local-dev/local-dev.runtime.ts";
 import { retireCommands } from "../local-dev/worktree-services.ts";
 import { baseOf, mergeRoute, taskWorktrees } from "./task-routing.ts";
@@ -61,11 +62,36 @@ export interface LocalTasksServiceShape {
     GitFailure
   >;
   /**
-   * Land a task on its base and take its worktree with it. A task that is
-   * behind its base comes back unmerged with the reason, rather than as a git
-   * error the surface would have to interpret.
+   * What the worktree has written and not committed, as the file list a commit
+   * panel needs. Only its own directory can answer this — no ref knows whether
+   * a file has been saved.
    */
-  readonly merge: (branch: string) => Effect.Effect<MergeOutcome, GitFailure>;
+  readonly changes: (
+    branch: string
+  ) => Effect.Effect<ReadonlyArray<GitStatusEntry>, GitFailure>;
+  /**
+   * Commit in the worktree. The same act as committing here, done there — which
+   * is what lets a review of somebody's work end in landing it rather than in a
+   * message asking them to commit before it can be read as a merge.
+   */
+  readonly commit: (
+    branch: string,
+    message: string,
+    paths: ReadonlyArray<string>
+  ) => Effect.Effect<MergeOutcome, GitFailure>;
+  /**
+   * Land a task and take its worktree with it. A task that is behind its base
+   * comes back unmerged with the reason, rather than as a git error the surface
+   * would have to interpret.
+   *
+   * `base` lands it somewhere other than what it is aimed at, which re-aims it
+   * first so that being ahead and being up to date are judged against the
+   * branch it is actually going to.
+   */
+  readonly merge: (
+    branch: string,
+    base: string | null
+  ) => Effect.Effect<MergeOutcome, GitFailure>;
   /** Bring the base into the task, in the task's own worktree. */
   readonly update: (branch: string) => Effect.Effect<string, GitFailure>;
   /**
@@ -330,8 +356,51 @@ export const make: Effect.Effect<
       return { merged: false, reason: null };
     });
 
-  const merge: LocalTasksServiceShape["merge"] = (branch) =>
+  const changes: LocalTasksServiceShape["changes"] = (branch) =>
     Effect.gen(function* () {
+      const task = yield* find(branch);
+      if (task === undefined) return [];
+      const at = yield* gitAt(task.path);
+      const out = yield* at.run(
+        "status",
+        "--porcelain",
+        "--untracked-files=all"
+      );
+      return out
+        .split("\n")
+        .map(parseStatusLine)
+        .filter((entry): entry is GitStatusEntry => entry !== null);
+    });
+
+  const commit: LocalTasksServiceShape["commit"] = (branch, message, paths) =>
+    Effect.gen(function* () {
+      const task = yield* find(branch);
+      if (task === undefined) {
+        return { merged: false, reason: "That worktree is no longer here." };
+      }
+      const at = yield* gitAt(task.path);
+      // Everything, or exactly what was ticked. `add -A` is the same choice the
+      // commit panel makes here; a worktree is not a different kind of place.
+      if (paths.length === 0) {
+        yield* at.run("add", "-A");
+        yield* at.run("commit", "-m", message);
+      } else {
+        yield* at.run("add", "--", ...paths);
+        yield* at.run("commit", "-m", message, "--", ...paths);
+      }
+      return { merged: true, reason: null };
+    });
+
+  const merge: LocalTasksServiceShape["merge"] = (branch, base) =>
+    Effect.gen(function* () {
+      // Aiming first, not merging elsewhere: where a task lands is a fact about
+      // the task, and one the rest of the surface reads. Setting it means the
+      // count it is ahead by and whether it is up to date are recomputed
+      // against the branch it is about to go to, instead of being checked
+      // against one branch and applied to another.
+      if (base !== null && base.length > 0) {
+        yield* Effect.ignore(targets.set(branch, base));
+      }
       const task = yield* find(branch);
       if (task === undefined) {
         return { merged: false, reason: "That task is no longer here." };
@@ -367,6 +436,8 @@ export const make: Effect.Effect<
     list,
     diff,
     fileDiff,
+    changes,
+    commit,
     merge,
     update,
     discard,

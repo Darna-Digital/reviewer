@@ -131,6 +131,26 @@ export const TaskRef = Schema.Struct({ branch: Schema.String });
 export type TaskRef = typeof TaskRef.Type;
 
 /**
+ * A merge, and where to land it. `base` absent means what the branch is already
+ * aimed at; naming one re-aims it, so what it is ahead by is judged against the
+ * branch it is actually going to.
+ */
+export const MergeTaskRef = Schema.Struct({
+  branch: Schema.String,
+  base: Schema.optional(Schema.String),
+});
+export type MergeTaskRef = typeof MergeTaskRef.Type;
+
+/** A commit made in a worktree rather than in the checkout you are standing in. */
+export const TaskCommit = Schema.Struct({
+  branch: Schema.String,
+  message: Schema.String,
+  /** Empty commits everything, as the commit panel here does. */
+  paths: Schema.optional(Schema.Array(Schema.String)),
+});
+export type TaskCommit = typeof TaskCommit.Type;
+
+/**
  * A merge that declined to happen is an answer, not a failure — a task behind
  * its base needs updating, which is something to be told, not an error to be
  * decoded out of git's stderr.

@@ -14,8 +14,21 @@
  * whoever is working there can settle any conflicts. Discarding is the other
  * ending, and the only one a worktree with nothing committed can have.
  */
-import { IconGitMerge, IconRefresh, IconTrash } from "@tabler/icons-react";
+import {
+  IconCheck,
+  IconChevronDown,
+  IconGitMerge,
+  IconRefresh,
+  IconTrash,
+} from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -45,13 +58,19 @@ const blockedBecause = (worktree: LocalTask): string | null =>
 export function WorktreeActions({
   worktree,
   busy,
+  branches,
+  mergeTarget,
   onMerge,
   onUpdate,
   onDiscard,
 }: {
   worktree: LocalTask;
   busy: boolean;
-  onMerge: () => void;
+  /** Everywhere it could land. */
+  branches: ReadonlyArray<string>;
+  /** Where it will land unless another is picked. */
+  mergeTarget: string;
+  onMerge: (base: string) => void;
   onUpdate: () => void;
   onDiscard: () => void;
 }) {
@@ -89,25 +108,67 @@ export function WorktreeActions({
         </Tooltip>
       )}
       {!nothingToMerge && (
-        <Tooltip disabled={blocked === null}>
-          <TooltipTrigger
-            render={
-              // A disabled button answers nothing, so the reason is wrapped
-              // around it rather than hidden inside it.
-              <span>
+        <>
+          <Tooltip disabled={blocked === null}>
+            <TooltipTrigger
+              render={
+                // A disabled button answers nothing, so the reason is wrapped
+                // around it rather than hidden inside it.
+                <span>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    disabled={busy || !isMergeable(worktree)}
+                    onClick={() => onMerge(mergeTarget)}
+                  >
+                    <IconGitMerge /> Merge into ‘{mergeTarget}’
+                  </Button>
+                </span>
+              }
+            />
+            <TooltipContent side="bottom">{blocked}</TooltipContent>
+          </Tooltip>
+          {/* Where it lands is a separate question from whether to land it, so
+              it is a separate control — the button stays one press for the
+              answer you already have. */}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              aria-label="Choose where to merge"
+              render={
                 <Button
                   variant="ghost"
                   size="xs"
-                  disabled={busy || !isMergeable(worktree)}
-                  onClick={onMerge}
-                >
-                  <IconGitMerge /> Merge
-                </Button>
-              </span>
-            }
-          />
-          <TooltipContent side="bottom">{blocked}</TooltipContent>
-        </Tooltip>
+                  disabled={busy}
+                  className="px-1"
+                />
+              }
+            >
+              <IconChevronDown />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="max-h-[min(60vh,24rem)] min-w-56 overflow-y-auto"
+            >
+              <DropdownMenuLabel>Merge into</DropdownMenuLabel>
+              {branches
+                .filter((branch) => branch !== worktree.branch)
+                .map((branch) => (
+                  <DropdownMenuItem
+                    key={branch}
+                    onClick={() => onMerge(branch)}
+                  >
+                    <span className="min-w-0 flex-1 truncate">{branch}</span>
+                    <IconCheck
+                      className={cn(
+                        "size-4 shrink-0",
+                        branch === mergeTarget ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                  </DropdownMenuItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </>
       )}
       <Tooltip>
         <TooltipTrigger

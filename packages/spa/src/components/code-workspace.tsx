@@ -50,11 +50,6 @@ import { CodeView } from "@/components/editor/code-view";
 import { ImageView, isImagePath } from "@/components/editor/image-view";
 import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
-import {
-  WorktreeActions,
-  discardWarning,
-  mergeWarning,
-} from "@/interactions/reviews/components/worktree-actions";
 import { CheckoutButton } from "@/interactions/reviews/components/checkout-button";
 import { useTaskActions } from "@/interactions/reviews/adapters/reviews.hook.adapter";
 import {
@@ -73,12 +68,7 @@ import type { Crumb } from "@/components/layout/breadcrumbs";
 import { EmptyPane } from "@/components/layout/empty-pane";
 import { PathBar } from "@/components/layout/path-bar";
 import { useHeaderTrailSlot } from "@/components/layout/header-trail";
-import {
-  REVIEW_HREF,
-  REVIEWS_HREF,
-  reviewHref,
-  reviewSourceOf,
-} from "@/lib/shell-route";
+import { REVIEW_HREF, reviewHref, reviewSourceOf } from "@/lib/shell-route";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
@@ -148,6 +138,7 @@ import {
   useBranchTargets,
   useBranches,
   useLocalTasks,
+  useWorktreeChanges,
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
@@ -503,6 +494,8 @@ export function CodeWorkspace() {
               )?.branch ?? "",
           }
         : null;
+  const worktreeChanges = useWorktreeChanges(selectedWorktree?.branch ?? null);
+
   // Nothing to offer about the tree you are already standing in.
   const checkout =
     sourceTree === null || sourceTree.path === inTree ? null : sourceTree;
@@ -1172,36 +1165,6 @@ export function CodeWorkspace() {
       actions={
         <div ref={setFileActionsSlot} className="flex items-center gap-1" />
       }
-      viewActions={
-        selectedWorktree === null ? undefined : (
-          <WorktreeActions
-            worktree={selectedWorktree}
-            busy={worktreeActions.busy === selectedWorktree.branch}
-            onUpdate={() =>
-              void worktreeActions.update(selectedWorktree.branch)
-            }
-            onDiscard={() => {
-              if (!window.confirm(discardWarning(selectedWorktree))) return;
-              void worktreeActions
-                .discard(selectedWorktree.branch, selectedWorktree.ahead > 0)
-                .then((done) => {
-                  if (done) void navigate({ to: REVIEWS_HREF });
-                });
-            }}
-            onMerge={() => {
-              const warning = mergeWarning(selectedWorktree);
-              if (warning !== null && !window.confirm(warning)) return;
-              void worktreeActions
-                .merge(selectedWorktree.branch)
-                .then((merged) => {
-                  // What it was showing no longer exists, so the pane goes back
-                  // to the list rather than pointing at a gap.
-                  if (merged) void navigate({ to: REVIEWS_HREF });
-                });
-            }}
-          />
-        )
-      }
     />
   );
 
@@ -1248,6 +1211,22 @@ export function CodeWorkspace() {
                         toast.error(settled.error);
                       void git.clearCommitDraft();
                     }}
+                  />
+                ) : /* The same panel, for work sitting in somebody else's
+                       directory — because a review that can only be read ends
+                       by asking whoever is in there to commit before it can
+                       become a merge. The draft is kept against the worktree's
+                       own path, so two of them never share a message. */
+                selectedWorktree !== null &&
+                  (worktreeChanges.data ?? []).length > 0 ? (
+                  <CommitPanel
+                    changes={worktreeChanges.data ?? []}
+                    busy={worktreeActions.busy === selectedWorktree.branch}
+                    project={selectedWorktree.path}
+                    allowPush={false}
+                    onCommit={(m, p) =>
+                      worktreeActions.commit(selectedWorktree.branch, m, p)
+                    }
                   />
                 ) : undefined
               }

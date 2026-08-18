@@ -44,10 +44,6 @@ export interface PathBarProps {
   readonly trailEnd?: ReactNode;
   /** The open file's own controls, e.g. Save and its problem count. */
   readonly actions?: ReactNode;
-  /** What acts on the whole view rather than the file in it, e.g. merging the
-   * worktree being read. Sits past the file's controls, behind a rule, because
-   * it outlives whichever file happens to be open. */
-  readonly viewActions?: ReactNode;
   /** `inline` fills a row somebody else drew; `bottom` draws its own. */
   readonly placement?: "inline" | "bottom";
 }
@@ -61,7 +57,6 @@ export function PathBar({
   onShowHistory,
   trailEnd,
   actions,
-  viewActions,
   placement = "bottom",
 }: PathBarProps) {
   const folderCrumbs = useMemo<ReadonlyArray<Crumb>>(
@@ -118,14 +113,6 @@ export function PathBar({
           <Button variant="ghost" size="xs" onClick={onEdit}>
             <IconPencil /> Edit
           </Button>
-        )}
-        {viewActions !== undefined && (
-          <>
-            {(onShowHistory !== undefined || onEdit !== undefined) && (
-              <span className="mx-1 h-3.5 w-px bg-border" />
-            )}
-            {viewActions}
-          </>
         )}
       </div>
     </div>

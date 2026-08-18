@@ -46,6 +46,9 @@ import {
   SearchQueryParams,
   SetBranchTarget,
   TaskRef,
+  TaskCommit,
+  MergeTaskRef,
+  GitStatusEntry,
   Worktree,
 } from "@byconvo/core/repo";
 
@@ -116,7 +119,21 @@ export class RepoApi extends HttpApiGroup.make("repo")
   )
   .add(
     HttpApiEndpoint.post("mergeTask", "/local-tasks/merge", {
-      payload: TaskRef,
+      payload: MergeTaskRef,
+      success: MergeOutcome,
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("taskChanges", "/local-tasks/changes", {
+      query: TaskRef,
+      success: Schema.Array(GitStatusEntry),
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("commitTask", "/local-tasks/commit", {
+      payload: TaskCommit,
       success: MergeOutcome,
       error: gitError,
     })

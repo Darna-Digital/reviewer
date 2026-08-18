@@ -156,7 +156,17 @@ export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
       Effect.flatMap(LocalTasksService, (s) => s.list)
     )
     .handle("mergeTask", ({ payload }) =>
-      Effect.flatMap(LocalTasksService, (s) => s.merge(payload.branch))
+      Effect.flatMap(LocalTasksService, (s) =>
+        s.merge(payload.branch, payload.base ?? null)
+      )
+    )
+    .handle("taskChanges", ({ query }) =>
+      Effect.flatMap(LocalTasksService, (s) => s.changes(query.branch))
+    )
+    .handle("commitTask", ({ payload }) =>
+      Effect.flatMap(LocalTasksService, (s) =>
+        s.commit(payload.branch, payload.message, payload.paths ?? [])
+      )
     )
     .handle("discardTask", ({ payload }) =>
       Effect.flatMap(LocalTasksService, (s) => s.discard(payload.branch))
