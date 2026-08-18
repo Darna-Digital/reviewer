@@ -173,9 +173,12 @@ export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
     )
     .handle("updateTask", ({ payload }) =>
       Effect.flatMap(LocalTasksService, (s) =>
-        Effect.map(s.update(payload.branch, payload.base ?? null), (output) => ({
-          output,
-        }))
+        Effect.map(
+          s.update(payload.branch, payload.base ?? null),
+          (output) => ({
+            output,
+          })
+        )
       )
     )
     .handle("setBranchTarget", ({ payload }) =>

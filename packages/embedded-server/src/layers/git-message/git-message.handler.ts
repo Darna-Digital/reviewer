@@ -67,9 +67,7 @@ export const GitMessageHandler = HttpApiBuilder.group(
       .handle("clearDraft", ({ payload }) =>
         Effect.gen(function* () {
           const service = yield* GitMessageService;
-          return yield* service.clear(
-            yield* scopeOf(payload.worktree ?? null)
-          );
+          return yield* service.clear(yield* scopeOf(payload.worktree ?? null));
         })
       )
 );

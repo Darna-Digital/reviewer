@@ -126,8 +126,8 @@ describe("taskBranchName", () => {
 
   it("steps past a branch that already exists", () => {
     expect(taskBranchName("Fix login", ["fix-login"])).toBe("fix-login-2");
-    expect(
-      taskBranchName("Fix login", ["fix-login", "fix-login-2"])
-    ).toBe("fix-login-3");
+    expect(taskBranchName("Fix login", ["fix-login", "fix-login-2"])).toBe(
+      "fix-login-3"
+    );
   });
 });

@@ -142,7 +142,10 @@ export const LOCAL_SOURCE: DiffSource = { kind: "local" };
 export const diffSources = (
   pulls: ReadonlyArray<PullRequestInfo>,
   worktrees: ReadonlyArray<LocalTask>
-): ReadonlyArray<DiffSource> => [LOCAL_SOURCE, ...reviewItems(pulls, worktrees)];
+): ReadonlyArray<DiffSource> => [
+  LOCAL_SOURCE,
+  ...reviewItems(pulls, worktrees),
+];
 
 export const diffSourceKey = (source: DiffSource): string =>
   source.kind === "local" ? "local" : reviewKey(source);
