@@ -155,11 +155,11 @@ export const useMergeState = () =>
  * because the run it reports may have been started by a page that is gone —
  * and is watched while it runs, which is the only stretch it changes over.
  */
-export const useCommitDraft = () =>
+export const useCommitDraft = (worktree?: string | null) =>
   api.useQuery(
     "get",
     "/api/git-message/draft",
-    {},
+    { params: { query: { worktree: worktree ?? undefined } } },
     {
       staleTime: 0,
       refetchInterval: (query) =>

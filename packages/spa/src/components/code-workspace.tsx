@@ -50,7 +50,7 @@ import { CodeView } from "@/components/editor/code-view";
 import { ImageView, isImagePath } from "@/components/editor/image-view";
 import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
-import { CheckoutButton } from "@/interactions/reviews/components/checkout-button";
+import { mergeWarning } from "@/interactions/reviews/components/worktree-actions";
 import { useTaskActions } from "@/interactions/reviews/adapters/reviews.hook.adapter";
 import {
   diffSourceKey,
@@ -68,7 +68,12 @@ import type { Crumb } from "@/components/layout/breadcrumbs";
 import { EmptyPane } from "@/components/layout/empty-pane";
 import { PathBar } from "@/components/layout/path-bar";
 import { useHeaderTrailSlot } from "@/components/layout/header-trail";
-import { REVIEW_HREF, reviewHref, reviewSourceOf } from "@/lib/shell-route";
+import {
+  REVIEW_HREF,
+  REVIEWS_HREF,
+  reviewHref,
+  reviewSourceOf,
+} from "@/lib/shell-route";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
@@ -472,34 +477,51 @@ export function CodeWorkspace() {
 
   // --- review → agent: hand the comments in view (local + GitHub) to an agent.
   /**
-   * The tree this diff can be run in, and whether the window is already in it.
+   * The tree behind a source, and going to work in it.
    *
-   * A worktree's is its own directory. The changes in front of you belong to
-   * the checkout the project was opened on, which is where the button leads
-   * back to when the window is off following a worktree. A pull request has no
-   * tree here at all — nothing to check out until somebody fetches it — so the
-   * trail simply ends without the offer.
+   * A worktree's is its own directory; the changes in front of you belong to
+   * the checkout the project was opened on, which is where this leads back to
+   * when the window is off following a worktree. A pull request has no tree
+   * here at all — nothing to check out until somebody fetches it.
+   *
+   * Reading a source and working in it are separate acts, so going there leaves
+   * the diff where it is: the diff you were reading is why you went.
    */
   const mainRoot = workspace.data?.currentRoot ?? null;
   const inTree = workspace.data?.current ?? null;
-  const sourceTree =
-    selectedWorktree !== null
-      ? { path: selectedWorktree.path, branch: selectedWorktree.branch }
-      : source.kind === "local" && mainRoot !== null
-        ? {
-            path: mainRoot,
-            branch:
-              (workspace.data?.repos ?? []).find(
-                (entry) => entry.path === mainRoot
-              )?.branch ?? "",
-          }
+  const treeOf = (of: DiffSource): string | null =>
+    of.kind === "worktree"
+      ? of.worktree.path
+      : of.kind === "local"
+        ? mainRoot
         : null;
+  const checkedOut = sources.find((entry) => treeOf(entry) === inTree) ?? null;
+  const checkOut = (of: DiffSource) => {
+    const path = treeOf(of);
+    if (path !== null) void workspaceActions.followRepo(path, inTree);
+  };
   const worktreeChanges = useWorktreeChanges(selectedWorktree?.branch ?? null);
+  // Its own slot: your changes and somebody's worktree can be drafting at once.
+  const worktreeDraft = useCommitDraft(selectedWorktree?.branch ?? null);
 
-  // Nothing to offer about the tree you are already standing in.
-  const checkout =
-    sourceTree === null || sourceTree.path === inTree ? null : sourceTree;
-  const [checkingOut, setCheckingOut] = useState(false);
+  /**
+   * Landing the worktree's work on a branch.
+   *
+   * Offered from the same menu that says what the diff is read against, because
+   * the branch you read a change against is nearly always the branch you mean
+   * to put it on — so the choice is made once, on the row, rather than twice in
+   * two controls.
+   */
+  const mergeInto = (base: string) => {
+    if (selectedWorktree === null) return;
+    const warning = mergeWarning(selectedWorktree);
+    if (warning !== null && !window.confirm(warning)) return;
+    void worktreeActions.merge(selectedWorktree.branch, base).then((merged) => {
+      // What it was showing no longer exists, so the pane goes back to the
+      // list rather than pointing at a gap.
+      if (merged) void navigate({ to: REVIEWS_HREF });
+    });
+  };
 
   /**
    * Where the comments' agent is to work.
@@ -806,15 +828,23 @@ export function CodeWorkspace() {
       list.push({
         id: "diff-source",
         label: diffSourceLabel(source),
-        // Only a pull request's number. A task's destination is the next crumb
-        // along, and printing it here said the same branch name twice in a row.
+        // Only a pull request's number. A worktree's destination is the next
+        // crumb along, and printing it here said the same branch name twice.
         hint: source.kind === "pull" ? `#${source.pull.number}` : undefined,
-        icon: diffSourceIcon(source),
+        // A worktree wears no mark. Its label is a sentence taken from the
+        // prompt and already the longest thing on the row; a glyph in front of
+        // it says "runs on this machine", which the crumb beside it and the
+        // whole rest of the window have established already.
+        ...(source.kind === "worktree"
+          ? { title: `${source.worktree.subject} — ${source.worktree.branch}` }
+          : { icon: diffSourceIcon(source) }),
         menu: () => (
           <DiffSourceItems
             sources={sources}
             current={diffSourceKey(source)}
+            checkedOut={checkedOut === null ? null : diffSourceKey(checkedOut)}
             onSelect={openSource}
+            onCheckout={checkOut}
           />
         ),
       });
@@ -823,8 +853,9 @@ export function CodeWorkspace() {
         // told rather than offered.
         list.push({
           id: "diff-against",
-          label: `vs ${source.pull.baseRef}`,
-          icon: IconGitCompare,
+          label: source.pull.baseRef,
+          title: `Read against ‘${source.pull.baseRef}’`,
+          separator: IconGitCompare,
         });
       } else if (comparable !== null && comparable.shown !== null) {
         // Only when there is something to say. Read against nothing, your own
@@ -833,8 +864,14 @@ export function CodeWorkspace() {
         const shown = comparable.shown;
         list.push({
           id: "diff-against",
-          label: `vs ${shown}`,
-          icon: IconGitCompare,
+          // The whole ref, folder and all. A branch's folder is part of its
+          // name — `task/x` and `fix/x` are different branches — and dropping
+          // it to save a few characters loses the half people sort by.
+          label: shown,
+          title: `Read against ‘${shown}’`,
+          // The compare glyph stands between the two, which is where the
+          // relation is: what is being read, against what.
+          separator: IconGitCompare,
           menu: () => (
             <CompareItems
               branches={(branches.data ?? []).map((entry) => entry.name)}
@@ -842,6 +879,9 @@ export function CodeWorkspace() {
               own={comparable.own}
               exclude={comparable.exclude}
               onSelect={compareAgainst}
+              {...(selectedWorktree !== null && selectedWorktree.ahead > 0
+                ? { onMerge: mergeInto }
+                : {})}
             />
           ),
         });
@@ -1148,20 +1188,6 @@ export function CodeWorkspace() {
       onShowHistory={
         viewing === null ? undefined : () => showFileHistory(viewing)
       }
-      trailEnd={
-        showsDiff && checkout !== null ? (
-          <CheckoutButton
-            branch={checkout.branch}
-            busy={checkingOut}
-            onOpen={() => {
-              setCheckingOut(true);
-              void workspaceActions
-                .followRepo(checkout.path, inTree)
-                .finally(() => setCheckingOut(false));
-            }}
-          />
-        ) : undefined
-      }
       actions={
         <div ref={setFileActionsSlot} className="flex items-center gap-1" />
       }
@@ -1227,6 +1253,15 @@ export function CodeWorkspace() {
                     onCommit={(m, p) =>
                       worktreeActions.commit(selectedWorktree.branch, m, p)
                     }
+                    onGenerate={(p, agent) =>
+                      git.startCommitMessage(p, agent, selectedWorktree.branch)
+                    }
+                    draft={worktreeDraft.data}
+                    onDraftSettled={(settled) => {
+                      if (settled.status === "error" && settled.error !== null)
+                        toast.error(settled.error);
+                      void git.clearCommitDraft(selectedWorktree.branch);
+                    }}
                   />
                 ) : undefined
               }

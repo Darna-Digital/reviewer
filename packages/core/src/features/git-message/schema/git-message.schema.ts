@@ -10,6 +10,11 @@ export type CommitAgent = typeof CommitAgent.Type;
 export const GenerateBody = Schema.Struct({
   paths: Schema.optionalKey(Schema.Array(Schema.String)),
   agent: Schema.optionalKey(CommitAgent),
+  /**
+   * The worktree the change is in, by branch. Absent means the checkout you are
+   * standing in — a draft has to read the same tree the commit will be made in.
+   */
+  worktree: Schema.optionalKey(Schema.String),
 });
 export type GenerateBody = typeof GenerateBody.Type;
 

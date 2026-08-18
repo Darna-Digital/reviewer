@@ -5036,6 +5036,7 @@ export interface operations {
                     paths?: string[];
                     /** @enum {string} */
                     agent?: "claude" | "opencode" | "codex" | "cursor";
+                    worktree?: string;
                 };
             };
         };
@@ -5060,7 +5061,9 @@ export interface operations {
     };
     "gitMessage.draft": {
         parameters: {
-            query?: never;
+            query?: {
+                worktree?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5092,7 +5095,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    worktree?: string | null;
+                };
+            };
+        };
         responses: {
             /** @description Success */
             200: {

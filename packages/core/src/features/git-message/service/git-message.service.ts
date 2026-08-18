@@ -74,7 +74,8 @@ const failedDraft = (
 export interface GitMessageServiceShape {
   readonly generate: (
     paths: ReadonlyArray<string>,
-    agent: CommitAgent
+    agent: CommitAgent,
+    at?: string | null
   ) => Effect.Effect<string, GitFailure | TerminalError>;
   /**
    * Draft in the background: the agent CLI is left running detached from the
@@ -85,7 +86,8 @@ export interface GitMessageServiceShape {
   readonly start: (
     scope: string,
     paths: ReadonlyArray<string>,
-    agent: CommitAgent
+    agent: CommitAgent,
+    at?: string | null
   ) => Effect.Effect<CommitDraft>;
   readonly draft: (scope: string) => Effect.Effect<CommitDraft>;
   readonly clear: (scope: string) => Effect.Effect<CommitDraft>;
@@ -98,9 +100,9 @@ export const makeGitMessageService = Effect.gen(function* () {
   const source = yield* GitMessageChanges;
   const terminal = yield* TerminalExec;
   const drafts = yield* CommitDrafts;
-  const generate: GitMessageServiceShape["generate"] = (paths, agent) =>
+  const generate: GitMessageServiceShape["generate"] = (paths, agent, at) =>
     Effect.gen(function* () {
-      const collected = yield* source.collect(paths);
+      const collected = yield* source.collect(paths, at ?? null);
       if (!hasChanges(collected)) {
         return yield* Effect.fail(
           new TerminalError({ reason: "no changes to summarize" })
@@ -141,11 +143,11 @@ export const makeGitMessageService = Effect.gen(function* () {
           );
     });
 
-  const start: GitMessageServiceShape["start"] = (scope, paths, agent) =>
+  const start: GitMessageServiceShape["start"] = (scope, paths, agent, at) =>
     Effect.gen(function* () {
       const claimed = yield* drafts.claim(scope, runningDraft(agent, paths));
       if (claimed === null) return yield* drafts.get(scope);
-      yield* generate(paths, agent).pipe(
+      yield* generate(paths, agent, at).pipe(
         Effect.match({
           onSuccess: (message) => readyDraft(agent, paths, message),
           onFailure: (failure) => failedDraft(agent, paths, failure.message),

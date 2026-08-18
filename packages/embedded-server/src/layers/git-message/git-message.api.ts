@@ -4,7 +4,13 @@
  * is written — and the message is read off the draft once it lands.
  */
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
+import * as Schema from "effect/Schema";
 import { CommitDraft, GenerateBody } from "@byconvo/core/git-message";
+
+/** Which draft slot a read or a clear is about — a worktree's, or this checkout's. */
+const DraftScope = Schema.Struct({
+  worktree: Schema.optional(Schema.String),
+});
 
 export class GitMessageApi extends HttpApiGroup.make("gitMessage")
   .add(
@@ -15,11 +21,13 @@ export class GitMessageApi extends HttpApiGroup.make("gitMessage")
   )
   .add(
     HttpApiEndpoint.get("draft", "/git-message/draft", {
+      query: DraftScope,
       success: CommitDraft,
     })
   )
   .add(
     HttpApiEndpoint.post("clearDraft", "/git-message/draft/clear", {
+      payload: DraftScope,
       success: CommitDraft,
     })
   ) {}

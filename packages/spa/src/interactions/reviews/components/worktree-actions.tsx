@@ -1,30 +1,22 @@
 /**
- * What a worktree can be done to, sitting in the trail beside the crumb that
- * names it.
+ * Landing a worktree's work, from the trail that names it.
  *
- * Not a bar of its own: a bar would repeat the branch and its base, which the
- * trail has already said, and it would make reading a worktree look different
- * from reading the changes in front of you. The point of the one diff view is
- * that reading is the same everywhere and only what you can *do* changes, so
- * only that is here.
+ * A selector rather than a button with a menu bolted on: where the work goes is
+ * the question, and pressing "merge" without answering it is only ever right by
+ * luck. The branch you last landed on is checked, so the answer is one click
+ * when it has not changed.
  *
- * Merging is the end it was for, and says so — the worktree goes with it, which
- * is the thing worth knowing before pressing it. Updating is the way out of the
- * one state that blocks a merge, and happens in the worktree itself, where
- * whoever is working there can settle any conflicts. Discarding is the other
- * ending, and the only one a worktree with nothing committed can have.
+ * It appears only once there are commits. A worktree with nothing committed has
+ * nothing to land, and offering the choice anyway makes the trail carry a
+ * control that cannot work for most of a task's life.
  */
-import {
-  IconCheck,
-  IconChevronDown,
-  IconGitMerge,
-  IconRefresh,
-  IconTrash,
-} from "@tabler/icons-react";
+import { IconCheck, IconGitMerge } from "@tabler/icons-react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
@@ -36,169 +28,78 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { LocalTask } from "@byconvo/core/repo";
-import {
-  isMergeable,
-  worktreeState,
-  WORKTREE_STATE_LABEL,
-} from "../functions/reviews.functions";
+import { MenuSearch } from "./diff-source-menu";
 
-const STATE_TONE: Record<string, string> = {
-  working: "text-muted-foreground",
-  behind: "text-amber-600 dark:text-amber-400",
-  uncommitted: "text-amber-600 dark:text-amber-400",
-  ready: "text-emerald-600 dark:text-emerald-400",
-};
-
-/** Why the merge button is off, in the words that say what to do about it. */
-const blockedBecause = (worktree: LocalTask): string | null =>
-  worktree.upToDate
-    ? null
-    : `‘${worktree.branch}’ is behind ‘${worktree.base}’. Update it first.`;
-
-export function WorktreeActions({
+export function MergeSelector({
   worktree,
-  busy,
   branches,
-  mergeTarget,
+  target,
+  busy,
   onMerge,
-  onUpdate,
-  onDiscard,
 }: {
   worktree: LocalTask;
-  busy: boolean;
-  /** Everywhere it could land. */
+  /** Everywhere it could land — the branches the main worktree holds. */
   branches: ReadonlyArray<string>;
-  /** Where it will land unless another is picked. */
-  mergeTarget: string;
+  /** Where it lands unless another is picked. */
+  target: string;
+  busy: boolean;
   onMerge: (base: string) => void;
-  onUpdate: () => void;
-  onDiscard: () => void;
 }) {
-  const state = worktreeState(worktree);
-  const blocked = blockedBecause(worktree);
-  // A worktree that has committed nothing cannot be merged and never will be by
-  // waiting. Offering only a dead Merge button makes it a dead end, so getting
-  // rid of it becomes the thing on offer instead.
-  const nothingToMerge = worktree.ahead === 0;
-
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const shown = useMemo(
+    () =>
+      branches
+        .filter((branch) => branch !== worktree.branch)
+        .filter((branch) => q === "" || branch.toLowerCase().includes(q)),
+    [branches, worktree.branch, q]
+  );
   return (
-    <>
-      <span className={cn("truncate text-xs", STATE_TONE[state])}>
-        {WORKTREE_STATE_LABEL[state]}
-      </span>
-      {!worktree.upToDate && (
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              // The base is already the crumb to the left, so the button need
-              // not say it twice — but it is what pressing this pulls from.
-              <Button
-                variant="ghost"
-                size="xs"
-                disabled={busy}
-                onClick={onUpdate}
-              >
-                <IconRefresh /> Update
-              </Button>
-            }
-          />
-          <TooltipContent side="bottom">
-            Update from ‘{worktree.base}’
-          </TooltipContent>
-        </Tooltip>
-      )}
-      {!nothingToMerge && (
-        <>
-          <Tooltip disabled={blocked === null}>
-            <TooltipTrigger
-              render={
-                // A disabled button answers nothing, so the reason is wrapped
-                // around it rather than hidden inside it.
-                <span>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    disabled={busy || !isMergeable(worktree)}
-                    onClick={() => onMerge(mergeTarget)}
-                  >
-                    <IconGitMerge /> Merge into ‘{mergeTarget}’
-                  </Button>
-                </span>
-              }
-            />
-            <TooltipContent side="bottom">{blocked}</TooltipContent>
-          </Tooltip>
-          {/* Where it lands is a separate question from whether to land it, so
-              it is a separate control — the button stays one press for the
-              answer you already have. */}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              aria-label="Choose where to merge"
-              render={
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  disabled={busy}
-                  className="px-1"
-                />
-              }
-            >
-              <IconChevronDown />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="max-h-[min(60vh,24rem)] min-w-56 overflow-y-auto"
-            >
-              <DropdownMenuLabel>Merge into</DropdownMenuLabel>
-              {branches
-                .filter((branch) => branch !== worktree.branch)
-                .map((branch) => (
-                  <DropdownMenuItem
-                    key={branch}
-                    onClick={() => onMerge(branch)}
-                  >
-                    <span className="min-w-0 flex-1 truncate">{branch}</span>
-                    <IconCheck
-                      className={cn(
-                        "size-4 shrink-0",
-                        branch === mergeTarget ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                  </DropdownMenuItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </>
-      )}
+    <DropdownMenu>
       <Tooltip>
         <TooltipTrigger
           render={
-            <Button
-              variant="ghost"
-              size="xs"
-              disabled={busy}
-              onClick={onDiscard}
-              aria-label="Discard worktree"
-            >
-              <IconTrash />
-            </Button>
+            <DropdownMenuTrigger
+              aria-label={`Merge ‘${worktree.branch}’`}
+              render={<Button variant="ghost" size="xs" disabled={busy} />}
+            />
           }
-        />
-        <TooltipContent side="bottom">Discard worktree</TooltipContent>
+        >
+          <IconGitMerge />
+          Merge
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          {`Land the ${worktree.ahead} commit${worktree.ahead === 1 ? "" : "s"} on ‘${worktree.branch}’ and retire its worktree.`}
+        </TooltipContent>
       </Tooltip>
-    </>
+      <DropdownMenuContent
+        align="end"
+        className="max-h-[min(60vh,24rem)] min-w-56 overflow-y-auto"
+      >
+        <MenuSearch label="Search branches" value={query} onChange={setQuery} />
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Merge into</DropdownMenuLabel>
+          {shown.map((branch) => (
+            <DropdownMenuItem key={branch} onClick={() => onMerge(branch)}>
+              <span className="min-w-0 flex-1 truncate">{branch}</span>
+              <IconCheck
+                className={cn(
+                  "size-4 shrink-0",
+                  branch === target ? "opacity-100" : "opacity-0"
+                )}
+              />
+            </DropdownMenuItem>
+          ))}
+          {shown.length === 0 && (
+            <p className="px-2 py-4 text-center text-sm text-muted-foreground">
+              No branch matches.
+            </p>
+          )}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
-
-/**
- * What discarding will actually do, in the words that matter: whether the
- * commits survive. Asked every time — removing a directory somebody's agent has
- * been working in is not something to do on one click.
- */
-export const discardWarning = (worktree: LocalTask): string =>
-  worktree.ahead > 0
-    ? `Discard the worktree for ‘${worktree.branch}’? Its ${worktree.ahead} commit${worktree.ahead === 1 ? "" : "s"} stay on the branch — only the directory and its services go.${worktree.dirty ? " Uncommitted changes there will be lost." : ""}`
-    : `Discard ‘${worktree.branch}’? It has no commits, so the worktree and the branch both go.${worktree.dirty ? " Uncommitted changes there will be lost." : ""}`;
 
 /**
  * Said before the merge rather than after: uncommitted work in the worktree is

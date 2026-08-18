@@ -14,8 +14,14 @@ import {
 } from "../functions/git-message.functions.ts";
 
 export interface GitMessageChangesShape {
+  /**
+   * `at` names a working tree other than the selected one — a worktree being
+   * reviewed. Without it a draft would summarise whatever is uncommitted in the
+   * checkout you are standing in, which is a different change entirely.
+   */
   readonly collect: (
-    paths: ReadonlyArray<string>
+    paths: ReadonlyArray<string>,
+    at?: string | null
   ) => Effect.Effect<DraftChanges, GitFailure>;
 }
 
