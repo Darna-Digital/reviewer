@@ -63,6 +63,17 @@ export const useBranchTargets = () =>
 /** This repository's worktrees, read as the pull requests they are. */
 export const useLocalTasks = () =>
   api.useQuery("get", "/api/local-tasks", {}, GIT_DATA);
+/**
+ * What one worktree has written and not committed — the same list the commit
+ * panel reads here, asked of the directory the work is actually in.
+ */
+export const useWorktreeChanges = (branch: string | null) =>
+  api.useQuery(
+    "get",
+    "/api/local-tasks/changes",
+    { params: { query: { branch: branch ?? "" } } },
+    { ...GIT_DATA, enabled: branch !== null }
+  );
 export const useComments = () =>
   api.useQuery("get", "/api/comments", {}, OWN_DATA);
 
@@ -144,11 +155,11 @@ export const useMergeState = () =>
  * because the run it reports may have been started by a page that is gone —
  * and is watched while it runs, which is the only stretch it changes over.
  */
-export const useCommitDraft = () =>
+export const useCommitDraft = (worktree?: string | null) =>
   api.useQuery(
     "get",
     "/api/git-message/draft",
-    {},
+    { params: { query: { worktree: worktree ?? undefined } } },
     {
       staleTime: 0,
       refetchInterval: (query) =>

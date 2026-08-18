@@ -110,26 +110,24 @@ describe("opensExisting", () => {
 describe("taskBranchName", () => {
   it("names the branch after the opening of the prompt", () => {
     expect(taskBranchName("Add dark mode to the settings pane", [])).toBe(
-      "task/add-dark-mode-to-the-settings"
+      "add-dark-mode-to-the-settings"
     );
   });
 
   it("drops punctuation rather than carrying it into a ref name", () => {
     expect(taskBranchName("Fix the login bug (again!)", [])).toBe(
-      "task/fix-the-login-bug-again"
+      "fix-the-login-bug-again"
     );
   });
 
   it("falls back to a name when the prompt has no words in it", () => {
-    expect(taskBranchName("!!! ???", [])).toBe("task/session");
+    expect(taskBranchName("!!! ???", [])).toBe("session");
   });
 
   it("steps past a branch that already exists", () => {
-    expect(taskBranchName("Fix login", ["task/fix-login"])).toBe(
-      "task/fix-login-2"
-    );
+    expect(taskBranchName("Fix login", ["fix-login"])).toBe("fix-login-2");
     expect(
-      taskBranchName("Fix login", ["task/fix-login", "task/fix-login-2"])
-    ).toBe("task/fix-login-3");
+      taskBranchName("Fix login", ["fix-login", "fix-login-2"])
+    ).toBe("fix-login-3");
   });
 });

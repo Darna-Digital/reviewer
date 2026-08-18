@@ -47,7 +47,8 @@ const conflictKindFromXY = (xy: string): ConflictKind => {
   }
 };
 
-const parseStatusLine = (line: string): GitStatusEntry | null => {
+/** One `--porcelain` line as a status entry, shared with the worktree reader. */
+export const parseStatusLine = (line: string): GitStatusEntry | null => {
   if (line.length < 4) return null;
   const xy = line.slice(0, 2);
   let path = line.slice(3);

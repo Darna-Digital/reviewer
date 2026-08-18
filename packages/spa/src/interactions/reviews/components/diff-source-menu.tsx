@@ -9,17 +9,26 @@
  * instead of three: the pane never changes, only the crumb does.
  */
 import {
+  IconArrowBarToRight,
   IconCheck,
   IconCloud,
   IconDeviceLaptop,
   IconGitCommit,
+  IconGitCompare,
+  IconGitMerge,
+  IconSearch,
 } from "@tabler/icons-react";
+import { useMemo, useRef, useState } from "react";
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
+import { handleSearchKeyDown } from "@/components/ui/search-keydown";
 import { cn } from "@/lib/utils";
 import {
   diffSourceHint,
@@ -41,19 +50,37 @@ const GROUP_LABEL: Readonly<Record<DiffSource["kind"], string>> = {
   pull: "Pull requests",
 };
 
+/**
+ * One source, as a row that opens into what can be done with it — the shape the
+ * branch picker two crumbs to the left already uses, so the two menus in the
+ * same bar are read the same way.
+ *
+ * Reading it and going to work in it are different acts, and the row used to
+ * carry only the first while a button out on the trail carried the second. One
+ * of them is about a diff and the other is about a directory; putting both
+ * under the thing they are both about is what let the trail lose the button.
+ */
 const SourceItem = ({
   source,
   current,
+  checkedOut,
   onSelect,
+  onCheckout,
 }: {
   source: DiffSource;
   current: boolean;
+  /** The window is already working in this source's tree. */
+  checkedOut: boolean;
   onSelect: () => void;
+  onCheckout: () => void;
 }) => {
   const Icon = diffSourceIcon(source);
   const hint = diffSourceHint(source);
-  return (
-    <DropdownMenuItem className="gap-2" onClick={onSelect}>
+  // Nothing on this machine to stand in. Until somebody fetches it, a pull
+  // request is a diff and nothing else.
+  const hasTree = source.kind !== "pull";
+  const row = (
+    <>
       <Icon className="size-4 shrink-0 text-muted-foreground" />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate">{diffSourceLabel(source)}</span>
@@ -64,7 +91,29 @@ const SourceItem = ({
       <IconCheck
         className={cn("size-4 shrink-0", current ? "opacity-100" : "opacity-0")}
       />
-    </DropdownMenuItem>
+    </>
+  );
+  if (!hasTree) {
+    return (
+      <DropdownMenuItem className="gap-2" onClick={onSelect}>
+        {row}
+      </DropdownMenuItem>
+    );
+  }
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger className="gap-2">{row}</DropdownMenuSubTrigger>
+      <DropdownMenuSubContent className="min-w-56">
+        <DropdownMenuItem onClick={onSelect}>
+          <IconGitCompare className="size-4 shrink-0 text-muted-foreground" />
+          Read the changes
+        </DropdownMenuItem>
+        <DropdownMenuItem disabled={checkedOut} onClick={onCheckout}>
+          <IconArrowBarToRight className="size-4 shrink-0 text-muted-foreground" />
+          {checkedOut ? "Working here" : "Check out"}
+        </DropdownMenuItem>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
   );
 };
 
@@ -77,11 +126,16 @@ const SourceItem = ({
 export function DiffSourceItems({
   sources,
   current,
+  checkedOut,
   onSelect,
+  onCheckout,
 }: {
   sources: ReadonlyArray<DiffSource>;
   current: string;
+  /** The key of the source whose tree the window is working in. */
+  checkedOut: string | null;
   onSelect: (source: DiffSource) => void;
+  onCheckout: (source: DiffSource) => void;
 }) {
   const kinds: ReadonlyArray<DiffSource["kind"]> = [
     "local",
@@ -105,7 +159,9 @@ export function DiffSourceItems({
                 key={diffSourceKey(source)}
                 source={source}
                 current={diffSourceKey(source) === current}
+                checkedOut={diffSourceKey(source) === checkedOut}
                 onSelect={() => onSelect(source)}
+                onCheckout={() => onCheckout(source)}
               />
             ))}
           </DropdownMenuGroup>
@@ -115,12 +171,53 @@ export function DiffSourceItems({
 }
 
 /**
- * Which branch the changes are read against.
+ * The filter box every long menu in this app wears: a plain row rather than a
+ * menu item, so typing never navigates and the arrows still walk the rows.
+ * Inset out to the panel's edges, since a rule that stops short of them reads
+ * as a box inside a box.
+ */
+export function MenuSearch({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="-mx-1 -mt-1 mb-1 flex items-center gap-2 border-b px-2.5 py-2">
+      <IconSearch className="size-4 shrink-0 text-muted-foreground" />
+      <input
+        ref={ref}
+        autoFocus
+        data-search-input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={handleSearchKeyDown}
+        placeholder={label}
+        aria-label={label}
+        className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+      />
+    </div>
+  );
+}
+
+/**
+ * Which branch the changes are read against — and, where the work can be
+ * landed, which branch it lands on.
  *
- * `own` is the answer that needs no choosing — the branch a task lands on, or
- * the one this checkout is aimed at — so it is marked rather than repeated, and
- * choosing it means "stop comparing" rather than "compare with that". `null`
- * from `onSelect` says exactly that.
+ * The two are one question asked twice: the branch you read a change against is
+ * nearly always the branch you mean to put it on. So one list answers both,
+ * each row opening into the two things a branch can be to this diff, the way
+ * the source list beside it opens into the two things a source can be. There is
+ * no separate merge button because there was never a separate list.
+ *
+ * `own` is the answer that needs no choosing — the branch a worktree lands on,
+ * or the one this checkout is aimed at — so it is marked rather than repeated,
+ * and choosing it means "stop comparing" rather than "compare with that".
+ * `null` from `onSelect` says exactly that.
  */
 export function CompareItems({
   branches,
@@ -128,6 +225,7 @@ export function CompareItems({
   own,
   exclude,
   onSelect,
+  onMerge,
 }: {
   branches: ReadonlyArray<string>;
   against: string | null;
@@ -136,10 +234,22 @@ export function CompareItems({
   /** The branch the changes are *on* — diffing it with itself says nothing. */
   exclude: string | null;
   onSelect: (branch: string | null) => void;
+  /** Omitted where there is nothing to land — no commits, or not a worktree. */
+  onMerge?: (branch: string) => void;
 }) {
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const shown = useMemo(
+    () =>
+      branches
+        .filter((branch) => branch !== exclude)
+        .filter((branch) => q === "" || branch.toLowerCase().includes(q)),
+    [branches, exclude, q]
+  );
   return (
     <>
-      {own === null && (
+      <MenuSearch label="Search branches" value={query} onChange={setQuery} />
+      {own === null && q === "" && (
         <DropdownMenuItem onClick={() => onSelect(null)}>
           <span className="min-w-0 flex-1 truncate">Uncommitted only</span>
           <IconCheck
@@ -150,13 +260,9 @@ export function CompareItems({
           />
         </DropdownMenuItem>
       )}
-      {branches
-        .filter((branch) => branch !== exclude)
-        .map((branch) => (
-          <DropdownMenuItem
-            key={branch}
-            onClick={() => onSelect(branch === own ? null : branch)}
-          >
+      {shown.map((branch) => {
+        const row = (
+          <>
             <span className="min-w-0 flex-1 truncate">{branch}</span>
             {branch === own && (
               <span className="shrink-0 text-xs text-muted-foreground">
@@ -169,8 +275,51 @@ export function CompareItems({
                 branch === (against ?? own) ? "opacity-100" : "opacity-0"
               )}
             />
-          </DropdownMenuItem>
-        ))}
+          </>
+        );
+        if (onMerge === undefined) {
+          return (
+            <DropdownMenuItem
+              key={branch}
+              onClick={() => onSelect(branch === own ? null : branch)}
+            >
+              {row}
+            </DropdownMenuItem>
+          );
+        }
+        return (
+          <DropdownMenuSub key={branch}>
+            <DropdownMenuSubTrigger>{row}</DropdownMenuSubTrigger>
+            {/* Named, not "this". A submenu is read on its own — you got here
+                by pointing at a row and the row is now behind the panel — so an
+                action that says only "this" is asking you to remember which
+                branch you were on. Each row is a menu item, and a menu item
+                tooltips whatever it has had to cut off, so the whole name is
+                still a hover away. */}
+            <DropdownMenuSubContent className="max-w-80 min-w-56">
+              <DropdownMenuItem
+                onClick={() => onSelect(branch === own ? null : branch)}
+              >
+                <IconGitCompare className="size-4 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1 truncate">
+                  Read against ‘{branch}’
+                </span>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onMerge(branch)}>
+                <IconGitMerge className="size-4 shrink-0 text-muted-foreground" />
+                <span className="min-w-0 flex-1 truncate">
+                  Merge into ‘{branch}’
+                </span>
+              </DropdownMenuItem>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        );
+      })}
+      {shown.length === 0 && (
+        <p className="px-2 py-4 text-center text-sm text-muted-foreground">
+          No branch matches.
+        </p>
+      )}
     </>
   );
 }

@@ -276,6 +276,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/local-tasks/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["repo.taskChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/local-tasks/commit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["repo.commitTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/local-tasks/discard": {
         parameters: {
             query?: never;
@@ -2823,6 +2855,100 @@ export interface operations {
             content: {
                 "application/json": {
                     branch: string;
+                    base?: string | null;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        merged: boolean;
+                        reason: string | null;
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description GitError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitError"];
+                };
+            };
+        };
+    };
+    "repo.taskChanges": {
+        parameters: {
+            query: {
+                branch: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        path: string;
+                        /** @enum {string} */
+                        status: "added" | "deleted" | "ignored" | "modified" | "renamed" | "untracked";
+                    }[];
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description GitError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitError"];
+                };
+            };
+        };
+    };
+    "repo.commitTask": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    branch: string;
+                    message: string;
+                    paths?: string[] | null;
                 };
             };
         };
@@ -4910,6 +5036,7 @@ export interface operations {
                     paths?: string[];
                     /** @enum {string} */
                     agent?: "claude" | "opencode" | "codex" | "cursor";
+                    worktree?: string;
                 };
             };
         };
@@ -4934,7 +5061,9 @@ export interface operations {
     };
     "gitMessage.draft": {
         parameters: {
-            query?: never;
+            query?: {
+                worktree?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -4966,7 +5095,13 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    worktree?: string | null;
+                };
+            };
+        };
         responses: {
             /** @description Success */
             200: {

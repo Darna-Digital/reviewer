@@ -37,17 +37,8 @@ export interface PathBarProps {
    * for editing. */
   readonly onEdit?: () => void;
   readonly onShowHistory?: () => void;
-  /**
-   * What ends the trail — read as its last word rather than as a control off
-   * on the right, because it acts on what the crumbs just named.
-   */
-  readonly trailEnd?: ReactNode;
   /** The open file's own controls, e.g. Save and its problem count. */
   readonly actions?: ReactNode;
-  /** What acts on the whole view rather than the file in it, e.g. merging the
-   * worktree being read. Sits past the file's controls, behind a rule, because
-   * it outlives whichever file happens to be open. */
-  readonly viewActions?: ReactNode;
   /** `inline` fills a row somebody else drew; `bottom` draws its own. */
   readonly placement?: "inline" | "bottom";
 }
@@ -59,16 +50,23 @@ export function PathBar({
   onOpenFile,
   onEdit,
   onShowHistory,
-  trailEnd,
   actions,
-  viewActions,
   placement = "bottom",
 }: PathBarProps) {
   const folderCrumbs = useMemo<ReadonlyArray<Crumb>>(
     () =>
       path === null
         ? []
-        : pathSegments(path).map((segment, index, segments) => ({
+        : // On the header row the trail shares one line with the branch picker,
+          // what the pane is showing and its controls, and a deep path put on
+          // top of that shrinks every folder to a single letter — a path of
+          // initials names nothing. So only the file itself goes up there; its
+          // own crumb still opens the folder it sits in, and the tab above
+          // carries the full path.
+          (placement === "inline"
+            ? pathSegments(path).slice(-1)
+            : pathSegments(path)
+          ).map((segment, index, segments) => ({
             id: `path:${segment.path}`,
             label: segment.name,
             // Only the file at the end of the trail wears a mark: the folders
@@ -90,7 +88,7 @@ export function PathBar({
               />
             ),
           })),
-    [path, paths, onOpenFile]
+    [path, paths, onOpenFile, placement]
   );
 
   return (
@@ -102,11 +100,10 @@ export function PathBar({
     >
       <Breadcrumbs
         crumbs={[...crumbs, ...folderCrumbs]}
-        // Beside the branch picker the crumbs are its peers and are built to
-        // its measure; along the foot of the pane they are a caption.
+        // On the header row the crumbs lead it, and are built to the measure the
+        // pickers there use; along the foot of the pane they are a caption.
         size={placement === "inline" ? "md" : "sm"}
       />
-      {trailEnd}
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {onShowHistory !== undefined && (
           <Button variant="ghost" size="xs" onClick={onShowHistory}>
@@ -118,14 +115,6 @@ export function PathBar({
           <Button variant="ghost" size="xs" onClick={onEdit}>
             <IconPencil /> Edit
           </Button>
-        )}
-        {viewActions !== undefined && (
-          <>
-            {(onShowHistory !== undefined || onEdit !== undefined) && (
-              <span className="mx-1 h-3.5 w-px bg-border" />
-            )}
-            {viewActions}
-          </>
         )}
       </div>
     </div>

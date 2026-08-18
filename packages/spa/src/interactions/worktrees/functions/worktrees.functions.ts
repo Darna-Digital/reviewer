@@ -67,10 +67,14 @@ export const openableBranches = <A extends { readonly name: string }>(
 /**
  * What to call the branch a prompt is about to run on.
  *
- * Nobody names a task before writing it — the prompt is the name, so the branch
- * is taken from it rather than asked for. Kept to the opening few words: a
- * branch name is read in a list beside a dozen others, and the rest of the
- * sentence is in the session anyway.
+ * Nobody names a piece of work before writing it — the prompt is the name, so
+ * the branch is taken from it rather than asked for. Kept to the opening few
+ * words: a branch name is read in a list beside a dozen others, and the rest of
+ * the sentence is in the session anyway.
+ *
+ * No folder in front of it. Every branch cut here would carry the same one,
+ * which makes it a word that distinguishes nothing while costing five
+ * characters in every list, trail and tooltip that ever shows the name.
  *
  * `taken` is every branch that already exists, including the ones no worktree
  * holds — git refuses to cut a branch twice, and the second prompt about the
@@ -93,7 +97,7 @@ export const taskBranchName = (
     .join("-")
     .slice(0, TASK_BRANCH_LENGTH)
     .replace(/-+$/, "");
-  const base = `task/${slug.length > 0 ? slug : "session"}`;
+  const base = slug.length > 0 ? slug : "session";
   const used = new Set(taken);
   if (!used.has(base)) return base;
   let suffix = 2;

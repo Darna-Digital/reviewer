@@ -39,12 +39,12 @@ export function useTaskActions() {
        * an outcome rather than an error — a branch behind its base is something
        * to be told, not a failure.
        */
-      merge: async (branch: string): Promise<boolean> => {
+      merge: async (branch: string, base: string | null): Promise<boolean> => {
         setBusy(branch);
         try {
           const { data, error } = await fetchClient.POST(
             "/api/local-tasks/merge",
-            { body: { branch } }
+            { body: { branch, ...(base === null ? {} : { base }) } }
           );
           if (error !== undefined || data === undefined) {
             toast.error(failureText(error));
@@ -54,7 +54,41 @@ export function useTaskActions() {
             toast.error(data.reason ?? "Could not merge.");
             return false;
           }
-          toast.success(`Merged ${branch} and retired its worktree`);
+          toast.success(
+            base === null
+              ? `Merged ${branch} and retired its worktree`
+              : `Merged ${branch} into ${base} and retired its worktree`
+          );
+          await queryClient.invalidateQueries();
+          return true;
+        } finally {
+          setBusy(null);
+        }
+      },
+
+      /**
+       * Commit in the worktree, from the review of it. The same panel, the same
+       * act — somewhere else.
+       */
+      commit: async (
+        branch: string,
+        message: string,
+        paths: ReadonlyArray<string>
+      ): Promise<boolean> => {
+        setBusy(branch);
+        try {
+          const { data, error } = await fetchClient.POST(
+            "/api/local-tasks/commit",
+            { body: { branch, message, paths: [...paths] } }
+          );
+          if (error !== undefined || data === undefined) {
+            toast.error(failureText(error));
+            return false;
+          }
+          if (!data.merged) {
+            toast.error(data.reason ?? "Could not commit.");
+            return false;
+          }
           await queryClient.invalidateQueries();
           return true;
         } finally {

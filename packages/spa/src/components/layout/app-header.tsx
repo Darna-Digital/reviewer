@@ -90,49 +90,63 @@ export function AppHeader({ route }: { route: ShellRoute }) {
           (search.base !== undefined && search.head !== undefined))));
 
   return (
-    <header className="flex h-9 shrink-0 items-center gap-2 px-2">
-      {repo.data != null && (
-        <BranchSwitcher
-          current={repo.data.currentBranch}
-          branches={branches.data ?? []}
-          remoteBranches={remoteBranches.data ?? []}
-          busy={false}
-          onCheckout={(b) => {
-            void git.checkout(b);
-            void navigate({ to: REVIEW_HREF });
-          }}
-          onCheckoutAndUpdate={(b) => {
-            void git.checkoutAndUpdate(b);
-            void navigate({ to: REVIEW_HREF });
-          }}
-          onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
-          onCompare={(base, head) =>
-            void navigate({
-              to: "/modes/code/browse/range",
-              search: { base, head },
-            })
-          }
-          onMerge={(b) => void git.merge(b)}
-          onRebase={(o) => void git.rebase(o)}
-          onRenameBranch={(from, to) => void git.renameBranch(from, to)}
-          onDeleteBranch={(name) => void git.deleteBranch(name)}
-          onFetch={() => void git.fetch()}
-          onPush={() => void git.push()}
-          repos={projectBranchList.data?.repos}
-          currentRepo={activeRepo(
-            workspace.data ?? { repos: [], current: null }
-          )}
-          onFollowRepo={followRepo}
-        />
-      )}
-
-      {/* Lent to the page beneath, which hangs its trail here when the trail
-          is what steers the page rather than what reports on it. Empty
-          otherwise, and it costs nothing then. */}
+    <header className="group/header flex h-9 shrink-0 items-center gap-2 px-2">
+      {/* Lent to the page beneath, which hangs its trail here when the trail is
+          what steers the page rather than what reports on it. */}
       <div
+        data-trail
         ref={setHeaderTrailSlot}
-        className="flex min-w-0 flex-1 items-center gap-2"
+        className="flex min-w-0 flex-1 items-center gap-2 empty:hidden"
       />
+
+      {/*
+       * Hidden by the trail's own presence, in CSS, rather than by asking the
+       * route the same question the page just answered.
+       *
+       * Both are branch pickers with the branch they picked written on them, so
+       * a third in front of them naming a branch that may be neither is the
+       * reading nobody wants — but the page portals its trail in from a
+       * different component, and when the two decided this separately they
+       * decided it a frame and a half apart. You saw both, briefly, on every
+       * navigation. `:has` cannot be late: the picker is gone in the same paint
+       * the trail arrives in, and back in the paint it leaves.
+       */}
+      {repo.data != null && (
+        <div className="contents group-has-[[data-trail]:not(:empty)]/header:hidden">
+          <BranchSwitcher
+            current={repo.data.currentBranch}
+            branches={branches.data ?? []}
+            remoteBranches={remoteBranches.data ?? []}
+            busy={false}
+            onCheckout={(b) => {
+              void git.checkout(b);
+              void navigate({ to: REVIEW_HREF });
+            }}
+            onCheckoutAndUpdate={(b) => {
+              void git.checkoutAndUpdate(b);
+              void navigate({ to: REVIEW_HREF });
+            }}
+            onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
+            onCompare={(base, head) =>
+              void navigate({
+                to: "/modes/code/browse/range",
+                search: { base, head },
+              })
+            }
+            onMerge={(b) => void git.merge(b)}
+            onRebase={(o) => void git.rebase(o)}
+            onRenameBranch={(from, to) => void git.renameBranch(from, to)}
+            onDeleteBranch={(name) => void git.deleteBranch(name)}
+            onFetch={() => void git.fetch()}
+            onPush={() => void git.push()}
+            repos={projectBranchList.data?.repos}
+            currentRepo={activeRepo(
+              workspace.data ?? { repos: [], current: null }
+            )}
+            onFollowRepo={followRepo}
+          />
+        </div>
+      )}
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {route.kind === "dock" && <DockRestore tab={route.tab} />}

@@ -15,6 +15,11 @@
 import { IconChevronDown, IconChevronRight } from "@tabler/icons-react";
 import { Fragment, type ReactNode, useState } from "react";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
@@ -30,6 +35,20 @@ export interface Crumb {
   hint?: string;
   /** Render the label in mono — used for file paths. */
   mono?: boolean;
+  /**
+   * What the crumb says in full, when the label is a shortening of it. The trail
+   * is one line and shares it with everything else on the header row, so a
+   * branch or a commit subject is cut to something scannable and the whole of it
+   * waits under the pointer.
+   */
+  title?: string;
+  /**
+   * What stands between this crumb and the one before it, in place of the
+   * chevron. A relation with a glyph of its own — read against, compared with —
+   * says it better than a chevron does, and belongs between the two things it
+   * relates rather than inside one of them.
+   */
+  separator?: React.ComponentType<{ className?: string }>;
   onClick?: () => void;
   /** Menu items, built only once the crumb's dropdown opens. */
   menu?: () => ReactNode;
@@ -84,7 +103,16 @@ export function Breadcrumbs({
                 {crumb.hint}
               </span>
             )}
-            <span className={cn("truncate", crumb.mono && "font-mono")}>
+            <span
+              className={cn(
+                "truncate",
+                crumb.mono && "font-mono",
+                // Capped, not merely truncatable: a flex child sizes to its
+                // text, so without a ceiling one long subject pushes every
+                // crumb after it off the row instead of shortening itself.
+                size === "md" && "max-w-56"
+              )}
+            >
               {crumb.label}
             </span>
             {crumb.menu !== undefined && (
@@ -96,14 +124,21 @@ export function Breadcrumbs({
         );
         return (
           <Fragment key={crumb.id}>
-            {index > 0 && (
-              <IconChevronRight
-                className={cn(
-                  "shrink-0 text-muted-foreground/50",
-                  metrics.glyph
-                )}
-              />
-            )}
+            {index > 0 &&
+              (() => {
+                const Separator = crumb.separator ?? IconChevronRight;
+                return (
+                  <Separator
+                    className={cn(
+                      "shrink-0",
+                      crumb.separator === undefined
+                        ? "text-muted-foreground/50"
+                        : "text-muted-foreground",
+                      metrics.glyph
+                    )}
+                  />
+                );
+              })()}
             {crumb.menu !== undefined ? (
               <CrumbMenu crumb={crumb} last={last} className={metrics.crumb}>
                 {content}
@@ -153,18 +188,28 @@ function CrumbMenu({
   const [open, setOpen] = useState(false);
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
-      <DropdownMenuTrigger
-        aria-current={last ? "page" : undefined}
-        className={cn(
-          interactiveCrumb,
-          className,
-          "cursor-default",
-          last ? "font-medium text-foreground" : "text-muted-foreground"
-        )}
-        render={<button type="button" />}
-      >
-        {children}
-      </DropdownMenuTrigger>
+      {/* Silenced while the menu is down. The tooltip and the menu hang off the
+          same edge of the same control, so leaving it up puts the whole of a
+          name over the top of the list you opened to choose from. */}
+      <Tooltip disabled={crumb.title === undefined || open}>
+        <TooltipTrigger
+          render={
+            <DropdownMenuTrigger
+              aria-current={last ? "page" : undefined}
+              className={cn(
+                interactiveCrumb,
+                className,
+                "cursor-default",
+                last ? "font-medium text-foreground" : "text-muted-foreground"
+              )}
+              render={<button type="button" />}
+            />
+          }
+        >
+          {children}
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{crumb.title}</TooltipContent>
+      </Tooltip>
       <DropdownMenuContent
         align="start"
         className="max-h-[min(60vh,24rem)] max-w-72 min-w-56 overflow-y-auto"
