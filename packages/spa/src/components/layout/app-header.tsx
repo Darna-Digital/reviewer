@@ -12,7 +12,12 @@
  * anything on its behalf, which is what lets it sit in the layout and stay
  * mounted while the page beneath it changes.
  */
-import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import {
+  useNavigate,
+  useParams,
+  useRouterState,
+  useSearch,
+} from "@tanstack/react-router";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { DockRestore } from "@/components/layout/dock-restore";
@@ -32,12 +37,18 @@ import {
 } from "@/lib/queries";
 import { setHeaderTrailSlot } from "@/components/layout/header-trail";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
-import { REVIEW_HREF, type ShellRoute } from "@/lib/shell-route";
+import {
+  REVIEW_HREF,
+  reviewSourceOf,
+  type ShellRoute,
+} from "@/lib/shell-route";
+import { cn } from "@/lib/utils";
 
 export function AppHeader({ route }: { route: ShellRoute }) {
   const navigate = useNavigate();
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const prefs = useUiPrefs();
 
   const repo = useRepo();
@@ -77,6 +88,8 @@ export function AppHeader({ route }: { route: ShellRoute }) {
     );
   }
 
+  const readingOwnChanges = reviewSourceOf(pathname)?.kind === "local";
+
   /**
    * The diff-style toggle belongs to a diff, so it shows when one is on screen:
    * a code page, with no file open over it, pointed at something to diff.
@@ -91,14 +104,6 @@ export function AppHeader({ route }: { route: ShellRoute }) {
 
   return (
     <header className="group/header flex h-9 shrink-0 items-center gap-2 px-2">
-      {/* Lent to the page beneath, which hangs its trail here when the trail is
-          what steers the page rather than what reports on it. */}
-      <div
-        data-trail
-        ref={setHeaderTrailSlot}
-        className="flex min-w-0 flex-1 items-center gap-2 empty:hidden"
-      />
-
       {/*
        * Hidden by the trail's own presence, in CSS, rather than by asking the
        * route the same question the page just answered.
@@ -110,9 +115,20 @@ export function AppHeader({ route }: { route: ShellRoute }) {
        * decided it a frame and a half apart. You saw both, briefly, on every
        * navigation. `:has` cannot be late: the picker is gone in the same paint
        * the trail arrives in, and back in the paint it leaves.
+       *
+       * Reading your own changes is the exception the rule was never about: the
+       * trail there opens with "Review", which names no branch, so the picker is
+       * the only thing on the row saying whose changes these are — and the only
+       * way to go and read another branch's.
        */}
       {repo.data != null && (
-        <div className="contents group-has-[[data-trail]:not(:empty)]/header:hidden">
+        <div
+          className={cn(
+            "contents",
+            !readingOwnChanges &&
+              "group-has-[[data-trail]:not(:empty)]/header:hidden"
+          )}
+        >
           <BranchSwitcher
             current={repo.data.currentBranch}
             branches={branches.data ?? []}
@@ -147,6 +163,14 @@ export function AppHeader({ route }: { route: ShellRoute }) {
           />
         </div>
       )}
+
+      {/* Lent to the page beneath, which hangs its trail here when the trail is
+          what steers the page rather than what reports on it. */}
+      <div
+        data-trail
+        ref={setHeaderTrailSlot}
+        className="flex min-w-0 flex-1 items-center gap-2 empty:hidden"
+      />
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {route.kind === "dock" && <DockRestore tab={route.tab} />}
