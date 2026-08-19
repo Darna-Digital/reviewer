@@ -668,9 +668,9 @@ export function WindowBar() {
               <IconDotsVertical className="size-4" />
             </DropdownMenuTrigger>
 
-            {/* Narrower than a menu's default: these rows are short names,
-                and the chords that would have set the width are in the
-                tooltips rather than along them. */}
+            {/* Narrower than a menu's default: these rows are short names, and
+                the chords that would have set the width are in the tooltips
+                rather than along them. */}
             <DropdownMenuContent align="end" className="min-w-48">
               {/* The palette is code mode's, and so is the host that answers
                   ⌘K: off it there is nothing behind the row to open. */}

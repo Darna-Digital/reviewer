@@ -83,6 +83,13 @@ const sectionLabelClass = "px-2.5 pt-2 pb-1 text-xs text-muted-foreground";
 const emptyClass = "px-2.5 py-6 text-center text-sm text-muted-foreground";
 
 /**
+ * The list scrolls at a few rows rather than running the popover down the
+ * window — the search box above it is the way through a long list, and the
+ * "browse folders" row below it has to stay in sight to be found.
+ */
+const listHeight = "max-h-[min(15rem,45vh)]";
+
+/**
  * A folder row: name over its path. Anywhere on the row is the tooltip's
  * trigger, so a clipped path can be read without aiming at the path itself.
  */
@@ -265,7 +272,7 @@ export function ProjectPicker({
               />
             </div>
 
-            <ScrollArea className="max-h-96">
+            <ScrollArea className={listHeight}>
               <div className="p-1">
                 {filteredRecents.length > 0 && (
                   <div className={sectionLabelClass}>Recent</div>
@@ -353,7 +360,7 @@ export function ProjectPicker({
               </div>
             </div>
 
-            <ScrollArea className="max-h-96">
+            <ScrollArea className={listHeight}>
               <div className="p-1">
                 {browse.isPending && (
                   <div className="px-2 py-3">
