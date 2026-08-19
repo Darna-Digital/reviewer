@@ -6,20 +6,27 @@
  * the WindowFrame, so the rail starts at the content edge.
  */
 import {
-  IconFolders,
+  IconFolder,
+  IconGitBranch,
   IconGitCommit,
   IconGitPullRequest,
   IconHistory,
   IconPlayerPlay,
+  IconSearch,
   IconTerminal2,
 } from "@tabler/icons-react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { restoreDock, showDockPage } from "@/components/layout/dock-expansion";
 import { Rail, RailButton, RailFoot } from "@/components/layout/rail";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { SearchMenuItems } from "@/interactions/search/components/search-menu";
 // The Sessions tab is the way into the threads now, so the rail's inbox is parked.
 // import { ChatsInboxPopover } from "@/interactions/chats/components/chats-inbox-popover";
-import { useRepo } from "@/lib/queries";
-import { shellRoute } from "@/lib/shell-route";
+import { REVIEW_HREF, REVIEWS_HREF, shellRoute } from "@/lib/shell-route";
 import {
   openBottomTab,
   setUiPrefs,
@@ -31,9 +38,8 @@ interface RailLink {
   to: string;
   label: string;
   icon: typeof IconGitCommit;
-  /** Route prefix that lights the button up. */
+  /** The route that lights the button up, it or anything under it. */
   match: string;
-  github?: boolean;
 }
 
 /** Code mode's inbox is the repo's agent threads. */
@@ -43,21 +49,20 @@ const GIT_LINKS: RailLink[] = [
   {
     to: "/modes/code/browse",
     label: "Browse the project",
-    icon: IconFolders,
+    icon: IconFolder,
     match: "/modes/code/browse",
   },
   {
-    to: "/modes/code/commit",
-    label: "Local changes",
+    to: REVIEW_HREF,
+    label: "Review",
     icon: IconGitCommit,
-    match: "/modes/code/commit",
+    match: REVIEW_HREF,
   },
   {
-    to: "/modes/code/review",
-    label: "Pull requests",
+    to: REVIEWS_HREF,
+    label: "Reviews",
     icon: IconGitPullRequest,
-    match: "/modes/code/review",
-    github: true,
+    match: REVIEWS_HREF,
   },
 ];
 
@@ -72,10 +77,8 @@ function toggleBottomTab(tab: BottomTab, current: BottomTab, visible: boolean) {
 
 export function ModeRail() {
   const prefs = useUiPrefs();
-  const repo = useRepo();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const hasGitHub = repo.data?.github != null;
 
   // Which surface has the window to itself, if one has. A rail button is how you
   // get from one of them to another, so on a page it moves between the pages
@@ -101,7 +104,7 @@ export function ModeRail() {
       key={to}
       to={to}
       label={label}
-      active={pathname.startsWith(match)}
+      active={pathname === match || pathname.startsWith(`${match}/`)}
     >
       <Icon className="size-4" />
     </RailButton>
@@ -109,8 +112,30 @@ export function ModeRail() {
 
   return (
     <Rail label="Project">
-      {GIT_LINKS.filter((l) => l.github !== true || hasGitHub).map(renderLink)}
+      {GIT_LINKS.map(renderLink)}
+      {/* Searching the project is something you do *to* the surfaces above, not
+          a fourth surface, so it follows them rather than joining them — and it
+          is here rather than in the header because this is the column you
+          already reach to when you want to be somewhere else. */}
+      <DropdownMenu>
+        <RailButton
+          label="Search"
+          render={<DropdownMenuTrigger render={<button type="button" />} />}
+        >
+          <IconSearch className="size-4" />
+        </RailButton>
+        <DropdownMenuContent side="right" align="start" className="min-w-56">
+          <SearchMenuItems />
+        </DropdownMenuContent>
+      </DropdownMenu>
       <RailFoot>
+        <RailButton
+          label="Branches"
+          active={active("branches")}
+          onClick={() => pick("branches")}
+        >
+          <IconGitBranch className="size-4" />
+        </RailButton>
         <RailButton
           label="History"
           active={active("history")}

@@ -48,6 +48,12 @@ function Probe({ seen }: { seen: Theme[] }) {
   return null;
 }
 
+function RenderProbe({ seen }: { seen: string[] }) {
+  const prefs = useUiPrefs();
+  seen.push(prefs.workMode);
+  return null;
+}
+
 describe("useUiPrefs system theme sync", () => {
   it("re-renders consumers when the OS theme changes in system mode", () => {
     act(() => setUiPrefs({ theme: "system" }));
@@ -77,5 +83,19 @@ describe("useUiPrefs system theme sync", () => {
 
     act(() => mql.fire(true));
     expect(seen.at(-1)).toBe("light");
+  });
+
+  it("does not re-render consumers for a no-op preference write", () => {
+    act(() => setUiPrefs({ workMode: "code" }));
+
+    const seen: string[] = [];
+    act(() => void render(<RenderProbe seen={seen} />));
+    expect(seen).toEqual(["code"]);
+
+    act(() => setUiPrefs({ workMode: "code" }));
+    expect(seen).toEqual(["code"]);
+
+    act(() => setUiPrefs({ workMode: "collaboration" }));
+    expect(seen).toEqual(["code", "collaboration"]);
   });
 });

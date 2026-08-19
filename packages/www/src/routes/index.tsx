@@ -12,6 +12,7 @@ import { Logo } from "#/components/logo";
 import { SiteHeader } from "#/components/site-header";
 import { SpaSnapshot } from "#/components/spa-snapshot";
 import { usePrefersDark } from "#/hooks/use-prefers-dark";
+import { cn } from "#/lib/utils";
 
 const HERO_SNAPSHOT = {
   src: "/spa-snapshots/hero.json",
@@ -60,7 +61,10 @@ function CtaButton({
       : "bg-white text-neutral-900 shadow-sm ring-1 ring-black/10 ring-inset hover:bg-neutral-50 dark:bg-white/5 dark:text-white dark:shadow-none dark:ring-white/15 dark:hover:bg-white/10";
   return (
     <a
-      className={`group inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-[15px] font-medium whitespace-nowrap transition-colors ${tone}`}
+      className={cn(
+        "group inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-[15px] font-medium whitespace-nowrap transition-colors",
+        tone
+      )}
       href={href}
     >
       {children}

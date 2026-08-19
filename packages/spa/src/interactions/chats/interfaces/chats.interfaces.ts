@@ -17,6 +17,17 @@ export type { ChatWireEvent } from "@byconvo/core/chats";
 /** Images sent with a prompt (server type ChatImageUpload). */
 export type ChatImage = ChatImageUpload;
 
+/**
+ * Where a session runs: the branch it is on, and the checkout its agent's
+ * process is started in. The checkout is only ever named when it is not the one
+ * the app has selected — a task cut into a worktree of its own — which is what
+ * lets a task start without the app going there.
+ */
+export interface ChatPlace {
+  readonly branch: string;
+  readonly repoPath?: string;
+}
+
 /** The composer's settings for a chat (what the picker/menus edit). */
 export interface ChatSettings {
   readonly provider: ChatProviderKind;
@@ -35,6 +46,7 @@ export interface ChatsDependencies {
       effort: ChatEffort;
       access: ChatAccess;
       branch?: string;
+      repoPath?: string;
     }) => Promise<Chat>;
     readonly send: (
       id: string,
@@ -56,14 +68,14 @@ export interface ChatsFunctions {
    * blank and no images are attached. */
   readonly start: (
     settings: ChatSettings,
-    branch: string,
+    place: ChatPlace,
     text: string,
     images?: ReadonlyArray<ChatImage>
   ) => Promise<Chat | null>;
   /** Create a titled chat, then immediately send the first prompt. */
   readonly startWithTitle: (
     settings: ChatSettings,
-    branch: string,
+    place: ChatPlace,
     title: string,
     text: string,
     images?: ReadonlyArray<ChatImage>

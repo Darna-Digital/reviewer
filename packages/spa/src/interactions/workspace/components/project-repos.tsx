@@ -3,7 +3,7 @@
  * git repository at all. It names what was opened and offers the roots if any
  * turned up, so the app says why it is empty instead of showing a blank tree.
  */
-import { IconFolders, IconGitBranch } from "@tabler/icons-react";
+import { IconFolder, IconGitBranch } from "@tabler/icons-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { folderName } from "@byconvo/core/workspace";
 import { ProjectAvatar } from "./project-avatar";
@@ -21,7 +21,7 @@ export function ProjectRepos({ project, repos, onOpen }: ProjectReposProps) {
       <div className="mx-auto flex max-w-2xl flex-col gap-3 p-8">
         <div>
           <h2 className="flex items-center gap-2 text-base font-medium">
-            <IconFolders className="size-4 text-muted-foreground" />
+            <IconFolder className="size-4 text-muted-foreground" />
             {folderName(project)}
           </h2>
           <p className="text-sm text-muted-foreground">

@@ -35,7 +35,7 @@ import {
   setCurrentProject,
   setCurrentRepo,
 } from "./current-repo.ts";
-import { scanRepos } from "./repo-scan.ts";
+import { scanRepos, worktreesOf } from "./repo-scan.ts";
 
 export interface WorkspaceContextShape {
   /** The selected repo root, or fail with NoRepoSelected when none is set. */
@@ -227,11 +227,21 @@ export const make = (initial: InitialSelection | null) =>
      * carries its own history. Neither call fails an open — a project that
      * cannot be recorded is still a project the user can work in.
      */
-    const adoptRoots = (project: string, repos: ReadonlyArray<RepoEntry>) =>
+    const adoptRoots = (
+      project: string,
+      roots: ReadonlyArray<RepoEntry>,
+      worktrees: ReadonlyArray<RepoEntry>
+    ) =>
       Effect.sync(() => {
         try {
-          rememberProject(project, repos);
-          for (const repo of repos) importLegacyJson(repo.path);
+          // Worktrees are registered alongside the roots, though they are not
+          // roots. This table is only what files a path under the project it
+          // belongs to, and anything written while standing in a worktree — a
+          // session above all — is written against the worktree's own path. Left
+          // out, those would be filed under a project of their own, named after
+          // a directory the user never opened.
+          rememberProject(project, [...roots, ...worktrees]);
+          for (const repo of roots) importLegacyJson(repo.path);
         } catch (error) {
           console.warn(
             "byconvo: could not register the open project —",
@@ -240,13 +250,21 @@ export const make = (initial: InitialSelection | null) =>
         }
       });
 
-    /** Open `project` on the root it was last left on, or on its first. */
+    /** Open `project` where it was last left, or on its first root. */
     const openRoots = (project: string) =>
       Effect.gen(function* () {
-        const repos = yield* scanRepos(fs, project);
-        yield* adoptRoots(project, repos);
+        const roots = yield* scanRepos(fs, project);
+        const worktrees = yield* worktreesOf(fs, roots);
+        yield* adoptRoots(project, roots, worktrees);
         const remembered = yield* Ref.get(rememberedRef);
-        const chosen = chooseRepo(repos, remembered[project] ?? null);
+        // Chosen from the worktrees rather than the roots: a project left in
+        // one of them should reopen there, and matching only against roots
+        // would forget the worktree and land you in the original checkout —
+        // a different working tree than the one the work is in.
+        const chosen = chooseRepo(
+          [...roots, ...worktrees],
+          remembered[project] ?? null
+        );
         // `current-repo.ts` is the single store for the selection: an Effect Ref
         // couldn't be read by the PTY socket / chat runtime, which run outside
         // the Effect runtime, so those (and this service) share the one module

@@ -17,8 +17,8 @@ export function ProjectAvatar({
   return (
     <span
       className={cn(
-        "flex shrink-0 items-center justify-center rounded-sm text-[9px] font-semibold text-white",
-        className ?? "size-5"
+        "flex size-5 shrink-0 items-center justify-center rounded-sm text-[9px] font-semibold text-white",
+        className
       )}
       style={{ backgroundColor: avatar.color }}
     >

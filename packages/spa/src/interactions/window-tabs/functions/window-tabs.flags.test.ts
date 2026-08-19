@@ -25,8 +25,8 @@ const session: WindowTab = {
 const saved: ReadonlyArray<WindowTab> = [
   {
     id: PROJECT_TAB_ID,
-    href: "/modes/code/commit",
-    title: "Local changes",
+    href: "/modes/code/review",
+    title: "Review",
     kind: "project",
   },
   {
@@ -70,8 +70,8 @@ describe("a switched-off collaboration button", () => {
       },
     ]);
     expect(code).toMatchObject({
-      href: "/modes/code/commit",
-      title: "Local changes",
+      href: "/modes/code/review",
+      title: "Review",
     });
   });
 

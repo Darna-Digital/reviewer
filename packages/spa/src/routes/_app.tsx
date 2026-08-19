@@ -18,6 +18,11 @@ export interface AppSearch {
   /** Range-diff base/head (browse mode). */
   base?: string;
   head?: string;
+  /**
+   * The branch the local changes are read against — the whole task rather than
+   * whatever is uncommitted. Absent means today's working-tree diff.
+   */
+  target?: string;
 }
 
 export const Route = createFileRoute("/_app")({
@@ -29,6 +34,7 @@ export const Route = createFileRoute("/_app")({
       : undefined,
     base: typeof search["base"] === "string" ? search["base"] : undefined,
     head: typeof search["head"] === "string" ? search["head"] : undefined,
+    target: typeof search["target"] === "string" ? search["target"] : undefined,
   }),
   component: AppLayout,
 });

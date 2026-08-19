@@ -78,8 +78,10 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
         project: yield* Ref.get(projectRef),
         repos: yield* Ref.get(reposRef),
         current: yield* Ref.get(currentRef),
+        currentRoot: yield* Ref.get(currentRef),
         recents: yield* Ref.get(recentsRef),
         home: "/home/test",
+        device: "Test Machine",
       };
     });
     const repo: WorkspaceRepo = {

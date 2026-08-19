@@ -1,7 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { CodeWorkspace } from "@/components/code-workspace";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-// Review a single GitHub pull request. `pull` (number) is a typed path param.
+/** The old bare-number pull request URL, forwarded to the one that says so. */
 export const Route = createFileRoute("/_app/modes/code/review/$pull")({
-  component: CodeWorkspace,
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: "/modes/code/review/pull/$number",
+      params: { number: params.pull },
+    });
+  },
 });

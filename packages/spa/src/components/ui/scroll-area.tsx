@@ -137,9 +137,7 @@ const ScrollArea = forwardRef<
               onScroll={onViewportScroll}
             >
               <ScrollAreaPrimitive.Content
-                className={
-                  orientation === "vertical" ? "w-full min-w-0" : undefined
-                }
+                className={cn(orientation === "vertical" && "w-full min-w-0")}
                 // Base UI's Content is min-width: fit-content so it can measure
                 // horizontal overflow; a vertical list overrides that, or long
                 // labels widen the viewport instead of truncating.

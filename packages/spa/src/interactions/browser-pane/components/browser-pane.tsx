@@ -304,7 +304,7 @@ export function BrowserPane() {
       const chatId = await assignToChat(chatActions, {
         target: dest,
         catalog: chatModels.data,
-        branch: repo.data?.currentBranch ?? "",
+        place: { branch: repo.data?.currentBranch ?? "" },
         title: buildVisualAssignmentTitle(pending.length),
         prompt: buildVisualAssignmentPrompt(pending),
       });

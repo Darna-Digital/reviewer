@@ -1,6 +1,7 @@
 import { PaneHeader } from "#/components/app-window";
 import { Document } from "#/components/icons";
 import { Avatar } from "#/components/showcase/avatar";
+import { cn } from "#/lib/utils";
 
 const LANES = [
   { label: "Frontend", x: 16 },
@@ -310,7 +311,10 @@ export function PlansShowcase() {
                   {note.anchor}
                 </span>
                 <span
-                  className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${status.className}`}
+                  className={cn(
+                    "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                    status.className
+                  )}
                 >
                   {status.label}
                 </span>

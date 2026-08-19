@@ -11,8 +11,8 @@ export type Theme = "light" | "dark";
 export type DiffStyle = "split" | "unified";
 /** Agent CLIs that can draft a commit message (threads kinds minus terminal). */
 export type CommitAgent = "claude" | "opencode" | "codex" | "cursor";
-/** Active tab in the shared bottom dock (history + services + threads). */
-export type BottomTab = "history" | "services" | "threads";
+/** Active tab in the shared bottom dock (git + services + threads). */
+export type BottomTab = "branches" | "history" | "services" | "threads";
 /** Which way of working the app is framed around (UI only for now). */
 export type WorkMode = "code" | "collaboration";
 
@@ -54,8 +54,6 @@ export interface UiPrefs {
   commitFilesHeight: number;
   /** Drag-resizable commit-message textarea height, in px. */
   commitMessageHeight: number;
-  /** Drag-resizable pull-request list height in the review sidebar, in px. */
-  reviewPullsHeight: number;
   /** Drag-resizable commit-details pane width in the history panel, in px. */
   commitDetailsWidth: number;
   /** Which agent CLI drafts commit messages via the "Generate" button. */
@@ -96,6 +94,7 @@ const resolve = (pref: ThemePref): Theme =>
   pref === "system" ? systemTheme() : pref;
 
 const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
+  "branches",
   "history",
   "services",
   "threads",
@@ -118,7 +117,6 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   bottomHeight: 256,
   commitFilesHeight: 180,
   commitMessageHeight: 80,
-  reviewPullsHeight: 220,
   commitDetailsWidth: 320,
   commitAgent: "claude",
   chatModelFavorites: [],
@@ -179,7 +177,6 @@ function persist() {
       bottomHeight,
       commitFilesHeight,
       commitMessageHeight,
-      reviewPullsHeight,
       commitDetailsWidth,
       commitAgent,
       chatModelFavorites,
@@ -211,7 +208,6 @@ function persist() {
         bottomHeight,
         commitFilesHeight,
         commitMessageHeight,
-        reviewPullsHeight,
         commitDetailsWidth,
         commitAgent,
         chatModelFavorites,
@@ -250,7 +246,14 @@ function applyTranslucency() {
   document.documentElement.classList.toggle("translucent", state.translucency);
 }
 
-export function setUiPrefs(patch: Partial<Omit<UiPrefs, "resolvedTheme">>) {
+type UiPrefsPatch = Partial<Omit<UiPrefs, "resolvedTheme">>;
+
+export function setUiPrefs(patch: UiPrefsPatch) {
+  const changed = (Object.keys(patch) as Array<keyof UiPrefsPatch>).some(
+    (key) => !Object.is(state[key], patch[key])
+  );
+  if (!changed) return;
+
   state = { ...state, ...patch };
   if (patch.theme !== undefined) {
     state.resolvedTheme = resolve(patch.theme);

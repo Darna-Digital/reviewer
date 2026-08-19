@@ -5,6 +5,7 @@ import {
   Subsection,
 } from "@/components/kitchen-sink/kitchen-sink-primitives";
 import { surfaceClasses } from "@/lib/surface-classes";
+import { cn } from "@/lib/utils";
 
 const BRAND_RAMP = [
   { step: "50", swatch: "bg-brand-50" },
@@ -128,7 +129,10 @@ const SURFACE_LADDER = [
 function SwatchTile({ swatch }: { swatch: string }) {
   return (
     <div
-      className={`h-14 w-full rounded-lg inset-ring inset-ring-foreground/10 ${swatch}`}
+      className={cn(
+        "h-14 w-full rounded-lg inset-ring inset-ring-foreground/10",
+        swatch
+      )}
     />
   );
 }
@@ -228,7 +232,7 @@ export function Foundations() {
                 key={token}
                 className="flex flex-wrap items-baseline gap-x-4 gap-y-1"
               >
-                <p className={`text-base/7 sm:text-sm/6 ${ink}`}>
+                <p className={cn("text-base/7 sm:text-sm/6", ink)}>
                   Rebase the branch onto master
                 </p>
                 <p className="font-mono text-sm text-muted-foreground sm:text-xs">
@@ -337,7 +341,10 @@ export function Foundations() {
             {RADII.map(({ token, radius, role }) => (
               <Specimen key={token} label={`${token} · ${role}`}>
                 <div
-                  className={`size-16 bg-muted inset-ring inset-ring-foreground/10 ${radius}`}
+                  className={cn(
+                    "size-16 bg-muted inset-ring inset-ring-foreground/10",
+                    radius
+                  )}
                 />
               </Specimen>
             ))}
@@ -353,7 +360,10 @@ export function Foundations() {
               <Specimen key={token} label={role}>
                 <button
                   type="button"
-                  className={`inline-flex h-8 items-center justify-center rounded-md px-3 type-ui ${face}`}
+                  className={cn(
+                    "inline-flex h-8 items-center justify-center rounded-md px-3 type-ui",
+                    face
+                  )}
                 >
                   {token}
                 </button>
@@ -369,7 +379,7 @@ export function Foundations() {
           <SpecimenRow>
             {ELEVATIONS.map(({ token, shadow, role }) => (
               <Specimen key={token} label={`${token} · ${role}`}>
-                <div className={`size-16 rounded-lg bg-card ${shadow}`} />
+                <div className={cn("size-16 rounded-lg bg-card", shadow)} />
               </Specimen>
             ))}
           </SpecimenRow>
@@ -383,7 +393,10 @@ export function Foundations() {
             {SURFACE_LADDER.map(({ level, role }) => (
               <div
                 key={level}
-                className={`flex flex-col gap-1 rounded-lg p-4 ${surfaceClasses(level)}`}
+                className={cn(
+                  "flex flex-col gap-1 rounded-lg p-4",
+                  surfaceClasses(level)
+                )}
               >
                 <p className="font-mono text-sm sm:text-xs">surface-{level}</p>
                 <p className="text-sm/5 text-pretty text-muted-foreground sm:text-xs/5">

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { Chevron, GitBranch, Search } from "#/components/icons";
+import { cn } from "#/lib/utils";
 
 const TRAFFIC_LIGHTS = ["bg-[#ff5f57]", "bg-[#febc2e]", "bg-[#28c840]"];
 
@@ -17,12 +18,15 @@ export function AppWindow({
 }) {
   return (
     <div
-      className={`overflow-hidden rounded-xl border border-black/10 bg-white dark:border-white/10 dark:bg-neutral-900 ${className}`}
+      className={cn(
+        "overflow-hidden rounded-xl border border-black/10 bg-white dark:border-white/10 dark:bg-neutral-900",
+        className
+      )}
     >
       <div className="flex h-9 items-center gap-3 border-b border-black/8 bg-neutral-50 px-3 dark:border-white/8 dark:bg-white/4">
         <div className="flex gap-1.5">
           {TRAFFIC_LIGHTS.map((color) => (
-            <span className={`size-2.5 rounded-full ${color}`} key={color} />
+            <span className={cn("size-2.5 rounded-full", color)} key={color} />
           ))}
         </div>
         <span className="flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[11px] font-semibold text-neutral-700 dark:text-neutral-200">

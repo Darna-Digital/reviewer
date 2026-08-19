@@ -91,6 +91,10 @@ const emptyHint = (target: DiffTarget): string => {
   switch (target.kind) {
     case "worktree":
       return "Working tree is clean — make some changes and hit refresh.";
+    case "branch":
+      return `Nothing yet on this branch that ${target.target} does not already have.`;
+    case "task":
+      return `Nothing on ${target.branch} yet that ${target.base} does not already have.`;
     case "range":
       return "These refs are identical.";
     case "commit":
@@ -111,10 +115,20 @@ const THEMES = { light: "github-light", dark: "github-dark" } as const;
  */
 const diffFileTargetQuery = (
   target: DiffTarget
-): { commit?: string; base?: string; head?: string } => {
+): {
+  commit?: string;
+  base?: string;
+  head?: string;
+  target?: string;
+  task?: string;
+} => {
   switch (target.kind) {
     case "worktree":
       return {};
+    case "branch":
+      return { target: target.target };
+    case "task":
+      return { task: target.branch, target: target.base };
     case "commit":
       return { commit: target.sha };
     case "range":
@@ -750,7 +764,11 @@ export function DiffPane({
             onCommentDelete={onCommentDelete}
             onCommentEdit={onCommentEdit}
             onCommentReply={onCommentReply}
-            languageEnabled={target.kind === "worktree"}
+            // Both of these have the working tree on their new side, which is
+            // the file the language server actually has open.
+            languageEnabled={
+              target.kind === "worktree" || target.kind === "branch"
+            }
             onOpenLocation={onOpenLocation}
           />
         ))}

@@ -11,6 +11,7 @@ import {
 } from "@/components/kitchen-sink/kitchen-sink-primitives";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const STATS = [
   { label: "Files changed", value: "14" },
@@ -157,7 +158,7 @@ export function Patterns() {
                   <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground sm:text-xs">
-                  <span className={`size-2 shrink-0 rounded-full ${dot}`} />
+                  <span className={cn("size-2 shrink-0 rounded-full", dot)} />
                   {state}
                   <span aria-hidden="true">·</span>
                   {repo}
@@ -187,7 +188,9 @@ export function Patterns() {
                   <div className="flex min-w-0 flex-1 flex-col">
                     <p className="truncate text-base/6 sm:text-sm/6">{title}</p>
                     <p className="flex items-center gap-1.5 text-sm text-muted-foreground sm:text-xs">
-                      <span className={`size-2 shrink-0 rounded-full ${dot}`} />
+                      <span
+                        className={cn("size-2 shrink-0 rounded-full", dot)}
+                      />
                       {state} in {repo}
                     </p>
                   </div>
@@ -234,7 +237,7 @@ export function Patterns() {
                       <td className="py-3 pr-4 text-base text-muted-foreground sm:text-sm">
                         {author}
                       </td>
-                      <td className={`py-3 text-base sm:text-sm ${tone}`}>
+                      <td className={cn("py-3 text-base sm:text-sm", tone)}>
                         {checks}
                       </td>
                     </tr>

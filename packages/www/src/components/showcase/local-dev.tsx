@@ -1,6 +1,7 @@
 import { PaneHeader } from "#/components/app-window";
 import { Cursor, Globe, Play, Stop } from "#/components/icons";
 import { Avatar } from "#/components/showcase/avatar";
+import { cn } from "#/lib/utils";
 
 const SERVICES = [
   { name: "web", command: "pnpm --filter www dev", running: true },
@@ -38,7 +39,12 @@ export function LocalDevShowcase() {
               key={service.name}
             >
               <span
-                className={`size-1.5 shrink-0 rounded-full ${service.running ? "bg-[#2b6b45] dark:bg-[#3fb950]" : "bg-neutral-300 dark:bg-neutral-600"}`}
+                className={cn(
+                  "size-1.5 shrink-0 rounded-full",
+                  service.running
+                    ? "bg-[#2b6b45] dark:bg-[#3fb950]"
+                    : "bg-neutral-300 dark:bg-neutral-600"
+                )}
               />
               <span className="min-w-0">
                 <span className="block text-xs font-medium text-neutral-800 dark:text-neutral-200">

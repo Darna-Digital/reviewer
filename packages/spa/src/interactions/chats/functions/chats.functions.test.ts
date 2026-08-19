@@ -13,7 +13,7 @@ describe("createChatsFunctions", () => {
   it("start creates the chat then sends the trimmed first prompt", async () => {
     const { deps, calls } = mockChatsDependencies();
     const fns = createChatsFunctions(deps);
-    const result = await fns.start(settings, "main", "  hey  ");
+    const result = await fns.start(settings, { branch: "main" }, "  hey  ");
     expect(result).not.toBeNull();
     expect(calls.create).toEqual([{ ...settings, branch: "main" }]);
     expect(calls.send).toEqual([{ id: "c-1", text: "hey", images: [] }]);
@@ -23,7 +23,9 @@ describe("createChatsFunctions", () => {
     const { deps, calls } = mockChatsDependencies();
     const fns = createChatsFunctions(deps);
     const image = { name: "a.png", data: "abc", thumbnail: "data:image/png,x" };
-    const result = await fns.start(settings, "main", "   ", [image]);
+    const result = await fns.start(settings, { branch: "main" }, "   ", [
+      image,
+    ]);
     expect(result).not.toBeNull();
     expect(calls.create).toEqual([{ ...settings, branch: "main" }]);
     expect(calls.send).toEqual([{ id: "c-1", text: "", images: [image] }]);
@@ -32,7 +34,7 @@ describe("createChatsFunctions", () => {
   it("start with a blank prompt creates nothing", async () => {
     const { deps, calls } = mockChatsDependencies();
     const fns = createChatsFunctions(deps);
-    const result = await fns.start(settings, "main", "   ");
+    const result = await fns.start(settings, { branch: "main" }, "   ");
     expect(result).toBeNull();
     expect(calls.create).toHaveLength(0);
     expect(calls.send).toHaveLength(0);
@@ -43,7 +45,7 @@ describe("createChatsFunctions", () => {
     const fns = createChatsFunctions(deps);
     const result = await fns.startWithTitle(
       settings,
-      "feature",
+      { branch: "feature" },
       "  Fix review comments  ",
       "  address these comments  "
     );
@@ -59,12 +61,39 @@ describe("createChatsFunctions", () => {
   it("startWithTitle drops blank titles and blank prompts", async () => {
     const { deps, calls } = mockChatsDependencies();
     const fns = createChatsFunctions(deps);
-    const blank = await fns.startWithTitle(settings, "main", "Fix it", "   ");
-    const untitled = await fns.startWithTitle(settings, "main", "   ", "go");
+    const blank = await fns.startWithTitle(
+      settings,
+      { branch: "main" },
+      "Fix it",
+      "   "
+    );
+    const untitled = await fns.startWithTitle(
+      settings,
+      { branch: "main" },
+      "   ",
+      "go"
+    );
     expect(blank).toBeNull();
     expect(untitled).not.toBeNull();
     expect(calls.create).toEqual([{ ...settings, branch: "main" }]);
     expect(calls.send).toEqual([{ id: "c-1", text: "go", images: [] }]);
+  });
+
+  it("start in a worktree names the checkout the agent runs in", async () => {
+    const { deps, calls } = mockChatsDependencies();
+    const fns = createChatsFunctions(deps);
+    await fns.start(
+      settings,
+      { branch: "task/dark-mode", repoPath: "/repo/.byconvo-worktrees/task" },
+      "add dark mode"
+    );
+    expect(calls.create).toEqual([
+      {
+        ...settings,
+        branch: "task/dark-mode",
+        repoPath: "/repo/.byconvo-worktrees/task",
+      },
+    ]);
   });
 
   it("send trims and skips blank prompts", async () => {

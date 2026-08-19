@@ -19,11 +19,25 @@ export const WorkspaceInfo = Schema.Struct({
   project: Schema.NullOr(Schema.String),
   /** Every git root the project holds, ordered by project-relative name. */
   repos: Schema.Array(RepoEntry),
-  /** The root git actions run against; null when the project holds none. */
+  /** Where git actions run; null when the project holds none. May be one of
+   * the project's roots, or a worktree of one. */
   current: Schema.NullOr(Schema.String),
+  /**
+   * The root in `repos` that `current` belongs to — itself when `current` is a
+   * root, and the original checkout when it is a worktree of one.
+   *
+   * Needed because a worktree is deliberately not listed as a root: without
+   * this, anything resolving `current` against `repos` finds nothing the moment
+   * you are working in one, and a surface that scopes an action to "the current
+   * repository" would either lose its footing or quietly fall back to the
+   * first root — which is a different working tree than the one you are in.
+   */
+  currentRoot: Schema.NullOr(Schema.String),
   /** Recently opened projects, most-recent first. */
   recents: Schema.Array(Schema.String),
   home: Schema.String,
+  /** The machine everything here runs on, as its owner named it. */
+  device: Schema.String,
 });
 export type WorkspaceInfo = typeof WorkspaceInfo.Type;
 export const BrowseEntry = Schema.Struct({

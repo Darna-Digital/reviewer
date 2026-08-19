@@ -14,7 +14,7 @@
 import type { BottomTab } from "@/lib/ui-prefs";
 
 export type ShellRoute =
-  | { readonly kind: "code"; readonly mode: "commit" | "browse" | "review" }
+  | { readonly kind: "code"; readonly mode: "browse" | "review" }
   /** A workspace page that still sits over a repository: docs, tasks. */
   | { readonly kind: "workspace" }
   /**
@@ -38,7 +38,53 @@ export type ShellRoute =
   | { readonly kind: "settings" };
 
 /** Pages under `/modes/code/` that are workspace pages rather than the diff. */
-const CODE_WORKSPACE_PAGES = ["docs", "tasks"];
+const CODE_WORKSPACE_PAGES = ["docs", "tasks", "reviews"];
+
+/**
+ * What the diff view is pointed at, as the URL says it.
+ *
+ * One view reads all three, so they are one route with three shapes rather than
+ * three routes: `/review` is the changes in front of you, and the other two name
+ * whose work it is instead. A branch holds slashes, so the worktree's is the
+ * rest of the path rather than one segment of it.
+ */
+export type ReviewSource =
+  | { readonly kind: "local" }
+  | { readonly kind: "worktree"; readonly branch: string }
+  | { readonly kind: "pull"; readonly number: number };
+
+/** The diff view. */
+export const REVIEW_HREF = "/modes/code/review";
+/** Everything waiting to be read, listed. */
+export const REVIEWS_HREF = "/modes/code/reviews";
+
+export const reviewHref = (source: ReviewSource): string => {
+  if (source.kind === "local") return REVIEW_HREF;
+  return source.kind === "pull"
+    ? `${REVIEW_HREF}/pull/${source.number}`
+    : `${REVIEW_HREF}/worktree/${source.branch}`;
+};
+
+const onReviewPath = (pathname: string): boolean =>
+  pathname === REVIEW_HREF || pathname.startsWith(`${REVIEW_HREF}/`);
+
+/** Null when the path is not the diff view at all — `/reviews` included. */
+export const reviewSourceOf = (pathname: string): ReviewSource | null => {
+  if (!onReviewPath(pathname)) return null;
+  const [head, ...rest] = pathname
+    .slice(REVIEW_HREF.length)
+    .replace(/^\//, "")
+    .split("/")
+    .filter((segment) => segment.length > 0);
+  if (head === undefined) return { kind: "local" };
+  if (head === "worktree" && rest.length > 0) {
+    return { kind: "worktree", branch: rest.join("/") };
+  }
+  if (head === "pull" && rest[0] !== undefined && /^\d+$/.test(rest[0])) {
+    return { kind: "pull", number: Number(rest[0]) };
+  }
+  return null;
+};
 
 /** Where the window goes back to when a dock page is put down and nowhere else
  * has been asked for. */
@@ -56,13 +102,18 @@ export interface DockPage {
 }
 
 /**
- * The three of them, keyed by the surface they show.
+ * The four of them, keyed by the surface they show.
  *
  * Held here rather than beside the drawer because the classification above is
  * the same knowledge read the other way round: a location is a dock page
  * exactly when it is one of these.
  */
 const DOCK_PAGES: Record<BottomTab, DockPage> = {
+  branches: {
+    tab: "branches",
+    href: "/modes/code/branches",
+    title: "Branches",
+  },
   history: {
     tab: "history",
     href: "/modes/code/history",
@@ -115,15 +166,14 @@ export function shellRoute(
     if (dock !== undefined) return { kind: "dock", tab: dock.tab };
     if (CODE_WORKSPACE_PAGES.includes(page)) return { kind: "workspace" };
     if (page === "browse") return { kind: "code", mode: "browse" };
-    if (page === "review") return { kind: "code", mode: "review" };
-    return { kind: "code", mode: "commit" };
+    return { kind: "code", mode: "review" };
   }
 
   // Nothing in the path says: fall back to the remembered mode, which is what
   // the index route resolves against.
   return workMode === "collaboration"
     ? { kind: "collaboration" }
-    : { kind: "code", mode: "commit" };
+    : { kind: "code", mode: "review" };
 }
 
 /** Whether the page beneath the layout is one of the git/code surfaces. */
