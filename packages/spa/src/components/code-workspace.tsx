@@ -923,13 +923,20 @@ export function CodeWorkspace() {
         });
       }
     } else if (browse !== null) {
-      // A commit or a range came from the log, so the trail starts at History
-      // — that's what tells this apart from plain file browsing.
+      // A commit or a range came from the log, so the trail runs through
+      // History — that's what tells this apart from plain file browsing, and
+      // the crumb in front of it is the way back out of the log.
+      list.push({
+        id: "browse-mode",
+        label: "Browse",
+        onClick: () => void navigate({ to: "/modes/code/browse" }),
+      });
+      // Named, not offered: the log it stands for is already on screen below,
+      // so a hover and a press here would land you where you are.
       list.push({
         id: "history",
         label: "History",
         icon: IconHistory,
-        onClick: () => openBottomTab("history"),
       });
       const historyRef = logRef ?? repo.data?.currentBranch ?? null;
       if (browse.kind === "commit") {
