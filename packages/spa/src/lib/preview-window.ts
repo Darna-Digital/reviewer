@@ -49,13 +49,17 @@ export const isPreviewWindow = claimPreviewLocation() !== null;
  * field autofocusing itself on the way up takes their typing with it — and
  * hands it back on the next capture, which the window reads as having been
  * away and refetches everything on.
+ *
+ * Putting the keyboard down is all this can do: the caret belongs to an element
+ * in the window outside, and that window is the one that hands it back — see
+ * `preview-focus`. Focusing the parent from in here would only move its focus
+ * to its own body, undoing that.
  */
 if (isPreviewWindow && typeof document !== "undefined") {
   document.addEventListener(
     "focusin",
     (event) => {
       if (event.target instanceof HTMLElement) event.target.blur();
-      window.parent.focus();
     },
     true
   );
