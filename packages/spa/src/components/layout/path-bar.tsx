@@ -39,6 +39,11 @@ export interface PathBarProps {
   readonly onShowHistory?: () => void;
   /** The open file's own controls, e.g. Save and its problem count. */
   readonly actions?: ReactNode;
+  /**
+   * Controls that act on what the trail names rather than on the pane, so they
+   * ride with the crumbs instead of ending the line on the right.
+   */
+  readonly trailActions?: ReactNode;
   /** `inline` fills a row somebody else drew; `bottom` draws its own. */
   readonly placement?: "inline" | "bottom";
 }
@@ -51,6 +56,7 @@ export function PathBar({
   onEdit,
   onShowHistory,
   actions,
+  trailActions,
   placement = "bottom",
 }: PathBarProps) {
   const folderCrumbs = useMemo<ReadonlyArray<Crumb>>(
@@ -104,6 +110,7 @@ export function PathBar({
         // pickers there use; along the foot of the pane they are a caption.
         size={placement === "inline" ? "md" : "sm"}
       />
+      {trailActions}
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {onShowHistory !== undefined && (
           <Button variant="ghost" size="xs" onClick={onShowHistory}>

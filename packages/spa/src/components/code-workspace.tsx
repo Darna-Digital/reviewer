@@ -67,6 +67,7 @@ import {
   DiffSourceItems,
   diffSourceIcon,
 } from "@/interactions/reviews/components/diff-source-menu";
+import { OpenInGitHub } from "@/interactions/reviews/components/open-in-github";
 import type { Crumb } from "@/components/layout/breadcrumbs";
 import { EmptyPane } from "@/components/layout/empty-pane";
 import { PathBar } from "@/components/layout/path-bar";
@@ -1222,6 +1223,11 @@ export function CodeWorkspace() {
       }
       onShowHistory={
         viewing === null ? undefined : () => showFileHistory(viewing)
+      }
+      trailActions={
+        showsDiff && source.kind === "pull" && source.pull.url !== "" ? (
+          <OpenInGitHub url={source.pull.url} />
+        ) : undefined
       }
       actions={
         <div ref={setFileActionsSlot} className="flex items-center gap-1" />
