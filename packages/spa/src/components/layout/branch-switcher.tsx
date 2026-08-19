@@ -115,6 +115,14 @@ interface BranchTarget {
   readonly isRemote: boolean;
 }
 
+/**
+ * The menu keeps to a few rows and scrolls the rest, rather than growing down
+ * the window: it is opened to pick one branch out of many, and a list long
+ * enough to need reading through is a list to search instead.
+ */
+const MENU_HEIGHT = "max-h-[min(20rem,70vh)]";
+const REPO_MENU_HEIGHT = "max-h-[min(18rem,60vh)]";
+
 /** Branch names make these labels long; the menu item tooltips the clipped ones. */
 const ActionLabel = ({ children }: { children: React.ReactNode }) => (
   <span className="min-w-0 flex-1 truncate">{children}</span>
@@ -500,7 +508,10 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         <DropdownMenuContent
           align="start"
           side={props.side ?? "bottom"}
-          className="max-h-[70vh] w-72 overflow-x-hidden overflow-y-auto p-0"
+          className={cn(
+            MENU_HEIGHT,
+            "w-72 overflow-x-hidden overflow-y-auto p-0"
+          )}
         >
           {/* Filter box — a plain row, not a menu item, so typing never navigates. */}
           <BranchSearchRow>
@@ -536,7 +547,12 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
                       {entry.repo.branch ?? "detached"}
                     </span>
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="max-h-[60vh] w-72 overflow-x-hidden overflow-y-auto p-1">
+                  <DropdownMenuSubContent
+                    className={cn(
+                      REPO_MENU_HEIGHT,
+                      "w-72 overflow-x-hidden overflow-y-auto p-1"
+                    )}
+                  >
                     {renderSections({
                       repoPath: entry.repo.path,
                       head: entry.repo.branch ?? "—",

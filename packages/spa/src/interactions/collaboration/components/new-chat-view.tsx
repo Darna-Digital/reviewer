@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
+import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
 import { activeRepo } from "@byconvo/core/workspace";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { AgentMark } from "@/interactions/threads/components/agent-mark";
@@ -244,6 +245,7 @@ export function NewChatView() {
   const [effort, setEffort] = useState("high");
   const [visibility, setVisibility] = useState("public");
   const [projectId, setProjectId] = useState(PROJECT_OPTIONS[0]?.id ?? "");
+  const [repoOpen, setRepoOpen] = useState(false);
   const repo = useRepo();
   const workspace = useWorkspace();
   const workspaceActions = useWorkspaceActions();
@@ -444,10 +446,18 @@ export function NewChatView() {
               : "Saved to the workspace, not this machine. Only the people you put in it will see it."}
           </p>
 
-          {/* Where the agent runs: the branch the app has open — the same
-              switcher as the title bar, opening upward from this bar. */}
+          {/* Where the agent runs: the repository the app has open and the
+              branch it is on — the same pickers as the title bar, opening
+              upward from this bar. */}
           {toAgent && (
             <div className="mt-1 flex h-10 items-center gap-1 rounded-xl border px-1.5">
+              <ProjectPicker
+                workspace={workspace.data}
+                open={repoOpen}
+                onOpenChange={setRepoOpen}
+                onChosen={() => {}}
+                side="top"
+              />
               {repo.data !== undefined && (
                 <BranchSwitcher
                   current={repo.data.currentBranch ?? null}
