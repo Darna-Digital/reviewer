@@ -50,6 +50,7 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
+import { REVIEW_HREF } from "@/lib/shell-route";
 import { setUiPrefs, useUiPrefs, type BottomTab } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import type { CommitInfo } from "@byconvo/core/repo";
@@ -224,12 +225,12 @@ export function GitBottomDock({
               onCheckout={(branch) => {
                 leavingBranches();
                 void git.checkout(branch);
-                void navigate({ to: "/modes/code/commit" });
+                void navigate({ to: REVIEW_HREF });
               }}
               onCheckoutAndUpdate={(branch) => {
                 leavingBranches();
                 void git.checkoutAndUpdate(branch);
-                void navigate({ to: "/modes/code/commit" });
+                void navigate({ to: REVIEW_HREF });
               }}
               onCreateBranch={(name, startPoint) =>
                 void git.createBranch(name, startPoint)

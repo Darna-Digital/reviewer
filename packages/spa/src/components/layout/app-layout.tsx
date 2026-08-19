@@ -163,11 +163,10 @@ export function AppLayout() {
                 keeps whatever the location matched, and a dock page matches a
                 route that draws nothing. */}
             <div
-              className={
-                dockExpanded
-                  ? "hidden"
-                  : "flex min-h-0 flex-1 flex-col overflow-hidden"
-              }
+              className={cn(
+                "flex min-h-0 flex-1 flex-col overflow-hidden",
+                dockExpanded && "hidden"
+              )}
             >
               {/* The pages that sit *over* a repository say so when there
                   isn't one. The code surfaces answer for themselves — a

@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { cn } from "#/lib/utils";
+
 export function Container({
   children,
   className = "",
@@ -8,7 +10,7 @@ export function Container({
   className?: string;
 }) {
   return (
-    <div className={`mx-auto w-full max-w-[1248px] px-6 ${className}`}>
+    <div className={cn("mx-auto w-full max-w-[1248px] px-6", className)}>
       {children}
     </div>
   );
@@ -49,7 +51,12 @@ export function Button({
 }) {
   return (
     <a
-      className={`inline-flex items-center justify-center gap-1.5 rounded-full font-medium whitespace-nowrap transition-colors select-none ${BUTTON_SIZES[size]} ${BUTTON_VARIANTS[variant]} ${className}`}
+      className={cn(
+        "inline-flex items-center justify-center gap-1.5 rounded-full font-medium whitespace-nowrap transition-colors select-none",
+        BUTTON_SIZES[size],
+        BUTTON_VARIANTS[variant],
+        className
+      )}
       href={href}
     >
       {children}
@@ -66,7 +73,10 @@ export function MonoLabel({
 }) {
   return (
     <span
-      className={`font-mono text-xs leading-none tracking-wide text-neutral-500 uppercase select-none ${className}`}
+      className={cn(
+        "font-mono text-xs leading-none tracking-wide text-neutral-500 uppercase select-none",
+        className
+      )}
     >
       {children}
     </span>
@@ -82,7 +92,10 @@ export function InitialsAvatar({
 }) {
   return (
     <span
-      className={`grid shrink-0 place-items-center rounded-full bg-neutral-200 font-medium text-neutral-600 ring-1 ring-black/8 ${className}`}
+      className={cn(
+        "grid shrink-0 place-items-center rounded-full bg-neutral-200 font-medium text-neutral-600 ring-1 ring-black/8",
+        className
+      )}
     >
       {initials}
     </span>
@@ -195,7 +208,7 @@ export function UserGlyph({ className }: GlyphProps) {
 
 export function InterfereLogo({ className = "h-4" }: { className?: string }) {
   return (
-    <span className={`flex items-center gap-2 ${className}`}>
+    <span className={cn("flex items-center gap-2", className)}>
       <svg
         aria-hidden="true"
         className="h-full w-auto"

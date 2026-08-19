@@ -1,0 +1,51 @@
+/**
+ * What the reviews page says when it has nothing to list.
+ *
+ * The two cases are different questions, so they get different answers: an
+ * empty list on a project that could fill it is a waiting room, while a project
+ * with no remote is one where half the list was never going to arrive and says
+ * so instead of looking broken.
+ */
+import { IconGitPullRequest, IconPlugConnectedX } from "@tabler/icons-react";
+
+export function NoReviews() {
+  return (
+    <ReviewsEmpty
+      icon={IconGitPullRequest}
+      title="Nothing to review"
+      body="Work started in a worktree of its own shows up here, next to any pull requests opened on this project."
+    />
+  );
+}
+
+export function NoReviewRemote() {
+  return (
+    <ReviewsEmpty
+      icon={IconPlugConnectedX}
+      title="No GitHub remote"
+      body="This project is not on GitHub, so nothing arrives from the cloud. Work started in a worktree of its own still shows up here."
+    />
+  );
+}
+
+function ReviewsEmpty({
+  icon: Icon,
+  title,
+  body,
+}: {
+  readonly icon: typeof IconGitPullRequest;
+  readonly title: string;
+  readonly body: string;
+}) {
+  return (
+    <div className="flex h-full items-center justify-center p-6">
+      <div className="flex flex-col items-center gap-1 rounded-3xl border border-dashed border-foreground/15 px-6 py-14 text-center">
+        <Icon className="size-4 shrink-0 text-muted-foreground" />
+        <p className="mt-2 text-sm font-medium">{title}</p>
+        <p className="max-w-[48ch] text-sm/6 text-pretty text-muted-foreground">
+          {body}
+        </p>
+      </div>
+    </div>
+  );
+}

@@ -23,6 +23,7 @@ import { Route as AppModesCodeCommitRouteImport } from './routes/_app/modes.code
 import { Route as AppModesCodeDocsRouteImport } from './routes/_app/modes.code.docs'
 import { Route as AppModesCodeHistoryRouteImport } from './routes/_app/modes.code.history'
 import { Route as AppModesCodeLocalDevRouteImport } from './routes/_app/modes.code.local-dev'
+import { Route as AppModesCodeReviewsRouteImport } from './routes/_app/modes.code.reviews'
 import { Route as AppModesCodeTasksRouteImport } from './routes/_app/modes.code.tasks'
 import { Route as AppModesCodeThreadsRouteImport } from './routes/_app/modes.code.threads'
 import { Route as AppModesCollaborationInboxRouteImport } from './routes/_app/modes.collaboration_.inbox'
@@ -31,6 +32,8 @@ import { Route as AppModesCodeBrowseRangeRouteImport } from './routes/_app/modes
 import { Route as AppModesCodeReviewIndexRouteImport } from './routes/_app/modes.code.review.index'
 import { Route as AppModesCodeReviewPullRouteImport } from './routes/_app/modes.code.review.$pull'
 import { Route as AppModesCodeBrowseCommitShaRouteImport } from './routes/_app/modes.code.browse.commit.$sha'
+import { Route as AppModesCodeReviewPullNumberRouteImport } from './routes/_app/modes.code.review.pull.$number'
+import { Route as AppModesCodeReviewWorktreeSplatRouteImport } from './routes/_app/modes.code.review.worktree.$'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -103,6 +106,11 @@ const AppModesCodeLocalDevRoute = AppModesCodeLocalDevRouteImport.update({
   path: '/modes/code/local-dev',
   getParentRoute: () => AppRoute,
 } as any)
+const AppModesCodeReviewsRoute = AppModesCodeReviewsRouteImport.update({
+  id: '/modes/code/reviews',
+  path: '/modes/code/reviews',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppModesCodeTasksRoute = AppModesCodeTasksRouteImport.update({
   id: '/modes/code/tasks',
   path: '/modes/code/tasks',
@@ -145,6 +153,18 @@ const AppModesCodeBrowseCommitShaRoute =
     path: '/modes/code/browse/commit/$sha',
     getParentRoute: () => AppRoute,
   } as any)
+const AppModesCodeReviewPullNumberRoute =
+  AppModesCodeReviewPullNumberRouteImport.update({
+    id: '/modes/code/review/pull/$number',
+    path: '/modes/code/review/pull/$number',
+    getParentRoute: () => AppRoute,
+  } as any)
+const AppModesCodeReviewWorktreeSplatRoute =
+  AppModesCodeReviewWorktreeSplatRouteImport.update({
+    id: '/modes/code/review/worktree/$',
+    path: '/modes/code/review/worktree/$',
+    getParentRoute: () => AppRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
@@ -158,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/modes/code/docs': typeof AppModesCodeDocsRoute
   '/modes/code/history': typeof AppModesCodeHistoryRoute
   '/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
+  '/modes/code/reviews': typeof AppModesCodeReviewsRoute
   '/modes/code/tasks': typeof AppModesCodeTasksRoute
   '/modes/code/threads': typeof AppModesCodeThreadsRoute
   '/modes/collaboration/inbox': typeof AppModesCollaborationInboxRoute
@@ -168,6 +189,8 @@ export interface FileRoutesByFullPath {
   '/modes/code/browse/': typeof AppModesCodeBrowseIndexRoute
   '/modes/code/review/': typeof AppModesCodeReviewIndexRoute
   '/modes/code/browse/commit/$sha': typeof AppModesCodeBrowseCommitShaRoute
+  '/modes/code/review/pull/$number': typeof AppModesCodeReviewPullNumberRoute
+  '/modes/code/review/worktree/$': typeof AppModesCodeReviewWorktreeSplatRoute
 }
 export interface FileRoutesByTo {
   '/kitchen-sink': typeof KitchenSinkRoute
@@ -180,6 +203,7 @@ export interface FileRoutesByTo {
   '/modes/code/docs': typeof AppModesCodeDocsRoute
   '/modes/code/history': typeof AppModesCodeHistoryRoute
   '/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
+  '/modes/code/reviews': typeof AppModesCodeReviewsRoute
   '/modes/code/tasks': typeof AppModesCodeTasksRoute
   '/modes/code/threads': typeof AppModesCodeThreadsRoute
   '/modes/collaboration/inbox': typeof AppModesCollaborationInboxRoute
@@ -190,6 +214,8 @@ export interface FileRoutesByTo {
   '/modes/code/browse': typeof AppModesCodeBrowseIndexRoute
   '/modes/code/review': typeof AppModesCodeReviewIndexRoute
   '/modes/code/browse/commit/$sha': typeof AppModesCodeBrowseCommitShaRoute
+  '/modes/code/review/pull/$number': typeof AppModesCodeReviewPullNumberRoute
+  '/modes/code/review/worktree/$': typeof AppModesCodeReviewWorktreeSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -205,6 +231,7 @@ export interface FileRoutesById {
   '/_app/modes/code/docs': typeof AppModesCodeDocsRoute
   '/_app/modes/code/history': typeof AppModesCodeHistoryRoute
   '/_app/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
+  '/_app/modes/code/reviews': typeof AppModesCodeReviewsRoute
   '/_app/modes/code/tasks': typeof AppModesCodeTasksRoute
   '/_app/modes/code/threads': typeof AppModesCodeThreadsRoute
   '/_app/modes/collaboration_/inbox': typeof AppModesCollaborationInboxRoute
@@ -215,6 +242,8 @@ export interface FileRoutesById {
   '/_app/modes/code/browse/': typeof AppModesCodeBrowseIndexRoute
   '/_app/modes/code/review/': typeof AppModesCodeReviewIndexRoute
   '/_app/modes/code/browse/commit/$sha': typeof AppModesCodeBrowseCommitShaRoute
+  '/_app/modes/code/review/pull/$number': typeof AppModesCodeReviewPullNumberRoute
+  '/_app/modes/code/review/worktree/$': typeof AppModesCodeReviewWorktreeSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -230,6 +259,7 @@ export interface FileRouteTypes {
     | '/modes/code/docs'
     | '/modes/code/history'
     | '/modes/code/local-dev'
+    | '/modes/code/reviews'
     | '/modes/code/tasks'
     | '/modes/code/threads'
     | '/modes/collaboration/inbox'
@@ -240,6 +270,8 @@ export interface FileRouteTypes {
     | '/modes/code/browse/'
     | '/modes/code/review/'
     | '/modes/code/browse/commit/$sha'
+    | '/modes/code/review/pull/$number'
+    | '/modes/code/review/worktree/$'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/kitchen-sink'
@@ -252,6 +284,7 @@ export interface FileRouteTypes {
     | '/modes/code/docs'
     | '/modes/code/history'
     | '/modes/code/local-dev'
+    | '/modes/code/reviews'
     | '/modes/code/tasks'
     | '/modes/code/threads'
     | '/modes/collaboration/inbox'
@@ -262,6 +295,8 @@ export interface FileRouteTypes {
     | '/modes/code/browse'
     | '/modes/code/review'
     | '/modes/code/browse/commit/$sha'
+    | '/modes/code/review/pull/$number'
+    | '/modes/code/review/worktree/$'
   id:
     | '__root__'
     | '/_app'
@@ -276,6 +311,7 @@ export interface FileRouteTypes {
     | '/_app/modes/code/docs'
     | '/_app/modes/code/history'
     | '/_app/modes/code/local-dev'
+    | '/_app/modes/code/reviews'
     | '/_app/modes/code/tasks'
     | '/_app/modes/code/threads'
     | '/_app/modes/collaboration_/inbox'
@@ -286,6 +322,8 @@ export interface FileRouteTypes {
     | '/_app/modes/code/browse/'
     | '/_app/modes/code/review/'
     | '/_app/modes/code/browse/commit/$sha'
+    | '/_app/modes/code/review/pull/$number'
+    | '/_app/modes/code/review/worktree/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -393,6 +431,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppModesCodeLocalDevRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/modes/code/reviews': {
+      id: '/_app/modes/code/reviews'
+      path: '/modes/code/reviews'
+      fullPath: '/modes/code/reviews'
+      preLoaderRoute: typeof AppModesCodeReviewsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/modes/code/tasks': {
       id: '/_app/modes/code/tasks'
       path: '/modes/code/tasks'
@@ -449,6 +494,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppModesCodeBrowseCommitShaRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/modes/code/review/pull/$number': {
+      id: '/_app/modes/code/review/pull/$number'
+      path: '/modes/code/review/pull/$number'
+      fullPath: '/modes/code/review/pull/$number'
+      preLoaderRoute: typeof AppModesCodeReviewPullNumberRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/modes/code/review/worktree/$': {
+      id: '/_app/modes/code/review/worktree/$'
+      path: '/modes/code/review/worktree/$'
+      fullPath: '/modes/code/review/worktree/$'
+      preLoaderRoute: typeof AppModesCodeReviewWorktreeSplatRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -475,6 +534,7 @@ interface AppRouteChildren {
   AppModesCodeDocsRoute: typeof AppModesCodeDocsRoute
   AppModesCodeHistoryRoute: typeof AppModesCodeHistoryRoute
   AppModesCodeLocalDevRoute: typeof AppModesCodeLocalDevRoute
+  AppModesCodeReviewsRoute: typeof AppModesCodeReviewsRoute
   AppModesCodeTasksRoute: typeof AppModesCodeTasksRoute
   AppModesCodeThreadsRoute: typeof AppModesCodeThreadsRoute
   AppModesCollaborationInboxRoute: typeof AppModesCollaborationInboxRoute
@@ -484,6 +544,8 @@ interface AppRouteChildren {
   AppModesCodeBrowseIndexRoute: typeof AppModesCodeBrowseIndexRoute
   AppModesCodeReviewIndexRoute: typeof AppModesCodeReviewIndexRoute
   AppModesCodeBrowseCommitShaRoute: typeof AppModesCodeBrowseCommitShaRoute
+  AppModesCodeReviewPullNumberRoute: typeof AppModesCodeReviewPullNumberRoute
+  AppModesCodeReviewWorktreeSplatRoute: typeof AppModesCodeReviewWorktreeSplatRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -496,6 +558,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppModesCodeDocsRoute: AppModesCodeDocsRoute,
   AppModesCodeHistoryRoute: AppModesCodeHistoryRoute,
   AppModesCodeLocalDevRoute: AppModesCodeLocalDevRoute,
+  AppModesCodeReviewsRoute: AppModesCodeReviewsRoute,
   AppModesCodeTasksRoute: AppModesCodeTasksRoute,
   AppModesCodeThreadsRoute: AppModesCodeThreadsRoute,
   AppModesCollaborationInboxRoute: AppModesCollaborationInboxRoute,
@@ -505,6 +568,8 @@ const AppRouteChildren: AppRouteChildren = {
   AppModesCodeBrowseIndexRoute: AppModesCodeBrowseIndexRoute,
   AppModesCodeReviewIndexRoute: AppModesCodeReviewIndexRoute,
   AppModesCodeBrowseCommitShaRoute: AppModesCodeBrowseCommitShaRoute,
+  AppModesCodeReviewPullNumberRoute: AppModesCodeReviewPullNumberRoute,
+  AppModesCodeReviewWorktreeSplatRoute: AppModesCodeReviewWorktreeSplatRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

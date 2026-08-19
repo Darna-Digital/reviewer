@@ -109,11 +109,11 @@ describe("trackLocation", () => {
   it("hands the window to the tab that owns where it went", () => {
     const state = trackLocation(
       initialWindowTabs(),
-      "/modes/code/review/12",
-      "/modes/code/review/12"
+      "/modes/code/review/pull/12",
+      "/modes/code/review/pull/12"
     );
     expect(show(state)).toBe("*code team sessions");
-    expect(state.tabs[0].href).toBe("/modes/code/review/12");
+    expect(state.tabs[0].href).toBe("/modes/code/review/pull/12");
   });
 
   it("takes the window into Sessions without taking it off the list", () => {
@@ -142,8 +142,8 @@ describe("trackLocation", () => {
   it("leaving the chats hands a session tab back to Code", () => {
     const state = trackLocation(
       stripOf("a"),
-      "/modes/code/commit",
-      "/modes/code/commit"
+      "/modes/code/review",
+      "/modes/code/review"
     );
     expect(show(state)).toBe("*code team sessions a");
     expect(state.tabs[3].href).toBe("/modes/agent-session/a");
@@ -152,11 +152,11 @@ describe("trackLocation", () => {
   it("names the code tab after the surface it is on", () => {
     const state = trackLocation(
       initialWindowTabs(),
-      "/modes/code/review/12",
-      "/modes/code/review/12"
+      "/modes/code/review/pull/12",
+      "/modes/code/review/pull/12"
     );
     expect(state.tabs.map((t) => t.title)).toEqual([
-      "Pull requests",
+      "Review",
       "Collaboration",
       "Sessions",
     ]);
@@ -182,7 +182,7 @@ describe("trackLocation", () => {
       "/modes/agent-session/abc"
     );
     expect(state.tabs.map((t) => t.title)).toEqual([
-      "Local changes",
+      "Review",
       "Collaboration",
       "Sessions",
       "a",
@@ -192,7 +192,7 @@ describe("trackLocation", () => {
   it("is a no-op when the owning tab is already there", () => {
     const before = initialWindowTabs();
     expect(
-      trackLocation(before, "/modes/code/commit", "/modes/code/commit")
+      trackLocation(before, "/modes/code/review", "/modes/code/review")
     ).toBe(before);
   });
 });
@@ -274,14 +274,14 @@ describe("chatIdOf", () => {
   it("reads the conversation a session tab is showing", () => {
     expect(chatIdOf("/modes/agent-session/abc123")).toBe("abc123");
     expect(chatIdOf("/modes/agent-session?new=true")).toBeNull();
-    expect(chatIdOf("/modes/code/commit")).toBeNull();
+    expect(chatIdOf("/modes/code/review")).toBeNull();
   });
 });
 
 describe("tabTitle", () => {
   it("names the mode surface a location belongs to", () => {
     expect(tabTitle("/modes/code/browse/commit/abc123")).toBe("Project");
-    expect(tabTitle("/modes/code/review/12")).toBe("Pull requests");
+    expect(tabTitle("/modes/code/review/pull/12")).toBe("Review");
     expect(tabTitle("/modes/collaboration")).toBe("Collaboration");
     expect(tabTitle("/settings")).toBe("Settings");
     expect(tabTitle("/somewhere-else")).toBe("Byconvo");

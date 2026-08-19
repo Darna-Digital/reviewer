@@ -19,6 +19,7 @@ import {
   ShieldGlyph,
   StarsGlyph,
 } from "#/components/interfere/ui";
+import { cn } from "#/lib/utils";
 
 export const Route = createFileRoute("/interfere")({
   component: InterferePage,
@@ -132,7 +133,7 @@ const FOOTER_COLUMNS: ReadonlyArray<{
 ];
 
 function BreaksWord({ className = "" }: { className?: string }) {
-  return <span className={`font-serif italic ${className}`}>breaks</span>;
+  return <span className={cn("font-serif italic", className)}>breaks</span>;
 }
 
 function SiteNav() {

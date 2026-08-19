@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   IconArrowRight,
   IconCheck,
@@ -66,6 +66,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 const RADIO_CLASSES =
   "col-start-1 row-start-1 appearance-none rounded-full border border-border bg-background checked:border-primary checked:bg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:border-border disabled:bg-muted disabled:checked:bg-muted dark:bg-white/5 dark:disabled:bg-white/10 forced-colors:appearance-auto";
@@ -150,6 +151,18 @@ const TOAST_MOCKS: readonly { label: string; fire: () => void }[] = [
     },
   },
 ];
+
+/** Remounts on a beat that shares no factor with the orb's, so the fresh orb
+ *  lands on an arbitrary point of the cycle — it should still come up in step
+ *  with the ones that have been running all along, never from rest. */
+function LateOrb() {
+  const [generation, setGeneration] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setGeneration((n) => n + 1), 1100);
+    return () => clearInterval(timer);
+  }, []);
+  return <Orb key={generation} size={40} label="Working" />;
+}
 
 function Field({
   label,
@@ -390,7 +403,7 @@ export function ComponentsGallery() {
                 key={label}
                 className="flex items-center gap-2 text-base sm:text-sm"
               >
-                <span className={`size-2 shrink-0 rounded-full ${dot}`} />
+                <span className={cn("size-2 shrink-0 rounded-full", dot)} />
                 {label}
               </li>
             ))}
@@ -410,6 +423,42 @@ export function ComponentsGallery() {
             </Specimen>
             <Specimen label="20 — default">
               <Orb label="Working" />
+            </Specimen>
+          </SpecimenRow>
+        </Subsection>
+
+        <Subsection
+          title="Agent orb — motion"
+          hint="Blown up so the sweep can be judged frame by frame: the crest should cross the diagonal at one steady beat and wrap without a hitch, and every orb below should hold the same phase however long the page has been open."
+        >
+          <SpecimenRow className="items-end">
+            <Specimen label="72 — the wave">
+              <Orb size={72} label="Working" className="text-brand-500" />
+            </Specimen>
+            <Specimen label="40 — mid">
+              <Orb size={40} label="Working" />
+            </Specimen>
+            <Specimen label="a list of running rows">
+              <div className="flex flex-col gap-2">
+                {[
+                  "task/git-worktrees",
+                  "task/landing-page",
+                  "fix/diff-gutter",
+                ].map((branch) => (
+                  <div
+                    key={branch}
+                    className="flex items-center gap-2 rounded-md bg-elevate px-2 py-1.5 text-sm sm:text-xs"
+                  >
+                    <Orb size={14} />
+                    <span className="font-mono text-muted-foreground">
+                      {branch}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Specimen>
+            <Specimen label="mounted late">
+              <LateOrb />
             </Specimen>
           </SpecimenRow>
         </Subsection>

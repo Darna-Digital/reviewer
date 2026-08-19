@@ -314,7 +314,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         <DropdownMenuContent
           align="start"
           side={props.side ?? "bottom"}
-          className="max-h-[70vh] w-72 overflow-x-hidden overflow-y-auto p-0"
+          className="max-h-80 w-72 overflow-x-hidden overflow-y-auto p-0"
         >
           {/* Filter box — a plain row, not a menu item, so typing never navigates. */}
           <MenuFilterRow>
@@ -350,7 +350,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
                       {entry.repo.branch ?? "detached"}
                     </span>
                   </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="max-h-[60vh] w-72 overflow-x-hidden overflow-y-auto p-1">
+                  <DropdownMenuSubContent className="max-h-80 w-72 overflow-x-hidden overflow-y-auto p-1">
                     {renderSections({
                       repoPath: entry.repo.path,
                       head: entry.repo.branch ?? "—",

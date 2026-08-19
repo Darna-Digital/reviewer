@@ -149,7 +149,7 @@ describe("SearchHost", () => {
 
     await user.keyboard("{Meta>}k{/Meta}");
 
-    expect(screen.getByText("Go to Local Changes")).toBeDefined();
+    expect(screen.getByText("Go to Review")).toBeDefined();
     expect(screen.getByText("Git Actions…")).toBeDefined();
   });
 
@@ -159,7 +159,7 @@ describe("SearchHost", () => {
     await user.click(screen.getByLabelText("Message"));
     await user.keyboard("{Meta>}k{/Meta}");
 
-    expect(screen.getByText("Go to Local Changes")).toBeDefined();
+    expect(screen.getByText("Go to Review")).toBeDefined();
   });
 
   it("offers the commands the page registered alongside its own", async () => {
@@ -207,7 +207,7 @@ describe("SearchHost", () => {
     await user.click(screen.getByText("Git Actions…"));
     await user.keyboard("{Meta>}k{/Meta}");
 
-    expect(screen.getByText("Go to Local Changes")).toBeDefined();
+    expect(screen.getByText("Go to Review")).toBeDefined();
     expect(screen.queryByText("Fetch")).toBeNull();
   });
 
@@ -237,7 +237,7 @@ describe("SearchHost", () => {
     await user.click(screen.getByRole("button", { name: /queries\.ts/ }));
 
     expect(navigate).toHaveBeenCalledWith({
-      to: "/modes/code/commit",
+      to: "/modes/code/review",
       search: { file: "packages/spa/src/lib/queries.ts" },
     });
   });
@@ -252,13 +252,13 @@ describe("SearchHost", () => {
     await user.click(screen.getByRole("button", { name: /server\.ts/ }));
 
     expect(navigate).toHaveBeenCalledWith({
-      to: "/modes/code/commit",
+      to: "/modes/code/review",
       search: { file: "backend/src/server.ts" },
     });
   });
 
   it("opens a file in place when the page already shows files", async () => {
-    pathname = "/modes/code/review/12";
+    pathname = "/modes/code/review/pull/12";
     const user = setup();
 
     await user.keyboard("{Shift>}{/Shift}");

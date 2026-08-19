@@ -52,6 +52,12 @@ interface CommitPanelProps {
   draft?: CommitDraft;
   /** Told once the panel has taken a finished draft, so it can be dropped. */
   onDraftSettled?: (draft: CommitDraft) => void;
+  /**
+   * Off where there is nowhere to push to. A worktree's branch is local until
+   * somebody opens it for review, and an button that cannot work is worse than
+   * one that is not there.
+   */
+  allowPush?: boolean;
 }
 
 const STATUS_LETTER: Record<GitFileStatus, string> = {
@@ -71,6 +77,7 @@ export function CommitPanel({
   onGenerate,
   draft,
   onDraftSettled,
+  allowPush = true,
 }: CommitPanelProps) {
   const { commitFilesHeight, commitMessageHeight, commitAgent } = useUiPrefs();
   // Live heights for smooth dragging; committed back to prefs on release.
@@ -343,17 +350,19 @@ export function CommitPanel({
             )}
             Commit
           </Button>
-          <Button
-            size="sm"
-            variant="ghost-muted"
-            disabled={!canCommit}
-            onClick={() => void commit(true)}
-          >
-            {pending === "push" && (
-              <LoadingCursor label="Committing and pushing…" />
-            )}
-            Commit & push
-          </Button>
+          {allowPush && (
+            <Button
+              size="sm"
+              variant="ghost-muted"
+              disabled={!canCommit}
+              onClick={() => void commit(true)}
+            >
+              {pending === "push" && (
+                <LoadingCursor label="Committing and pushing…" />
+              )}
+              Commit & push
+            </Button>
+          )}
         </div>
       </div>
     </div>

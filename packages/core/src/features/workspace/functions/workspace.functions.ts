@@ -46,11 +46,21 @@ export const chooseRepo = (
   return kept?.path ?? repos[0]?.path ?? null;
 };
 
-/** The entry `info.current` points at, or null when the project holds none. */
+/**
+ * The root the app is working in, or null when the project holds none.
+ *
+ * Resolved through `currentRoot` rather than `current`, because working in a
+ * worktree means `current` is a path no root will ever equal. Falls back to
+ * `current` for a caller that has not been given the resolution — a project
+ * with no worktrees answers the same either way.
+ */
 export const activeRepo = (
-  info: Pick<WorkspaceInfo, "repos" | "current">
-): RepoEntry | null =>
-  info.repos.find((repo) => repo.path === info.current) ?? null;
+  info: Pick<WorkspaceInfo, "repos" | "current"> &
+    Partial<Pick<WorkspaceInfo, "currentRoot">>
+): RepoEntry | null => {
+  const root = info.currentRoot ?? info.current;
+  return info.repos.find((repo) => repo.path === root) ?? null;
+};
 
 /** Whether the project holds more than one root — the multi-root case. */
 export const isMultiRepo = (info: Pick<WorkspaceInfo, "repos">): boolean =>
@@ -135,4 +145,21 @@ export const parseGitDir = (contents: string): string | null => {
   if (!line.startsWith("gitdir:")) return null;
   const dir = line.slice("gitdir:".length).trim();
   return dir.length === 0 ? null : dir;
+};
+
+/**
+ * The original checkout a linked worktree belongs to, read out of the git
+ * directory it points at: git keeps a worktree's data under
+ * `<main>/.git/worktrees/<name>`, so the main checkout is whatever comes before
+ * it. Null when the path is not a worktree's — a submodule, or the main
+ * checkout itself.
+ *
+ * Worth doing by string rather than by asking git: every store that has to
+ * agree across a repository's checkouts needs this answer, and none of them
+ * should have to spawn a process to get it.
+ */
+export const mainRepoFromGitDir = (gitDir: string): string | null => {
+  const marker = "/.git/worktrees/";
+  const at = gitDir.indexOf(marker);
+  return at === -1 ? null : gitDir.slice(0, at);
 };

@@ -57,6 +57,23 @@ export const useRemoteBranches = () =>
   api.useQuery("get", "/api/remote-branches", {}, GIT_DATA);
 export const useWorktrees = () =>
   api.useQuery("get", "/api/worktrees", {}, GIT_DATA);
+/** Where each branch's work is aimed — byconvo's own record, not git's. */
+export const useBranchTargets = () =>
+  api.useQuery("get", "/api/branch-targets", {}, OWN_DATA);
+/** This repository's worktrees, read as the pull requests they are. */
+export const useLocalTasks = () =>
+  api.useQuery("get", "/api/local-tasks", {}, GIT_DATA);
+/**
+ * What one worktree has written and not committed — the same list the commit
+ * panel reads here, asked of the directory the work is actually in.
+ */
+export const useWorktreeChanges = (branch: string | null) =>
+  api.useQuery(
+    "get",
+    "/api/local-tasks/changes",
+    { params: { query: { branch: branch ?? "" } } },
+    { ...GIT_DATA, enabled: branch !== null }
+  );
 export const useComments = () =>
   api.useQuery("get", "/api/comments", {}, OWN_DATA);
 
@@ -138,11 +155,11 @@ export const useMergeState = () =>
  * because the run it reports may have been started by a page that is gone —
  * and is watched while it runs, which is the only stretch it changes over.
  */
-export const useCommitDraft = () =>
+export const useCommitDraft = (worktree?: string | null) =>
   api.useQuery(
     "get",
     "/api/git-message/draft",
-    {},
+    { params: { query: { worktree: worktree ?? undefined } } },
     {
       staleTime: 0,
       refetchInterval: (query) =>
@@ -444,6 +461,19 @@ export const useDiffText = (target: DiffTarget | null) => {
     },
     { ...CATALOG, enabled: target?.kind === "commit" }
   );
+  // The whole branch, against what it is aimed at. Git data rather than a
+  // catalog: the merge base is fixed, but the working tree on the other side
+  // of it changes under the app the way the plain worktree diff does.
+  const branch = api.useQuery(
+    "get",
+    "/api/diff",
+    {
+      params: {
+        query: { target: target?.kind === "branch" ? target.target : "" },
+      },
+    },
+    { ...GIT_DATA, enabled: target?.kind === "branch" }
+  );
   const range = api.useQuery(
     "get",
     "/api/diff",
@@ -456,6 +486,22 @@ export const useDiffText = (target: DiffTarget | null) => {
       },
     },
     { ...GIT_DATA, enabled: target?.kind === "range" }
+  );
+  // A task, read in its own worktree: everything since the merge base, work
+  // that has not been committed included. The server resolves the branch to the
+  // directory, so nothing here has to know where that is.
+  const task = api.useQuery(
+    "get",
+    "/api/diff",
+    {
+      params: {
+        query:
+          target?.kind === "task"
+            ? { task: target.branch, target: target.base }
+            : { task: "" },
+      },
+    },
+    { ...GIT_DATA, enabled: target?.kind === "task" }
   );
   const pull = api.useQuery(
     "get",
@@ -473,10 +519,14 @@ export const useDiffText = (target: DiffTarget | null) => {
   switch (target?.kind) {
     case "worktree":
       return worktree;
+    case "branch":
+      return branch;
     case "commit":
       return commit;
     case "range":
       return range;
+    case "task":
+      return task;
     case "pull":
       return pull;
     default:

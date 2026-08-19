@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { usePrefersDark } from "#/hooks/use-prefers-dark";
 import type { SpaSnapshotFile, SpaSnapshotVariant } from "#/lib/spa-snapshot";
+import { cn } from "#/lib/utils";
 
 const adoptedSheets = new Map<string, CSSStyleSheet>();
 
@@ -207,7 +208,7 @@ export function SpaSnapshot({
   return (
     <div
       aria-label={label}
-      className={`relative overflow-hidden ${className}`}
+      className={cn("relative overflow-hidden", className)}
       ref={containerRef}
       role="img"
       style={{ aspectRatio: `${frame.width} / ${frame.height}` }}

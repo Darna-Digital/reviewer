@@ -12,13 +12,17 @@
  * anything on its behalf, which is what lets it sit in the layout and stay
  * mounted while the page beneath it changes.
  */
-import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import {
+  useNavigate,
+  useParams,
+  useRouterState,
+  useSearch,
+} from "@tanstack/react-router";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { DockRestore } from "@/components/layout/dock-restore";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
-import { SearchMenu } from "@/interactions/search/components/search-menu";
 import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
@@ -31,13 +35,20 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
+import { setHeaderTrailSlot } from "@/components/layout/header-trail";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
-import type { ShellRoute } from "@/lib/shell-route";
+import {
+  REVIEW_HREF,
+  reviewSourceOf,
+  type ShellRoute,
+} from "@/lib/shell-route";
+import { cn } from "@/lib/utils";
 
 export function AppHeader({ route }: { route: ShellRoute }) {
   const navigate = useNavigate();
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const prefs = useUiPrefs();
 
   const repo = useRepo();
@@ -77,6 +88,8 @@ export function AppHeader({ route }: { route: ShellRoute }) {
     );
   }
 
+  const readingOwnChanges = reviewSourceOf(pathname)?.kind === "local";
+
   /**
    * The diff-style toggle belongs to a diff, so it shows when one is on screen:
    * a code page, with no file open over it, pointed at something to diff.
@@ -84,52 +97,82 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   const showDiffStyleToggle =
     route.kind === "code" &&
     search.file === undefined &&
-    (route.mode === "commit" ||
-      (route.mode === "review" && params.pull !== undefined) ||
+    (route.mode === "review" ||
       (route.mode === "browse" &&
         (params.sha !== undefined ||
           (search.base !== undefined && search.head !== undefined))));
 
   return (
-    <header className="flex h-9 shrink-0 items-center gap-2 px-2">
+    <header className="group/header flex h-9 shrink-0 items-center gap-2 px-2">
+      {/*
+       * Hidden by the trail's own presence, in CSS, rather than by asking the
+       * route the same question the page just answered.
+       *
+       * Both are branch pickers with the branch they picked written on them, so
+       * a third in front of them naming a branch that may be neither is the
+       * reading nobody wants — but the page portals its trail in from a
+       * different component, and when the two decided this separately they
+       * decided it a frame and a half apart. You saw both, briefly, on every
+       * navigation. `:has` cannot be late: the picker is gone in the same paint
+       * the trail arrives in, and back in the paint it leaves.
+       *
+       * Reading your own changes is the exception the rule was never about: the
+       * trail there opens with "Review", which names no branch, so the picker is
+       * the only thing on the row saying whose changes these are — and the only
+       * way to go and read another branch's.
+       */}
       {repo.data != null && (
-        <BranchSwitcher
-          current={repo.data.currentBranch}
-          branches={branches.data ?? []}
-          remoteBranches={remoteBranches.data ?? []}
-          busy={false}
-          onCheckout={(b) => {
-            void git.checkout(b);
-            void navigate({ to: "/modes/code/commit" });
-          }}
-          onCheckoutAndUpdate={(b) => {
-            void git.checkoutAndUpdate(b);
-            void navigate({ to: "/modes/code/commit" });
-          }}
-          onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
-          onCompare={(base, head) =>
-            void navigate({
-              to: "/modes/code/browse/range",
-              search: { base, head },
-            })
-          }
-          onMerge={(b) => void git.merge(b)}
-          onRebase={(o) => void git.rebase(o)}
-          onRenameBranch={(from, to) => void git.renameBranch(from, to)}
-          onDeleteBranch={(name) => void git.deleteBranch(name)}
-          onFetch={() => void git.fetch()}
-          onPush={() => void git.push()}
-          repos={projectBranchList.data?.repos}
-          currentRepo={activeRepo(
-            workspace.data ?? { repos: [], current: null }
+        <div
+          className={cn(
+            "contents",
+            !readingOwnChanges &&
+              "group-has-[[data-trail]:not(:empty)]/header:hidden"
           )}
-          onFollowRepo={followRepo}
-        />
+        >
+          <BranchSwitcher
+            current={repo.data.currentBranch}
+            branches={branches.data ?? []}
+            remoteBranches={remoteBranches.data ?? []}
+            busy={false}
+            onCheckout={(b) => {
+              void git.checkout(b);
+              void navigate({ to: REVIEW_HREF });
+            }}
+            onCheckoutAndUpdate={(b) => {
+              void git.checkoutAndUpdate(b);
+              void navigate({ to: REVIEW_HREF });
+            }}
+            onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
+            onCompare={(base, head) =>
+              void navigate({
+                to: "/modes/code/browse/range",
+                search: { base, head },
+              })
+            }
+            onMerge={(b) => void git.merge(b)}
+            onRebase={(o) => void git.rebase(o)}
+            onRenameBranch={(from, to) => void git.renameBranch(from, to)}
+            onDeleteBranch={(name) => void git.deleteBranch(name)}
+            onFetch={() => void git.fetch()}
+            onPush={() => void git.push()}
+            repos={projectBranchList.data?.repos}
+            currentRepo={activeRepo(
+              workspace.data ?? { repos: [], current: null }
+            )}
+            onFollowRepo={followRepo}
+          />
+        </div>
       )}
 
-      <SearchMenu />
+      {/* Lent to the page beneath, which hangs its trail here when the trail is
+          what steers the page rather than what reports on it. */}
+      <div
+        data-trail
+        ref={setHeaderTrailSlot}
+        className="flex min-w-0 flex-1 items-center gap-2 empty:hidden"
+      />
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         {route.kind === "dock" && <DockRestore tab={route.tab} />}
         {showDiffStyleToggle && (
           <DiffStyleToggle

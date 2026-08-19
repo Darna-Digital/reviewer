@@ -1,5 +1,6 @@
 import { Message } from "#/components/icons";
 import { Avatar } from "#/components/showcase/avatar";
+import { cn } from "#/lib/utils";
 
 interface Card {
   readonly key: string;
@@ -106,7 +107,12 @@ export function CollaborationShowcase() {
                     )}
                   </div>
                   <p
-                    className={`mt-1.5 text-xs leading-snug ${card.done ? "text-neutral-400 line-through dark:text-neutral-500" : "text-neutral-800 dark:text-neutral-200"}`}
+                    className={cn(
+                      "mt-1.5 text-xs leading-snug",
+                      card.done
+                        ? "text-neutral-400 line-through dark:text-neutral-500"
+                        : "text-neutral-800 dark:text-neutral-200"
+                    )}
                   >
                     {card.title}
                   </p>

@@ -14,7 +14,7 @@ import {
   IconSearch,
   IconX,
 } from "@tabler/icons-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AgentGlyph } from "@/interactions/threads/components/agent-mark";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,12 +75,19 @@ export type AssignTarget =
 export function ReviewAssignBar({
   comments,
   chats,
+  branch,
   onAssign,
   onOpenComment,
   className,
 }: {
   comments: ReadonlyArray<AssignBarComment>;
   chats: ReadonlyArray<ChatSummary>;
+  /**
+   * The branch the comments are about — the worktree being read, or the
+   * checkout you are standing in. Sessions already working there lead the
+   * picker, and the newest of them is what the bar opens on.
+   */
+  branch?: string;
   onAssign: (target: AssignTarget) => Promise<void> | void;
   /**
    * Jump to where a comment was left. Omitted by callers whose comments have
@@ -94,10 +101,8 @@ export function ReviewAssignBar({
   className?: string;
 }) {
   const count = comments.length;
-  const [target, setTarget] = useState<AssignTarget>({
-    kind: "new",
-    agent: "claude",
-  });
+  /** Null until the reader picks: before that the diff answers for them. */
+  const [picked, setPicked] = useState<AssignTarget | null>(null);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [listOpen, setListOpen] = useState(false);
@@ -112,6 +117,30 @@ export function ReviewAssignBar({
     ELEVATION.menu,
     POPUP_SHADOW
   );
+
+  /** Sessions working where the comments are, newest first. */
+  const onBranch = useMemo(
+    () =>
+      branch === undefined || branch.length === 0
+        ? []
+        : [...chats.filter((chat) => chat.branch === branch)].sort((a, b) =>
+            b.updatedAt.localeCompare(a.updatedAt)
+          ),
+    [chats, branch]
+  );
+  /**
+   * What the bar is aimed at.
+   *
+   * A note left on a worktree's diff is nearly always for whoever is working in
+   * it, so that session is the answer until somebody says otherwise — which
+   * makes the common case no clicks at all. A pick, once made, is held: the
+   * list reloads as sessions come and go, and it must not quietly undo one.
+   */
+  const target: AssignTarget = picked ?? {
+    ...(onBranch[0] === undefined
+      ? { kind: "new" as const, agent: "claude" as const }
+      : { kind: "existing" as const, chatId: onBranch[0].id }),
+  };
 
   const q = query.trim().toLowerCase();
   const agents = useMemo(
@@ -130,16 +159,21 @@ export function ReviewAssignBar({
     }
     return [...grouped];
   }, [comments]);
-  const sessions = useMemo(
-    () =>
-      chats.filter(
-        (chat) =>
-          q === "" ||
-          chat.title.toLowerCase().includes(q) ||
-          chat.branch.toLowerCase().includes(q)
-      ),
-    [chats, q]
-  );
+  const sessions = useMemo(() => {
+    const matches = (chat: ChatSummary) =>
+      q === "" ||
+      chat.title.toLowerCase().includes(q) ||
+      chat.branch.toLowerCase().includes(q);
+    const ids = new Set(onBranch.map((chat) => chat.id));
+    const here = onBranch.filter(matches);
+    return {
+      here,
+      elsewhere: chats.filter((chat) => !ids.has(chat.id) && matches(chat)),
+      get all() {
+        return [...here, ...this.elsewhere];
+      },
+    };
+  }, [chats, onBranch, q]);
 
   const selectedChat =
     target.kind === "existing"
@@ -153,7 +187,7 @@ export function ReviewAssignBar({
       : (selectedChat?.title ?? "Session");
 
   const pick = (next: AssignTarget) => {
-    setTarget(next);
+    setPicked(next);
     setQuery("");
     setOpen(false);
   };
@@ -253,7 +287,7 @@ export function ReviewAssignBar({
               <span className="truncate">{targetLabel}</span>
               <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-64 gap-0 p-1">
+            <PopoverContent align="end" className="w-80 gap-0 p-1">
               <div className="-mx-1 mb-1 flex items-center gap-2 border-b px-2.5 py-2">
                 <IconSearch className="size-4 shrink-0 text-muted-foreground" />
                 <Input
@@ -291,22 +325,46 @@ export function ReviewAssignBar({
                     </button>
                   );
                 })}
-                {sessions.length > 0 && (
-                  <div className="px-2 pt-2 pb-1 text-xs text-muted-foreground">
-                    Sessions
-                  </div>
-                )}
-                {sessions.map((chat) => (
-                  <SessionRow
-                    key={chat.id}
-                    chat={chat}
-                    active={
-                      target.kind === "existing" && target.chatId === chat.id
-                    }
-                    onSelect={() => pick({ kind: "existing", chatId: chat.id })}
-                  />
-                ))}
-                {agents.length === 0 && sessions.length === 0 && (
+                {/* Two headings rather than one, so the rows that lead the
+                    list say why they lead it instead of looking like an
+                    arbitrary order. */}
+                {[
+                  {
+                    heading: `On ‘${branch}’`,
+                    items: sessions.here,
+                  },
+                  {
+                    // Where the work happens when it is not cut into a worktree
+                    // of its own — named, not merely "not here", because that
+                    // is the place you would be sending the comments to.
+                    heading:
+                      sessions.here.length > 0 ? "Main worktree" : "Sessions",
+                    items: sessions.elsewhere,
+                  },
+                ]
+                  .filter((group) => group.items.length > 0)
+                  .map((group) => (
+                    <Fragment key={group.heading}>
+                      <div className="px-2 pt-2 pb-1 text-xs text-muted-foreground">
+                        {group.heading}
+                      </div>
+                      {group.items.map((chat) => (
+                        <SessionRow
+                          key={chat.id}
+                          chat={chat}
+                          showBranch={group.items !== sessions.here}
+                          active={
+                            target.kind === "existing" &&
+                            target.chatId === chat.id
+                          }
+                          onSelect={() =>
+                            pick({ kind: "existing", chatId: chat.id })
+                          }
+                        />
+                      ))}
+                    </Fragment>
+                  ))}
+                {agents.length === 0 && sessions.all.length === 0 && (
                   <div className="px-2 py-6 text-center text-sm text-muted-foreground">
                     No matches
                   </div>
@@ -385,17 +443,24 @@ function CommentRow({
 }
 
 /**
- * A session row in the picker. Hovering opens a side preview card with the full
- * title and session metadata — same elevated panel language as the Cursor-style
- * hover previews, rather than a tiny tooltip bubble.
+ * A session row in the picker. Hovering opens a side preview card.
+ *
+ * Wider than the picker it hangs off, and showing what the row cannot: the last
+ * thing said in the session. Which session to hand a review to is a question
+ * about what is going on in it, and a title alone rarely answers that — the
+ * card has to be big enough to hold a few lines of the conversation, or hovering
+ * only repeats the row.
  */
 function SessionRow({
   chat,
   active,
+  showBranch,
   onSelect,
 }: {
   chat: ChatSummary;
   active: boolean;
+  /** Off under a heading that already named the branch — it would say it twice. */
+  showBranch: boolean;
   onSelect: () => void;
 }) {
   return (
@@ -416,11 +481,13 @@ function SessionRow({
       >
         <AgentGlyph kind={chat.provider} className="size-4 shrink-0" />
         <span className="min-w-0 flex-1 truncate">{chat.title}</span>
-        <span className="shrink-0 text-xs text-muted-foreground">
-          {chat.branch}
-        </span>
+        {showBranch && (
+          <span className="max-w-36 shrink-0 truncate text-xs text-muted-foreground">
+            {chat.branch}
+          </span>
+        )}
       </PreviewCardTrigger>
-      <PreviewCardContent side="right" align="start" className="p-2.5">
+      <PreviewCardContent side="right" align="start" className="w-96 gap-2 p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 leading-snug font-medium">
             {chat.title}
@@ -429,17 +496,24 @@ function SessionRow({
             {timeAgo(chat.updatedAt)}
           </span>
         </div>
-        <div className="flex flex-col gap-1 text-muted-foreground">
-          <div className="flex min-w-0 items-center gap-1.5">
+        {chat.lastMessage !== null && chat.lastMessage.trim().length > 0 && (
+          <p className="line-clamp-5 text-xs/5 whitespace-pre-line text-muted-foreground">
+            {chat.lastMessage.trim()}
+          </p>
+        )}
+        <div className="flex min-w-0 items-center gap-3 border-t pt-2 text-xs text-muted-foreground">
+          <span className="flex min-w-0 items-center gap-1.5">
             <IconGitBranch className="size-3.5 shrink-0" />
             <span className="min-w-0 truncate">{chat.branch}</span>
-          </div>
-          <div className="flex min-w-0 items-center gap-1.5">
+          </span>
+          <span className="flex shrink-0 items-center gap-1.5">
             <AgentGlyph kind={chat.provider} className="size-3.5 shrink-0" />
-            <span className="min-w-0 truncate">
-              {agentLabel(chat.provider)}
-            </span>
-          </div>
+            {agentLabel(chat.provider)}
+          </span>
+          <span className="ml-auto shrink-0 tabular-nums">
+            {chat.messageCount}{" "}
+            {chat.messageCount === 1 ? "message" : "messages"}
+          </span>
         </div>
       </PreviewCardContent>
     </PreviewCard>

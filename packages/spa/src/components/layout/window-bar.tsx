@@ -11,7 +11,7 @@
 // import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
 import {
   IconCommand,
-  IconDots,
+  IconDotsVertical,
   IconLayoutGrid,
   IconPlus,
   IconSitemap,
@@ -316,6 +316,8 @@ export function WindowBar() {
   // and its chord does nothing.
   const paneAvailable = (pane: BarPane): boolean =>
     pane === "browser" ? isDesktop : isDesktop || inCodeMode;
+  const windowMenu =
+    inCodeMode || paneAvailable("analysis") || paneAvailable("browser");
   const togglePane = (pane: BarPane) => {
     if (!paneAvailable(pane)) return;
     setUiPrefs(
@@ -637,65 +639,71 @@ export function WindowBar() {
           the strip that gives way first. Its inset is a gutter like the lead
           one rather than padding, so both ends of the bar read the same. */}
       <div className="flex shrink-0 items-center justify-end gap-1">
-        {/* Everything the window can put over or beside the page, under one
-            handle: each row names itself, and hovering it says which chord
-            does the same. */}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Window menu"
-                className={cn("text-muted-foreground", NO_DRAG)}
-              />
-            }
-          >
-            <IconDots className="size-4" />
-          </DropdownMenuTrigger>
-
-          {/* Narrower than a menu's default: these rows are four short names,
-              and the chords that would have set the width are in the tooltips
-              rather than along them. */}
-          <DropdownMenuContent align="end" className="min-w-48">
-            <MenuRow
-              label="Launchpad"
-              keys={LAUNCHPAD_KEYS}
-              onClick={toggleTabOverview}
+        {/* The launchpad is where the window keeps its tabs, and it is reached
+            often enough to be worth a press rather than two — the menu beside
+            it holds the surfaces that are opened once and left. */}
+        <BarButton
+          label="Launchpad"
+          keys={LAUNCHPAD_KEYS}
+          pressed={overviewOpen}
+          onClick={toggleTabOverview}
+        >
+          <IconLayoutGrid className="size-4" />
+        </BarButton>
+        {/* Everything the window can put beside the page, under one handle:
+            each row names itself, and hovering it says which chord does the
+            same. Off the modes that have any, the handle itself goes. */}
+        {windowMenu && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Window menu"
+                  className={cn("text-muted-foreground", NO_DRAG)}
+                />
+              }
             >
-              <IconLayoutGrid className="size-4 shrink-0" />
-            </MenuRow>
-            {/* The palette is code mode's, and so is the host that answers ⌘K:
-                off it there is nothing behind the row to open. */}
-            {inCodeMode && (
-              <MenuRow
-                label="Command menu"
-                keys={COMMANDS_KEYS}
-                onClick={() => openSearch("commands")}
-              >
-                <IconCommand className="size-4 shrink-0" />
-              </MenuRow>
-            )}
-            {paneAvailable("analysis") && (
-              <MenuRow
-                label="Analysis"
-                keys={ANALYSIS_KEYS}
-                onClick={() => togglePane("analysis")}
-              >
-                <IconSitemap className="size-4 shrink-0" />
-              </MenuRow>
-            )}
-            {paneAvailable("browser") && (
-              <MenuRow
-                label="Browser"
-                keys={BROWSER_KEYS}
-                onClick={() => togglePane("browser")}
-              >
-                <IconWorld className="size-4 shrink-0" />
-              </MenuRow>
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              <IconDotsVertical className="size-4" />
+            </DropdownMenuTrigger>
+
+            {/* Narrower than a menu's default: these rows are short names,
+                and the chords that would have set the width are in the
+                tooltips rather than along them. */}
+            <DropdownMenuContent align="end" className="min-w-48">
+              {/* The palette is code mode's, and so is the host that answers
+                  ⌘K: off it there is nothing behind the row to open. */}
+              {inCodeMode && (
+                <MenuRow
+                  label="Command menu"
+                  keys={COMMANDS_KEYS}
+                  onClick={() => openSearch("commands")}
+                >
+                  <IconCommand className="size-4 shrink-0" />
+                </MenuRow>
+              )}
+              {paneAvailable("analysis") && (
+                <MenuRow
+                  label="Analysis"
+                  keys={ANALYSIS_KEYS}
+                  onClick={() => togglePane("analysis")}
+                >
+                  <IconSitemap className="size-4 shrink-0" />
+                </MenuRow>
+              )}
+              {paneAvailable("browser") && (
+                <MenuRow
+                  label="Browser"
+                  keys={BROWSER_KEYS}
+                  onClick={() => togglePane("browser")}
+                >
+                  <IconWorld className="size-4 shrink-0" />
+                </MenuRow>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         <UserMenu className={NO_DRAG} />
         <div aria-hidden className="w-2 shrink-0" />
       </div>

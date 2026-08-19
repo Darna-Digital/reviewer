@@ -55,6 +55,112 @@ export const Worktree = Schema.Struct({
   isCurrent: Schema.Boolean,
 });
 export type Worktree = typeof Worktree.Type;
+
+/**
+ * Open a branch in a worktree of its own. No path is given: a worktree is not
+ * something anyone asks for by name, it is where a branch had to go, so the
+ * directory is derived from the branch and the caller never sees it.
+ */
+export const NewWorktree = Schema.Struct({
+  branch: Schema.String,
+  /** The branch the work is aimed at — and cut from, when it is a new branch. */
+  target: Schema.optionalKey(Schema.String),
+});
+export type NewWorktree = typeof NewWorktree.Type;
+export const RemoveWorktree = Schema.Struct({
+  path: Schema.String,
+  /** Retire it even though the worktree still holds uncommitted work. */
+  force: Schema.optionalKey(Schema.Boolean),
+});
+export type RemoveWorktree = typeof RemoveWorktree.Type;
+
+/**
+ * Where a branch's work is aimed. Git has no such notion — a branch knows its
+ * tip and its upstream, never what it is meant to land on — so the answer is
+ * recorded once, when the branch is made, and every diff of that branch is read
+ * against it.
+ *
+ * Kept per branch rather than per worktree: a branch aimed at `development` is
+ * aimed there whether it is read from its own worktree or from the main one.
+ */
+export const BranchTarget = Schema.Struct({
+  branch: Schema.String,
+  target: Schema.String,
+});
+export type BranchTarget = typeof BranchTarget.Type;
+export const SetBranchTarget = Schema.Struct({
+  branch: Schema.String,
+  target: Schema.String,
+});
+export type SetBranchTarget = typeof SetBranchTarget.Type;
+
+/**
+ * A piece of work running in a worktree of its own, read the way a pull request
+ * is read: a branch, the branch it lands on, and what stands between them.
+ *
+ * The point of the shape is that you never have to go to it. Everything here is
+ * answerable from any checkout of the repository — refs are shared — so a task
+ * can be listed, reviewed and merged while the app stays where it is. That is
+ * the whole difference between this and a worktree switcher.
+ */
+export const LocalTask = Schema.Struct({
+  branch: Schema.String,
+  /** The branch this lands on. Falls back to the main worktree's own branch. */
+  base: Schema.String,
+  /** Where the work is happening — needed to update it, and to retire it. */
+  path: Schema.String,
+  name: Schema.String,
+  /** Commits the branch has that the base does not. */
+  ahead: Schema.Number,
+  /**
+   * Whether the base is already an ancestor, which is exactly the question of
+   * whether merging is a fast-forward — and so whether it can happen without
+   * checking anything out.
+   */
+  upToDate: Schema.Boolean,
+  /** Uncommitted work in the worktree, which no merge would carry across. */
+  dirty: Schema.Boolean,
+  /** The last commit's subject — a task's title, the way a PR has one. */
+  subject: Schema.String,
+  author: Schema.String,
+  updatedAt: Schema.String,
+});
+export type LocalTask = typeof LocalTask.Type;
+
+export const TaskRef = Schema.Struct({ branch: Schema.String });
+export type TaskRef = typeof TaskRef.Type;
+
+/**
+ * A merge, and where to land it. `base` absent means what the branch is already
+ * aimed at; naming one re-aims it, so what it is ahead by is judged against the
+ * branch it is actually going to.
+ */
+export const MergeTaskRef = Schema.Struct({
+  branch: Schema.String,
+  base: Schema.optional(Schema.String),
+});
+export type MergeTaskRef = typeof MergeTaskRef.Type;
+
+/** A commit made in a worktree rather than in the checkout you are standing in. */
+export const TaskCommit = Schema.Struct({
+  branch: Schema.String,
+  message: Schema.String,
+  /** Empty commits everything, as the commit panel here does. */
+  paths: Schema.optional(Schema.Array(Schema.String)),
+});
+export type TaskCommit = typeof TaskCommit.Type;
+
+/**
+ * A merge that declined to happen is an answer, not a failure — a task behind
+ * its base needs updating, which is something to be told, not an error to be
+ * decoded out of git's stderr.
+ */
+export const MergeOutcome = Schema.Struct({
+  merged: Schema.Boolean,
+  reason: Schema.NullOr(Schema.String),
+});
+export type MergeOutcome = typeof MergeOutcome.Type;
+
 export const RemoteBranchInfo = Schema.Struct({
   name: Schema.String,
   remote: Schema.String,
@@ -191,6 +297,14 @@ export const DiffQuery = Schema.Struct({
   commit: Schema.optionalKey(Schema.String),
   base: Schema.optionalKey(Schema.String),
   head: Schema.optionalKey(Schema.String),
+  /** The branch the working tree is read against, uncommitted work included. */
+  target: Schema.optionalKey(Schema.String),
+  /**
+   * A task's branch — read the diff in that task's own worktree instead of
+   * here. Paired with `target`, which names the branch it is read against;
+   * without one the task's own base answers.
+   */
+  task: Schema.optionalKey(Schema.String),
 });
 export type DiffQuery = typeof DiffQuery.Type;
 export const DiffFileQuery = Schema.Struct({
@@ -199,6 +313,8 @@ export const DiffFileQuery = Schema.Struct({
   commit: Schema.optionalKey(Schema.String),
   base: Schema.optionalKey(Schema.String),
   head: Schema.optionalKey(Schema.String),
+  target: Schema.optionalKey(Schema.String),
+  task: Schema.optionalKey(Schema.String),
 });
 export type DiffFileQuery = typeof DiffFileQuery.Type;
 export const DiffFileContents = Schema.Struct({
@@ -257,7 +373,22 @@ export type DeleteBranch = typeof DeleteBranch.Type;
 export type DiffFileTarget =
   | { readonly kind: "worktree" }
   | { readonly kind: "commit"; readonly sha: string }
-  | { readonly kind: "range"; readonly base: string; readonly head: string };
+  | { readonly kind: "range"; readonly base: string; readonly head: string }
+  /**
+   * The branch as a whole, against what it is aimed at: the merge base on the
+   * old side and the working tree on the new one, so work that is written but
+   * not yet committed still reads as part of the branch.
+   */
+  | { readonly kind: "branch"; readonly target: string }
+  /**
+   * The same two sides, read in a task's own worktree rather than this one —
+   * which is the only way to see work an agent has written but not committed.
+   */
+  | {
+      readonly kind: "task";
+      readonly branch: string;
+      readonly base: string | null;
+    };
 
 /**
  * Sentinel `LogQuery.ref` asking for every ref (local, remote and tags) instead

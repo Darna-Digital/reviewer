@@ -1,6 +1,7 @@
 import { PaneHeader } from "#/components/app-window";
 import { GitBranch, GitPullRequest, History } from "#/components/icons";
 import { Avatar } from "#/components/showcase/avatar";
+import { cn } from "#/lib/utils";
 
 const ROW_HEIGHT = 26;
 
@@ -110,7 +111,12 @@ export function GitShowcase() {
           <span className="flex gap-1">
             {ROOTS.map((root, index) => (
               <span
-                className={`rounded-full px-1.5 py-0.5 text-[10px] ${index === 0 ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-950" : "text-neutral-500 ring-1 ring-black/8 ring-inset dark:text-neutral-400 dark:ring-white/10"}`}
+                className={cn(
+                  "rounded-full px-1.5 py-0.5 text-[10px]",
+                  index === 0
+                    ? "bg-neutral-900 text-white dark:bg-white dark:text-neutral-950"
+                    : "text-neutral-500 ring-1 ring-black/8 ring-inset dark:text-neutral-400 dark:ring-white/10"
+                )}
                 key={root}
               >
                 {root}
@@ -140,7 +146,10 @@ export function GitShowcase() {
             />
             {COMMITS.map((commit, row) => (
               <circle
-                className={`fill-white dark:fill-neutral-900 ${LANE_STROKE[commit.lane]}`}
+                className={cn(
+                  "fill-white dark:fill-neutral-900",
+                  LANE_STROKE[commit.lane]
+                )}
                 cx={LANE_X[commit.lane]}
                 cy={centre(row)}
                 key={commit.subject}
@@ -204,7 +213,10 @@ export function GitShowcase() {
                     #{pull.number}
                   </span>
                   <span
-                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${STATE_TONE[pull.state]}`}
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                      STATE_TONE[pull.state]
+                    )}
                   >
                     {pull.state}
                   </span>
