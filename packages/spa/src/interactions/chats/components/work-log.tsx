@@ -19,7 +19,7 @@ import {
 } from "@tabler/icons-react";
 import { useState } from "react";
 import { Disclosure } from "@/components/ui/disclosure";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { cn } from "@/lib/utils";
 import { elapsedMs, type WorkStep } from "../functions/work-log.functions";
 
@@ -56,7 +56,7 @@ function StatusIcon({ status }: { status: WorkStep["status"] }) {
   return (
     // Boxed to the width of the done/failed icons so the rows stay aligned.
     <span className="flex size-3.5 shrink-0 items-center justify-center">
-      <LoadingCursor label="Running" />
+      <Orb size={14} label="Running" />
     </span>
   );
 }

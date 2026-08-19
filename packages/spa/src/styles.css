@@ -800,7 +800,7 @@
   background-size: 300% 100%;
   background-clip: text;
   -webkit-background-clip: text;
-  animation: shimmer 1.5s ease-in-out infinite;
+  animation: shimmer 1.5s linear infinite;
 }
 /* Left at background-position 0%, the visible slice is flat muted-foreground —
    the label stays legible, it just stops moving. */
@@ -829,6 +829,81 @@
   .loading-cursor {
     animation: none;
     opacity: 1;
+  }
+}
+
+/* --- byconvo: agent orb --------------------------------------------------- */
+/* The "S2" lattice from aicss.dev/components/orbs — see components/ui/orb.tsx
+   for the geometry. The dots take `currentColor`, so the orb is the colour of
+   whatever it stands in. The swell is a raised cosine sampled every eighth of
+   its crest and played linear: an eased three-stop wave snaps through its peak,
+   and a cell held at rest for the back half of the cycle reads as a step rather
+   than a sweep, so the crest is wide enough that three diagonals are always in
+   motion at once. */
+@keyframes orb-wave {
+  0%,
+  72%,
+  100% {
+    opacity: var(--orb-rest);
+    transform: scale(1);
+  }
+  9%,
+  63% {
+    opacity: calc(var(--orb-rest) + (1 - var(--orb-rest)) * 0.146);
+    transform: scale(1.026);
+  }
+  18%,
+  54% {
+    opacity: calc(var(--orb-rest) + (1 - var(--orb-rest)) * 0.5);
+    transform: scale(1.09);
+  }
+  27%,
+  45% {
+    opacity: calc(var(--orb-rest) + (1 - var(--orb-rest)) * 0.854);
+    transform: scale(1.154);
+  }
+  36% {
+    opacity: 1;
+    transform: scale(1.18);
+  }
+}
+.orb {
+  contain: strict;
+  position: relative;
+  display: block;
+  flex: none;
+  overflow: hidden;
+}
+.orb-lattice {
+  --orb-rest: 0.14;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  transform-origin: 0 0;
+  /* Scaled first, then nudged in the stage's own units to centre the 15px the
+     lattice actually occupies inside the 28px it is tuned on. */
+  transform: scale(var(--orb-k)) translate(6.5px, 6.5px);
+}
+.dark .orb-lattice {
+  --orb-rest: 0.2;
+}
+.orb-cell {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: var(--orb-rest);
+  animation: orb-wave var(--orb-period, 1700ms) linear infinite both;
+}
+/* Held still, the resting opacity is too faint to read as anything at all, so
+   the frozen frame is a legible lattice rather than the trough of the wave. */
+@media (prefers-reduced-motion: reduce) {
+  .orb-cell {
+    animation: none;
+    opacity: 0.5;
   }
 }
 

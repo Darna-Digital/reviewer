@@ -28,6 +28,7 @@ import {
 } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { Orb } from "@/components/ui/orb";
 import {
   Tooltip,
   TooltipContent,
@@ -35,7 +36,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useEntered, usePresence, useSettled } from "@/hooks/use-presence";
+import { useThinkingChatIds } from "@/interactions/chats/adapters/thinking-chats.hook.adapter";
 import { useWindowTabActions } from "@/interactions/window-tabs/adapters/window-tab-actions";
+import { chatIdOf } from "@/interactions/window-tabs/functions/window-tabs.functions";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import {
@@ -144,6 +147,12 @@ export function TabOverview() {
   const resizing = useOverviewResizing();
   const groups = useLaunchpadGroups();
   const { visit, prime, openSession, close } = useWindowTabActions();
+  // A card stands for a tab, so it says what the strip says about it.
+  const thinking = useThinkingChatIds();
+  const working = (section: LaunchpadSection): boolean => {
+    const chatId = chatIdOf(section.href);
+    return chatId !== null && thinking.has(chatId);
+  };
   const height = useUiPrefs().launchpadHeight;
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
@@ -343,6 +352,7 @@ export function TabOverview() {
                     key={section.id}
                     section={section}
                     active={section.id === here}
+                    working={working(section)}
                     previewed={sections.indexOf(section) < LIVE_PREVIEW_LIMIT}
                     onPrime={() => prime(section.href)}
                     onSelect={() => pick(section)}
@@ -641,6 +651,7 @@ export function TabOverviewScrim() {
 function SectionCard({
   section,
   active,
+  working,
   previewed,
   onPrime,
   onSelect,
@@ -648,6 +659,8 @@ function SectionCard({
 }: {
   readonly section: LaunchpadSection;
   readonly active: boolean;
+  /** Whether an agent is mid-turn in the conversation this card stands for. */
+  readonly working: boolean;
   /** Whether this card shows a picture, or stays a title in a plain box. */
   readonly previewed: boolean;
   readonly onPrime: () => void;
@@ -686,16 +699,29 @@ function SectionCard({
         {/* Above the sheet that picks the section, which covers the whole card
             — so the ✕ is the one part of it that answers for itself. It is the
             strip's ✕ and behaves like it: held back until the card is reached
-            for, and there for the keyboard whenever it is on it. */}
-        {onClose !== undefined && (
-          <button
-            type="button"
-            aria-label={`Close ${section.title}`}
-            onClick={onClose}
-            className="relative z-10 flex size-[1.125rem] shrink-0 items-center justify-center rounded opacity-0 group-hover/card:opacity-70 hover:bg-elevate-strong focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            <IconX className="size-3.5" />
-          </button>
+            for, and there for the keyboard whenever it is on it. The orb shares
+            that slot the same way the strip's does, so reaching for the ✕
+            trades one for the other rather than moving the title. */}
+        {(onClose !== undefined || working) && (
+          <span className="relative z-10 flex size-[1.125rem] shrink-0 items-center justify-center">
+            {working && (
+              <Orb
+                size={18}
+                label="Working"
+                className="group-hover/card:opacity-0"
+              />
+            )}
+            {onClose !== undefined && (
+              <button
+                type="button"
+                aria-label={`Close ${section.title}`}
+                onClick={onClose}
+                className="absolute inset-0 flex items-center justify-center rounded opacity-0 group-hover/card:opacity-70 hover:bg-elevate-strong focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              >
+                <IconX className="size-3.5" />
+              </button>
+            )}
+          </span>
         )}
       </div>
       {previewed ? (

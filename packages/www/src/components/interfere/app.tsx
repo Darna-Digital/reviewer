@@ -11,6 +11,7 @@ import {
   UserGlyph,
   WarningGlyph,
 } from "#/components/interfere/ui";
+import { cn } from "#/lib/utils";
 
 const PROPERTIES: ReadonlyArray<{ label: string; value: ReactNode }> = [
   { label: "Title", value: "Broken password reset link" },
@@ -390,7 +391,10 @@ export function InboxApp() {
                       </p>
                       <div className="mt-2 flex items-center gap-2 text-[10px]">
                         <span
-                          className={`flex items-center gap-1 ${PRIORITY_TONE[card.priority]}`}
+                          className={cn(
+                            "flex items-center gap-1",
+                            PRIORITY_TONE[card.priority]
+                          )}
                         >
                           <span className="size-1 rounded-full bg-current" />
                           {card.priority}
@@ -471,7 +475,10 @@ export function AppShell({
 }) {
   return (
     <div
-      className={`pointer-events-none relative flex overflow-hidden rounded-2xl bg-[#ebebeb]/70 ring-1 ring-black/8 backdrop-blur-[20px] select-none ${className}`}
+      className={cn(
+        "pointer-events-none relative flex overflow-hidden rounded-2xl bg-[#ebebeb]/70 ring-1 ring-black/8 backdrop-blur-[20px] select-none",
+        className
+      )}
       style={{
         boxShadow:
           "0 149px 199px 0 rgba(0,0,0,0.07), 0 62px 83px 0 rgba(0,0,0,0.05), 0 33px 44px 0 rgba(0,0,0,0.04), 0 19px 25px 0 rgba(0,0,0,0.04), 0 10px 13px 0 rgba(0,0,0,0.03), 0 4px 6px 0 rgba(0,0,0,0.02)",

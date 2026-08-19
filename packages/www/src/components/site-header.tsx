@@ -1,5 +1,6 @@
 import { Logo } from "#/components/logo";
 import { useScrolled } from "#/hooks/use-scrolled";
+import { cn } from "#/lib/utils";
 
 const NAV_LINKS = [
   { label: "Changelog", href: "/changelog" },
@@ -19,7 +20,10 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 -mb-header">
       <div
-        className={`h-header border-b transition-colors duration-200 ${backdrop}`}
+        className={cn(
+          "h-header border-b transition-colors duration-200",
+          backdrop
+        )}
       >
         <div className="mx-auto flex h-full max-w-[1248px] items-center gap-6 px-6">
           <a aria-label="byconvo home" className="flex shrink-0" href="/">
@@ -32,7 +36,10 @@ export function SiteHeader() {
             {NAV_LINKS.map((link) => (
               <a
                 key={link.href}
-                className={`flex h-7 items-center rounded-md px-2 text-sm whitespace-nowrap transition-colors hover:bg-black/5 hover:text-neutral-900 dark:hover:bg-white/8 dark:hover:text-white ${navTone}`}
+                className={cn(
+                  "flex h-7 items-center rounded-md px-2 text-sm whitespace-nowrap transition-colors hover:bg-black/5 hover:text-neutral-900 dark:hover:bg-white/8 dark:hover:text-white",
+                  navTone
+                )}
                 href={link.href}
               >
                 {link.label}

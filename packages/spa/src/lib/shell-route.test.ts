@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { dockPage, dockPages, shellRoute, showsGitChrome } from "./shell-route";
+import {
+  dockPage,
+  dockPages,
+  reviewHref,
+  reviewSourceOf,
+  shellRoute,
+  showsGitChrome,
+} from "./shell-route";
 
 describe("shellRoute", () => {
-  it("reads the three code modes off the path", () => {
-    expect(shellRoute("/modes/code/commit", "code")).toEqual({
+  it("reads the two code modes off the path", () => {
+    expect(shellRoute("/modes/code/review", "code")).toEqual({
       kind: "code",
-      mode: "commit",
+      mode: "review",
     });
     expect(shellRoute("/modes/code/browse", "code")).toEqual({
       kind: "code",
@@ -15,14 +22,14 @@ describe("shellRoute", () => {
       kind: "code",
       mode: "browse",
     });
-    expect(shellRoute("/modes/code/review/7", "code")).toEqual({
+    expect(shellRoute("/modes/code/review/worktree/task/x", "code")).toEqual({
       kind: "code",
       mode: "review",
     });
   });
 
   it("treats the workspace pages under /modes/code as workspace, not diff", () => {
-    for (const page of ["docs", "tasks"]) {
+    for (const page of ["docs", "tasks", "reviews"]) {
       expect(shellRoute(`/modes/code/${page}`, "code")).toEqual({
         kind: "workspace",
       });
@@ -30,6 +37,10 @@ describe("shellRoute", () => {
   });
 
   it("names the dock surface a dock page stands for", () => {
+    expect(shellRoute("/modes/code/branches", "code")).toEqual({
+      kind: "dock",
+      tab: "branches",
+    });
     expect(shellRoute("/modes/code/history", "code")).toEqual({
       kind: "dock",
       tab: "history",
@@ -78,25 +89,64 @@ describe("shellRoute", () => {
 
   it("falls back to the remembered mode when the path does not say", () => {
     expect(shellRoute("/", "collaboration")).toEqual({ kind: "collaboration" });
-    expect(shellRoute("/", "code")).toEqual({ kind: "code", mode: "commit" });
+    expect(shellRoute("/", "code")).toEqual({ kind: "code", mode: "review" });
   });
 
   it("does not mistake a path that merely starts with a page name", () => {
     // `/modes/code/browse` is the diff; nothing else should be read as a page.
     expect(shellRoute("/modes/code/tasksomething", "code")).toEqual({
       kind: "code",
-      mode: "commit",
+      mode: "review",
     });
   });
 });
 
 describe("showsGitChrome", () => {
   it("is on for the code and workspace surfaces, off for the rest", () => {
-    expect(showsGitChrome({ kind: "code", mode: "commit" })).toBe(true);
+    expect(showsGitChrome({ kind: "code", mode: "review" })).toBe(true);
     expect(showsGitChrome({ kind: "workspace" })).toBe(true);
     expect(showsGitChrome({ kind: "dock", tab: "history" })).toBe(true);
     expect(showsGitChrome({ kind: "session", composing: false })).toBe(false);
     expect(showsGitChrome({ kind: "collaboration" })).toBe(false);
     expect(showsGitChrome({ kind: "settings" })).toBe(false);
+  });
+});
+
+describe("reviewSourceOf", () => {
+  it("reads the bare path as the changes in this checkout", () => {
+    expect(reviewSourceOf("/modes/code/review")).toEqual({ kind: "local" });
+  });
+
+  it("keeps the slashes in a worktree's branch", () => {
+    expect(
+      reviewSourceOf("/modes/code/review/worktree/task/adjust-the-readme")
+    ).toEqual({ kind: "worktree", branch: "task/adjust-the-readme" });
+  });
+
+  it("reads a pull request's number", () => {
+    expect(reviewSourceOf("/modes/code/review/pull/12")).toEqual({
+      kind: "pull",
+      number: 12,
+    });
+  });
+
+  it("is nothing for the list beside it, which only shares a prefix", () => {
+    expect(reviewSourceOf("/modes/code/reviews")).toBeNull();
+    expect(reviewSourceOf("/modes/code/browse")).toBeNull();
+  });
+
+  it("is nothing for a shape it does not recognise", () => {
+    expect(reviewSourceOf("/modes/code/review/worktree")).toBeNull();
+    expect(reviewSourceOf("/modes/code/review/pull/not-a-number")).toBeNull();
+  });
+
+  it("round-trips every source through its href", () => {
+    for (const source of [
+      { kind: "local" },
+      { kind: "worktree", branch: "task/a/b" },
+      { kind: "pull", number: 4 },
+    ] as const) {
+      expect(reviewSourceOf(reviewHref(source))).toEqual(source);
+    }
   });
 });

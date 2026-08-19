@@ -16,6 +16,7 @@ import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functio
 import { useRecentChats } from "@/lib/queries";
 import { timeAgo } from "@/lib/relative-time";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 
 export function ChatsInboxPopover({ active }: { active: boolean }) {
   const seenAt = useUiPrefs().inboxSeenAt;
@@ -42,7 +43,10 @@ export function ChatsInboxPopover({ active }: { active: boolean }) {
               to="/modes/agent-session"
               search={{ new: true }}
               onClick={close}
-              className={`ml-auto flex items-center gap-1.5 ${inboxPopoverLink}`}
+              className={cn(
+                "ml-auto flex items-center gap-1.5",
+                inboxPopoverLink
+              )}
             >
               <IconPlus className="size-3.5" />
               New thread

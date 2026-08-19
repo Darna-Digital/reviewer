@@ -44,17 +44,30 @@ export function SearchMenu() {
       </Tooltip>
 
       <DropdownMenuContent align="start" className="min-w-56">
-        <DropdownMenuItem onClick={() => openSearch("files")}>
-          <IconFile className="size-4 shrink-0" />
-          Find a file
-          <DropdownMenuShortcut>⇧⇧</DropdownMenuShortcut>
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => openSearch("text")}>
-          <IconTextSize className="size-4 shrink-0" />
-          Search file contents
-          <DropdownMenuShortcut>⌘⇧F</DropdownMenuShortcut>
-        </DropdownMenuItem>
+        <SearchMenuItems />
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/**
+ * The two lists worth opening straight into, wherever the trigger lives. The
+ * rail carries its own trigger — a rail button is a shape of its own — but the
+ * offer must not drift between the two.
+ */
+export function SearchMenuItems() {
+  return (
+    <>
+      <DropdownMenuItem onClick={() => openSearch("files")}>
+        <IconFile className="size-4 shrink-0" />
+        Find a file
+        <DropdownMenuShortcut>⇧⇧</DropdownMenuShortcut>
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => openSearch("text")}>
+        <IconTextSize className="size-4 shrink-0" />
+        Search file contents
+        <DropdownMenuShortcut>⌘⇧F</DropdownMenuShortcut>
+      </DropdownMenuItem>
+    </>
   );
 }

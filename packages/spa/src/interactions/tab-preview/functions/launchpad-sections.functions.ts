@@ -7,7 +7,7 @@
  * — the surfaces reached from a rail, a dock or nowhere at all — so each of
  * those gets a card, showing that place as it looks right now.
  *
- * A place is a location and nothing else, which is why the dock's three surfaces
+ * A place is a location and nothing else, which is why the dock's four surfaces
  * are pages of their own: `/modes/code/history` is the branch history with the
  * window to itself, and the card shows that page rather than the page the drawer
  * happened to be lying over. Picking it leaves the window exactly where the
@@ -19,7 +19,8 @@
  * the go, and the launchpad is where you see them all at once.
  */
 import {
-  IconFolders,
+  IconFolder,
+  IconGitBranch,
   IconGitCommit,
   IconGitPullRequest,
   IconHistory,
@@ -61,7 +62,7 @@ export interface LaunchpadGroup {
 }
 
 /** Sections the project has to be on GitHub to have anything to show. */
-const GITHUB_SECTIONS = new Set(["/modes/code/review"]);
+const GITHUB_SECTIONS = new Set<string>();
 
 /** A card for one of the dock's surfaces, named and located where it is named
  * and located everywhere else. */
@@ -81,24 +82,25 @@ const dockSection = (
 
 const CODE_SECTIONS: ReadonlyArray<LaunchpadSection> = [
   {
-    id: "/modes/code/commit",
-    href: "/modes/code/commit",
-    title: "Local changes",
-    icon: IconGitCommit,
-    mode: "code",
-  },
-  dockSection("history", IconHistory),
-  {
     id: "/modes/code/browse",
     href: "/modes/code/browse",
     title: "Browse",
-    icon: IconFolders,
+    icon: IconFolder,
     mode: "code",
   },
   {
     id: "/modes/code/review",
     href: "/modes/code/review",
-    title: "Pull requests",
+    title: "Review",
+    icon: IconGitCommit,
+    mode: "code",
+  },
+  dockSection("branches", IconGitBranch),
+  dockSection("history", IconHistory),
+  {
+    id: "/modes/code/reviews",
+    href: "/modes/code/reviews",
+    title: "Reviews",
     icon: IconGitPullRequest,
     mode: "code",
   },

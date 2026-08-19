@@ -54,6 +54,26 @@ export type AppMode =
 
 export type DiffTarget =
   | { readonly kind: "worktree" }
+  /**
+   * The branch as a whole, against what it is aimed at — everything since the
+   * merge base, including work that is written but not yet committed. What a
+   * task is reviewed as, in place of whatever happens to be uncommitted now.
+   */
+  | { readonly kind: "branch"; readonly target: string }
+  /**
+   * A task running in a worktree of its own, read the way this window's own
+   * changes are: everything since the merge base with the branch it lands on,
+   * work that has not been committed included.
+   *
+   * Uncommitted work is the point. An agent writes long before it commits, and
+   * a review that stays empty until it does is empty for most of the time you
+   * want to look — so what is on disk over there is shown, and the merge is
+   * where the difference between written and committed is enforced.
+   *
+   * Keyed by the branch alone. The base can be changed to read the same work
+   * against something else, and comments must not scatter when it is.
+   */
+  | { readonly kind: "task"; readonly branch: string; readonly base: string }
   | { readonly kind: "range"; readonly base: string; readonly head: string }
   | { readonly kind: "commit"; readonly sha: string; readonly shortSha: string }
   | { readonly kind: "pull"; readonly pull: PullRequestInfo };
@@ -62,6 +82,10 @@ export const diffTargetKey = (target: DiffTarget): string => {
   switch (target.kind) {
     case "worktree":
       return "worktree";
+    case "branch":
+      return `branch-${target.target}`;
+    case "task":
+      return `task-${target.branch}`;
     case "range":
       return `${target.base}...${target.head}`;
     case "commit":

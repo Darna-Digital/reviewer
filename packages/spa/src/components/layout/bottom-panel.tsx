@@ -1,6 +1,7 @@
 import {
   IconArrowsDiagonal,
   IconChevronDown,
+  IconGitBranch,
   IconHistory,
   IconPlayerPlay,
   IconTerminal2,
@@ -25,6 +26,7 @@ import { useState, type ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 const ICONS: Record<BottomTab, typeof IconHistory> = {
+  branches: IconGitBranch,
   history: IconHistory,
   services: IconPlayerPlay,
   threads: IconTerminal2,
@@ -40,6 +42,7 @@ const TABS: ReadonlyArray<{
   label: string;
   icon: typeof IconHistory;
 }> = [
+  { id: "branches", label: "Branches", icon: ICONS.branches },
   { id: "history", label: "History", icon: ICONS.history },
   { id: "services", label: "Services", icon: ICONS.services },
   { id: "threads", label: "Terminal sessions", icon: ICONS.threads },
@@ -51,7 +54,7 @@ interface BottomPanelProps {
   active: boolean;
   /**
    * Whether the surface has the window to itself. A page is not a taller
-   * drawer: the strip of tabs is the drawer's own way of holding three surfaces
+   * drawer: the strip of tabs is the drawer's own way of holding four surfaces
    * in one seam, and on a page there is one surface and nowhere for it to be —
    * so the page wears the trail every other page in code mode wears instead.
    */
@@ -60,6 +63,8 @@ interface BottomPanelProps {
   onCollapse: () => void;
   /** Give this surface the window. */
   onExpand: () => void;
+  /** The branch manager, wired to the dock's repository actions. */
+  branchPanel: React.ReactNode;
   branches: ReadonlyArray<BranchInfo>;
   currentBranch: string | null;
   commits: ReadonlyArray<CommitInfo>;
@@ -154,6 +159,17 @@ export function BottomPanel(props: BottomPanelProps) {
 
       <div
         {...paneProps(0, props.expanded)}
+        hidden={props.tab !== "branches"}
+        className={cn(
+          "min-h-0 flex-1 overflow-hidden outline-none",
+          props.tab !== "branches" && "hidden"
+        )}
+      >
+        {props.active && props.tab === "branches" && props.branchPanel}
+      </div>
+
+      <div
+        {...paneProps(1, props.expanded)}
         hidden={props.tab !== "history"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
@@ -185,7 +201,7 @@ export function BottomPanel(props: BottomPanelProps) {
       </div>
 
       <div
-        {...paneProps(1, props.expanded)}
+        {...paneProps(2, props.expanded)}
         hidden={props.tab !== "services"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
@@ -196,7 +212,7 @@ export function BottomPanel(props: BottomPanelProps) {
       </div>
 
       <div
-        {...paneProps(2, props.expanded)}
+        {...paneProps(3, props.expanded)}
         hidden={props.tab !== "threads"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
@@ -211,7 +227,7 @@ export function BottomPanel(props: BottomPanelProps) {
 
 /**
  * The page's own trail, along its foot, where code mode keeps every other one:
- * which of the three surfaces this is, and nothing else. The way back into the
+ * which of the four surfaces this is, and nothing else. The way back into the
  * drawer is in the header — see `DockRestore`.
  */
 function PageTrail({ tab }: { readonly tab: BottomTab }) {

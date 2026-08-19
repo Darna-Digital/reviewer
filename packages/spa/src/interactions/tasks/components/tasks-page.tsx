@@ -207,7 +207,7 @@ export function TasksPage() {
       if (agent === null) return;
       const started = await chatActions.startWithTitle(
         buildChatAssignmentSettings(agent, chatModels.data),
-        currentBranch,
+        { branch: currentBranch },
         buildTaskAssignmentTitle(card, body, agent),
         buildTaskAssignmentPrompt(card, body, agent)
       );

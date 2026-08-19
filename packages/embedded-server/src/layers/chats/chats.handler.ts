@@ -26,6 +26,9 @@ export const ChatsHandler = HttpApiBuilder.group(Api, "chats", (handlers) =>
           effort: payload.effort ?? defaults.effort,
           access: payload.access ?? defaults.access,
           branch: payload.branch ?? "",
+          ...(payload.repoPath === undefined
+            ? {}
+            : { repoPath: payload.repoPath }),
         })
       )
     )

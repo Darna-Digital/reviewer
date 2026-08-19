@@ -29,7 +29,15 @@ const unwrap = async <T>(
   return data as T;
 };
 
-const draftKey = api.queryOptions("get", "/api/git-message/draft", {}).queryKey;
+/**
+ * A draft's cache slot. Keyed by the worktree it is for, so a message being
+ * written for somebody's worktree never lands in the composer for your own
+ * changes — two of them can be drafting at once.
+ */
+const draftKey = (worktree: string | null) =>
+  api.queryOptions("get", "/api/git-message/draft", {
+    params: { query: { worktree: worktree ?? undefined } },
+  }).queryKey;
 
 /**
  * All imperative git actions, wired to the typed API, sonner toasts and
@@ -99,15 +107,20 @@ export function useGitActions() {
      */
     startCommitMessage: async (
       paths: ReadonlyArray<string>,
-      agent: CommitAgent
+      agent: CommitAgent,
+      worktree: string | null = null
     ): Promise<void> => {
       try {
         const draft = await unwrap(
           fetchClient.POST("/api/git-message/generate", {
-            body: { paths: [...paths], agent },
+            body: {
+              paths: [...paths],
+              agent,
+              ...(worktree === null ? {} : { worktree }),
+            },
           })
         );
-        queryClient.setQueryData<CommitDraft>(draftKey, draft);
+        queryClient.setQueryData<CommitDraft>(draftKey(worktree), draft);
       } catch (cause) {
         notify("err", errorText(cause));
       }
@@ -118,13 +131,12 @@ export function useGitActions() {
      * later mount would put the same message back over whatever was typed
      * since. A clear that fails is not worth a toast: the message is in hand.
      */
-    clearCommitDraft: async (): Promise<void> => {
-      const { data } = await fetchClient.POST(
-        "/api/git-message/draft/clear",
-        {}
-      );
+    clearCommitDraft: async (worktree: string | null = null): Promise<void> => {
+      const { data } = await fetchClient.POST("/api/git-message/draft/clear", {
+        body: worktree === null ? {} : { worktree },
+      });
       if (data !== undefined)
-        queryClient.setQueryData<CommitDraft>(draftKey, data);
+        queryClient.setQueryData<CommitDraft>(draftKey(worktree), data);
     },
 
     /**

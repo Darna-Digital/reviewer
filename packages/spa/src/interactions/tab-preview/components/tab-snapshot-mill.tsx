@@ -51,6 +51,10 @@ import {
   previewGoto,
 } from "../functions/preview-channel.functions";
 import {
+  guardKeyboard,
+  type KeyboardGuard,
+} from "../functions/preview-focus.functions";
+import {
   captureOrder,
   isSnapshotDue,
   isSnapshotWorthKeeping,
@@ -174,6 +178,7 @@ export function TabSnapshotMill() {
   const { resolvedTheme } = useUiPrefs();
 
   const frameRef = useRef<HTMLIFrameElement>(null);
+  const keyboard = useRef<KeyboardGuard | null>(null);
   // Read at the top of each capture rather than closed over, so where the
   // window is and how closely it is being watched change what the rest of a
   // pass does instead of restarting it.
@@ -185,6 +190,17 @@ export function TabSnapshotMill() {
   };
 
   useEffect(() => keepSnapshotsFor(hrefs), [hrefs]);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (frame === null) return;
+    const guard = guardKeyboard(frame);
+    keyboard.current = guard;
+    return () => {
+      keyboard.current = null;
+      guard.stop();
+    };
+  }, []);
 
   // Not on every run of the loop below — that also restarts when a section is
   // picked — but only when the pictures themselves have gone stale.
@@ -270,10 +286,9 @@ export function TabSnapshotMill() {
           const view = await show(href);
           // A page coming up in here may focus something on its way — a
           // composer, a search field — and take the keyboard out of the window
-          // with it. The preview refuses focus from the inside; this is the
-          // same refusal from the outside, for whatever asked before its own
-          // scripts were up.
-          frame.blur();
+          // with it. Catches whatever asked before the preview's own refusal
+          // was up, and gives the caret back to whoever was typing.
+          keyboard.current?.restore();
           if (stopped || view === null) continue;
           // The rules are the same page after page, so they are read once a
           // run — off the first page that comes up wearing them.
@@ -318,7 +333,6 @@ export function TabSnapshotMill() {
       aria-hidden
       tabIndex={-1}
       title="Tab preview renderer"
-      onFocus={() => frameRef.current?.blur()}
       // Parked off the side of the window rather than hidden: a frame with no
       // box to lay out into draws nothing, and nothing is what we would then
       // have a picture of.

@@ -8,6 +8,7 @@ import {
   folderName,
   isMultiRepo,
   isOpenable,
+  mainRepoFromGitDir,
   parseGitDir,
   parseHeadRef,
   repoMatches,
@@ -180,5 +181,39 @@ describe("parseGitDir", () => {
   });
   it("is null for anything else", () => {
     expect(parseGitDir("ref: refs/heads/main")).toBeNull();
+  });
+});
+
+describe("mainRepoFromGitDir", () => {
+  it("reads the original checkout out of a linked worktree's git dir", () => {
+    expect(mainRepoFromGitDir("/code/app/.git/worktrees/fix-login")).toBe(
+      "/code/app"
+    );
+  });
+
+  it("is null for a git dir that is not a worktree's", () => {
+    expect(mainRepoFromGitDir("/code/app/.git/modules/vendor")).toBeNull();
+  });
+});
+
+describe("activeRepo in a worktree", () => {
+  const info = {
+    repos: [{ name: "app", path: "/work/app", branch: "master" }],
+    current: "/work/.app-worktrees/fix-login",
+    currentRoot: "/work/app",
+  };
+
+  it("resolves to the root the worktree belongs to", () => {
+    expect(activeRepo(info)?.path).toBe("/work/app");
+  });
+
+  it("is null when the working directory belongs to no listed root", () => {
+    expect(activeRepo({ ...info, currentRoot: "/elsewhere" })).toBeNull();
+  });
+
+  it("still reads `current` for a caller with no resolution to give", () => {
+    expect(activeRepo({ repos: info.repos, current: "/work/app" })?.path).toBe(
+      "/work/app"
+    );
   });
 });

@@ -147,6 +147,21 @@ CREATE TABLE legacy_import (
 );
 `;
 
+/**
+ * Where each branch's work is aimed. Keyed by the repository's *main* worktree
+ * so every linked worktree reads the same row — a branch aimed at `development`
+ * is aimed there wherever it is read from.
+ */
+const branchTargets = `
+CREATE TABLE branch_target (
+  repo_path TEXT NOT NULL,
+  branch    TEXT NOT NULL,
+  target    TEXT NOT NULL,
+  PRIMARY KEY (repo_path, branch)
+);
+`;
+
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { id: "0001_initial", up: (db) => db.exec(initial) },
+  { id: "0002_branch_target", up: (db) => db.exec(branchTargets) },
 ];

@@ -15,7 +15,7 @@ import { NotFound } from "@byconvo/core/shared";
 import { DevCommandDefinition } from "@byconvo/core/local-dev";
 import { attempt } from "../db/db.service.ts";
 import { documentTable } from "../db/documents.ts";
-import { scanRepos } from "../workspace/repo-scan.ts";
+import { scanWorktrees } from "../workspace/repo-scan.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 import type {
   CreateDevCommandInput,
@@ -48,9 +48,10 @@ export const makeSqliteDevCommandsRepository = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const ctx = yield* WorkspaceContext;
 
-  /** The project's roots, freshly scanned so a new clone shows up unprompted. */
+  /** Every worktree the project can be pointed at, freshly scanned so a new
+   * clone — or a task's worktree — shows up unprompted. */
   const roots = Effect.flatMap(ctx.requireProject, (project) =>
-    scanRepos(fs, project)
+    scanWorktrees(fs, project)
   );
 
   const withRoots = <A>(f: (repos: ReadonlyArray<RepoEntry>) => A) =>
