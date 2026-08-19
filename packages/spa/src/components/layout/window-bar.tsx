@@ -11,7 +11,7 @@
 // import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
 import {
   IconCommand,
-  IconDots,
+  IconDotsVertical,
   IconLayoutGrid,
   IconPlus,
   IconSitemap,
@@ -665,7 +665,7 @@ export function WindowBar() {
                 />
               }
             >
-              <IconDots className="size-4" />
+              <IconDotsVertical className="size-4" />
             </DropdownMenuTrigger>
 
             {/* Narrower than a menu's default: these rows are short names,
