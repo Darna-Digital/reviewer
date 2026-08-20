@@ -1056,6 +1056,7 @@ export function CodeWorkspace() {
             pull={selectedPull}
             currentBranch={repo.data?.currentBranch ?? null}
             onCheckout={(p, branch) => git.checkoutPull(p.number, branch)}
+            onMerge={(p, method) => git.mergePull(p.number, method)}
             onBack={() => void navigate({ to: "/modes/code/review" })}
             className="min-h-0 flex-1"
           />

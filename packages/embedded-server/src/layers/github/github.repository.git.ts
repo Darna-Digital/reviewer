@@ -194,8 +194,34 @@ export const makeGitHubProvider = Effect.gen(function* () {
       } satisfies ReviewComment;
     });
 
+  /**
+   * Land the pull request on its base branch.
+   *
+   * GitHub answers a refusal with 405 (not mergeable — conflicts, a draft, a
+   * failing required check, a protection rule) or 409 (the head moved since
+   * the sha the caller was looking at). Both come back through `GitProviderError`
+   * carrying GitHub's own sentence, which says which of those it was far better
+   * than any wording of ours would.
+   */
+  const mergePull: GitProviderShape["mergePull"] = (pullNumber, method) =>
+    Effect.gen(function* () {
+      const { owner, repo } = yield* gh.repo;
+      const merged = (yield* gh.putJson(
+        `/repos/${owner}/${repo}/pulls/${pullNumber}/merge`,
+        { merge_method: method }
+      )) as { sha?: unknown; message?: unknown };
+      return {
+        sha: typeof merged.sha === "string" ? merged.sha : "",
+        message:
+          typeof merged.message === "string" && merged.message.length > 0
+            ? merged.message
+            : `Merged #${pullNumber}`,
+      };
+    });
+
   return {
     pulls,
+    mergePull,
     pullDiff,
     pullComments,
     createPullComment,

@@ -195,6 +195,22 @@ export function useGitActions() {
         )
       ),
 
+    /**
+     * Land a pull request on its base branch. Outward-facing and not ours to
+     * undo, so the caller confirms first — this only carries it out, and
+     * reports GitHub's own sentence about what happened.
+     */
+    mergePull: (pullNumber: number, method: "merge" | "squash" | "rebase") =>
+      fns.runOp(`Merged #${pullNumber}`, async () => {
+        const { message } = await unwrap(
+          fetchClient.POST("/api/github/pulls/{number}/merge", {
+            params: { path: { number: String(pullNumber) } },
+            body: { method },
+          })
+        );
+        return { output: message };
+      }),
+
     checkoutAndUpdate: async (branch: string) => {
       try {
         await unwrap(fetchClient.POST("/api/checkout", { body: { branch } }));

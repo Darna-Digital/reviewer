@@ -119,3 +119,39 @@ export function localBranchForPull(pull: PullRequestInfo): string {
     .replace(/^[./]+|[./]+$/g, "");
   return safe.length > 0 ? `pr-${pull.number}-${safe}` : `pr-${pull.number}`;
 }
+
+/**
+ * Why the merge button cannot be pressed, or null when it can.
+ *
+ * Only the two things GitHub itself would refuse: a draft, and a branch that
+ * conflicts with its base. Failing checks are deliberately not here — whether a
+ * red check should stop a merge is the repository's rule to enforce, not this
+ * window's guess at one, and a button greyed out over a check the repo does not
+ * require is a button that lies.
+ */
+export function mergeBlockedReason(pull: PullRequestInfo): string | null {
+  if (pull.draft) {
+    return `#${pull.number} is a draft. Mark it ready for review on GitHub before merging.`;
+  }
+  return blockedReason(pull);
+}
+
+/**
+ * What the confirmation has to say beyond the branch names — the reasons to
+ * think twice that are not reasons to refuse.
+ */
+export function mergeCaution(pull: PullRequestInfo): string | null {
+  const counts = countChecks(pull);
+  const parts = [
+    counts.failed > 0
+      ? `${counts.failed} check${counts.failed === 1 ? " is" : "s are"} failing`
+      : null,
+    counts.pending > 0
+      ? `${counts.pending} check${counts.pending === 1 ? " is" : "s are"} still running`
+      : null,
+    pull.mergeable === "unknown"
+      ? "GitHub has not worked out whether this merges cleanly"
+      : null,
+  ].filter((part): part is string => part !== null);
+  return parts.length === 0 ? null : `${parts.join(", ")}.`;
+}

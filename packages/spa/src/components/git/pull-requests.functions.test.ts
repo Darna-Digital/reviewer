@@ -9,6 +9,8 @@ import {
   checksSummary,
   groupPullsByBase,
   localBranchForPull,
+  mergeBlockedReason,
+  mergeCaution,
 } from "./pull-requests.functions";
 
 const pull = (number: number, baseRef: string): PullRequestInfo => ({
@@ -130,5 +132,51 @@ describe("localBranchForPull", () => {
   it("still names a branch when a fork's is unusable", () => {
     const fork = { ...pull(12, "main"), headRef: "...", fromFork: true };
     expect(localBranchForPull(fork)).toBe("pr-12");
+  });
+});
+
+describe("mergeBlockedReason", () => {
+  it("refuses a draft, and says which", () => {
+    const draft = { ...pull(8, "main"), draft: true };
+    expect(mergeBlockedReason(draft)).toContain("#8 is a draft");
+  });
+
+  it("refuses a branch that conflicts with its base", () => {
+    const conflicting = {
+      ...pull(8, "main"),
+      mergeable: "conflicting" as const,
+    };
+    expect(mergeBlockedReason(conflicting)).toContain("conflicts with main");
+  });
+
+  it("does not refuse over a failing check — that is the repo's rule, not ours", () => {
+    const failing = {
+      ...withChecks(["failure"]),
+      mergeable: "mergeable" as const,
+    };
+    expect(mergeBlockedReason(failing)).toBeNull();
+  });
+});
+
+describe("mergeCaution", () => {
+  it("is nothing to say when everything is green and mergeable", () => {
+    expect(
+      mergeCaution({ ...withChecks(["success"]), mergeable: "mergeable" })
+    ).toBeNull();
+  });
+
+  it("counts what is failing and what has not finished", () => {
+    expect(
+      mergeCaution({
+        ...withChecks(["failure", "pending", "pending"]),
+        mergeable: "mergeable",
+      })
+    ).toBe("1 check is failing, 2 checks are still running.");
+  });
+
+  it("mentions a mergeability GitHub has not worked out", () => {
+    expect(
+      mergeCaution({ ...withChecks(["success"]), mergeable: "unknown" })
+    ).toBe("GitHub has not worked out whether this merges cleanly.");
   });
 });

@@ -116,6 +116,25 @@ export const unenrichedPull = {
   | "updatedAt"
 >;
 
+/**
+ * How a pull request's commits land on its base branch. GitHub's three, under
+ * its own names — a repository may have any of them turned off, and refuses
+ * the call rather than quietly substituting another.
+ */
+export const MergeMethod = Schema.Literals(["merge", "squash", "rebase"]);
+export type MergeMethod = typeof MergeMethod.Type;
+
+export const MergePullRequest = Schema.Struct({ method: MergeMethod });
+export type MergePullRequest = typeof MergePullRequest.Type;
+
+export const MergeResult = Schema.Struct({
+  /** The commit the merge produced. */
+  sha: Schema.String,
+  /** GitHub's own wording for what happened, shown as the confirmation. */
+  message: Schema.String,
+});
+export type MergeResult = typeof MergeResult.Type;
+
 export const PullNumberParam = Schema.Struct({ number: Schema.String });
 export const PullReplyParams = Schema.Struct({
   number: Schema.String,
@@ -163,6 +182,10 @@ export interface GitProviderShape {
   readonly replyToPullComment: (
     input: PrReplyInput
   ) => Effect.Effect<ReviewComment, GitProviderError>;
+  readonly mergePull: (
+    pullNumber: number,
+    method: MergeMethod
+  ) => Effect.Effect<MergeResult, GitProviderError>;
 }
 
 export class GitProvider extends Context.Service<
@@ -195,6 +218,11 @@ export const GitProviderMemory = (
           createdAt: "2026-01-01T00:00:00.000Z",
           target: `pr-${input.pullNumber}`,
           source: "github",
+        }),
+      mergePull: (pullNumber) =>
+        Effect.succeed({
+          sha: "merged1",
+          message: `Pull Request successfully merged (#${pullNumber})`,
         }),
       replyToPullComment: (input) =>
         Effect.succeed({

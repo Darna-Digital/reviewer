@@ -31,6 +31,10 @@ export interface GitHubClientShape {
     path: string,
     body: unknown
   ) => Effect.Effect<unknown, GitProviderError>;
+  readonly putJson: (
+    path: string,
+    body: unknown
+  ) => Effect.Effect<unknown, GitProviderError>;
   /**
    * One GraphQL query, with its `data` unwrapped.
    *
@@ -190,6 +194,11 @@ export const make = Effect.gen(function* () {
       HttpClientRequest.bodyJsonUnsafe(HttpClientRequest.post(url, init), body)
     ).pipe(Effect.flatMap((text) => parseJson(path, text)));
 
+  const putJson: GitHubClientShape["putJson"] = (path, body) =>
+    requestText(path, "application/vnd.github+json", (url, init) =>
+      HttpClientRequest.bodyJsonUnsafe(HttpClientRequest.put(url, init), body)
+    ).pipe(Effect.flatMap((text) => parseJson(path, text)));
+
   const graphql: GitHubClientShape["graphql"] = (query, variables) =>
     postJson("/graphql", { query, variables }).pipe(
       Effect.flatMap((payload) => {
@@ -218,7 +227,14 @@ export const make = Effect.gen(function* () {
       })
     );
 
-  return GitHubClient.of({ repo, getJson, getText, postJson, graphql });
+  return GitHubClient.of({
+    repo,
+    getJson,
+    getText,
+    postJson,
+    putJson,
+    graphql,
+  });
 });
 
 export const layer: Layer.Layer<
