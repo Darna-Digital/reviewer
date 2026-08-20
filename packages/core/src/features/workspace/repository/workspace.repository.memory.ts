@@ -39,6 +39,19 @@ const toBase64 = (text: string) => {
   return out;
 };
 
+const fromBase64 = (base64: string) => {
+  const bits = [...base64.replace(/=+$/, "")]
+    .map((character) =>
+      BASE64_ALPHABET.indexOf(character).toString(2).padStart(6, "0")
+    )
+    .join("");
+  let out = "";
+  for (let i = 0; i + 8 <= bits.length; i += 8) {
+    out += String.fromCharCode(Number.parseInt(bits.slice(i, i + 8), 2));
+  }
+  return out;
+};
+
 export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
   Effect.gen(function* () {
     const project = seed.project ?? null;
@@ -68,6 +81,7 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
     );
     const filesRef = yield* Ref.make<Record<string, string>>({ ...seed.files });
     const directoriesRef = yield* Ref.make<ReadonlyArray<string>>([]);
+    const trashSlotRef = yield* Ref.make(0);
     const requireCurrent = Ref.get(currentRef).pipe(
       Effect.flatMap((current) =>
         current === null ? Effect.fail(new NoRepoSelected()) : Effect.void
@@ -185,6 +199,58 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
             next[toRel] = value;
           }
           return next;
+        }),
+      copyPath: (fromRel, toRel) =>
+        Effect.gen(function* () {
+          yield* requireCurrent;
+          const files = yield* Ref.get(filesRef);
+          if (files[toRel] !== undefined) {
+            return yield* Effect.fail(new PathExists({ path: toRel }));
+          }
+          const value = files[fromRel];
+          if (value === undefined) {
+            return yield* Effect.fail(
+              new StorageError({ reason: `no such file: ${fromRel}` })
+            );
+          }
+          yield* Ref.set(filesRef, { ...files, [toRel]: value });
+        }),
+      uploadFile: (relPath, base64) =>
+        Effect.gen(function* () {
+          yield* requireCurrent;
+          const files = yield* Ref.get(filesRef);
+          if (files[relPath] !== undefined) {
+            return yield* Effect.fail(new PathExists({ path: relPath }));
+          }
+          yield* Ref.set(filesRef, { ...files, [relPath]: fromBase64(base64) });
+        }),
+      trashPath: (relPath) =>
+        Effect.gen(function* () {
+          yield* requireCurrent;
+          const files = yield* Ref.get(filesRef);
+          const slot = yield* Ref.updateAndGet(
+            trashSlotRef,
+            (last) => last + 1
+          );
+          const path = `.byconvo/trash/${slot}/${relPath.split("/").at(-1) ?? relPath}`;
+          const contents = files[relPath];
+          if (contents !== undefined) {
+            const next = { ...files, [path]: contents };
+            delete next[relPath];
+            yield* Ref.set(filesRef, next);
+          }
+          return { path };
+        }),
+      revealPath: (relPath) =>
+        Effect.gen(function* () {
+          yield* requireCurrent;
+          const files = yield* Ref.get(filesRef);
+          const directories = yield* Ref.get(directoriesRef);
+          if (files[relPath] === undefined && !directories.includes(relPath)) {
+            return yield* Effect.fail(
+              new StorageError({ reason: `no such path: ${relPath}` })
+            );
+          }
         }),
     };
     return repo;
