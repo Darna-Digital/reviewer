@@ -53,10 +53,10 @@ import { ImageView, isImagePath } from "@/components/editor/image-view";
 import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
 import { PullRequestList } from "@/components/git/pull-request-list";
+import { PullRequestOverview } from "@/components/git/pull-request-overview";
 import type { Crumb } from "@/components/layout/breadcrumbs";
 import { EmptyPane } from "@/components/layout/empty-pane";
 import { NoPullRequests, NoReviewRemote } from "@/components/git/review-empty";
-import { firstPullRequest } from "@/components/git/pull-requests.functions";
 import { PathBar } from "@/components/layout/path-bar";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
@@ -111,6 +111,7 @@ import {
   type DiffTarget,
 } from "@/lib/api/types";
 import type { ReviewComment } from "@byconvo/core/comments";
+import { unenrichedPull } from "@byconvo/core/ports/git-provider";
 import { pathName } from "@/lib/display-path";
 import { errorReason } from "@/lib/errors";
 import {
@@ -235,10 +236,18 @@ export function CodeWorkspace() {
   // jankiest thing in the app. The drag now writes a CSS variable and only the
   // final size is committed back to the prefs. See `usePanelSize`.
   const sidebar = usePanelSize("sidebar-w", prefs.sidebarWidth, "width");
-  const reviewPulls = usePanelSize(
-    "review-pulls-h",
-    prefs.reviewPullsHeight,
-    "height"
+  // Review mode's first column is the pull request, not the tree, and it is
+  // sized on its own — see `reviewInfoWidth`.
+  const reviewInfo = usePanelSize(
+    "review-info-w",
+    prefs.reviewInfoWidth,
+    "width"
+  );
+  // Review mode's middle column — the files the pull request touches.
+  const reviewTree = usePanelSize(
+    "review-tree-w",
+    prefs.reviewTreeWidth,
+    "width"
   );
 
   // A project with no git root at all: there is nothing repo-scoped to show,
@@ -252,6 +261,7 @@ export function CodeWorkspace() {
     const n = Number(params.pull);
     return (
       pulls.data?.find((p) => p.number === n) ?? {
+        ...unenrichedPull,
         number: n,
         title: `#${n}`,
         author: "",
@@ -263,33 +273,6 @@ export function CodeWorkspace() {
       }
     );
   }, [params.pull, pulls.data]);
-
-  /**
-   * The pull request review mode opens on: the one at the top of the sidebar.
-   *
-   * A list beside an empty pane is a gate in front of the thing you came for —
-   * the pane cannot show a diff until something is picked, and nine times in ten
-   * the something is the one at the top. So the window goes there itself, and the
-   * list stays what it is: the way between them.
-   *
-   * Replaced rather than pushed. `/modes/code/review` is a place the window
-   * passes through, and left in the history it would be a Back that lands you
-   * where you have just been sent from.
-   */
-  const firstPull = useMemo(
-    () => firstPullRequest(pulls.data ?? []),
-    [pulls.data]
-  );
-  useEffect(() => {
-    if (mode !== "review" || params.pull !== undefined || firstPull === null) {
-      return;
-    }
-    void navigate({
-      to: "/modes/code/review/$pull",
-      params: { pull: String(firstPull.number) },
-      replace: true,
-    });
-  }, [mode, params.pull, firstPull, navigate]);
 
   const browse = useMemo(() => {
     if (params.sha !== undefined) {
@@ -903,24 +886,6 @@ export function CodeWorkspace() {
     await workspaceActions.openRepo(path);
   };
 
-  /**
-   * Review mode with nothing open, which is either a project with no pull
-   * requests or a moment on the way to one.
-   *
-   * Nothing at all while the list is still coming, while it has failed — the
-   * sidebar carries that error, and a second telling of it in the middle of the
-   * window is not a second thing to do about it — and while the window is on its
-   * way to the pull it will open on. An empty state that is about to be replaced
-   * reads worse than the moment of nothing it fills.
-   */
-  const reviewPane = () => {
-    if (!hasGitHub) return <NoReviewRemote />;
-    if (pulls.isPending || pulls.error != null || firstPull !== null) {
-      return null;
-    }
-    return <NoPullRequests />;
-  };
-
   // --- center pane -----------------------------------------------------------
   const renderCenter = () => {
     if (noRepo) {
@@ -974,7 +939,6 @@ export function CodeWorkspace() {
       );
     }
     if (target === null) {
-      if (mode === "review") return reviewPane();
       return (
         <EmptyPane hint="Pick a file from the tree, or a commit from the log" />
       );
@@ -1014,99 +978,169 @@ export function CodeWorkspace() {
     );
   };
 
+  /**
+   * The tree of changed files. Review mode puts it in the middle column, under
+   * the pull request's metadata; the other modes have it as the whole sidebar.
+   */
+  const fileTree = (
+    <FileSidebar
+      key={mode}
+      mode={mode}
+      paths={sidebarPaths}
+      gitStatus={treeGitStatus}
+      loading={mode === "review" ? diff.isPending : files.isPending}
+      selectedFile={mode === "browse" ? viewing : (search.path ?? null)}
+      onFileSelect={onFileSelect}
+      onDeletePaths={mode === "review" ? undefined : deletePaths}
+      onRenamePath={mode === "review" ? undefined : renamePath}
+      actions={mode === "review" ? undefined : fileActions}
+      onShowHistory={showFileHistory}
+      projectPath={workspace.data?.project ?? null}
+      footer={
+        mode === "commit" && changedFiles.length > 0 ? (
+          <CommitPanel
+            changes={changedFiles}
+            busy={false}
+            project={workspace.data?.project ?? ""}
+            onCommit={(m, p, push) => git.commitChanges(m, p, push)}
+            onGenerate={(p, agent) => git.startCommitMessage(p, agent)}
+            draft={commitDraft.data}
+            onDraftSettled={(settled) => {
+              if (settled.status === "error" && settled.error !== null)
+                toast.error(settled.error);
+              void git.clearCommitDraft();
+            }}
+          />
+        ) : undefined
+      }
+    />
+  );
+
+  /**
+   * The first column's size. Review mode puts the pull request there and the
+   * other modes put the file tree, and the two are remembered apart: they hold
+   * different things and want different room.
+   */
+  const reviewing = mode === "review" && selectedPull !== null;
+  const firstColumn = reviewing ? reviewInfo : sidebar;
+
   const crumbs = buildCrumbs();
+
+  /**
+   * Review mode before a pull request is picked: the list, and nothing else.
+   *
+   * It used to be a column beside a diff, and the window opened itself on the
+   * first row so that diff had something in it. Which meant the list was never
+   * actually read — it was a narrow strip of titles you passed on your way to
+   * whatever the window had already decided for you.
+   *
+   * Choosing is its own step now, and it gets the whole window: the rows have
+   * room for what the choice is made on, and nothing else is on screen
+   * competing for the room, because until a pull request is picked there is
+   * nothing else to show.
+   */
+  if (mode === "review" && selectedPull === null) {
+    return !hasGitHub ? (
+      <NoReviewRemote />
+    ) : (
+      <PullRequestList
+        pulls={pulls.data ?? []}
+        error={
+          pulls.error
+            ? errorReason(pulls.error, "Could not load pull requests")
+            : null
+        }
+        // A query that was never enabled is pending for as long as the window
+        // is open, and a list that says it is loading forever is worse than one
+        // that says it is empty.
+        loading={hasGitHub && pulls.isPending}
+        empty={<NoPullRequests />}
+        onSelect={(p) =>
+          void navigate({
+            to: "/modes/code/review/$pull",
+            params: { pull: String(p.number) },
+          })
+        }
+        className="min-h-0 flex-1"
+      />
+    );
+  }
 
   return (
     <div className="flex min-h-0 flex-1">
-      {/* Review mode stacks the pull request picker above the selected
-                  PR's file tree; the other modes are just the tree. */}
+      {/* A pull request under review is three columns: what it is, what files
+          it touches, and the diff. The other modes are the tree beside the
+          diff, as they were.
+
+          Both auxiliary columns answer to the same "hide sidebar" toggle. Two
+          of the three going away is what makes it a way to look at the code
+          alone; hiding one of them and leaving the other is neither thing. */}
       <div
         className={cn(
           "flex shrink-0 flex-col overflow-hidden border-r",
           !prefs.sidebarVisible && "hidden"
         )}
-        style={sidebar.style}
+        style={firstColumn.style}
       >
-        {mode === "review" && (
-          <>
-            <PullRequestList
-              pulls={pulls.data ?? []}
-              error={
-                pulls.error
-                  ? errorReason(pulls.error, "Could not load pull requests")
-                  : null
-              }
-              // A query that was never enabled is pending for as long as the
-              // window is open, and a list that says it is loading forever is
-              // worse than one that says it is empty.
-              loading={hasGitHub && pulls.isPending}
-              selectedNumber={selectedPull?.number ?? null}
-              onSelect={(p) =>
-                void navigate({
-                  to: "/modes/code/review/$pull",
-                  params: { pull: String(p.number) },
-                })
-              }
-              className={selectedPull === null ? "flex-1" : "shrink-0 border-b"}
-              style={selectedPull === null ? undefined : reviewPulls.style}
-            />
-            {selectedPull !== null && (
-              <ResizeHandle
-                orientation="row"
-                value={reviewPulls.current}
-                min={80}
-                max={() => Math.max(120, window.innerHeight - 320)}
-                onResize={reviewPulls.onResize}
-                onResizeEnd={(h) => setUiPrefs({ reviewPullsHeight: h })}
-                label="Resize pull request list"
-              />
-            )}
-          </>
-        )}
-        {(mode !== "review" || selectedPull !== null) && (
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <FileSidebar
-              key={mode}
-              mode={mode}
-              paths={sidebarPaths}
-              gitStatus={treeGitStatus}
-              loading={mode === "review" ? diff.isPending : files.isPending}
-              selectedFile={mode === "browse" ? viewing : (search.path ?? null)}
-              onFileSelect={onFileSelect}
-              onDeletePaths={mode === "review" ? undefined : deletePaths}
-              onRenamePath={mode === "review" ? undefined : renamePath}
-              actions={mode === "review" ? undefined : fileActions}
-              onShowHistory={showFileHistory}
-              projectPath={workspace.data?.project ?? null}
-              footer={
-                mode === "commit" && changedFiles.length > 0 ? (
-                  <CommitPanel
-                    changes={changedFiles}
-                    busy={false}
-                    project={workspace.data?.project ?? ""}
-                    onCommit={(m, p, push) => git.commitChanges(m, p, push)}
-                    onGenerate={(p, agent) => git.startCommitMessage(p, agent)}
-                    draft={commitDraft.data}
-                    onDraftSettled={(settled) => {
-                      if (settled.status === "error" && settled.error !== null)
-                        toast.error(settled.error);
-                      void git.clearCommitDraft();
-                    }}
-                  />
-                ) : undefined
-              }
-            />
-          </div>
+        {reviewing ? (
+          <PullRequestOverview
+            pull={selectedPull}
+            currentBranch={repo.data?.currentBranch ?? null}
+            onCheckout={async (p, branch) => {
+              await git.checkoutPull(p.number, branch);
+            }}
+            onMerge={(p, method) => git.mergePull(p.number, method)}
+            onBack={() => void navigate({ to: "/modes/code/review" })}
+            treeVisible={prefs.reviewTreeVisible}
+            onToggleTree={() =>
+              setUiPrefs({ reviewTreeVisible: !prefs.reviewTreeVisible })
+            }
+            className="min-h-0 flex-1"
+          />
+        ) : (
+          <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
         )}
       </div>
       {prefs.sidebarVisible && (
         <SidebarResizeHandle
-          width={sidebar.current}
-          stored={prefs.sidebarWidth}
-          max={() => Math.max(240, window.innerWidth - 400)}
-          onResize={sidebar.onResize}
-          onResizeEnd={(w) => setUiPrefs({ sidebarWidth: w })}
+          width={firstColumn.current}
+          stored={reviewing ? prefs.reviewInfoWidth : prefs.sidebarWidth}
+          // Review mode has a third column between this one and the diff, so
+          // the room this may take is what is left after that one has had its.
+          max={() =>
+            Math.max(
+              240,
+              window.innerWidth -
+                400 -
+                (reviewing && prefs.reviewTreeVisible
+                  ? reviewTree.current()
+                  : 0)
+            )
+          }
+          onResize={firstColumn.onResize}
+          onResizeEnd={(w) =>
+            setUiPrefs(reviewing ? { reviewInfoWidth: w } : { sidebarWidth: w })
+          }
         />
+      )}
+      {reviewing && prefs.sidebarVisible && prefs.reviewTreeVisible && (
+        <>
+          <div
+            className="flex shrink-0 flex-col overflow-hidden border-r"
+            style={reviewTree.style}
+          >
+            <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
+          </div>
+          <ResizeHandle
+            orientation="col"
+            value={reviewTree.current}
+            min={180}
+            max={() => Math.max(240, window.innerWidth - 520)}
+            onResize={reviewTree.onResize}
+            onResizeEnd={(w) => setUiPrefs({ reviewTreeWidth: w })}
+            label="Resize file tree"
+          />
+        </>
       )}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {mode === "commit" &&

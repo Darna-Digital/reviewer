@@ -67,8 +67,10 @@ export function createGitActionsFunctions(
           : label;
       notify("ok", output);
       refresh();
+      return true;
     } catch (cause) {
       notify("err", errorText(cause));
+      return false;
     }
   };
 
