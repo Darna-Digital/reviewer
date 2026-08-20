@@ -66,6 +66,101 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  HoverDocumentation,
+  TargetChoice,
+  UsagesList,
+} from "@/interactions/language/components/symbol-overlay";
+import {
+  ELEVATION,
+  POPUP_SHADOW,
+  SurfaceProvider,
+  useElevation,
+} from "@/lib/surface-context";
+import { cn } from "@/lib/utils";
+
+/** Enough of a hover, a usage list and a jump to judge the three side by side. */
+const SYMBOL_HOVER = [
+  "```ts",
+  "(method) Repository.commit(message: string): Promise<Sha>",
+  "```",
+  "",
+  "Records the staged changes and returns the new commit.",
+  "",
+  "*@throws* — when nothing is staged",
+].join("\n");
+
+const symbolLocation = (path: string, line: number) => ({
+  path,
+  range: {
+    start: { line, character: 2 },
+    end: { line, character: 8 },
+  },
+});
+
+const SYMBOL_USAGES = [
+  {
+    location: symbolLocation("src/features/git/repository.ts", 41),
+    kind: "definition" as const,
+    preview: "async commit(message: string): Promise<Sha> {",
+  },
+  {
+    location: symbolLocation("src/interactions/commit/commit-panel.tsx", 118),
+    kind: "read" as const,
+    preview: "const sha = await repository.commit(message);",
+  },
+  {
+    location: symbolLocation("src/interactions/commit/commit-panel.tsx", 132),
+    kind: "write" as const,
+    preview: "repository.commit = withRetries(repository.commit);",
+  },
+];
+
+const SYMBOL_TARGETS = [
+  {
+    location: symbolLocation("src/features/git/repository.ts", 41),
+    name: "commit",
+    kind: "method",
+    containerName: "Repository",
+    preview: "async commit(message: string): Promise<Sha> {",
+  },
+  {
+    location: symbolLocation("src/features/git/repository.d.ts", 12),
+    name: "commit",
+    kind: "declaration",
+    containerName: "Repository",
+    preview: "commit(message: string): Promise<Sha>;",
+  },
+];
+
+/**
+ * A symbol card, held still. The real one floats off a token and is anchored to
+ * it; what is worth comparing here is the surface and the layout, so the
+ * specimen borrows the popup's own elevation and stays on the page.
+ */
+function SymbolCardSpecimen({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  const { level, className } = useElevation(ELEVATION.menu, POPUP_SHADOW);
+  return (
+    <Specimen label={label}>
+      <SurfaceProvider value={level}>
+        <div
+          className={cn(
+            "w-[26rem] max-w-full overflow-hidden rounded-md",
+            className
+          )}
+        >
+          {children}
+        </div>
+      </SurfaceProvider>
+    </Specimen>
+  );
+}
 
 const RADIO_CLASSES =
   "col-start-1 row-start-1 appearance-none rounded-full border border-border bg-background checked:border-primary checked:bg-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:border-border disabled:bg-muted disabled:checked:bg-muted dark:bg-white/5 dark:disabled:bg-white/10 forced-colors:appearance-auto";
@@ -741,6 +836,29 @@ export function ComponentsGallery() {
             </Tooltip>
           </Specimen>
         </SpecimenRow>
+
+        <Subsection
+          title="Symbol cards"
+          hint="What a token in the code opens: its documentation on hover, its usages on a click, or a choice of declarations when there is more than one. Three answers to one gesture, so one card — a heading naming the symbol, a rule, then the answer."
+        >
+          <SpecimenRow className="items-start">
+            <SymbolCardSpecimen label="Hover documentation">
+              <HoverDocumentation symbol="commit" contents={SYMBOL_HOVER} />
+            </SymbolCardSpecimen>
+
+            <SymbolCardSpecimen label="Usages">
+              <UsagesList
+                symbol="commit"
+                references={SYMBOL_USAGES}
+                onOpen={() => undefined}
+              />
+            </SymbolCardSpecimen>
+
+            <SymbolCardSpecimen label="Declarations">
+              <TargetChoice targets={SYMBOL_TARGETS} onOpen={() => undefined} />
+            </SymbolCardSpecimen>
+          </SpecimenRow>
+        </Subsection>
 
         <Subsection
           title="Toasts"

@@ -75,6 +75,8 @@ type CardState =
   | {
       readonly kind: "hover";
       readonly anchor: CardAnchor;
+      /** The token the pointer is on — the card's heading. */
+      readonly symbol: string;
       readonly contents: string | null;
     }
   | { readonly kind: "busy"; readonly anchor: CardAnchor }
@@ -301,7 +303,7 @@ export function useLanguageLayer({
         setCard((current) =>
           current !== null && current.kind !== "hover"
             ? current
-            : { kind: "hover", anchor, contents: null }
+            : { kind: "hover", anchor, symbol: token.tokenText, contents: null }
         );
         void actions
           .describe(path, token)
@@ -315,7 +317,12 @@ export function useLanguageLayer({
             }
             setCard((current) =>
               current?.kind === "hover"
-                ? { kind: "hover", anchor, contents: result.contents }
+                ? {
+                    kind: "hover",
+                    anchor,
+                    symbol: token.tokenText,
+                    contents: result.contents,
+                  }
                 : current
             );
           })
@@ -459,7 +466,7 @@ export function useLanguageLayer({
         card.contents === null ? (
           <CardSpinner label="Reading…" />
         ) : (
-          <HoverDocumentation contents={card.contents} />
+          <HoverDocumentation symbol={card.symbol} contents={card.contents} />
         )
       ) : card.outcome.kind === "usages" ? (
         <UsagesList

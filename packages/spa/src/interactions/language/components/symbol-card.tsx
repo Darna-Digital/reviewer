@@ -60,7 +60,10 @@ export function SymbolCard({
         className={cn(
           // `overscroll-contain`: reaching the end of the card must not hand
           // the scroll on to the view behind it, which would dismiss the card.
-          "max-h-[min(24rem,60vh)] w-auto max-w-[min(40rem,90vw)] gap-0 overflow-auto overscroll-contain p-2",
+          //
+          // No padding: the bodies pad themselves, so a list can run its rows
+          // to the edges and its heading rule can go full-bleed.
+          "max-h-[min(24rem,60vh)] w-auto max-w-[min(40rem,90vw)] gap-0 overflow-auto overscroll-contain p-0",
           !interactive && "pointer-events-auto"
         )}
         onPointerEnter={onPointerEnter}

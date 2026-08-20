@@ -76,7 +76,9 @@ export function CompletionPopup({
           ref={listRef}
           role="listbox"
           aria-label="Completions"
-          className="overflow-y-auto py-1"
+          // Same geometry as the rows on a symbol card: a one-unit gutter with
+          // rounded rows inside it, so the two lists read as one family.
+          className="overflow-y-auto p-1"
           style={{ maxHeight: `${VISIBLE_ROWS * 1.5}rem` }}
         >
           {items.map((item, index) => (
@@ -86,21 +88,23 @@ export function CompletionPopup({
               role="option"
               aria-selected={index === selected}
               className={cn(
-                "flex cursor-default items-baseline gap-2 px-2 py-1 text-left text-xs",
+                "flex cursor-default items-baseline gap-2.5 rounded-sm px-2 py-1 text-left text-xs",
                 index === selected ? "bg-elevate" : "hover:bg-elevate/60"
               )}
               onPointerEnter={() => onSelect(index)}
               onClick={() => onAccept(index)}
             >
+              {/* A fixed column rather than a chip: the kinds line up, which
+                  is what makes a long list scannable. */}
               <span className="w-16 shrink-0 truncate text-[10px] tracking-wide text-muted-foreground uppercase">
                 {item.kind}
               </span>
-              <span className="min-w-0 flex-1 truncate font-mono">
+              <span className="min-w-0 flex-1 truncate font-mono text-foreground">
                 {item.label}
               </span>
               {item.source.length > 0 && (
                 // The symbol is not in scope; accepting it adds the import.
-                <span className="shrink-0 truncate text-[10px] text-muted-foreground">
+                <span className="max-w-[12rem] shrink-0 truncate font-mono text-[10px] text-muted-foreground">
                   {item.source}
                 </span>
               )}
