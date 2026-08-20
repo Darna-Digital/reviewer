@@ -4,18 +4,14 @@
  * The trail runs from the mode you are in through every folder of the open
  * file, and each of those folders is a dropdown of what else sits beside it —
  * folders open a submenu, files open in the pane above. The file's own controls
- * (edit it, read its history, save it) end the line on the right.
+ * (read its history, save it) end the line on the right — there is no "edit it",
+ * because a file is editable from the moment it opens.
  *
  * Over a diff the trail is also the only thing naming the open file — a review
  * draws no open-file strip — so it ends its line with the control that puts the
  * file down again and gives the pane back to the diff.
  */
-import {
-  IconFolder,
-  IconHistory,
-  IconPencil,
-  IconX,
-} from "@tabler/icons-react";
+import { IconFolder, IconHistory, IconX } from "@tabler/icons-react";
 import { type ReactNode, useMemo } from "react";
 import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -37,9 +33,6 @@ export interface PathBarProps {
   /** Every path in the repository — what the folder dropdowns read. */
   readonly paths: ReadonlyArray<string>;
   readonly onOpenFile: (path: string) => void;
-  /** Omit to leave the open file read-only, e.g. an image or one already open
-   * for editing. */
-  readonly onEdit?: () => void;
   readonly onShowHistory?: () => void;
   /**
    * Put the open file down and give the pane back to whatever is under it.
@@ -57,7 +50,6 @@ export function PathBar({
   path,
   paths,
   onOpenFile,
-  onEdit,
   onShowHistory,
   onClose,
   actions,
@@ -101,11 +93,6 @@ export function PathBar({
           </Button>
         )}
         {actions}
-        {onEdit !== undefined && (
-          <Button variant="ghost" size="xs" onClick={onEdit}>
-            <IconPencil /> Edit
-          </Button>
-        )}
         {onClose !== undefined && (
           <Button
             variant="ghost"

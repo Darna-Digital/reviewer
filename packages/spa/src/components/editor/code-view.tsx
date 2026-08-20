@@ -1,4 +1,5 @@
-import { type LineAnnotation } from "@pierre/diffs";
+import { DIFFS_TAG_NAME } from "@pierre/diffs";
+import type { DiffsEditableComponent, LineAnnotation } from "@pierre/diffs";
 import { EditProvider, File, Virtualizer } from "@pierre/diffs/react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -7,6 +8,17 @@ import {
   DraftCard,
   type DraftLocation,
 } from "@/interactions/comments/components/comment-thread";
+import {
+  SELECTION_COMMENT_CSS,
+  selectionCommentAction,
+} from "@/interactions/comments/components/selection-comment-action";
+import { SelectionCommentPopover } from "@/interactions/comments/components/selection-comment-popover";
+import {
+  rectAnchor,
+  type VirtualAnchor,
+} from "@/interactions/language/functions/anchors";
+import { codeRootsWithin } from "@/lib/code-root";
+import { commentLineFor } from "@/interactions/comments/functions/selection-anchor";
 import {
   DiagnosticsAnnotation,
   DiagnosticsSummary,
@@ -20,6 +32,8 @@ import {
   type RevealTarget,
 } from "@/interactions/language/components/use-reveal-line";
 import { useFindInFile } from "@/interactions/find-in-file/adapters/find-in-file.hook.adapter";
+import { useVim } from "@/interactions/vim/adapters/vim.hook.adapter";
+import { useFolding } from "@/interactions/folding/adapters/folding.hook.adapter";
 import {
   THEMES,
   fileForHighlighting,
@@ -27,13 +41,18 @@ import {
   useLangReady,
 } from "@/components/editor/highlighter";
 import { UnsupportedFile } from "@/components/editor/unsupported-file";
-import { useFileEditing } from "@/components/editor/use-file-editing";
+import {
+  useFileEditing,
+  type SelectionActionContext,
+} from "@/components/editor/use-file-editing";
 import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
 import { useFile } from "@/lib/queries";
+import { useUiPrefs } from "@/lib/ui-prefs";
 import type { ReviewComment } from "@byconvo/core/comments";
 import type { FileEdits, Location } from "@byconvo/core/language";
+import type { VimFoldAction } from "@/interactions/vim/interfaces/vim.interfaces";
 import { writeFileEdits } from "@/interactions/language/adapters/language.hook.adapter";
 import type { Theme } from "@/lib/ui-prefs";
 
@@ -65,14 +84,6 @@ interface CodeViewProps {
    */
   actionsSlot?: HTMLElement | null;
   /**
-   * Reading and editing stay separate — reading is what the gutter `+` needs,
-   * since an editable view takes the caret on every click. Editing is switched
-   * on from the file's tab, which is why the host owns the flag; omit it for a
-   * view that is only ever read.
-   */
-  editing?: boolean;
-  onEditingChange?: (editing: boolean) => void;
-  /**
    * Open another file at a line — go-to-definition and find-usages need it.
    * Omit to leave the IDE layer off.
    */
@@ -95,8 +106,6 @@ export function CodeView({
   onSaved,
   onDirtyChange,
   actionsSlot,
-  editing = false,
-  onEditingChange,
   onOpenLocation,
   reveal = null,
   comments,
@@ -108,14 +117,15 @@ export function CodeView({
   onCommentEdit,
 }: CodeViewProps) {
   const file = useFile(path);
-  const langReady = useLangReady(path, editing);
+  const prefs = useUiPrefs();
+  const langReady = useLangReady(path, true);
   const contents = file.data?.contents;
   const highlightFile = useMemo(
     () => (contents === undefined ? null : fileForHighlighting(path, contents)),
     [path, contents]
   );
-  // Editing renders off the pool, so there is nothing to prime for it.
-  const highlightPrimed = useHighlightPrimed(highlightFile, !editing);
+  // The editable view renders off the pool, so there is nothing to prime.
+  const highlightPrimed = useHighlightPrimed(highlightFile, false);
   const scrollWrapper = useRef<HTMLDivElement>(null);
   const commentsEnabled =
     onCommentSubmit !== undefined && onCommentDelete !== undefined;
@@ -128,26 +138,113 @@ export function CodeView({
     []
   );
 
-  const buffer = useFileEditing(
-    path,
-    file.data?.contents,
-    useCallback(() => onSaved?.(), [onSaved])
+  // `useFolding` needs the file component to give it the collapsed-region hooks
+  // it has none of, and it only turns up when the editor attaches. The ref
+  // breaks the cycle: folding is declared below, since it needs the editor this
+  // call produces.
+  const foldAttach = useRef<
+    ((component: DiffsEditableComponent<undefined>) => void) | null
+  >(null);
+  // Starting a comment. The gutter `+` has nowhere left to live — an editable
+  // view takes the caret on every click — so a comment begins from the passage
+  // it is about: select, and the editor floats an offer over the selection.
+  const draftRef = useRef<((draft: DraftLocation) => void) | undefined>(
+    undefined
   );
+  draftRef.current = commentsEnabled ? onDraftOpen : undefined;
+
+  const buffer = useFileEditing({
+    path,
+    loadedContents: file.data?.contents,
+    onSaved: useCallback(() => onSaved?.(), [onSaved]),
+    onAttach: useCallback((component: DiffsEditableComponent<undefined>) => {
+      foldAttach.current?.(component);
+    }, []),
+    renderSelectionAction: useCallback(
+      (context: SelectionActionContext) =>
+        selectionCommentAction({
+          onComment: () => {
+            const lineNumber = commentLineFor(context.selection);
+            if (lineNumber === null) return;
+            draftRef.current?.({
+              filePath: path,
+              side: FILE_COMMENT_SIDE,
+              lineNumber,
+            });
+          },
+          close: context.close,
+        }),
+      [path]
+    ),
+  });
 
   useEffect(() => {
     onDirtyChange?.(buffer.dirty);
   }, [buffer.dirty, onDirtyChange]);
 
+  // The editor keeps offering to comment for as long as the selection stands,
+  // which would put the offer on top of the composer it just opened. The flag
+  // rides on the shadow host, where the popover's own stylesheet can see it —
+  // `unsafeCSS` is read once at mount, so the CSS cannot be made conditional.
+  /** Open a comment on whatever the editor currently has selected. */
+  const commentOnSelection = useCallback(() => {
+    const selection = buffer.editor?.getState().selections?.at(-1);
+    if (selection === undefined) return;
+    const lineNumber = commentLineFor(selection);
+    if (lineNumber === null) return;
+    draftRef.current?.({ filePath: path, side: FILE_COMMENT_SIDE, lineNumber });
+  }, [buffer.editor, path]);
+
+  // Where Vim's own offer hangs: the last band of the selection it painted.
+  const selectionAnchor = useCallback((): VirtualAnchor | null => {
+    const container = scrollWrapper.current;
+    if (container === null) return null;
+    for (const root of codeRootsWithin(container)) {
+      const bands = root.querySelectorAll("[data-selection-range]");
+      const last = bands[bands.length - 1];
+      if (last !== undefined) return rectAnchor(last.getBoundingClientRect());
+    }
+    return null;
+  }, []);
+
+  const drafting = draft !== null && draft.filePath === path;
+  useEffect(() => {
+    const host = scrollWrapper.current?.querySelector(DIFFS_TAG_NAME);
+    if (host === null || host === undefined) return;
+    if (drafting) host.setAttribute("data-drafting", "");
+    else host.removeAttribute("data-drafting");
+  }, [drafting]);
+
   // Report the file as saved when it goes away, so a stale marker cannot
   // outlive the view that owned it.
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
 
-  const stopEditing = () => {
-    if (buffer.dirty && !window.confirm(`Discard unsaved changes in ${path}?`))
-      return;
-    buffer.discard();
-    onEditingChange?.(false);
-  };
+  const folding = useFolding({
+    editor: buffer.editor,
+    contents: contents ?? "",
+    subscribe: buffer.subscribe,
+    isFocused: buffer.isFocused,
+  });
+  foldAttach.current = folding.attach;
+
+  // Modal editing, when the user has asked for it.
+  const vim = useVim({
+    editor: buffer.editor,
+    enabled: prefs.vimMode,
+    isFocused: buffer.isFocused,
+    subscribe: buffer.subscribe,
+    visibleFrom: folding.visibleFrom,
+    onFold: useCallback(
+      (action: VimFoldAction, line: number) => {
+        if (action === "toggle") folding.toggle(line);
+        else if (action === "close") folding.close(line);
+        else if (action === "open") folding.open(line);
+        else if (action === "closeAll") folding.closeAll();
+        else folding.openAll();
+      },
+      [folding]
+    ),
+  });
 
   // The IDE layer: diagnostics, go-to-definition and find-usages, driven by
   // `@pierre/diffs` token hooks. Only active when the host can navigate.
@@ -155,6 +252,10 @@ export function CodeView({
     path,
     editor: buffer.editor,
     subscribe: buffer.subscribe,
+    isFocused: buffer.isFocused,
+    // While `d` means delete, a list offering to finish a word is in the way —
+    // Vim's insert mode is the only one where typing means typing.
+    completionsEnabled: vim.mode === null || vim.mode === "insert",
     getContainer: useCallback(() => scrollWrapper.current, []),
     onApplyForeignEdits: applyForeignEdits,
     // Diagnostics follow what is on screen, not what is on disk.
@@ -197,7 +298,6 @@ export function CodeView({
   // The annotation slot carries diagnostics as well as comments, so it stays on
   // whenever either has something to show.
   const annotationsEnabled = commentsEnabled || language.annotations.length > 0;
-  const gutterCommentsEnabled = commentsEnabled && !editing;
 
   // The Virtualizer's own root div owns the scroll — it has to, in order to
   // window its rendering — and it is the wrapper's only child.
@@ -206,21 +306,21 @@ export function CodeView({
     return scroller instanceof HTMLElement ? scroller : null;
   }, []);
 
-  // ⌘F. The editor is handed over only while a session is open: `useFileEditing`
-  // keeps the instance it built after the session closes, and a read-only view
-  // must not answer for a caret that is no longer on screen.
   const find = useFindInFile({
     path,
     contents: contents ?? "",
-    editor: editing ? buffer.editor : null,
-    subscribe: editing ? buffer.subscribe : undefined,
+    editor: buffer.editor,
+    subscribe: buffer.subscribe,
     getScroller,
   });
 
-  // The view keeps one `onPostRender`, and two layers paint from it: the
-  // diagnostic underlines and the find highlight.
+  // The view keeps one `onPostRender`, and four layers paint from it: the
+  // diagnostic underlines, the find highlight, the relative line numbers and
+  // the folds.
   const languagePostRender = language.viewOptions.onPostRender;
   const findPostRender = find.viewOptions.onPostRender;
+  const vimPostRender = vim.viewOptions.onPostRender;
+  const foldPostRender = folding.viewOptions.onPostRender;
   const onPostRender = useCallback(
     (
       node: HTMLElement,
@@ -229,8 +329,10 @@ export function CodeView({
     ) => {
       languagePostRender(node, instance, phase);
       findPostRender(node, instance, phase);
+      vimPostRender(node, instance, phase);
+      foldPostRender(node, instance, phase);
     },
-    [languagePostRender, findPostRender]
+    [languagePostRender, findPostRender, vimPostRender, foldPostRender]
   );
 
   // Line count drives the first scroll estimate for a line that has not been
@@ -273,17 +375,16 @@ export function CodeView({
           hang over the bottom of the pane (the assign bar), and scrolling a
           little past the end is how an editor behaves anyway. */}
       <Virtualizer className="h-full overflow-auto pb-20">
-        {/* The editable view builds its own editor from this factory when a
-            session opens, rather than being handed one that exists whether or
-            not anyone is editing — see `useFileEditing`. */}
+        {/* The view builds its own editor from this factory as it mounts,
+            rather than being handed one that exists whether or not a file is
+            open — see `useFileEditing`. */}
         <EditProvider createEditor={buffer.createEditor}>
           <section className="diff-file" data-file-anchor={path}>
-            {/* Remount per file, and when editing is switched on or off: the
-            underlying File instance neither re-highlights on a `file` prop
-            change nor attaches the editor after mount, so navigating or
-            starting to edit would otherwise leave a stale view. */}
+            {/* Remount per file: the underlying File instance neither
+            re-highlights on a `file` prop change nor attaches the editor after
+            mount, so navigating would otherwise leave a stale view. */}
             <File<AnnotationMeta>
-              key={`${path}:${editing}`}
+              key={path}
               file={highlightFile}
               options={{
                 theme: THEMES,
@@ -294,44 +395,19 @@ export function CodeView({
                 // belong on one line — the crumb bar above owns it, so the
                 // view's own header would only say the same thing twice.
                 disableFileHeader: true,
-                enableGutterUtility: gutterCommentsEnabled,
-                onGutterUtilityClick: gutterCommentsEnabled
-                  ? (range) =>
-                      onDraftOpen?.({
-                        filePath: path,
-                        side: FILE_COMMENT_SIDE,
-                        lineNumber: range.end,
-                      })
-                  : undefined,
-                onLineNumberClick: gutterCommentsEnabled
-                  ? (props) =>
-                      onDraftOpen?.({
-                        filePath: path,
-                        side: FILE_COMMENT_SIDE,
-                        lineNumber: props.lineNumber,
-                      })
-                  : undefined,
                 // Token hooks + the post-render pass that underlines problems.
                 ...language.viewOptions,
                 // Both layers paint from the same callback and into the same
                 // stylesheet, and the view keeps one of each.
                 onPostRender,
-                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}`,
+                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}\n${folding.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}`,
               }}
-              edit={editing}
+              edit
               /* The editable view snapshots the rendered code when the editor
                attaches, so a worker highlight landing afterwards would never
-               reach it; `useLangReady` primes the main-thread highlighter for
-               that case so the first paint is coloured anyway. Reading goes
-               through the pool, off the main thread. */
-              disableWorkerPool={editing}
-              selectedLines={
-                gutterCommentsEnabled
-                  ? draft !== null && draft.filePath === path
-                    ? { start: draft.lineNumber, end: draft.lineNumber }
-                    : null
-                  : undefined
-              }
+               reach it; `useLangReady` primes the main-thread highlighter so
+               the first paint is coloured anyway. */
+              disableWorkerPool
               lineAnnotations={annotationsEnabled ? annotations : undefined}
               renderAnnotation={
                 annotationsEnabled
@@ -382,22 +458,19 @@ export function CodeView({
           actionsSlot !== undefined &&
           createPortal(
             <>
+              {vim.status}
               <DiagnosticsSummary counts={language.counts} />
-              {editing && (
-                <>
-                  {buffer.dirty && (
-                    <Button
-                      size="xs"
-                      disabled={buffer.saving}
-                      onClick={buffer.save}
-                    >
-                      {buffer.saving ? "Saving…" : "Save"}
-                    </Button>
-                  )}
-                  <Button variant="ghost" size="xs" onClick={stopEditing}>
-                    Done
-                  </Button>
-                </>
+              {/* Nothing to switch into and nothing to leave: the file is
+                  editable, and the only thing worth a button is the one action
+                  with a consequence. ⌘S does the same. */}
+              {buffer.dirty && (
+                <Button
+                  size="xs"
+                  disabled={buffer.saving}
+                  onClick={buffer.save}
+                >
+                  {buffer.saving ? "Saving…" : "Save"}
+                </Button>
               )}
             </>,
             actionsSlot
@@ -405,6 +478,15 @@ export function CodeView({
         {language.card}
         {language.completions}
         {language.menu}
+        {/* The editor makes its own offer over a selection the pointer made; a
+            Vim visual selection is set programmatically, so it never gets one
+            and this one stands in. */}
+        {vim.hasSelection && commentsEnabled && !drafting && (
+          <SelectionCommentPopover
+            anchor={selectionAnchor}
+            onComment={commentOnSelection}
+          />
+        )}
       </Virtualizer>
       {find.bar}
     </div>

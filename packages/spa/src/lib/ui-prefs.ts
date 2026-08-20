@@ -32,6 +32,11 @@ export interface UiPrefs {
   translucency: boolean;
   /** Whether the shell's left sidebar (file tree / collaboration nav) shows. */
   sidebarVisible: boolean;
+  /**
+   * Modal editing in the code view: Vim motions and operators, a block caret,
+   * and line numbers counted from the caret rather than from the top.
+   */
+  vimMode: boolean;
   bottomVisible: boolean;
   /** Which bottom-dock tab is selected. */
   bottomTab: BottomTab;
@@ -108,6 +113,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   connectors: true,
   translucency: true,
   sidebarVisible: true,
+  vimMode: false,
   bottomVisible: true,
   bottomTab: "history",
   sidebarWidth: 288,
@@ -169,6 +175,7 @@ function persist() {
       connectors,
       translucency,
       sidebarVisible,
+      vimMode,
       bottomVisible,
       bottomTab,
       sidebarWidth,
@@ -201,6 +208,7 @@ function persist() {
         connectors,
         translucency,
         sidebarVisible,
+        vimMode,
         bottomVisible,
         bottomTab,
         sidebarWidth,
