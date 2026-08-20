@@ -33,17 +33,6 @@ const INDEXED = "[data-line-index]";
 export const FOLD_CSS = `
 [${HIDDEN}] { display: none !important; }
 
-[data-line][${CLOSED}]::after {
-  content: "⋯";
-  display: inline-block;
-  margin-inline-start: 0.5ch;
-  padding-inline: 0.5ch;
-  border-radius: 3px;
-  opacity: 0.75;
-  background-color: color-mix(in lab, currentColor 12%, transparent);
-  cursor: pointer;
-}
-
 [data-column-number][${FOLDABLE}] { position: relative; }
 
 [${TOGGLE}] {
@@ -150,9 +139,12 @@ export function paintFolds(root: ParentNode, painting: FoldPainting): number {
 }
 
 /**
- * The line a click was meant for: the chevron in a gutter cell, or the `⋯`
- * badge on a closed line — which is the whole of a folded block's click target,
- * since its body is not on screen to be clicked.
+ * The line a click was meant for: the chevron in a gutter cell, and only that.
+ *
+ * A folded line's own text is not a fold control. It is still code — clicking
+ * `/**` to put the caret in it should do that, not expand eighteen lines
+ * underneath — so the gutter keeps the gesture, where the chevron already turns
+ * round to say which way it goes.
  *
  * Takes the event rather than its target because the rows are in a shadow root:
  * by the time a listener on `window` sees the event, `target` has been
@@ -162,11 +154,7 @@ export function paintFolds(root: ParentNode, painting: FoldPainting): number {
 export function foldTargetOf(event: Event): number | null {
   const target = event.composedPath()[0] ?? event.target;
   if (!(target instanceof Element)) return null;
+  if (target.closest(`[${TOGGLE}]`) === null) return null;
   const row = target.closest(`[${FOLDABLE}]`);
-  if (row === null) return null;
-  // Only the chevron and a closed line answer to a click. A plain click on an
-  // open line's gutter belongs to the editor, which selects lines with it.
-  const onChevron = target.closest(`[${TOGGLE}]`) !== null;
-  if (!onChevron && !row.hasAttribute(CLOSED)) return null;
-  return indexOf(row);
+  return row === null ? null : indexOf(row);
 }

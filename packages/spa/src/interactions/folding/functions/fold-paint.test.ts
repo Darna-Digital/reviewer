@@ -141,14 +141,14 @@ describe("foldTargetOf", () => {
     ).toBe(1);
   });
 
-  it("answers to a click on a closed line, whose body cannot be clicked", () => {
+  it("leaves a folded line's own text alone — it is code, not a control", () => {
     const root = rendered(4);
     paintFolds(root, painting([2], [1], [1]));
     expect(
       foldTargetOf(
         pressOn(root.querySelector("[data-line][data-line-index='1']"))
       )
-    ).toBe(1);
+    ).toBeNull();
   });
 
   it("leaves an open line's gutter to the editor, which selects lines with it", () => {
