@@ -215,7 +215,81 @@ get a PR back" without operating any box at all.
 
 ---
 
-## 3. Sharp edges
+## 3. Multiplayer, precisely
+
+Three different things get called multiplayer, and only one of them is prohibited.
+
+1. **Many sessions, one person.** Fine on every plan, no API key, no team tier. This is
+   byconvo's main case. The only thing pushing back is rate limits, which are per
+   account — six parallel sessions divide your quota rather than multiplying it.
+2. **Many people, each with their own seat, one box.** **Allowed**, and this is the real
+   answer to "can my team use this". Nobody shares a seat; you are colocating N seats on
+   shared hardware. What it needs is a per-user credential scope on the box and a
+   per-user connect flow in byconvo. All four providers support a subscription-backed
+   headless credential for exactly this.
+3. **Many people, one seat.** Prohibited on Claude and ChatGPT alike, and enforced.
+
+### How each provider does case 2, on individual plans
+
+| Provider | Per-user credential | How the box gets it | State left on the box |
+| --- | --- | --- | --- |
+| Cursor | user API key → `CURSOR_API_KEY` | minted in the dashboard, pasted into byconvo once | none — injected per session |
+| Claude Code | `CLAUDE_CODE_OAUTH_TOKEN` | each person runs `claude setup-token` on their own laptop | none, if injected per session |
+| Codex | ChatGPT OAuth / personal access token | `codex login --device-auth`, under that user's `CODEX_HOME` | `$CODEX_HOME/auth.json`, per user |
+| opencode | whichever provider they connect | `POST /provider/{id}/oauth/authorize` on their own server instance | per-user data dir, or one server each |
+
+Note the distinction the pricing pages blur: a *subscription-backed* credential (Cursor's
+user key, Claude's `setup-token`, Codex's device login) authenticates as that person and
+consumes that person's plan. That is not a metered platform API key billed per token.
+All four support the former headlessly.
+
+### What Codex adds that the others don't
+
+Codex has the richest credential model of the four, and the one that most directly
+anticipates a background-agent runner:
+
+- **Device login is the sanctioned remote path.** The CLI says so itself when the browser
+  flow starts: "On a remote or headless machine? Use `codex login --device-auth`
+  instead." Each teammate authorizes the box from their own browser and no credential is
+  ever copied — which sidesteps the refresh-token rotation trap entirely.
+- **`CODEX_HOME`** is a clean per-user credential scope, so one box can carry several
+  people's logins side by side without separate OS users.
+- **Personal access tokens.** `AuthMode::PersonalAccessToken`, loaded via `codex login
+  --with-access-token` or `CODEX_ACCESS_TOKEN` — a ChatGPT-backed, long-lived, per-person
+  credential you can hand a process, which is neither a shared password nor a metered API
+  key.
+- **Agent Identity.** `register_agent_identity` mints an Ed25519 keypair and an
+  `agent_runtime_id`; JWTs are issued by `chatgpt.com/codex-backend/agent-identity` with
+  audience `codex-app-server`; the stored record carries the ChatGPT account id and plan
+  type; `register_agent_task` registers work under it; and `codex exec-server --remote
+  --environment-id --use-agent-identity-auth` uses it to register a runner remotely.
+  Structurally that is a *machine identity for a background agent acting on behalf of a
+  ChatGPT account* — precisely the primitive a product like this wants.
+
+**Temper that.** Agent Identity has no documented end-user path to mint one; it arrives
+through `CODEX_ACCESS_TOKEN` and reads like Codex Cloud's own harness plumbing.
+`exec-server`, `remote-control` and the `ws://` transport are all flagged experimental or
+unsupported. And device login can be turned off server-side — the CLI ships the error
+"device code login is not enabled for this Codex server," which business workspaces have
+reported hitting until an admin enables it. Design against `--device-auth` plus
+`CODEX_HOME`; treat the rest as a direction of travel, not a foundation.
+
+### What this means for byconvo
+
+The box is multi-tenant; the credential is single-tenant. Credentials attach to the
+byconvo **user**, never to the runner. That implies a per-user "connect your agents" flow
+— device code for Codex, paste-a-token for Claude and Cursor, OAuth for opencode — and
+session dispatch that resolves user → credential scope → per-user `CODEX_HOME` /
+`CLAUDE_CONFIG_DIR` / OS user / container.
+
+It also promotes sharp edge 4 into the load-bearing constraint: on a shared box a
+`fullAccess` session can read every other person's credentials in the adjacent home
+directory. Multiplayer makes per-session isolation a security requirement rather than
+good hygiene.
+
+---
+
+## 4. Sharp edges
 
 These are the constraints that decide the design, roughly in order of how much trouble
 they cause.
@@ -282,7 +356,7 @@ they cause.
 
 ---
 
-## 4. Recommended shape for byconvo
+## 5. Recommended shape for byconvo
 
 **Put the seam at the process boundary, not the provider boundary.** That is the whole
 argument: `providers.ts` and the four stream parsers stay untouched, and every provider
@@ -331,16 +405,20 @@ reserved for.
 
 ---
 
-## 5. What the architecture cannot do
+## 6. What the architecture cannot do
 
-- **One box serving several people from one Claude or ChatGPT seat.** Prohibited, and
-  actively enforced. Team/Enterprise seats are the supported path.
+- **Several people working off one Claude or ChatGPT seat.** Prohibited, and actively
+  enforced. Note the scope: it is the *seat* that cannot be shared, not the machine.
+  Several people each running their own seat on one box is fine — see section 3.
 - **Routing a Claude Pro/Max subscription into opencode or another third-party client.**
   Explicitly prohibited; opencode unbundled the plugins that did it in 1.3.0.
 - **Sharing one credential file between laptop and box.** Refresh-token rotation breaks
   it, non-deterministically.
 - **`claude setup-token` plus Remote Control.** The long-lived token can only make model
   requests; it cannot establish Remote Control sessions or fetch claude.ai connectors.
+- **Codex device login where the server has it disabled.** The CLI reports "device code
+  login is not enabled for this Codex server"; a business workspace may need an admin to
+  enable it before a box can be authorized that way.
 - **A browser talking directly to `codex app-server` over WebSocket.** Any request with
   an `Origin` header is rejected. Proxy it server-side.
 - **Claude Code cloud sessions on API-key auth or a third-party inference provider.**
