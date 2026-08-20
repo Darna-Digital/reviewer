@@ -21,14 +21,14 @@ import {
   IconAlertTriangleFilled,
   IconArrowLeft,
   IconArrowNarrowRight,
+  IconBrandGithub,
   IconCheck,
   IconChevronDown,
-  IconExternalLink,
   IconGitFork,
   IconGitMerge,
   IconGitPullRequest,
   IconGitPullRequestDraft,
-  IconLayoutSidebarRight,
+  IconListTree,
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
@@ -58,7 +58,8 @@ import {
 import { ChecksIcon } from "@/components/git/pull-request-status";
 import {
   blockedReason,
-  checksSummary,
+  checksHeadline,
+  checksTally,
   countChecks,
   localBranchForPull,
   mergeBlockedReason,
@@ -140,30 +141,56 @@ function Section({
   );
 }
 
-/** One row of the details list: a fixed label gutter, then the value. */
+/**
+ * One row of a section: a name on the left, its figure on the right.
+ *
+ * Both sections are made of this and nothing else, which is the point. They
+ * used to be two shapes side by side — checks as a list with a right-aligned
+ * verdict, details as a label gutter with values ragging off it — and two
+ * alignments in adjacent sections is what made a column of short facts read as
+ * unproportioned. One shape gives the whole column a left edge and a right one.
+ */
 function Row({
   label,
-  children,
+  value,
+  lead,
+  wrap = false,
 }: {
-  readonly label: string;
-  readonly children: React.ReactNode;
+  readonly label: React.ReactNode;
+  readonly value: React.ReactNode;
+  /** A glyph before the label — the check dot, on a status row. */
+  readonly lead?: React.ReactNode;
+  /** Let a wide value (badges, avatars) wrap under itself rather than squash. */
+  readonly wrap?: boolean;
 }) {
   return (
-    <>
-      <dt className="type-meta text-muted-foreground">{label}</dt>
-      <dd className="m-0 min-w-0 type-xs">{children}</dd>
-    </>
+    <div className="flex min-h-5 items-baseline justify-between gap-3 py-px">
+      <span className="flex min-w-0 items-baseline gap-2">
+        {lead}
+        <span className="truncate type-meta text-muted-foreground">
+          {label}
+        </span>
+      </span>
+      <span
+        className={cn(
+          "flex min-w-0 shrink-0 items-center justify-end gap-1.5 type-xs",
+          wrap && "flex-wrap"
+        )}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
 
 function People({ people }: { readonly people: ReadonlyArray<string> }) {
   return (
-    <span className="flex min-w-0 items-center gap-1.5">
+    <>
       {people.slice(0, 3).map((person) => (
         <Avatar key={person} name={person} letters={1} className="size-4" />
       ))}
       <span className="truncate">{people.join(", ")}</span>
-    </span>
+    </>
   );
 }
 
@@ -182,10 +209,15 @@ export function PullRequestOverview({
   /** The branch the working copy is on, so the button can say you are on it. */
   readonly currentBranch: string | null;
   readonly onCheckout: (pull: PullRequestInfo, branch: string) => Promise<void>;
+  /**
+   * Land the pull request. Answers whether it went through: a merged pull
+   * request is no longer one of the open ones, so the window leaves for the
+   * list rather than sitting on a page that has stopped being true.
+   */
   readonly onMerge: (
     pull: PullRequestInfo,
     method: MergeMethod
-  ) => Promise<void>;
+  ) => Promise<boolean>;
   /** Back to the list of pull requests, which this column replaced. */
   readonly onBack: () => void;
   /** Whether the file tree column beside this one is showing. */
@@ -201,7 +233,8 @@ export function PullRequestOverview({
   const localBranch = localBranchForPull(pull);
   const onBranch = currentBranch === localBranch;
   const counts = countChecks(pull);
-  const summary = checksSummary(pull);
+  const headline = checksHeadline(pull);
+  const tally = checksTally(pull);
   const blocked = blockedReason(pull);
   const mergeBlocked = mergeBlockedReason(pull);
   const caution = mergeCaution(pull);
@@ -221,7 +254,15 @@ export function PullRequestOverview({
   const runMerge = (method: MergeMethod) => {
     setConfirming(null);
     setMerging(true);
-    void onMerge(pull, method).finally(() => setMerging(false));
+    void onMerge(pull, method)
+      .then((merged) => {
+        // The column is about a pull request that is now closed, and the tree
+        // and diff beside it are about a diff that has landed. Nothing here
+        // says anything true any more, so it goes back to the list — which is
+        // also where the merged row disappearing is worth seeing.
+        if (merged) onBack();
+      })
+      .finally(() => setMerging(false));
   };
 
   const StateIcon = pull.draft ? IconGitPullRequestDraft : IconGitPullRequest;
@@ -242,57 +283,30 @@ export function PullRequestOverview({
           onClick={onBack}
         >
           <IconArrowLeft className="size-3.5 shrink-0" />
-          Pull requests
+          Back to list
         </Button>
-        <div className="flex shrink-0 items-center gap-0.5">
-          {pull.url.length > 0 && (
-            <Tooltip>
-              {/* An anchor wearing the button's face rather than a Button
-                  rendering an anchor: this navigates, so it should be a link
-                  the browser knows how to open in a new window. */}
-              <TooltipTrigger
-                render={
-                  <a
-                    href={pull.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={`Open #${pull.number} on GitHub`}
-                    className={buttonVariants({
-                      variant: "ghost-muted",
-                      size: "icon-xs",
-                    })}
-                  />
-                }
-              >
-                <IconExternalLink />
-              </TooltipTrigger>
-              <TooltipContent>Open on GitHub</TooltipContent>
-            </Tooltip>
-          )}
-          {/* The tree is the column immediately to the right of this one, and
-              the icon says so — a panel toggle, not a file glyph. It stays put
-              in both states and reports which one it is in, rather than
-              swapping to a second icon the eye has to re-read. */}
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost-muted"
-                  size="icon-xs"
-                  aria-pressed={treeVisible}
-                  aria-label={treeVisible ? "Hide file tree" : "Show file tree"}
-                  onClick={onToggleTree}
-                  className={cn(treeVisible && "text-foreground")}
-                />
-              }
-            >
-              <IconLayoutSidebarRight />
-            </TooltipTrigger>
-            <TooltipContent>
-              {treeVisible ? "Hide file tree" : "Show file tree"}
-            </TooltipContent>
-          </Tooltip>
-        </div>
+        {/* The tree is the column immediately to the right of this one. It
+            stays put in both states and reports which one it is in, rather
+            than swapping to a second icon the eye has to re-read. */}
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost-muted"
+                size="icon-xs"
+                aria-pressed={treeVisible}
+                aria-label={treeVisible ? "Hide file tree" : "Show file tree"}
+                onClick={onToggleTree}
+                className={cn(treeVisible && "text-foreground")}
+              />
+            }
+          >
+            <IconListTree />
+          </TooltipTrigger>
+          <TooltipContent>
+            {treeVisible ? "Hide file tree" : "Show file tree"}
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
@@ -446,9 +460,35 @@ export function PullRequestOverview({
                   : `Fetch ${pull.headRef} from origin and check it out. An existing local branch is fast-forwarded, never reset.`}
             </TooltipContent>
           </Tooltip>
+          {/* An anchor wearing the button's face rather than a Button
+              rendering an anchor: this navigates, so it should be a link the
+              browser knows how to open in a window of its own. It sits with
+              the other two because it is the third thing you do with a pull
+              request — merge it, check it out, or go and look at it. */}
+          {pull.url.length > 0 && (
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <a
+                    href={pull.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Open #${pull.number} on GitHub`}
+                    className={buttonVariants({
+                      variant: "ghost",
+                      size: "icon-sm",
+                    })}
+                  />
+                }
+              >
+                <IconBrandGithub className="size-3.5" />
+              </TooltipTrigger>
+              <TooltipContent>Open on GitHub</TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
-        {(blocked !== null || summary !== null) && (
+        {(blocked !== null || headline !== null) && (
           <Section legend="Status">
             {/* The blocker gets a line of prose rather than only the icon it
                 shares with the picker: this is the pane you are in when you
@@ -460,99 +500,115 @@ export function PullRequestOverview({
               </p>
             )}
 
-            {summary !== null && (
+            {headline !== null && (
               <>
-                <div className="mb-1 flex items-center gap-1.5 type-xs">
-                  <ChecksIcon pull={pull} />
-                  <span>{summary}</span>
-                </div>
-                <ul className="flex flex-col">
-                  {orderedChecks.slice(0, CHECKS_SHOWN).map((check) => (
-                    <li
-                      key={`${check.name}-${check.url}`}
-                      className="flex h-5 items-center gap-2 type-meta"
-                    >
+                <Row
+                  lead={<ChecksIcon pull={pull} />}
+                  label={<span className="text-foreground">{headline}</span>}
+                  value={
+                    <span className="text-muted-foreground tabular-nums">
+                      {tally}
+                    </span>
+                  }
+                />
+                {orderedChecks.slice(0, CHECKS_SHOWN).map((check) => (
+                  <Row
+                    key={`${check.name}-${check.url}`}
+                    lead={
                       <span
                         className={cn(
-                          "size-1.5 shrink-0 rounded-full",
+                          "size-1.5 shrink-0 translate-y-[-2px] rounded-full",
                           CHECK_DOT[check.state]
                         )}
                       />
-                      {check.url.length > 0 ? (
+                    }
+                    label={
+                      check.url.length > 0 ? (
                         <a
                           href={check.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="truncate text-link hover:underline"
+                          className="text-link hover:underline"
                         >
                           {check.name}
                         </a>
                       ) : (
-                        <span className="truncate">{check.name}</span>
-                      )}
-                      <span className="ml-auto shrink-0 text-muted-foreground">
+                        check.name
+                      )
+                    }
+                    value={
+                      <span className="type-meta text-muted-foreground">
                         {CHECK_WORD[check.state]}
                       </span>
-                    </li>
-                  ))}
-                </ul>
+                    }
+                  />
+                ))}
                 {counts.total > CHECKS_SHOWN && (
-                  <a
-                    href={`${pull.url}/checks`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-1.5 inline-block type-meta text-link hover:underline"
-                  >
-                    {counts.total - CHECKS_SHOWN} more on GitHub
-                  </a>
+                  <Row
+                    label={
+                      <a
+                        href={`${pull.url}/checks`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-link hover:underline"
+                      >
+                        {counts.total - CHECKS_SHOWN} more on GitHub
+                      </a>
+                    }
+                    value={null}
+                  />
                 )}
               </>
             )}
           </Section>
         )}
 
-        {/* A label gutter, so every value starts on the same x. */}
         <Section legend="Details">
-          <dl className="grid grid-cols-[68px_minmax(0,1fr)] items-baseline gap-x-2.5 gap-y-2">
-            {pull.assignees.length > 0 && (
-              <Row label="Assignees">
-                <People people={pull.assignees} />
-              </Row>
-            )}
-            {pull.reviewers.length > 0 && (
-              <Row label="Reviewers">
-                <People people={pull.reviewers} />
-              </Row>
-            )}
-            {pull.labels.length > 0 && (
-              <Row label="Labels">
-                <span className="flex flex-wrap gap-1">
-                  {pull.labels.map((label) => (
-                    <Badge
-                      key={label.name}
-                      variant="outline"
-                      className="h-[18px] px-1.5 type-meta font-normal"
-                      style={labelStyle(label.color)}
-                    >
-                      {label.name}
-                    </Badge>
-                  ))}
-                </span>
-              </Row>
-            )}
-            {pull.changedFiles > 0 && (
-              <Row label="Changes">
+          {pull.assignees.length > 0 && (
+            <Row
+              label="Assignees"
+              wrap
+              value={<People people={pull.assignees} />}
+            />
+          )}
+          {pull.reviewers.length > 0 && (
+            <Row
+              label="Reviewers"
+              wrap
+              value={<People people={pull.reviewers} />}
+            />
+          )}
+          {pull.labels.length > 0 && (
+            <Row
+              label="Labels"
+              wrap
+              value={pull.labels.map((label) => (
+                <Badge
+                  key={label.name}
+                  variant="outline"
+                  className="h-[18px] px-1.5 type-meta font-normal"
+                  style={labelStyle(label.color)}
+                >
+                  {label.name}
+                </Badge>
+              ))}
+            />
+          )}
+          {pull.changedFiles > 0 && (
+            <Row
+              label="Changes"
+              value={
                 <span className="tabular-nums">
                   {pull.changedFiles} file{pull.changedFiles === 1 ? "" : "s"}{" "}
                   <span className="text-success">+{pull.additions}</span>{" "}
                   <span className="text-destructive">−{pull.deletions}</span>
                 </span>
-              </Row>
-            )}
-            {pull.createdAt.length > 0 && (
-              <Row label="Opened">{timeAgo(pull.createdAt)} ago</Row>
-            )}
-          </dl>
+              }
+            />
+          )}
+          {pull.createdAt.length > 0 && (
+            <Row label="Opened" value={`${timeAgo(pull.createdAt)} ago`} />
+          )}
         </Section>
 
         {/* The one place in the column made of sentences rather than labels,

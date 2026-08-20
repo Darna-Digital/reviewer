@@ -62,10 +62,40 @@ export function countChecks(pull: PullRequestInfo): CheckCounts {
   };
 }
 
+/**
+ * The verdict, in as few words as a row can hold. The numbers behind it are
+ * `checksTally`'s job and the breakdown is `checksSummary`'s — a headline that
+ * carried its own counts would be a sentence, and a sentence does not line up
+ * with the rows under it.
+ */
+export function checksHeadline(pull: PullRequestInfo): string | null {
+  switch (checksState(pull)) {
+    case "failure":
+      return "Checks failing";
+    case "pending":
+      return "Checks running";
+    case "success":
+      return "All checks passing";
+    case "neutral":
+      return "No check reached a verdict";
+    default:
+      return null;
+  }
+}
+
+/** How many of them are through and passing, as a row's right-hand figure. */
+export function checksTally(pull: PullRequestInfo): string | null {
+  const counts = countChecks(pull);
+  if (counts.total === 0) return null;
+  return counts.failed > 0
+    ? `${counts.failed}/${counts.total} failing`
+    : `${counts.passed}/${counts.total}`;
+}
+
 /** The sentence a CI badge says on hover — the counts, not just the verdict. */
 export function checksSummary(pull: PullRequestInfo): string | null {
-  const state = checksState(pull);
-  if (state === null) return null;
+  const head = checksHeadline(pull);
+  if (head === null) return null;
   const counts = countChecks(pull);
   const parts = [
     counts.failed > 0 ? `${counts.failed} failing` : null,
@@ -73,14 +103,6 @@ export function checksSummary(pull: PullRequestInfo): string | null {
     counts.passed > 0 ? `${counts.passed} passing` : null,
     counts.neutral > 0 ? `${counts.neutral} skipped` : null,
   ].filter((part): part is string => part !== null);
-  const head =
-    state === "failure"
-      ? "Checks failing"
-      : state === "pending"
-        ? "Checks running"
-        : state === "success"
-          ? "All checks passing"
-          : "Checks finished without a verdict";
   return `${head} — ${parts.join(", ")} of ${counts.total}`;
 }
 

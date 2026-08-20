@@ -5,8 +5,10 @@ import {
 } from "@byconvo/core/ports/git-provider";
 import {
   blockedReason,
+  checksHeadline,
   checksState,
   checksSummary,
+  checksTally,
   groupPullsByBase,
   localBranchForPull,
   mergeBlockedReason,
@@ -178,5 +180,26 @@ describe("mergeCaution", () => {
     expect(
       mergeCaution({ ...withChecks(["success"]), mergeable: "unknown" })
     ).toBe("GitHub has not worked out whether this merges cleanly.");
+  });
+});
+
+describe("checksHeadline / checksTally", () => {
+  it("says the verdict without carrying the numbers", () => {
+    expect(checksHeadline(withChecks(["success", "success"]))).toBe(
+      "All checks passing"
+    );
+    expect(checksHeadline(withChecks(["success", "failure"]))).toBe(
+      "Checks failing"
+    );
+    expect(checksHeadline(withChecks([]))).toBeNull();
+  });
+
+  it("tallies what is through, and what is failing when anything is", () => {
+    expect(checksTally(withChecks(["success", "success"]))).toBe("2/2");
+    expect(checksTally(withChecks(["success", "pending"]))).toBe("1/2");
+    expect(checksTally(withChecks(["failure", "success", "pending"]))).toBe(
+      "1/3 failing"
+    );
+    expect(checksTally(withChecks([]))).toBeNull();
   });
 });
