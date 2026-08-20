@@ -10,6 +10,7 @@ import { isPreviewWindow } from "@/lib/preview-window";
 import {
   initialWindowTabs,
   NEW_SESSION_TITLE,
+  onSessionTab,
   withPinnedTabs,
 } from "../functions/window-tabs.functions";
 import type {
@@ -102,12 +103,32 @@ export function updateWindowTabs(
  */
 export const windowTabsSnapshot = (): WindowTabsState => state;
 
+const subscribe = (listener: () => void): (() => void) => {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+};
+
 export const useWindowTabs = (): WindowTabsState =>
   useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
+    subscribe,
     () => state,
     () => state
+  );
+
+/**
+ * Whether the window is on a session's own tab.
+ *
+ * The one flag rather than the whole strip: the shell and the sessions surface
+ * both shape themselves around this, and taking the state instead would rebuild
+ * them every time a tab is renamed, reordered or opened — which, since a
+ * session tab is renamed as its conversation is titled, is while you are
+ * reading it.
+ */
+export const useOnSessionTab = (): boolean =>
+  useSyncExternalStore(
+    subscribe,
+    () => onSessionTab(state),
+    () => onSessionTab(state)
   );
