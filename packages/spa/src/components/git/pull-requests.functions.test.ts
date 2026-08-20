@@ -1,8 +1,22 @@
 import { describe, expect, it } from "vitest";
-import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
-import { firstPullRequest, groupPullsByBase } from "./pull-requests.functions";
+import {
+  unenrichedPull,
+  type PullRequestInfo,
+} from "@byconvo/core/ports/git-provider";
+import {
+  blockedReason,
+  checksHeadline,
+  checksState,
+  checksSummary,
+  checksTally,
+  groupPullsByBase,
+  localBranchForPull,
+  mergeBlockedReason,
+  mergeCaution,
+} from "./pull-requests.functions";
 
 const pull = (number: number, baseRef: string): PullRequestInfo => ({
+  ...unenrichedPull,
   number,
   title: `#${number}`,
   author: "someone",
@@ -30,15 +44,162 @@ describe("groupPullsByBase", () => {
   });
 });
 
-describe("firstPullRequest", () => {
-  it("is the row the sidebar draws at the top", () => {
-    expect(
-      firstPullRequest([pull(3, "release"), pull(1, "main"), pull(2, "main")])
-        ?.number
-    ).toBe(1);
+const withChecks = (
+  states: ReadonlyArray<"success" | "failure" | "pending" | "neutral">
+): PullRequestInfo => ({
+  ...pull(1, "main"),
+  checks: states.map((state, index) => ({
+    name: `${state}-${index}`,
+    state,
+    url: "",
+  })),
+});
+
+describe("checksState", () => {
+  it("is null when the repo runs no checks", () => {
+    expect(checksState(withChecks([]))).toBeNull();
   });
 
-  it("is nothing when there is nothing to review", () => {
-    expect(firstPullRequest([])).toBeNull();
+  it("reports a failure over anything else", () => {
+    expect(checksState(withChecks(["success", "pending", "failure"]))).toBe(
+      "failure"
+    );
+  });
+
+  it("is pending while anything is still running", () => {
+    expect(checksState(withChecks(["success", "pending"]))).toBe("pending");
+  });
+
+  it("passes only when something passed and nothing else is outstanding", () => {
+    expect(checksState(withChecks(["success", "neutral"]))).toBe("success");
+    expect(checksState(withChecks(["neutral"]))).toBe("neutral");
+  });
+});
+
+describe("checksSummary", () => {
+  it("counts what it found", () => {
+    expect(checksSummary(withChecks(["success", "success", "failure"]))).toBe(
+      "Checks failing — 1 failing, 2 passing of 3"
+    );
+  });
+
+  it("says nothing at all when there is nothing to say", () => {
+    expect(checksSummary(withChecks([]))).toBeNull();
+  });
+});
+
+describe("blockedReason", () => {
+  it("names the branch to merge in", () => {
+    const conflicting = {
+      ...pull(4, "main"),
+      mergeable: "conflicting" as const,
+    };
+    expect(blockedReason(conflicting)).toContain("conflicts with main");
+    expect(blockedReason(conflicting)).toContain("branch-4");
+  });
+
+  it("does not cry wolf over a mergeability GitHub has not worked out", () => {
+    expect(
+      blockedReason({ ...pull(4, "main"), mergeable: "unknown" })
+    ).toBeNull();
+    expect(
+      blockedReason({ ...pull(4, "main"), mergeable: "mergeable" })
+    ).toBeNull();
+  });
+});
+
+describe("localBranchForPull", () => {
+  it("uses the pull request's own branch when it is one of ours", () => {
+    expect(localBranchForPull(pull(4, "main"))).toBe("branch-4");
+  });
+
+  it("keeps a fork's branch off ours of the same name", () => {
+    const fork = {
+      ...pull(12, "main"),
+      headRef: "development",
+      fromFork: true,
+    };
+    expect(localBranchForPull(fork)).toBe("pr-12-development");
+  });
+
+  it("scrubs a name git would refuse", () => {
+    const fork = {
+      ...pull(12, "main"),
+      headRef: "feat/a b~c..d",
+      fromFork: true,
+    };
+    expect(localBranchForPull(fork)).toBe("pr-12-feat/a-b-c.d");
+  });
+
+  it("still names a branch when a fork's is unusable", () => {
+    const fork = { ...pull(12, "main"), headRef: "...", fromFork: true };
+    expect(localBranchForPull(fork)).toBe("pr-12");
+  });
+});
+
+describe("mergeBlockedReason", () => {
+  it("refuses a draft, and says which", () => {
+    const draft = { ...pull(8, "main"), draft: true };
+    expect(mergeBlockedReason(draft)).toContain("#8 is a draft");
+  });
+
+  it("refuses a branch that conflicts with its base", () => {
+    const conflicting = {
+      ...pull(8, "main"),
+      mergeable: "conflicting" as const,
+    };
+    expect(mergeBlockedReason(conflicting)).toContain("conflicts with main");
+  });
+
+  it("does not refuse over a failing check — that is the repo's rule, not ours", () => {
+    const failing = {
+      ...withChecks(["failure"]),
+      mergeable: "mergeable" as const,
+    };
+    expect(mergeBlockedReason(failing)).toBeNull();
+  });
+});
+
+describe("mergeCaution", () => {
+  it("is nothing to say when everything is green and mergeable", () => {
+    expect(
+      mergeCaution({ ...withChecks(["success"]), mergeable: "mergeable" })
+    ).toBeNull();
+  });
+
+  it("counts what is failing and what has not finished", () => {
+    expect(
+      mergeCaution({
+        ...withChecks(["failure", "pending", "pending"]),
+        mergeable: "mergeable",
+      })
+    ).toBe("1 check is failing, 2 checks are still running.");
+  });
+
+  it("mentions a mergeability GitHub has not worked out", () => {
+    expect(
+      mergeCaution({ ...withChecks(["success"]), mergeable: "unknown" })
+    ).toBe("GitHub has not worked out whether this merges cleanly.");
+  });
+});
+
+describe("checksHeadline / checksTally", () => {
+  it("says the verdict without carrying the numbers", () => {
+    expect(checksHeadline(withChecks(["success", "success"]))).toBe(
+      "All checks passing"
+    );
+    expect(checksHeadline(withChecks(["success", "failure"]))).toBe(
+      "Checks failing"
+    );
+    expect(checksHeadline(withChecks([]))).toBeNull();
+  });
+
+  it("tallies what is through, and what is failing when anything is", () => {
+    expect(checksTally(withChecks(["success", "success"]))).toBe("2/2");
+    expect(checksTally(withChecks(["success", "pending"]))).toBe("1/2");
+    expect(checksTally(withChecks(["failure", "success", "pending"]))).toBe(
+      "1/3 failing"
+    );
+    expect(checksTally(withChecks([]))).toBeNull();
   });
 });

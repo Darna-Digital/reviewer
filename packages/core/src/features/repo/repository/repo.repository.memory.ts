@@ -97,6 +97,7 @@ export const makeMemoryRepoRepository = (seed: MemoryRepoSeed = {}) =>
       diffFileContents: () =>
         Effect.succeed({ oldContents: null, newContents: null }),
       checkout: () => Effect.void,
+      checkoutPull: (_pullNumber, branch) => Effect.succeed(branch),
       createBranch: () => Effect.void,
       commit: () => Effect.succeed("newsha1"),
       discard: () => Effect.void,

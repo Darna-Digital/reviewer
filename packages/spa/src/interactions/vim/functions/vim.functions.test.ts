@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { INITIAL_VIM_STATE } from "../interfaces/vim.interfaces";
 import type { VimPosition, VimState } from "../interfaces/vim.interfaces";
-import { onVimKey } from "./vim.functions";
+import { afterPointerPress, onVimKey } from "./vim.functions";
 
 const FILE = [
   "const greeting = 'hello';",
@@ -448,5 +448,31 @@ describe("folding", () => {
 
   it("folds from visual mode too, where the same keys mean the same thing", () => {
     expect(type(open(), ["v", "j", "z", "a"]).folds).toEqual(["toggle@1"]);
+  });
+});
+
+describe("a press in the code", () => {
+  it("ends visual mode, because the press collapsed what it was measuring", () => {
+    const visual = type(open(), ["v", "j"]).state;
+    expect(visual.mode).toBe("visual");
+    const after = afterPointerPress(visual);
+    expect(after.mode).toBe("normal");
+    expect(after.anchor).toBeNull();
+  });
+
+  it("ends visual-line mode too", () => {
+    expect(afterPointerPress(type(open(), ["V"]).state).mode).toBe("normal");
+  });
+
+  it("drops a half-typed command with it", () => {
+    const pending = type(open(), ["v", "2", "d"]).state;
+    expect(afterPointerPress(pending).pending).toBe("");
+  });
+
+  it("leaves normal and insert mode exactly as they were", () => {
+    const normal = INITIAL_VIM_STATE;
+    expect(afterPointerPress(normal)).toBe(normal);
+    const inserting = type(open(), ["i"]).state;
+    expect(afterPointerPress(inserting)).toBe(inserting);
   });
 });

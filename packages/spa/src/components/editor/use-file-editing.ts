@@ -126,7 +126,23 @@ export function useFileEditing({
   const debounce = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listeners = useRef(new Set<() => void>());
 
-  const [editor, setEditor] = useState<Editor<undefined> | null>(null);
+  /**
+   * The editor, together with the file it was built for. The view builds one as
+   * it mounts, and whether that happens before or after this hook's own effects
+   * is not something either side controls — a file already in the cache renders
+   * in the same commit the hook mounts in, and one still being read does not.
+   * Pairing the instance with its path settles the question by construction:
+   * an editor belongs to the file it was made for and to no other, so there is
+   * never a right moment to throw one away.
+   */
+  const [attachment, setAttachment] = useState<{
+    readonly path: string;
+    readonly editor: Editor<undefined>;
+  } | null>(null);
+  const pathRef = useRef(path);
+  pathRef.current = path;
+  const editor =
+    attachment !== null && attachment.path === path ? attachment.editor : null;
 
   /**
    * Build the editor the view asked for, with this hook's own listeners folded
@@ -191,27 +207,24 @@ export function useFileEditing({
         }, DIAGNOSTICS_DEBOUNCE_MS);
       },
     });
-    setEditor(created);
+    setAttachment({ path: pathRef.current, editor: created });
     return created;
   }, []);
 
   // The editor belongs to the session the view opened, so it is torn down with
   // it rather than with this hook.
   useEffect(() => {
-    if (editor === null) return;
+    const instance = attachment?.editor;
+    if (instance === undefined) return;
     return () => {
       if (debounce.current !== null) clearTimeout(debounce.current);
-      editor.cleanUp();
+      instance.cleanUp();
     };
-  }, [editor]);
+  }, [attachment]);
 
-  // A file swapped underneath takes its editor with it: the view re-keys `File`
-  // by path, so the instance that was attached to the old one is detached, and
-  // everything downstream reads "there is an editor" as "there is a caret and a
-  // buffer to act on".
+  // A file swapped underneath leaves the caret behind with the view it was in.
   useEffect(() => {
     focusedRef.current = false;
-    setEditor(null);
   }, [path]);
 
   // Reseed the mirrors whenever the file (re)loads. The view re-keys `File` by

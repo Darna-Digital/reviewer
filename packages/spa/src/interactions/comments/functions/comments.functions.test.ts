@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { ReviewComment } from "@byconvo/core/comments";
-import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
+import {
+  unenrichedPull,
+  type PullRequestInfo,
+} from "@byconvo/core/ports/git-provider";
 import { createCommentsFunctions } from "./comments.functions";
 import { createCommentsDependenciesMock } from "./comments.functions.mock";
 
 const pull: PullRequestInfo = {
+  ...unenrichedPull,
   number: 5,
   title: "t",
   author: "a",

@@ -133,6 +133,22 @@ export function onVimKey(
   return runCommand(state, lines, caret, parsed.command);
 }
 
+/**
+ * Where a press in the code leaves the mode.
+ *
+ * A press moves the caret itself and collapses whatever was selected, so the
+ * anchor visual mode was measuring from no longer describes anything. Left
+ * standing it is worse than useless: the next motion would extend a selection
+ * from wherever visual mode was entered — possibly screens away — and until
+ * that keystroke the indicator claims a selection that is not on screen.
+ *
+ * Normal and insert mode are untouched: a press there is just a caret move.
+ */
+export const afterPointerPress = (state: VimState): VimState =>
+  state.mode === "visual" || state.mode === "visual-line"
+    ? { ...state, mode: "normal", anchor: null, pending: "" }
+    : state;
+
 /** What the status line shows for a mode. */
 export const modeLabel = (state: VimState): string => {
   switch (state.mode) {
