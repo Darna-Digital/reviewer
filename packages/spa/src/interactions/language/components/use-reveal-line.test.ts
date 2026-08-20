@@ -66,9 +66,15 @@ describe("useRevealLine", () => {
       )
     );
 
+    // The flash goes on the frame the line is first sighted and comes off
+    // 1.6s later, while the scroll converges a quarter of the way per frame —
+    // so it is waited for first. Asserting it after the scroll had settled read
+    // the attribute after its own timer had taken it away again on a slow run.
+    await waitFor(() => {
+      const flashed = container.querySelector("[data-line='100']");
+      expect(flashed?.hasAttribute("data-revealed")).toBe(true);
+    });
     await waitFor(() => expect(container.scrollTop).toBeCloseTo(CENTRED, 0));
-    const line = container.querySelector("[data-line='100']");
-    expect(line?.hasAttribute("data-revealed")).toBe(true);
   });
 
   it("waits for a view that is still loading, rather than spending the request on nothing", async () => {

@@ -424,11 +424,51 @@ export function CodeWorkspace() {
     }
   };
 
+  // Only the open file has a buffer, so it is the only one that can be dirty.
+  const [dirtyFile, setDirtyFile] = useState<string | null>(null);
+  const dirtyPaths = useMemo(
+    () => new Set(dirtyFile === null ? [] : [dirtyFile]),
+    [dirtyFile]
+  );
+  const onDirtyChange = useCallback(
+    (dirty: boolean) => {
+      setDirtyFile(dirty ? (search.file ?? null) : null);
+      // Editing a file is the clearest possible statement that you are staying
+      // in it, so it stops being a preview.
+      if (dirty && search.file !== undefined) {
+        const path = search.file;
+        updateTabs((state) => keepTab(state, path));
+      }
+    },
+    [search.file]
+  );
+
+  /**
+   * Whether it is all right to stop showing the file that is being edited.
+   *
+   * Every file is editable the moment it opens, so a buffer can go unsaved
+   * without anyone having decided to edit anything — and the view holds the
+   * only copy of it. Leaving asks first, which is the guard that used to sit
+   * behind the "Done" button.
+   */
+  const mayLeaveFile = (next?: string | null): boolean => {
+    if (dirtyFile === null || dirtyFile === next) return true;
+    if (!window.confirm(`Discard unsaved changes in ${dirtyFile}?`)) {
+      return false;
+    }
+    setDirtyFile(null);
+    return true;
+  };
+
   // --- navigation helpers ----------------------------------------------------
   const setSearch = (patch: Partial<Search>) =>
     navigate({ to: ".", search: (prev: Search) => ({ ...prev, ...patch }) });
-  const openFile = (path: string) => setSearch({ file: path });
-  const closeFile = () => setSearch({ file: undefined });
+  const openFile = (path: string) => {
+    if (mayLeaveFile(path)) setSearch({ file: path });
+  };
+  const closeFile = () => {
+    if (mayLeaveFile()) setSearch({ file: undefined });
+  };
 
   const fileActions = useFileActions(openFile);
   // A folder created here holds nothing for git to list, so the tree is told
@@ -437,14 +477,6 @@ export function CodeWorkspace() {
     () => fileActions.withPendingFolders(treePaths),
     [fileActions, treePaths]
   );
-
-  // Which file is open for editing rather than reading. Held here because the
-  // request comes from the file's tab, above the view that does the editing.
-  const [editingFile, setEditingFile] = useState<string | null>(null);
-  const editFile = (path: string) => {
-    openFile(path);
-    setEditingFile(path);
-  };
 
   // Go-to-definition and find-usages land here: open the file (it may already
   // be the one on screen) and ask the view to reveal the line. The counter lets
@@ -617,27 +649,13 @@ export function CodeWorkspace() {
     updateTabs((state) => pruneTabs(state, (path) => known.has(path)));
   }, [allPaths]);
 
-  // Only the open file has a buffer, so it is the only one that can be dirty.
-  const [dirtyFile, setDirtyFile] = useState<string | null>(null);
-  const dirtyPaths = useMemo(
-    () => new Set(dirtyFile === null ? [] : [dirtyFile]),
-    [dirtyFile]
-  );
-  const onDirtyChange = useCallback(
-    (dirty: boolean) => {
-      setDirtyFile(dirty ? (search.file ?? null) : null);
-      // Editing a file is the clearest possible statement that you are staying
-      // in it, so it stops being a preview.
-      if (dirty && search.file !== undefined) {
-        const path = search.file;
-        updateTabs((state) => keepTab(state, path));
-      }
-    },
-    [search.file]
-  );
-
-  const selectTab = (path: string) => setSearch({ file: path });
+  const selectTab = (path: string) => {
+    if (mayLeaveFile(path)) setSearch({ file: path });
+  };
   const closeTabAt = (path: string) => {
+    // Closing another tab leaves the edited file where it is; only closing the
+    // one holding the buffer throws it away.
+    if (!mayLeaveFile(dirtyFile === path ? undefined : dirtyFile)) return;
     updateTabs((state) => {
       const next = closeTab(state, path);
       // Closing the tab on screen moves the file view to its neighbour, or
@@ -925,8 +943,6 @@ export function CodeWorkspace() {
           onSaved={git.refresh}
           onDirtyChange={onDirtyChange}
           actionsSlot={fileActionsSlot}
-          editing={editingFile === viewing}
-          onEditingChange={(on) => setEditingFile(on ? viewing : null)}
           onOpenLocation={openLocation}
           reveal={reveal}
           comments={fileComments}
@@ -952,7 +968,7 @@ export function CodeWorkspace() {
           onResolve={(merged) =>
             void resolveConflictContent(search.path!, merged)
           }
-          onEdit={editFile}
+          onEdit={openFile}
           onClose={() => setSearch({ path: undefined })}
         />
       );
@@ -980,7 +996,7 @@ export function CodeWorkspace() {
         selectedFile={search.path ?? null}
         onDraftOpen={setDraft}
         onDraftCancel={() => setDraft(null)}
-        onEditFile={editFile}
+        onEditFile={openFile}
         onShowFileHistory={showFileHistory}
         onDiscardFile={
           mode === "commit" ? (p) => void git.discard([p]) : undefined
@@ -1116,20 +1132,22 @@ export function CodeWorkspace() {
               onTogglePin={(path) =>
                 updateTabs((state) => togglePin(state, path))
               }
-              onCloseOthers={(path) =>
+              onCloseOthers={(path) => {
+                if (!mayLeaveFile(path)) return;
                 updateTabs((state) => {
                   const next = closeOthers(state, path);
                   setSearch({ file: next.active ?? undefined });
                   return next;
-                })
-              }
-              onCloseAll={() =>
+                });
+              }}
+              onCloseAll={() => {
+                if (!mayLeaveFile()) return;
                 updateTabs((state) => {
                   const next = closeAll(state);
                   setSearch({ file: next.active ?? undefined });
                   return next;
-                })
-              }
+                });
+              }}
               onMove={(path, toIndex) =>
                 updateTabs((state) => moveTab(state, path, toIndex))
               }
@@ -1163,13 +1181,6 @@ export function CodeWorkspace() {
               path={viewing}
               paths={allPaths}
               onOpenFile={openFile}
-              onEdit={
-                viewing !== null &&
-                !isImagePath(viewing) &&
-                editingFile !== viewing
-                  ? () => editFile(viewing)
-                  : undefined
-              }
               onShowHistory={
                 viewing === null ? undefined : () => showFileHistory(viewing)
               }

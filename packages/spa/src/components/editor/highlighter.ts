@@ -26,7 +26,7 @@ const readyLangs = new Set<string>();
  * instead, so `enabled: false` never gates.
  */
 export function useLangReady(path: string, enabled: boolean): boolean {
-  const lang = getFiletypeFromFileName(path);
+  const lang = filetypeOf(path);
   const [ready, setReady] = useState(() => readyLangs.has(lang));
   useEffect(() => {
     if (!enabled || readyLangs.has(lang)) {
@@ -49,6 +49,21 @@ export function useLangReady(path: string, enabled: boolean): boolean {
   return !enabled || ready;
 }
 
+/**
+ * The Shiki grammar a path is read with — its own, unless we know better.
+ *
+ * `.env` resolves to the dotenv grammar but `.env.local` and friends fall back
+ * to plain text, which leaves them flat on screen and, once the editor is
+ * attached, commented with `//`. The filetype is what both the highlighter and
+ * the editor's comment tokens key off, so it is settled in one place.
+ */
+export function filetypeOf(path: string): string {
+  const filetype = getFiletypeFromFileName(path);
+  if (filetype !== "text") return filetype;
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  return /^\.?env(\..+)?$/i.test(name) ? "dotenv" : filetype;
+}
+
 /** The file as the pool wants it: named, and keyed so its highlight is cached. */
 export function fileForHighlighting(
   path: string,
@@ -57,6 +72,7 @@ export function fileForHighlighting(
   return {
     name: path,
     contents,
+    lang: filetypeOf(path),
     cacheKey: `${path}:${contentCacheKey(contents)}`,
   };
 }
