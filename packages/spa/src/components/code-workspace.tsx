@@ -48,6 +48,7 @@ import {
   type DraftLocation,
 } from "@/interactions/diff/components/diff-pane";
 import { CodeView } from "@/components/editor/code-view";
+import type { RevealTarget } from "@/interactions/language/components/use-reveal-line";
 import { ImageView, isImagePath } from "@/components/editor/image-view";
 import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
@@ -433,17 +434,19 @@ export function CodeWorkspace() {
   // Go-to-definition and find-usages land here: open the file (it may already
   // be the one on screen) and ask the view to reveal the line. The counter lets
   // the same line be revealed twice in a row.
-  const [reveal, setReveal] = useState<{ line: number; key: number } | null>(
-    null
-  );
-  const revealLine = (lineNumber: number) =>
+  const [reveal, setReveal] = useState<RevealTarget | null>(null);
+  // The path travels with the request: navigation lands a moment after it, so
+  // the view it is meant for is often not the one on screen yet, and the file
+  // that *is* must not be scrolled in its place.
+  const revealLine = (path: string, lineNumber: number) =>
     setReveal((previous) => ({
+      path,
       line: lineNumber,
       key: (previous?.key ?? 0) + 1,
     }));
   const openLocation = (path: string, lineNumber: number) => {
     openFile(path);
-    revealLine(lineNumber);
+    revealLine(path, lineNumber);
   };
   /**
    * A comment picked out of the bar's list: a permanent tab, since picking a
@@ -463,14 +466,14 @@ export function CodeWorkspace() {
       path: comment.filePath,
       line: comment.lineNumber,
     });
-    revealLine(comment.lineNumber);
+    revealLine(comment.filePath, comment.lineNumber);
   };
 
   // A `line` in the URL is how another surface points at code — the comments
   // page linking a comment back to the line it was left on.
   useEffect(() => {
     if (search.line === undefined || search.file === undefined) return;
-    revealLine(search.line);
+    revealLine(search.file, search.line);
   }, [search.line, search.file]);
 
   /**
@@ -489,7 +492,7 @@ export function CodeWorkspace() {
     // rather than being spent against whatever was open at the time.
     if (search.file !== revealRequest.path) return;
     revealed.current = revealRequest.key;
-    revealLine(revealRequest.line);
+    revealLine(revealRequest.path, revealRequest.line);
   }, [revealRequest, search.file]);
 
   // Show one file's past: the log filters down to it (following renames) and
