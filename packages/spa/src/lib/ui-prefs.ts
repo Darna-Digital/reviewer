@@ -59,8 +59,24 @@ export interface UiPrefs {
   commitFilesHeight: number;
   /** Drag-resizable commit-message textarea height, in px. */
   commitMessageHeight: number;
-  /** Drag-resizable pull-request list height in the review sidebar, in px. */
-  reviewPullsHeight: number;
+  /**
+   * Drag-resizable width of review mode's pull request column, in px.
+   *
+   * Its own, not the shell's `sidebarWidth`: the two columns hold different
+   * things and want different room — a file tree is as wide as its deepest
+   * path, a pull request as wide as its description reads well. Sharing one
+   * number meant sizing a review resized the browser's tree behind your back.
+   */
+  reviewInfoWidth: number;
+  /** Drag-resizable width of review mode's file tree column, in px. */
+  reviewTreeWidth: number;
+  /**
+   * Whether review mode shows the file tree column. Its own switch rather than
+   * the shell's `sidebarVisible`, which puts the pull request away with it: a
+   * reviewer reading one long file wants the tree gone and the pull request
+   * still there.
+   */
+  reviewTreeVisible: boolean;
   /** Drag-resizable commit-details pane width in the history panel, in px. */
   commitDetailsWidth: number;
   /** Which agent CLI drafts commit messages via the "Generate" button. */
@@ -124,7 +140,9 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   bottomHeight: 256,
   commitFilesHeight: 180,
   commitMessageHeight: 80,
-  reviewPullsHeight: 220,
+  reviewInfoWidth: 320,
+  reviewTreeWidth: 300,
+  reviewTreeVisible: true,
   commitDetailsWidth: 320,
   commitAgent: "claude",
   chatModelFavorites: [],
@@ -186,7 +204,9 @@ function persist() {
       bottomHeight,
       commitFilesHeight,
       commitMessageHeight,
-      reviewPullsHeight,
+      reviewInfoWidth,
+      reviewTreeWidth,
+      reviewTreeVisible,
       commitDetailsWidth,
       commitAgent,
       chatModelFavorites,
@@ -219,7 +239,9 @@ function persist() {
         bottomHeight,
         commitFilesHeight,
         commitMessageHeight,
-        reviewPullsHeight,
+        reviewInfoWidth,
+        reviewTreeWidth,
+        reviewTreeVisible,
         commitDetailsWidth,
         commitAgent,
         chatModelFavorites,

@@ -31,6 +31,22 @@ export interface GitHubClientShape {
     path: string,
     body: unknown
   ) => Effect.Effect<unknown, GitProviderError>;
+  readonly putJson: (
+    path: string,
+    body: unknown
+  ) => Effect.Effect<unknown, GitProviderError>;
+  /**
+   * One GraphQL query, with its `data` unwrapped.
+   *
+   * GraphQL answers 200 with an `errors` array rather than a status, so a
+   * failed query would otherwise arrive here as a success holding nulls. It
+   * also refuses anonymous callers outright, which REST does not — so every
+   * caller of this needs a way back to REST when it fails.
+   */
+  readonly graphql: (
+    query: string,
+    variables: Record<string, unknown>
+  ) => Effect.Effect<unknown, GitProviderError>;
 }
 
 export class GitHubClient extends Context.Service<
@@ -178,7 +194,47 @@ export const make = Effect.gen(function* () {
       HttpClientRequest.bodyJsonUnsafe(HttpClientRequest.post(url, init), body)
     ).pipe(Effect.flatMap((text) => parseJson(path, text)));
 
-  return GitHubClient.of({ repo, getJson, getText, postJson });
+  const putJson: GitHubClientShape["putJson"] = (path, body) =>
+    requestText(path, "application/vnd.github+json", (url, init) =>
+      HttpClientRequest.bodyJsonUnsafe(HttpClientRequest.put(url, init), body)
+    ).pipe(Effect.flatMap((text) => parseJson(path, text)));
+
+  const graphql: GitHubClientShape["graphql"] = (query, variables) =>
+    postJson("/graphql", { query, variables }).pipe(
+      Effect.flatMap((payload) => {
+        const body = payload as {
+          data?: unknown;
+          errors?: ReadonlyArray<{ message?: unknown }>;
+        };
+        const errors = body.errors;
+        if (Array.isArray(errors) && errors.length > 0) {
+          const messages = errors
+            .map((error) =>
+              typeof error.message === "string" ? error.message : "unknown"
+            )
+            .join("; ");
+          return Effect.fail(
+            new GitProviderError({ reason: `GitHub GraphQL: ${messages}` })
+          );
+        }
+        return body.data === undefined || body.data === null
+          ? Effect.fail(
+              new GitProviderError({
+                reason: "GitHub GraphQL returned no data",
+              })
+            )
+          : Effect.succeed(body.data);
+      })
+    );
+
+  return GitHubClient.of({
+    repo,
+    getJson,
+    getText,
+    postJson,
+    putJson,
+    graphql,
+  });
 });
 
 export const layer: Layer.Layer<

@@ -1,9 +1,14 @@
-import { IconLayoutColumns, IconLayoutRows } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconLayoutColumns,
+  IconLayoutRows,
+} from "@tabler/icons-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useDiffNarrowed } from "@/interactions/diff/adapters/diff-layout.store";
 import { cn } from "@/lib/utils";
 import type { DiffStyle } from "@/lib/ui-prefs";
 
@@ -105,7 +110,13 @@ interface DiffStyleToggleProps {
 }
 
 export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
-  const activeIndex = OPTIONS.findIndex((option) => option.value === value);
+  // The pane lays a diff out inline when it is too narrow for two columns. The
+  // choice is still horizontal — widening the window brings it back — so the
+  // toggle keeps pointing at it and says why it is not getting it, rather than
+  // silently moving to the other option and losing what was asked for.
+  const narrowed = useDiffNarrowed();
+  const active = narrowed && value === "split" ? "unified" : value;
+  const activeIndex = OPTIONS.findIndex((option) => option.value === active);
 
   return (
     <div className="relative flex items-center rounded-lg border p-0.5">
@@ -120,14 +131,24 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
             render={
               <button
                 type="button"
-                aria-label={`${option.label} diff layout`}
+                aria-label={
+                  narrowed && option.value === "split"
+                    ? `${option.label} diff layout — not enough space`
+                    : `${option.label} diff layout`
+                }
                 aria-pressed={value === option.value}
                 onClick={() => onChange(option.value)}
                 className={cn(
                   "relative flex size-6 items-center justify-center rounded-[6px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                  value === option.value
+                  active === option.value
                     ? "text-secondary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                  // The choice that is being withheld. Dimmed rather than
+                  // disabled: it is still what the reader wants, and it comes
+                  // back on its own the moment the pane is wide enough.
+                  narrowed &&
+                    option.value === "split" &&
+                    "text-amber-600/70 dark:text-amber-400/70"
                 )}
               />
             }
@@ -147,6 +168,19 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
               <span className="font-normal text-muted-foreground">
                 {option.detail}
               </span>
+              {/* Only under Horizontal, and only while it is the one that
+                  cannot be given: this is the answer to "I picked that, why am
+                  I not looking at it". */}
+              {narrowed && option.value === "split" && (
+                <span className="mt-1 flex items-start gap-1.5 font-normal text-amber-600 dark:text-amber-400">
+                  <IconAlertTriangle className="mt-px size-3 shrink-0" />
+                  <span className="text-pretty">
+                    Not enough space to fit both sides — showing the diff
+                    vertically until there is more room. Widen the window, or a
+                    side column, to get it back.
+                  </span>
+                </span>
+              )}
             </div>
           </TooltipContent>
         </Tooltip>

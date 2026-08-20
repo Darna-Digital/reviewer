@@ -31,6 +31,11 @@ import {
   DiffConnectors,
   connectorGutterCSS,
 } from "@/interactions/diff/components/diff-connectors";
+import { setDiffNarrowed } from "@/interactions/diff/adapters/diff-layout.store";
+import {
+  isNarrowedToUnified,
+  resolveDiffStyle,
+} from "@/interactions/diff/functions/diff-style.functions";
 import { DiagnosticsAnnotation } from "@/interactions/language/components/diagnostics-annotation";
 import { useDiffLanguage } from "@/interactions/language/components/use-diff-language";
 import type { DiagnosticsAnnotationMeta } from "@/interactions/language/components/language-layer";
@@ -468,8 +473,42 @@ export function DiffPane({
   const onDiscardFile = useStableOptionalCallback(rawOnDiscardFile);
   const onDiscardHunk = useStableOptionalCallback(rawOnDiscardHunk);
 
-  const connectorsEnabled = connectors && diffStyle === "split";
   const containerRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Side-by-side needs room for two columns of code. In a three-column review
+   * window — pull requests, then the file tree, then this — a narrow enough
+   * window leaves it without that room, and the diff would be read through two
+   * horizontal scrollbars. So the pane measures itself and lays the diff out
+   * inline when it is too narrow, whatever the preference says.
+   *
+   * Measured off this element rather than the window: what decides is the room
+   * the diff has, and the other two columns can take most of a wide window.
+   */
+  const [paneWidth, setPaneWidth] = useState<number | null>(null);
+  useEffect(() => {
+    const element = containerRef.current;
+    if (element === null || typeof ResizeObserver === "undefined") return;
+    setPaneWidth(element.getBoundingClientRect().width);
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry !== undefined) setPaneWidth(entry.contentRect.width);
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+    // Re-attached when the pane comes back after an empty/loading state, which
+    // renders a different element and would otherwise leave the ref stale.
+  }, [loading, error, files.length]);
+
+  const laidOut = resolveDiffStyle(diffStyle, paneWidth);
+  const connectorsEnabled = connectors && laidOut === "split";
+
+  // Told to the header, so the layout toggle can say it has been overruled
+  // rather than sitting on "Horizontal" over a diff that plainly is not.
+  const narrowed = isNarrowedToUnified(diffStyle, paneWidth);
+  useEffect(() => {
+    setDiffNarrowed(narrowed);
+    return () => setDiffNarrowed(false);
+  }, [narrowed]);
 
   // Per-file "show the whole file" choices, scoped to the current target: the
   // stored key invalidates the set when the user navigates to another diff, so
@@ -724,7 +763,7 @@ export function DiffPane({
             key={`${target.kind}-${file.prevName ?? ""}-${file.name}`}
             file={file}
             theme={theme}
-            diffStyle={diffStyle}
+            diffStyle={laidOut}
             connectorsEnabled={connectorsEnabled}
             expandUnchanged={expandedFiles.has(file.name)}
             onToggleExpandUnchanged={toggleExpanded}

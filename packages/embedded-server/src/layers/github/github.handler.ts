@@ -16,6 +16,13 @@ const pullNumber = (raw: string): Effect.Effect<number, GitProviderError> =>
 export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
   handlers
     .handle("pulls", () => Effect.flatMap(GitProvider, (s) => s.pulls))
+    .handle("mergePull", ({ params, payload }) =>
+      pullNumber(params.number).pipe(
+        Effect.flatMap((n) =>
+          Effect.flatMap(GitProvider, (s) => s.mergePull(n, payload.method))
+        )
+      )
+    )
     .handle("pullDiff", ({ params }) =>
       pullNumber(params.number).pipe(
         Effect.flatMap((n) => Effect.flatMap(GitProvider, (s) => s.pullDiff(n)))
