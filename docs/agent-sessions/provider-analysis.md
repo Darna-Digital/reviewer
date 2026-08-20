@@ -1,0 +1,367 @@
+# Background agent sessions on a cloud box — provider analysis
+
+**Question.** Can byconvo run agent sessions on a cloud machine where my Claude Code,
+Codex, opencode and Cursor subscriptions live, let me pick that machine when I open a
+session, and get a pull request back that I review in byconvo?
+
+**Answer.** Yes, and byconvo is closer to it than it looks. The four providers are
+already driven headlessly by `packages/embedded-server/src/layers/chats/providers.ts`.
+Everything that makes those invocations *local* is a handful of Node calls, not a
+design assumption. The work is moving one seam — where the process runs — not
+re-integrating four agents.
+
+The parts that are genuinely hard are not technical: they are credential residency and
+per-seat licensing. Those are covered under [Sharp edges](#sharp-edges).
+
+---
+
+## 1. What byconvo already does
+
+Today a chat turn is a local CLI invocation:
+
+| Step | Where it lives |
+| --- | --- |
+| Build the provider command | `chats/providers.ts` — `chatTurnProgram()` |
+| Launch it through the user's login shell | `providers.ts` — `inLoginShell()`, `$SHELL -l -c` |
+| Spawn, feed prompt on stdin, read NDJSON stdout | `chats/chat-runtime.ts` — `node:child_process.spawn` |
+| Parse the stream into canonical events | `claude-stream.ts`, `codex-stream.ts`, `cursor-stream.ts`, `opencode-stream.ts` |
+| Persist and fan out to sockets | `chats/store.ts`, `/api/chats/stream` |
+| Recover the CLI's own session id | `terminal/agent-session-capture.ts` (`minted` vs `discovered`) |
+| Discover models | `core/chats/functions/model-discovery.ts` |
+| Read/write git, open and review PRs | `layers/git`, `layers/github`, `ports/git-exec.ts` |
+
+The provider layer is the expensive, tested part, and none of it is local by nature.
+The local assumptions are narrow and enumerable:
+
+1. `spawn()` runs on this machine.
+2. `chat.origin.repoPath` is a path on this filesystem.
+3. Dropped images are written to a local temp file whose path is put in the prompt.
+4. `agent-session-capture.ts` scans CLI session files under the *local* home directory.
+5. `$SHELL` is the developer's shell; `inLoginShell` depends on their rc files for PATH.
+6. Model discovery shells out on this machine.
+
+Move those six and a chat runs anywhere.
+
+---
+
+## 2. Provider deep dive
+
+### 2.1 Claude Code
+
+**Headless contract.** `claude -p --output-format stream-json --verbose
+--include-partial-messages` is the documented programmatic path, and it is exactly
+what byconvo already emits. `--json-schema` gives structured output, `--resume <id>` /
+`--session-id <id>` handle continuity, and from v2.1.223 a session is resolvable by id
+from any directory on the machine, not only from the project it started in. Subagent
+messages carry `parent_tool_use_id`, so a remote runner can rebuild the full tree.
+`--bare` skips hook/plugin/MCP/CLAUDE.md discovery — the right default for a shared
+box, except that it also refuses to read OAuth credentials, so it forces an API key.
+
+**Authorizing a box.** `claude setup-token` mints a one-year OAuth token, printed once,
+consumed as `CLAUDE_CODE_OAUTH_TOKEN`. Anthropic documents it for exactly this case:
+"CI pipelines, scripts, or other environments where interactive browser login isn't
+available." It requires Pro, Max, Team or Enterprise, and it is *model requests only* —
+it cannot establish Remote Control sessions or fetch claude.ai connectors.
+
+Watch the precedence order. `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` both rank
+**above** `CLAUDE_CODE_OAUTH_TOKEN`, so a box that has a stray API key in its
+environment will quietly bill the API instead of the subscription. Credentials live in
+`~/.claude/.credentials.json` (mode 0600) on Linux, relocatable with
+`CLAUDE_CONFIG_DIR` — which is the hook for per-user isolation on one box.
+
+**Anthropic already ships this product.** Claude Code on the web runs each session in
+an isolated Anthropic-managed VM: clones the repo, works on a branch, creates the PR,
+and can then watch that PR and auto-fix CI failures and review comments. `claude --cloud
+"<task>"` starts one from the terminal; `claude --teleport` pulls it back down. The CLI
+can queue follow-ups into a running cloud session with `claude -p "msg" --cloud
+<session-id>`.
+
+More interesting for byconvo: **self-hosted environments** (Team/Enterprise, public
+beta). You run *runners* on your own hosts; Anthropic's control plane queues sessions to
+them; the runner clones the repo and spawns a child Claude Code process on your machine.
+All traffic is outbound to `api.anthropic.com`; nothing connects inward. Sessions
+authenticate with an Anthropic-issued, session-scoped OAuth token delivered by the
+control plane — the box never holds a long-lived credential. And crucially, **a runner
+locks to one user account** on its first session and serves only that account until it
+drains. That is the same isolation rule any byconvo box will need, arrived at
+independently.
+
+`claude --remote-control` is the third variant: expose an always-on machine's local
+session for monitoring from the web and mobile. Available on Pro and Max. It is the
+closest existing analogue to what you described, minus byconvo's review surface.
+
+**Limits.** Cloud sessions share the account's rate limits; running tasks in parallel
+consumes them proportionately. There is no separate compute charge, and no separate
+quota.
+
+---
+
+### 2.2 Codex
+
+**Headless contract.** `codex exec --json`, prompt via `-` on stdin, `codex exec resume
+<session-id>` — again what byconvo already emits. There is also an official
+`@openai/codex-sdk` (TypeScript) that spawns the same CLI and exchanges JSONL over
+stdio, with `runStreamed()` yielding `item.completed` / `turn.completed` events.
+
+**Codex is the most remote-ready of the four**, by a distance. Beyond `exec`, the CLI
+carries:
+
+- `codex app-server` — JSON-RPC 2.0, MCP-shaped, over **stdio**, **unix socket**, or
+  **`ws://IP:PORT`**. Threads, turns, items, approvals, skills, MCP management. This is
+  the interface the official VS Code extension runs on.
+- `codex app-server daemon` + `codex agents` — a shared local app-server daemon hosting
+  many agent sessions, with a command to browse all of them. A session directory for one
+  machine, already built.
+- `codex app-server bootstrap` — "durable local app-server management for SSH-driven
+  use". Explicitly designed for the box-you-ssh-into case.
+- `codex remote-control` — pairing codes and an `environmentId`, so a controller device
+  can drive an app-server on another machine.
+- `codex exec-server --remote <url> --environment-id <id>` — registers a local
+  exec-server with an environment registry and reconnects over a Noise relay, so tool
+  execution can happen on a different machine from the agent loop.
+- `codex cloud` / `codex apply` — browse Codex Cloud tasks and apply their diffs
+  locally. Codex Cloud opens PRs of its own.
+
+The app-server's auth surface matters for byconvo's UX: `account/login/start` accepts
+`chatgptDeviceCode`, which means **byconvo could render "connect this box to ChatGPT"
+in its own UI** — show the code, poll `account/login/completed` — with no SSH session
+and no browser on the box. `account/rateLimits/read` and `account/usage/read` would let
+the session picker show what quota a box has left.
+
+Two constraints on the WebSocket transport: it is marked **experimental and
+unsupported**, and any request carrying an `Origin` header is rejected with 403. A
+browser cannot talk to it directly; byconvo's server has to proxy.
+
+**Authorizing a box.** `$CODEX_HOME/auth.json` holds `tokens` and `last_refresh`. Access
+tokens refresh within a 5-minute window; a full refresh happens on an 8-day interval.
+The refresh tokens **rotate, and reuse is detected** — the CLI ships distinct error
+strings for `refresh_token_expired`, `refresh_token_reused` ("your refresh token was
+already used"), and `refresh_token_invalidated`. There is no file locking around
+`auth.json` in the source.
+
+The practical consequence is important: *do not rsync `auth.json` from your laptop to
+the box.* Two machines rotating the same refresh token will invalidate each other at
+unpredictable times. Log the box in on its own — device code, `codex login
+--with-access-token`, `CODEX_ACCESS_TOKEN`, or an API key.
+
+---
+
+### 2.3 opencode
+
+**opencode is already the architecture you are asking for.** It is a client/server
+product: the TUI is just a client. `opencode serve --port <n> --hostname <h> --cors
+<origin>` runs a headless HTTP server publishing an OpenAPI 3.1 spec at `/doc`, an SSE
+stream at `/global/event`, and REST endpoints for projects, sessions, config, providers
+and VCS. There is a generated, type-safe `@opencode-ai/sdk`. `OPENCODE_SERVER_PASSWORD`
+(username `opencode`, overridable) puts HTTP basic auth in front of it.
+
+For byconvo this means opencode needs **no CLI spawning and no stdout parsing at all** —
+byconvo becomes an API client. It is the natural first provider to port to a remote box,
+because the remote case and the local case are the same code.
+
+`opencode acp` additionally speaks the Agent Client Protocol over stdio, which Cursor
+also supports; that is a plausible long-term convergence point for byconvo's transport
+layer.
+
+**Authorizing a box.** Credentials sit in `~/.local/share/opencode/auth.json`. OAuth is
+exposed *over the server API* (`POST /provider/{id}/oauth/authorize` and
+`/oauth/callback`), so the same "connect from byconvo's UI" flow is available here too.
+opencode supports ChatGPT Plus/Pro, GitHub Copilot and GitLab Duo subscriptions
+directly.
+
+**The one thing you cannot do.** From opencode's own provider documentation:
+
+> There are plugins that allow you to use your Claude Pro/Max models with OpenCode.
+> Anthropic explicitly prohibits this. Previous versions of OpenCode came bundled with
+> these plugins but that is no longer the case as of 1.3.0.
+
+So "put all my subscriptions on one box" resolves to: put each vendor's *own* client on
+the box, authorized with that vendor's subscription. Rerouting a Claude subscription
+into a third-party client is off the table, and opencode removed the ability.
+
+**Security note.** Basic auth plus a CORS list is the whole protection model, and the
+server has full tool access to the box. It should never be exposed to the public
+internet — bind to loopback and reach it through a tunnel or mTLS.
+
+---
+
+### 2.4 Cursor
+
+**Headless contract.** `cursor-agent -p --output-format stream-json
+--stream-partial-output`, with `--resume <chat-id>`, `--force` for unattended writes,
+`--list-models`, and a `--sandbox <enabled|disabled>` mode that also controls network
+access. byconvo already uses all of these. Cursor also supports ACP.
+
+**Cursor is the easiest of the four to authorize headlessly.** The docs are explicit
+that interactive login must not be used in CI; instead you mint a user API key in the
+dashboard and set `CURSOR_API_KEY`. A plain environment variable, no OAuth dance, no
+rotation hazard. That makes Cursor the least painful provider to stand up on a box —
+and, correspondingly, the one where an accidentally leaked box gives away the most with
+the least friction.
+
+Two operational details worth carrying into a fresh box image: `cursor-agent` refuses to
+run in a directory the user has not trusted (byconvo's `model-discovery.ts` already
+documents this), and its permission model has only one real switch — `--force` — with no
+sandbox tier between "ask" and "don't ask", which is why byconvo maps `acceptEdits` and
+`fullAccess` to the same flag.
+
+**Cursor Cloud Agents.** `POST https://api.cursor.com/v1/agents` takes
+`source.repository` + `source.ref`, a prompt, session-scoped environment variables, and
+a webhook URL; the response and webhook payload carry the agent's branch and **pull
+request URL**. Environments are configured in `.cursor/environment.json` via agent-led
+setup, a snapshot, or a Dockerfile. The v1 API is public beta (webhooks currently land
+on v0). Of the four, this is the one whose hosted API is a drop-in for "kick off work,
+get a PR back" without operating any box at all.
+
+---
+
+## 3. Sharp edges
+
+These are the constraints that decide the design, roughly in order of how much trouble
+they cause.
+
+1. **A credential store is per-user, not per-session.** `~/.claude/.credentials.json`,
+   `$CODEX_HOME/auth.json`, `~/.local/share/opencode/auth.json` and Cursor's config are
+   all one-per-home-directory. If two people share a box, they share seats. Anthropic's
+   terms do not permit sharing a personal account, and Anthropic has publicly tied rate
+   limit changes to enforcement against account sharing and resale. **One box per
+   person** — or at minimum one Linux user per person with per-user
+   `CLAUDE_CONFIG_DIR` / `CODEX_HOME`. Anthropic's self-hosted runners reach the same
+   conclusion: a runner locks to one account.
+
+2. **Refresh-token rotation punishes credential copying.** Covered above for Codex; the
+   same class of failure applies wherever OAuth is in play. Authorize each machine
+   separately. Device-code and `setup-token` flows exist precisely for this.
+
+3. **Concurrent sessions in one checkout will collide.** Every one of these CLIs is
+   cwd-scoped. Give each session its own `git worktree` on its own branch. byconvo's
+   `ChatOrigin.repoPath` is already per-chat, so this is a value change, not a schema
+   change.
+
+4. **`fullAccess` means something different on a box.** Locally,
+   `--dangerously-skip-permissions` / `--dangerously-bypass-approvals-and-sandbox` /
+   `--force` means "my laptop". On a shared box it means any session can read every
+   other subscription's credentials sitting in the adjacent home directory. byconvo's
+   catalog currently defaults `access` to `fullAccess`; that default should not follow a
+   session onto a remote runner unchecked. Keep the provider sandboxes on (`--full-auto`,
+   `--sandbox`), run sessions as a non-root user, and put credentials outside the
+   sandbox where you can — which is exactly what Anthropic does: "sensitive credentials
+   such as git credentials or signing keys are never inside the sandbox."
+
+5. **Git credentials should be minted, not stored.** A long-lived PAT on a box that runs
+   arbitrary agent-authored shell commands is the whole repository in one file. Prefer
+   short-lived per-session tokens, or proxy git the way Anthropic's git proxy does.
+
+6. **`$SHELL -l -c` is wrong on a server.** `inLoginShell()` exists because a GUI-launched
+   app misses the developer's PATH. A box has a known, provisioned PATH; the login-shell
+   wrapper there just re-introduces rc-file noise into a parsed stream. Remote runners
+   should use a fixed shell and explicit PATH.
+
+7. **Session-id capture has to run where the CLI runs.** `agent-session-capture.ts`
+   scans the CLI's own session files to recover `discovered` ids for codex and opencode.
+   On a remote runner that scan must happen on the runner. Same for
+   `modelDiscoveryCommand` — otherwise the model picker shows the laptop's models, not
+   the box's.
+
+8. **Rate limits are per account, not per box.** Six parallel sessions do not multiply
+   your quota; they divide it. Codex exposes `account/rateLimits/read` and Claude's cloud
+   docs say parallel sessions consume limits proportionately. The session picker should
+   show remaining quota per provider, not just "box online".
+
+9. **The stream has to survive the WAN.** byconvo already has the right shape here — the
+   turn runtime lives outside Effect, keeps running without a socket, and broadcasts to
+   watchers with a heartbeat that reaps half-open sockets. That design is what makes a
+   remote runner viable; it just needs the same treatment applied between byconvo and
+   the box, not only between browser and server.
+
+10. **The review loop needs a repo identity that isn't a local path.**
+    `layers/github/github-client.ts` resolves owner/repo from the *selected local repo's*
+    `origin`. Reviewing a PR that a remote box produced means either keeping a local
+    clone selected, or letting the GitHub layer take a repo identity supplied by the
+    runner.
+
+---
+
+## 4. Recommended shape for byconvo
+
+**Put the seam at the process boundary, not the provider boundary.** That is the whole
+argument: `providers.ts` and the four stream parsers stay untouched, and every provider
+gains remote execution at once.
+
+Define a `ProcessHost` port next to the existing `ports/terminal-exec.ts` and
+`ports/git-exec.ts`:
+
+```
+spawn(program: ChatTurnProgram) -> { stdout, stderr, stdin, kill }
+writeTempFile(bytes) -> path          // dropped images
+recentAgentSessions(since) -> ids     // discovered session ids
+gitExec(args) -> string
+worktreeCreate(repo, branch) -> path
+```
+
+Local implementation is today's `node:child_process`. Remote implementation is a small
+byconvo agent daemon on the box (or plain SSH to start with). Add a `Runner` alongside
+`ChatOrigin` on the chat record — `{ id, label, kind: "local" | "remote", endpoint,
+capabilities }` — which is presumably what the empty `packages/central-server` package is
+reserved for.
+
+**Ship it in this order.**
+
+1. **Run byconvo's own embedded-server on the box.** `packages/spa/src/lib/api/client.ts`
+   already reads `window.byconvo.apiBaseUrl` and derives every WebSocket URL from it, so
+   the SPA can point at a remote origin today. The box has git, the checkouts, the CLIs
+   and the credentials; nothing about chats, threads, review or Local Dev changes. Add
+   auth and TLS in front, and make the desktop shell a multi-server client. This gets
+   you "background agent sessions" with almost no new concepts — a byconvo server that
+   isn't your laptop.
+2. **Per-session worktrees and a `byconvo/<chat-id>` branch**, so parallel sessions stop
+   colliding and every session already has a branch to push.
+3. **Push and open the PR** from the runner, through the existing `GitHubClient`. The
+   review side of the loop already exists — `layers/github` reads pulls, diffs, comments
+   and replies, and the SPA renders them.
+4. **Upgrade transports where they pay for themselves**, provider by provider:
+   opencode → `opencode serve` + SDK (drop the parser entirely); codex →
+   `codex app-server` over a unix socket, proxied, which brings approvals, rate limits
+   and device-code login into byconvo's UI; claude and cursor → keep `-p` streaming JSON,
+   which is the supported programmatic path for both.
+5. **Offer provider-native cloud as a separate runner kind**, not as a replacement:
+   Cursor Cloud Agents for fire-and-forget PR tasks, Claude Code cloud sessions where
+   the account has them, Codex Cloud via `codex cloud`. These need no box at all, but
+   you give up control of the environment and you cannot mix providers under one model.
+
+---
+
+## 5. What the architecture cannot do
+
+- **One box serving several people from one Claude or ChatGPT seat.** Prohibited, and
+  actively enforced. Team/Enterprise seats are the supported path.
+- **Routing a Claude Pro/Max subscription into opencode or another third-party client.**
+  Explicitly prohibited; opencode unbundled the plugins that did it in 1.3.0.
+- **Sharing one credential file between laptop and box.** Refresh-token rotation breaks
+  it, non-deterministically.
+- **`claude setup-token` plus Remote Control.** The long-lived token can only make model
+  requests; it cannot establish Remote Control sessions or fetch claude.ai connectors.
+- **A browser talking directly to `codex app-server` over WebSocket.** Any request with
+  an `Origin` header is rejected. Proxy it server-side.
+- **Claude Code cloud sessions on API-key auth or a third-party inference provider.**
+  Bedrock, Vertex/Agent Platform and Foundry configurations cannot use `--cloud` or
+  `--teleport`.
+
+---
+
+## Sources
+
+- Claude Code — [Authentication](https://code.claude.com/docs/en/authentication),
+  [Run Claude Code programmatically](https://code.claude.com/docs/en/headless),
+  [Claude Code on the web](https://code.claude.com/docs/en/claude-code-on-the-web),
+  [Self-hosted environments](https://code.claude.com/docs/en/self-hosted-environments)
+- Codex — source read at [`openai/codex`](https://github.com/openai/codex):
+  `codex-rs/app-server/README.md`, `codex-rs/exec-server/README.md`,
+  `codex-rs/login/src/auth/{storage,manager}.rs`, `codex-rs/cli/src/main.rs`,
+  `sdk/typescript/README.md`
+- opencode — source read at [`sst/opencode`](https://github.com/sst/opencode):
+  `packages/web/src/content/docs/{server,providers,acp,github,enterprise,network}.mdx`
+- Cursor — [CLI overview](https://cursor.com/docs/cli/overview),
+  [Headless CLI](https://cursor.com/docs/cli/headless),
+  [CLI authentication](https://cursor.com/docs/cli/reference/authentication),
+  [Cloud Agents API](https://cursor.com/docs/cloud-agent/api/endpoints)
