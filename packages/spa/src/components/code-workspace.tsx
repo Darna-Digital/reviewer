@@ -98,6 +98,8 @@ import {
   togglePin,
 } from "@/interactions/tabs/functions/tabs.functions";
 import { useFileActions } from "@/interactions/file-actions/adapters/file-actions.hook.adapter";
+import { withoutTrailingSlash } from "@/interactions/file-actions/functions/file-actions.functions";
+import type { TreeItem } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { fetchClient } from "@/lib/api/client";
 import {
@@ -165,6 +167,19 @@ export function CodeWorkspace() {
     : pathname.startsWith("/modes/code/browse")
       ? "browse"
       : "commit";
+
+  /**
+   * The open-file strip is browsing's, and only browsing's.
+   *
+   * Reading a diff — the local changes, or somebody's pull request — what the
+   * pane is showing is the review, and a file opened over it is one look at one
+   * file rather than a set of them you are working in. The strip standing there
+   * was a list of files from somewhere else entirely: whatever you had open
+   * while browsing, laid in a row across the top of somebody's pull request. So
+   * the review does not draw it, and does not add to it either — a file read
+   * out of a diff leaves the browsing strip exactly as it was.
+   */
+  const tabbed = mode === "browse";
 
   // --- queries ---------------------------------------------------------------
   const workspace = useWorkspace();
@@ -460,7 +475,8 @@ export function CodeWorkspace() {
   const openComment = (id: string) => {
     const comment = visibleComments.find((c) => c.id === id);
     if (comment === undefined) return;
-    updateTabs((state) => openTab(state, comment.filePath, "permanent"));
+    if (tabbed)
+      updateTabs((state) => openTab(state, comment.filePath, "permanent"));
     setSearch({
       file: comment.filePath,
       path: comment.filePath,
@@ -531,7 +547,6 @@ export function CodeWorkspace() {
   };
 
   const viewing = search.file ?? null;
-  const showFileTabs = mode !== "commit" || viewing !== null;
 
   // --- open-file tabs --------------------------------------------------------
   // The strip follows the open file rather than owning it: navigation arrives
@@ -577,6 +592,8 @@ export function CodeWorkspace() {
   // pointing the store at a repository swaps in that repository's strip, which
   // would otherwise drop the file already on screen.
   useEffect(() => {
+    // Nothing to reconcile where the strip is neither drawn nor written to.
+    if (!tabbed) return;
     if (viewing === null && canRestore) {
       const restored = tabToRestore(readTabs());
       // Replaces rather than pushes, so Back leaves the strip behind instead of
@@ -591,7 +608,7 @@ export function CodeWorkspace() {
       }
     }
     updateTabs((state) => syncActive(state, viewing));
-  }, [repoRoot, viewing, canRestore, navigate]);
+  }, [repoRoot, viewing, canRestore, tabbed, navigate]);
   // A strip restored from a previous session can name files that have since
   // been deleted or renamed.
   useEffect(() => {
@@ -746,15 +763,17 @@ export function CodeWorkspace() {
   };
 
   // --- handlers --------------------------------------------------------------
-  const deletePath = async (path: string, isDirectory: boolean) => {
-    if (
-      !window.confirm(
-        `Delete ${isDirectory ? "folder" : "file"} "${path}"? This cannot be undone.`
-      )
-    )
-      return;
-    await fetchClient.DELETE("/api/file", { params: { query: { path } } });
-    if (search.file === path) closeFile();
+  const deletePaths = async (items: ReadonlyArray<TreeItem>) => {
+    const only = items.length === 1 ? items[0] : null;
+    const what =
+      only === null
+        ? `${items.length} items`
+        : `${only.kind === "directory" ? "folder" : "file"} "${only.path}"`;
+    if (!window.confirm(`Delete ${what}?`)) return;
+    await fileActions.trash(items);
+    for (const item of items) {
+      if (search.file === withoutTrailingSlash(item.path)) closeFile();
+    }
     git.refresh();
   };
   const renamePath = async (from: string, to: string) => {
@@ -1038,10 +1057,11 @@ export function CodeWorkspace() {
               loading={mode === "review" ? diff.isPending : files.isPending}
               selectedFile={mode === "browse" ? viewing : (search.path ?? null)}
               onFileSelect={onFileSelect}
-              onDeletePath={mode === "review" ? undefined : deletePath}
+              onDeletePaths={mode === "review" ? undefined : deletePaths}
               onRenamePath={mode === "review" ? undefined : renamePath}
-              onCreatePath={mode === "review" ? undefined : fileActions.create}
+              actions={mode === "review" ? undefined : fileActions}
               onShowHistory={showFileHistory}
+              projectPath={workspace.data?.project ?? null}
               footer={
                 mode === "commit" && changedFiles.length > 0 ? (
                   <CommitPanel
@@ -1085,7 +1105,7 @@ export function CodeWorkspace() {
             />
           )}
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {showFileTabs && (
+          {tabbed && (
             <TabStrip
               tabs={tabs.tabs}
               active={tabs.active}
@@ -1153,6 +1173,9 @@ export function CodeWorkspace() {
               onShowHistory={
                 viewing === null ? undefined : () => showFileHistory(viewing)
               }
+              // Over a diff the trail is the only thing naming the open file,
+              // now that no strip does, so it is also what puts it down again.
+              onClose={!tabbed && viewing !== null ? closeFile : undefined}
               actions={
                 <div
                   ref={setFileActionsSlot}
