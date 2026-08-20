@@ -1,4 +1,4 @@
-import { type LineAnnotation } from "@pierre/diffs";
+import type { DiffsEditableComponent, LineAnnotation } from "@pierre/diffs";
 import { EditProvider, File, Virtualizer } from "@pierre/diffs/react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -21,6 +21,7 @@ import {
 } from "@/interactions/language/components/use-reveal-line";
 import { useFindInFile } from "@/interactions/find-in-file/adapters/find-in-file.hook.adapter";
 import { useVim } from "@/interactions/vim/adapters/vim.hook.adapter";
+import { useFolding } from "@/interactions/folding/adapters/folding.hook.adapter";
 import {
   THEMES,
   fileForHighlighting,
@@ -36,6 +37,7 @@ import { useFile } from "@/lib/queries";
 import { useUiPrefs } from "@/lib/ui-prefs";
 import type { ReviewComment } from "@byconvo/core/comments";
 import type { FileEdits, Location } from "@byconvo/core/language";
+import type { VimFoldAction } from "@/interactions/vim/interfaces/vim.interfaces";
 import { writeFileEdits } from "@/interactions/language/adapters/language.hook.adapter";
 import type { Theme } from "@/lib/ui-prefs";
 
@@ -131,11 +133,21 @@ export function CodeView({
     []
   );
 
+  // `useFolding` needs the file component to give it the collapsed-region hooks
+  // it has none of, and it only turns up when the editor attaches. The ref
+  // breaks the cycle: folding is declared below, since it needs the editor this
+  // call produces.
+  const foldAttach = useRef<
+    ((component: DiffsEditableComponent<undefined>) => void) | null
+  >(null);
   const buffer = useFileEditing(
     path,
     file.data?.contents,
     useCallback(() => onSaved?.(), [onSaved]),
-    editing
+    editing,
+    useCallback((component: DiffsEditableComponent<undefined>) => {
+      foldAttach.current?.(component);
+    }, [])
   );
 
   useEffect(() => {
@@ -153,6 +165,18 @@ export function CodeView({
     onEditingChange?.(false);
   };
 
+  // Folding. Unlike the rest of the editing layer this is worth having in a
+  // view that is only being read, so it is not gated on an edit session — the
+  // editor is handed over when there is one, for the caret to be kept out of a
+  // closed fold.
+  const folding = useFolding({
+    editor: editing ? buffer.editor : null,
+    contents: contents ?? "",
+    subscribe: editing ? buffer.subscribe : undefined,
+    isFocused: buffer.isFocused,
+  });
+  foldAttach.current = folding.attach;
+
   // Modal editing, when the user has asked for it. Same story as ⌘F about the
   // editor: only a live session has a caret for the motions to move.
   const vim = useVim({
@@ -160,6 +184,17 @@ export function CodeView({
     enabled: prefs.vimMode,
     isFocused: buffer.isFocused,
     subscribe: editing ? buffer.subscribe : undefined,
+    visibleFrom: folding.visibleFrom,
+    onFold: useCallback(
+      (action: VimFoldAction, line: number) => {
+        if (action === "toggle") folding.toggle(line);
+        else if (action === "close") folding.close(line);
+        else if (action === "open") folding.open(line);
+        else if (action === "closeAll") folding.closeAll();
+        else folding.openAll();
+      },
+      [folding]
+    ),
   });
 
   // The IDE layer: diagnostics, go-to-definition and find-usages, driven by
@@ -234,11 +269,13 @@ export function CodeView({
     getScroller,
   });
 
-  // The view keeps one `onPostRender`, and three layers paint from it: the
-  // diagnostic underlines, the find highlight and the relative line numbers.
+  // The view keeps one `onPostRender`, and four layers paint from it: the
+  // diagnostic underlines, the find highlight, the relative line numbers and
+  // the folds.
   const languagePostRender = language.viewOptions.onPostRender;
   const findPostRender = find.viewOptions.onPostRender;
   const vimPostRender = vim.viewOptions.onPostRender;
+  const foldPostRender = folding.viewOptions.onPostRender;
   const onPostRender = useCallback(
     (
       node: HTMLElement,
@@ -248,8 +285,9 @@ export function CodeView({
       languagePostRender(node, instance, phase);
       findPostRender(node, instance, phase);
       vimPostRender(node, instance, phase);
+      foldPostRender(node, instance, phase);
     },
-    [languagePostRender, findPostRender, vimPostRender]
+    [languagePostRender, findPostRender, vimPostRender, foldPostRender]
   );
 
   // Line count drives the first scroll estimate for a line that has not been
@@ -335,7 +373,7 @@ export function CodeView({
                 // Both layers paint from the same callback and into the same
                 // stylesheet, and the view keeps one of each.
                 onPostRender,
-                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}`,
+                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}\n${folding.viewOptions.unsafeCSS}`,
               }}
               edit={editing}
               /* The editable view snapshots the rendered code when the editor

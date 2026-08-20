@@ -543,6 +543,15 @@ export function runCommand(
       };
     }
 
+    case "fold":
+      return {
+        state: cleared,
+        edits: NOTHING,
+        caret,
+        handled: true,
+        fold: command.action,
+      };
+
     case "undo":
       return {
         state: cleared,

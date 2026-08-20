@@ -11,7 +11,7 @@
  * The painter is idempotent and reversible: turning Vim mode off, or moving to a
  * view that never had it, puts the absolute numbers back.
  */
-import { codeRootsWithin } from "@/lib/code-root";
+import { codeRootOf } from "@/lib/code-root";
 
 /** Marks a row this module has rewritten, so it can be put back. */
 const PAINTED = "data-vim-relative";
@@ -19,10 +19,11 @@ const PAINTED = "data-vim-relative";
 const NUMBER_SELECTOR = "[data-column-number]";
 const CONTENT_SELECTOR = "[data-line-number-content]";
 
-const rowsIn = (container: ParentNode): ReadonlyArray<Element> =>
-  codeRootsWithin(container).flatMap((root) => [
-    ...root.querySelectorAll(NUMBER_SELECTOR),
-  ]);
+// The rows live in the view's own shadow root, which is what `onPostRender`
+// hands back the host of — a plain query on the host itself reaches none of them.
+const rowsIn = (container: HTMLElement): ReadonlyArray<Element> => [
+  ...codeRootOf(container).querySelectorAll(NUMBER_SELECTOR),
+];
 
 /**
  * Number every row by its distance from `caretLine` (zero-based), leaving the
@@ -31,7 +32,7 @@ const rowsIn = (container: ParentNode): ReadonlyArray<Element> =>
  * when you want to jump to it.
  */
 export function paintRelativeLines(
-  container: ParentNode,
+  container: HTMLElement,
   caretLine: number
 ): number {
   let painted = 0;
@@ -52,14 +53,12 @@ export function paintRelativeLines(
 }
 
 /** Put the absolute numbers back on every row this module rewrote. */
-export function clearRelativeLines(container: ParentNode): void {
-  for (const root of codeRootsWithin(container)) {
-    for (const row of root.querySelectorAll(`[${PAINTED}]`)) {
-      row.removeAttribute(PAINTED);
-      const attribute = row.getAttribute("data-column-number");
-      const content = row.querySelector(CONTENT_SELECTOR);
-      if (attribute === null || !(content instanceof HTMLElement)) continue;
-      content.textContent = attribute;
-    }
+export function clearRelativeLines(container: HTMLElement): void {
+  for (const row of codeRootOf(container).querySelectorAll(`[${PAINTED}]`)) {
+    row.removeAttribute(PAINTED);
+    const attribute = row.getAttribute("data-column-number");
+    const content = row.querySelector(CONTENT_SELECTOR);
+    if (attribute === null || !(content instanceof HTMLElement)) continue;
+    content.textContent = attribute;
   }
 }

@@ -18,6 +18,7 @@ interface Editor {
   readonly state: VimState;
   readonly handled: boolean;
   readonly history: ReadonlyArray<"undo" | "redo">;
+  readonly folds: ReadonlyArray<string>;
 }
 
 /** Apply the edits a keystroke produced, exactly as the adapter would. */
@@ -57,6 +58,7 @@ const open = (
   state: INITIAL_VIM_STATE,
   handled: true,
   history: [],
+  folds: [],
 });
 
 /** Type a run of keys, one keystroke each, the way a user would. `C-x` is ⌃x. */
@@ -84,6 +86,10 @@ function type(editor: Editor, keys: ReadonlyArray<string>): Editor {
         outcome.history === undefined
           ? current.history
           : [...current.history, outcome.history],
+      folds:
+        outcome.fold === undefined
+          ? current.folds
+          : [...current.folds, `${outcome.fold}@${outcome.caret.line}`],
     };
   }
   return current;
@@ -416,5 +422,31 @@ describe("what Vim mode never takes", () => {
   it("leaves the arrow keys to the editor", () => {
     expect(chord("ArrowLeft", {}).handled).toBe(false);
     expect(chord("Home", {}).handled).toBe(false);
+  });
+});
+
+describe("folding", () => {
+  it("asks the view to fold rather than touching the buffer", () => {
+    const folded = type(open(FILE, { line: 3, character: 0 }), ["z", "a"]);
+    expect(folded.folds).toEqual(["toggle@3"]);
+    expect(folded.text).toBe(FILE);
+  });
+
+  it("spells the rest of the z commands", () => {
+    expect(type(open(), ["z", "c"]).folds).toEqual(["close@0"]);
+    expect(type(open(), ["z", "o"]).folds).toEqual(["open@0"]);
+    expect(type(open(), ["z", "M"]).folds).toEqual(["closeAll@0"]);
+    expect(type(open(), ["z", "R"]).folds).toEqual(["openAll@0"]);
+  });
+
+  it("waits for the second key, and drops a pair that spells nothing", () => {
+    expect(type(open(), ["z"]).state.pending).toBe("z");
+    const nonsense = type(open(), ["z", "q"]);
+    expect(nonsense.folds).toEqual([]);
+    expect(nonsense.text).toBe(FILE);
+  });
+
+  it("folds from visual mode too, where the same keys mean the same thing", () => {
+    expect(type(open(), ["v", "j", "z", "a"]).folds).toEqual(["toggle@1"]);
   });
 });

@@ -62,9 +62,25 @@ export type VimMotion =
       readonly till: boolean;
     }
   | { readonly kind: "halfPageDown" }
-  | { readonly kind: "halfPageUp" };
+  | { readonly kind: "halfPageUp" }
+  /** `%` — the bracket matching the one at or after the caret. */
+  | { readonly kind: "matchBracket" }
+  /** `[{` `[(` `]}` `])` — the wall of the block the caret is inside. */
+  | {
+      readonly kind: "enclosing";
+      readonly open: string;
+      readonly ahead: boolean;
+    }
+  /** `{` and `}` — the blank line either side of this run of code. */
+  | { readonly kind: "paragraph"; readonly ahead: boolean }
+  /** `[[` and `]]` — the next thing starting at the left margin. */
+  | { readonly kind: "section"; readonly ahead: boolean };
 
 export type VimOperator = "delete" | "change" | "yank" | "indent" | "outdent";
+
+/** What a `z` command asks the view to do with its folds. */
+export type VimFoldAction =
+  "toggle" | "close" | "open" | "closeAll" | "openAll";
 
 /** Where `i`, `a`, `o` and their capitals leave the caret. */
 export type VimInsertAt =
@@ -107,7 +123,9 @@ export type VimCommand =
   /** Escape, and everything else that just puts the caret back in normal mode. */
   | { readonly kind: "escape" }
   /** The visual-mode operators, which act on the selection rather than a motion. */
-  | { readonly kind: "operateSelection"; readonly operator: VimOperator };
+  | { readonly kind: "operateSelection"; readonly operator: VimOperator }
+  /** `za` `zc` `zo` `zR` `zM` — folding, which the view owns rather than the buffer. */
+  | { readonly kind: "fold"; readonly action: VimFoldAction };
 
 /** What parsing the keys so far came to. */
 export type VimParse =
@@ -131,6 +149,11 @@ export interface VimOutcome {
   readonly handled: boolean;
   /** Undo or redo to run on the editor — Vim's `u` and `⌃r`. */
   readonly history?: "undo" | "redo";
+  /**
+   * A fold to act on, at `caret`'s line. Folding is the view's, not the
+   * buffer's, so the grammar names the action and the adapter carries it out.
+   */
+  readonly fold?: VimFoldAction;
 }
 
 export const INITIAL_VIM_STATE: VimState = {

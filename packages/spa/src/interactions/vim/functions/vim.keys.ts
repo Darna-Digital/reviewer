@@ -12,6 +12,7 @@
  * operator acts on it rather than taking a motion of its own.
  */
 import type {
+  VimFoldAction,
   VimMotion,
   VimOperator,
   VimParse,
@@ -40,6 +41,34 @@ const SIMPLE_MOTIONS: Readonly<Record<string, VimMotion>> = {
   "^": { kind: "firstNonBlank" },
   $: { kind: "lineEnd" },
   G: { kind: "fileEnd" },
+  "%": { kind: "matchBracket" },
+  "{": { kind: "paragraph", ahead: false },
+  "}": { kind: "paragraph", ahead: true },
+};
+
+/**
+ * The two-key bracket motions: `[` and `]` followed by the wall to travel to.
+ *
+ * `[[` and `]]` are the odd ones out — the bracket repeated means "the next
+ * thing at the left margin" rather than a bracket at all, which is how Vim
+ * spells section movement.
+ */
+const BRACKET_MOTIONS: Readonly<Record<string, VimMotion>> = {
+  "[(": { kind: "enclosing", open: "(", ahead: false },
+  "[{": { kind: "enclosing", open: "{", ahead: false },
+  "[[": { kind: "section", ahead: false },
+  "])": { kind: "enclosing", open: "(", ahead: true },
+  "]}": { kind: "enclosing", open: "{", ahead: true },
+  "]]": { kind: "section", ahead: true },
+};
+
+/** The `z` commands, which act on the view's folds rather than on the buffer. */
+const FOLD_ACTIONS: Readonly<Record<string, VimFoldAction>> = {
+  a: "toggle",
+  c: "close",
+  o: "open",
+  M: "closeAll",
+  R: "openAll",
 };
 
 /** Keys that take the next keystroke as an argument rather than a command. */
@@ -76,6 +105,14 @@ function parseMotion(input: string): MotionParse {
     return second === "g"
       ? { kind: "motion", motion: { kind: "fileStart" } }
       : { kind: "none" };
+  }
+
+  if (key === "[" || key === "]") {
+    const second = input[1];
+    if (second === undefined) return { kind: "pending" };
+    if (input.length > 2) return { kind: "none" };
+    const motion = BRACKET_MOTIONS[key + second];
+    return motion === undefined ? { kind: "none" } : { kind: "motion", motion };
   }
 
   if (key === "f" || key === "F" || key === "t" || key === "T") {
@@ -204,7 +241,17 @@ export function parseNormal(input: string): VimParse {
       : { kind: "command", command: { kind: "replaceChar", char: after[0] } };
   }
 
-  if (AWAITS_ARGUMENT.has(key)) {
+  if (key === "z") {
+    const after = rest[1];
+    if (after === undefined) return { kind: "pending" };
+    if (rest.length > 2) return { kind: "none" };
+    const action = FOLD_ACTIONS[after];
+    return action === undefined
+      ? { kind: "none" }
+      : { kind: "command", command: { kind: "fold", action } };
+  }
+
+  if (AWAITS_ARGUMENT.has(key) || key === "[" || key === "]") {
     const parsed = parseMotion(rest);
     return parsed.kind === "motion" ? move(parsed.motion, count) : parsed;
   }
@@ -345,6 +392,16 @@ export function parseVisual(input: string): VimParse {
       break;
   }
 
+  if (key === "z") {
+    const after = rest[1];
+    if (after === undefined) return { kind: "pending" };
+    if (rest.length > 2) return { kind: "none" };
+    const action = FOLD_ACTIONS[after];
+    return action === undefined
+      ? { kind: "none" }
+      : { kind: "command", command: { kind: "fold", action } };
+  }
+
   if (key === "g") {
     const after = rest.slice(1);
     if (after.length === 0) return { kind: "pending" };
@@ -362,7 +419,7 @@ export function parseVisual(input: string): VimParse {
     };
   }
 
-  if (AWAITS_ARGUMENT.has(key) && key !== "r") {
+  if ((AWAITS_ARGUMENT.has(key) && key !== "r") || key === "[" || key === "]") {
     const parsed = parseMotion(rest);
     return parsed.kind === "motion" ? move(parsed.motion, count) : parsed;
   }

@@ -9,6 +9,12 @@
  * further stops rather than wrapping.
  */
 import type { VimMotion, VimPosition } from "../interfaces/vim.interfaces";
+import {
+  enclosingBracket,
+  matchingBracket,
+  paragraphJump,
+  sectionJump,
+} from "./vim.brackets";
 
 /** How far `⌃d` and `⌃u` travel, as Vim's default half-page. */
 export const HALF_PAGE_LINES = 12;
@@ -245,6 +251,33 @@ export function applyMotion(
       const line = clampLine(lines, motion.line);
       return { line, character: firstNonBlank(lines[line] ?? "") };
     }
+    case "matchBracket": {
+      // Unbalanced, or no bracket on the line: Vim beeps and stays put.
+      const found = matchingBracket(lines, at);
+      return found === null ? at : clampCaret(lines, found, past);
+    }
+    case "enclosing": {
+      const found = enclosingBracket(
+        lines,
+        at,
+        motion.open,
+        motion.ahead,
+        count
+      );
+      return found === null ? at : clampCaret(lines, found, past);
+    }
+    case "paragraph":
+      return clampCaret(
+        lines,
+        paragraphJump(lines, at, motion.ahead, count),
+        past
+      );
+    case "section":
+      return clampCaret(
+        lines,
+        sectionJump(lines, at, motion.ahead, count),
+        past
+      );
     case "findChar": {
       let column = at.character;
       for (let n = 0; n < count; n++) {
@@ -267,6 +300,7 @@ export function applyMotion(
 /** Whether a motion covers whole lines, which is what an operator acts on. */
 export const isLinewise = (motion: VimMotion): boolean =>
   motion.kind === "up" ||
+  motion.kind === "section" ||
   motion.kind === "down" ||
   motion.kind === "fileStart" ||
   motion.kind === "fileEnd" ||
@@ -283,5 +317,9 @@ export const isLinewise = (motion: VimMotion): boolean =>
  */
 export const isInclusive = (motion: VimMotion): boolean =>
   motion.kind === "wordEnd" ||
+  // `d%` takes the bracket it lands on, and so does `d]}` — the point of both
+  // is to remove the whole balanced run rather than to leave a stray wall.
+  motion.kind === "matchBracket" ||
+  (motion.kind === "enclosing" && motion.ahead) ||
   (motion.kind === "findChar" && motion.forward) ||
   motion.kind === "lineEnd";

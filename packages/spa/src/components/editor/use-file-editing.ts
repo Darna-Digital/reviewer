@@ -15,7 +15,7 @@
  * to be something the editor has no command for, or ⌘/ and friends would be
  * stopped on their way down to it.
  */
-import { type FileContents } from "@pierre/diffs";
+import { type DiffsEditableComponent, type FileContents } from "@pierre/diffs";
 import { Editor, type EditorOptions } from "@pierre/diffs/edit";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -77,7 +77,13 @@ export function useFileEditing(
   loadedContents: string | undefined,
   onSaved: () => void,
   /** Whether the view is in editing mode, so a closed session drops its editor. */
-  editing: boolean = true
+  editing: boolean = true,
+  /**
+   * Called with the file component the editor attached to. It is the only way
+   * to reach the optional collapsed-region hooks a plain file leaves
+   * unimplemented — see `useFolding`.
+   */
+  onAttach?: (component: DiffsEditableComponent<undefined>) => void
 ): FileEditing {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -105,9 +111,16 @@ export function useFileEditing(
    * the debounced hand-off to the analyser all hang off ours. The view's own
    * callbacks are still called, so nothing it registered is lost.
    */
+  const attachRef = useRef(onAttach);
+  attachRef.current = onAttach;
+
   const createEditor = useCallback((options: EditorOptions<undefined>) => {
     const created = new Editor<undefined>({
       ...options,
+      onAttach: (attached, component) => {
+        attachRef.current?.(component);
+        options.onAttach?.(attached, component);
+      },
       // Comment tokens for the filetypes the library's own table misses, and
       // the bindings this app adds to its defaults.
       languageCommentConfig: {
