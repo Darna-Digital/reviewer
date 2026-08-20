@@ -15,7 +15,10 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Editor } from "@pierre/diffs/edit";
-import { useRevealLine } from "@/interactions/language/components/use-reveal-line";
+import {
+  useRevealLine,
+  type RevealTarget,
+} from "@/interactions/language/components/use-reveal-line";
 import { selectedTextInCode } from "@/lib/code-root";
 import { FindBar } from "../components/find-bar";
 import {
@@ -83,9 +86,7 @@ export function useFindInFile({
   const [activeIndex, setActiveIndex] = useState(0);
   const [focusKey, setFocusKey] = useState(0);
   const [anchor, setAnchor] = useState<FindAnchor | null>(null);
-  const [reveal, setReveal] = useState<{ line: number; key: number } | null>(
-    null
-  );
+  const [reveal, setReveal] = useState<RevealTarget | null>(null);
   /** The live buffer while one is being typed into; null while reading. */
   const [buffered, setBuffered] = useState<string | null>(null);
 
@@ -151,13 +152,14 @@ export function useFindInFile({
     if (!open || matches.length === 0) return;
     const match = matches[Math.min(activeIndex, matches.length - 1)];
     revealKey.current += 1;
-    setReveal({ line: match.line, key: revealKey.current });
-  }, [open, matches, activeIndex]);
+    setReveal({ path, line: match.line, key: revealKey.current });
+  }, [open, matches, activeIndex, path]);
 
   useRevealLine(
     getScroller,
     open ? reveal : null,
     text.split("\n").length,
+    path,
     // The match is already highlighted; flashing its line on every step would
     // be a second answer to a question nobody asked twice.
     false

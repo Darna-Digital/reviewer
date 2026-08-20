@@ -235,10 +235,14 @@ export function CodeView({
 
   // Line count drives the first scroll estimate for a line that has not been
   // rendered yet; zero until the file loads, which simply means "start at top".
+  // The hook is called above the loading and error returns below, so a request
+  // that arrives while the file is still being read has something waiting for
+  // the view to mount — that first jump is the one that used to be lost.
   useRevealLine(
     getScroller,
     reveal,
-    file.data === undefined ? 0 : file.data.contents.split("\n").length
+    file.data === undefined ? 0 : file.data.contents.split("\n").length,
+    path
   );
 
   if (file.isPending || !langReady || !highlightPrimed) {
