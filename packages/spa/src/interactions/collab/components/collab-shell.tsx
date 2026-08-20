@@ -18,7 +18,6 @@
  */
 import { Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect, type CSSProperties } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   COLLAB_SHORTCUTS,
   collabWidth,
@@ -79,11 +78,9 @@ export function CollabShell() {
       className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
     >
       <CollabDrawerPush>
-        <ScrollArea className="min-h-0 flex-1">
-          <CollabColumn width={width}>
-            <Outlet />
-          </CollabColumn>
-        </ScrollArea>
+        <CollabColumn width={width}>
+          <Outlet />
+        </CollabColumn>
         {/* Inside the push, so it dims the page rather than the window: it
             travels with what it is covering. */}
         <CollabDrawerScrim />

@@ -91,10 +91,25 @@ function Row({
 /**
  * The page giving way to the drawer.
  *
- * Moved rather than resized, exactly as `TabOverviewPush` moves it for the
- * launchpad: the transform is the whole of the animation, and the column
- * underneath never learns that anything happened. The scrim is a child so it
- * travels with the page it is dimming — it covers the page, not the window.
+ * The one place this departs from `TabOverviewPush`, and it is the geometry
+ * rather than the taste that forces it. The launchpad takes most of the window,
+ * so sliding the page off the far edge costs a strip of it nobody was reading;
+ * this drawer takes a third, and sliding the page the same way took its head
+ * off — the title, the trail, the row of tools — while leaving the rest of the
+ * sheet on screen. A page whose top is the part you are keeping cannot be
+ * pushed out through the top.
+ *
+ * So the page yields by getting shorter rather than by moving: its bottom edge
+ * rises exactly as far as the drawer is tall, and the sheet's own scroller
+ * keeps the content where it was. The window still visibly makes room, which is
+ * what the gesture says; nothing that was being read leaves.
+ *
+ * That is a layout on each frame rather than a composite, which is a cost worth
+ * naming — but it is one flex row holding one sheet, over 260ms, and it is the
+ * same work a pane drag in this app already does on every pointer move.
+ *
+ * The scrim is a child so it dims the page rather than the window, and shrinks
+ * with it.
  */
 export function CollabDrawerPush({
   children,
@@ -102,18 +117,16 @@ export function CollabDrawerPush({
   readonly children: ReactNode;
 }) {
   const open = useCollabDrawer();
-  const present = usePresence(open !== null, PANEL_SLIDE_MS);
 
   return (
     <div
-      style={PANEL_SLIDE}
+      style={{
+        ...PANEL_SLIDE,
+        bottom: open === null ? 0 : "var(--collab-drawer)",
+      }}
       className={cn(
-        "absolute inset-0 flex min-h-0 min-w-0 flex-col",
-        "transition-transform motion-reduce:transition-none",
-        // Held only while the drawer is on screen: the layer is the whole page,
-        // and it is not worth its memory for the rest of the session.
-        present && "will-change-transform",
-        open !== null && "-translate-y-[var(--collab-drawer)]",
+        "absolute inset-x-0 top-0 flex min-h-0 min-w-0 flex-col",
+        "transition-[bottom] motion-reduce:transition-none",
         PANEL_EASE
       )}
     >
