@@ -98,6 +98,8 @@ import {
   togglePin,
 } from "@/interactions/tabs/functions/tabs.functions";
 import { useFileActions } from "@/interactions/file-actions/adapters/file-actions.hook.adapter";
+import { withoutTrailingSlash } from "@/interactions/file-actions/functions/file-actions.functions";
+import type { TreeItem } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { fetchClient } from "@/lib/api/client";
 import {
@@ -761,15 +763,17 @@ export function CodeWorkspace() {
   };
 
   // --- handlers --------------------------------------------------------------
-  const deletePath = async (path: string, isDirectory: boolean) => {
-    if (
-      !window.confirm(
-        `Delete ${isDirectory ? "folder" : "file"} "${path}"? This cannot be undone.`
-      )
-    )
-      return;
-    await fetchClient.DELETE("/api/file", { params: { query: { path } } });
-    if (search.file === path) closeFile();
+  const deletePaths = async (items: ReadonlyArray<TreeItem>) => {
+    const only = items.length === 1 ? items[0] : null;
+    const what =
+      only === null
+        ? `${items.length} items`
+        : `${only.kind === "directory" ? "folder" : "file"} "${only.path}"`;
+    if (!window.confirm(`Delete ${what}?`)) return;
+    await fileActions.trash(items);
+    for (const item of items) {
+      if (search.file === withoutTrailingSlash(item.path)) closeFile();
+    }
     git.refresh();
   };
   const renamePath = async (from: string, to: string) => {
@@ -1053,10 +1057,11 @@ export function CodeWorkspace() {
               loading={mode === "review" ? diff.isPending : files.isPending}
               selectedFile={mode === "browse" ? viewing : (search.path ?? null)}
               onFileSelect={onFileSelect}
-              onDeletePath={mode === "review" ? undefined : deletePath}
+              onDeletePaths={mode === "review" ? undefined : deletePaths}
               onRenamePath={mode === "review" ? undefined : renamePath}
-              onCreatePath={mode === "review" ? undefined : fileActions.create}
+              actions={mode === "review" ? undefined : fileActions}
               onShowHistory={showFileHistory}
+              projectPath={workspace.data?.project ?? null}
               footer={
                 mode === "commit" && changedFiles.length > 0 ? (
                   <CommitPanel

@@ -7,6 +7,7 @@ import type {
   FileBytes,
   FileContent,
   PathKind,
+  Trashed,
   WorkspaceInfo,
 } from "../schema/workspace.schema.ts";
 
@@ -48,6 +49,30 @@ export interface WorkspaceRepo {
   readonly renamePath: (
     fromRel: string,
     toRel: string
+  ) => Effect.Effect<void, NoRepoSelected | StorageError>;
+  /** Copy a file or a whole directory, refusing to overwrite what is there. */
+  readonly copyPath: (
+    fromRel: string,
+    toRel: string
+  ) => Effect.Effect<void, NoRepoSelected | PathExists | StorageError>;
+  /**
+   * Write bytes that came from outside the project — a file dropped onto the
+   * tree — refusing a path that is taken.
+   */
+  readonly uploadFile: (
+    relPath: string,
+    base64: string
+  ) => Effect.Effect<void, NoRepoSelected | PathExists | StorageError>;
+  /**
+   * Move a path into the project's trash, and say where it went. Nothing is
+   * unlinked, so a delete is undone by renaming it back.
+   */
+  readonly trashPath: (
+    relPath: string
+  ) => Effect.Effect<Trashed, NoRepoSelected | StorageError>;
+  /** Show the path in the operating system's file manager. */
+  readonly revealPath: (
+    relPath: string
   ) => Effect.Effect<void, NoRepoSelected | StorageError>;
 }
 export class WorkspaceRepository extends Context.Service<

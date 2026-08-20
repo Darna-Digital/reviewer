@@ -93,6 +93,25 @@ export const RenameFile = Schema.Struct({
   to: Schema.String,
 });
 export type RenameFile = typeof RenameFile.Type;
+/** A file dropped in from outside the project — bytes, so binaries survive. */
+export const UploadFile = Schema.Struct({
+  path: Schema.String,
+  base64: Schema.String,
+});
+export type UploadFile = typeof UploadFile.Type;
+/**
+ * Where a deleted path went. Deleting moves it into the project's own trash
+ * rather than unlinking it, so undoing a delete is an ordinary rename back.
+ */
+export const Trashed = Schema.Struct({
+  path: Schema.String,
+});
+export type Trashed = typeof Trashed.Type;
+export const CopyPath = Schema.Struct({
+  from: Schema.String,
+  to: Schema.String,
+});
+export type CopyPath = typeof CopyPath.Type;
 export const PathKind = Schema.Literals(["file", "directory"]);
 export type PathKind = typeof PathKind.Type;
 export const CreatePath = Schema.Struct({
@@ -108,3 +127,8 @@ export const PathQuery = Schema.Struct({
   path: Schema.String,
 });
 export type PathQuery = typeof PathQuery.Type;
+/** Show a path where the operating system keeps it — Finder, Explorer, files. */
+export const RevealPath = Schema.Struct({
+  path: Schema.String,
+});
+export type RevealPath = typeof RevealPath.Type;
