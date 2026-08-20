@@ -92,6 +92,8 @@ Element.prototype.scrollIntoView = () => {};
 const { SearchHost } = await import("./search-host");
 const { resetSearchStore, useRegisterCommands } =
   await import("../adapters/search.store");
+const { registerCodeSelection, resetCodeSelection } =
+  await import("@/interactions/find-in-file/adapters/code-selection.store");
 
 const pageCommand = vi.fn();
 
@@ -135,6 +137,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   resetSearchStore();
+  resetCodeSelection();
 });
 
 describe("SearchHost", () => {
@@ -226,6 +229,56 @@ describe("SearchHost", () => {
     await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
 
     expect(screen.getByText("Type to search.")).toBeDefined();
+  });
+
+  it("opens the text search on whatever the open file has highlighted", async () => {
+    const user = setup();
+    registerCodeSelection(() => "useProjectFiles");
+
+    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
+
+    const box = dialog() as HTMLInputElement;
+    expect(box.value).toBe("useProjectFiles");
+    // Selected, so the next keystroke replaces it rather than appending to it.
+    expect(box.selectionStart).toBe(0);
+    expect(box.selectionEnd).toBe("useProjectFiles".length);
+  });
+
+  it("takes a fresh phrase every time, including the same one twice", async () => {
+    const user = setup();
+    let selected = "first";
+    registerCodeSelection(() => selected);
+
+    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
+    await user.keyboard("{Escape}");
+    selected = "second";
+    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
+    expect((dialog() as HTMLInputElement).value).toBe("second");
+
+    await user.type(dialog()!, "typed over");
+    await user.keyboard("{Escape}");
+    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
+    expect((dialog() as HTMLInputElement).value).toBe("second");
+  });
+
+  it("keeps the last search when nothing is highlighted", async () => {
+    const user = setup();
+
+    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
+    await user.type(dialog()!, "handler");
+    await user.keyboard("{Escape}");
+    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
+
+    expect((dialog() as HTMLInputElement).value).toBe("handler");
+  });
+
+  it("will not carry a paragraph into the box", async () => {
+    const user = setup();
+    registerCodeSelection(() => "one line\nand another");
+
+    await user.keyboard("{Meta>}{Shift>}f{/Shift}{/Meta}");
+
+    expect((dialog() as HTMLInputElement).value).toBe("");
   });
 
   it("opens a file on the code page when the current one cannot show it", async () => {

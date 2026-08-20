@@ -51,7 +51,14 @@ export function useRevealLine(
   target: RevealTarget | null,
   totalLines: number,
   /** The file on screen. A request for another one belongs to another view. */
-  path: string
+  path: string,
+  /**
+   * Flash the line once it is on screen. On for a jump the user has to find on
+   * arrival — a definition, a usage, a note — and off for stepping through find
+   * matches, where the match is already highlighted and a flash on every press
+   * of Enter is noise.
+   */
+  flash = true
 ) {
   const line = target !== null && target.path === path ? target.line : null;
   const key = target?.key ?? 0;
@@ -143,12 +150,14 @@ export function useRevealLine(
         // and start the flash from the moment there is something to flash.
         sighted = true;
         deadline = now + SETTLE_MS;
-        unflash = setTimeout(
-          () => flashed?.removeAttribute("data-revealed"),
-          FLASH_MS
-        );
+        if (flash) {
+          unflash = setTimeout(
+            () => flashed?.removeAttribute("data-revealed"),
+            FLASH_MS
+          );
+        }
       }
-      if (flashed !== element) {
+      if (flash && flashed !== element) {
         flashed?.removeAttribute("data-revealed");
         element.setAttribute("data-revealed", "");
         flashed = element;
@@ -194,5 +203,5 @@ export function useRevealLine(
     raf = requestAnimationFrame(frame);
     return stop;
     // `key` re-runs the effect when the same line is requested again.
-  }, [line, key, totalLines, getScroller, path]);
+  }, [line, key, totalLines, getScroller, path, flash]);
 }
