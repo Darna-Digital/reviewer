@@ -24,29 +24,33 @@ const NONE: ReadonlyArray<ComposerAttachment> = [];
 let pending: Readonly<Record<string, ReadonlyArray<ComposerAttachment>>> = {};
 const listeners = new Set<() => void>();
 
-const write = (key: string, next: ReadonlyArray<ComposerAttachment>): void => {
-  if (next.length === 0) {
-    if (!(key in pending)) return;
-    const { [key]: _removed, ...rest } = pending;
-    pending = rest;
-  } else {
-    pending = { ...pending, [key]: next };
-  }
+const emit = () => {
   for (const listener of listeners) listener();
 };
 
+const write = (key: string, next: ReadonlyArray<ComposerAttachment>) => {
+  if (next.length > 0) {
+    pending = { ...pending, [key]: next };
+    emit();
+    return;
+  }
+  // Emptied: drop the key rather than leave an empty array behind it.
+  if (!(key in pending)) return;
+  const { [key]: _removed, ...rest } = pending;
+  pending = rest;
+  emit();
+};
+
 /** Everything `key`'s composer is currently holding. */
-export const composerAttachments = (
-  key: string
-): ReadonlyArray<ComposerAttachment> => pending[key] ?? NONE;
+export const composerAttachments = (key: string) => pending[key] ?? NONE;
 
 /** Attach one more image, after the ones already picked. */
 export const addComposerAttachment = (
   key: string,
   attachment: ComposerAttachment
-): void => write(key, [...composerAttachments(key), attachment]);
+) => write(key, [...composerAttachments(key), attachment]);
 
-export const removeComposerAttachment = (key: string, id: string): void => {
+export const removeComposerAttachment = (key: string, id: string) => {
   const current = composerAttachments(key);
   const next = current.filter((attachment) => attachment.id !== id);
   if (next.length === current.length) return;
@@ -54,11 +58,9 @@ export const removeComposerAttachment = (key: string, id: string): void => {
 };
 
 /** Drop the lot — what a sent message does with what it took with it. */
-export const clearComposerAttachments = (key: string): void => write(key, NONE);
+export const clearComposerAttachments = (key: string) => write(key, NONE);
 
-export const useComposerAttachments = (
-  key: string
-): ReadonlyArray<ComposerAttachment> =>
+export const useComposerAttachments = (key: string) =>
   useSyncExternalStore(
     (listener) => {
       listeners.add(listener);
@@ -69,7 +71,7 @@ export const useComposerAttachments = (
   );
 
 /** Test seam: forget every composer's pending images. */
-export const resetComposerAttachments = (): void => {
+export const resetComposerAttachments = () => {
   pending = {};
-  for (const listener of listeners) listener();
+  emit();
 };

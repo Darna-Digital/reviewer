@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import type { ComposerAttachment } from "../components/attachments";
 import {
   addComposerAttachment,
   clearComposerAttachments,
@@ -11,7 +10,7 @@ import {
   useComposerAttachments,
 } from "./composer-attachments.store";
 
-const shot = (id: string): ComposerAttachment => ({
+const shot = (id: string) => ({
   id,
   name: `${id}.png`,
   mimeType: "image/png",
