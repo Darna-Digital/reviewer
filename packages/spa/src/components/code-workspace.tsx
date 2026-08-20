@@ -1058,6 +1058,10 @@ export function CodeWorkspace() {
             onCheckout={(p, branch) => git.checkoutPull(p.number, branch)}
             onMerge={(p, method) => git.mergePull(p.number, method)}
             onBack={() => void navigate({ to: "/modes/code/review" })}
+            treeVisible={prefs.reviewTreeVisible}
+            onToggleTree={() =>
+              setUiPrefs({ reviewTreeVisible: !prefs.reviewTreeVisible })
+            }
             className="min-h-0 flex-1"
           />
         ) : (
@@ -1075,7 +1079,9 @@ export function CodeWorkspace() {
               240,
               window.innerWidth -
                 400 -
-                (mode === "review" && selectedPull !== null
+                (mode === "review" &&
+                selectedPull !== null &&
+                prefs.reviewTreeVisible
                   ? reviewTree.current()
                   : 0)
             )
@@ -1084,25 +1090,28 @@ export function CodeWorkspace() {
           onResizeEnd={(w) => setUiPrefs({ sidebarWidth: w })}
         />
       )}
-      {mode === "review" && selectedPull !== null && prefs.sidebarVisible && (
-        <>
-          <div
-            className="flex shrink-0 flex-col overflow-hidden border-r"
-            style={reviewTree.style}
-          >
-            <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
-          </div>
-          <ResizeHandle
-            orientation="col"
-            value={reviewTree.current}
-            min={180}
-            max={() => Math.max(240, window.innerWidth - 520)}
-            onResize={reviewTree.onResize}
-            onResizeEnd={(w) => setUiPrefs({ reviewTreeWidth: w })}
-            label="Resize file tree"
-          />
-        </>
-      )}
+      {mode === "review" &&
+        selectedPull !== null &&
+        prefs.sidebarVisible &&
+        prefs.reviewTreeVisible && (
+          <>
+            <div
+              className="flex shrink-0 flex-col overflow-hidden border-r"
+              style={reviewTree.style}
+            >
+              <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
+            </div>
+            <ResizeHandle
+              orientation="col"
+              value={reviewTree.current}
+              min={180}
+              max={() => Math.max(240, window.innerWidth - 520)}
+              onResize={reviewTree.onResize}
+              onResizeEnd={(w) => setUiPrefs({ reviewTreeWidth: w })}
+              label="Resize file tree"
+            />
+          </>
+        )}
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {mode === "commit" &&
           mergeState.data != null &&

@@ -28,6 +28,7 @@ import {
   IconGitMerge,
   IconGitPullRequest,
   IconGitPullRequestDraft,
+  IconLayoutSidebarRight,
 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
@@ -172,6 +173,8 @@ export function PullRequestOverview({
   onCheckout,
   onMerge,
   onBack,
+  treeVisible,
+  onToggleTree,
   className,
   style,
 }: {
@@ -185,6 +188,9 @@ export function PullRequestOverview({
   ) => Promise<void>;
   /** Back to the list of pull requests, which this column replaced. */
   readonly onBack: () => void;
+  /** Whether the file tree column beside this one is showing. */
+  readonly treeVisible: boolean;
+  readonly onToggleTree: () => void;
   readonly className?: string;
   readonly style?: React.CSSProperties;
 }) {
@@ -238,30 +244,55 @@ export function PullRequestOverview({
           <IconArrowLeft className="size-3.5 shrink-0" />
           Pull requests
         </Button>
-        {pull.url.length > 0 && (
+        <div className="flex shrink-0 items-center gap-0.5">
+          {pull.url.length > 0 && (
+            <Tooltip>
+              {/* An anchor wearing the button's face rather than a Button
+                  rendering an anchor: this navigates, so it should be a link
+                  the browser knows how to open in a new window. */}
+              <TooltipTrigger
+                render={
+                  <a
+                    href={pull.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={`Open #${pull.number} on GitHub`}
+                    className={buttonVariants({
+                      variant: "ghost-muted",
+                      size: "icon-xs",
+                    })}
+                  />
+                }
+              >
+                <IconExternalLink />
+              </TooltipTrigger>
+              <TooltipContent>Open on GitHub</TooltipContent>
+            </Tooltip>
+          )}
+          {/* The tree is the column immediately to the right of this one, and
+              the icon says so — a panel toggle, not a file glyph. It stays put
+              in both states and reports which one it is in, rather than
+              swapping to a second icon the eye has to re-read. */}
           <Tooltip>
-            {/* An anchor wearing the button's face rather than a Button
-                rendering an anchor: this navigates, so it should be a link
-                the browser knows how to open in a new window. */}
             <TooltipTrigger
               render={
-                <a
-                  href={pull.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={`Open #${pull.number} on GitHub`}
-                  className={buttonVariants({
-                    variant: "ghost-muted",
-                    size: "icon-xs",
-                  })}
+                <Button
+                  variant="ghost-muted"
+                  size="icon-xs"
+                  aria-pressed={treeVisible}
+                  aria-label={treeVisible ? "Hide file tree" : "Show file tree"}
+                  onClick={onToggleTree}
+                  className={cn(treeVisible && "text-foreground")}
                 />
               }
             >
-              <IconExternalLink />
+              <IconLayoutSidebarRight />
             </TooltipTrigger>
-            <TooltipContent>Open on GitHub</TooltipContent>
+            <TooltipContent>
+              {treeVisible ? "Hide file tree" : "Show file tree"}
+            </TooltipContent>
           </Tooltip>
-        )}
+        </div>
       </div>
 
       <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
