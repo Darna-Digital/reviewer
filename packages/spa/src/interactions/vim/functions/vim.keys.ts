@@ -17,6 +17,7 @@ import type {
   VimOperator,
   VimParse,
 } from "../interfaces/vim.interfaces";
+import { OBJECT_KEYS } from "./vim.objects";
 
 const OPERATORS: Readonly<Record<string, VimOperator>> = {
   d: "delete",
@@ -88,6 +89,29 @@ const takeCount = (input: string): Counted => {
   if (match === null) return { count: null, rest: input };
   return { count: Number(match[0]), rest: input.slice(match[0].length) };
 };
+
+/**
+ * `i` or `a` and the key naming what it applies to. Returns "pending" while the
+ * object key has not been typed yet, so `di` waits rather than being dropped.
+ */
+function parseObject(input: string):
+  | { readonly kind: "pending" }
+  | { readonly kind: "none" }
+  | {
+      readonly kind: "object";
+      readonly object: (typeof OBJECT_KEYS)[string];
+      readonly around: boolean;
+    } {
+  const prefix = input[0];
+  if (prefix !== "i" && prefix !== "a") return { kind: "none" };
+  const key = input[1];
+  if (key === undefined) return { kind: "pending" };
+  if (input.length > 2) return { kind: "none" };
+  const object = OBJECT_KEYS[key];
+  return object === undefined
+    ? { kind: "none" }
+    : { kind: "object", object, around: prefix === "a" };
+}
 
 type MotionParse =
   | { readonly kind: "pending" }
@@ -178,6 +202,20 @@ export function parseNormal(input: string): VimParse {
     }
     const inner = takeCount(after);
     if (inner.rest.length === 0) return { kind: "pending" };
+    // `diw`, `ci"`, `ya{` — an object rather than a motion.
+    if (inner.rest[0] === "i" || inner.rest[0] === "a") {
+      const object = parseObject(inner.rest);
+      if (object.kind !== "object") return object;
+      return {
+        kind: "command",
+        command: {
+          kind: "operateObject",
+          operator,
+          object: object.object,
+          around: object.around,
+        },
+      };
+    }
     const parsed = parseMotion(inner.rest);
     if (parsed.kind !== "motion") return parsed;
     const { motion } = parsed;
@@ -400,6 +438,20 @@ export function parseVisual(input: string): VimParse {
     return action === undefined
       ? { kind: "none" }
       : { kind: "command", command: { kind: "fold", action } };
+  }
+
+  // `viw` and friends: the object becomes the selection.
+  if (key === "i" || key === "a") {
+    const object = parseObject(rest);
+    if (object.kind !== "object") return object;
+    return {
+      kind: "command",
+      command: {
+        kind: "selectObject",
+        object: object.object,
+        around: object.around,
+      },
+    };
   }
 
   if (key === "g") {

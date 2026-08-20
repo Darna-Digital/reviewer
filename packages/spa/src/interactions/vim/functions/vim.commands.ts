@@ -24,6 +24,7 @@ import {
   isLinewise,
   lastColumn,
 } from "./vim.motions";
+import { isLinewiseObject, textObjectSpan } from "./vim.objects";
 
 /** One level of indentation, matching what the editor inserts for Tab. */
 const INDENT = "  ";
@@ -539,6 +540,51 @@ export function runCommand(
           ),
         ],
         caret: { line: top, character: Math.max(0, head.trimEnd().length) },
+        handled: true,
+      };
+    }
+
+    case "operateObject": {
+      const span = textObjectSpan(lines, caret, command.object, command.around);
+      if (span === null) return stay(cleared, caret);
+      // `dip` takes whole lines, the way `dd` does, rather than emptying them.
+      if (isLinewiseObject(command.object)) {
+        return operateOnLines(
+          cleared,
+          lines,
+          command.operator,
+          span.start.line,
+          span.end.line
+        );
+      }
+      return operateOnRange(
+        cleared,
+        lines,
+        command.operator,
+        span.start,
+        span.end
+      );
+    }
+
+    case "selectObject": {
+      const span = textObjectSpan(lines, caret, command.object, command.around);
+      if (span === null) return stay(cleared, caret);
+      const linewise = isLinewiseObject(command.object);
+      // The anchor is the far end and the caret the near one, so a motion after
+      // the object carries on extending from where it left the caret.
+      return {
+        state: {
+          ...cleared,
+          mode: linewise ? "visual-line" : "visual",
+          anchor: span.start,
+        },
+        edits: NOTHING,
+        caret: linewise
+          ? { line: span.end.line, character: 0 }
+          : {
+              line: span.end.line,
+              character: Math.max(span.start.character, span.end.character - 1),
+            },
         handled: true,
       };
     }

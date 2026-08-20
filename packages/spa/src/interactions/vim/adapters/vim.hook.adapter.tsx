@@ -80,6 +80,11 @@ export interface Vim {
    * a list offering to finish a word makes no sense while `d` means delete.
    */
   readonly mode: VimMode | null;
+  /**
+   * Whether visual mode currently covers anything. `v` on its own is a mode,
+   * not a passage — an offer to comment on it would have nothing to attach to.
+   */
+  readonly hasSelection: boolean;
   /** The mode indicator. Render it beside the file's other controls. */
   readonly status: React.ReactNode;
   /** Spread into the view's `options` — merge the CSS with everything else's. */
@@ -102,6 +107,8 @@ export function useVim({
   visibleFrom,
 }: VimOptions): Vim {
   const [state, setState] = useState<VimState>(INITIAL_VIM_STATE);
+  /** Whether the visual selection covers more than the caret's own character. */
+  const [spanning, setSpanning] = useState(false);
   const container = useRef<HTMLElement | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -181,7 +188,10 @@ export function useVim({
   // A file opened while a command was half-typed would otherwise inherit it,
   // and a view that is no longer editable has no mode at all.
   useEffect(() => {
-    if (!active) setState(INITIAL_VIM_STATE);
+    if (!active) {
+      setState(INITIAL_VIM_STATE);
+      setSpanning(false);
+    }
   }, [active]);
 
   useEffect(() => {
@@ -233,6 +243,13 @@ export function useVim({
             })();
 
       const mode = outcome.state.mode;
+      setSpanning(
+        mode === "visual-line" ||
+          (mode === "visual" &&
+            outcome.state.anchor !== null &&
+            (outcome.state.anchor.line !== landed.line ||
+              outcome.state.anchor.character !== landed.character))
+      );
       if (mode === "visual" || mode === "visual-line") {
         const [from, to] = visualRange(outcome.state, landed);
         const after = editor.getText().split("\n");
@@ -274,6 +291,7 @@ export function useVim({
 
   return {
     mode: active ? state.mode : null,
+    hasSelection: active && spanning,
     status,
     // Always handed over, never conditionally: `File` reads its options when it
     // mounts, and the editor this hook needs is built during that very mount —

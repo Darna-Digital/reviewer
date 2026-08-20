@@ -12,6 +12,12 @@ import {
   SELECTION_COMMENT_CSS,
   selectionCommentAction,
 } from "@/interactions/comments/components/selection-comment-action";
+import { SelectionCommentPopover } from "@/interactions/comments/components/selection-comment-popover";
+import {
+  rectAnchor,
+  type VirtualAnchor,
+} from "@/interactions/language/functions/anchors";
+import { codeRootsWithin } from "@/lib/code-root";
 import { commentLineFor } from "@/interactions/comments/functions/selection-anchor";
 import {
   DiagnosticsAnnotation,
@@ -180,6 +186,27 @@ export function CodeView({
   // which would put the offer on top of the composer it just opened. The flag
   // rides on the shadow host, where the popover's own stylesheet can see it —
   // `unsafeCSS` is read once at mount, so the CSS cannot be made conditional.
+  /** Open a comment on whatever the editor currently has selected. */
+  const commentOnSelection = useCallback(() => {
+    const selection = buffer.editor?.getState().selections?.at(-1);
+    if (selection === undefined) return;
+    const lineNumber = commentLineFor(selection);
+    if (lineNumber === null) return;
+    draftRef.current?.({ filePath: path, side: FILE_COMMENT_SIDE, lineNumber });
+  }, [buffer.editor, path]);
+
+  // Where Vim's own offer hangs: the last band of the selection it painted.
+  const selectionAnchor = useCallback((): VirtualAnchor | null => {
+    const container = scrollWrapper.current;
+    if (container === null) return null;
+    for (const root of codeRootsWithin(container)) {
+      const bands = root.querySelectorAll("[data-selection-range]");
+      const last = bands[bands.length - 1];
+      if (last !== undefined) return rectAnchor(last.getBoundingClientRect());
+    }
+    return null;
+  }, []);
+
   const drafting = draft !== null && draft.filePath === path;
   useEffect(() => {
     const host = scrollWrapper.current?.querySelector(DIFFS_TAG_NAME);
@@ -451,6 +478,15 @@ export function CodeView({
         {language.card}
         {language.completions}
         {language.menu}
+        {/* The editor makes its own offer over a selection the pointer made; a
+            Vim visual selection is set programmatically, so it never gets one
+            and this one stands in. */}
+        {vim.hasSelection && commentsEnabled && !drafting && (
+          <SelectionCommentPopover
+            anchor={selectionAnchor}
+            onComment={commentOnSelection}
+          />
+        )}
       </Virtualizer>
       {find.bar}
     </div>

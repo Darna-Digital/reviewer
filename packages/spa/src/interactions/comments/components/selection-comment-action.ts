@@ -45,8 +45,16 @@ export const SELECTION_COMMENT_CSS = `
 
 /* A composer is already open for this file: the offer has been taken up, and
    repeating it over the box the user is typing in is just in the way. The
-   selection stays lit, so what the comment is about is still visible. */
-:host([data-drafting]) [${ACTION}] { display: none; }
+   selection stays lit, so what the comment is about is still visible.
+
+   The editor's own widget shell is what goes, not the button inside it — the
+   shell carries a border, a background and a 9px radius of its own, so hiding
+   only its contents leaves a small empty circle floating over the composer.
+   The override is forced because that shell is styled from the editor's own
+   stylesheet, which outranks anything handed to it through unsafeCSS. */
+:host([data-drafting]) [data-selection-action-popover] {
+  display: none !important;
+}
 `;
 
 /** The speech bubble, inline so it needs nothing from outside the shadow root. */

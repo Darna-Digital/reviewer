@@ -7,6 +7,7 @@
  * what makes the grammar testable a key at a time.
  */
 import type { TextEdit } from "@pierre/diffs/edit";
+import type { VimTextObject } from "../functions/vim.objects";
 
 export type VimMode = "normal" | "insert" | "visual" | "visual-line";
 
@@ -125,7 +126,20 @@ export type VimCommand =
   /** The visual-mode operators, which act on the selection rather than a motion. */
   | { readonly kind: "operateSelection"; readonly operator: VimOperator }
   /** `za` `zc` `zo` `zR` `zM` — folding, which the view owns rather than the buffer. */
-  | { readonly kind: "fold"; readonly action: VimFoldAction };
+  | { readonly kind: "fold"; readonly action: VimFoldAction }
+  /** `diw`, `ci"`, `ya{` — an operator over a text object rather than a motion. */
+  | {
+      readonly kind: "operateObject";
+      readonly operator: VimOperator;
+      readonly object: VimTextObject;
+      readonly around: boolean;
+    }
+  /** `viw`, `va{` — visual mode taking the object as its selection. */
+  | {
+      readonly kind: "selectObject";
+      readonly object: VimTextObject;
+      readonly around: boolean;
+    };
 
 /** What parsing the keys so far came to. */
 export type VimParse =
