@@ -20,6 +20,7 @@ import {
   type RevealTarget,
 } from "@/interactions/language/components/use-reveal-line";
 import { useFindInFile } from "@/interactions/find-in-file/adapters/find-in-file.hook.adapter";
+import { useVim } from "@/interactions/vim/adapters/vim.hook.adapter";
 import {
   THEMES,
   fileForHighlighting,
@@ -32,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
 import { useFile } from "@/lib/queries";
+import { useUiPrefs } from "@/lib/ui-prefs";
 import type { ReviewComment } from "@byconvo/core/comments";
 import type { FileEdits, Location } from "@byconvo/core/language";
 import { writeFileEdits } from "@/interactions/language/adapters/language.hook.adapter";
@@ -108,6 +110,7 @@ export function CodeView({
   onCommentEdit,
 }: CodeViewProps) {
   const file = useFile(path);
+  const prefs = useUiPrefs();
   const langReady = useLangReady(path, editing);
   const contents = file.data?.contents;
   const highlightFile = useMemo(
@@ -131,7 +134,8 @@ export function CodeView({
   const buffer = useFileEditing(
     path,
     file.data?.contents,
-    useCallback(() => onSaved?.(), [onSaved])
+    useCallback(() => onSaved?.(), [onSaved]),
+    editing
   );
 
   useEffect(() => {
@@ -149,12 +153,25 @@ export function CodeView({
     onEditingChange?.(false);
   };
 
+  // Modal editing, when the user has asked for it. Same story as ⌘F about the
+  // editor: only a live session has a caret for the motions to move.
+  const vim = useVim({
+    editor: editing ? buffer.editor : null,
+    enabled: prefs.vimMode,
+    isFocused: buffer.isFocused,
+    subscribe: editing ? buffer.subscribe : undefined,
+  });
+
   // The IDE layer: diagnostics, go-to-definition and find-usages, driven by
   // `@pierre/diffs` token hooks. Only active when the host can navigate.
   const language = useLanguageLayer({
     path,
     editor: buffer.editor,
     subscribe: buffer.subscribe,
+    isFocused: buffer.isFocused,
+    // While `d` means delete, a list offering to finish a word is in the way —
+    // Vim's insert mode is the only one where typing means typing.
+    completionsEnabled: vim.mode === null || vim.mode === "insert",
     getContainer: useCallback(() => scrollWrapper.current, []),
     onApplyForeignEdits: applyForeignEdits,
     // Diagnostics follow what is on screen, not what is on disk.
@@ -217,10 +234,11 @@ export function CodeView({
     getScroller,
   });
 
-  // The view keeps one `onPostRender`, and two layers paint from it: the
-  // diagnostic underlines and the find highlight.
+  // The view keeps one `onPostRender`, and three layers paint from it: the
+  // diagnostic underlines, the find highlight and the relative line numbers.
   const languagePostRender = language.viewOptions.onPostRender;
   const findPostRender = find.viewOptions.onPostRender;
+  const vimPostRender = vim.viewOptions.onPostRender;
   const onPostRender = useCallback(
     (
       node: HTMLElement,
@@ -229,8 +247,9 @@ export function CodeView({
     ) => {
       languagePostRender(node, instance, phase);
       findPostRender(node, instance, phase);
+      vimPostRender(node, instance, phase);
     },
-    [languagePostRender, findPostRender]
+    [languagePostRender, findPostRender, vimPostRender]
   );
 
   // Line count drives the first scroll estimate for a line that has not been
@@ -316,7 +335,7 @@ export function CodeView({
                 // Both layers paint from the same callback and into the same
                 // stylesheet, and the view keeps one of each.
                 onPostRender,
-                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}`,
+                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}`,
               }}
               edit={editing}
               /* The editable view snapshots the rendered code when the editor
@@ -382,6 +401,7 @@ export function CodeView({
           actionsSlot !== undefined &&
           createPortal(
             <>
+              {vim.status}
               <DiagnosticsSummary counts={language.counts} />
               {editing && (
                 <>

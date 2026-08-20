@@ -7,6 +7,7 @@ import {
   IconMoon,
   IconRoute,
   IconSun,
+  IconKeyboard,
 } from "@tabler/icons-react";
 import type { ComponentType, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
@@ -181,6 +182,26 @@ export function SettingsPage() {
                     </label>
                   </SettingRow>
                 )}
+                <SettingRow
+                  title="Vim mode"
+                  detail="Modal editing in the code view: Vim motions and operators, a block caret, and line numbers counted from the caret"
+                >
+                  <label className="flex items-center gap-2">
+                    <IconKeyboard
+                      className={cn(
+                        "size-4 text-muted-foreground",
+                        prefs.vimMode && "text-foreground"
+                      )}
+                    />
+                    <Switch
+                      checked={prefs.vimMode}
+                      onChange={(event) =>
+                        setUiPrefs({ vimMode: event.currentTarget.checked })
+                      }
+                      aria-label="Vim mode"
+                    />
+                  </label>
+                </SettingRow>
                 <SettingRow title="Git dock">
                   <label className="flex items-center gap-2">
                     <IconGitFork

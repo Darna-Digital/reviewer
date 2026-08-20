@@ -1,80 +1,111 @@
 /**
- * Editor commands pierre/diffs doesn't ship. Its `EditorCommand` set covers
- * indent/undo/find/move-line but has no toggle-comment, duplicate-line, or
- * delete-line — and no per-language comment tokens — so we implement them here
- * as pure `TextEdit[]` builders and drive the editor via `editor.applyEdits`.
+ * How the editor is configured, and the one command it still has to be given.
+ *
+ * `@pierre/diffs` 1.3.5 ships the commands this module used to hand-roll —
+ * `toggleComment`, `toggleBlockComment`, `copyLineUp`/`copyLineDown` — and runs
+ * them through its own edit path, so the selection survives the edit and the
+ * whole batch is a single undo. Reimplementing them here meant taking ⌘/ off
+ * the editor at window level and handing back something that knew four families
+ * of language, had no block comment at all, and silently did nothing everywhere
+ * else — including CSS, HTML, Markdown, Vue and Svelte.
+ *
+ * So the commands are the library's now. What is left here is what it cannot
+ * know: the comment tokens for the filetypes missing from its own table, the
+ * bindings this app wants on top of the defaults, and delete-line, which it has
+ * no command for.
  *
  * Edits are computed against the original line array and returned sorted
  * bottom-up so they can be applied sequentially without invalidating positions.
  */
-import { getFiletypeFromFileName } from "@pierre/diffs";
-import type { TextEdit } from "@pierre/diffs/edit";
+import type { EditorKeymap, EditorOptions, TextEdit } from "@pierre/diffs/edit";
 
-// Line-comment token by Shiki filetype id (see getFiletypeFromFileName).
-const HASH = new Set([
-  "dotenv",
-  "shellscript",
-  "shell",
-  "bash",
-  "sh",
-  "zsh",
-  "fish",
-  "yaml",
-  "yml",
-  "toml",
-  "ini",
-  "python",
-  "ruby",
-  "perl",
-  "r",
-  "makefile",
-  "dockerfile",
-  "properties",
-  "gitignore",
-  "nix",
-  "elixir",
-  "cmake",
-  "coffee",
-]);
-const SLASH = new Set([
-  "typescript",
-  "tsx",
-  "javascript",
-  "jsx",
-  "json",
-  "jsonc",
-  "json5",
-  "c",
-  "cpp",
-  "csharp",
-  "java",
-  "go",
-  "rust",
-  "swift",
-  "kotlin",
-  "scala",
-  "php",
-  "dart",
-  "zig",
-  "proto",
-  "glsl",
-  "scss",
-  "less",
-]);
-const DASH = new Set(["sql", "lua", "haskell", "elm", "ada"]);
-const SEMI = new Set(["clojure", "commonlisp", "lisp", "scheme"]);
+type LanguageComments = NonNullable<
+  EditorOptions<undefined>["languageCommentConfig"]
+>;
 
-/** The line-comment prefix for a path, or null when we don't know one. */
-export function lineCommentToken(path: string): string | null {
-  const t = getFiletypeFromFileName(path);
-  if (HASH.has(t)) return "#";
-  if (SLASH.has(t)) return "//";
-  if (DASH.has(t)) return "--";
-  if (SEMI.has(t)) return ";";
-  // env files (e.g. `.env.local`) fall back to the "text" grammar.
-  if (/(^|\/|\.)env(\.|$)/i.test(path)) return "#";
-  return null;
-}
+const HASH: LanguageComments[string] = { lineComment: "#" };
+const DASH_BRACE: LanguageComments[string] = {
+  lineComment: "--",
+  blockComment: ["{-", "-}"],
+};
+const PERCENT: LanguageComments[string] = { lineComment: "%" };
+const SEMI: LanguageComments[string] = { lineComment: ";" };
+const MARKUP: LanguageComments[string] = {
+  lineComment: null,
+  blockComment: ["<!--", "-->"],
+};
+
+/**
+ * Comment tokens for the filetypes `@pierre/diffs` has no entry for.
+ *
+ * Only the gaps: anything already in its own table (sql, python, yaml, css,
+ * html, markdown, lua, ini, …) is left alone, and anything genuinely served by
+ * its `//` + `/* *\/` default (C-likes, Go, Rust, Swift, JSON, SCSS, GraphQL's
+ * cousins) is left out rather than restated. Keys are Shiki filetype ids, which
+ * is what the editor resolves a file's name to — see `getFiletypeFromFileName`.
+ */
+export const LANGUAGE_COMMENTS: LanguageComments = {
+  // `#` families.
+  toml: HASH,
+  properties: HASH,
+  graphql: HASH,
+  elixir: HASH,
+  crystal: HASH,
+  nim: HASH,
+  tcl: HASH,
+  awk: HASH,
+  cmake: HASH,
+  apache: HASH,
+  nginx: HASH,
+  terraform: { lineComment: "#", blockComment: ["/*", "*/"] },
+  tf: { lineComment: "#", blockComment: ["/*", "*/"] },
+  hcl: { lineComment: "#", blockComment: ["/*", "*/"] },
+  nix: { lineComment: "#", blockComment: ["/*", "*/"] },
+  // `--` families.
+  haskell: DASH_BRACE,
+  elm: DASH_BRACE,
+  purescript: DASH_BRACE,
+  ada: { lineComment: "--" },
+  vhdl: { lineComment: "--" },
+  // `%` families.
+  erlang: PERCENT,
+  latex: PERCENT,
+  bibtex: PERCENT,
+  matlab: { lineComment: "%", blockComment: ["%{", "%}"] },
+  fortran: { lineComment: "!" },
+  "fortran-free-form": { lineComment: "!" },
+  "fortran-fixed-form": { lineComment: "c " },
+  // `;` families.
+  lisp: SEMI,
+  commonlisp: SEMI,
+  "emacs-lisp": SEMI,
+  scheme: SEMI,
+  racket: SEMI,
+  asm: SEMI,
+  // Markup, where a line comment would be a syntax error.
+  vue: MARKUP,
+  svelte: MARKUP,
+  astro: MARKUP,
+  ocaml: { lineComment: null, blockComment: ["(*", "*)"] },
+  vimscript: { lineComment: '"' },
+};
+
+/**
+ * Bindings layered over the editor's defaults.
+ *
+ * The defaults already carry the IDE staples — ⌘/ comment, ⇧⌥A block comment,
+ * ⌥↑/↓ move line, ⇧⌥↑/↓ copy line, ⌘[ / ⌘] indent, ⌘↑/↓ document ends. These
+ * add the two gestures this app's users reach for that they do not cover.
+ * ⌘⇧K has no command behind it — see `deleteLinesEdits`.
+ */
+export const EDITOR_KEYMAP: EditorKeymap = [
+  {
+    bindings: {
+      "cmdOrCtrl+shift+d": "copyLineDown",
+      "cmdOrCtrl+shift+Enter": "insertBlankLine",
+    },
+  },
+];
 
 const sortDesc = (edits: TextEdit[]): TextEdit[] =>
   [...edits].sort(
@@ -92,69 +123,6 @@ function toRuns(sorted: ReadonlyArray<number>): Array<[number, number]> {
     else runs.push([n, n]);
   }
   return runs;
-}
-
-/**
- * Toggle the line comment on the given lines: uncomment when every non-blank
- * target line is already commented, otherwise comment. Comments are inserted at
- * the shallowest indentation among the targets so they stay aligned; blank lines
- * are ignored.
- */
-export function toggleLineCommentEdits(
-  lines: ReadonlyArray<string>,
-  lineNums: ReadonlyArray<number>,
-  token: string
-): TextEdit[] {
-  const targets = lineNums.filter((n) => (lines[n] ?? "").trim().length > 0);
-  if (targets.length === 0) return [];
-  const indentOf = (l: string) => l.length - l.trimStart().length;
-  const commented = (l: string) => l.trimStart().startsWith(token);
-
-  if (targets.every((n) => commented(lines[n]))) {
-    return sortDesc(
-      targets.map((n) => {
-        const l = lines[n];
-        const indent = indentOf(l);
-        // Drop the token plus one following space, when present.
-        const len =
-          l[indent + token.length] === " " ? token.length + 1 : token.length;
-        return {
-          range: {
-            start: { line: n, character: indent },
-            end: { line: n, character: indent + len },
-          },
-          newText: "",
-        };
-      })
-    );
-  }
-
-  const col = Math.min(...targets.map((n) => indentOf(lines[n])));
-  return sortDesc(
-    targets.map((n) => ({
-      range: {
-        start: { line: n, character: col },
-        end: { line: n, character: col },
-      },
-      newText: `${token} `,
-    }))
-  );
-}
-
-/** Duplicate each contiguous run of lines directly below itself. */
-export function duplicateLinesEdits(
-  lines: ReadonlyArray<string>,
-  lineNums: ReadonlyArray<number>
-): TextEdit[] {
-  return sortDesc(
-    toRuns([...lineNums]).map(([lo, hi]) => ({
-      range: {
-        start: { line: hi, character: lines[hi].length },
-        end: { line: hi, character: lines[hi].length },
-      },
-      newText: `\n${lines.slice(lo, hi + 1).join("\n")}`,
-    }))
-  );
 }
 
 /** Delete each contiguous run of lines, including its line break. */
@@ -186,4 +154,24 @@ export function deleteLinesEdits(
       };
     })
   );
+}
+
+/**
+ * Where the caret belongs once those lines are gone: the start of whatever
+ * moved up into the first deleted line's place, indented as it is — which is
+ * where an IDE leaves it, ready to keep deleting. Deleting through the end of
+ * the file leaves it on the last line that survived, there being nothing below
+ * to take the place.
+ */
+export function caretAfterDelete(
+  lines: ReadonlyArray<string>,
+  lineNums: ReadonlyArray<number>
+): { readonly line: number; readonly character: number } {
+  const first = lineNums[0];
+  if (first === undefined) return { line: 0, character: 0 };
+  const gone = new Set(lineNums);
+  const survivors = lines.filter((_, n) => !gone.has(n));
+  const line = Math.max(0, Math.min(first, survivors.length - 1));
+  const text = survivors[line] ?? "";
+  return { line, character: text.length - text.trimStart().length };
 }
