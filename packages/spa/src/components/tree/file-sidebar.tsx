@@ -13,7 +13,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { FileTree, useFileTree } from "@pierre/trees/react";
-import type { DragEvent, KeyboardEvent, ReactNode } from "react";
+import type { ComponentType, DragEvent, KeyboardEvent, ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { droppedFiles } from "@/interactions/file-actions/adapters/dropped-files.adapter";
@@ -75,8 +75,8 @@ const TREE_UNSAFE_CSS = `
 const CONTEXT_MENU_ITEM =
   "flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left hover:bg-elevate disabled:opacity-40 disabled:hover:bg-transparent";
 
-/** A menu row's icon, called rather than mounted so the list stays a list. */
-type MenuIcon = (props: { className: string }) => ReactNode;
+/** A menu row's icon: the component itself, mounted by the row that takes it. */
+type MenuIcon = ComponentType<{ className?: string }>;
 
 const REVEAL_LABEL =
   typeof navigator !== "undefined" && navigator.userAgent.includes("Mac")
@@ -422,7 +422,7 @@ export function FileSidebar({
         // Closing restores focus to the row, which would take it straight back
         // off an input the action is about to open — so those say not to.
         const entry = (
-          icon: MenuIcon,
+          Icon: MenuIcon,
           label: string,
           run: () => void,
           options?: { readonly focusMoves?: boolean; readonly off?: boolean }
@@ -444,7 +444,7 @@ export function FileSidebar({
               run();
             }}
           >
-            {icon({ className: "size-3.5 shrink-0 opacity-70" })}
+            <Icon className="size-3.5 shrink-0 opacity-70" />
             {label}
           </button>
         );
