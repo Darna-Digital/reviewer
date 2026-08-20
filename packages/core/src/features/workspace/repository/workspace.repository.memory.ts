@@ -228,7 +228,10 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
         Effect.gen(function* () {
           yield* requireCurrent;
           const files = yield* Ref.get(filesRef);
-          const slot = yield* Ref.updateAndGet(trashSlotRef, (last) => last + 1);
+          const slot = yield* Ref.updateAndGet(
+            trashSlotRef,
+            (last) => last + 1
+          );
           const path = `.byconvo/trash/${slot}/${relPath.split("/").at(-1) ?? relPath}`;
           const contents = files[relPath];
           if (contents !== undefined) {
