@@ -13,15 +13,23 @@
  * mounted while the page beneath it changes.
  */
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { useEffect } from "react";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { DockRestore } from "@/components/layout/dock-restore";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
+import { TooltipContent } from "@/components/ui/tooltip";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
 import { SearchMenu } from "@/interactions/search/components/search-menu";
 import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
+import {
+  setProjectPickerOpen,
+  useProjectPickerOpen,
+} from "@/interactions/workspace/adapters/project-picker.store";
+import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { activeRepo } from "@byconvo/core/workspace";
 import {
@@ -32,7 +40,19 @@ import {
   useWorkspace,
 } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
-import type { ShellRoute } from "@/lib/shell-route";
+import { showsProjectPicker, type ShellRoute } from "@/lib/shell-route";
+
+/** The chip's own chord, said the way the window bar says its controls'. */
+const projectTooltip = (
+  <TooltipContent side="bottom">
+    Projects
+    <KbdGroup>
+      <Kbd>⌘</Kbd>
+      <Kbd>⇧</Kbd>
+      <Kbd>P</Kbd>
+    </KbdGroup>
+  </TooltipContent>
+);
 
 export function AppHeader({ route }: { route: ShellRoute }) {
   const navigate = useNavigate();
@@ -47,6 +67,14 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   const projectBranchList = useProjectBranches();
   const workspaceActions = useWorkspaceActions();
   const git = useGitActions();
+  const pickerOpen = useProjectPickerOpen();
+  // The flag outlives the chip, so a dropdown left open — or a command run —
+  // where there is no chip would raise it on the way back to a page that has
+  // one. It is put down with the header that carries it.
+  const carriesPicker = showsProjectPicker(route);
+  useEffect(() => {
+    if (!carriesPicker) setProjectPickerOpen(false);
+  }, [carriesPicker]);
 
   /** Make a root current before a menu action runs in it. */
   const followRepo = (repoPath: string) =>
@@ -92,6 +120,16 @@ export function AppHeader({ route }: { route: ShellRoute }) {
 
   return (
     <header className="flex h-9 shrink-0 items-center gap-2 px-2">
+      {/* The project leads the row, and the branch follows it: what the window
+          is on, then where in it — the same order the two chips have had
+          wherever else they stand together. */}
+      <ProjectPicker
+        workspace={workspace.data}
+        open={pickerOpen}
+        onOpenChange={setProjectPickerOpen}
+        tooltip={projectTooltip}
+      />
+
       {repo.data != null && (
         <BranchSwitcher
           current={repo.data.currentBranch}

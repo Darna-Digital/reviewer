@@ -143,6 +143,15 @@ export function shellRoute(
     : { kind: "code", mode: "commit" };
 }
 
+/**
+ * Whether the header carries the project chip. A conversation and the
+ * collaboration workspace name themselves instead — the one says which thread
+ * it is, the other has its own sidebar — and neither has the branch the chip
+ * now stands beside.
+ */
+export const showsProjectPicker = (route: ShellRoute): boolean =>
+  route.kind !== "session" && route.kind !== "collaboration";
+
 /** Whether the page beneath the layout is one of the git/code surfaces. */
 export const showsGitChrome = (route: ShellRoute): boolean =>
   route.kind === "code" || route.kind === "workspace" || route.kind === "dock";

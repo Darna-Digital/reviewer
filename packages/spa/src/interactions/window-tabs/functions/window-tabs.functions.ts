@@ -79,8 +79,8 @@ export const isPinnedTab = (tab: WindowTab): boolean => tab.kind !== "session";
  * The tabs the strip shows. With its button switched off Sessions stays in the
  * strip — the launchpad goes on listing it, and a conversation still has
  * somewhere to be handed back to — but leads the window no more than the
- * launchpad does, so it is left out of the bar and of ⌘<digit> with it. It comes
- * back for as long as the window is on it: a bar showing a page while
+ * launchpad does, so it is left out of the bar, leaving ⌘G nowhere to cross to.
+ * It comes back for as long as the window is on it: a bar showing a page while
  * highlighting none of its tabs reads as having lost its place.
  */
 export function stripTabs({
@@ -325,9 +325,25 @@ export function moveTab(
 }
 
 /**
+ * The way of working after the one the window is on, wrapping round — what ⌘G
+ * crosses to. The pinned tabs are those ways of working, so the crossing is a
+ * step along them; from a conversation, which is had in either, it is the first
+ * of them. A window with only one has nowhere to cross to.
+ */
+export function nextModeTab(
+  tabs: ReadonlyArray<WindowTab>,
+  activeId: string | null
+): WindowTab | null {
+  const modes = tabs.filter(isPinnedTab);
+  if (modes.length < 2) return null;
+  const at = modes.findIndex((tab) => tab.id === activeId);
+  return modes[(at + 1) % modes.length] ?? null;
+}
+
+/**
  * The session standing in that slot of a strip, counting from 1. The pinned
- * tabs are skipped: each is on a digit of its own, so the conversations are
- * counted among themselves and none of them moves when a pinned tab is
+ * tabs are skipped: they are off the digits altogether, so the conversations
+ * are counted among themselves and none of them moves when a pinned tab is
  * switched on or off.
  */
 export function sessionAtSlot(

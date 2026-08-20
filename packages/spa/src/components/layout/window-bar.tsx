@@ -47,13 +47,11 @@ import {
   chatIdOf,
   isPinnedTab,
   moveTab,
+  nextModeTab,
   NEW_SESSION_HREF,
-  PROJECT_TAB_ID,
   renameTab,
   sessionAtSlot,
-  SESSIONS_TAB_ID,
   stripTabs,
-  tabById,
   trackLocation,
 } from "@/interactions/window-tabs/functions/window-tabs.functions";
 import {
@@ -69,18 +67,15 @@ import {
   toggleTabOverview,
   useTabOverview,
 } from "@/interactions/tab-preview/adapters/tab-overview.store";
-import {
-  setProjectPickerOpen,
-  useProjectPickerOpen,
-} from "@/interactions/workspace/adapters/project-picker.store";
-import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
+import { setProjectPickerOpen } from "@/interactions/workspace/adapters/project-picker.store";
 import { ROW_TOOLTIP_PLACEMENT } from "@/components/ui/truncated-text";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
 import { openSearch } from "@/interactions/search/adapters/search.store";
 import { useThinkingChatIds } from "@/interactions/chats/adapters/thinking-chats.hook.adapter";
 import { isDesktop } from "@/lib/desktop";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
-import { useRecentChats, useWorkspace } from "@/lib/queries";
+import { useRecentChats } from "@/lib/queries";
+import { shellRoute, showsProjectPicker } from "@/lib/shell-route";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { activeWorkMode } from "@/lib/work-mode";
@@ -103,12 +98,7 @@ const LEAD_GUTTER = "w-22";
 
 const sessionsEnabled = isFeatureEnabled("sessions-button");
 
-/** Stay on the page the project was switched from, now scoped to the new one. */
-const stayPut = () => {};
-
-const PROJECT_KEYS = "⌘1";
-const PROJECT_PICKER_KEYS = "⌘⇧P";
-const SESSIONS_KEYS = "⌘2";
+const MODE_KEYS = "⌘G";
 const NEW_SESSION_KEYS = "⌘T";
 const LAUNCHPAD_KEYS = "⌘L";
 const COMMANDS_KEYS = "⌘K";
@@ -233,12 +223,17 @@ function BarButton({
 }
 
 /**
- * The chord that takes the window to a tab: a named place keeps its own digit,
- * a session takes the next one along until the digits run out.
+ * The chord that takes the window to a tab. The digits count the conversations
+ * alone, from ⌘1, until they run out; the places the strip leads with are ways
+ * of working rather than tabs among them, and ⌘G steps between them — so it is
+ * what they say, and only while there are two of them to cross between.
  */
-const tabKeys = (tab: WindowTab, slot: number): string | null => {
-  if (tab.id === PROJECT_TAB_ID) return PROJECT_KEYS;
-  if (tab.id === SESSIONS_TAB_ID) return sessionsEnabled ? SESSIONS_KEYS : null;
+const tabKeys = (
+  tab: WindowTab,
+  slot: number,
+  modeCount: number
+): string | null => {
+  if (isPinnedTab(tab)) return modeCount > 1 ? MODE_KEYS : null;
   const digit = sessionDigit(slot);
   return digit === null ? null : `⌘${digit}`;
 };
@@ -300,8 +295,11 @@ export function WindowBar() {
   const prefs = useUiPrefs();
   const inCodeMode =
     activeWorkMode(location.pathname, prefs.workMode) === "code";
-  const workspace = useWorkspace();
-  const pickerOpen = useProjectPickerOpen();
+  // The project chip is the header's now, beside the branch it names, so the
+  // chord that raises it only answers on the pages that carry one.
+  const pickerShown = showsProjectPicker(
+    shellRoute(location.pathname, prefs.workMode)
+  );
   // Both panes are there to be read against something else the window is
   // showing, and in the native shell there is always something — the browser
   // pane is a window of its own, and an analysis is opened from either mode. A
@@ -382,11 +380,12 @@ export function WindowBar() {
         case "launchpad":
           return toggleTabOverview();
         case "project-picker":
-          return setProjectPickerOpen(true);
+          return pickerShown ? setProjectPickerOpen(true) : undefined;
         case "pane":
           return togglePane(shortcut.pane);
-        case "tab": {
-          const tab = tabById(windowTabsSnapshot(), shortcut.tabId);
+        case "mode": {
+          const state = windowTabsSnapshot();
+          const tab = nextModeTab(stripTabs(state), state.activeId);
           return tab === null ? undefined : show(tab);
         }
         case "session": {
@@ -444,22 +443,6 @@ export function WindowBar() {
         <IconArrowRight className="size-5" />
       </BarButton> */}
 
-        {/* The project the window is on leads the strip: every tab behind it is
-            a place within that project, so the chip names them all rather than
-            being one more thing on the page under them. Switching project keeps
-            a session or a board where it is; on the code surfaces it lands in
-            the arriving project's tree, as it always has. */}
-        <div className={cn("flex min-w-0 shrink-0", NO_DRAG)}>
-          <ProjectPicker
-            workspace={workspace.data}
-            open={pickerOpen}
-            onOpenChange={setProjectPickerOpen}
-            onChosen={inCodeMode ? undefined : stayPut}
-            onWindowBar
-            tooltip={<BarLabel label="Projects" keys={PROJECT_PICKER_KEYS} />}
-          />
-        </div>
-
         <div
           role="tablist"
           aria-label="Open tabs"
@@ -479,7 +462,7 @@ export function WindowBar() {
               <BarTooltip
                 key={tab.id}
                 label={tab.title}
-                keys={tabKeys(tab, at + 1 - pinnedCount)}
+                keys={tabKeys(tab, at + 1 - pinnedCount, pinnedCount)}
                 disabled={dragging !== null}
               >
                 <TooltipTrigger

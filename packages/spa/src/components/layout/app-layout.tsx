@@ -111,8 +111,8 @@ export function AppLayout() {
     route.kind === "dock" && current !== null ? route.tab : undefined;
   const dockExpanded = expandedTab !== undefined;
 
-  // The picker rides the window bar, but the command that raises it belongs
-  // with the rest of the shell's.
+  // The picker rides the header, but the command that raises it belongs with
+  // the rest of the shell's.
   const shellCommands = useMemo<ReadonlyArray<Command>>(
     () => [
       {

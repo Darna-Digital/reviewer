@@ -9,6 +9,7 @@ import {
   COLLABORATION_TAB_ID,
   initialWindowTabs,
   moveTab,
+  nextModeTab,
   onSessionTab,
   openTab,
   PROJECT_TAB_ID,
@@ -266,6 +267,26 @@ describe("moveTab", () => {
     expect(show(moveTab(state, "a", 99))).toBe("code team sessions b *c a");
     expect(moveTab(state, "b", 4)).toBe(state);
     expect(moveTab(state, "missing", 3)).toBe(state);
+  });
+});
+
+describe("nextModeTab", () => {
+  it("steps along the ways of working, wrapping round at the last", () => {
+    const { tabs } = stripOf("a");
+    expect(nextModeTab(tabs, PROJECT_TAB_ID)?.id).toBe(COLLABORATION_TAB_ID);
+    expect(nextModeTab(tabs, COLLABORATION_TAB_ID)?.id).toBe(SESSIONS_TAB_ID);
+    expect(nextModeTab(tabs, SESSIONS_TAB_ID)?.id).toBe(PROJECT_TAB_ID);
+  });
+
+  it("crosses to the first of them from a conversation, which is in neither", () => {
+    expect(nextModeTab(stripOf("a").tabs, "a")?.id).toBe(PROJECT_TAB_ID);
+    expect(nextModeTab(stripOf("a").tabs, null)?.id).toBe(PROJECT_TAB_ID);
+  });
+
+  it("has nowhere to cross to with one way of working", () => {
+    const { tabs } = stripOf("a");
+    const alone = tabs.filter((tab) => tab.id === PROJECT_TAB_ID);
+    expect(nextModeTab(alone, PROJECT_TAB_ID)).toBeNull();
   });
 });
 
