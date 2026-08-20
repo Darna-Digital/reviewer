@@ -90,6 +90,14 @@ const SYMBOL_HOVER = [
   "*@throws* — when nothing is staged",
 ].join("\n");
 
+/** A server that ships reference data — the CSS one — answering about `gap`. */
+const SYMBOL_HOVER_CSS = [
+  "The gap CSS property is a shorthand property for row-gap and column-gap",
+  "specifying the gutters between grid rows and columns.",
+  "",
+  "[Learn more on MDN](https://developer.mozilla.org/docs/Web/CSS/gap)",
+].join("\n");
+
 const symbolLocation = (path: string, line: number) => ({
   path,
   range: {
@@ -151,7 +159,9 @@ function SymbolCardSpecimen({
       <SurfaceProvider value={level}>
         <div
           className={cn(
-            "w-[26rem] max-w-full overflow-hidden rounded-md",
+            // Sized by its content, capped like the real popup, so the specimen
+            // is the width the card actually opens at.
+            "w-fit max-w-[min(40rem,100%)] overflow-hidden rounded-lg",
             className
           )}
         >
@@ -839,11 +849,15 @@ export function ComponentsGallery() {
 
         <Subsection
           title="Symbol cards"
-          hint="What a token in the code opens: its documentation on hover, its usages on a click, or a choice of declarations when there is more than one. Three answers to one gesture, so one card — a heading naming the symbol, a rule, then the answer."
+          hint="What a token in the code opens: its documentation on hover, its usages on a click, or a choice of declarations when there is more than one. Three answers to one gesture, so one heading — the symbol in the code font, and a chip for what it is. A hover runs flush from there; a list puts a rule under the heading, because it scrolls beneath it."
         >
           <SpecimenRow className="items-start">
             <SymbolCardSpecimen label="Hover documentation">
               <HoverDocumentation symbol="commit" contents={SYMBOL_HOVER} />
+            </SymbolCardSpecimen>
+
+            <SymbolCardSpecimen label="Hover documentation, with a link out">
+              <HoverDocumentation symbol="gap" contents={SYMBOL_HOVER_CSS} />
             </SymbolCardSpecimen>
 
             <SymbolCardSpecimen label="Usages">

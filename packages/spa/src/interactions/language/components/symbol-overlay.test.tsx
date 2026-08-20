@@ -31,12 +31,13 @@ const target = (path: string, kind: string): SymbolTarget => ({
 });
 
 /**
- * A signature is highlighted, so its text arrives as a span per token, and the
- * heading repeats a word that is also in the code under it. Both are read back
- * through the slots the chrome marks them with rather than by their text.
+ * The heading repeats a word that is also in the code under it, so both are
+ * read back through the slots the chrome marks them with rather than by text.
  */
 const signatureOf = (container: HTMLElement) =>
-  container.querySelector("pre")?.textContent?.trim() ?? "";
+  container
+    .querySelector("[data-slot='card-signature']")
+    ?.textContent?.trim() ?? "";
 const symbolOf = (container: HTMLElement) =>
   container.querySelector("[data-slot='card-symbol']")?.textContent ?? "";
 const chipsOf = (container: HTMLElement) =>

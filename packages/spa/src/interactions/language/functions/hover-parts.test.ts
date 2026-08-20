@@ -15,7 +15,7 @@ describe("splitHover", () => {
   it("lifts the fenced signature away from the prose", () => {
     const parts = splitHover(TS_HOVER);
     expect(parts.signature).toBe(
-      "```ts\nRepository.commit(message: string): Promise<void>\n```"
+      "Repository.commit(message: string): Promise<void>"
     );
     expect(parts.body).toBe(
       "Records the staged changes.\n\n*@throws* — when nothing is staged"
@@ -32,9 +32,7 @@ describe("splitHover", () => {
       "```ts\nfunction greet(name: string): string\n```"
     );
     expect(parts.kind).toBe("function");
-    expect(parts.signature).toBe(
-      "```ts\nfunction greet(name: string): string\n```"
-    );
+    expect(parts.signature).toBe("function greet(name: string): string");
   });
 
   it("keeps a multi-word parenthesised kind", () => {
@@ -46,13 +44,13 @@ describe("splitHover", () => {
   it("leaves the kind empty when the signature does not announce one", () => {
     const parts = splitHover("```css\ngrid-template-columns\n```");
     expect(parts.kind).toBe("");
-    expect(parts.signature).toBe("```css\ngrid-template-columns\n```");
+    expect(parts.signature).toBe("grid-template-columns");
   });
 
   it("keeps a bare kind as the signature rather than emptying the block", () => {
     const parts = splitHover("```ts\n(alias)\n```");
     expect(parts.kind).toBe("alias");
-    expect(parts.signature).toBe("```ts\n(alias)\n```");
+    expect(parts.signature).toBe("(alias)");
   });
 
   it("lifts trailing reference links into their own list", () => {

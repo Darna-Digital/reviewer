@@ -1017,17 +1017,16 @@
   padding: 0;
   white-space: inherit;
 }
-/* The signature panel on a symbol card. Same code block as any other, tightened
-   up: it is one declaration sitting under a heading, not a listing, and the card
-   already pads it. Written as a rule rather than as utilities on the element
-   because `.markdown pre` above is unlayered and would outrank them. */
-.markdown-signature pre {
-  margin: 0;
-  padding: 0.3rem 0.5rem;
-}
 .markdown a {
   color: var(--link);
   text-decoration: underline;
+}
+/* Hover documentation on a symbol card. It reads as a caption under a heading
+   rather than as a comment thread, so it sits tighter than the default above.
+   A rule rather than a `leading-*` utility: `.markdown` is unlayered and would
+   outrank anything Tailwind emits for the same element. */
+.markdown-hover {
+  line-height: 1.4;
 }
 
 /* GFM tables (remark-gfm emits real <table> markup). Wide tables scroll

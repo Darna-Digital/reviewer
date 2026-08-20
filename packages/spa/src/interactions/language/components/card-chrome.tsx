@@ -75,13 +75,13 @@ export function CardHeading({
       )}
       <span
         data-slot="card-symbol"
-        className="min-w-0 truncate font-mono text-[13px] font-semibold text-brand-700 dark:text-brand-300"
+        className="min-w-0 truncate font-mono text-sm font-semibold text-brand-700 dark:text-brand-300"
       >
         {name}
       </span>
       {kind !== undefined && kind.length > 0 && <CardChip>{kind}</CardChip>}
       {meta !== undefined && (
-        <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">
+        <span className="ml-auto shrink-0 text-xs text-muted-foreground">
           {meta}
         </span>
       )}
@@ -112,7 +112,7 @@ export function CardLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-1 text-[11px] text-muted-foreground no-underline hover:text-foreground hover:underline"
+      className="inline-flex items-center gap-1 text-xs text-muted-foreground no-underline hover:text-foreground hover:underline"
     >
       <Icon className="size-3 shrink-0" />
       {children}

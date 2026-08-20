@@ -3,10 +3,12 @@
  * pointer rests on a symbol, and after a click either its usages or a choice of
  * declarations.
  *
- * All three open the same way and answer the same gesture, so all three are
- * laid out the same way — a heading naming the symbol, a rule, then the answer.
- * The shared pieces live in `card-chrome`; what is here is the part that
- * differs, which is only ever the answer.
+ * All three open the same way and answer the same gesture, so all three open
+ * with the same heading: the symbol set in the code font, and a chip for what
+ * it is. What follows differs by how much there is of it. A hover is four lines
+ * about one symbol and runs flush from the heading on one steady gap; a list
+ * can be forty rows and scrolls under a heading that stays put, which needs a
+ * rule to sit against. The shared pieces live in `card-chrome`.
  *
  * The cards own their padding rather than taking it from the card shell,
  * because a list wants its rows to reach the edges (a row is a target, and a
@@ -74,7 +76,7 @@ function LocationRow({
     <li>
       <button
         type="button"
-        className="flex w-full items-baseline gap-2.5 rounded-sm px-2 py-1 text-left text-xs outline-hidden hover:bg-elevate focus-visible:bg-elevate"
+        className="flex w-full items-baseline gap-2.5 rounded-sm px-2 py-1 text-left text-[13px] outline-hidden hover:bg-elevate focus-visible:bg-elevate"
         onClick={() => onOpen(location)}
       >
         {/* The file name carries the information, so the directory is what
@@ -117,7 +119,7 @@ function CardShell({
     // surface the popup landed on rather than guessing at a colour.
     <div className={cn("flex min-w-0 flex-col bg-inherit", className)}>
       <div className="sticky top-0 z-10 bg-inherit">
-        <div className="px-3 pt-2.5 pb-2">{heading}</div>
+        <div className="px-3 py-2.5">{heading}</div>
         <CardRule />
       </div>
       {children}
@@ -141,44 +143,50 @@ export function HoverDocumentation({
   const { kind, signature, body, links } = splitHover(contents);
 
   if (signature.length === 0 && body.length === 0 && links.length === 0) {
-    return (
-      <p className="px-3 py-2.5 text-xs text-muted-foreground">
-        No information
-      </p>
-    );
+    return <p className="p-3 text-sm text-muted-foreground">No information</p>;
   }
 
   return (
-    <CardShell heading={<CardHeading name={symbol} kind={kind} />}>
-      <div className="flex min-w-0 flex-col gap-2 px-3 py-2.5">
-        {signature.length > 0 && (
-          // Rendered as markdown rather than as text so the fenced block keeps
-          // the same highlighting the code behind the card has.
-          <div className="markdown markdown-signature min-w-0 text-xs">
-            <Markdown rehypePlugins={[rehypeHighlight]}>{signature}</Markdown>
-          </div>
-        )}
-        {body.length > 0 && (
-          <div className="markdown min-w-0 text-xs text-muted-foreground">
-            <Markdown
-              remarkPlugins={[remarkGfm]}
-              rehypePlugins={[rehypeHighlight]}
-            >
-              {body}
-            </Markdown>
-          </div>
-        )}
-        {links.length > 0 && (
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            {links.map((link) => (
-              <CardLink key={link.href} href={link.href} icon={IconLink}>
-                {link.label}
-              </CardLink>
-            ))}
-          </div>
-        )}
-      </div>
-    </CardShell>
+    // No rule and no sections: a hover is one short description of one symbol,
+    // and dividing four lines of it into compartments makes it look like more
+    // than it is. The rhythm is the whole layout — one gap, held everywhere.
+    //
+    // `max-w`: prose needs a measure. Left to itself the card is as wide as the
+    // longest signature, which for a generic type is most of the screen.
+    <div className="flex max-w-[25rem] min-w-0 flex-col gap-1.5 p-3 text-sm">
+      <CardHeading name={symbol} kind={kind} />
+      {signature.length > 0 && (
+        // One ink rather than the full syntax palette. A signature is read as a
+        // whole — colouring it token by token turns four words into confetti,
+        // and the code it was pulled out of is already highlighted behind the
+        // card. The panel's job is to say "this is the declaration".
+        <code
+          data-slot="card-signature"
+          className="block rounded bg-elevate-strong px-2 py-1 font-mono text-xs leading-relaxed break-words whitespace-pre-wrap text-emerald-700 dark:text-emerald-300"
+        >
+          {signature}
+        </code>
+      )}
+      {body.length > 0 && (
+        <div className="markdown markdown-hover min-w-0 text-foreground/85">
+          <Markdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeHighlight]}
+          >
+            {body}
+          </Markdown>
+        </div>
+      )}
+      {links.length > 0 && (
+        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+          {links.map((link) => (
+            <CardLink key={link.href} href={link.href} icon={IconLink}>
+              {link.label}
+            </CardLink>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -202,7 +210,7 @@ export function UsagesList({
         />
       }
     >
-      <ul className="p-1">
+      <ul className="p-1.5">
         {references.map((reference) => {
           const { label, tone } = REFERENCE_KIND[reference.kind];
           return (
@@ -240,7 +248,7 @@ export function TargetChoice({
         />
       }
     >
-      <ul className="p-1">
+      <ul className="p-1.5">
         {targets.map((target) => (
           <LocationRow
             key={`${target.location.path}:${target.location.range.start.line}:${target.location.range.start.character}`}
@@ -261,7 +269,7 @@ export function TargetChoice({
 
 export function CardSpinner({ label }: { label: string }) {
   return (
-    <p className="flex items-center gap-2 px-3 py-2.5 text-xs text-muted-foreground">
+    <p className="flex items-center gap-2 p-3 text-sm text-muted-foreground">
       <IconLoader2 className="size-3.5 animate-spin" />
       {label}
     </p>

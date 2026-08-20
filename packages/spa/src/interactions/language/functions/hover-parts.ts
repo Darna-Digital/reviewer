@@ -10,9 +10,9 @@
  * middle of it.
  *
  * Splitting it lets the card give each piece its own slot — a heading with the
- * symbol's kind, a code panel for the signature, prose underneath, and the
- * links as a footer row. The pieces come back as markdown rather than as text
- * so whatever renders them keeps its highlighting and its inline formatting.
+ * symbol's kind, a panel for the declaration, prose underneath, and the links
+ * as a footer row. The signature comes back as bare code, since the panel sets
+ * it whole; the body stays markdown, which is what its prose is.
  *
  * Nothing here is language-specific: a hover that does not follow the shape
  * falls through as one body, which is exactly what the card used to render.
@@ -29,7 +29,7 @@ export interface HoverParts {
    * Empty when the signature does not announce one.
    */
   readonly kind: string;
-  /** The signature, still fenced, so its renderer keeps highlighting it. */
+  /** The declaration itself, unfenced, ready to set in a panel of its own. */
   readonly signature: string;
   /** The doc comment and its tags — everything the signature is not. */
   readonly body: string;
@@ -38,7 +38,7 @@ export interface HoverParts {
 }
 
 /** ```` ```ts ```` … ```` ``` ```` at the very start, or null. */
-const leadingFence = (text: string): { block: string; rest: string } | null => {
+const leadingFence = (text: string): { code: string; rest: string } | null => {
   const lines = text.split("\n");
   const open = lines[0] ?? "";
   if (!open.startsWith("```")) return null;
@@ -50,7 +50,7 @@ const leadingFence = (text: string): { block: string; rest: string } | null => {
   );
   if (close === -1) return null;
   return {
-    block: lines.slice(0, close + 1).join("\n"),
+    code: lines.slice(1, close).join("\n").trim(),
     rest: lines
       .slice(close + 1)
       .join("\n")
@@ -77,28 +77,27 @@ const DECLARATION_KEYWORDS = new Set([
   "var",
 ]);
 
-const kindOf = (signature: string): { kind: string; signature: string } => {
-  // The fenced block's first line of code, past the opening fence.
-  const lines = signature.split("\n");
-  const first = (lines[1] ?? "").trim();
+const kindOf = (code: string): { kind: string; signature: string } => {
+  const lines = code.split("\n");
+  const first = (lines[0] ?? "").trim();
 
   const parenthesised = /^\(([a-z][a-z ]*)\)\s*/.exec(first);
   if (parenthesised !== null) {
     const [matched, kind] = parenthesised;
     const stripped = first.slice(matched.length);
     // A kind on its own carries no signature to strip it from.
-    if (stripped.length === 0) return { kind: kind ?? "", signature };
+    if (stripped.length === 0) return { kind: kind ?? "", signature: code };
     return {
       kind: kind ?? "",
-      signature: [lines[0], stripped, ...lines.slice(2)].join("\n"),
+      signature: [stripped, ...lines.slice(1)].join("\n"),
     };
   }
 
   const keyword = /^([a-z]+)\b/.exec(first)?.[1];
   if (keyword !== undefined && DECLARATION_KEYWORDS.has(keyword)) {
-    return { kind: keyword, signature };
+    return { kind: keyword, signature: code };
   }
-  return { kind: "", signature };
+  return { kind: "", signature: code };
 };
 
 /** A paragraph made of nothing but markdown links, in source order. */
@@ -119,7 +118,7 @@ export const splitHover = (contents: string): HoverParts => {
   const trimmed = contents.trim();
   const fence = leadingFence(trimmed);
   const { kind, signature } =
-    fence === null ? { kind: "", signature: "" } : kindOf(fence.block);
+    fence === null ? { kind: "", signature: "" } : kindOf(fence.code);
 
   const paragraphs = (fence === null ? trimmed : fence.rest)
     .split(/\n{2,}/)
