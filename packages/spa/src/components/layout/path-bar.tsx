@@ -6,7 +6,7 @@
  * folders open a submenu, files open in the pane above. The file's own controls
  * (edit it, read its history, save it) end the line on the right.
  */
-import { IconFolder, IconHistory, IconPencil } from "@tabler/icons-react";
+import { IconFolder, IconHistory } from "@tabler/icons-react";
 import { type ReactNode, useMemo } from "react";
 import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -28,9 +28,6 @@ export interface PathBarProps {
   /** Every path in the repository — what the folder dropdowns read. */
   readonly paths: ReadonlyArray<string>;
   readonly onOpenFile: (path: string) => void;
-  /** Omit to leave the open file read-only, e.g. an image or one already open
-   * for editing. */
-  readonly onEdit?: () => void;
   readonly onShowHistory?: () => void;
   /** The open view's own controls, e.g. Save and its problem count. */
   readonly actions?: ReactNode;
@@ -41,7 +38,6 @@ export function PathBar({
   path,
   paths,
   onOpenFile,
-  onEdit,
   onShowHistory,
   actions,
 }: PathBarProps) {
@@ -84,11 +80,6 @@ export function PathBar({
           </Button>
         )}
         {actions}
-        {onEdit !== undefined && (
-          <Button variant="ghost" size="xs" onClick={onEdit}>
-            <IconPencil /> Edit
-          </Button>
-        )}
       </div>
     </div>
   );

@@ -1,9 +1,10 @@
 /**
  * Editing a file in place.
  *
- * The file view switches into editing rather than hosting a separate editor
- * component, so this owns the editor instance, the dirty buffer, saving, and
- * the one command the library does not provide.
+ * A file in browse mode is editable the moment it opens — there is no mode to
+ * switch into, so this owns the editor instance, the dirty buffer, saving, and
+ * the one command the library does not provide, for as long as the file is on
+ * screen.
  *
  * Three constraints shape it. The editable view snapshots the rendered code
  * when the editor attaches, so an asynchronous worker highlight landing
@@ -32,12 +33,11 @@ const DIAGNOSTICS_DEBOUNCE_MS = 600;
 
 export interface FileEditing {
   /**
-   * The live editor, or null whenever there is no open edit session.
+   * The live editor, or null until the view has built one.
    *
-   * The view owns the moment of creation: `File` calls the factory below when
-   * it opens a session, rather than being handed an instance that existed
-   * whether or not anyone was editing. Everything reading the buffer copes with
-   * there not being one.
+   * The view owns the moment of creation: `File` calls the factory below as it
+   * mounts. Everything reading the buffer copes with there not being one yet,
+   * and with it going away when the file does.
    */
   readonly editor: Editor<undefined> | null;
   /**
@@ -72,19 +72,45 @@ export interface FileEditing {
   readonly bufferForAnalysis: string | null;
 }
 
-export function useFileEditing(
-  path: string,
-  loadedContents: string | undefined,
-  onSaved: () => void,
-  /** Whether the view is in editing mode, so a closed session drops its editor. */
-  editing: boolean = true,
+export interface FileEditingOptions {
+  /** Repository-relative path of the file being edited. */
+  readonly path: string;
+  /** What was loaded from disk, or undefined while it is still being read. */
+  readonly loadedContents: string | undefined;
+  /** Called after the buffer is written back, so git state can refresh. */
+  readonly onSaved: () => void;
   /**
    * Called with the file component the editor attached to. It is the only way
    * to reach the optional collapsed-region hooks a plain file leaves
    * unimplemented — see `useFolding`.
    */
-  onAttach?: (component: DiffsEditableComponent<undefined>) => void
-): FileEditing {
+  readonly onAttach?: (component: DiffsEditableComponent<undefined>) => void;
+  /**
+   * Build the popover the editor floats over a user-made selection. The editor
+   * owns when it appears and where; this only says what it is.
+   */
+  readonly renderSelectionAction?: (
+    context: SelectionActionContext
+  ) => HTMLElement;
+}
+
+/** What the selection popover is given to work with. */
+export interface SelectionActionContext {
+  readonly selection: {
+    readonly start: { readonly line: number; readonly character: number };
+    readonly end: { readonly line: number; readonly character: number };
+  };
+  readonly getSelectionText: () => string;
+  readonly close: () => void;
+}
+
+export function useFileEditing({
+  path,
+  loadedContents,
+  onSaved,
+  onAttach,
+  renderSelectionAction,
+}: FileEditingOptions): FileEditing {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [bufferForAnalysis, setBufferForAnalysis] = useState<string | null>(
@@ -113,6 +139,8 @@ export function useFileEditing(
    */
   const attachRef = useRef(onAttach);
   attachRef.current = onAttach;
+  const selectionActionRef = useRef(renderSelectionAction);
+  selectionActionRef.current = renderSelectionAction;
 
   const createEditor = useCallback((options: EditorOptions<undefined>) => {
     const created = new Editor<undefined>({
@@ -130,6 +158,16 @@ export function useFileEditing(
       keymap: [...EDITOR_KEYMAP, ...(options.keymap ?? [])],
       matchBrackets: options.matchBrackets ?? true,
       autoSurround: options.autoSurround ?? "default",
+      // The editor decides when a selection is the user's rather than the
+      // app's, and keeps the popover positioned and torn down; all this
+      // supplies is the element.
+      enabledSelectionAction: selectionActionRef.current !== undefined,
+      renderSelectionAction: (context) =>
+        selectionActionRef.current?.({
+          selection: context.selection,
+          getSelectionText: context.getSelectionText,
+          close: context.close,
+        }) ?? document.createElement("span"),
       onFocus: () => {
         focusedRef.current = true;
         options.onFocus?.();
@@ -167,16 +205,14 @@ export function useFileEditing(
     };
   }, [editor]);
 
-  // A closed session leaves nothing behind. `File` unmounts with the session
-  // and never calls the factory again, so an editor kept past it is a detached
-  // one — and everything downstream reads "there is an editor" as "there is a
-  // caret and a buffer to act on".
+  // A file swapped underneath takes its editor with it: the view re-keys `File`
+  // by path, so the instance that was attached to the old one is detached, and
+  // everything downstream reads "there is an editor" as "there is a caret and a
+  // buffer to act on".
   useEffect(() => {
-    if (!editing) {
-      focusedRef.current = false;
-      setEditor(null);
-    }
-  }, [editing]);
+    focusedRef.current = false;
+    setEditor(null);
+  }, [path]);
 
   // Reseed the mirrors whenever the file (re)loads. The view re-keys `File` by
   // path, so the editor itself reseeds on navigation.
