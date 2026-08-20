@@ -9,6 +9,7 @@ import {
   COLLABORATION_TAB_ID,
   initialWindowTabs,
   moveTab,
+  onSessionTab,
   openTab,
   PROJECT_TAB_ID,
   renameTab,
@@ -88,6 +89,17 @@ describe("withPinnedTabs", () => {
       COLLABORATION_TAB_ID,
       SESSIONS_TAB_ID,
     ]);
+  });
+});
+
+describe("onSessionTab", () => {
+  it("is true only while a conversation has the window to itself", () => {
+    expect(onSessionTab(initialWindowTabs())).toBe(false);
+    const state = stripOf("a", "b");
+    expect(onSessionTab(state)).toBe(true);
+    // Back on the pinned Sessions tab the conversation is a pane beside the
+    // list again, which is what the rail's buttons act on.
+    expect(onSessionTab(selectTab(state, SESSIONS_TAB_ID))).toBe(false);
   });
 });
 

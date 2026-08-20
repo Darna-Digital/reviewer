@@ -37,6 +37,12 @@ import type {
   ChatModelCatalog,
 } from "@byconvo/core/chats";
 import { useDraft } from "@/lib/composer-drafts";
+import {
+  addComposerAttachment,
+  clearComposerAttachments,
+  removeComposerAttachment,
+  useComposerAttachments,
+} from "@/interactions/chats/adapters/composer-attachments.store";
 import { cn } from "@/lib/utils";
 import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces";
 import type { ChatMode } from "@/interactions/chats/functions/chat-mode.functions";
@@ -54,7 +60,6 @@ import {
   readImageAttachment,
   toImagePayload,
   type ChatImagePayload,
-  type ComposerAttachment,
 } from "./attachments";
 import { ModelPicker } from "./model-picker";
 
@@ -192,7 +197,9 @@ export function ChatComposer({
   // Not React state — see `usePanelSize`.
   const prompt = usePanelSize("composer-h", prefs.composerHeight, "height");
   const [sending, setSending] = useState(false);
-  const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
+  // Pending images are kept beside the draft text, under the same key, so
+  // navigating away and back finds the composer exactly as it was left.
+  const attachments = useComposerAttachments(draftKey);
   const [dragging, setDragging] = useState(false);
   const ownTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const textareaRef = externalTextareaRef ?? ownTextareaRef;
@@ -247,8 +254,7 @@ export function ChatComposer({
         continue;
       }
       try {
-        const attachment = await readImageAttachment(file);
-        setAttachments((prev) => [...prev, attachment]);
+        addComposerAttachment(draftKey, await readImageAttachment(file));
       } catch {
         toast.error(`Could not read ${file.name || "image"}`);
       }
@@ -256,7 +262,7 @@ export function ChatComposer({
   };
 
   const removeAttachment = (id: string) =>
-    setAttachments((prev) => prev.filter((a) => a.id !== id));
+    removeComposerAttachment(draftKey, id);
 
   // Deliver the draft. Clears it on success; keeps it on failure so the user
   // can retry — the caller has already surfaced a toast.
@@ -266,7 +272,7 @@ export function ChatComposer({
     try {
       await onSend(text, attachments.map(toImagePayload));
       setText("");
-      setAttachments([]);
+      clearComposerAttachments(draftKey);
     } catch {
       // keep the draft for a manual retry
     } finally {

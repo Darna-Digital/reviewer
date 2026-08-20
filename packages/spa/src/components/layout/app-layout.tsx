@@ -25,6 +25,7 @@ import { SessionsRail } from "@/components/layout/sessions-rail";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
+import { useOnSessionTab } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { openProjectPicker } from "@/interactions/workspace/adapters/project-picker.store";
 import { useRepoCommands } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
@@ -58,8 +59,12 @@ export function AppLayout() {
   });
   const prefs = useUiPrefs();
   const workspace = useWorkspace();
+  // Which tab is holding the window, where that changes the shape of the page:
+  // a conversation lifted into a tab of its own is the whole page rather than
+  // the pane beside the list. See `ShellRoute`.
+  const soloSession = useOnSessionTab();
 
-  const route = shellRoute(pathname, prefs.workMode, startingNew);
+  const route = shellRoute(pathname, prefs.workMode, startingNew, soloSession);
   const gitChrome = showsGitChrome(route);
   const current = workspace.data?.current ?? null;
 
@@ -74,7 +79,17 @@ export function AppLayout() {
   // surfaces, sessions' new-and-find — so crossing between them leaves the page
   // beside it exactly where it was. Collaboration is the one surface without
   // one: its own sidebar carries the equivalent.
-  const railed = route.kind !== "collaboration" && !bare;
+  //
+  // So is a conversation with the window to itself. Every button in the
+  // sessions rail acts on the list, and on a session tab there is no list — the
+  // column would be three controls for a surface that is not on screen, drawn
+  // down the side of a page that has nothing else in the margin. The strip
+  // above it mints a session and the trail leads back to the list, which is
+  // what was worth having here.
+  const railed =
+    route.kind !== "collaboration" &&
+    !bare &&
+    !(route.kind === "session" && route.solo);
 
   /** Pages that are meaningless without a repository open behind them. */
   const needsRepo =
