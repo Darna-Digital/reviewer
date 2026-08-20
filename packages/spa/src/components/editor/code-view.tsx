@@ -19,6 +19,7 @@ import {
   useRevealLine,
   type RevealTarget,
 } from "@/interactions/language/components/use-reveal-line";
+import { useFindInFile } from "@/interactions/find-in-file/adapters/find-in-file.hook.adapter";
 import {
   THEMES,
   fileForHighlighting,
@@ -198,15 +199,44 @@ export function CodeView({
   const annotationsEnabled = commentsEnabled || language.annotations.length > 0;
   const gutterCommentsEnabled = commentsEnabled && !editing;
 
+  // The Virtualizer's own root div owns the scroll — it has to, in order to
+  // window its rendering — and it is the wrapper's only child.
+  const getScroller = useCallback(() => {
+    const scroller = scrollWrapper.current?.firstElementChild;
+    return scroller instanceof HTMLElement ? scroller : null;
+  }, []);
+
+  // ⌘F. The editor is handed over only while a session is open: `useFileEditing`
+  // keeps the instance it built after the session closes, and a read-only view
+  // must not answer for a caret that is no longer on screen.
+  const find = useFindInFile({
+    path,
+    contents: contents ?? "",
+    editor: editing ? buffer.editor : null,
+    subscribe: editing ? buffer.subscribe : undefined,
+    getScroller,
+  });
+
+  // The view keeps one `onPostRender`, and two layers paint from it: the
+  // diagnostic underlines and the find highlight.
+  const languagePostRender = language.viewOptions.onPostRender;
+  const findPostRender = find.viewOptions.onPostRender;
+  const onPostRender = useCallback(
+    (
+      node: HTMLElement,
+      instance: unknown,
+      phase: "mount" | "update" | "unmount"
+    ) => {
+      languagePostRender(node, instance, phase);
+      findPostRender(node, instance, phase);
+    },
+    [languagePostRender, findPostRender]
+  );
+
   // Line count drives the first scroll estimate for a line that has not been
   // rendered yet; zero until the file loads, which simply means "start at top".
   useRevealLine(
-    // The Virtualizer's own root div owns the scroll — it has to, in order to
-    // window its rendering — and it is the wrapper's only child.
-    useCallback(() => {
-      const scroller = scrollWrapper.current?.firstElementChild;
-      return scroller instanceof HTMLElement ? scroller : null;
-    }, []),
+    getScroller,
     reveal,
     file.data === undefined ? 0 : file.data.contents.split("\n").length
   );
@@ -234,7 +264,7 @@ export function CodeView({
     // lines is materialized in the DOM, so large files open instantly. The
     // wrapper exists so `useRevealLine` can reach the Virtualizer's own
     // scrolling root, which is its only child.
-    <div ref={scrollWrapper} className="h-full">
+    <div ref={scrollWrapper} className="relative h-full">
       {/* Trailing gutter: the last lines have to clear the floating bars that
           hang over the bottom of the pane (the assign bar), and scrolling a
           little past the end is how an editor behaves anyway. */}
@@ -279,7 +309,10 @@ export function CodeView({
                   : undefined,
                 // Token hooks + the post-render pass that underlines problems.
                 ...language.viewOptions,
-                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}`,
+                // Both layers paint from the same callback and into the same
+                // stylesheet, and the view keeps one of each.
+                onPostRender,
+                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}`,
               }}
               edit={editing}
               /* The editable view snapshots the rendered code when the editor
@@ -369,6 +402,7 @@ export function CodeView({
         {language.completions}
         {language.menu}
       </Virtualizer>
+      {find.bar}
     </div>
   );
 }

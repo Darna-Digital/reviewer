@@ -9,12 +9,24 @@
 import { useEffect, useSyncExternalStore } from "react";
 import type { Command, SearchMode } from "../interfaces/search.interfaces";
 
+/**
+ * A phrase the dialog should open holding, and the press that supplied it. The
+ * nonce is what lets the same word be sent twice: ⌘⇧F over `useFiles`, escape,
+ * ⌘⇧F over `useFiles` again is two requests, not one.
+ */
+export interface SearchSeed {
+  readonly text: string;
+  readonly nonce: number;
+}
+
 export interface SearchState {
   readonly open: boolean;
   readonly mode: SearchMode;
+  /** Null when the dialog should keep whatever query it had. */
+  readonly seed: SearchSeed | null;
 }
 
-const CLOSED: SearchState = { open: false, mode: "commands" };
+const CLOSED: SearchState = { open: false, mode: "commands", seed: null };
 
 let state: SearchState = CLOSED;
 /** Scope name → the commands that scope currently offers, in mount order. */
@@ -29,14 +41,30 @@ const emit = (listeners: Set<() => void>) => {
 };
 
 const setState = (next: SearchState) => {
-  if (next.open === state.open && next.mode === state.mode) return;
+  if (
+    next.open === state.open &&
+    next.mode === state.mode &&
+    next.seed === state.seed
+  ) {
+    return;
+  }
   state = next;
   emit(stateListeners);
 };
 
-/** Open the dialog on `mode` — what the ⇧⇧ and ⌘⇧F gestures do. */
-export const openSearch = (mode: SearchMode): void =>
-  setState({ open: true, mode });
+let seeds = 0;
+
+/**
+ * Open the dialog on `mode` — what the ⇧⇧ and ⌘⇧F gestures do. A `seed` is the
+ * phrase the caller had highlighted; an empty one means there was nothing
+ * highlighted, and the box keeps what it already held.
+ */
+export const openSearch = (mode: SearchMode, seed = ""): void =>
+  setState({
+    open: true,
+    mode,
+    seed: seed === "" ? null : { text: seed, nonce: ++seeds },
+  });
 
 /**
  * The mode is deliberately left as it was: the dialog animates out, and
@@ -58,7 +86,8 @@ export const setSearchMode = (mode: SearchMode): void =>
 export const toggleCommandSearch = (): void =>
   state.open && state.mode === "commands"
     ? closeSearch()
-    : setState({ open: true, mode: "commands" });
+    : // The command list is not a search, so nothing seeds it.
+      setState({ open: true, mode: "commands", seed: null });
 
 const rebuildCommands = () => {
   registered = [...scopes.values()].flat();
@@ -116,6 +145,7 @@ export const useRegisterCommands = (
 /** Test seam: forget everything the mounted pages registered. */
 export const resetSearchStore = (): void => {
   state = CLOSED;
+  seeds = 0;
   scopes.clear();
   registered = [];
   emit(stateListeners);

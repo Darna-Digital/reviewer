@@ -53,22 +53,37 @@ export const queryInCode = (
  * this, and the document selection is the fallback for anywhere that does not.
  */
 export const caretRect = (container: ParentNode): DOMRect | null => {
-  const roots = codeRootsWithin(container);
-  for (const root of roots) {
-    const selection =
-      "getSelection" in root &&
-      typeof (root as { getSelection?: unknown }).getSelection === "function"
-        ? (
-            root as unknown as { getSelection: () => Selection | null }
-          ).getSelection()
-        : null;
-    const rect = rectOfSelection(selection);
+  for (const root of codeRootsWithin(container)) {
+    const rect = rectOfSelection(selectionIn(root));
     if (rect !== null) return rect;
   }
   return rectOfSelection(
     typeof document === "undefined" ? null : document.getSelection()
   );
 };
+
+/**
+ * The text selected inside a code view, reading the same shadow-root selection
+ * `caretRect` measures. Empty when nothing is selected there — a selection in
+ * the page around the view is somebody else's to read.
+ */
+export const selectedTextInCode = (container: ParentNode): string => {
+  for (const root of codeRootsWithin(container)) {
+    const selection = selectionIn(root);
+    const text = selection === null ? "" : selection.toString();
+    if (text !== "") return text;
+  }
+  return "";
+};
+
+/** Chromium exposes `getSelection` on a shadow root; nothing else has to. */
+const selectionIn = (root: ParentNode): Selection | null =>
+  "getSelection" in root &&
+  typeof (root as { getSelection?: unknown }).getSelection === "function"
+    ? (
+        root as unknown as { getSelection: () => Selection | null }
+      ).getSelection()
+    : null;
 
 const rectOfSelection = (selection: Selection | null): DOMRect | null => {
   if (selection === null || selection.rangeCount === 0) return null;

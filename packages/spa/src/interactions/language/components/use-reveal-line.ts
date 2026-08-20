@@ -32,7 +32,14 @@ export function useRevealLine(
   /** Resolves the element that owns the scroll; views nest it differently. */
   getScroller: () => HTMLElement | null,
   target: RevealTarget | null,
-  totalLines: number
+  totalLines: number,
+  /**
+   * Flash the line once it is on screen. On for a jump the user has to find on
+   * arrival — a definition, a usage — and off for stepping through find
+   * matches, where the match is already highlighted and a flash on every press
+   * of Enter is noise.
+   */
+  flash = true
 ) {
   const line = target?.line ?? null;
   const key = target?.key ?? 0;
@@ -85,7 +92,7 @@ export function useRevealLine(
         container.scrollTop =
           Math.abs(delta) <= 1 ? top : container.scrollTop + delta * 0.25;
 
-        if (flashed !== element) {
+        if (flash && flashed !== element) {
           flashed?.removeAttribute("data-revealed");
           element.setAttribute("data-revealed", "");
           flashed = element;
@@ -111,5 +118,5 @@ export function useRevealLine(
     raf = requestAnimationFrame(frame);
     return stop;
     // `key` re-runs the effect when the same line is requested again.
-  }, [line, key, totalLines, getScroller]);
+  }, [line, key, totalLines, getScroller, flash]);
 }
