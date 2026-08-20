@@ -32,4 +32,8 @@ describe("a switched-off sessions button", () => {
   it("leaves the launchpad on ⌘L, which is nothing to do with sessions", () => {
     expect(chord("l")).toEqual({ kind: "launchpad" });
   });
+
+  it("leaves ⌘G cycling the modes, which is nothing to do with it either", () => {
+    expect(chord("g")).toEqual({ kind: "cycle-mode" });
+  });
 });

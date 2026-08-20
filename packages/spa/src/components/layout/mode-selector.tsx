@@ -1,92 +1,102 @@
 /**
- * ModeSelector — the title bar's leading chip. It picks how the app is framed
- * (Code vs Collaboration) and routes to that mode's home; the choice is
- * remembered so the chip still reads right after a reload.
+ * ModeSelector — the modes, as a strip of tabs at the head of the window bar.
+ *
+ * It used to be a chip that dropped a menu: one press to be told which modes
+ * there are, a second to change. There are two of them, and which one you are
+ * in is the frame around everything else on the bar — so they are drawn as what
+ * they are, a tab each, wearing the same chip as the window's own tabs beside
+ * them. Links rather than buttons: a mode is a place, and its tab says so on
+ * hover and answers a modified click like every other link in the app.
+ *
+ * One chord covers the lot. ⌘G moves to the next mode along and wraps, so there
+ * is one thing to learn however many modes there come to be; the tab it would
+ * take you to is the one whose tooltip shows the keycaps.
  */
-import { IconCheck, IconChevronDown } from "@tabler/icons-react";
-import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { isFeatureEnabled } from "@byconvo/feature-flags";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { TooltipTrigger } from "@/components/ui/tooltip";
+import { TAB_STRIP, tabChipClass } from "@/components/layout/tab-chip";
+import { BarTooltip, NO_DRAG } from "@/components/layout/window-bar.chrome";
+import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { setUiPrefs, useUiPrefs, type WorkMode } from "@/lib/ui-prefs";
-import { activeWorkMode } from "@/lib/work-mode";
+  activeWorkMode,
+  nextWorkMode,
+  workModeTabs,
+  type WorkModeTab,
+} from "@/lib/work-mode";
 
-const MODES: ReadonlyArray<{
-  mode: WorkMode;
-  title: string;
-  detail: string;
-  to: string;
-}> = [
-  {
-    mode: "code",
-    title: "Code",
-    detail: "Focus on technical details in a detailed view",
-    to: "/modes/code/browse",
-  },
-  ...(isFeatureEnabled("collaboration-button")
-    ? [
-        {
-          mode: "collaboration" as WorkMode,
-          title: "Collaboration",
-          detail: "Collaborate with humans and agents",
-          to: "/modes/collaboration",
-        },
-      ]
-    : []),
-];
+const MODE_KEYS = "⌘G";
 
-export function ModeSelector() {
+/** Remember the pick, so the frame still reads right after a reload. */
+const remember = (mode: WorkModeTab) => setUiPrefs({ workMode: mode.mode });
+
+/**
+ * Which mode the strip is on, and the one ⌘G would move to — read the same way
+ * by the tabs and by the bar that answers the chord.
+ */
+function useWorkModes() {
   const { workMode } = useUiPrefs();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-
+  const modes = workModeTabs();
   const active = activeWorkMode(pathname, workMode);
-  const selected = MODES.find((m) => m.mode === active) ?? MODES[0];
+  return { modes, active, next: nextWorkMode(modes, active) };
+}
+
+/**
+ * Take the window to the next mode. Handed to the window bar, which owns the
+ * chords the bar answers — the switch itself belongs with the tabs.
+ */
+export function useModeCycle(): () => void {
+  const { next } = useWorkModes();
+  const navigate = useNavigate();
+  return () => {
+    if (next === null) return;
+    remember(next);
+    void navigate({ to: next.to });
+  };
+}
+
+export function ModeSelector() {
+  const { modes, active, next } = useWorkModes();
+
+  // A strip of one tab is no choice at all: with collaboration switched off the
+  // app has a single frame, and naming it takes room from the tabs that do move
+  // the window somewhere.
+  if (modes.length < 2) return null;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="sm"
-            className="gap-1.5 px-3.5 py-1.5 font-semibold"
-          />
-        }
-      >
-        <span className="truncate">{selected?.title}</span>
-        <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 gap-0 p-1.5">
-        {MODES.map((m) => (
-          <button
-            key={m.mode}
-            type="button"
-            className="flex w-full items-start gap-3 rounded-lg px-2.5 py-2 text-left outline-none hover:bg-elevate focus-visible:bg-elevate"
-            onClick={() => {
-              setUiPrefs({ workMode: m.mode });
-              setOpen(false);
-              void navigate({ to: m.to });
-            }}
+    <div
+      role="tablist"
+      aria-label="Modes"
+      className={cn(TAB_STRIP, "shrink-0", NO_DRAG)}
+    >
+      {modes.map((mode) => {
+        const selected = mode.mode === active;
+        return (
+          <BarTooltip
+            key={mode.mode}
+            label={selected ? mode.detail : `Switch to ${mode.title}`}
+            keys={mode.mode === next?.mode ? MODE_KEYS : null}
           >
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-medium">{m.title}</span>
-              <span className="block text-sm text-muted-foreground">
-                {m.detail}
-              </span>
-            </span>
-            {m.mode === active && (
-              <IconCheck className="mt-0.5 size-4 shrink-0" />
-            )}
-          </button>
-        ))}
-      </PopoverContent>
-    </Popover>
+            <TooltipTrigger
+              render={
+                <Link
+                  to={mode.to}
+                  role="tab"
+                  aria-selected={selected}
+                  onClick={() => remember(mode)}
+                  // The window's own tabs, less the slot they keep for a ✕:
+                  // nothing is ever closed from here, so the chip is even
+                  // either side of its name.
+                  className={cn(tabChipClass(selected), "px-2.5 font-medium")}
+                />
+              }
+            >
+              <span className="truncate">{mode.title}</span>
+            </TooltipTrigger>
+          </BarTooltip>
+        );
+      })}
+    </div>
   );
 }

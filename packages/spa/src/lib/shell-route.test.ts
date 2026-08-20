@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { dockPage, dockPages, shellRoute, showsGitChrome } from "./shell-route";
+import {
+  dockPage,
+  dockPages,
+  shellRoute,
+  showsGitChrome,
+  showsProjectChip,
+} from "./shell-route";
 
 describe("shellRoute", () => {
   it("reads the three code modes off the path", () => {
@@ -108,5 +114,28 @@ describe("showsGitChrome", () => {
     ).toBe(false);
     expect(showsGitChrome({ kind: "collaboration" })).toBe(false);
     expect(showsGitChrome({ kind: "settings" })).toBe(false);
+  });
+});
+
+describe("where the project chip is drawn", () => {
+  it("puts it on the rows that carry a branch switcher for it to scope", () => {
+    for (const pathname of [
+      "/modes/code/review",
+      "/modes/code/browse",
+      "/modes/code/docs",
+      "/modes/code/history",
+      "/settings",
+    ]) {
+      expect(showsProjectChip(shellRoute(pathname, "code"))).toBe(true);
+    }
+  });
+
+  it("leaves it on the window bar for the surfaces with no such row", () => {
+    expect(showsProjectChip(shellRoute("/modes/agent-session", "code"))).toBe(
+      false
+    );
+    expect(showsProjectChip(shellRoute("/modes/collaboration", "code"))).toBe(
+      false
+    );
   });
 });

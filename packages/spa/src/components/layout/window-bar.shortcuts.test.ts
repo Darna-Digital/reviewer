@@ -27,6 +27,10 @@ describe("the window bar's chords", () => {
     expect(chord("9")).toEqual({ kind: "session", slot: 7 });
   });
 
+  it("cycles the modes on ⌘G — one chord for the strip, not one each", () => {
+    expect(chord("g")).toEqual({ kind: "cycle-mode" });
+  });
+
   it("leaves the launchpad on ⌘L, off the run of places", () => {
     expect(chord("l")).toEqual({ kind: "launchpad" });
     expect(chord("0")).toBeNull();

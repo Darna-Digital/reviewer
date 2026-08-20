@@ -146,3 +146,14 @@ export function shellRoute(
 /** Whether the page beneath the layout is one of the git/code surfaces. */
 export const showsGitChrome = (route: ShellRoute): boolean =>
   route.kind === "code" || route.kind === "workspace" || route.kind === "dock";
+
+/**
+ * Where the project chip is drawn.
+ *
+ * It scopes the branch switcher standing next to it, so on the rows that carry
+ * one it belongs on that row, ahead of it — the project, then the branch of it
+ * you are reading. The surfaces with no git row of their own keep the chip on
+ * the window bar, which is the only row they have.
+ */
+export const showsProjectChip = (route: ShellRoute): boolean =>
+  route.kind !== "session" && route.kind !== "collaboration";

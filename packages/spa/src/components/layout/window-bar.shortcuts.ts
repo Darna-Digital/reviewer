@@ -19,12 +19,18 @@
  *
  * The project chip leads the strip but is not a place in it — it is what every
  * tab behind it is scoped to — so it takes ⇧ as well, on ⌘⇧P.
+ *
+ * The modes are one chord rather than one each: ⌘G moves to the next along and
+ * wraps, so the strip ahead of the tabs is learnt once however many modes it
+ * comes to hold. With a single mode there is nowhere to cycle to, and the chord
+ * is left to the browser.
  */
 import { isFeatureEnabled } from "@byconvo/feature-flags";
 import {
   PROJECT_TAB_ID,
   SESSIONS_TAB_ID,
 } from "@/interactions/window-tabs/functions/window-tabs.functions";
+import { workModeTabs } from "@/lib/work-mode";
 
 export type BarPane = "analysis" | "browser";
 
@@ -33,6 +39,8 @@ export type BarShortcut =
   | { readonly kind: "launchpad" }
   /** Raise the project chip's dropdown, to switch what the window is on. */
   | { readonly kind: "project-picker" }
+  /** Frame the app in the next mode along, wrapping at the end of the strip. */
+  | { readonly kind: "cycle-mode" }
   /** Open or close one of the panes beside the page. */
   | { readonly kind: "pane"; readonly pane: BarPane }
   /** Go to a pinned tab, wherever it was left. */
@@ -88,6 +96,9 @@ export function barShortcut(event: Chord): BarShortcut | null {
     if (key === "p") return { kind: "project-picker" };
     const pane = PANE_KEYS[key];
     return pane === undefined ? null : { kind: "pane", pane };
+  }
+  if (key === "g") {
+    return workModeTabs().length > 1 ? { kind: "cycle-mode" } : null;
   }
   if (key === "l") return { kind: "launchpad" };
   if (key === "t") return sessionsEnabled() ? { kind: "new-session" } : null;

@@ -1,6 +1,6 @@
 /**
  * WindowBar — the strip along the top of the window: the macOS traffic lights,
- * the tab strip, the window menu and the account.
+ * the modes, the tab strip, the window menu and the account.
  *
  * Drawn in both shells, so the app reads the same either way. Two things are
  * the native window's alone: the lead gutter the traffic lights are drawn into,
@@ -29,13 +29,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Orb } from "@/components/ui/orb";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  BarLabel,
+  BarTooltip,
+  NO_DRAG,
+  PROJECT_PICKER_KEYS,
+  Shortcut,
+} from "@/components/layout/window-bar.chrome";
 import {
   updateWindowTabs,
   useWindowTabs,
@@ -63,6 +69,7 @@ import {
   type BarShortcut,
 } from "@/components/layout/window-bar.shortcuts";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
+import { ModeSelector, useModeCycle } from "@/components/layout/mode-selector";
 import { UserMenu } from "@/components/layout/user-menu";
 import {
   closeTabOverview,
@@ -81,11 +88,10 @@ import { useThinkingChatIds } from "@/interactions/chats/adapters/thinking-chats
 import { isDesktop } from "@/lib/desktop";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import { useRecentChats, useWorkspace } from "@/lib/queries";
+import { shellRoute, showsProjectChip } from "@/lib/shell-route";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { activeWorkMode } from "@/lib/work-mode";
-
-const NO_DRAG = "[-webkit-app-region:no-drag]";
 
 /**
  * How much of the bar the window's own controls have.
@@ -107,53 +113,12 @@ const sessionsEnabled = isFeatureEnabled("sessions-button");
 const stayPut = () => {};
 
 const PROJECT_KEYS = "⌘1";
-const PROJECT_PICKER_KEYS = "⌘⇧P";
 const SESSIONS_KEYS = "⌘2";
 const NEW_SESSION_KEYS = "⌘T";
 const LAUNCHPAD_KEYS = "⌘L";
 const COMMANDS_KEYS = "⌘K";
 const ANALYSIS_KEYS = "⌘⇧A";
 const BROWSER_KEYS = "⌘⇧B";
-
-/** A chord as its keycaps: one per glyph, the way the style guide sets them. */
-function Shortcut({ keys }: { keys: string }) {
-  return (
-    <KbdGroup>
-      {Array.from(keys).map((key) => (
-        <Kbd key={key}>{key}</Kbd>
-      ))}
-    </KbdGroup>
-  );
-}
-
-/** What the bar says about a control: its name, and the chord that runs it. */
-function BarLabel({ label, keys }: { label: string; keys?: string | null }) {
-  return (
-    <TooltipContent side="bottom">
-      {label}
-      {keys != null && <Shortcut keys={keys} />}
-    </TooltipContent>
-  );
-}
-
-function BarTooltip({
-  label,
-  keys,
-  children,
-  disabled,
-}: {
-  label: string;
-  keys?: string | null;
-  children: React.ReactNode;
-  disabled?: boolean;
-}) {
-  return (
-    <Tooltip disabled={disabled}>
-      {children}
-      <BarLabel label={label} keys={keys} />
-    </Tooltip>
-  );
-}
 
 /**
  * A row of the window menu: its name, and its chord on hover rather than set
@@ -300,8 +265,15 @@ export function WindowBar() {
   const prefs = useUiPrefs();
   const inCodeMode =
     activeWorkMode(location.pathname, prefs.workMode) === "code";
+  const cycleMode = useModeCycle();
   const workspace = useWorkspace();
   const pickerOpen = useProjectPickerOpen();
+  // The chip is the header's on every row that carries a branch switcher for it
+  // to scope — see `showsProjectChip`. Here it stands in for the surfaces that
+  // have no such row, so the two never draw it at once.
+  const onHeader = showsProjectChip(
+    shellRoute(location.pathname, prefs.workMode)
+  );
   // Both panes are there to be read against something else the window is
   // showing, and in the native shell there is always something — the browser
   // pane is a window of its own, and an analysis is opened from either mode. A
@@ -383,6 +355,8 @@ export function WindowBar() {
           return toggleTabOverview();
         case "project-picker":
           return setProjectPickerOpen(true);
+        case "cycle-mode":
+          return cycleMode();
         case "pane":
           return togglePane(shortcut.pane);
         case "tab": {
@@ -433,6 +407,11 @@ export function WindowBar() {
           className={cn("shrink-0", isDesktop ? LEAD_GUTTER : "w-2")}
         />
         <SidebarToggle className={NO_DRAG} />
+
+        {/* Which frame the app is in leads the bar: everything after it — the
+            chip, the tabs, the page under them — is a place within the mode
+            these name. */}
+        <ModeSelector />
         {/* <BarButton
         label="Back"
         disabled={!canGoBack}
@@ -444,21 +423,23 @@ export function WindowBar() {
         <IconArrowRight className="size-5" />
       </BarButton> */}
 
-        {/* The project the window is on leads the strip: every tab behind it is
+        {/* The project the window is on, on the surfaces whose own rows carry
+            no branch switcher for it to stand ahead of. Every tab behind it is
             a place within that project, so the chip names them all rather than
             being one more thing on the page under them. Switching project keeps
-            a session or a board where it is; on the code surfaces it lands in
-            the arriving project's tree, as it always has. */}
-        <div className={cn("flex min-w-0 shrink-0", NO_DRAG)}>
-          <ProjectPicker
-            workspace={workspace.data}
-            open={pickerOpen}
-            onOpenChange={setProjectPickerOpen}
-            onChosen={inCodeMode ? undefined : stayPut}
-            onWindowBar
-            tooltip={<BarLabel label="Projects" keys={PROJECT_PICKER_KEYS} />}
-          />
-        </div>
+            a session or a board where it is. */}
+        {!onHeader && (
+          <div className={cn("flex min-w-0 shrink-0", NO_DRAG)}>
+            <ProjectPicker
+              workspace={workspace.data}
+              open={pickerOpen}
+              onOpenChange={setProjectPickerOpen}
+              onChosen={inCodeMode ? undefined : stayPut}
+              onWindowBar
+              tooltip={<BarLabel label="Projects" keys={PROJECT_PICKER_KEYS} />}
+            />
+          </div>
+        )}
 
         <div
           role="tablist"

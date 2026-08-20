@@ -5,16 +5,16 @@
  */
 import {
   IconCode,
+  IconLayoutKanban,
   IconMessage,
   IconSend,
-  IconUsersGroup,
 } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import type { WindowTabKind } from "../interfaces/window-tabs.interfaces";
 
 const ICONS: Record<WindowTabKind, typeof IconCode> = {
   project: IconCode,
-  collaboration: IconUsersGroup,
+  collaboration: IconLayoutKanban,
   sessions: IconSend,
   session: IconMessage,
 };

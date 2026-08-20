@@ -21,6 +21,15 @@ import { NewTaskButton } from "@/interactions/collaboration/components/task-crea
 import { SearchMenu } from "@/interactions/search/components/search-menu";
 import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
+import {
+  setProjectPickerOpen,
+  useProjectPickerOpen,
+} from "@/interactions/workspace/adapters/project-picker.store";
+import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
+import {
+  BarLabel,
+  PROJECT_PICKER_KEYS,
+} from "@/components/layout/window-bar.chrome";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { activeRepo } from "@byconvo/core/workspace";
@@ -32,7 +41,7 @@ import {
   useWorkspace,
 } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
-import type { ShellRoute } from "@/lib/shell-route";
+import { showsProjectChip, type ShellRoute } from "@/lib/shell-route";
 
 export function AppHeader({ route }: { route: ShellRoute }) {
   const navigate = useNavigate();
@@ -47,6 +56,7 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   const projectBranchList = useProjectBranches();
   const workspaceActions = useWorkspaceActions();
   const git = useGitActions();
+  const pickerOpen = useProjectPickerOpen();
 
   /** Make a root current before a menu action runs in it. */
   const followRepo = (repoPath: string) =>
@@ -92,6 +102,19 @@ export function AppHeader({ route }: { route: ShellRoute }) {
 
   return (
     <header className="flex h-9 shrink-0 items-center gap-2 px-2">
+      {/* The project, then the branch of it you are reading: the chip scopes
+          the switcher beside it, so it leads the row rather than standing a row
+          above it on the window bar. The surfaces with no git row of their own
+          keep it on the window bar — see `showsProjectChip`. */}
+      {showsProjectChip(route) && (
+        <ProjectPicker
+          workspace={workspace.data}
+          open={pickerOpen}
+          onOpenChange={setProjectPickerOpen}
+          tooltip={<BarLabel label="Projects" keys={PROJECT_PICKER_KEYS} />}
+        />
+      )}
+
       {repo.data != null && (
         <BranchSwitcher
           current={repo.data.currentBranch}
