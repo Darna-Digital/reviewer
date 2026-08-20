@@ -58,15 +58,23 @@ describe("shellRoute", () => {
     expect(shellRoute("/modes/agent-session", "code")).toEqual({
       kind: "session",
       composing: false,
+      solo: false,
     });
     expect(shellRoute("/modes/agent-session", "code", true)).toEqual({
       kind: "session",
       composing: true,
+      solo: false,
     });
     expect(shellRoute("/modes/agent-session/abc", "code")).toEqual({
       kind: "session",
       composing: false,
+      solo: false,
     });
+    // The same conversation, on a tab of its own: the shell drops the rail,
+    // whose every button acts on a list that is not beside it there.
+    expect(shellRoute("/modes/agent-session/abc", "code", false, true)).toEqual(
+      { kind: "session", composing: false, solo: true }
+    );
     expect(shellRoute("/modes/collaboration", "code")).toEqual({
       kind: "collaboration",
     });
@@ -95,7 +103,9 @@ describe("showsGitChrome", () => {
     expect(showsGitChrome({ kind: "code", mode: "commit" })).toBe(true);
     expect(showsGitChrome({ kind: "workspace" })).toBe(true);
     expect(showsGitChrome({ kind: "dock", tab: "history" })).toBe(true);
-    expect(showsGitChrome({ kind: "session", composing: false })).toBe(false);
+    expect(
+      showsGitChrome({ kind: "session", composing: false, solo: false })
+    ).toBe(false);
     expect(showsGitChrome({ kind: "collaboration" })).toBe(false);
     expect(showsGitChrome({ kind: "settings" })).toBe(false);
   });

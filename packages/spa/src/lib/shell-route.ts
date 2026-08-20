@@ -33,6 +33,20 @@ export type ShellRoute =
        * gets the window to itself.
        */
       readonly composing: boolean;
+      /**
+       * The conversation lifted into a tab of its own, with no list beside it.
+       *
+       * Everything in the sessions rail acts on that list — mint one, find one,
+       * narrow which of them are shown — so beside a conversation that has the
+       * window to itself the column is three buttons for a surface that is not
+       * there. The window bar carries the ones still worth having here: ✛ mints
+       * a session, ⌘K finds anything, and the trail leads back to the list.
+       *
+       * Not something the path can say: which tab is holding the window is the
+       * strip's business, and the same URL is the list's conversation on the
+       * Sessions tab and a page of its own on a session tab.
+       */
+      readonly solo: boolean;
     }
   | { readonly kind: "collaboration" }
   | { readonly kind: "settings" };
@@ -88,19 +102,22 @@ export const dockPage = (tab: BottomTab): DockPage => DOCK_PAGES[tab];
 /**
  * `pathname` classified. `workMode` is the preference the collaboration/code
  * switch remembers, consulted only where the path itself does not say.
- * `startingNew` is the sessions index's `?new`, which the path cannot carry.
+ * `startingNew` is the sessions index's `?new`, which the path cannot carry;
+ * `soloSession` says the window is on a session's own tab, which it cannot
+ * carry either.
  */
 export function shellRoute(
   pathname: string,
   workMode: "code" | "collaboration",
-  startingNew = false
+  startingNew = false,
+  soloSession = false
 ): ShellRoute {
   if (pathname.startsWith("/settings")) return { kind: "settings" };
   if (pathname.startsWith("/modes/agent-session")) {
     // The bare path is the list, which wears the shell like any other page; the
     // composer is the one thing under here that asks for the window to itself,
     // and it says so in the search rather than in the path.
-    return { kind: "session", composing: startingNew };
+    return { kind: "session", composing: startingNew, solo: soloSession };
   }
   if (pathname.startsWith("/modes/collaboration")) {
     return { kind: "collaboration" };

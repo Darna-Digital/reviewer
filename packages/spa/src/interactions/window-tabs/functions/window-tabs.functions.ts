@@ -186,6 +186,19 @@ export const activeTab = (state: WindowTabsState): WindowTab | null =>
   state.tabs.find((tab) => tab.id === state.activeId) ?? null;
 
 /**
+ * Whether the window is on a conversation's own tab — one session, lifted out
+ * of the list, with the window to itself.
+ *
+ * The sessions surface and a session tab are the same URLs, so this is the only
+ * thing that tells the two apart: on the Sessions tab a conversation is the
+ * pane beside the list, and on its own tab it is the page. What the shell puts
+ * around it differs accordingly — see `ChatsPage` for the list it stays out of,
+ * and `ShellRoute` for the rail.
+ */
+export const onSessionTab = (state: WindowTabsState): boolean =>
+  activeTab(state)?.kind === "session";
+
+/**
  * Where a location belongs. A session tab holds one conversation, so it keeps
  * anything inside Sessions; everything else lands on the pinned tab that owns
  * that part of the app, whichever tab you set off from — leaving Sessions from
