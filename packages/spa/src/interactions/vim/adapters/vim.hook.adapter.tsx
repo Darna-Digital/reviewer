@@ -23,7 +23,7 @@ import {
   type VimState,
 } from "../interfaces/vim.interfaces";
 import { afterPointerPress, onVimKey } from "../functions/vim.functions";
-import { visualRange } from "../functions/vim.commands";
+import { precedes, visualRange } from "../functions/vim.commands";
 import {
   clearRelativeLines,
   paintRelativeLines,
@@ -98,6 +98,9 @@ export interface Vim {
   };
 }
 
+const isVisual = (mode: VimMode): boolean =>
+  mode === "visual" || mode === "visual-line";
+
 export function useVim({
   editor,
   enabled,
@@ -112,11 +115,21 @@ export function useVim({
   const container = useRef<HTMLElement | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
+  /**
+   * The end of a visual selection the motions move, kept because the editor
+   * does not record which end that is: its selection is only a span, and asking
+   * it where the caret is would answer with the top of the span. Every motion
+   * would then set off from the anchor again, so a selection could never reach
+   * further than a single step from where `v` was pressed.
+   */
+  const head = useRef<VimPosition | null>(null);
 
   const active = enabled && editor !== null;
 
   /** Where the caret is, as the grammar wants it. */
   const caretOf = useCallback((): VimPosition => {
+    const moving = head.current;
+    if (moving !== null && isVisual(stateRef.current.mode)) return moving;
     const selection = editor?.getState().selections?.at(-1);
     if (selection === undefined) return { line: 0, character: 0 };
     return {
@@ -184,6 +197,7 @@ export function useVim({
       if (next === stateRef.current) return;
       stateRef.current = next;
       setState(next);
+      head.current = null;
       setSpanning(false);
     };
     window.addEventListener("pointerdown", onPointerDown, true);
@@ -217,6 +231,7 @@ export function useVim({
   useEffect(() => {
     if (!active) {
       setState(INITIAL_VIM_STATE);
+      head.current = null;
       setSpanning(false);
     }
   }, [active]);
@@ -270,14 +285,16 @@ export function useVim({
             })();
 
       const mode = outcome.state.mode;
+      const anchor = outcome.state.anchor;
+      head.current = isVisual(mode) ? landed : null;
       setSpanning(
         mode === "visual-line" ||
           (mode === "visual" &&
-            outcome.state.anchor !== null &&
-            (outcome.state.anchor.line !== landed.line ||
-              outcome.state.anchor.character !== landed.character))
+            anchor !== null &&
+            (anchor.line !== landed.line ||
+              anchor.character !== landed.character))
       );
-      if (mode === "visual" || mode === "visual-line") {
+      if (isVisual(mode)) {
         const [from, to] = visualRange(outcome.state, landed);
         const after = editor.getText().split("\n");
         editor.setSelections([
@@ -297,7 +314,15 @@ export function useVim({
                       (after[to.line] ?? "").length
                     ),
                   },
-            direction: "forward",
+            // Which way round the span was made is what the editor draws the
+            // caret and the current-line highlight from; called "forward"
+            // whichever way it went, a selection reaching back up the file
+            // would light the line it started at rather than the one the
+            // motions have arrived at.
+            direction:
+              anchor !== null && precedes(landed, anchor)
+                ? "backward"
+                : "forward",
           },
         ]);
       } else {

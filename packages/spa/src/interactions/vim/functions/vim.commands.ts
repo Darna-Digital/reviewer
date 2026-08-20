@@ -43,10 +43,12 @@ const edit = (
   newText,
 });
 
+/** Whether `a` comes before `b` in the buffer. */
+export const precedes = (a: VimPosition, b: VimPosition): boolean =>
+  a.line < b.line || (a.line === b.line && a.character < b.character);
+
 const ordered = (a: VimPosition, b: VimPosition): [VimPosition, VimPosition] =>
-  a.line < b.line || (a.line === b.line && a.character <= b.character)
-    ? [a, b]
-    : [b, a];
+  precedes(b, a) ? [b, a] : [a, b];
 
 const sliceLines = (
   lines: ReadonlyArray<string>,
