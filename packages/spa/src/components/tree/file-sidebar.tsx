@@ -513,7 +513,7 @@ export function FileSidebar({
           </button>
         );
         const separator = (key: string) => (
-          <div key={key} role="separator" className="my-1 h-px bg-border" />
+          <div key={key} role="separator" className="my-0.5 h-px bg-border" />
         );
         return (
           <div
@@ -523,7 +523,10 @@ export function FileSidebar({
             key={item.path}
             role="menu"
             ref={openedMenu}
-            className="min-w-48 rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-md"
+            // A hovered row and a focused one are lit at once whenever the
+            // pointer rests somewhere the arrows are not, so the rows are held
+            // apart by the 2px the tree already puts between its own.
+            className="flex min-w-48 flex-col gap-0.5 rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-md"
           >
             {actions !== undefined && [
               entry(
