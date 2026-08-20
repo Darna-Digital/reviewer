@@ -13,7 +13,12 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { FileTree, useFileTree } from "@pierre/trees/react";
-import type { ComponentType, DragEvent, KeyboardEvent, ReactNode } from "react";
+import type {
+  ComponentType,
+  DragEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  ReactNode,
+} from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { droppedFiles } from "@/interactions/file-actions/adapters/dropped-files.adapter";
@@ -72,8 +77,10 @@ const TREE_UNSAFE_CSS = `
   }
 `;
 
+// Walked with the arrows as much as with the pointer, so the row the keyboard
+// is on reads exactly like the row the pointer is on.
 const CONTEXT_MENU_ITEM =
-  "flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left hover:bg-elevate disabled:opacity-40 disabled:hover:bg-transparent";
+  "flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left outline-none hover:bg-elevate focus:bg-elevate disabled:opacity-40 disabled:hover:bg-transparent";
 
 /** A menu row's icon: the component itself, mounted by the row that takes it. */
 type MenuIcon = ComponentType<{ className?: string }>;
@@ -108,6 +115,47 @@ function rowUnder(event: DragEvent): HTMLElement | null {
   }
   return null;
 }
+
+/** The menu rows that can be chosen right now — a disabled Paste is skipped. */
+const menuItems = (menu: HTMLElement) => [
+  ...menu.querySelectorAll<HTMLButtonElement>(
+    "[role='menuitem']:not(:disabled)"
+  ),
+];
+
+/** The arrows walk the rows and wrap at both ends; Enter is the button's own. */
+function walkMenu(event: KeyboardEvent) {
+  const items = menuItems(event.currentTarget as HTMLElement);
+  if (items.length === 0) return;
+  const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+  if (step !== 0) {
+    event.preventDefault();
+    // -1 stepped back lands on the last row, which is where Up from a menu
+    // nothing is focused in ought to go.
+    const at = items.indexOf(document.activeElement as HTMLButtonElement);
+    items[(at + step + items.length) % items.length]?.focus();
+    return;
+  }
+  if (event.key === "Home" || event.key === "End") {
+    event.preventDefault();
+    (event.key === "Home" ? items.at(0) : items.at(-1))?.focus();
+  }
+}
+
+/**
+ * An open menu is the keyboard's, not just the pointer's: the first row takes
+ * focus as it opens, and the arrows walk on from there. The listener is bound
+ * to the element rather than handed over as a prop because the tree stops keys
+ * inside its slotted menu from travelling any further, and React's own listener
+ * sits at the root of the page, where they never arrive. Escape belongs to the
+ * tree, which closes the menu on it.
+ */
+const openedMenu = (menu: HTMLElement | null) => {
+  if (menu === null) return;
+  menuItems(menu).at(0)?.focus();
+  menu.addEventListener("keydown", walkMenu);
+  return () => menu.removeEventListener("keydown", walkMenu);
+};
 
 const rowItem = (row: HTMLElement): TreeItem => ({
   kind: row.dataset.itemType === "folder" ? "directory" : "file",
@@ -346,7 +394,7 @@ export function FileSidebar({
 
   // The tree drives the arrows, Enter and F2 itself; these are the rest of what
   // a file tree is expected to answer to.
-  const onKeyDown = (event: KeyboardEvent) => {
+  const onKeyDown = (event: ReactKeyboardEvent) => {
     const chord = event.metaKey || event.ctrlKey;
     // Shift turns the key itself uppercase, and ⇧⌘Z is how redo is spelled.
     const key = event.key.toLowerCase();
@@ -465,7 +513,12 @@ export function FileSidebar({
         );
         return (
           <div
+            // Re-keyed per row, so opening the menu on another row while it is
+            // already up mounts a fresh one — and the first entry takes focus
+            // again, rather than leaving it on the row the last menu was for.
+            key={item.path}
             role="menu"
+            ref={openedMenu}
             className="min-w-48 rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-md"
           >
             {actions !== undefined && [
