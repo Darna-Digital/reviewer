@@ -180,6 +180,21 @@ export function useGitActions() {
         unwrap(fetchClient.POST("/api/checkout", { body: { branch } }))
       ),
 
+    /**
+     * Bring a pull request's head onto a local branch and switch to it. The
+     * branch name is decided here rather than by the server — see
+     * `localBranchForPull` — because only the app knows a fork's branch must
+     * not be allowed to land on ours of the same name.
+     */
+    checkoutPull: (pullNumber: number, branch: string) =>
+      fns.runOp(`Checked out ${branch}`, () =>
+        unwrap(
+          fetchClient.POST("/api/checkout-pull", {
+            body: { number: pullNumber, branch },
+          })
+        )
+      ),
+
     checkoutAndUpdate: async (branch: string) => {
       try {
         await unwrap(fetchClient.POST("/api/checkout", { body: { branch } }));

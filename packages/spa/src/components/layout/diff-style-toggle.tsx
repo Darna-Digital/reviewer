@@ -4,6 +4,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useDiffNarrowed } from "@/interactions/diff/adapters/diff-layout.store";
 import { cn } from "@/lib/utils";
 import type { DiffStyle } from "@/lib/ui-prefs";
 
@@ -105,7 +106,13 @@ interface DiffStyleToggleProps {
 }
 
 export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
-  const activeIndex = OPTIONS.findIndex((option) => option.value === value);
+  // The pane lays a diff out inline when it is too narrow for two columns. The
+  // choice is still horizontal — widening the window brings it back — so the
+  // toggle keeps pointing at it and says why it is not getting it, rather than
+  // silently moving to the other option and losing what was asked for.
+  const narrowed = useDiffNarrowed();
+  const active = narrowed && value === "split" ? "unified" : value;
+  const activeIndex = OPTIONS.findIndex((option) => option.value === active);
 
   return (
     <div className="relative flex items-center rounded-lg border p-0.5">
@@ -125,7 +132,7 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
                 onClick={() => onChange(option.value)}
                 className={cn(
                   "relative flex size-6 items-center justify-center rounded-[6px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                  value === option.value
+                  active === option.value
                     ? "text-secondary-foreground"
                     : "text-muted-foreground hover:text-foreground"
                 )}
@@ -145,7 +152,9 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
             <div className="flex flex-col gap-0.5 px-0.5">
               <span>{option.label}</span>
               <span className="font-normal text-muted-foreground">
-                {option.detail}
+                {narrowed && option.value === "split"
+                  ? "Chosen, but the pane is too narrow — widen the window or a side column"
+                  : option.detail}
               </span>
             </div>
           </TooltipContent>

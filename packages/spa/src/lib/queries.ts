@@ -335,8 +335,21 @@ export const useConflictBlobs = (path: string | null) =>
     { enabled: path !== null }
   );
 
+/**
+ * Every open pull request, with CI and mergeability on each.
+ *
+ * Unlike the other remote reads this one does refetch on focus: half of what it
+ * carries is about a build that is running somewhere else. A window left open
+ * beside a CI tab would otherwise keep saying a check is still going long after
+ * it went red, and a status light that stops moving stops being read.
+ */
 export const usePulls = (enabled: boolean) =>
-  api.useQuery("get", "/api/github/pulls", {}, { ...REMOTE, enabled });
+  api.useQuery(
+    "get",
+    "/api/github/pulls",
+    {},
+    { ...REMOTE, refetchOnWindowFocus: true, enabled }
+  );
 
 /**
  * A commit is immutable once it exists, so the one thing that could make this

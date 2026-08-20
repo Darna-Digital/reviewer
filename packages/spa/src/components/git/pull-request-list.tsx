@@ -2,8 +2,13 @@
  * PullRequestList — the review sidebar's pull request picker. It mirrors the
  * agent-threads sidebar: a free-text search over number/title/author/branch, a
  * branch + time filter menu, and rows grouped under the branch each PR targets.
+ *
+ * It is the window's first column and runs its full height, so a row is the
+ * only place a reviewer sees the whole list at once. That is why each row also
+ * carries CI and whether the pull request is blocked: the decision of which one
+ * to open is made here, and it is made on those two things more than on titles.
  */
-import { IconGitBranch } from "@tabler/icons-react";
+import { IconGitBranch, IconGitPullRequestDraft } from "@tabler/icons-react";
 import { useMemo, useState, type CSSProperties } from "react";
 import {
   ALL_BRANCHES,
@@ -17,6 +22,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { dateCutoff, type DateFilter } from "@/lib/date-filter";
 import { cn } from "@/lib/utils";
 import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
+import { BlockedIcon, ChecksIcon } from "@/components/git/pull-request-status";
 import { groupPullsByBase } from "./pull-requests.functions";
 
 interface PullRequestListProps {
@@ -86,11 +92,24 @@ export function PullRequestList({
       onClick={() => onSelect(p)}
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-1.5">
+        <div className="flex items-center gap-1.5">
           <span className="shrink-0 font-mono text-xs text-muted-foreground">
             #{p.number}
           </span>
           <span className="truncate text-sm">{p.title}</span>
+          {/* Pinned to the right of the row rather than beside the title: the
+              glyphs stay in one column down the list, so the failing one is
+              found by scanning rather than by reading every title. */}
+          <span className="ml-auto flex shrink-0 items-center gap-1">
+            {p.draft && (
+              <IconGitPullRequestDraft
+                className="size-3.5 text-muted-foreground"
+                aria-label="Draft"
+              />
+            )}
+            <BlockedIcon pull={p} />
+            <ChecksIcon pull={p} />
+          </span>
         </div>
         <div className="truncate text-xs text-muted-foreground">
           {p.author} · {p.headRef}

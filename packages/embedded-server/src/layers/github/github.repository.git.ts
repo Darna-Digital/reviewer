@@ -7,6 +7,12 @@ import { GitProviderError } from "@byconvo/core/ports/git-provider";
 import { GitHubClient } from "./github-client.ts";
 import { diffFromPullFiles, parsePullFiles } from "./pull-files-diff.ts";
 import type { PullFileEntry } from "./pull-files-diff.ts";
+import {
+  PULLS_PER_PAGE,
+  PULLS_QUERY,
+  pullFromRest,
+  pullsFromGraphql,
+} from "./pull-request-mapping.ts";
 import type { ReviewComment } from "@byconvo/core/comments";
 import type {
   PullRequestInfo,
@@ -22,22 +28,46 @@ const isDiffTooLarge = (error: GitProviderError): boolean =>
 export const makeGitHubProvider = Effect.gen(function* () {
   const gh = yield* GitHubClient;
 
+  /**
+   * The plain listing. Always available — it is the one call that works without
+   * a token on a public repo — but it knows nothing about CI or conflicts.
+   */
+  const restPulls = Effect.gen(function* () {
+    const { owner, repo } = yield* gh.repo;
+    const data = yield* gh.getJson(
+      `/repos/${owner}/${repo}/pulls?state=open&per_page=${PULLS_PER_PAGE}`
+    );
+    if (!Array.isArray(data)) return [];
+    return (data as Array<Record<string, unknown>>).map((pr): PullRequestInfo =>
+      pullFromRest(pr)
+    );
+  });
+
+  /**
+   * Every open pull request with the parts the review pane decides by — CI on
+   * the head commit, whether it merges cleanly, who is on it — in one request.
+   *
+   * GraphQL is asked first and the listing is the fallback rather than the
+   * other way around, because the fallback is the lesser answer: a list that
+   * cannot say a pull request is blocked is still a usable list, and one that
+   * fails because there is no token is not.
+   */
   const pulls: GitProviderShape["pulls"] = Effect.gen(function* () {
     const { owner, repo } = yield* gh.repo;
-    const data = (yield* gh.getJson(
-      `/repos/${owner}/${repo}/pulls?state=open&per_page=50`
-    )) as any;
-    if (!Array.isArray(data)) return [];
-    return data.map((pr: any): PullRequestInfo => ({
-      number: pr.number,
-      title: pr.title ?? "",
-      author: pr.user?.login ?? "",
-      baseRef: pr.base?.ref ?? "",
-      headRef: pr.head?.ref ?? "",
-      headSha: pr.head?.sha ?? "",
-      url: pr.html_url ?? "",
-      updatedAt: pr.updated_at ?? "",
-    }));
+    return yield* gh
+      .graphql(PULLS_QUERY, { owner, repo, first: PULLS_PER_PAGE })
+      .pipe(
+        Effect.map(pullsFromGraphql),
+        Effect.catch((error) =>
+          Effect.gen(function* () {
+            yield* Effect.logInfo(
+              `GitHub GraphQL is unavailable (${error.reason}); ` +
+                "listing pull requests over REST without CI or merge status."
+            );
+            return yield* restPulls;
+          })
+        )
+      );
   });
 
   const pullFiles = (owner: string, repo: string, pullNumber: number) =>

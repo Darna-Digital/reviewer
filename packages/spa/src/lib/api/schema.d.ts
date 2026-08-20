@@ -292,6 +292,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/checkout-pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["repo.checkoutPull"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/commit": {
         parameters: {
             query?: never;
@@ -2688,6 +2704,53 @@ export interface operations {
             };
         };
     };
+    "repo.checkoutPull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    number: number;
+                    branch: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        branch: string;
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description GitError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitError"];
+                };
+            };
+        };
+    };
     "repo.commit": {
         parameters: {
             query?: never;
@@ -4128,6 +4191,27 @@ export interface operations {
                         headSha: string;
                         url: string;
                         updatedAt: string;
+                        createdAt: string;
+                        body: string;
+                        draft: boolean;
+                        fromFork: boolean;
+                        /** @enum {string} */
+                        mergeable: "mergeable" | "conflicting" | "unknown";
+                        checks: {
+                            name: string;
+                            /** @enum {string} */
+                            state: "success" | "failure" | "pending" | "neutral";
+                            url: string;
+                        }[];
+                        assignees: string[];
+                        reviewers: string[];
+                        labels: {
+                            name: string;
+                            color: string;
+                        }[];
+                        additions: number;
+                        deletions: number;
+                        changedFiles: number;
                     }[];
                 };
             };
