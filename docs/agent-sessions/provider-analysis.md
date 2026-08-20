@@ -282,14 +282,105 @@ byconvo **user**, never to the runner. That implies a per-user "connect your age
 session dispatch that resolves user → credential scope → per-user `CODEX_HOME` /
 `CLAUDE_CONFIG_DIR` / OS user / container.
 
-It also promotes sharp edge 4 into the load-bearing constraint: on a shared box a
+It also promotes sharp edge 1 into the load-bearing constraint: on a shared box a
 `fullAccess` session can read every other person's credentials in the adjacent home
 directory. Multiplayer makes per-session isolation a security requirement rather than
 good hygiene.
 
 ---
 
-## 4. Sharp edges
+## 4. Whose credential is it?
+
+Both models work — a lead adding one credential for the team, and each person adding
+their own — but they are not alternatives. They apply to different *kinds* of credential,
+and the deciding question is always: who does this credential identify?
+
+### Seat credentials — identify a person
+
+Claude's `setup-token`, Codex's ChatGPT device login and personal access tokens, a Cursor
+*user* API key, opencode's ChatGPT and Copilot OAuth. These carry a person's identity and
+consume that person's plan. **A lead cannot add one on the team's behalf** — that is
+several people on one seat, the prohibited case. Per-user only, always.
+
+### Org-provisioned seats — central billing, personal identity
+
+Claude for Teams and Enterprise, Claude Console, ChatGPT Business, Cursor Teams. Here the
+lead genuinely does set it up for everyone — but what they provision is *access*, not a
+token. Members still authenticate as themselves. Anthropic's own instructions make the
+shape explicit: for Teams, "team members install Claude Code and log in with their
+Claude.ai accounts"; on Console, an admin invites users and each one creates their own
+Claude Code key.
+
+### Workload credentials — identify a machine or an org
+
+An Anthropic Console API key, an OpenAI platform key, Bedrock / Vertex / Foundry, an LLM
+gateway, an opencode Zen key, and **Cursor service-account keys, which bill to the team
+that owns the service account** rather than to a user's plan. These are the only
+credentials that can legitimately sit on a box and serve everybody. That is what API keys
+are for — and the price is that they are metered per token instead of flat-rate.
+
+**Better than a shared static key.** Do not park a long-lived key on a box running
+agent-authored shell commands. Claude Code's `apiKeyHelper` runs a script that returns a
+key, re-called after five minutes or on a 401 (tunable with
+`CLAUDE_CODE_API_KEY_HELPER_TTL_MS`), so byconvo mints a per-session credential and the
+box stores nothing. Workload Identity Federation goes further — the box proves its
+identity over OIDC and exchanges it for short-lived credentials, holding no secret at
+all. Codex has the matching primitive in `cli_auth_credentials_store = "ephemeral"`,
+which keeps credentials in memory for the current process only; combined with `codex
+login --with-access-token` reading from stdin, a session runs with zero credential
+residue on disk.
+
+### Which methods byconvo may pool
+
+| Provider | Auth method | Identifies | Poolable |
+| --- | --- | --- | --- |
+| Claude Code | setup-token OAuth | a person | no |
+| Claude Code | Console API key | an org | yes |
+| Claude Code | apiKeyHelper · federation | a workload | yes — preferred |
+| Claude Code | Bedrock · Vertex · Foundry | a cloud account | yes |
+| Codex | ChatGPT device login | a person | no |
+| Codex | personal access token | a person | no |
+| Codex | OpenAI platform key | an org | yes |
+| Cursor | user API key | a person | no |
+| Cursor | service account key | a team | yes |
+| opencode | ChatGPT · Copilot OAuth | a person | no |
+| opencode | Zen or provider API key | an org | yes |
+
+### The model this implies
+
+Support both scopes, and make the distinction structural rather than a note in the docs.
+A `poolable` flag on each auth method is what stops the product quietly inviting a
+licence violation.
+
+```
+Credential {
+  id, provider, method,
+  scope:  "user" | "workspace",   // workspace only where method.poolable
+  ownerId, secretRef, label
+}
+
+resolve(session) =
+  credential(user, provider)                // their own seat wins
+    ?? workspaceCredential(provider)        // the team's metered key
+    ?? PromptToConnect(provider)
+```
+
+Two things follow that are easy to skip and expensive to retrofit. Show **which**
+credential a session ran on, in the session header and on the PR it opens — both cost
+attribution and licence compliance hang on it, and a session that silently fell back to
+the team's metered key is a bill nobody expected. And never write one person's seat
+credential into a home directory another person's session can read: inject per session
+(Cursor, Claude's token), use the ephemeral store (Codex), and fall back to per-user
+`CODEX_HOME` or `CLAUDE_CONFIG_DIR` only where the CLI insists on disk.
+
+The practical default for a small studio: **everyone brings their own seat**. It is
+flat-rate, it needs no team plan, and every provider supports it headlessly. Add a
+workspace-scoped API key as the fallback lane — for CI, for scheduled work with no human
+owner, and for anyone not yet connected.
+
+---
+
+## 5. Sharp edges
 
 These are the constraints that decide the design, roughly in order of how much trouble
 they cause.
@@ -356,7 +447,7 @@ they cause.
 
 ---
 
-## 5. Recommended shape for byconvo
+## 6. Recommended shape for byconvo
 
 **Put the seam at the process boundary, not the provider boundary.** That is the whole
 argument: `providers.ts` and the four stream parsers stay untouched, and every provider
@@ -405,7 +496,7 @@ reserved for.
 
 ---
 
-## 6. What the architecture cannot do
+## 7. What the architecture cannot do
 
 - **Several people working off one Claude or ChatGPT seat.** Prohibited, and actively
   enforced. Note the scope: it is the *seat* that cannot be shared, not the machine.
