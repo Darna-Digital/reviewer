@@ -20,6 +20,7 @@ import {
 } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { Kbd } from "@/components/ui/kbd";
+import { PANEL_EASE, PANEL_SLIDE } from "@/lib/panel-slide";
 import {
   Tooltip,
   TooltipContent,
@@ -51,16 +52,19 @@ export function CollabBar() {
 
   return (
     <div
+      style={PANEL_SLIDE}
       className={cn(
         // Absolute within the shell, for the reason the drawer is — see
         // `collab-drawer`.
-        "pointer-events-none absolute inset-x-0 z-30 flex justify-center",
-        // Above the drawer when one is up, so the bar reads as the thing that
-        // raised it rather than as something the drawer covered.
-        open === null
-          ? "bottom-5"
-          : "bottom-[calc(var(--collab-drawer)+1.25rem)]",
-        "transition-[bottom] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]"
+        "pointer-events-none absolute inset-x-0 bottom-5 z-50 flex justify-center",
+        // The bar rides up with the drawer it raised, so it stays the thing
+        // standing on it rather than something the drawer covered. Moved by a
+        // transform rather than by its own `bottom`, on the drawer's own
+        // slide: an animated edge is a layout on every frame, and these two
+        // have to arrive together or the gap between them breathes on the way.
+        open !== null && "-translate-y-[var(--collab-drawer)]",
+        "transition-transform motion-reduce:transition-none",
+        PANEL_EASE
       )}
     >
       <nav

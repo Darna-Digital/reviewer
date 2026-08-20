@@ -3,29 +3,44 @@
  *
  * The mode has no rail and no sidebar — a project's own page is the index of
  * itself, which is Basecamp's whole argument and the reason the column is
- * centred rather than pushed aside by a tree. What is left around the page is
- * the ground it stands on, the hovering bar, and the drawer that bar raises.
+ * centred rather than pushed aside by a tree. Nor is it drawn on a sheet: the
+ * ground behind the column is the window's own material, so on the native shell
+ * the desktop shows through it (see `.app-canvas.on-frame`). What is left
+ * around the page is the hovering bar and the drawer that bar raises.
  *
  * The shell is mounted once by the layout route and stays put while the pages
  * under it change, so the bar does not blink between a project and its board,
  * and the drawer survives a navigation made from inside it.
+ *
+ * The three boxes below are the launchpad's three, at the other edge: the page
+ * that is pushed, the panel that pushes it, and the bar the panel comes out of.
+ * `collab-drawer` has the whole of why.
  */
 import { Outlet, useRouterState } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, type CSSProperties } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  collabWidth,
   COLLAB_SHORTCUTS,
+  collabWidth,
 } from "../functions/collab-layout.functions";
 import { pressCollabShortcut } from "../adapters/collab-drawer.store";
 import { CollabBar } from "./collab-bar";
-import { CollabDrawer } from "./collab-drawer";
+import {
+  CollabDrawer,
+  CollabDrawerPush,
+  CollabDrawerScrim,
+} from "./collab-drawer";
 import { CollabColumn } from "./collab-column";
 
 /**
- * How tall the drawer stands. A custom property rather than a class, because
- * the bar has to be lifted by exactly the same amount and the two would
- * otherwise drift apart the first time one of them was adjusted.
+ * How tall the drawer stands, and so exactly how far the page is pushed.
+ *
+ * A custom property because three things have to agree about it — the drawer's
+ * own height, the distance the page travels, and where the bar comes to rest —
+ * and a value written out three times is three chances for the seam between
+ * them to be somewhere else. The launchpad has the same rule and a harder
+ * version of the problem: its height is dragged, so its single source is a
+ * store that draws all three per frame rather than a constant.
  */
 const DRAWER_HEIGHT = "17rem";
 
@@ -60,14 +75,19 @@ export function CollabShell() {
 
   return (
     <div
-      style={{ "--collab-drawer": DRAWER_HEIGHT } as React.CSSProperties}
+      style={{ "--collab-drawer": DRAWER_HEIGHT } as CSSProperties}
       className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
     >
-      <ScrollArea className="min-h-0 flex-1">
-        <CollabColumn width={width}>
-          <Outlet />
-        </CollabColumn>
-      </ScrollArea>
+      <CollabDrawerPush>
+        <ScrollArea className="min-h-0 flex-1">
+          <CollabColumn width={width}>
+            <Outlet />
+          </CollabColumn>
+        </ScrollArea>
+        {/* Inside the push, so it dims the page rather than the window: it
+            travels with what it is covering. */}
+        <CollabDrawerScrim />
+      </CollabDrawerPush>
       <CollabDrawer />
       <CollabBar />
     </div>

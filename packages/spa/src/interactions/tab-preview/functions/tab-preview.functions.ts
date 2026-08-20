@@ -3,6 +3,7 @@
  * window the pictures are taken in and a card's place in the grid, so none of it
  * needs a rendered preview — or a page to load — to test.
  */
+import { PANEL_SLIDE_MS } from "@/lib/panel-slide";
 
 /**
  * The window the pictures are taken in. A desktop shape, in the launchpad's own
@@ -23,8 +24,13 @@ export const PREVIEW_ASPECT = "16 / 10";
 /** What the app's own page is, inside a preview window — see `WindowFrame`. */
 export const PREVIEW_ROOT_SELECTOR = ".app-canvas";
 
-/** How long the panel takes to slide in, and the page under it to be pushed. */
-export const OVERVIEW_TRANSITION_MS = 260;
+/**
+ * How long the panel takes to slide in, and the page under it to be pushed.
+ *
+ * The window's slide rather than the launchpad's: collaboration's drawer comes
+ * out of the opposite edge on the same one. See `panel-slide`.
+ */
+export const OVERVIEW_TRANSITION_MS = PANEL_SLIDE_MS;
 
 /**
  * The longest the launchpad will stay up waiting for a page it was asked for.
