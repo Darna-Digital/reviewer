@@ -39,6 +39,7 @@ import { useEntered, usePresence, useSettled } from "@/hooks/use-presence";
 import { useThinkingChatIds } from "@/interactions/chats/adapters/thinking-chats.hook.adapter";
 import { useWindowTabActions } from "@/interactions/window-tabs/adapters/window-tab-actions";
 import { chatIdOf } from "@/interactions/window-tabs/functions/window-tabs.functions";
+import { PANEL_EASE } from "@/lib/panel-slide";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import {
@@ -72,7 +73,8 @@ import {
 } from "../functions/tab-preview.functions";
 import { TabPreviewFrame } from "./tab-preview-frame";
 
-const EASE = "ease-[cubic-bezier(0.22,1,0.36,1)]";
+/** The window's own curve — collaboration's drawer travels on it too. */
+const EASE = PANEL_EASE;
 
 /** The chord that does what the handle does — see `window-bar.shortcuts`. */
 const LAUNCHPAD_KEYS = "⌘L";

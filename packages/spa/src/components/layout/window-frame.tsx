@@ -26,6 +26,7 @@ import { isDesktop } from "@/lib/desktop";
 import { isPreviewWindow } from "@/lib/preview-window";
 import { shellRoute } from "@/lib/shell-route";
 import { setUiPrefs, toggleBottomVisible, useUiPrefs } from "@/lib/ui-prefs";
+import { cn } from "@/lib/utils";
 import { activeWorkMode } from "@/lib/work-mode";
 
 export function WindowFrame({ children }: { children: React.ReactNode }) {
@@ -79,6 +80,8 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
   // on the page it was expanded from.
   const route = shellRoute(pathname, prefs.workMode);
   const dockPageTab = route.kind === "dock" ? route.tab : null;
+  /** Whether the page is drawn straight on the frame rather than on a canvas. */
+  const onFrame = route.kind === "collaboration";
   useEffect(() => {
     if (!inCodeMode) return;
     const onKey = (event: KeyboardEvent) => {
@@ -118,7 +121,16 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
               between them is the frame's own material, so the seam reads as the
               window showing through instead of a painted divider. */}
           <TabOverviewPush>
-            <div className="app-canvas flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-frame-border">
+            {/* Collaboration takes the frame's own material instead of a sheet
+                laid over it, so the column it centres stands on the window
+                rather than on a page — and on the native shell the desktop is
+                what shows behind it. See `.app-canvas.on-frame`. */}
+            <div
+              className={cn(
+                "app-canvas flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl",
+                onFrame ? "on-frame" : "border border-frame-border"
+              )}
+            >
               {children}
             </div>
             {prefs.plansPaneOpen && (

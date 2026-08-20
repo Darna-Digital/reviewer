@@ -695,6 +695,19 @@
     var(--canvas-edge) 100%
   );
 }
+
+/* Collaboration is drawn on the frame rather than on a sheet laid over it.
+   Every surface in that mode is a centred column standing on open ground, and
+   the ground is the window's own material: the panels in the column are the
+   sheets, and what is behind them is the frame — which on the native shell is
+   the desktop, blurred, showing through. A canvas here would be a second sheet
+   under the first, and would paint the vibrancy out.
+
+   The class is kept rather than dropped because it is also what a preview
+   window captures as the page (`PREVIEW_ROOT_SELECTOR`); only the paint goes. */
+.app-canvas.on-frame {
+  background: none;
+}
 .app-frame {
   background-color: var(--frame);
 }
