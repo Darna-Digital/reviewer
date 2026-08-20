@@ -57,7 +57,6 @@ import { PullRequestOverview } from "@/components/git/pull-request-overview";
 import type { Crumb } from "@/components/layout/breadcrumbs";
 import { EmptyPane } from "@/components/layout/empty-pane";
 import { NoPullRequests, NoReviewRemote } from "@/components/git/review-empty";
-import { firstPullRequest } from "@/components/git/pull-requests.functions";
 import { PathBar } from "@/components/layout/path-bar";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
@@ -237,16 +236,11 @@ export function CodeWorkspace() {
   // jankiest thing in the app. The drag now writes a CSS variable and only the
   // final size is committed back to the prefs. See `usePanelSize`.
   const sidebar = usePanelSize("sidebar-w", prefs.sidebarWidth, "width");
-  // Review mode's middle column, and the metadata panel at the top of it.
+  // Review mode's middle column — the files the pull request touches.
   const reviewTree = usePanelSize(
     "review-tree-w",
     prefs.reviewTreeWidth,
     "width"
-  );
-  const reviewMeta = usePanelSize(
-    "review-meta-h",
-    prefs.reviewMetaHeight,
-    "height"
   );
 
   // A project with no git root at all: there is nothing repo-scoped to show,
@@ -272,33 +266,6 @@ export function CodeWorkspace() {
       }
     );
   }, [params.pull, pulls.data]);
-
-  /**
-   * The pull request review mode opens on: the one at the top of the sidebar.
-   *
-   * A list beside an empty pane is a gate in front of the thing you came for —
-   * the pane cannot show a diff until something is picked, and nine times in ten
-   * the something is the one at the top. So the window goes there itself, and the
-   * list stays what it is: the way between them.
-   *
-   * Replaced rather than pushed. `/modes/code/review` is a place the window
-   * passes through, and left in the history it would be a Back that lands you
-   * where you have just been sent from.
-   */
-  const firstPull = useMemo(
-    () => firstPullRequest(pulls.data ?? []),
-    [pulls.data]
-  );
-  useEffect(() => {
-    if (mode !== "review" || params.pull !== undefined || firstPull === null) {
-      return;
-    }
-    void navigate({
-      to: "/modes/code/review/$pull",
-      params: { pull: String(firstPull.number) },
-      replace: true,
-    });
-  }, [mode, params.pull, firstPull, navigate]);
 
   const browse = useMemo(() => {
     if (params.sha !== undefined) {
@@ -894,24 +861,6 @@ export function CodeWorkspace() {
     await workspaceActions.openRepo(path);
   };
 
-  /**
-   * Review mode with nothing open, which is either a project with no pull
-   * requests or a moment on the way to one.
-   *
-   * Nothing at all while the list is still coming, while it has failed — the
-   * sidebar carries that error, and a second telling of it in the middle of the
-   * window is not a second thing to do about it — and while the window is on its
-   * way to the pull it will open on. An empty state that is about to be replaced
-   * reads worse than the moment of nothing it fills.
-   */
-  const reviewPane = () => {
-    if (!hasGitHub) return <NoReviewRemote />;
-    if (pulls.isPending || pulls.error != null || firstPull !== null) {
-      return null;
-    }
-    return <NoPullRequests />;
-  };
-
   // --- center pane -----------------------------------------------------------
   const renderCenter = () => {
     if (noRepo) {
@@ -967,7 +916,6 @@ export function CodeWorkspace() {
       );
     }
     if (target === null) {
-      if (mode === "review") return reviewPane();
       return (
         <EmptyPane hint="Pick a file from the tree, or a commit from the log" />
       );
@@ -1047,14 +995,51 @@ export function CodeWorkspace() {
 
   const crumbs = buildCrumbs();
 
+  /**
+   * Review mode before a pull request is picked: the list, and nothing else.
+   *
+   * It used to be a column beside a diff, and the window opened itself on the
+   * first row so that diff had something in it. Which meant the list was never
+   * actually read — it was a narrow strip of titles you passed on your way to
+   * whatever the window had already decided for you.
+   *
+   * Choosing is its own step now, and it gets the whole window: the rows have
+   * room for what the choice is made on, and nothing else is on screen
+   * competing for the room, because until a pull request is picked there is
+   * nothing else to show.
+   */
+  if (mode === "review" && selectedPull === null) {
+    return !hasGitHub ? (
+      <NoReviewRemote />
+    ) : (
+      <PullRequestList
+        pulls={pulls.data ?? []}
+        error={
+          pulls.error
+            ? errorReason(pulls.error, "Could not load pull requests")
+            : null
+        }
+        // A query that was never enabled is pending for as long as the window
+        // is open, and a list that says it is loading forever is worse than one
+        // that says it is empty.
+        loading={hasGitHub && pulls.isPending}
+        empty={<NoPullRequests />}
+        onSelect={(p) =>
+          void navigate({
+            to: "/modes/code/review/$pull",
+            params: { pull: String(p.number) },
+          })
+        }
+        className="min-h-0 flex-1"
+      />
+    );
+  }
+
   return (
     <div className="flex min-h-0 flex-1">
-      {/* Review mode is three columns: every open pull request down the left,
-          the one you picked in the middle — what it is, what CI made of it, and
-          its files — and its diff filling the rest. The picker used to sit on
-          top of the tree in a single column, which gave each of them half a
-          sidebar: a list too short to see the work in and a tree too short to
-          navigate it. The other modes are still just the tree.
+      {/* A pull request under review is three columns: what it is, what files
+          it touches, and the diff. The other modes are the tree beside the
+          diff, as they were.
 
           Both auxiliary columns answer to the same "hide sidebar" toggle. Two
           of the three going away is what makes it a way to look at the code
@@ -1066,25 +1051,12 @@ export function CodeWorkspace() {
         )}
         style={sidebar.style}
       >
-        {mode === "review" ? (
-          <PullRequestList
-            pulls={pulls.data ?? []}
-            error={
-              pulls.error
-                ? errorReason(pulls.error, "Could not load pull requests")
-                : null
-            }
-            // A query that was never enabled is pending for as long as the
-            // window is open, and a list that says it is loading forever is
-            // worse than one that says it is empty.
-            loading={hasGitHub && pulls.isPending}
-            selectedNumber={selectedPull?.number ?? null}
-            onSelect={(p) =>
-              void navigate({
-                to: "/modes/code/review/$pull",
-                params: { pull: String(p.number) },
-              })
-            }
+        {mode === "review" && selectedPull !== null ? (
+          <PullRequestOverview
+            pull={selectedPull}
+            currentBranch={repo.data?.currentBranch ?? null}
+            onCheckout={(p, branch) => git.checkoutPull(p.number, branch)}
+            onBack={() => void navigate({ to: "/modes/code/review" })}
             className="min-h-0 flex-1"
           />
         ) : (
@@ -1117,22 +1089,6 @@ export function CodeWorkspace() {
             className="flex shrink-0 flex-col overflow-hidden border-r"
             style={reviewTree.style}
           >
-            <PullRequestOverview
-              pull={selectedPull}
-              currentBranch={repo.data?.currentBranch ?? null}
-              onCheckout={(p, branch) => git.checkoutPull(p.number, branch)}
-              className="shrink-0 border-b"
-              style={reviewMeta.style}
-            />
-            <ResizeHandle
-              orientation="row"
-              value={reviewMeta.current}
-              min={72}
-              max={() => Math.max(120, window.innerHeight - 240)}
-              onResize={reviewMeta.onResize}
-              onResizeEnd={(h) => setUiPrefs({ reviewMetaHeight: h })}
-              label="Resize pull request details"
-            />
             <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
           </div>
           <ResizeHandle

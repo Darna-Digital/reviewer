@@ -3,15 +3,16 @@
  * who is on it, where it is going, what CI made of it, and what its author said
  * it was for.
  *
- * It sits above the file tree, in the middle column, because that is where the
- * question it answers is asked. The left column decides *which* pull request;
- * the right one shows the code; between them a reviewer needs the frame the
- * code is being read in — is this a draft, is CI red, does it conflict, what is
- * it supposed to do — and until now the only way to get it was to leave for the
- * browser.
+ * It is the first of the three columns a pull request under review is read in:
+ * this, then its files, then its diff. It takes the place the list was in
+ * before a row was picked, and carries the way back to it — what the reviewer
+ * needs beside the code is the frame it is being read in (is this a draft, is
+ * CI red, does it conflict, what is it supposed to do), and until now the only
+ * way to get any of that was to leave for the browser.
  */
 import {
   IconAlertTriangleFilled,
+  IconArrowLeft,
   IconArrowNarrowRight,
   IconCheck,
   IconExternalLink,
@@ -104,6 +105,7 @@ export function PullRequestOverview({
   pull,
   currentBranch,
   onCheckout,
+  onBack,
   className,
   style,
 }: {
@@ -111,6 +113,8 @@ export function PullRequestOverview({
   /** The branch the working copy is on, so the button can say you are on it. */
   readonly currentBranch: string | null;
   readonly onCheckout: (pull: PullRequestInfo, branch: string) => Promise<void>;
+  /** Back to the list of pull requests, which this column replaced. */
+  readonly onBack: () => void;
   readonly className?: string;
   readonly style?: React.CSSProperties;
 }) {
@@ -139,6 +143,20 @@ export function PullRequestOverview({
       style={style}
       aria-label={`Pull request #${pull.number}`}
     >
+      {/* The way back, at the top of the column that replaced the list. The
+          trail at the foot of the window says the same thing, but it says it
+          about wherever you are; this is here whatever the diff is showing. */}
+      <div className="flex shrink-0 items-center border-b p-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground"
+          onClick={onBack}
+        >
+          <IconArrowLeft className="size-3.5 shrink-0" />
+          Back to list
+        </Button>
+      </div>
       <ScrollArea className="min-h-0 flex-1" viewportClassName="scroll-fade">
         <div className="flex flex-col gap-3 p-3">
           <header className="flex flex-col gap-1.5">

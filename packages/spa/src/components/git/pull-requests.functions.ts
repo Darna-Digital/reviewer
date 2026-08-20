@@ -3,10 +3,9 @@
  * they target, the branches alphabetical, each group keeping the order GitHub
  * listed them in.
  *
- * Held apart from the list because two things need it. The list draws it, and
- * review mode opens on the first pull request there is — and "the first" has to
- * mean the row at the top of the sidebar, or the window opens on one thing while
- * pointing at another.
+ * Held apart from the list because it is the shape of the page rather than a
+ * detail of how the page is drawn, and because an ordering is worth testing on
+ * its own.
  */
 import type {
   CheckState,
@@ -25,13 +24,6 @@ export function groupPullsByBase(
     base,
     pulls: pulls.filter((pull) => pull.baseRef === base),
   }));
-}
-
-/** The one review mode opens on, or null when there is nothing to review. */
-export function firstPullRequest(
-  pulls: ReadonlyArray<PullRequestInfo>
-): PullRequestInfo | null {
-  return groupPullsByBase(pulls)[0]?.pulls[0] ?? null;
 }
 
 /**

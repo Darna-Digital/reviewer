@@ -7,7 +7,6 @@ import {
   blockedReason,
   checksState,
   checksSummary,
-  firstPullRequest,
   groupPullsByBase,
   localBranchForPull,
 } from "./pull-requests.functions";
@@ -38,19 +37,6 @@ describe("groupPullsByBase", () => {
   it("keeps the order the list was given inside a group", () => {
     const groups = groupPullsByBase([pull(9, "main"), pull(4, "main")]);
     expect(groups[0]?.pulls.map((p) => p.number)).toEqual([9, 4]);
-  });
-});
-
-describe("firstPullRequest", () => {
-  it("is the row the sidebar draws at the top", () => {
-    expect(
-      firstPullRequest([pull(3, "release"), pull(1, "main"), pull(2, "main")])
-        ?.number
-    ).toBe(1);
-  });
-
-  it("is nothing when there is nothing to review", () => {
-    expect(firstPullRequest([])).toBeNull();
   });
 });
 

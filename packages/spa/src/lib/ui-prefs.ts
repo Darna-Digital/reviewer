@@ -54,10 +54,8 @@ export interface UiPrefs {
   commitFilesHeight: number;
   /** Drag-resizable commit-message textarea height, in px. */
   commitMessageHeight: number;
-  /** Drag-resizable width of review mode's middle column (metadata + tree). */
+  /** Drag-resizable width of review mode's file tree column, in px. */
   reviewTreeWidth: number;
-  /** Drag-resizable height of the pull request metadata panel, in px. */
-  reviewMetaHeight: number;
   /** Drag-resizable commit-details pane width in the history panel, in px. */
   commitDetailsWidth: number;
   /** Which agent CLI drafts commit messages via the "Generate" button. */
@@ -121,7 +119,6 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   commitFilesHeight: 180,
   commitMessageHeight: 80,
   reviewTreeWidth: 300,
-  reviewMetaHeight: 260,
   commitDetailsWidth: 320,
   commitAgent: "claude",
   chatModelFavorites: [],
@@ -183,7 +180,6 @@ function persist() {
       commitFilesHeight,
       commitMessageHeight,
       reviewTreeWidth,
-      reviewMetaHeight,
       commitDetailsWidth,
       commitAgent,
       chatModelFavorites,
@@ -216,7 +212,6 @@ function persist() {
         commitFilesHeight,
         commitMessageHeight,
         reviewTreeWidth,
-        reviewMetaHeight,
         commitDetailsWidth,
         commitAgent,
         chatModelFavorites,
