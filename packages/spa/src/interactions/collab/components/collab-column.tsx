@@ -8,8 +8,19 @@
  * heading, the section label and the panel are the three things every one of
  * those pages is built from, kept here for the same reason — a page should be
  * able to say what it holds without also deciding what a section looks like.
+ *
+ * The column is a sheet, not a transparent box. The mode drops the full-pane
+ * canvas so the app's ground runs edge to edge, but prose still wants a page
+ * under it — so the page is made exactly as wide as the column, with the ground
+ * left showing around it. That margin is where the frame is seen, which on the
+ * native shell is the desktop. See `.collab-sheet`.
+ *
+ * It stands at least the height of the window even when it holds a paragraph:
+ * a sheet that stopped where its content did would read as a card dropped on
+ * the page rather than as the page itself.
  */
 import type { ReactNode } from "react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import type { CollabWidth } from "../interfaces/collab.interfaces";
 
@@ -28,8 +39,29 @@ export function CollabColumn({
   readonly children: ReactNode;
 }) {
   return (
-    <div className={cn("mx-auto w-full px-6 pt-8 pb-28", WIDTH[width])}>
-      {children}
+    // The ground, and the gap that lets it be seen. A flex row with a definite
+    // height, so the sheet fills it by being a flex child rather than by asking
+    // for a percentage of it — a scroller puts a wrapper of its own between the
+    // two, and a percentage height resolved against that auto-sized box is no
+    // height at all.
+    <div className="flex min-h-0 flex-1 justify-center p-3">
+      <div
+        className={cn(
+          "collab-sheet flex min-h-0 w-full flex-col overflow-hidden rounded-2xl",
+          WIDTH[width]
+        )}
+      >
+        {/* The page scrolls, not the window: the scrollbar belongs inside the
+            sheet's own edges, and the sheet's corners stay round while its
+            content runs past them. */}
+        <ScrollArea className="min-h-0 flex-1">
+          {/* `px-6` rather than a roomier inset because the board bleeds its
+              sideways scroller back out by exactly that much — see `BoardPage`.
+              The foot clears the hovering bar, which stands over the sheet
+              rather than after it. */}
+          <div className="px-6 pt-8 pb-24">{children}</div>
+        </ScrollArea>
+      </div>
     </div>
   );
 }

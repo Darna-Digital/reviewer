@@ -687,13 +687,37 @@
    and lifting towards its edges, so the corners catch the light and the sheet
    reads as curving up out of the frame rather than sinking into it. Panels
    drawn on it stay transparent, so the ramp shows through. */
-.app-canvas {
-  background: radial-gradient(
+/* The page material, named once so the two things made of it agree: the canvas
+   every code surface rests on, and the sheet collaboration's column stands on.
+   The gradient reads `--canvas` lazily, so the dark theme's redefinition is
+   picked up without a second copy of the paint. */
+:root {
+  --canvas-paint: radial-gradient(
     120% 95% at 50% 46%,
     var(--canvas) 0%,
     var(--canvas) 45%,
     var(--canvas-edge) 100%
   );
+}
+
+.app-canvas {
+  background: var(--canvas-paint);
+}
+
+/* Collaboration's column, as a sheet.
+
+   The mode drops the full-pane canvas (see `.app-canvas.on-frame`) so the app's
+   own ground runs edge to edge — but a column of prose still wants a page under
+   it rather than under the whole window. So the page is exactly as wide as the
+   column: the sheet hugs the content with the ground showing around it, which
+   is the shape the design is after and is also what leaves the frame — the
+   desktop, on the native shell — visible in the margin.
+
+   Opaque, with no `.desktop.translucent` override, for the reason `.plans-notes`
+   has none: a dotted grid can afford to show the desktop through it, paragraphs
+   of body text cannot. */
+.collab-sheet {
+  background: var(--canvas-paint);
 }
 
 /* Collaboration is drawn on the frame rather than on a sheet laid over it.
