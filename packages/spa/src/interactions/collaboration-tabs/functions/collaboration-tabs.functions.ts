@@ -19,8 +19,8 @@ import type {
   CollaborationTabsState,
 } from "../interfaces/collaboration-tabs.interfaces";
 
-export const COLLABORATION_PATH = "/modes/collaboration";
-export const INBOX_PATH = "/modes/collaboration/inbox";
+export const COLLABORATION_PATH = "/modes/experimentation/collaboration";
+export const INBOX_PATH = "/modes/experimentation/collaboration/inbox";
 
 export const viewHref = (view: CollaborationView, id: string): string =>
   `${COLLABORATION_PATH}?view=${view}&id=${encodeURIComponent(id)}`;

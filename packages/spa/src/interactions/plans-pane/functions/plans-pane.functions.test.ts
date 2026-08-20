@@ -451,6 +451,7 @@ describe("isBrowsingCode", () => {
   it("rejects the pages with no file viewer at all", () => {
     expect(isBrowsingCode("/modes/agent-session/c1")).toBe(false);
     expect(isBrowsingCode("/modes/collaboration")).toBe(false);
+    expect(isBrowsingCode("/modes/experimentation/collaboration")).toBe(false);
     expect(isBrowsingCode("/settings")).toBe(false);
   });
 

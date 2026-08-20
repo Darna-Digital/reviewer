@@ -64,8 +64,8 @@ describe("a switched-off collaboration button", () => {
     const [code] = withPinnedTabs([
       {
         id: PROJECT_TAB_ID,
-        href: "/modes/collaboration/inbox",
-        title: "Inbox",
+        href: "/modes/collaboration/projects/p1",
+        title: "Collaboration",
         kind: "project",
       },
     ]);
@@ -80,8 +80,8 @@ describe("a switched-off collaboration button", () => {
     expect(
       trackLocation(
         before,
-        "/modes/collaboration/inbox",
-        "/modes/collaboration/inbox"
+        "/modes/collaboration/projects/p1",
+        "/modes/collaboration/projects/p1"
       )
     ).toBe(before);
   });

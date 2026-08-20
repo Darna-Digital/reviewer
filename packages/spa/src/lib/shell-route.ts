@@ -49,6 +49,14 @@ export type ShellRoute =
       readonly solo: boolean;
     }
   | { readonly kind: "collaboration" }
+  /**
+   * The collaboration prototype, kept whole under `/modes/experimentation` as
+   * the reference the redesign was measured against. It wears the chrome it
+   * always wore — its own sidebar, its workspace picker, its strip of open
+   * surfaces — which is the point of keeping it: the two shapes can be put
+   * side by side without either being bent towards the other.
+   */
+  | { readonly kind: "experimentation" }
   | { readonly kind: "settings" };
 
 /** Pages under `/modes/code/` that are workspace pages rather than the diff. */
@@ -119,6 +127,12 @@ export function shellRoute(
     // and it says so in the search rather than in the path.
     return { kind: "session", composing: startingNew, solo: soloSession };
   }
+  // Ahead of collaboration's own prefix, which it does not share — but the
+  // order says what the reading is: an experimentation path is the prototype
+  // first and a collaboration surface second.
+  if (pathname.startsWith("/modes/experimentation")) {
+    return { kind: "experimentation" };
+  }
   if (pathname.startsWith("/modes/collaboration")) {
     return { kind: "collaboration" };
   }
@@ -144,13 +158,15 @@ export function shellRoute(
 }
 
 /**
- * Whether the header carries the project chip. A conversation and the
- * collaboration workspace name themselves instead — the one says which thread
- * it is, the other has its own sidebar — and neither has the branch the chip
+ * Whether the header carries the project chip. A conversation and the two
+ * collaboration surfaces name themselves instead — the one says which thread it
+ * is, the others carry a picker of their own — and none has the branch the chip
  * now stands beside.
  */
 export const showsProjectPicker = (route: ShellRoute): boolean =>
-  route.kind !== "session" && route.kind !== "collaboration";
+  route.kind !== "session" &&
+  route.kind !== "collaboration" &&
+  route.kind !== "experimentation";
 
 /** Whether the page beneath the layout is one of the git/code surfaces. */
 export const showsGitChrome = (route: ShellRoute): boolean =>

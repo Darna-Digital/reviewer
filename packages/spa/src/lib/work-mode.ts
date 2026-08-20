@@ -8,6 +8,8 @@ import type { WorkMode } from "@/lib/ui-prefs";
  */
 export function activeWorkMode(pathname: string, stored: WorkMode): WorkMode {
   if (pathname.startsWith("/modes/collaboration")) return "collaboration";
+  // The prototype is still collaboration, whatever prefix it was parked under.
+  if (pathname.startsWith("/modes/experimentation")) return "collaboration";
   if (pathname.startsWith("/modes/code")) return "code";
   if (pathname.startsWith("/modes/agent-session")) return "code";
   return stored;

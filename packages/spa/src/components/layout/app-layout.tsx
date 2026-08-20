@@ -75,6 +75,17 @@ export function AppLayout() {
    */
   const bare = route.kind === "session" && route.composing;
 
+  /**
+   * Pages that wear no header, and so no rule under one either.
+   *
+   * The composer is one because the shell is getting out of its way entirely.
+   * Collaboration is one for the opposite reason: it is a full page, but every
+   * surface in it names itself at the top of its own centred column, so a bar
+   * above would repeat that — and the rule under it would be the one line drawn
+   * across a design whose argument is a page standing on open ground.
+   */
+  const headerless = bare || route.kind === "collaboration";
+
   // Both rails are the same column carrying different things — code's git
   // surfaces, sessions' new-and-find — so crossing between them leaves the page
   // beside it exactly where it was. Collaboration is the one surface without
@@ -88,6 +99,7 @@ export function AppLayout() {
   // what was worth having here.
   const railed =
     route.kind !== "collaboration" &&
+    route.kind !== "experimentation" &&
     !bare &&
     !(route.kind === "session" && route.solo);
 
@@ -96,6 +108,7 @@ export function AppLayout() {
     route.kind === "workspace" ||
     route.kind === "session" ||
     route.kind === "collaboration" ||
+    route.kind === "experimentation" ||
     route.kind === "dock";
 
   /**
@@ -145,13 +158,13 @@ export function AppLayout() {
       <WindowFrame>
         {railed && (route.kind === "session" ? <SessionsRail /> : <ModeRail />)}
         <div className="flex min-w-0 flex-1 flex-col">
-          {!bare && <AppHeader route={route} />}
+          {!headerless && <AppHeader route={route} />}
           {/* The rule under the header goes with the header: on the composer it
               would be a line drawn across the top of an empty page. */}
           <div
             className={cn(
               "flex min-h-0 flex-1 flex-col overflow-hidden",
-              !bare && "border-t"
+              !headerless && "border-t"
             )}
           >
             {/* Put away rather than unmounted: the outlet is where the router

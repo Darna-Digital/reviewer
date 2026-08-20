@@ -23,6 +23,19 @@ export const NEW_SESSION_HREF = "/modes/agent-session?new=true";
 
 const SESSIONS_PREFIX = "/modes/agent-session";
 const COLLABORATION_PREFIX = "/modes/collaboration";
+/**
+ * The collaboration prototype, kept as a reference.
+ *
+ * It belongs to no tab in the strip. The three the bar leads with are ways of
+ * working, and the prototype is not one — it is the previous draft of one, kept
+ * reachable by its URL. Letting Collaboration hold it would be worse than
+ * letting it fall through to Code: a mode tab remembers where it was left, so
+ * one trip to the old design would leave the button labelled after it and
+ * pointing there, and ⌘G would go on landing on the prototype instead of the
+ * mode. So the strip stays as it was while the prototype is on screen — see
+ * `tabForLocation`.
+ */
+const EXPERIMENTATION_PREFIX = "/modes/experimentation";
 
 const TITLES: ReadonlyArray<readonly [string, string]> = [
   ["/modes/code/browse", "Project"],
@@ -36,7 +49,11 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
   ]),
   ["/modes/code/docs", "Docs"],
   ["/modes/code/tasks", "Tasks"],
-  ["/modes/collaboration/inbox", "Inbox"],
+  // Longest first: `startsWith` takes the first entry that matches, and the
+  // prototype's paths sit under a prefix of their own so neither reading of a
+  // collaboration URL can swallow the other.
+  ["/modes/experimentation/collaboration/inbox", "Inbox"],
+  ["/modes/experimentation/collaboration", "Experimentation"],
   ["/modes/collaboration", "Collaboration"],
   ["/settings", "Settings"],
 ];
@@ -119,6 +136,10 @@ const inSessions = (pathname: string): boolean =>
 const inCollaboration = (pathname: string): boolean =>
   pathname.startsWith(COLLABORATION_PREFIX);
 
+/** Whether a location is the prototype's, which no tab in the strip holds. */
+const inExperimentation = (pathname: string): boolean =>
+  pathname.startsWith(EXPERIMENTATION_PREFIX);
+
 /** A pinned tab that is named after wherever it has been left. */
 const followsLocation = (tab: WindowTab): boolean =>
   tab.kind === "project" || tab.kind === "collaboration";
@@ -133,6 +154,7 @@ const keepsLocation = (tab: WindowTab): boolean => tab.kind !== "sessions";
 
 /** Whether a location is a pinned tab's to hold. */
 function ownsLocation(tab: WindowTab, pathname: string): boolean {
+  if (inExperimentation(pathname)) return false;
   if (inSessions(pathname)) return tab.kind === "sessions";
   if (inCollaboration(pathname)) return tab.kind === "collaboration";
   return tab.kind === "project";
@@ -207,12 +229,17 @@ export const onSessionTab = (state: WindowTabsState): boolean =>
  * A switched-off feature has no tab to hand its locations to, and they are not
  * the active tab's to take instead: a strip that let them in would rename
  * whichever tab you were on and point it somewhere it does not belong, so Code
- * reached by URL alone would send you back to Collaboration.
+ * reached by URL alone would send you back to Collaboration. The collaboration
+ * prototype is the same case reached from the other side — a surface with no
+ * tab of its own — and is answered the same way.
  */
 function tabForLocation(
   state: WindowTabsState,
   pathname: string
 ): WindowTab | null {
+  // The prototype is nobody's: the strip keeps its place rather than renaming
+  // a mode button after a reference surface. See `EXPERIMENTATION_PREFIX`.
+  if (inExperimentation(pathname)) return null;
   const current = activeTab(state);
   const sessions = inSessions(pathname);
   if (current !== null && current.kind === "session" && sessions)
@@ -327,8 +354,9 @@ export function moveTab(
 /**
  * The way of working after the one the window is on, wrapping round — what ⌘G
  * crosses to. The pinned tabs are those ways of working, so the crossing is a
- * step along them; from a conversation, which is had in either, it is the first
- * of them. A window with only one has nowhere to cross to.
+ * step along them — Code, Collaboration and Sessions, in strip order — and from
+ * a conversation, which is had in any of them, it is the first. A window with
+ * only one has nowhere to cross to.
  */
 export function nextModeTab(
   tabs: ReadonlyArray<WindowTab>,

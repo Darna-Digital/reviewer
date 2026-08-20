@@ -93,9 +93,21 @@ export function AppHeader({ route }: { route: ShellRoute }) {
     );
   }
 
-  // Collaboration drops the git chrome entirely — its own sidebar carries what
-  // the branch switcher would have said.
-  if (route.kind === "collaboration") {
+  /**
+   * Collaboration keeps nothing in the header at all.
+   *
+   * Every page in the mode names itself — a project's own page is the index of
+   * itself, and the trail above each title leads back out — so a bar repeating
+   * that above the column would be saying twice what the column already says,
+   * and would be the one horizontal rule cutting across a design whose whole
+   * argument is a page standing on open ground. What is genuinely global here
+   * is the hovering bar, and it is at the other edge.
+   */
+  if (route.kind === "collaboration") return null;
+
+  // The collaboration prototype drops the git chrome entirely — its own sidebar
+  // carries what the branch switcher would have said.
+  if (route.kind === "experimentation") {
     return (
       <header className="flex h-9 shrink-0 items-center gap-2 px-2">
         <WorkspacePicker />

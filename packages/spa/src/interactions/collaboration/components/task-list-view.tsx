@@ -115,7 +115,7 @@ function TaskRow({
         <IconGripVertical className="size-3.5" />
       </span>
       <Link
-        to="/modes/collaboration"
+        to="/modes/experimentation/collaboration"
         search={{ view: "task", id: task.id }}
         {...drag.keyProps(task)}
         className={cn(
@@ -317,7 +317,7 @@ function LandedGroup({ tasks }: { tasks: ReadonlyArray<MockTask> }) {
           {tasks.map((task) => (
             <Link
               key={task.id}
-              to="/modes/collaboration"
+              to="/modes/experimentation/collaboration"
               search={{ view: "task", id: task.id }}
               className="flex h-9 items-center gap-2.5 px-3 pl-9 text-[13px] outline-none hover:bg-elevate focus-visible:bg-elevate"
             >
@@ -353,7 +353,7 @@ export function TaskListView({ project }: { project: MockProject }) {
         crumbs={[
           <Link
             key="project"
-            to="/modes/collaboration"
+            to="/modes/experimentation/collaboration"
             search={{ view: "project", id: project.id }}
             className="flex min-w-0 items-center gap-1.5 text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
           >

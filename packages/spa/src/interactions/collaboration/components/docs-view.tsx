@@ -19,7 +19,7 @@ export function DocsView({ project }: { project: MockProject }) {
         crumbs={[
           <Link
             key="project"
-            to="/modes/collaboration"
+            to="/modes/experimentation/collaboration"
             search={{ view: "project", id: project.id }}
             className="truncate text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
           >

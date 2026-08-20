@@ -78,9 +78,17 @@ describe("shellRoute", () => {
     expect(shellRoute("/modes/collaboration", "code")).toEqual({
       kind: "collaboration",
     });
-    expect(shellRoute("/modes/collaboration/inbox", "code")).toEqual({
+    expect(shellRoute("/modes/collaboration/projects/p1", "code")).toEqual({
       kind: "collaboration",
     });
+    // The prototype reads as itself rather than as the mode it was the first
+    // draft of — the shell puts different chrome around each.
+    expect(shellRoute("/modes/experimentation/collaboration", "code")).toEqual({
+      kind: "experimentation",
+    });
+    expect(
+      shellRoute("/modes/experimentation/collaboration/inbox", "code")
+    ).toEqual({ kind: "experimentation" });
     expect(shellRoute("/settings", "code")).toEqual({ kind: "settings" });
   });
 

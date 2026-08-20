@@ -178,13 +178,34 @@ describe("trackLocation", () => {
   it("hands collaboration to its own tab, named after where it lands", () => {
     const state = trackLocation(
       initialWindowTabs(),
-      "/modes/collaboration/inbox",
-      "/modes/collaboration/inbox"
+      "/modes/collaboration/projects/p1",
+      "/modes/collaboration/projects/p1"
     );
     expect(show(state)).toBe("code *team sessions");
     expect(state.tabs[1]).toMatchObject({
-      href: "/modes/collaboration/inbox",
-      title: "Inbox",
+      href: "/modes/collaboration/projects/p1",
+      title: "Collaboration",
+    });
+  });
+
+  it("leaves the strip where it was while the prototype is on screen", () => {
+    // A mode button remembers where it was left, so one trip to the old design
+    // would otherwise leave Collaboration labelled after it and pointing there
+    // — and ⌘G landing on the prototype rather than on the mode.
+    const onCollaboration = trackLocation(
+      initialWindowTabs(),
+      "/modes/collaboration",
+      "/modes/collaboration"
+    );
+    const after = trackLocation(
+      onCollaboration,
+      "/modes/experimentation/collaboration",
+      "/modes/experimentation/collaboration"
+    );
+    expect(after).toBe(onCollaboration);
+    expect(after.tabs[1]).toMatchObject({
+      href: "/modes/collaboration",
+      title: "Collaboration",
     });
   });
 
@@ -316,6 +337,12 @@ describe("tabTitle", () => {
     expect(tabTitle("/modes/code/browse/commit/abc123")).toBe("Project");
     expect(tabTitle("/modes/code/review/12")).toBe("Pull requests");
     expect(tabTitle("/modes/collaboration")).toBe("Collaboration");
+    expect(tabTitle("/modes/experimentation/collaboration")).toBe(
+      "Experimentation"
+    );
+    expect(tabTitle("/modes/experimentation/collaboration/inbox")).toBe(
+      "Inbox"
+    );
     expect(tabTitle("/settings")).toBe("Settings");
     expect(tabTitle("/somewhere-else")).toBe("Byconvo");
   });
