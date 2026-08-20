@@ -150,6 +150,12 @@ export function FileSidebar({
   const syncingSelectionRef = useRef(false);
   const [clipboard, setClipboard] = useState<Clipboard | null>(null);
   const [dropping, setDropping] = useState(false);
+  // The menu is drawn inside the tree's shadow root, which stacks wherever the
+  // host does — under the sidebar's resize seam, which lifts itself over the
+  // panels it divides. Lifting the tree higher while a menu is open puts the
+  // menu over the seam without leaving the tree over it the rest of the time,
+  // where it would take the pointer off the few pixels the seam overlaps.
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Copied for the tree, which wants mutable arrays — but copied once per new
   // listing rather than once per render, for the same reason as the keys below.
@@ -176,6 +182,12 @@ export function FileSidebar({
     search: mode !== "browse",
     unsafeCSS: TREE_UNSAFE_CSS,
     gitStatus: treeGitStatus,
+    composition: {
+      contextMenu: {
+        onOpen: () => setMenuOpen(true),
+        onClose: () => setMenuOpen(false),
+      },
+    },
     onSelectionChange: (selectedPaths) => {
       if (syncingSelectionRef.current) return;
       const first = selectedPaths.at(0);
@@ -522,6 +534,7 @@ export function FileSidebar({
       <div
         className={cn(
           "-mx-2 mt-2 min-h-0 flex-1 overflow-auto",
+          menuOpen && "relative z-20",
           dropping && "rounded-md ring-1 ring-ring ring-inset"
         )}
         onKeyDown={onKeyDown}
