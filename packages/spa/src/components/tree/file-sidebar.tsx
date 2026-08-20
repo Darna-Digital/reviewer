@@ -123,38 +123,42 @@ const menuItems = (menu: HTMLElement) => [
   ),
 ];
 
-/** The arrows walk the rows and wrap at both ends; Enter is the button's own. */
-function walkMenu(event: KeyboardEvent) {
-  const items = menuItems(event.currentTarget as HTMLElement);
+/**
+ * The keys an open menu answers to. It does not take the keyboard as it opens —
+ * the row keeps focus until Down reaches for the menu, and only from there do
+ * the arrows walk the entries and wrap at both ends. Bound to the document
+ * because until focus is in the menu the keys are still the tree's, and bound
+ * in the capture phase so the arrow that reaches for the menu does not move the
+ * row behind it on its way. Escape belongs to the tree, which closes the menu.
+ */
+const menuKeys = (menu: HTMLElement) => (event: KeyboardEvent) => {
+  const items = menuItems(menu);
   if (items.length === 0) return;
+  const inside = menu.contains(document.activeElement);
   const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
   if (step !== 0) {
     event.preventDefault();
-    // -1 stepped back lands on the last row, which is where Up from a menu
-    // nothing is focused in ought to go.
+    event.stopPropagation();
+    if (!inside) {
+      (step === 1 ? items.at(0) : items.at(-1))?.focus();
+      return;
+    }
     const at = items.indexOf(document.activeElement as HTMLButtonElement);
     items[(at + step + items.length) % items.length]?.focus();
     return;
   }
-  if (event.key === "Home" || event.key === "End") {
+  if (inside && (event.key === "Home" || event.key === "End")) {
     event.preventDefault();
+    event.stopPropagation();
     (event.key === "Home" ? items.at(0) : items.at(-1))?.focus();
   }
-}
+};
 
-/**
- * An open menu is the keyboard's, not just the pointer's: the first row takes
- * focus as it opens, and the arrows walk on from there. The listener is bound
- * to the element rather than handed over as a prop because the tree stops keys
- * inside its slotted menu from travelling any further, and React's own listener
- * sits at the root of the page, where they never arrive. Escape belongs to the
- * tree, which closes the menu on it.
- */
 const openedMenu = (menu: HTMLElement | null) => {
   if (menu === null) return;
-  menuItems(menu).at(0)?.focus();
-  menu.addEventListener("keydown", walkMenu);
-  return () => menu.removeEventListener("keydown", walkMenu);
+  const onKeyDown = menuKeys(menu);
+  document.addEventListener("keydown", onKeyDown, true);
+  return () => document.removeEventListener("keydown", onKeyDown, true);
 };
 
 const rowItem = (row: HTMLElement): TreeItem => ({

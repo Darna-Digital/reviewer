@@ -62,6 +62,16 @@ export async function droppedFiles(
   transfer: DataTransfer
 ): Promise<ReadonlyArray<DroppedFile>> {
   const entries = entriesOf(transfer);
+  const files = [...transfer.files];
+  // Not every browser hands over the directory entries, and one that doesn't
+  // still has the flat list — a drop of plain files lands the same either way,
+  // and a folder in it is the only thing that cannot come along.
+  if (entries.length === 0) {
+    return files.map((file) => ({
+      relativePath: file.name,
+      readBase64: readBase64(file),
+    }));
+  }
   const walked = await Promise.all(entries.map((entry) => walk(entry, "")));
   return walked.flat();
 }
