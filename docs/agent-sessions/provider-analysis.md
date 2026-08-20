@@ -282,7 +282,7 @@ byconvo **user**, never to the runner. That implies a per-user "connect your age
 session dispatch that resolves user → credential scope → per-user `CODEX_HOME` /
 `CLAUDE_CONFIG_DIR` / OS user / container.
 
-It also promotes sharp edge 1 into the load-bearing constraint: on a shared box a
+It also promotes sharp edge 1 (section 6) into the load-bearing constraint: on a shared box a
 `fullAccess` session can read every other person's credentials in the adjacent home
 directory. Multiplayer makes per-session isolation a security requirement rather than
 good hygiene.
@@ -380,7 +380,92 @@ owner, and for anyone not yet connected.
 
 ---
 
-## 5. Sharp edges
+## 5. What six developers would pay on API keys
+
+Anthropic publishes the figure, which beats any estimate built from scratch: across
+enterprise deployments the average is **about $13 per developer per active day and
+$150–250 per developer per month**, with 90% of users staying under $30 per active day.
+For six people that is **$900–1,500 a month** at moderate usage.
+
+### Where the money actually goes
+
+The session breakdown from Anthropic's own docs, priced out — a six-minute Sonnet session
+costing $0.55:
+
+| Token class | Count | Rate | Cost | Share |
+| --- | --- | --- | --- | --- |
+| Cache read | 940,000 | $0.30 / MTok | $0.282 | 51% |
+| Cache write | 50,000 | $3.75 / MTok | $0.188 | 34% |
+| Output | 5,300 | $15.00 / MTok | $0.080 | 14% |
+| Fresh input | 1,200 | $3.00 / MTok | $0.004 | 1% |
+
+**85% of the bill is re-reading context, not generating code.** Cost tracks conversation
+length times number of turns, which is why clearing between tasks saves more than any
+prompt you could shorten, and why a session left open all day is expensive even when
+nobody is typing.
+
+### Three scenarios, six developers
+
+| Usage | Per dev / active day | Per dev / month | Team of 6 / month |
+| --- | --- | --- | --- |
+| Light — a couple of hours, Sonnet | ~$4 | $60–90 | $360–540 |
+| **Moderate** — most of the workday, Sonnet default | ~$13 | $150–250 | **$900–1,500** |
+| Heavy — Opus default, long sessions | ~$30 | $450–600 | $2,700–3,600 |
+
+**Background sessions are additive.** Those figures are for interactive work. Every
+background session byconvo fires is a full context of its own and costs what a
+human-driven session costs. Six developers each kicking off three background tasks a day
+adds roughly **$750–1,300 a month** on top. Budget for it explicitly — it is the line
+item that surprises people, because the sessions run while nobody is watching the meter.
+
+### Rates, for your own arithmetic
+
+| Model | Input | Output | Cache read | Cache write |
+| --- | --- | --- | --- | --- |
+| Claude Opus 5 | $5.00 | $25.00 | $0.50 | $6.25 |
+| Claude Sonnet 5 | $3.00 | $15.00 | $0.30 | $3.75 |
+| Claude Haiku 4.5 | $1.00 | $5.00 | $0.10 | $1.25 |
+| GPT-5.3-Codex (unverified) | $1.75 | $14.00 | ~$0.18 | n/a |
+
+Per million tokens. Sonnet 5 runs introductory pricing at $2 / $10 until 31 August 2026 —
+do not build a budget on it. The Codex row comes from secondary sources rather than
+OpenAI's own pricing page; treat it as indicative. Cursor's plans are credit-based rather
+than published per-token, so there is no reliable row for it.
+
+### The comparison that should decide it
+
+Six Max-tier seats run roughly $600–1,200 a month, flat, with no metering. Six developers
+on API keys at moderate usage run $900–1,500 *plus* background sessions. **For steady
+interactive work, seats win, usually by a wide margin.**
+
+Which points at the hybrid — and it is the same split the credential model already draws:
+**seats for the humans, one workspace API key for the machines.** Background and scheduled
+sessions are where a metered key earns its keep: they have no human owner to attribute a
+seat to, and running them on someone's seat burns the five-hour rolling allowance their
+interactive work depends on. A background agent that exhausts a developer's window has
+cost more than the tokens it spent.
+
+### Levers, in order of effect
+
+- **Clear between tasks.** 85% of spend is context re-reads, so a fresh session is the
+  single biggest saving available.
+- **Sonnet as the default, Opus for hard problems.** Roughly 40% off the same work.
+- **Haiku for subagents** — a tenth of Opus, and adequate for the read-heavy delegated
+  work byconvo would fan out.
+- **Batch API for anything not latency-sensitive** — 50% off, which fits scheduled
+  background runs precisely.
+- **Watch cache TTL on API keys.** The prompt cache lives five minutes on an API key
+  against an hour on a subscription, so a background agent that pauses between turns
+  re-pays full price for its whole context. Measure it before scaling the fleet.
+
+If you do go the API route, request rate limits up front. Anthropic's guidance for a 5–20
+person team is 100–150k TPM per user, so budget around **600–900k TPM** org-wide — and
+those limits are shared across the organisation, so a box running six parallel background
+sessions competes with the humans for them.
+
+---
+
+## 6. Sharp edges
 
 These are the constraints that decide the design, roughly in order of how much trouble
 they cause.
@@ -447,7 +532,7 @@ they cause.
 
 ---
 
-## 6. Recommended shape for byconvo
+## 7. Recommended shape for byconvo
 
 **Put the seam at the process boundary, not the provider boundary.** That is the whole
 argument: `providers.ts` and the four stream parsers stay untouched, and every provider
@@ -496,7 +581,7 @@ reserved for.
 
 ---
 
-## 7. What the architecture cannot do
+## 8. What the architecture cannot do
 
 - **Several people working off one Claude or ChatGPT seat.** Prohibited, and actively
   enforced. Note the scope: it is the *seat* that cannot be shared, not the machine.
@@ -530,6 +615,8 @@ reserved for.
   `sdk/typescript/README.md`
 - opencode — source read at [`sst/opencode`](https://github.com/sst/opencode):
   `packages/web/src/content/docs/{server,providers,acp,github,enterprise,network}.mdx`
+- Costs — Claude Code [Manage costs effectively](https://code.claude.com/docs/en/costs);
+  model rates from the bundled Claude API pricing reference (cached 2026-06-24)
 - Cursor — [CLI overview](https://cursor.com/docs/cli/overview),
   [Headless CLI](https://cursor.com/docs/cli/headless),
   [CLI authentication](https://cursor.com/docs/cli/reference/authentication),
