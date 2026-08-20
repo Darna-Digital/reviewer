@@ -22,7 +22,7 @@ import {
   type VimPosition,
   type VimState,
 } from "../interfaces/vim.interfaces";
-import { onVimKey } from "../functions/vim.functions";
+import { afterPointerPress, onVimKey } from "../functions/vim.functions";
 import { visualRange } from "../functions/vim.commands";
 import {
   clearRelativeLines,
@@ -162,6 +162,33 @@ export function useVim({
   // the switch is flipped either way.
   useEffect(paint, [paint, state.mode]);
   useEffect(() => subscribe?.(paint), [paint, subscribe]);
+
+  /**
+   * A press in the code moves the caret itself and collapses whatever was
+   * selected, so the anchor visual mode was measuring from is gone with it.
+   * The mode has to go too: left standing, the next motion resurrects a
+   * selection reaching all the way back to wherever visual mode was entered,
+   * which by then may be a long way from where the caret now is — and until
+   * that keystroke the badge claims a selection that is not on screen.
+   *
+   * Only presses inside the code count. The comment offer is a press too, and
+   * it is rendered outside the view precisely so it can be told apart: leaving
+   * visual mode on it would unmount the button before its click landed.
+   */
+  useEffect(() => {
+    if (!active) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const host = container.current;
+      if (host === null || !event.composedPath().includes(host)) return;
+      const next = afterPointerPress(stateRef.current);
+      if (next === stateRef.current) return;
+      stateRef.current = next;
+      setState(next);
+      setSpanning(false);
+    };
+    window.addEventListener("pointerdown", onPointerDown, true);
+    return () => window.removeEventListener("pointerdown", onPointerDown, true);
+  }, [active]);
 
   // The gutter counts from the caret, and the caret moves in ways the buffer
   // never hears about — a click into the code, an arrow key in insert mode. The
