@@ -4,9 +4,14 @@
  * The trail runs from the mode you are in through every folder of the open
  * file, and each of those folders is a dropdown of what else sits beside it —
  * folders open a submenu, files open in the pane above. The file's own controls
- * (edit it, read its history, save it) end the line on the right.
+ * (read its history, save it) end the line on the right — there is no "edit it",
+ * because a file is editable from the moment it opens.
+ *
+ * Over a diff the trail is also the only thing naming the open file — a review
+ * draws no open-file strip — so it ends its line with the control that puts the
+ * file down again and gives the pane back to the diff.
  */
-import { IconFolder, IconHistory } from "@tabler/icons-react";
+import { IconFolder, IconHistory, IconX } from "@tabler/icons-react";
 import { type ReactNode, useMemo } from "react";
 import { Breadcrumbs, type Crumb } from "@/components/layout/breadcrumbs";
 import { Button } from "@/components/ui/button";
@@ -29,6 +34,13 @@ export interface PathBarProps {
   readonly paths: ReadonlyArray<string>;
   readonly onOpenFile: (path: string) => void;
   readonly onShowHistory?: () => void;
+  /**
+   * Put the open file down and give the pane back to whatever is under it.
+   * Only where there *is* something under it — a diff — since the trail is then
+   * the only thing naming the file, and closing it would otherwise mean finding
+   * your way back through the tree.
+   */
+  readonly onClose?: () => void;
   /** The open view's own controls, e.g. Save and its problem count. */
   readonly actions?: ReactNode;
 }
@@ -39,6 +51,7 @@ export function PathBar({
   paths,
   onOpenFile,
   onShowHistory,
+  onClose,
   actions,
 }: PathBarProps) {
   const folderCrumbs = useMemo<ReadonlyArray<Crumb>>(
@@ -80,6 +93,16 @@ export function PathBar({
           </Button>
         )}
         {actions}
+        {onClose !== undefined && (
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={onClose}
+            aria-label="Close file"
+          >
+            <IconX /> Close
+          </Button>
+        )}
       </div>
     </div>
   );
