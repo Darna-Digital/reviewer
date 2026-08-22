@@ -70,7 +70,7 @@ function ConversationTail({
     <div className="flex flex-col gap-1.5">
       {messages.map((m) => (
         <div key={m.id} className="flex flex-col gap-0.5">
-          <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+          <span className="text-[10px] font-medium text-muted-foreground">
             {m.role === "user" ? "You" : assistantLabel}
           </span>
           <p className="line-clamp-2 text-xs leading-relaxed break-words">

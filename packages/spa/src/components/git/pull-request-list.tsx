@@ -9,6 +9,12 @@
  * step now, so the page is the width of the window and a row can say what the
  * pick is actually made on: who wrote it, where it is going, how big it is,
  * whether CI passed, and whether anything is in the way of merging it.
+ *
+ * The facts read by scanning rather than by reading — how many files, how much
+ * changed, how long ago, what CI said — each hold a slot of their own width, so
+ * they stack into columns down the page instead of ragging after each title.
+ * The target branch is not among them: the heading the row sits under has
+ * already said it.
  */
 import { IconGitBranch, IconGitPullRequestDraft } from "@tabler/icons-react";
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
@@ -105,23 +111,19 @@ export function PullRequestList({
 
   const groups = useMemo(() => {
     const grouped = groupPullsByBase(filtered);
-    return baseFilter === ALL_BRANCHES
-      ? grouped
-      : grouped.filter((group) => group.base === baseFilter);
+    return (
+      baseFilter === ALL_BRANCHES
+        ? grouped
+        : grouped.filter((group) => group.base === baseFilter)
+    ).filter((group) => group.pulls.length > 0);
   }, [filtered, baseFilter]);
 
-  const hasMatches = groups.some((g) => g.pulls.length > 0);
+  const hasMatches = groups.length > 0;
   const filtersActive =
     baseFilter !== ALL_BRANCHES ||
     dateFilter !== "all" ||
     search.trim().length > 0;
 
-  /**
-   * One row across the window. The title takes whatever is left; everything
-   * that is read by scanning rather than by reading — the size of the change,
-   * when it moved, CI, the blocker — is pinned to the right, so those stay in
-   * their own columns down the page instead of ragging after each title.
-   */
   const renderRow = (p: PullRequestInfo) => (
     <button
       key={p.number}
@@ -145,25 +147,29 @@ export function PullRequestList({
           <span className="truncate">{p.author}</span>
           <span aria-hidden>·</span>
           <span className="truncate font-mono">{p.headRef}</span>
-          <span aria-hidden>→</span>
-          <span className="truncate font-mono">{p.baseRef}</span>
         </div>
       </div>
-      {p.changedFiles > 0 && (
-        <span className="hidden shrink-0 text-xs text-muted-foreground tabular-nums sm:inline">
-          {p.changedFiles} file{p.changedFiles === 1 ? "" : "s"}{" "}
-          <span className="text-emerald-600 dark:text-emerald-400">
-            +{p.additions}
-          </span>{" "}
-          <span className="text-destructive">−{p.deletions}</span>
-        </span>
-      )}
-      {p.updatedAt.length > 0 && (
-        <span className="hidden w-16 shrink-0 text-right text-xs text-muted-foreground sm:inline">
-          {timeAgo(p.updatedAt)}
-        </span>
-      )}
-      <span className="flex w-10 shrink-0 items-center justify-end gap-1">
+      <span className="hidden w-14 shrink-0 text-right text-xs text-muted-foreground tabular-nums sm:inline">
+        {p.changedFiles > 0 && (
+          <>
+            {p.changedFiles} file{p.changedFiles === 1 ? "" : "s"}
+          </>
+        )}
+      </span>
+      <span className="hidden w-24 shrink-0 text-right text-xs tabular-nums sm:inline">
+        {p.changedFiles > 0 && (
+          <>
+            <span className="text-emerald-600 dark:text-emerald-400">
+              +{p.additions}
+            </span>{" "}
+            <span className="text-destructive">−{p.deletions}</span>
+          </>
+        )}
+      </span>
+      <span className="hidden w-8 shrink-0 text-right text-xs text-muted-foreground sm:inline">
+        {p.updatedAt.length > 0 && timeAgo(p.updatedAt)}
+      </span>
+      <span className="flex w-9 shrink-0 items-center justify-end gap-1">
         <BlockedIcon pull={p} />
         <ChecksIcon pull={p} />
       </span>
@@ -227,20 +233,23 @@ export function PullRequestList({
           </div>
         ) : baseFilter === ALL_BRANCHES ? (
           // Grouped under the target branch when viewing all branches.
-          groups
-            .filter((g) => g.pulls.length > 0)
-            .map((group) => (
-              <div key={group.base} className="mb-1">
-                <div className="flex items-center gap-1.5 px-3 pt-3 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-                  <IconGitBranch className="size-3 shrink-0" />
-                  <span className="truncate">{branchLabel(group.base)}</span>
+          groups.map((group) => (
+            <div key={group.base} className="mb-1">
+              {/* The count sits over the status column, and only when there is
+                  something to count: "1" beside a single row is a figure that
+                  reads as a fact and turns out to be the row itself. */}
+              <div className="flex items-center gap-1.5 px-3 pt-3 pr-[2.25rem] pb-1 text-[11px] font-medium text-muted-foreground">
+                <IconGitBranch className="size-3 shrink-0" />
+                <span className="truncate">{branchLabel(group.base)}</span>
+                {group.pulls.length > 1 && (
                   <span className="ml-auto tabular-nums">
                     {group.pulls.length}
                   </span>
-                </div>
-                {group.pulls.map(renderRow)}
+                )}
               </div>
-            ))
+              {group.pulls.map(renderRow)}
+            </div>
+          ))
         ) : (
           groups[0]?.pulls.map(renderRow)
         )}

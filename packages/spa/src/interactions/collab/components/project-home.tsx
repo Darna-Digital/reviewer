@@ -174,7 +174,7 @@ export function ProjectHome({ projectId }: { readonly projectId: string }) {
                 <span className="text-sm font-semibold tabular-nums">
                   {column.todos.length}
                 </span>
-                <span className="w-full truncate text-center text-[0.625rem] tracking-wide text-muted-foreground uppercase">
+                <span className="w-full truncate text-center text-[0.625rem] text-muted-foreground">
                   {column.list.name}
                 </span>
               </div>

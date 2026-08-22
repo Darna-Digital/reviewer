@@ -1,21 +1,21 @@
 /**
  * Everything about the open pull request that is not its diff: who wrote it and
  * who is on it, where it is going, what CI made of it, and what its author said
- * it was for — plus the two things a reviewer does to it, checking it out and
- * merging it.
+ * it was for — plus what a reviewer does to it: checking it out, merging it,
+ * or closing it unmerged.
  *
  * It is the first of the three columns a pull request under review is read in:
  * this, then its files, then its diff. It takes the place the list was in
  * before a row was picked, and carries the way back to it.
  *
- * The column reads down a spine: identity, then the actions, then Status,
- * Details and Description, each behind a hairline and an uppercase legend.
- * Facts are laid on a label gutter rather than run together in a paragraph of
- * chips — before that, assignees, reviewers and labels each began wherever the
- * row above them happened to end, which is what made a short column feel like
- * a pile. Type is the app's own four steps and nothing else: `type-ui` for
- * controls, `type-body` for the sentences the description is made of, `type-xs`
- * for values, `type-meta` for the captions and legends.
+ * The column reads down a spine: identity — title, byline, branches and the
+ * figures the pull request is sized by on one strip — then the actions, then
+ * the checks, who is on it, and what its author wrote. Only Details keeps a
+ * legend, because only Details is a label gutter; the checks are a verdict you
+ * open, and the description is prose. Type is the app's own four steps and
+ * nothing else: `type-ui` for controls, `type-body` for the sentences the
+ * description is made of, `type-xs` for values, `type-meta` for the captions
+ * and legends.
  */
 import {
   IconAlertTriangleFilled,
@@ -27,6 +27,7 @@ import {
   IconGitFork,
   IconGitMerge,
   IconGitPullRequest,
+  IconGitPullRequestClosed,
   IconGitPullRequestDraft,
   IconListTree,
 } from "@tabler/icons-react";
@@ -117,11 +118,7 @@ const labelStyle = (color: string) =>
 
 /** The legend a section reads under — the column's spine. */
 function Legend({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="mb-2 type-meta tracking-[0.4px] text-muted-foreground uppercase">
-      {children}
-    </div>
-  );
+  return <div className="mb-2 type-meta text-muted-foreground">{children}</div>;
 }
 
 function Section({
@@ -183,6 +180,23 @@ function Row({
   );
 }
 
+/**
+ * A check's verdict as a dot, boxed to the width of the icon the summary above
+ * it wears, so a list of checks hangs on the edge the headline starts on.
+ */
+function CheckDot({ state }: { readonly state: CheckState }) {
+  return (
+    <span className="flex w-3.5 shrink-0 justify-center">
+      <span
+        className={cn(
+          "size-1.5 translate-y-[-2px] rounded-full",
+          CHECK_DOT[state]
+        )}
+      />
+    </span>
+  );
+}
+
 function People({ people }: { readonly people: ReadonlyArray<string> }) {
   return (
     <>
@@ -199,6 +213,7 @@ export function PullRequestOverview({
   currentBranch,
   onCheckout,
   onMerge,
+  onClose,
   onBack,
   treeVisible,
   onToggleTree,
@@ -218,6 +233,12 @@ export function PullRequestOverview({
     pull: PullRequestInfo,
     method: MergeMethod
   ) => Promise<boolean>;
+  /**
+   * Close the pull request without merging it. Answers the same question
+   * merging does — whether it went through — because a closed pull request
+   * leaves the open list the same way a merged one does.
+   */
+  readonly onClose: (pull: PullRequestInfo) => Promise<boolean>;
   /** Back to the list of pull requests, which this column replaced. */
   readonly onBack: () => void;
   /** Whether the file tree column beside this one is showing. */
@@ -229,6 +250,8 @@ export function PullRequestOverview({
   const [checkingOut, setCheckingOut] = useState(false);
   const [merging, setMerging] = useState(false);
   const [confirming, setConfirming] = useState<MergeMethod | null>(null);
+  const [closing, setClosing] = useState(false);
+  const [confirmingClose, setConfirmingClose] = useState(false);
 
   const localBranch = localBranchForPull(pull);
   const onBranch = currentBranch === localBranch;
@@ -265,7 +288,23 @@ export function PullRequestOverview({
       .finally(() => setMerging(false));
   };
 
+  const runClose = () => {
+    setConfirmingClose(false);
+    setClosing(true);
+    void onClose(pull)
+      .then((closed) => {
+        // Same as a merge: nothing in the three columns is true of an open
+        // pull request any more, so the window goes back to the list.
+        if (closed) onBack();
+      })
+      .finally(() => setClosing(false));
+  };
+
   const StateIcon = pull.draft ? IconGitPullRequestDraft : IconGitPullRequest;
+  const hasDetails =
+    pull.assignees.length > 0 ||
+    pull.reviewers.length > 0 ||
+    pull.labels.length > 0;
 
   return (
     <section
@@ -327,7 +366,7 @@ export function PullRequestOverview({
               {pull.title}
             </h2>
           </div>
-          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 pl-6 type-meta text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 type-meta text-muted-foreground">
             <span className="font-mono">#{pull.number}</span>
             {pull.author.length > 0 && (
               <>
@@ -344,8 +383,11 @@ export function PullRequestOverview({
             )}
           </div>
           {/* The branch pair as one rail rather than a loose line: it is a
-              single fact — this goes there — so it gets a single object. */}
-          <div className="ml-6 flex min-w-0 items-center gap-1.5 rounded-md bg-muted px-2 py-1 font-mono type-meta">
+              single fact — this goes there — so it gets a single object. The
+              fill stops where the two names stop: a bar drawn to the column's
+              width would be sizing the object by the pane rather than by what
+              is written on it. */}
+          <div className="flex min-w-0 items-center gap-1.5 self-start rounded-md bg-muted px-2 py-1 font-mono type-meta">
             <span className="truncate">{pull.headRef}</span>
             <IconArrowNarrowRight className="size-3 shrink-0 text-muted-foreground" />
             <span className="shrink-0">{pull.baseRef}</span>
@@ -354,7 +396,7 @@ export function PullRequestOverview({
                 <TooltipTrigger
                   render={
                     <span
-                      className="ml-auto flex shrink-0 items-center"
+                      className="flex shrink-0 items-center"
                       aria-label="Opened from a fork"
                     />
                   }
@@ -363,6 +405,25 @@ export function PullRequestOverview({
                 </TooltipTrigger>
                 <TooltipContent>Opened from a fork</TooltipContent>
               </Tooltip>
+            )}
+          </div>
+          {/* The size of the thing, on one line under the branches. These
+              were rows in Details before, which spent a hairline-separated
+              band on two facts that are one glance — and pushed the
+              description off the bottom of a column that had said almost
+              nothing yet. The checks stay out of it: they have their own row
+              directly below, and a verdict said twice is a verdict read
+              neither time. */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 type-meta text-muted-foreground">
+            {pull.changedFiles > 0 && (
+              <span className="tabular-nums">
+                {pull.changedFiles} file{pull.changedFiles === 1 ? "" : "s"}{" "}
+                <span className="text-success">+{pull.additions}</span>{" "}
+                <span className="text-destructive">−{pull.deletions}</span>
+              </span>
+            )}
+            {pull.createdAt.length > 0 && (
+              <span>opened {timeAgo(pull.createdAt)} ago</span>
             )}
           </div>
         </header>
@@ -460,6 +521,31 @@ export function PullRequestOverview({
                   : `Fetch ${pull.headRef} from origin and check it out. An existing local branch is fast-forwarded, never reset.`}
             </TooltipContent>
           </Tooltip>
+          {/* Closing is the one thing in this row that takes the pull request
+              away rather than doing something with it, so it keeps the quiet
+              icon face the GitHub link has and says so only on hover, where
+              the red is a warning rather than a fourth thing competing for
+              the row. It is confirmed like the merge is, for the same reason:
+              everyone else sees it happen. */}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Close #${pull.number} without merging`}
+                  disabled={closing || merging}
+                  onClick={() => setConfirmingClose(true)}
+                  className="text-muted-foreground hover:text-destructive"
+                />
+              }
+            >
+              <IconGitPullRequestClosed className="size-3.5" />
+            </TooltipTrigger>
+            <TooltipContent>
+              {closing ? "Closing…" : `Close #${pull.number} without merging.`}
+            </TooltipContent>
+          </Tooltip>
           {/* An anchor wearing the button's face rather than a Button
               rendering an anchor: this navigates, so it should be a link the
               browser knows how to open in a window of its own. It sits with
@@ -489,7 +575,7 @@ export function PullRequestOverview({
         </div>
 
         {(blocked !== null || headline !== null) && (
-          <Section legend="Status">
+          <section className="border-t p-3">
             {/* The blocker gets a line of prose rather than only the icon it
                 shares with the picker: this is the pane you are in when you
                 find out, and "why" is the next thing you would ask. */}
@@ -500,125 +586,120 @@ export function PullRequestOverview({
               </p>
             )}
 
+            {/* The verdict is the row; the runs behind it are what you open
+                when the verdict is not enough. Green folds itself away — a
+                red or still-running one opens, because that is the one you
+                came here to read. */}
             {headline !== null && (
-              <>
-                <Row
-                  lead={<ChecksIcon pull={pull} />}
-                  label={<span className="text-foreground">{headline}</span>}
-                  value={
-                    <span className="text-muted-foreground tabular-nums">
-                      {tally}
-                    </span>
-                  }
-                />
-                {orderedChecks.slice(0, CHECKS_SHOWN).map((check) => (
-                  <Row
-                    key={`${check.name}-${check.url}`}
-                    lead={
-                      <span
-                        className={cn(
-                          "size-1.5 shrink-0 translate-y-[-2px] rounded-full",
-                          CHECK_DOT[check.state]
-                        )}
-                      />
-                    }
-                    label={
-                      check.url.length > 0 ? (
+              <details
+                open={counts.failed > 0 || counts.pending > 0}
+                className="group"
+              >
+                <summary className="flex cursor-pointer list-none items-center gap-2 type-xs select-none [&::-webkit-details-marker]:hidden">
+                  <ChecksIcon pull={pull} />
+                  <span className="min-w-0 flex-1 truncate">{headline}</span>
+                  <span className="type-meta text-muted-foreground tabular-nums">
+                    {tally}
+                  </span>
+                  <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
+                </summary>
+                {/* The list hangs on the summary's own two edges: `CheckDot`
+                    holds the icon's width on the left, and the strip the
+                    chevron occupies is kept clear on the right, so names line
+                    up under the headline and verdicts under the tally. */}
+                <div className="mt-1.5 pr-5.5">
+                  {orderedChecks.slice(0, CHECKS_SHOWN).map((check) => (
+                    <Row
+                      key={`${check.name}-${check.url}`}
+                      lead={<CheckDot state={check.state} />}
+                      label={
+                        check.url.length > 0 ? (
+                          <a
+                            href={check.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-link hover:underline"
+                          >
+                            {check.name}
+                          </a>
+                        ) : (
+                          check.name
+                        )
+                      }
+                      value={
+                        <span className="type-meta text-muted-foreground">
+                          {CHECK_WORD[check.state]}
+                        </span>
+                      }
+                    />
+                  ))}
+                  {counts.total > CHECKS_SHOWN && (
+                    <Row
+                      lead={<span className="w-3.5 shrink-0" />}
+                      label={
                         <a
-                          href={check.url}
+                          href={`${pull.url}/checks`}
                           target="_blank"
                           rel="noreferrer"
                           className="text-link hover:underline"
                         >
-                          {check.name}
+                          {counts.total - CHECKS_SHOWN} more on GitHub
                         </a>
-                      ) : (
-                        check.name
-                      )
-                    }
-                    value={
-                      <span className="type-meta text-muted-foreground">
-                        {CHECK_WORD[check.state]}
-                      </span>
-                    }
-                  />
+                      }
+                      value={null}
+                    />
+                  )}
+                </div>
+              </details>
+            )}
+          </section>
+        )}
+
+        {hasDetails && (
+          <Section legend="Details">
+            {pull.assignees.length > 0 && (
+              <Row
+                label="Assignees"
+                wrap
+                value={<People people={pull.assignees} />}
+              />
+            )}
+            {pull.reviewers.length > 0 && (
+              <Row
+                label="Reviewers"
+                wrap
+                value={<People people={pull.reviewers} />}
+              />
+            )}
+            {pull.labels.length > 0 && (
+              <Row
+                label="Labels"
+                wrap
+                value={pull.labels.map((label) => (
+                  <Badge
+                    key={label.name}
+                    variant="outline"
+                    className="h-[18px] px-1.5 type-meta font-normal"
+                    style={labelStyle(label.color)}
+                  >
+                    {label.name}
+                  </Badge>
                 ))}
-                {counts.total > CHECKS_SHOWN && (
-                  <Row
-                    label={
-                      <a
-                        href={`${pull.url}/checks`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-link hover:underline"
-                      >
-                        {counts.total - CHECKS_SHOWN} more on GitHub
-                      </a>
-                    }
-                    value={null}
-                  />
-                )}
-              </>
+              />
             )}
           </Section>
         )}
 
-        <Section legend="Details">
-          {pull.assignees.length > 0 && (
-            <Row
-              label="Assignees"
-              wrap
-              value={<People people={pull.assignees} />}
-            />
-          )}
-          {pull.reviewers.length > 0 && (
-            <Row
-              label="Reviewers"
-              wrap
-              value={<People people={pull.reviewers} />}
-            />
-          )}
-          {pull.labels.length > 0 && (
-            <Row
-              label="Labels"
-              wrap
-              value={pull.labels.map((label) => (
-                <Badge
-                  key={label.name}
-                  variant="outline"
-                  className="h-[18px] px-1.5 type-meta font-normal"
-                  style={labelStyle(label.color)}
-                >
-                  {label.name}
-                </Badge>
-              ))}
-            />
-          )}
-          {pull.changedFiles > 0 && (
-            <Row
-              label="Changes"
-              value={
-                <span className="tabular-nums">
-                  {pull.changedFiles} file{pull.changedFiles === 1 ? "" : "s"}{" "}
-                  <span className="text-success">+{pull.additions}</span>{" "}
-                  <span className="text-destructive">−{pull.deletions}</span>
-                </span>
-              }
-            />
-          )}
-          {pull.createdAt.length > 0 && (
-            <Row label="Opened" value={`${timeAgo(pull.createdAt)} ago`} />
-          )}
-        </Section>
-
         {/* The one place in the column made of sentences rather than labels,
-            so the one place that reads at `type-body`'s weight. */}
+            so the one place that reads at `type-body`'s weight — and the one
+            place that goes without a legend, because prose under a caption
+            reads as a field rather than as what the author wrote. */}
         {pull.body.trim().length > 0 && (
-          <Section legend="Description" className="pb-6">
+          <section className="border-t p-3 pb-6">
             <div className="markdown min-w-0 type-body">
               <ChatMarkdown text={pull.body} />
             </div>
-          </Section>
+          </section>
         )}
       </ScrollArea>
 
@@ -651,6 +732,30 @@ export function PullRequestOverview({
             </DialogClose>
             <Button onClick={() => runMerge(confirming ?? "merge")}>
               Merge
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Closing is undone by reopening it on GitHub rather than by anything
+          here, and the branch it was opened from is untouched either way —
+          which is the pair of facts that decide whether to go through with
+          it, so it is the pair the confirmation says. */}
+      <Dialog open={confirmingClose} onOpenChange={setConfirmingClose}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Close #{pull.number} without merging?</DialogTitle>
+            <DialogDescription>
+              {pull.headRef} keeps its commits and stays where it is. Reopening
+              #{pull.number} is done on GitHub.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose render={<Button variant="ghost" />}>
+              Cancel
+            </DialogClose>
+            <Button variant="destructive" onClick={runClose}>
+              Close pull request
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -24,24 +24,31 @@ export const TAB_STRIP = "flex min-w-0 items-center gap-1 overflow-x-auto";
 export function TabClose({
   label,
   active,
+  dirty = false,
   onClose,
-  children,
 }: {
   readonly label: string;
   readonly active: boolean;
+  /** An unsaved buffer takes the slot as a dot, and gives it back on hover. */
+  readonly dirty?: boolean;
   readonly onClose: () => void;
-  /** Sits under the ✕ and shows through until the tab is hovered or active. */
-  readonly children?: React.ReactNode;
 }) {
   return (
     <span className="relative flex size-[1.125rem] shrink-0 items-center justify-center">
-      {children}
+      {dirty && (
+        <span
+          aria-label="Unsaved changes"
+          className="size-1.5 rounded-full bg-primary group-hover/tab:opacity-0"
+        />
+      )}
       <button
         type="button"
         aria-label={label}
         className={cn(
           "absolute inset-0 flex items-center justify-center rounded hover:bg-elevate-strong",
-          active ? "opacity-70" : "opacity-0 group-hover/tab:opacity-70"
+          active && !dirty
+            ? "opacity-70"
+            : "opacity-0 group-hover/tab:opacity-70"
         )}
         onClick={(event) => {
           event.stopPropagation();

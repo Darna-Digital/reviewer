@@ -211,6 +211,21 @@ export function useGitActions() {
         return { output: message };
       }),
 
+    /**
+     * Close a pull request without merging it. Nothing local changes — the
+     * branch and its commits stay where they are — but the pull request is
+     * gone from everyone else's list too, so the caller confirms first.
+     */
+    closePull: (pullNumber: number) =>
+      fns.runOp(`Closed #${pullNumber}`, async () => {
+        const { message } = await unwrap(
+          fetchClient.POST("/api/github/pulls/{number}/close", {
+            params: { path: { number: String(pullNumber) } },
+          })
+        );
+        return { output: message };
+      }),
+
     checkoutAndUpdate: async (branch: string) => {
       try {
         await unwrap(fetchClient.POST("/api/checkout", { body: { branch } }));

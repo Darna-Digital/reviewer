@@ -1,8 +1,4 @@
-import {
-  IconAlertTriangle,
-  IconLayoutColumns,
-  IconLayoutRows,
-} from "@tabler/icons-react";
+import { IconLayoutColumns, IconLayoutRows } from "@tabler/icons-react";
 import {
   Tooltip,
   TooltipContent,
@@ -104,16 +100,17 @@ const OPTIONS = [
   },
 ] as const;
 
+const NO_ROOM_LABEL = "Horizontal mode needs more screen space";
+
 interface DiffStyleToggleProps {
   value: DiffStyle;
   onChange: (style: DiffStyle) => void;
 }
 
 export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
-  // The pane lays a diff out inline when it is too narrow for two columns. The
-  // choice is still horizontal — widening the window brings it back — so the
-  // toggle keeps pointing at it and says why it is not getting it, rather than
-  // silently moving to the other option and losing what was asked for.
+  // The pane cannot lay two columns out below a certain width, so horizontal is
+  // off the table until there is room: the option goes disabled and the diff
+  // falls to vertical, and both come back on their own once the pane grows.
   const narrowed = useDiffNarrowed();
   const active = narrowed && value === "split" ? "unified" : value;
   const activeIndex = OPTIONS.findIndex((option) => option.value === active);
@@ -125,66 +122,61 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
         className="absolute top-0.5 left-0.5 size-6 rounded-[6px] bg-secondary transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
         style={{ transform: `translateX(${activeIndex * 100}%)` }}
       />
-      {OPTIONS.map((option) => (
-        <Tooltip key={option.value}>
-          <TooltipTrigger
-            render={
-              <button
-                type="button"
-                aria-label={
-                  narrowed && option.value === "split"
-                    ? `${option.label} diff layout — not enough space`
-                    : `${option.label} diff layout`
-                }
-                aria-pressed={value === option.value}
-                onClick={() => onChange(option.value)}
+      {OPTIONS.map((option) => {
+        const outOfRoom = narrowed && option.value === "split";
+        return (
+          <Tooltip key={option.value}>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label={
+                    outOfRoom ? NO_ROOM_LABEL : `${option.label} diff layout`
+                  }
+                  aria-pressed={value === option.value}
+                  // Kept clickable to the pointer so the tooltip can explain
+                  // itself; a natively disabled button swallows the hover.
+                  aria-disabled={outOfRoom || undefined}
+                  onClick={() => {
+                    if (!outOfRoom) {
+                      onChange(option.value);
+                    }
+                  }}
+                  className={cn(
+                    "relative flex size-6 items-center justify-center rounded-[6px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                    active === option.value
+                      ? "text-secondary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                    outOfRoom &&
+                      "cursor-default text-muted-foreground/40 hover:text-muted-foreground/40"
+                  )}
+                />
+              }
+            >
+              <option.icon className="size-3.5" />
+            </TooltipTrigger>
+            {outOfRoom ? (
+              <TooltipContent side="bottom">{NO_ROOM_LABEL}</TooltipContent>
+            ) : (
+              <TooltipContent
+                side="bottom"
                 className={cn(
-                  "relative flex size-6 items-center justify-center rounded-[6px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                  active === option.value
-                    ? "text-secondary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                  // The choice that is being withheld. Dimmed rather than
-                  // disabled: it is still what the reader wants, and it comes
-                  // back on its own the moment the pane is wide enough.
-                  narrowed &&
-                    option.value === "split" &&
-                    "text-amber-600/70 dark:text-amber-400/70"
+                  "flex-col items-stretch gap-1.5 rounded-xl p-2",
+                  option.width
                 )}
-              />
-            }
-          >
-            <option.icon className="size-3.5" />
-          </TooltipTrigger>
-          <TooltipContent
-            side="bottom"
-            className={cn(
-              "flex-col items-stretch gap-1.5 rounded-xl p-2",
-              option.width
-            )}
-          >
-            <option.preview />
-            <div className="flex flex-col gap-0.5 px-0.5">
-              <span>{option.label}</span>
-              <span className="font-normal text-muted-foreground">
-                {option.detail}
-              </span>
-              {/* Only under Horizontal, and only while it is the one that
-                  cannot be given: this is the answer to "I picked that, why am
-                  I not looking at it". */}
-              {narrowed && option.value === "split" && (
-                <span className="mt-1 flex items-start gap-1.5 font-normal text-amber-600 dark:text-amber-400">
-                  <IconAlertTriangle className="mt-px size-3 shrink-0" />
-                  <span className="text-pretty">
-                    Not enough space to fit both sides — showing the diff
-                    vertically until there is more room. Widen the window, or a
-                    side column, to get it back.
+              >
+                <option.preview />
+                <div className="flex flex-col gap-0.5 px-0.5">
+                  <span>{option.label}</span>
+                  <span className="font-normal text-muted-foreground">
+                    {option.detail}
                   </span>
-                </span>
-              )}
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      ))}
+                </div>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        );
+      })}
     </div>
   );
 }

@@ -61,21 +61,23 @@ import {
   type BarShortcut,
 } from "@/components/layout/window-bar.shortcuts";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
-import { UserMenu } from "@/components/layout/user-menu";
 import {
   closeTabOverview,
   toggleTabOverview,
   useTabOverview,
 } from "@/interactions/tab-preview/adapters/tab-overview.store";
-import { setProjectPickerOpen } from "@/interactions/workspace/adapters/project-picker.store";
+import {
+  setProjectPickerOpen,
+  useProjectPickerOpen,
+} from "@/interactions/workspace/adapters/project-picker.store";
+import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
 import { ROW_TOOLTIP_PLACEMENT } from "@/components/ui/truncated-text";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
 import { openSearch } from "@/interactions/search/adapters/search.store";
 import { useThinkingChatIds } from "@/interactions/chats/adapters/thinking-chats.hook.adapter";
 import { isDesktop } from "@/lib/desktop";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
-import { useRecentChats } from "@/lib/queries";
-import { shellRoute, showsProjectPicker } from "@/lib/shell-route";
+import { useRecentChats, useWorkspace } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { activeWorkMode } from "@/lib/work-mode";
@@ -98,6 +100,10 @@ const LEAD_GUTTER = "w-22";
 
 const sessionsEnabled = isFeatureEnabled("sessions-button");
 
+/** Stay on the page the project was switched from, now scoped to the new one. */
+const stayPut = () => {};
+
+const PROJECT_PICKER_KEYS = "⌘⇧P";
 const MODE_KEYS = "⌘G";
 const NEW_SESSION_KEYS = "⌘T";
 const LAUNCHPAD_KEYS = "⌘L";
@@ -295,11 +301,8 @@ export function WindowBar() {
   const prefs = useUiPrefs();
   const inCodeMode =
     activeWorkMode(location.pathname, prefs.workMode) === "code";
-  // The project chip is the header's now, beside the branch it names, so the
-  // chord that raises it only answers on the pages that carry one.
-  const pickerShown = showsProjectPicker(
-    shellRoute(location.pathname, prefs.workMode)
-  );
+  const workspace = useWorkspace();
+  const pickerOpen = useProjectPickerOpen();
   // Both panes are there to be read against something else the window is
   // showing, and in the native shell there is always something — the browser
   // pane is a window of its own, and an analysis is opened from either mode. A
@@ -380,7 +383,7 @@ export function WindowBar() {
         case "launchpad":
           return toggleTabOverview();
         case "project-picker":
-          return pickerShown ? setProjectPickerOpen(true) : undefined;
+          return setProjectPickerOpen(true);
         case "pane":
           return togglePane(shortcut.pane);
         case "mode": {
@@ -442,6 +445,22 @@ export function WindowBar() {
       <BarButton label="Forward" onClick={() => router.history.forward()}>
         <IconArrowRight className="size-5" />
       </BarButton> */}
+
+        {/* The project the window is on leads the strip: every tab behind it is
+            a place within that project, so the chip names them all rather than
+            being one more thing on the page under them. Switching project keeps
+            a session or a board where it is; on the code surfaces it lands in
+            the arriving project's tree, as it always has. */}
+        <div className={cn("flex min-w-0 shrink-0", NO_DRAG)}>
+          <ProjectPicker
+            workspace={workspace.data}
+            open={pickerOpen}
+            onOpenChange={setProjectPickerOpen}
+            onChosen={inCodeMode ? undefined : stayPut}
+            onWindowBar
+            tooltip={<BarLabel label="Projects" keys={PROJECT_PICKER_KEYS} />}
+          />
+        </div>
 
         <div
           role="tablist"
@@ -681,7 +700,6 @@ export function WindowBar() {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        <UserMenu className={NO_DRAG} />
         <div aria-hidden className="w-2 shrink-0" />
       </div>
     </header>

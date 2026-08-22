@@ -64,7 +64,7 @@ function StatusIcon({ status }: { status: WorkStep["status"] }) {
 function Payload({ title, body }: { title: string; body: string }) {
   return (
     <div className="flex min-w-0 flex-col gap-1">
-      <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+      <span className="text-[10px] font-medium text-muted-foreground">
         {title}
       </span>
       <pre className="overflow-hidden rounded-md bg-muted px-2.5 py-2 text-[11px] leading-relaxed break-words whitespace-pre-wrap">

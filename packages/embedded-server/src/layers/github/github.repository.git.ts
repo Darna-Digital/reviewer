@@ -219,9 +219,40 @@ export const makeGitHubProvider = Effect.gen(function* () {
       };
     });
 
+  /**
+   * Close the pull request without merging it.
+   *
+   * GitHub answers with the pull request itself rather than with a verdict, so
+   * the answer is the state it comes back in — anything but `closed` means the
+   * call did not do what was asked (a merged pull request cannot be closed),
+   * and that is a failure rather than a success with a caveat in it.
+   */
+  const closePull: GitProviderShape["closePull"] = (pullNumber) =>
+    Effect.gen(function* () {
+      const { owner, repo } = yield* gh.repo;
+      const closed = (yield* gh.patchJson(
+        `/repos/${owner}/${repo}/pulls/${pullNumber}`,
+        { state: "closed" }
+      )) as { state?: unknown; merged?: unknown };
+      const state =
+        closed.merged === true
+          ? "merged"
+          : typeof closed.state === "string"
+            ? closed.state
+            : "unknown";
+      return state === "closed"
+        ? { message: `Closed #${pullNumber}` }
+        : yield* Effect.fail(
+            new GitProviderError({
+              reason: `GitHub left #${pullNumber} ${state}`,
+            })
+          );
+    });
+
   return {
     pulls,
     mergePull,
+    closePull,
     pullDiff,
     pullComments,
     createPullComment,

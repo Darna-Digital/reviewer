@@ -135,6 +135,15 @@ export const MergeResult = Schema.Struct({
 });
 export type MergeResult = typeof MergeResult.Type;
 
+/**
+ * The outcome of closing a pull request without merging it. Only the sentence
+ * to show for it: GitHub answers a close with the whole pull request, and the
+ * one thing in it worth carrying back is whether it is shut — which a refusal
+ * says by failing rather than by a field the caller has to remember to read.
+ */
+export const CloseResult = Schema.Struct({ message: Schema.String });
+export type CloseResult = typeof CloseResult.Type;
+
 export const PullNumberParam = Schema.Struct({ number: Schema.String });
 export const PullReplyParams = Schema.Struct({
   number: Schema.String,
@@ -186,6 +195,9 @@ export interface GitProviderShape {
     pullNumber: number,
     method: MergeMethod
   ) => Effect.Effect<MergeResult, GitProviderError>;
+  readonly closePull: (
+    pullNumber: number
+  ) => Effect.Effect<CloseResult, GitProviderError>;
 }
 
 export class GitProvider extends Context.Service<
@@ -224,6 +236,8 @@ export const GitProviderMemory = (
           sha: "merged1",
           message: `Pull Request successfully merged (#${pullNumber})`,
         }),
+      closePull: (pullNumber) =>
+        Effect.succeed({ message: `Closed #${pullNumber}` }),
       replyToPullComment: (input) =>
         Effect.succeed({
           id: "gh-reply",

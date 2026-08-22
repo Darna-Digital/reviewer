@@ -62,6 +62,12 @@ interface ProjectPickerProps {
   /** Which way the popover opens — "top" for a bar pinned to the bottom. */
   side?: "top" | "bottom";
   /**
+   * Set on the window bar, where the chip is sized to the tab strip it leads
+   * rather than to the header row it used to sit in: the strip's type, the
+   * strip's inset, and a mark the size of a tab's icon.
+   */
+  onWindowBar?: boolean;
+  /**
    * A `TooltipContent` for the chip, so a row that labels its controls can
    * label this one the same way. It is held back while the dropdown is up,
    * which is what the chip has to say by then.
@@ -76,6 +82,12 @@ const rowClass =
 const sectionLabelClass = "px-2.5 pt-2 pb-1 text-xs text-muted-foreground";
 
 const emptyClass = "px-2.5 py-6 text-center text-sm text-muted-foreground";
+
+/**
+ * Rows are two lines tall, so their hover fills sit close enough to read as one
+ * block; the gap matches the padding the list already keeps at its edges.
+ */
+const listClass = "flex flex-col gap-1 p-1";
 
 /**
  * The list scrolls at a few rows rather than running the popover down the
@@ -148,6 +160,7 @@ export function ProjectPicker({
   onOpenChange,
   onChosen,
   side,
+  onWindowBar,
   tooltip,
 }: ProjectPickerProps) {
   const navigate = useNavigate();
@@ -209,13 +222,21 @@ export function ProjectPicker({
     <Button
       variant="ghost"
       size="chip"
-      className="max-w-56 gap-2 px-2 py-1.5"
+      className={cn(
+        "max-w-56 gap-2 px-2 py-1.5",
+        onWindowBar && "max-w-44 gap-1.5 py-0 pr-1.5 pl-2 text-[0.8125rem]"
+      )}
     />
   );
 
   const chipContent = (
     <>
-      {projectName !== null && <ProjectAvatar name={projectName} />}
+      {projectName !== null && (
+        <ProjectAvatar
+          name={projectName}
+          className={onWindowBar ? "size-4" : undefined}
+        />
+      )}
       {projectName === null && (
         <IconFolder className="size-3.5 shrink-0 text-muted-foreground" />
       )}
@@ -259,7 +280,7 @@ export function ProjectPicker({
             </div>
 
             <ScrollArea className={listHeight}>
-              <div className="p-1">
+              <div className={listClass}>
                 {filteredRecents.length > 0 && (
                   <div className={sectionLabelClass}>Recent</div>
                 )}
@@ -292,7 +313,7 @@ export function ProjectPicker({
               </div>
             </ScrollArea>
 
-            <div className="shrink-0 border-t p-1">
+            <div className={cn("shrink-0 border-t", listClass)}>
               {isDesktop && (
                 <button
                   type="button"
@@ -347,7 +368,7 @@ export function ProjectPicker({
             </div>
 
             <ScrollArea className={listHeight}>
-              <div className="p-1">
+              <div className={listClass}>
                 {browse.isPending && (
                   <div className="px-2 py-3">
                     <LoadingCursor label="Loading folders…" />
@@ -421,7 +442,7 @@ export function ProjectPicker({
             </ScrollArea>
 
             {data !== undefined && isOpenable(data) && (
-              <div className="shrink-0 border-t p-1">
+              <div className={cn("shrink-0 border-t", listClass)}>
                 <PathRow
                   icon={
                     data.isGitRepo ? (

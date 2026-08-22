@@ -1090,6 +1090,7 @@ export function CodeWorkspace() {
               await git.checkoutPull(p.number, branch);
             }}
             onMerge={(p, method) => git.mergePull(p.number, method)}
+            onClose={(p) => git.closePull(p.number)}
             onBack={() => void navigate({ to: "/modes/code/review" })}
             treeVisible={prefs.reviewTreeVisible}
             onToggleTree={() =>

@@ -1,6 +1,7 @@
 import * as Schema from "effect/Schema";
 import { ReviewComment } from "@byconvo/core/comments";
 import {
+  CloseResult,
   GitProviderError,
   MergePullRequest,
   MergeResult,
@@ -25,6 +26,13 @@ export class GitHubApi extends HttpApiGroup.make("github")
       params: PullNumberParam,
       payload: MergePullRequest,
       success: MergeResult,
+      error: GitProviderError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("closePull", "/github/pulls/:number/close", {
+      params: PullNumberParam,
+      success: CloseResult,
       error: GitProviderError,
     })
   )

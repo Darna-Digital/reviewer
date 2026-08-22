@@ -45,7 +45,6 @@ import {
   useFileEditing,
   type SelectionActionContext,
 } from "@/components/editor/use-file-editing";
-import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
 import { useFile } from "@/lib/queries";
@@ -78,9 +77,9 @@ interface CodeViewProps {
   /** Whether this file has unsaved changes — the tab strip shows a marker. */
   onDirtyChange?: (dirty: boolean) => void;
   /**
-   * Where this file's own controls (Save, Done, the problem count) render —
-   * the end of the tab strip above the view, so the file and everything acting
-   * on it stay on one line. Omit to leave the file without them.
+   * Where this file's own readouts — the mode line, the problem count — render.
+   * Saving is not among them: an unsaved buffer says so on its tab, and ⌘S
+   * writes it, as in any editor. Omit to leave the file without them.
    */
   actionsSlot?: HTMLElement | null;
   /**
@@ -460,18 +459,6 @@ export function CodeView({
             <>
               {vim.status}
               <DiagnosticsSummary counts={language.counts} />
-              {/* Nothing to switch into and nothing to leave: the file is
-                  editable, and the only thing worth a button is the one action
-                  with a consequence. ⌘S does the same. */}
-              {buffer.dirty && (
-                <Button
-                  size="xs"
-                  disabled={buffer.saving}
-                  onClick={buffer.save}
-                >
-                  {buffer.saving ? "Saving…" : "Save"}
-                </Button>
-              )}
             </>,
             actionsSlot
           )}

@@ -23,6 +23,13 @@ export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
         )
       )
     )
+    .handle("closePull", ({ params }) =>
+      pullNumber(params.number).pipe(
+        Effect.flatMap((n) =>
+          Effect.flatMap(GitProvider, (s) => s.closePull(n))
+        )
+      )
+    )
     .handle("pullDiff", ({ params }) =>
       pullNumber(params.number).pipe(
         Effect.flatMap((n) => Effect.flatMap(GitProvider, (s) => s.pullDiff(n)))
