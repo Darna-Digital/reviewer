@@ -632,11 +632,7 @@ export function WindowBar() {
           })}
         </div>
         {sessionsEnabled && (
-          <BarButton
-            label="New session"
-            keys={NEW_SESSION_KEYS}
-            onClick={mint}
-          >
+          <BarButton label="New session" keys={NEW_SESSION_KEYS} onClick={mint}>
             <IconPlus className="size-4" />
           </BarButton>
         )}
