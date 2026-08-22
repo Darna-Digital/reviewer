@@ -131,7 +131,7 @@ export function NewTaskButton() {
     reset();
     setOpen(false);
     void navigate({
-      to: "/modes/collaboration",
+      to: "/modes/experimentation/collaboration",
       search: { view: "task", id: task.id },
     });
   };

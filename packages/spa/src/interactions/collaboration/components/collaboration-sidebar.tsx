@@ -161,7 +161,7 @@ function TreeRow({
   );
 }
 
-const INBOX_HREF = "/modes/collaboration/inbox";
+const INBOX_HREF = "/modes/experimentation/collaboration/inbox";
 
 const HEAD_ROW =
   "flex h-6 items-center gap-1.5 rounded-md px-1.5 text-[0.6875rem] font-medium outline-none focus-visible:ring-3 focus-visible:ring-ring/30";
@@ -194,7 +194,7 @@ function WorkspaceRows({
         <UnreadCount count={UNREAD_COUNT} />
       </Link>
       <Link
-        to="/modes/collaboration"
+        to="/modes/experimentation/collaboration"
         search={{ view: "outlook", id: DEFAULT_SCOPE }}
         className={cn(
           HEAD_ROW,
@@ -228,7 +228,7 @@ function ProjectBranchRows({
         depth={0}
         icon={projectMark(project)}
         label={project.name}
-        to="/modes/collaboration"
+        to="/modes/experimentation/collaboration"
         search={{ view: "project", id: project.id }}
         active={isActive("project", project.id)}
         expanded={expanded}
@@ -242,7 +242,7 @@ function ProjectBranchRows({
               <IconTimeline className="size-4 shrink-0 text-muted-foreground" />
             }
             label="Flow"
-            to="/modes/collaboration"
+            to="/modes/experimentation/collaboration"
             search={{ view: "flow", id: project.id }}
             active={isActive("flow", project.id)}
           />
@@ -252,7 +252,7 @@ function ProjectBranchRows({
               <IconCircleCheck className="size-4 shrink-0 text-muted-foreground" />
             }
             label="Tasks"
-            to="/modes/collaboration"
+            to="/modes/experimentation/collaboration"
             search={{ view: "tasks", id: project.id }}
             active={isActive("tasks", project.id)}
             trailing={<UnreadCount count={tasks.length} />}
@@ -274,7 +274,9 @@ export function CollaborationSidebar() {
   const [overrides, setOverrides] = useState<Record<string, boolean>>({});
   const { pathname, search } = useRouterState({ select: (s) => s.location });
 
-  const onCollaboration = pathname.startsWith("/modes/collaboration");
+  const onCollaboration = pathname.startsWith(
+    "/modes/experimentation/collaboration"
+  );
   const current = search as { view?: CollaborationView; id?: string };
   const view = current.view ?? DEFAULT_VIEW;
   const id = current.id ?? DEFAULT_ID;
@@ -339,7 +341,7 @@ export function CollaborationSidebar() {
                   depth={0}
                   icon={favorite.icon}
                   label={favorite.label}
-                  to="/modes/collaboration"
+                  to="/modes/experimentation/collaboration"
                   search={{ view: favorite.view, id: favorite.id }}
                   active={isActive(favorite.view, favorite.id)}
                 />

@@ -233,7 +233,7 @@ export function ChatView({ chat: initial }: { chat: MockChat }) {
           ) : (
             <Link
               key="project"
-              to="/modes/collaboration"
+              to="/modes/experimentation/collaboration"
               search={{ view: "project", id: project.id }}
               className="truncate text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
             >

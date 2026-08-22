@@ -1,7 +1,15 @@
+import type { ReviewComment } from "@byconvo/core/comments";
 import type {
   CommentsDependencies,
   CommentsFunctions,
 } from "../interfaces/comments.interfaces";
+
+/** GitHub's own id for a comment we hold as `gh-<id>`, or null for any other. */
+const githubCommentId = (comment: ReviewComment): number | null => {
+  if (comment.source !== "github") return null;
+  const id = Number(comment.id.replace(/^gh-/, ""));
+  return Number.isInteger(id) ? id : null;
+};
 
 export function createCommentsFunctions(
   d: CommentsDependencies
@@ -29,9 +37,14 @@ export function createCommentsFunctions(
     return d.sideEffects.updateLocalComment(comment.id, body);
   };
 
-  const remove: CommentsFunctions["remove"] = async (comment) => {
-    if (comment.source !== "local") return false;
-    await d.sideEffects.deleteComment(comment.id);
+  const remove: CommentsFunctions["remove"] = async (selectedPull, comment) => {
+    if (comment.source === "local") {
+      await d.sideEffects.deleteComment(comment.id);
+      return true;
+    }
+    const commentId = githubCommentId(comment);
+    if (selectedPull === null || commentId === null) return false;
+    await d.sideEffects.deletePullComment(selectedPull.number, commentId);
     return true;
   };
 
@@ -40,9 +53,8 @@ export function createCommentsFunctions(
     comment,
     body
   ) => {
-    if (selectedPull === null || comment.source !== "github") return null;
-    const commentId = Number(comment.id.replace(/^gh-/, ""));
-    if (!Number.isInteger(commentId)) return null;
+    const commentId = githubCommentId(comment);
+    if (selectedPull === null || commentId === null) return null;
     const created = await d.sideEffects.replyPullComment(
       selectedPull.number,
       commentId,

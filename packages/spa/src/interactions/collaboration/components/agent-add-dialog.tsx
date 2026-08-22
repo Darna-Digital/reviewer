@@ -162,7 +162,7 @@ export function AddAgentButton({ compact = false }: { compact?: boolean }) {
     setOpen(false);
     setDetail("");
     void navigate({
-      to: "/modes/collaboration",
+      to: "/modes/experimentation/collaboration",
       search: { view: "agents", id: agent.id },
     });
   };

@@ -33,6 +33,7 @@ export const createCommentsDependenciesMock = (): CommentsDependencies => ({
       comment({ id, body, source: "local" })
     ),
     deleteComment: vi.fn(async () => undefined),
+    deletePullComment: vi.fn(async () => undefined),
     replyPullComment: vi.fn(async (pullNumber, _commentId, body) =>
       comment({
         id: "pr-reply",

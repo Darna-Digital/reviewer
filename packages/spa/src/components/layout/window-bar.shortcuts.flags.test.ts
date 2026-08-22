@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import { PROJECT_TAB_ID } from "@/interactions/window-tabs/functions/window-tabs.functions";
 import { barShortcut } from "./window-bar.shortcuts";
 
 vi.mock("@byconvo/feature-flags", () => ({
@@ -16,17 +15,17 @@ const chord = (key: string) =>
   });
 
 describe("a switched-off sessions button", () => {
-  it("takes Sessions off ⌘2, as it is off the bar", () => {
-    expect(chord("2")).toBeNull();
-  });
-
-  it("takes minting a session off ⌘T with it", () => {
+  it("takes minting a session off ⌘T", () => {
     expect(chord("t")).toBeNull();
   });
 
-  it("leaves the digits either side of it where they are", () => {
-    expect(chord("1")).toEqual({ kind: "tab", tabId: PROJECT_TAB_ID });
-    expect(chord("3")).toEqual({ kind: "session", slot: 1 });
+  it("leaves the tabs on their digits, which are the strip's own", () => {
+    expect(chord("1")).toEqual({ kind: "session", slot: 1 });
+    expect(chord("2")).toEqual({ kind: "session", slot: 2 });
+  });
+
+  it("leaves ⌘G alone: the strip settles what there is to cross to", () => {
+    expect(chord("g")).toEqual({ kind: "mode" });
   });
 
   it("leaves the launchpad on ⌘L, which is nothing to do with sessions", () => {

@@ -7,6 +7,12 @@ import { GitProviderError } from "@byconvo/core/ports/git-provider";
 import { GitHubClient } from "./github-client.ts";
 import { diffFromPullFiles, parsePullFiles } from "./pull-files-diff.ts";
 import type { PullFileEntry } from "./pull-files-diff.ts";
+import {
+  PULLS_PER_PAGE,
+  PULLS_QUERY,
+  pullFromRest,
+  pullsFromGraphql,
+} from "./pull-request-mapping.ts";
 import type { ReviewComment } from "@byconvo/core/comments";
 import type {
   PullRequestInfo,
@@ -22,22 +28,46 @@ const isDiffTooLarge = (error: GitProviderError): boolean =>
 export const makeGitHubProvider = Effect.gen(function* () {
   const gh = yield* GitHubClient;
 
+  /**
+   * The plain listing. Always available — it is the one call that works without
+   * a token on a public repo — but it knows nothing about CI or conflicts.
+   */
+  const restPulls = Effect.gen(function* () {
+    const { owner, repo } = yield* gh.repo;
+    const data = yield* gh.getJson(
+      `/repos/${owner}/${repo}/pulls?state=open&per_page=${PULLS_PER_PAGE}`
+    );
+    if (!Array.isArray(data)) return [];
+    return (data as Array<Record<string, unknown>>).map((pr): PullRequestInfo =>
+      pullFromRest(pr)
+    );
+  });
+
+  /**
+   * Every open pull request with the parts the review pane decides by — CI on
+   * the head commit, whether it merges cleanly, who is on it — in one request.
+   *
+   * GraphQL is asked first and the listing is the fallback rather than the
+   * other way around, because the fallback is the lesser answer: a list that
+   * cannot say a pull request is blocked is still a usable list, and one that
+   * fails because there is no token is not.
+   */
   const pulls: GitProviderShape["pulls"] = Effect.gen(function* () {
     const { owner, repo } = yield* gh.repo;
-    const data = (yield* gh.getJson(
-      `/repos/${owner}/${repo}/pulls?state=open&per_page=50`
-    )) as any;
-    if (!Array.isArray(data)) return [];
-    return data.map((pr: any): PullRequestInfo => ({
-      number: pr.number,
-      title: pr.title ?? "",
-      author: pr.user?.login ?? "",
-      baseRef: pr.base?.ref ?? "",
-      headRef: pr.head?.ref ?? "",
-      headSha: pr.head?.sha ?? "",
-      url: pr.html_url ?? "",
-      updatedAt: pr.updated_at ?? "",
-    }));
+    return yield* gh
+      .graphql(PULLS_QUERY, { owner, repo, first: PULLS_PER_PAGE })
+      .pipe(
+        Effect.map(pullsFromGraphql),
+        Effect.catch((error) =>
+          Effect.gen(function* () {
+            yield* Effect.logInfo(
+              `GitHub GraphQL is unavailable (${error.reason}); ` +
+                "listing pull requests over REST without CI or merge status."
+            );
+            return yield* restPulls;
+          })
+        )
+      );
   });
 
   const pullFiles = (owner: string, repo: string, pullNumber: number) =>
@@ -164,11 +194,86 @@ export const makeGitHubProvider = Effect.gen(function* () {
       } satisfies ReviewComment;
     });
 
+  /**
+   * Remove one review comment from the pull request.
+   *
+   * GitHub keys a review comment to the repository rather than to the pull
+   * request it hangs on, so the number the caller was looking at plays no part
+   * in the call — only in which list the answer belongs to. A comment somebody
+   * else wrote comes back 403, which reaches the reviewer as GitHub's own
+   * sentence about it rather than as a silent no-op.
+   */
+  const deletePullComment: GitProviderShape["deletePullComment"] = (input) =>
+    Effect.gen(function* () {
+      const { owner, repo } = yield* gh.repo;
+      yield* gh.deleteResource(
+        `/repos/${owner}/${repo}/pulls/comments/${input.commentId}`
+      );
+    });
+
+  /**
+   * Land the pull request on its base branch.
+   *
+   * GitHub answers a refusal with 405 (not mergeable — conflicts, a draft, a
+   * failing required check, a protection rule) or 409 (the head moved since
+   * the sha the caller was looking at). Both come back through `GitProviderError`
+   * carrying GitHub's own sentence, which says which of those it was far better
+   * than any wording of ours would.
+   */
+  const mergePull: GitProviderShape["mergePull"] = (pullNumber, method) =>
+    Effect.gen(function* () {
+      const { owner, repo } = yield* gh.repo;
+      const merged = (yield* gh.putJson(
+        `/repos/${owner}/${repo}/pulls/${pullNumber}/merge`,
+        { merge_method: method }
+      )) as { sha?: unknown; message?: unknown };
+      return {
+        sha: typeof merged.sha === "string" ? merged.sha : "",
+        message:
+          typeof merged.message === "string" && merged.message.length > 0
+            ? merged.message
+            : `Merged #${pullNumber}`,
+      };
+    });
+
+  /**
+   * Close the pull request without merging it.
+   *
+   * GitHub answers with the pull request itself rather than with a verdict, so
+   * the answer is the state it comes back in — anything but `closed` means the
+   * call did not do what was asked (a merged pull request cannot be closed),
+   * and that is a failure rather than a success with a caveat in it.
+   */
+  const closePull: GitProviderShape["closePull"] = (pullNumber) =>
+    Effect.gen(function* () {
+      const { owner, repo } = yield* gh.repo;
+      const closed = (yield* gh.patchJson(
+        `/repos/${owner}/${repo}/pulls/${pullNumber}`,
+        { state: "closed" }
+      )) as { state?: unknown; merged?: unknown };
+      const state =
+        closed.merged === true
+          ? "merged"
+          : typeof closed.state === "string"
+            ? closed.state
+            : "unknown";
+      return state === "closed"
+        ? { message: `Closed #${pullNumber}` }
+        : yield* Effect.fail(
+            new GitProviderError({
+              reason: `GitHub left #${pullNumber} ${state}`,
+            })
+          );
+    });
+
   return {
     pulls,
+    mergePull,
+    closePull,
     pullDiff,
     pullComments,
     createPullComment,
     replyToPullComment,
+    deletePullComment,
   } satisfies GitProviderShape;
 });

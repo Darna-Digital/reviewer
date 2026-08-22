@@ -12,7 +12,10 @@ import {
   reviewKey,
   worktreeState,
 } from "./reviews.functions";
-import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
+import {
+  unenrichedPull,
+  type PullRequestInfo,
+} from "@byconvo/core/ports/git-provider";
 import type { LocalTask } from "@byconvo/core/repo";
 
 const pull = (
@@ -20,6 +23,7 @@ const pull = (
   baseRef: string,
   updatedAt: string
 ): PullRequestInfo => ({
+  ...unenrichedPull,
   number,
   title: `PR ${number}`,
   author: "someone",

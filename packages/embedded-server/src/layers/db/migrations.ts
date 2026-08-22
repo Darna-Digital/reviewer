@@ -161,7 +161,62 @@ CREATE TABLE branch_target (
 );
 `;
 
+/**
+ * Collaboration — projects, the work under them, the notes beside them, and
+ * the things a person has starred.
+ *
+ * Four tables of the same document shape the rest of the file uses: the
+ * columns are what is queried (which repository a row belongs to, which
+ * project it hangs off, the timestamp it is listed by) and the document itself
+ * rides in `data`, decoded through `@byconvo/core/collab`'s own `Schema`.
+ *
+ * `project_id` is a column on todos and notes rather than only a field in the
+ * JSON because it is the one thing every read filters on — a project page asks
+ * for its own work, and nobody ever asks for every todo in a repository. It is
+ * not a foreign key: deleting a project sweeps its rows itself, in the same
+ * transaction, which keeps the delete readable at the call site rather than
+ * spread between here and there.
+ */
+const collabTables = `
+CREATE TABLE collab_project (
+  id         TEXT PRIMARY KEY,
+  repo_path  TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  data       TEXT NOT NULL
+);
+CREATE INDEX collab_project_repo ON collab_project (repo_path, created_at DESC);
+
+CREATE TABLE collab_todo (
+  id         TEXT PRIMARY KEY,
+  repo_path  TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  data       TEXT NOT NULL
+);
+CREATE INDEX collab_todo_repo ON collab_todo (repo_path, created_at);
+CREATE INDEX collab_todo_project ON collab_todo (repo_path, project_id);
+
+CREATE TABLE collab_note (
+  id         TEXT PRIMARY KEY,
+  repo_path  TEXT NOT NULL,
+  project_id TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  data       TEXT NOT NULL
+);
+CREATE INDEX collab_note_repo ON collab_note (repo_path, updated_at DESC);
+CREATE INDEX collab_note_project ON collab_note (repo_path, project_id);
+
+CREATE TABLE collab_bookmark (
+  id         TEXT PRIMARY KEY,
+  repo_path  TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  data       TEXT NOT NULL
+);
+CREATE INDEX collab_bookmark_repo ON collab_bookmark (repo_path, created_at DESC);
+`;
+
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { id: "0001_initial", up: (db) => db.exec(initial) },
   { id: "0002_branch_target", up: (db) => db.exec(branchTargets) },
+  { id: "0003_collab", up: (db) => db.exec(collabTables) },
 ];

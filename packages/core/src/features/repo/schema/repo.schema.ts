@@ -325,6 +325,18 @@ export type DiffFileContents = typeof DiffFileContents.Type;
 export const CommitParam = Schema.Struct({ sha: Schema.String });
 export const Checkout = Schema.Struct({ branch: Schema.String });
 export type Checkout = typeof Checkout.Type;
+/**
+ * Check out a pull request's head locally. The local branch name is the
+ * caller's to choose: a pull request from a fork must not be allowed to land on
+ * the branch of the same name here — see `localBranchForPull` in the app.
+ */
+export const CheckoutPull = Schema.Struct({
+  number: Schema.Number,
+  branch: Schema.String,
+});
+export type CheckoutPull = typeof CheckoutPull.Type;
+export const CheckedOutBranch = Schema.Struct({ branch: Schema.String });
+export type CheckedOutBranch = typeof CheckedOutBranch.Type;
 export const CommitBody = Schema.Struct({
   message: Schema.String,
   paths: Schema.optionalKey(Schema.Array(Schema.String)),

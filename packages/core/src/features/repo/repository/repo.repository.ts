@@ -68,6 +68,14 @@ export interface RepoRepo {
     prevPath: string | null
   ) => Effect.Effect<DiffFileContents, GitFailure>;
   readonly checkout: (branch: string) => Effect.Effect<void, GitFailure>;
+  /**
+   * Fetch a pull request's head from `origin` and land it on a local branch
+   * named `branch`, checked out. Answers the branch it left you on.
+   */
+  readonly checkoutPull: (
+    pullNumber: number,
+    branch: string
+  ) => Effect.Effect<string, GitFailure>;
   readonly createBranch: (
     name: string,
     startPoint: string | null

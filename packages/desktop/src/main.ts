@@ -20,6 +20,7 @@ import {
   ipcMain,
   net,
   nativeImage,
+  nativeTheme,
   protocol,
   shell,
 } from "electron";
@@ -73,12 +74,35 @@ const bundledServerEntry = app.isPackaged
 const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
 // The Byconvo brand logo, used for the window and the macOS dock icon so the
-// app no longer shows Electron's default icon. The artwork fills the whole
-// tile, matching the bundle `.icns` generated from the same source.
-// Resolved relative to `dist/` (../assets) so it works in packaged builds too.
-const brandIcon = nativeImage.createFromPath(
-  resolve(__dirname, "..", "assets", "byconvo-icon.png")
-);
+// app no longer shows Electron's default icon. Both variants are the `brand/`
+// square on the macOS icon grid — an 824px tile centred in a 1024px canvas, the
+// margin every other dock icon leaves — and differ only in whether the tile is
+// black with a white mark or white with a black one, so nothing moves or
+// resizes as the appearance flips. Resolved relative to `dist/` (../assets) so
+// dev and packaged builds load the same files.
+const brandIcons = {
+  dark: nativeImage.createFromPath(
+    resolve(__dirname, "..", "assets", "byconvo-icon-dark.png")
+  ),
+  light: nativeImage.createFromPath(
+    resolve(__dirname, "..", "assets", "byconvo-icon-light.png")
+  ),
+};
+
+const currentBrandIcon = () =>
+  nativeTheme.shouldUseDarkColors ? brandIcons.dark : brandIcons.light;
+
+/**
+ * The bundle `.icns` is baked at build time and can't follow the appearance, so
+ * the running app repaints its own dock tile and window icon instead — which is
+ * also what gives dev, where there is no bundle at all, the same icon.
+ */
+function applyBrandIcon(): void {
+  const icon = currentBrandIcon();
+  if (icon.isEmpty()) return;
+  if (process.platform === "darwin") app.dock?.setIcon(icon);
+  else for (const window of BrowserWindow.getAllWindows()) window.setIcon(icon);
+}
 
 let serverProcess: ChildProcess | null = null;
 
@@ -229,7 +253,7 @@ async function createWindow(): Promise<void> {
         }
       : {}),
     title: "Byconvo",
-    icon: brandIcon,
+    icon: currentBrandIcon(),
     titleBarStyle: "hiddenInset",
     // Measured off screenshots rather than reasoned about: macOS lands a 14px
     // light on an even pixel, snapping this inset down to reach one, so its
@@ -299,11 +323,8 @@ app.whenReady().then(async () => {
 
   if (!isDev) registerRendererProtocol();
 
-  // Packaged builds also carry the icon in the bundle `.icns` (CFBundleIconFile);
-  // setting it at runtime covers dev, where there is no bundle to fall back on.
-  if (process.platform === "darwin" && !brandIcon.isEmpty()) {
-    app.dock?.setIcon(brandIcon);
-  }
+  applyBrandIcon();
+  nativeTheme.on("updated", applyBrandIcon);
 
   try {
     await ensureServer();

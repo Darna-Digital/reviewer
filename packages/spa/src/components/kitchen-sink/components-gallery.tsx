@@ -313,7 +313,10 @@ export function ComponentsGallery() {
           </SpecimenRow>
         </Subsection>
 
-        <Subsection title="States">
+        <Subsection
+          title="States"
+          hint="Tab through the row to see focus. Nothing is drawn around the button — the accent blooms off its own shape and fades, and an invalid button blooms the same way in red, which outranks focus while it lasts."
+        >
           <SpecimenRow>
             <Specimen label="disabled">
               <Button disabled>Push</Button>

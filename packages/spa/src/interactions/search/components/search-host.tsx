@@ -12,6 +12,8 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
+import { selectedCodeText } from "@/interactions/find-in-file/adapters/code-selection.store";
+import { seedFromSelection } from "@/interactions/find-in-file/functions/find-in-file.functions";
 import {
   useBranches,
   useFiles,
@@ -44,7 +46,7 @@ interface FileLocation {
 export function SearchHost() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { open, mode } = useSearchState();
+  const { open, mode, seed } = useSearchState();
   const codeCommands = useCodeCommands();
   const pageCommands = useRegisteredCommands();
   // A multi-root project searches all of its roots, and names what it finds
@@ -86,13 +88,19 @@ export function SearchHost() {
       <SearchShortcuts
         onOpenCommands={toggleCommandSearch}
         onOpenFiles={() => openSearch("files")}
-        onOpenText={() => openSearch("text")}
+        // Whatever is highlighted — in the open file or on the page — is what
+        // the grep opens on, selected, so ⌘⇧F over a word searches for it and
+        // typing still replaces it.
+        onOpenText={() =>
+          openSearch("text", seedFromSelection(selectedCodeText()))
+        }
       />
       <SearchDialog
         open={open}
         mode={mode}
         onOpenChange={setSearchOpen}
         onModeChange={setSearchMode}
+        seed={seed}
         commands={commands}
         files={(multiRepo ? projectFiles.data?.paths : files.data?.paths) ?? []}
         scope={multiRepo ? "project" : "repo"}

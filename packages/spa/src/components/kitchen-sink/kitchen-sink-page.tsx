@@ -79,7 +79,10 @@ export function KitchenSinkPage() {
   const active = useVisibleSection();
 
   return (
-    <div className="isolate min-h-svh bg-background text-foreground">
+    /* The app shell locks `html, body` to the window height and hides their
+       overflow, so this page cannot ride the document scroll the way an
+       ordinary long page would — it has to be its own scrollport. */
+    <div className="isolate h-svh overflow-y-auto bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b border-foreground/10 bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex min-w-0 flex-1 items-center gap-2">

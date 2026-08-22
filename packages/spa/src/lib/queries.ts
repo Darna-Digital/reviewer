@@ -341,6 +341,50 @@ export const useDoc = (id: string | null) =>
 export const useTasks = () =>
   api.useQuery("get", "/api/tasks/board", {}, OWN_DATA);
 
+// --- Collaboration ---------------------------------------------------------
+// One hook per surface rather than one per table: each of these is a whole
+// screen's worth of answer, so a page never has to stitch two moments together.
+// See `collab.api` on the server for why the grouping is what it is.
+
+/** The projects home — every project, with how far through its work it is. */
+export const useCollabHome = () =>
+  api.useQuery("get", "/api/collab/home", {}, OWN_DATA);
+
+/** One project, with its own to-dos and notes beside it. */
+export const useCollabProject = (id: string | null) =>
+  api.useQuery(
+    "get",
+    "/api/collab/projects/{id}",
+    { params: { path: { id: id ?? "" } } },
+    { ...OWN_DATA, enabled: id !== null }
+  );
+
+/** The same work, dealt into the project's lists. */
+export const useCollabBoard = (id: string | null) =>
+  api.useQuery(
+    "get",
+    "/api/collab/projects/{id}/board",
+    { params: { path: { id: id ?? "" } } },
+    { ...OWN_DATA, enabled: id !== null }
+  );
+
+/** What the hovering bar's drawer shows: one person's work, notes and stars. */
+export const useCollabMine = (viewer: string) =>
+  api.useQuery(
+    "get",
+    "/api/collab/mine",
+    { params: { query: { viewer } } },
+    OWN_DATA
+  );
+
+export const useCollabNote = (id: string | null) =>
+  api.useQuery(
+    "get",
+    "/api/collab/notes/{id}",
+    { params: { path: { id: id ?? "" } } },
+    { ...OWN_DATA, enabled: id !== null }
+  );
+
 /** Saved Local Dev commands across the project's repos, with runtime status. */
 export const useDevCommands = () =>
   api.useQuery("get", "/api/local-dev/commands", {}, OWN_DATA);
@@ -354,8 +398,21 @@ export const useConflictBlobs = (path: string | null) =>
     { enabled: path !== null }
   );
 
+/**
+ * Every open pull request, with CI and mergeability on each.
+ *
+ * Unlike the other remote reads this one does refetch on focus: half of what it
+ * carries is about a build that is running somewhere else. A window left open
+ * beside a CI tab would otherwise keep saying a check is still going long after
+ * it went red, and a status light that stops moving stops being read.
+ */
 export const usePulls = (enabled: boolean) =>
-  api.useQuery("get", "/api/github/pulls", {}, { ...REMOTE, enabled });
+  api.useQuery(
+    "get",
+    "/api/github/pulls",
+    {},
+    { ...REMOTE, refetchOnWindowFocus: true, enabled }
+  );
 
 /**
  * A commit is immutable once it exists, so the one thing that could make this

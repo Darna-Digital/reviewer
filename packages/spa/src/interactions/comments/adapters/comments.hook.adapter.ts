@@ -70,6 +70,23 @@ export function useCommentsActions() {
               params: { path: { id } },
             });
           },
+          deletePullComment: async (pullNumber, commentId) => {
+            const { error } = await fetchClient.DELETE(
+              "/api/github/pulls/{number}/comments/{commentId}",
+              {
+                params: {
+                  path: {
+                    number: String(pullNumber),
+                    commentId: String(commentId),
+                  },
+                },
+              }
+            );
+            if (error)
+              throw new Error(
+                (error as { reason?: string }).reason ?? "failed to delete"
+              );
+          },
           replyPullComment: async (pullNumber, commentId, body) => {
             const { data, error } = await fetchClient.POST(
               "/api/github/pulls/{number}/comments/{commentId}/replies",
@@ -200,22 +217,33 @@ export function useCommentsActions() {
       }
     },
 
-    remove: async (comment: ReviewComment) => {
-      if (comment.source !== "local") return fns.remove(comment);
-      holdRefetches(localCommentsKey);
-      const before = edit(localCommentsKey, (list) =>
-        withoutComment(list, comment.id)
-      );
+    remove: async (
+      selectedPull: SubmitContext["selectedPull"],
+      comment: ReviewComment
+    ) => {
+      // A GitHub comment is removed from the list its pull request is keyed
+      // under, a local one from the worktree's list. With no pull request in
+      // hand there is nothing to delete a GitHub comment from, so the logic
+      // answers for it rather than a list being edited on a guess.
+      const pull = comment.source === "github" ? selectedPull : null;
+      if (comment.source === "github" && pull === null)
+        return fns.remove(selectedPull, comment);
+      const key =
+        pull === null ? localCommentsKey : pullCommentsKey(pull.number);
+      const path =
+        pull === null ? "/api/comments" : "/api/github/pulls/{number}/comments";
+      holdRefetches(key);
+      const before = edit(key, (list) => withoutComment(list, comment.id));
       try {
-        const removed = await fns.remove(comment);
-        void invalidate("/api/comments");
+        const removed = await fns.remove(selectedPull, comment);
+        void invalidate(path);
         return removed;
       } catch (error) {
         // Put it back, then reconcile: concurrent edits (assigning a review
         // removes every comment at once) can interleave, and only the server
         // knows what actually survived.
-        restore(localCommentsKey, before);
-        void invalidate("/api/comments");
+        restore(key, before);
+        void invalidate(path);
         throw error;
       }
     },

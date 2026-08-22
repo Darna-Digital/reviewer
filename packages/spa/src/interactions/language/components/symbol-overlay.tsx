@@ -63,7 +63,7 @@ function LocationRow({
           {preview}
         </span>
         {detail !== undefined && (
-          <span className="shrink-0 text-[10px] tracking-wide text-muted-foreground uppercase">
+          <span className="shrink-0 text-[10px] text-muted-foreground">
             {detail}
           </span>
         )}

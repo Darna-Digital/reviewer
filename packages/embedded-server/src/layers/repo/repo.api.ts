@@ -25,7 +25,9 @@ import {
   RemoteBranchInfo,
   RepoInfo,
   RepoStatus,
+  CheckedOutBranch,
   Checkout,
+  CheckoutPull,
   CommitBody,
   CommitParam,
   ConflictParam,
@@ -198,6 +200,13 @@ export class RepoApi extends HttpApiGroup.make("repo")
     HttpApiEndpoint.post("checkout", "/checkout", {
       payload: Checkout,
       success: Ok,
+      error: gitError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("checkoutPull", "/checkout-pull", {
+      payload: CheckoutPull,
+      success: CheckedOutBranch,
       error: gitError,
     })
   )

@@ -4,10 +4,12 @@ import { describe, expect } from "vitest";
 import {
   GitProvider,
   GitProviderMemory,
+  unenrichedPull,
   type PullRequestInfo,
 } from "./git-provider.ts";
 
 const pr = (number: number, title: string): PullRequestInfo => ({
+  ...unenrichedPull,
   number,
   title,
   author: "octocat",

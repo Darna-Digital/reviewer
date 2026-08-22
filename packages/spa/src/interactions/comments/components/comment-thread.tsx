@@ -9,7 +9,11 @@
  * the opening comment, and a muted "Add reply… / Resolve" action row. Built on
  * the shadcn primitives and theme tokens so it adapts to light & dark.
  */
-import { IconBrandGithub, IconCornerDownRight } from "@tabler/icons-react";
+import {
+  IconBrandGithub,
+  IconCornerDownRight,
+  IconTrash,
+} from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
@@ -115,16 +119,44 @@ export function CommentComposer({
   );
 }
 
+/**
+ * Take a comment off the pull request. Offered per comment rather than on the
+ * thread's action row, which acts on the thread as a whole: a GitHub thread is
+ * several people's comments stacked together, and "delete" there would not say
+ * whose. Kept quiet until the comment is under the cursor — a destructive
+ * control on every card, always lit, is louder than every comment it sits on.
+ */
+function DeleteCommentButton({ onDelete }: { onDelete: () => Promise<void> }) {
+  const [deleting, setDeleting] = useState(false);
+
+  return (
+    <button
+      type="button"
+      aria-label="Delete comment"
+      disabled={deleting}
+      onClick={() => {
+        setDeleting(true);
+        void onDelete().finally(() => setDeleting(false));
+      }}
+      className="ml-auto rounded-sm p-0.5 text-muted-foreground opacity-0 outline-offset-2 outline-ring transition group-hover/comment:opacity-100 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-2 disabled:opacity-40"
+    >
+      <IconTrash className="size-3.5" />
+    </button>
+  );
+}
+
 function CommentCard({
   comment,
   editing,
   onEdit,
   onCancelEdit,
+  onDelete,
 }: {
   comment: ReviewComment;
   editing: boolean;
   onEdit?: (body: string) => Promise<void>;
   onCancelEdit?: () => void;
+  onDelete?: () => Promise<void>;
 }) {
   if (editing && onEdit !== undefined && onCancelEdit !== undefined) {
     return (
@@ -154,12 +186,8 @@ function CommentCard({
   const pending = isOptimisticId(comment.id);
 
   return (
-    <div className={cn("flex gap-2.5", pending && "opacity-60")}>
-      <AuthorAvatar
-        author={comment.author}
-        source={comment.source}
-        className="size-6"
-      />
+    <div className={cn("group/comment flex gap-3", pending && "opacity-60")}>
+      <AuthorAvatar author={comment.author} source={comment.source} />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
           <span className="type-ui text-foreground">{comment.author}</span>
@@ -172,6 +200,9 @@ function CommentCard({
           <span className="type-meta text-muted-foreground/70 tabular-nums">
             {pending ? "Sending…" : timeAgo(comment.createdAt)}
           </span>
+          {onDelete !== undefined && (
+            <DeleteCommentButton onDelete={onDelete} />
+          )}
         </div>
         <div className="markdown mt-0.5 min-w-0 type-body">
           <Markdown
@@ -217,7 +248,8 @@ function ThreadAction({
  * A stack of comments anchored to one line, rendered as a single rounded card.
  * The opening comment sits flush; later comments are nested as replies. The
  * footer offers "Add reply…" (GitHub threads) and "Resolve" (removes the local
- * comments — deletion is how a local thread is resolved).
+ * comments — deletion is how a local thread is resolved). A GitHub comment,
+ * which "Resolve" cannot touch, carries its own delete on its card.
  */
 export function CommentThread({
   comments,
@@ -250,6 +282,11 @@ export function CommentThread({
   const canEdit = editableComment !== undefined && onEdit !== undefined;
   const canReply = onReply !== undefined && lastGithub !== undefined;
   const canResolve = localComments.length > 0;
+  // A local comment is taken off the thread by resolving it, which the footer
+  // already offers; a GitHub one has no such gesture, so its own card carries
+  // the delete instead.
+  const deletable = (c: ReviewComment) =>
+    c.source === "github" && settled.includes(c);
   const showActions =
     !replying && editingId === null && (canEdit || canReply || canResolve);
 
@@ -276,6 +313,9 @@ export function CommentThread({
                 onEdit === undefined
                   ? undefined
                   : (body) => onEdit(comment, body)
+              }
+              onDelete={
+                deletable(comment) ? () => onDelete(comment) : undefined
               }
             />
           </div>

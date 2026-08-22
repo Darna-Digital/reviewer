@@ -94,7 +94,7 @@ export function WorkspacePicker() {
         <DropdownMenuItem
           onClick={() =>
             void navigate({
-              to: "/modes/collaboration",
+              to: "/modes/experimentation/collaboration",
               search: { view: "members" },
             })
           }

@@ -167,7 +167,7 @@ export function ModelPicker({
                 return (
                   <Fragment key={`${m.provider}:${m.id}`}>
                     {startsGroup && (
-                      <div className="px-2 pt-2 pb-1 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
+                      <div className="px-2 pt-2 pb-1 text-[11px] font-semibold text-muted-foreground">
                         {m.group}
                       </div>
                     )}

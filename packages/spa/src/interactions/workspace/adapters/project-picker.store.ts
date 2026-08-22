@@ -1,10 +1,10 @@
 /**
  * Whether the project picker is open.
  *
- * The chip rides the window bar, which the frame draws for itself, while the
- * command that raises it is registered by the layout above — so the flag lives
- * here rather than in the state of either. It closes with the project you pick,
- * so it is neither navigation nor a preference.
+ * The chip rides the header, the chord that raises it is the window bar's and
+ * the command that does the same is registered by the layout — so the flag
+ * lives here rather than in the state of any of them. It closes with the
+ * project you pick, so it is neither navigation nor a preference.
  */
 import { useSyncExternalStore } from "react";
 

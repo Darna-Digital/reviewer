@@ -34,7 +34,7 @@ import { usePanelSize } from "@/components/layout/use-panel-size";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import { useChatListQuery } from "@/interactions/chats/adapters/chat-list-query.hook.adapter";
-import { useWindowTabs } from "@/interactions/window-tabs/adapters/window-tabs.store";
+import { useOnSessionTab } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { ChatRow } from "@/interactions/chats/components/chat-row";
 import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
 import { useChatPages } from "@/lib/queries";
@@ -56,9 +56,11 @@ export function ChatsPage() {
    * whole pane and the list stays out of it — landing in the inbox you
    * deliberately stepped past would be the surprise. ⌘-clicking a row is how a
    * conversation is lifted into one; the toolbar's crumb is the way back.
+   *
+   * The shell asks the same question of the same store: with no list here,
+   * there is no rail beside it either. See `ShellRoute`.
    */
-  const { tabs, activeId } = useWindowTabs();
-  const ownTab = tabs.find((tab) => tab.id === activeId)?.kind === "session";
+  const ownTab = useOnSessionTab();
 
   const [seenAt] = useState(prefs.inboxSeenAt);
   useEffect(() => {

@@ -104,7 +104,7 @@ export function CollaborationSearch() {
             {hits.slice(0, 12).map((hit) => (
               <Link
                 key={hit.key}
-                to="/modes/collaboration"
+                to="/modes/experimentation/collaboration"
                 search={{ view: hit.view, id: hit.id }}
                 onClick={() => setOpen(false)}
                 className="flex h-8 items-center gap-2 rounded-md px-1.5 text-[13px] outline-none hover:bg-elevate focus-visible:bg-elevate"

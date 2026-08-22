@@ -1,30 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { CollaborationPage } from "@/interactions/collaboration/components/collaboration-page";
-import type { CollaborationView } from "@/interactions/collaboration/data/collaboration.mock";
+import { CollabShell } from "@/interactions/collab/components/collab-shell";
 
-const VIEWS: ReadonlyArray<CollaborationView> = [
-  "project",
-  "tasks",
-  "flow",
-  "outlook",
-  "docs",
-  "chat",
-  "task",
-  "agents",
-  "members",
-];
-
-export interface CollaborationSearch {
-  view?: CollaborationView;
-  id?: string;
-}
-
+/**
+ * The collaboration mode's layout. Everything under it is drawn in the shell's
+ * centred column, with the hovering bar and its drawer above — see
+ * `CollabShell` for why those live above the outlet rather than on each page.
+ */
 export const Route = createFileRoute("/_app/modes/collaboration")({
-  validateSearch: (search: Record<string, unknown>): CollaborationSearch => ({
-    view: VIEWS.includes(search["view"] as CollaborationView)
-      ? (search["view"] as CollaborationView)
-      : undefined,
-    id: typeof search["id"] === "string" ? search["id"] : undefined,
-  }),
-  component: CollaborationPage,
+  component: CollabShell,
 });

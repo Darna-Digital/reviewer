@@ -47,13 +47,11 @@ import {
   chatIdOf,
   isPinnedTab,
   moveTab,
+  nextModeTab,
   NEW_SESSION_HREF,
-  PROJECT_TAB_ID,
   renameTab,
   sessionAtSlot,
-  SESSIONS_TAB_ID,
   stripTabs,
-  tabById,
   trackLocation,
 } from "@/interactions/window-tabs/functions/window-tabs.functions";
 import {
@@ -63,7 +61,6 @@ import {
   type BarShortcut,
 } from "@/components/layout/window-bar.shortcuts";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
-import { UserMenu } from "@/components/layout/user-menu";
 import {
   closeTabOverview,
   toggleTabOverview,
@@ -106,9 +103,8 @@ const sessionsEnabled = isFeatureEnabled("sessions-button");
 /** Stay on the page the project was switched from, now scoped to the new one. */
 const stayPut = () => {};
 
-const PROJECT_KEYS = "⌘1";
 const PROJECT_PICKER_KEYS = "⌘⇧P";
-const SESSIONS_KEYS = "⌘2";
+const MODE_KEYS = "⌘G";
 const NEW_SESSION_KEYS = "⌘T";
 const LAUNCHPAD_KEYS = "⌘L";
 const COMMANDS_KEYS = "⌘K";
@@ -239,12 +235,17 @@ function BarButton({
 }
 
 /**
- * The chord that takes the window to a tab: a named place keeps its own digit,
- * a session takes the next one along until the digits run out.
+ * The chord that takes the window to a tab. The digits count the conversations
+ * alone, from ⌘1, until they run out; the places the strip leads with are ways
+ * of working rather than tabs among them, and ⌘G steps between them — so it is
+ * what they say, and only while there are two of them to cross between.
  */
-const tabKeys = (tab: WindowTab, slot: number): string | null => {
-  if (tab.id === PROJECT_TAB_ID) return PROJECT_KEYS;
-  if (tab.id === SESSIONS_TAB_ID) return sessionsEnabled ? SESSIONS_KEYS : null;
+const tabKeys = (
+  tab: WindowTab,
+  slot: number,
+  modeCount: number
+): string | null => {
+  if (isPinnedTab(tab)) return modeCount > 1 ? MODE_KEYS : null;
   const digit = sessionDigit(slot);
   return digit === null ? null : `⌘${digit}`;
 };
@@ -273,6 +274,16 @@ export function WindowBar() {
   const show = (tab: WindowTab) => {
     closeTabOverview();
     void select(tab);
+  };
+  /**
+   * Mint a session, from the ✛ or from its chord. The launchpad answers to this
+   * as it answers to `show`, and for the same reason: the bar is what you
+   * reached for, and a panel left standing over the session it has just started
+   * is a panel you have to dismiss before you can type into it.
+   */
+  const mint = () => {
+    closeTabOverview();
+    void openSession();
   };
   /**
    * The tab being dragged. It lives in a ref as well as state because the first
@@ -384,15 +395,16 @@ export function WindowBar() {
     const run = (shortcut: BarShortcut) => {
       switch (shortcut.kind) {
         case "new-session":
-          return void openSession();
+          return mint();
         case "launchpad":
           return toggleTabOverview();
         case "project-picker":
           return setProjectPickerOpen(true);
         case "pane":
           return togglePane(shortcut.pane);
-        case "tab": {
-          const tab = tabById(windowTabsSnapshot(), shortcut.tabId);
+        case "mode": {
+          const state = windowTabsSnapshot();
+          const tab = nextModeTab(stripTabs(state), state.activeId);
           return tab === null ? undefined : show(tab);
         }
         case "session": {
@@ -485,7 +497,7 @@ export function WindowBar() {
               <BarTooltip
                 key={tab.id}
                 label={tab.title}
-                keys={tabKeys(tab, at + 1 - pinnedCount)}
+                keys={tabKeys(tab, at + 1 - pinnedCount, pinnedCount)}
                 disabled={dragging !== null}
               >
                 <TooltipTrigger
@@ -626,11 +638,7 @@ export function WindowBar() {
           })}
         </div>
         {sessionsEnabled && (
-          <BarButton
-            label="New session"
-            keys={NEW_SESSION_KEYS}
-            onClick={openSession}
-          >
+          <BarButton label="New session" keys={NEW_SESSION_KEYS} onClick={mint}>
             <IconPlus className="size-4" />
           </BarButton>
         )}
@@ -704,7 +712,6 @@ export function WindowBar() {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
-        <UserMenu className={NO_DRAG} />
         <div aria-hidden className="w-2 shrink-0" />
       </div>
     </header>

@@ -69,21 +69,37 @@ describe("shellRoute", () => {
     expect(shellRoute("/modes/agent-session", "code")).toEqual({
       kind: "session",
       composing: false,
+      solo: false,
     });
     expect(shellRoute("/modes/agent-session", "code", true)).toEqual({
       kind: "session",
       composing: true,
+      solo: false,
     });
     expect(shellRoute("/modes/agent-session/abc", "code")).toEqual({
       kind: "session",
       composing: false,
+      solo: false,
     });
+    // The same conversation, on a tab of its own: the shell drops the rail,
+    // whose every button acts on a list that is not beside it there.
+    expect(shellRoute("/modes/agent-session/abc", "code", false, true)).toEqual(
+      { kind: "session", composing: false, solo: true }
+    );
     expect(shellRoute("/modes/collaboration", "code")).toEqual({
       kind: "collaboration",
     });
-    expect(shellRoute("/modes/collaboration/inbox", "code")).toEqual({
+    expect(shellRoute("/modes/collaboration/projects/p1", "code")).toEqual({
       kind: "collaboration",
     });
+    // The prototype reads as itself rather than as the mode it was the first
+    // draft of — the shell puts different chrome around each.
+    expect(shellRoute("/modes/experimentation/collaboration", "code")).toEqual({
+      kind: "experimentation",
+    });
+    expect(
+      shellRoute("/modes/experimentation/collaboration/inbox", "code")
+    ).toEqual({ kind: "experimentation" });
     expect(shellRoute("/settings", "code")).toEqual({ kind: "settings" });
   });
 
@@ -106,7 +122,9 @@ describe("showsGitChrome", () => {
     expect(showsGitChrome({ kind: "code", mode: "review" })).toBe(true);
     expect(showsGitChrome({ kind: "workspace" })).toBe(true);
     expect(showsGitChrome({ kind: "dock", tab: "history" })).toBe(true);
-    expect(showsGitChrome({ kind: "session", composing: false })).toBe(false);
+    expect(
+      showsGitChrome({ kind: "session", composing: false, solo: false })
+    ).toBe(false);
     expect(showsGitChrome({ kind: "collaboration" })).toBe(false);
     expect(showsGitChrome({ kind: "settings" })).toBe(false);
   });

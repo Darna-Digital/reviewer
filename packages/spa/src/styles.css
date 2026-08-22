@@ -24,6 +24,7 @@
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-link: var(--link);
+  --color-collab-accent: var(--collab-accent);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -287,6 +288,26 @@
     0 16px 32px 0 rgb(0 0 0 / 0.04), 0 8px 16px 0 rgb(0 0 0 / 0.08),
     0 0 0 0.5px rgb(0 0 0 / 0.12);
   --elev-button: 0 1px 1.5px 0 rgb(0 0 0 / 0.1), 0 0 0 0.5px rgb(0 0 0 / 0.14);
+  /* Keyboard focus is a bloom rather than a ring: the accent bleeds off the
+     button's own shape and fades out, so the shape stays the shape and nothing
+     is drawn around it. Two stops — a close wash that grounds the colour
+     against the edge, and a short blur that carries it just off the edge before
+     it is gone — the bloom should hug the button, not halo it. It lives in the
+     shadow stack rather than the outline so the elevation underneath survives
+     and the bloom can fade in alongside it. The unlit value is the same two
+     shadows spent on nothing, because a shadow list only interpolates against
+     another of its own length. */
+  --glow-none: 0 0 0 0 rgb(0 0 0 / 0), 0 0 0 0 rgb(0 0 0 / 0);
+  --glow-focus:
+    0 0 0 1.5px color-mix(in oklab, var(--ring-accent) 7%, transparent),
+    0 0 5px 0 color-mix(in oklab, var(--ring-accent) 20%, transparent);
+  /* An invalid button blooms in the same shape, only red — one focus language
+     for the whole set rather than a glow for the good case and a drawn ring
+     for the bad one. It outranks focus, so a field you have broken keeps
+     saying so while you are standing in it. */
+  --glow-invalid:
+    0 0 0 1.5px color-mix(in oklab, var(--destructive) 7%, transparent),
+    0 0 5px 0 color-mix(in oklab, var(--destructive) 20%, transparent);
   /* No hairline and no inset lines on the filled button, unlike every other
      face here. A ring around a saturated fill reads as a drawn border rather
      than an edge, and the sheen already gives the shape its top and bottom —
@@ -331,6 +352,14 @@
   --elev-button:
     0 1px 2px 0 rgb(0 0 0 / 0.4), 0 0 0 0.5px rgb(255 255 255 / 0.2),
     0 -0.5px 0 0 rgb(255 255 255 / 0.1);
+  /* Dark gives a glow somewhere to go, so it reaches a little further and holds
+     more of the colour than the same bloom can on paper. */
+  --glow-focus:
+    0 0 0 1.5px color-mix(in oklab, var(--ring-accent) 10%, transparent),
+    0 0 6px 0 color-mix(in oklab, var(--ring-accent) 25%, transparent);
+  --glow-invalid:
+    0 0 0 1.5px color-mix(in oklab, var(--destructive) 10%, transparent),
+    0 0 6px 0 color-mix(in oklab, var(--destructive) 25%, transparent);
   --elev-button-contrast: 0 1px 2px 0 rgb(0 0 0 / 0.3);
   --elev-groove:
     inset 0 -0.5px 0 0 rgb(255 255 255 / 0.1),
@@ -392,7 +421,7 @@
     var(--sheen-faint) 0%,
     var(--sheen-none) 100%
   );
-  box-shadow: var(--elev-button);
+  box-shadow: var(--glow, var(--glow-none)), var(--elev-button);
   &:hover:not(:disabled) {
     background-image:
       linear-gradient(0deg, var(--overlay-hover), var(--overlay-hover)),
@@ -410,7 +439,7 @@
    white type back an edge against the lighter half. */
 @utility face-contrast {
   background-image: var(--sheen-filled);
-  box-shadow: var(--elev-button-contrast);
+  box-shadow: var(--glow, var(--glow-none)), var(--elev-button-contrast);
   text-shadow: var(--text-shadow-filled);
   &:hover:not(:disabled) {
     background-image:
@@ -432,8 +461,10 @@
   }
 }
 
-/* No face at all until touched — the overlay is the entire appearance. */
+/* No face at all until touched — the overlay is the entire appearance, apart
+   from the focus bloom every face has to leave room for. */
 @utility face-quiet {
+  box-shadow: var(--glow, var(--glow-none));
   &:hover:not(:disabled) {
     background-color: var(--overlay-hover);
   }
@@ -501,15 +532,20 @@
   --success-foreground: oklch(1 0 0);
   --warning: oklch(0.72 0.15 75);
   --warning-foreground: oklch(0.28 0.06 75);
+  /* Collaboration's section labels. Warm, and the one colour on an otherwise
+     grey page — it is what tells one tool on a project's page from the next
+     without a rule being drawn between them. Off the brand ramp on purpose:
+     brand is reserved for focus and links, and a section label is neither. */
+  --collab-accent: oklch(0.62 0.15 55);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  /* Text fields focus in the accent, everything else in grey `--ring`. A caret
-     landing in a field is the one focus worth colouring: it says where typing
-     will go, which no amount of grey outline communicates. It stays a hairline
-     border and nothing more — the field is already outlined, so recolouring
-     that edge is enough, and a glow around it would shout where the caret
-     already whispers. */
+  /* The focus accent: buttons and text fields wear it, the rest of the
+     furniture stays on grey `--ring`. Keyboard focus is the one state worth
+     colouring, because unlike hover it has no pointer to say where it is. A
+     field recolours the hairline border it already has; a button, which has no
+     border to recolour, blooms the same accent off its edge instead — see
+     `--glow-focus`. Neither draws a new shape around the control. */
   --ring-accent: var(--brand-500);
   --chart-1: var(--brand-500);
   --chart-2: var(--brand-300);
@@ -573,6 +609,7 @@
   --success-foreground: oklch(0.22 0.05 158);
   --warning: oklch(0.8 0.14 78);
   --warning-foreground: oklch(0.26 0.06 78);
+  --collab-accent: oklch(0.82 0.11 58);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
@@ -606,6 +643,32 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Buttons light the slot their face leaves in its shadow stack. The unfaced
+     `link` variant has no stack of its own, so the declaration here is what
+     paints its bloom; every other variant overrides this from the utilities
+     layer with a stack that folds the same slot back in. */
+  [data-slot="button"] {
+    --glow: var(--glow-none);
+    box-shadow: var(--glow);
+  }
+  [data-slot="button"]:focus-visible {
+    --glow: var(--glow-focus);
+  }
+  /* Same weight as the focus rule and written after it, so an invalid button
+     holds its red bloom rather than trading it for the accent on focus. */
+  [data-slot="button"][aria-invalid="true"] {
+    --glow: var(--glow-invalid);
+  }
+  /* Shadows are dropped in forced-colours mode, which would leave the keyboard
+     with nothing at all — so there, and only there, both blooms fall back to a
+     ring. */
+  @media (forced-colors: active) {
+    [data-slot="button"]:focus-visible,
+    [data-slot="button"][aria-invalid="true"] {
+      outline: 2px solid;
+      outline-offset: 2px;
+    }
+  }
   html,
   body {
     height: 100%;
@@ -624,13 +687,50 @@
    and lifting towards its edges, so the corners catch the light and the sheet
    reads as curving up out of the frame rather than sinking into it. Panels
    drawn on it stay transparent, so the ramp shows through. */
-.app-canvas {
-  background: radial-gradient(
+/* The page material, named once so the two things made of it agree: the canvas
+   every code surface rests on, and the sheet collaboration's column stands on.
+   The gradient reads `--canvas` lazily, so the dark theme's redefinition is
+   picked up without a second copy of the paint. */
+:root {
+  --canvas-paint: radial-gradient(
     120% 95% at 50% 46%,
     var(--canvas) 0%,
     var(--canvas) 45%,
     var(--canvas-edge) 100%
   );
+}
+
+.app-canvas {
+  background: var(--canvas-paint);
+}
+
+/* Collaboration's column, as a sheet.
+
+   The mode drops the full-pane canvas (see `.app-canvas.on-frame`) so the app's
+   own ground runs edge to edge — but a column of prose still wants a page under
+   it rather than under the whole window. So the page is exactly as wide as the
+   column: the sheet hugs the content with the ground showing around it, which
+   is the shape the design is after and is also what leaves the frame — the
+   desktop, on the native shell — visible in the margin.
+
+   Opaque, with no `.desktop.translucent` override, for the reason `.plans-notes`
+   has none: a dotted grid can afford to show the desktop through it, paragraphs
+   of body text cannot. */
+.collab-sheet {
+  background: var(--canvas-paint);
+}
+
+/* Collaboration is drawn on the frame rather than on a sheet laid over it.
+   Every surface in that mode is a centred column standing on open ground, and
+   the ground is the window's own material: the panels in the column are the
+   sheets, and what is behind them is the frame — which on the native shell is
+   the desktop, blurred, showing through. A canvas here would be a second sheet
+   under the first, and would paint the vibrancy out.
+
+   The class is kept rather than dropped because it is also what a preview
+   window captures as the page (`PREVIEW_ROOT_SELECTOR`); only the paint goes. */
+.app-canvas.on-frame {
+  background: none;
 }
 .app-frame {
   background-color: var(--frame);

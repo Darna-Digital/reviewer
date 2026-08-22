@@ -37,7 +37,11 @@ describe("search state", () => {
   it("starts closed on the command list", () => {
     const { result } = watchState();
 
-    expect(result.current).toEqual({ open: false, mode: "commands" });
+    expect(result.current).toEqual({
+      open: false,
+      mode: "commands",
+      seed: null,
+    });
   });
 
   it("opens on the mode it was asked for", () => {
@@ -45,7 +49,33 @@ describe("search state", () => {
 
     act(() => openSearch("text"));
 
-    expect(result.current).toEqual({ open: true, mode: "text" });
+    expect(result.current).toEqual({ open: true, mode: "text", seed: null });
+  });
+
+  it("carries a phrase in, once per press", () => {
+    const { result } = watchState();
+
+    act(() => openSearch("text", "useFiles"));
+    const first = result.current.seed;
+    expect(first).toMatchObject({ text: "useFiles" });
+
+    act(() => closeSearch());
+    act(() => openSearch("text", "useFiles"));
+
+    // Same phrase, different press: the dialog has to be able to tell them
+    // apart, or the second ⌘⇧F would leave the box as the user last left it.
+    expect(result.current.seed).toMatchObject({ text: "useFiles" });
+    expect(result.current.seed?.nonce).not.toBe(first?.nonce);
+  });
+
+  it("carries nothing in when nothing was highlighted", () => {
+    const { result } = watchState();
+
+    act(() => openSearch("text", "useFiles"));
+    act(() => closeSearch());
+    act(() => openSearch("text"));
+
+    expect(result.current.seed).toBeNull();
   });
 
   it("switches mode while staying open", () => {
@@ -54,7 +84,7 @@ describe("search state", () => {
     act(() => openSearch("files"));
     act(() => setSearchMode("text"));
 
-    expect(result.current).toEqual({ open: true, mode: "text" });
+    expect(result.current).toEqual({ open: true, mode: "text", seed: null });
   });
 
   it("keeps the mode on close, so the list does not change as it animates out", () => {
@@ -63,7 +93,7 @@ describe("search state", () => {
     act(() => openSearch("text"));
     act(() => setSearchOpen(false));
 
-    expect(result.current).toEqual({ open: false, mode: "text" });
+    expect(result.current).toEqual({ open: false, mode: "text", seed: null });
   });
 
   it("opens on the mode it was asked for, whatever it closed on", () => {
@@ -73,20 +103,32 @@ describe("search state", () => {
     act(closeSearch);
     act(toggleCommandSearch);
 
-    expect(result.current).toEqual({ open: true, mode: "commands" });
+    expect(result.current).toEqual({
+      open: true,
+      mode: "commands",
+      seed: null,
+    });
   });
 
   it("toggles the command list shut, and back open", () => {
     const { result } = watchState();
 
     act(toggleCommandSearch);
-    expect(result.current).toEqual({ open: true, mode: "commands" });
+    expect(result.current).toEqual({
+      open: true,
+      mode: "commands",
+      seed: null,
+    });
 
     act(toggleCommandSearch);
     expect(result.current.open).toBe(false);
 
     act(toggleCommandSearch);
-    expect(result.current).toEqual({ open: true, mode: "commands" });
+    expect(result.current).toEqual({
+      open: true,
+      mode: "commands",
+      seed: null,
+    });
   });
 
   it("goes straight from the text search to closed, never via the commands", () => {
@@ -109,7 +151,11 @@ describe("search state", () => {
     act(() => openSearch("text"));
     act(toggleCommandSearch);
 
-    expect(result.current).toEqual({ open: true, mode: "commands" });
+    expect(result.current).toEqual({
+      open: true,
+      mode: "commands",
+      seed: null,
+    });
   });
 
   it("does not re-render subscribers when nothing changed", () => {
@@ -131,7 +177,11 @@ describe("search state", () => {
 
     act(closeSearch);
 
-    expect(result.current).toEqual({ open: false, mode: "commands" });
+    expect(result.current).toEqual({
+      open: false,
+      mode: "commands",
+      seed: null,
+    });
   });
 });
 

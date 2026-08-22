@@ -1,13 +1,36 @@
+import {
+  IconClipboard,
+  IconClipboardCopy,
+  IconClipboardText,
+  IconCopy,
+  IconCopyPlus,
+  IconCursorText,
+  IconCut,
+  IconFilePlus,
+  IconFolderPlus,
+  IconFolderSearch,
+  IconHistory,
+  IconTrash,
+} from "@tabler/icons-react";
 import { FileTree, useFileTree } from "@pierre/trees/react";
-import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef } from "react";
+import type {
+  ComponentType,
+  DragEvent,
+  KeyboardEvent as ReactKeyboardEvent,
+  ReactNode,
+} from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { droppedFiles } from "@/interactions/file-actions/adapters/dropped-files.adapter";
 import {
   draftPath,
+  dropDirectory,
   targetDirectory,
   withoutTrailingSlash,
 } from "@/interactions/file-actions/functions/file-actions.functions";
 import type {
+  Clipboard,
+  FileActionsFunctions,
   PathKind,
   TreeItem,
 } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
@@ -21,12 +44,19 @@ interface FileSidebarProps {
   gitStatus: ReadonlyArray<GitStatusEntry>;
   selectedFile: string | null;
   onFileSelect: (path: string | null) => void;
-  onDeletePath?: (path: string, isDirectory: boolean) => Promise<void> | void;
+  /**
+   * Everything the tree can do to the project's own files. Left out for a
+   * review, whose tree lists a pull request rather than the working copy.
+   */
+  actions?: FileActionsFunctions;
+  /** Confirm and delete; the rows go to the project's trash, so ⌘Z has them. */
+  onDeletePaths?: (items: ReadonlyArray<TreeItem>) => Promise<void> | void;
   onRenamePath?: (from: string, to: string) => Promise<void>;
-  onCreatePath?: (path: string, kind: PathKind) => Promise<void>;
   /** Open the bottom dock on this path's commit history. */
   onShowHistory?: (path: string) => void;
   onError?: (message: string) => void;
+  /** The open project folder, for the absolute path the menu copies. */
+  projectPath?: string | null;
   loading?: boolean;
   footer?: ReactNode;
 }
@@ -47,8 +77,18 @@ const TREE_UNSAFE_CSS = `
   }
 `;
 
+// Walked with the arrows as much as with the pointer, so the row the keyboard
+// is on reads exactly like the row the pointer is on.
 const CONTEXT_MENU_ITEM =
-  "flex w-full items-center rounded-sm px-2 py-1 text-left hover:bg-elevate";
+  "flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left outline-none hover:bg-elevate focus:bg-elevate disabled:opacity-40 disabled:hover:bg-transparent";
+
+/** A menu row's icon: the component itself, mounted by the row that takes it. */
+type MenuIcon = ComponentType<{ className?: string }>;
+
+const REVEAL_LABEL =
+  typeof navigator !== "undefined" && navigator.userAgent.includes("Mac")
+    ? "Reveal in Finder"
+    : "Show in folder";
 
 /**
  * Directory prefixes that must be expanded for `filePath` to be visible, e.g.
@@ -67,17 +107,77 @@ function ancestorDirs(filePath: string): ReadonlyArray<string> {
   return dirs;
 }
 
+/** The tree row a pointer event landed on, reached through the shadow root. */
+function rowUnder(event: DragEvent): HTMLElement | null {
+  for (const node of event.nativeEvent.composedPath()) {
+    if (node instanceof HTMLElement && node.dataset.type === "item")
+      return node;
+  }
+  return null;
+}
+
+/** The menu rows that can be chosen right now — a disabled Paste is skipped. */
+const menuItems = (menu: HTMLElement) => [
+  ...menu.querySelectorAll<HTMLButtonElement>(
+    "[role='menuitem']:not(:disabled)"
+  ),
+];
+
+/**
+ * The keys an open menu answers to. It does not take the keyboard as it opens —
+ * the row keeps focus until Down reaches for the menu, and only from there do
+ * the arrows walk the entries and wrap at both ends. Bound to the document
+ * because until focus is in the menu the keys are still the tree's, and bound
+ * in the capture phase so the arrow that reaches for the menu does not move the
+ * row behind it on its way. Escape belongs to the tree, which closes the menu.
+ */
+const menuKeys = (menu: HTMLElement) => (event: KeyboardEvent) => {
+  const items = menuItems(menu);
+  if (items.length === 0) return;
+  const inside = menu.contains(document.activeElement);
+  const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+  if (step !== 0) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!inside) {
+      (step === 1 ? items.at(0) : items.at(-1))?.focus();
+      return;
+    }
+    const at = items.indexOf(document.activeElement as HTMLButtonElement);
+    items[(at + step + items.length) % items.length]?.focus();
+    return;
+  }
+  if (inside && (event.key === "Home" || event.key === "End")) {
+    event.preventDefault();
+    event.stopPropagation();
+    (event.key === "Home" ? items.at(0) : items.at(-1))?.focus();
+  }
+};
+
+const openedMenu = (menu: HTMLElement | null) => {
+  if (menu === null) return;
+  const onKeyDown = menuKeys(menu);
+  document.addEventListener("keydown", onKeyDown, true);
+  return () => document.removeEventListener("keydown", onKeyDown, true);
+};
+
+const rowItem = (row: HTMLElement): TreeItem => ({
+  kind: row.dataset.itemType === "folder" ? "directory" : "file",
+  path: row.dataset.itemPath ?? "",
+});
+
 export function FileSidebar({
   mode,
   paths,
   gitStatus,
   selectedFile,
   onFileSelect,
-  onDeletePath,
+  actions,
+  onDeletePaths,
   onRenamePath,
-  onCreatePath,
   onShowHistory,
   onError,
+  projectPath,
   loading = false,
   footer,
 }: FileSidebarProps) {
@@ -85,8 +185,8 @@ export function FileSidebar({
   onFileSelectRef.current = onFileSelect;
   const onRenamePathRef = useRef(onRenamePath);
   onRenamePathRef.current = onRenamePath;
-  const onCreatePathRef = useRef(onCreatePath);
-  onCreatePathRef.current = onCreatePath;
+  const actionsRef = useRef(actions);
+  actionsRef.current = actions;
   // The row a "New file/folder" is being named in, as the rename event spells
   // it. It is an ordinary tree row until the name is committed, so the rename
   // handler recognises it here and routes it to creation instead.
@@ -100,11 +200,25 @@ export function FileSidebar({
   // Set while we sync the tree's selection to `selectedFile`, so the resulting
   // selection-change events don't loop back through `onFileSelect`.
   const syncingSelectionRef = useRef(false);
+  const [clipboard, setClipboard] = useState<Clipboard | null>(null);
+  const [dropping, setDropping] = useState(false);
+  // The menu is drawn inside the tree's shadow root, which stacks wherever the
+  // host does — under the sidebar's resize seam, which lifts itself over the
+  // panels it divides. Lifting the tree higher while a menu is open puts the
+  // menu over the seam without leaving the tree over it the rest of the time,
+  // where it would take the pointer off the few pixels the seam overlaps.
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Copied for the tree, which wants mutable arrays — but copied once per new
   // listing rather than once per render, for the same reason as the keys below.
   const treePaths = useMemo(() => [...paths], [paths]);
   const treeGitStatus = useMemo(() => [...gitStatus], [gitStatus]);
+
+  // A folder is `src/` in the tree and `src` everywhere else, and a row is only
+  // "already there" if either spelling of it is.
+  const treeHolds = (path: string) =>
+    modelRef.current?.getItem(path) != null ||
+    modelRef.current?.getItem(`${path}/`) != null;
 
   const { model } = useFileTree({
     paths: treePaths,
@@ -120,6 +234,12 @@ export function FileSidebar({
     search: mode !== "browse",
     unsafeCSS: TREE_UNSAFE_CSS,
     gitStatus: treeGitStatus,
+    composition: {
+      contextMenu: {
+        onOpen: () => setMenuOpen(true),
+        onClose: () => setMenuOpen(false),
+      },
+    },
     onSelectionChange: (selectedPaths) => {
       if (syncingSelectionRef.current) return;
       const first = selectedPaths.at(0);
@@ -128,17 +248,33 @@ export function FileSidebar({
         if (item != null && !item.isDirectory()) onFileSelectRef.current(first);
       }
     },
+    // The tree rearranges its own rows the moment a drag lands, so the move is
+    // already on screen while the server is still hearing about it; a refusal
+    // puts the listing back.
+    dragAndDrop:
+      actions === undefined
+        ? false
+        : {
+            onDropComplete: ({ draggedPaths, target }) => {
+              void actionsRef.current
+                ?.move(draggedPaths, dropDirectory(target))
+                .catch(() =>
+                  modelRef.current?.resetPaths([...pathsRef.current])
+                );
+            },
+            onDropError: (message) => onErrorRef.current?.(message),
+          },
     renaming: {
       canRename: () =>
         onRenamePathRef.current !== undefined ||
-        onCreatePathRef.current !== undefined,
+        actionsRef.current !== undefined,
       onError: (message) => onErrorRef.current?.(message),
       onRename: ({ destinationPath, isFolder, sourcePath }) => {
         const revert = () =>
           modelRef.current?.resetPaths([...pathsRef.current]);
         if (draftRef.current === sourcePath) {
           draftRef.current = null;
-          const create = onCreatePathRef.current;
+          const create = actionsRef.current?.create;
           if (create === undefined) return revert();
           void create(destinationPath, isFolder ? "directory" : "file").catch(
             revert
@@ -226,93 +362,246 @@ export function FileSidebar({
   }, [selectedFile, pathsKey, model]);
 
   // Draw the new entry as a row and let the user name it in place; the rename
-  // that commits it is routed to `onCreatePath` by the handler above.
+  // that commits it is routed to `create` by the handler above.
   const startCreate = (item: TreeItem, kind: PathKind) => {
-    const row = draftPath(
-      targetDirectory(item),
-      kind,
-      (candidate) => modelRef.current?.getItem(candidate) != null
-    );
+    const row = draftPath(targetDirectory(item), kind, treeHolds);
     draftRef.current = withoutTrailingSlash(row);
     modelRef.current?.add(row);
     modelRef.current?.startRenaming(row, { removeIfCanceled: true });
   };
 
+  /** The rows a keyboard action works on: the selection, or the focused row. */
+  const activeItems = (): ReadonlyArray<TreeItem> => {
+    const selected = model.getSelectedPaths();
+    const focused = model.getFocusedPath();
+    const rows =
+      selected.length > 0 ? selected : focused === null ? [] : [focused];
+    return rows.map((path) => ({
+      kind: model.getItem(path)?.isDirectory() === true ? "directory" : "file",
+      path,
+    }));
+  };
+
+  const copyToClipboard = (text: string) =>
+    void navigator.clipboard.writeText(text);
+
+  const absolutePath = (path: string) =>
+    projectPath == null || projectPath === ""
+      ? path
+      : `${projectPath}/${withoutTrailingSlash(path)}`;
+
+  const pasteInto = (item: TreeItem) => {
+    if (clipboard === null) return;
+    void actionsRef.current?.paste(clipboard, targetDirectory(item), treeHolds);
+    if (clipboard.mode === "cut") setClipboard(null);
+  };
+
+  // The tree drives the arrows, Enter and F2 itself; these are the rest of what
+  // a file tree is expected to answer to.
+  const onKeyDown = (event: ReactKeyboardEvent) => {
+    const chord = event.metaKey || event.ctrlKey;
+    // Shift turns the key itself uppercase, and ⇧⌘Z is how redo is spelled.
+    const key = event.key.toLowerCase();
+    if (chord && key === "z" && actions !== undefined) {
+      event.preventDefault();
+      void (event.shiftKey ? actions.redo() : actions.undo());
+      return;
+    }
+    const items = activeItems();
+    const first = items.at(0);
+    if (first === undefined) return;
+    if (!chord && (key === "delete" || key === "backspace")) {
+      event.preventDefault();
+      void onDeletePaths?.(items);
+      return;
+    }
+    if (!chord || actions === undefined) return;
+    if (key === "c" || key === "x") {
+      event.preventDefault();
+      setClipboard({
+        mode: key === "c" ? "copy" : "cut",
+        paths: items.map((item) => item.path),
+      });
+      return;
+    }
+    if (key === "v") {
+      event.preventDefault();
+      pasteInto(first);
+    }
+  };
+
+  const carriesFiles = (event: DragEvent) =>
+    event.dataTransfer.types.includes("Files");
+
+  // The tree paints its own drop target only for rows it is dragging itself, so
+  // a drop from the desktop marks the row the same way by hand.
+  const highlightRef = useRef<HTMLElement | null>(null);
+  const highlight = (row: HTMLElement | null) => {
+    if (highlightRef.current === row) return;
+    highlightRef.current?.removeAttribute("data-item-drag-target");
+    row?.setAttribute("data-item-drag-target", "true");
+    highlightRef.current = row;
+  };
+
+  const onDragOver = (event: DragEvent) => {
+    if (actions === undefined || !carriesFiles(event)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    highlight(rowUnder(event));
+    setDropping(true);
+  };
+
+  const onDragLeave = (event: DragEvent) => {
+    const leaving = event.relatedTarget;
+    if (leaving instanceof Node && event.currentTarget.contains(leaving))
+      return;
+    highlight(null);
+    setDropping(false);
+  };
+
+  const onDrop = (event: DragEvent) => {
+    if (actions === undefined || !carriesFiles(event)) return;
+    event.preventDefault();
+    const row = rowUnder(event);
+    const directory = row === null ? "" : targetDirectory(rowItem(row));
+    highlight(null);
+    setDropping(false);
+    // Read before yielding: the browser empties the transfer once this returns.
+    const files = droppedFiles(event.dataTransfer);
+    void files.then((dropped) =>
+      actionsRef.current?.upload(dropped, directory, treeHolds)
+    );
+  };
+
   const hasMenu =
-    onCreatePath !== undefined ||
-    onDeletePath !== undefined ||
+    actions !== undefined ||
+    onDeletePaths !== undefined ||
     onRenamePath !== undefined ||
     onShowHistory !== undefined;
   const renderContextMenu = hasMenu
     ? (
         item: TreeItem,
         context: { close: (options?: { restoreFocus?: boolean }) => void }
-      ) => (
-        <div
-          role="menu"
-          className="min-w-36 rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-md"
-        >
-          {onCreatePath !== undefined && (
-            <>
-              {(["file", "directory"] as const).map((kind) => (
-                <button
-                  key={kind}
-                  role="menuitem"
-                  className={CONTEXT_MENU_ITEM}
-                  onClick={() => {
-                    context.close({ restoreFocus: false });
-                    startCreate(item, kind);
-                  }}
-                >
-                  {kind === "file" ? "New file…" : "New folder…"}
-                </button>
-              ))}
-              <div role="separator" className="my-1 h-px bg-border" />
-            </>
-          )}
-          {onShowHistory !== undefined && (
-            <button
-              role="menuitem"
-              className={CONTEXT_MENU_ITEM}
-              onClick={() => {
-                context.close();
-                onShowHistory(item.path);
-              }}
-            >
-              Show history
-            </button>
-          )}
-          {onRenamePath !== undefined && (
-            <button
-              role="menuitem"
-              className={CONTEXT_MENU_ITEM}
-              onClick={() => {
-                context.close({ restoreFocus: false });
-                modelRef.current?.startRenaming(item.path);
-              }}
-            >
-              Rename…
-            </button>
-          )}
-          {onDeletePath !== undefined && (
-            <button
-              role="menuitem"
-              className={cn(CONTEXT_MENU_ITEM, "text-destructive")}
-              onClick={() => {
-                context.close();
-                void onDeletePath(item.path, item.kind === "directory");
-              }}
-            >
-              Delete
-            </button>
-          )}
-        </div>
-      )
+      ) => {
+        // Closing restores focus to the row, which would take it straight back
+        // off an input the action is about to open — so those say not to.
+        const entry = (
+          Icon: MenuIcon,
+          label: string,
+          run: () => void,
+          options?: { readonly focusMoves?: boolean; readonly off?: boolean }
+        ) => (
+          <button
+            key={label}
+            role="menuitem"
+            disabled={options?.off === true}
+            className={cn(
+              CONTEXT_MENU_ITEM,
+              label === "Delete" && "text-destructive"
+            )}
+            onClick={() => {
+              context.close(
+                options?.focusMoves === true
+                  ? { restoreFocus: false }
+                  : undefined
+              );
+              run();
+            }}
+          >
+            <Icon className="size-3.5 shrink-0 opacity-70" />
+            {label}
+          </button>
+        );
+        const separator = (key: string) => (
+          <div key={key} role="separator" className="my-0.5 h-px bg-border" />
+        );
+        return (
+          <div
+            // Re-keyed per row, so opening the menu on another row while it is
+            // already up mounts a fresh one — and the first entry takes focus
+            // again, rather than leaving it on the row the last menu was for.
+            key={item.path}
+            role="menu"
+            ref={openedMenu}
+            // A hovered row and a focused one are lit at once whenever the
+            // pointer rests somewhere the arrows are not, so the rows are held
+            // apart by the 2px the tree already puts between its own.
+            className="flex min-w-48 flex-col gap-0.5 rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-md"
+          >
+            {actions !== undefined && [
+              entry(
+                IconFilePlus,
+                "New file…",
+                () => startCreate(item, "file"),
+                { focusMoves: true }
+              ),
+              entry(
+                IconFolderPlus,
+                "New folder…",
+                () => startCreate(item, "directory"),
+                { focusMoves: true }
+              ),
+              separator("new"),
+              entry(IconCut, "Cut", () =>
+                setClipboard({ mode: "cut", paths: [item.path] })
+              ),
+              entry(IconCopy, "Copy", () =>
+                setClipboard({ mode: "copy", paths: [item.path] })
+              ),
+              entry(IconClipboard, "Paste", () => pasteInto(item), {
+                off: clipboard === null,
+              }),
+              entry(
+                IconCopyPlus,
+                "Duplicate",
+                () => void actions.duplicate(item.path, treeHolds)
+              ),
+              separator("clipboard"),
+              entry(IconClipboardCopy, "Copy path", () =>
+                copyToClipboard(absolutePath(item.path))
+              ),
+              entry(IconClipboardText, "Copy relative path", () =>
+                copyToClipboard(withoutTrailingSlash(item.path))
+              ),
+              entry(
+                IconFolderSearch,
+                REVEAL_LABEL,
+                () => void actions.reveal(item.path)
+              ),
+            ]}
+            {onShowHistory !== undefined &&
+              entry(IconHistory, "Show history", () =>
+                onShowHistory(item.path)
+              )}
+            {(onRenamePath !== undefined || onDeletePaths !== undefined) &&
+              separator("edit")}
+            {onRenamePath !== undefined &&
+              entry(
+                IconCursorText,
+                "Rename…",
+                () => void modelRef.current?.startRenaming(item.path),
+                { focusMoves: true }
+              )}
+            {onDeletePaths !== undefined &&
+              entry(IconTrash, "Delete", () => void onDeletePaths([item]))}
+          </div>
+        );
+      }
     : undefined;
 
   return (
     <aside className="flex h-full flex-col">
-      <div className="-mx-2 mt-2 min-h-0 flex-1 overflow-auto">
+      <div
+        className={cn(
+          "-mx-2 mt-2 min-h-0 flex-1 overflow-auto",
+          menuOpen && "relative z-20",
+          dropping && "rounded-md ring-1 ring-ring ring-inset"
+        )}
+        onKeyDown={onKeyDown}
+        onDragOver={onDragOver}
+        onDragLeave={onDragLeave}
+        onDrop={onDrop}
+      >
         {loading ? (
           <div className="px-3 py-2">
             <LoadingCursor label="Loading files…" />

@@ -192,6 +192,52 @@ export function useGitActions() {
         unwrap(fetchClient.POST("/api/checkout", { body: { branch } }))
       ),
 
+    /**
+     * Bring a pull request's head onto a local branch and switch to it. The
+     * branch name is decided here rather than by the server — see
+     * `localBranchForPull` — because only the app knows a fork's branch must
+     * not be allowed to land on ours of the same name.
+     */
+    checkoutPull: (pullNumber: number, branch: string) =>
+      fns.runOp(`Checked out ${branch}`, () =>
+        unwrap(
+          fetchClient.POST("/api/checkout-pull", {
+            body: { number: pullNumber, branch },
+          })
+        )
+      ),
+
+    /**
+     * Land a pull request on its base branch. Outward-facing and not ours to
+     * undo, so the caller confirms first — this only carries it out, and
+     * reports GitHub's own sentence about what happened.
+     */
+    mergePull: (pullNumber: number, method: "merge" | "squash" | "rebase") =>
+      fns.runOp(`Merged #${pullNumber}`, async () => {
+        const { message } = await unwrap(
+          fetchClient.POST("/api/github/pulls/{number}/merge", {
+            params: { path: { number: String(pullNumber) } },
+            body: { method },
+          })
+        );
+        return { output: message };
+      }),
+
+    /**
+     * Close a pull request without merging it. Nothing local changes — the
+     * branch and its commits stay where they are — but the pull request is
+     * gone from everyone else's list too, so the caller confirms first.
+     */
+    closePull: (pullNumber: number) =>
+      fns.runOp(`Closed #${pullNumber}`, async () => {
+        const { message } = await unwrap(
+          fetchClient.POST("/api/github/pulls/{number}/close", {
+            params: { path: { number: String(pullNumber) } },
+          })
+        );
+        return { output: message };
+      }),
+
     checkoutAndUpdate: async (branch: string) => {
       try {
         await unwrap(fetchClient.POST("/api/checkout", { body: { branch } }));

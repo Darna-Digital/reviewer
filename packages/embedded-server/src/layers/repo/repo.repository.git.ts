@@ -744,6 +744,38 @@ export const makeGitRepoRepository = Effect.gen(function* () {
   const checkout: RepoRepo["checkout"] = (branch) =>
     run("checkout", branch).pipe(Effect.asVoid);
 
+  /**
+   * A pull request, checked out locally.
+   *
+   * Fetched by `refs/pull/<n>/head` rather than by branch name: every open pull
+   * request has that ref on `origin`, including the ones opened from forks
+   * whose branch `origin` has never heard of.
+   *
+   * An existing local branch of that name is only ever fast-forwarded, never
+   * reset: the branch may be one you have been working on, and "check out this
+   * pull request" is not permission to throw that away. When it cannot
+   * fast-forward, git says so and the checkout fails — which is the right
+   * answer, because the two have genuinely diverged.
+   */
+  const checkoutPull: RepoRepo["checkoutPull"] = (pullNumber, branch) =>
+    Effect.gen(function* () {
+      yield* run("fetch", "origin", `refs/pull/${pullNumber}/head`);
+      const head = (yield* run("rev-parse", "FETCH_HEAD")).trim();
+      const existing = (yield* runTolerant(
+        "rev-parse",
+        "--verify",
+        "--quiet",
+        `refs/heads/${branch}`
+      )).trim();
+      if (existing.length === 0) {
+        yield* run("checkout", "-b", branch, head);
+      } else {
+        yield* run("checkout", branch);
+        yield* run("merge", "--ff-only", head);
+      }
+      return branch;
+    });
+
   const createBranch: RepoRepo["createBranch"] = (name, startPoint) =>
     (startPoint === null
       ? run("checkout", "-b", name)
@@ -1058,6 +1090,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     commitDiff,
     diffFileContents,
     checkout,
+    checkoutPull,
     createBranch,
     commit,
     discard,

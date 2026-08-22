@@ -1,8 +1,4 @@
 import { describe, expect, it } from "vitest";
-import {
-  PROJECT_TAB_ID,
-  SESSIONS_TAB_ID,
-} from "@/interactions/window-tabs/functions/window-tabs.functions";
 import { barShortcut, sessionDigit } from "./window-bar.shortcuts";
 
 const chord = (key: string, held: Partial<KeyboardEvent> = {}) =>
@@ -16,15 +12,15 @@ const chord = (key: string, held: Partial<KeyboardEvent> = {}) =>
   });
 
 describe("the window bar's chords", () => {
-  it("puts the two places it leads with on ⌘1 and ⌘2", () => {
-    expect(chord("1")).toEqual({ kind: "tab", tabId: PROJECT_TAB_ID });
-    expect(chord("2")).toEqual({ kind: "tab", tabId: SESSIONS_TAB_ID });
+  it("gives the digits to the tabs alone, from ⌘1", () => {
+    expect(chord("1")).toEqual({ kind: "session", slot: 1 });
+    expect(chord("2")).toEqual({ kind: "session", slot: 2 });
+    expect(chord("9")).toEqual({ kind: "session", slot: 9 });
   });
 
-  it("carries on along the sessions from ⌘3", () => {
-    expect(chord("3")).toEqual({ kind: "session", slot: 1 });
-    expect(chord("4")).toEqual({ kind: "session", slot: 2 });
-    expect(chord("9")).toEqual({ kind: "session", slot: 7 });
+  it("crosses between the ways of working on ⌘G, off the digits", () => {
+    expect(chord("g")).toEqual({ kind: "mode" });
+    expect(chord("G", { shiftKey: true })).toBeNull();
   });
 
   it("leaves the launchpad on ⌘L, off the run of places", () => {
@@ -33,8 +29,8 @@ describe("the window bar's chords", () => {
   });
 
   it("runs out at ⌘9", () => {
-    expect(sessionDigit(7)).toBe(9);
-    expect(sessionDigit(8)).toBeNull();
+    expect(sessionDigit(9)).toBe(9);
+    expect(sessionDigit(10)).toBeNull();
   });
 
   it("reads a digit rather than coercing one out of any key", () => {
@@ -83,8 +79,8 @@ describe("the window bar's chords", () => {
 
   it("answers Ctrl the same as ⌘", () => {
     expect(chord("1", { metaKey: false, ctrlKey: true })).toEqual({
-      kind: "tab",
-      tabId: PROJECT_TAB_ID,
+      kind: "session",
+      slot: 1,
     });
   });
 

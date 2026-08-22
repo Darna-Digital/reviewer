@@ -171,7 +171,7 @@ function TaskCard({
       </div>
 
       <Link
-        to="/modes/collaboration"
+        to="/modes/experimentation/collaboration"
         search={{ view: "task", id: task.id }}
         {...drag.keyProps(task)}
         className="flex flex-col gap-2 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
@@ -411,7 +411,7 @@ export function FlowView({ project }: { project: MockProject }) {
         crumbs={[
           <Link
             key="project"
-            to="/modes/collaboration"
+            to="/modes/experimentation/collaboration"
             search={{ view: "project", id: project.id }}
             className="flex min-w-0 items-center gap-1.5 text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
           >
@@ -433,7 +433,7 @@ export function FlowView({ project }: { project: MockProject }) {
           <span className="text-muted-foreground">nothing in any horizon</span>
         ) : (
           <Link
-            to="/modes/collaboration"
+            to="/modes/experimentation/collaboration"
             search={{ view: "task", id: first.id }}
             className="flex min-w-0 items-center gap-2 outline-none hover:underline focus-visible:underline"
           >
@@ -527,7 +527,7 @@ export function FlowView({ project }: { project: MockProject }) {
                 {landed.map((task) => (
                   <li key={task.id}>
                     <Link
-                      to="/modes/collaboration"
+                      to="/modes/experimentation/collaboration"
                       search={{ view: "task", id: task.id }}
                       className="flex items-center gap-1.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
                     >

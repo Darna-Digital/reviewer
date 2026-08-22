@@ -52,6 +52,10 @@ export interface CommentsDependencies {
       body: string
     ) => Promise<ReviewComment>;
     readonly deleteComment: (id: string) => Promise<void>;
+    readonly deletePullComment: (
+      pullNumber: number,
+      commentId: number
+    ) => Promise<void>;
     readonly replyPullComment: (
       pullNumber: number,
       commentId: number,
@@ -72,8 +76,16 @@ export interface CommentsFunctions {
     comment: ReviewComment,
     body: string
   ) => Promise<ReviewComment | null>;
-  /** Delete a comment — only local comments are deletable; returns true if removed. */
-  readonly remove: (comment: ReviewComment) => Promise<boolean>;
+  /**
+   * Delete a comment from whichever store holds it — disk for a local one,
+   * GitHub for one on the pull request being reviewed. Answers false when
+   * nothing was removed: a GitHub comment reached with no pull request in hand
+   * has no store to be deleted from.
+   */
+  readonly remove: (
+    selectedPull: PullRequestInfo | null,
+    comment: ReviewComment
+  ) => Promise<boolean>;
   /** Reply to a GitHub PR comment, anchored to its parent's line. */
   readonly reply: (
     selectedPull: PullRequestInfo | null,
