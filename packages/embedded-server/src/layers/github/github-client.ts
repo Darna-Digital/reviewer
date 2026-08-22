@@ -40,6 +40,14 @@ export interface GitHubClientShape {
     body: unknown
   ) => Effect.Effect<unknown, GitProviderError>;
   /**
+   * A DELETE. GitHub answers one with 204 and an empty body, so unlike the
+   * others there is nothing to parse and nothing to hand back — the absence of
+   * a failure is the whole answer.
+   */
+  readonly deleteResource: (
+    path: string
+  ) => Effect.Effect<void, GitProviderError>;
+  /**
    * One GraphQL query, with its `data` unwrapped.
    *
    * GraphQL answers 200 with an `errors` array rather than a status, so a
@@ -208,6 +216,11 @@ export const make = Effect.gen(function* () {
       HttpClientRequest.bodyJsonUnsafe(HttpClientRequest.patch(url, init), body)
     ).pipe(Effect.flatMap((text) => parseJson(path, text)));
 
+  const deleteResource: GitHubClientShape["deleteResource"] = (path) =>
+    requestText(path, "application/vnd.github+json", (url, init) =>
+      HttpClientRequest.delete(url, init)
+    ).pipe(Effect.asVoid);
+
   const graphql: GitHubClientShape["graphql"] = (query, variables) =>
     postJson("/graphql", { query, variables }).pipe(
       Effect.flatMap((payload) => {
@@ -243,6 +256,7 @@ export const make = Effect.gen(function* () {
     postJson,
     putJson,
     patchJson,
+    deleteResource,
     graphql,
   });
 });

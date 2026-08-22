@@ -9,9 +9,9 @@ import {
   PrComment,
   PrReply,
   PullNumberParam,
-  PullReplyParams,
+  PullCommentParams,
 } from "@byconvo/core/ports/git-provider";
-import { DiffText } from "@byconvo/core/shared";
+import { DiffText, Ok } from "@byconvo/core/shared";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 export class GitHubApi extends HttpApiGroup.make("github")
@@ -67,9 +67,20 @@ export class GitHubApi extends HttpApiGroup.make("github")
       "replyPullComment",
       "/github/pulls/:number/comments/:commentId/replies",
       {
-        params: PullReplyParams,
+        params: PullCommentParams,
         payload: PrReply,
         success: ReviewComment,
+        error: GitProviderError,
+      }
+    )
+  )
+  .add(
+    HttpApiEndpoint.make("DELETE")(
+      "deletePullComment",
+      "/github/pulls/:number/comments/:commentId",
+      {
+        params: PullCommentParams,
+        success: Ok,
         error: GitProviderError,
       }
     )

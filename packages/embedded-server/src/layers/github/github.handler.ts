@@ -6,6 +6,8 @@ import {
   GitProvider,
 } from "@byconvo/core/ports/git-provider";
 
+const ok = { ok: true } as const;
+
 const pullNumber = (raw: string): Effect.Effect<number, GitProviderError> =>
   Number.isInteger(Number(raw))
     ? Effect.succeed(Number(raw))
@@ -55,6 +57,20 @@ export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
             })
           )
         )
+      )
+    )
+    .handle("deletePullComment", ({ params }) =>
+      pullNumber(params.number).pipe(
+        Effect.flatMap((n) =>
+          pullNumber(params.commentId).pipe(
+            Effect.flatMap((commentId) =>
+              Effect.flatMap(GitProvider, (s) =>
+                s.deletePullComment({ pullNumber: n, commentId })
+              )
+            )
+          )
+        ),
+        Effect.as(ok)
       )
     )
     .handle("replyPullComment", ({ params, payload }) =>

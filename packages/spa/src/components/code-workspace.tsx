@@ -393,10 +393,11 @@ export function CodeWorkspace() {
       });
       if (chatId === null) return;
       // Handing the comments off resolves them: their text now lives in the chat,
-      // so clear the local ones (remove() ignores GitHub comments) instead of
-      // leaving them lingering in the diff.
+      // so clear the local ones instead of leaving them lingering in the diff.
+      // No pull request is passed, which is how the GitHub ones are spared —
+      // they belong to the pull request rather than to this hand-off.
       await Promise.all(
-        visibleComments.map((comment) => comments.remove(comment))
+        visibleComments.map((comment) => comments.remove(null, comment))
       );
       toast.success(`Assigned ${count} comment${plural}`);
       void navigate({ to: "/modes/agent-session/$chatId", params: { chatId } });
@@ -822,8 +823,14 @@ export function CodeWorkspace() {
       location,
       body
     );
+  // GitHub can refuse this one — a comment somebody else wrote is not ours to
+  // remove — so unlike a local delete it needs somewhere to say so.
   const deleteComment = async (comment: ReviewComment) => {
-    await comments.remove(comment);
+    try {
+      await comments.remove(selectedPull, comment);
+    } catch (error) {
+      toast.error(errorReason(error, "Could not delete the comment"));
+    }
   };
   const editComment = async (comment: ReviewComment, body: string) => {
     await comments.update(comment, body);

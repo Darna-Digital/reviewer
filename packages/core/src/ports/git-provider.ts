@@ -145,7 +145,7 @@ export const CloseResult = Schema.Struct({ message: Schema.String });
 export type CloseResult = typeof CloseResult.Type;
 
 export const PullNumberParam = Schema.Struct({ number: Schema.String });
-export const PullReplyParams = Schema.Struct({
+export const PullCommentParams = Schema.Struct({
   number: Schema.String,
   commentId: Schema.String,
 });
@@ -168,9 +168,16 @@ export interface PrCommentInput {
   readonly lineNumber: number;
   readonly body: string;
 }
-export interface PrReplyInput {
+/**
+ * One comment already on a pull request. GitHub identifies a review comment
+ * repo-wide rather than within its pull request, so the number here is what the
+ * caller is looking at rather than something the provider needs to find it.
+ */
+export interface PrCommentRef {
   readonly pullNumber: number;
   readonly commentId: number;
+}
+export interface PrReplyInput extends PrCommentRef {
   readonly body: string;
 }
 
@@ -191,6 +198,9 @@ export interface GitProviderShape {
   readonly replyToPullComment: (
     input: PrReplyInput
   ) => Effect.Effect<ReviewComment, GitProviderError>;
+  readonly deletePullComment: (
+    input: PrCommentRef
+  ) => Effect.Effect<void, GitProviderError>;
   readonly mergePull: (
     pullNumber: number,
     method: MergeMethod
@@ -238,6 +248,7 @@ export const GitProviderMemory = (
         }),
       closePull: (pullNumber) =>
         Effect.succeed({ message: `Closed #${pullNumber}` }),
+      deletePullComment: () => Effect.void,
       replyToPullComment: (input) =>
         Effect.succeed({
           id: "gh-reply",

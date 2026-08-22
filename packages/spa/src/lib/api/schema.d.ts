@@ -900,6 +900,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/github/pulls/{number}/comments/{commentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["github.deletePullComment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/git-message/generate": {
         parameters: {
             query?: never;
@@ -4953,6 +4969,40 @@ export interface operations {
                         target: string;
                         /** @enum {string} */
                         source: "local" | "github";
+                    };
+                };
+            };
+            /** @description GitProviderError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitProviderError"];
+                };
+            };
+        };
+    };
+    "github.deletePullComment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: string;
+                commentId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok: boolean;
                     };
                 };
             };

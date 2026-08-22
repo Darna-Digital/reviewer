@@ -195,6 +195,23 @@ export const makeGitHubProvider = Effect.gen(function* () {
     });
 
   /**
+   * Remove one review comment from the pull request.
+   *
+   * GitHub keys a review comment to the repository rather than to the pull
+   * request it hangs on, so the number the caller was looking at plays no part
+   * in the call — only in which list the answer belongs to. A comment somebody
+   * else wrote comes back 403, which reaches the reviewer as GitHub's own
+   * sentence about it rather than as a silent no-op.
+   */
+  const deletePullComment: GitProviderShape["deletePullComment"] = (input) =>
+    Effect.gen(function* () {
+      const { owner, repo } = yield* gh.repo;
+      yield* gh.deleteResource(
+        `/repos/${owner}/${repo}/pulls/comments/${input.commentId}`
+      );
+    });
+
+  /**
    * Land the pull request on its base branch.
    *
    * GitHub answers a refusal with 405 (not mergeable — conflicts, a draft, a
@@ -257,5 +274,6 @@ export const makeGitHubProvider = Effect.gen(function* () {
     pullComments,
     createPullComment,
     replyToPullComment,
+    deletePullComment,
   } satisfies GitProviderShape;
 });

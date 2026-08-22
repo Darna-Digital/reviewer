@@ -270,6 +270,16 @@ export function WindowBar() {
     void select(tab);
   };
   /**
+   * Mint a session, from the ✛ or from its chord. The launchpad answers to this
+   * as it answers to `show`, and for the same reason: the bar is what you
+   * reached for, and a panel left standing over the session it has just started
+   * is a panel you have to dismiss before you can type into it.
+   */
+  const mint = () => {
+    closeTabOverview();
+    void openSession();
+  };
+  /**
    * The tab being dragged. It lives in a ref as well as state because the first
    * `dragover` can arrive in the same task as the `dragstart` that set it, and
    * would read the pre-render value; the state copy only drives the styling.
@@ -379,7 +389,7 @@ export function WindowBar() {
     const run = (shortcut: BarShortcut) => {
       switch (shortcut.kind) {
         case "new-session":
-          return void openSession();
+          return mint();
         case "launchpad":
           return toggleTabOverview();
         case "project-picker":
@@ -625,7 +635,7 @@ export function WindowBar() {
           <BarButton
             label="New session"
             keys={NEW_SESSION_KEYS}
-            onClick={openSession}
+            onClick={mint}
           >
             <IconPlus className="size-4" />
           </BarButton>

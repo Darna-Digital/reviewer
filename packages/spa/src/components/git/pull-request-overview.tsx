@@ -340,7 +340,7 @@ export function PullRequestOverview({
               />
             }
           >
-            <IconListTree />
+            <IconListTree className="size-3.5" />
           </TooltipTrigger>
           <TooltipContent>
             {treeVisible ? "Hide file tree" : "Show file tree"}
