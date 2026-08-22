@@ -6,6 +6,8 @@ import {
   GitProvider,
 } from "@byconvo/core/ports/git-provider";
 
+const ok = { ok: true } as const;
+
 const pullNumber = (raw: string): Effect.Effect<number, GitProviderError> =>
   Number.isInteger(Number(raw))
     ? Effect.succeed(Number(raw))
@@ -16,6 +18,20 @@ const pullNumber = (raw: string): Effect.Effect<number, GitProviderError> =>
 export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
   handlers
     .handle("pulls", () => Effect.flatMap(GitProvider, (s) => s.pulls))
+    .handle("mergePull", ({ params, payload }) =>
+      pullNumber(params.number).pipe(
+        Effect.flatMap((n) =>
+          Effect.flatMap(GitProvider, (s) => s.mergePull(n, payload.method))
+        )
+      )
+    )
+    .handle("closePull", ({ params }) =>
+      pullNumber(params.number).pipe(
+        Effect.flatMap((n) =>
+          Effect.flatMap(GitProvider, (s) => s.closePull(n))
+        )
+      )
+    )
     .handle("pullDiff", ({ params }) =>
       pullNumber(params.number).pipe(
         Effect.flatMap((n) => Effect.flatMap(GitProvider, (s) => s.pullDiff(n)))
@@ -41,6 +57,20 @@ export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
             })
           )
         )
+      )
+    )
+    .handle("deletePullComment", ({ params }) =>
+      pullNumber(params.number).pipe(
+        Effect.flatMap((n) =>
+          pullNumber(params.commentId).pipe(
+            Effect.flatMap((commentId) =>
+              Effect.flatMap(GitProvider, (s) =>
+                s.deletePullComment({ pullNumber: n, commentId })
+              )
+            )
+          )
+        ),
+        Effect.as(ok)
       )
     )
     .handle("replyPullComment", ({ params, payload }) =>

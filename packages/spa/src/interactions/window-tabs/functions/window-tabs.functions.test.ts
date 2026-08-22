@@ -9,6 +9,8 @@ import {
   COLLABORATION_TAB_ID,
   initialWindowTabs,
   moveTab,
+  nextModeTab,
+  onSessionTab,
   openTab,
   PROJECT_TAB_ID,
   renameTab,
@@ -91,6 +93,17 @@ describe("withPinnedTabs", () => {
   });
 });
 
+describe("onSessionTab", () => {
+  it("is true only while a conversation has the window to itself", () => {
+    expect(onSessionTab(initialWindowTabs())).toBe(false);
+    const state = stripOf("a", "b");
+    expect(onSessionTab(state)).toBe(true);
+    // Back on the pinned Sessions tab the conversation is a pane beside the
+    // list again, which is what the rail's buttons act on.
+    expect(onSessionTab(selectTab(state, SESSIONS_TAB_ID))).toBe(false);
+  });
+});
+
 describe("openTab", () => {
   it("opens next to the active tab and goes to it", () => {
     let state = stripOf("a", "b", "c");
@@ -165,13 +178,34 @@ describe("trackLocation", () => {
   it("hands collaboration to its own tab, named after where it lands", () => {
     const state = trackLocation(
       initialWindowTabs(),
-      "/modes/collaboration/inbox",
-      "/modes/collaboration/inbox"
+      "/modes/collaboration/projects/p1",
+      "/modes/collaboration/projects/p1"
     );
     expect(show(state)).toBe("code *team sessions");
     expect(state.tabs[1]).toMatchObject({
-      href: "/modes/collaboration/inbox",
-      title: "Inbox",
+      href: "/modes/collaboration/projects/p1",
+      title: "Collaboration",
+    });
+  });
+
+  it("leaves the strip where it was while the prototype is on screen", () => {
+    // A mode button remembers where it was left, so one trip to the old design
+    // would otherwise leave Collaboration labelled after it and pointing there
+    // — and ⌘G landing on the prototype rather than on the mode.
+    const onCollaboration = trackLocation(
+      initialWindowTabs(),
+      "/modes/collaboration",
+      "/modes/collaboration"
+    );
+    const after = trackLocation(
+      onCollaboration,
+      "/modes/experimentation/collaboration",
+      "/modes/experimentation/collaboration"
+    );
+    expect(after).toBe(onCollaboration);
+    expect(after.tabs[1]).toMatchObject({
+      href: "/modes/collaboration",
+      title: "Collaboration",
     });
   });
 
@@ -257,6 +291,26 @@ describe("moveTab", () => {
   });
 });
 
+describe("nextModeTab", () => {
+  it("steps along the ways of working, wrapping round at the last", () => {
+    const { tabs } = stripOf("a");
+    expect(nextModeTab(tabs, PROJECT_TAB_ID)?.id).toBe(COLLABORATION_TAB_ID);
+    expect(nextModeTab(tabs, COLLABORATION_TAB_ID)?.id).toBe(SESSIONS_TAB_ID);
+    expect(nextModeTab(tabs, SESSIONS_TAB_ID)?.id).toBe(PROJECT_TAB_ID);
+  });
+
+  it("crosses to the first of them from a conversation, which is in neither", () => {
+    expect(nextModeTab(stripOf("a").tabs, "a")?.id).toBe(PROJECT_TAB_ID);
+    expect(nextModeTab(stripOf("a").tabs, null)?.id).toBe(PROJECT_TAB_ID);
+  });
+
+  it("has nowhere to cross to with one way of working", () => {
+    const { tabs } = stripOf("a");
+    const alone = tabs.filter((tab) => tab.id === PROJECT_TAB_ID);
+    expect(nextModeTab(alone, PROJECT_TAB_ID)).toBeNull();
+  });
+});
+
 describe("sessionAtSlot", () => {
   it("counts the sessions from 1, past the pinned tabs ahead of them", () => {
     const { tabs } = stripOf("a", "b");
@@ -283,6 +337,12 @@ describe("tabTitle", () => {
     expect(tabTitle("/modes/code/browse/commit/abc123")).toBe("Project");
     expect(tabTitle("/modes/code/review/pull/12")).toBe("Review");
     expect(tabTitle("/modes/collaboration")).toBe("Collaboration");
+    expect(tabTitle("/modes/experimentation/collaboration")).toBe(
+      "Experimentation"
+    );
+    expect(tabTitle("/modes/experimentation/collaboration/inbox")).toBe(
+      "Inbox"
+    );
     expect(tabTitle("/settings")).toBe("Settings");
     expect(tabTitle("/somewhere-else")).toBe("Byconvo");
   });

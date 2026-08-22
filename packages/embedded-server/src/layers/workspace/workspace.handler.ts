@@ -57,4 +57,22 @@ export const WorkspaceHandler = HttpApiBuilder.group(
           s.renamePath(payload.from, payload.to)
         ).pipe(Effect.as(ok))
       )
+      .handle("copyFile", ({ payload }) =>
+        Effect.flatMap(WorkspaceService, (s) =>
+          s.copyPath(payload.from, payload.to)
+        ).pipe(Effect.as(ok))
+      )
+      .handle("uploadFile", ({ payload }) =>
+        Effect.flatMap(WorkspaceService, (s) =>
+          s.uploadFile(payload.path, payload.base64)
+        ).pipe(Effect.as(ok))
+      )
+      .handle("trashFile", ({ payload }) =>
+        Effect.flatMap(WorkspaceService, (s) => s.trashPath(payload.path))
+      )
+      .handle("revealFile", ({ payload }) =>
+        Effect.flatMap(WorkspaceService, (s) =>
+          s.revealPath(payload.path)
+        ).pipe(Effect.as(ok))
+      )
 );

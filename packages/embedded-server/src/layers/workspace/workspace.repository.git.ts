@@ -9,7 +9,7 @@ import * as FileSystem from "effect/FileSystem";
 import type { PlatformError } from "effect/PlatformError";
 import * as Stream from "effect/Stream";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
-import { homedir, hostname } from "node:os";
+import { homedir, hostname, platform } from "node:os";
 import { resolve as pathResolve } from "node:path";
 import { NoRepoSelected, StorageError } from "@byconvo/core/shared";
 import { InvalidRepo, mediaTypeFor, PathExists } from "@byconvo/core/workspace";
@@ -30,6 +30,26 @@ import type {
 
 const toStorageError = (error: PlatformError) =>
   new StorageError({ reason: error.message });
+
+/** How each desktop asks its file manager to show a path and select it. */
+export const revealCommand = (
+  os: string,
+  resolved: string
+): { command: string; args: Array<string> } => {
+  if (os === "darwin") return { command: "open", args: ["-R", resolved] };
+  if (os === "win32") {
+    return { command: "explorer", args: [`/select,${resolved}`] };
+  }
+  // No Linux file manager selects a file from the command line; the folder it
+  // sits in is what every one of them opens.
+  return {
+    command: "xdg-open",
+    args: [resolved.slice(0, resolved.lastIndexOf("/")) || "/"],
+  };
+};
+
+/** Where a deleted path is kept, beside the rest of byconvo's project state. */
+const TRASH_DIR = ".byconvo/trash";
 
 // Git's own heuristic: a NUL byte in the first 8k means "not text".
 const BINARY_SNIFF_BYTES = 8000;
@@ -245,6 +265,61 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
       yield* tryFs(fs.rename(from.resolved, to.resolved));
     });
 
+  const copyPath: WorkspaceRepo["copyPath"] = (fromRel, toRel) =>
+    Effect.gen(function* () {
+      const from = yield* resolveInProject(fromRel);
+      const to = yield* resolveInProject(toRel);
+      if (yield* tryFs(fs.exists(to.resolved))) {
+        return yield* Effect.fail(new PathExists({ path: toRel }));
+      }
+      yield* makeParentDirectory(to.resolved);
+      yield* tryFs(fs.copy(from.resolved, to.resolved));
+    });
+
+  const uploadFile: WorkspaceRepo["uploadFile"] = (relPath, base64) =>
+    Effect.gen(function* () {
+      const { resolved } = yield* resolveInProject(relPath);
+      if (yield* tryFs(fs.exists(resolved))) {
+        return yield* Effect.fail(new PathExists({ path: relPath }));
+      }
+      yield* makeParentDirectory(resolved);
+      yield* tryFs(fs.writeFile(resolved, Buffer.from(base64, "base64")));
+    });
+
+  const trashPath: WorkspaceRepo["trashPath"] = (relPath) =>
+    Effect.gen(function* () {
+      const source = yield* resolveInProject(relPath);
+      const root = yield* ctx.requireProject;
+      // One numbered folder per deletion, so two files of the same name can
+      // both sit in the trash and each is restored under the name it had.
+      const held = yield* fs
+        .readDirectory(`${root}/${TRASH_DIR}`)
+        .pipe(Effect.catch(() => Effect.succeed<Array<string>>([])));
+      const slot =
+        held.reduce(
+          (highest, name) => Math.max(highest, Number(name) || 0),
+          0
+        ) + 1;
+      const path = `${TRASH_DIR}/${slot}/${source.name}`;
+      yield* makeParentDirectory(`${root}/${path}`);
+      yield* tryFs(fs.rename(source.resolved, `${root}/${path}`));
+      return { path };
+    });
+
+  const revealPath: WorkspaceRepo["revealPath"] = (relPath) =>
+    Effect.gen(function* () {
+      const { resolved } = yield* resolveInProject(relPath);
+      const { args, command } = revealCommand(platform(), resolved);
+      const exitCode = yield* tryFs(
+        spawner.exitCode(ChildProcess.make(command, args))
+      );
+      if (exitCode !== 0) {
+        return yield* Effect.fail(
+          new StorageError({ reason: `could not reveal ${relPath}` })
+        );
+      }
+    });
+
   return {
     info,
     setCurrent,
@@ -256,5 +331,9 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
     createPath,
     deletePath,
     renamePath,
+    copyPath,
+    uploadFile,
+    trashPath,
+    revealPath,
   } satisfies WorkspaceRepo;
 });

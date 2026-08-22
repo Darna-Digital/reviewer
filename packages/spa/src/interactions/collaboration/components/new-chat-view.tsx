@@ -286,7 +286,7 @@ export function NewChatView() {
         crumbs={[
           <Link
             key="inbox"
-            to="/modes/collaboration/inbox"
+            to="/modes/experimentation/collaboration/inbox"
             className="text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
           >
             Inbox

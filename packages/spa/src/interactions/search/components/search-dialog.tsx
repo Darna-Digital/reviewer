@@ -17,7 +17,7 @@ import {
   IconGitBranch,
   IconSearch,
 } from "@tabler/icons-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DialogOverlay, DialogPortal } from "@/components/ui/dialog";
 import { Kbd } from "@/components/ui/kbd";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,6 +27,7 @@ import {
   MIN_QUERY_LENGTH,
   useGrepSearch,
 } from "../adapters/search.hook.adapter";
+import type { SearchSeed } from "../adapters/search.store";
 import {
   commandsIn,
   crumbsFor,
@@ -57,6 +58,11 @@ interface SearchDialogProps {
   mode: SearchMode;
   onOpenChange: (open: boolean) => void;
   onModeChange: (mode: SearchMode) => void;
+  /**
+   * A phrase to open holding — what ⌘⇧F over a highlighted word sends. Null
+   * leaves the box as the last search left it.
+   */
+  seed?: SearchSeed | null;
   commands: ReadonlyArray<Command>;
   /** Every path the search covers, named as `scope` names them. */
   files: ReadonlyArray<string>;
@@ -136,6 +142,7 @@ export function SearchDialog({
   mode,
   onOpenChange,
   onModeChange,
+  seed = null,
   commands,
   files,
   scope,
@@ -156,7 +163,24 @@ export function SearchDialog({
   const setQuery = (next: string) => {
     setQueries((current) => ({ ...current, [mode]: next }));
     setActive(0);
+    // Typing is the answer to the selection, so it stops waiting to be made.
+    selectPending.current = false;
   };
+
+  /**
+   * Select the whole box — now if it is on screen, and otherwise the moment it
+   * takes focus. The popup mounts a commit after `open` flips, so an effect
+   * firing on the way in has no input to select yet, and the focus it is about
+   * to be given would leave the caret at the end of a query nobody asked to
+   * append to.
+   */
+  const selectPending = useRef(false);
+  const selectQuery = useCallback(() => {
+    const input = inputRef.current;
+    if (input === null || input.value === "") return;
+    selectPending.current = false;
+    input.select();
+  }, []);
 
   // Always the text query, whatever mode is on screen: the debounce inside the
   // hook must never be left holding a command-list query when text mode opens.
@@ -260,10 +284,32 @@ export function SearchDialog({
   // A query carried over from last time is selected, so typing replaces it and
   // ↑/↓ or Enter picks up where it left off.
   useEffect(() => {
-    if (open && query !== "") inputRef.current?.select();
+    if (!open) {
+      selectPending.current = false;
+      return;
+    }
+    selectPending.current = true;
+    selectQuery();
     // Only on the way in: re-selecting as the user types would be unusable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, mode]);
+
+  // A phrase sent in with the gesture replaces the box. Applied in two steps on
+  // purpose: the value has to reach the input before it can be selected, and
+  // both updates land in the same commit, so the effect below sees it there.
+  const [seededAt, setSeededAt] = useState(0);
+  useEffect(() => {
+    if (!open || seed === null || seed.nonce === seededAt) return;
+    setQueries((current) => ({ ...current, [mode]: seed.text }));
+    setActive(0);
+    setSeededAt(seed.nonce);
+  }, [open, seed, seededAt, mode]);
+
+  useEffect(() => {
+    if (seededAt === 0) return;
+    selectPending.current = true;
+    selectQuery();
+  }, [seededAt, selectQuery]);
 
   useEffect(() => {
     setActive((current) =>
@@ -367,6 +413,9 @@ export function SearchDialog({
               value={query}
               aria-label={INPUT_LABELS[mode]}
               onChange={(event) => setQuery(event.target.value)}
+              onFocus={() => {
+                if (selectPending.current) selectQuery();
+              }}
               onKeyDown={onInputKeyDown}
               placeholder={PLACEHOLDERS[mode]}
               autoComplete="off"

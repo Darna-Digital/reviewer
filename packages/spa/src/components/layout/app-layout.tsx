@@ -25,6 +25,7 @@ import { SessionsRail } from "@/components/layout/sessions-rail";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
+import { useOnSessionTab } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { openProjectPicker } from "@/interactions/workspace/adapters/project-picker.store";
 import { useRepoCommands } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
@@ -78,8 +79,12 @@ export function AppLayout() {
     : resolvedStartingNew;
   const prefs = useUiPrefs();
   const workspace = useWorkspace();
+  // Which tab is holding the window, where that changes the shape of the page:
+  // a conversation lifted into a tab of its own is the whole page rather than
+  // the pane beside the list. See `ShellRoute`.
+  const soloSession = useOnSessionTab();
 
-  const route = shellRoute(pathname, prefs.workMode, startingNew);
+  const route = shellRoute(pathname, prefs.workMode, startingNew, soloSession);
   const gitChrome = showsGitChrome(route);
   const current = workspace.data?.current ?? null;
 
@@ -90,17 +95,40 @@ export function AppLayout() {
    */
   const bare = route.kind === "session" && route.composing;
 
+  /**
+   * Pages that wear no header, and so no rule under one either.
+   *
+   * The composer is one because the shell is getting out of its way entirely.
+   * Collaboration is one for the opposite reason: it is a full page, but every
+   * surface in it names itself at the top of its own centred column, so a bar
+   * above would repeat that — and the rule under it would be the one line drawn
+   * across a design whose argument is a page standing on open ground.
+   */
+  const headerless = bare || route.kind === "collaboration";
+
   // Both rails are the same column carrying different things — code's git
   // surfaces, sessions' new-and-find — so crossing between them leaves the page
   // beside it exactly where it was. Collaboration is the one surface without
   // one: its own sidebar carries the equivalent.
-  const railed = route.kind !== "collaboration" && !bare;
+  //
+  // So is a conversation with the window to itself. Every button in the
+  // sessions rail acts on the list, and on a session tab there is no list — the
+  // column would be three controls for a surface that is not on screen, drawn
+  // down the side of a page that has nothing else in the margin. The strip
+  // above it mints a session and the trail leads back to the list, which is
+  // what was worth having here.
+  const railed =
+    route.kind !== "collaboration" &&
+    route.kind !== "experimentation" &&
+    !bare &&
+    !(route.kind === "session" && route.solo);
 
   /** Pages that are meaningless without a repository open behind them. */
   const needsRepo =
     route.kind === "workspace" ||
     route.kind === "session" ||
     route.kind === "collaboration" ||
+    route.kind === "experimentation" ||
     route.kind === "dock";
 
   /**
@@ -116,8 +144,8 @@ export function AppLayout() {
     route.kind === "dock" && current !== null ? route.tab : undefined;
   const dockExpanded = expandedTab !== undefined;
 
-  // The picker rides the window bar, but the command that raises it belongs
-  // with the rest of the shell's.
+  // The picker rides the header, but the command that raises it belongs with
+  // the rest of the shell's.
   const shellCommands = useMemo<ReadonlyArray<Command>>(
     () => [
       {
@@ -150,13 +178,13 @@ export function AppLayout() {
       <WindowFrame>
         {railed && (route.kind === "session" ? <SessionsRail /> : <ModeRail />)}
         <div className="flex min-w-0 flex-1 flex-col">
-          {!bare && <AppHeader route={route} />}
+          {!headerless && <AppHeader route={route} />}
           {/* The rule under the header goes with the header: on the composer it
               would be a line drawn across the top of an empty page. */}
           <div
             className={cn(
               "flex min-h-0 flex-1 flex-col overflow-hidden",
-              !bare && "border-t"
+              !headerless && "border-t"
             )}
           >
             {/* Put away rather than unmounted: the outlet is where the router

@@ -68,6 +68,9 @@ export function CompletionPopup({
         className="w-auto max-w-[32rem] min-w-[18rem] gap-0 overflow-hidden p-0"
         // The caret must stay where it is; the editor clears it on a press.
         onPointerDown={(event) => event.preventDefault()}
+        // A press outside the list retires it — see `useCompletions`. This is
+        // how a press *on* a row is told apart from one that dismisses it.
+        data-completion-popup=""
       >
         <ul
           ref={listRef}
@@ -89,7 +92,7 @@ export function CompletionPopup({
               onPointerEnter={() => onSelect(index)}
               onClick={() => onAccept(index)}
             >
-              <span className="w-16 shrink-0 truncate text-[10px] tracking-wide text-muted-foreground uppercase">
+              <span className="w-16 shrink-0 truncate text-[10px] text-muted-foreground">
                 {item.kind}
               </span>
               <span className="min-w-0 flex-1 truncate font-mono">

@@ -321,7 +321,7 @@ export function ThreadsPage() {
               .filter((g) => g.threads.length > 0)
               .map((group) => (
                 <div key={group.branch} className="mb-1">
-                  <div className="flex items-center gap-1.5 px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                  <div className="flex items-center gap-1.5 px-2 pt-2 pb-1 text-[11px] font-medium text-muted-foreground">
                     <IconGitBranch className="size-3 shrink-0" />
                     <span className="truncate">
                       {branchLabel(group.branch)}

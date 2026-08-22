@@ -23,6 +23,19 @@ export const NEW_SESSION_HREF = "/modes/agent-session?new=true";
 
 const SESSIONS_PREFIX = "/modes/agent-session";
 const COLLABORATION_PREFIX = "/modes/collaboration";
+/**
+ * The collaboration prototype, kept as a reference.
+ *
+ * It belongs to no tab in the strip. The three the bar leads with are ways of
+ * working, and the prototype is not one — it is the previous draft of one, kept
+ * reachable by its URL. Letting Collaboration hold it would be worse than
+ * letting it fall through to Code: a mode tab remembers where it was left, so
+ * one trip to the old design would leave the button labelled after it and
+ * pointing there, and ⌘G would go on landing on the prototype instead of the
+ * mode. So the strip stays as it was while the prototype is on screen — see
+ * `tabForLocation`.
+ */
+const EXPERIMENTATION_PREFIX = "/modes/experimentation";
 
 const TITLES: ReadonlyArray<readonly [string, string]> = [
   ["/modes/code/browse", "Project"],
@@ -38,7 +51,11 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
   ]),
   ["/modes/code/docs", "Docs"],
   ["/modes/code/tasks", "Tasks"],
-  ["/modes/collaboration/inbox", "Inbox"],
+  // Longest first: `startsWith` takes the first entry that matches, and the
+  // prototype's paths sit under a prefix of their own so neither reading of a
+  // collaboration URL can swallow the other.
+  ["/modes/experimentation/collaboration/inbox", "Inbox"],
+  ["/modes/experimentation/collaboration", "Experimentation"],
   ["/modes/collaboration", "Collaboration"],
   ["/settings", "Settings"],
 ];
@@ -81,8 +98,8 @@ export const isPinnedTab = (tab: WindowTab): boolean => tab.kind !== "session";
  * The tabs the strip shows. With its button switched off Sessions stays in the
  * strip — the launchpad goes on listing it, and a conversation still has
  * somewhere to be handed back to — but leads the window no more than the
- * launchpad does, so it is left out of the bar and of ⌘<digit> with it. It comes
- * back for as long as the window is on it: a bar showing a page while
+ * launchpad does, so it is left out of the bar, leaving ⌘G nowhere to cross to.
+ * It comes back for as long as the window is on it: a bar showing a page while
  * highlighting none of its tabs reads as having lost its place.
  */
 export function stripTabs({
@@ -121,6 +138,10 @@ const inSessions = (pathname: string): boolean =>
 const inCollaboration = (pathname: string): boolean =>
   pathname.startsWith(COLLABORATION_PREFIX);
 
+/** Whether a location is the prototype's, which no tab in the strip holds. */
+const inExperimentation = (pathname: string): boolean =>
+  pathname.startsWith(EXPERIMENTATION_PREFIX);
+
 /** A pinned tab that is named after wherever it has been left. */
 const followsLocation = (tab: WindowTab): boolean =>
   tab.kind === "project" || tab.kind === "collaboration";
@@ -135,6 +156,7 @@ const keepsLocation = (tab: WindowTab): boolean => tab.kind !== "sessions";
 
 /** Whether a location is a pinned tab's to hold. */
 function ownsLocation(tab: WindowTab, pathname: string): boolean {
+  if (inExperimentation(pathname)) return false;
   if (inSessions(pathname)) return tab.kind === "sessions";
   if (inCollaboration(pathname)) return tab.kind === "collaboration";
   return tab.kind === "project";
@@ -188,6 +210,19 @@ export const activeTab = (state: WindowTabsState): WindowTab | null =>
   state.tabs.find((tab) => tab.id === state.activeId) ?? null;
 
 /**
+ * Whether the window is on a conversation's own tab — one session, lifted out
+ * of the list, with the window to itself.
+ *
+ * The sessions surface and a session tab are the same URLs, so this is the only
+ * thing that tells the two apart: on the Sessions tab a conversation is the
+ * pane beside the list, and on its own tab it is the page. What the shell puts
+ * around it differs accordingly — see `ChatsPage` for the list it stays out of,
+ * and `ShellRoute` for the rail.
+ */
+export const onSessionTab = (state: WindowTabsState): boolean =>
+  activeTab(state)?.kind === "session";
+
+/**
  * Where a location belongs. A session tab holds one conversation, so it keeps
  * anything inside Sessions; everything else lands on the pinned tab that owns
  * that part of the app, whichever tab you set off from — leaving Sessions from
@@ -196,12 +231,17 @@ export const activeTab = (state: WindowTabsState): WindowTab | null =>
  * A switched-off feature has no tab to hand its locations to, and they are not
  * the active tab's to take instead: a strip that let them in would rename
  * whichever tab you were on and point it somewhere it does not belong, so Code
- * reached by URL alone would send you back to Collaboration.
+ * reached by URL alone would send you back to Collaboration. The collaboration
+ * prototype is the same case reached from the other side — a surface with no
+ * tab of its own — and is answered the same way.
  */
 function tabForLocation(
   state: WindowTabsState,
   pathname: string
 ): WindowTab | null {
+  // The prototype is nobody's: the strip keeps its place rather than renaming
+  // a mode button after a reference surface. See `EXPERIMENTATION_PREFIX`.
+  if (inExperimentation(pathname)) return null;
   const current = activeTab(state);
   const sessions = inSessions(pathname);
   if (current !== null && current.kind === "session" && sessions)
@@ -314,9 +354,26 @@ export function moveTab(
 }
 
 /**
+ * The way of working after the one the window is on, wrapping round — what ⌘G
+ * crosses to. The pinned tabs are those ways of working, so the crossing is a
+ * step along them — Code, Collaboration and Sessions, in strip order — and from
+ * a conversation, which is had in any of them, it is the first. A window with
+ * only one has nowhere to cross to.
+ */
+export function nextModeTab(
+  tabs: ReadonlyArray<WindowTab>,
+  activeId: string | null
+): WindowTab | null {
+  const modes = tabs.filter(isPinnedTab);
+  if (modes.length < 2) return null;
+  const at = modes.findIndex((tab) => tab.id === activeId);
+  return modes[(at + 1) % modes.length] ?? null;
+}
+
+/**
  * The session standing in that slot of a strip, counting from 1. The pinned
- * tabs are skipped: each is on a digit of its own, so the conversations are
- * counted among themselves and none of them moves when a pinned tab is
+ * tabs are skipped: they are off the digits altogether, so the conversations
+ * are counted among themselves and none of them moves when a pinned tab is
  * switched on or off.
  */
 export function sessionAtSlot(

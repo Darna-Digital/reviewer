@@ -191,6 +191,11 @@ export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
         Effect.as(ok)
       )
     )
+    .handle("checkoutPull", ({ payload }) =>
+      Effect.flatMap(RepoService, (s) =>
+        s.checkoutPull(payload.number, payload.branch)
+      ).pipe(Effect.map((branch) => ({ branch })))
+    )
     .handle("commit", ({ payload }) =>
       Effect.flatMap(RepoService, (s) =>
         s.commit(payload.message, payload.paths ?? [])

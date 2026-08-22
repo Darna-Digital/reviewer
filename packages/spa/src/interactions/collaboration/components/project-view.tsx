@@ -121,7 +121,7 @@ export function ProjectView({ project }: { project: MockProject }) {
             action={
               <SeeAll
                 label="The whole flow"
-                to="/modes/collaboration"
+                to="/modes/experimentation/collaboration"
                 search={{ view: "flow", id: project.id }}
               />
             }
@@ -131,7 +131,7 @@ export function ProjectView({ project }: { project: MockProject }) {
               {upNext.map((task) => (
                 <li key={task.id}>
                   <Link
-                    to="/modes/collaboration"
+                    to="/modes/experimentation/collaboration"
                     search={{ view: "task", id: task.id }}
                     className={ROW}
                   >
@@ -171,7 +171,7 @@ export function ProjectView({ project }: { project: MockProject }) {
               {landed.map((task) => (
                 <li key={task.id}>
                   <Link
-                    to="/modes/collaboration"
+                    to="/modes/experimentation/collaboration"
                     search={{ view: "task", id: task.id }}
                     className={ROW}
                   >

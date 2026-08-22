@@ -8,6 +8,10 @@ import {
   FileBytes,
   FileContent,
   PathExists,
+  RevealPath,
+  Trashed,
+  UploadFile,
+  CopyPath,
   WorkspaceInfo,
   BrowseQuery,
   PathQuery,
@@ -83,6 +87,34 @@ export class WorkspaceApi extends HttpApiGroup.make("workspace")
   .add(
     HttpApiEndpoint.post("renameFile", "/file/rename", {
       payload: RenameFile,
+      success: Ok,
+      error: [NoRepoSelected, StorageError],
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("copyFile", "/file/copy", {
+      payload: CopyPath,
+      success: Ok,
+      error: [NoRepoSelected, PathExists, StorageError],
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("uploadFile", "/file/upload", {
+      payload: UploadFile,
+      success: Ok,
+      error: [NoRepoSelected, PathExists, StorageError],
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("trashFile", "/file/trash", {
+      payload: PathQuery,
+      success: Trashed,
+      error: [NoRepoSelected, StorageError],
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("revealFile", "/file/reveal", {
+      payload: RevealPath,
       success: Ok,
       error: [NoRepoSelected, StorageError],
     })

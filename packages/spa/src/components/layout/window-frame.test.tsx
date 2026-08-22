@@ -66,6 +66,8 @@ describe("WindowFrame", () => {
 
   it("leaves collaboration mode to its own search", () => {
     expect(mountedOn("/modes/collaboration")).toBe(false);
+    cleanup();
+    expect(mountedOn("/modes/experimentation/collaboration")).toBe(false);
   });
 
   it("follows the last mode on surfaces both modes share", () => {

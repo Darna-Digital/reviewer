@@ -59,6 +59,13 @@ export function TurnStateDot({ state }: { state: ChatSummary["turnState"] }) {
   );
 }
 
+/**
+ * The tail read as a conversation rather than a list of labelled turns: what
+ * you said sits in a bubble on the right, what the agent said runs plain across
+ * the card, and everything before the last agent line is dimmed — the shape
+ * carries the roles, so the names come off. Only the reader who cannot see the
+ * shape still gets them.
+ */
 function ConversationTail({
   messages,
   assistantLabel,
@@ -67,17 +74,36 @@ function ConversationTail({
   assistantLabel: string;
 }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      {messages.map((m) => (
-        <div key={m.id} className="flex flex-col gap-0.5">
-          <span className="text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
-            {m.role === "user" ? "You" : assistantLabel}
+    <div className="flex flex-col items-start gap-1.5">
+      {messages.map((m, i) => {
+        const speaker = (
+          <span className="sr-only">
+            {m.role === "user" ? "You" : assistantLabel}:{" "}
           </span>
-          <p className="line-clamp-2 text-xs leading-relaxed break-words">
+        );
+        return m.role === "user" ? (
+          <p
+            key={m.id}
+            className="line-clamp-2 max-w-[85%] self-end rounded-lg rounded-br-sm bg-elevate px-2 py-1 text-xs leading-relaxed break-words"
+          >
+            {speaker}
             {m.text}
           </p>
-        </div>
-      ))}
+        ) : (
+          <p
+            key={m.id}
+            className={cn(
+              "line-clamp-2 max-w-[92%] text-xs leading-relaxed break-words",
+              i === messages.length - 1
+                ? "text-foreground"
+                : "text-muted-foreground"
+            )}
+          >
+            {speaker}
+            {m.text}
+          </p>
+        );
+      })}
     </div>
   );
 }
@@ -152,15 +178,22 @@ export function ChatRow({
         <span className="min-w-0 flex-1 truncate">{chat.title}</span>
         {/* The unread dot and the delete control share the same column: the
             dot steps aside the moment the row is hovered. */}
-        <span className="relative -mr-1 size-7 shrink-0">
+        <span
+          className={cn(
+            "relative h-7 shrink-0 overflow-hidden transition-[width,margin] duration-160 ease-out",
+            unread
+              ? "-mr-1 w-7"
+              : "w-0 group-hover/row:-mr-1 group-hover/row:w-7 focus-within:-mr-1 focus-within:w-7"
+          )}
+        >
           {unread && (
-            <span className="absolute inset-0 m-auto size-2 rounded-full bg-brand-500 group-hover/row:opacity-0" />
+            <span className="absolute inset-0 m-auto size-2 rounded-full bg-brand-500 transition-opacity duration-160 ease-out group-hover/row:opacity-0" />
           )}
           <Button
             variant="ghost"
             size="icon-sm"
             aria-label="Delete session"
-            className="absolute inset-0 text-muted-foreground opacity-0 transition-[background,box-shadow,color,opacity] group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100"
+            className="absolute inset-0 text-muted-foreground opacity-0 transition-[background,box-shadow,color,opacity] duration-160 ease-out group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -192,7 +225,7 @@ export function ChatRow({
         )}
         <div className="flex items-center gap-1.5 border-t pt-2 text-xs text-muted-foreground">
           <IconMessage className="size-3.5 shrink-0" />
-          <span className="tabular-nums">
+          <span className="whitespace-nowrap tabular-nums">
             {chat.messageCount === 1
               ? "1 message"
               : `${chat.messageCount} messages`}

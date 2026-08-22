@@ -105,6 +105,17 @@ export interface LanguageLayerOptions {
   editor: Editor<undefined> | null;
   /** Buffer-change subscription owned by the editing hook. */
   subscribe?: (listener: () => void) => () => void;
+  /**
+   * Whether the caret is in the code. The completion list takes Enter, Tab and
+   * the arrows while it is open, so it has to know when the keystrokes stopped
+   * being meant for the editor.
+   */
+  isFocused?: () => boolean;
+  /**
+   * Whether completions should offer themselves at all. Off in Vim's normal and
+   * visual modes, where a keystroke is a command rather than a word being typed.
+   */
+  completionsEnabled?: boolean;
   /** Resolves the element the rendered code lives under. */
   getContainer: () => ParentNode | null;
   /** Apply edits landing in files other than the open one. */
@@ -157,6 +168,8 @@ export function useLanguageLayer({
   path,
   editor,
   subscribe,
+  isFocused,
+  completionsEnabled = true,
   getContainer,
   onApplyForeignEdits,
   contents = null,
@@ -431,8 +444,9 @@ export function useLanguageLayer({
   const completions = useCompletions({
     editor,
     subscribe,
+    isFocused,
     path,
-    enabled: enabled && editor !== null,
+    enabled: enabled && completionsEnabled && editor !== null,
     getContainer,
   });
 

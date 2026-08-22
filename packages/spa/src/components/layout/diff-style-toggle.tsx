@@ -4,6 +4,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useDiffNarrowed } from "@/interactions/diff/adapters/diff-layout.store";
 import { cn } from "@/lib/utils";
 import type { DiffStyle } from "@/lib/ui-prefs";
 
@@ -99,13 +100,20 @@ const OPTIONS = [
   },
 ] as const;
 
+const NO_ROOM_LABEL = "Horizontal mode needs more screen space";
+
 interface DiffStyleToggleProps {
   value: DiffStyle;
   onChange: (style: DiffStyle) => void;
 }
 
 export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
-  const activeIndex = OPTIONS.findIndex((option) => option.value === value);
+  // The pane cannot lay two columns out below a certain width, so horizontal is
+  // off the table until there is room: the option goes disabled and the diff
+  // falls to vertical, and both come back on their own once the pane grows.
+  const narrowed = useDiffNarrowed();
+  const active = narrowed && value === "split" ? "unified" : value;
+  const activeIndex = OPTIONS.findIndex((option) => option.value === active);
 
   return (
     <div className="relative flex items-center rounded-lg border p-0.5">
@@ -114,43 +122,61 @@ export function DiffStyleToggle({ value, onChange }: DiffStyleToggleProps) {
         className="absolute top-0.5 left-0.5 size-6 rounded-[6px] bg-secondary transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
         style={{ transform: `translateX(${activeIndex * 100}%)` }}
       />
-      {OPTIONS.map((option) => (
-        <Tooltip key={option.value}>
-          <TooltipTrigger
-            render={
-              <button
-                type="button"
-                aria-label={`${option.label} diff layout`}
-                aria-pressed={value === option.value}
-                onClick={() => onChange(option.value)}
+      {OPTIONS.map((option) => {
+        const outOfRoom = narrowed && option.value === "split";
+        return (
+          <Tooltip key={option.value}>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label={
+                    outOfRoom ? NO_ROOM_LABEL : `${option.label} diff layout`
+                  }
+                  aria-pressed={value === option.value}
+                  // Kept clickable to the pointer so the tooltip can explain
+                  // itself; a natively disabled button swallows the hover.
+                  aria-disabled={outOfRoom || undefined}
+                  onClick={() => {
+                    if (!outOfRoom) {
+                      onChange(option.value);
+                    }
+                  }}
+                  className={cn(
+                    "relative flex size-6 items-center justify-center rounded-[6px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                    active === option.value
+                      ? "text-secondary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                    outOfRoom &&
+                      "cursor-default text-muted-foreground/40 hover:text-muted-foreground/40"
+                  )}
+                />
+              }
+            >
+              <option.icon className="size-3.5" />
+            </TooltipTrigger>
+            {outOfRoom ? (
+              <TooltipContent side="bottom">{NO_ROOM_LABEL}</TooltipContent>
+            ) : (
+              <TooltipContent
+                side="bottom"
                 className={cn(
-                  "relative flex size-6 items-center justify-center rounded-[6px] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                  value === option.value
-                    ? "text-secondary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
+                  "flex-col items-stretch gap-1.5 rounded-xl p-2",
+                  option.width
                 )}
-              />
-            }
-          >
-            <option.icon className="size-3.5" />
-          </TooltipTrigger>
-          <TooltipContent
-            side="bottom"
-            className={cn(
-              "flex-col items-stretch gap-1.5 rounded-xl p-2",
-              option.width
+              >
+                <option.preview />
+                <div className="flex flex-col gap-0.5 px-0.5">
+                  <span>{option.label}</span>
+                  <span className="font-normal text-muted-foreground">
+                    {option.detail}
+                  </span>
+                </div>
+              </TooltipContent>
             )}
-          >
-            <option.preview />
-            <div className="flex flex-col gap-0.5 px-0.5">
-              <span>{option.label}</span>
-              <span className="font-normal text-muted-foreground">
-                {option.detail}
-              </span>
-            </div>
-          </TooltipContent>
-        </Tooltip>
-      ))}
+          </Tooltip>
+        );
+      })}
     </div>
   );
 }

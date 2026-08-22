@@ -2,9 +2,10 @@
  * The open-file strip over the centre pane.
  *
  * Reads as an IDE's: the file's type icon — the tree's own — then its name,
- * italic while the tab is only a preview, a pin marker when it is pinned, a dot
- * when the buffer is unsaved, and a close control that appears on the active tab
- * or on hover. Middle-click closes, as it does in every editor and browser.
+ * italic while the tab is only a preview, a pin marker when it is pinned, and a
+ * close control that appears on the active tab or on hover — replaced by a dot
+ * while the buffer is unsaved, which the same hover trades back for the ✕.
+ * Middle-click closes, as it does in every editor and browser.
  *
  * The strip scrolls rather than shrinking its tabs to nothing, and pinned tabs
  * sort to the head so they stay reachable once it does. Tabs drag into any
@@ -202,18 +203,9 @@ export function TabStrip({
                 <TabClose
                   label={`Close ${pathName(tab.path)}`}
                   active={isActive}
+                  dirty={dirty.has(tab.path)}
                   onClose={() => onClose(tab.path)}
-                >
-                  {dirty.has(tab.path) && (
-                    <span
-                      aria-label="Unsaved changes"
-                      className={cn(
-                        "size-1.5 rounded-full bg-primary group-hover/tab:opacity-0",
-                        isActive && "opacity-0"
-                      )}
-                    />
-                  )}
-                </TabClose>
+                />
               </TooltipTrigger>
               <TooltipContent
                 side="bottom"

@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { ReviewComment } from "@byconvo/core/comments";
-import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
+import {
+  unenrichedPull,
+  type PullRequestInfo,
+} from "@byconvo/core/ports/git-provider";
 import { createCommentsFunctions } from "./comments.functions";
 import { createCommentsDependenciesMock } from "./comments.functions.mock";
 
 const pull: PullRequestInfo = {
+  ...unenrichedPull,
   number: 5,
   title: "t",
   author: "a",
@@ -56,18 +60,45 @@ describe("remove", () => {
   it("deletes local comments", async () => {
     const deps = createCommentsDependenciesMock();
     const fns = createCommentsFunctions(deps);
-    const ok = await fns.remove({ id: "x", source: "local" } as ReviewComment);
+    const ok = await fns.remove(null, {
+      id: "x",
+      source: "local",
+    } as ReviewComment);
     expect(ok).toBe(true);
     expect(deps.sideEffects.deleteComment).toHaveBeenCalledWith("x");
   });
 
-  it("refuses to delete GitHub comments", async () => {
+  it("deletes a GitHub comment from the pull request being reviewed", async () => {
+    const deps = createCommentsDependenciesMock();
+    const fns = createCommentsFunctions(deps);
+    const ok = await fns.remove(pull, {
+      id: "gh-42",
+      source: "github",
+    } as ReviewComment);
+    expect(ok).toBe(true);
+    expect(deps.sideEffects.deletePullComment).toHaveBeenCalledWith(5, 42);
+  });
+
+  it("leaves a GitHub comment alone with no pull request in hand", async () => {
     const deps = createCommentsDependenciesMock();
     const fns = createCommentsFunctions(deps);
     expect(
-      await fns.remove({ id: "gh-1", source: "github" } as ReviewComment)
+      await fns.remove(null, { id: "gh-1", source: "github" } as ReviewComment)
     ).toBe(false);
     expect(deps.sideEffects.deleteComment).not.toHaveBeenCalled();
+    expect(deps.sideEffects.deletePullComment).not.toHaveBeenCalled();
+  });
+
+  it("leaves a GitHub comment alone when its id is not GitHub's", async () => {
+    const deps = createCommentsDependenciesMock();
+    const fns = createCommentsFunctions(deps);
+    expect(
+      await fns.remove(pull, {
+        id: "optimistic-1",
+        source: "github",
+      } as ReviewComment)
+    ).toBe(false);
+    expect(deps.sideEffects.deletePullComment).not.toHaveBeenCalled();
   });
 });
 

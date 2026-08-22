@@ -211,7 +211,7 @@ export function InboxPage() {
                 className="ml-1"
                 render={
                   <Link
-                    to="/modes/collaboration"
+                    to="/modes/experimentation/collaboration"
                     search={{ view: "task", id: task?.id }}
                   />
                 }

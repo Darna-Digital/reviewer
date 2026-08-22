@@ -114,7 +114,7 @@ function TaskChip({ task }: { task: MockTask }) {
   const scope = findScope(task.scopeId);
   return (
     <Link
-      to="/modes/collaboration"
+      to="/modes/experimentation/collaboration"
       search={{ view: "task", id: task.id }}
       className={cn(PROPERTY_ROW, "h-auto flex-col items-start gap-0 py-1")}
     >
@@ -170,7 +170,7 @@ export function TaskView({ task: selected }: { task: MockTask }) {
           className="flex min-w-0 items-center gap-1.5 text-[13px]"
         >
           <Link
-            to="/modes/collaboration"
+            to="/modes/experimentation/collaboration"
             search={{ view: "tasks", id: task.projectId }}
             className="flex min-w-0 items-center gap-1.5 text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
           >
@@ -207,7 +207,7 @@ export function TaskView({ task: selected }: { task: MockTask }) {
               aria-label="Previous task"
               render={
                 <Link
-                  to="/modes/collaboration"
+                  to="/modes/experimentation/collaboration"
                   search={{ view: "task", id: previous.id }}
                 />
               }
@@ -223,7 +223,7 @@ export function TaskView({ task: selected }: { task: MockTask }) {
               aria-label="Next task"
               render={
                 <Link
-                  to="/modes/collaboration"
+                  to="/modes/experimentation/collaboration"
                   search={{ view: "task", id: next.id }}
                 />
               }
@@ -278,7 +278,7 @@ export function TaskView({ task: selected }: { task: MockTask }) {
                     <>
                       The answer arrives when{" "}
                       <Link
-                        to="/modes/collaboration"
+                        to="/modes/experimentation/collaboration"
                         search={{ view: "task", id: decision.id }}
                         className="underline underline-offset-2"
                       >
@@ -307,7 +307,7 @@ export function TaskView({ task: selected }: { task: MockTask }) {
               <p className="mt-3 max-w-[70ch] text-[13px] text-muted-foreground">
                 A symptom of{" "}
                 <Link
-                  to="/modes/collaboration"
+                  to="/modes/experimentation/collaboration"
                   search={{ view: "task", id: cause.id }}
                   className="font-medium text-foreground underline underline-offset-2"
                 >
@@ -327,7 +327,7 @@ export function TaskView({ task: selected }: { task: MockTask }) {
                   <p>
                     Planned for {scope?.name ?? "this horizon"}, waiting on{" "}
                     <Link
-                      to="/modes/collaboration"
+                      to="/modes/experimentation/collaboration"
                       search={{ view: "task", id: conflict.blocker.id }}
                       className="font-medium underline underline-offset-2"
                     >
@@ -398,7 +398,7 @@ export function TaskView({ task: selected }: { task: MockTask }) {
                   {children.map((child) => (
                     <li key={child.id}>
                       <Link
-                        to="/modes/collaboration"
+                        to="/modes/experimentation/collaboration"
                         search={{ view: "task", id: child.id }}
                         className="flex h-8 items-center gap-2.5 rounded-md px-1.5 text-[13px] outline-none hover:bg-elevate focus-visible:bg-elevate"
                       >
@@ -648,7 +648,7 @@ export function TaskView({ task: selected }: { task: MockTask }) {
 
             <Property label="Project">
               <Link
-                to="/modes/collaboration"
+                to="/modes/experimentation/collaboration"
                 search={{ view: "project", id: task.projectId }}
                 className={PROPERTY_ROW}
               >

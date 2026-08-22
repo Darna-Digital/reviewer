@@ -45,11 +45,15 @@ export interface GitActionsFunctions {
     paths: ReadonlyArray<string>,
     andPush: boolean
   ) => Promise<boolean>;
-  /** Run a branch operation, surfacing its output (or `label`) and refreshing. */
+  /**
+   * Run a branch operation, surfacing its output (or `label`) and refreshing.
+   * Answers whether it went through — a caller with somewhere to go afterwards
+   * needs to know, and the failure has already been reported by then.
+   */
   readonly runOp: (
     label: string,
     op: () => Promise<{ output?: string } | unknown>
-  ) => Promise<void>;
+  ) => Promise<boolean>;
 }
 
 export const errorText = (cause: unknown): string =>

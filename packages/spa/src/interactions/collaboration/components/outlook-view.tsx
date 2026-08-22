@@ -87,7 +87,7 @@ function TaskRow({
   const conflicts = conflictsFor(tasks, task);
   return (
     <Link
-      to="/modes/collaboration"
+      to="/modes/experimentation/collaboration"
       search={{ view: "task", id: task.id }}
       className="flex h-9 items-center gap-2.5 rounded-lg px-2 text-[13px] outline-none hover:bg-elevate focus-visible:ring-3 focus-visible:ring-ring/30"
     >
@@ -169,7 +169,7 @@ export function OutlookView({ scopeId }: { scopeId: string }) {
         {HORIZONS.map((scope) => (
           <Link
             key={scope.id}
-            to="/modes/collaboration"
+            to="/modes/experimentation/collaboration"
             search={{ view: "outlook", id: scope.id }}
             className={cn(
               "flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-[13px] outline-none focus-visible:ring-3 focus-visible:ring-ring/30",
@@ -276,7 +276,7 @@ export function OutlookView({ scopeId }: { scopeId: string }) {
                     className="flex flex-wrap items-center gap-x-2 text-[13px]"
                   >
                     <Link
-                      to="/modes/collaboration"
+                      to="/modes/experimentation/collaboration"
                       search={{ view: "task", id: task.id }}
                       className="flex min-w-0 items-center gap-1.5 outline-none hover:underline focus-visible:underline"
                     >
@@ -308,7 +308,7 @@ export function OutlookView({ scopeId }: { scopeId: string }) {
                   {rows.length}
                 </span>
                 <Link
-                  to="/modes/collaboration"
+                  to="/modes/experimentation/collaboration"
                   search={{ view: "flow", id: project.id }}
                   className="ml-auto rounded-md text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
                 >
@@ -352,7 +352,7 @@ export function OutlookView({ scopeId }: { scopeId: string }) {
               {later.map((task) => (
                 <li key={task.id}>
                   <Link
-                    to="/modes/collaboration"
+                    to="/modes/experimentation/collaboration"
                     search={{ view: "task", id: task.id }}
                     className="flex items-center gap-1.5 text-xs text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground"
                   >

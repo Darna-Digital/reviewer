@@ -1717,7 +1717,7 @@ export const MEMBERS: ReadonlyArray<MockPerson> = [
   { id: "sam", name: "Sam Okoro", detail: "Product", online: false },
 ];
 
-/** What an unqualified `/modes/collaboration` shows — the lead project. */
+/** What an unqualified `/modes/experimentation/collaboration` shows — the lead project. */
 export const DEFAULT_VIEW: CollaborationView = "project";
 export const DEFAULT_ID = PROJECTS[0]?.id ?? "";
 

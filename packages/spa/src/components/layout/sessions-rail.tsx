@@ -3,6 +3,10 @@
  * list, rather than on the conversation beside it — minting a session, finding
  * one, and narrowing which of them the list holds.
  *
+ * Only beside the list: a conversation lifted into a tab of its own has no list
+ * under any of these, so the shell leaves the column out there rather than
+ * drawing three controls for a surface that is not on screen. See `ShellRoute`.
+ *
  * They were in the toolbar, which left the sessions surface a rail short of
  * every code page: crossing between the two slid the whole window sideways by
  * the rail's width, and back again on the way out. Same controls, same column,

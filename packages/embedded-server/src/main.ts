@@ -24,6 +24,8 @@ import { BrowserHandler } from "./layers/browser/browser.handler.ts";
 import { BrowserRuntimeLive } from "./layers/browser/browser.runtime.ts";
 import { ChatsHandler } from "./layers/chats/chats.handler.ts";
 import { ChatsLive } from "./layers/chats/chats.layer.live.ts";
+import { CollabHandler } from "./layers/collab/collab.handler.ts";
+import { CollabLive } from "./layers/collab/collab.layer.live.ts";
 import { CommentsHandler } from "./layers/comments/comments.handler.ts";
 import { CommentsLive } from "./layers/comments/comments.layer.live.ts";
 import { DocsHandler } from "./layers/docs/docs.handler.ts";
@@ -94,7 +96,8 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(LocalDevHandler),
   Layer.provide(BrowserHandler),
   Layer.provide(PlansHandler),
-  Layer.provide(VisualCommentsHandler)
+  Layer.provide(VisualCommentsHandler),
+  Layer.provide(CollabHandler)
 );
 
 /** Stateless feature services, resolved per request. */
@@ -115,7 +118,8 @@ const FeatureServices = Layer.mergeAll(
   DevRuntimeLive,
   BrowserRuntimeLive,
   PlansLive,
-  VisualCommentsLive
+  VisualCommentsLive,
+  CollabLive
 );
 
 /**

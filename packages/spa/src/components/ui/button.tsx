@@ -8,9 +8,16 @@ import { cn } from "@/lib/utils";
    allowed, everything else recedes. The brand never fills a button — it lives
    in the focus ring and in links, so the eye reads "focused" and "clickable
    text" as ours and "the primary action here" as simply the darkest thing on
-   screen. Tabular numerals keep counts from reflowing as they tick. */
+   screen. Tabular numerals keep counts from reflowing as they tick.
+
+   Neither focus nor invalid is written here. Both are blooms in the shadow
+   stack rather than outlines, so they have to compose with whatever elevation
+   the face already carries — see `--glow-focus`, `--glow-invalid` and the
+   `[data-slot="button"]` rules in `styles.css`. All that is left on this side
+   is `outline-none`, which keeps the browser from drawing its own ring over
+   the top. */
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-md bg-clip-padding whitespace-nowrap tabular-nums transition-[background,box-shadow,color] outline-none select-none focus-visible:outline-2 focus-visible:outline-offset-[2.5px] focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 aria-invalid:outline-2 aria-invalid:outline-offset-[2.5px] aria-invalid:outline-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-md bg-clip-padding whitespace-nowrap tabular-nums transition-[background,box-shadow,color] outline-none select-none disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
