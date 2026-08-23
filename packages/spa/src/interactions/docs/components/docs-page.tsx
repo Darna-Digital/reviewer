@@ -206,7 +206,7 @@ export function DocsPage() {
           </div>
         ) : (
           <>
-            <header className="flex items-center gap-2 border-b px-4 py-2">
+            <header className="flex min-h-9 items-center gap-2 border-b px-4 py-0.5">
               <span className="truncate text-sm font-medium">
                 {detail.data.title}
               </span>

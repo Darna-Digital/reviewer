@@ -90,6 +90,11 @@ export interface FindUsagesDependencies {
     readonly references: ReadonlyArray<SymbolReference>;
     /** Branch ids the user has folded shut. Everything else is open. */
     readonly collapsed: ReadonlySet<string>;
+    /**
+     * The declared symbol's kind (`function`, `class`), which names the group
+     * its declaration falls into. Empty when the provider could not say.
+     */
+    readonly declarationKind: string;
   };
 }
 

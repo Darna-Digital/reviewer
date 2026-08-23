@@ -22,6 +22,7 @@ export const usage = (
 export interface MockFindUsagesSeed {
   readonly references?: ReadonlyArray<SymbolReference>;
   readonly collapsed?: ReadonlyArray<string>;
+  readonly declarationKind?: string;
 }
 
 export function mockFindUsagesDependencies(
@@ -31,6 +32,7 @@ export function mockFindUsagesDependencies(
     data: {
       references: seed.references ?? [],
       collapsed: new Set(seed.collapsed ?? []),
+      declarationKind: seed.declarationKind ?? "",
     },
   };
 }

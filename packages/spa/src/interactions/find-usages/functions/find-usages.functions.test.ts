@@ -6,7 +6,7 @@ import {
   buildUsageTree,
   categoryOf,
   createFindUsagesFunctions,
-  declarationLabel,
+  declarationGroupLabel,
   directoryOf,
   previewParts,
   previewedUsage,
@@ -116,6 +116,19 @@ describe("buildUsageTree", () => {
     const category = group(tree[0]);
     expect(category.count).toBe(3);
     expect(group(category.children[0]).count).toBe(3);
+  });
+
+  it("names the declaration's group after the symbol's kind", () => {
+    const tree = buildUsageTree(
+      [usage("src/a.ts", 1, { kind: "definition" })],
+      "function"
+    );
+    expect(group(tree[0]).label).toBe("Function");
+  });
+
+  it("falls back to the bare group when the provider named no kind", () => {
+    const tree = buildUsageTree([usage("src/a.ts", 1, { kind: "definition" })]);
+    expect(group(tree[0]).label).toBe("Declaration");
   });
 
   it("orders categories by how much they say, not by arrival", () => {
@@ -341,26 +354,13 @@ describe("revealing", () => {
   });
 });
 
-describe("declarationLabel", () => {
-  it("does not print the kind twice", () => {
-    expect(
-      declarationLabel({
-        kind: "function",
-        name: "function greet(name: string): string",
-        preview: "",
-      })
-    ).toBe("greet(name: string): string");
+describe("declarationGroupLabel", () => {
+  it("names the group after what the symbol is", () => {
+    expect(declarationGroupLabel("function")).toBe("Function");
+    expect(declarationGroupLabel("class")).toBe("Class");
   });
 
-  it("keeps a name that does not start with its kind", () => {
-    expect(declarationLabel({ kind: "class", name: "Box", preview: "" })).toBe(
-      "Box"
-    );
-  });
-
-  it("falls back to the source line when the provider names nothing", () => {
-    expect(
-      declarationLabel({ kind: "", name: "", preview: "export const a = 1" })
-    ).toBe("export const a = 1");
+  it("says only that it is the declaration when nothing named it", () => {
+    expect(declarationGroupLabel("")).toBe("Declaration");
   });
 });

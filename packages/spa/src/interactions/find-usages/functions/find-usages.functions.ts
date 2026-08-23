@@ -57,6 +57,19 @@ export const CATEGORY_LABEL: Record<UsageCategory, string> = {
 export const categoryOf = (kind: ReferenceKind): UsageCategory =>
   CATEGORY_OF[kind];
 
+/**
+ * What the declaration's own group is called.
+ *
+ * Its kind, when the provider gave one: a reader looking for where a symbol
+ * comes from is also asking *what it is*, and "Function" answers both at once.
+ * An LSP location carries no kind, and there the group says only that the row
+ * under it is the declaration.
+ */
+export const declarationGroupLabel = (kind: string): string =>
+  kind === ""
+    ? CATEGORY_LABEL.declaration
+    : `${kind.slice(0, 1).toUpperCase()}${kind.slice(1)}`;
+
 /** `src/a/b.ts` → `src/a`; the empty string for a file at the root. */
 export const directoryOf = (path: string): string => {
   const cut = path.lastIndexOf("/");
@@ -139,7 +152,9 @@ const finish = (node: Level): UsageGroup => {
  * the reader can use to narrow down.
  */
 export const buildUsageTree = (
-  references: ReadonlyArray<SymbolReference>
+  references: ReadonlyArray<SymbolReference>,
+  /** The declared symbol's kind, which names its own group. Empty when unknown. */
+  declarationKind = ""
 ): ReadonlyArray<UsageNode> => {
   const categories = new Map<UsageCategory, Level>();
 
@@ -150,7 +165,9 @@ export const buildUsageTree = (
       node = level(
         `category:${category}`,
         "category",
-        CATEGORY_LABEL[category],
+        category === "declaration"
+          ? declarationGroupLabel(declarationKind)
+          : CATEGORY_LABEL[category],
         ""
       );
       categories.set(category, node);
@@ -252,27 +269,6 @@ export const stepUsage = (
     return (step < 0 ? leaves[leaves.length - 1] : leaves[0]) ?? null;
   const next = Math.min(leaves.length - 1, Math.max(0, at + step));
   return leaves[next] ?? null;
-};
-
-/**
- * How a declaration reads in the results header.
- *
- * TypeScript names a declaration with its whole rendered signature —
- * `function greet(name: string): string` — which repeats the kind shown beside
- * it, so the kind is taken off the front rather than printed twice. An LSP
- * server sends no name at all, and there the source line is all there is.
- */
-export const declarationLabel = (declaration: {
-  readonly kind: string;
-  readonly name: string;
-  readonly preview: string;
-}): string => {
-  const name = declaration.name.trim();
-  if (name === "") return declaration.preview;
-  const prefix = `${declaration.kind} `;
-  return declaration.kind !== "" && name.startsWith(prefix)
-    ? name.slice(prefix.length)
-    : name;
 };
 
 /**
@@ -399,7 +395,7 @@ export function createFindUsagesFunctions(
   d: FindUsagesDependencies
 ): FindUsagesFunctions {
   const tree: FindUsagesFunctions["tree"] = () =>
-    buildUsageTree(d.data.references);
+    buildUsageTree(d.data.references, d.data.declarationKind);
 
   const rows: FindUsagesFunctions["rows"] = () =>
     visibleRows(tree(), d.data.collapsed);

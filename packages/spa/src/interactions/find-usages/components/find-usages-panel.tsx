@@ -35,7 +35,7 @@ import {
 import { useOpenInEditor } from "@/lib/open-in-editor";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
-import type { Location, SymbolTarget } from "@byconvo/core/language";
+import type { Location } from "@byconvo/core/language";
 import { useUsages } from "../adapters/find-usages.hook.adapter";
 import {
   rerunFindUsages,
@@ -46,7 +46,6 @@ import {
 import {
   branchIds,
   createFindUsagesFunctions,
-  declarationLabel,
   revealing,
   toggleCollapsed,
 } from "../functions/find-usages.functions";
@@ -67,9 +66,15 @@ export function FindUsagesPanel() {
     () => search.data?.references ?? [],
     [search.data]
   );
+  // The declaration's kind names the group its own row falls into — "Function"
+  // rather than the bare "Declaration" a provider that cannot say would get.
+  const declarationKind = search.data?.declaration?.kind ?? "";
   const fns = useMemo(
-    () => createFindUsagesFunctions({ data: { references, collapsed } }),
-    [references, collapsed]
+    () =>
+      createFindUsagesFunctions({
+        data: { references, collapsed, declarationKind },
+      }),
+    [references, collapsed, declarationKind]
   );
   const rows = fns.rows();
   const usages = fns.usages();
@@ -133,12 +138,7 @@ export function FindUsagesPanel() {
         className="flex min-w-0 shrink-0 flex-col border-r"
         style={resultsPane.style}
       >
-        <ResultsHeader
-          symbol={symbol}
-          results={results}
-          declaration={search.data?.declaration ?? null}
-          onOpenDeclaration={open}
-        />
+        <ResultsHeader symbol={symbol} results={results} />
         {query === null ? (
           <Empty
             title="No search yet"
@@ -292,67 +292,37 @@ function RailButton({
 }
 
 /**
- * What was searched for and where it is declared.
+ * What was searched for.
  *
- * The declaration is a row of its own rather than a branch of the tree: it is
- * not a usage, and filing it under one of the usage categories would put the
- * one thing every reader is looking for behind a fold.
+ * One row of the 36px band, like the strip above it and the trail under the
+ * page — see `window-bar`. Where the symbol is *declared* used to sit on a
+ * second line here, which made this the one bar in the stack that was two rows
+ * tall; it is a row of the tree instead, under a group the declaration's own
+ * kind names.
  */
 function ResultsHeader({
   symbol,
   results,
-  declaration,
-  onOpenDeclaration,
 }: {
   readonly symbol: string;
   readonly results: number;
-  readonly declaration: SymbolTarget | null;
-  readonly onOpenDeclaration: (location: Location) => void;
 }) {
   return (
-    <div className="shrink-0 border-b px-2 py-1.5">
-      <div className="flex items-center gap-1.5 text-xs">
-        <IconSearch className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 truncate">
-          {symbol === "" ? (
-            <span className="text-muted-foreground">Find usages</span>
-          ) : (
-            <>
-              <span className="font-mono font-medium">{symbol}</span>
-              <span className="text-muted-foreground">
-                {" "}
-                — {results} {results === 1 ? "usage" : "usages"}
-              </span>
-            </>
-          )}
-        </span>
-      </div>
-      {declaration !== null && (
-        <button
-          type="button"
-          title={declarationLabel(declaration)}
-          className="mt-0.5 flex w-full min-w-0 items-baseline gap-1.5 rounded px-0.5 text-left text-[11px] hover:bg-elevate"
-          onClick={() => onOpenDeclaration(declaration.location)}
-        >
-          <span className="shrink-0 text-muted-foreground">
-            {declaration.kind === "" ? "Declared in" : declaration.kind}
-          </span>
-          {/* The signature yields first: it is the one part of the row that
-              still reads when it is cut short, and the path is what says which
-              of several declarations this is. */}
-          <span className="min-w-0 flex-1 truncate font-mono text-foreground">
-            {declarationLabel(declaration)}
-          </span>
-          {/* The path clips from the left: the file name is what identifies it,
-              and truncating from the right would take exactly that. */}
-          <span
-            dir="rtl"
-            className="max-w-[50%] shrink-0 truncate text-muted-foreground"
-          >
-            {`${declaration.location.path}:${declaration.location.range.start.line + 1}`}
-          </span>
-        </button>
-      )}
+    <div className="flex h-9 shrink-0 items-center gap-1.5 border-b px-2 text-xs">
+      <IconSearch className="size-3.5 shrink-0 text-muted-foreground" />
+      <span className="min-w-0 truncate">
+        {symbol === "" ? (
+          <span className="text-muted-foreground">Find usages</span>
+        ) : (
+          <>
+            <span className="font-mono font-medium">{symbol}</span>
+            <span className="text-muted-foreground">
+              {" "}
+              — {results} {results === 1 ? "usage" : "usages"}
+            </span>
+          </>
+        )}
+      </span>
     </div>
   );
 }
@@ -362,7 +332,7 @@ function PreviewHeader({ location }: { readonly location: Location | null }) {
   return (
     <div
       className={cn(
-        "flex h-7 shrink-0 items-center gap-1.5 border-b px-2 text-[11px]",
+        "flex h-9 shrink-0 items-center gap-1.5 border-b px-2 text-[11px]",
         location === null && "text-muted-foreground"
       )}
     >
