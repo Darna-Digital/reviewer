@@ -97,7 +97,7 @@ export interface FileActionsDependencies {
     readonly notify: (text: string) => void;
     readonly notifyError: (text: string) => void;
     /** Ask before replacing a file a drop would land on top of. */
-    readonly confirm: (question: string) => boolean;
+    readonly confirm: (path: string) => Promise<boolean>;
     readonly refresh: () => void;
   };
 }

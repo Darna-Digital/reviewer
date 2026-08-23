@@ -9,6 +9,7 @@ import {
   IconTrash,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
+import { askForText, confirm } from "@/components/ui/alerts";
 
 import {
   Section,
@@ -154,6 +155,47 @@ const TOAST_MOCKS: readonly { label: string; fire: () => void }[] = [
 /** Remounts on a beat that shares no factor with the orb's, so the fresh orb
  *  lands on an arbitrary point of the cycle — it should still come up in step
  *  with the ones that have been running all along, never from rest. */
+/* The three shapes an ask comes in. Each reports what it was answered with, so
+   the specimen shows the promise resolving as well as the dialog drawing. */
+const ALERT_MOCKS: ReadonlyArray<{
+  label: string;
+  ask: () => void;
+}> = [
+  {
+    label: "Confirm",
+    ask: () =>
+      void confirm({
+        title: "Switch to master?",
+        description: "The three stashed changes stay where they are.",
+        confirmLabel: "Switch",
+      }).then((ok) => toast.info(ok ? "Switched" : "Stayed put")),
+  },
+  {
+    label: "Confirm — destructive",
+    ask: () =>
+      void confirm({
+        title: 'Delete the "task/inline-diff-comments" branch?',
+        description:
+          "It has six commits that are on no other branch. This cannot be undone.",
+        confirmLabel: "Delete",
+        destructive: true,
+      }).then((ok) => toast[ok ? "success" : "info"](ok ? "Deleted" : "Kept")),
+  },
+  {
+    label: "Ask for text",
+    ask: () =>
+      void askForText({
+        title: "Create a branch",
+        label: "Branch name",
+        placeholder: "feature/…",
+        defaultValue: "feature/",
+        confirmLabel: "Create",
+      }).then((name) =>
+        toast.info(name === null ? "Cancelled" : `Branched to ${name}`)
+      ),
+  },
+];
+
 function LateOrb() {
   const [generation, setGeneration] = useState(0);
   useEffect(() => {
@@ -741,6 +783,24 @@ export function ComponentsGallery() {
             </Tooltip>
           </Specimen>
         </SpecimenRow>
+
+        <Subsection
+          title="Alerts"
+          hint="The questions that used to be window.confirm and window.prompt. Each one resolves a promise, so a handler reads `if (!(await confirm({…}))) return;` — and answering is the only way out, apart from Escape, which always means no."
+        >
+          <div className="flex flex-wrap gap-2">
+            {ALERT_MOCKS.map((mock) => (
+              <Button
+                key={mock.label}
+                size="sm"
+                variant="outline"
+                onClick={mock.ask}
+              >
+                {mock.label}
+              </Button>
+            ))}
+          </div>
+        </Subsection>
 
         <Subsection
           title="Toasts"

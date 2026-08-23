@@ -20,7 +20,7 @@ export function mockCodeCommandDependencies(
       push: () => calls.ran.push("push"),
       createBranch: (name, startPoint) =>
         calls.createBranch.push({ name, startPoint }),
-      askForBranchName: () => branchName,
+      askForBranchName: () => Promise.resolve(branchName),
     },
   };
 

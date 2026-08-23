@@ -15,6 +15,7 @@ import {
 } from "@tabler/icons-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { confirm } from "@/components/ui/alerts";
 import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import {
@@ -321,12 +322,15 @@ const FileDiffSection = memo(function FileDiffSectionView({
                 className="gap-1 hover:text-destructive hover:[&_svg]:text-destructive"
                 title={`Discard changes in ${meta.name}`}
                 onClick={() => {
-                  if (
-                    window.confirm(
-                      `Discard all changes in ${meta.name}?\n\nThis reverts the file to the last commit and cannot be undone.`
-                    )
-                  )
-                    onDiscardFile(meta.name);
+                  void confirm({
+                    title: `Discard all changes in ${meta.name}?`,
+                    description:
+                      "This reverts the file to the last commit and cannot be undone.",
+                    confirmLabel: "Discard",
+                    destructive: true,
+                  }).then((ok) => {
+                    if (ok) onDiscardFile(meta.name);
+                  });
                 }}
               >
                 <IconArrowBackUp className="size-3.5" />

@@ -11,6 +11,7 @@ import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
+import { confirm } from "@/components/ui/alerts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -106,7 +107,13 @@ export function DocsPage() {
   };
 
   const removeDoc = async (id: string) => {
-    if (!window.confirm("Delete this plan?")) return;
+    const ok = await confirm({
+      title: "Delete this plan?",
+      description: "This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await actions.remove(id);
     } catch (error) {

@@ -341,7 +341,7 @@ export function createFileActionsFunctions(
       const path = joinPath(directory, file.relativePath);
       // Replacing is a trash-then-write, so undo puts the old file back.
       if (exists(path)) {
-        if (!confirm(`Replace ${path}?`)) continue;
+        if (!(await confirm(path))) continue;
         steps.push({ op: "trash", path });
       }
       steps.push({ op: "upload", path, read: file.readBase64 });

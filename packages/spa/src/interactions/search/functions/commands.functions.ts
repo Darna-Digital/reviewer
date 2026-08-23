@@ -31,8 +31,8 @@ export interface CodeCommandDependencies {
     readonly pull: () => void;
     readonly push: () => void;
     readonly createBranch: (name: string, startPoint: string | null) => void;
-    /** Returns the name to branch to, or null when the user backs out. */
-    readonly askForBranchName: () => string | null;
+    /** Resolves to the name to branch to, or null when the user backs out. */
+    readonly askForBranchName: () => Promise<string | null>;
   };
 }
 
@@ -127,9 +127,11 @@ export const buildCodeCommands = (
       icon: IconGitBranch,
       keywords: "new checkout",
       run: () => {
-        const name = git.askForBranchName()?.trim();
-        if (name === undefined || name.length === 0) return;
-        git.createBranch(name, d.data.currentBranch);
+        void git.askForBranchName().then((answer) => {
+          const name = answer?.trim();
+          if (name === undefined || name.length === 0) return;
+          git.createBranch(name, d.data.currentBranch);
+        });
       },
     },
   ];
