@@ -235,7 +235,6 @@ export function TabOverview() {
    * than growing into it on the way down.
    */
   const gridRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
   const fitted = useRef(height);
   fitted.current = height;
   // Read at the moment a fit is asked for rather than as the effect was made:
@@ -256,8 +255,7 @@ export function TabOverview() {
       // holding the height of a query that is about to be cleared.
       if (grid === null || isOverviewResizing() || searching.current) return;
       const next = fittedLaunchpadHeight(
-        grid.getBoundingClientRect().height +
-          (searchRef.current?.getBoundingClientRect().height ?? 0),
+        grid.getBoundingClientRect().height,
         window.innerHeight
       );
       // A window resize arrives per frame of its own drag, and each one of
@@ -392,70 +390,63 @@ export function TabOverview() {
             shown && !expanded ? SLIDE.transitionDuration : "0ms",
         }}
         className={cn(
-          "flex min-h-0 flex-1 flex-col transition-opacity motion-reduce:transition-none",
+          "min-h-0 flex-1 overflow-y-auto transition-opacity motion-reduce:transition-none",
           shown && !expanded ? "opacity-0" : "opacity-100",
           EASE
         )}
       >
-        {/* The way to a card by name. It sits over the grid rather than in it:
-            a panel tall enough to scroll is exactly the panel you came here to
-            search, and a box that scrolls away with the first row is one you
-            have to go back up for.
-            Centred, and the width of a name rather than of the window: what it
-            stands on is the whole panel, so it is placed against the panel and
-            not against the first column. No rule under it either — the grid
-            begins at its first heading, which is start enough. */}
-        <div
-          ref={searchRef}
-          className="flex shrink-0 items-center justify-center px-3 pt-3"
-        >
-          <div className="w-full max-w-80">
-            <SidebarSearch
-              inputRef={searchInputRef}
-              label="Search the launchpad"
-              placeholder="Search launchpad…"
-              value={query}
-              onChange={setQuery}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") pickFirstHit();
-              }}
-            />
+        <div ref={gridRef} className="p-3 pb-11">
+          {/* The way to a card by name: the grid's first row, centred over the
+              columns and the width of a name rather than of the window. It
+              rides the grid rather than standing over it — a box pinned to the
+              top of a scroller is chrome, and this is the panel's own first
+              line. No fill and no rule: the launchpad is the frame's material
+              and nothing else, and a filled box is a sheet laid on it. */}
+          <div className="mb-3 flex items-center justify-center">
+            <div className="w-full max-w-80 [&_input]:bg-transparent">
+              <SidebarSearch
+                inputRef={searchInputRef}
+                label="Search the launchpad"
+                placeholder="Search launchpad…"
+                value={query}
+                onChange={setQuery}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") pickFirstHit();
+                }}
+              />
+            </div>
           </div>
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div ref={gridRef} className="p-3 pb-11">
-            {shownGroups.map((group) => (
-              <section key={group.title} className="mb-4 last:mb-0">
-                <h2 className="mb-2 px-0.5 text-xs font-medium text-muted-foreground">
-                  {group.title}
-                </h2>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(26rem,1fr))] gap-3">
-                  {group.sections.map((section) => (
-                    <SectionCard
-                      key={section.id}
-                      section={section}
-                      active={section.id === here}
-                      working={working(section)}
-                      previewed={sections.indexOf(section) < LIVE_PREVIEW_LIMIT}
-                      onPrime={() => prime(section.href)}
-                      onSelect={() => pick(section)}
-                      onClose={closer(section)}
-                    />
-                  ))}
-                  {group.minting && (
-                    <NewSessionCard onSelect={() => cover(openSession())} />
-                  )}
-                </div>
-              </section>
-            ))}
-            {/* Under the box rather than at the head of the grid: it is the
-                answer to what was typed, not a row of what was found. */}
-            {shownGroups.length === 0 && (
-              <p className="text-center text-xs text-muted-foreground">
-                Nothing matches.
-              </p>
-            )}
-          </div>
+          {shownGroups.map((group) => (
+            <section key={group.title} className="mb-4 last:mb-0">
+              <h2 className="mb-2 px-0.5 text-xs font-medium text-muted-foreground">
+                {group.title}
+              </h2>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(26rem,1fr))] gap-3">
+                {group.sections.map((section) => (
+                  <SectionCard
+                    key={section.id}
+                    section={section}
+                    active={section.id === here}
+                    working={working(section)}
+                    previewed={sections.indexOf(section) < LIVE_PREVIEW_LIMIT}
+                    onPrime={() => prime(section.href)}
+                    onSelect={() => pick(section)}
+                    onClose={closer(section)}
+                  />
+                ))}
+                {group.minting && (
+                  <NewSessionCard onSelect={() => cover(openSession())} />
+                )}
+              </div>
+            </section>
+          ))}
+          {/* Under the box rather than at the head of the grid: it is the
+              answer to what was typed, not a row of what was found. */}
+          {shownGroups.length === 0 && (
+            <p className="text-center text-xs text-muted-foreground">
+              Nothing matches.
+            </p>
+          )}
         </div>
       </div>
       {/* It waits out the arrival and leaves on the click. Riding the edge down
