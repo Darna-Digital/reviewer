@@ -60,6 +60,7 @@ const EMPTY_REFERENCES: ReferencesResult = {
   providerId: null,
   origin: null,
   symbol: null,
+  declaration: null,
   references: [],
 };
 const EMPTY_HOVER: HoverResult = {
@@ -299,14 +300,29 @@ export const makeLspProvider = (config: LspServerConfig): LanguageProvider => {
             definitionLocations(connection, uri, request.position),
           ]);
 
+          const readText = makeTextReader();
+
           const declarations = new Set<string>();
+          // The first declaration is the header the usages stand under. LSP
+          // sends no symbol metadata with a location, so the name and kind stay
+          // empty and the source line is what the header can show.
+          let declaration: SymbolTarget | null = null;
           for (const raw of toLocations(rawDefinitions)) {
             const resolved = toLocation(request.root, raw);
-            if (resolved !== null)
-              declarations.add(locationKey(resolved.location));
+            if (resolved === null) continue;
+            declarations.add(locationKey(resolved.location));
+            declaration ??= {
+              location: resolved.location,
+              name: "",
+              kind: "",
+              containerName: "",
+              preview: previewAt(
+                readText(resolved.absolute),
+                resolved.location.range.start.line
+              ),
+            };
           }
 
-          const readText = makeTextReader();
           const references: Array<SymbolReference> = [];
           for (const raw of toLocations(rawReferences)) {
             const resolved = toLocation(request.root, raw);
@@ -320,6 +336,12 @@ export const makeLspProvider = (config: LspServerConfig): LanguageProvider => {
                 readText(resolved.absolute),
                 resolved.location.range.start.line
               ),
+              // LSP reference responses carry no syntax, so nothing says which
+              // function a usage sits in or whether it is an import. The tree
+              // reads an empty container as "not filed" and shows the usages
+              // straight under their file.
+              containerName: "",
+              containerKind: "",
             });
           }
 
@@ -335,6 +357,7 @@ export const makeLspProvider = (config: LspServerConfig): LanguageProvider => {
             providerId,
             origin,
             symbol: symbol !== null && symbol.length > 0 ? symbol : null,
+            declaration,
             references,
           };
         }

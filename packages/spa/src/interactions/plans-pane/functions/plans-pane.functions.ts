@@ -211,24 +211,3 @@ export const statusLabel = (status: PlanAnchorStatus): string =>
 /** True once a status means the analysis is describing code that isn't there. */
 export const isBrokenAnchor = (status: PlanAnchorStatus): boolean =>
   status === "lost" || status === "missing";
-
-/**
- * Where a jump to code lands: the project browser, whose tree is every file in
- * the repository and whose centre pane is the file viewer.
- *
- * Not whichever page the window happened to be on. Commit mode's tree is the
- * changed files and its pane is the worktree diff; a review's are the pull
- * request's. A file an analysis points at belongs to neither, so opening one
- * there put it on screen inside a context that disagreed with it — a file absent
- * from the tree beside it, under a trail reading "Local changes".
- */
-export const CODE_BROWSE = "/modes/code/browse";
-
-/**
- * Whether the window is already in the browser, in which case a jump only swaps
- * the file over: a commit or a range being read under `/browse` is context the
- * file sits inside rather than context it contradicts, so following a note there
- * should not throw it away.
- */
-export const isBrowsingCode = (pathname: string): boolean =>
-  pathname === CODE_BROWSE || pathname.startsWith(`${CODE_BROWSE}/`);

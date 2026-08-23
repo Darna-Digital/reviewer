@@ -9,6 +9,11 @@
  *
  * Navigation is modifier-click, as in a JetBrains IDE. Plain clicks belong to
  * text selection — hijacking them would make the file impossible to copy from.
+ *
+ * Anything that answers with a *list* leaves here: find-usages opens the Find
+ * window in the dock rather than a card over the token. A card is the wrong
+ * shape for it — it holds a dozen rows, has no room for the code around them,
+ * and is gone the moment you look away.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -26,6 +31,7 @@ import {
   countDiagnostics,
   groupDiagnosticsByLine,
   identifierWithin,
+  positionOfToken,
 } from "../functions/language.functions";
 import type {
   DiagnosticCounts,
@@ -37,6 +43,7 @@ import {
   rectAnchor,
   type VirtualAnchor,
 } from "../functions/anchors";
+import { findUsages } from "@/interactions/find-usages/adapters/find-usages.store";
 import { SymbolCard } from "./symbol-card";
 import { useCompletions } from "./use-completions";
 import { useSymbolMenu } from "./use-symbol-menu";
@@ -44,7 +51,6 @@ import {
   CardSpinner,
   HoverDocumentation,
   TargetChoice,
-  UsagesList,
 } from "./symbol-overlay";
 
 /** How long the pointer must rest on a token before documentation is fetched. */
@@ -78,6 +84,11 @@ type CardState =
       readonly contents: string | null;
     }
   | { readonly kind: "busy"; readonly anchor: CardAnchor }
+  /**
+   * A choice of declarations — the one outcome that is still a card. It is a
+   * short list the user picks from and is done with, drawn over the token it is
+   * about; usages are a surface you stay on, and they go to the Find window.
+   */
   | {
       readonly kind: "outcome";
       readonly anchor: CardAnchor;
@@ -350,10 +361,16 @@ export function useLanguageLayer({
       void actions
         .navigate(path, token)
         .then((outcome) => {
-          // A single destination needs no card; just go there.
+          // Anything with one answer needs no card: a destination is jumped to,
+          // and usages go to the window that is built to hold them.
           if (outcome.kind === "open") {
             setCard(null);
             onOpenLocation(outcome.target.location);
+            return;
+          }
+          if (outcome.kind === "usages") {
+            setCard(null);
+            findUsages(path, outcome.position, outcome.symbol);
             return;
           }
           if (outcome.kind === "none") {
@@ -399,22 +416,14 @@ export function useLanguageLayer({
     enabled: enabled && lineNumbersMatchFile,
     getContainer,
     onOpen: closeCard,
+    // No card and no spinner: the search is handed to the Find window, which
+    // opens on the question and says for itself that it is working on it.
     onFindUsages: useCallback(
-      (token: TokenSpan, at: VirtualAnchor) => {
-        const anchor: CardAnchor = () => at;
-        setCard({ kind: "busy", anchor });
-        void actions
-          .references(path, token)
-          .then((outcome) =>
-            setCard(
-              outcome.kind === "none"
-                ? null
-                : { kind: "outcome", anchor, outcome }
-            )
-          )
-          .catch(() => setCard(null));
+      (token: TokenSpan) => {
+        setCard(null);
+        findUsages(path, positionOfToken(token), token.tokenText);
       },
-      [actions, path]
+      [path]
     ),
     onGoToDefinition: useCallback(
       (token: TokenSpan, at: VirtualAnchor) => {
@@ -426,6 +435,11 @@ export function useLanguageLayer({
             if (outcome.kind === "open") {
               setCard(null);
               onOpenLocation(outcome.target.location);
+              return;
+            }
+            if (outcome.kind === "usages") {
+              setCard(null);
+              findUsages(path, outcome.position, outcome.symbol);
               return;
             }
             setCard(
@@ -461,12 +475,6 @@ export function useLanguageLayer({
         ) : (
           <HoverDocumentation contents={card.contents} />
         )
-      ) : card.outcome.kind === "usages" ? (
-        <UsagesList
-          symbol={card.outcome.symbol}
-          references={card.outcome.references}
-          onOpen={openFromCard}
-        />
       ) : card.outcome.kind === "choose" ? (
         <TargetChoice targets={card.outcome.targets} onOpen={openFromCard} />
       ) : null;

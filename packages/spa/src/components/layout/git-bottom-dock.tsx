@@ -1,6 +1,6 @@
 /**
- * The bottom dock — history, services and terminal sessions — for the whole
- * app.
+ * The bottom dock — history, find usages, services and terminal sessions — for
+ * the whole app.
  *
  * There used to be two of these: this one for the workspace pages, and a second
  * copy assembled inline by the code shell, kept in step with it by hand. They
@@ -32,6 +32,7 @@ import { usePanelSize } from "@/components/layout/use-panel-size";
 import { filterCommitsByRepo } from "@byconvo/core/project";
 import { folderName, isMultiRepo } from "@byconvo/core/workspace";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
+import { resetFindUsages } from "@/interactions/find-usages/adapters/find-usages.store";
 import {
   resetHistoryFilters,
   setHistoryQuery,
@@ -81,10 +82,14 @@ export function GitBottomDock({
 
   // A ref belongs to the root it was read from, so following another root
   // starts the history over rather than listing a branch that root has never
-  // heard of.
+  // heard of — and takes the Find window's results with it, for the same
+  // reason.
   const root = repo.data?.root ?? null;
   useEffect(() => {
     resetHistoryFilters();
+    // A search is a path and a position inside one repository; in another they
+    // point at a file that is not there, or at the middle of a different one.
+    resetFindUsages();
   }, [root]);
   // Not React state: the dock holds the history list and the terminals, and a
   // drag re-rendering them per pointer frame is the jank. See `usePanelSize`.
