@@ -27,6 +27,7 @@ import {
   type RevealTarget,
 } from "@/interactions/language/components/use-reveal-line";
 import { useFindInFile } from "@/interactions/find-in-file/adapters/find-in-file.hook.adapter";
+import { useFormatOnSave } from "@/interactions/formatting/adapters/formatting.hook.adapter";
 import { useVim } from "@/interactions/vim/adapters/vim.hook.adapter";
 import { useFolding } from "@/interactions/folding/adapters/folding.hook.adapter";
 import {
@@ -146,10 +147,14 @@ export function CodeView({
   );
   draftRef.current = commentsEnabled ? onDraftOpen : undefined;
 
+  // Saving a file formats it, when the project says how and the user wants it.
+  const formatting = useFormatOnSave();
+
   const buffer = useFileEditing({
     path,
     loadedContents: file.data?.contents,
     onSaved: useCallback(() => onSaved?.(), [onSaved]),
+    formatBeforeSave: formatting.formatBeforeSave,
     onAttach: useCallback((component: DiffsEditableComponent<undefined>) => {
       foldAttach.current?.(component);
     }, []),

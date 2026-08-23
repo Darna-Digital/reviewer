@@ -30,6 +30,8 @@ import { CommentsHandler } from "./layers/comments/comments.handler.ts";
 import { CommentsLive } from "./layers/comments/comments.layer.live.ts";
 import { DocsHandler } from "./layers/docs/docs.handler.ts";
 import { DocsLive } from "./layers/docs/docs.layer.live.ts";
+import { FormattingHandler } from "./layers/formatting/formatting.handler.ts";
+import { FormattingLive } from "./layers/formatting/formatting.layer.live.ts";
 import { GitMessageHandler } from "./layers/git-message/git-message.handler.ts";
 import { GitMessageLive } from "./layers/git-message/git-message.layer.live.ts";
 import { GitHubHandler } from "./layers/github/github.handler.ts";
@@ -90,6 +92,7 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(ChatsHandler),
   Layer.provide(DocsHandler),
   Layer.provide(LanguageHandler),
+  Layer.provide(FormattingHandler),
   Layer.provide(TasksHandler),
   Layer.provide(LocalDevHandler),
   Layer.provide(BrowserHandler),
@@ -110,6 +113,7 @@ const RequestServices = Layer.mergeAll(
   ChatsLive,
   DocsLive,
   LanguageLive,
+  FormattingLive,
   TasksLive,
   LocalDevLive,
   DevRuntimeLive,
