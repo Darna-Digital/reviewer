@@ -18,7 +18,7 @@
  */
 import {
   IconColumns2,
-  IconFolders,
+  IconFolder,
   IconGitBranch,
   IconGitCommit,
   IconGitCompare,
@@ -676,7 +676,7 @@ export function CodeWorkspace() {
         {
           id: "project",
           label: pathName(workspace.data?.project ?? ""),
-          icon: IconFolders,
+          icon: IconFolder,
         },
       ];
     }

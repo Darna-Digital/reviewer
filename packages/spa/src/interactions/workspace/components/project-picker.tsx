@@ -10,8 +10,6 @@ import {
   IconCheck,
   IconChevronDown,
   IconFolder,
-  IconFolderOpen,
-  IconFolders,
   IconGitBranch,
   IconSearch,
 } from "@tabler/icons-react";
@@ -321,7 +319,7 @@ export function ProjectPicker({
                   className={rowClass}
                   onClick={() => void chooseDirectory()}
                 >
-                  <IconFolderOpen className="size-4 shrink-0 text-muted-foreground" />
+                  <IconFolder className="size-4 shrink-0 text-muted-foreground" />
                   <span>Use an existing folder</span>
                 </button>
               )}
@@ -412,8 +410,6 @@ export function ProjectPicker({
                       >
                         {entry.isGitRepo ? (
                           <IconGitBranch className="size-4 shrink-0 text-muted-foreground" />
-                        ) : entry.repoCount > 0 ? (
-                          <IconFolders className="size-4 shrink-0 text-muted-foreground" />
                         ) : (
                           <IconFolder className="size-4 shrink-0 text-muted-foreground" />
                         )}
@@ -448,7 +444,7 @@ export function ProjectPicker({
                     data.isGitRepo ? (
                       <IconGitBranch className="size-4 h-lh shrink-0 text-muted-foreground" />
                     ) : (
-                      <IconFolders className="size-4 h-lh shrink-0 text-muted-foreground" />
+                      <IconFolder className="size-4 h-lh shrink-0 text-muted-foreground" />
                     )
                   }
                   label={

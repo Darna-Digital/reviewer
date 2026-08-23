@@ -6,7 +6,7 @@
  * the WindowFrame, so the rail starts at the content edge.
  */
 import {
-  IconFolders,
+  IconFolder,
   IconGitCommit,
   IconGitPullRequest,
   IconHistory,
@@ -43,7 +43,7 @@ const GIT_LINKS: RailLink[] = [
   {
     to: "/modes/code/browse",
     label: "Browse the project",
-    icon: IconFolders,
+    icon: IconFolder,
     match: "/modes/code/browse",
   },
   {
