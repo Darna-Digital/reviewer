@@ -8,6 +8,7 @@ import type {
   FileHistory,
   FileStep,
   FileStepEffects,
+  NewFileTemplate,
   PathExists,
   PathKind,
   PathMove,
@@ -134,6 +135,29 @@ export const draftPath = (
   while (exists(`${prefix}${name}`)) name += DRAFT_BASENAME;
   return `${prefix}${name}${kind === "directory" ? "/" : ""}`;
 };
+
+/** The typed entries the tree's "New" menu offers beside plain files. */
+export const NEW_FILE_TEMPLATES: ReadonlyArray<NewFileTemplate> = [
+  { label: "TypeScript File", extension: ".ts" },
+  { label: "TSX File", extension: ".tsx" },
+  { label: "JavaScript File", extension: ".js" },
+  { label: "HTML File", extension: ".html" },
+  { label: "JSON File", extension: ".json" },
+  { label: "Markdown File", extension: ".md" },
+];
+
+/**
+ * The path a typed template's draft commits to. A name that spells any
+ * extension — or is a dotfile — is taken at its word, so "util.js" under the
+ * TypeScript entry stays "util.js" rather than becoming "util.js.ts".
+ */
+export const withTemplateExtension = (
+  path: string,
+  extension: string | null
+): string =>
+  extension === null || basename(path).includes(".")
+    ? path
+    : `${path}${extension}`;
 
 /**
  * Carry out each step in turn, and hand back the steps that put them back.

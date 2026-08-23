@@ -1001,6 +1001,7 @@ export function CodeWorkspace() {
       onDeletePaths={mode === "review" ? undefined : deletePaths}
       onRenamePath={mode === "review" ? undefined : renamePath}
       actions={mode === "review" ? undefined : fileActions}
+      onError={(message) => toast.error(message)}
       onShowHistory={showFileHistory}
       projectPath={workspace.data?.project ?? null}
       footer={
