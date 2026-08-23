@@ -46,11 +46,6 @@ export interface UiPrefs {
   workspaceSidebarWidth: number;
   /** Drag-resizable width of the inbox's message list, in px. */
   inboxListWidth: number;
-  /**
-   * When the inbox was last opened, ISO. Threads touched since then read as
-   * unread — the server keeps no per-reader state, so this is the mark.
-   */
-  inboxSeenAt: string;
   /** Drag-resizable source pane width in the SVG split view, in px. */
   svgSourceWidth: number;
   /** Drag-resizable bottom panel height, in px. */
@@ -135,7 +130,6 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   sidebarWidth: 288,
   workspaceSidebarWidth: 256,
   inboxListWidth: 320,
-  inboxSeenAt: "",
   svgSourceWidth: 420,
   bottomHeight: 256,
   commitFilesHeight: 180,
@@ -199,7 +193,6 @@ function persist() {
       sidebarWidth,
       workspaceSidebarWidth,
       inboxListWidth,
-      inboxSeenAt,
       svgSourceWidth,
       bottomHeight,
       commitFilesHeight,
@@ -234,7 +227,6 @@ function persist() {
         sidebarWidth,
         workspaceSidebarWidth,
         inboxListWidth,
-        inboxSeenAt,
         svgSourceWidth,
         bottomHeight,
         commitFilesHeight,

@@ -26,6 +26,7 @@ import {
   insertChat,
   listChatProjects,
   listChatSummaries,
+  markChatSeen,
   nextChatId,
   removeChat,
   updateChatSettings,
@@ -104,5 +105,21 @@ export const makeSqliteChatsRepository = Effect.gen(function* () {
 
   const remove: ChatsRepo["remove"] = (id) => attempt(() => removeChat(id));
 
-  return { list, projects, get, create, update, remove } satisfies ChatsRepo;
+  // The chat is required first so opening one that has been deleted elsewhere
+  // fails the way every other read of a missing session does.
+  const markSeen: ChatsRepo["markSeen"] = (id) =>
+    attempt(() => {
+      requireChat(id);
+      markChatSeen(id, new Date().toISOString());
+    });
+
+  return {
+    list,
+    projects,
+    get,
+    create,
+    update,
+    remove,
+    markSeen,
+  } satisfies ChatsRepo;
 });

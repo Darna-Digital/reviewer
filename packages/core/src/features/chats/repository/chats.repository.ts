@@ -68,6 +68,12 @@ export interface ChatsRepo {
     input: UpdateChatInput
   ) => Effect.Effect<Chat, ChatsFailure>;
   readonly remove: (id: string) => Effect.Effect<void, ChatsFailure>;
+  /**
+   * Records that the reader has the session open now, which is what settles
+   * both of the list's dots — see `chats.attention.ts`. Idempotent: the mark is
+   * simply moved to the present, so repeating it costs nothing.
+   */
+  readonly markSeen: (id: string) => Effect.Effect<void, ChatsFailure>;
 }
 export class ChatsRepository extends Context.Service<
   ChatsRepository,

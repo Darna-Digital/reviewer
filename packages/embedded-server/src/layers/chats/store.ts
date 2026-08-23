@@ -62,6 +62,7 @@ interface ChatRow {
   readonly session_id: string | null;
   readonly created_at: string;
   readonly updated_at: string;
+  readonly seen_at: string | null;
   readonly latest_turn: string | null;
   readonly repo_name: string | null;
   readonly project_path: string | null;
@@ -165,6 +166,7 @@ const toChat = (row: ChatRow): Chat => ({
   sessionId: row.session_id,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
+  seenAt: row.seen_at,
   messages: messagesOf(row.id),
   activities: activitiesOf(row.id),
   latestTurn:
@@ -222,6 +224,7 @@ const toSummary = (row: SummaryRow): ChatSummary => ({
   branch: row.branch,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
+  seenAt: row.seen_at,
   messageCount: row.message_count,
   lastMessage: row.last_message?.slice(0, 120) ?? null,
   turnState:
@@ -343,9 +346,12 @@ export interface InsertChatInput {
 export const insertChat = (input: InsertChatInput): Chat => {
   database()
     .prepare(
+      // A session is minted by the reader who is about to talk into it, so it
+      // starts seen — an empty conversation has nothing to have missed.
       `INSERT INTO chat (id, repo_path, title, provider, model, effort, access,
-                         branch, session_id, created_at, updated_at, latest_turn)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, NULL)`
+                         branch, session_id, created_at, updated_at, seen_at,
+                         latest_turn)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, NULL)`
     )
     .run(
       input.id,
@@ -356,6 +362,7 @@ export const insertChat = (input: InsertChatInput): Chat => {
       input.effort,
       input.access,
       input.branch,
+      input.createdAt,
       input.createdAt,
       input.createdAt
     );
@@ -397,6 +404,18 @@ export const updateChatSettings = (
       id
     );
   return findChat(id);
+};
+
+/**
+ * Stamps the session as looked at, which is what clears its row — both the dot
+ * for a turn that ended badly and the one for "this moved since you last
+ * looked" are read against this mark. See `chats.attention.ts`.
+ *
+ * Deliberately not a `touch`: being read is not the session changing, and
+ * moving `updated_at` here would reorder the list under whoever is reading it.
+ */
+export const markChatSeen = (id: string, at: string): void => {
+  execute("UPDATE chat SET seen_at = ? WHERE id = ?", at, id);
 };
 
 export const removeChat = (id: string): void => {

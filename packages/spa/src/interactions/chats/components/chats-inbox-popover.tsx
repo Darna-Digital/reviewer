@@ -1,7 +1,9 @@
 /**
  * Code mode's inbox button — the repo's real agent threads, newest first, with
- * the same panel the collaboration prototype wears. Opening it clears the dot:
- * the mark it compares against moves to now once the panel closes.
+ * the same panel the collaboration prototype wears. The dot stands for threads
+ * that have moved since they were last opened, so it is opening a thread that
+ * puts it out — glancing at the panel is not reading them. See
+ * `chats.attention.ts`.
  */
 import { IconPlus } from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
@@ -12,22 +14,16 @@ import {
   inboxPopoverLink,
 } from "@/components/layout/inbox-popover";
 import { AgentMark } from "@/interactions/threads/components/agent-mark";
-import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
+import { isChatUnread } from "@byconvo/core/chats";
 import { useRecentChats } from "@/lib/queries";
 import { timeAgo } from "@/lib/relative-time";
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 
 export function ChatsInboxPopover({ active }: { active: boolean }) {
-  const seenAt = useUiPrefs().inboxSeenAt;
   const chats = useRecentChats().data?.items ?? [];
-  const unread = chats.filter((chat) => isChatUnread(chat, seenAt));
+  const unread = chats.filter(isChatUnread);
 
   return (
-    <InboxPopover
-      active={active}
-      waiting={unread.length > 0}
-      onClose={() => setUiPrefs({ inboxSeenAt: new Date().toISOString() })}
-    >
+    <InboxPopover active={active} waiting={unread.length > 0}>
       {(close) => (
         <>
           <InboxPopoverHeader>
@@ -80,7 +76,7 @@ export function ChatsInboxPopover({ active }: { active: boolean }) {
                           </span>
                         )}
                     </span>
-                    {isChatUnread(chat, seenAt) && (
+                    {isChatUnread(chat) && (
                       <span className="mt-1.5 size-2 shrink-0 rounded-full bg-brand-500" />
                     )}
                   </Link>

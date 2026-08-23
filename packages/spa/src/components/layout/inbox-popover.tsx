@@ -35,7 +35,6 @@ export function InboxPopover({
   active,
   side = "right",
   waiting,
-  onClose,
   children,
 }: {
   active: boolean;
@@ -43,8 +42,6 @@ export function InboxPopover({
   side?: "right" | "bottom";
   /** Draws the dot on the button — something in the list wants a look. */
   waiting: boolean;
-  /** Fired once the panel is dismissed, so a mode can mark the list seen. */
-  onClose?: () => void;
   children: (close: () => void) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -52,7 +49,6 @@ export function InboxPopover({
   const close = () => {
     holdsFocus.current = false;
     setOpen(false);
-    onClose?.();
   };
 
   return (
