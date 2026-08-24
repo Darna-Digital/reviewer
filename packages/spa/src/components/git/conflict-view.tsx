@@ -132,7 +132,7 @@ export function ConflictView({
   return (
     <div className="flex h-full flex-col">
       {/* Resolver toolbar */}
-      <div className="flex shrink-0 items-center gap-2 border-b px-3 py-2">
+      <div className="flex h-9 shrink-0 items-center gap-2 border-b px-3">
         <span className="truncate font-mono text-xs">{path}</span>
         <span className="text-xs text-muted-foreground">
           {resolved

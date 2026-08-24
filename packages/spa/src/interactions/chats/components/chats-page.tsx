@@ -17,9 +17,9 @@
  * filters — and the rail's search — are part of what is asked for rather than
  * applied to what came back. See `useChatPages`.
  *
- * Arriving marks the inbox seen, so the rail's dot only stands for sessions that
- * moved since you last looked; the rows keep comparing against the mark this
- * visit started with, so nothing goes read out from under you.
+ * Which rows are still waiting is the sessions' own business: each carries the
+ * moment it was last opened, so a row settles when you open its conversation
+ * rather than when you next arrive here. See `chats.attention.ts`.
  */
 import {
   Outlet,
@@ -27,7 +27,7 @@ import {
   useParams,
   useSearch,
 } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
@@ -36,7 +36,6 @@ import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapte
 import { useChatListQuery } from "@/interactions/chats/adapters/chat-list-query.hook.adapter";
 import { useOnSessionTab } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { ChatRow } from "@/interactions/chats/components/chat-row";
-import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
 import { useChatPages } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 
@@ -61,11 +60,6 @@ export function ChatsPage() {
    * there is no rail beside it either. See `ShellRoute`.
    */
   const ownTab = useOnSessionTab();
-
-  const [seenAt] = useState(prefs.inboxSeenAt);
-  useEffect(() => {
-    setUiPrefs({ inboxSeenAt: new Date().toISOString() });
-  }, []);
 
   // Starting a session gets the whole pane: the composer is the only thing on
   // screen worth looking at, and it is the one place under here that asks for
@@ -165,7 +159,6 @@ export function ChatsPage() {
                       key={c.id}
                       chat={c}
                       active={c.id === chatId}
-                      unread={isChatUnread(c, seenAt)}
                       onDelete={() => void remove(c.id)}
                     />
                   ))

@@ -43,21 +43,20 @@ export const reference = (
   location: { path: "src/b.ts", range: range(2, 8, 2, 13) },
   kind: "read",
   preview: 'greet("bob")',
+  containerName: "",
+  containerKind: "",
   ...over,
 });
 
 export interface MockLanguageSeed {
   readonly diagnostics?: ReadonlyArray<Diagnostic>;
   readonly targets?: ReadonlyArray<SymbolTarget>;
-  readonly references?: ReadonlyArray<SymbolReference>;
-  readonly symbol?: string | null;
   readonly hover?: HoverResult;
 }
 
 export function mockLanguageDependencies(seed: MockLanguageSeed = {}) {
   const calls = {
     definition: [] as Array<{ path: string; position: Position }>,
-    references: [] as Array<{ path: string; position: Position }>,
     hover: [] as Array<{ path: string; position: Position }>,
   };
 
@@ -67,13 +66,6 @@ export function mockLanguageDependencies(seed: MockLanguageSeed = {}) {
       definition: async (path, position) => {
         calls.definition.push({ path, position });
         return { targets: seed.targets ?? [] };
-      },
-      references: async (path, position) => {
-        calls.references.push({ path, position });
-        return {
-          symbol: seed.symbol === undefined ? "greet" : seed.symbol,
-          references: seed.references ?? [],
-        };
       },
       hover: async (path, position) => {
         calls.hover.push({ path, position });

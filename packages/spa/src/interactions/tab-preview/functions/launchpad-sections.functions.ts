@@ -176,3 +176,46 @@ export const launchpadSections = (
   groups: ReadonlyArray<LaunchpadGroup>
 ): ReadonlyArray<LaunchpadSection> =>
   groups.flatMap((group) => [...group.sections]);
+
+/** The mint tile's name, which the filter narrows it by like any other card. */
+export const NEW_SESSION_TITLE = "New session";
+
+/**
+ * What the search box comes to: the words typed into it, in no particular
+ * order. A card is a hit when its title carries all of them, so "changes local"
+ * finds the same card "local changes" does — a grid you are scanning for one
+ * card in is not one you should have to name in the right order.
+ */
+const queryTerms = (query: string): ReadonlyArray<string> =>
+  query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((term) => term.length > 0);
+
+const titled = (title: string, terms: ReadonlyArray<string>): boolean => {
+  const name = title.toLowerCase();
+  return terms.every((term) => name.includes(term));
+};
+
+/**
+ * The grid, narrowed to what was asked for. A group with nothing left in it
+ * goes with its cards rather than standing as a heading over a gap — and an
+ * empty query is answered with the groups themselves, so the grid the launchpad
+ * opens on is the one it was handed.
+ */
+export function filterLaunchpadGroups(
+  groups: ReadonlyArray<LaunchpadGroup>,
+  query: string
+): ReadonlyArray<LaunchpadGroup> {
+  const terms = queryTerms(query);
+  if (terms.length === 0) return groups;
+  return groups
+    .map((group) => ({
+      title: group.title,
+      sections: group.sections.filter((section) =>
+        titled(section.title, terms)
+      ),
+      minting: group.minting && titled(NEW_SESSION_TITLE, terms),
+    }))
+    .filter((group) => group.sections.length > 0 || group.minting);
+}

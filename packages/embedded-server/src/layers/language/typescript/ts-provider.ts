@@ -37,6 +37,7 @@ import {
 } from "@byconvo/core/language";
 import { loadTypeScript } from "./ts-module.ts";
 import { projectFor, type TsProject } from "./ts-project.ts";
+import { containerAt, usageKind, NO_CONTAINER } from "./ts-usages.ts";
 import {
   completionKind,
   hoverMarkdown,
@@ -81,7 +82,13 @@ const unsupported: {
 } = {
   diagnostics: [],
   definition: { providerId: null, origin: null, targets: [] },
-  references: { providerId: null, origin: null, symbol: null, references: [] },
+  references: {
+    providerId: null,
+    origin: null,
+    symbol: null,
+    declaration: null,
+    references: [],
+  },
   hover: { providerId: null, range: null, contents: "" },
   completions: {
     providerId: null,
@@ -216,21 +223,78 @@ const targetsOf = (
   return out;
 };
 
+/**
+ * The parsed form of the files a search touched, looked up once each.
+ *
+ * A symbol used a hundred times in one file is a hundred questions about the
+ * same syntax tree; the program already holds it, so the only cost worth
+ * avoiding is asking for it again per usage.
+ */
+const sourceFiles = (document: OpenDocument) => {
+  const program = document.service.getProgram();
+  const cache = new Map<string, TS.SourceFile | undefined>();
+  return (fileName: string): TS.SourceFile | undefined => {
+    if (!cache.has(fileName))
+      cache.set(fileName, program?.getSourceFile(fileName));
+    return cache.get(fileName);
+  };
+};
+
+/**
+ * Where the symbol is declared, as the compiler describes it — the header a
+ * usages view stands above its results. `findReferences` groups by declaration
+ * and a search starts from one symbol, so the first group is that symbol; the
+ * rest, when there are any, are the other declarations of an overload or a
+ * merged interface, and their usages are already in the list.
+ */
+const declarationOf = (
+  root: string,
+  document: OpenDocument,
+  symbols: ReadonlyArray<TS.ReferencedSymbol>
+): SymbolTarget | null => {
+  const definition = symbols[0]?.definition;
+  if (definition === undefined) return null;
+  const path = toRepoRelative(root, definition.fileName);
+  if (path === null) return null;
+  const text = document.project.textOf(definition.fileName) ?? "";
+  return {
+    location: { path, range: spanToRange(text, definition.textSpan) },
+    name: definition.name,
+    kind: definition.kind,
+    containerName: definition.containerName,
+    preview: spanPreview(text, definition.textSpan.start),
+  };
+};
+
 const referencesOf = (
   document: OpenDocument,
   root: string,
   symbols: ReadonlyArray<TS.ReferencedSymbol>
 ): ReadonlyArray<SymbolReference> => {
+  const sourceOf = sourceFiles(document);
   const out: Array<SymbolReference> = [];
   for (const symbol of symbols) {
     for (const entry of symbol.references) {
       const path = toRepoRelative(root, entry.fileName);
       if (path === null) continue;
       const text = document.project.textOf(entry.fileName) ?? "";
+      // A file the program has dropped still has a span and a preview; it is
+      // only the syntactic reading that goes with it, which the wire shapes
+      // already allow to be absent.
+      const source = sourceOf(entry.fileName);
+      const container =
+        source === undefined
+          ? NO_CONTAINER
+          : containerAt(document.ts, source, entry.textSpan.start);
       out.push({
         location: { path, range: spanToRange(text, entry.textSpan) },
-        kind: referenceKind(entry),
+        kind:
+          source === undefined
+            ? referenceKind(entry)
+            : usageKind(document.ts, source, entry.textSpan.start, entry),
         preview: spanPreview(text, entry.textSpan.start),
+        containerName: container.name,
+        containerKind: container.kind,
       });
     }
   }
@@ -345,6 +409,7 @@ export const typescriptProvider: LanguageProvider = {
                 offsetAt(document.text, origin.start),
                 offsetAt(document.text, origin.end)
               ),
+        declaration: declarationOf(request.root, document, symbols),
         references: referencesOf(document, request.root, symbols),
       };
     }),

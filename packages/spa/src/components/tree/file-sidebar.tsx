@@ -6,8 +6,6 @@ import {
   IconCopyPlus,
   IconCursorText,
   IconCut,
-  IconFilePlus,
-  IconFolderPlus,
   IconFolderSearch,
   IconHistory,
   IconTrash,
@@ -20,6 +18,14 @@ import type {
   ReactNode,
 } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { NewEntryChoice } from "@/components/tree/new-entry-submenu";
+import {
+  NewEntrySubmenu,
+  SUBMENU_CLOSE_EVENT,
+  SUBMENU_OPEN_EVENT,
+  TREE_MENU_ITEM,
+  TREE_MENU_PANEL,
+} from "@/components/tree/new-entry-submenu";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { droppedFiles } from "@/interactions/file-actions/adapters/dropped-files.adapter";
 import {
@@ -27,11 +33,11 @@ import {
   dropDirectory,
   targetDirectory,
   withoutTrailingSlash,
+  withTemplateExtension,
 } from "@/interactions/file-actions/functions/file-actions.functions";
 import type {
   Clipboard,
   FileActionsFunctions,
-  PathKind,
   TreeItem,
 } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
 import type { AppMode } from "@/lib/api/types";
@@ -77,11 +83,6 @@ const TREE_UNSAFE_CSS = `
   }
 `;
 
-// Walked with the arrows as much as with the pointer, so the row the keyboard
-// is on reads exactly like the row the pointer is on.
-const CONTEXT_MENU_ITEM =
-  "flex w-full items-center gap-2 rounded-sm px-2 py-1 text-left outline-none hover:bg-elevate focus:bg-elevate disabled:opacity-40 disabled:hover:bg-transparent";
-
 /** A menu row's icon: the component itself, mounted by the row that takes it. */
 type MenuIcon = ComponentType<{ className?: string }>;
 
@@ -116,12 +117,27 @@ function rowUnder(event: DragEvent): HTMLElement | null {
   return null;
 }
 
-/** The menu rows that can be chosen right now — a disabled Paste is skipped. */
-const menuItems = (menu: HTMLElement) => [
-  ...menu.querySelectorAll<HTMLButtonElement>(
-    "[role='menuitem']:not(:disabled)"
-  ),
-];
+/**
+ * The menu rows that can be chosen right now — a disabled Paste is skipped,
+ * and so are the rows of any other panel: the "New" flyout is a `role="menu"`
+ * of its own nested in the top-level one, and the arrows walk one at a time.
+ */
+const menuItems = (panel: HTMLElement) =>
+  [
+    ...panel.querySelectorAll<HTMLButtonElement>(
+      "[role='menuitem']:not(:disabled)"
+    ),
+  ].filter((item) => item.closest("[role='menu']") === panel);
+
+/** The panel the keyboard is in: the flyout when focus is there, else `menu`. */
+const activePanel = (menu: HTMLElement): HTMLElement => {
+  const active = document.activeElement;
+  const panel =
+    active instanceof HTMLElement
+      ? active.closest<HTMLElement>("[role='menu']")
+      : null;
+  return panel !== null && menu.contains(panel) ? panel : menu;
+};
 
 /**
  * The keys an open menu answers to. It does not take the keyboard as it opens —
@@ -129,12 +145,35 @@ const menuItems = (menu: HTMLElement) => [
  * the arrows walk the entries and wrap at both ends. Bound to the document
  * because until focus is in the menu the keys are still the tree's, and bound
  * in the capture phase so the arrow that reaches for the menu does not move the
- * row behind it on its way. Escape belongs to the tree, which closes the menu.
+ * row behind it on its way. Escape belongs to the tree, which closes the menu;
+ * Left and Right belong to the "New" entry, which opens and closes its flyout.
  */
 const menuKeys = (menu: HTMLElement) => (event: KeyboardEvent) => {
-  const items = menuItems(menu);
+  const panel = activePanel(menu);
+  const items = menuItems(panel);
   if (items.length === 0) return;
-  const inside = menu.contains(document.activeElement);
+  const inside = panel.contains(document.activeElement);
+  // The submenu cannot hear the arrows itself — the tree swallows them while
+  // its menu is up — so from here they become events its component listens for.
+  if (event.key === "ArrowRight" && panel === menu) {
+    const active = document.activeElement;
+    if (
+      active instanceof HTMLElement &&
+      menu.contains(active) &&
+      active.getAttribute("aria-haspopup") === "menu"
+    ) {
+      event.preventDefault();
+      event.stopPropagation();
+      active.dispatchEvent(new CustomEvent(SUBMENU_OPEN_EVENT));
+    }
+    return;
+  }
+  if (event.key === "ArrowLeft" && panel !== menu) {
+    event.preventDefault();
+    event.stopPropagation();
+    panel.dispatchEvent(new CustomEvent(SUBMENU_CLOSE_EVENT));
+    return;
+  }
   const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
   if (step !== 0) {
     event.preventDefault();
@@ -187,10 +226,19 @@ export function FileSidebar({
   onRenamePathRef.current = onRenamePath;
   const actionsRef = useRef(actions);
   actionsRef.current = actions;
-  // The row a "New file/folder" is being named in, as the rename event spells
-  // it. It is an ordinary tree row until the name is committed, so the rename
-  // handler recognises it here and routes it to creation instead.
-  const draftRef = useRef<string | null>(null);
+  // The row a "New …" entry is being named in. It is an ordinary tree row
+  // until the name is committed, so the rename handler recognises it here and
+  // routes it to creation instead — `path` as the rename event spells it,
+  // `row` as the tree does, and the extension a typed template stamps on.
+  const draftRef = useRef<{
+    readonly path: string;
+    readonly row: string;
+    readonly extension: string | null;
+  } | null>(null);
+  // Set when the listing changes under an open draft: resetting the tree then
+  // would take the row — and the half-typed name in it — down with it, so the
+  // reset waits until the draft is committed or let go.
+  const pendingResetRef = useRef(false);
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
   const pathsRef = useRef(paths);
@@ -213,6 +261,10 @@ export function FileSidebar({
   // listing rather than once per render, for the same reason as the keys below.
   const treePaths = useMemo(() => [...paths], [paths]);
   const treeGitStatus = useMemo(() => [...gitStatus], [gitStatus]);
+  // What the server has confirmed, for telling real rows from optimistic ones.
+  const knownPaths = useMemo(() => new Set(paths), [paths]);
+  const knownPathsRef = useRef(knownPaths);
+  knownPathsRef.current = knownPaths;
 
   // A folder is `src/` in the tree and `src` everywhere else, and a row is only
   // "already there" if either spelling of it is.
@@ -243,10 +295,15 @@ export function FileSidebar({
     onSelectionChange: (selectedPaths) => {
       if (syncingSelectionRef.current) return;
       const first = selectedPaths.at(0);
-      if (first !== undefined) {
-        const item = modelRef.current?.getItem(first);
-        if (item != null && !item.isDirectory()) onFileSelectRef.current(first);
-      }
+      if (first === undefined) return;
+      const item = modelRef.current?.getItem(first);
+      if (item == null || item.isDirectory()) return;
+      // A row the server hasn't confirmed — a draft being named, a create or
+      // move still in flight — has no file behind it to open yet. Starting a
+      // draft selects its row, which was navigating the viewer to a path that
+      // doesn't exist; a created file is opened by the create flow instead.
+      if (!knownPathsRef.current.has(first)) return;
+      onFileSelectRef.current(first);
     },
     // The tree rearranges its own rows the moment a drag lands, so the move is
     // already on screen while the server is still hearing about it; a refusal
@@ -268,17 +325,61 @@ export function FileSidebar({
       canRename: () =>
         onRenamePathRef.current !== undefined ||
         actionsRef.current !== undefined,
-      onError: (message) => onErrorRef.current?.(message),
+      onError: (message) => {
+        // A draft that failed to commit — the name is taken, or holds a "/" —
+        // would be left behind as a blank ghost row: the tree closes the
+        // rename but keeps the row. Reopen the input instead, so the user is
+        // still where JetBrains would leave them: naming the file.
+        const draft = draftRef.current;
+        if (draft !== null) {
+          // After the commit that raised the error has fully unwound.
+          queueMicrotask(() => {
+            if (draftRef.current !== draft) return;
+            modelRef.current?.startRenaming(draft.row, {
+              removeIfCanceled: true,
+            });
+          });
+        }
+        onErrorRef.current?.(message);
+      },
       onRename: ({ destinationPath, isFolder, sourcePath }) => {
         const revert = () =>
           modelRef.current?.resetPaths([...pathsRef.current]);
-        if (draftRef.current === sourcePath) {
+        const draft = draftRef.current;
+        if (draft !== null && draft.path === sourcePath) {
+          const target = withTemplateExtension(
+            destinationPath,
+            draft.extension
+          );
+          // The tree validated the typed name, but the stamped one is what the
+          // file will really be called — a collision it lands on comes out
+          // here, before a doomed round-trip, with the naming still open.
+          if (target !== destinationPath && treeHolds(target)) {
+            queueMicrotask(() => {
+              if (draftRef.current !== draft) return;
+              modelRef.current?.move(destinationPath, draft.row);
+              modelRef.current?.startRenaming(draft.row, {
+                removeIfCanceled: true,
+              });
+            });
+            onErrorRef.current?.(`"${target}" already exists.`);
+            return;
+          }
           draftRef.current = null;
+          // A listing change held back during naming is settled by what comes
+          // next either way: success refreshes the listing, failure reverts.
+          pendingResetRef.current = false;
           const create = actionsRef.current?.create;
           if (create === undefined) return revert();
-          void create(destinationPath, isFolder ? "directory" : "file").catch(
-            revert
-          );
+          // The tree is about to move the draft row to the typed name; when a
+          // template stamps its extension on, move the row once more to match
+          // the file being created — after that first move has landed.
+          if (target !== destinationPath) {
+            queueMicrotask(() =>
+              modelRef.current?.move(destinationPath, target)
+            );
+          }
+          void create(target, isFolder ? "directory" : "file").catch(revert);
           return;
         }
         const handler = onRenamePathRef.current;
@@ -323,19 +424,44 @@ export function FileSidebar({
   // dragging a panel handle was enough to join fifty thousand strings. They
   // change only when their input array is replaced, which is what the memo says.
   const pathsKey = useMemo(() => paths.join("\n"), [paths]);
-  useEffect(() => {
-    // Rebuilding collapses the tree; seed the open file's ancestors as expanded
-    // so it doesn't flash closed. Selection/scroll/focus is re-applied by the
-    // reveal effect below (which also depends on `pathsKey`).
+  // Rebuilding collapses the tree; seed the open file's ancestors as expanded
+  // so it doesn't flash closed. Selection/scroll/focus is re-applied by the
+  // reveal effect below (which also depends on `pathsKey`).
+  const resetTreePaths = () => {
     const open = selectedFileRef.current;
-    model.resetPaths(
-      [...paths],
+    modelRef.current?.resetPaths(
+      [...pathsRef.current],
       open !== null
         ? { initialExpandedPaths: [...ancestorDirs(open)] }
         : undefined
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  };
+  useEffect(() => {
+    // A reset would tear the row a draft is being named in out from under the
+    // input, half-typed name and all — it waits for the draft to finish.
+    if (draftRef.current !== null) {
+      pendingResetRef.current = true;
+      return;
+    }
+    resetTreePaths();
   }, [pathsKey, model]);
+
+  // The tree is the only one who knows a draft was let go — Escape, or a
+  // committed blank name, removes the row without a rename ever firing. Seeing
+  // that remove closes out the draft and applies any reset it was holding up.
+  useEffect(
+    () =>
+      model.onMutation("remove", ({ path }) => {
+        const draft = draftRef.current;
+        if (draft === null || withoutTrailingSlash(path) !== draft.path) return;
+        draftRef.current = null;
+        if (pendingResetRef.current) {
+          pendingResetRef.current = false;
+          resetTreePaths();
+        }
+      }),
+    [model]
+  );
 
   const statusKey = useMemo(
     () => gitStatus.map((e) => `${e.path}:${e.status}`).join("\n"),
@@ -362,10 +488,15 @@ export function FileSidebar({
   }, [selectedFile, pathsKey, model]);
 
   // Draw the new entry as a row and let the user name it in place; the rename
-  // that commits it is routed to `create` by the handler above.
-  const startCreate = (item: TreeItem, kind: PathKind) => {
-    const row = draftPath(targetDirectory(item), kind, treeHolds);
-    draftRef.current = withoutTrailingSlash(row);
+  // that commits it is routed to `create` by the handler above, which stamps a
+  // typed template's extension on the name.
+  const startCreate = (item: TreeItem, choice: NewEntryChoice) => {
+    const row = draftPath(targetDirectory(item), choice.kind, treeHolds);
+    draftRef.current = {
+      path: withoutTrailingSlash(row),
+      row,
+      extension: choice.extension,
+    };
     modelRef.current?.add(row);
     modelRef.current?.startRenaming(row, { removeIfCanceled: true });
   };
@@ -496,7 +627,7 @@ export function FileSidebar({
             role="menuitem"
             disabled={options?.off === true}
             className={cn(
-              CONTEXT_MENU_ITEM,
+              TREE_MENU_ITEM,
               label === "Delete" && "text-destructive"
             )}
             onClick={() => {
@@ -526,21 +657,17 @@ export function FileSidebar({
             // A hovered row and a focused one are lit at once whenever the
             // pointer rests somewhere the arrows are not, so the rows are held
             // apart by the 2px the tree already puts between its own.
-            className="flex min-w-48 flex-col gap-0.5 rounded-md border bg-popover p-1 text-sm text-popover-foreground shadow-md"
+            className={TREE_MENU_PANEL}
           >
             {actions !== undefined && [
-              entry(
-                IconFilePlus,
-                "New file…",
-                () => startCreate(item, "file"),
-                { focusMoves: true }
-              ),
-              entry(
-                IconFolderPlus,
-                "New folder…",
-                () => startCreate(item, "directory"),
-                { focusMoves: true }
-              ),
+              <NewEntrySubmenu
+                key="new"
+                onPick={(choice) => {
+                  // Focus moves on to the draft's rename input.
+                  context.close({ restoreFocus: false });
+                  startCreate(item, choice);
+                }}
+              />,
               separator("new"),
               entry(IconCut, "Cut", () =>
                 setClipboard({ mode: "cut", paths: [item.path] })

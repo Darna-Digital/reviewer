@@ -19,6 +19,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { agentIcon } from "@/interactions/threads/components/agent-icons";
+import { confirm } from "@/components/ui/alerts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -291,12 +292,13 @@ export function TasksPage() {
   };
 
   const deleteColumn = async (id: string, name: string) => {
-    if (
-      !window.confirm(
-        `Delete the "${name}" column? Its tasks move to the first column.`
-      )
-    )
-      return;
+    const ok = await confirm({
+      title: `Delete the "${name}" column?`,
+      description: "Its tasks move to the first column.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await actions.removeColumn(id);
     } catch (error) {
@@ -322,7 +324,14 @@ export function TasksPage() {
   };
 
   const removeCard = async (id: string) => {
-    if (!window.confirm("Delete this card?")) return;
+    const ok = await confirm({
+      title: "Delete this card?",
+      description:
+        "The card and its comments go with it. This cannot be undone.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     try {
       await actions.remove(id);
     } catch (error) {
@@ -383,7 +392,7 @@ export function TasksPage() {
   return (
     <div className="flex h-full min-h-0">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b px-4 py-2">
+        <header className="flex min-h-9 items-center gap-2 border-b px-4 py-0.5">
           <span className="text-sm font-medium">Tasks board</span>
           <span className="text-xs text-muted-foreground">
             Reference a task by its key (e.g. {board?.prefix ?? "T"}-1) in an

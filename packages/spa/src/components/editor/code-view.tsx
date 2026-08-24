@@ -1,7 +1,7 @@
 import { DIFFS_TAG_NAME } from "@pierre/diffs";
 import type { DiffsEditableComponent, LineAnnotation } from "@pierre/diffs";
 import { EditProvider, File, Virtualizer } from "@pierre/diffs/react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   CommentThread,
@@ -19,19 +19,15 @@ import {
 } from "@/interactions/language/functions/anchors";
 import { codeRootsWithin } from "@/lib/code-root";
 import { commentLineFor } from "@/interactions/comments/functions/selection-anchor";
-import {
-  DiagnosticsAnnotation,
-  DiagnosticsSummary,
-} from "@/interactions/language/components/diagnostics-annotation";
-import {
-  useLanguageLayer,
-  type DiagnosticsAnnotationMeta,
-} from "@/interactions/language/components/language-layer";
+import { ProblemsBar } from "@/interactions/language/components/problems-bar";
+import { useLanguageLayer } from "@/interactions/language/components/language-layer";
+import { lineOfDiagnostic } from "@/interactions/language/functions/language.functions";
 import {
   useRevealLine,
   type RevealTarget,
 } from "@/interactions/language/components/use-reveal-line";
 import { useFindInFile } from "@/interactions/find-in-file/adapters/find-in-file.hook.adapter";
+import { useFormatOnSave } from "@/interactions/formatting/adapters/formatting.hook.adapter";
 import { useVim } from "@/interactions/vim/adapters/vim.hook.adapter";
 import { useFolding } from "@/interactions/folding/adapters/folding.hook.adapter";
 import {
@@ -50,7 +46,7 @@ import { selectionShadingCSS } from "@/lib/code-selection-css";
 import { useFile } from "@/lib/queries";
 import { useUiPrefs } from "@/lib/ui-prefs";
 import type { ReviewComment } from "@byconvo/core/comments";
-import type { FileEdits, Location } from "@byconvo/core/language";
+import type { Diagnostic, FileEdits, Location } from "@byconvo/core/language";
 import type { VimFoldAction } from "@/interactions/vim/interfaces/vim.interfaces";
 import { writeFileEdits } from "@/interactions/language/adapters/language.hook.adapter";
 import type { Theme } from "@/lib/ui-prefs";
@@ -66,8 +62,7 @@ type AnnotationMeta =
     }
   // See `diff-pane`: the body travels with the draft so a composer reopened
   // after a refused write comes back holding what was typed.
-  | { readonly kind: "draft"; readonly body?: string }
-  | DiagnosticsAnnotationMeta;
+  | { readonly kind: "draft"; readonly body?: string };
 
 interface CodeViewProps {
   path: string;
@@ -77,9 +72,9 @@ interface CodeViewProps {
   /** Whether this file has unsaved changes — the tab strip shows a marker. */
   onDirtyChange?: (dirty: boolean) => void;
   /**
-   * Where this file's own readouts — the mode line, the problem count — render.
-   * Saving is not among them: an unsaved buffer says so on its tab, and ⌘S
-   * writes it, as in any editor. Omit to leave the file without them.
+   * Where this file's own readouts — the Vim mode line — render. Saving is not
+   * among them: an unsaved buffer says so on its tab, and ⌘S writes it, as in
+   * any editor. Omit to leave the file without them.
    */
   actionsSlot?: HTMLElement | null;
   /**
@@ -152,10 +147,14 @@ export function CodeView({
   );
   draftRef.current = commentsEnabled ? onDraftOpen : undefined;
 
+  // Saving a file formats it, when the project says how and the user wants it.
+  const formatting = useFormatOnSave();
+
   const buffer = useFileEditing({
     path,
     loadedContents: file.data?.contents,
     onSaved: useCallback(() => onSaved?.(), [onSaved]),
+    formatBeforeSave: formatting.formatBeforeSave,
     onAttach: useCallback((component: DiffsEditableComponent<undefined>) => {
       foldAttach.current?.(component);
     }, []),
@@ -288,15 +287,13 @@ export function CodeView({
             : { kind: "draft", body: draft.body },
       });
     }
-    // Diagnostics share the annotation slot with comments; a line can carry
-    // both, and `@pierre/diffs` stacks them in order.
-    out.push(...language.annotations);
     return out;
-  }, [comments, draft, language.annotations, path]);
+  }, [comments, draft, path]);
 
-  // The annotation slot carries diagnostics as well as comments, so it stays on
-  // whenever either has something to show.
-  const annotationsEnabled = commentsEnabled || language.annotations.length > 0;
+  // Diagnostics stay out of the annotation slot: rows appearing under lines
+  // while typing shove the code around under the caret. They live in the
+  // problems bar below instead, with the squiggles still marking the spot.
+  const annotationsEnabled = commentsEnabled;
 
   // The Virtualizer's own root div owns the scroll — it has to, in order to
   // window its rendering — and it is the wrapper's only child.
@@ -312,6 +309,18 @@ export function CodeView({
     subscribe: buffer.subscribe,
     getScroller,
   });
+
+  // Whether the problems bar is open on its list, kept across files: leaving
+  // it open is a way of working, not a per-file setting.
+  const [problemsOpen, setProblemsOpen] = useState(false);
+  const toggleProblems = useCallback(
+    () => setProblemsOpen((open) => !open),
+    []
+  );
+  const jumpToProblem = useCallback(
+    (problem: Diagnostic) => onOpenLocation?.(path, lineOfDiagnostic(problem)),
+    [onOpenLocation, path]
+  );
 
   // The view keeps one `onPostRender`, and four layers paint from it: the
   // diagnostic underlines, the find highlight, the relative line numbers and
@@ -368,11 +377,11 @@ export function CodeView({
     // Virtualizer windows the file: only the viewport (±overscan) worth of
     // lines is materialized in the DOM, so large files open instantly. The
     // wrapper exists so `useRevealLine` can reach the Virtualizer's own
-    // scrolling root, which is its only child.
+    // scrolling root, which is its first child.
     <div ref={scrollWrapper} className="relative h-full">
       {/* Trailing gutter: the last lines have to clear the floating bars that
-          hang over the bottom of the pane (the assign bar), and scrolling a
-          little past the end is how an editor behaves anyway. */}
+          hang over the bottom of the pane (the assign bar, the problems bar),
+          and scrolling a little past the end is how an editor behaves anyway. */}
       <Virtualizer className="h-full overflow-auto pb-20">
         {/* The view builds its own editor from this factory as it mounts,
             rather than being handed one that exists whether or not a file is
@@ -413,13 +422,6 @@ export function CodeView({
                   ? (annotation) => {
                       const meta = annotation.metadata;
                       if (meta === undefined) return null;
-                      if (meta.kind === "diagnostics") {
-                        return (
-                          <DiagnosticsAnnotation
-                            diagnostics={meta.diagnostics}
-                          />
-                        );
-                      }
                       if (meta.kind === "draft") {
                         return onCommentSubmit === undefined ? null : (
                           <DraftCard
@@ -455,13 +457,7 @@ export function CodeView({
         </EditProvider>
         {actionsSlot !== null &&
           actionsSlot !== undefined &&
-          createPortal(
-            <>
-              {vim.status}
-              <DiagnosticsSummary counts={language.counts} />
-            </>,
-            actionsSlot
-          )}
+          createPortal(vim.status, actionsSlot)}
         {language.card}
         {language.completions}
         {language.menu}
@@ -475,6 +471,16 @@ export function CodeView({
           />
         )}
       </Virtualizer>
+      {/* Floats over the code rather than sitting under it: diagnostics come
+          and go while typing, and a bar that resizes the view would shove the
+          text around under the caret every time the last problem cleared. */}
+      <ProblemsBar
+        diagnostics={language.diagnostics}
+        expanded={problemsOpen}
+        onToggle={toggleProblems}
+        onSelect={jumpToProblem}
+        className="absolute inset-x-0 bottom-0 z-10"
+      />
       {find.bar}
     </div>
   );

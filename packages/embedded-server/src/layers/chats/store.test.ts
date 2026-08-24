@@ -11,6 +11,7 @@ import {
   insertChat,
   listChatProjects,
   listChatSummaries,
+  markChatSeen,
   removeChat,
   saveStreamingText,
   settleStaleTurns,
@@ -357,6 +358,19 @@ describe("chat store", () => {
       "read a file",
       "ran a command",
     ]);
+  });
+
+  it("starts a new session seen, and re-marks it on demand", () => {
+    seed("c-1", API, "2026-07-25T12:00:00.000Z");
+    expect(findChat("c-1")?.seenAt).toBe("2026-07-25T12:00:00.000Z");
+
+    markChatSeen("c-1", "2026-07-25T13:00:00.000Z");
+    const chat = findChat("c-1");
+    expect(chat?.seenAt).toBe("2026-07-25T13:00:00.000Z");
+    // Reading a session is not the session changing: the list must not reorder
+    // under whoever is reading it.
+    expect(chat?.updatedAt).toBe("2026-07-25T12:00:00.000Z");
+    expect(allChats()[0]?.seenAt).toBe("2026-07-25T13:00:00.000Z");
   });
 
   it("settles a turn with its final text and cost", () => {
