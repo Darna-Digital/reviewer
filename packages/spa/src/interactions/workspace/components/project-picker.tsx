@@ -10,7 +10,6 @@ import {
   IconCheck,
   IconChevronDown,
   IconFolder,
-  IconFolderOpen,
   IconGitBranch,
   IconSearch,
 } from "@tabler/icons-react";
@@ -320,7 +319,7 @@ export function ProjectPicker({
                   className={rowClass}
                   onClick={() => void chooseDirectory()}
                 >
-                  <IconFolderOpen className="size-4 shrink-0 text-muted-foreground" />
+                  <IconFolder className="size-4 shrink-0 text-muted-foreground" />
                   <span>Use an existing folder</span>
                 </button>
               )}

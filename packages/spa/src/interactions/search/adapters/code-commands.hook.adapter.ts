@@ -1,5 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
+import { askForText } from "@/components/ui/alerts";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { useRepo } from "@/lib/queries";
 import { buildCodeCommands } from "../functions/commands.functions";
@@ -25,7 +26,13 @@ export function useCodeCommands(): ReadonlyArray<Command> {
           push: () => void git.push(),
           createBranch: (name, startPoint) =>
             void git.createBranch(name, startPoint),
-          askForBranchName: () => window.prompt("New branch name:"),
+          askForBranchName: () =>
+            askForText({
+              title: "Create a branch",
+              label: "Branch name",
+              placeholder: "feature/…",
+              confirmLabel: "Create",
+            }),
         },
       }),
     [navigate, git, hasGitHub, currentBranch]

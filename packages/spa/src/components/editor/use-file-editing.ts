@@ -17,6 +17,7 @@
  * stopped on their way down to it.
  */
 import { type DiffsEditableComponent, type FileContents } from "@pierre/diffs";
+import type { TextEdit } from "@byconvo/core/language";
 import { Editor, type EditorOptions } from "@pierre/diffs/edit";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -86,6 +87,15 @@ export interface FileEditingOptions {
    */
   readonly onAttach?: (component: DiffsEditableComponent<undefined>) => void;
   /**
+   * Run the project's formatter over the buffer on its way to disk, answering
+   * with the text to write and the edit that brings the buffer to it. Omit to
+   * save exactly what the user typed.
+   */
+  readonly formatBeforeSave?: (
+    path: string,
+    contents: string
+  ) => Promise<{ readonly contents: string; readonly edit: TextEdit | null }>;
+  /**
    * Build the popover the editor floats over a user-made selection. The editor
    * owns when it appears and where; this only says what it is.
    */
@@ -109,6 +119,7 @@ export function useFileEditing({
   loadedContents,
   onSaved,
   onAttach,
+  formatBeforeSave,
   renderSelectionAction,
 }: FileEditingOptions): FileEditing {
   const [dirty, setDirty] = useState(false);
@@ -237,16 +248,45 @@ export function useFileEditing({
     setBufferForAnalysis(null);
   }, [loadedContents]);
 
+  /**
+   * The buffer as it should be written: formatted, if the project formats and
+   * the editor is there to take the result.
+   *
+   * Two things it refuses to do. It never writes formatted text the editor does
+   * not also hold — the file on disk and the buffer on screen would disagree,
+   * and the tab would go clean over a document nobody had seen. And it drops a
+   * result that arrived about a buffer the user has since typed past: the edit
+   * was computed against text that no longer exists, so what is on screen now
+   * is saved instead, unformatted.
+   */
+  const formatRef = useRef(formatBeforeSave);
+  formatRef.current = formatBeforeSave;
+  const editorRef = useRef(editor);
+  editorRef.current = editor;
+
+  const contentsToWrite = useCallback(async () => {
+    const format = formatRef.current;
+    const instance = editorRef.current;
+    const requested = valueRef.current;
+    if (format === undefined || instance === null) return requested;
+    const outcome = await format(path, requested);
+    if (outcome.edit === null || valueRef.current !== requested)
+      return valueRef.current;
+    instance.applyEdits([outcome.edit], true);
+    return outcome.contents;
+  }, [path]);
+
   const save = useCallback(async () => {
     if (valueRef.current === originalRef.current) return;
     setSaving(true);
     try {
+      const contents = await contentsToWrite();
       const { error } = await fetchClient.PUT("/api/file", {
-        body: { path, contents: valueRef.current },
+        body: { path, contents },
       });
       if (error)
         throw new Error((error as { reason?: string }).reason ?? "save failed");
-      originalRef.current = valueRef.current;
+      originalRef.current = contents;
       setDirty(false);
       setBufferForAnalysis(null);
       toast.success("Saved");
@@ -256,7 +296,7 @@ export function useFileEditing({
     } finally {
       setSaving(false);
     }
-  }, [path, onSaved]);
+  }, [path, onSaved, contentsToWrite]);
   saveRef.current = () => void save();
 
   /**

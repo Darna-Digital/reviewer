@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   dockPage,
   dockPages,
+  isBrowsingCode,
   reviewHref,
   reviewSourceOf,
   shellRoute,
@@ -166,5 +167,29 @@ describe("reviewSourceOf", () => {
     ] as const) {
       expect(reviewSourceOf(reviewHref(source))).toEqual(source);
     }
+  });
+});
+
+describe("isBrowsingCode", () => {
+  it("accepts the browser and whatever it is browsing", () => {
+    expect(isBrowsingCode("/modes/code/browse")).toBe(true);
+    expect(isBrowsingCode("/modes/code/browse/commit/abc123")).toBe(true);
+    expect(isBrowsingCode("/modes/code/browse/range")).toBe(true);
+  });
+
+  it("rejects the other code pages, whose context a file would contradict", () => {
+    expect(isBrowsingCode("/modes/code/commit")).toBe(false);
+    expect(isBrowsingCode("/modes/code/review/42")).toBe(false);
+    expect(isBrowsingCode("/modes/code/find")).toBe(false);
+  });
+
+  it("rejects everything outside code mode", () => {
+    expect(isBrowsingCode("/modes/agent-session/c1")).toBe(false);
+    expect(isBrowsingCode("/modes/collaboration")).toBe(false);
+    expect(isBrowsingCode("/settings")).toBe(false);
+  });
+
+  it("does not take a longer segment for the browser", () => {
+    expect(isBrowsingCode("/modes/code/browser")).toBe(false);
   });
 });

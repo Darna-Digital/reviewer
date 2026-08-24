@@ -87,6 +87,15 @@ export class ChatsApi extends HttpApiGroup.make("chats")
     })
   )
   .add(
+    // Records that the reader has this session open, which is what settles the
+    // row's dots — see `chats.attention.ts` in core.
+    HttpApiEndpoint.post("seen", "/chats/:id/seen", {
+      params: ChatIdParam,
+      success: Ok,
+      error: errors,
+    })
+  )
+  .add(
     HttpApiEndpoint.post("stop", "/chats/:id/stop", {
       params: ChatIdParam,
       success: Ok,

@@ -15,6 +15,7 @@ import {
   redoable,
   targetDirectory,
   undoable,
+  withTemplateExtension,
 } from "./file-actions.functions";
 import {
   createFileActionsDependenciesMock,
@@ -69,6 +70,31 @@ describe("draftPath", () => {
     expect(
       draftPath("src", "file", nothingExists).split("/").at(-1)?.trim()
     ).toBe("");
+  });
+});
+
+describe("withTemplateExtension", () => {
+  it("stamps the template's extension on a bare name", () => {
+    expect(withTemplateExtension("src/util", ".ts")).toBe("src/util.ts");
+  });
+
+  it("takes a name that spells its own extension at its word", () => {
+    expect(withTemplateExtension("src/util.js", ".ts")).toBe("src/util.js");
+    expect(withTemplateExtension("src/util.ts", ".ts")).toBe("src/util.ts");
+  });
+
+  it("leaves a dotfile's name whole", () => {
+    expect(withTemplateExtension("src/.env", ".ts")).toBe("src/.env");
+  });
+
+  it("only reads the basename for dots, not the folders above it", () => {
+    expect(withTemplateExtension("src/v1.2/util", ".ts")).toBe(
+      "src/v1.2/util.ts"
+    );
+  });
+
+  it("leaves a plain file or folder draft alone", () => {
+    expect(withTemplateExtension("src/util", null)).toBe("src/util");
   });
 });
 
@@ -365,9 +391,7 @@ describe("upload", () => {
       "assets",
       taken("assets/logo.png")
     );
-    expect(deps.sideEffects.confirm).toHaveBeenCalledWith(
-      "Replace assets/logo.png?"
-    );
+    expect(deps.sideEffects.confirm).toHaveBeenCalledWith("assets/logo.png");
     expect(deps.sideEffects.trash).toHaveBeenCalledWith("assets/logo.png");
     expect(deps.sideEffects.upload).toHaveBeenCalledWith(
       "assets/logo.png",
@@ -377,7 +401,9 @@ describe("upload", () => {
 
   it("skips the file, and only that file, when the answer is no", async () => {
     const deps = createFileActionsDependenciesMock({
-      confirm: vi.fn((question) => !question.includes("logo.png")),
+      confirm: vi.fn((path: string) =>
+        Promise.resolve(!path.includes("logo.png"))
+      ),
     });
     const files = [dropped("logo.png"), dropped("b.png")];
     await createFileActionsFunctions(deps).upload(
@@ -395,7 +421,7 @@ describe("upload", () => {
 
   it("leaves the tree alone when every file was declined", async () => {
     const deps = createFileActionsDependenciesMock({
-      confirm: vi.fn(() => false),
+      confirm: vi.fn(() => Promise.resolve(false)),
     });
     await createFileActionsFunctions(deps).upload(
       [dropped("logo.png")],

@@ -4,6 +4,7 @@ import { ChatsApi } from "./layers/chats/chats.api.ts";
 import { CollabApi } from "./layers/collab/collab.api.ts";
 import { CommentsApi } from "./layers/comments/comments.api.ts";
 import { DocsApi } from "./layers/docs/docs.api.ts";
+import { FormattingApi } from "./layers/formatting/formatting.api.ts";
 import { GitMessageApi } from "./layers/git-message/git-message.api.ts";
 import { GitHubApi } from "./layers/github/github.api.ts";
 import { LanguageApi } from "./layers/language/language.api.ts";
@@ -27,6 +28,7 @@ export class Api extends HttpApi.make("byconvo")
   .add(ChatsApi)
   .add(DocsApi)
   .add(LanguageApi)
+  .add(FormattingApi)
   .add(TasksApi)
   .add(LocalDevApi)
   .add(BrowserApi)

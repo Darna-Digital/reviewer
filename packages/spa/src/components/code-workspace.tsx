@@ -36,6 +36,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
+import { confirm } from "@/components/ui/alerts";
 import { CommitPanel } from "@/components/commit-panel";
 import {
   ReviewAssignBar,
@@ -655,23 +656,40 @@ export function CodeWorkspace() {
    * only copy of it. Leaving asks first, which is the guard that used to sit
    * behind the "Done" button.
    */
-  const mayLeaveFile = (next?: string | null): boolean => {
+  const mayLeaveFile = async (next?: string | null): Promise<boolean> => {
     if (dirtyFile === null || dirtyFile === next) return true;
-    if (!window.confirm(`Discard unsaved changes in ${dirtyFile}?`)) {
-      return false;
-    }
+    const discard = await confirm({
+      title: `Discard unsaved changes in ${dirtyFile}?`,
+      description: "The edits in the buffer are the only copy of them.",
+      confirmLabel: "Discard",
+      destructive: true,
+    });
+    if (!discard) return false;
     setDirtyFile(null);
     return true;
   };
+
+  /**
+   * Do something that leaves the open file, once leaving it is allowed.
+   *
+   * The question is asked in our own dialog now, which means it is answered a
+   * turn later than `window.confirm` answered it. Everything that used to read
+   * `if (mayLeaveFile(…))` goes through here instead, so the call sites stay
+   * the plain event handlers they were.
+   */
+  const whenMayLeaveFile = (next: string | null | undefined, go: () => void) =>
+    void mayLeaveFile(next).then((may) => {
+      if (may) go();
+    });
 
   // --- navigation helpers ----------------------------------------------------
   const setSearch = (patch: Partial<Search>) =>
     navigate({ to: ".", search: (prev: Search) => ({ ...prev, ...patch }) });
   const openFile = (path: string) => {
-    if (mayLeaveFile(path)) setSearch({ file: path });
+    whenMayLeaveFile(path, () => setSearch({ file: path }));
   };
   const closeFile = () => {
-    if (mayLeaveFile()) setSearch({ file: undefined });
+    whenMayLeaveFile(undefined, () => setSearch({ file: undefined }));
   };
 
   const fileActions = useFileActions(openFile);
@@ -696,8 +714,10 @@ export function CodeWorkspace() {
       key: (previous?.key ?? 0) + 1,
     }));
   const openLocation = (path: string, lineNumber: number) => {
-    openFile(path);
-    revealLine(path, lineNumber);
+    whenMayLeaveFile(path, () => {
+      setSearch({ file: path });
+      revealLine(path, lineNumber);
+    });
   };
   /**
    * A comment picked out of the bar's list: a permanent tab, since picking a
@@ -854,21 +874,22 @@ export function CodeWorkspace() {
   }, [allPaths]);
 
   const selectTab = (path: string) => {
-    if (mayLeaveFile(path)) setSearch({ file: path });
+    whenMayLeaveFile(path, () => setSearch({ file: path }));
   };
   const closeTabAt = (path: string) => {
     // Closing another tab leaves the edited file where it is; only closing the
     // one holding the buffer throws it away.
-    if (!mayLeaveFile(dirtyFile === path ? undefined : dirtyFile)) return;
-    updateTabs((state) => {
-      const next = closeTab(state, path);
-      // Closing the tab on screen moves the file view to its neighbour, or
-      // shuts it when the strip empties.
-      if (state.active === path) {
-        setSearch({ file: next.active ?? undefined });
-      }
-      return next;
-    });
+    whenMayLeaveFile(dirtyFile === path ? undefined : dirtyFile, () =>
+      updateTabs((state) => {
+        const next = closeTab(state, path);
+        // Closing the tab on screen moves the file view to its neighbour, or
+        // shuts it when the strip empties.
+        if (state.active === path) {
+          setSearch({ file: next.active ?? undefined });
+        }
+        return next;
+      })
+    );
   };
 
   // Local comments anchored to the file currently open in the viewer (worktree
@@ -1038,7 +1059,14 @@ export function CodeWorkspace() {
       only === null
         ? `${items.length} items`
         : `${only.kind === "directory" ? "folder" : "file"} "${only.path}"`;
-    if (!window.confirm(`Delete ${what}?`)) return;
+    const ok = await confirm({
+      title: `Delete ${what}?`,
+      description:
+        "Deleted files go to the project's trash, so ⌘Z can put them back.",
+      confirmLabel: "Delete",
+      destructive: true,
+    });
+    if (!ok) return;
     await fileActions.trash(items);
     for (const item of items) {
       if (search.file === withoutTrailingSlash(item.path)) closeFile();
@@ -1268,6 +1296,7 @@ export function CodeWorkspace() {
       onDeletePaths={mode === "review" ? undefined : deletePaths}
       onRenamePath={mode === "review" ? undefined : renamePath}
       actions={mode === "review" ? undefined : fileActions}
+      onError={(message) => toast.error(message)}
       onShowHistory={showFileHistory}
       projectPath={workspace.data?.project ?? null}
       footer={
@@ -1442,20 +1471,22 @@ export function CodeWorkspace() {
                 updateTabs((state) => togglePin(state, path))
               }
               onCloseOthers={(path) => {
-                if (!mayLeaveFile(path)) return;
-                updateTabs((state) => {
-                  const next = closeOthers(state, path);
-                  setSearch({ file: next.active ?? undefined });
-                  return next;
-                });
+                whenMayLeaveFile(path, () =>
+                  updateTabs((state) => {
+                    const next = closeOthers(state, path);
+                    setSearch({ file: next.active ?? undefined });
+                    return next;
+                  })
+                );
               }}
               onCloseAll={() => {
-                if (!mayLeaveFile()) return;
-                updateTabs((state) => {
-                  const next = closeAll(state);
-                  setSearch({ file: next.active ?? undefined });
-                  return next;
-                });
+                whenMayLeaveFile(undefined, () =>
+                  updateTabs((state) => {
+                    const next = closeAll(state);
+                    setSearch({ file: next.active ?? undefined });
+                    return next;
+                  })
+                );
               }}
               onMove={(path, toIndex) =>
                 updateTabs((state) => moveTab(state, path, toIndex))

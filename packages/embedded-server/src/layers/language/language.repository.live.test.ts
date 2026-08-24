@@ -161,11 +161,20 @@ const recordingProvider = (asked: Array<Asked>): LanguageProvider => {
       return Effect.succeed({
         ...empty,
         symbol: "thing",
+        declaration: {
+          location: { path: "src/other.ts", range },
+          name: "thing",
+          kind: "function",
+          containerName: "",
+          preview: "export const thing = 1",
+        },
         references: [
           {
             location: { path: "src/other.ts", range },
             kind: "read" as const,
             preview: "thing()",
+            containerName: "",
+            containerKind: "",
           },
         ],
       });
@@ -270,12 +279,15 @@ describe("the language repository over a multi-root project", () => {
     )
   );
 
-  it.effect("names references from the project", () =>
+  it.effect("names references and their declaration from the project", () =>
     withRepo(multiRepo, (repo) =>
       Effect.map(
         repo.references("backend/src/app.ts", position, null),
         (result) => {
           expect(result.references[0].location.path).toBe(
+            "backend/src/other.ts"
+          );
+          expect(result.declaration?.location.path).toBe(
             "backend/src/other.ts"
           );
         }

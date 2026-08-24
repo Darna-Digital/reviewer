@@ -41,6 +41,7 @@ const chat = (overrides: Partial<Chat> = {}): Chat => ({
   sessionId: null,
   createdAt: "",
   updatedAt: "",
+  seenAt: null,
   messages: [],
   activities: [],
   latestTurn: null,

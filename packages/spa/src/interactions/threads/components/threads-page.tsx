@@ -258,7 +258,7 @@ export function ThreadsPage() {
         )}
         style={sidebar.style}
       >
-        <div className="flex items-center gap-1.5 border-b p-2">
+        <div className="flex min-h-9 items-center gap-1.5 border-b px-2 py-0.5">
           <SidebarSearch
             label="Search sessions"
             placeholder="Search sessions…"

@@ -105,7 +105,7 @@ export function PathBar({
     <div
       className={cn(
         "flex min-w-0 items-center gap-2",
-        placement === "inline" ? "flex-1" : "h-7 shrink-0 border-t px-2"
+        placement === "inline" ? "flex-1" : "h-9 shrink-0 border-t px-2"
       )}
     >
       <Breadcrumbs

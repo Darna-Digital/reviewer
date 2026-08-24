@@ -2,7 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { fetchClient } from "@/lib/api/client";
 import { chatQueryOptions } from "@/lib/queries";
-import type { Chat, ChatPage, ChatSummary } from "@byconvo/core/chats";
+import type { Chat, ChatSummary } from "@byconvo/core/chats";
+import { invalidateChatList, prependChatSummary } from "./chats.cache";
 import { createChatsFunctions } from "../functions/chats.functions";
 import type {
   ChatImage,
@@ -62,12 +63,7 @@ export function useChatsActions() {
     []
   );
 
-  const isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === "object" && value !== null;
-
-  const invalidate = () => {
-    void queryClient.invalidateQueries({ queryKey: ["get", "/api/chats"] });
-  };
+  const invalidate = () => invalidateChatList(queryClient);
 
   // Optimistically put a freshly-started chat at the top of the list cache so
   // the sidebar shows it before the refetch lands (see threads.hook.adapter).
@@ -81,33 +77,12 @@ export function useChatsActions() {
       branch: chat.branch,
       createdAt: chat.createdAt,
       updatedAt: chat.updatedAt,
+      seenAt: chat.seenAt,
       messageCount: chat.messages.length,
       lastMessage: chat.messages.at(-1)?.text.slice(0, 120) ?? null,
       turnState: chat.latestTurn?.state ?? null,
     };
-    /**
-     * The list is read two ways under this key — a single newest-first page,
-     * and the sidebar's infinite pages — and a new session belongs at the head
-     * of both. Only the first page is touched: it is the one the top of the
-     * list is drawn from, and the pages below it are already past this session.
-     */
-    queryClient.setQueriesData<unknown>(
-      { queryKey: ["get", "/api/chats"] },
-      (old: unknown) => {
-        const head = (page: ChatPage): ChatPage => ({
-          ...page,
-          items: [summary, ...page.items.filter((c) => c.id !== summary.id)],
-        });
-        if (!isRecord(old)) return old;
-        if (Array.isArray(old["pages"])) {
-          const [first, ...rest] = old["pages"] as ReadonlyArray<ChatPage>;
-          return first === undefined
-            ? old
-            : { ...old, pages: [head(first), ...rest] };
-        }
-        return Array.isArray(old["items"]) ? head(old as ChatPage) : old;
-      }
-    );
+    prependChatSummary(queryClient, summary);
   };
 
   return {

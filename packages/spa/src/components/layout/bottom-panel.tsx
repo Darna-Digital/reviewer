@@ -4,6 +4,7 @@ import {
   IconGitBranch,
   IconHistory,
   IconPlayerPlay,
+  IconSearch,
   IconTerminal2,
 } from "@tabler/icons-react";
 import { CommitHistory } from "@/components/git/commit-history";
@@ -15,6 +16,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { FindUsagesPanel } from "@/interactions/find-usages/components/find-usages-panel";
 import { LocalDevPage } from "@/interactions/local-dev/components/local-dev-page";
 import { ThreadsPage } from "@/interactions/threads/components/threads-page";
 import type { LogQuery } from "@/lib/api/types";
@@ -28,14 +30,15 @@ import { cn } from "@/lib/utils";
 const ICONS: Record<BottomTab, typeof IconHistory> = {
   branches: IconGitBranch,
   history: IconHistory,
+  find: IconSearch,
   services: IconPlayerPlay,
   threads: IconTerminal2,
 };
 
 /**
  * The strip's own names, which are shorter than the pages': a tab is read
- * alongside its two neighbours and against the surface it is sitting on, so it
- * only has to say which of the three it is.
+ * alongside its neighbours and against the surface it is sitting on, so it only
+ * has to say which of them it is.
  */
 const TABS: ReadonlyArray<{
   id: BottomTab;
@@ -44,6 +47,7 @@ const TABS: ReadonlyArray<{
 }> = [
   { id: "branches", label: "Branches", icon: ICONS.branches },
   { id: "history", label: "History", icon: ICONS.history },
+  { id: "find", label: "Find", icon: ICONS.find },
   { id: "services", label: "Services", icon: ICONS.services },
   { id: "threads", label: "Terminal sessions", icon: ICONS.threads },
 ];
@@ -202,6 +206,17 @@ export function BottomPanel(props: BottomPanelProps) {
 
       <div
         {...paneProps(2, props.expanded)}
+        hidden={props.tab !== "find"}
+        className={cn(
+          "min-h-0 flex-1 overflow-hidden outline-none",
+          props.tab !== "find" && "hidden"
+        )}
+      >
+        {props.active && props.tab === "find" && <FindUsagesPanel />}
+      </div>
+
+      <div
+        {...paneProps(3, props.expanded)}
         hidden={props.tab !== "services"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
@@ -212,7 +227,7 @@ export function BottomPanel(props: BottomPanelProps) {
       </div>
 
       <div
-        {...paneProps(3, props.expanded)}
+        {...paneProps(4, props.expanded)}
         hidden={props.tab !== "threads"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",

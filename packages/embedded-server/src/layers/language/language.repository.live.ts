@@ -245,9 +245,19 @@ export const makeLanguageRepository = (
           position,
           contents,
           (provider, request) => provider.references(request),
-          { providerId: null, origin: null, symbol: null, references: [] },
+          {
+            providerId: null,
+            origin: null,
+            symbol: null,
+            declaration: null,
+            references: [],
+          },
           (result, naming) => ({
             ...result,
+            declaration:
+              result.declaration === null
+                ? null
+                : naming.located(result.declaration),
             references: result.references.map(naming.located),
           })
         ),

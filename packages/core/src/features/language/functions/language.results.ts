@@ -70,12 +70,19 @@ export const normalizeDiagnostics = (
 /**
  * References in document order, deduplicated by location. When the same span is
  * reported twice the more specific kind wins, so a declaration that is also a
- * write stays labelled `definition`.
+ * write stays labelled `definition` — and, below that, a named kind beats the
+ * bare `read` a provider falls back to.
  */
 export const normalizeReferences = (
   references: ReadonlyArray<SymbolReference>
 ): ReadonlyArray<SymbolReference> => {
-  const KIND_RANK = { definition: 0, write: 1, read: 2 } as const;
+  const KIND_RANK = {
+    definition: 0,
+    import: 1,
+    export: 2,
+    write: 3,
+    read: 4,
+  } as const;
   const byLocation = new Map<string, SymbolReference>();
   for (const reference of references) {
     const key = locationKey(reference.location);

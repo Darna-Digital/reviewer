@@ -12,7 +12,8 @@ import {
 import type { Diagnostic, DiagnosticSeverity } from "@byconvo/core/language";
 import { cn } from "@/lib/utils";
 
-const SEVERITY_STYLE: Record<
+/** One look per severity, shared by every surface that names a diagnostic. */
+export const SEVERITY_STYLE: Record<
   DiagnosticSeverity,
   {
     readonly icon: typeof IconXboxX;
@@ -70,38 +71,5 @@ export function DiagnosticsAnnotation({
         />
       ))}
     </ul>
-  );
-}
-
-/** Counts for the file header — nothing at all when the file is clean. */
-export function DiagnosticsSummary({
-  counts,
-}: {
-  counts: { errors: number; warnings: number; infos: number; hints: number };
-}) {
-  const shown = [
-    { key: "error" as const, value: counts.errors },
-    { key: "warning" as const, value: counts.warnings },
-    { key: "information" as const, value: counts.infos },
-    { key: "hint" as const, value: counts.hints },
-  ].filter((entry) => entry.value > 0);
-  if (shown.length === 0) return null;
-
-  return (
-    <div className="flex items-center gap-2">
-      {shown.map(({ key, value }) => {
-        const { icon: Icon, className, label } = SEVERITY_STYLE[key];
-        return (
-          <span
-            key={key}
-            className={cn("flex items-center gap-1 text-xs", className)}
-            title={`${value} ${label.toLowerCase()}${value === 1 ? "" : "s"}`}
-          >
-            <Icon className="size-3.5" />
-            {value}
-          </span>
-        );
-      })}
-    </div>
   );
 }
