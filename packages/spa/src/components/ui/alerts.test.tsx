@@ -80,7 +80,9 @@ describe("alerts", () => {
     });
     await dialog();
 
-    expect(screen.getByLabelText("Name").value).toBe("feature/");
+    expect(screen.getByLabelText<HTMLInputElement>("Name").value).toBe(
+      "feature/"
+    );
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(await answer).toBe("feature/");
   });
