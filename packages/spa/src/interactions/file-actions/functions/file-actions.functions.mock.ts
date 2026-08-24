@@ -24,7 +24,7 @@ export const createFileActionsDependenciesMock = (
     record: vi.fn(),
     notify: vi.fn(),
     notifyError: vi.fn(),
-    confirm: vi.fn(() => true),
+    confirm: vi.fn(() => Promise.resolve(true)),
     refresh: vi.fn(),
     ...overrides,
   },

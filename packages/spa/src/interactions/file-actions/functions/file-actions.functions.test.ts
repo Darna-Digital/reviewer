@@ -391,9 +391,7 @@ describe("upload", () => {
       "assets",
       taken("assets/logo.png")
     );
-    expect(deps.sideEffects.confirm).toHaveBeenCalledWith(
-      "Replace assets/logo.png?"
-    );
+    expect(deps.sideEffects.confirm).toHaveBeenCalledWith("assets/logo.png");
     expect(deps.sideEffects.trash).toHaveBeenCalledWith("assets/logo.png");
     expect(deps.sideEffects.upload).toHaveBeenCalledWith(
       "assets/logo.png",
@@ -403,7 +401,9 @@ describe("upload", () => {
 
   it("skips the file, and only that file, when the answer is no", async () => {
     const deps = createFileActionsDependenciesMock({
-      confirm: vi.fn((question) => !question.includes("logo.png")),
+      confirm: vi.fn((path: string) =>
+        Promise.resolve(!path.includes("logo.png"))
+      ),
     });
     const files = [dropped("logo.png"), dropped("b.png")];
     await createFileActionsFunctions(deps).upload(
@@ -421,7 +421,7 @@ describe("upload", () => {
 
   it("leaves the tree alone when every file was declined", async () => {
     const deps = createFileActionsDependenciesMock({
-      confirm: vi.fn(() => false),
+      confirm: vi.fn(() => Promise.resolve(false)),
     });
     await createFileActionsFunctions(deps).upload(
       [dropped("logo.png")],

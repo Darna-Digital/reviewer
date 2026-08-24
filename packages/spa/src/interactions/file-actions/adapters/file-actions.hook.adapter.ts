@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { confirm } from "@/components/ui/alerts";
 import { fetchClient } from "@/lib/api/client";
 import { errorReason } from "@/lib/errors";
 import {
@@ -98,7 +99,14 @@ export function useFileActions(openFile: (path: string) => void) {
           record: setHistory,
           notify: (text) => toast(text),
           notifyError: (text) => toast.error(text),
-          confirm: (question) => window.confirm(question),
+          confirm: (path) =>
+            confirm({
+              title: `Replace ${path}?`,
+              description:
+                "The file already in the project moves to the trash, so ⌘Z can put it back.",
+              confirmLabel: "Replace",
+              destructive: true,
+            }),
           refresh,
         },
       }),
