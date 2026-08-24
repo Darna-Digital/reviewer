@@ -25,8 +25,10 @@ import {
   useLayoutEffect,
   useMemo,
   useRef,
+  useState,
 } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
+import { SidebarSearch } from "@/components/layout/sidebar-filters";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Orb } from "@/components/ui/orb";
 import {
@@ -58,7 +60,11 @@ import {
   useDrawLaunchpad,
 } from "../adapters/launchpad-height.store";
 import { useLaunchpadGroups } from "../adapters/launchpad-sections.hook.adapter";
-import type { LaunchpadSection } from "../functions/launchpad-sections.functions";
+import {
+  filterLaunchpadGroups,
+  NEW_SESSION_TITLE,
+  type LaunchpadSection,
+} from "../functions/launchpad-sections.functions";
 import {
   LAUNCHPAD_DISMISS_HEIGHT,
   LAUNCHPAD_MIN_HEIGHT,
@@ -160,6 +166,20 @@ export function TabOverview() {
     select: (state) => state.location.pathname,
   });
 
+  // What the search box has narrowed the grid to. The query is the panel's for
+  // as long as it is on screen and no longer: it is dropped once the panel is
+  // parked, so the launchpad opens on everything it has rather than on the last
+  // thing that was looked for — but not a moment before, or the grid would
+  // repopulate in full while it is still sliding away.
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    if (!shown) setQuery("");
+  }, [shown]);
+  const shownGroups = useMemo(
+    () => filterLaunchpadGroups(groups, query),
+    [groups, query]
+  );
+
   // The panel draws itself at whatever height the drag is reporting, without
   // going through React to do it — see `launchpad-height.store`.
   const panelRef = useRef<HTMLDivElement>(null);
@@ -176,13 +196,26 @@ export function TabOverview() {
     drawLaunchpadHeight(height);
   }, [height]);
 
+  // Escape undoes the last thing done, which is the search before it is the
+  // panel: a grid narrowed to one card and then dismissed outright is a
+  // launchpad you have to reopen to see the rest of.
   useEffect(() => {
     if (!expanded) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeTabOverview();
+      if (event.key !== "Escape") return;
+      if (query.length > 0) setQuery("");
+      else closeTabOverview();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, [expanded, query]);
+
+  // The caret goes in as the panel starts to arrive, so ⌘L and a few letters
+  // are one gesture. Without the scroll, which would be the grid jumping to an
+  // input that is on its way down the screen.
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (expanded) searchInputRef.current?.focus({ preventScroll: true });
   }, [expanded]);
 
   /**
@@ -204,6 +237,10 @@ export function TabOverview() {
   const gridRef = useRef<HTMLDivElement>(null);
   const fitted = useRef(height);
   fitted.current = height;
+  // Read at the moment a fit is asked for rather than as the effect was made:
+  // the fit does not run on the query, and a stale one is what it would see.
+  const searching = useRef(false);
+  searching.current = query.length > 0;
   useLayoutEffect(() => {
     if (!expanded) return;
     let frame = 0;
@@ -212,7 +249,11 @@ export function TabOverview() {
       // A panel being pulled open by the pointer has a height already: the
       // pointer's. Sizing it to its rows mid-gesture would take the drag off
       // the pointer and leave it somewhere of our choosing.
-      if (grid === null || isOverviewResizing()) return;
+      //
+      // A narrowed grid is the same case for a different reason: its rows are
+      // the answer to a search, and sizing the panel to them would leave it
+      // holding the height of a query that is about to be cleared.
+      if (grid === null || isOverviewResizing() || searching.current) return;
       const next = fittedLaunchpadHeight(
         grid.getBoundingClientRect().height,
         window.innerHeight
@@ -254,6 +295,18 @@ export function TabOverview() {
   };
   const pick = (section: LaunchpadSection) =>
     cover(visit(section.href, section.mode));
+
+  /**
+   * What the search box does with a return: the first card left in the grid,
+   * read in the order the grid is read. A query narrowed to one card is an
+   * answer, and having to reach for it with the pointer is the search asking
+   * you to find what you have already named.
+   */
+  const pickFirstHit = () => {
+    const first = shownGroups.flatMap((group) => [...group.sections])[0];
+    if (first !== undefined) return pick(first);
+    if (shownGroups.some((group) => group.minting)) cover(openSession());
+  };
 
   /**
    * Done with a conversation, from the grid rather than from the strip. The
@@ -343,7 +396,27 @@ export function TabOverview() {
         )}
       >
         <div ref={gridRef} className="p-3 pb-11">
-          {groups.map((group) => (
+          {/* The way to a card by name: the grid's first row, centred over the
+              columns and the width of a name rather than of the window. It
+              rides the grid rather than standing over it — a box pinned to the
+              top of a scroller is chrome, and this is the panel's own first
+              line. No fill and no rule: the launchpad is the frame's material
+              and nothing else, and a filled box is a sheet laid on it. */}
+          <div className="mb-3 flex items-center justify-center">
+            <div className="w-full max-w-80 [&_input]:bg-transparent">
+              <SidebarSearch
+                inputRef={searchInputRef}
+                label="Search the launchpad"
+                placeholder="Search launchpad…"
+                value={query}
+                onChange={setQuery}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") pickFirstHit();
+                }}
+              />
+            </div>
+          </div>
+          {shownGroups.map((group) => (
             <section key={group.title} className="mb-4 last:mb-0">
               <h2 className="mb-2 px-0.5 text-xs font-medium text-muted-foreground">
                 {group.title}
@@ -367,6 +440,13 @@ export function TabOverview() {
               </div>
             </section>
           ))}
+          {/* Under the box rather than at the head of the grid: it is the
+              answer to what was typed, not a row of what was found. */}
+          {shownGroups.length === 0 && (
+            <p className="text-center text-xs text-muted-foreground">
+              Nothing matches.
+            </p>
+          )}
         </div>
       </div>
       {/* It waits out the arrival and leaves on the click. Riding the edge down
@@ -761,7 +841,7 @@ function NewSessionCard({ onSelect }: { readonly onSelect: () => void }) {
     >
       <div className="flex h-7 w-full items-center gap-2 border-b border-border bg-elevate px-2.5 text-xs">
         <IconPlus className="size-3.5 text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate">New session</span>
+        <span className="min-w-0 flex-1 truncate">{NEW_SESSION_TITLE}</span>
       </div>
       <div
         style={{ aspectRatio: PREVIEW_ASPECT }}

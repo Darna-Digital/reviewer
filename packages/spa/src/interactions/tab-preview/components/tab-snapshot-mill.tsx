@@ -71,6 +71,30 @@ import {
 const wait = (ms: number) =>
   new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 
+/**
+ * Refuse the frame the keyboard, and hand it back to whatever was holding it.
+ *
+ * A blur on its own leaves the window with the keyboard nowhere — the app is
+ * focused and nothing in it is — so a box you were typing into goes quiet on
+ * the next picture taken behind it. The launchpad's search is exactly that box:
+ * it is up while the mill is at its busiest, and losing a word to a photograph
+ * of a page you are not looking at is not a trade anyone would make.
+ *
+ * Only when the keyboard has actually been dropped, and only back to something
+ * still on the page: a capture that took long enough for you to click elsewhere
+ * has no business pulling you back to where you were when it started.
+ */
+const refuseFocus = (frame: HTMLIFrameElement, held: EventTarget | null) => {
+  frame.blur();
+  if (
+    document.activeElement !== null &&
+    document.activeElement !== document.body
+  )
+    return;
+  if (held instanceof HTMLElement && held.isConnected)
+    held.focus({ preventScroll: true });
+};
+
 /** Resolves once the frame has loaded `href` and had a moment to draw it. */
 function boot(
   frame: HTMLIFrameElement,
@@ -267,13 +291,14 @@ export function TabSnapshotMill() {
           if (!plan.current.hrefs.includes(href)) continue;
           await whenOverviewStill();
           if (stopped) return;
+          // Where the keyboard was before the page came up. A page in here may
+          // focus something on its way — a composer, a search field — and take
+          // the keyboard out of the window with it. The preview refuses focus
+          // from the inside; this is the same refusal from the outside, for
+          // whatever asked before its own scripts were up.
+          const held = document.activeElement;
           const view = await show(href);
-          // A page coming up in here may focus something on its way — a
-          // composer, a search field — and take the keyboard out of the window
-          // with it. The preview refuses focus from the inside; this is the
-          // same refusal from the outside, for whatever asked before its own
-          // scripts were up.
-          frame.blur();
+          refuseFocus(frame, held);
           if (stopped || view === null) continue;
           // The rules are the same page after page, so they are read once a
           // run — off the first page that comes up wearing them.
@@ -318,7 +343,10 @@ export function TabSnapshotMill() {
       aria-hidden
       tabIndex={-1}
       title="Tab preview renderer"
-      onFocus={() => frameRef.current?.blur()}
+      onFocus={(event) => {
+        const frame = frameRef.current;
+        if (frame !== null) refuseFocus(frame, event.relatedTarget);
+      }}
       // Parked off the side of the window rather than hidden: a frame with no
       // box to lay out into draws nothing, and nothing is what we would then
       // have a picture of.
