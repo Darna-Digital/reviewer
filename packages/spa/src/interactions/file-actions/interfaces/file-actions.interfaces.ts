@@ -24,6 +24,15 @@ export interface PathMove {
   readonly to: string;
 }
 
+/**
+ * A typed entry in the tree's "New" menu — "TypeScript File", and the
+ * extension it stamps on a name that doesn't spell its own.
+ */
+export interface NewFileTemplate {
+  readonly label: string;
+  readonly extension: `.${string}`;
+}
+
 /** Where the tree says a drag was let go — a folder row, or empty space. */
 export interface DropTarget {
   readonly kind: "directory" | "root";
