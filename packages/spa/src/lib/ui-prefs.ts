@@ -11,8 +11,8 @@ export type Theme = "light" | "dark";
 export type DiffStyle = "split" | "unified";
 /** Agent CLIs that can draft a commit message (threads kinds minus terminal). */
 export type CommitAgent = "claude" | "opencode" | "codex" | "cursor";
-/** Active tab in the shared bottom dock (history + services + threads). */
-export type BottomTab = "history" | "services" | "threads";
+/** Active tab in the shared bottom dock (history + find + services + threads). */
+export type BottomTab = "history" | "find" | "services" | "threads";
 /** Which way of working the app is framed around (UI only for now). */
 export type WorkMode = "code" | "collaboration";
 
@@ -55,6 +55,8 @@ export interface UiPrefs {
   svgSourceWidth: number;
   /** Drag-resizable bottom panel height, in px. */
   bottomHeight: number;
+  /** Drag-resizable width of the Find window's results list, in px. */
+  findResultsWidth: number;
   /** Drag-resizable changed-files list height in the commit panel, in px. */
   commitFilesHeight: number;
   /** Drag-resizable commit-message textarea height, in px. */
@@ -118,6 +120,7 @@ const resolve = (pref: ThemePref): Theme =>
 
 const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
   "history",
+  "find",
   "services",
   "threads",
 ];
@@ -138,6 +141,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   inboxListWidth: 320,
   svgSourceWidth: 420,
   bottomHeight: 256,
+  findResultsWidth: 380,
   commitFilesHeight: 180,
   commitMessageHeight: 80,
   reviewInfoWidth: 320,
@@ -202,6 +206,7 @@ function persist() {
       inboxListWidth,
       svgSourceWidth,
       bottomHeight,
+      findResultsWidth,
       commitFilesHeight,
       commitMessageHeight,
       reviewInfoWidth,
@@ -237,6 +242,7 @@ function persist() {
         inboxListWidth,
         svgSourceWidth,
         bottomHeight,
+        findResultsWidth,
         commitFilesHeight,
         commitMessageHeight,
         reviewInfoWidth,
@@ -291,7 +297,7 @@ export function setUiPrefs(patch: Partial<Omit<UiPrefs, "resolvedTheme">>) {
   emit();
 }
 
-/** Show the bottom dock and select a tab (History / Services / Threads). */
+/** Show the bottom dock and select a tab (History / Find / Services / …). */
 export function openBottomTab(tab: BottomTab) {
   setUiPrefs({ bottomVisible: true, bottomTab: tab });
 }

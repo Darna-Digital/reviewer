@@ -6869,6 +6869,25 @@ export interface operations {
                             };
                         } | null;
                         symbol: string | null;
+                        declaration: {
+                            location: {
+                                path: string;
+                                range: {
+                                    start: {
+                                        line: number;
+                                        character: number;
+                                    };
+                                    end: {
+                                        line: number;
+                                        character: number;
+                                    };
+                                };
+                            };
+                            name: string;
+                            kind: string;
+                            containerName: string;
+                            preview: string;
+                        } | null;
                         references: {
                             location: {
                                 path: string;
@@ -6884,8 +6903,10 @@ export interface operations {
                                 };
                             };
                             /** @enum {string} */
-                            kind: "definition" | "write" | "read";
+                            kind: "definition" | "import" | "export" | "write" | "read";
                             preview: string;
+                            containerName: string;
+                            containerKind: string;
                         }[];
                     };
                 };

@@ -45,7 +45,7 @@ import {
 import { NEW_CHAT_DRAFT, setDraft } from "@/lib/composer-drafts";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
-import { useOpenInEditor } from "../adapters/open-in-editor.adapter";
+import { useOpenInEditor } from "@/lib/open-in-editor";
 import {
   clearSelection,
   focusAnnotation,

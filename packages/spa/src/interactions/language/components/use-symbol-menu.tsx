@@ -42,8 +42,8 @@ export interface SymbolMenuOptions {
    * over the same spot, which would cover the menu it is competing with.
    */
   readonly onOpen: () => void;
-  /** Show the usages of a symbol, reusing the card the click path opens. */
-  readonly onFindUsages: (token: TokenSpan, anchor: VirtualAnchor) => void;
+  /** Search for the symbol's usages, which opens the Find window. */
+  readonly onFindUsages: (token: TokenSpan) => void;
   readonly onGoToDefinition: (token: TokenSpan, anchor: VirtualAnchor) => void;
   /** Apply edits that land in files other than the open one. */
   readonly onApplyForeignEdits?: (edits: ReadonlyArray<FileEdits>) => void;
@@ -260,7 +260,7 @@ export function useSymbolMenu({
         label: `Find usages of ${state.token.tokenText}`,
         run: () => {
           close();
-          onFindUsages(state.token, state.anchor);
+          onFindUsages(state.token);
         },
       },
       {

@@ -84,7 +84,7 @@ export function PathBar({
   );
 
   return (
-    <div className="flex h-7 shrink-0 items-center gap-2 border-t px-2">
+    <div className="flex h-9 shrink-0 items-center gap-2 border-t px-2">
       <Breadcrumbs crumbs={[...crumbs, ...folderCrumbs]} />
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {onShowHistory !== undefined && (

@@ -40,6 +40,8 @@ const reference = (
   location: { path, range: at(line) },
   kind,
   preview: "",
+  containerName: "",
+  containerKind: "",
 });
 
 const target = (path: string, line: number): SymbolTarget => ({

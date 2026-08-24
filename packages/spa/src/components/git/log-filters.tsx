@@ -131,7 +131,7 @@ export function LogFilters({
     repos?.find((repo) => repo.path === path)?.name ?? pathName(path);
 
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b p-2">
+    <div className="flex min-h-9 flex-wrap items-center gap-2 border-b px-2 py-0.5">
       {byRepo && (
         <Combobox<string>
           value={repoFilter ?? ALL_REPOS}

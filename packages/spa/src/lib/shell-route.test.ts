@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { dockPage, dockPages, shellRoute, showsGitChrome } from "./shell-route";
+import {
+  dockPage,
+  dockPages,
+  isBrowsingCode,
+  shellRoute,
+  showsGitChrome,
+} from "./shell-route";
 
 describe("shellRoute", () => {
   it("reads the three code modes off the path", () => {
@@ -116,5 +122,29 @@ describe("showsGitChrome", () => {
     ).toBe(false);
     expect(showsGitChrome({ kind: "collaboration" })).toBe(false);
     expect(showsGitChrome({ kind: "settings" })).toBe(false);
+  });
+});
+
+describe("isBrowsingCode", () => {
+  it("accepts the browser and whatever it is browsing", () => {
+    expect(isBrowsingCode("/modes/code/browse")).toBe(true);
+    expect(isBrowsingCode("/modes/code/browse/commit/abc123")).toBe(true);
+    expect(isBrowsingCode("/modes/code/browse/range")).toBe(true);
+  });
+
+  it("rejects the other code pages, whose context a file would contradict", () => {
+    expect(isBrowsingCode("/modes/code/commit")).toBe(false);
+    expect(isBrowsingCode("/modes/code/review/42")).toBe(false);
+    expect(isBrowsingCode("/modes/code/find")).toBe(false);
+  });
+
+  it("rejects everything outside code mode", () => {
+    expect(isBrowsingCode("/modes/agent-session/c1")).toBe(false);
+    expect(isBrowsingCode("/modes/collaboration")).toBe(false);
+    expect(isBrowsingCode("/settings")).toBe(false);
+  });
+
+  it("does not take a longer segment for the browser", () => {
+    expect(isBrowsingCode("/modes/code/browser")).toBe(false);
   });
 });

@@ -62,9 +62,29 @@ export type ShellRoute =
 /** Pages under `/modes/code/` that are workspace pages rather than the diff. */
 const CODE_WORKSPACE_PAGES = ["docs", "tasks"];
 
-/** Where the window goes back to when a dock page is put down and nowhere else
- * has been asked for. */
+/**
+ * The project browser: the tree is every file in the repository and the centre
+ * pane is the file viewer.
+ *
+ * Where the window goes back to when a dock page is put down and nowhere else
+ * has been asked for — and where a jump to code from outside the page lands,
+ * rather than on whichever page the window happened to be on. Commit mode's
+ * tree is the changed files and its pane is the worktree diff; a review's are
+ * the pull request's. A file an analysis or a usage points at belongs to
+ * neither, so opening one there put it on screen inside a context that
+ * disagreed with it — a file absent from the tree beside it, under a trail
+ * reading "Local changes".
+ */
 export const BROWSE_HREF = "/modes/code/browse";
+
+/**
+ * Whether the window is already in the browser, in which case a jump to a file
+ * only swaps it over: a commit or a range being read under `/browse` is context
+ * the file sits inside rather than context it contradicts, so following a
+ * result there should not throw it away.
+ */
+export const isBrowsingCode = (pathname: string): boolean =>
+  pathname === BROWSE_HREF || pathname.startsWith(`${BROWSE_HREF}/`);
 
 /**
  * A dock surface as a page of its own: where it lives, and what it is called
@@ -78,7 +98,7 @@ export interface DockPage {
 }
 
 /**
- * The three of them, keyed by the surface they show.
+ * The four of them, keyed by the surface they show.
  *
  * Held here rather than beside the drawer because the classification above is
  * the same knowledge read the other way round: a location is a dock page
@@ -89,6 +109,11 @@ const DOCK_PAGES: Record<BottomTab, DockPage> = {
     tab: "history",
     href: "/modes/code/history",
     title: "Branch history",
+  },
+  find: {
+    tab: "find",
+    href: "/modes/code/find",
+    title: "Find usages",
   },
   services: {
     tab: "services",
