@@ -37,6 +37,11 @@ export interface UiPrefs {
    * and line numbers counted from the caret rather than from the top.
    */
   vimMode: boolean;
+  /**
+   * Whether saving a file runs the project's own formatter over it first. Inert
+   * in a project that configures none.
+   */
+  formatOnSave: boolean;
   bottomVisible: boolean;
   /** Which bottom-dock tab is selected. */
   bottomTab: BottomTab;
@@ -130,6 +135,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   translucency: true,
   sidebarVisible: true,
   vimMode: false,
+  formatOnSave: true,
   bottomVisible: true,
   bottomTab: "history",
   sidebarWidth: 288,
@@ -194,6 +200,7 @@ function persist() {
       translucency,
       sidebarVisible,
       vimMode,
+      formatOnSave,
       bottomVisible,
       bottomTab,
       sidebarWidth,
@@ -229,6 +236,7 @@ function persist() {
         translucency,
         sidebarVisible,
         vimMode,
+        formatOnSave,
         bottomVisible,
         bottomTab,
         sidebarWidth,
