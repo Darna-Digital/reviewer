@@ -1092,6 +1092,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chats/{id}/seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["chats.seen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chats/{id}/stop": {
         parameters: {
             query?: never;
@@ -5573,6 +5589,7 @@ export interface operations {
                             branch: string;
                             createdAt: string;
                             updatedAt: string;
+                            seenAt: string | null;
                             messageCount: number;
                             lastMessage: string | null;
                             turnState: ("running" | "completed" | "interrupted" | "error") | null;
@@ -5659,6 +5676,7 @@ export interface operations {
                         sessionId: string | null;
                         createdAt: string;
                         updatedAt: string;
+                        seenAt: string | null;
                         messages: {
                             id: string;
                             /** @enum {string} */
@@ -5881,6 +5899,7 @@ export interface operations {
                         sessionId: string | null;
                         createdAt: string;
                         updatedAt: string;
+                        seenAt: string | null;
                         messages: {
                             id: string;
                             /** @enum {string} */
@@ -6049,6 +6068,7 @@ export interface operations {
                         sessionId: string | null;
                         createdAt: string;
                         updatedAt: string;
+                        seenAt: string | null;
                         messages: {
                             id: string;
                             /** @enum {string} */
@@ -6164,6 +6184,7 @@ export interface operations {
                         sessionId: string | null;
                         createdAt: string;
                         updatedAt: string;
+                        seenAt: string | null;
                         messages: {
                             id: string;
                             /** @enum {string} */
@@ -6199,6 +6220,57 @@ export interface operations {
                             errorMessage: string | null;
                             totalCostUsd: (number) | null;
                         } | null;
+                    };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
+            /** @description NoRepoSelected | ChatBusy */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                };
+            };
+            /** @description StorageError | TerminalError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                };
+            };
+        };
+    };
+    "chats.seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok: boolean;
                     };
                 };
             };

@@ -94,6 +94,14 @@ export const Chat = Schema.Struct({
   sessionId: Schema.NullOr(Schema.String),
   createdAt: Schema.String,
   updatedAt: Schema.String,
+  /**
+   * When the reader last had this session open, ISO — `null` for one never
+   * opened. Both of the sessions list's dots are the same question asked of
+   * this mark: has the session moved since you last looked at it? Kept per
+   * session rather than as one stamp over the inbox, because the answer has to
+   * change when you open *this* conversation. See `chats.attention.ts`.
+   */
+  seenAt: Schema.NullOr(Schema.String),
   messages: Schema.Array(ChatMessage),
   activities: Schema.Array(ChatActivity),
   latestTurn: Schema.NullOr(ChatTurn),
@@ -108,8 +116,15 @@ export const ChatSummary = Schema.Struct({
   branch: Schema.String,
   createdAt: Schema.String,
   updatedAt: Schema.String,
+  /** When the reader last had this session open — see `Chat.seenAt`. */
+  seenAt: Schema.NullOr(Schema.String),
   messageCount: Schema.Number,
   lastMessage: Schema.NullOr(Schema.String),
+  /**
+   * How the session's last turn ended, as stored. What the row actually shows
+   * is narrower — a settled turn stops being news once its outcome has been
+   * looked at. See `unattendedTurnState`.
+   */
   turnState: Schema.NullOr(ChatTurnState),
 });
 export type ChatSummary = typeof ChatSummary.Type;

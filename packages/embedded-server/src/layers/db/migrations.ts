@@ -201,7 +201,19 @@ CREATE TABLE collab_bookmark (
 CREATE INDEX collab_bookmark_repo ON collab_bookmark (repo_path, created_at DESC);
 `;
 
+/**
+ * When the reader last had a session open. The sessions list's dots — the one
+ * for a turn that ended badly and the one for "this moved" — are both read off
+ * this mark, which is why it belongs to the session rather than to the inbox:
+ * opening a conversation has to be able to settle its own row.
+ *
+ * Sessions that predate the column start at `NULL`, which reads as never
+ * opened; the first visit stamps them.
+ */
+const chatSeenAt = `ALTER TABLE chat ADD COLUMN seen_at TEXT`;
+
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { id: "0001_initial", up: (db) => db.exec(initial) },
   { id: "0002_collab", up: (db) => db.exec(collabTables) },
+  { id: "0003_chat_seen_at", up: (db) => db.exec(chatSeenAt) },
 ];
