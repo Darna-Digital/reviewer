@@ -1,64 +1,75 @@
-"""Bulk NS-record availability probe over UDP DNS against public recursors."""
+"""Bulk domain-availability probe: UDP NS/SOA/A queries across many public recursors."""
 import socket, struct, random, sys, json
 from concurrent.futures import ThreadPoolExecutor
 
-RESOLVERS = ["8.8.8.8", "1.1.1.1", "9.9.9.9", "8.8.4.4"]
+RESOLVERS = [
+    "8.8.8.8", "1.1.1.1", "9.9.9.9", "8.8.4.4", "1.0.0.1",
+    "149.112.112.112", "208.67.222.222", "208.67.220.220",
+    "94.140.14.14", "64.6.64.6", "76.76.2.0", "185.228.168.9",
+]
+NS, A, SOA = 2, 1, 6
 
-def query(name, server, qtype=2, timeout=5):
+def query(name, server, qtype=NS, timeout=4, cd=False):
     tid = random.randint(0, 65535)
-    hdr = struct.pack(">HHHHHH", tid, 0x0100, 1, 0, 0, 0)
+    flags = 0x0100 | (0x0010 if cd else 0)
+    hdr = struct.pack(">HHHHHH", tid, flags, 1, 0, 0, 0)
     qn = b"".join(bytes([len(p)]) + p.encode() for p in name.split(".")) + b"\x00"
     pkt = hdr + qn + struct.pack(">HH", qtype, 1)
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.settimeout(timeout)
     try:
         s.sendto(pkt, (server, 53))
-        while True:
-            d, _ = s.recvfrom(4096)
+        for _ in range(4):
+            d, _a = s.recvfrom(4096)
             if struct.unpack(">H", d[:2])[0] == tid:
-                break
-        return d[3] & 0xF, struct.unpack(">H", d[6:8])[0], struct.unpack(">H", d[8:10])[0]
+                return d[3] & 0xF, struct.unpack(">H", d[6:8])[0]
+        return None, None
     except Exception:
-        return None, None, None
+        return None, None
     finally:
         s.close()
 
+def first_clean(name, qtype, servers, cd=False):
+    """First non-SERVFAIL, non-timeout answer from the resolver list."""
+    for srv in servers:
+        rc, an = query(name, srv, qtype, cd=cd)
+        if rc is not None and rc != 2:
+            return rc, an, srv
+    return None, None, None
+
 def status(name):
-    """NS then SOA then A. Consensus across resolvers; retries on failure."""
-    votes = []
-    for r in RESOLVERS:
-        rc, an, ns = query(name, r, 2)
+    order = RESOLVERS[:]
+    random.shuffle(order)
+    rc, an, _ = first_clean(name, NS, order)
+
+    if rc is None:                       # SERVFAIL/timeout everywhere -> retry with DNSSEC off
+        rc, an, _ = first_clean(name, NS, order, cd=True)
         if rc is None:
-            continue
-        votes.append((rc, an, ns))
-        if len(votes) >= 2:
-            break
-    if not votes:
-        return "unknown", "no resolver answered"
-    rc, an, nscount = votes[0]
-    if rc == 3:
-        # NXDOMAIN from NS: confirm with SOA and A to weed out negative-cache oddities
-        rc2, _, _ = query(name, RESOLVERS[1], 6)
-        rc3, an3, _ = query(name, RESOLVERS[1], 1)
-        if rc2 == 3 and rc3 == 3:
-            return "free", "NXDOMAIN (NS/SOA/A)"
-        return "maybe", f"NS=NXDOMAIN SOA={rc2} A={rc3}"
-    if rc == 0 and an > 0:
+            return "unknown", "SERVFAIL on every resolver (NS, incl. CD=1)"
+
+    if rc == 0 and an and an > 0:
         return "taken", f"{an} NS record(s)"
-    if rc == 0 and an == 0:
-        rc3, an3, _ = query(name, RESOLVERS[1], 1)
-        if rc3 == 0 and an3 > 0:
-            return "taken", "no NS in answer, but A resolves"
-        return "maybe", "NOERROR, no NS data (registered-undelegated or CNAME)"
+
+    if rc == 3:                          # NXDOMAIN -> corroborate with SOA and A
+        rc2, _, _ = first_clean(name, SOA, order)
+        rc3, an3, _ = first_clean(name, A, order)
+        if rc2 == 3 and rc3 == 3:
+            return "free", "NXDOMAIN on NS, SOA and A"
+        return "maybe", f"NS=NXDOMAIN but SOA={rc2} A={rc3}"
+
+    if rc == 0 and not an:               # NOERROR/NODATA -> does anything resolve?
+        rc3, an3, _ = first_clean(name, A, order)
+        if rc3 == 0 and an3:
+            return "taken", "no NS in answer but A resolves"
+        return "maybe", "NOERROR with no NS data"
+
     return "unknown", f"rcode={rc}"
 
 def main():
     names = [l.strip() for l in sys.stdin if l.strip()]
-    out = {}
-    with ThreadPoolExecutor(max_workers=24) as ex:
-        for n, res in zip(names, ex.map(status, names)):
-            out[n] = res
-    json.dump(out, sys.stdout, indent=0)
+    with ThreadPoolExecutor(max_workers=32) as ex:
+        out = dict(zip(names, ex.map(status, names)))
+    json.dump(out, sys.stdout, separators=(",", ":"))
 
 if __name__ == "__main__":
     main()
