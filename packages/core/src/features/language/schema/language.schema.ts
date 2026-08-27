@@ -94,13 +94,36 @@ export const DefinitionResult = Schema.Struct({
 });
 export type DefinitionResult = typeof DefinitionResult.Type;
 
-export const ReferenceKind = Schema.Literals(["definition", "write", "read"]);
+/**
+ * How a usage reads where it stands.
+ *
+ * LSP's reference response says only that a location is a reference; a provider
+ * that can see the syntax says more, and the extra words are what a usages tree
+ * is worth grouping by — an import is not the same finding as an assignment.
+ * A provider that cannot tell says `read`, which is the safe reading of a bare
+ * reference.
+ */
+export const ReferenceKind = Schema.Literals([
+  "definition",
+  "import",
+  "export",
+  "write",
+  "read",
+]);
 export type ReferenceKind = typeof ReferenceKind.Type;
 
 export const SymbolReference = Schema.Struct({
   location: Location,
   kind: ReferenceKind,
   preview: Schema.String,
+  /**
+   * The symbol the usage sits inside — the function, method or class a results
+   * tree files it under. Empty when the provider cannot see that far, or when
+   * the usage is at the top level of its file.
+   */
+  containerName: Schema.String,
+  /** That container's kind (`function`, `method`, `class`), empty when unknown. */
+  containerKind: Schema.String,
 });
 export type SymbolReference = typeof SymbolReference.Type;
 
@@ -109,6 +132,12 @@ export const ReferencesResult = Schema.Struct({
   origin: Schema.NullOr(Range),
   /** Display name of the symbol the references belong to. */
   symbol: Schema.NullOr(Schema.String),
+  /**
+   * Where the symbol is declared — what a usages view names at the top of its
+   * results, above the usages themselves. Null when the provider could not
+   * resolve one, which is the normal answer for a local binding.
+   */
+  declaration: Schema.NullOr(SymbolTarget),
   references: Schema.Array(SymbolReference),
 });
 export type ReferencesResult = typeof ReferencesResult.Type;

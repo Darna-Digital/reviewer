@@ -178,7 +178,7 @@ export function PullRequestList({
 
   return (
     <section className={cn("flex min-h-0 flex-col", className)} style={style}>
-      <div className="flex items-center gap-1.5 border-b p-2">
+      <div className="flex min-h-9 items-center gap-1.5 border-b px-2 py-0.5">
         <SidebarSearch
           label="Search pull requests"
           placeholder="Search pull requests…"

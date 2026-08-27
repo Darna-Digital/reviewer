@@ -12,6 +12,7 @@ export const summarizeChat = (chat: Chat): ChatSummary => {
     branch: chat.branch,
     createdAt: chat.createdAt,
     updatedAt: chat.updatedAt,
+    seenAt: chat.seenAt,
     messageCount: chat.messages.length,
     lastMessage: last !== undefined ? last.text.slice(0, 120) : null,
     turnState: chat.latestTurn?.state ?? null,

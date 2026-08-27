@@ -72,7 +72,7 @@ import {
 } from "@/interactions/workspace/adapters/project-picker.store";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
 import { ROW_TOOLTIP_PLACEMENT } from "@/components/ui/truncated-text";
-import { isChatUnread } from "@/interactions/chats/functions/chat-unread.functions";
+import { isChatUnread } from "@byconvo/core/chats";
 import { openSearch } from "@/interactions/search/adapters/search.store";
 import { useThinkingChatIds } from "@/interactions/chats/adapters/thinking-chats.hook.adapter";
 import { isDesktop } from "@/lib/desktop";
@@ -337,15 +337,14 @@ export function WindowBar() {
         : { plansPaneOpen: !prefs.plansPaneOpen }
     );
   };
-  const seenAt = prefs.inboxSeenAt;
+  // A tab waits when its session has moved since it was last opened — the
+  // session's own mark, so reading it here puts the tab's dot out too.
   const unread = useMemo(
     () =>
       new Set(
-        (chats.data?.items ?? [])
-          .filter((chat) => isChatUnread(chat, seenAt))
-          .map((chat) => chat.id)
+        (chats.data?.items ?? []).filter(isChatUnread).map((chat) => chat.id)
       ),
-    [chats.data, seenAt]
+    [chats.data]
   );
   const thinking = useThinkingChatIds();
   const chatOf = (tab: WindowTab): string | null =>

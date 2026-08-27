@@ -100,6 +100,7 @@ export const makeMemoryChatsRepository = (seed: ReadonlyArray<Chat> = []) =>
             sessionId: null,
             createdAt: now(),
             updatedAt: now(),
+            seenAt: now(),
             messages: [],
             activities: [],
             latestTurn: null,
@@ -132,6 +133,13 @@ export const makeMemoryChatsRepository = (seed: ReadonlyArray<Chat> = []) =>
         }),
       remove: (id) =>
         Ref.update(store, (all) => all.filter((c) => c.id !== id)),
+      markSeen: (id) =>
+        Effect.gen(function* () {
+          yield* find(yield* Ref.get(store), id);
+          yield* Ref.update(store, (all) =>
+            all.map((c) => (c.id === id ? { ...c, seenAt: now() } : c))
+          );
+        }),
     };
     return repo;
   });

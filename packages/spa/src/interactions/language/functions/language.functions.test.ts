@@ -16,7 +16,6 @@ import {
   diagnostic,
   mockLanguageDependencies,
   range,
-  reference,
   target,
 } from "./language.functions.mock";
 
@@ -285,8 +284,6 @@ describe("navigate", () => {
     expect(calls.definition).toEqual([
       { path: "src/b.ts", position: { line: 4, character: 16 } },
     ]);
-    // No need to ask for usages when there is somewhere to jump.
-    expect(calls.references).toEqual([]);
   });
 
   it("offers a choice when a symbol has several declarations", async () => {
@@ -302,54 +299,30 @@ describe("navigate", () => {
     expect(outcome).toEqual({ kind: "choose", targets });
   });
 
-  it("lists usages when the click lands on the declaration itself", async () => {
+  it("asks for usages when the click lands on the declaration itself", async () => {
     const declaration = target({
       location: { path: "src/a.ts", range: range(4, 16, 4, 21) },
     });
-    const { deps, calls } = mockLanguageDependencies({
-      targets: [declaration],
-      references: [reference(), reference({ kind: "definition" })],
-    });
+    const { deps } = mockLanguageDependencies({ targets: [declaration] });
     const outcome = await createLanguageFunctions(deps).navigate(
       "src/a.ts",
       token
     );
-    expect(outcome).toMatchObject({ kind: "usages", symbol: "greet" });
-    expect(calls.references).toHaveLength(1);
+    // The question, not the answer: the Find window does the fetching.
+    expect(outcome).toEqual({
+      kind: "usages",
+      position: { line: 4, character: 16 },
+      symbol: "greet",
+    });
   });
 
   it("falls back to usages when there is no definition to jump to", async () => {
-    const { deps } = mockLanguageDependencies({
-      targets: [],
-      references: [reference()],
-    });
-    const outcome = await createLanguageFunctions(deps).navigate(
-      "src/b.ts",
-      token
-    );
-    expect(outcome).toMatchObject({ kind: "usages" });
-  });
-
-  it("uses the token's own text when the provider names no symbol", async () => {
-    const { deps } = mockLanguageDependencies({
-      targets: [],
-      references: [reference()],
-      symbol: null,
-    });
+    const { deps } = mockLanguageDependencies({ targets: [] });
     const outcome = await createLanguageFunctions(deps).navigate(
       "src/b.ts",
       token
     );
     expect(outcome).toMatchObject({ kind: "usages", symbol: "greet" });
-  });
-
-  it("resolves to nothing when there is neither a definition nor a usage", async () => {
-    const { deps } = mockLanguageDependencies({ targets: [], references: [] });
-    const outcome = await createLanguageFunctions(deps).navigate(
-      "src/b.ts",
-      token
-    );
-    expect(outcome).toEqual({ kind: "none" });
   });
 });
 
@@ -364,29 +337,5 @@ describe("describe", () => {
     expect(calls.hover).toEqual([
       { path: "src/b.ts", position: { line: 4, character: 16 } },
     ]);
-  });
-});
-
-describe("references", () => {
-  it("always lists usages, even standing on a usage", async () => {
-    const { deps, calls } = mockLanguageDependencies({
-      targets: [target()],
-      references: [reference(), reference({ kind: "definition" })],
-    });
-    const outcome = await createLanguageFunctions(deps).references(
-      "src/b.ts",
-      token
-    );
-    expect(outcome).toMatchObject({ kind: "usages", symbol: "greet" });
-    // It asks for usages directly rather than deciding via the definition.
-    expect(calls.definition).toEqual([]);
-    expect(calls.references).toHaveLength(1);
-  });
-
-  it("resolves to nothing when the symbol is never used", async () => {
-    const { deps } = mockLanguageDependencies({ references: [] });
-    expect(
-      await createLanguageFunctions(deps).references("src/b.ts", token)
-    ).toEqual({ kind: "none" });
   });
 });

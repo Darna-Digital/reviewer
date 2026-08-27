@@ -11,8 +11,9 @@ export type Theme = "light" | "dark";
 export type DiffStyle = "split" | "unified";
 /** Agent CLIs that can draft a commit message (threads kinds minus terminal). */
 export type CommitAgent = "claude" | "opencode" | "codex" | "cursor";
-/** Active tab in the shared bottom dock (git + services + threads). */
-export type BottomTab = "branches" | "history" | "services" | "threads";
+/** Active tab in the shared bottom dock (git + find + services + threads). */
+export type BottomTab =
+  "branches" | "history" | "find" | "services" | "threads";
 /** Which way of working the app is framed around (UI only for now). */
 export type WorkMode = "code" | "collaboration";
 
@@ -37,6 +38,11 @@ export interface UiPrefs {
    * and line numbers counted from the caret rather than from the top.
    */
   vimMode: boolean;
+  /**
+   * Whether saving a file runs the project's own formatter over it first. Inert
+   * in a project that configures none.
+   */
+  formatOnSave: boolean;
   bottomVisible: boolean;
   /** Which bottom-dock tab is selected. */
   bottomTab: BottomTab;
@@ -46,15 +52,12 @@ export interface UiPrefs {
   workspaceSidebarWidth: number;
   /** Drag-resizable width of the inbox's message list, in px. */
   inboxListWidth: number;
-  /**
-   * When the inbox was last opened, ISO. Threads touched since then read as
-   * unread — the server keeps no per-reader state, so this is the mark.
-   */
-  inboxSeenAt: string;
   /** Drag-resizable source pane width in the SVG split view, in px. */
   svgSourceWidth: number;
   /** Drag-resizable bottom panel height, in px. */
   bottomHeight: number;
+  /** Drag-resizable width of the Find window's results list, in px. */
+  findResultsWidth: number;
   /** Drag-resizable changed-files list height in the commit panel, in px. */
   commitFilesHeight: number;
   /** Drag-resizable commit-message textarea height, in px. */
@@ -119,6 +122,7 @@ const resolve = (pref: ThemePref): Theme =>
 const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
   "branches",
   "history",
+  "find",
   "services",
   "threads",
 ];
@@ -131,14 +135,15 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   translucency: true,
   sidebarVisible: true,
   vimMode: false,
+  formatOnSave: true,
   bottomVisible: true,
   bottomTab: "history",
   sidebarWidth: 288,
   workspaceSidebarWidth: 256,
   inboxListWidth: 320,
-  inboxSeenAt: "",
   svgSourceWidth: 420,
   bottomHeight: 256,
+  findResultsWidth: 380,
   commitFilesHeight: 180,
   commitMessageHeight: 80,
   reviewInfoWidth: 320,
@@ -195,14 +200,15 @@ function persist() {
       translucency,
       sidebarVisible,
       vimMode,
+      formatOnSave,
       bottomVisible,
       bottomTab,
       sidebarWidth,
       workspaceSidebarWidth,
       inboxListWidth,
-      inboxSeenAt,
       svgSourceWidth,
       bottomHeight,
+      findResultsWidth,
       commitFilesHeight,
       commitMessageHeight,
       reviewInfoWidth,
@@ -230,14 +236,15 @@ function persist() {
         translucency,
         sidebarVisible,
         vimMode,
+        formatOnSave,
         bottomVisible,
         bottomTab,
         sidebarWidth,
         workspaceSidebarWidth,
         inboxListWidth,
-        inboxSeenAt,
         svgSourceWidth,
         bottomHeight,
+        findResultsWidth,
         commitFilesHeight,
         commitMessageHeight,
         reviewInfoWidth,
@@ -299,7 +306,7 @@ export function setUiPrefs(patch: UiPrefsPatch) {
   emit();
 }
 
-/** Show the bottom dock and select a tab (History / Services / Threads). */
+/** Show the bottom dock and select a tab (History / Find / Services / …). */
 export function openBottomTab(tab: BottomTab) {
   setUiPrefs({ bottomVisible: true, bottomTab: tab });
 }

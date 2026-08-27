@@ -4,9 +4,9 @@
  *
  * The orchestration worth isolating is the part that decides *what a click
  * means*. Clicking a usage should jump to its declaration; clicking the
- * declaration itself should list its usages; several candidates should offer a
- * choice. That rule set is pure logic over injected API calls, so it can be
- * tested without a rendered editor.
+ * declaration itself should send its usages to the Find window; several
+ * candidates should offer a choice. That rule set is pure logic over injected
+ * API calls, so it can be tested without a rendered editor.
  *
  * Coordinates are the one real hazard here. `@pierre/diffs` reports one-based
  * line numbers with zero-based columns; LSP is zero-based on both axes. The
@@ -18,7 +18,6 @@ import type {
   DiagnosticTag,
   HoverResult,
   Position,
-  SymbolReference,
   SymbolTarget,
 } from "@byconvo/core/language";
 
@@ -53,10 +52,16 @@ export type NavigationOutcome =
   | { readonly kind: "none" }
   | { readonly kind: "open"; readonly target: SymbolTarget }
   | { readonly kind: "choose"; readonly targets: ReadonlyArray<SymbolTarget> }
+  /**
+   * The click landed on the declaration itself, so the useful answer is where
+   * the symbol is used. The usages are not fetched here: they belong to the
+   * Find window, which owns the request, keeps the results and can say what it
+   * is doing while they arrive — so this is the question, not the answer.
+   */
   | {
       readonly kind: "usages";
+      readonly position: Position;
       readonly symbol: string;
-      readonly references: ReadonlyArray<SymbolReference>;
     };
 
 export interface LanguageDependencies {
@@ -70,13 +75,6 @@ export interface LanguageDependencies {
       position: Position
     ) => Promise<{
       readonly targets: ReadonlyArray<SymbolTarget>;
-    }>;
-    readonly references: (
-      path: string,
-      position: Position
-    ) => Promise<{
-      readonly symbol: string | null;
-      readonly references: ReadonlyArray<SymbolReference>;
     }>;
     readonly hover: (path: string, position: Position) => Promise<HoverResult>;
   };
@@ -92,14 +90,6 @@ export interface LanguageFunctions {
   readonly markerFor: (token: TokenSpan) => DiagnosticMarker | null;
   readonly counts: () => DiagnosticCounts;
   readonly navigate: (
-    path: string,
-    token: TokenSpan
-  ) => Promise<NavigationOutcome>;
-  /**
-   * Usages of the symbol, always — unlike `navigate`, which decides between
-   * jumping and listing. This is what "Find usages" asks for explicitly.
-   */
-  readonly references: (
     path: string,
     token: TokenSpan
   ) => Promise<NavigationOutcome>;

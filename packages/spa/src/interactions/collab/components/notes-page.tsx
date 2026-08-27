@@ -46,7 +46,7 @@ function Editor({ noteId }: { readonly noteId: string }) {
 
   return (
     <CollabPanel className="flex flex-col">
-      <header className="flex items-center gap-2 border-b px-3 py-2">
+      <header className="flex min-h-9 items-center gap-2 border-b px-3 py-0.5">
         <h2 className="min-w-0 flex-1 truncate text-[13px] font-semibold">
           {note.data.title}
         </h2>

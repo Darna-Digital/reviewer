@@ -35,6 +35,8 @@ const reference = (
   location: { path: "src/a.ts", range: span(line) },
   kind,
   preview: "",
+  containerName: "",
+  containerKind: "",
 });
 
 const seeded = LanguageMemory({
@@ -63,6 +65,7 @@ const inert: LanguageRepo = {
       providerId: null,
       origin: null,
       symbol: null,
+      declaration: null,
       references: [],
     }),
   hover: () => Effect.succeed({ providerId: null, range: null, contents: "" }),

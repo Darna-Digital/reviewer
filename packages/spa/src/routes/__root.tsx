@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { Suspense, lazy } from "react";
 
+import { Alerts } from "@/components/ui/alerts";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { isDesktop } from "@/lib/desktop";
@@ -77,6 +78,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <TooltipProvider delay={300}>{children ?? <Outlet />}</TooltipProvider>
         <Toaster />
+        <Alerts />
         {/* Devtools only in the browser, not inside the Electron shell — and
             never in a preview frame, which would boot a second set of panels
             for a picture of a page. In a release build `Devtools` is null and

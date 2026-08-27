@@ -21,6 +21,7 @@ import { Route as AppModesCodeIndexRouteImport } from './routes/_app/modes.code.
 import { Route as AppModesCodeBranchesRouteImport } from './routes/_app/modes.code.branches'
 import { Route as AppModesCodeCommitRouteImport } from './routes/_app/modes.code.commit'
 import { Route as AppModesCodeDocsRouteImport } from './routes/_app/modes.code.docs'
+import { Route as AppModesCodeFindRouteImport } from './routes/_app/modes.code.find'
 import { Route as AppModesCodeHistoryRouteImport } from './routes/_app/modes.code.history'
 import { Route as AppModesCodeLocalDevRouteImport } from './routes/_app/modes.code.local-dev'
 import { Route as AppModesCodeReviewsRouteImport } from './routes/_app/modes.code.reviews'
@@ -100,6 +101,11 @@ const AppModesCodeCommitRoute = AppModesCodeCommitRouteImport.update({
 const AppModesCodeDocsRoute = AppModesCodeDocsRouteImport.update({
   id: '/modes/code/docs',
   path: '/modes/code/docs',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppModesCodeFindRoute = AppModesCodeFindRouteImport.update({
+  id: '/modes/code/find',
+  path: '/modes/code/find',
   getParentRoute: () => AppRoute,
 } as any)
 const AppModesCodeHistoryRoute = AppModesCodeHistoryRouteImport.update({
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/modes/code/branches': typeof AppModesCodeBranchesRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
   '/modes/code/docs': typeof AppModesCodeDocsRoute
+  '/modes/code/find': typeof AppModesCodeFindRoute
   '/modes/code/history': typeof AppModesCodeHistoryRoute
   '/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
   '/modes/code/reviews': typeof AppModesCodeReviewsRoute
@@ -248,6 +255,7 @@ export interface FileRoutesByTo {
   '/modes/code/branches': typeof AppModesCodeBranchesRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
   '/modes/code/docs': typeof AppModesCodeDocsRoute
+  '/modes/code/find': typeof AppModesCodeFindRoute
   '/modes/code/history': typeof AppModesCodeHistoryRoute
   '/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
   '/modes/code/reviews': typeof AppModesCodeReviewsRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/_app/modes/code/branches': typeof AppModesCodeBranchesRoute
   '/_app/modes/code/commit': typeof AppModesCodeCommitRoute
   '/_app/modes/code/docs': typeof AppModesCodeDocsRoute
+  '/_app/modes/code/find': typeof AppModesCodeFindRoute
   '/_app/modes/code/history': typeof AppModesCodeHistoryRoute
   '/_app/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
   '/_app/modes/code/reviews': typeof AppModesCodeReviewsRoute
@@ -316,6 +325,7 @@ export interface FileRouteTypes {
     | '/modes/code/branches'
     | '/modes/code/commit'
     | '/modes/code/docs'
+    | '/modes/code/find'
     | '/modes/code/history'
     | '/modes/code/local-dev'
     | '/modes/code/reviews'
@@ -346,6 +356,7 @@ export interface FileRouteTypes {
     | '/modes/code/branches'
     | '/modes/code/commit'
     | '/modes/code/docs'
+    | '/modes/code/find'
     | '/modes/code/history'
     | '/modes/code/local-dev'
     | '/modes/code/reviews'
@@ -379,6 +390,7 @@ export interface FileRouteTypes {
     | '/_app/modes/code/branches'
     | '/_app/modes/code/commit'
     | '/_app/modes/code/docs'
+    | '/_app/modes/code/find'
     | '/_app/modes/code/history'
     | '/_app/modes/code/local-dev'
     | '/_app/modes/code/reviews'
@@ -491,6 +503,13 @@ declare module '@tanstack/react-router' {
       path: '/modes/code/docs'
       fullPath: '/modes/code/docs'
       preLoaderRoute: typeof AppModesCodeDocsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/modes/code/find': {
+      id: '/_app/modes/code/find'
+      path: '/modes/code/find'
+      fullPath: '/modes/code/find'
+      preLoaderRoute: typeof AppModesCodeFindRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/modes/code/history': {
@@ -675,6 +694,7 @@ interface AppRouteChildren {
   AppModesCodeBranchesRoute: typeof AppModesCodeBranchesRoute
   AppModesCodeCommitRoute: typeof AppModesCodeCommitRoute
   AppModesCodeDocsRoute: typeof AppModesCodeDocsRoute
+  AppModesCodeFindRoute: typeof AppModesCodeFindRoute
   AppModesCodeHistoryRoute: typeof AppModesCodeHistoryRoute
   AppModesCodeLocalDevRoute: typeof AppModesCodeLocalDevRoute
   AppModesCodeReviewsRoute: typeof AppModesCodeReviewsRoute
@@ -700,6 +720,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppModesCodeBranchesRoute: AppModesCodeBranchesRoute,
   AppModesCodeCommitRoute: AppModesCodeCommitRoute,
   AppModesCodeDocsRoute: AppModesCodeDocsRoute,
+  AppModesCodeFindRoute: AppModesCodeFindRoute,
   AppModesCodeHistoryRoute: AppModesCodeHistoryRoute,
   AppModesCodeLocalDevRoute: AppModesCodeLocalDevRoute,
   AppModesCodeReviewsRoute: AppModesCodeReviewsRoute,

@@ -5,8 +5,10 @@
  * over — the same file as it re-renders, the same symbol as the pointer crosses
  * it — and both answer with something that only changes when the file does.
  *
- * Definition and references are one-shot fetches. They answer a click and move
- * the user somewhere, and a stale jump is worse than a slow one.
+ * Definition is a one-shot fetch. It answers a click and moves the user
+ * somewhere, and a stale jump is worse than a slow one. Find-usages is neither
+ * of these: its answer is a surface the reader stays on, so it is a query of
+ * its own — see `find-usages.hook.adapter`.
  */
 import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -89,8 +91,8 @@ const HOVER_STALE_MS = 60_000;
  * instant, and two tokens resting under the pointer at once share one request
  * instead of racing.
  *
- * Definition and references stay uncached on purpose: they answer a click, they
- * move the user somewhere, and a stale jump is worse than a slow one.
+ * Definition stays uncached on purpose: it answers a click, it moves the user
+ * somewhere, and a stale jump is worse than a slow one.
  */
 export const useLanguageActions = (
   diagnostics: ReadonlyArray<Diagnostic>
@@ -107,14 +109,6 @@ export const useLanguageActions = (
               positionQuery(filePath, position)
             );
             if (error) return fail(error, "could not resolve the definition");
-            return data;
-          },
-          references: async (filePath, position) => {
-            const { data, error } = await fetchClient.GET(
-              "/api/language/references",
-              positionQuery(filePath, position)
-            );
-            if (error) return fail(error, "could not find usages");
             return data;
           },
           hover: (filePath, position) =>

@@ -7,6 +7,7 @@ import { IconPlugConnectedX } from "@tabler/icons-react";
 import { toast } from "sonner";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { useChatStream } from "@/interactions/chats/adapters/chats.stream.adapter";
+import { useMarkChatSeen } from "@/interactions/chats/adapters/chat-seen.hook.adapter";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import {
   setChatMode,
@@ -25,6 +26,8 @@ import { SessionContextBar } from "./session-context-bar";
 
 export function ChatView({ chatId }: { chatId: string }) {
   const { chat, error, status } = useChatStream(chatId);
+  // Having the conversation open is what settles its row in the sidebar.
+  useMarkChatSeen(chat);
   const models = useChatModels();
   const actions = useChatsActions();
   const mode = useChatMode(chatId);

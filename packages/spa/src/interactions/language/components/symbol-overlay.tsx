@@ -1,17 +1,13 @@
 /**
  * What a token's floating card actually shows: hover documentation while the
- * pointer rests on a symbol, and after a click either its usages or a choice of
- * declarations.
+ * pointer rests on a symbol, and after a click a choice of declarations when
+ * there is more than one. Usages have their own window — see `find-usages`.
  */
 import { IconArrowRight, IconLoader2 } from "@tabler/icons-react";
 import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
-import type {
-  Location,
-  SymbolReference,
-  SymbolTarget,
-} from "@byconvo/core/language";
+import type { Location, SymbolTarget } from "@byconvo/core/language";
 import { cn } from "@/lib/utils";
 
 /** `src/a/b.ts` -> `src/a/`, so the name can be kept while the path clips. */
@@ -23,12 +19,6 @@ const basenameOf = (path: string) => {
   const cut = path.lastIndexOf("/");
   return cut === -1 ? path : path.slice(cut + 1);
 };
-
-const REFERENCE_KIND_LABEL = {
-  definition: "declaration",
-  write: "write",
-  read: "read",
-} as const;
 
 /** One row in a usage or declaration list. */
 function LocationRow({
@@ -81,36 +71,6 @@ export function HoverDocumentation({ contents }: { contents: string }) {
       <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
         {contents}
       </Markdown>
-    </div>
-  );
-}
-
-export function UsagesList({
-  symbol,
-  references,
-  onOpen,
-}: {
-  symbol: string;
-  references: ReadonlyArray<SymbolReference>;
-  onOpen: (location: Location) => void;
-}) {
-  return (
-    <div className="min-w-[20rem]">
-      <p className="px-2 pb-1 text-xs text-muted-foreground">
-        {references.length} usage{references.length === 1 ? "" : "s"} of{" "}
-        <span className="font-mono text-foreground">{symbol}</span>
-      </p>
-      <ul>
-        {references.map((reference) => (
-          <LocationRow
-            key={`${reference.location.path}:${reference.location.range.start.line}:${reference.location.range.start.character}`}
-            location={reference.location}
-            preview={reference.preview}
-            detail={REFERENCE_KIND_LABEL[reference.kind]}
-            onOpen={onOpen}
-          />
-        ))}
-      </ul>
     </div>
   );
 }
