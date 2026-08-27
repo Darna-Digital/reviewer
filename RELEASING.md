@@ -5,7 +5,7 @@ Two channels, each a separate signed app with its own release feed:
 | Channel | Trigger | Publishes to | Signed | Notarized | Auto-update |
 | --- | --- | --- | --- | --- | --- |
 | **Beta** | push to `staging` | `darna-digital/byconvo-beta` | yes | no | no (manual download) |
-| **Production** | push to `master` | `darna-digital/byconvo` | yes | yes | yes |
+| **Production** | push to `main` | `darna-digital/byconvo` | yes | yes | yes |
 
 Local dev is unchanged: `pnpm dev:desktop`. It defaults to the production app
 identity and never touches CI or signing.
@@ -26,8 +26,8 @@ they preview the `X.Y.Z` you are working toward.
    on first launch of a build, **right-click → Open** once (beta is signed but
    not notarized, so Gatekeeper prompts once per build).
 2. **Ready to ship?** Make sure `packages/desktop/package.json` holds the version
-   you intend to release, then promote `staging → master`.
-3. **`master` publishes production.** `release-prod` builds the package version
+   you intend to release, then promote `staging → main`.
+3. **`main` publishes production.** `release-prod` builds the package version
    and publishes it **only if that version has not already been released** — so
    the version bump is the deliberate "ship it" signal, and merges that don't
    change the version are no-ops. Real users auto-update from this release.
