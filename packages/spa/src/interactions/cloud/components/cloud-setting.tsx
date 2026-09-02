@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { SettingRow } from "@/interactions/settings/components/setting-row";
 import { useCloudStatus } from "@/lib/queries";
 import { useCloudActions } from "../adapters/cloud.hook.adapter";
+import { cloudAppHref } from "../functions/cloud-review.functions";
 
 export function CloudSetting() {
   const status = useCloudStatus();
@@ -119,6 +120,21 @@ export function CloudSetting() {
         }
       >
         <IconCloudCheck className="size-4 text-brand-500" />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() =>
+            window.open(
+              cloudAppHref(connection.serverUrl, "/app/repos"),
+              "_blank",
+              "noopener"
+            )
+          }
+        >
+          Repositories
+          <IconExternalLink className="size-3.5" />
+        </Button>
         <Button
           type="button"
           variant="outline"

@@ -12,10 +12,12 @@ import {
   IconAlertCircle,
   IconExternalLink,
   IconGitBranch,
+  IconGitPullRequest,
   IconPlayerStopFilled,
   IconPlugConnectedX,
   IconSend,
 } from "@tabler/icons-react";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -43,9 +45,11 @@ import {
   activeWorkStep,
   toWorkSteps,
 } from "@/interactions/chats/functions/work-log.functions";
+import { useRepo } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { useCloudActions } from "../adapters/cloud.hook.adapter";
 import { useCloudRunStream } from "../adapters/cloud-run.stream.adapter";
+import { reviewDestination } from "../functions/cloud-review.functions";
 
 /** The worker's narration of a turn: the lines it logged while provisioning. */
 function ProvisioningLog({
@@ -220,6 +224,7 @@ function StatusBadge({
 export function CloudRunView({ runId }: { runId: string }) {
   const { snapshot, error, status } = useCloudRunStream(runId);
   const actions = useCloudActions();
+  const repo = useRepo();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
 
@@ -241,6 +246,9 @@ export function CloudRunView({ runId }: { runId: string }) {
 
   const { run } = snapshot;
   const active = isCloudRunActive(run.status);
+  // Read the pull request here when it is this repository's, rather than
+  // handing the reader off to a browser tab.
+  const review = reviewDestination(run, repo.data);
   // The cloud refuses a prompt only while provisioning; anywhere else one is
   // queued behind whatever is running.
   const canSend = run.status !== "provisioning" && !sending;
@@ -287,12 +295,23 @@ export function CloudRunView({ runId }: { runId: string }) {
           <span className="truncate">{run.branch}</span>
         </span>
         <StatusBadge status={run.status} />
-        {run.pullRequestUrl !== null && (
+        {review.kind === "byconvo" && (
+          <Link
+            to="/modes/code/review/pull/$number"
+            params={{ number: String(review.number) }}
+            className="flex items-center gap-1 text-xs text-brand-500 hover:underline"
+          >
+            <IconGitPullRequest className="size-3.5" />
+            Review #{review.number}
+          </Link>
+        )}
+        {review.kind === "elsewhere" && (
           <a
-            href={run.pullRequestUrl}
+            href={review.url}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1 text-xs text-brand-500 hover:underline"
+            title={`Opened against ${review.repoFullName}, which is not the repository byconvo has open`}
           >
             Pull request
             <IconExternalLink className="size-3.5" />
