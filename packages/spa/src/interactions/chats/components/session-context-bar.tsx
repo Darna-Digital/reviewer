@@ -21,6 +21,15 @@ import { useNavigate } from "@tanstack/react-router";
 import { IconGitBranch, IconGitFork } from "@tabler/icons-react";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { DeviceSwitcher } from "@/components/layout/device-switcher";
+import {
+  CloudRepoPicker,
+  RunTargetPicker,
+} from "@/interactions/cloud/components/run-target-picker";
+import { useCloudRunTarget } from "@/interactions/cloud/adapters/cloud.hook.adapter";
+import {
+  setCloudRepoId,
+  setRunTarget,
+} from "@/interactions/cloud/adapters/run-target.store";
 import { RunLocationPicker } from "@/interactions/worktrees/components/run-location-picker";
 import {
   setRunLocation,
@@ -67,6 +76,10 @@ export function SessionContextBar({ chat }: { chat?: Chat }) {
   const worktrees = useWorktrees().data ?? [];
   const git = useGitActions();
   const runLocation = useRunLocation();
+  const runTarget = useCloudRunTarget();
+  // A choice of the cloud outlives a disconnect only as a preference: until
+  // the app is connected again the session runs here, and the chip says so.
+  const cloudChosen = runTarget.target === "cloud" && runTarget.connected;
 
   const current = repo.data ?? null;
   const standingIn = worktrees.find((worktree) => worktree.isCurrent) ?? null;
@@ -120,12 +133,27 @@ export function SessionContextBar({ chat }: { chat?: Chat }) {
             onFetch={() => void git.fetch()}
             onPush={() => void git.push()}
           />
-          <RunLocationPicker
-            value={runLocation}
-            onChange={setRunLocation}
-            here={hereLabel}
-            base={current?.currentBranch ?? null}
+          <RunTargetPicker
+            value={cloudChosen ? "cloud" : "local"}
+            onChange={setRunTarget}
+            cloudConnected={runTarget.connected}
           />
+          {/* A cloud run clones the linked repository for itself, so the
+              worktree question does not arise; which repository does. */}
+          {cloudChosen ? (
+            <CloudRepoPicker
+              repos={runTarget.repos}
+              value={runTarget.cloudRepo}
+              onChange={setCloudRepoId}
+            />
+          ) : (
+            <RunLocationPicker
+              value={runLocation}
+              onChange={setRunLocation}
+              here={hereLabel}
+              base={current?.currentBranch ?? null}
+            />
+          )}
         </>
       ) : (
         <>

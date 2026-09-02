@@ -1,6 +1,7 @@
 import { HttpApi } from "effect/unstable/httpapi";
 import { BrowserApi } from "./layers/browser/browser.api.ts";
 import { ChatsApi } from "./layers/chats/chats.api.ts";
+import { CloudApi } from "./layers/cloud/cloud.api.ts";
 import { CollabApi } from "./layers/collab/collab.api.ts";
 import { CommentsApi } from "./layers/comments/comments.api.ts";
 import { DocsApi } from "./layers/docs/docs.api.ts";
@@ -35,4 +36,5 @@ export class Api extends HttpApi.make("byconvo")
   .add(PlansApi)
   .add(VisualCommentsApi)
   .add(CollabApi)
+  .add(CloudApi)
   .prefix("/api") {}

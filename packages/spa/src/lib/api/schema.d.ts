@@ -2148,6 +2148,150 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cloud/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["cloud.status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cloud/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cloud.connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cloud/poll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cloud.poll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cloud/disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cloud.disconnect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cloud/repos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["cloud.repos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cloud/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["cloud.runs"];
+        put?: never;
+        post: operations["cloud.createRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cloud/runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["cloud.run"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cloud/runs/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cloud.send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cloud/runs/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cloud.cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2215,6 +2359,17 @@ export interface components {
         BrowserUnavailable: {
             /** @enum {string} */
             _tag: "BrowserUnavailable";
+            reason: string;
+        };
+        CloudApiError: {
+            /** @enum {string} */
+            _tag: "CloudApiError";
+            reason: string;
+            status?: number;
+        };
+        CloudNotConnected: {
+            /** @enum {string} */
+            _tag: "CloudNotConnected";
             reason: string;
         };
     };
@@ -11831,6 +11986,819 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "cloud.status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        serverUrl: string;
+                        /** @enum {string} */
+                        status: "disconnected" | "pending" | "connected";
+                        user: {
+                            id: string;
+                            name: string;
+                            email: string;
+                            image: string | null;
+                            /** @enum {string} */
+                            plan: "free" | "pro" | "team";
+                        } | null;
+                        connectedAt: string | null;
+                        pending: {
+                            userCode: string;
+                            verificationUri: string;
+                            verificationUriComplete: string;
+                            expiresAt: string;
+                            intervalMs: number;
+                        } | null;
+                    };
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "cloud.connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    serverUrl: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        serverUrl: string;
+                        /** @enum {string} */
+                        status: "disconnected" | "pending" | "connected";
+                        user: {
+                            id: string;
+                            name: string;
+                            email: string;
+                            image: string | null;
+                            /** @enum {string} */
+                            plan: "free" | "pro" | "team";
+                        } | null;
+                        connectedAt: string | null;
+                        pending: {
+                            userCode: string;
+                            verificationUri: string;
+                            verificationUriComplete: string;
+                            expiresAt: string;
+                            intervalMs: number;
+                        } | null;
+                    };
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+            /** @description CloudApiError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudApiError"];
+                };
+            };
+        };
+    };
+    "cloud.poll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        serverUrl: string;
+                        /** @enum {string} */
+                        status: "disconnected" | "pending" | "connected";
+                        user: {
+                            id: string;
+                            name: string;
+                            email: string;
+                            image: string | null;
+                            /** @enum {string} */
+                            plan: "free" | "pro" | "team";
+                        } | null;
+                        connectedAt: string | null;
+                        pending: {
+                            userCode: string;
+                            verificationUri: string;
+                            verificationUriComplete: string;
+                            expiresAt: string;
+                            intervalMs: number;
+                        } | null;
+                    };
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+            /** @description CloudApiError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudApiError"];
+                };
+            };
+        };
+    };
+    "cloud.disconnect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        serverUrl: string;
+                        /** @enum {string} */
+                        status: "disconnected" | "pending" | "connected";
+                        user: {
+                            id: string;
+                            name: string;
+                            email: string;
+                            image: string | null;
+                            /** @enum {string} */
+                            plan: "free" | "pro" | "team";
+                        } | null;
+                        connectedAt: string | null;
+                        pending: {
+                            userCode: string;
+                            verificationUri: string;
+                            verificationUriComplete: string;
+                            expiresAt: string;
+                            intervalMs: number;
+                        } | null;
+                    };
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "cloud.repos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        hostId: string;
+                        owner: string;
+                        name: string;
+                        fullName: string;
+                        defaultBranch: string;
+                        private: boolean;
+                        cloneUrl: string;
+                        htmlUrl: string;
+                        linkedAt: string;
+                    }[];
+                };
+            };
+            /** @description CloudNotConnected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudNotConnected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+            /** @description CloudApiError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudApiError"];
+                };
+            };
+        };
+    };
+    "cloud.runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        repoFullName: string;
+                        title: string;
+                        /** @enum {string} */
+                        provider: "claude" | "codex" | "opencode" | "cursor";
+                        model: string;
+                        branch: string;
+                        /** @enum {string} */
+                        status: "queued" | "provisioning" | "running" | "idle" | "failed" | "cancelled";
+                        pullRequestUrl: string | null;
+                        createdAt: string;
+                        updatedAt: string;
+                        turnCount: number;
+                        lastMessage: string | null;
+                    }[];
+                };
+            };
+            /** @description CloudNotConnected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudNotConnected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+            /** @description CloudApiError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudApiError"];
+                };
+            };
+        };
+    };
+    "cloud.createRun": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    repoId: string;
+                    prompt: string;
+                    /** @enum {string} */
+                    provider?: "claude" | "codex" | "opencode" | "cursor";
+                    model?: string;
+                    /** @enum {string} */
+                    effort?: "low" | "medium" | "high";
+                    /** @enum {string} */
+                    access?: "supervised" | "acceptEdits" | "fullAccess";
+                    baseBranch?: string;
+                    branch?: string;
+                    openPullRequest?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        run: {
+                            id: string;
+                            repoId: string;
+                            repoFullName: string;
+                            title: string;
+                            /** @enum {string} */
+                            provider: "claude" | "codex" | "opencode" | "cursor";
+                            model: string;
+                            /** @enum {string} */
+                            effort: "low" | "medium" | "high";
+                            /** @enum {string} */
+                            access: "supervised" | "acceptEdits" | "fullAccess";
+                            baseBranch: string;
+                            branch: string;
+                            sessionId: string | null;
+                            /** @enum {string} */
+                            status: "queued" | "provisioning" | "running" | "idle" | "failed" | "cancelled";
+                            openPullRequest: boolean;
+                            pullRequestUrl: string | null;
+                            headSha: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                        turns: {
+                            id: string;
+                            runId: string;
+                            seq: number;
+                            prompt: string;
+                            /** @enum {string} */
+                            state: "queued" | "running" | "completed" | "failed" | "cancelled";
+                            attempts: number;
+                            runnerId: string | null;
+                            leaseUntil: string | null;
+                            cancelRequested: boolean;
+                            resultText: string | null;
+                            errorMessage: string | null;
+                            totalCostUsd: (number) | null;
+                            createdAt: string;
+                            startedAt: string | null;
+                            endedAt: string | null;
+                        }[];
+                        messages: {
+                            id: string;
+                            turnId: string;
+                            /** @enum {string} */
+                            role: "user" | "assistant";
+                            text: string;
+                            streaming: boolean;
+                            createdAt: string;
+                        }[];
+                        activities: {
+                            id: string;
+                            turnId: string;
+                            kind: string;
+                            /** @enum {string} */
+                            tone: "info" | "tool" | "error";
+                            summary: string;
+                            detail: string | null;
+                            createdAt: string;
+                            callId?: string;
+                            label?: string;
+                        }[];
+                        lastSeq: number;
+                    };
+                };
+            };
+            /** @description CloudNotConnected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudNotConnected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+            /** @description CloudApiError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudApiError"];
+                };
+            };
+        };
+    };
+    "cloud.run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        run: {
+                            id: string;
+                            repoId: string;
+                            repoFullName: string;
+                            title: string;
+                            /** @enum {string} */
+                            provider: "claude" | "codex" | "opencode" | "cursor";
+                            model: string;
+                            /** @enum {string} */
+                            effort: "low" | "medium" | "high";
+                            /** @enum {string} */
+                            access: "supervised" | "acceptEdits" | "fullAccess";
+                            baseBranch: string;
+                            branch: string;
+                            sessionId: string | null;
+                            /** @enum {string} */
+                            status: "queued" | "provisioning" | "running" | "idle" | "failed" | "cancelled";
+                            openPullRequest: boolean;
+                            pullRequestUrl: string | null;
+                            headSha: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                        turns: {
+                            id: string;
+                            runId: string;
+                            seq: number;
+                            prompt: string;
+                            /** @enum {string} */
+                            state: "queued" | "running" | "completed" | "failed" | "cancelled";
+                            attempts: number;
+                            runnerId: string | null;
+                            leaseUntil: string | null;
+                            cancelRequested: boolean;
+                            resultText: string | null;
+                            errorMessage: string | null;
+                            totalCostUsd: (number) | null;
+                            createdAt: string;
+                            startedAt: string | null;
+                            endedAt: string | null;
+                        }[];
+                        messages: {
+                            id: string;
+                            turnId: string;
+                            /** @enum {string} */
+                            role: "user" | "assistant";
+                            text: string;
+                            streaming: boolean;
+                            createdAt: string;
+                        }[];
+                        activities: {
+                            id: string;
+                            turnId: string;
+                            kind: string;
+                            /** @enum {string} */
+                            tone: "info" | "tool" | "error";
+                            summary: string;
+                            detail: string | null;
+                            createdAt: string;
+                            callId?: string;
+                            label?: string;
+                        }[];
+                        lastSeq: number;
+                    };
+                };
+            };
+            /** @description CloudNotConnected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudNotConnected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+            /** @description CloudApiError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudApiError"];
+                };
+            };
+        };
+    };
+    "cloud.send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    prompt: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        run: {
+                            id: string;
+                            repoId: string;
+                            repoFullName: string;
+                            title: string;
+                            /** @enum {string} */
+                            provider: "claude" | "codex" | "opencode" | "cursor";
+                            model: string;
+                            /** @enum {string} */
+                            effort: "low" | "medium" | "high";
+                            /** @enum {string} */
+                            access: "supervised" | "acceptEdits" | "fullAccess";
+                            baseBranch: string;
+                            branch: string;
+                            sessionId: string | null;
+                            /** @enum {string} */
+                            status: "queued" | "provisioning" | "running" | "idle" | "failed" | "cancelled";
+                            openPullRequest: boolean;
+                            pullRequestUrl: string | null;
+                            headSha: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                        turns: {
+                            id: string;
+                            runId: string;
+                            seq: number;
+                            prompt: string;
+                            /** @enum {string} */
+                            state: "queued" | "running" | "completed" | "failed" | "cancelled";
+                            attempts: number;
+                            runnerId: string | null;
+                            leaseUntil: string | null;
+                            cancelRequested: boolean;
+                            resultText: string | null;
+                            errorMessage: string | null;
+                            totalCostUsd: (number) | null;
+                            createdAt: string;
+                            startedAt: string | null;
+                            endedAt: string | null;
+                        }[];
+                        messages: {
+                            id: string;
+                            turnId: string;
+                            /** @enum {string} */
+                            role: "user" | "assistant";
+                            text: string;
+                            streaming: boolean;
+                            createdAt: string;
+                        }[];
+                        activities: {
+                            id: string;
+                            turnId: string;
+                            kind: string;
+                            /** @enum {string} */
+                            tone: "info" | "tool" | "error";
+                            summary: string;
+                            detail: string | null;
+                            createdAt: string;
+                            callId?: string;
+                            label?: string;
+                        }[];
+                        lastSeq: number;
+                    };
+                };
+            };
+            /** @description CloudNotConnected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudNotConnected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+            /** @description CloudApiError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudApiError"];
+                };
+            };
+        };
+    };
+    "cloud.cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        run: {
+                            id: string;
+                            repoId: string;
+                            repoFullName: string;
+                            title: string;
+                            /** @enum {string} */
+                            provider: "claude" | "codex" | "opencode" | "cursor";
+                            model: string;
+                            /** @enum {string} */
+                            effort: "low" | "medium" | "high";
+                            /** @enum {string} */
+                            access: "supervised" | "acceptEdits" | "fullAccess";
+                            baseBranch: string;
+                            branch: string;
+                            sessionId: string | null;
+                            /** @enum {string} */
+                            status: "queued" | "provisioning" | "running" | "idle" | "failed" | "cancelled";
+                            openPullRequest: boolean;
+                            pullRequestUrl: string | null;
+                            headSha: string | null;
+                            createdAt: string;
+                            updatedAt: string;
+                        };
+                        turns: {
+                            id: string;
+                            runId: string;
+                            seq: number;
+                            prompt: string;
+                            /** @enum {string} */
+                            state: "queued" | "running" | "completed" | "failed" | "cancelled";
+                            attempts: number;
+                            runnerId: string | null;
+                            leaseUntil: string | null;
+                            cancelRequested: boolean;
+                            resultText: string | null;
+                            errorMessage: string | null;
+                            totalCostUsd: (number) | null;
+                            createdAt: string;
+                            startedAt: string | null;
+                            endedAt: string | null;
+                        }[];
+                        messages: {
+                            id: string;
+                            turnId: string;
+                            /** @enum {string} */
+                            role: "user" | "assistant";
+                            text: string;
+                            streaming: boolean;
+                            createdAt: string;
+                        }[];
+                        activities: {
+                            id: string;
+                            turnId: string;
+                            kind: string;
+                            /** @enum {string} */
+                            tone: "info" | "tool" | "error";
+                            summary: string;
+                            detail: string | null;
+                            createdAt: string;
+                            callId?: string;
+                            label?: string;
+                        }[];
+                        lastSeq: number;
+                    };
+                };
+            };
+            /** @description CloudNotConnected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudNotConnected"];
+                };
+            };
+            /** @description StorageError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+            /** @description CloudApiError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudApiError"];
                 };
             };
         };

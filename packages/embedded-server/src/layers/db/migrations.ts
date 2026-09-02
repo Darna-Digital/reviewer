@@ -226,9 +226,25 @@ CREATE INDEX collab_bookmark_repo ON collab_bookmark (repo_path, created_at DESC
  */
 const chatSeenAt = `ALTER TABLE chat ADD COLUMN seen_at TEXT`;
 
+/**
+ * The app's connection to byconvo cloud: which server, the bearer token once
+ * the device flow has granted one, and the code while it is still pending.
+ * One row for the whole machine — the connection is the app's, not a
+ * project's — held as a single JSON document decoded through
+ * `@byconvo/core/cloud`'s `StoredCloudConnection`. The token rests here in
+ * the clear like the rest of `~/.byconvo`: this is the user's own machine.
+ */
+const cloudConnection = `
+CREATE TABLE cloud_connection (
+  id   INTEGER PRIMARY KEY CHECK (id = 1),
+  data TEXT NOT NULL
+);
+`;
+
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { id: "0001_initial", up: (db) => db.exec(initial) },
   { id: "0002_branch_target", up: (db) => db.exec(branchTargets) },
   { id: "0003_collab", up: (db) => db.exec(collabTables) },
   { id: "0004_chat_seen_at", up: (db) => db.exec(chatSeenAt) },
+  { id: "0005_cloud_connection", up: (db) => db.exec(cloudConnection) },
 ];

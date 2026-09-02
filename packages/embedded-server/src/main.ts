@@ -24,6 +24,9 @@ import { BrowserHandler } from "./layers/browser/browser.handler.ts";
 import { BrowserRuntimeLive } from "./layers/browser/browser.runtime.ts";
 import { ChatsHandler } from "./layers/chats/chats.handler.ts";
 import { ChatsLive } from "./layers/chats/chats.layer.live.ts";
+import { handleCloudEvents } from "./layers/cloud/cloud-events-proxy.ts";
+import { CloudHandler } from "./layers/cloud/cloud.handler.ts";
+import { CloudLive } from "./layers/cloud/cloud.layer.live.ts";
 import { CollabHandler } from "./layers/collab/collab.handler.ts";
 import { CollabLive } from "./layers/collab/collab.layer.live.ts";
 import { CommentsHandler } from "./layers/comments/comments.handler.ts";
@@ -100,7 +103,8 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(BrowserHandler),
   Layer.provide(PlansHandler),
   Layer.provide(VisualCommentsHandler),
-  Layer.provide(CollabHandler)
+  Layer.provide(CollabHandler),
+  Layer.provide(CloudHandler)
 );
 
 /** Stateless feature services, resolved per request. */
@@ -123,7 +127,8 @@ const FeatureServices = Layer.mergeAll(
   BrowserRuntimeLive,
   PlansLive,
   VisualCommentsLive,
-  CollabLive
+  CollabLive,
+  CloudLive
 );
 
 /**
@@ -161,14 +166,41 @@ const InfraLive = gitHubClientLayer.pipe(
  * Allow all origins — this server is local-only and never credentialed.
  */
 // Wrap node's createServer so every server instance also hosts the live-terminal
-// PTY WebSocket (attached to its `upgrade` event) alongside the Effect HttpApi.
+// PTY WebSocket (attached to its `upgrade` event) alongside the Effect HttpApi,
+// and answers the cloud run stream itself (see `attachCloudEventsProxy`).
 const createServerWithPty: typeof createServer = ((
   ...args: Parameters<typeof createServer>
 ) => {
   const server = createServer(...args);
   attachPtyServer(server);
+  attachCloudEventsProxy(server);
   return server;
 }) as typeof createServer;
+
+/**
+ * The cloud run stream is a plain Node request listener beside the Effect
+ * HttpApi, the way the PTY socket is an `upgrade` listener beside it. Effect
+ * attaches its own `request` listener when the server starts listening, and
+ * Node hands every request to every listener — so the proxy is put in front
+ * of `emit` rather than added as one more listener: a request for the events
+ * route is consumed here and never emitted, and everything else goes through
+ * untouched.
+ */
+const attachCloudEventsProxy = (server: ReturnType<typeof createServer>) => {
+  const emit = server.emit.bind(server);
+  server.emit = ((event: string | symbol, ...args: Array<unknown>) => {
+    if (
+      event === "request" &&
+      handleCloudEvents(
+        args[0] as Parameters<typeof handleCloudEvents>[0],
+        args[1] as Parameters<typeof handleCloudEvents>[1]
+      )
+    ) {
+      return true;
+    }
+    return emit(event as string, ...args);
+  }) as typeof server.emit;
+};
 
 const HttpLive = HttpRouter.serve(
   Layer.mergeAll(
