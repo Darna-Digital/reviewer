@@ -13,6 +13,12 @@ export const CloudHandler = HttpApiBuilder.group(Api, "cloud", (handlers) =>
     .handle("disconnect", () =>
       Effect.flatMap(CloudService, (s) => s.disconnect)
     )
+    .handle("connectAgent", ({ params }) =>
+      Effect.map(
+        Effect.flatMap(CloudService, (s) => s.connectAgent(params.provider)),
+        (connected) => ({ provider: params.provider, ...connected })
+      )
+    )
     .handle("repos", () => Effect.flatMap(CloudService, (s) => s.repos))
     .handle("runs", () => Effect.flatMap(CloudService, (s) => s.runs))
     .handle("createRun", ({ payload }) =>

@@ -273,3 +273,17 @@ export const SendCloudRunMessage = Schema.Struct({ prompt: Schema.String });
 export type SendCloudRunMessage = typeof SendCloudRunMessage.Type;
 
 export const CloudRunIdParam = Schema.Struct({ id: Schema.String });
+
+/**
+ * How an agent's subscription reached the cloud: `reused` when this machine
+ * was already signed in, `signed-in` when a browser was opened for it.
+ */
+export const CloudAgentConnected = Schema.Struct({
+  provider: Schema.Literals(["codex"]),
+  kind: Schema.Literals(["reused", "signed-in"]),
+});
+export type CloudAgentConnected = typeof CloudAgentConnected.Type;
+
+export const CloudAgentParam = Schema.Struct({
+  provider: Schema.Literals(["codex"]),
+});

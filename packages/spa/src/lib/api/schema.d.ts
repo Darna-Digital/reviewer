@@ -2212,6 +2212,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cloud/agents/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cloud.connectAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cloud/repos": {
         parameters: {
             query?: never;
@@ -2366,6 +2382,11 @@ export interface components {
             _tag: "CloudApiError";
             reason: string;
             status?: number;
+        };
+        AgentAuthError: {
+            /** @enum {string} */
+            _tag: "AgentAuthError";
+            reason: string;
         };
         CloudNotConnected: {
             /** @enum {string} */
@@ -12206,6 +12227,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "cloud.connectAgent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: "codex";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        provider: "codex";
+                        /** @enum {string} */
+                        kind: "reused" | "signed-in";
+                    };
+                };
+            };
+            /** @description CloudNotConnected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudNotConnected"];
+                };
+            };
+            /** @description StorageError | AgentAuthError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["AgentAuthError"];
+                };
+            };
+            /** @description CloudApiError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CloudApiError"];
                 };
             };
         };

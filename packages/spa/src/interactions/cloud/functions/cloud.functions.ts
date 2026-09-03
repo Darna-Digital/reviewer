@@ -88,6 +88,7 @@ export function createCloudFunctions(d: CloudDependencies): CloudFunctions {
     connect: (serverUrl) => d.sideEffects.connect(serverUrl),
     awaitApproval,
     disconnect: () => d.sideEffects.disconnect(),
+    connectAgent: (provider) => d.sideEffects.connectAgent(provider),
     startCloudRun,
     send: async (id, text) => {
       const prompt = text.trim();

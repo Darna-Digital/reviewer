@@ -11,6 +11,11 @@
  */
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
+import {
+  AgentAuth,
+  type AgentAuthError,
+  type AgentAuthProvider,
+} from "../../../ports/agent-auth.ts";
 import { CloudApi, type CloudApiError } from "../../../ports/cloud-api.ts";
 import type { StorageError } from "../../../shared.ts";
 import { CloudNotConnected } from "../errors.ts";
@@ -34,6 +39,13 @@ import type {
 export const DEFAULT_CLOUD_SERVER_URL = "https://api.byconvo.com";
 
 export type CloudFailure = StorageError | CloudApiError | CloudNotConnected;
+
+/** How an agent's subscription got to the cloud. */
+export type AgentConnected =
+  /** It was already signed in here; no browser was needed. */
+  | { readonly kind: "reused" }
+  /** The vendor's login ran and the person approved it. */
+  | { readonly kind: "signed-in" };
 
 /** What the SSE proxy needs to open a stream in the user's name. */
 export interface CloudCredentials {
@@ -68,6 +80,18 @@ export interface CloudServiceShape {
   readonly cancel: (
     id: string
   ) => Effect.Effect<CloudRunSnapshot, CloudFailure>;
+  /**
+   * Put this machine's agent subscription into byconvo cloud, so its sandboxes
+   * can run that agent as the person.
+   *
+   * The login has to happen here: the vendors redirect to a port on localhost,
+   * which a hosted sandbox can never receive — the cloud is left with a device
+   * code to type instead. Doing it on the machine that has the browser makes
+   * it a click and an approval, and the credential is then carried up.
+   */
+  readonly connectAgent: (
+    provider: AgentAuthProvider
+  ) => Effect.Effect<AgentConnected, CloudFailure | AgentAuthError>;
   /** Internal — for the SSE proxy. Not exposed over HTTP. */
   readonly credentials: Effect.Effect<
     CloudCredentials,
@@ -126,6 +150,7 @@ const disconnected = (serverUrl: string): StoredCloudConnection => ({
 export const makeCloudService = Effect.gen(function* () {
   const repo: CloudSettingsRepo = yield* CloudSettingsRepository;
   const api = yield* CloudApi;
+  const agentAuth = yield* AgentAuth;
 
   const status = Effect.map(repo.read, publicConnection);
 
@@ -209,6 +234,26 @@ export const makeCloudService = Effect.gen(function* () {
     return publicConnection(yield* repo.write(disconnected(serverUrl)));
   });
 
+  /** Which stored credential a provider's login produces, for the cloud. */
+  const CREDENTIAL_KIND: Record<AgentAuthProvider, string> = {
+    codex: "codex-auth",
+  };
+
+  const connectAgent: CloudServiceShape["connectAgent"] = (provider) =>
+    Effect.gen(function* () {
+      // Checked before anything opens a browser: approving a vendor login
+      // only to be told the cloud was never connected wastes the approval.
+      const { serverUrl, token } = yield* credentials;
+      // Somebody who has run `codex login` already needs no browser at all.
+      const already = yield* agentAuth.existing(provider);
+      const secret = already ?? (yield* agentAuth.signIn(provider));
+      yield* api.setCredential(serverUrl, token, {
+        kind: CREDENTIAL_KIND[provider],
+        secret,
+      });
+      return { kind: already === null ? "signed-in" : "reused" } as const;
+    });
+
   const service: CloudServiceShape = {
     status,
     connect,
@@ -225,6 +270,7 @@ export const makeCloudService = Effect.gen(function* () {
       ),
     cancel: (id) =>
       withCredentials((url, token) => api.cancelRun(url, token, id)),
+    connectAgent,
     credentials,
   };
 

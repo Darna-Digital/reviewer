@@ -5,6 +5,7 @@
  * and turning the composer's local settings into a cloud run.
  */
 import type {
+  CloudAgentConnected,
   CloudConnection,
   CloudRepo,
   CloudRunSnapshot,
@@ -12,6 +13,9 @@ import type {
   NewCloudRun,
 } from "@byconvo/core/cloud";
 import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces";
+
+/** The agents that can be signed in to on this machine. */
+export type CloudAgentProvider = CloudAgentConnected["provider"];
 
 /** Where a cloud run works: the linked repository, and the branch to start from. */
 export interface CloudRunPlace {
@@ -26,6 +30,14 @@ export interface CloudDependencies {
     readonly connect: (serverUrl: string) => Promise<CloudConnection>;
     readonly poll: () => Promise<CloudConnection>;
     readonly disconnect: () => Promise<CloudConnection>;
+    /**
+     * Sign in to an agent's vendor here and put the credential in the cloud.
+     * It runs on this machine because the vendors' logins redirect to a port
+     * on localhost, which a cloud sandbox can never receive.
+     */
+    readonly connectAgent: (
+      provider: CloudAgentProvider
+    ) => Promise<CloudAgentConnected>;
     readonly createRun: (input: NewCloudRun) => Promise<CloudRunSnapshot>;
     readonly send: (id: string, prompt: string) => Promise<CloudRunSnapshot>;
     readonly cancel: (id: string) => Promise<CloudRunSnapshot>;
@@ -54,6 +66,9 @@ export interface CloudFunctions {
     signal?: AbortSignal
   ) => Promise<CloudApproval>;
   readonly disconnect: () => Promise<CloudConnection>;
+  readonly connectAgent: (
+    provider: CloudAgentProvider
+  ) => Promise<CloudAgentConnected>;
   /** Hand a prompt to the cloud; null (no-op) when the prompt is blank. */
   readonly startCloudRun: (
     settings: ChatSettings,

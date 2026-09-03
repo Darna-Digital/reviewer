@@ -249,6 +249,16 @@ export const makeLiveCloudApi: CloudApiShape = {
       `${serverUrl}/api/runs/${encodeURIComponent(id)}/cancel`,
       { method: "POST", token }
     ),
+  setCredential: (serverUrl, token, input) =>
+    // The answer is the stored credential, which is of no use here: what
+    // matters is that the cloud took it.
+    Effect.asVoid(
+      request(`${serverUrl}/api/connections/credentials`, {
+        method: "PUT",
+        token,
+        body: input,
+      })
+    ),
 };
 
 export const CloudApiLive: Layer.Layer<CloudApi> = Layer.succeed(CloudApi)(

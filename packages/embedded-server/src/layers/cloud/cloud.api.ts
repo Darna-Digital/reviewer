@@ -9,6 +9,8 @@
 import * as Schema from "effect/Schema";
 import {
   CloudConnection,
+  CloudAgentConnected,
+  CloudAgentParam,
   CloudNotConnected,
   CloudRepo,
   CloudRunIdParam,
@@ -18,6 +20,7 @@ import {
   NewCloudRun,
   SendCloudRunMessage,
 } from "@byconvo/core/cloud";
+import { AgentAuthError } from "@byconvo/core/ports/agent-auth";
 import { CloudApiError } from "@byconvo/core/ports/cloud-api";
 import { StorageError } from "@byconvo/core/shared";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
@@ -49,6 +52,18 @@ export class CloudApi extends HttpApiGroup.make("cloud")
     HttpApiEndpoint.post("disconnect", "/cloud/disconnect", {
       success: CloudConnection,
       error: [StorageError],
+    })
+  )
+  /**
+   * Sign in to an agent's vendor here and put the credential in the cloud.
+   * It has to happen on this machine: the vendors' logins redirect to a port
+   * on localhost, which a cloud sandbox can never receive.
+   */
+  .add(
+    HttpApiEndpoint.post("connectAgent", "/cloud/agents/:provider", {
+      params: CloudAgentParam,
+      success: CloudAgentConnected,
+      error: [StorageError, CloudApiError, CloudNotConnected, AgentAuthError],
     })
   )
   .add(

@@ -10,7 +10,10 @@ import {
   useRepo,
 } from "@/lib/queries";
 import { createCloudFunctions } from "../functions/cloud.functions";
-import type { CloudFunctions } from "../interfaces/cloud.interfaces";
+import type {
+  CloudAgentProvider,
+  CloudFunctions,
+} from "../interfaces/cloud.interfaces";
 import { useRunTarget, type RunTarget } from "./run-target.store";
 
 const CLOUD_RUNS_KEY = ["get", "/api/cloud/runs"];
@@ -49,6 +52,14 @@ export function useCloudActions() {
               "/api/cloud/disconnect"
             );
             if (error) return fail(error, "failed to disconnect");
+            return data;
+          },
+          connectAgent: async (provider) => {
+            const { data, error } = await fetchClient.POST(
+              "/api/cloud/agents/{provider}",
+              { params: { path: { provider } } }
+            );
+            if (error) return fail(error, `failed to connect ${provider}`);
             return data;
           },
           createRun: async (input) => {
@@ -119,6 +130,12 @@ export function useCloudActions() {
       queryClient.removeQueries({ queryKey: CLOUD_RUNS_KEY });
       queryClient.removeQueries({ queryKey: ["get", "/api/cloud/repos"] });
       return after;
+    },
+    connectAgent: async (provider: CloudAgentProvider) => {
+      const connected = await fns.connectAgent(provider);
+      // The cloud's own view of what is connected has just changed.
+      void invalidateStatus();
+      return connected;
     },
     startCloudRun: async (
       ...args: Parameters<CloudFunctions["startCloudRun"]>

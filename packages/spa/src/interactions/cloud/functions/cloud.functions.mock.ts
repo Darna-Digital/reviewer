@@ -121,6 +121,7 @@ export interface CloudCalls {
   connect: string[];
   poll: number;
   disconnect: number;
+  connectAgent: Array<"codex">;
   createRun: NewCloudRun[];
   send: Array<{ id: string; prompt: string }>;
   cancel: string[];
@@ -133,6 +134,8 @@ export function mockCloudDependencies(
     polls?: ReadonlyArray<CloudConnection | Error>;
     /** The clock, as milliseconds since the epoch; advanced by each delay. */
     startAt?: number;
+    /** True when this machine has already signed in to the agent's vendor. */
+    agentAlreadySignedIn?: boolean;
   } = {}
 ): { deps: CloudDependencies; calls: CloudCalls } {
   const calls: CloudCalls = {
@@ -143,6 +146,7 @@ export function mockCloudDependencies(
     send: [],
     cancel: [],
     delays: [],
+    connectAgent: [],
   };
   const polls = script.polls ?? [connected()];
   let clock = script.startAt ?? Date.parse("2026-01-01T00:00:00.000Z");
@@ -152,6 +156,13 @@ export function mockCloudDependencies(
       connect: async (serverUrl) => {
         calls.connect.push(serverUrl);
         return pending({ serverUrl });
+      },
+      connectAgent: async (provider) => {
+        calls.connectAgent.push(provider);
+        return {
+          provider,
+          kind: script.agentAlreadySignedIn === true ? "reused" : "signed-in",
+        };
       },
       poll: async () => {
         const answer = polls[Math.min(calls.poll, polls.length - 1)];

@@ -190,4 +190,57 @@ describe("CloudService", () => {
       expect(error.message).toBe("token revoked");
     }).pipe(Effect.provide(layer));
   });
+
+  describe("connectAgent", () => {
+    it.effect("signs in here and carries the credential to the cloud", () => {
+      // The vendors redirect their login to localhost, so it can only happen
+      // on this machine — the point of doing it here rather than in a sandbox.
+      const cloud = CloudMemory(connected, {}, { signedIn: '{"tokens":{}}' });
+      return Effect.gen(function* () {
+        const service = yield* CloudService;
+        const result = yield* service.connectAgent("codex");
+
+        expect(result).toEqual({ kind: "signed-in" });
+        expect(cloud.authCalls.signIn).toEqual(["codex"]);
+        expect(cloud.calls.setCredential).toEqual([
+          {
+            serverUrl: "https://cloud.test",
+            token: "token-stored",
+            kind: "codex-auth",
+            secret: '{"tokens":{}}',
+          },
+        ]);
+      }).pipe(Effect.provide(cloud.layer));
+    });
+
+    it.effect("uses an existing login rather than opening a browser", () => {
+      const cloud = CloudMemory(
+        connected,
+        {},
+        { existing: '{"tokens":{"a":1}}' }
+      );
+      return Effect.gen(function* () {
+        const service = yield* CloudService;
+        const result = yield* service.connectAgent("codex");
+
+        expect(result).toEqual({ kind: "reused" });
+        // Somebody who already ran `codex login` is not sent to a browser.
+        expect(cloud.authCalls.signIn).toEqual([]);
+        expect(cloud.calls.setCredential[0]?.secret).toBe('{"tokens":{"a":1}}');
+      }).pipe(Effect.provide(cloud.layer));
+    });
+
+    it.effect("will not sign in when the cloud is not connected", () => {
+      const cloud = CloudMemory(null, {}, { signedIn: '{"tokens":{}}' });
+      return Effect.gen(function* () {
+        const service = yield* CloudService;
+        const result = yield* Effect.exit(service.connectAgent("codex"));
+
+        expect(result._tag).toBe("Failure");
+        // And no browser was opened for a login that could not be delivered.
+        expect(cloud.authCalls.signIn).toEqual([]);
+        expect(cloud.calls.setCredential).toEqual([]);
+      }).pipe(Effect.provide(cloud.layer));
+    });
+  });
 });

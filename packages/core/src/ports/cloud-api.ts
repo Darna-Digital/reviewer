@@ -90,6 +90,16 @@ export interface CloudApiShape {
     token: string,
     id: string
   ) => Effect.Effect<CloudRunSnapshot, CloudApiError>;
+  /**
+   * Store an agent credential in the cloud, so its sandboxes can run that
+   * agent on the person's own subscription. What `codex login` wrote here is
+   * what the cloud's runs are given.
+   */
+  readonly setCredential: (
+    serverUrl: string,
+    token: string,
+    input: { readonly kind: string; readonly secret: string }
+  ) => Effect.Effect<void, CloudApiError>;
 }
 
 export class CloudApi extends Context.Service<CloudApi, CloudApiShape>()(
@@ -132,6 +142,12 @@ export interface MemoryCloudApiScript {
 }
 
 export interface MemoryCloudApiCalls {
+  readonly setCredential: Array<{
+    serverUrl: string;
+    token: string;
+    kind: string;
+    secret: string;
+  }>;
   readonly startDevice: Array<{ serverUrl: string }>;
   readonly pollDevice: Array<{ serverUrl: string; deviceCode: string }>;
   readonly me: Array<{ serverUrl: string; token: string }>;
@@ -190,6 +206,7 @@ export const memoryCloudApi = (script: MemoryCloudApiScript = {}) => {
     createRun: [],
     sendRunMessage: [],
     cancelRun: [],
+    setCredential: [],
   };
   const polls = script.polls ?? [{ kind: "token", token: "token-1" }];
   let pollIndex = 0;
@@ -255,6 +272,10 @@ export const memoryCloudApi = (script: MemoryCloudApiScript = {}) => {
         const current = snapshot(id);
         return { ...current, run: { ...current.run, status: "cancelled" } };
       });
+    },
+    setCredential: (serverUrl, token, input) => {
+      calls.setCredential.push({ serverUrl, token, ...input });
+      return authed(() => undefined);
     },
   };
 

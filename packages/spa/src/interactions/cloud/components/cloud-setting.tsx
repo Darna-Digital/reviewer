@@ -47,6 +47,31 @@ export function CloudSetting() {
     }
   };
 
+  /**
+   * Signing in to Codex here rather than in the cloud: its login redirects to
+   * a port on localhost, which only exists on this machine. The cloud is left
+   * asking for a device code; from here it is a click and an approval.
+   */
+  const [agentNote, setAgentNote] = useState<string | null>(null);
+  const connectCodex = async () => {
+    setBusy(true);
+    setAgentNote(null);
+    try {
+      const connected = await actions.connectAgent("codex");
+      setAgentNote(
+        connected.kind === "reused"
+          ? "Codex was already signed in here — sent to byconvo cloud."
+          : "Codex connected. byconvo cloud runs it on your subscription."
+      );
+    } catch (error) {
+      setAgentNote(
+        error instanceof Error ? error.message : "failed to connect Codex"
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const disconnect = async () => {
     setBusy(true);
     try {
@@ -140,10 +165,23 @@ export function CloudSetting() {
           variant="outline"
           size="sm"
           disabled={busy}
+          onClick={() => void connectCodex()}
+          title="Sign in to Codex here and use it in byconvo cloud"
+        >
+          Connect Codex
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={busy}
           onClick={() => void disconnect()}
         >
           Disconnect
         </Button>
+        {agentNote !== null && (
+          <span className="text-xs text-muted-foreground">{agentNote}</span>
+        )}
       </SettingRow>
     );
   }
