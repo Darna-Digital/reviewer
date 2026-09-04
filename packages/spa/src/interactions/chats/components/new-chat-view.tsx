@@ -33,10 +33,7 @@ import {
 import { preferredChatModel } from "@/interactions/chats/functions/chat-model.functions";
 import { NEW_CHAT_DRAFT, setDraft } from "@/lib/composer-drafts";
 import { isDesktop } from "@/lib/desktop";
-import { useBranches, useChatModels, useRepo } from "@/lib/queries";
-import { useRunLocation } from "@/interactions/worktrees/adapters/run-location.store";
-import { useWorktreeActions } from "@/interactions/worktrees/adapters/worktrees.hook.adapter";
-import { taskBranchName } from "@/interactions/worktrees/functions/worktrees.functions";
+import { useChatModels, useRepo } from "@/lib/queries";
 import { useUiPrefs } from "@/lib/ui-prefs";
 import { ChatComposer } from "./chat-composer";
 import { SessionContextBar } from "./session-context-bar";
@@ -74,9 +71,6 @@ export function NewChatView() {
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const mode = useChatMode(NEW_SESSION);
 
-  const runLocation = useRunLocation();
-  const branches = useBranches();
-  const worktrees = useWorktreeActions();
   const runTarget = useCloudRunTarget();
   const cloud = useCloudActions();
 
@@ -88,27 +82,6 @@ export function NewChatView() {
     model: overrides.model ?? preferred?.id ?? "",
     effort: overrides.effort ?? defaults?.effort ?? "high",
     access: overrides.access ?? defaults?.access ?? "fullAccess",
-  };
-
-  /**
-   * Where this prompt will be worked on. Running it beside your work means
-   * cutting the worktree first: the branch is named after the prompt, aimed
-   * back at the branch you are on, and the app stays exactly where it is —
-   * the task comes back to you in the review rather than you going to it.
-   *
-   * A worktree that cannot be cut stops the send. Falling back to running here
-   * would put an agent to work in the checkout you were keeping clear, which is
-   * the one outcome the choice existed to prevent.
-   */
-  const place = async (text: string) => {
-    const here = repo.data?.currentBranch ?? "";
-    if (runLocation === "here") return { branch: here };
-    const branch = taskBranchName(
-      text,
-      (branches.data ?? []).map((entry) => entry.name)
-    );
-    const worktree = await worktrees.cut(branch, here.length > 0 ? here : null);
-    return worktree === null ? null : { branch, repoPath: worktree.path };
   };
 
   /**
@@ -152,8 +125,7 @@ export function NewChatView() {
         await sendToCloud(prompt);
         return;
       }
-      const where = await place(text);
-      if (where === null) return;
+      const where = { branch: repo.data?.currentBranch ?? "" };
       const started =
         title === null
           ? await actions.start(settings, where, prompt, images)

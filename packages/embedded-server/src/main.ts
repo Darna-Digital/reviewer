@@ -51,7 +51,6 @@ import { PlansLive } from "./layers/plans/plans.layer.live.ts";
 import { ProjectHandler } from "./layers/project/project.handler.ts";
 import { ProjectLive } from "./layers/project/project.layer.live.ts";
 import { BranchTargetsLive } from "./layers/branch-targets/branch-targets.layer.live.ts";
-import { LocalTasksLive } from "./layers/local-tasks/local-tasks.layer.live.ts";
 import { RepoHandler } from "./layers/repo/repo.handler.ts";
 import { RepoLive } from "./layers/repo/repo.layer.live.ts";
 import { ThreadsHandler } from "./layers/threads/threads.handler.ts";
@@ -132,16 +131,6 @@ const FeatureServices = Layer.mergeAll(
 );
 
 /**
- * Local tasks read git, the recorded aims and the dev commands all at once, so
- * unlike its siblings it is built *on* the others rather than beside them —
- * `provideMerge` hands it the very same instances the handlers get, which
- * matters for the dev runtime, whose whole job is remembering what is running.
- */
-const RequestServices = LocalTasksLive.pipe(
-  Layer.provideMerge(FeatureServices)
-);
-
-/**
  * Global singletons, built once so the selected-repo state persists across
  * requests: the database, the workspace context (mutable selection), the git
  * executor, the GitHub client and the commit-message drafts (a drafting agent
@@ -204,7 +193,7 @@ const attachCloudEventsProxy = (server: ReturnType<typeof createServer>) => {
 
 const HttpLive = HttpRouter.serve(
   Layer.mergeAll(
-    ApiLive.pipe(HttpRouter.provideRequest(RequestServices)),
+    ApiLive.pipe(HttpRouter.provideRequest(FeatureServices)),
     HttpRouter.cors()
   )
 ).pipe(

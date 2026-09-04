@@ -53,9 +53,8 @@ interface CommitPanelProps {
   /** Told once the panel has taken a finished draft, so it can be dropped. */
   onDraftSettled?: (draft: CommitDraft) => void;
   /**
-   * Off where there is nowhere to push to. A worktree's branch is local until
-   * somebody opens it for review, and an button that cannot work is worse than
-   * one that is not there.
+   * Off where there is nowhere to push to — a button that cannot work is worse
+   * than one that is not there.
    */
   allowPush?: boolean;
 }

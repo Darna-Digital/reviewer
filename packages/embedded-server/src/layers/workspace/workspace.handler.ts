@@ -1,8 +1,6 @@
 import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
 import { Api } from "../../api.ts";
-import { followFocus } from "../local-dev/worktree-services.ts";
-import { WorkspaceContext } from "./workspace-context.ts";
 import { WorkspaceService } from "@byconvo/core/workspace";
 
 const ok = { ok: true } as const;
@@ -16,17 +14,8 @@ export const WorkspaceHandler = HttpApiBuilder.group(
       .handle("setCurrent", ({ payload }) =>
         Effect.flatMap(WorkspaceService, (s) => s.setCurrent(payload.path))
       )
-      /** Focus is a selection, and the running services follow it. */
       .handle("selectRepo", ({ payload }) =>
-        Effect.gen(function* () {
-          const ctx = yield* WorkspaceContext;
-          const left = yield* ctx.current;
-          const info = yield* Effect.flatMap(WorkspaceService, (s) =>
-            s.selectRepo(payload.path)
-          );
-          yield* followFocus(left, payload.path);
-          return info;
-        })
+        Effect.flatMap(WorkspaceService, (s) => s.selectRepo(payload.path))
       )
       .handle("browse", ({ query }) =>
         Effect.flatMap(WorkspaceService, (s) => s.browse(query.path ?? null))

@@ -53,10 +53,7 @@ export const makeSqliteChatsRepository = Effect.gen(function* () {
 
   const create: ChatsRepo["create"] = (input: CreateChatInput) =>
     Effect.flatMap(ctx.project, (projectPath) =>
-      withRepo((selected) => {
-        // A session can be told where to run — a worktree of this repository —
-        // so that starting one beside your work does not move the app there.
-        const repoPath = input.repoPath ?? selected;
+      withRepo((repoPath) => {
         // A root reached before any project open (the boot seed) would have no
         // project to be grouped under; register it as it is used so the chat is
         // labelled from the moment it exists.

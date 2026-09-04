@@ -211,13 +211,6 @@ export const NewChat = Schema.Struct({
   effort: Schema.optionalKey(ChatEffort),
   access: Schema.optionalKey(ChatAccess),
   branch: Schema.optionalKey(Schema.String),
-  /**
-   * The checkout the agent's process runs in. Absent means wherever the app is
-   * standing, which is the ordinary case; given, it is a worktree of the same
-   * repository — the way a task runs beside your work without the app going
-   * there, and the reason this is not simply read from the selection.
-   */
-  repoPath: Schema.optionalKey(Schema.String),
 });
 export type NewChat = typeof NewChat.Type;
 export const UpdateChat = Schema.Struct({

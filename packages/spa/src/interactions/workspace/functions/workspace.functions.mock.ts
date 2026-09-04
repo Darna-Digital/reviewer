@@ -10,7 +10,6 @@ export const multiRepoWorkspace: WorkspaceInfo = {
     { name: "frontend", path: "/work/frontend", branch: "main" },
   ],
   current: "/work/backend",
-  currentRoot: "/work/backend",
   recents: ["/work"],
   home: "/home/ada",
   device: "Ada's MacBook Pro",

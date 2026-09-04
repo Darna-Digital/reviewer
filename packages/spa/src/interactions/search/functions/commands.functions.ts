@@ -60,7 +60,7 @@ export const buildCodeCommands = (
       label: "Go to Reviews",
       group: "Navigation",
       icon: IconGitPullRequest,
-      keywords: "review pr github pull requests worktrees",
+      keywords: "review pr github pull requests",
       run: () => goTo("/modes/code/reviews"),
     },
     {

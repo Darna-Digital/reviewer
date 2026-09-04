@@ -44,53 +44,6 @@ describe("deriveTarget", () => {
     ).toEqual({ kind: "pull", pull: pull(7) });
   });
 
-  it("review mode reads a task against what it lands on", () => {
-    const task = {
-      branch: "task/dark-mode",
-      base: "master",
-      path: "/work/.app-worktrees/task-dark-mode",
-      name: "task-dark-mode",
-      ahead: 2,
-      upToDate: true,
-      dirty: false,
-      subject: "Add dark mode",
-      author: "someone",
-      updatedAt: "2026-08-18T00:00:00.000Z",
-    };
-    expect(
-      fns().deriveTarget({
-        mode: "review",
-        selectedPull: null,
-        selectedTask: task,
-        browse: null,
-      })
-    ).toEqual({ kind: "task", branch: "task/dark-mode", base: "master" });
-  });
-
-  it("a chosen branch replaces the base a task is read against", () => {
-    const task = {
-      branch: "task/dark-mode",
-      base: "master",
-      path: "/work/.app-worktrees/task-dark-mode",
-      name: "task-dark-mode",
-      ahead: 2,
-      upToDate: true,
-      dirty: false,
-      subject: "Add dark mode",
-      author: "someone",
-      updatedAt: "2026-08-18T00:00:00.000Z",
-    };
-    expect(
-      fns().deriveTarget({
-        mode: "review",
-        selectedPull: null,
-        selectedTask: task,
-        target: "development",
-        browse: null,
-      })
-    ).toEqual({ kind: "task", branch: "task/dark-mode", base: "development" });
-  });
-
   it("browse commit / range map through", () => {
     expect(
       fns().deriveTarget({

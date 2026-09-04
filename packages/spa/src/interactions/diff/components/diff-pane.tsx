@@ -99,8 +99,6 @@ const emptyHint = (target: DiffTarget): string => {
       return "Working tree is clean — make some changes and hit refresh.";
     case "branch":
       return `Nothing yet on this branch that ${target.target} does not already have.`;
-    case "task":
-      return `Nothing on ${target.branch} yet that ${target.base} does not already have.`;
     case "range":
       return "These refs are identical.";
     case "commit":
@@ -126,15 +124,12 @@ const diffFileTargetQuery = (
   base?: string;
   head?: string;
   target?: string;
-  task?: string;
 } => {
   switch (target.kind) {
     case "worktree":
       return {};
     case "branch":
       return { target: target.target };
-    case "task":
-      return { task: target.branch, target: target.base };
     case "commit":
       return { commit: target.sha };
     case "range":

@@ -26,7 +26,6 @@ export function createChatsFunctions(d: ChatsDependencies): ChatsFunctions {
     const created = await d.sideEffects.create({
       ...settings,
       branch: place.branch,
-      ...(place.repoPath === undefined ? {} : { repoPath: place.repoPath }),
       ...(trimmedTitle !== undefined && trimmedTitle.length > 0
         ? { title: trimmedTitle }
         : {}),

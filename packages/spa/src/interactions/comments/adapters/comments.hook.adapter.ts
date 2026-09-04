@@ -222,7 +222,7 @@ export function useCommentsActions() {
       comment: ReviewComment
     ) => {
       // A GitHub comment is removed from the list its pull request is keyed
-      // under, a local one from the worktree's list. With no pull request in
+      // under, a local one from the working tree's list. With no pull request in
       // hand there is nothing to delete a GitHub comment from, so the logic
       // answers for it rather than a list being edited on a guess.
       const pull = comment.source === "github" ? selectedPull : null;

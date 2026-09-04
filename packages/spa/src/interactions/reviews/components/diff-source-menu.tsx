@@ -5,20 +5,18 @@
  * Both hang off the breadcrumb rather than sitting in a bar of their own,
  * because both are already answered there in words — "Local changes", "vs
  * master" — and a crumb that names the answer is the natural place to change
- * it. That is what makes local work, a worktree and a pull request one view
- * instead of three: the pane never changes, only the crumb does.
+ * it. That is what makes local work and a pull request one view instead of
+ * two: the pane never changes, only the crumb does.
  */
 import {
   IconArrowBarToRight,
   IconCheck,
   IconCloud,
-  IconDeviceLaptop,
   IconGitCommit,
   IconGitCompare,
   IconGitMerge,
   IconRefresh,
   IconSearch,
-  IconTrash,
 } from "@tabler/icons-react";
 import { useMemo, useRef, useState } from "react";
 import {
@@ -40,15 +38,10 @@ import {
 } from "../functions/reviews.functions";
 
 export const diffSourceIcon = (source: DiffSource) =>
-  source.kind === "local"
-    ? IconGitCommit
-    : source.kind === "worktree"
-      ? IconDeviceLaptop
-      : IconCloud;
+  source.kind === "local" ? IconGitCommit : IconCloud;
 
 const GROUP_LABEL: Readonly<Record<DiffSource["kind"], string>> = {
-  local: "Main worktree",
-  worktree: "Worktrees",
+  local: "This checkout",
   pull: "Pull requests",
 };
 
@@ -59,7 +52,7 @@ const GROUP_LABEL: Readonly<Record<DiffSource["kind"], string>> = {
  *
  * Reading it and going to work in it are different acts, and the row used to
  * carry only the first while a button out on the trail carried the second. One
- * of them is about a diff and the other is about a directory; putting both
+ * of them is about a diff and the other is about a checkout; putting both
  * under the thing they are both about is what let the trail lose the button.
  */
 const SourceItem = ({
@@ -68,7 +61,6 @@ const SourceItem = ({
   checkedOut,
   onSelect,
   onCheckout,
-  onDiscard,
 }: {
   source: DiffSource;
   current: boolean;
@@ -76,7 +68,6 @@ const SourceItem = ({
   checkedOut: boolean;
   onSelect: () => void;
   onCheckout: () => void;
-  onDiscard: () => void;
 }) => {
   const Icon = diffSourceIcon(source);
   const hint = diffSourceHint(source);
@@ -116,28 +107,15 @@ const SourceItem = ({
           <IconArrowBarToRight className="size-4 shrink-0 text-muted-foreground" />
           {checkedOut ? "Working here" : "Check out"}
         </DropdownMenuItem>
-        {/* Only a worktree can be given up. The checkout the project was opened
-            on is the project — there is no version of this app where getting
-            rid of it is one of the things on offer. */}
-        {source.kind === "worktree" && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive" onClick={onDiscard}>
-              <IconTrash className="size-4 shrink-0" />
-              Discard worktree
-            </DropdownMenuItem>
-          </>
-        )}
       </DropdownMenuSubContent>
     </DropdownMenuSub>
   );
 };
 
 /**
- * Grouped by kind rather than listed flat. The three are different in a way
- * that matters — one is on disk in front of you, one is running beside you, one
- * is on somebody's server — and a heading says so once instead of every row
- * having to carry it.
+ * Grouped by kind rather than listed flat. The two are different in a way that
+ * matters — one is on disk in front of you, one is on somebody's server — and a
+ * heading says so once instead of every row having to carry it.
  */
 export function DiffSourceItems({
   sources,
@@ -145,7 +123,6 @@ export function DiffSourceItems({
   checkedOut,
   onSelect,
   onCheckout,
-  onDiscard,
 }: {
   sources: ReadonlyArray<DiffSource>;
   current: string;
@@ -153,13 +130,8 @@ export function DiffSourceItems({
   checkedOut: string | null;
   onSelect: (source: DiffSource) => void;
   onCheckout: (source: DiffSource) => void;
-  onDiscard: (source: DiffSource) => void;
 }) {
-  const kinds: ReadonlyArray<DiffSource["kind"]> = [
-    "local",
-    "worktree",
-    "pull",
-  ];
+  const kinds: ReadonlyArray<DiffSource["kind"]> = ["local", "pull"];
   return (
     <>
       {kinds
@@ -180,7 +152,6 @@ export function DiffSourceItems({
                 checkedOut={diffSourceKey(source) === checkedOut}
                 onSelect={() => onSelect(source)}
                 onCheckout={() => onCheckout(source)}
-                onDiscard={() => onDiscard(source)}
               />
             ))}
           </DropdownMenuGroup>
@@ -233,10 +204,10 @@ export function MenuSearch({
  * the source list beside it opens into the two things a source can be. There is
  * no separate merge button because there was never a separate list.
  *
- * `own` is the answer that needs no choosing — the branch a worktree lands on,
- * or the one this checkout is aimed at — so it is marked rather than repeated,
- * and choosing it means "stop comparing" rather than "compare with that".
- * `null` from `onSelect` says exactly that.
+ * `own` is the answer that needs no choosing — the branch this checkout is
+ * aimed at — so it is marked rather than repeated, and choosing it means "stop
+ * comparing" rather than "compare with that". `null` from `onSelect` says
+ * exactly that.
  */
 export function CompareItems({
   branches,
@@ -255,12 +226,11 @@ export function CompareItems({
   exclude: string | null;
   onSelect: (branch: string | null) => void;
   /**
-   * Bring that branch into the work. Offered wherever the work has a worktree
-   * to bring it into — including before there are any commits, since falling
-   * behind starts the moment somebody else pushes.
+   * Bring that branch into the work — including before there are any commits,
+   * since falling behind starts the moment somebody else pushes.
    */
   onUpdate?: (branch: string) => void;
-  /** Omitted where there is nothing to land — no commits, or not a worktree. */
+  /** Omitted where there is nothing to land. */
   onMerge?: (branch: string) => void;
 }) {
   const [query, setQuery] = useState("");
