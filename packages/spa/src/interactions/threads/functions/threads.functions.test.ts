@@ -6,11 +6,11 @@ describe("threads functions", () => {
   it("create passes the agent, trims the title, and drops it when blank", async () => {
     const { deps, calls } = mockThreadsDependencies();
     const fns = createThreadsFunctions(deps);
-    await fns.create("terminal", "  ", null, "main");
-    await fns.create("claude", "  Build  ", "T-1", "feat");
+    await fns.create("terminal", "  ", "main");
+    await fns.create("claude", "  Build  ", "feat");
     expect(calls.create).toEqual([
-      { title: undefined, agent: "terminal", branch: "main", taskKey: null },
-      { title: "Build", agent: "claude", branch: "feat", taskKey: "T-1" },
+      { title: undefined, agent: "terminal", branch: "main" },
+      { title: "Build", agent: "claude", branch: "feat" },
     ]);
   });
 
@@ -22,12 +22,12 @@ describe("threads functions", () => {
     expect(calls.run).toEqual([{ id: "t-1", command: "ls -la" }]);
   });
 
-  it("linkTask keeps the current title and edits only the task link", async () => {
+  it("setBranch keeps the current title and edits only the branch", async () => {
     const { deps, calls } = mockThreadsDependencies();
     const fns = createThreadsFunctions(deps);
-    await fns.linkTask("t-1", "Build", "T-2");
+    await fns.setBranch("t-1", "Build", "feat");
     expect(calls.rename).toEqual([
-      { id: "t-1", input: { title: "Build", taskKey: "T-2" } },
+      { id: "t-1", input: { title: "Build", branch: "feat" } },
     ]);
   });
 });

@@ -76,11 +76,11 @@ import { isChatUnread } from "@byconvo/core/chats";
 import { openSearch } from "@/interactions/search/adapters/search.store";
 import { useThinkingChatIds } from "@/interactions/chats/adapters/thinking-chats.hook.adapter";
 import { isDesktop } from "@/lib/desktop";
+import { isCodeSurface } from "@/lib/shell-route";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import { useRecentChats, useWorkspace } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
-import { activeWorkMode } from "@/lib/work-mode";
 
 const NO_DRAG = "[-webkit-app-region:no-drag]";
 
@@ -315,8 +315,7 @@ export function WindowBar() {
    * thread you have open, not a count of everything in the inbox.
    */
   const prefs = useUiPrefs();
-  const inCodeMode =
-    activeWorkMode(location.pathname, prefs.workMode) === "code";
+  const inCodeMode = isCodeSurface(location.pathname);
   const workspace = useWorkspace();
   const pickerOpen = useProjectPickerOpen();
   // Both panes are there to be read against something else the window is

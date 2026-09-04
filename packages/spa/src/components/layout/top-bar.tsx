@@ -1,6 +1,4 @@
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
-// Only code mode is offered for now, so the mode chip stays parked.
-// import { ModeSelector } from "@/components/layout/mode-selector";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
 import { SearchMenu } from "@/interactions/search/components/search-menu";
@@ -54,8 +52,6 @@ export function TopBar(props: TopBarProps) {
 
   return (
     <header className="flex h-9 shrink-0 items-center gap-2 px-2">
-      {/* <ModeSelector /> */}
-
       {/* Project chip — opens the recents + folder-browser dropdown */}
       <ProjectPicker
         workspace={props.workspace}

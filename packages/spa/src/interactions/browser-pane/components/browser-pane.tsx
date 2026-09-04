@@ -62,11 +62,11 @@ import {
   useVisualComments,
 } from "@/interactions/visual-comments/adapters/visual-comments.hook.adapter";
 import { useChatModels, useRecentChats, useRepo } from "@/lib/queries";
+import { isCodeSurface } from "@/lib/shell-route";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { activeWorkMode } from "@/lib/work-mode";
 
 const CONSOLE_LEVELS = ["verbose", "info", "warning", "error"] as const;
 
@@ -129,7 +129,7 @@ export function BrowserPane() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const inCodeMode = activeWorkMode(pathname, prefs.workMode) === "code";
+  const inCodeMode = isCodeSurface(pathname);
 
   const navigate = useNavigate();
   const comments = useVisualComments();

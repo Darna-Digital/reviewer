@@ -24,7 +24,6 @@ const summarize = (thread: Thread) => ({
   title: thread.title,
   agent: thread.agent,
   branch: thread.branch,
-  taskKey: thread.taskKey,
   createdAt: thread.createdAt,
   updatedAt: thread.updatedAt,
   entryCount: thread.entries.length,
@@ -81,7 +80,6 @@ export const makeSqliteThreadsRepository = Effect.gen(function* () {
             : agentDefaultTitle(input.agent),
         agent: input.agent,
         branch: input.branch,
-        taskKey: input.taskKey,
         initialPrompt: input.initialPrompt,
         agentSessionId: null,
         createdAt: now,
@@ -100,7 +98,6 @@ export const makeSqliteThreadsRepository = Effect.gen(function* () {
         title:
           input.title.trim().length > 0 ? input.title.trim() : existing.title,
         branch: input.branch === undefined ? existing.branch : input.branch,
-        taskKey: input.taskKey === undefined ? existing.taskKey : input.taskKey,
         updatedAt: new Date().toISOString(),
       };
       putThread(repoPath, updated);

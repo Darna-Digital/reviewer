@@ -1,5 +1,5 @@
 /**
- * What acting on a window tab does, bound to the router and the mode.
+ * What acting on a window tab does, bound to the router.
  *
  * The strip is not the only place tabs are picked from — the overview grid does
  * the same three things — and each of them is a transition plus the navigation
@@ -12,14 +12,12 @@ import {
   NEW_SESSION,
   setChatMode,
 } from "@/interactions/chats/adapters/chat-mode.store";
-import { setUiPrefs, type WorkMode } from "@/lib/ui-prefs";
 import {
   closeTab,
   NEW_SESSION_HREF,
   NEW_SESSION_TITLE,
   openTab,
   selectTab,
-  workModeOf,
 } from "../functions/window-tabs.functions";
 import type { WindowTab } from "../interfaces/window-tabs.interfaces";
 import { nextTabId, updateWindowTabs } from "./window-tabs.store";
@@ -28,9 +26,9 @@ type RouterHandle = ReturnType<typeof useRouter>;
 
 export interface WindowTabActions {
   /**
-   * Take the window to `tab`, framing the app in the mode it belongs to.
-   * Settles once the page is actually there, so a surface that is covering the
-   * window while it navigates knows when it is safe to get out of the way.
+   * Take the window to `tab`. Settles once the page is actually there, so a
+   * surface that is covering the window while it navigates knows when it is
+   * safe to get out of the way.
    */
   readonly select: (tab: WindowTab) => Promise<void>;
   /**
@@ -38,7 +36,7 @@ export interface WindowTabActions {
    * picks sections, and which tab ends up holding one is the strip's own
    * business — see `trackLocation`.
    */
-  readonly visit: (href: string, mode: WorkMode) => Promise<void>;
+  readonly visit: (href: string) => Promise<void>;
   readonly close: (id: string) => void;
   /** Mint a session tab and go to its composer. */
   readonly openSession: () => Promise<void>;
@@ -97,11 +95,6 @@ function makeWindowTabActions(router: RouterHandle): WindowTabActions {
         .catch(() => {});
     },
     select: (tab) => {
-      // Which mode the app is framed in follows the pinned tab you pick, so the
-      // surfaces both modes share — settings, the inbox — still know which one
-      // you came from.
-      const mode = workModeOf(tab.kind);
-      if (mode !== null) setUiPrefs({ workMode: mode });
       // Against the location rather than against which tab is active: Sessions
       // holds the window while you read a conversation without giving up its
       // own href, so picking it there is a click that has somewhere to go.
@@ -109,10 +102,7 @@ function makeWindowTabActions(router: RouterHandle): WindowTabActions {
       updateWindowTabs((state) => selectTab(state, tab.id));
       return held ? Promise.resolve() : go(tab.href);
     },
-    visit: (href, mode) => {
-      setUiPrefs({ workMode: mode });
-      return go(href);
-    },
+    visit: (href) => go(href),
     close: (id) => {
       updateWindowTabs((state) => {
         const next = closeTab(state, id);

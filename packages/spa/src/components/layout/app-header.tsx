@@ -4,8 +4,8 @@
  * There used to be two: the code shell's `TopBar`, taking twenty-odd props
  * drilled down from the shell that owned them, and the workspace shell's own
  * `<header>` rendering nearly the same controls from its own queries. Between
- * them they covered the same three states — a project, a session, a
- * collaboration workspace — and neither could be used by the other.
+ * them they covered the same states — a project, a session, the collaboration
+ * prototype — and neither could be used by the other.
  *
  * This one reads what it shows: the route says which state it is in, and the
  * queries and preferences say what to put in it. Nothing above it has to hold
@@ -75,18 +75,6 @@ export function AppHeader({ route }: { route: ShellRoute }) {
       </header>
     );
   }
-
-  /**
-   * Collaboration keeps nothing in the header at all.
-   *
-   * Every page in the mode names itself — a project's own page is the index of
-   * itself, and the trail above each title leads back out — so a bar repeating
-   * that above the column would be saying twice what the column already says,
-   * and would be the one horizontal rule cutting across a design whose whole
-   * argument is a page standing on open ground. What is genuinely global here
-   * is the hovering bar, and it is at the other edge.
-   */
-  if (route.kind === "collaboration") return null;
 
   // The collaboration prototype drops the git chrome entirely — its own sidebar
   // carries what the branch switcher would have said.

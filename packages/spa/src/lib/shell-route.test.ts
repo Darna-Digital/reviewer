@@ -3,6 +3,7 @@ import {
   dockPage,
   dockPages,
   isBrowsingCode,
+  isCodeSurface,
   reviewHref,
   reviewSourceOf,
   shellRoute,
@@ -11,57 +12,57 @@ import {
 
 describe("shellRoute", () => {
   it("reads a cloud run as a session, like a local conversation", () => {
-    expect(shellRoute("/modes/agent-session/cloud/run-1", "code")).toEqual({
+    expect(shellRoute("/modes/agent-session/cloud/run-1")).toEqual({
       kind: "session",
       composing: false,
       solo: false,
     });
-    expect(
-      shellRoute("/modes/agent-session/cloud/run-1", "code", false, true)
-    ).toEqual({ kind: "session", composing: false, solo: true });
+    expect(shellRoute("/modes/agent-session/cloud/run-1", false, true)).toEqual(
+      { kind: "session", composing: false, solo: true }
+    );
   });
 
   it("reads the two code modes off the path", () => {
-    expect(shellRoute("/modes/code/review", "code")).toEqual({
+    expect(shellRoute("/modes/code/review")).toEqual({
       kind: "code",
       mode: "review",
     });
-    expect(shellRoute("/modes/code/browse", "code")).toEqual({
+    expect(shellRoute("/modes/code/browse")).toEqual({
       kind: "code",
       mode: "browse",
     });
-    expect(shellRoute("/modes/code/browse/commit/abc123", "code")).toEqual({
+    expect(shellRoute("/modes/code/browse/commit/abc123")).toEqual({
       kind: "code",
       mode: "browse",
     });
-    expect(shellRoute("/modes/code/review/pull/12", "code")).toEqual({
+    expect(shellRoute("/modes/code/review/pull/12")).toEqual({
       kind: "code",
       mode: "review",
     });
   });
 
   it("treats the workspace pages under /modes/code as workspace, not diff", () => {
-    for (const page of ["docs", "tasks", "reviews"]) {
-      expect(shellRoute(`/modes/code/${page}`, "code")).toEqual({
+    for (const page of ["reviews"]) {
+      expect(shellRoute(`/modes/code/${page}`)).toEqual({
         kind: "workspace",
       });
     }
   });
 
   it("names the dock surface a dock page stands for", () => {
-    expect(shellRoute("/modes/code/branches", "code")).toEqual({
+    expect(shellRoute("/modes/code/branches")).toEqual({
       kind: "dock",
       tab: "branches",
     });
-    expect(shellRoute("/modes/code/history", "code")).toEqual({
+    expect(shellRoute("/modes/code/history")).toEqual({
       kind: "dock",
       tab: "history",
     });
-    expect(shellRoute("/modes/code/local-dev", "code")).toEqual({
+    expect(shellRoute("/modes/code/local-dev")).toEqual({
       kind: "dock",
       tab: "services",
     });
-    expect(shellRoute("/modes/code/threads", "code")).toEqual({
+    expect(shellRoute("/modes/code/threads")).toEqual({
       kind: "dock",
       tab: "threads",
     });
@@ -70,62 +71,67 @@ describe("shellRoute", () => {
   it("keeps a dock page's card, tab and trail on one name", () => {
     for (const page of dockPages) {
       expect(dockPage(page.tab)).toEqual(page);
-      expect(shellRoute(page.href, "code")).toEqual({
+      expect(shellRoute(page.href)).toEqual({
         kind: "dock",
         tab: page.tab,
       });
     }
   });
 
-  it("recognises sessions, collaboration and settings", () => {
-    expect(shellRoute("/modes/agent-session", "code")).toEqual({
+  it("recognises sessions, the prototype and settings", () => {
+    expect(shellRoute("/modes/agent-session")).toEqual({
       kind: "session",
       composing: false,
       solo: false,
     });
-    expect(shellRoute("/modes/agent-session", "code", true)).toEqual({
+    expect(shellRoute("/modes/agent-session", true)).toEqual({
       kind: "session",
       composing: true,
       solo: false,
     });
-    expect(shellRoute("/modes/agent-session/abc", "code")).toEqual({
+    expect(shellRoute("/modes/agent-session/abc")).toEqual({
       kind: "session",
       composing: false,
       solo: false,
     });
     // The same conversation, on a tab of its own: the shell drops the rail,
     // whose every button acts on a list that is not beside it there.
-    expect(shellRoute("/modes/agent-session/abc", "code", false, true)).toEqual(
-      { kind: "session", composing: false, solo: true }
-    );
-    expect(shellRoute("/modes/collaboration", "code")).toEqual({
-      kind: "collaboration",
+    expect(shellRoute("/modes/agent-session/abc", false, true)).toEqual({
+      kind: "session",
+      composing: false,
+      solo: true,
     });
-    expect(shellRoute("/modes/collaboration/projects/p1", "code")).toEqual({
-      kind: "collaboration",
-    });
-    // The prototype reads as itself rather than as the mode it was the first
-    // draft of — the shell puts different chrome around each.
-    expect(shellRoute("/modes/experimentation/collaboration", "code")).toEqual({
+    expect(shellRoute("/modes/experimentation/collaboration")).toEqual({
       kind: "experimentation",
     });
-    expect(
-      shellRoute("/modes/experimentation/collaboration/inbox", "code")
-    ).toEqual({ kind: "experimentation" });
-    expect(shellRoute("/settings", "code")).toEqual({ kind: "settings" });
+    expect(shellRoute("/modes/experimentation/collaboration/inbox")).toEqual({
+      kind: "experimentation",
+    });
+    expect(shellRoute("/settings")).toEqual({ kind: "settings" });
   });
 
-  it("falls back to the remembered mode when the path does not say", () => {
-    expect(shellRoute("/", "collaboration")).toEqual({ kind: "collaboration" });
-    expect(shellRoute("/", "code")).toEqual({ kind: "code", mode: "review" });
+  it("falls back to the diff view when the path does not say", () => {
+    expect(shellRoute("/")).toEqual({ kind: "code", mode: "review" });
   });
 
   it("does not mistake a path that merely starts with a page name", () => {
     // `/modes/code/browse` is the diff; nothing else should be read as a page.
-    expect(shellRoute("/modes/code/tasksomething", "code")).toEqual({
+    expect(shellRoute("/modes/code/reviewsomething")).toEqual({
       kind: "code",
       mode: "review",
     });
+  });
+});
+
+describe("isCodeSurface", () => {
+  it("is off only on the collaboration prototype", () => {
+    expect(isCodeSurface("/modes/code/review")).toBe(true);
+    expect(isCodeSurface("/modes/agent-session")).toBe(true);
+    expect(isCodeSurface("/settings")).toBe(true);
+    expect(isCodeSurface("/modes/experimentation/collaboration")).toBe(false);
+    expect(isCodeSurface("/modes/experimentation/collaboration/inbox")).toBe(
+      false
+    );
   });
 });
 
@@ -137,7 +143,6 @@ describe("showsGitChrome", () => {
     expect(
       showsGitChrome({ kind: "session", composing: false, solo: false })
     ).toBe(false);
-    expect(showsGitChrome({ kind: "collaboration" })).toBe(false);
     expect(showsGitChrome({ kind: "settings" })).toBe(false);
   });
 });
@@ -189,7 +194,7 @@ describe("isBrowsingCode", () => {
 
   it("rejects everything outside code mode", () => {
     expect(isBrowsingCode("/modes/agent-session/c1")).toBe(false);
-    expect(isBrowsingCode("/modes/collaboration")).toBe(false);
+    expect(isBrowsingCode("/modes/agent-session")).toBe(false);
     expect(isBrowsingCode("/settings")).toBe(false);
   });
 

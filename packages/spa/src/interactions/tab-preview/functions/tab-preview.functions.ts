@@ -27,8 +27,7 @@ export const PREVIEW_ROOT_SELECTOR = ".app-canvas";
 /**
  * How long the panel takes to slide in, and the page under it to be pushed.
  *
- * The window's slide rather than the launchpad's: collaboration's drawer comes
- * out of the opposite edge on the same one. See `panel-slide`.
+ * The window's slide rather than the launchpad's own. See `panel-slide`.
  */
 export const OVERVIEW_TRANSITION_MS = PANEL_SLIDE_MS;
 

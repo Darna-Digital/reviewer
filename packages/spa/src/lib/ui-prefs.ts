@@ -14,8 +14,6 @@ export type CommitAgent = "claude" | "opencode" | "codex" | "cursor";
 /** Active tab in the shared bottom dock (git + find + services + threads). */
 export type BottomTab =
   "branches" | "history" | "find" | "services" | "threads";
-/** Which way of working the app is framed around (UI only for now). */
-export type WorkMode = "code" | "collaboration";
 
 export interface UiPrefs {
   /** The user's choice; "system" follows the OS. */
@@ -23,15 +21,13 @@ export interface UiPrefs {
   /** The concrete theme to render (system resolved against the OS). */
   resolvedTheme: Theme;
   diffStyle: DiffStyle;
-  /** The selected mode in the top bar's mode selector. */
-  workMode: WorkMode;
   connectors: boolean;
   /**
    * Whether the window frame lets the desktop through. Native shell only — a
    * browser tab has nothing behind it to show.
    */
   translucency: boolean;
-  /** Whether the shell's left sidebar (file tree / collaboration nav) shows. */
+  /** Whether the shell's left sidebar (the file tree) shows. */
   sidebarVisible: boolean;
   /**
    * Modal editing in the code view: Vim motions and operators, a block caret,
@@ -130,7 +126,6 @@ const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
 const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   theme: "system",
   diffStyle: "split",
-  workMode: "code",
   connectors: true,
   translucency: true,
   sidebarVisible: true,
@@ -195,7 +190,6 @@ function persist() {
     const {
       theme,
       diffStyle,
-      workMode,
       connectors,
       translucency,
       sidebarVisible,
@@ -231,7 +225,6 @@ function persist() {
       JSON.stringify({
         theme,
         diffStyle,
-        workMode,
         connectors,
         translucency,
         sidebarVisible,

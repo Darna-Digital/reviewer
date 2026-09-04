@@ -6,7 +6,6 @@ const thread = (over: Partial<Thread> = {}): Thread => ({
   title: "New session",
   agent: "terminal",
   branch: "main",
-  taskKey: null,
   initialPrompt: "",
   agentSessionId: null,
   createdAt: "2026-01-01T00:00:00.000Z",
@@ -28,16 +27,9 @@ const entry = (over: Partial<ThreadEntry> = {}): ThreadEntry => ({
 /** Records calls so tests can assert how the functions orchestrate side effects. */
 export function mockThreadsDependencies() {
   const calls = {
-    create: [] as Array<{
-      title?: string;
-      agent: AgentKind;
-      taskKey?: string | null;
-    }>,
+    create: [] as Array<{ title?: string; agent: AgentKind }>,
     run: [] as Array<{ id: string; command: string }>,
-    rename: [] as Array<{
-      id: string;
-      input: { title: string; taskKey?: string | null };
-    }>,
+    rename: [] as Array<{ id: string; input: { title: string } }>,
     remove: [] as Array<string>,
   };
 
@@ -49,7 +41,6 @@ export function mockThreadsDependencies() {
         return thread({
           title: input.title ?? "New session",
           agent: input.agent,
-          taskKey: input.taskKey ?? null,
         });
       },
       run: async (id, command) => {
@@ -58,11 +49,7 @@ export function mockThreadsDependencies() {
       },
       rename: async (id, input) => {
         calls.rename.push({ id, input });
-        return thread({
-          id,
-          title: input.title,
-          taskKey: input.taskKey ?? null,
-        });
+        return thread({ id, title: input.title });
       },
       remove: async (id) => {
         calls.remove.push(id);

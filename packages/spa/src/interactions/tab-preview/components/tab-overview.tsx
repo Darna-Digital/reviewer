@@ -79,7 +79,7 @@ import {
 } from "../functions/tab-preview.functions";
 import { TabPreviewFrame } from "./tab-preview-frame";
 
-/** The window's own curve — collaboration's drawer travels on it too. */
+/** The window's own curve. */
 const EASE = PANEL_EASE;
 
 /** The chord that does what the handle does — see `window-bar.shortcuts`. */
@@ -293,8 +293,7 @@ export function TabOverview() {
       .catch(() => {})
       .finally(closeTabOverview);
   };
-  const pick = (section: LaunchpadSection) =>
-    cover(visit(section.href, section.mode));
+  const pick = (section: LaunchpadSection) => cover(visit(section.href));
 
   /**
    * What the search box does with a return: the first card left in the grid,

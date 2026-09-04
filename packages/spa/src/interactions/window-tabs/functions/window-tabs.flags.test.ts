@@ -1,18 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import type { WindowTab } from "../interfaces/window-tabs.interfaces";
 import {
-  COLLABORATION_TAB_ID,
   initialWindowTabs,
   PROJECT_TAB_ID,
   SESSIONS_TAB_ID,
   stripTabs,
-  trackLocation,
   withPinnedTabs,
 } from "./window-tabs.functions";
 
 vi.mock("@byconvo/feature-flags", () => ({
-  isFeatureEnabled: (flag: string) =>
-    flag !== "collaboration-button" && flag !== "sessions-button",
+  isFeatureEnabled: (flag: string) => flag !== "sessions-button",
 }));
 
 const session: WindowTab = {
@@ -30,12 +27,6 @@ const saved: ReadonlyArray<WindowTab> = [
     kind: "project",
   },
   {
-    id: COLLABORATION_TAB_ID,
-    href: "/modes/collaboration",
-    title: "Collaboration",
-    kind: "collaboration",
-  },
-  {
     id: SESSIONS_TAB_ID,
     href: "/modes/agent-session",
     title: "Sessions",
@@ -44,23 +35,8 @@ const saved: ReadonlyArray<WindowTab> = [
   session,
 ];
 
-describe("a switched-off collaboration button", () => {
-  it("keeps its tab out of the strip a window opens with", () => {
-    expect(initialWindowTabs().tabs.map((t) => t.id)).toEqual([
-      PROJECT_TAB_ID,
-      SESSIONS_TAB_ID,
-    ]);
-  });
-
-  it("drops its tab from a strip saved while it was on", () => {
-    expect(withPinnedTabs(saved).map((t) => t.id)).toEqual([
-      PROJECT_TAB_ID,
-      SESSIONS_TAB_ID,
-      "a",
-    ]);
-  });
-
-  it("hands Code back its own location when a saved strip left it there", () => {
+describe("a strip saved before collaboration was taken out", () => {
+  it("hands Code back its own location when the saved one has gone", () => {
     const [code] = withPinnedTabs([
       {
         id: PROJECT_TAB_ID,
@@ -73,17 +49,6 @@ describe("a switched-off collaboration button", () => {
       href: "/modes/code/review",
       title: "Review",
     });
-  });
-
-  it("leaves the strip alone when its route is reached by URL", () => {
-    const before = initialWindowTabs();
-    expect(
-      trackLocation(
-        before,
-        "/modes/collaboration/projects/p1",
-        "/modes/collaboration/projects/p1"
-      )
-    ).toBe(before);
   });
 });
 

@@ -27,12 +27,8 @@ import { ChatsLive } from "./layers/chats/chats.layer.live.ts";
 import { handleCloudEvents } from "./layers/cloud/cloud-events-proxy.ts";
 import { CloudHandler } from "./layers/cloud/cloud.handler.ts";
 import { CloudLive } from "./layers/cloud/cloud.layer.live.ts";
-import { CollabHandler } from "./layers/collab/collab.handler.ts";
-import { CollabLive } from "./layers/collab/collab.layer.live.ts";
 import { CommentsHandler } from "./layers/comments/comments.handler.ts";
 import { CommentsLive } from "./layers/comments/comments.layer.live.ts";
-import { DocsHandler } from "./layers/docs/docs.handler.ts";
-import { DocsLive } from "./layers/docs/docs.layer.live.ts";
 import { FormattingHandler } from "./layers/formatting/formatting.handler.ts";
 import { FormattingLive } from "./layers/formatting/formatting.layer.live.ts";
 import { GitMessageHandler } from "./layers/git-message/git-message.handler.ts";
@@ -41,8 +37,6 @@ import { GitHubHandler } from "./layers/github/github.handler.ts";
 import { GitHubLive } from "./layers/github/github.layer.live.ts";
 import { LanguageHandler } from "./layers/language/language.handler.ts";
 import { LanguageLive } from "./layers/language/language.layer.live.ts";
-import { TasksHandler } from "./layers/tasks/tasks.handler.ts";
-import { TasksLive } from "./layers/tasks/tasks.layer.live.ts";
 import { LocalDevHandler } from "./layers/local-dev/local-dev.handler.ts";
 import { LocalDevLive } from "./layers/local-dev/local-dev.layer.live.ts";
 import { DevRuntimeLive } from "./layers/local-dev/local-dev.runtime.ts";
@@ -79,8 +73,7 @@ const port = Number(process.env["BYCONVO_PORT"] ?? 41811);
 /**
  * The API router with every feature controller attached. The OpenAPI document
  * (consumed by the SPA's typesafe `openapi-fetch` client) is served at
- * /api/openapi.json, and a Scalar API reference at /api/reference (the /api/docs
- * path belongs to the Docs feature).
+ * /api/openapi.json, and a Scalar API reference at /api/reference.
  */
 const ApiLive = Layer.mergeAll(
   HttpApiBuilder.layer(Api, { openapiPath: "/api/openapi.json" }),
@@ -94,15 +87,12 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(GitMessageHandler),
   Layer.provide(ThreadsHandler),
   Layer.provide(ChatsHandler),
-  Layer.provide(DocsHandler),
   Layer.provide(LanguageHandler),
   Layer.provide(FormattingHandler),
-  Layer.provide(TasksHandler),
   Layer.provide(LocalDevHandler),
   Layer.provide(BrowserHandler),
   Layer.provide(PlansHandler),
   Layer.provide(VisualCommentsHandler),
-  Layer.provide(CollabHandler),
   Layer.provide(CloudHandler)
 );
 
@@ -117,16 +107,13 @@ const FeatureServices = Layer.mergeAll(
   GitMessageLive,
   ThreadsLive,
   ChatsLive,
-  DocsLive,
   LanguageLive,
   FormattingLive,
-  TasksLive,
   LocalDevLive,
   DevRuntimeLive,
   BrowserRuntimeLive,
   PlansLive,
   VisualCommentsLive,
-  CollabLive,
   CloudLive
 );
 
