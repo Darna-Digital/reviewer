@@ -65,14 +65,8 @@ export const makeWorkspaceChanges = Effect.gen(function* () {
       Effect.catch(() => Effect.succeed(null))
     );
 
-  const collect: GitMessageChangesShape["collect"] = (paths, at) =>
+  const collect: GitMessageChangesShape["collect"] = (paths) =>
     Effect.gen(function* () {
-      // A worktree is one tree and answers for itself: the multi-root split
-      // below is about a project holding several checkouts, which is a
-      // different question from which checkout this change is in.
-      if (at !== undefined && at !== null && at.length > 0) {
-        return yield* collectDraftChanges(yield* gitAt(at), paths);
-      }
       const repos = yield* roots;
       if (repos.length < 2) return yield* collectDraftChanges(selected, paths);
       // No paths means "everything", which spans every root; a selection is

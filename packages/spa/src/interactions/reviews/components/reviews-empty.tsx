@@ -13,7 +13,7 @@ export function NoReviews() {
     <ReviewsEmpty
       icon={IconGitPullRequest}
       title="Nothing to review"
-      body="Work started in a worktree of its own shows up here, next to any pull requests opened on this project."
+      body="Pull requests opened on this project show up here, ready to read without leaving the app."
     />
   );
 }
@@ -23,7 +23,7 @@ export function NoReviewRemote() {
     <ReviewsEmpty
       icon={IconPlugConnectedX}
       title="No GitHub remote"
-      body="This project is not on GitHub, so nothing arrives from the cloud. Work started in a worktree of its own still shows up here."
+      body="This project is not on GitHub, so no pull requests arrive from the cloud. The changes in this checkout are still read here."
     />
   );
 }

@@ -27,12 +27,7 @@ export const assignToChat = async (
   input: {
     readonly target: AssignTarget;
     readonly catalog: ChatModelCatalog | undefined;
-    /**
-     * Where the agent is to work. Comments left on a worktree's diff are about
-     * that worktree, so the chat has to start *in* it — naming only the branch
-     * would start the agent in whatever checkout the window happens to be on
-     * and point it at the wrong copy of the files.
-     */
+    /** Where the agent is to work — the branch the comments are about. */
     readonly place: ChatPlace;
     readonly title: string;
     readonly prompt: string;

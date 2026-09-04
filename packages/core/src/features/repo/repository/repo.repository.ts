@@ -16,7 +16,6 @@ import type {
   RepoStatus,
   LogQuery,
   SearchQuery,
-  Worktree,
 } from "../schema/repo.schema.ts";
 
 export interface RepoRepo {
@@ -28,19 +27,6 @@ export interface RepoRepo {
     ReadonlyArray<RemoteBranchInfo>,
     GitFailure
   >;
-  readonly worktrees: Effect.Effect<ReadonlyArray<Worktree>, GitFailure>;
-  /**
-   * Open `branch` in a checkout of its own, creating the branch off `target`
-   * when it does not exist yet. Answers with the checkout it made.
-   */
-  readonly addWorktree: (
-    branch: string,
-    target: string | null
-  ) => Effect.Effect<Worktree, GitFailure>;
-  readonly removeWorktree: (
-    path: string,
-    force: boolean
-  ) => Effect.Effect<void, GitFailure>;
   readonly log: (
     query: LogQuery
   ) => Effect.Effect<ReadonlyArray<CommitInfo>, GitFailure>;

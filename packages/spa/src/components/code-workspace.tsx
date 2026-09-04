@@ -51,11 +51,7 @@ import type { RevealTarget } from "@/interactions/language/components/use-reveal
 import { ImageView, isImagePath } from "@/components/editor/image-view";
 import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
-import {
-  discardWarning,
-  mergeWarning,
-} from "@/interactions/reviews/components/worktree-actions";
-import { useTaskActions } from "@/interactions/reviews/adapters/reviews.hook.adapter";
+import { targetOf } from "@/interactions/branch-targets/functions/branch-targets.functions";
 import {
   diffSourceKey,
   diffSourceLabel,
@@ -74,12 +70,7 @@ import type { Crumb } from "@/components/layout/breadcrumbs";
 import { EmptyPane } from "@/components/layout/empty-pane";
 import { NoPullRequests, NoReviewRemote } from "@/components/git/review-empty";
 import { PathBar } from "@/components/layout/path-bar";
-import {
-  REVIEW_HREF,
-  REVIEWS_HREF,
-  reviewHref,
-  reviewSourceOf,
-} from "@/lib/shell-route";
+import { REVIEW_HREF, reviewHref, reviewSourceOf } from "@/lib/shell-route";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
@@ -152,11 +143,9 @@ import {
   usePulls,
   useBranchTargets,
   useBranches,
-  useLocalTasks,
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
-import { targetOf } from "@/interactions/worktrees/functions/worktrees.functions";
 import {
   resetHistoryFilters,
   setHistoryQuery,
@@ -174,7 +163,7 @@ type Search = {
   line?: number;
 };
 
-// Target key under which worktree/browse comments are stored, so a comment left
+// Target key under which working-tree/browse comments are stored, so a comment left
 // while browsing a file shows up again in commit mode.
 const WORKTREE_KEY = diffTargetKey({ kind: "worktree" });
 
@@ -223,7 +212,7 @@ export function CodeWorkspace() {
   const chats = useRecentChats();
   const files = useFiles();
   const localComments = useComments();
-  // Files carrying a local worktree comment (left here or while browsing). Commit
+  // Files carrying a local working-tree comment (left here or while browsing). Commit
   // mode surfaces these in the tree even when the file has no git changes.
   const commentedPaths = useMemo(
     () => [
@@ -323,24 +312,10 @@ export function CodeWorkspace() {
 
   /**
    * What the local changes are read against. Aiming a branch is recorded once
-   * and meant to hold: a task opened in a worktree of its own already said what
-   * it is for, so arriving at its changes should not ask again. The URL still
-   * wins when it says anything — including the empty string, which is how the
-   * trail drops back to what is merely uncommitted.
+   * and meant to hold, so arriving at its changes should not ask again. The URL
+   * still wins when it says anything — including the empty string, which is how
+   * the trail drops back to what is merely uncommitted.
    */
-  const worktrees = useLocalTasks();
-  const worktreeActions = useTaskActions();
-  /** The worktree under review, when the route names one. */
-  const selectedWorktree = useMemo(
-    () =>
-      routeSource?.kind !== "worktree"
-        ? null
-        : ((worktrees.data ?? []).find(
-            (entry) => entry.branch === routeSource.branch
-          ) ?? null),
-    [routeSource, worktrees.data]
-  );
-
   const branches = useBranches();
   const branchTargets = useBranchTargets();
   const aim = targetOf(
@@ -352,11 +327,7 @@ export function CodeWorkspace() {
   const target: DiffTarget | null = diffFns.deriveTarget({
     mode,
     selectedPull,
-    selectedTask: selectedWorktree,
     browse,
-    // A task under review answers to the URL alone. The branch's own aim is
-    // about the changes in *this* checkout, and letting it reach across would
-    // read somebody else's task against whatever this window happens to be on.
     target: mode === "review" ? (search.target ?? null) : reading,
   });
   const targetKey = target === null ? "none" : diffTargetKey(target);
@@ -368,25 +339,16 @@ export function CodeWorkspace() {
    * crumb navigates, so the URL follows the choice instead of being the way the
    * choice has to be made.
    */
-  const sources = useMemo(
-    () => diffSources(pulls.data ?? [], worktrees.data ?? []),
-    [pulls.data, worktrees.data]
-  );
+  const sources = useMemo(() => diffSources(pulls.data ?? []), [pulls.data]);
   const source: DiffSource =
-    selectedWorktree !== null
-      ? { kind: "worktree", worktree: selectedWorktree }
-      : selectedPull !== null
-        ? { kind: "pull", pull: selectedPull }
-        : LOCAL_SOURCE;
+    selectedPull !== null ? { kind: "pull", pull: selectedPull } : LOCAL_SOURCE;
 
   const openSource = (next: DiffSource) =>
     void navigate({
       to: reviewHref(
         next.kind === "local"
           ? { kind: "local" }
-          : next.kind === "worktree"
-            ? { kind: "worktree", branch: next.worktree.branch }
-            : { kind: "pull", number: next.pull.number }
+          : { kind: "pull", number: next.pull.number }
       ),
       search: {},
     });
@@ -402,32 +364,17 @@ export function CodeWorkspace() {
   const comparable =
     source.kind === "pull"
       ? null
-      : source.kind === "worktree"
-        ? {
-            against: search.target ?? null,
-            own: source.worktree.base,
-            exclude: source.worktree.branch,
-            shown: search.target ?? source.worktree.base,
-          }
-        : {
-            against: reading === null || reading.length === 0 ? null : reading,
-            own: null,
-            exclude: repo.data?.currentBranch ?? null,
-            shown: reading === null || reading.length === 0 ? null : reading,
-          };
+      : {
+          against: reading === null || reading.length === 0 ? null : reading,
+          own: null,
+          exclude: repo.data?.currentBranch ?? null,
+          shown: reading === null || reading.length === 0 ? null : reading,
+        };
 
-  const compareAgainst = (branch: string | null) => {
-    if (source.kind === "worktree") {
-      void navigate({
-        to: reviewHref({ kind: "worktree", branch: source.worktree.branch }),
-        search: branch === null ? {} : { target: branch },
-      });
-      return;
-    }
+  const compareAgainst = (branch: string | null) =>
     // Empty, not absent: absent would only let the branch's own aim answer
     // again, and this is how you say you meant otherwise.
     void navigate({ to: REVIEW_HREF, search: { target: branch ?? "" } });
-  };
 
   const diff = useDiffText(target);
   // The uncommitted diff of every root at once, its paths named from the
@@ -515,89 +462,24 @@ export function CodeWorkspace() {
   /**
    * The tree behind a source, and going to work in it.
    *
-   * A worktree's is its own directory; the changes in front of you belong to
-   * the checkout the project was opened on, which is where this leads back to
-   * when the window is off following a worktree. A pull request has no tree
-   * here at all — nothing to check out until somebody fetches it.
+   * The changes in front of you belong to the checkout the project was opened
+   * on. A pull request has no tree here at all — nothing to check out until
+   * somebody fetches it.
    *
    * Reading a source and working in it are separate acts, so going there leaves
    * the diff where it is: the diff you were reading is why you went.
    */
-  const mainRoot = workspace.data?.currentRoot ?? null;
   const inTree = workspace.data?.current ?? null;
   const treeOf = (of: DiffSource): string | null =>
-    of.kind === "worktree"
-      ? of.worktree.path
-      : of.kind === "local"
-        ? mainRoot
-        : null;
+    of.kind === "local" ? inTree : null;
   const checkedOut = sources.find((entry) => treeOf(entry) === inTree) ?? null;
   const checkOut = (of: DiffSource) => {
     const path = treeOf(of);
     if (path !== null) void workspaceActions.followRepo(path, inTree);
   };
 
-  /**
-   * Give a worktree up. Offered from the row that names it rather than from a
-   * control on the trail, so it is only ever reachable while looking at the one
-   * it would remove.
-   */
-  const discardSource = (of: DiffSource) => {
-    if (of.kind !== "worktree") return;
-    const { worktree } = of;
-    if (!window.confirm(discardWarning(worktree))) return;
-    void worktreeActions
-      .discard(worktree.branch, worktree.ahead > 0)
-      .then((done) => {
-        // Reading something that has just stopped existing is a gap, so the
-        // window leaves — but only if it was that one being read.
-        if (done && selectedWorktree?.branch === worktree.branch) {
-          void navigate({ to: REVIEWS_HREF });
-        }
-      });
-  };
-
-  /**
-   * Landing the worktree's work on a branch.
-   *
-   * Offered from the same menu that says what the diff is read against, because
-   * the branch you read a change against is nearly always the branch you mean
-   * to put it on — so the choice is made once, on the row, rather than twice in
-   * two controls.
-   */
-  /**
-   * Bring a branch into the worktree. The way out of the one state that blocks
-   * a merge, offered on the same row the merge is, so being told "update it
-   * first" and doing so are the same gesture in the same place.
-   */
-  const updateFrom = (base: string) => {
-    if (selectedWorktree === null) return;
-    void worktreeActions.update(selectedWorktree.branch, base);
-  };
-
-  const mergeInto = (base: string) => {
-    if (selectedWorktree === null) return;
-    const warning = mergeWarning(selectedWorktree);
-    if (warning !== null && !window.confirm(warning)) return;
-    void worktreeActions.merge(selectedWorktree.branch, base).then((merged) => {
-      // What it was showing no longer exists, so the pane goes back to the
-      // list rather than pointing at a gap.
-      if (merged) void navigate({ to: REVIEWS_HREF });
-    });
-  };
-
-  /**
-   * Where the comments' agent is to work.
-   *
-   * The diff you are reading decides it, not the checkout the window is on: a
-   * note left on a worktree's diff is about the files in that worktree, and an
-   * agent started here would edit a different copy of them. A pull request has
-   * no checkout of its own, so it falls back to this one.
-   */
-  const assignPlace: ChatPlace =
-    selectedWorktree === null
-      ? { branch: repo.data?.currentBranch ?? "" }
-      : { branch: selectedWorktree.branch, repoPath: selectedWorktree.path };
+  /** Where the comments' agent is to work — the checkout you are standing in. */
+  const assignPlace: ChatPlace = { branch: repo.data?.currentBranch ?? "" };
 
   const assignReview = async (dest: AssignTarget) => {
     if (visibleComments.length === 0) return;
@@ -892,7 +774,7 @@ export function CodeWorkspace() {
     );
   };
 
-  // Local comments anchored to the file currently open in the viewer (worktree
+  // Local comments anchored to the file currently open in the viewer (working-tree
   // target — see CodeView). Threaded into the viewer so browse/commit comments
   // appear inline on the source.
   const fileComments = useMemo(
@@ -924,23 +806,15 @@ export function CodeWorkspace() {
     const openPath = viewing;
     const list: Crumb[] = [];
     if (mode === "commit" || mode === "review") {
-      // One trail for all three, because it is one view: the first crumb names
-      // what is on screen and carries every other thing it could be, so moving
-      // between your own changes, a task and a pull request is a menu rather
-      // than a mode.
+      // One trail for both, because it is one view: the first crumb names what
+      // is on screen and carries every other thing it could be, so moving
+      // between your own changes and a pull request is a menu rather than a
+      // mode.
       list.push({
         id: "diff-source",
         label: diffSourceLabel(source),
-        // Only a pull request's number. A worktree's destination is the next
-        // crumb along, and printing it here said the same branch name twice.
         hint: source.kind === "pull" ? `#${source.pull.number}` : undefined,
-        // A worktree wears no mark. Its label is a sentence taken from the
-        // prompt and already the longest thing on the row; a glyph in front of
-        // it says "runs on this machine", which the crumb beside it and the
-        // whole rest of the window have established already.
-        ...(source.kind === "worktree"
-          ? { title: `${source.worktree.subject} — ${source.worktree.branch}` }
-          : { icon: diffSourceIcon(source) }),
+        icon: diffSourceIcon(source),
         menu: () => (
           <DiffSourceItems
             sources={sources}
@@ -948,7 +822,6 @@ export function CodeWorkspace() {
             checkedOut={checkedOut === null ? null : diffSourceKey(checkedOut)}
             onSelect={openSource}
             onCheckout={checkOut}
-            onDiscard={discardSource}
           />
         ),
       });
@@ -983,10 +856,6 @@ export function CodeWorkspace() {
               own={comparable.own}
               exclude={comparable.exclude}
               onSelect={compareAgainst}
-              {...(selectedWorktree === null ? {} : { onUpdate: updateFrom })}
-              {...(selectedWorktree !== null && selectedWorktree.ahead > 0
-                ? { onMerge: mergeInto }
-                : {})}
             />
           ),
         });

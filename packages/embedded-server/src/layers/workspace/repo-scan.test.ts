@@ -222,23 +222,23 @@ describe("scanRepos", () => {
 });
 
 describe("readBranch", () => {
-  it.effect("follows a worktree's .git file to the real git directory", () =>
+  it.effect("follows a submodule's .git file to the real git directory", () =>
     Effect.flatMap(FileSystem.FileSystem, (fs) =>
-      Effect.map(readBranch(fs, "/work/wt"), (branch) => {
+      Effect.map(readBranch(fs, "/work/vendor"), (branch) => {
         expect(branch).toBe("main");
       })
     ).pipe(
       Effect.provide(
         FileSystem.layerNoop({
           stat: (path) =>
-            String(path) === "/work/wt/.git"
+            String(path) === "/work/vendor/.git"
               ? Effect.succeed(info("File"))
               : missing(String(path)),
           readFileString: (path) => {
             const at = String(path);
-            if (at === "/work/wt/.git")
-              return Effect.succeed("gitdir: /work/.git/worktrees/wt\n");
-            if (at === "/work/.git/worktrees/wt/HEAD")
+            if (at === "/work/vendor/.git")
+              return Effect.succeed("gitdir: /work/.git/modules/vendor\n");
+            if (at === "/work/.git/modules/vendor/HEAD")
               return Effect.succeed("ref: refs/heads/main\n");
             return missing(at);
           },

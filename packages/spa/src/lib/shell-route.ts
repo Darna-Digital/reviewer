@@ -65,14 +65,12 @@ const CODE_WORKSPACE_PAGES = ["docs", "tasks", "reviews"];
 /**
  * What the diff view is pointed at, as the URL says it.
  *
- * One view reads all three, so they are one route with three shapes rather than
- * three routes: `/review` is the changes in front of you, and the other two name
- * whose work it is instead. A branch holds slashes, so the worktree's is the
- * rest of the path rather than one segment of it.
+ * One view reads both, so they are one route with two shapes rather than two
+ * routes: `/review` is the changes in front of you, and `/review/pull/12` is
+ * somebody else's, read in the same pane.
  */
 export type ReviewSource =
   | { readonly kind: "local" }
-  | { readonly kind: "worktree"; readonly branch: string }
   | { readonly kind: "pull"; readonly number: number };
 
 /** The diff view. */
@@ -80,12 +78,10 @@ export const REVIEW_HREF = "/modes/code/review";
 /** Everything waiting to be read, listed. */
 export const REVIEWS_HREF = "/modes/code/reviews";
 
-export const reviewHref = (source: ReviewSource): string => {
-  if (source.kind === "local") return REVIEW_HREF;
-  return source.kind === "pull"
-    ? `${REVIEW_HREF}/pull/${source.number}`
-    : `${REVIEW_HREF}/worktree/${source.branch}`;
-};
+export const reviewHref = (source: ReviewSource): string =>
+  source.kind === "local"
+    ? REVIEW_HREF
+    : `${REVIEW_HREF}/pull/${source.number}`;
 
 const onReviewPath = (pathname: string): boolean =>
   pathname === REVIEW_HREF || pathname.startsWith(`${REVIEW_HREF}/`);
@@ -99,9 +95,6 @@ export const reviewSourceOf = (pathname: string): ReviewSource | null => {
     .split("/")
     .filter((segment) => segment.length > 0);
   if (head === undefined) return { kind: "local" };
-  if (head === "worktree" && rest.length > 0) {
-    return { kind: "worktree", branch: rest.join("/") };
-  }
   if (head === "pull" && rest[0] !== undefined && /^\d+$/.test(rest[0])) {
     return { kind: "pull", number: Number(rest[0]) };
   }

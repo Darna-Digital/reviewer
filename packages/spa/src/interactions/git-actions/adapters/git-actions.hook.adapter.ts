@@ -29,15 +29,8 @@ const unwrap = async <T>(
   return data as T;
 };
 
-/**
- * A draft's cache slot. Keyed by the worktree it is for, so a message being
- * written for somebody's worktree never lands in the composer for your own
- * changes — two of them can be drafting at once.
- */
-const draftKey = (worktree: string | null) =>
-  api.queryOptions("get", "/api/git-message/draft", {
-    params: { query: { worktree: worktree ?? undefined } },
-  }).queryKey;
+/** A draft's cache slot — one per project, the way the server keeps it. */
+const draftKey = api.queryOptions("get", "/api/git-message/draft", {}).queryKey;
 
 /**
  * All imperative git actions, wired to the typed API, sonner toasts and
@@ -107,20 +100,15 @@ export function useGitActions() {
      */
     startCommitMessage: async (
       paths: ReadonlyArray<string>,
-      agent: CommitAgent,
-      worktree: string | null = null
+      agent: CommitAgent
     ): Promise<void> => {
       try {
         const draft = await unwrap(
           fetchClient.POST("/api/git-message/generate", {
-            body: {
-              paths: [...paths],
-              agent,
-              ...(worktree === null ? {} : { worktree }),
-            },
+            body: { paths: [...paths], agent },
           })
         );
-        queryClient.setQueryData<CommitDraft>(draftKey(worktree), draft);
+        queryClient.setQueryData<CommitDraft>(draftKey, draft);
       } catch (cause) {
         notify("err", errorText(cause));
       }
@@ -131,16 +119,17 @@ export function useGitActions() {
      * later mount would put the same message back over whatever was typed
      * since. A clear that fails is not worth a toast: the message is in hand.
      */
-    clearCommitDraft: async (worktree: string | null = null): Promise<void> => {
-      const { data } = await fetchClient.POST("/api/git-message/draft/clear", {
-        body: worktree === null ? {} : { worktree },
-      });
+    clearCommitDraft: async (): Promise<void> => {
+      const { data } = await fetchClient.POST(
+        "/api/git-message/draft/clear",
+        {}
+      );
       if (data !== undefined)
-        queryClient.setQueryData<CommitDraft>(draftKey(worktree), data);
+        queryClient.setQueryData<CommitDraft>(draftKey, data);
     },
 
     /**
-     * Discard the worktree changes for the given paths, reverting them to HEAD
+     * Discard the working-tree changes for the given paths, reverting them to HEAD
      * (modifications and deletions are restored; new files are removed). This is
      * irreversible — callers should confirm before invoking.
      *
@@ -168,7 +157,7 @@ export function useGitActions() {
       ),
 
     /**
-     * Discard a single hunk of a file's worktree diff, reverting just that
+     * Discard a single hunk of a file's working-tree diff, reverting just that
      * change. `hunkIndex` is zero-based in the order the diff renders its hunks.
      * Irreversible — callers should confirm before invoking.
      */

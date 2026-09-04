@@ -8,22 +8,16 @@ import type { FileDiffMetadata } from "@pierre/diffs";
 import type { AppMode, DiffTarget } from "@/lib/api/types";
 import type { ReviewComment } from "@byconvo/core/comments";
 import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
-import type {
-  GitFileStatus,
-  GitStatusEntry,
-  LocalTask,
-} from "@byconvo/core/repo";
+import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo";
 
 /** What the user has navigated to — the route state, normalised. */
 export interface DiffSelection {
   readonly mode: AppMode;
   readonly selectedPull: PullRequestInfo | null;
-  /** The local task under review, when the selected row is one. */
-  readonly selectedTask?: LocalTask | null;
   /**
    * The branch the local changes are read against. Given, the diff is the whole
-   * task — everything since the merge base, uncommitted work included — rather
-   * than only what has not been committed yet.
+   * branch — everything since the merge base, uncommitted work included —
+   * rather than only what has not been committed yet.
    */
   readonly target?: string | null;
   readonly browse:
@@ -42,7 +36,7 @@ export interface TreeInputs {
   readonly gitStatus: ReadonlyArray<GitStatusEntry>;
   readonly parsedFiles: ReadonlyArray<FileDiffMetadata>;
   /**
-   * Files carrying a local worktree comment. In commit mode these appear in the
+   * Files carrying a local working-tree comment. In commit mode these appear in the
    * tree even with no git change, so a reviewer can revisit comments left while
    * browsing. Defaults to none.
    */

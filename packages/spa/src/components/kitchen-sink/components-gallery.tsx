@@ -486,7 +486,7 @@ export function ComponentsGallery() {
             <Specimen label="a list of running rows">
               <div className="flex flex-col gap-2">
                 {[
-                  "task/git-worktrees",
+                  "task/inline-comments",
                   "task/landing-page",
                   "fix/diff-gutter",
                 ].map((branch) => (
@@ -518,7 +518,7 @@ export function ComponentsGallery() {
           <Field
             label="Branch name"
             htmlFor="ks-branch"
-            hint="Lowercase, slash-separated. This becomes the worktree folder name."
+            hint="Lowercase, slash-separated, the way git branches are named."
           >
             <Input
               id="ks-branch"

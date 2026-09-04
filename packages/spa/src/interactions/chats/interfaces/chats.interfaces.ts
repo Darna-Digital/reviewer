@@ -18,14 +18,11 @@ export type { ChatWireEvent } from "@byconvo/core/chats";
 export type ChatImage = ChatImageUpload;
 
 /**
- * Where a session runs: the branch it is on, and the checkout its agent's
- * process is started in. The checkout is only ever named when it is not the one
- * the app has selected — a task cut into a worktree of its own — which is what
- * lets a task start without the app going there.
+ * Where a session runs: the branch it is on. The checkout is the one the app
+ * has selected, which is where the agent's process is started.
  */
 export interface ChatPlace {
   readonly branch: string;
-  readonly repoPath?: string;
 }
 
 /** The composer's settings for a chat (what the picker/menus edit). */

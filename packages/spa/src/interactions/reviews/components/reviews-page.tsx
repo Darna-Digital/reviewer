@@ -9,13 +9,7 @@
  * happens for every source — the changes in this checkout included, which is
  * why the way to those is on this page too.
  */
-import {
-  IconCheck,
-  IconCloud,
-  IconDeviceLaptop,
-  IconGitBranch,
-  IconGitCommit,
-} from "@tabler/icons-react";
+import { IconCloud, IconGitBranch, IconGitCommit } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { PaneHeader } from "@/components/layout/pane-header";
@@ -26,47 +20,23 @@ import {
 import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { TabsSubtle, TabsSubtleItem } from "@/components/ui/tabs-subtle";
-import { useLocalTasks, usePulls, useRepo } from "@/lib/queries";
+import { usePulls, useRepo } from "@/lib/queries";
 import { errorReason } from "@/lib/errors";
 import { timeAgo } from "@/lib/relative-time";
 import { REVIEW_HREF, reviewHref } from "@/lib/shell-route";
 import { NoReviewRemote, NoReviews } from "./reviews-empty";
 import {
-  filterReviewKind,
   groupReviewsByBase,
   reviewAuthor,
   reviewBranch,
-  reviewFilterCount,
   reviewItems,
   reviewKey,
   reviewTitle,
   reviewUpdatedAt,
-  REVIEW_FILTERS,
-  REVIEW_FILTER_LABEL,
-  worktreeState,
-  WORKTREE_STATE_LABEL,
-  type ReviewFilter,
   type ReviewItem,
 } from "../functions/reviews.functions";
 
-/** Only the states worth interrupting the row for; "ready" needs no warning. */
-const STATE_TONE: Readonly<Record<string, string>> = {
-  working: "text-muted-foreground",
-  behind: "text-amber-600 dark:text-amber-400",
-  uncommitted: "text-amber-600 dark:text-amber-400",
-  ready: "text-emerald-600 dark:text-emerald-400",
-};
-
-const FILTER_ICON: Readonly<Record<ReviewFilter, typeof IconCheck>> = {
-  all: IconCheck,
-  worktree: IconDeviceLaptop,
-  pull: IconCloud,
-};
-
 function Row({ item, onOpen }: { item: ReviewItem; onOpen: () => void }) {
-  const worktree = item.kind === "worktree" ? item.worktree : null;
-  const state = worktree === null ? null : worktreeState(worktree);
   const updated = reviewUpdatedAt(item);
   return (
     <button
@@ -74,27 +44,16 @@ function Row({ item, onOpen }: { item: ReviewItem; onOpen: () => void }) {
       onClick={onOpen}
       className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-muted/60"
     >
-      {item.kind === "pull" ? (
-        <IconCloud
-          className="size-4 shrink-0 text-muted-foreground"
-          aria-label="Runs in the cloud"
-        />
-      ) : (
-        <IconDeviceLaptop
-          className="size-4 shrink-0 text-muted-foreground"
-          aria-label="Runs on this machine"
-        />
-      )}
+      <IconCloud
+        className="size-4 shrink-0 text-muted-foreground"
+        aria-label="Runs in the cloud"
+      />
       <span className="flex min-w-0 flex-[2] items-baseline gap-2">
-        {item.kind === "pull" && (
-          <span className="shrink-0 font-mono text-xs text-muted-foreground">
-            #{item.pull.number}
-          </span>
-        )}
+        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+          #{item.pull.number}
+        </span>
         <span className="truncate text-sm">{reviewTitle(item)}</span>
       </span>
-      {/* A worktree with nothing committed is titled by its branch, so
-          repeating the branch would print the same word twice. */}
       <span className="hidden min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground md:block">
         {reviewTitle(item) === reviewBranch(item) ? "" : reviewBranch(item)}
       </span>
@@ -104,15 +63,6 @@ function Row({ item, onOpen }: { item: ReviewItem; onOpen: () => void }) {
       <span className="hidden w-24 shrink-0 truncate text-xs text-muted-foreground sm:block">
         {updated.length > 0 ? timeAgo(updated) : ""}
       </span>
-      <span className="w-40 shrink-0 truncate text-right text-xs">
-        {state !== null && (
-          <span className={STATE_TONE[state]}>
-            {state === "ready" && worktree !== null
-              ? `${worktree.ahead} to merge`
-              : WORKTREE_STATE_LABEL[state]}
-          </span>
-        )}
-      </span>
     </button>
   );
 }
@@ -120,36 +70,27 @@ function Row({ item, onOpen }: { item: ReviewItem; onOpen: () => void }) {
 export function ReviewsPage() {
   const navigate = useNavigate();
   const repo = useRepo();
-  const worktrees = useLocalTasks();
   const hasGitHub = repo.data?.github != null;
   const pulls = usePulls(hasGitHub);
 
-  const [filter, setFilter] = useState<ReviewFilter>("all");
   const [search, setSearch] = useState("");
 
-  const items = useMemo(
-    () => reviewItems(pulls.data ?? [], worktrees.data ?? []),
-    [pulls.data, worktrees.data]
-  );
+  const items = useMemo(() => reviewItems(pulls.data ?? []), [pulls.data]);
 
   const groups = useMemo(() => {
     const q = search.trim().replace(/^#/, "").toLowerCase();
-    const matching = filterReviewKind(items, filter).filter((item) => {
+    const matching = items.filter((item) => {
       if (q.length === 0) return true;
-      const number = item.kind === "pull" ? item.pull.number : "";
-      return `${number}\n${reviewTitle(item)}\n${reviewAuthor(item)}\n${reviewBranch(item)}`
+      return `${item.pull.number}\n${reviewTitle(item)}\n${reviewAuthor(item)}\n${reviewBranch(item)}`
         .toLowerCase()
         .includes(q);
     });
     return groupReviewsByBase(matching);
-  }, [items, filter, search]);
+  }, [items, search]);
 
   const open = (item: ReviewItem) =>
     void navigate({
-      to:
-        item.kind === "pull"
-          ? reviewHref({ kind: "pull", number: item.pull.number })
-          : reviewHref({ kind: "worktree", branch: item.worktree.branch }),
+      to: reviewHref({ kind: "pull", number: item.pull.number }),
     });
 
   const error = pulls.error
@@ -158,7 +99,7 @@ export function ReviewsPage() {
   // A query that was never enabled is pending for as long as the window is
   // open, and a list that says it is loading forever is worse than one that
   // says it is empty.
-  const loading = (hasGitHub && pulls.isPending) || worktrees.isPending;
+  const loading = hasGitHub && pulls.isPending;
   const hasMatches = groups.some((group) => group.items.length > 0);
 
   return (
@@ -177,23 +118,6 @@ export function ReviewsPage() {
         }
       />
       <div className="flex shrink-0 items-center gap-2 border-b px-3 py-1.5">
-        <TabsSubtle
-          idPrefix="reviews-filter"
-          selectedIndex={REVIEW_FILTERS.indexOf(filter)}
-          onSelect={(index) => {
-            const next = REVIEW_FILTERS[index];
-            if (next !== undefined) setFilter(next);
-          }}
-        >
-          {REVIEW_FILTERS.map((kind, index) => (
-            <TabsSubtleItem
-              key={kind}
-              index={index}
-              label={`${REVIEW_FILTER_LABEL[kind]} ${reviewFilterCount(items, kind)}`}
-              icon={FILTER_ICON[kind]}
-            />
-          ))}
-        </TabsSubtle>
         {/* The changes in front of you are read in the same view as everything
             below, so the way to them belongs on the same page — but they are
             not waiting on anybody, which is why they are not a row in the
@@ -225,17 +149,10 @@ export function ReviewsPage() {
         ) : !hasMatches ? (
           <div className="flex flex-col items-center gap-2 px-3 py-8 text-center">
             <p className="text-sm text-muted-foreground">
-              Nothing matches this filter.
+              Nothing matches this search.
             </p>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setFilter("all");
-                setSearch("");
-              }}
-            >
-              Clear filters
+            <Button size="sm" variant="ghost" onClick={() => setSearch("")}>
+              Clear the search
             </Button>
           </div>
         ) : (

@@ -52,7 +52,7 @@ import { writeFileEdits } from "@/interactions/language/adapters/language.hook.a
 import type { Theme } from "@/lib/ui-prefs";
 
 // Comments on a plain (non-diff) file are always anchored to the current
-// content, i.e. the "additions" side of an eventual worktree diff.
+// content, i.e. the "additions" side of an eventual working-tree diff.
 const FILE_COMMENT_SIDE = "additions" as const;
 
 type AnnotationMeta =

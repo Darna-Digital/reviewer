@@ -34,7 +34,7 @@ describe("shellRoute", () => {
       kind: "code",
       mode: "browse",
     });
-    expect(shellRoute("/modes/code/review/worktree/task/x", "code")).toEqual({
+    expect(shellRoute("/modes/code/review/pull/12", "code")).toEqual({
       kind: "code",
       mode: "review",
     });
@@ -147,12 +147,6 @@ describe("reviewSourceOf", () => {
     expect(reviewSourceOf("/modes/code/review")).toEqual({ kind: "local" });
   });
 
-  it("keeps the slashes in a worktree's branch", () => {
-    expect(
-      reviewSourceOf("/modes/code/review/worktree/task/adjust-the-readme")
-    ).toEqual({ kind: "worktree", branch: "task/adjust-the-readme" });
-  });
-
   it("reads a pull request's number", () => {
     expect(reviewSourceOf("/modes/code/review/pull/12")).toEqual({
       kind: "pull",
@@ -166,14 +160,13 @@ describe("reviewSourceOf", () => {
   });
 
   it("is nothing for a shape it does not recognise", () => {
-    expect(reviewSourceOf("/modes/code/review/worktree")).toBeNull();
+    expect(reviewSourceOf("/modes/code/review/branch")).toBeNull();
     expect(reviewSourceOf("/modes/code/review/pull/not-a-number")).toBeNull();
   });
 
   it("round-trips every source through its href", () => {
     for (const source of [
       { kind: "local" },
-      { kind: "worktree", branch: "task/a/b" },
       { kind: "pull", number: 4 },
     ] as const) {
       expect(reviewSourceOf(reviewHref(source))).toEqual(source);

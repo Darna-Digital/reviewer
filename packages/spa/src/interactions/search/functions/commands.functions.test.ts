@@ -33,7 +33,7 @@ describe("buildCodeCommands", () => {
     expect(calls.goTo).toEqual(["/modes/code/browse", "/settings"]);
   });
 
-  it("offers the reviews list with or without a GitHub remote — worktrees are on it too", () => {
+  it("offers the reviews list with or without a GitHub remote", () => {
     const withHub = mockCodeCommandDependencies({ hasGitHub: true });
     const withoutHub = mockCodeCommandDependencies({ hasGitHub: false });
 

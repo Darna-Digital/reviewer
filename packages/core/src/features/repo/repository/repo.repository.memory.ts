@@ -9,7 +9,6 @@ import type {
   RepoInfo,
   RepoStatus,
   SearchQuery,
-  Worktree,
 } from "../schema/repo.schema.ts";
 import type { RepoRepo } from "./repo.repository.ts";
 
@@ -23,7 +22,6 @@ export interface MemoryRepoSeed {
   readonly mergeState?: MergeState;
   readonly conflictBlobs?: ConflictBlobs;
   readonly contentMatches?: ReadonlyArray<ContentMatch>;
-  readonly worktrees?: ReadonlyArray<Worktree>;
 }
 const defaultInfo: RepoInfo = {
   root: "/repo",
@@ -76,16 +74,6 @@ export const makeMemoryRepoRepository = (seed: MemoryRepoSeed = {}) =>
       status: Effect.succeed(seed.status ?? defaultStatus),
       branches: Effect.succeed(seed.branches ?? []),
       remoteBranches: Effect.succeed([]),
-      worktrees: Effect.succeed(seed.worktrees ?? []),
-      addWorktree: (branch) =>
-        Effect.succeed({
-          path: `/tmp/${branch}`,
-          name: branch,
-          branch,
-          isMain: false,
-          isCurrent: false,
-        }),
-      removeWorktree: () => Effect.void,
       log: (query) =>
         Effect.succeed((seed.commits ?? []).slice(0, query.limit)),
       search: (query) =>

@@ -260,38 +260,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/worktrees": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["repo.worktrees"];
-        put?: never;
-        post: operations["repo.addWorktree"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/worktrees/remove": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["repo.removeWorktree"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/branch-targets": {
         parameters: {
             query?: never;
@@ -302,102 +270,6 @@ export interface paths {
         get: operations["repo.branchTargets"];
         put?: never;
         post: operations["repo.setBranchTarget"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/local-tasks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["repo.localTasks"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/local-tasks/merge": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["repo.mergeTask"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/local-tasks/changes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["repo.taskChanges"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/local-tasks/commit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["repo.commitTask"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/local-tasks/discard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["repo.discardTask"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/local-tasks/update": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["repo.updateTask"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2425,7 +2297,6 @@ export interface operations {
                             branch: string | null;
                         }[];
                         current: string | null;
-                        currentRoot: string | null;
                         recents: string[];
                         home: string;
                         device: string;
@@ -2472,7 +2343,6 @@ export interface operations {
                             branch: string | null;
                         }[];
                         current: string | null;
-                        currentRoot: string | null;
                         recents: string[];
                         home: string;
                         device: string;
@@ -2528,7 +2398,6 @@ export interface operations {
                             branch: string | null;
                         }[];
                         current: string | null;
-                        currentRoot: string | null;
                         recents: string[];
                         home: string;
                         device: string;
@@ -3289,157 +3158,6 @@ export interface operations {
             };
         };
     };
-    "repo.worktrees": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        path: string;
-                        name: string;
-                        branch: string | null;
-                        isMain: boolean;
-                        isCurrent: boolean;
-                    }[];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"];
-                };
-            };
-        };
-    };
-    "repo.addWorktree": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    branch: string;
-                    target?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        path: string;
-                        name: string;
-                        branch: string | null;
-                        isMain: boolean;
-                        isCurrent: boolean;
-                    };
-                };
-            };
-            /** @description NotFound */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotFound"];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError | StorageError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"] | components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "repo.removeWorktree": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    path: string;
-                    force?: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"];
-                };
-            };
-        };
-    };
     "repo.branchTargets": {
         parameters: {
             query?: never;
@@ -3543,290 +3261,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GitError"] | components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "repo.localTasks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        branch: string;
-                        base: string;
-                        path: string;
-                        name: string;
-                        ahead: number;
-                        upToDate: boolean;
-                        dirty: boolean;
-                        subject: string;
-                        author: string;
-                        updatedAt: string;
-                    }[];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"];
-                };
-            };
-        };
-    };
-    "repo.mergeTask": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    branch: string;
-                    base?: string | null;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        merged: boolean;
-                        reason: string | null;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"];
-                };
-            };
-        };
-    };
-    "repo.taskChanges": {
-        parameters: {
-            query: {
-                branch: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        path: string;
-                        /** @enum {string} */
-                        status: "added" | "deleted" | "ignored" | "modified" | "renamed" | "untracked";
-                    }[];
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"];
-                };
-            };
-        };
-    };
-    "repo.commitTask": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    branch: string;
-                    message: string;
-                    paths?: string[] | null;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        merged: boolean;
-                        reason: string | null;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"];
-                };
-            };
-        };
-    };
-    "repo.discardTask": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    branch: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        merged: boolean;
-                        reason: string | null;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"];
-                };
-            };
-        };
-    };
-    "repo.updateTask": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    branch: string;
-                    base?: string | null;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        output: string;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"];
                 };
             };
         };
@@ -4004,7 +3438,6 @@ export interface operations {
                 base?: string;
                 head?: string;
                 target?: string;
-                task?: string;
             };
             header?: never;
             path?: never;
@@ -4050,7 +3483,6 @@ export interface operations {
                 base?: string;
                 head?: string;
                 target?: string;
-                task?: string;
             };
             header?: never;
             path?: never;
@@ -5965,7 +5397,6 @@ export interface operations {
                     paths?: string[];
                     /** @enum {string} */
                     agent?: "claude" | "opencode" | "codex" | "cursor";
-                    worktree?: string;
                 };
             };
         };
@@ -5990,9 +5421,7 @@ export interface operations {
     };
     "gitMessage.draft": {
         parameters: {
-            query?: {
-                worktree?: string | null;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -6024,13 +5453,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    worktree?: string | null;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Success */
             200: {
@@ -6536,7 +5959,6 @@ export interface operations {
                     /** @enum {string} */
                     access?: "supervised" | "acceptEdits" | "fullAccess";
                     branch?: string;
-                    repoPath?: string;
                 };
             };
         };

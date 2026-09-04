@@ -1,10 +1,10 @@
 /**
  * Where this session runs — this machine, or byconvo cloud.
  *
- * Sits where the worktree picker does, and is the same kind of answer: a
- * statement about the prompt being written, not a move. Picking the cloud
- * changes nothing until you send; then the prompt goes to a run that clones,
- * works and pushes on its own, and this window follows it live.
+ * The last of the composer's answers, and the same kind of answer as the ones
+ * beside it: a statement about the prompt being written, not a move. Picking
+ * the cloud changes nothing until you send; then the prompt goes to a run that
+ * clones, works and pushes on its own, and this window follows it live.
  *
  * The cloud is only an answer once the app is connected to it, so until then
  * the choice is shown but cannot be made, and says where to go to make it.

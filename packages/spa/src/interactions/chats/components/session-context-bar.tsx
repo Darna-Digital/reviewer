@@ -1,12 +1,12 @@
 /**
  * The strip tucked under the composer, naming where the session will land, read
  * outside in: the project it belongs to, the branch it starts from, then the
- * worktree it runs in.
+ * machine it runs on.
  *
- * The worktree comes last because it is the only one of the three that is a
+ * Where it runs comes last because it is the only one of the three that is a
  * choice about *this* prompt — the project and the branch are where you already
- * are, and picking "New worktree" says this particular piece of work should
- * happen beside them rather than in them.
+ * are, and picking the cloud says this particular piece of work should happen
+ * away from them rather than in them.
  *
  * A session that already exists answers the same three questions as facts. It
  * ran where it ran, and the branch it is on is the one it was started on, which
@@ -30,11 +30,6 @@ import {
   setCloudRepoId,
   setRunTarget,
 } from "@/interactions/cloud/adapters/run-target.store";
-import { RunLocationPicker } from "@/interactions/worktrees/components/run-location-picker";
-import {
-  setRunLocation,
-  useRunLocation,
-} from "@/interactions/worktrees/adapters/run-location.store";
 import { activeRepo, folderName } from "@byconvo/core/workspace";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
@@ -44,7 +39,6 @@ import {
   useRemoteBranches,
   useRepo,
   useWorkspace,
-  useWorktrees,
 } from "@/lib/queries";
 import type { Chat } from "@byconvo/core/chats";
 
@@ -73,26 +67,13 @@ export function SessionContextBar({ chat }: { chat?: Chat }) {
     workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
-  const worktrees = useWorktrees().data ?? [];
   const git = useGitActions();
-  const runLocation = useRunLocation();
   const runTarget = useCloudRunTarget();
   // A choice of the cloud outlives a disconnect only as a preference: until
   // the app is connected again the session runs here, and the chip says so.
   const cloudChosen = runTarget.target === "cloud" && runTarget.connected;
 
   const current = repo.data ?? null;
-  const standingIn = worktrees.find((worktree) => worktree.isCurrent) ?? null;
-  const hereLabel =
-    standingIn === null || standingIn.isMain
-      ? "Main worktree"
-      : standingIn.name;
-
-  const ran =
-    chat === undefined
-      ? null
-      : (worktrees.find((worktree) => worktree.path === chat.origin.repoPath) ??
-        null);
 
   return (
     <div className="-mt-3 flex items-center gap-1 rounded-b-lg border border-t-0 bg-elevate px-2 pt-4 pb-1.5">
@@ -138,20 +119,13 @@ export function SessionContextBar({ chat }: { chat?: Chat }) {
             onChange={setRunTarget}
             cloudConnected={runTarget.connected}
           />
-          {/* A cloud run clones the linked repository for itself, so the
-              worktree question does not arise; which repository does. */}
-          {cloudChosen ? (
+          {/* A cloud run clones the linked repository for itself, so it has
+              one more question to answer: which repository that is. */}
+          {cloudChosen && (
             <CloudRepoPicker
               repos={runTarget.repos}
               value={runTarget.cloudRepo}
               onChange={setCloudRepoId}
-            />
-          ) : (
-            <RunLocationPicker
-              value={runLocation}
-              onChange={setRunLocation}
-              here={hereLabel}
-              base={current?.currentBranch ?? null}
             />
           )}
         </>
@@ -160,19 +134,9 @@ export function SessionContextBar({ chat }: { chat?: Chat }) {
           {chat.branch.length > 0 && (
             <PlaceChip icon={IconGitBranch} label={chat.branch} />
           )}
-          <PlaceChip
-            icon={IconGitFork}
-            label={
-              // A session of another project's repository is not a worktree of
-              // this one, so it is named by the repository it ran in rather
-              // than mislabelled as a worktree nobody here can see.
-              ran === null
-                ? chat.origin.repoName
-                : ran.isMain
-                  ? "Main worktree"
-                  : `Worktree ‘${ran.name}’`
-            }
-          />
+          {/* The repository the session's process ran in — a project may hold
+              several, and a session belongs to the one it was started in. */}
+          <PlaceChip icon={IconGitFork} label={chat.origin.repoName} />
         </>
       )}
     </div>
