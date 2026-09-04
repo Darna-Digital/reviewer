@@ -36,7 +36,8 @@ import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapte
 import { useChatListQuery } from "@/interactions/chats/adapters/chat-list-query.hook.adapter";
 import { useOnSessionTab } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { ChatRow } from "@/interactions/chats/components/chat-row";
-import { useChatPages } from "@/lib/queries";
+import { CloudRunRow } from "@/interactions/cloud/components/cloud-run-row";
+import { useChatPages, useCloudRuns, useCloudStatus } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 
 /** How close to the foot of the loaded list fetches the next page. */
@@ -45,7 +46,7 @@ const LOAD_MORE_WITHIN_PX = 400;
 export function ChatsPage() {
   const actions = useChatsActions();
   const navigate = useNavigate();
-  const { chatId } = useParams({ strict: false });
+  const { chatId, runId } = useParams({ strict: false });
   const prefs = useUiPrefs();
   // Not React state: a drag would otherwise re-render this whole page, and
   // its list of sessions, on every pointer frame. See `usePanelSize`.
@@ -78,6 +79,15 @@ export function ChatsPage() {
     filters,
     showList || landing
   );
+
+  /**
+   * Runs handed to byconvo cloud, listed above the local sessions. They are
+   * the account's rather than any project's, which is why they are a group of
+   * their own — and why there is none until the app is connected.
+   */
+  const cloudStatus = useCloudStatus();
+  const cloudConnected = cloudStatus.data?.status === "connected";
+  const cloudRuns = useCloudRuns(cloudConnected && showList).data ?? [];
 
   /**
    * Landing on the surface opens the newest session the filters leave in the
@@ -143,6 +153,20 @@ export function ChatsPage() {
             onViewportScroll={onListScroll}
             viewportRef={listViewport}
           >
+            {cloudConnected && cloudRuns.length > 0 && (
+              <div className="flex flex-col gap-px border-b px-2 pt-2 pb-2">
+                <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
+                  Cloud
+                </p>
+                {cloudRuns.map((run) => (
+                  <CloudRunRow
+                    key={run.id}
+                    run={run}
+                    active={run.id === runId}
+                  />
+                ))}
+              </div>
+            )}
             {sessions.length === 0 && !loading ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">
                 No sessions yet. Send a message to start one.

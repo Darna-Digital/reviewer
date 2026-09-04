@@ -1,6 +1,6 @@
 name: release-prod
 
-# Production channel. A push to `master` publishes the version in
+# Production channel. A push to `main` publishes the version in
 # packages/desktop/package.json to darna-digital/byconvo — but only once that
 # version has a COMPLETE release (one carrying latest-mac.yml, the auto-update
 # manifest). Bumping the version is the "ship it" signal; other merges are
@@ -21,7 +21,7 @@ name: release-prod
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   workflow_dispatch:
 
 concurrency:

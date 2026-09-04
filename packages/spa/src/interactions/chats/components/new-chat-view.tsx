@@ -14,6 +14,10 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import {
+  useCloudActions,
+  useCloudRunTarget,
+} from "@/interactions/cloud/adapters/cloud.hook.adapter";
+import {
   NEW_SESSION,
   setChatMode,
   useChatMode,
@@ -73,6 +77,8 @@ export function NewChatView() {
   const runLocation = useRunLocation();
   const branches = useBranches();
   const worktrees = useWorktreeActions();
+  const runTarget = useCloudRunTarget();
+  const cloud = useCloudActions();
 
   const favorites = useUiPrefs().chatModelFavorites;
   const defaults = models.data?.defaults;
@@ -105,10 +111,47 @@ export function NewChatView() {
     return worktree === null ? null : { branch, repoPath: worktree.path };
   };
 
+  /**
+   * The prompt handed to byconvo cloud instead of a process here. The run
+   * clones the linked repository on its own, so nothing local is cut for it;
+   * the branch you are on is named as the base only when the cloud repository
+   * is this one on GitHub, since any other repository knows nothing of it.
+   */
+  const sendToCloud = async (prompt: string) => {
+    const cloudRepo = runTarget.cloudRepo;
+    if (cloudRepo === null) {
+      toast.error("Link a repository in byconvo cloud before sending to it.");
+      return;
+    }
+    const github = repo.data?.github ?? null;
+    const sameRepo =
+      github !== null &&
+      `${github.owner}/${github.repo}`.toLowerCase() ===
+        cloudRepo.fullName.toLowerCase();
+    const started = await cloud.startCloudRun(
+      settings,
+      {
+        repo: cloudRepo,
+        baseBranch: sameRepo ? (repo.data?.currentBranch ?? null) : null,
+      },
+      prompt
+    );
+    if (started !== null) {
+      void navigate({
+        to: "/modes/agent-session/cloud/$runId",
+        params: { runId: started.run.id },
+      });
+    }
+  };
+
   const send = async (text: string, images: ReadonlyArray<ChatImage>) => {
     const prompt = modePrompt(mode, text);
     const title = modeTitle(mode, text);
     try {
+      if (runTarget.target === "cloud" && runTarget.connected) {
+        await sendToCloud(prompt);
+        return;
+      }
       const where = await place(text);
       if (where === null) return;
       const started =

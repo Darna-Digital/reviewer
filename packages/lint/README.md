@@ -33,5 +33,5 @@ export default { ...baseConfig }
 ```
 
 The `check` GitHub Action (`.github/workflows/check.yml`) runs ESLint and the
-Prettier check across the workspace on pushes to `master` and on every pull
+Prettier check across the workspace on pushes to `main` and on every pull
 request.

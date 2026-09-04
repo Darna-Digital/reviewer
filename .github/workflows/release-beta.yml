@@ -7,7 +7,7 @@ name: release-beta
 #
 # Beta builds are code-signed with the Developer ID certificate but NOT
 # notarized — notarization (the slow, Apple-side step) is reserved for the
-# production channel on `master`. A signed-but-unnotarized app opens with a
+# production channel on `main`. A signed-but-unnotarized app opens with a
 # right-click -> Open (the mild "unidentified developer" prompt), no Terminal
 # needed, unlike a fully unsigned app which macOS reports as "damaged".
 #

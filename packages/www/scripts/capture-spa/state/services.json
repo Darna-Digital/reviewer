@@ -1,9 +1,0 @@
-{
-  "byconvo-ui": {
-    "bottomVisible": true,
-    "bottomTab": "services",
-    "bottomHeight": 520,
-    "sidebarVisible": true,
-    "sidebarWidth": 260
-  }
-}

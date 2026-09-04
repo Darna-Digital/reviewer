@@ -6,6 +6,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api, fetchClient } from "@/lib/api/client";
+import { isCloudRunActive } from "@byconvo/core/cloud";
 import { isMultiRepo } from "@byconvo/core/workspace";
 import type { DiffTarget, LogQuery } from "@/lib/api/types";
 
@@ -609,3 +610,59 @@ export const useFile = (path: string | null) =>
     // just hangs the viewer on "Loading", so fail fast and surface the error.
     { ...GIT_DATA, enabled: path !== null, retry: false }
   );
+
+// --- byconvo cloud ---------------------------------------------------------
+
+/**
+ * Whether the app is connected to byconvo cloud, and as whom. Refetched on
+ * focus: the approval half of connecting happens in a browser tab, and coming
+ * back to the window is the moment the answer is most likely to have changed.
+ */
+export const cloudStatusOptions = () =>
+  api.queryOptions(
+    "get",
+    "/api/cloud/status",
+    {},
+    { staleTime: 30_000, refetchOnWindowFocus: "always" }
+  );
+
+export const useCloudStatus = () => useQuery(cloudStatusOptions());
+
+/** The repositories linked in the cloud — asked for only once connected. */
+export const useCloudRepos = (enabled: boolean) =>
+  api.useQuery("get", "/api/cloud/repos", {}, { ...REMOTE, enabled });
+
+/**
+ * Every cloud run, newest first. Watched while any of them is still working,
+ * since the sidebar's dots are read off their status.
+ */
+export const useCloudRuns = (enabled: boolean) =>
+  api.useQuery(
+    "get",
+    "/api/cloud/runs",
+    {},
+    {
+      staleTime: 5_000,
+      enabled,
+      refetchInterval: (query) =>
+        query.state.data?.some((run) => isCloudRunActive(run.status)) === true
+          ? 5_000
+          : false,
+    }
+  );
+
+/**
+ * One cloud run's snapshot, under the key the live view seeds itself from and
+ * writes its latest fold back to — so reopening a run paints from the cache
+ * instead of waiting on the stream.
+ */
+export const cloudRunQueryOptions = (id: string) =>
+  api.queryOptions(
+    "get",
+    "/api/cloud/runs/{id}",
+    { params: { path: { id } } },
+    { staleTime: 15_000 }
+  );
+
+export const useCloudRun = (id: string | null) =>
+  useQuery({ ...cloudRunQueryOptions(id ?? ""), enabled: id !== null });
