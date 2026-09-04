@@ -10,7 +10,7 @@ import {
   IconSearch,
   IconX,
 } from "@tabler/icons-react";
-import { useState } from "react";
+import { useState, type KeyboardEventHandler, type Ref } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -41,20 +41,28 @@ export function SidebarSearch({
   placeholder,
   value,
   onChange,
+  onKeyDown,
+  inputRef,
 }: {
   label: string;
   placeholder: string;
   value: string;
   onChange: (value: string) => void;
+  /** For a box whose list answers keys of its own — see the launchpad's. */
+  onKeyDown?: KeyboardEventHandler<HTMLInputElement>;
+  /** For a box something else decides the moment to put the caret in. */
+  inputRef?: Ref<HTMLInputElement>;
 }) {
   return (
     <div className="relative min-w-0 flex-1">
       <IconSearch className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
       <Input
+        ref={inputRef}
         aria-label={label}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         className="h-7 rounded-md pr-7 pl-8"
       />
       {value.length > 0 && (

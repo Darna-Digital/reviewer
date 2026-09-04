@@ -1236,6 +1236,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chats/{id}/seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["chats.seen"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chats/{id}/stop": {
         parameters: {
             query?: never;
@@ -1406,6 +1422,38 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["language.codeActions"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/formatting/formatter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["formatting.formatter"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/formatting/format": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["formatting.format"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2156,6 +2204,12 @@ export interface components {
             /** @enum {string} */
             _tag: "LanguageError";
             providerId: string;
+            reason: string;
+        };
+        FormatError: {
+            /** @enum {string} */
+            _tag: "FormatError";
+            formatterId: string;
             reason: string;
         };
         BrowserUnavailable: {
@@ -6249,6 +6303,7 @@ export interface operations {
                             branch: string;
                             createdAt: string;
                             updatedAt: string;
+                            seenAt: string | null;
                             messageCount: number;
                             lastMessage: string | null;
                             turnState: ("running" | "completed" | "interrupted" | "error") | null;
@@ -6336,6 +6391,7 @@ export interface operations {
                         sessionId: string | null;
                         createdAt: string;
                         updatedAt: string;
+                        seenAt: string | null;
                         messages: {
                             id: string;
                             /** @enum {string} */
@@ -6558,6 +6614,7 @@ export interface operations {
                         sessionId: string | null;
                         createdAt: string;
                         updatedAt: string;
+                        seenAt: string | null;
                         messages: {
                             id: string;
                             /** @enum {string} */
@@ -6726,6 +6783,7 @@ export interface operations {
                         sessionId: string | null;
                         createdAt: string;
                         updatedAt: string;
+                        seenAt: string | null;
                         messages: {
                             id: string;
                             /** @enum {string} */
@@ -6841,6 +6899,7 @@ export interface operations {
                         sessionId: string | null;
                         createdAt: string;
                         updatedAt: string;
+                        seenAt: string | null;
                         messages: {
                             id: string;
                             /** @enum {string} */
@@ -6876,6 +6935,57 @@ export interface operations {
                             errorMessage: string | null;
                             totalCostUsd: (number) | null;
                         } | null;
+                    };
+                };
+            };
+            /** @description NotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotFound"];
+                };
+            };
+            /** @description NoRepoSelected | ChatBusy */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"] | components["schemas"]["ChatBusy"];
+                };
+            };
+            /** @description StorageError | TerminalError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StorageError"] | components["schemas"]["TerminalError"];
+                };
+            };
+        };
+    };
+    "chats.seen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        ok: boolean;
                     };
                 };
             };
@@ -7474,6 +7584,25 @@ export interface operations {
                             };
                         } | null;
                         symbol: string | null;
+                        declaration: {
+                            location: {
+                                path: string;
+                                range: {
+                                    start: {
+                                        line: number;
+                                        character: number;
+                                    };
+                                    end: {
+                                        line: number;
+                                        character: number;
+                                    };
+                                };
+                            };
+                            name: string;
+                            kind: string;
+                            containerName: string;
+                            preview: string;
+                        } | null;
                         references: {
                             location: {
                                 path: string;
@@ -7489,8 +7618,10 @@ export interface operations {
                                 };
                             };
                             /** @enum {string} */
-                            kind: "definition" | "write" | "read";
+                            kind: "definition" | "import" | "export" | "write" | "read";
                             preview: string;
+                            containerName: string;
+                            containerKind: string;
                         }[];
                     };
                 };
@@ -7780,6 +7911,101 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["LanguageError"];
+                };
+            };
+        };
+    };
+    "formatting.formatter": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        id: string;
+                        name: string;
+                        available: boolean;
+                        version: string | null;
+                        configPath: string | null;
+                        detail: string;
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description FormatError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormatError"];
+                };
+            };
+        };
+    };
+    "formatting.format": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    path: string;
+                    contents: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        path: string;
+                        formatterId: string | null;
+                        changed: boolean;
+                        contents: string;
+                    };
+                };
+            };
+            /** @description NoRepoSelected */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoRepoSelected"];
+                };
+            };
+            /** @description FormatError */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FormatError"];
                 };
             };
         };

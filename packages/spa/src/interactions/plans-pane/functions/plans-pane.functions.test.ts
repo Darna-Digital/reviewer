@@ -3,7 +3,6 @@ import {
   annotationTarget,
   planOutline,
   sameTarget,
-  isBrowsingCode,
   isBrokenAnchor,
   nodeStatus,
   nodeTarget,
@@ -429,33 +428,5 @@ describe("statusLabel", () => {
     expect(statusLabel("relocated")).toContain("moved");
     expect(statusLabel("lost")).toContain("rerun");
     expect(statusLabel("missing")).toContain("rerun");
-  });
-});
-
-describe("isBrowsingCode", () => {
-  it("accepts the browser and whatever it is browsing", () => {
-    expect(isBrowsingCode("/modes/code/browse")).toBe(true);
-    expect(isBrowsingCode("/modes/code/browse/commit/abc123")).toBe(true);
-    expect(isBrowsingCode("/modes/code/browse/range")).toBe(true);
-  });
-
-  /**
-   * The pages a jump has to leave: both show a file, but each shows it as part of
-   * a set of changes the analysis's file is not in.
-   */
-  it("rejects the other code pages", () => {
-    expect(isBrowsingCode("/modes/code/commit")).toBe(false);
-    expect(isBrowsingCode("/modes/code/review/42")).toBe(false);
-  });
-
-  it("rejects the pages with no file viewer at all", () => {
-    expect(isBrowsingCode("/modes/agent-session/c1")).toBe(false);
-    expect(isBrowsingCode("/modes/collaboration")).toBe(false);
-    expect(isBrowsingCode("/modes/experimentation/collaboration")).toBe(false);
-    expect(isBrowsingCode("/settings")).toBe(false);
-  });
-
-  it("is not fooled by a page whose name merely starts the same way", () => {
-    expect(isBrowsingCode("/modes/code/browser")).toBe(false);
   });
 });

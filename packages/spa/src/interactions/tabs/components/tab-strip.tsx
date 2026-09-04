@@ -111,7 +111,7 @@ export function TabStrip({
         aria-label="Open files"
         className={cn(
           TAB_STRIP,
-          "shrink-0 border-b border-border bg-background px-2 py-1"
+          "h-9 shrink-0 border-b border-border bg-background px-2"
         )}
       >
         {ordered.map((tab, index) => {

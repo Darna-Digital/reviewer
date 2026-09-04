@@ -175,6 +175,53 @@ describe("typescriptProvider", () => {
     ).toBe(true);
   });
 
+  it("reads each usage's syntax, and names where the symbol is declared", async () => {
+    const result = await run(
+      typescriptProvider.references({
+        ...request("src/a.ts"),
+        position: positionOf(A_TS, "greet"),
+      })
+    );
+
+    // The `import { greet }` line is an import, not a bare reference — which is
+    // the whole reason a usages tree can put the wiring in its own group.
+    const imported = result.references.find(
+      (reference) =>
+        reference.location.path === "src/b.ts" && reference.kind === "import"
+    );
+    expect(imported).toBeDefined();
+
+    // The call sits at the top level of `b.ts`, so there is no function to file
+    // it under, and the fixture's declaration is a function called `greet`.
+    const call = result.references.find(
+      (reference) => reference.kind === "read"
+    );
+    expect(call?.containerName).toBe("");
+    expect(result.declaration?.location.path).toBe("src/a.ts");
+    expect(result.declaration?.kind).toBe("function");
+  });
+
+  it("files a usage under the function it sits in", async () => {
+    const contents = [
+      'import { greet } from "./a"',
+      "",
+      "export function shout(name: string) {",
+      "  return greet(name).toUpperCase()",
+      "}",
+      "",
+    ].join("\n");
+    const result = await run(
+      typescriptProvider.references({
+        ...request("src/b.ts", contents),
+        position: positionOf(contents, "greet(name)"),
+      })
+    );
+    const inside = result.references.find(
+      (reference) => reference.containerName === "shout"
+    );
+    expect(inside?.containerKind).toBe("function");
+  });
+
   it("returns hover markdown with the signature and doc comment", async () => {
     const result = await run(
       typescriptProvider.hover({

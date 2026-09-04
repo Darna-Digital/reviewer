@@ -9,7 +9,6 @@ import type {
   DiagnosticMarker,
   LanguageDependencies,
   LanguageFunctions,
-  NavigationOutcome,
   TokenSpan,
 } from "../interfaces/language.interfaces";
 
@@ -181,24 +180,6 @@ export function createLanguageFunctions(
   const counts: LanguageFunctions["counts"] = () =>
     countDiagnostics(d.data.diagnostics);
 
-  const usagesAt = async (
-    path: string,
-    position: Position,
-    fallbackSymbol: string
-  ): Promise<NavigationOutcome> => {
-    const { symbol, references } = await d.sideEffects.references(
-      path,
-      position
-    );
-    return references.length === 0
-      ? { kind: "none" }
-      : {
-          kind: "usages",
-          symbol: symbol ?? fallbackSymbol,
-          references,
-        };
-  };
-
   const navigate: LanguageFunctions["navigate"] = async (path, token) => {
     const position = positionOfToken(token);
     const { targets } = await d.sideEffects.definition(path, position);
@@ -209,24 +190,14 @@ export function createLanguageFunctions(
       targets.length === 0 ||
       (targets.length === 1 && targetsSameToken(targets[0], path, token))
     ) {
-      return usagesAt(path, position, token.tokenText);
+      return { kind: "usages", position, symbol: token.tokenText };
     }
     if (targets.length === 1) return { kind: "open", target: targets[0] };
     return { kind: "choose", targets };
   };
 
-  const references: LanguageFunctions["references"] = (path, token) =>
-    usagesAt(path, positionOfToken(token), token.tokenText);
-
   const describe: LanguageFunctions["describe"] = (path, token) =>
     d.sideEffects.hover(path, positionOfToken(token));
 
-  return {
-    diagnosticsByLine,
-    markerFor,
-    counts,
-    navigate,
-    references,
-    describe,
-  };
+  return { diagnosticsByLine, markerFor, counts, navigate, describe };
 }

@@ -2,10 +2,17 @@ import { describe, expect, it } from "vitest";
 import { buildCodeCommands } from "./commands.functions";
 import { mockCodeCommandDependencies } from "./commands.functions.mock";
 
-const run = (id: string, deps: Parameters<typeof buildCodeCommands>[0]) => {
+// Commands that ask something first answer on a later microtask, so running
+// one always yields before the assertions read what it did.
+const run = async (
+  id: string,
+  deps: Parameters<typeof buildCodeCommands>[0]
+) => {
   const command = buildCodeCommands(deps).find((c) => c.id === id);
   if (command === undefined) throw new Error(`no command ${id}`);
   command.run();
+  await Promise.resolve();
+  await Promise.resolve();
 };
 
 describe("buildCodeCommands", () => {
@@ -17,11 +24,11 @@ describe("buildCodeCommands", () => {
     expect([...groups]).toEqual(["Navigation", "Git"]);
   });
 
-  it("navigates to the page a command names", () => {
+  it("navigates to the page a command names", async () => {
     const { deps, calls } = mockCodeCommandDependencies();
 
-    run("go-browse", deps);
-    run("go-settings", deps);
+    await run("go-browse", deps);
+    await run("go-settings", deps);
 
     expect(calls.goTo).toEqual(["/modes/code/browse", "/settings"]);
   });
@@ -35,32 +42,32 @@ describe("buildCodeCommands", () => {
     }
   });
 
-  it("runs the git action behind each git command", () => {
+  it("runs the git action behind each git command", async () => {
     const { deps, calls } = mockCodeCommandDependencies();
 
     for (const id of ["git-refresh", "git-fetch", "git-pull", "git-push"]) {
-      run(id, deps);
+      await run(id, deps);
     }
 
     expect(calls.ran).toEqual(["refresh", "fetch", "pull", "push"]);
   });
 
-  it("branches from the current branch, trimming the name it was given", () => {
+  it("branches from the current branch, trimming the name it was given", async () => {
     const { deps, calls } = mockCodeCommandDependencies({}, "  feature/x  ");
 
-    run("git-branch", deps);
+    await run("git-branch", deps);
 
     expect(calls.createBranch).toEqual([
       { name: "feature/x", startPoint: "main" },
     ]);
   });
 
-  it("creates nothing when the branch name is blank or cancelled", () => {
+  it("creates nothing when the branch name is blank or cancelled", async () => {
     const cancelled = mockCodeCommandDependencies({}, null);
     const blank = mockCodeCommandDependencies({}, "   ");
 
-    run("git-branch", cancelled.deps);
-    run("git-branch", blank.deps);
+    await run("git-branch", cancelled.deps);
+    await run("git-branch", blank.deps);
 
     expect(cancelled.calls.createBranch).toEqual([]);
     expect(blank.calls.createBranch).toEqual([]);

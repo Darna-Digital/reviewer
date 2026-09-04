@@ -98,6 +98,7 @@ export const makeMemoryLanguageRepository = (seed: MemoryLanguageSeed = {}) =>
           providerId: providerFor(path),
           origin: originAt(path, position),
           symbol: null,
+          declaration: seed.targets?.[path]?.[0] ?? null,
           references: seed.references?.[path] ?? [],
         }),
 

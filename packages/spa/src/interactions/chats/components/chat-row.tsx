@@ -6,7 +6,9 @@
  * session's metadata.
  *
  * The two dots the row does keep are the ones that change: the turn state, and
- * whether the session moved since you last looked.
+ * whether the session moved since you last looked. Both are read off the
+ * session's own seen mark, so opening the conversation is what puts them out —
+ * see `chats.attention.ts`.
  *
  * The list spans every project, but which one a session came from is the card's
  * to say, not the row's — a name on every row is noise on all of them.
@@ -29,7 +31,13 @@ import {
 } from "@/components/ui/preview-card";
 import { agentLabel } from "@/interactions/threads/interfaces/agents";
 import { openSessionTab } from "@/interactions/chats/functions/open-session-tab";
-import type { ChatMessage, ChatSummary } from "@byconvo/core/chats";
+import {
+  isChatUnread,
+  unattendedTurnState,
+  type ChatMessage,
+  type ChatSummary,
+  type ChatTurnState,
+} from "@byconvo/core/chats";
 import { useChatPreview } from "@/lib/queries";
 import { timeAgo } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
@@ -38,8 +46,8 @@ const HOVER_DELAY_MS = 120;
 const HOVER_CLOSE_DELAY_MS = 100;
 const PREVIEW_TURNS = 3;
 
-export function TurnStateDot({ state }: { state: ChatSummary["turnState"] }) {
-  if (state === null || state === "completed") return null;
+function TurnStateDot({ state }: { state: ChatTurnState | null }) {
+  if (state === null) return null;
   return (
     // A settled turn is a dot and a running one is the orb, so the two sit in
     // the same box — the title starts at one place whatever the row is saying.
@@ -111,12 +119,10 @@ function ConversationTail({
 export function ChatRow({
   chat,
   active,
-  unread,
   onDelete,
 }: {
   chat: ChatSummary;
   active: boolean;
-  unread: boolean;
   onDelete: () => void;
 }) {
   const navigate = useNavigate();
@@ -130,6 +136,10 @@ export function ChatRow({
   const [primed, setPrimed] = useState(false);
   const preview = useChatPreview(chat.id, primed || open);
   const assistantLabel = agentLabel(chat.provider);
+  // Both dots are the session's own mark answering "has this moved since you
+  // last had it open?" — so opening the conversation puts them out. See
+  // `chats.attention.ts`.
+  const unread = isChatUnread(chat);
 
   const tail = (preview.data?.messages ?? [])
     .filter((m) => m.text.trim().length > 0)
@@ -174,7 +184,7 @@ export function ChatRow({
           />
         }
       >
-        <TurnStateDot state={chat.turnState} />
+        <TurnStateDot state={unattendedTurnState(chat)} />
         <span className="min-w-0 flex-1 truncate">{chat.title}</span>
         {/* The unread dot and the delete control share the same column: the
             dot steps aside the moment the row is hovered. */}
