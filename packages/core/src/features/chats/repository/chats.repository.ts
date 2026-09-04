@@ -40,8 +40,6 @@ export interface CreateChatInput {
   readonly effort: ChatEffort;
   readonly access: ChatAccess;
   readonly branch: string;
-  /** The checkout to run in; absent means the one the app has selected. */
-  readonly repoPath?: string;
 }
 export interface UpdateChatInput {
   readonly title?: string;

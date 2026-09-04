@@ -147,11 +147,7 @@ CREATE TABLE legacy_import (
 );
 `;
 
-/**
- * Where each branch's work is aimed. Keyed by the repository's *main* worktree
- * so every linked worktree reads the same row — a branch aimed at `development`
- * is aimed there wherever it is read from.
- */
+/** Where each branch's work is aimed, per repository. */
 const branchTargets = `
 CREATE TABLE branch_target (
   repo_path TEXT NOT NULL,

@@ -30,7 +30,7 @@ const skipped = (name: string): boolean =>
 const orElse = <A>(effect: Effect.Effect<A, unknown>, fallback: A) =>
   effect.pipe(Effect.catch(() => Effect.succeed(fallback)));
 
-/** Whether `dir` is a git root — `.git` as a directory, or a worktree's file. */
+/** Whether `dir` is a git root — `.git` as a directory, or a submodule's file. */
 export const isGitRoot = (
   fs: FileSystem.FileSystem,
   dir: string
@@ -38,8 +38,8 @@ export const isGitRoot = (
 
 /**
  * The branch `repoPath` is on, or null when HEAD is detached or unreadable.
- * A linked worktree or submodule keeps its `.git` as a file pointing at the
- * real git directory, so follow that before reading HEAD.
+ * A submodule keeps its `.git` as a file pointing at the real git directory,
+ * so follow that before reading HEAD.
  */
 export const readBranch = (
   fs: FileSystem.FileSystem,
@@ -107,7 +107,7 @@ const rootsUnder = (
 /**
  * Every git root the project holds, named relative to it. A project that is
  * itself a repository holds exactly itself — nested roots below a repository
- * are its submodules or worktrees, which git already owns.
+ * are its submodules, which git already owns.
  */
 export const scanRepos = (
   fs: FileSystem.FileSystem,
@@ -131,92 +131,6 @@ export const scanRepos = (
       { concurrency: SCAN_CONCURRENCY }
     );
   });
-
-/**
- * The linked worktrees of one root, read out of git's own bookkeeping: each
- * lives at `<root>/.git/worktrees/<name>/gitdir`, whose contents point back at
- * that worktree's `.git`.
- *
- * Read rather than asked for, because every caller that needs it is already
- * doing filesystem work and none of them should have to spawn git to find out
- * which checkouts exist.
- */
-export const linkedWorktrees = (
-  fs: FileSystem.FileSystem,
-  repoPath: string
-): Effect.Effect<ReadonlyArray<string>> =>
-  Effect.gen(function* () {
-    const dir = `${repoPath}/.git/worktrees`;
-    const names = yield* orElse(fs.readDirectory(dir), [] as Array<string>);
-    const paths = yield* Effect.forEach(
-      [...names].sort((a, b) => a.localeCompare(b)),
-      (name): Effect.Effect<ReadonlyArray<string>> =>
-        Effect.map(
-          orElse(fs.readFileString(`${dir}/${name}/gitdir`), ""),
-          (contents) => {
-            const gitFile = contents.trim();
-            return gitFile.endsWith("/.git")
-              ? [gitFile.slice(0, -"/.git".length)]
-              : [];
-          }
-        ),
-      { concurrency: SCAN_CONCURRENCY }
-    );
-    return paths.flat();
-  });
-
-/**
- * Every worktree the project can be pointed at: the roots it holds, and each
- * root's linked worktrees.
- *
- * A linked worktree is deliberately not a root. A root is a repository the
- * project contains — one of a `backend`/`frontend` pair — and every
- * project-wide view lists all of them at once, so a worktree appearing there
- * would show the same repository twice. What a worktree *is* is somewhere the
- * app can be pointed, which is a different question and this is the one
- * function that answers it.
- */
-export const scanWorktrees = (
-  fs: FileSystem.FileSystem,
-  project: string,
-  depth = SCAN_DEPTH
-): Effect.Effect<ReadonlyArray<RepoEntry>> =>
-  Effect.gen(function* () {
-    const roots = yield* scanRepos(fs, project, depth);
-    return [...roots, ...(yield* worktreesOf(fs, roots))];
-  });
-
-/**
- * The same linked worktrees, for a caller that has already scanned the roots
- * and needs to tell the two apart — registering a project treats them alike,
- * but only a root carries the history an older byconvo left on disk.
- */
-export const worktreesOf = (
-  fs: FileSystem.FileSystem,
-  roots: ReadonlyArray<RepoEntry>
-): Effect.Effect<ReadonlyArray<RepoEntry>> =>
-  Effect.map(
-    Effect.forEach(
-      roots,
-      (root) =>
-        Effect.flatMap(linkedWorktrees(fs, root.path), (paths) =>
-          Effect.forEach(
-            paths,
-            (path) =>
-              Effect.map(readBranch(fs, path), (branch) => ({
-                // Named for its own folder: a worktree kept beside the project
-                // has no meaningful path relative to it.
-                name: path.split("/").at(-1) ?? path,
-                path,
-                branch,
-              })),
-            { concurrency: SCAN_CONCURRENCY }
-          )
-        ),
-      { concurrency: SCAN_CONCURRENCY }
-    ),
-    (linked) => linked.flat()
-  );
 
 /** How many git roots a folder holds — what makes it openable as a project. */
 export const countRepos = (

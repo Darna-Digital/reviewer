@@ -37,7 +37,6 @@ import { Route as AppModesCodeReviewPullRouteImport } from './routes/_app/modes.
 import { Route as AppModesExperimentationCollaborationInboxRouteImport } from './routes/_app/modes.experimentation.collaboration_.inbox'
 import { Route as AppModesCodeBrowseCommitShaRouteImport } from './routes/_app/modes.code.browse.commit.$sha'
 import { Route as AppModesCodeReviewPullNumberRouteImport } from './routes/_app/modes.code.review.pull.$number'
-import { Route as AppModesCodeReviewWorktreeSplatRouteImport } from './routes/_app/modes.code.review.worktree.$'
 import { Route as AppModesCollaborationProjectsProjectIdIndexRouteImport } from './routes/_app/modes.collaboration.projects.$projectId.index'
 import { Route as AppModesCollaborationProjectsProjectIdBoardRouteImport } from './routes/_app/modes.collaboration.projects.$projectId.board'
 import { Route as AppModesCollaborationProjectsProjectIdNotesRouteImport } from './routes/_app/modes.collaboration.projects.$projectId.notes'
@@ -190,12 +189,6 @@ const AppModesCodeReviewPullNumberRoute =
     path: '/modes/code/review/pull/$number',
     getParentRoute: () => AppRoute,
   } as any)
-const AppModesCodeReviewWorktreeSplatRoute =
-  AppModesCodeReviewWorktreeSplatRouteImport.update({
-    id: '/modes/code/review/worktree/$',
-    path: '/modes/code/review/worktree/$',
-    getParentRoute: () => AppRoute,
-  } as any)
 const AppModesCollaborationProjectsProjectIdIndexRoute =
   AppModesCollaborationProjectsProjectIdIndexRouteImport.update({
     id: '/projects/$projectId/',
@@ -249,7 +242,6 @@ export interface FileRoutesByFullPath {
   '/modes/code/review/': typeof AppModesCodeReviewIndexRoute
   '/modes/code/browse/commit/$sha': typeof AppModesCodeBrowseCommitShaRoute
   '/modes/code/review/pull/$number': typeof AppModesCodeReviewPullNumberRoute
-  '/modes/code/review/worktree/$': typeof AppModesCodeReviewWorktreeSplatRoute
   '/modes/collaboration/projects/$projectId/board': typeof AppModesCollaborationProjectsProjectIdBoardRoute
   '/modes/collaboration/projects/$projectId/notes': typeof AppModesCollaborationProjectsProjectIdNotesRoute
   '/modes/collaboration/projects/$projectId/todos': typeof AppModesCollaborationProjectsProjectIdTodosRoute
@@ -281,7 +273,6 @@ export interface FileRoutesByTo {
   '/modes/code/review': typeof AppModesCodeReviewIndexRoute
   '/modes/code/browse/commit/$sha': typeof AppModesCodeBrowseCommitShaRoute
   '/modes/code/review/pull/$number': typeof AppModesCodeReviewPullNumberRoute
-  '/modes/code/review/worktree/$': typeof AppModesCodeReviewWorktreeSplatRoute
   '/modes/collaboration/projects/$projectId/board': typeof AppModesCollaborationProjectsProjectIdBoardRoute
   '/modes/collaboration/projects/$projectId/notes': typeof AppModesCollaborationProjectsProjectIdNotesRoute
   '/modes/collaboration/projects/$projectId/todos': typeof AppModesCollaborationProjectsProjectIdTodosRoute
@@ -317,7 +308,6 @@ export interface FileRoutesById {
   '/_app/modes/code/review/': typeof AppModesCodeReviewIndexRoute
   '/_app/modes/code/browse/commit/$sha': typeof AppModesCodeBrowseCommitShaRoute
   '/_app/modes/code/review/pull/$number': typeof AppModesCodeReviewPullNumberRoute
-  '/_app/modes/code/review/worktree/$': typeof AppModesCodeReviewWorktreeSplatRoute
   '/_app/modes/collaboration/projects/$projectId/board': typeof AppModesCollaborationProjectsProjectIdBoardRoute
   '/_app/modes/collaboration/projects/$projectId/notes': typeof AppModesCollaborationProjectsProjectIdNotesRoute
   '/_app/modes/collaboration/projects/$projectId/todos': typeof AppModesCollaborationProjectsProjectIdTodosRoute
@@ -353,7 +343,6 @@ export interface FileRouteTypes {
     | '/modes/code/review/'
     | '/modes/code/browse/commit/$sha'
     | '/modes/code/review/pull/$number'
-    | '/modes/code/review/worktree/$'
     | '/modes/collaboration/projects/$projectId/board'
     | '/modes/collaboration/projects/$projectId/notes'
     | '/modes/collaboration/projects/$projectId/todos'
@@ -385,7 +374,6 @@ export interface FileRouteTypes {
     | '/modes/code/review'
     | '/modes/code/browse/commit/$sha'
     | '/modes/code/review/pull/$number'
-    | '/modes/code/review/worktree/$'
     | '/modes/collaboration/projects/$projectId/board'
     | '/modes/collaboration/projects/$projectId/notes'
     | '/modes/collaboration/projects/$projectId/todos'
@@ -420,7 +408,6 @@ export interface FileRouteTypes {
     | '/_app/modes/code/review/'
     | '/_app/modes/code/browse/commit/$sha'
     | '/_app/modes/code/review/pull/$number'
-    | '/_app/modes/code/review/worktree/$'
     | '/_app/modes/collaboration/projects/$projectId/board'
     | '/_app/modes/collaboration/projects/$projectId/notes'
     | '/_app/modes/collaboration/projects/$projectId/todos'
@@ -630,13 +617,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppModesCodeReviewPullNumberRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/modes/code/review/worktree/$': {
-      id: '/_app/modes/code/review/worktree/$'
-      path: '/modes/code/review/worktree/$'
-      fullPath: '/modes/code/review/worktree/$'
-      preLoaderRoute: typeof AppModesCodeReviewWorktreeSplatRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/modes/collaboration/projects/$projectId/': {
       id: '/_app/modes/collaboration/projects/$projectId/'
       path: '/projects/$projectId'
@@ -731,7 +711,6 @@ interface AppRouteChildren {
   AppModesCodeReviewIndexRoute: typeof AppModesCodeReviewIndexRoute
   AppModesCodeBrowseCommitShaRoute: typeof AppModesCodeBrowseCommitShaRoute
   AppModesCodeReviewPullNumberRoute: typeof AppModesCodeReviewPullNumberRoute
-  AppModesCodeReviewWorktreeSplatRoute: typeof AppModesCodeReviewWorktreeSplatRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -759,7 +738,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppModesCodeReviewIndexRoute: AppModesCodeReviewIndexRoute,
   AppModesCodeBrowseCommitShaRoute: AppModesCodeBrowseCommitShaRoute,
   AppModesCodeReviewPullNumberRoute: AppModesCodeReviewPullNumberRoute,
-  AppModesCodeReviewWorktreeSplatRoute: AppModesCodeReviewWorktreeSplatRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

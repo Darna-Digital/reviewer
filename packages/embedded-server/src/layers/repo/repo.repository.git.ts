@@ -24,7 +24,6 @@ import type {
   RepoStatus,
   RepoRepo,
   SearchQuery,
-  Worktree,
 } from "@byconvo/core/repo";
 
 /** Map a porcelain v2 unmerged `XY` field to a conflict kind. */
@@ -47,7 +46,7 @@ const conflictKindFromXY = (xy: string): ConflictKind => {
   }
 };
 
-/** One `--porcelain` line as a status entry, shared with the worktree reader. */
+/** One `--porcelain` line as a status entry. */
 export const parseStatusLine = (line: string): GitStatusEntry | null => {
   if (line.length < 4) return null;
   const xy = line.slice(0, 2);
@@ -111,60 +110,6 @@ export const splitDiffIntoHunks = (
   }
   flush();
   return { header, hunks };
-};
-
-/**
- * Parse `git worktree list --porcelain`: blank-line separated records, each
- * opening with `worktree <path>` and carrying `branch refs/heads/<name>` unless
- * the checkout is detached or bare. Git lists the main working tree first,
- * which is the only way the format says which one it is.
- */
-export const parseWorktrees = (
-  out: string,
-  currentRoot: string
-): ReadonlyArray<Worktree> =>
-  out
-    .split("\n\n")
-    .flatMap((record): Array<Worktree> => {
-      const fields = record.trim().split("\n");
-      const path = fields
-        .find((line) => line.startsWith("worktree "))
-        ?.slice("worktree ".length);
-      if (path === undefined || fields.includes("bare")) return [];
-      const ref = fields
-        .find((line) => line.startsWith("branch "))
-        ?.slice("branch ".length);
-      return [
-        {
-          path,
-          name: path.split("/").at(-1) ?? path,
-          branch: ref?.replace(/^refs\/heads\//, "") ?? null,
-          isMain: false,
-          isCurrent: path === currentRoot,
-        },
-      ];
-    })
-    .map((worktree, index) => ({ ...worktree, isMain: index === 0 }));
-
-/**
- * The directory a branch's worktree goes in. Derived, never asked for: the
- * branch is the thing the user named, and the folder is only where it had to
- * live. Slashes in a branch name would otherwise nest folders, so they flatten.
- */
-export const worktreeName = (branch: string): string =>
-  branch.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "work";
-
-/**
- * Where a repository keeps its linked worktrees: a dot-folder beside the main
- * one. Beside rather than inside because a worktree under the repository would
- * be walked by the file tree and the project scanner alike; dot-prefixed
- * because the scanner skips those, so a project holding several roots does not
- * grow a new one every time a task starts.
- */
-export const worktreesRoot = (mainPath: string): string => {
-  const parent = mainPath.split("/").slice(0, -1).join("/");
-  const name = mainPath.split("/").at(-1) ?? "repo";
-  return `${parent}/.${name}-worktrees`;
 };
 
 /** Long enough to read a match in context; minified files would otherwise ship megabytes. */
@@ -477,64 +422,6 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     });
   });
 
-  const worktrees: RepoRepo["worktrees"] = Effect.gen(function* () {
-    const [root, listing] = yield* Effect.all(
-      [
-        run("rev-parse", "--show-toplevel").pipe(
-          Effect.map((out) => out.trim())
-        ),
-        run("worktree", "list", "--porcelain"),
-      ],
-      { concurrency: "unbounded" }
-    );
-    return parseWorktrees(listing, root);
-  });
-
-  /** The repository's original worktree — the one git lists first. */
-  const mainWorktree = Effect.gen(function* () {
-    const listing = yield* run("worktree", "list", "--porcelain");
-    const first = parseWorktrees(listing, "")[0];
-    return first?.path ?? (yield* run("rev-parse", "--show-toplevel")).trim();
-  });
-
-  /** Tolerant on purpose: a branch that is not there is an answer, not a failure. */
-  const localBranchExists = (branch: string) =>
-    runTolerant("rev-parse", "--verify", `refs/heads/${branch}`).pipe(
-      Effect.map((out) => out.trim().length > 0)
-    );
-
-  const addWorktree: RepoRepo["addWorktree"] = (branch, target) =>
-    Effect.gen(function* () {
-      const main = yield* mainWorktree;
-      const path = `${worktreesRoot(main)}/${worktreeName(branch)}`;
-      // An existing branch is checked out into the new tree; a new one is cut
-      // from the target in the same call, which is the whole reason the target
-      // is asked for at the moment a task starts.
-      const args = (yield* localBranchExists(branch))
-        ? (["worktree", "add", path, branch] as const)
-        : ([
-            "worktree",
-            "add",
-            "-b",
-            branch,
-            path,
-            ...(target === null ? [] : [target]),
-          ] as const);
-      yield* run(...args);
-      return {
-        path,
-        name: worktreeName(branch),
-        branch,
-        isMain: false,
-        isCurrent: false,
-      };
-    });
-
-  const removeWorktree: RepoRepo["removeWorktree"] = (path, force) =>
-    run("worktree", "remove", ...(force ? ["--force"] : []), path).pipe(
-      Effect.asVoid
-    );
-
   const remoteBranches: RepoRepo["remoteBranches"] = Effect.gen(function* () {
     const refLines = yield* lines(
       "for-each-ref",
@@ -721,11 +608,6 @@ export const makeGitRepoRepository = Effect.gen(function* () {
             .pipe(Effect.catch(() => Effect.succeed<string | null>(null)));
           return { oldContents, newContents };
         }
-        // Read in the task's own worktree, which this repository is not — the
-        // tasks service answers it, and reaching here at all is a caller that
-        // asked the wrong one.
-        case "task":
-          return { oldContents: null, newContents: null };
         case "range": {
           // `rangeDiff` uses the three-dot form, whose old side is the merge
           // base — resolve the same commit so line numbers line up.
@@ -1078,9 +960,6 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     status,
     branches,
     remoteBranches,
-    worktrees,
-    addWorktree,
-    removeWorktree,
     log,
     search,
     commitDetail,

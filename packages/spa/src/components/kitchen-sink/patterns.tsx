@@ -133,7 +133,7 @@ export function Patterns() {
           hint="A recessed fill for secondary or nested content. No shadow, so it reads as set into the page."
         >
           <div className="rounded-3xl bg-muted p-5">
-            <p className="text-base font-medium sm:text-sm">Worktree</p>
+            <p className="text-base font-medium sm:text-sm">Project</p>
             <p className="mt-1 max-w-[56ch] font-mono text-sm/6 text-muted-foreground">
               ~/programming/darna-digital-organization/byconvo
             </p>

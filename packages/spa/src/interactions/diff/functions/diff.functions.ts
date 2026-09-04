@@ -21,22 +21,6 @@ export function createDiffFunctions(d: DiffDependencies): DiffFunctions {
         : { kind: "branch", target };
     }
     if (selection.mode === "review") {
-      // A local task and a pull request are the same row in the same list, so
-      // review mode answers for whichever of the two is selected.
-      if (selection.selectedTask != null) {
-        // Reading a task against something other than what it lands on is a
-        // reading, not a re-aim: the base moves, the key does not, so the
-        // comments left on it stay where they were put.
-        const against = selection.target ?? null;
-        return {
-          kind: "task",
-          branch: selection.selectedTask.branch,
-          base:
-            against === null || against.length === 0
-              ? selection.selectedTask.base
-              : against,
-        };
-      }
       return selection.selectedPull === null
         ? null
         : { kind: "pull", pull: selection.selectedPull };

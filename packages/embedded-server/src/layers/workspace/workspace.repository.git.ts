@@ -13,13 +13,7 @@ import { homedir, hostname, platform } from "node:os";
 import { resolve as pathResolve } from "node:path";
 import { NoRepoSelected, StorageError } from "@byconvo/core/shared";
 import { InvalidRepo, mediaTypeFor, PathExists } from "@byconvo/core/workspace";
-import { mainRepoOf } from "./main-repo.ts";
-import {
-  countRepos,
-  isGitRoot,
-  scanRepos,
-  scanWorktrees,
-} from "./repo-scan.ts";
+import { countRepos, isGitRoot, scanRepos } from "./repo-scan.ts";
 import { resolveWorkspace, WorkspaceContext } from "./workspace-context.ts";
 import type {
   BrowseEntry,
@@ -98,12 +92,10 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
    * so a repository cloned into the folder shows up without reopening it. */
   const info: WorkspaceRepo["info"] = Effect.gen(function* () {
     const project = yield* ctx.project;
-    const current = yield* ctx.current;
     return {
       project,
       repos: project === null ? [] : yield* scanRepos(fs, project),
-      current,
-      currentRoot: current === null ? null : yield* mainRepoOf(fs, current),
+      current: yield* ctx.current,
       recents: yield* ctx.recents,
       home: homedir(),
       device,
@@ -132,14 +124,12 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
           new InvalidRepo({ path, reason: "no project is open" })
         );
       }
-      // Worktrees, not roots: a task's worktree is somewhere the app can be
-      // pointed even though it is not one of the repositories the project holds.
-      const worktrees = yield* scanWorktrees(fs, project);
-      if (!worktrees.some((worktree) => worktree.path === path)) {
+      const repos = yield* scanRepos(fs, project);
+      if (!repos.some((repo) => repo.path === path)) {
         return yield* Effect.fail(
           new InvalidRepo({
             path,
-            reason: "not a worktree of the open project",
+            reason: "not a repository in the open project",
           })
         );
       }

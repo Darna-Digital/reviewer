@@ -83,9 +83,9 @@ export function ReviewAssignBar({
   comments: ReadonlyArray<AssignBarComment>;
   chats: ReadonlyArray<ChatSummary>;
   /**
-   * The branch the comments are about — the worktree being read, or the
-   * checkout you are standing in. Sessions already working there lead the
-   * picker, and the newest of them is what the bar opens on.
+   * The branch the comments are about — the one this checkout is on. Sessions
+   * already working there lead the picker, and the newest of them is what the
+   * bar opens on.
    */
   branch?: string;
   onAssign: (target: AssignTarget) => Promise<void> | void;
@@ -131,7 +131,7 @@ export function ReviewAssignBar({
   /**
    * What the bar is aimed at.
    *
-   * A note left on a worktree's diff is nearly always for whoever is working in
+   * A note left on a branch's diff is nearly always for whoever is working on
    * it, so that session is the answer until somebody says otherwise — which
    * makes the common case no clicks at all. A pick, once made, is held: the
    * list reloads as sessions come and go, and it must not quietly undo one.
@@ -334,11 +334,10 @@ export function ReviewAssignBar({
                     items: sessions.here,
                   },
                   {
-                    // Where the work happens when it is not cut into a worktree
-                    // of its own — named, not merely "not here", because that
-                    // is the place you would be sending the comments to.
+                    // Everything else this project has going, so a comment can
+                    // still be handed to a session that is not on this branch.
                     heading:
-                      sessions.here.length > 0 ? "Main worktree" : "Sessions",
+                      sessions.here.length > 0 ? "Other sessions" : "Sessions",
                     items: sessions.elsewhere,
                   },
                 ]

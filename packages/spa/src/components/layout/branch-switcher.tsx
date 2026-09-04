@@ -399,10 +399,6 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
  * The pinned filter row. It scrolls under the branch list, so it has to repaint
  * the menu's own surface — read from context rather than hardcoded, so it still
  * matches when the menu opens at a deeper elevation (inside a dialog, say).
- *
- * Exported for the worktree menu beside this one: the two answer neighbouring
- * questions in the same bar, and a filter row that sat a pixel differently in
- * one of them would be the thing you noticed.
  */
 export function MenuFilterRow({ children }: { children: React.ReactNode }) {
   const surface = useSurfaceBackground();

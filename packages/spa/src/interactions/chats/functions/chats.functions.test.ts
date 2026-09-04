@@ -79,23 +79,6 @@ describe("createChatsFunctions", () => {
     expect(calls.send).toEqual([{ id: "c-1", text: "go", images: [] }]);
   });
 
-  it("start in a worktree names the checkout the agent runs in", async () => {
-    const { deps, calls } = mockChatsDependencies();
-    const fns = createChatsFunctions(deps);
-    await fns.start(
-      settings,
-      { branch: "task/dark-mode", repoPath: "/repo/.byconvo-worktrees/task" },
-      "add dark mode"
-    );
-    expect(calls.create).toEqual([
-      {
-        ...settings,
-        branch: "task/dark-mode",
-        repoPath: "/repo/.byconvo-worktrees/task",
-      },
-    ]);
-  });
-
   it("send trims and skips blank prompts", async () => {
     const { deps, calls } = mockChatsDependencies();
     const fns = createChatsFunctions(deps);
