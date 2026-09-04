@@ -24,10 +24,8 @@ import {
 import { TabSnapshotMill } from "@/interactions/tab-preview/components/tab-snapshot-mill";
 import { isDesktop } from "@/lib/desktop";
 import { isPreviewWindow } from "@/lib/preview-window";
-import { shellRoute } from "@/lib/shell-route";
+import { isCodeSurface, shellRoute } from "@/lib/shell-route";
 import { setUiPrefs, toggleBottomVisible, useUiPrefs } from "@/lib/ui-prefs";
-import { cn } from "@/lib/utils";
-import { activeWorkMode } from "@/lib/work-mode";
 
 export function WindowFrame({ children }: { children: React.ReactNode }) {
   // ⌘, opens Settings, as in every Mac app. It lives here rather than in either
@@ -54,7 +52,7 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
     select: (state) => state.location.pathname,
   });
   const prefs = useUiPrefs();
-  const inCodeMode = activeWorkMode(pathname, prefs.workMode) === "code";
+  const inCodeMode = isCodeSurface(pathname);
 
   // Both side panes hang off the frame, so dragging either used to re-render
   // the entire window — and, because these two wrote straight to the prefs,
@@ -78,10 +76,8 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
   // On one of the dock's own pages there is no drawer to collapse and the page
   // *is* the dock, so the chord means the smaller of the two: put it back down
   // on the page it was expanded from.
-  const route = shellRoute(pathname, prefs.workMode);
+  const route = shellRoute(pathname);
   const dockPageTab = route.kind === "dock" ? route.tab : null;
-  /** Whether the page is drawn straight on the frame rather than on a canvas. */
-  const onFrame = route.kind === "collaboration";
   useEffect(() => {
     if (!inCodeMode) return;
     const onKey = (event: KeyboardEvent) => {
@@ -121,16 +117,7 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
               between them is the frame's own material, so the seam reads as the
               window showing through instead of a painted divider. */}
           <TabOverviewPush>
-            {/* Collaboration takes the frame's own material instead of a sheet
-                laid over it, so the column it centres stands on the window
-                rather than on a page — and on the native shell the desktop is
-                what shows behind it. See `.app-canvas.on-frame`. */}
-            <div
-              className={cn(
-                "app-canvas flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl",
-                onFrame ? "on-frame" : "border border-frame-border"
-              )}
-            >
+            <div className="app-canvas flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-frame-border">
               {children}
             </div>
             {prefs.plansPaneOpen && (

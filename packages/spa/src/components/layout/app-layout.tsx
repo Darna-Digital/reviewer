@@ -2,7 +2,7 @@
  * The layout — one of them, for every page in the app.
  *
  * There were two: `AppShell` for the code surfaces and `WorkspaceShell` for the
- * sessions, docs, tasks and collaboration pages, each a pathless layout route
+ * sessions and workspace pages, each a pathless layout route
  * with its own `WindowFrame`, mode rail, header and bottom dock. They were
  * siblings in the route tree, so moving between a diff and an agent session
  * unmounted one of them whole and built the other: the frame, the rail, the
@@ -31,7 +31,6 @@ import { useRepoCommands } from "@/interactions/workspace/adapters/workspace.hoo
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { useWorkspace } from "@/lib/queries";
 import { shellRoute, showsGitChrome } from "@/lib/shell-route";
-import { useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
 const SESSIONS_PREFIX = "/modes/agent-session";
@@ -77,14 +76,13 @@ export function AppLayout() {
   const startingNew = pendingIntoSessions
     ? targetStartingNew
     : resolvedStartingNew;
-  const prefs = useUiPrefs();
   const workspace = useWorkspace();
   // Which tab is holding the window, where that changes the shape of the page:
   // a conversation lifted into a tab of its own is the whole page rather than
   // the pane beside the list. See `ShellRoute`.
   const soloSession = useOnSessionTab();
 
-  const route = shellRoute(pathname, prefs.workMode, startingNew, soloSession);
+  const route = shellRoute(pathname, startingNew, soloSession);
   const gitChrome = showsGitChrome(route);
   const current = workspace.data?.current ?? null;
 
@@ -96,19 +94,14 @@ export function AppLayout() {
   const bare = route.kind === "session" && route.composing;
 
   /**
-   * Pages that wear no header, and so no rule under one either.
-   *
-   * The composer is one because the shell is getting out of its way entirely.
-   * Collaboration is one for the opposite reason: it is a full page, but every
-   * surface in it names itself at the top of its own centred column, so a bar
-   * above would repeat that — and the rule under it would be the one line drawn
-   * across a design whose argument is a page standing on open ground.
+   * Pages that wear no header, and so no rule under one either — the composer,
+   * because the shell is getting out of its way entirely.
    */
-  const headerless = bare || route.kind === "collaboration";
+  const headerless = bare;
 
   // Both rails are the same column carrying different things — code's git
   // surfaces, sessions' new-and-find — so crossing between them leaves the page
-  // beside it exactly where it was. Collaboration is the one surface without
+  // beside it exactly where it was. The prototype is the one surface without
   // one: its own sidebar carries the equivalent.
   //
   // So is a conversation with the window to itself. Every button in the
@@ -118,7 +111,6 @@ export function AppLayout() {
   // above it mints a session and the trail leads back to the list, which is
   // what was worth having here.
   const railed =
-    route.kind !== "collaboration" &&
     route.kind !== "experimentation" &&
     !bare &&
     !(route.kind === "session" && route.solo);
@@ -127,7 +119,6 @@ export function AppLayout() {
   const needsRepo =
     route.kind === "workspace" ||
     route.kind === "session" ||
-    route.kind === "collaboration" ||
     route.kind === "experimentation" ||
     route.kind === "dock";
 

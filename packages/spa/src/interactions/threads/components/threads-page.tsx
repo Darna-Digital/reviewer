@@ -148,12 +148,7 @@ export function ThreadsPage() {
 
   const createThread = async () => {
     try {
-      const created = await actions.create(
-        "terminal",
-        "",
-        null,
-        newThreadBranch
-      );
+      const created = await actions.create("terminal", "", newThreadBranch);
       setActiveId(created.id);
     } catch (error) {
       toast.error(
@@ -226,11 +221,6 @@ export function ThreadsPage() {
             className="size-1.5 shrink-0 rounded-full bg-brand-500"
             aria-label="activity"
           />
-        )}
-        {t.taskKey !== null && (
-          <span className="shrink-0 rounded bg-muted-foreground/15 px-1 text-[10px] text-muted-foreground">
-            {t.taskKey}
-          </span>
         )}
         <Button
           variant="ghost"

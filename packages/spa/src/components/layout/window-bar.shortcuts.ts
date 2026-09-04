@@ -7,10 +7,10 @@
  * leads with are ways of working rather than tabs among them, so taking one of
  * them off the digits keeps the run counting what a tab strip counts.
  *
- * ⌘G is how you cross between those ways of working — Code, Collaboration and
- * Sessions — the way ⌘<digit> moves along the tabs within one. It steps along
- * whichever of them the strip is currently leading with, so a mode switched off
- * drops out of the run rather than leaving a gap in it.
+ * ⌘G is how you cross between those ways of working — Code and Sessions — the
+ * way ⌘<digit> moves along the tabs within one. It steps along whichever of them
+ * the strip is currently leading with, so a mode switched off drops out of the
+ * run rather than leaving a gap in it.
  *
  * The launchpad is off the bar — it is reached by the handle under it — so it is
  * off the run of digits too: it answers to ⌘L, beside ⌘T for a new session, the

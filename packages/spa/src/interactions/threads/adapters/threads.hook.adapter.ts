@@ -24,7 +24,6 @@ export function useThreadsActions() {
                 title: input.title,
                 agent: input.agent,
                 branch: input.branch,
-                taskKey: input.taskKey ?? undefined,
               },
             });
             if (error) return fail(error, "failed to create thread");
@@ -74,7 +73,6 @@ export function useThreadsActions() {
       title: thread.title,
       agent: thread.agent,
       branch: thread.branch,
-      taskKey: thread.taskKey,
       createdAt: thread.createdAt,
       updatedAt: thread.updatedAt,
       entryCount: thread.entries.length,
@@ -87,13 +85,8 @@ export function useThreadsActions() {
   };
 
   return {
-    create: async (
-      agent: AgentKind,
-      title: string,
-      taskKey: string | null,
-      branch: string
-    ) => {
-      const created = await fns.create(agent, title, taskKey, branch);
+    create: async (agent: AgentKind, title: string, branch: string) => {
+      const created = await fns.create(agent, title, branch);
       prependThread(created);
       invalidate();
       return created;
@@ -108,42 +101,10 @@ export function useThreadsActions() {
       invalidate(id);
       return updated;
     },
-    linkTask: async (
-      id: string,
-      currentTitle: string,
-      taskKey: string | null
-    ) => {
-      const updated = await fns.linkTask(id, currentTitle, taskKey);
-      invalidate(id);
-      return updated;
-    },
     setBranch: async (id: string, currentTitle: string, branch: string) => {
       const updated = await fns.setBranch(id, currentTitle, branch);
       invalidate(id);
       return updated;
-    },
-    // Start an agent thread seeded with a prompt (a task comment handed to the
-    // agent). The prompt is typed into the agent once it boots.
-    spawnForTask: async (input: {
-      agent: AgentKind;
-      branch: string;
-      taskKey: string | null;
-      title: string;
-      initialPrompt: string;
-    }) => {
-      const { data, error } = await fetchClient.POST("/api/threads", {
-        body: {
-          agent: input.agent,
-          branch: input.branch,
-          taskKey: input.taskKey ?? undefined,
-          title: input.title,
-          initialPrompt: input.initialPrompt,
-        },
-      });
-      if (error) return fail(error, "failed to start agent");
-      if (data) prependThread(data);
-      invalidate();
-      return data;
     },
     remove: async (id: string) => {
       await fns.remove(id);

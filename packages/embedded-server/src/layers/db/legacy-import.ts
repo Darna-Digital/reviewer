@@ -27,7 +27,6 @@ import {
 import { ReviewComment } from "@byconvo/core/comments";
 import { DevCommandDefinition } from "@byconvo/core/local-dev";
 import { Plan } from "@byconvo/core/plans";
-import { Card, Column, DEFAULT_COLUMNS } from "@byconvo/core/tasks";
 import { Thread } from "@byconvo/core/threads";
 import { VisualComment } from "@byconvo/core/visual-comments";
 import { database, transact } from "./database.ts";
@@ -65,14 +64,6 @@ const decodeDevCommands = Schema.decodeUnknownSync(
   Schema.Array(DevCommandDefinition)
 );
 const decodePlan = Schema.decodeUnknownSync(Plan);
-const decodeTasks = Schema.decodeUnknownSync(
-  Schema.Struct({
-    cards: Schema.Array(Card),
-    counter: Schema.Number,
-    prefix: Schema.optionalKey(Schema.String),
-    columns: Schema.optionalKey(Schema.Array(Column)),
-  })
-);
 
 /** Parse a `.byconvo` file, or null when it isn't there. */
 const readJson = (path: string): unknown | null => {
@@ -228,42 +219,6 @@ const importChats = (repoPath: string): void => {
   }
 };
 
-const importTasks = (repoPath: string): void => {
-  const raw = readJson(`${repoPath}/.byconvo/tasks.json`);
-  if (raw === null) return;
-  const state = decodeTasks(raw);
-  const columns =
-    state.columns !== undefined && state.columns.length > 0
-      ? state.columns
-      : DEFAULT_COLUMNS;
-  database()
-    .prepare(
-      `INSERT INTO task_board (repo_path, prefix, counter, columns) VALUES (?, ?, ?, ?)
-       ON CONFLICT (repo_path) DO NOTHING`
-    )
-    .run(
-      repoPath,
-      state.prefix !== undefined && state.prefix.length > 0
-        ? state.prefix
-        : "T",
-      state.counter,
-      JSON.stringify(columns)
-    );
-  const insertCard = database().prepare(
-    `INSERT INTO task_card (id, repo_path, column_id, sort_order, data) VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT (id) DO NOTHING`
-  );
-  for (const card of state.cards) {
-    insertCard.run(
-      card.id,
-      repoPath,
-      card.column,
-      card.order,
-      JSON.stringify(card)
-    );
-  }
-};
-
 const importPlans = (repoPath: string): void => {
   const dir = `${repoPath}/.byconvo/plans`;
   let names: ReadonlyArray<string>;
@@ -331,7 +286,6 @@ export const importLegacyJson = (repoPath: string): ReadonlyArray<string> => {
       threads.put(repoPath, thread.id, thread.updatedAt, thread);
     }
   });
-  run("tasks", () => importTasks(repoPath));
   run("plans", () => importPlans(repoPath));
   run("dev-commands", () => {
     const raw = readJson(`${repoPath}/.byconvo/dev-commands.json`);

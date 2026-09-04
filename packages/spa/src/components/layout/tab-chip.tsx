@@ -3,9 +3,9 @@
  * icon, names itself, and keeps a fixed slot at its tail for the ✕ — so a tab
  * neither resizes nor leaves a hole as the control comes and goes.
  *
- * The window bar's own strip is the reference; the mode strips beneath it —
- * open files in code, open surfaces in collaboration — wear the same chip so
- * moving between modes is a change of contents, not of furniture.
+ * The window bar's own strip is the reference; the strips beneath it — the
+ * open files in code, the prototype's open surfaces — wear the same chip so
+ * moving between them is a change of contents, not of furniture.
  */
 import { IconX } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";

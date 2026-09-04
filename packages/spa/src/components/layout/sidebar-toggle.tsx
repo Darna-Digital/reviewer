@@ -1,9 +1,8 @@
 /**
- * SidebarToggle — the way back to the shell's left sidebar (the file tree in
- * code mode, the collaboration nav in the other). The sidebar is put away by
- * dragging its edge shut rather than by a button, so while it is showing there
- * is nothing here to press and the button stays out of the bar; it appears
- * once the sidebar is gone. It rides the window bar, in either shell.
+ * SidebarToggle — the way back to the shell's left sidebar (the file tree).
+ * The sidebar is put away by dragging its edge shut rather than by a button, so
+ * while it is showing there is nothing here to press and the button stays out
+ * of the bar; it appears once the sidebar is gone. It rides the window bar.
  */
 import { IconLayoutSidebar } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";

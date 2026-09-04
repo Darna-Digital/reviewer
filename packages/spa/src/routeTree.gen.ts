@@ -14,20 +14,16 @@ import { Route as KitchenSinkRouteImport } from './routes/kitchen-sink'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppModesAgentSessionRouteImport } from './routes/_app/modes.agent-session'
-import { Route as AppModesCollaborationRouteImport } from './routes/_app/modes.collaboration'
 import { Route as AppModesAgentSessionIndexRouteImport } from './routes/_app/modes.agent-session.index'
 import { Route as AppModesAgentSessionChatIdRouteImport } from './routes/_app/modes.agent-session.$chatId'
 import { Route as AppModesCodeIndexRouteImport } from './routes/_app/modes.code.index'
 import { Route as AppModesCodeBranchesRouteImport } from './routes/_app/modes.code.branches'
 import { Route as AppModesCodeCommitRouteImport } from './routes/_app/modes.code.commit'
-import { Route as AppModesCodeDocsRouteImport } from './routes/_app/modes.code.docs'
 import { Route as AppModesCodeFindRouteImport } from './routes/_app/modes.code.find'
 import { Route as AppModesCodeHistoryRouteImport } from './routes/_app/modes.code.history'
 import { Route as AppModesCodeLocalDevRouteImport } from './routes/_app/modes.code.local-dev'
 import { Route as AppModesCodeReviewsRouteImport } from './routes/_app/modes.code.reviews'
-import { Route as AppModesCodeTasksRouteImport } from './routes/_app/modes.code.tasks'
 import { Route as AppModesCodeThreadsRouteImport } from './routes/_app/modes.code.threads'
-import { Route as AppModesCollaborationIndexRouteImport } from './routes/_app/modes.collaboration.index'
 import { Route as AppModesExperimentationCollaborationRouteImport } from './routes/_app/modes.experimentation.collaboration'
 import { Route as AppModesAgentSessionCloudRunIdRouteImport } from './routes/_app/modes.agent-session.cloud.$runId'
 import { Route as AppModesCodeBrowseIndexRouteImport } from './routes/_app/modes.code.browse.index'
@@ -37,10 +33,6 @@ import { Route as AppModesCodeReviewPullRouteImport } from './routes/_app/modes.
 import { Route as AppModesExperimentationCollaborationInboxRouteImport } from './routes/_app/modes.experimentation.collaboration_.inbox'
 import { Route as AppModesCodeBrowseCommitShaRouteImport } from './routes/_app/modes.code.browse.commit.$sha'
 import { Route as AppModesCodeReviewPullNumberRouteImport } from './routes/_app/modes.code.review.pull.$number'
-import { Route as AppModesCollaborationProjectsProjectIdIndexRouteImport } from './routes/_app/modes.collaboration.projects.$projectId.index'
-import { Route as AppModesCollaborationProjectsProjectIdBoardRouteImport } from './routes/_app/modes.collaboration.projects.$projectId.board'
-import { Route as AppModesCollaborationProjectsProjectIdNotesRouteImport } from './routes/_app/modes.collaboration.projects.$projectId.notes'
-import { Route as AppModesCollaborationProjectsProjectIdTodosRouteImport } from './routes/_app/modes.collaboration.projects.$projectId.todos'
 
 const AppRoute = AppRouteImport.update({
   id: '/_app',
@@ -64,11 +56,6 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppModesAgentSessionRoute = AppModesAgentSessionRouteImport.update({
   id: '/modes/agent-session',
   path: '/modes/agent-session',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppModesCollaborationRoute = AppModesCollaborationRouteImport.update({
-  id: '/modes/collaboration',
-  path: '/modes/collaboration',
   getParentRoute: () => AppRoute,
 } as any)
 const AppModesAgentSessionIndexRoute =
@@ -98,11 +85,6 @@ const AppModesCodeCommitRoute = AppModesCodeCommitRouteImport.update({
   path: '/modes/code/commit',
   getParentRoute: () => AppRoute,
 } as any)
-const AppModesCodeDocsRoute = AppModesCodeDocsRouteImport.update({
-  id: '/modes/code/docs',
-  path: '/modes/code/docs',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppModesCodeFindRoute = AppModesCodeFindRouteImport.update({
   id: '/modes/code/find',
   path: '/modes/code/find',
@@ -123,22 +105,11 @@ const AppModesCodeReviewsRoute = AppModesCodeReviewsRouteImport.update({
   path: '/modes/code/reviews',
   getParentRoute: () => AppRoute,
 } as any)
-const AppModesCodeTasksRoute = AppModesCodeTasksRouteImport.update({
-  id: '/modes/code/tasks',
-  path: '/modes/code/tasks',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppModesCodeThreadsRoute = AppModesCodeThreadsRouteImport.update({
   id: '/modes/code/threads',
   path: '/modes/code/threads',
   getParentRoute: () => AppRoute,
 } as any)
-const AppModesCollaborationIndexRoute =
-  AppModesCollaborationIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AppModesCollaborationRoute,
-  } as any)
 const AppModesExperimentationCollaborationRoute =
   AppModesExperimentationCollaborationRouteImport.update({
     id: '/modes/experimentation/collaboration',
@@ -189,51 +160,23 @@ const AppModesCodeReviewPullNumberRoute =
     path: '/modes/code/review/pull/$number',
     getParentRoute: () => AppRoute,
   } as any)
-const AppModesCollaborationProjectsProjectIdIndexRoute =
-  AppModesCollaborationProjectsProjectIdIndexRouteImport.update({
-    id: '/projects/$projectId/',
-    path: '/projects/$projectId/',
-    getParentRoute: () => AppModesCollaborationRoute,
-  } as any)
-const AppModesCollaborationProjectsProjectIdBoardRoute =
-  AppModesCollaborationProjectsProjectIdBoardRouteImport.update({
-    id: '/projects/$projectId/board',
-    path: '/projects/$projectId/board',
-    getParentRoute: () => AppModesCollaborationRoute,
-  } as any)
-const AppModesCollaborationProjectsProjectIdNotesRoute =
-  AppModesCollaborationProjectsProjectIdNotesRouteImport.update({
-    id: '/projects/$projectId/notes',
-    path: '/projects/$projectId/notes',
-    getParentRoute: () => AppModesCollaborationRoute,
-  } as any)
-const AppModesCollaborationProjectsProjectIdTodosRoute =
-  AppModesCollaborationProjectsProjectIdTodosRouteImport.update({
-    id: '/projects/$projectId/todos',
-    path: '/projects/$projectId/todos',
-    getParentRoute: () => AppModesCollaborationRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AppIndexRoute
   '/kitchen-sink': typeof KitchenSinkRoute
   '/settings': typeof AppSettingsRoute
   '/modes/agent-session': typeof AppModesAgentSessionRouteWithChildren
-  '/modes/collaboration': typeof AppModesCollaborationRouteWithChildren
   '/modes/agent-session/$chatId': typeof AppModesAgentSessionChatIdRoute
   '/modes/code/branches': typeof AppModesCodeBranchesRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
-  '/modes/code/docs': typeof AppModesCodeDocsRoute
   '/modes/code/find': typeof AppModesCodeFindRoute
   '/modes/code/history': typeof AppModesCodeHistoryRoute
   '/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
   '/modes/code/reviews': typeof AppModesCodeReviewsRoute
-  '/modes/code/tasks': typeof AppModesCodeTasksRoute
   '/modes/code/threads': typeof AppModesCodeThreadsRoute
   '/modes/experimentation/collaboration': typeof AppModesExperimentationCollaborationRoute
   '/modes/agent-session/': typeof AppModesAgentSessionIndexRoute
   '/modes/code/': typeof AppModesCodeIndexRoute
-  '/modes/collaboration/': typeof AppModesCollaborationIndexRoute
   '/modes/agent-session/cloud/$runId': typeof AppModesAgentSessionCloudRunIdRoute
   '/modes/code/browse/range': typeof AppModesCodeBrowseRangeRoute
   '/modes/code/review/$pull': typeof AppModesCodeReviewPullRoute
@@ -242,10 +185,6 @@ export interface FileRoutesByFullPath {
   '/modes/code/review/': typeof AppModesCodeReviewIndexRoute
   '/modes/code/browse/commit/$sha': typeof AppModesCodeBrowseCommitShaRoute
   '/modes/code/review/pull/$number': typeof AppModesCodeReviewPullNumberRoute
-  '/modes/collaboration/projects/$projectId/board': typeof AppModesCollaborationProjectsProjectIdBoardRoute
-  '/modes/collaboration/projects/$projectId/notes': typeof AppModesCollaborationProjectsProjectIdNotesRoute
-  '/modes/collaboration/projects/$projectId/todos': typeof AppModesCollaborationProjectsProjectIdTodosRoute
-  '/modes/collaboration/projects/$projectId/': typeof AppModesCollaborationProjectsProjectIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/kitchen-sink': typeof KitchenSinkRoute
@@ -254,17 +193,14 @@ export interface FileRoutesByTo {
   '/modes/agent-session/$chatId': typeof AppModesAgentSessionChatIdRoute
   '/modes/code/branches': typeof AppModesCodeBranchesRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
-  '/modes/code/docs': typeof AppModesCodeDocsRoute
   '/modes/code/find': typeof AppModesCodeFindRoute
   '/modes/code/history': typeof AppModesCodeHistoryRoute
   '/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
   '/modes/code/reviews': typeof AppModesCodeReviewsRoute
-  '/modes/code/tasks': typeof AppModesCodeTasksRoute
   '/modes/code/threads': typeof AppModesCodeThreadsRoute
   '/modes/experimentation/collaboration': typeof AppModesExperimentationCollaborationRoute
   '/modes/agent-session': typeof AppModesAgentSessionIndexRoute
   '/modes/code': typeof AppModesCodeIndexRoute
-  '/modes/collaboration': typeof AppModesCollaborationIndexRoute
   '/modes/agent-session/cloud/$runId': typeof AppModesAgentSessionCloudRunIdRoute
   '/modes/code/browse/range': typeof AppModesCodeBrowseRangeRoute
   '/modes/code/review/$pull': typeof AppModesCodeReviewPullRoute
@@ -273,10 +209,6 @@ export interface FileRoutesByTo {
   '/modes/code/review': typeof AppModesCodeReviewIndexRoute
   '/modes/code/browse/commit/$sha': typeof AppModesCodeBrowseCommitShaRoute
   '/modes/code/review/pull/$number': typeof AppModesCodeReviewPullNumberRoute
-  '/modes/collaboration/projects/$projectId/board': typeof AppModesCollaborationProjectsProjectIdBoardRoute
-  '/modes/collaboration/projects/$projectId/notes': typeof AppModesCollaborationProjectsProjectIdNotesRoute
-  '/modes/collaboration/projects/$projectId/todos': typeof AppModesCollaborationProjectsProjectIdTodosRoute
-  '/modes/collaboration/projects/$projectId': typeof AppModesCollaborationProjectsProjectIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -285,21 +217,17 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/': typeof AppIndexRoute
   '/_app/modes/agent-session': typeof AppModesAgentSessionRouteWithChildren
-  '/_app/modes/collaboration': typeof AppModesCollaborationRouteWithChildren
   '/_app/modes/agent-session/$chatId': typeof AppModesAgentSessionChatIdRoute
   '/_app/modes/code/branches': typeof AppModesCodeBranchesRoute
   '/_app/modes/code/commit': typeof AppModesCodeCommitRoute
-  '/_app/modes/code/docs': typeof AppModesCodeDocsRoute
   '/_app/modes/code/find': typeof AppModesCodeFindRoute
   '/_app/modes/code/history': typeof AppModesCodeHistoryRoute
   '/_app/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
   '/_app/modes/code/reviews': typeof AppModesCodeReviewsRoute
-  '/_app/modes/code/tasks': typeof AppModesCodeTasksRoute
   '/_app/modes/code/threads': typeof AppModesCodeThreadsRoute
   '/_app/modes/experimentation/collaboration': typeof AppModesExperimentationCollaborationRoute
   '/_app/modes/agent-session/': typeof AppModesAgentSessionIndexRoute
   '/_app/modes/code/': typeof AppModesCodeIndexRoute
-  '/_app/modes/collaboration/': typeof AppModesCollaborationIndexRoute
   '/_app/modes/agent-session/cloud/$runId': typeof AppModesAgentSessionCloudRunIdRoute
   '/_app/modes/code/browse/range': typeof AppModesCodeBrowseRangeRoute
   '/_app/modes/code/review/$pull': typeof AppModesCodeReviewPullRoute
@@ -308,10 +236,6 @@ export interface FileRoutesById {
   '/_app/modes/code/review/': typeof AppModesCodeReviewIndexRoute
   '/_app/modes/code/browse/commit/$sha': typeof AppModesCodeBrowseCommitShaRoute
   '/_app/modes/code/review/pull/$number': typeof AppModesCodeReviewPullNumberRoute
-  '/_app/modes/collaboration/projects/$projectId/board': typeof AppModesCollaborationProjectsProjectIdBoardRoute
-  '/_app/modes/collaboration/projects/$projectId/notes': typeof AppModesCollaborationProjectsProjectIdNotesRoute
-  '/_app/modes/collaboration/projects/$projectId/todos': typeof AppModesCollaborationProjectsProjectIdTodosRoute
-  '/_app/modes/collaboration/projects/$projectId/': typeof AppModesCollaborationProjectsProjectIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -320,21 +244,17 @@ export interface FileRouteTypes {
     | '/kitchen-sink'
     | '/settings'
     | '/modes/agent-session'
-    | '/modes/collaboration'
     | '/modes/agent-session/$chatId'
     | '/modes/code/branches'
     | '/modes/code/commit'
-    | '/modes/code/docs'
     | '/modes/code/find'
     | '/modes/code/history'
     | '/modes/code/local-dev'
     | '/modes/code/reviews'
-    | '/modes/code/tasks'
     | '/modes/code/threads'
     | '/modes/experimentation/collaboration'
     | '/modes/agent-session/'
     | '/modes/code/'
-    | '/modes/collaboration/'
     | '/modes/agent-session/cloud/$runId'
     | '/modes/code/browse/range'
     | '/modes/code/review/$pull'
@@ -343,10 +263,6 @@ export interface FileRouteTypes {
     | '/modes/code/review/'
     | '/modes/code/browse/commit/$sha'
     | '/modes/code/review/pull/$number'
-    | '/modes/collaboration/projects/$projectId/board'
-    | '/modes/collaboration/projects/$projectId/notes'
-    | '/modes/collaboration/projects/$projectId/todos'
-    | '/modes/collaboration/projects/$projectId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/kitchen-sink'
@@ -355,17 +271,14 @@ export interface FileRouteTypes {
     | '/modes/agent-session/$chatId'
     | '/modes/code/branches'
     | '/modes/code/commit'
-    | '/modes/code/docs'
     | '/modes/code/find'
     | '/modes/code/history'
     | '/modes/code/local-dev'
     | '/modes/code/reviews'
-    | '/modes/code/tasks'
     | '/modes/code/threads'
     | '/modes/experimentation/collaboration'
     | '/modes/agent-session'
     | '/modes/code'
-    | '/modes/collaboration'
     | '/modes/agent-session/cloud/$runId'
     | '/modes/code/browse/range'
     | '/modes/code/review/$pull'
@@ -374,10 +287,6 @@ export interface FileRouteTypes {
     | '/modes/code/review'
     | '/modes/code/browse/commit/$sha'
     | '/modes/code/review/pull/$number'
-    | '/modes/collaboration/projects/$projectId/board'
-    | '/modes/collaboration/projects/$projectId/notes'
-    | '/modes/collaboration/projects/$projectId/todos'
-    | '/modes/collaboration/projects/$projectId'
   id:
     | '__root__'
     | '/_app'
@@ -385,21 +294,17 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/'
     | '/_app/modes/agent-session'
-    | '/_app/modes/collaboration'
     | '/_app/modes/agent-session/$chatId'
     | '/_app/modes/code/branches'
     | '/_app/modes/code/commit'
-    | '/_app/modes/code/docs'
     | '/_app/modes/code/find'
     | '/_app/modes/code/history'
     | '/_app/modes/code/local-dev'
     | '/_app/modes/code/reviews'
-    | '/_app/modes/code/tasks'
     | '/_app/modes/code/threads'
     | '/_app/modes/experimentation/collaboration'
     | '/_app/modes/agent-session/'
     | '/_app/modes/code/'
-    | '/_app/modes/collaboration/'
     | '/_app/modes/agent-session/cloud/$runId'
     | '/_app/modes/code/browse/range'
     | '/_app/modes/code/review/$pull'
@@ -408,10 +313,6 @@ export interface FileRouteTypes {
     | '/_app/modes/code/review/'
     | '/_app/modes/code/browse/commit/$sha'
     | '/_app/modes/code/review/pull/$number'
-    | '/_app/modes/collaboration/projects/$projectId/board'
-    | '/_app/modes/collaboration/projects/$projectId/notes'
-    | '/_app/modes/collaboration/projects/$projectId/todos'
-    | '/_app/modes/collaboration/projects/$projectId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -456,13 +357,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppModesAgentSessionRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/modes/collaboration': {
-      id: '/_app/modes/collaboration'
-      path: '/modes/collaboration'
-      fullPath: '/modes/collaboration'
-      preLoaderRoute: typeof AppModesCollaborationRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/modes/agent-session/': {
       id: '/_app/modes/agent-session/'
       path: '/'
@@ -498,13 +392,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppModesCodeCommitRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/modes/code/docs': {
-      id: '/_app/modes/code/docs'
-      path: '/modes/code/docs'
-      fullPath: '/modes/code/docs'
-      preLoaderRoute: typeof AppModesCodeDocsRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/modes/code/find': {
       id: '/_app/modes/code/find'
       path: '/modes/code/find'
@@ -533,26 +420,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppModesCodeReviewsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/modes/code/tasks': {
-      id: '/_app/modes/code/tasks'
-      path: '/modes/code/tasks'
-      fullPath: '/modes/code/tasks'
-      preLoaderRoute: typeof AppModesCodeTasksRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/modes/code/threads': {
       id: '/_app/modes/code/threads'
       path: '/modes/code/threads'
       fullPath: '/modes/code/threads'
       preLoaderRoute: typeof AppModesCodeThreadsRouteImport
       parentRoute: typeof AppRoute
-    }
-    '/_app/modes/collaboration/': {
-      id: '/_app/modes/collaboration/'
-      path: '/'
-      fullPath: '/modes/collaboration/'
-      preLoaderRoute: typeof AppModesCollaborationIndexRouteImport
-      parentRoute: typeof AppModesCollaborationRoute
     }
     '/_app/modes/experimentation/collaboration': {
       id: '/_app/modes/experimentation/collaboration'
@@ -617,34 +490,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppModesCodeReviewPullNumberRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/modes/collaboration/projects/$projectId/': {
-      id: '/_app/modes/collaboration/projects/$projectId/'
-      path: '/projects/$projectId'
-      fullPath: '/modes/collaboration/projects/$projectId/'
-      preLoaderRoute: typeof AppModesCollaborationProjectsProjectIdIndexRouteImport
-      parentRoute: typeof AppModesCollaborationRoute
-    }
-    '/_app/modes/collaboration/projects/$projectId/board': {
-      id: '/_app/modes/collaboration/projects/$projectId/board'
-      path: '/projects/$projectId/board'
-      fullPath: '/modes/collaboration/projects/$projectId/board'
-      preLoaderRoute: typeof AppModesCollaborationProjectsProjectIdBoardRouteImport
-      parentRoute: typeof AppModesCollaborationRoute
-    }
-    '/_app/modes/collaboration/projects/$projectId/notes': {
-      id: '/_app/modes/collaboration/projects/$projectId/notes'
-      path: '/projects/$projectId/notes'
-      fullPath: '/modes/collaboration/projects/$projectId/notes'
-      preLoaderRoute: typeof AppModesCollaborationProjectsProjectIdNotesRouteImport
-      parentRoute: typeof AppModesCollaborationRoute
-    }
-    '/_app/modes/collaboration/projects/$projectId/todos': {
-      id: '/_app/modes/collaboration/projects/$projectId/todos'
-      path: '/projects/$projectId/todos'
-      fullPath: '/modes/collaboration/projects/$projectId/todos'
-      preLoaderRoute: typeof AppModesCollaborationProjectsProjectIdTodosRouteImport
-      parentRoute: typeof AppModesCollaborationRoute
-    }
   }
 }
 
@@ -663,44 +508,16 @@ const AppModesAgentSessionRouteChildren: AppModesAgentSessionRouteChildren = {
 const AppModesAgentSessionRouteWithChildren =
   AppModesAgentSessionRoute._addFileChildren(AppModesAgentSessionRouteChildren)
 
-interface AppModesCollaborationRouteChildren {
-  AppModesCollaborationIndexRoute: typeof AppModesCollaborationIndexRoute
-  AppModesCollaborationProjectsProjectIdBoardRoute: typeof AppModesCollaborationProjectsProjectIdBoardRoute
-  AppModesCollaborationProjectsProjectIdNotesRoute: typeof AppModesCollaborationProjectsProjectIdNotesRoute
-  AppModesCollaborationProjectsProjectIdTodosRoute: typeof AppModesCollaborationProjectsProjectIdTodosRoute
-  AppModesCollaborationProjectsProjectIdIndexRoute: typeof AppModesCollaborationProjectsProjectIdIndexRoute
-}
-
-const AppModesCollaborationRouteChildren: AppModesCollaborationRouteChildren = {
-  AppModesCollaborationIndexRoute: AppModesCollaborationIndexRoute,
-  AppModesCollaborationProjectsProjectIdBoardRoute:
-    AppModesCollaborationProjectsProjectIdBoardRoute,
-  AppModesCollaborationProjectsProjectIdNotesRoute:
-    AppModesCollaborationProjectsProjectIdNotesRoute,
-  AppModesCollaborationProjectsProjectIdTodosRoute:
-    AppModesCollaborationProjectsProjectIdTodosRoute,
-  AppModesCollaborationProjectsProjectIdIndexRoute:
-    AppModesCollaborationProjectsProjectIdIndexRoute,
-}
-
-const AppModesCollaborationRouteWithChildren =
-  AppModesCollaborationRoute._addFileChildren(
-    AppModesCollaborationRouteChildren,
-  )
-
 interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppModesAgentSessionRoute: typeof AppModesAgentSessionRouteWithChildren
-  AppModesCollaborationRoute: typeof AppModesCollaborationRouteWithChildren
   AppModesCodeBranchesRoute: typeof AppModesCodeBranchesRoute
   AppModesCodeCommitRoute: typeof AppModesCodeCommitRoute
-  AppModesCodeDocsRoute: typeof AppModesCodeDocsRoute
   AppModesCodeFindRoute: typeof AppModesCodeFindRoute
   AppModesCodeHistoryRoute: typeof AppModesCodeHistoryRoute
   AppModesCodeLocalDevRoute: typeof AppModesCodeLocalDevRoute
   AppModesCodeReviewsRoute: typeof AppModesCodeReviewsRoute
-  AppModesCodeTasksRoute: typeof AppModesCodeTasksRoute
   AppModesCodeThreadsRoute: typeof AppModesCodeThreadsRoute
   AppModesExperimentationCollaborationRoute: typeof AppModesExperimentationCollaborationRoute
   AppModesCodeIndexRoute: typeof AppModesCodeIndexRoute
@@ -717,15 +534,12 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
   AppModesAgentSessionRoute: AppModesAgentSessionRouteWithChildren,
-  AppModesCollaborationRoute: AppModesCollaborationRouteWithChildren,
   AppModesCodeBranchesRoute: AppModesCodeBranchesRoute,
   AppModesCodeCommitRoute: AppModesCodeCommitRoute,
-  AppModesCodeDocsRoute: AppModesCodeDocsRoute,
   AppModesCodeFindRoute: AppModesCodeFindRoute,
   AppModesCodeHistoryRoute: AppModesCodeHistoryRoute,
   AppModesCodeLocalDevRoute: AppModesCodeLocalDevRoute,
   AppModesCodeReviewsRoute: AppModesCodeReviewsRoute,
-  AppModesCodeTasksRoute: AppModesCodeTasksRoute,
   AppModesCodeThreadsRoute: AppModesCodeThreadsRoute,
   AppModesExperimentationCollaborationRoute:
     AppModesExperimentationCollaborationRoute,

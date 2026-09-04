@@ -1,8 +1,8 @@
 /**
- * The inbox button both modes wear: it opens onto the last few messages and a
- * composer, so a reply never costs the surface you are on. Each mode fills the
- * panel with its own rows — collaboration's prototype threads, code mode's
- * agent chats — so this only carries the chrome the two share.
+ * The inbox button: it opens onto the last few messages and a composer, so a
+ * reply never costs the surface you are on. Each caller fills the panel with
+ * its own rows — the prototype's threads, the app's agent chats — so this only
+ * carries the chrome the two share.
  */
 import { IconInbox } from "@tabler/icons-react";
 import { useRef, useState, type ReactNode } from "react";

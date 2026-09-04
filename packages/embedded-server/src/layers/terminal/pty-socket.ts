@@ -55,13 +55,11 @@ import {
   startBrowserBridge,
 } from "../browser/browser-bridge.ts";
 import { CHAT_STREAM_PATH, startChatStream } from "../chats/chat-runtime.ts";
-import { findCardByKey } from "../tasks/store.ts";
 import {
   clearThreadInitialPrompt,
   patchThread,
   readThreadAgentSessionId,
   readThreadInitialPrompt,
-  readThreadTaskKey,
 } from "../threads/store.ts";
 import {
   getCurrentProject,
@@ -314,30 +312,13 @@ const startSessionCapture = (
 
 /**
  * Environment a session's program inherits. Exposes the thread id and the local
- * API origin so an agent CLI can always look up its own thread / linked task
- * (GET /api/threads/{id}, GET /api/tasks/resolve/{ref}); the linked task at spawn
- * time is also passed directly for convenience.
+ * API origin so an agent CLI can always look up its own thread
+ * (GET /api/threads/{id}).
  */
-const buildSessionEnv = (
-  repoPath: string,
-  threadId: string
-): Record<string, string> => {
-  const env: Record<string, string> = {
-    BYCONVO_THREAD_ID: threadId,
-    BYCONVO_API: `http://localhost:${process.env["BYCONVO_PORT"] ?? 41811}`,
-  };
-  const taskKey = readThreadTaskKey(repoPath, threadId);
-  if (taskKey === null) return env;
-
-  env["BYCONVO_TASK_KEY"] = taskKey;
-  const card = findCardByKey(repoPath, taskKey);
-  if (card !== undefined) {
-    if (card.title.length > 0) env["BYCONVO_TASK_TITLE"] = card.title;
-    env["BYCONVO_TASK"] =
-      `${taskKey} ${card.title}${card.description.length > 0 ? ` — ${card.description}` : ""}`.trim();
-  }
-  return env;
-};
+const buildSessionEnv = (threadId: string): Record<string, string> => ({
+  BYCONVO_THREAD_ID: threadId,
+  BYCONVO_API: `http://localhost:${process.env["BYCONVO_PORT"] ?? 41811}`,
+});
 
 /** Wire a client socket to a session: replay scrollback, then stream both ways. */
 const attachClient = (
@@ -513,7 +494,7 @@ const startSession = async (ws: WebSocket, request: IncomingMessage) => {
         // dark theme. This is synchronous at spawn, unlike the OSC 11 query
         // whose browser→server round-trip can miss the CLI's detection window.
         COLORFGBG: theme === "dark" ? "15;0" : "0;15",
-        ...(id !== null && id.length > 0 ? buildSessionEnv(repoPath, id) : {}),
+        ...(id !== null && id.length > 0 ? buildSessionEnv(id) : {}),
       },
     });
   } catch (error) {

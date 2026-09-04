@@ -11,7 +11,6 @@ const section = (title: string): LaunchpadSection => ({
   href: `/${title}`,
   title,
   icon: IconMessage,
-  mode: "code",
 });
 
 const GROUPS: ReadonlyArray<LaunchpadGroup> = [

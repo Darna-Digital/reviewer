@@ -1,7 +1,6 @@
 /**
- * ModeRail — code mode's left rail: the git surfaces on top, then the bottom
- * dock's toggles. Collaboration mode has no rail — its sidebar carries the
- * equivalent. It reads the active surface from the route, so the shells render
+ * ModeRail — the left rail: the git surfaces on top, then the bottom dock's
+ * toggles. It reads the active surface from the route, so the shells render
  * it prop-free. The window's own chrome (traffic lights, tabs) sits above it in
  * the WindowFrame, so the rail starts at the content edge.
  */
@@ -84,7 +83,7 @@ export function ModeRail() {
   // get from one of them to another, so on a page it moves between the pages
   // rather than dropping the window back into the drawer for every click; the
   // one you are already on is the click that puts it down.
-  const route = shellRoute(pathname, "code");
+  const route = shellRoute(pathname);
   const expandedTab = route.kind === "dock" ? route.tab : null;
   const active = (tab: BottomTab): boolean =>
     expandedTab === null

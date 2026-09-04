@@ -50,7 +50,7 @@ function Probe({ seen }: { seen: Theme[] }) {
 
 function RenderProbe({ seen }: { seen: string[] }) {
   const prefs = useUiPrefs();
-  seen.push(prefs.workMode);
+  seen.push(prefs.diffStyle);
   return null;
 }
 
@@ -86,16 +86,16 @@ describe("useUiPrefs system theme sync", () => {
   });
 
   it("does not re-render consumers for a no-op preference write", () => {
-    act(() => setUiPrefs({ workMode: "code" }));
+    act(() => setUiPrefs({ diffStyle: "split" }));
 
     const seen: string[] = [];
     act(() => void render(<RenderProbe seen={seen} />));
-    expect(seen).toEqual(["code"]);
+    expect(seen).toEqual(["split"]);
 
-    act(() => setUiPrefs({ workMode: "code" }));
-    expect(seen).toEqual(["code"]);
+    act(() => setUiPrefs({ diffStyle: "split" }));
+    expect(seen).toEqual(["split"]);
 
-    act(() => setUiPrefs({ workMode: "collaboration" }));
-    expect(seen).toEqual(["code", "collaboration"]);
+    act(() => setUiPrefs({ diffStyle: "unified" }));
+    expect(seen).toEqual(["split", "unified"]);
   });
 });

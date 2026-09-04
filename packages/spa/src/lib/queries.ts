@@ -153,7 +153,7 @@ export const useCommitDraft = () =>
     }
   );
 
-// --- Threads / Chats / Docs / Tasks (workspace features) ------------------
+// --- Threads / Chats (workspace features) ---------------------------------
 
 export const useThreads = () =>
   api.useQuery("get", "/api/threads", {}, OWN_DATA);
@@ -309,63 +309,6 @@ export const useThread = (id: string | null) =>
   api.useQuery(
     "get",
     "/api/threads/{id}",
-    { params: { path: { id: id ?? "" } } },
-    { ...OWN_DATA, enabled: id !== null }
-  );
-
-export const useDocs = () => api.useQuery("get", "/api/docs", {}, OWN_DATA);
-
-export const useDoc = (id: string | null) =>
-  api.useQuery(
-    "get",
-    "/api/docs/{id}",
-    { params: { path: { id: id ?? "" } } },
-    { ...OWN_DATA, enabled: id !== null }
-  );
-
-export const useTasks = () =>
-  api.useQuery("get", "/api/tasks/board", {}, OWN_DATA);
-
-// --- Collaboration ---------------------------------------------------------
-// One hook per surface rather than one per table: each of these is a whole
-// screen's worth of answer, so a page never has to stitch two moments together.
-// See `collab.api` on the server for why the grouping is what it is.
-
-/** The projects home — every project, with how far through its work it is. */
-export const useCollabHome = () =>
-  api.useQuery("get", "/api/collab/home", {}, OWN_DATA);
-
-/** One project, with its own to-dos and notes beside it. */
-export const useCollabProject = (id: string | null) =>
-  api.useQuery(
-    "get",
-    "/api/collab/projects/{id}",
-    { params: { path: { id: id ?? "" } } },
-    { ...OWN_DATA, enabled: id !== null }
-  );
-
-/** The same work, dealt into the project's lists. */
-export const useCollabBoard = (id: string | null) =>
-  api.useQuery(
-    "get",
-    "/api/collab/projects/{id}/board",
-    { params: { path: { id: id ?? "" } } },
-    { ...OWN_DATA, enabled: id !== null }
-  );
-
-/** What the hovering bar's drawer shows: one person's work, notes and stars. */
-export const useCollabMine = (viewer: string) =>
-  api.useQuery(
-    "get",
-    "/api/collab/mine",
-    { params: { query: { viewer } } },
-    OWN_DATA
-  );
-
-export const useCollabNote = (id: string | null) =>
-  api.useQuery(
-    "get",
-    "/api/collab/notes/{id}",
     { params: { path: { id: id ?? "" } } },
     { ...OWN_DATA, enabled: id !== null }
   );

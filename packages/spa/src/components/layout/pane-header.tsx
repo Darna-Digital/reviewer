@@ -2,12 +2,12 @@ import { Fragment, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The bar a two-pane surface wears — collaboration's panes, the inbox and code
- * mode's sessions: a breadcrumb on the left, the subject's one-line context
+ * The bar a two-pane surface wears — the prototype's panes, the inbox and the
+ * sessions list: a breadcrumb on the left, the subject's one-line context
  * beside it, and the pane's actions on the right.
  *
- * `foot` puts it along the bottom instead, where code mode keeps the same trail
- * — the pane's last line rather than its first. It stays ahead of the body in
+ * `foot` puts it along the bottom instead, where the code surfaces keep the
+ * same trail — the pane's last line rather than its first. It stays ahead of the body in
  * the markup, so the trail is still read before what it describes.
  */
 export function PaneHeader({
