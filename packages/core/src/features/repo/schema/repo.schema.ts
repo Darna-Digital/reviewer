@@ -1,4 +1,5 @@
 import * as Schema from "effect/Schema";
+import { GitRemoteInfo } from "../../../ports/git-remote.ts";
 
 export const GitFileStatus = Schema.Literals([
   "added",
@@ -14,17 +15,19 @@ export const GitStatusEntry = Schema.Struct({
   status: GitFileStatus,
 });
 export type GitStatusEntry = typeof GitStatusEntry.Type;
-export const GitHubRemote = Schema.Struct({
-  owner: Schema.String,
-  repo: Schema.String,
-});
-export type GitHubRemote = typeof GitHubRemote.Type;
+
 export const RepoInfo = Schema.Struct({
   root: Schema.String,
   name: Schema.String,
   currentBranch: Schema.String,
   remoteUrl: Schema.NullOr(Schema.String),
-  github: Schema.NullOr(GitHubRemote),
+  /**
+   * The forge `origin` is on, once it has been recognised — which is how the
+   * app knows whether there are requests to review here at all, and whether to
+   * call them pull requests or merge requests. Null when the remote is on
+   * neither GitHub nor GitLab, or when there is no remote.
+   */
+  remote: Schema.NullOr(GitRemoteInfo),
 });
 export type RepoInfo = typeof RepoInfo.Type;
 export const BranchInfo = Schema.Struct({

@@ -1,7 +1,8 @@
 /**
  * PullRequestList — the page review mode opens on, and the whole of it: every
- * open pull request, grouped under the branch it targets, over a free-text
- * search and a branch + time filter.
+ * open request, grouped under the branch it targets, over a free-text search
+ * and a branch + time filter. A pull request on GitHub and a merge request on
+ * GitLab are one row either way; only the number's sigil differs.
  *
  * It used to be a column beside a diff, which is why it read as a strip of
  * truncated titles — there was no room for anything else, and no room needed,
@@ -17,6 +18,10 @@
  * already said it.
  */
 import { IconGitBranch, IconGitPullRequestDraft } from "@tabler/icons-react";
+import {
+  gitHostRequestRef,
+  type GitHost,
+} from "@byconvo/core/ports/git-remote";
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import {
   ALL_BRANCHES,
@@ -40,16 +45,18 @@ import { groupPullsByBase } from "./pull-requests.functions";
 
 interface PullRequestListProps {
   pulls: ReadonlyArray<PullRequestInfo>;
+  /** The forge these came from — GitLab writes a request's number `!12`. */
+  host: GitHost;
   error: string | null;
   loading?: boolean;
   onSelect: (pull: PullRequestInfo) => void;
-  /** What stands in for the list when the project has no open pull requests. */
+  /** What stands in for the list when the project has nothing open. */
   empty?: ReactNode;
   className?: string;
   style?: CSSProperties;
 }
 
-/** GitHub gives label colours as bare hex; a label with none falls back. */
+/** Both forges give label colours as bare hex; one with none falls back. */
 const labelStyle = (color: string) =>
   /^[0-9a-fA-F]{6}$/.test(color)
     ? {
@@ -79,6 +86,7 @@ function Labels({ labels }: { labels: ReadonlyArray<PullRequestLabel> }) {
 
 export function PullRequestList({
   pulls,
+  host,
   error,
   loading = false,
   onSelect,
@@ -97,7 +105,9 @@ export function PullRequestList({
 
   const filtered = useMemo(() => {
     const cutoff = dateCutoff(dateFilter);
-    const q = search.trim().replace(/^#/, "").toLowerCase();
+    // Typing the number the way the forge writes it — "#12", or "!12" — is
+    // the same search as typing "12".
+    const q = search.trim().replace(/^[#!]/, "").toLowerCase();
     return pulls.filter((p) => {
       if (cutoff > 0 && Date.parse(p.updatedAt) < cutoff) return false;
       if (q.length > 0) {
@@ -143,7 +153,9 @@ export function PullRequestList({
           <Labels labels={p.labels} />
         </div>
         <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
-          <span className="shrink-0 font-mono">#{p.number}</span>
+          <span className="shrink-0 font-mono">
+            {gitHostRequestRef(host, p.number)}
+          </span>
           <span className="truncate">{p.author}</span>
           <span aria-hidden>·</span>
           <span className="truncate font-mono">{p.headRef}</span>

@@ -76,7 +76,18 @@ describe("remove", () => {
       source: "github",
     } as ReviewComment);
     expect(ok).toBe(true);
-    expect(deps.sideEffects.deletePullComment).toHaveBeenCalledWith(5, 42);
+    expect(deps.sideEffects.deletePullComment).toHaveBeenCalledWith(5, "42");
+  });
+
+  it("deletes a GitLab comment by the discussion and note in its id", async () => {
+    const deps = createCommentsDependenciesMock();
+    const fns = createCommentsFunctions(deps);
+    const ok = await fns.remove(pull, {
+      id: "gl-d1-5",
+      source: "gitlab",
+    } as ReviewComment);
+    expect(ok).toBe(true);
+    expect(deps.sideEffects.deletePullComment).toHaveBeenCalledWith(5, "d1-5");
   });
 
   it("leaves a GitHub comment alone with no pull request in hand", async () => {
@@ -89,7 +100,7 @@ describe("remove", () => {
     expect(deps.sideEffects.deletePullComment).not.toHaveBeenCalled();
   });
 
-  it("leaves a GitHub comment alone when its id is not GitHub's", async () => {
+  it("leaves a comment alone when its id is not its own forge's", async () => {
     const deps = createCommentsDependenciesMock();
     const fns = createCommentsFunctions(deps);
     expect(
@@ -153,7 +164,7 @@ describe("reply", () => {
     expect(reply!.lineNumber).toBe(7);
     expect(deps.sideEffects.replyPullComment).toHaveBeenCalledWith(
       5,
-      42,
+      "42",
       "agreed"
     );
   });

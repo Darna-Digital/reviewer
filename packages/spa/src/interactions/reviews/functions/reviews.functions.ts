@@ -1,5 +1,6 @@
 /**
- * One list of things to review: the pull requests opened on this project.
+ * One list of things to review: the requests opened on this project — pull
+ * requests on GitHub, merge requests on GitLab, one list either way.
  *
  * A review is a branch, the branch it lands on, and a state that says whether
  * it can land yet — so the rows are grouped under the base they share rather
@@ -7,6 +8,10 @@
  * thing.
  */
 import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
+import {
+  gitHostRequestRef,
+  type GitHost,
+} from "@byconvo/core/ports/git-remote";
 
 export type ReviewItem = {
   readonly kind: "pull";
@@ -80,7 +85,11 @@ export const diffSourceLabel = (source: DiffSource): string =>
 
 /**
  * The short prefix that says which of the two a row is without a word for it: a
- * pull request has a number, and the changes in front of you need nothing.
+ * request has a number, written the way its forge writes it, and the changes in
+ * front of you need nothing.
  */
-export const diffSourceHint = (source: DiffSource): string | null =>
-  source.kind === "local" ? null : `#${source.pull.number}`;
+export const diffSourceHint = (
+  source: DiffSource,
+  host: GitHost
+): string | null =>
+  source.kind === "local" ? null : gitHostRequestRef(host, source.pull.number);

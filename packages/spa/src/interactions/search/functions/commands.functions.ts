@@ -20,8 +20,8 @@ export type CodeRoute =
 
 export interface CodeCommandDependencies {
   data: {
-    /** Pull requests only exist when the repo has a GitHub remote. */
-    readonly hasGitHub: boolean;
+    /** Requests to review only exist when origin is on GitHub or GitLab. */
+    readonly hasReviews: boolean;
     readonly currentBranch: string | null;
   };
   sideEffects: {
@@ -60,7 +60,7 @@ export const buildCodeCommands = (
       label: "Go to Reviews",
       group: "Navigation",
       icon: IconGitPullRequest,
-      keywords: "review pr github pull requests",
+      keywords: "review pr mr github gitlab pull merge requests",
       run: () => goTo("/modes/code/reviews"),
     },
     {

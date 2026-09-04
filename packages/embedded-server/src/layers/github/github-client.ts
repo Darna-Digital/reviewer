@@ -1,6 +1,6 @@
 /**
  * GitHubClient — thin REST gateway to the GitHub API for the currently
- * selected repository. Resolves the owner/repo from `origin`, finds an auth
+ * selected repository. Reads the owner/repo off `origin`, finds an auth
  * token (GITHUB_TOKEN / GH_TOKEN / `gh auth token`), and exposes JSON/text
  * helpers the GitHub feature repository builds on.
  */
@@ -11,6 +11,7 @@ import { HttpClient, HttpClientRequest } from "effect/unstable/http";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { GitProviderError } from "@byconvo/core/ports/git-provider";
 import { GitExec } from "../git/git-exec.ts";
+import { originRemote } from "../reviews/origin-remote.ts";
 
 const API = "https://api.github.com";
 
@@ -100,13 +101,6 @@ const transportError = (path: string, error: unknown): GitProviderError =>
     reason: `GitHub request to ${path} failed: ${String(error)}`,
   });
 
-const parseGitHubRemote = (url: string): GitHubRepo | null => {
-  const match = url.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?\/?$/);
-  const owner = match?.[1];
-  const repo = match?.[2];
-  return owner !== undefined && repo !== undefined ? { owner, repo } : null;
-};
-
 export const make = Effect.gen(function* () {
   const git = yield* GitExec;
   const client = yield* HttpClient.HttpClient;
@@ -139,21 +133,15 @@ export const make = Effect.gen(function* () {
     return yield* tokenFromGhCli;
   });
 
-  const repo: GitHubClientShape["repo"] = git
-    .run("remote", "get-url", "origin")
-    .pipe(
-      Effect.mapError(
-        (error) => new GitProviderError({ reason: error.message })
-      ),
-      Effect.flatMap((out) => {
-        const parsed = parseGitHubRemote(out.trim());
-        return parsed === null
-          ? Effect.fail(
-              new GitProviderError({ reason: "origin is not a GitHub remote" })
-            )
-          : Effect.succeed(parsed);
-      })
-    );
+  const repo: GitHubClientShape["repo"] = originRemote(git).pipe(
+    Effect.flatMap((remote) =>
+      remote.host === "github"
+        ? Effect.succeed({ owner: remote.owner, repo: remote.repo })
+        : Effect.fail(
+            new GitProviderError({ reason: "origin is not a GitHub remote" })
+          )
+    )
+  );
 
   const headers = (accept: string, token: string | null) => ({
     accept,

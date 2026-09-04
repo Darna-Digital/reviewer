@@ -9,22 +9,19 @@
  * the opening comment, and a muted "Add reply… / Resolve" action row. Built on
  * the shadcn primitives and theme tokens so it adapts to light & dark.
  */
-import {
-  IconBrandGithub,
-  IconCornerDownRight,
-  IconTrash,
-} from "@tabler/icons-react";
+import { IconCornerDownRight, IconTrash } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import { AuthorAvatar } from "@/interactions/comments/components/author-avatar";
+import { GitHostIcon } from "@/components/git/git-host-icon";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { timeAgo } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { isOptimisticId } from "@/interactions/comments/functions/optimistic-comments.functions";
-import type { ReviewComment } from "@byconvo/core/comments";
+import { isRemoteComment, type ReviewComment } from "@byconvo/core/comments";
 
 /**
  * Where a draft (or new) comment is anchored. Declared with the rest of the
@@ -121,7 +118,7 @@ export function CommentComposer({
 
 /**
  * Take a comment off the pull request. Offered per comment rather than on the
- * thread's action row, which acts on the thread as a whole: a GitHub thread is
+ * thread's action row, which acts on the thread as a whole: a forge thread is
  * several people's comments stacked together, and "delete" there would not say
  * whose. Kept quiet until the comment is under the cursor — a destructive
  * control on every card, always lit, is louder than every comment it sits on.
@@ -179,10 +176,11 @@ function CommentCard({
   }
 
   // Written, shown, and not yet acknowledged by whoever stores it. A local
-  // comment passes through this state too fast to see; a GitHub one is a round
-  // trip to their servers, so the card says so rather than showing a comment
-  // that looks filed when it is still in flight — and rather than inventing the
-  // author, which only GitHub can name. See `optimistic-comments.functions`.
+  // comment passes through this state too fast to see; one on a pull or merge
+  // request is a round trip to somebody else's servers, so the card says so
+  // rather than showing a comment that looks filed when it is still in flight —
+  // and rather than inventing the author, which only the forge can name. See
+  // `optimistic-comments.functions`.
   const pending = isOptimisticId(comment.id);
 
   return (
@@ -191,10 +189,10 @@ function CommentCard({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
           <span className="type-ui text-foreground">{comment.author}</span>
-          {comment.source === "github" && (
-            <IconBrandGithub
+          {isRemoteComment(comment) && (
+            <GitHostIcon
+              host={comment.source === "gitlab" ? "gitlab" : "github"}
               className="size-3.5 text-muted-foreground"
-              aria-label="GitHub"
             />
           )}
           <span className="type-meta text-muted-foreground/70 tabular-nums">
@@ -247,8 +245,8 @@ function ThreadAction({
 /**
  * A stack of comments anchored to one line, rendered as a single rounded card.
  * The opening comment sits flush; later comments are nested as replies. The
- * footer offers "Add reply…" (GitHub threads) and "Resolve" (removes the local
- * comments — deletion is how a local thread is resolved). A GitHub comment,
+ * footer offers "Add reply…" (threads on a request) and "Resolve" (removes the
+ * local comments — deletion is how a local thread is resolved). A forge comment,
  * which "Resolve" cannot touch, carries its own delete on its card.
  */
 export function CommentThread({
@@ -267,26 +265,26 @@ export function CommentThread({
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Actions target a comment by id, and a comment still in flight does not have
-  // its real one yet — replying to a pending GitHub comment would address a
-  // parent GitHub has never heard of, and editing or resolving a pending local
-  // one would name a row the server has not written. So the actions look past
-  // anything unacknowledged; they come back as soon as it is confirmed, which
-  // for a local comment is too fast to notice.
+  // its real one yet — replying to a pending forge comment would address a
+  // parent the forge has never heard of, and editing or resolving a pending
+  // local one would name a row the server has not written. So the actions look
+  // past anything unacknowledged; they come back as soon as it is confirmed,
+  // which for a local comment is too fast to notice.
   const settled = comments.filter((c) => !isOptimisticId(c.id));
-  const lastGithub = [...settled].reverse().find((c) => c.source === "github");
+  const lastRemote = [...settled].reverse().find(isRemoteComment);
   const localComments = settled.filter((c) => c.source === "local");
   const editableComment =
     onEdit === undefined
       ? undefined
       : (localComments.find((c) => c.id === editingId) ?? localComments[0]);
   const canEdit = editableComment !== undefined && onEdit !== undefined;
-  const canReply = onReply !== undefined && lastGithub !== undefined;
+  const canReply = onReply !== undefined && lastRemote !== undefined;
   const canResolve = localComments.length > 0;
   // A local comment is taken off the thread by resolving it, which the footer
-  // already offers; a GitHub one has no such gesture, so its own card carries
-  // the delete instead.
+  // already offers; one on a request has no such gesture, so its own card
+  // carries the delete instead.
   const deletable = (c: ReviewComment) =>
-    c.source === "github" && settled.includes(c);
+    isRemoteComment(c) && settled.includes(c);
   const showActions =
     !replying && editingId === null && (canEdit || canReply || canResolve);
 
@@ -323,13 +321,13 @@ export function CommentThread({
       </div>
 
       <div className={cn("mt-2", REPLY_INDENT)}>
-        {replying && onReply !== undefined && lastGithub !== undefined ? (
+        {replying && onReply !== undefined && lastRemote !== undefined ? (
           <CommentComposer
             submitLabel="Reply"
             placeholder="Reply…"
             onCancel={() => setReplying(false)}
             onSubmit={async (body) => {
-              await onReply(lastGithub, body);
+              await onReply(lastRemote, body);
               setReplying(false);
             }}
           />

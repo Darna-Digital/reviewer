@@ -17,12 +17,12 @@ import {
 
 export function useLaunchpadGroups(): ReadonlyArray<LaunchpadGroup> {
   const repo = useRepo();
-  const github = repo.data?.github != null;
+  const reviews = repo.data?.remote != null;
   const { tabs } = useWindowTabs();
   const sessions = useMemo(() => sessionSections(tabs), [tabs]);
   return useMemo(
-    () => launchpadGroups({ github, sessions }),
-    [github, sessions]
+    () => launchpadGroups({ reviews, sessions }),
+    [reviews, sessions]
   );
 }
 

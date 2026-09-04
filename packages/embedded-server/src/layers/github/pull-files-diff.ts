@@ -1,9 +1,10 @@
 /**
- * Rebuilds a unified diff out of GitHub's paginated `pulls/:n/files` payload.
- * The `application/vnd.github.v3.diff` media type refuses any PR whose diff
- * exceeds 20000 lines (406 `too_large`), while the files endpoint has no such
- * cap — it just pages.
+ * GitHub's paginated `pulls/:n/files` payload, read into the file patches
+ * `unifiedDiff` stitches back into a diff. The `application/vnd.github.v3.diff`
+ * media type refuses any PR whose diff exceeds 20000 lines (406 `too_large`),
+ * while the files endpoint has no such cap — it just pages.
  */
+import { unifiedDiff, type FileDiff } from "../reviews/unified-diff.ts";
 
 export interface PullFileEntry {
   readonly filename: string;
@@ -11,8 +12,6 @@ export interface PullFileEntry {
   readonly patch?: string;
   readonly previousFilename?: string;
 }
-
-const REGULAR_FILE_MODE = "100644";
 
 export const parsePullFiles = (data: unknown): ReadonlyArray<PullFileEntry> => {
   if (!Array.isArray(data)) return [];
@@ -38,34 +37,25 @@ export const parsePullFiles = (data: unknown): ReadonlyArray<PullFileEntry> => {
   });
 };
 
-const renameLines = (file: PullFileEntry, previous: string): Array<string> =>
-  file.previousFilename === undefined
-    ? []
-    : [
-        // Parsers only read this line to tell a pure rename from a rename with
-        // edits; GitHub does not report the real percentage.
-        file.patch === undefined
-          ? "similarity index 100%"
-          : "similarity index 99%",
-        `rename from ${previous}`,
-        `rename to ${file.filename}`,
-      ];
-
-const fileDiff = (file: PullFileEntry): string => {
-  const previous = file.previousFilename ?? file.filename;
-  const added = file.status === "added";
-  const removed = file.status === "removed";
-  return [
-    `diff --git a/${previous} b/${file.filename}`,
-    ...(added ? [`new file mode ${REGULAR_FILE_MODE}`] : []),
-    ...(removed ? [`deleted file mode ${REGULAR_FILE_MODE}`] : []),
-    ...renameLines(file, previous),
-    added ? "--- /dev/null" : `--- a/${previous}`,
-    removed ? "+++ /dev/null" : `+++ b/${file.filename}`,
-    ...(file.patch === undefined ? [] : [file.patch]),
-  ].join("\n");
+/**
+ * GitHub's own word for what happened to a file, in the four the diff builder
+ * knows. Anything else it says — `changed`, `unchanged`, `copied` — is a file
+ * that is still in both trees, which is what `modified` means here.
+ */
+const fileStatus = (entry: PullFileEntry): FileDiff["status"] => {
+  if (entry.status === "added") return "added";
+  if (entry.status === "removed") return "removed";
+  return entry.previousFilename === undefined ? "modified" : "renamed";
 };
 
 export const diffFromPullFiles = (
   files: ReadonlyArray<PullFileEntry>
-): string => (files.length === 0 ? "" : files.map(fileDiff).join("\n") + "\n");
+): string =>
+  unifiedDiff(
+    files.map((file): FileDiff => ({
+      previousPath: file.previousFilename ?? file.filename,
+      path: file.filename,
+      status: fileStatus(file),
+      ...(file.patch === undefined ? {} : { patch: file.patch }),
+    }))
+  );

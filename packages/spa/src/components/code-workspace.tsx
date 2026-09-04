@@ -126,6 +126,7 @@ import {
 } from "@/lib/api/types";
 import type { ReviewComment } from "@byconvo/core/comments";
 import { unenrichedPull } from "@byconvo/core/ports/git-provider";
+import { gitHostRequestRef } from "@byconvo/core/ports/git-remote";
 import { pathName } from "@/lib/display-path";
 import { errorReason } from "@/lib/errors";
 import {
@@ -225,8 +226,9 @@ export function CodeWorkspace() {
     [localComments.data]
   );
 
-  const hasGitHub = repo.data?.github != null;
-  const pulls = usePulls(hasGitHub);
+  const reviewHost = repo.data?.remote?.host ?? null;
+  const hasReviews = reviewHost !== null;
+  const pulls = usePulls(hasReviews);
 
   // Watched from here rather than from the commit panel: the drafting agent CLI
   // keeps running while the user is in another mode, and this is what is still
@@ -356,8 +358,8 @@ export function CodeWorkspace() {
   /**
    * What the source is read against, when that is something you can change.
    *
-   * `own` is the answer it falls back to; a pull request has one but it is
-   * GitHub's, so it is named and not offered. Local changes have none — read
+   * `own` is the answer it falls back to; a pull request has one but it is the
+   * forge's, so it is named and not offered. Local changes have none — read
    * against nothing, they are simply what is uncommitted — which is why that is
    * the entry the menu offers instead.
    */
@@ -458,7 +460,7 @@ export function CodeWorkspace() {
     ]
   );
 
-  // --- review → agent: hand the comments in view (local + GitHub) to an agent.
+  // --- review → agent: hand the comments in view (local + the forge's) to an agent.
   /**
    * The tree behind a source, and going to work in it.
    *
@@ -497,8 +499,8 @@ export function CodeWorkspace() {
       if (chatId === null) return;
       // Handing the comments off resolves them: their text now lives in the chat,
       // so clear the local ones instead of leaving them lingering in the diff.
-      // No pull request is passed, which is how the GitHub ones are spared —
-      // they belong to the pull request rather than to this hand-off.
+      // No pull request is passed, which is how the forge's own are spared —
+      // they belong to the request rather than to this hand-off.
       await Promise.all(
         visibleComments.map((comment) => comments.remove(null, comment))
       );
@@ -813,11 +815,15 @@ export function CodeWorkspace() {
       list.push({
         id: "diff-source",
         label: diffSourceLabel(source),
-        hint: source.kind === "pull" ? `#${source.pull.number}` : undefined,
+        hint:
+          source.kind === "pull"
+            ? gitHostRequestRef(reviewHost ?? "github", source.pull.number)
+            : undefined,
         icon: diffSourceIcon(source),
         menu: () => (
           <DiffSourceItems
             sources={sources}
+            host={reviewHost ?? "github"}
             current={diffSourceKey(source)}
             checkedOut={checkedOut === null ? null : diffSourceKey(checkedOut)}
             onSelect={openSource}
@@ -826,7 +832,7 @@ export function CodeWorkspace() {
         ),
       });
       if (source.kind === "pull") {
-        // GitHub decides what a pull request is read against, so this one is
+        // The forge decides what a request is read against, so this one is
         // told rather than offered.
         list.push({
           id: "diff-against",
@@ -987,8 +993,8 @@ export function CodeWorkspace() {
       location,
       body
     );
-  // GitHub can refuse this one — a comment somebody else wrote is not ours to
-  // remove — so unlike a local delete it needs somewhere to say so.
+  // The forge can refuse this one — a comment somebody else wrote is not ours
+  // to remove — so unlike a local delete it needs somewhere to say so.
   const deleteComment = async (comment: ReviewComment) => {
     try {
       await comments.remove(selectedPull, comment);
@@ -1212,11 +1218,12 @@ export function CodeWorkspace() {
    * nothing else to show.
    */
   if (mode === "review" && selectedPull === null) {
-    return !hasGitHub ? (
+    return !hasReviews ? (
       <NoReviewRemote />
     ) : (
       <PullRequestList
         pulls={pulls.data ?? []}
+        host={reviewHost ?? "github"}
         error={
           pulls.error
             ? errorReason(pulls.error, "Could not load pull requests")
@@ -1225,7 +1232,7 @@ export function CodeWorkspace() {
         // A query that was never enabled is pending for as long as the window
         // is open, and a list that says it is loading forever is worse than one
         // that says it is empty.
-        loading={hasGitHub && pulls.isPending}
+        loading={hasReviews && pulls.isPending}
         empty={<NoPullRequests />}
         onSelect={(p) =>
           void navigate({
@@ -1257,6 +1264,9 @@ export function CodeWorkspace() {
         {reviewing ? (
           <PullRequestOverview
             pull={selectedPull}
+            // There is no pull request to be looking at unless origin is on a
+            // forge, so this fallback is unreachable rather than a default.
+            host={reviewHost ?? "github"}
             currentBranch={repo.data?.currentBranch ?? null}
             onCheckout={async (p, branch) => {
               await git.checkoutPull(p.number, branch);

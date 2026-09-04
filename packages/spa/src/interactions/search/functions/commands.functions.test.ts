@@ -34,8 +34,8 @@ describe("buildCodeCommands", () => {
   });
 
   it("offers the reviews list with or without a GitHub remote", () => {
-    const withHub = mockCodeCommandDependencies({ hasGitHub: true });
-    const withoutHub = mockCodeCommandDependencies({ hasGitHub: false });
+    const withHub = mockCodeCommandDependencies({ hasReviews: true });
+    const withoutHub = mockCodeCommandDependencies({ hasReviews: false });
 
     for (const { deps } of [withHub, withoutHub]) {
       expect(buildCodeCommands(deps).map((c) => c.id)).toContain("go-reviews");

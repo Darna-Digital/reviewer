@@ -61,8 +61,8 @@ export interface LaunchpadGroup {
   readonly minting: boolean;
 }
 
-/** Sections the project has to be on GitHub to have anything to show. */
-const GITHUB_SECTIONS = new Set<string>();
+/** Sections the project has to be on a forge to have anything to show. */
+const FORGE_SECTIONS = new Set<string>();
 
 /** A card for one of the dock's surfaces, named and located where it is named
  * and located everywhere else. */
@@ -145,17 +145,17 @@ export const sessionSections = (
  * and with sessions switched off the whole second group goes the same way.
  */
 export function launchpadGroups({
-  github,
+  reviews,
   sessions,
 }: {
-  readonly github: boolean;
+  readonly reviews: boolean;
   readonly sessions: ReadonlyArray<LaunchpadSection>;
 }): ReadonlyArray<LaunchpadGroup> {
   return [
     {
       title: "Project",
       sections: CODE_SECTIONS.filter(
-        (section) => github || !GITHUB_SECTIONS.has(section.href)
+        (section) => reviews || !FORGE_SECTIONS.has(section.href)
       ),
       minting: false,
     },

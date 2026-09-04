@@ -37,8 +37,8 @@ import { FormattingHandler } from "./layers/formatting/formatting.handler.ts";
 import { FormattingLive } from "./layers/formatting/formatting.layer.live.ts";
 import { GitMessageHandler } from "./layers/git-message/git-message.handler.ts";
 import { GitMessageLive } from "./layers/git-message/git-message.layer.live.ts";
-import { GitHubHandler } from "./layers/github/github.handler.ts";
-import { GitHubLive } from "./layers/github/github.layer.live.ts";
+import { ReviewsHandler } from "./layers/reviews/reviews.handler.ts";
+import { ReviewsLive } from "./layers/reviews/reviews.layer.live.ts";
 import { LanguageHandler } from "./layers/language/language.handler.ts";
 import { LanguageLive } from "./layers/language/language.layer.live.ts";
 import { TasksHandler } from "./layers/tasks/tasks.handler.ts";
@@ -62,6 +62,7 @@ import { WorkspaceLive } from "./layers/workspace/workspace.layer.live.ts";
 import { layer as databaseLayer } from "./layers/db/db.service.ts";
 import { layer as gitExecLayer } from "./layers/git/git-exec.ts";
 import { layer as gitHubClientLayer } from "./layers/github/github-client.ts";
+import { layer as gitLabClientLayer } from "./layers/gitlab/gitlab-client.ts";
 import { attachPtyServer } from "./layers/terminal/pty-socket.ts";
 import { layer as terminalExecLayer } from "./layers/terminal/terminal-exec.ts";
 import {
@@ -90,7 +91,7 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(RepoHandler),
   Layer.provide(ProjectHandler),
   Layer.provide(CommentsHandler),
-  Layer.provide(GitHubHandler),
+  Layer.provide(ReviewsHandler),
   Layer.provide(GitMessageHandler),
   Layer.provide(ThreadsHandler),
   Layer.provide(ChatsHandler),
@@ -113,7 +114,7 @@ const FeatureServices = Layer.mergeAll(
   BranchTargetsLive,
   ProjectLive,
   CommentsLive,
-  GitHubLive,
+  ReviewsLive,
   GitMessageLive,
   ThreadsLive,
   ChatsLive,
@@ -133,14 +134,14 @@ const FeatureServices = Layer.mergeAll(
 /**
  * Global singletons, built once so the selected-repo state persists across
  * requests: the database, the workspace context (mutable selection), the git
- * executor, the GitHub client and the commit-message drafts (a drafting agent
+ * executor, the forge clients (GitHub and GitLab) and the commit-message drafts (a drafting agent
  * CLI outlives the request that started it, so its slot has to outlive it too).
  *
  * The database comes first — opening a project imports whatever its roots still
  * keep in `.byconvo/*.json`, so the file has to be there (and migrated) before
  * the workspace context seeds its initial selection.
  */
-const InfraLive = gitHubClientLayer.pipe(
+const InfraLive = Layer.mergeAll(gitHubClientLayer, gitLabClientLayer).pipe(
   Layer.provideMerge(
     Layer.mergeAll(gitExecLayer, terminalExecLayer, commitDraftsLayer)
   ),

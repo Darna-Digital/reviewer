@@ -12,8 +12,29 @@
 
 /** The repository byconvo has open, as `/api/repo` answers it. */
 export interface OpenRepo {
-  readonly github: { readonly owner: string; readonly repo: string } | null;
+  readonly remote: {
+    readonly host: string;
+    readonly owner: string;
+    readonly repo: string;
+  } | null;
 }
+
+/**
+ * The open repository as GitHub knows it, or null when it is not on GitHub.
+ *
+ * byconvo cloud runs on GitHub and only on GitHub — a run is a branch and a
+ * pull request there — so everything about a run compares against this rather
+ * than against whichever forge the checkout happens to be on. A GitLab project
+ * is simply not a repository any cloud run can belong to.
+ */
+export const githubRepoOf = (
+  open: OpenRepo | null | undefined
+): { readonly owner: string; readonly repo: string } | null => {
+  const remote = open?.remote ?? null;
+  return remote === null || remote.host !== "github"
+    ? null
+    : { owner: remote.owner, repo: remote.repo };
+};
 
 export type ReviewDestination =
   /** Reviewed here, at this route. */
@@ -42,7 +63,7 @@ export const pullNumberOf = (url: string): number | null => {
 /** `owner/repo` compared the way GitHub does it: case-insensitively. */
 export const sameRepo = (
   fullName: string,
-  open: OpenRepo["github"]
+  open: { readonly owner: string; readonly repo: string } | null
 ): boolean => {
   if (open === null) return false;
   return fullName.toLowerCase() === `${open.owner}/${open.repo}`.toLowerCase();
@@ -58,7 +79,7 @@ export const reviewDestination = (
   const url = run.pullRequestUrl;
   if (url === null || url.length === 0) return { kind: "none" };
   const number = pullNumberOf(url);
-  if (number === null || !sameRepo(run.repoFullName, open?.github ?? null)) {
+  if (number === null || !sameRepo(run.repoFullName, githubRepoOf(open))) {
     return { kind: "elsewhere", url, repoFullName: run.repoFullName };
   }
   return {

@@ -1,15 +1,8 @@
-import type { ReviewComment } from "@byconvo/core/comments";
+import { remoteCommentId } from "@byconvo/core/comments";
 import type {
   CommentsDependencies,
   CommentsFunctions,
 } from "../interfaces/comments.interfaces";
-
-/** GitHub's own id for a comment we hold as `gh-<id>`, or null for any other. */
-const githubCommentId = (comment: ReviewComment): number | null => {
-  if (comment.source !== "github") return null;
-  const id = Number(comment.id.replace(/^gh-/, ""));
-  return Number.isInteger(id) ? id : null;
-};
 
 export function createCommentsFunctions(
   d: CommentsDependencies
@@ -42,7 +35,7 @@ export function createCommentsFunctions(
       await d.sideEffects.deleteComment(comment.id);
       return true;
     }
-    const commentId = githubCommentId(comment);
+    const commentId = remoteCommentId(comment);
     if (selectedPull === null || commentId === null) return false;
     await d.sideEffects.deletePullComment(selectedPull.number, commentId);
     return true;
@@ -53,7 +46,7 @@ export function createCommentsFunctions(
     comment,
     body
   ) => {
-    const commentId = githubCommentId(comment);
+    const commentId = remoteCommentId(comment);
     if (selectedPull === null || commentId === null) return null;
     const created = await d.sideEffects.replyPullComment(
       selectedPull.number,
@@ -61,7 +54,7 @@ export function createCommentsFunctions(
       body
     );
     // Anchor the reply to the parent's line so it lands in the same thread even
-    // when GitHub reports a null position for an outdated diff.
+    // when the forge reports no position for an outdated diff.
     return {
       ...created,
       filePath: comment.filePath,

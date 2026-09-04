@@ -71,6 +71,11 @@ describe("diffSources", () => {
   });
 
   it("hints at a pull's number, and nothing at home", () => {
-    expect(diffSources(pulls).map(diffSourceHint)).toEqual([null, "#4"]);
+    expect(
+      diffSources(pulls).map((source) => diffSourceHint(source, "github"))
+    ).toEqual([null, "#4"]);
+    expect(
+      diffSources(pulls).map((source) => diffSourceHint(source, "gitlab"))
+    ).toEqual([null, "!4"]);
   });
 });

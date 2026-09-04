@@ -31,6 +31,7 @@ import {
   modeTitle,
 } from "@/interactions/chats/functions/chat-mode.functions";
 import { preferredChatModel } from "@/interactions/chats/functions/chat-model.functions";
+import { githubRepoOf } from "@/interactions/cloud/functions/cloud-review.functions";
 import { NEW_CHAT_DRAFT, setDraft } from "@/lib/composer-drafts";
 import { isDesktop } from "@/lib/desktop";
 import { useChatModels, useRepo } from "@/lib/queries";
@@ -96,7 +97,7 @@ export function NewChatView() {
       toast.error("Link a repository in byconvo cloud before sending to it.");
       return;
     }
-    const github = repo.data?.github ?? null;
+    const github = githubRepoOf(repo.data);
     const sameRepo =
       github !== null &&
       `${github.owner}/${github.repo}`.toLowerCase() ===

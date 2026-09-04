@@ -1,8 +1,10 @@
 /**
  * Round comment-author avatar. GitHub authors resolve to their real avatar via
- * `github.com/<user>.png`; everyone else (and any image that fails to load)
- * falls back to deterministic initials on a colour derived from the name —
- * reusing the same palette as the repo/project avatars.
+ * `github.com/<user>.png` — a URL that needs no token and no lookup. GitLab has
+ * no such address (its avatars are per-instance and only named in the API
+ * response), so a GitLab author, like a local one and like any image that fails
+ * to load, falls back to deterministic initials on a colour derived from the
+ * name — reusing the same palette as the repo/project avatars.
  */
 import { useEffect, useState } from "react";
 import { repoAvatar } from "@/lib/repo-avatar";

@@ -57,6 +57,7 @@ describe("optimisticPullComment", () => {
     body: "why this way?",
     pullNumber: 42,
     createdAt: "2026-07-25T12:00:00.000Z",
+    host: "github" as const,
   });
 
   it("lands under the pull request's own target", () => {
@@ -64,7 +65,14 @@ describe("optimisticPullComment", () => {
     expect(drafted.source).toBe("github");
   });
 
-  it("carries no author — only GitHub can name the commenter", () => {
+  it("is marked as belonging to the forge this checkout is on", () => {
+    expect(
+      optimisticPullComment({ ...drafted, pullNumber: 42, host: "gitlab" })
+        .source
+    ).toBe("gitlab");
+  });
+
+  it("carries no author — only the forge can name the commenter", () => {
     expect(drafted.author).toBe("");
   });
 

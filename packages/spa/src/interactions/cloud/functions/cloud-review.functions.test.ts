@@ -13,7 +13,9 @@ const run = (
   pullRequestUrl,
   repoFullName,
 });
-const open = (owner: string, repo: string) => ({ github: { owner, repo } });
+const open = (owner: string, repo: string) => ({
+  remote: { host: "github", owner, repo },
+});
 
 describe("where a cloud run's pull request is reviewed", () => {
   it("reads the number out of a pull request URL", () => {
@@ -74,8 +76,15 @@ describe("where a cloud run's pull request is reviewed", () => {
     });
   });
 
-  it("sends you out when byconvo has no repository, or a repository with no GitHub remote", () => {
-    for (const local of [null, undefined, { github: null }]) {
+  it("sends you out when byconvo has no repository, or one that is not on GitHub", () => {
+    for (const local of [
+      null,
+      undefined,
+      { remote: null },
+      // A GitLab checkout is not a repository a cloud run can belong to, even
+      // when the names line up.
+      { remote: { host: "gitlab", owner: "darna", repo: "byconvo" } },
+    ]) {
       expect(
         reviewDestination(
           run("https://github.com/darna/byconvo/pull/12"),

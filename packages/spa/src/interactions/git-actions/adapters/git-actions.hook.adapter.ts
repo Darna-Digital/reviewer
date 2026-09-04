@@ -199,12 +199,12 @@ export function useGitActions() {
     /**
      * Land a pull request on its base branch. Outward-facing and not ours to
      * undo, so the caller confirms first — this only carries it out, and
-     * reports GitHub's own sentence about what happened.
+     * reports the forge's own sentence about what happened.
      */
     mergePull: (pullNumber: number, method: "merge" | "squash" | "rebase") =>
       fns.runOp(`Merged #${pullNumber}`, async () => {
         const { message } = await unwrap(
-          fetchClient.POST("/api/github/pulls/{number}/merge", {
+          fetchClient.POST("/api/reviews/pulls/{number}/merge", {
             params: { path: { number: String(pullNumber) } },
             body: { method },
           })
@@ -220,7 +220,7 @@ export function useGitActions() {
     closePull: (pullNumber: number) =>
       fns.runOp(`Closed #${pullNumber}`, async () => {
         const { message } = await unwrap(
-          fetchClient.POST("/api/github/pulls/{number}/close", {
+          fetchClient.POST("/api/reviews/pulls/{number}/close", {
             params: { path: { number: String(pullNumber) } },
           })
         );

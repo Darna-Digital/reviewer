@@ -8,6 +8,7 @@ import { useMemo } from "react";
 import { api, fetchClient } from "@/lib/api/client";
 import { isCloudRunActive } from "@byconvo/core/cloud";
 import { isMultiRepo } from "@byconvo/core/workspace";
+import type { GitHost } from "@byconvo/core/ports/git-remote";
 import type { DiffTarget, LogQuery } from "@/lib/api/types";
 
 /**
@@ -50,6 +51,17 @@ const REMOTE = { staleTime: 60_000, refetchOnWindowFocus: false } as const;
 export const useWorkspace = () =>
   api.useQuery("get", "/api/workspace", {}, GIT_DATA);
 export const useRepo = () => api.useQuery("get", "/api/repo", {}, GIT_DATA);
+
+/**
+ * Which forge this checkout came from, or null when it came from neither.
+ *
+ * Every part of the app that shows a review asks this: whether there is
+ * anything to review at all, what to call it, and which logo goes on the way
+ * out to it. The server works it out from `origin` when the repository is
+ * opened, so nothing here has to be configured or picked.
+ */
+export const useGitHost = (): GitHost | null =>
+  useRepo().data?.remote?.host ?? null;
 export const useFiles = () => api.useQuery("get", "/api/files", {}, GIT_DATA);
 export const useStatus = () => api.useQuery("get", "/api/status", {}, GIT_DATA);
 export const useBranches = () =>
@@ -384,7 +396,8 @@ export const useConflictBlobs = (path: string | null) =>
   );
 
 /**
- * Every open pull request, with CI and mergeability on each.
+ * Every open request against this repository — pull requests on GitHub, merge
+ * requests on GitLab — with CI and mergeability on each.
  *
  * Unlike the other remote reads this one does refetch on focus: half of what it
  * carries is about a build that is running somewhere else. A window left open
@@ -394,7 +407,7 @@ export const useConflictBlobs = (path: string | null) =>
 export const usePulls = (enabled: boolean) =>
   api.useQuery(
     "get",
-    "/api/github/pulls",
+    "/api/reviews/pulls",
     {},
     { ...REMOTE, refetchOnWindowFocus: true, enabled }
   );
@@ -414,7 +427,7 @@ export const useCommitDetail = (sha: string | null) =>
 export const usePullComments = (pullNumber: number | null) =>
   api.useQuery(
     "get",
-    "/api/github/pulls/{number}/comments",
+    "/api/reviews/pulls/{number}/comments",
     { params: { path: { number: String(pullNumber ?? "") } } },
     { ...REMOTE, enabled: pullNumber !== null }
   );
@@ -531,7 +544,7 @@ export const useDiffText = (target: DiffTarget | null) => {
   );
   const pull = api.useQuery(
     "get",
-    "/api/github/pulls/{number}/diff",
+    "/api/reviews/pulls/{number}/diff",
     {
       params: {
         path: {

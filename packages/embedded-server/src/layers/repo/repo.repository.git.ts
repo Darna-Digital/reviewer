@@ -6,6 +6,8 @@
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import { GitError } from "@byconvo/core/ports/git-exec";
+import { parseGitRemote } from "@byconvo/core/ports/git-remote";
+import { gitHostHints } from "../reviews/git-host-hints.ts";
 import { GitExec, type GitFailure } from "../git/git-exec.ts";
 import { ALL_REFS } from "@byconvo/core/repo";
 import type {
@@ -181,15 +183,6 @@ const fsToGitError =
       stderr: error instanceof Error ? error.message : String(error),
     });
 
-const parseGitHubRemote = (
-  url: string
-): { owner: string; repo: string } | null => {
-  const match = url.match(/github\.com[/:]([^/]+)\/([^/]+?)(?:\.git)?\/?$/);
-  const owner = match?.[1];
-  const repo = match?.[2];
-  return owner !== undefined && repo !== undefined ? { owner, repo } : null;
-};
-
 const parseTrack = (track: string): { ahead: number; behind: number } => ({
   ahead: Number(track.match(/ahead (\d+)/)?.[1] ?? 0),
   behind: Number(track.match(/behind (\d+)/)?.[1] ?? 0),
@@ -301,7 +294,8 @@ export const makeGitRepoRepository = Effect.gen(function* () {
       name,
       currentBranch,
       remoteUrl,
-      github: remoteUrl === null ? null : parseGitHubRemote(remoteUrl),
+      remote:
+        remoteUrl === null ? null : parseGitRemote(remoteUrl, gitHostHints()),
     };
   });
 

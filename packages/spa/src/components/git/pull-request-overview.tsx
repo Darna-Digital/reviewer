@@ -21,7 +21,6 @@ import {
   IconAlertTriangleFilled,
   IconArrowLeft,
   IconArrowNarrowRight,
-  IconBrandGithub,
   IconCheck,
   IconChevronDown,
   IconGitFork,
@@ -56,6 +55,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  gitHostLabel,
+  gitHostRequestLabel,
+  gitHostRequestRef,
+  type GitHost,
+} from "@byconvo/core/ports/git-remote";
+import { GitHostIcon } from "@/components/git/git-host-icon";
 import { ChecksIcon } from "@/components/git/pull-request-status";
 import {
   blockedReason,
@@ -106,7 +112,15 @@ const MERGE_METHODS: ReadonlyArray<{
   { method: "rebase", label: "Rebase and merge", detail: "Replay, no merge" },
 ];
 
-/** GitHub gives label colours as bare hex; a label with none falls back. */
+/** The forge's page listing every check on the head commit. */
+const moreChecksUrl = (host: GitHost, url: string): string =>
+  host === "gitlab" ? `${url}/pipelines` : `${url}/checks`;
+
+/** "pull request" at the start of a sentence, or of a label. */
+const capitalise = (text: string): string =>
+  text.charAt(0).toUpperCase() + text.slice(1);
+
+/** Both forges give label colours as bare hex; one with none falls back. */
 const labelStyle = (color: string) =>
   /^[0-9a-fA-F]{6}$/.test(color)
     ? {
@@ -210,6 +224,7 @@ function People({ people }: { readonly people: ReadonlyArray<string> }) {
 
 export function PullRequestOverview({
   pull,
+  host,
   currentBranch,
   onCheckout,
   onMerge,
@@ -221,6 +236,12 @@ export function PullRequestOverview({
   style,
 }: {
   readonly pull: PullRequestInfo;
+  /**
+   * The forge this request is on. It decides the wording throughout — GitLab
+   * calls this a merge request and writes its number `!12` — and the mark on
+   * the way out to it.
+   */
+  readonly host: GitHost;
   /** The branch the working copy is on, so the button can say you are on it. */
   readonly currentBranch: string | null;
   readonly onCheckout: (pull: PullRequestInfo, branch: string) => Promise<void>;
@@ -247,6 +268,11 @@ export function PullRequestOverview({
   readonly className?: string;
   readonly style?: React.CSSProperties;
 }) {
+  // What this forge calls the thing on screen, and how it writes its number.
+  // Said once here so no sentence below has to remember which forge it is on.
+  const forge = gitHostLabel(host);
+  const ref = gitHostRequestRef(host, pull.number);
+
   const [checkingOut, setCheckingOut] = useState(false);
   const [merging, setMerging] = useState(false);
   const [confirming, setConfirming] = useState<MergeMethod | null>(null);
@@ -310,10 +336,10 @@ export function PullRequestOverview({
     <section
       className={cn("flex min-h-0 flex-col overflow-hidden", className)}
       style={style}
-      aria-label={`Pull request #${pull.number}`}
+      aria-label={`${capitalise(gitHostRequestLabel(host))} ${ref}`}
     >
-      {/* The way back, and the way out to GitHub. One row, the height of the
-          tree's search field beside it, so the three columns start level. */}
+      {/* The way back, and the way out to the forge. One row, the height of
+          the tree's search field beside it, so the three columns start level. */}
       <div className="flex shrink-0 items-center justify-between gap-2 border-b py-1 pr-1.5 pl-1">
         <Button
           variant="ghost-muted"
@@ -367,7 +393,7 @@ export function PullRequestOverview({
             </h2>
           </div>
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 type-meta text-muted-foreground">
-            <span className="font-mono">#{pull.number}</span>
+            <span className="font-mono">{ref}</span>
             {pull.author.length > 0 && (
               <>
                 <span aria-hidden>·</span>
@@ -450,7 +476,7 @@ export function PullRequestOverview({
               </TooltipTrigger>
               <TooltipContent>
                 {mergeBlocked ??
-                  `Merge #${pull.number} into ${pull.baseRef} on GitHub.`}
+                  `Merge ${ref} into ${pull.baseRef} on ${forge}.`}
               </TooltipContent>
             </Tooltip>
             <DropdownMenu>
@@ -517,13 +543,13 @@ export function PullRequestOverview({
               {onBranch
                 ? `The working copy is already on ${localBranch}.`
                 : pull.fromFork
-                  ? `Fetch #${pull.number} from the fork it was opened from and check it out as ${localBranch}.`
+                  ? `Fetch ${ref} from the fork it was opened from and check it out as ${localBranch}.`
                   : `Fetch ${pull.headRef} from origin and check it out. An existing local branch is fast-forwarded, never reset.`}
             </TooltipContent>
           </Tooltip>
           {/* Closing is the one thing in this row that takes the pull request
               away rather than doing something with it, so it keeps the quiet
-              icon face the GitHub link has and says so only on hover, where
+              icon face the forge link has and says so only on hover, where
               the red is a warning rather than a fourth thing competing for
               the row. It is confirmed like the merge is, for the same reason:
               everyone else sees it happen. */}
@@ -533,7 +559,7 @@ export function PullRequestOverview({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`Close #${pull.number} without merging`}
+                  aria-label={`Close ${ref} without merging`}
                   disabled={closing || merging}
                   onClick={() => setConfirmingClose(true)}
                   className="text-muted-foreground hover:text-destructive"
@@ -543,7 +569,7 @@ export function PullRequestOverview({
               <IconGitPullRequestClosed className="size-3.5" />
             </TooltipTrigger>
             <TooltipContent>
-              {closing ? "Closing…" : `Close #${pull.number} without merging.`}
+              {closing ? "Closing…" : `Close ${ref} without merging.`}
             </TooltipContent>
           </Tooltip>
           {/* An anchor wearing the button's face rather than a Button
@@ -559,7 +585,7 @@ export function PullRequestOverview({
                     href={pull.url}
                     target="_blank"
                     rel="noreferrer"
-                    aria-label={`Open #${pull.number} on GitHub`}
+                    aria-label={`Open ${ref} on ${forge}`}
                     className={buttonVariants({
                       variant: "ghost",
                       size: "icon-sm",
@@ -567,9 +593,9 @@ export function PullRequestOverview({
                   />
                 }
               >
-                <IconBrandGithub className="size-3.5" />
+                <GitHostIcon host={host} className="size-3.5" />
               </TooltipTrigger>
-              <TooltipContent>Open on GitHub</TooltipContent>
+              <TooltipContent>Open on {forge}</TooltipContent>
             </Tooltip>
           )}
         </div>
@@ -638,12 +664,12 @@ export function PullRequestOverview({
                       lead={<span className="w-3.5 shrink-0" />}
                       label={
                         <a
-                          href={`${pull.url}/checks`}
+                          href={moreChecksUrl(host, pull.url)}
                           target="_blank"
                           rel="noreferrer"
                           className="text-link hover:underline"
                         >
-                          {counts.total - CHECKS_SHOWN} more on GitHub
+                          {counts.total - CHECKS_SHOWN} more on {forge}
                         </a>
                       }
                       value={null}
@@ -705,8 +731,8 @@ export function PullRequestOverview({
 
       {/* Merging is outward-facing and not ours to undo, so it is confirmed —
           and the confirmation is where the reasons to think twice that are not
-          reasons to refuse (a red check, a mergeability GitHub has not worked
-          out) finally get said. */}
+          reasons to refuse (a red check, a mergeability the forge has not
+          worked out) finally get said. */}
       <Dialog
         open={confirming !== null}
         onOpenChange={(open) => {
@@ -716,10 +742,10 @@ export function PullRequestOverview({
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>
-              Merge #{pull.number} into {pull.baseRef}?
+              Merge {ref} into {pull.baseRef}?
             </DialogTitle>
             <DialogDescription>
-              This merges {pull.headRef} on GitHub as a{" "}
+              This merges {pull.headRef} on {forge} as a{" "}
               {MERGE_METHODS.find(
                 (m) => m.method === (confirming ?? "merge")
               )?.label.toLowerCase() ?? "merge commit"}
@@ -737,17 +763,17 @@ export function PullRequestOverview({
         </DialogContent>
       </Dialog>
 
-      {/* Closing is undone by reopening it on GitHub rather than by anything
+      {/* Closing is undone by reopening it on the forge rather than by anything
           here, and the branch it was opened from is untouched either way —
           which is the pair of facts that decide whether to go through with
           it, so it is the pair the confirmation says. */}
       <Dialog open={confirmingClose} onOpenChange={setConfirmingClose}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Close #{pull.number} without merging?</DialogTitle>
+            <DialogTitle>Close {ref} without merging?</DialogTitle>
             <DialogDescription>
-              {pull.headRef} keeps its commits and stays where it is. Reopening
-              #{pull.number} is done on GitHub.
+              {pull.headRef} keeps its commits and stays where it is. Reopening{" "}
+              {ref} is done on {forge}.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -755,7 +781,7 @@ export function PullRequestOverview({
               Cancel
             </DialogClose>
             <Button variant="destructive" onClick={runClose}>
-              Close pull request
+              Close {gitHostRequestLabel(host)}
             </Button>
           </DialogFooter>
         </DialogContent>

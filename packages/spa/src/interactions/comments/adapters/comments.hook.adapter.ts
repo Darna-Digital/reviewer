@@ -1,7 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef } from "react";
 import { api, fetchClient } from "@/lib/api/client";
-import type { ReviewComment } from "@byconvo/core/comments";
+import { isRemoteComment, type ReviewComment } from "@byconvo/core/comments";
+import { useGitHost } from "@/lib/queries";
 import { createCommentsFunctions } from "../functions/comments.functions";
 import {
   optimisticComment,
@@ -21,6 +22,10 @@ import type {
 /** Wires the real API mutations + TanStack Query cache into the comment logic. */
 export function useCommentsActions() {
   const queryClient = useQueryClient();
+  // Which forge a comment on a request belongs to, for the moment before the
+  // server names it. Null only when there is no forge — and then there is no
+  // request to comment on either.
+  const host = useGitHost();
 
   const fns: CommentsFunctions = useMemo(
     () =>
@@ -39,7 +44,7 @@ export function useCommentsActions() {
           },
           addPullComment: async (pullNumber, input) => {
             const { data, error } = await fetchClient.POST(
-              "/api/github/pulls/{number}/comments",
+              "/api/reviews/pulls/{number}/comments",
               {
                 params: { path: { number: String(pullNumber) } },
                 body: input,
@@ -72,13 +77,10 @@ export function useCommentsActions() {
           },
           deletePullComment: async (pullNumber, commentId) => {
             const { error } = await fetchClient.DELETE(
-              "/api/github/pulls/{number}/comments/{commentId}",
+              "/api/reviews/pulls/{number}/comments/{commentId}",
               {
                 params: {
-                  path: {
-                    number: String(pullNumber),
-                    commentId: String(commentId),
-                  },
+                  path: { number: String(pullNumber), commentId },
                 },
               }
             );
@@ -89,13 +91,10 @@ export function useCommentsActions() {
           },
           replyPullComment: async (pullNumber, commentId, body) => {
             const { data, error } = await fetchClient.POST(
-              "/api/github/pulls/{number}/comments/{commentId}/replies",
+              "/api/reviews/pulls/{number}/comments/{commentId}/replies",
               {
                 params: {
-                  path: {
-                    number: String(pullNumber),
-                    commentId: String(commentId),
-                  },
+                  path: { number: String(pullNumber), commentId },
                 },
                 body: { body },
               }
@@ -125,7 +124,7 @@ export function useCommentsActions() {
 
   /** The same, for one pull request's comments — keyed by its number. */
   const pullCommentsKey = (pullNumber: number) =>
-    api.queryOptions("get", "/api/github/pulls/{number}/comments", {
+    api.queryOptions("get", "/api/reviews/pulls/{number}/comments", {
       params: { path: { number: String(pullNumber) } },
     }).queryKey;
 
@@ -167,9 +166,9 @@ export function useCommentsActions() {
       const id = optimisticId(pending.current);
       const createdAt = new Date().toISOString();
 
-      // A pull request comment goes to GitHub rather than to disk. It still
+      // A comment on a request goes to the forge rather than to disk. It still
       // appears at once — waiting on somebody else's server is the thing being
-      // removed — but it is marked unacknowledged until GitHub confirms it,
+      // removed — but it is marked unacknowledged until the forge confirms it,
       // because unlike a local write this one can genuinely fail.
       const pull = ctx.mode === "review" ? ctx.selectedPull : null;
       const key =
@@ -195,6 +194,7 @@ export function useCommentsActions() {
               body,
               pullNumber: pull.number,
               createdAt,
+              host: host ?? "github",
             });
 
       holdRefetches(key);
@@ -211,7 +211,7 @@ export function useCommentsActions() {
         void invalidate(
           pull === null
             ? "/api/comments"
-            : "/api/github/pulls/{number}/comments"
+            : "/api/reviews/pulls/{number}/comments"
         );
         throw error;
       }
@@ -221,17 +221,19 @@ export function useCommentsActions() {
       selectedPull: SubmitContext["selectedPull"],
       comment: ReviewComment
     ) => {
-      // A GitHub comment is removed from the list its pull request is keyed
-      // under, a local one from the working tree's list. With no pull request in
-      // hand there is nothing to delete a GitHub comment from, so the logic
+      // A comment on a request is removed from the list that request is keyed
+      // under, a local one from the working tree's list. With no request in
+      // hand there is nothing to delete a forge comment from, so the logic
       // answers for it rather than a list being edited on a guess.
-      const pull = comment.source === "github" ? selectedPull : null;
-      if (comment.source === "github" && pull === null)
+      const pull = isRemoteComment(comment) ? selectedPull : null;
+      if (isRemoteComment(comment) && pull === null)
         return fns.remove(selectedPull, comment);
       const key =
         pull === null ? localCommentsKey : pullCommentsKey(pull.number);
       const path =
-        pull === null ? "/api/comments" : "/api/github/pulls/{number}/comments";
+        pull === null
+          ? "/api/comments"
+          : "/api/reviews/pulls/{number}/comments";
       holdRefetches(key);
       const before = edit(key, (list) => withoutComment(list, comment.id));
       try {
@@ -273,9 +275,9 @@ export function useCommentsActions() {
     },
 
     /**
-     * A reply is the same bargain as a new pull comment: shown at once,
+     * A reply is the same bargain as a new comment on a request: shown at once,
      * anchored to the line its parent sits on so it joins that thread rather
-     * than opening one of its own, and marked unacknowledged until GitHub
+     * than opening one of its own, and marked unacknowledged until the forge
      * names it.
      */
     reply: async (
@@ -283,7 +285,7 @@ export function useCommentsActions() {
       comment: ReviewComment,
       body: string
     ) => {
-      if (selectedPull === null || comment.source !== "github") {
+      if (selectedPull === null || !isRemoteComment(comment)) {
         return fns.reply(selectedPull, comment, body);
       }
       pending.current += 1;
@@ -296,6 +298,7 @@ export function useCommentsActions() {
         body,
         pullNumber: selectedPull.number,
         createdAt: new Date().toISOString(),
+        host: comment.source === "gitlab" ? "gitlab" : "github",
       });
       holdRefetches(key);
       const before = edit(key, (list) => withComment(list, placeholder));
@@ -311,7 +314,7 @@ export function useCommentsActions() {
         return created;
       } catch (error) {
         restore(key, before);
-        void invalidate("/api/github/pulls/{number}/comments");
+        void invalidate("/api/reviews/pulls/{number}/comments");
         throw error;
       }
     },

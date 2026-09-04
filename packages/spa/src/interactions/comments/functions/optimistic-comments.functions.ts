@@ -12,21 +12,23 @@
  * back a different id than the one we invented, putting the list back when the
  * write genuinely fails — are testable without a query client or a server.
  *
- * GitHub comments get the same treatment, with one difference that matters. A
- * local write is to a database on this machine and essentially cannot fail; a
- * GitHub write is a request to somebody else's system that can fail for
- * ordinary reasons — no token, rate limit, a line whose position has gone stale
- * since the diff was fetched. It still should not make you wait. So it appears
- * immediately and is marked as unacknowledged until GitHub confirms it, which
- * is both instant and true: `isOptimisticId` is what the thread reads to say
- * so, and the id it tests is replaced the moment the real one arrives.
+ * Comments on a pull or merge request get the same treatment, with one
+ * difference that matters. A local write is to a database on this machine and
+ * essentially cannot fail; a write to the forge is a request to somebody else's
+ * system that can fail for ordinary reasons — no token, rate limit, a line
+ * whose position has gone stale since the diff was fetched. It still should not
+ * make you wait. So it appears immediately and is marked as unacknowledged
+ * until the forge confirms it, which is both instant and true: `isOptimisticId`
+ * is what the thread reads to say so, and the id it tests is replaced the
+ * moment the real one arrives.
  *
- * The author is the other difference. GitHub names the commenter in its
+ * The author is the other difference. The forge names the commenter in its
  * response and there is no way to know that login beforehand, so a pending
- * GitHub comment carries no author rather than a guessed one — the thread shows
- * it as sending until the real name lands.
+ * comment carries no author rather than a guessed one — the thread shows it as
+ * sending until the real name lands.
  */
 import type { ReviewComment } from "@byconvo/core/comments";
+import type { GitHost } from "@byconvo/core/ports/git-remote";
 
 /** The `target` a pull request's comments are stored under. */
 export const pullTarget = (pullNumber: number): string => `pr-${pullNumber}`;
@@ -55,9 +57,14 @@ export const optimisticComment = (input: {
 }): ReviewComment => ({ ...input, source: "local" });
 
 /**
- * The same, for a pull request comment. No author: GitHub names the commenter
- * in its response, and inventing one here would put a wrong name on screen for
- * as long as the request takes. The thread reads the pending id instead.
+ * The same, for a comment on a pull or merge request. No author: the forge
+ * names the commenter in its response, and inventing one here would put a wrong
+ * name on screen for as long as the request takes. The thread reads the pending
+ * id instead.
+ *
+ * The source is the forge this checkout is on, so the comment is drawn with the
+ * right mark from the moment it appears — and so, if it fails, it is put back
+ * into the right list.
  */
 export const optimisticPullComment = (input: {
   id: string;
@@ -67,6 +74,7 @@ export const optimisticPullComment = (input: {
   body: string;
   pullNumber: number;
   createdAt: string;
+  host: GitHost;
 }): ReviewComment => ({
   id: input.id,
   filePath: input.filePath,
@@ -76,7 +84,7 @@ export const optimisticPullComment = (input: {
   author: "",
   createdAt: input.createdAt,
   target: pullTarget(input.pullNumber),
-  source: "github",
+  source: input.host,
 });
 
 /** `comment` appended to `list` — where the thread it joins expects it. */

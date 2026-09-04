@@ -10,6 +10,7 @@ import {
   useRepo,
 } from "@/lib/queries";
 import { createCloudFunctions } from "../functions/cloud.functions";
+import { githubRepoOf } from "../functions/cloud-review.functions";
 import type {
   CloudAgentProvider,
   CloudFunctions,
@@ -187,7 +188,7 @@ export function useCloudRunTarget(): {
   const status = useCloudStatus();
   const connected = status.data?.status === "connected";
   const repos = useCloudRepos(connected).data ?? [];
-  const local = useRepo().data?.github ?? null;
+  const local = githubRepoOf(useRepo().data);
   const remoteName =
     local === null ? null : `${local.owner}/${local.repo}`.toLowerCase();
   const cloudRepo =

@@ -14,15 +14,21 @@ import {
 import { DiffText, Ok } from "@byconvo/core/shared";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
-export class GitHubApi extends HttpApiGroup.make("github")
+/**
+ * The review endpoints — the requests open against this repository, whoever
+ * hosts it. A pull request on GitHub and a merge request on GitLab are the
+ * same thing under two names, so there is one group for both and `origin`
+ * decides which system answers; see `reviews.layer.live.ts`.
+ */
+export class ReviewsApi extends HttpApiGroup.make("reviews")
   .add(
-    HttpApiEndpoint.get("pulls", "/github/pulls", {
+    HttpApiEndpoint.get("pulls", "/reviews/pulls", {
       success: Schema.Array(PullRequestInfo),
       error: GitProviderError,
     })
   )
   .add(
-    HttpApiEndpoint.post("mergePull", "/github/pulls/:number/merge", {
+    HttpApiEndpoint.post("mergePull", "/reviews/pulls/:number/merge", {
       params: PullNumberParam,
       payload: MergePullRequest,
       success: MergeResult,
@@ -30,21 +36,21 @@ export class GitHubApi extends HttpApiGroup.make("github")
     })
   )
   .add(
-    HttpApiEndpoint.post("closePull", "/github/pulls/:number/close", {
+    HttpApiEndpoint.post("closePull", "/reviews/pulls/:number/close", {
       params: PullNumberParam,
       success: CloseResult,
       error: GitProviderError,
     })
   )
   .add(
-    HttpApiEndpoint.get("pullDiff", "/github/pulls/:number/diff", {
+    HttpApiEndpoint.get("pullDiff", "/reviews/pulls/:number/diff", {
       params: PullNumberParam,
       success: DiffText,
       error: GitProviderError,
     })
   )
   .add(
-    HttpApiEndpoint.get("pullComments", "/github/pulls/:number/comments", {
+    HttpApiEndpoint.get("pullComments", "/reviews/pulls/:number/comments", {
       params: PullNumberParam,
       success: Schema.Array(ReviewComment),
       error: GitProviderError,
@@ -53,7 +59,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
   .add(
     HttpApiEndpoint.post(
       "createPullComment",
-      "/github/pulls/:number/comments",
+      "/reviews/pulls/:number/comments",
       {
         params: PullNumberParam,
         payload: PrComment,
@@ -65,7 +71,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
   .add(
     HttpApiEndpoint.post(
       "replyPullComment",
-      "/github/pulls/:number/comments/:commentId/replies",
+      "/reviews/pulls/:number/comments/:commentId/replies",
       {
         params: PullCommentParams,
         payload: PrReply,
@@ -77,7 +83,7 @@ export class GitHubApi extends HttpApiGroup.make("github")
   .add(
     HttpApiEndpoint.make("DELETE")(
       "deletePullComment",
-      "/github/pulls/:number/comments/:commentId",
+      "/reviews/pulls/:number/comments/:commentId",
       {
         params: PullCommentParams,
         success: Ok,

@@ -11,13 +11,13 @@ export function useCodeCommands(): ReadonlyArray<Command> {
   const navigate = useNavigate();
   const git = useGitActions();
   const repo = useRepo();
-  const hasGitHub = repo.data?.github != null;
+  const hasReviews = repo.data?.remote != null;
   const currentBranch = repo.data?.currentBranch ?? null;
 
   return useMemo(
     () =>
       buildCodeCommands({
-        data: { hasGitHub, currentBranch },
+        data: { hasReviews, currentBranch },
         sideEffects: {
           goTo: (route) => void navigate({ to: route }),
           refresh: () => git.refresh(),
@@ -35,6 +35,6 @@ export function useCodeCommands(): ReadonlyArray<Command> {
             }),
         },
       }),
-    [navigate, git, hasGitHub, currentBranch]
+    [navigate, git, hasReviews, currentBranch]
   );
 }

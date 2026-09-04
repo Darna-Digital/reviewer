@@ -11,7 +11,7 @@ export function mockCodeCommandDependencies(
   };
 
   const deps: CodeCommandDependencies = {
-    data: { hasGitHub: true, currentBranch: "main", ...data },
+    data: { hasReviews: true, currentBranch: "main", ...data },
     sideEffects: {
       goTo: (route) => calls.goTo.push(route),
       refresh: () => calls.ran.push("refresh"),

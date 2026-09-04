@@ -45,7 +45,7 @@ describe("RepoService", () => {
             name: "r",
             currentBranch: "trunk",
             remoteUrl: null,
-            github: null,
+            remote: null,
           },
         })
       )

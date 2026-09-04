@@ -2,7 +2,7 @@
  * What the centre of the window says when review mode has nothing to review.
  *
  * It used to say `EmptyPane` — the command menu, the file finder, the ways into a
- * diff — under a line asking you to pick a pull request from the sidebar, while
+ * diff — under a line asking you to pick a request from the sidebar, while
  * the sidebar beside it said there were none to pick. Two panes disagreeing, and
  * the wrong one of them was the big one: none of those gestures is how a pull
  * request arrives, so the pane read as the project browser having been left open
@@ -10,12 +10,12 @@
  */
 import { IconGitPullRequest, IconPlugConnectedX } from "@tabler/icons-react";
 
-/** No open pull requests, on a project that would have them. */
+/** Nothing open, on a project that would have something. */
 export function NoPullRequests() {
   return (
     <ReviewEmpty
       icon={IconGitPullRequest}
-      title="No open pull requests"
+      title="Nothing open to review"
       body="When a branch is pushed and opened for review, it shows up in the sidebar with its files and comments."
     />
   );
@@ -30,8 +30,8 @@ export function NoReviewRemote() {
   return (
     <ReviewEmpty
       icon={IconPlugConnectedX}
-      title="No GitHub remote"
-      body="This project is not on GitHub, so there are no pull requests to review here."
+      title="No GitHub or GitLab remote"
+      body="This project's origin is on neither GitHub nor GitLab, so there is nothing opened for review to read here."
     />
   );
 }

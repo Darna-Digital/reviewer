@@ -12,6 +12,10 @@
 import { IconCloud, IconGitBranch, IconGitCommit } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import {
+  gitHostRequestRef,
+  type GitHost,
+} from "@byconvo/core/ports/git-remote";
 import { PaneHeader } from "@/components/layout/pane-header";
 import {
   branchLabel,
@@ -36,7 +40,15 @@ import {
   type ReviewItem,
 } from "../functions/reviews.functions";
 
-function Row({ item, onOpen }: { item: ReviewItem; onOpen: () => void }) {
+function Row({
+  item,
+  host,
+  onOpen,
+}: {
+  item: ReviewItem;
+  host: GitHost;
+  onOpen: () => void;
+}) {
   const updated = reviewUpdatedAt(item);
   return (
     <button
@@ -50,7 +62,7 @@ function Row({ item, onOpen }: { item: ReviewItem; onOpen: () => void }) {
       />
       <span className="flex min-w-0 flex-[2] items-baseline gap-2">
         <span className="shrink-0 font-mono text-xs text-muted-foreground">
-          #{item.pull.number}
+          {gitHostRequestRef(host, item.pull.number)}
         </span>
         <span className="truncate text-sm">{reviewTitle(item)}</span>
       </span>
@@ -70,8 +82,9 @@ function Row({ item, onOpen }: { item: ReviewItem; onOpen: () => void }) {
 export function ReviewsPage() {
   const navigate = useNavigate();
   const repo = useRepo();
-  const hasGitHub = repo.data?.github != null;
-  const pulls = usePulls(hasGitHub);
+  const host = repo.data?.remote?.host ?? null;
+  const hasReviews = host !== null;
+  const pulls = usePulls(hasReviews);
 
   const [search, setSearch] = useState("");
 
@@ -99,7 +112,7 @@ export function ReviewsPage() {
   // A query that was never enabled is pending for as long as the window is
   // open, and a list that says it is loading forever is worse than one that
   // says it is empty.
-  const loading = hasGitHub && pulls.isPending;
+  const loading = hasReviews && pulls.isPending;
   const hasMatches = groups.some((group) => group.items.length > 0);
 
   return (
@@ -141,7 +154,7 @@ export function ReviewsPage() {
             <LoadingCursor label="Loading reviews…" />
           </div>
         ) : items.length === 0 ? (
-          hasGitHub ? (
+          hasReviews ? (
             <NoReviews />
           ) : (
             <NoReviewRemote />
@@ -169,6 +182,7 @@ export function ReviewsPage() {
                 <Row
                   key={reviewKey(item)}
                   item={item}
+                  host={host ?? "github"}
                   onOpen={() => open(item)}
                 />
               ))}

@@ -16,11 +16,11 @@ export class GitProviderError extends Schema.TaggedErrorClass<GitProviderError>(
 }
 
 /**
- * How one CI check came back. GitHub spells this several ways — a check run has
- * a status and a conclusion, a commit status has a state — and the review UI
- * only ever asks one question of it: is this thing still running, did it pass,
- * or is it in the way. So they are all folded onto the same four words here,
- * once, at the edge.
+ * How one CI check came back. Each forge spells this several ways — a GitHub
+ * check run has a status and a conclusion, a commit status has a state, a
+ * GitLab job has a status of its own — and the review UI only ever asks one
+ * question of it: is this thing still running, did it pass, or is it in the
+ * way. So they are all folded onto the same four words here, once, at the edge.
  */
 export const CheckState = Schema.Literals([
   "success",
@@ -39,9 +39,9 @@ export const PullRequestCheck = Schema.Struct({
 export type PullRequestCheck = typeof PullRequestCheck.Type;
 
 /**
- * Whether the pull request can be merged as it stands. "unknown" is a real
- * answer and not a gap in ours: GitHub computes mergeability lazily, so a pull
- * request nobody has asked about recently genuinely does not know yet.
+ * Whether the request can be merged as it stands. "unknown" is a real answer
+ * and not a gap in ours: both forges compute mergeability lazily, so a request
+ * nobody has asked about recently genuinely does not know yet.
  */
 export const MergeableState = Schema.Literals([
   "mergeable",
@@ -169,13 +169,18 @@ export interface PrCommentInput {
   readonly body: string;
 }
 /**
- * One comment already on a pull request. GitHub identifies a review comment
- * repo-wide rather than within its pull request, so the number here is what the
- * caller is looking at rather than something the provider needs to find it.
+ * One comment already on a pull request.
+ *
+ * The id is the forge's own, as a string, because the two forges disagree
+ * about what identifies a comment: GitHub has a repo-wide numeric id, while
+ * GitLab needs the discussion the note hangs in as well as the note. Each
+ * provider reads its own spelling; the number beside it is the request the
+ * caller is looking at, which GitHub does not need to find the comment and
+ * GitLab does.
  */
 export interface PrCommentRef {
   readonly pullNumber: number;
-  readonly commentId: number;
+  readonly commentId: string;
 }
 export interface PrReplyInput extends PrCommentRef {
   readonly body: string;

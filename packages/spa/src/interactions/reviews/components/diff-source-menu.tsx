@@ -29,6 +29,7 @@ import {
   DropdownMenuSubTrigger,
 } from "@/components/ui/dropdown-menu";
 import { handleSearchKeyDown } from "@/components/ui/search-keydown";
+import type { GitHost } from "@byconvo/core/ports/git-remote";
 import { cn } from "@/lib/utils";
 import {
   diffSourceHint,
@@ -57,12 +58,14 @@ const GROUP_LABEL: Readonly<Record<DiffSource["kind"], string>> = {
  */
 const SourceItem = ({
   source,
+  host,
   current,
   checkedOut,
   onSelect,
   onCheckout,
 }: {
   source: DiffSource;
+  host: GitHost;
   current: boolean;
   /** The window is already working in this source's tree. */
   checkedOut: boolean;
@@ -70,7 +73,7 @@ const SourceItem = ({
   onCheckout: () => void;
 }) => {
   const Icon = diffSourceIcon(source);
-  const hint = diffSourceHint(source);
+  const hint = diffSourceHint(source, host);
   // Nothing on this machine to stand in. Until somebody fetches it, a pull
   // request is a diff and nothing else.
   const hasTree = source.kind !== "pull";
@@ -119,12 +122,15 @@ const SourceItem = ({
  */
 export function DiffSourceItems({
   sources,
+  host,
   current,
   checkedOut,
   onSelect,
   onCheckout,
 }: {
   sources: ReadonlyArray<DiffSource>;
+  /** The forge the requests among these came from. */
+  host: GitHost;
   current: string;
   /** The key of the source whose tree the window is working in. */
   checkedOut: string | null;
@@ -148,6 +154,7 @@ export function DiffSourceItems({
               <SourceItem
                 key={diffSourceKey(source)}
                 source={source}
+                host={host}
                 current={diffSourceKey(source) === current}
                 checkedOut={diffSourceKey(source) === checkedOut}
                 onSelect={() => onSelect(source)}

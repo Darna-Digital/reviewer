@@ -820,14 +820,14 @@ export interface paths {
         patch: operations["comments.update"];
         trace?: never;
     };
-    "/api/github/pulls": {
+    "/api/reviews/pulls": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["github.pulls"];
+        get: operations["reviews.pulls"];
         put?: never;
         post?: never;
         delete?: never;
@@ -836,7 +836,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/github/pulls/{number}/merge": {
+    "/api/reviews/pulls/{number}/merge": {
         parameters: {
             query?: never;
             header?: never;
@@ -845,14 +845,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["github.mergePull"];
+        post: operations["reviews.mergePull"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/github/pulls/{number}/close": {
+    "/api/reviews/pulls/{number}/close": {
         parameters: {
             query?: never;
             header?: never;
@@ -861,21 +861,21 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["github.closePull"];
+        post: operations["reviews.closePull"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/github/pulls/{number}/diff": {
+    "/api/reviews/pulls/{number}/diff": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["github.pullDiff"];
+        get: operations["reviews.pullDiff"];
         put?: never;
         post?: never;
         delete?: never;
@@ -884,23 +884,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/github/pulls/{number}/comments": {
+    "/api/reviews/pulls/{number}/comments": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["github.pullComments"];
+        get: operations["reviews.pullComments"];
         put?: never;
-        post: operations["github.createPullComment"];
+        post: operations["reviews.createPullComment"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/github/pulls/{number}/comments/{commentId}/replies": {
+    "/api/reviews/pulls/{number}/comments/{commentId}/replies": {
         parameters: {
             query?: never;
             header?: never;
@@ -909,14 +909,14 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["github.replyPullComment"];
+        post: operations["reviews.replyPullComment"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/github/pulls/{number}/comments/{commentId}": {
+    "/api/reviews/pulls/{number}/comments/{commentId}": {
         parameters: {
             query?: never;
             header?: never;
@@ -926,7 +926,7 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        delete: operations["github.deletePullComment"];
+        delete: operations["reviews.deletePullComment"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2945,9 +2945,14 @@ export interface operations {
                         name: string;
                         currentBranch: string;
                         remoteUrl: string | null;
-                        github: {
+                        remote: {
+                            /** @enum {string} */
+                            host: "github" | "gitlab";
+                            hostname: string;
                             owner: string;
                             repo: string;
+                            path: string;
+                            webUrl: string;
                         } | null;
                     };
                 };
@@ -4818,7 +4823,7 @@ export interface operations {
                         createdAt: string;
                         target: string;
                         /** @enum {string} */
-                        source: "local" | "github";
+                        source: "local" | "github" | "gitlab";
                     }[];
                 };
             };
@@ -4889,7 +4894,7 @@ export interface operations {
                         createdAt: string;
                         target: string;
                         /** @enum {string} */
-                        source: "local" | "github";
+                        source: "local" | "github" | "gitlab";
                     };
                 };
             };
@@ -5007,7 +5012,7 @@ export interface operations {
                         createdAt: string;
                         target: string;
                         /** @enum {string} */
-                        source: "local" | "github";
+                        source: "local" | "github" | "gitlab";
                     };
                 };
             };
@@ -5040,7 +5045,7 @@ export interface operations {
             };
         };
     };
-    "github.pulls": {
+    "reviews.pulls": {
         parameters: {
             query?: never;
             header?: never;
@@ -5099,7 +5104,7 @@ export interface operations {
             };
         };
     };
-    "github.mergePull": {
+    "reviews.mergePull": {
         parameters: {
             query?: never;
             header?: never;
@@ -5140,7 +5145,7 @@ export interface operations {
             };
         };
     };
-    "github.closePull": {
+    "reviews.closePull": {
         parameters: {
             query?: never;
             header?: never;
@@ -5173,7 +5178,7 @@ export interface operations {
             };
         };
     };
-    "github.pullDiff": {
+    "reviews.pullDiff": {
         parameters: {
             query?: never;
             header?: never;
@@ -5204,7 +5209,7 @@ export interface operations {
             };
         };
     };
-    "github.pullComments": {
+    "reviews.pullComments": {
         parameters: {
             query?: never;
             header?: never;
@@ -5232,7 +5237,7 @@ export interface operations {
                         createdAt: string;
                         target: string;
                         /** @enum {string} */
-                        source: "local" | "github";
+                        source: "local" | "github" | "gitlab";
                     }[];
                 };
             };
@@ -5247,7 +5252,7 @@ export interface operations {
             };
         };
     };
-    "github.createPullComment": {
+    "reviews.createPullComment": {
         parameters: {
             query?: never;
             header?: never;
@@ -5285,7 +5290,7 @@ export interface operations {
                         createdAt: string;
                         target: string;
                         /** @enum {string} */
-                        source: "local" | "github";
+                        source: "local" | "github" | "gitlab";
                     };
                 };
             };
@@ -5300,7 +5305,7 @@ export interface operations {
             };
         };
     };
-    "github.replyPullComment": {
+    "reviews.replyPullComment": {
         parameters: {
             query?: never;
             header?: never;
@@ -5335,7 +5340,7 @@ export interface operations {
                         createdAt: string;
                         target: string;
                         /** @enum {string} */
-                        source: "local" | "github";
+                        source: "local" | "github" | "gitlab";
                     };
                 };
             };
@@ -5350,7 +5355,7 @@ export interface operations {
             };
         };
     };
-    "github.deletePullComment": {
+    "reviews.deletePullComment": {
         parameters: {
             query?: never;
             header?: never;

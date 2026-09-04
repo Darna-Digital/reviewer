@@ -1,8 +1,8 @@
 /**
  * `comments` feature — submitting, deleting and replying to review comments.
- * Which store a comment lands in (local vs GitHub PR) and how a PR reply is
- * anchored to its parent line is real business logic, so it lives here behind
- * injected side effects (the API mutations).
+ * Which store a comment lands in (this machine, or the pull/merge request being
+ * reviewed) and how a reply is anchored to its parent line is real business
+ * logic, so it lives here behind injected side effects (the API mutations).
  */
 import type { AppMode } from "@/lib/api/types";
 import type { CommentSide, ReviewComment } from "@byconvo/core/comments";
@@ -52,13 +52,14 @@ export interface CommentsDependencies {
       body: string
     ) => Promise<ReviewComment>;
     readonly deleteComment: (id: string) => Promise<void>;
+    /** `commentId` is the forge's own id, as `remoteCommentId` reads it. */
     readonly deletePullComment: (
       pullNumber: number,
-      commentId: number
+      commentId: string
     ) => Promise<void>;
     readonly replyPullComment: (
       pullNumber: number,
-      commentId: number,
+      commentId: string,
       body: string
     ) => Promise<ReviewComment>;
   };
@@ -77,16 +78,16 @@ export interface CommentsFunctions {
     body: string
   ) => Promise<ReviewComment | null>;
   /**
-   * Delete a comment from whichever store holds it — disk for a local one,
-   * GitHub for one on the pull request being reviewed. Answers false when
-   * nothing was removed: a GitHub comment reached with no pull request in hand
-   * has no store to be deleted from.
+   * Delete a comment from whichever store holds it — disk for a local one, the
+   * forge for one on the request being reviewed. Answers false when nothing was
+   * removed: a forge comment reached with no request in hand has no store to be
+   * deleted from.
    */
   readonly remove: (
     selectedPull: PullRequestInfo | null,
     comment: ReviewComment
   ) => Promise<boolean>;
-  /** Reply to a GitHub PR comment, anchored to its parent's line. */
+  /** Reply to a comment on a request, anchored to its parent's line. */
   readonly reply: (
     selectedPull: PullRequestInfo | null,
     comment: ReviewComment,

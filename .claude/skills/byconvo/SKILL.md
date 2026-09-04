@@ -1,6 +1,6 @@
 ---
 name: byconvo
-description: Fetch the local review comments left in the byconvo tool — inline code comments on files, commits and ranges — and implement each suggestion in the codebase, then mark it done. Use when the user asks to "apply review comments", "implement the review", "address the comments I left", or similar.
+description: Fetch the review comments left in the byconvo tool — local inline comments on files, commits and ranges, and the comments on the GitHub pull request or GitLab merge request being reviewed — implement each suggestion in the codebase, then mark it done. Use when the user asks to "apply review comments", "implement the review", "address the comments I left", "address the MR comments", or similar.
 ---
 
 ## What this does
@@ -14,8 +14,14 @@ The byconvo server exposes them over HTTP. This skill walks you through fetching
 them, implementing each one in the code, and **resolving** it — which in byconvo
 means deleting it via the API — once done so it isn't applied twice.
 
-Only **local** comments (`"source": "local"`) are yours to implement. Comments
-with `"source": "github"` come live from a GitHub PR — leave them alone.
+Comments carry a `source` saying where they live:
+
+- `"local"` — byconvo's own database on this machine. Yours to implement and to
+  resolve (resolving is deleting; see below).
+- `"github"` / `"gitlab"` — a live thread on the pull request or merge request
+  being reviewed. Also yours to implement, but they are somebody else's record:
+  answer them with a reply rather than deleting them. See
+  "Comments on a pull or merge request".
 
 ## The API
 
@@ -24,7 +30,7 @@ The server listens on `http://localhost:41811` by default (override with
 the repo you're working in (it's seeded from `BYCONVO_REPO` / the cwd the server
 was started in). Interactive docs: `http://localhost:41811/api/docs`.
 
-- `GET /api/comments` → array of code comments
+- `GET /api/comments` → array of local code comments
 - `DELETE /api/comments/:id` → `{ "ok": true }` (fully removes one comment).
 
 Deleting **is** how a comment is resolved in byconvo — there is no separate
@@ -87,6 +93,91 @@ Field meaning:
    (`pnpm typecheck`, `pnpm --filter @byconvo/embedded-server test`, etc.) and report what
    you changed, file by file, with each comment's `body` you addressed.
 
+## Comments on a pull or merge request
+
+byconvo also reads the request open against this checkout — a **pull request**
+when `origin` is on GitHub, a **merge request** when it is on GitLab. It works
+the same either way: the server reads `origin` when the repository is opened and
+talks to whichever forge that is, so nothing here is configured per project.
+
+Which forge (if any) is answering:
+
+```bash
+curl -s http://localhost:41811/api/repo | jq .remote
+# {"host":"gitlab","hostname":"gitlab.com","owner":"acme/team","repo":"app", ...}
+# null → origin is on neither forge, and the endpoints below have nothing to serve.
+```
+
+The endpoints are the same for both. `:number` is the request's own number —
+GitHub's `#12`, GitLab's `!12` (its `iid`):
+
+| Call | What it does |
+| --- | --- |
+| `GET /api/reviews/pulls` | Every open request, with CI, mergeability, labels and who is on it |
+| `GET /api/reviews/pulls/:number/diff` | Its diff, as unified diff text |
+| `GET /api/reviews/pulls/:number/comments` | Its line comments, as `ReviewComment`s |
+| `POST /api/reviews/pulls/:number/comments` | Leave one: `{filePath, side, lineNumber, body}` |
+| `POST /api/reviews/pulls/:number/comments/:commentId/replies` | Reply in that comment's thread: `{body}` |
+| `DELETE /api/reviews/pulls/:number/comments/:commentId` | Remove a comment (only your own; the forge refuses others) |
+
+`:commentId` is the comment's `id` **without** its source prefix — `gh-123456`
+is passed as `123456`, and GitLab's `gl-<discussion>-<note>` as
+`<discussion>-<note>`. Pass it exactly as the id gives it; it is the forge's own
+name for the comment, not a number to reconstruct.
+
+So, to catch the comments people have left on the request being reviewed:
+
+```bash
+NUM=$(curl -s http://localhost:41811/api/reviews/pulls | jq '.[0].number')
+curl -s "http://localhost:41811/api/reviews/pulls/$NUM/comments" | jq .
+```
+
+Working through them:
+
+1. Implement each `body` at `filePath:lineNumber`, exactly as for a local one.
+2. **Reply** in its thread to say what you did, instead of deleting it — the
+   thread is the reviewer's record and other people are reading it:
+   ```bash
+   curl -s -X POST \
+     "http://localhost:41811/api/reviews/pulls/$NUM/comments/<id-without-prefix>/replies" \
+     -H 'content-type: application/json' -d '{"body":"Renamed it — 3a1f9c2."}'
+   ```
+3. Never delete a comment you did not write. The forge refuses it anyway, and
+   the refusal comes back as its own sentence about why.
+
+Authentication is the forge's usual one, read from the environment by the
+server: `GITHUB_TOKEN` / `GH_TOKEN` (or `gh auth token`) for GitHub,
+`GITLAB_TOKEN` (or `glab auth token`) for GitLab. Without one, a private project
+answers with nothing — if a call comes back 401/403/404, say so rather than
+concluding the request has no comments.
+
+## Sending comments to a session
+
+Comments — local or from the request — can be handed to an agent session
+instead of being implemented here. In the app that is the "assign" action on the
+review pane; over the API it is two calls:
+
+```bash
+CHAT=$(curl -s -X POST http://localhost:41811/api/chats \
+  -H 'content-type: application/json' \
+  -d '{"title":"Fix 3 review comments"}' | jq -r .id)
+
+curl -s -X POST "http://localhost:41811/api/chats/$CHAT/messages" \
+  -H 'content-type: application/json' \
+  -d '{"text":"Address these review comments in the codebase:\n\nsrc/a.ts:12 - Fix this"}'
+```
+
+`POST /api/chats` takes an optional `provider`, `model`, `effort`, `access` and
+`branch`; omitted, the session starts on the user's own defaults
+(`GET /api/chats/models` lists them). The turn streams over the session's
+WebSocket; `GET /api/chats/:id` reads the messages back afterwards.
+
+One line per comment — `filePath:lineNumber - body` — is the format the app
+itself sends, and it is what the receiving session expects to work from. Local
+comments handed off this way are deleted (the hand-off is the resolution);
+comments on a request are not — reply in their thread once the session's work
+lands.
+
 ## Verifying in the browser
 
 byconvo's window has a browser pane (the globe at the right of the window bar).
@@ -134,3 +225,6 @@ don't start a dev server yourself.
 - Comments persist per-repo in byconvo's database, so they survive restarts;
   only your DELETE removes them. Read them through the API above — the database
   is byconvo's to write.
+- A comment on a pull or merge request lives on the forge, not here: it survives
+  everything you do locally, and the only way to answer it is a reply in its
+  thread.
