@@ -204,20 +204,43 @@ async function ensureServer(): Promise<void> {
   await waitForUrl(`${serverUrl}/api/workspace`, 20_000);
 }
 
+/**
+ * A navigation — some route the router owns — rather than a fetch for a file the
+ * app ships. Only navigations get the SPA shell when nothing is on disk:
+ * answering a missing `index-abc123.js` with HTML gets it rejected on MIME type
+ * and leaves the window blank with nothing but that error to go on.
+ *
+ * The `Accept` header is the only signal that survives the trip: Electron leaves
+ * `request.destination` empty and strips `Sec-Fetch-Dest`. Chromium asks for
+ * `text/html` on a navigation and never on a script, stylesheet or `fetch()`.
+ * A route's path is no help — `/modes/code/review/worktree/src/main.ts` is a
+ * route, dot and all.
+ */
+function isNavigation(request: GlobalRequest): boolean {
+  return (request.headers.get("accept") ?? "").includes("text/html");
+}
+
 function registerRendererProtocol(): void {
   protocol.handle("byconvo", (request) => {
     const url = new URL(request.url);
     const pathname = decodeURIComponent(url.pathname);
     const candidate =
       pathname === "/" ? rendererIndex : resolve(rendererRoot, `.${pathname}`);
-    const filePath =
+    const onDisk =
       candidate.startsWith(rendererRoot) &&
       existsSync(candidate) &&
-      statSync(candidate).isFile()
-        ? candidate
-        : rendererIndex;
+      statSync(candidate).isFile();
 
-    return net.fetch(pathToFileURL(filePath).toString());
+    if (!onDisk && !isNavigation(request)) {
+      return new Response("Not found", {
+        status: 404,
+        headers: { "content-type": "text/plain" },
+      });
+    }
+
+    return net.fetch(
+      pathToFileURL(onDisk ? candidate : rendererIndex).toString()
+    );
   });
 }
 

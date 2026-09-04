@@ -3,10 +3,10 @@
  * looked at without being opened.
  *
  * The frame is loaded at the app's root with the tab's location in `?preview=`
- * rather than at the location itself: a packaged build resolves its assets
- * relative to the document, so only the root URL finds them. The location is
- * put back into the address before the router boots, so a preview renders the
- * page straight away instead of navigating to it.
+ * rather than at the location itself: the parameter is what marks a document as
+ * a preview at all, and it has to be readable before anything else runs. The
+ * location is put back into the address before the router boots, so a preview
+ * renders the page straight away instead of navigating to it.
  *
  * A preview shares its opener's origin, and so its storage: anything it would
  * write — where the tabs are, when the inbox was last read — is dropped, or
@@ -19,10 +19,7 @@ export function previewedHref(documentUrl: string): string | null {
   return new URL(documentUrl).searchParams.get(PREVIEW_PARAM);
 }
 
-/**
- * The URL a preview document is loaded from — and so what everything in it
- * resolved its assets against, before it rewrote its own address.
- */
+/** The URL a preview document is loaded from, before it rewrites its address. */
 export function previewRootUrl(documentUrl: string): string {
   return new URL("/", documentUrl).toString();
 }
