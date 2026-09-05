@@ -55,7 +55,7 @@ function fakeEditor(text: string) {
   });
   const editor = {
     getText: () => state.text,
-    getState: () => ({
+    getViewState: () => ({
       selections: [
         {
           start: { line: 0, character: state.caret },
@@ -64,7 +64,7 @@ function fakeEditor(text: string) {
       ],
     }),
     applyEdits,
-  } as unknown as Editor<undefined>;
+  } as unknown as Editor<"file">;
 
   return {
     editor,
@@ -89,7 +89,7 @@ function Harness({
   subscribe,
   isFocused,
 }: {
-  editor: Editor<undefined>;
+  editor: Editor<"file">;
   subscribe: (listener: () => void) => () => void;
   isFocused?: () => boolean;
 }) {

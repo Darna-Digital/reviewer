@@ -1,5 +1,5 @@
 import { DIFFS_TAG_NAME } from "@pierre/diffs";
-import type { DiffsEditableComponent, LineAnnotation } from "@pierre/diffs";
+import type { File as EditableFile, LineAnnotation } from "@pierre/diffs";
 import { EditProvider, File, Virtualizer } from "@pierre/diffs/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -137,7 +137,7 @@ export function CodeView({
   // breaks the cycle: folding is declared below, since it needs the editor this
   // call produces.
   const foldAttach = useRef<
-    ((component: DiffsEditableComponent<undefined>) => void) | null
+    ((component: EditableFile<undefined, undefined>) => void) | null
   >(null);
   // Starting a comment. The gutter `+` has nowhere left to live — an editable
   // view takes the caret on every click — so a comment begins from the passage
@@ -155,7 +155,7 @@ export function CodeView({
     loadedContents: file.data?.contents,
     onSaved: useCallback(() => onSaved?.(), [onSaved]),
     formatBeforeSave: formatting.formatBeforeSave,
-    onAttach: useCallback((component: DiffsEditableComponent<undefined>) => {
+    onAttach: useCallback((component: EditableFile<undefined, undefined>) => {
       foldAttach.current?.(component);
     }, []),
     renderSelectionAction: useCallback(
@@ -186,7 +186,7 @@ export function CodeView({
   // `unsafeCSS` is read once at mount, so the CSS cannot be made conditional.
   /** Open a comment on whatever the editor currently has selected. */
   const commentOnSelection = useCallback(() => {
-    const selection = buffer.editor?.getState().selections?.at(-1);
+    const selection = buffer.editor?.getViewState().selections?.at(-1);
     if (selection === undefined) return;
     const lineNumber = commentLineFor(selection);
     if (lineNumber === null) return;

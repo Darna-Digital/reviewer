@@ -51,7 +51,7 @@ export const VIM_CSS = `
 
 interface VimOptions {
   /** The editable view's editor, or null while the file is only being read. */
-  readonly editor: Editor<undefined> | null;
+  readonly editor: Editor<"file"> | null;
   /** Whether the user has Vim mode switched on. */
   readonly enabled: boolean;
   /** Whether the caret is in the code — keys elsewhere are not Vim's. */
@@ -130,7 +130,7 @@ export function useVim({
   const caretOf = useCallback((): VimPosition => {
     const moving = head.current;
     if (moving !== null && isVisual(stateRef.current.mode)) return moving;
-    const selection = editor?.getState().selections?.at(-1);
+    const selection = editor?.getViewState().selections?.at(-1);
     if (selection === undefined) return { line: 0, character: 0 };
     return {
       line: selection.start.line,
