@@ -3,7 +3,6 @@ export type FeatureFlagValue = "enabled" | "enabled-in-beta" | "disabled";
 export type ReleaseChannel = "stable" | "beta";
 
 const FEATURE_FLAGS = {
-  "collaboration-button": "disabled",
   "sessions-button": "enabled",
 } satisfies Record<string, FeatureFlagValue>;
 

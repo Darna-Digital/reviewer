@@ -32,7 +32,7 @@ import {
 import { isFeatureEnabled } from "@byconvo/feature-flags";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import { dockPage } from "@/lib/shell-route";
-import type { BottomTab, WorkMode } from "@/lib/ui-prefs";
+import type { BottomTab } from "@/lib/ui-prefs";
 
 export interface LaunchpadSection {
   /**
@@ -43,8 +43,6 @@ export interface LaunchpadSection {
   readonly href: string;
   readonly title: string;
   readonly icon: typeof IconGitCommit;
-  /** The mode the app is framed in once you are there. */
-  readonly mode: WorkMode;
   /**
    * The tab this card stands for, when it stands for one rather than for a
    * place. A conversation is something you have open and can be done with, so
@@ -76,7 +74,6 @@ const dockSection = (
     href: page.href,
     title: page.title,
     icon,
-    mode: "code",
   };
 };
 
@@ -86,14 +83,12 @@ const CODE_SECTIONS: ReadonlyArray<LaunchpadSection> = [
     href: "/modes/code/browse",
     title: "Browse",
     icon: IconFolder,
-    mode: "code",
   },
   {
     id: "/modes/code/review",
     href: "/modes/code/review",
     title: "Review",
     icon: IconGitCommit,
-    mode: "code",
   },
   dockSection("branches", IconGitBranch),
   dockSection("history", IconHistory),
@@ -102,7 +97,6 @@ const CODE_SECTIONS: ReadonlyArray<LaunchpadSection> = [
     href: "/modes/code/reviews",
     title: "Reviews",
     icon: IconGitPullRequest,
-    mode: "code",
   },
   dockSection("services", IconPlayerPlay),
   dockSection("threads", IconTerminal2),
@@ -118,7 +112,6 @@ const SESSIONS_LIST: LaunchpadSection = {
   href: "/modes/agent-session",
   title: "All sessions",
   icon: IconMessages,
-  mode: "code",
 };
 
 /** The conversations that are open, as cards, in the order the strip holds them. */
@@ -133,7 +126,6 @@ export const sessionSections = (
       href: tab.href,
       title: tab.title,
       icon: IconMessage,
-      mode: "code" as const,
     }));
 
 /**

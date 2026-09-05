@@ -161,17 +161,9 @@ CREATE TABLE branch_target (
  * Collaboration — projects, the work under them, the notes beside them, and
  * the things a person has starred.
  *
- * Four tables of the same document shape the rest of the file uses: the
- * columns are what is queried (which repository a row belongs to, which
- * project it hangs off, the timestamp it is listed by) and the document itself
- * rides in `data`, decoded through `@byconvo/core/collab`'s own `Schema`.
- *
- * `project_id` is a column on todos and notes rather than only a field in the
- * JSON because it is the one thing every read filters on — a project page asks
- * for its own work, and nobody ever asks for every todo in a repository. It is
- * not a foreign key: deleting a project sweeps its rows itself, in the same
- * transaction, which keeps the delete readable at the call site rather than
- * spread between here and there.
+ * The feature is gone (see `0006_drop_tasks_collab`), but the entry stays: a
+ * shipped migration is never edited, so a database that has not seen this one
+ * still creates the tables here before the next one drops them again.
  */
 const collabTables = `
 CREATE TABLE collab_project (
@@ -237,10 +229,29 @@ CREATE TABLE cloud_connection (
 );
 `;
 
+/**
+ * Tasks and collaboration, taken back out.
+ *
+ * Both features were removed from the app, so their tables are the only thing
+ * left of them. Dropping them here rather than editing `0001_initial` and
+ * `0003_collab` keeps the rule this file is built on: a shipped entry is never
+ * edited, so every database — one opened for the first time and one that has
+ * been carrying these tables for months — ends up in the same place.
+ */
+const dropTasksAndCollab = `
+DROP TABLE IF EXISTS task_card;
+DROP TABLE IF EXISTS task_board;
+DROP TABLE IF EXISTS collab_bookmark;
+DROP TABLE IF EXISTS collab_note;
+DROP TABLE IF EXISTS collab_todo;
+DROP TABLE IF EXISTS collab_project;
+`;
+
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { id: "0001_initial", up: (db) => db.exec(initial) },
   { id: "0002_branch_target", up: (db) => db.exec(branchTargets) },
   { id: "0003_collab", up: (db) => db.exec(collabTables) },
   { id: "0004_chat_seen_at", up: (db) => db.exec(chatSeenAt) },
   { id: "0005_cloud_connection", up: (db) => db.exec(cloudConnection) },
+  { id: "0006_drop_tasks_collab", up: (db) => db.exec(dropTasksAndCollab) },
 ];

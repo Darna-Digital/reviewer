@@ -13,7 +13,6 @@ describe("ThreadsService", () => {
         agent: "terminal",
         branch: "main",
         initialPrompt: "",
-        taskKey: null,
       });
       expect(created.id).not.toBe("");
       expect(created.title).toBe("New session");
@@ -30,7 +29,6 @@ describe("ThreadsService", () => {
         agent: "terminal",
         branch: "main",
         initialPrompt: "",
-        taskKey: null,
       });
       const entry = yield* threads.run(created.id, "echo hi");
       expect(entry.command).toBe("echo hi");
@@ -48,7 +46,6 @@ describe("ThreadsService", () => {
         agent: "claude",
         branch: "main",
         initialPrompt: "",
-        taskKey: null,
       });
       expect(created.title).toBe("Claude Code");
       const entry = yield* threads.run(created.id, "explain this repo");
@@ -66,7 +63,6 @@ describe("ThreadsService", () => {
         agent: "opencode",
         branch: "main",
         initialPrompt: "",
-        taskKey: null,
       });
       const entry = yield* threads.run(created.id, "add a test");
       expect(entry.stdout).toContain("opencode run 'add a test'");
@@ -80,7 +76,6 @@ describe("ThreadsService", () => {
         agent: "cursor",
         branch: "main",
         initialPrompt: "",
-        taskKey: null,
       });
       expect(created.title).toBe("Cursor");
       const entry = yield* threads.run(created.id, "rename this symbol");
@@ -102,7 +97,6 @@ describe("ThreadsService", () => {
         agent: "terminal",
         branch: "main",
         initialPrompt: "",
-        taskKey: null,
       });
       yield* threads.remove(created.id);
       const all = yield* threads.list;

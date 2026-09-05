@@ -1,6 +1,6 @@
 /**
- * Finding a session, from the sessions rail — a gesture, as it is in code and
- * collaboration modes, rather than a box on permanent display in the sidebar.
+ * Finding a session, from the sessions rail — a gesture, as searching is
+ * everywhere else, rather than a box on permanent display in the sidebar.
  * It searches titles and last messages — the pair the old inline filter matched
  * on — and, now that sessions from every project are in one list, the project
  * name too, so "api" finds that project's sessions without first narrowing the

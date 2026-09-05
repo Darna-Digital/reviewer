@@ -2,10 +2,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type * as RouterModule from "@tanstack/react-router";
-import type { WorkMode } from "@/lib/ui-prefs";
 
 let pathname = "/modes/code/commit";
-let workMode: WorkMode = "code";
 
 vi.mock("@tanstack/react-router", async (importOriginal) => ({
   ...(await importOriginal<typeof RouterModule>()),
@@ -16,7 +14,7 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
     select: (state: { location: { pathname: string } }) => unknown;
   }) => select({ location: { pathname } }),
 }));
-vi.mock("@/lib/ui-prefs", () => ({ useUiPrefs: () => ({ workMode }) }));
+vi.mock("@/lib/ui-prefs", () => ({ useUiPrefs: () => ({}) }));
 vi.mock("@/lib/queries", () => ({
   useRepo: () => ({ data: undefined }),
   // The launchpad asks which conversations have an agent working in them.
@@ -24,7 +22,7 @@ vi.mock("@/lib/queries", () => ({
 }));
 vi.mock("@/components/layout/window-bar", () => ({ WindowBar: () => null }));
 // The mill boots a second copy of the app in a frame; what it photographs has
-// nothing to do with which mode the frame is in.
+// nothing to do with which surface the frame is on.
 vi.mock("@/interactions/tab-preview/components/tab-snapshot-mill", () => ({
   TabSnapshotMill: () => null,
 }));
@@ -44,9 +42,8 @@ vi.stubGlobal(
 
 const { WindowFrame } = await import("./window-frame");
 
-const mountedOn = (page: string, stored: WorkMode = "code") => {
+const mountedOn = (page: string) => {
   pathname = page;
-  workMode = stored;
   render(
     <WindowFrame>
       <main>page</main>
@@ -64,16 +61,14 @@ describe("WindowFrame", () => {
     expect(mountedOn("/modes/agent-session/abc")).toBe(true);
   });
 
-  it("leaves collaboration mode to its own search", () => {
-    expect(mountedOn("/modes/collaboration")).toBe(false);
-    cleanup();
+  it("leaves the collaboration prototype to its own search", () => {
     expect(mountedOn("/modes/experimentation/collaboration")).toBe(false);
+    cleanup();
+    expect(mountedOn("/modes/experimentation/collaboration/inbox")).toBe(false);
   });
 
-  it("follows the last mode on surfaces both modes share", () => {
-    expect(mountedOn("/settings", "code")).toBe(true);
-    cleanup();
-    expect(mountedOn("/settings", "collaboration")).toBe(false);
+  it("hosts the search on the surfaces outside the modes too", () => {
+    expect(mountedOn("/settings")).toBe(true);
   });
 
   it("still renders the page it wraps", () => {

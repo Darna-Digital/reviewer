@@ -1,13 +1,11 @@
 /**
- * The slide a panel comes out of an edge with — one definition, for both of
- * them.
+ * The slide a panel comes out of an edge with — one definition, wherever the
+ * window uses it.
  *
  * The launchpad slides down out of the window bar and pushes the page off the
- * bottom; collaboration's drawer comes up off the foot and pushes it off the
- * top. They are the same gesture read at opposite edges, so they are the same
- * motion: a panel that arrived a little faster or eased a little differently
- * from the other would read as a second, nearly-identical idea rather than as
- * the one the window has.
+ * bottom. A panel that arrived a little faster or eased a little differently
+ * would read as a second, nearly-identical idea rather than as the one the
+ * window has.
  *
  * The ease is a decelerating curve — nearly all of the distance is covered in
  * the first half, and the panel settles rather than stopping. That is what lets
@@ -18,7 +16,7 @@
 /** How long a panel takes to slide in, and the page under it to be pushed. */
 export const PANEL_SLIDE_MS = 260;
 
-/** The curve both of them travel on, as the Tailwind arbitrary it is used as. */
+/** The curve they travel on, as the Tailwind arbitrary it is used as. */
 export const PANEL_EASE = "ease-[cubic-bezier(0.22,1,0.36,1)]";
 
 /**

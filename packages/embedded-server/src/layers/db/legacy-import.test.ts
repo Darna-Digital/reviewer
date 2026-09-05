@@ -5,7 +5,6 @@ import { findChat, listChatSummaries } from "../chats/store.ts";
 import { comments } from "../comments/comments.repository.sqlite.ts";
 import { devCommands } from "../local-dev/local-dev.repository.sqlite.ts";
 import { plans } from "../plans/plans.repository.sqlite.ts";
-import { readBoard } from "../tasks/store.ts";
 import { threads } from "../threads/store.ts";
 import { closeDatabase, openDatabase } from "./database.ts";
 import { importLegacyJson } from "./legacy-import.ts";
@@ -131,6 +130,9 @@ describe("legacy .byconvo import", () => {
         title: "a session",
         agent: "terminal",
         branch: "main",
+        // A thread could be linked to a task, and a file on disk still says so.
+        // The field is gone from the schema, so importing one has to drop it
+        // rather than fail over it.
         taskKey: "T-1",
         initialPrompt: "",
         agentSessionId: null,
@@ -148,34 +150,11 @@ describe("legacy .byconvo import", () => {
         updatedAt: "2026-07-25T12:00:00.000Z",
       },
     ]);
-    write(api, "tasks.json", {
-      counter: 3,
-      prefix: "API",
-      columns: [{ id: "todo", name: "Todo", order: 0 }],
-      cards: [
-        {
-          id: "card-1",
-          key: "API-1",
-          title: "ship it",
-          description: "",
-          column: "todo",
-          order: 1,
-          comments: [],
-          createdAt: "2026-07-25T12:00:00.000Z",
-          updatedAt: "2026-07-25T12:00:00.000Z",
-        },
-      ],
-    });
-
     importLegacyJson(api);
 
     expect(comments.list(api).map((c) => c.body)).toEqual(["looks good"]);
     expect(threads.list(api).map((t) => t.id)).toEqual(["t-1"]);
     expect(devCommands.list(api).map((d) => d.name)).toEqual(["dev"]);
-    const board = readBoard(api);
-    expect(board.prefix).toBe("API");
-    expect(board.counter).toBe(3);
-    expect(board.cards.map((c) => c.key)).toEqual(["API-1"]);
     // No plans directory at all is not a failure, just nothing to import.
     expect(plans.list(api)).toEqual([]);
   });
@@ -207,7 +186,6 @@ describe("legacy .byconvo import", () => {
       "comments",
       "visual-comments",
       "threads",
-      "tasks",
       "plans",
       "dev-commands",
     ]);

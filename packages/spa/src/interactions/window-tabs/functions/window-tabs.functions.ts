@@ -4,36 +4,29 @@
  */
 import { isFeatureEnabled } from "@byconvo/feature-flags";
 import { dockPages } from "@/lib/shell-route";
-import type { WorkMode } from "@/lib/ui-prefs";
 import type {
   WindowTab,
-  WindowTabKind,
   WindowTabsState,
 } from "../interfaces/window-tabs.interfaces";
 
 export const PROJECT_TAB_ID = "pinned-project";
-export const COLLABORATION_TAB_ID = "pinned-collaboration";
 export const SESSIONS_TAB_ID = "pinned-sessions";
 
 export const HOME_HREF = "/modes/code/review";
-export const COLLABORATION_HREF = "/modes/collaboration";
 export const SESSIONS_HREF = "/modes/agent-session";
 /** `?new` holds the composer open instead of resuming the latest chat. */
 export const NEW_SESSION_HREF = "/modes/agent-session?new=true";
 
 const SESSIONS_PREFIX = "/modes/agent-session";
-const COLLABORATION_PREFIX = "/modes/collaboration";
 /**
  * The collaboration prototype, kept as a reference.
  *
- * It belongs to no tab in the strip. The three the bar leads with are ways of
+ * It belongs to no tab in the strip. The two the bar leads with are ways of
  * working, and the prototype is not one — it is the previous draft of one, kept
- * reachable by its URL. Letting Collaboration hold it would be worse than
- * letting it fall through to Code: a mode tab remembers where it was left, so
- * one trip to the old design would leave the button labelled after it and
- * pointing there, and ⌘G would go on landing on the prototype instead of the
- * mode. So the strip stays as it was while the prototype is on screen — see
- * `tabForLocation`.
+ * reachable by its URL. Letting Code hold it would leave that tab labelled
+ * after the old design and pointing there, since a pinned tab remembers where
+ * it was left. So the strip stays as it was while the prototype is on screen —
+ * see `tabForLocation`.
  */
 const EXPERIMENTATION_PREFIX = "/modes/experimentation";
 
@@ -49,14 +42,9 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
     page.href,
     page.title,
   ]),
-  ["/modes/code/docs", "Docs"],
-  ["/modes/code/tasks", "Tasks"],
-  // Longest first: `startsWith` takes the first entry that matches, and the
-  // prototype's paths sit under a prefix of their own so neither reading of a
-  // collaboration URL can swallow the other.
+  // Longest first: `startsWith` takes the first entry that matches.
   ["/modes/experimentation/collaboration/inbox", "Inbox"],
   ["/modes/experimentation/collaboration", "Experimentation"],
-  ["/modes/collaboration", "Collaboration"],
   ["/settings", "Settings"],
 ];
 
@@ -66,13 +54,6 @@ export function tabTitle(pathname: string): string {
     TITLES.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? "Byconvo"
   );
 }
-
-const COLLABORATION_TAB: WindowTab = {
-  id: COLLABORATION_TAB_ID,
-  href: COLLABORATION_HREF,
-  title: tabTitle(COLLABORATION_HREF),
-  kind: "collaboration",
-};
 
 const SESSIONS_TAB: WindowTab = {
   id: SESSIONS_TAB_ID,
@@ -88,7 +69,6 @@ const PINNED_TABS: ReadonlyArray<WindowTab> = [
     title: tabTitle(HOME_HREF),
     kind: "project",
   },
-  ...(isFeatureEnabled("collaboration-button") ? [COLLABORATION_TAB] : []),
   SESSIONS_TAB,
 ];
 
@@ -110,23 +90,6 @@ export function stripTabs({
   return tabs.filter((tab) => tab.kind !== "sessions" || tab.id === activeId);
 }
 
-/**
- * The way of working a tab frames the app in. A session belongs to whichever
- * mode you were already in — a conversation is had about both — so it names
- * none and leaves the frame as it found it.
- */
-export function workModeOf(kind: WindowTabKind): WorkMode | null {
-  switch (kind) {
-    case "project":
-    case "sessions":
-      return "code";
-    case "collaboration":
-      return "collaboration";
-    case "session":
-      return null;
-  }
-}
-
 /** Pinned tabs always lead the strip, so their count is also the first slot a
  * session tab may take. */
 const firstSessionSlot = (tabs: ReadonlyArray<WindowTab>): number =>
@@ -135,16 +98,12 @@ const firstSessionSlot = (tabs: ReadonlyArray<WindowTab>): number =>
 const inSessions = (pathname: string): boolean =>
   pathname.startsWith(SESSIONS_PREFIX);
 
-const inCollaboration = (pathname: string): boolean =>
-  pathname.startsWith(COLLABORATION_PREFIX);
-
 /** Whether a location is the prototype's, which no tab in the strip holds. */
 const inExperimentation = (pathname: string): boolean =>
   pathname.startsWith(EXPERIMENTATION_PREFIX);
 
 /** A pinned tab that is named after wherever it has been left. */
-const followsLocation = (tab: WindowTab): boolean =>
-  tab.kind === "project" || tab.kind === "collaboration";
+const followsLocation = (tab: WindowTab): boolean => tab.kind === "project";
 
 /**
  * Whether a tab remembers where it was left. Sessions does not: it is the way
@@ -154,11 +113,20 @@ const followsLocation = (tab: WindowTab): boolean =>
  */
 const keepsLocation = (tab: WindowTab): boolean => tab.kind !== "sessions";
 
+/**
+ * Collaboration was a mode of its own, with a pinned tab and pages under
+ * `/modes/collaboration`. Both are gone, but a strip saved before they went
+ * still names those pages, so no tab owns them any more — which sends the one
+ * that was left there back to its own default rather than restoring it pointed
+ * at a route that no longer exists.
+ */
+const LEGACY_COLLABORATION_PREFIX = "/modes/collaboration";
+
 /** Whether a location is a pinned tab's to hold. */
 function ownsLocation(tab: WindowTab, pathname: string): boolean {
+  if (pathname.startsWith(LEGACY_COLLABORATION_PREFIX)) return false;
   if (inExperimentation(pathname)) return false;
   if (inSessions(pathname)) return tab.kind === "sessions";
-  if (inCollaboration(pathname)) return tab.kind === "collaboration";
   return tab.kind === "project";
 }
 
@@ -228,12 +196,9 @@ export const onSessionTab = (state: WindowTabsState): boolean =>
  * that part of the app, whichever tab you set off from — leaving Sessions from
  * a chat hands the window back to Code rather than overwriting the chat.
  *
- * A switched-off feature has no tab to hand its locations to, and they are not
- * the active tab's to take instead: a strip that let them in would rename
- * whichever tab you were on and point it somewhere it does not belong, so Code
- * reached by URL alone would send you back to Collaboration. The collaboration
- * prototype is the same case reached from the other side — a surface with no
- * tab of its own — and is answered the same way.
+ * A surface with no tab of its own — the collaboration prototype — is not the
+ * active tab's to take either: a strip that let it in would rename whichever
+ * tab you were on and point it somewhere it does not belong.
  */
 function tabForLocation(
   state: WindowTabsState,
@@ -246,20 +211,15 @@ function tabForLocation(
   const sessions = inSessions(pathname);
   if (current !== null && current.kind === "session" && sessions)
     return current;
-  const owner = sessions
-    ? SESSIONS_TAB_ID
-    : inCollaboration(pathname)
-      ? COLLABORATION_TAB_ID
-      : PROJECT_TAB_ID;
+  const owner = sessions ? SESSIONS_TAB_ID : PROJECT_TAB_ID;
   return state.tabs.find((tab) => tab.id === owner) ?? null;
 }
 
 /**
  * Follow navigation: the owning tab takes the window and remembers where it was
  * left. A no-op when it is already active and points there, so an unrelated
- * re-render never rewrites the strip. Code and Collaboration are named after
- * the surface they are on; Sessions and its conversations carry their own
- * names. Sessions takes the window without taking the location — it goes on
+ * re-render never rewrites the strip. Code is named after the surface it is on;
+ * Sessions and its conversations carry their own names. Sessions takes the window without taking the location — it goes on
  * pointing at the list, wherever inside it you are.
  */
 export function trackLocation(
@@ -356,9 +316,9 @@ export function moveTab(
 /**
  * The way of working after the one the window is on, wrapping round — what ⌘G
  * crosses to. The pinned tabs are those ways of working, so the crossing is a
- * step along them — Code, Collaboration and Sessions, in strip order — and from
- * a conversation, which is had in any of them, it is the first. A window with
- * only one has nowhere to cross to.
+ * step along them — Code then Sessions, in strip order — and from a
+ * conversation, which is had in either, it is the first. A window with only one
+ * has nowhere to cross to.
  */
 export function nextModeTab(
   tabs: ReadonlyArray<WindowTab>,

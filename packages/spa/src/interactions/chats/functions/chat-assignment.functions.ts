@@ -1,6 +1,5 @@
 import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core/chats";
 import type { ReviewComment } from "@byconvo/core/comments";
-import type { Card as TasksCard } from "@byconvo/core/tasks";
 import type { VisualComment } from "@byconvo/core/visual-comments";
 import type { ChatSettings } from "../interfaces/chats.interfaces";
 
@@ -109,36 +108,4 @@ export const buildVisualAssignmentPrompt = (
     "Find the code that renders each element, then verify your change through",
     "byconvo's browser API (see the byconvo skill) rather than assuming it worked.",
   ].join("\n");
-};
-
-export const buildTaskAssignmentPrompt = (
-  card: TasksCard,
-  body: string,
-  provider: ChatProviderKind
-): string => {
-  const instruction = instructionWithoutChatProviderMention(body, provider);
-  const comment =
-    instruction.length > 0
-      ? instruction
-      : "Follow the task description and resolve this task.";
-  const description = card.description.trim();
-  const descriptionBlock = description.length > 0 ? `\n\n${description}` : "";
-
-  return [
-    `You are working on task ${card.key}: ${card.title}.`,
-    descriptionBlock,
-    `\n\nAddress this comment:\n${comment}`,
-  ].join("");
-};
-
-export const buildTaskAssignmentTitle = (
-  card: TasksCard,
-  body: string,
-  provider: ChatProviderKind
-): string => {
-  const instruction = instructionWithoutChatProviderMention(body, provider);
-  const cleanInstruction = instruction.replace(/\s+/g, " ");
-  const summary =
-    cleanInstruction.length > 0 ? cleanInstruction.slice(0, 40) : card.title;
-  return `${card.key} - ${summary}`;
 };

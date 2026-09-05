@@ -16,9 +16,13 @@
  * to be something the editor has no command for, or ⌘/ and friends would be
  * stopped on their way down to it.
  */
-import { type DiffsEditableComponent, type FileContents } from "@pierre/diffs";
+import { type File as EditableFile, type FileContents } from "@pierre/diffs";
 import type { TextEdit } from "@byconvo/core/language";
-import { Editor, type EditorOptions } from "@pierre/diffs/edit";
+import {
+  Editor,
+  type EditorOptions,
+  type EditorType,
+} from "@pierre/diffs/edit";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -40,15 +44,17 @@ export interface FileEditing {
    * mounts. Everything reading the buffer copes with there not being one yet,
    * and with it going away when the file does.
    */
-  readonly editor: Editor<undefined> | null;
+  readonly editor: Editor<"file"> | null;
   /**
    * Hands the editable view an editor built to its specification. Given to
    * `EditProvider`; `File` calls it with the options for the session it is
    * opening, and this adds the ones this hook needs to mirror the buffer.
    */
-  readonly createEditor: (
-    options: EditorOptions<undefined>
-  ) => Editor<undefined>;
+  readonly createEditor: <EType extends EditorType>(
+    editorType: EType,
+    options: EditorOptions<EType, undefined, undefined>,
+    editStateKey?: string
+  ) => Editor<EType, undefined, undefined>;
   /**
    * Subscribe to buffer changes. The editor keeps a single `onChange`, and
    * `setOptions` merges by key — so a second feature registering its own would
@@ -85,7 +91,7 @@ export interface FileEditingOptions {
    * to reach the optional collapsed-region hooks a plain file leaves
    * unimplemented — see `useFolding`.
    */
-  readonly onAttach?: (component: DiffsEditableComponent<undefined>) => void;
+  readonly onAttach?: (component: EditableFile<undefined, undefined>) => void;
   /**
    * Run the project's formatter over the buffer on its way to disk, answering
    * with the text to write and the edit that brings the buffer to it. Omit to
@@ -148,7 +154,7 @@ export function useFileEditing({
    */
   const [attachment, setAttachment] = useState<{
     readonly path: string;
-    readonly editor: Editor<undefined>;
+    readonly editor: Editor<"file">;
   } | null>(null);
   const pathRef = useRef(path);
   pathRef.current = path;
@@ -169,58 +175,75 @@ export function useFileEditing({
   const selectionActionRef = useRef(renderSelectionAction);
   selectionActionRef.current = renderSelectionAction;
 
-  const createEditor = useCallback((options: EditorOptions<undefined>) => {
-    const created = new Editor<undefined>({
-      ...options,
-      onAttach: (attached, component) => {
-        attachRef.current?.(component);
-        options.onAttach?.(attached, component);
-      },
-      // Comment tokens for the filetypes the library's own table misses, and
-      // the bindings this app adds to its defaults.
-      languageCommentConfig: {
-        ...LANGUAGE_COMMENTS,
-        ...options.languageCommentConfig,
-      },
-      keymap: [...EDITOR_KEYMAP, ...(options.keymap ?? [])],
-      matchBrackets: options.matchBrackets ?? true,
-      autoSurround: options.autoSurround ?? "default",
-      // The editor decides when a selection is the user's rather than the
-      // app's, and keeps the popover positioned and torn down; all this
-      // supplies is the element.
-      enabledSelectionAction: selectionActionRef.current !== undefined,
-      renderSelectionAction: (context) =>
-        selectionActionRef.current?.({
-          selection: context.selection,
-          getSelectionText: context.getSelectionText,
-          close: context.close,
-        }) ?? document.createElement("span"),
-      onFocus: () => {
-        focusedRef.current = true;
-        options.onFocus?.();
-      },
-      onBlur: () => {
-        focusedRef.current = false;
-        options.onBlur?.();
-      },
-      onChange: (file: FileContents, annotations, event) => {
-        valueRef.current = file.contents;
-        setDirty(file.contents !== originalRef.current);
-        for (const listener of listeners.current) listener();
-        options.onChange?.(file, annotations, event);
-        if (debounce.current !== null) clearTimeout(debounce.current);
-        debounce.current = setTimeout(() => {
-          // Analysing every keystroke would rebuild the program mid-word; a
-          // pause is the natural moment to re-check.
-          setBufferForAnalysis(
-            file.contents === originalRef.current ? null : file.contents
-          );
-        }, DIAGNOSTICS_DEBOUNCE_MS);
-      },
-    });
-    setAttachment({ path: pathRef.current, editor: created });
-    return created;
-  }, []);
+  const createEditor = useCallback(
+    <EType extends EditorType>(
+      editorType: EType,
+      options: EditorOptions<EType, undefined, undefined>,
+      editStateKey?: string
+    ) => {
+      const created = new Editor<EType, undefined, undefined>(
+        editorType,
+        {
+          ...options,
+          onAttach: (attached, component) => {
+            attachRef.current?.(
+              component as EditableFile<undefined, undefined>
+            );
+            options.onAttach?.(attached, component);
+          },
+          // Comment tokens for the filetypes the library's own table misses, and
+          // the bindings this app adds to its defaults.
+          languageCommentConfig: {
+            ...LANGUAGE_COMMENTS,
+            ...options.languageCommentConfig,
+          },
+          keymap: [...EDITOR_KEYMAP, ...(options.keymap ?? [])],
+          matchBrackets: options.matchBrackets ?? true,
+          autoSurround: options.autoSurround ?? "default",
+          // The editor decides when a selection is the user's rather than the
+          // app's, and keeps the popover positioned and torn down; all this
+          // supplies is the element.
+          enabledSelectionAction: selectionActionRef.current !== undefined,
+          renderSelectionAction: (context) =>
+            selectionActionRef.current?.({
+              selection: context.selection,
+              getSelectionText: context.getSelectionText,
+              close: context.close,
+            }) ?? document.createElement("span"),
+          onFocus: () => {
+            focusedRef.current = true;
+            options.onFocus?.();
+          },
+          onBlur: () => {
+            focusedRef.current = false;
+            options.onBlur?.();
+          },
+          onChange: (event) => {
+            const file: FileContents = event.file;
+            valueRef.current = file.contents;
+            setDirty(file.contents !== originalRef.current);
+            for (const listener of listeners.current) listener();
+            options.onChange?.(event);
+            if (debounce.current !== null) clearTimeout(debounce.current);
+            debounce.current = setTimeout(() => {
+              // Analysing every keystroke would rebuild the program mid-word; a
+              // pause is the natural moment to re-check.
+              setBufferForAnalysis(
+                file.contents === originalRef.current ? null : file.contents
+              );
+            }, DIAGNOSTICS_DEBOUNCE_MS);
+          },
+        },
+        editStateKey
+      );
+      setAttachment({
+        path: pathRef.current,
+        editor: created as Editor<"file">,
+      });
+      return created;
+    },
+    []
+  );
 
   // The editor belongs to the session the view opened, so it is torn down with
   // it rather than with this hook.
@@ -307,7 +330,7 @@ export function useFileEditing({
    */
   const deleteLines = useCallback(() => {
     if (editor === null) return;
-    const selections = editor.getState().selections ?? [];
+    const selections = editor.getViewState().selections ?? [];
     if (selections.length === 0) return;
     const lines = editor.getText().split("\n");
     const targeted = new Set<number>();

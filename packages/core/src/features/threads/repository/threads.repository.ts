@@ -17,13 +17,11 @@ export interface CreateThreadInput {
   readonly title: string;
   readonly agent: AgentKind;
   readonly branch: string;
-  readonly taskKey: string | null;
   readonly initialPrompt: string;
 }
 export interface RenameThreadInput {
   readonly title: string;
   readonly branch?: string;
-  readonly taskKey?: string | null;
 }
 export type ThreadsFailure =
   NoRepoSelected | NotFound | StorageError | TerminalError;

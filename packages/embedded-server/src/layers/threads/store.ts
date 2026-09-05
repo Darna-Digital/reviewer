@@ -69,15 +69,3 @@ export const readThreadAgentSessionId = (
     return null;
   }
 };
-
-/** The task key a thread is linked to, or null. */
-export const readThreadTaskKey = (
-  repoPath: string,
-  id: string
-): string | null => {
-  try {
-    return findThread(repoPath, id)?.taskKey ?? null;
-  } catch {
-    return null;
-  }
-};

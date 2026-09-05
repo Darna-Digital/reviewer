@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { ChatModelCatalog } from "@byconvo/core/chats";
 import type { ReviewComment } from "@byconvo/core/comments";
-import type { Card as TasksCard } from "@byconvo/core/tasks";
 import type { VisualComment } from "@byconvo/core/visual-comments";
 import {
   buildChatAssignmentSettings,
   buildReviewAssignmentPrompt,
   buildReviewAssignmentTitle,
-  buildTaskAssignmentPrompt,
-  buildTaskAssignmentTitle,
   buildVisualAssignmentPrompt,
   buildVisualAssignmentTitle,
   instructionWithoutChatProviderMention,
@@ -42,18 +39,6 @@ const catalog: ChatModelCatalog = {
     },
   ],
 };
-
-const card = {
-  id: "card-1",
-  key: "DAR-168",
-  title: "Move assignment to chats",
-  description: "Use chat streams for agent work.",
-  column: "todo",
-  order: 0,
-  comments: [],
-  createdAt: "2026-01-01T00:00:00.000Z",
-  updatedAt: "2026-01-01T00:00:00.000Z",
-} as TasksCard;
 
 describe("chat assignment helpers", () => {
   it("detects assignable chat providers and @mentions", () => {
@@ -148,30 +133,9 @@ describe("chat assignment helpers", () => {
     expect(prompt).toContain("byconvo skill");
   });
 
-  it("strips task @mentions and builds task assignment content", () => {
+  it("strips a provider @mention out of the instruction it carries", () => {
     expect(
       instructionWithoutChatProviderMention("please @claude fix", "claude")
     ).toBe("please fix");
-    expect(
-      buildTaskAssignmentTitle(card, "@codex implement the flow", "codex")
-    ).toBe("DAR-168 - implement the flow");
-    expect(
-      buildTaskAssignmentPrompt(card, "@codex implement the flow", "codex")
-    ).toBe(
-      [
-        "You are working on task DAR-168: Move assignment to chats.",
-        "",
-        "Use chat streams for agent work.",
-        "",
-        "Address this comment:",
-        "implement the flow",
-      ].join("\n")
-    );
-  });
-
-  it("uses a generic task instruction when the comment only names an agent", () => {
-    expect(buildTaskAssignmentPrompt(card, "@opencode", "opencode")).toContain(
-      "Follow the task description and resolve this task."
-    );
   });
 });
