@@ -7,7 +7,7 @@
  *
  * The rows are painted (see `fold-paint`) because the library has no API for
  * hiding a range. The caret is kept out by the one hook it does offer:
- * `DiffsEditableComponent` declares `isLineRenderable`, `getNearestRenderableLine`
+ * The editable `File` component declares `isLineRenderable`, `getNearestRenderableLine`
  * and `revealLine` as optional members that "components without collapsible
  * regions leave unimplemented", and the editor reads them off the attached
  * component on every vertical move. `onAttach` hands us that component, so a
@@ -20,7 +20,7 @@
  * one that opened.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { DiffsEditableComponent } from "@pierre/diffs";
+import type { File as EditableFile } from "@pierre/diffs";
 import type { Editor } from "@pierre/diffs/edit";
 import { codeRootOf } from "@/lib/code-root";
 import {
@@ -71,12 +71,12 @@ export interface Folding {
    * Give the editor the collapsed-region hooks a plain file has none of. Call
    * from the editor's `onAttach`, which is where the component turns up.
    */
-  readonly attach: (component: DiffsEditableComponent<undefined>) => void;
+  readonly attach: (component: EditableFile<undefined, undefined>) => void;
 }
 
 interface FoldingOptions {
   /** The editable view's editor, or null while the file is only being read. */
-  readonly editor: Editor<undefined> | null;
+  readonly editor: Editor<"file"> | null;
   /** What is on disk, for a view with no live buffer to read. */
   readonly contents: string;
   /** Buffer-change subscription, so the regions follow the text. */
@@ -169,7 +169,7 @@ export function useFolding({
     (next: ReadonlySet<number>) => {
       setClosed(next);
       if (editor === null) return;
-      const selection = editor.getState().selections?.at(-1);
+      const selection = editor.getViewState().selections?.at(-1);
       if (selection === undefined) return;
       const nowHidden = hiddenLines(state.current.regions, next);
       const line = visibleLine(
@@ -229,7 +229,7 @@ export function useFolding({
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || !event.altKey) return;
       if (isFocused?.() === false) return;
-      const caret = editor.getState().selections?.at(-1)?.start.line ?? 0;
+      const caret = editor.getViewState().selections?.at(-1)?.start.line ?? 0;
       if (event.key === "[" || event.code === "BracketLeft") {
         event.preventDefault();
         event.stopPropagation();
@@ -251,41 +251,44 @@ export function useFolding({
    * attached to. They are read on every vertical move, so they answer from the
    * ref rather than from the render that installed them.
    */
-  const attach = useCallback((component: DiffsEditableComponent<undefined>) => {
-    const target = component as DiffsEditableComponent<undefined> & {
-      isLineRenderable?: (line: number) => boolean;
-      getNearestRenderableLine?: (
-        line: number,
-        direction: "up" | "down"
-      ) => number | undefined;
-      revealLine?: (line: number) => boolean;
-    };
-    // One-based lines at this boundary; zero-based everywhere inside.
-    target.isLineRenderable = (line) => !state.current.hidden.has(line - 1);
-    target.getNearestRenderableLine = (line, direction) => {
-      const found = nearestVisible(
-        state.current.hidden,
-        line - 1,
-        direction,
-        state.current.lines.length
-      );
-      return found === undefined ? undefined : found + 1;
-    };
-    // Anything that puts the caret inside a fold opens it — a jump to a
-    // definition should never land somewhere invisible.
-    //
-    // Deliberately not through `settle`: that moves the selection, the editor
-    // answers a moved selection by asking whether the line is renderable, and
-    // an unrenderable one brings it straight back here. Opening the fold is
-    // the whole job; the editor re-renders and puts its own caret right.
-    target.revealLine = (line) => {
-      if (!state.current.hidden.has(line - 1)) return false;
-      setClosed(
-        openFold(state.current.regions, state.current.closed, line - 1)
-      );
-      return true;
-    };
-  }, []);
+  const attach = useCallback(
+    (component: EditableFile<undefined, undefined>) => {
+      const target = component as EditableFile<undefined, undefined> & {
+        isLineRenderable?: (line: number) => boolean;
+        getNearestRenderableLine?: (
+          line: number,
+          direction: "up" | "down"
+        ) => number | undefined;
+        revealLine?: (line: number) => boolean;
+      };
+      // One-based lines at this boundary; zero-based everywhere inside.
+      target.isLineRenderable = (line) => !state.current.hidden.has(line - 1);
+      target.getNearestRenderableLine = (line, direction) => {
+        const found = nearestVisible(
+          state.current.hidden,
+          line - 1,
+          direction,
+          state.current.lines.length
+        );
+        return found === undefined ? undefined : found + 1;
+      };
+      // Anything that puts the caret inside a fold opens it — a jump to a
+      // definition should never land somewhere invisible.
+      //
+      // Deliberately not through `settle`: that moves the selection, the editor
+      // answers a moved selection by asking whether the line is renderable, and
+      // an unrenderable one brings it straight back here. Opening the fold is
+      // the whole job; the editor re-renders and puts its own caret right.
+      target.revealLine = (line) => {
+        if (!state.current.hidden.has(line - 1)) return false;
+        setClosed(
+          openFold(state.current.regions, state.current.closed, line - 1)
+        );
+        return true;
+      };
+    },
+    []
+  );
 
   return {
     toggle,

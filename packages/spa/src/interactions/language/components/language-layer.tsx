@@ -113,7 +113,7 @@ export interface LanguageLayerOptions {
    * apply a fix to, so completions and the quick-fix menu stay off; hover and
    * navigation are read-only questions and work either way.
    */
-  editor: Editor<undefined> | null;
+  editor: Editor<"file"> | null;
   /** Buffer-change subscription owned by the editing hook. */
   subscribe?: (listener: () => void) => () => void;
   /**

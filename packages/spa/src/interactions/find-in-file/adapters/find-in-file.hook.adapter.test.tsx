@@ -33,9 +33,9 @@ const fakeEditor = (
   const focus = vi.fn();
   const editor = {
     getText: () => over.text ?? FILE,
-    getState: () => ({ selections: over.selections }),
+    getViewState: () => ({ selections: over.selections }),
     focus,
-  } as unknown as Editor<undefined>;
+  } as unknown as Editor<"file">;
   return { editor, focus };
 };
 
@@ -44,7 +44,7 @@ function Harness({
   editor = null,
 }: {
   contents?: string;
-  editor?: Editor<undefined> | null;
+  editor?: Editor<"file"> | null;
 }) {
   const code = useRef<HTMLDivElement>(null);
   const find = useFindInFile({

@@ -66,7 +66,7 @@ interface Caret extends CaretPosition {
 
 export interface CompletionsOptions {
   /** Null in a read-only view; the hook is disabled then. */
-  readonly editor: Editor<undefined> | null;
+  readonly editor: Editor<"file"> | null;
   /** Buffer-change subscription owned by the editing hook. */
   readonly subscribe?: (listener: () => void) => () => void;
   /**
@@ -116,7 +116,7 @@ export function useCompletions({
   /** The caret, or null when there is no single collapsed one. */
   const caretOf = useCallback((): Caret | null => {
     if (editor === null) return null;
-    const state = editor.getState();
+    const state = editor.getViewState();
     const selection = state.selections?.[0];
     if (selection === undefined) return null;
     // A range selection is a different gesture; the bar handles that one.
@@ -126,8 +126,8 @@ export function useCompletions({
     ) {
       return null;
     }
-    // 1.3.5 moved the buffer off `EditorState` (now just selections + view);
-    // the document is read from the editor itself.
+    // `EditorViewState` is only selections + view; the document is read from
+    // the editor itself.
     const contents = editor.getText();
     const lines = contents.split("\n");
     return {
@@ -280,7 +280,7 @@ export function useCompletions({
         // The caret after the edit is what the next request compares against to
         // recognise its own echo, and imports landing above it shift the line —
         // so it is read back rather than predicted.
-        const after = editor.getState().selections?.[0];
+        const after = editor.getViewState().selections?.[0];
         accepted.current =
           after === undefined
             ? null

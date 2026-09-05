@@ -49,8 +49,8 @@ importers:
         specifier: ^22.20.1
         version: 22.20.1
       electron:
-        specifier: ^43.6.0
-        version: 43.6.0
+        specifier: ^44.2.0
+        version: 44.2.0
       electron-builder:
         specifier: ^26.15.3
         version: 26.15.3(electron-builder-squirrel-windows@26.15.3)
@@ -155,8 +155,8 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0
       '@pierre/diffs':
-        specifier: 1.3.5
-        version: 1.3.5(@shikijs/themes@4.4.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        specifier: 1.4.0
+        version: 1.4.0(@shikijs/themes@4.4.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@pierre/trees':
         specifier: 1.0.0-beta.6
         version: 1.0.0-beta.6(@pierre/theme@2.0.0)(@shikijs/themes@4.4.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(shiki@4.4.3)
@@ -168,7 +168,7 @@ importers:
         version: 4.3.3(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
       '@tanstack/react-devtools':
         specifier: latest
-        version: 0.10.12(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(csstype@3.2.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.13)
+        version: 0.10.12(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(csstype@3.2.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.15)
       '@tanstack/react-query':
         specifier: latest
         version: 5.102.8(react@19.2.8)
@@ -265,7 +265,7 @@ importers:
         version: link:../lint
       '@tanstack/devtools-vite':
         specifier: latest
-        version: 0.8.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
+        version: 0.8.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))
       '@tanstack/eslint-config':
         specifier: latest
         version: 0.4.0(@typescript-eslint/utils@8.69.0(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3))(eslint@10.9.1(jiti@2.7.0))(typescript@6.0.3)
@@ -613,9 +613,6 @@ packages:
 
   '@emnapi/runtime@1.10.0':
     resolution: {integrity: sha512-ewvYlk86xUoGI0zQRNq/mC+16R1QeDlKQy21Ki3oSYXNgLb45GV1P6A0M+/s6nyCuNDqe5VpaY84BzXGwVbwFA==}
-
-  '@emnapi/runtime@1.11.3':
-    resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
 
   '@emnapi/wasi-threads@1.2.1':
     resolution: {integrity: sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w==}
@@ -1172,11 +1169,16 @@ packages:
     resolution: {integrity: sha512-ODOov0sGMJMf3jPonOkgGqPknTsu+DdQ7kD++gz8aI+aFMOMHFbWAA2taqXXVTdP+OTOQR/znGvSpmkeI0WTYQ==}
     engines: {node: '>=14.18.0'}
 
-  '@pierre/diffs@1.3.5':
-    resolution: {integrity: sha512-BhaLEiUvR+BdIyOYdogA4JLQjluWPubuwySmmIqEkcE0FwIWRbgJgHNC/r884dlxEr89fO4hTk/sBln0a7NSOw==}
+  '@pierre/diffs@1.4.0':
+    resolution: {integrity: sha512-eSYnNDjRdgx01O16t8yxVW5M96ppgUMKbMyRE7/cyeJa+dMQrS/s0ed3n0KK9a2Or7SXon6cYbBLhAiAggD6ZQ==}
     peerDependencies:
       react: ^18.3.1 || ^19.0.0
       react-dom: ^18.3.1 || ^19.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
+      react-dom:
+        optional: true
 
   '@pierre/theme@2.0.0':
     resolution: {integrity: sha512-yNDd9GYLQl1mEUJR8AneJ5e4ohLIHQd/wZLWr4fagt78vS2RwwZNW530vVgHqXFAyFVcFlRmGUD5ramXH46OXw==}
@@ -2705,8 +2707,8 @@ packages:
     resolution: {integrity: sha512-bO3y10YikuUwUuDUQRM4KfwNkKhnpVO7IPdbsrejwN9/AABJzzTQ4GeHwyzNSrVO+tEH3/Np255a3sVZpZDjvg==}
     engines: {node: '>=8.0.0'}
 
-  electron@43.6.0:
-    resolution: {integrity: sha512-DqVKYV+FXheMSLTxcMQ+NCo78BDgpnToSyIzXctlUtbP3lRGEuoo1P+C2n/90rJ7TvHgzP0bpP9fbbXxp4noIg==}
+  electron@44.2.0:
+    resolution: {integrity: sha512-oK1icjhapp3xsUZycO9WZaLmd3hJnA7ieobC4mpdtO1pEN+PPGWpA3m1Mgzzuc1wzSD2Wai4zcH4yfpGJqxFMA==}
     engines: {node: '>= 22.12.0'}
     hasBin: true
 
@@ -4705,8 +4707,8 @@ packages:
     resolution: {integrity: sha512-e0VyvkVTwVYViNovRkZ9aodhxVlyoMn7eJhVUPxZ+eK9P/7CBkxvvsBOHqFPEH416726W8tLXXXjKwqgTErrCQ==}
     engines: {node: '>= 10.0.0', npm: '>= 3.0.0'}
 
-  solid-js@1.9.13:
-    resolution: {integrity: sha512-6hJeJMOcEX8ktqjpDoJZEmld3ijvcvWBDtiXBm7f4332SiFN66QeAQI1REQshvyUoISsSeJ4PHDauKYbwao9JQ==}
+  solid-js@1.9.15:
+    resolution: {integrity: sha512-EeiY2xfpZJqPLjXspVEKjAII4yv8NyG//NxZ3IpOFHdUNnnTyL0uJOeS9LWGvA7cFCz5y94cjFwYlmw5Luncsg==}
 
   sonner@2.0.8:
     resolution: {integrity: sha512-UM/ByIoFra8yzV75n1o0Puu0bw5U/9UNnDacrJNspekBewIfsQ3D6ez1nvlWpt7aTsO6rujQtifBpycwIivqlg==}
@@ -5792,11 +5794,6 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@emnapi/runtime@1.11.3':
-    dependencies:
-      tslib: 2.8.1
-    optional: true
-
   '@emnapi/wasi-threads@1.2.1':
     dependencies:
       tslib: 2.8.1
@@ -6069,19 +6066,12 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
-  '@napi-rs/wasm-runtime@1.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)':
-    dependencies:
-      '@emnapi/core': 1.10.0
-      '@emnapi/runtime': 1.11.3
-      '@tybys/wasm-util': 0.10.3
-    optional: true
-
   '@neodrag/core@3.0.0-next.11': {}
 
-  '@neodrag/solid@3.0.0-next.11(@neodrag/core@3.0.0-next.11)(solid-js@1.9.13)':
+  '@neodrag/solid@3.0.0-next.11(@neodrag/core@3.0.0-next.11)(solid-js@1.9.15)':
     dependencies:
       '@neodrag/core': 3.0.0-next.11
-      solid-js: 1.9.13
+      solid-js: 1.9.15
 
   '@noble/hashes@1.4.0': {}
 
@@ -6164,9 +6154,9 @@ snapshots:
   '@oxc-parser/binding-openharmony-arm64@0.120.0':
     optional: true
 
-  '@oxc-parser/binding-wasm32-wasi@0.120.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)':
+  '@oxc-parser/binding-wasm32-wasi@0.120.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
-      '@napi-rs/wasm-runtime': 1.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)
+      '@napi-rs/wasm-runtime': 1.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
     transitivePeerDependencies:
       - '@emnapi/core'
       - '@emnapi/runtime'
@@ -6207,7 +6197,7 @@ snapshots:
       tslib: 2.8.1
       webcrypto-core: 1.9.2
 
-  '@pierre/diffs@1.3.5(@shikijs/themes@4.4.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@pierre/diffs@1.4.0(@shikijs/themes@4.4.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@pierre/theme': 2.0.0
       '@pierre/theming': 1.0.1(@pierre/theme@2.0.0)(@shikijs/themes@4.4.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(shiki@4.4.3)
@@ -6215,9 +6205,10 @@ snapshots:
       diff: 9.0.0
       hast-util-to-html: 9.0.5
       lru_map: 0.4.1
+      shiki: 4.4.3
+    optionalDependencies:
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
-      shiki: 4.4.3
     transitivePeerDependencies:
       - '@shikijs/themes'
 
@@ -6372,39 +6363,39 @@ snapshots:
 
   '@sindresorhus/merge-streams@4.0.0': {}
 
-  '@solid-primitives/event-listener@2.4.6(solid-js@1.9.13)':
+  '@solid-primitives/event-listener@2.4.6(solid-js@1.9.15)':
     dependencies:
-      '@solid-primitives/utils': 6.4.1(solid-js@1.9.13)
-      solid-js: 1.9.13
+      '@solid-primitives/utils': 6.4.1(solid-js@1.9.15)
+      solid-js: 1.9.15
 
-  '@solid-primitives/keyboard@1.3.7(solid-js@1.9.13)':
+  '@solid-primitives/keyboard@1.3.7(solid-js@1.9.15)':
     dependencies:
-      '@solid-primitives/event-listener': 2.4.6(solid-js@1.9.13)
-      '@solid-primitives/rootless': 1.5.4(solid-js@1.9.13)
-      '@solid-primitives/utils': 6.4.1(solid-js@1.9.13)
-      solid-js: 1.9.13
+      '@solid-primitives/event-listener': 2.4.6(solid-js@1.9.15)
+      '@solid-primitives/rootless': 1.5.4(solid-js@1.9.15)
+      '@solid-primitives/utils': 6.4.1(solid-js@1.9.15)
+      solid-js: 1.9.15
 
-  '@solid-primitives/resize-observer@2.2.0(solid-js@1.9.13)':
+  '@solid-primitives/resize-observer@2.2.0(solid-js@1.9.15)':
     dependencies:
-      '@solid-primitives/event-listener': 2.4.6(solid-js@1.9.13)
-      '@solid-primitives/rootless': 1.5.4(solid-js@1.9.13)
-      '@solid-primitives/static-store': 0.1.4(solid-js@1.9.13)
-      '@solid-primitives/utils': 6.4.1(solid-js@1.9.13)
-      solid-js: 1.9.13
+      '@solid-primitives/event-listener': 2.4.6(solid-js@1.9.15)
+      '@solid-primitives/rootless': 1.5.4(solid-js@1.9.15)
+      '@solid-primitives/static-store': 0.1.4(solid-js@1.9.15)
+      '@solid-primitives/utils': 6.4.1(solid-js@1.9.15)
+      solid-js: 1.9.15
 
-  '@solid-primitives/rootless@1.5.4(solid-js@1.9.13)':
+  '@solid-primitives/rootless@1.5.4(solid-js@1.9.15)':
     dependencies:
-      '@solid-primitives/utils': 6.4.1(solid-js@1.9.13)
-      solid-js: 1.9.13
+      '@solid-primitives/utils': 6.4.1(solid-js@1.9.15)
+      solid-js: 1.9.15
 
-  '@solid-primitives/static-store@0.1.4(solid-js@1.9.13)':
+  '@solid-primitives/static-store@0.1.4(solid-js@1.9.15)':
     dependencies:
-      '@solid-primitives/utils': 6.4.1(solid-js@1.9.13)
-      solid-js: 1.9.13
+      '@solid-primitives/utils': 6.4.1(solid-js@1.9.15)
+      solid-js: 1.9.15
 
-  '@solid-primitives/utils@6.4.1(solid-js@1.9.13)':
+  '@solid-primitives/utils@6.4.1(solid-js@1.9.15)':
     dependencies:
-      solid-js: 1.9.13
+      solid-js: 1.9.15
 
   '@standard-schema/spec@1.1.0': {}
 
@@ -6497,14 +6488,14 @@ snapshots:
       tailwindcss: 4.3.3
       vite: 8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0)
 
-  '@tanstack/devtools-bundler-core@0.1.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)':
+  '@tanstack/devtools-bundler-core@0.1.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
       '@tanstack/devtools-client': 0.0.8
       '@tanstack/devtools-event-bus': 0.4.3
       chalk: 5.6.2
       launch-editor: 2.14.1
       magic-string: 0.30.21
-      oxc-parser: 0.120.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)
+      oxc-parser: 0.120.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       picomatch: 4.0.7
     transitivePeerDependencies:
       - '@emnapi/core'
@@ -6525,18 +6516,18 @@ snapshots:
 
   '@tanstack/devtools-event-client@0.5.0': {}
 
-  '@tanstack/devtools-ui@0.7.1(csstype@3.2.3)(solid-js@1.9.13)':
+  '@tanstack/devtools-ui@0.7.1(csstype@3.2.3)(solid-js@1.9.15)':
     dependencies:
       clsx: 2.1.1
       dayjs: 1.11.23
       goober: 2.1.19(csstype@3.2.3)
-      solid-js: 1.9.13
+      solid-js: 1.9.15
     transitivePeerDependencies:
       - csstype
 
-  '@tanstack/devtools-vite@0.8.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))':
+  '@tanstack/devtools-vite@0.8.5(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(vite@8.2.2(@types/node@22.20.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.13)(yaml@2.9.0))':
     dependencies:
-      '@tanstack/devtools-bundler-core': 0.1.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)
+      '@tanstack/devtools-bundler-core': 0.1.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       '@tanstack/devtools-client': 0.0.8
       '@tanstack/devtools-event-bus': 0.4.3
       chalk: 5.6.2
@@ -6547,19 +6538,19 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@tanstack/devtools@0.14.2(csstype@3.2.3)(solid-js@1.9.13)':
+  '@tanstack/devtools@0.14.2(csstype@3.2.3)(solid-js@1.9.15)':
     dependencies:
       '@neodrag/core': 3.0.0-next.11
-      '@neodrag/solid': 3.0.0-next.11(@neodrag/core@3.0.0-next.11)(solid-js@1.9.13)
-      '@solid-primitives/event-listener': 2.4.6(solid-js@1.9.13)
-      '@solid-primitives/keyboard': 1.3.7(solid-js@1.9.13)
-      '@solid-primitives/resize-observer': 2.2.0(solid-js@1.9.13)
+      '@neodrag/solid': 3.0.0-next.11(@neodrag/core@3.0.0-next.11)(solid-js@1.9.15)
+      '@solid-primitives/event-listener': 2.4.6(solid-js@1.9.15)
+      '@solid-primitives/keyboard': 1.3.7(solid-js@1.9.15)
+      '@solid-primitives/resize-observer': 2.2.0(solid-js@1.9.15)
       '@tanstack/devtools-client': 0.0.8
       '@tanstack/devtools-event-bus': 0.4.3
-      '@tanstack/devtools-ui': 0.7.1(csstype@3.2.3)(solid-js@1.9.13)
+      '@tanstack/devtools-ui': 0.7.1(csstype@3.2.3)(solid-js@1.9.15)
       clsx: 2.1.1
       goober: 2.1.19(csstype@3.2.3)
-      solid-js: 1.9.13
+      solid-js: 1.9.15
     transitivePeerDependencies:
       - bufferutil
       - csstype
@@ -6587,9 +6578,9 @@ snapshots:
 
   '@tanstack/query-devtools@5.102.8': {}
 
-  '@tanstack/react-devtools@0.10.12(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(csstype@3.2.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.13)':
+  '@tanstack/react-devtools@0.10.12(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(csstype@3.2.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(solid-js@1.9.15)':
     dependencies:
-      '@tanstack/devtools': 0.14.2(csstype@3.2.3)(solid-js@1.9.13)
+      '@tanstack/devtools': 0.14.2(csstype@3.2.3)(solid-js@1.9.15)
       '@types/react': 19.2.18
       '@types/react-dom': 19.2.7(@types/react@19.2.18)
       react: 19.2.8
@@ -7826,7 +7817,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  electron@43.6.0:
+  electron@44.2.0:
     dependencies:
       '@electron-internal/extract-zip': 1.0.5
       '@electron/get': 5.1.0
@@ -9494,7 +9485,7 @@ snapshots:
       string-width: 7.2.0
       strip-ansi: 7.2.0
 
-  oxc-parser@0.120.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3):
+  oxc-parser@0.120.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0):
     dependencies:
       '@oxc-project/types': 0.120.0
     optionalDependencies:
@@ -9514,7 +9505,7 @@ snapshots:
       '@oxc-parser/binding-linux-x64-gnu': 0.120.0
       '@oxc-parser/binding-linux-x64-musl': 0.120.0
       '@oxc-parser/binding-openharmony-arm64': 0.120.0
-      '@oxc-parser/binding-wasm32-wasi': 0.120.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.11.3)
+      '@oxc-parser/binding-wasm32-wasi': 0.120.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       '@oxc-parser/binding-win32-arm64-msvc': 0.120.0
       '@oxc-parser/binding-win32-ia32-msvc': 0.120.0
       '@oxc-parser/binding-win32-x64-msvc': 0.120.0
@@ -10114,7 +10105,7 @@ snapshots:
       ip-address: 10.7.0
       smart-buffer: 4.2.0
 
-  solid-js@1.9.13:
+  solid-js@1.9.15:
     dependencies:
       csstype: 3.2.3
       seroval: 1.5.6

@@ -32,7 +32,7 @@ export interface SymbolMenuOptions {
    * either way; the fixes need a buffer to apply to, so they are left out of
    * the menu — and never asked for — when there is no editor.
    */
-  readonly editor: Editor<undefined> | null;
+  readonly editor: Editor<"file"> | null;
   readonly path: string;
   readonly enabled?: boolean;
   readonly getContainer: () => ParentNode | null;

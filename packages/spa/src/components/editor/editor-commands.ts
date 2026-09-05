@@ -20,7 +20,7 @@
 import type { EditorKeymap, EditorOptions, TextEdit } from "@pierre/diffs/edit";
 
 type LanguageComments = NonNullable<
-  EditorOptions<undefined>["languageCommentConfig"]
+  EditorOptions<"file", undefined, undefined>["languageCommentConfig"]
 >;
 
 const HASH: LanguageComments[string] = { lineComment: "#" };

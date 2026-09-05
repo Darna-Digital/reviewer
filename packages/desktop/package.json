@@ -22,7 +22,7 @@
   "devDependencies": {
     "@byconvo/lint": "workspace:*",
     "@types/node": "^22.20.1",
-    "electron": "^43.6.0",
+    "electron": "^44.2.0",
     "electron-builder": "^26.15.3",
     "prettier": "^3.9.6",
     "typescript": "~6.0.3"

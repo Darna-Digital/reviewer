@@ -49,7 +49,7 @@ interface FindInFileOptions {
   /** What is on disk — searched whenever there is no live buffer to search. */
   readonly contents: string;
   /** The editable view's editor, or null while the file is only being read. */
-  readonly editor: Editor<undefined> | null;
+  readonly editor: Editor<"file"> | null;
   /**
    * Buffer-change subscription. Without one the buffer is read once, when the
    * bar opens — matches then follow the file rather than the typing.
@@ -131,7 +131,7 @@ export function useFindInFile({
   // the moment ⌘F is pressed, and kept: re-reading it as the view scrolls to
   // each match would walk the search down the file on its own.
   const anchorNow = useCallback((): FindAnchor | null => {
-    const selection = editor?.getState().selections?.at(-1);
+    const selection = editor?.getViewState().selections?.at(-1);
     if (selection !== undefined) {
       return {
         line: selection.start.line + 1,
@@ -198,7 +198,7 @@ export function useFindInFile({
   // editor's own selection when it has one, the shadow-root selection when the
   // file is only being read. Also what ⌘⇧F picks up on its way to the grep.
   const selectedText = useCallback((): string => {
-    const selection = editor?.getState().selections?.at(-1);
+    const selection = editor?.getViewState().selections?.at(-1);
     if (selection !== undefined) {
       const covered = sliceRange(
         editor?.getText() ?? "",

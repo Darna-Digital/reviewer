@@ -39,12 +39,12 @@ function fakeEditor(text: string) {
   });
   const editor = {
     getText: () => text,
-    getState: () => ({ selections: [selection] }),
+    getViewState: () => ({ selections: [selection] }),
     setSelections,
     applyEdits: vi.fn(),
     undo: vi.fn(),
     redo: vi.fn(),
-  } as unknown as Editor<undefined>;
+  } as unknown as Editor<"file">;
   return { editor, setSelections, at: () => selection };
 }
 
