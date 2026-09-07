@@ -55,8 +55,18 @@ import {
 
 /** How long the pointer must rest on a token before documentation is fetched. */
 const HOVER_DELAY_MS = 350;
-/** Grace period so the pointer can travel from the token into the card. */
-const HOVER_CLOSE_MS = 150;
+/**
+ * Grace period so the pointer can travel from the token into the card.
+ *
+ * Long enough for a hand rather than a cursor jump. The card hangs a few pixels
+ * below the token, and crossing that gap — reading what is in the card on the
+ * way, pausing over the code between them — took longer than the old sixth of a
+ * second, so a card carrying a link (ruby-lsp's hover is a list of definitions)
+ * was gone before it could be clicked. Leaving is measured from the last token
+ * the pointer was on, so a card that has been reached stays until the pointer
+ * leaves *it*.
+ */
+const HOVER_CLOSE_MS = 500;
 
 /** Annotation payload this layer contributes to a view's line annotations. */
 export interface DiagnosticsAnnotationMeta {
