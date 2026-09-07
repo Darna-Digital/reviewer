@@ -4,7 +4,7 @@ reviewer.darnadigital.com — the marketing site, a TanStack Start app on
 Cloudflare Workers.
 
 ```bash
-pnpm dev     # the site on :3000
+pnpm dev     # the site on :41822
 pnpm build   # dist/client (assets) and dist/server (the Worker)
 ```
 
