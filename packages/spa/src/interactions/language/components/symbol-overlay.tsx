@@ -8,6 +8,7 @@ import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import type { Location, SymbolTarget } from "@reviewer/core/language";
+import { hoverLinkLocation } from "../functions/hover-links";
 import { cn } from "@/lib/utils";
 
 /** `src/a/b.ts` -> `src/a/`, so the name can be kept while the path clips. */
@@ -62,13 +63,57 @@ function LocationRow({
   );
 }
 
-export function HoverDocumentation({ contents }: { contents: string }) {
+/**
+ * Documentation as the server wrote it, with its links made to work.
+ *
+ * A link in a hover points at a file — ruby-lsp answers "what is this" with
+ * where it is defined — and the app opens files itself, so those become
+ * buttons rather than anchors: react-markdown strips a href it does not
+ * recognise as a URL, which is why clicking one used to do nothing at all.
+ * A link that leaves the app stays an anchor and opens a browser tab, never
+ * this window, which the app cannot navigate back from.
+ */
+export function HoverDocumentation({
+  contents,
+  onOpen,
+}: {
+  contents: string;
+  /** Open a file the documentation links to. Absent in a read-only card. */
+  onOpen?: (location: Location) => void;
+}) {
   if (contents.trim().length === 0) {
     return <p className="px-1 text-xs text-muted-foreground">No information</p>;
   }
   return (
     <div className="markdown min-w-0 text-xs [&_pre]:my-1 [&_pre]:text-xs">
-      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+      <Markdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeHighlight]}
+        // A file path is not a URL, and the default transform drops it.
+        urlTransform={(url) => url}
+        components={{
+          a: ({ href, children }) => {
+            const location =
+              onOpen === undefined ? null : hoverLinkLocation(href);
+            if (location === null) {
+              return (
+                <a href={href} target="_blank" rel="noreferrer noopener">
+                  {children}
+                </a>
+              );
+            }
+            return (
+              <button
+                type="button"
+                className="cursor-pointer underline underline-offset-2"
+                onClick={() => onOpen?.(location)}
+              >
+                {children}
+              </button>
+            );
+          },
+        }}
+      >
         {contents}
       </Markdown>
     </div>

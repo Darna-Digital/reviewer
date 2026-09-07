@@ -503,7 +503,7 @@ export function useLanguageLayer({
         card.contents === null ? (
           <CardSpinner label="Reading…" />
         ) : (
-          <HoverDocumentation contents={card.contents} />
+          <HoverDocumentation contents={card.contents} onOpen={openFromCard} />
         )
       ) : card.outcome.kind === "choose" ? (
         <TargetChoice targets={card.outcome.targets} onOpen={openFromCard} />
