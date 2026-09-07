@@ -15,6 +15,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { CloudSetting } from "@/interactions/cloud/components/cloud-setting";
 import { FormatOnSaveSetting } from "@/interactions/formatting/components/format-on-save-setting";
+import { LanguagesSetting } from "@/interactions/language/components/languages-setting";
 import { SettingRow } from "@/interactions/settings/components/setting-row";
 import { isDesktop } from "@/lib/desktop";
 import {
@@ -201,6 +202,9 @@ export function SettingsPage() {
                     />
                   </label>
                 </SettingRow>
+              </section>
+              <section className="mt-6 border-y">
+                <LanguagesSetting />
               </section>
               <section className="mt-6 border-y">
                 <CloudSetting />
