@@ -2,6 +2,7 @@ import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { IconCheck, IconChevronDown, IconSelector } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
+import { HIDDEN_WITH_ANCHOR } from "@/components/ui/anchored-popup";
 import {
   ELEVATION,
   POPUP_SHADOW,
@@ -65,7 +66,7 @@ function SelectContent({
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Positioner
-        className="isolate z-50 outline-none"
+        className={cn("isolate z-50 outline-none", HIDDEN_WITH_ANCHOR)}
         sideOffset={sideOffset}
         align={align}
         side={side}

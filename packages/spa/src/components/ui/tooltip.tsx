@@ -1,9 +1,14 @@
 "use client";
 
+import * as React from "react";
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip";
 
 import { cn } from "@/lib/utils";
 import { ELEVATION, POPUP_SHADOW, useElevation } from "@/lib/surface-context";
+import {
+  HIDDEN_WITH_ANCHOR,
+  useDismissOnUserScroll,
+} from "@/components/ui/anchored-popup";
 
 function TooltipProvider({
   delay = 0,
@@ -18,8 +23,31 @@ function TooltipProvider({
   );
 }
 
-function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {
-  return <TooltipPrimitive.Root data-slot="tooltip" {...props} />;
+function Tooltip({
+  actionsRef,
+  onOpenChange,
+  ...props
+}: TooltipPrimitive.Root.Props) {
+  const ownActions = React.useRef<TooltipPrimitive.Root.Actions | null>(null);
+  const actions = actionsRef ?? ownActions;
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(
+    props.defaultOpen ?? false
+  );
+  useDismissOnUserScroll(props.open ?? uncontrolledOpen, () =>
+    actions.current?.close()
+  );
+
+  return (
+    <TooltipPrimitive.Root
+      data-slot="tooltip"
+      {...props}
+      actionsRef={actions}
+      onOpenChange={(open, details) => {
+        setUncontrolledOpen(open);
+        onOpenChange?.(open, details);
+      }}
+    />
+  );
 }
 
 function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
@@ -47,7 +75,7 @@ function TooltipContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
-        className="isolate z-50"
+        className={cn("isolate z-50", HIDDEN_WITH_ANCHOR)}
       >
         <TooltipPrimitive.Popup
           data-slot="tooltip-content"

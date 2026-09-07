@@ -2,6 +2,7 @@ import * as React from "react";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 
 import { cn } from "@/lib/utils";
+import { HIDDEN_WITH_ANCHOR } from "@/components/ui/anchored-popup";
 import {
   ELEVATION,
   POPUP_SHADOW,
@@ -56,7 +57,7 @@ function DropdownMenuContent({
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
-        className="isolate z-50 outline-none"
+        className={cn("isolate z-50 outline-none", HIDDEN_WITH_ANCHOR)}
         align={align}
         alignOffset={alignOffset}
         side={side}

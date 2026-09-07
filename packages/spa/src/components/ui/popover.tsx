@@ -2,6 +2,7 @@ import * as React from "react";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 
 import { cn } from "@/lib/utils";
+import { HIDDEN_WITH_ANCHOR } from "@/components/ui/anchored-popup";
 import {
   ELEVATION,
   POPUP_SHADOW,
@@ -53,7 +54,7 @@ function PopoverContent({
         sideOffset={sideOffset}
         anchor={anchor}
         collisionPadding={collisionPadding}
-        className="isolate z-50"
+        className={cn("isolate z-50", HIDDEN_WITH_ANCHOR)}
       >
         <PopoverPrimitive.Popup
           data-slot="popover-content"

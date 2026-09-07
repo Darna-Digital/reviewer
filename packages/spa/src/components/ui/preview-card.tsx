@@ -1,3 +1,4 @@
+import * as React from "react";
 import { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card";
 
 import { cn } from "@/lib/utils";
@@ -7,9 +8,38 @@ import {
   SurfaceProvider,
   useElevation,
 } from "@/lib/surface-context";
+import {
+  HIDDEN_WITH_ANCHOR,
+  useDismissOnUserScroll,
+} from "@/components/ui/anchored-popup";
 
-function PreviewCard({ ...props }: PreviewCardPrimitive.Root.Props) {
-  return <PreviewCardPrimitive.Root data-slot="preview-card" {...props} />;
+function PreviewCard({
+  actionsRef,
+  onOpenChange,
+  ...props
+}: PreviewCardPrimitive.Root.Props) {
+  const ownActions = React.useRef<PreviewCardPrimitive.Root.Actions | null>(
+    null
+  );
+  const actions = actionsRef ?? ownActions;
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(
+    props.defaultOpen ?? false
+  );
+  useDismissOnUserScroll(props.open ?? uncontrolledOpen, () =>
+    actions.current?.close()
+  );
+
+  return (
+    <PreviewCardPrimitive.Root
+      data-slot="preview-card"
+      {...props}
+      actionsRef={actions}
+      onOpenChange={(open, details) => {
+        setUncontrolledOpen(open);
+        onOpenChange?.(open, details);
+      }}
+    />
+  );
 }
 
 function PreviewCardTrigger({ ...props }: PreviewCardPrimitive.Trigger.Props) {
@@ -42,7 +72,7 @@ function PreviewCardContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
-        className="isolate z-50"
+        className={cn("isolate z-50", HIDDEN_WITH_ANCHOR)}
       >
         <PreviewCardPrimitive.Popup
           data-slot="preview-card-content"

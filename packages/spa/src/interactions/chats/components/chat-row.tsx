@@ -5,10 +5,12 @@
  * opens with the untruncated title, the tail of the conversation and the
  * session's metadata.
  *
- * The two dots the row does keep are the ones that change: the turn state, and
- * whether the session moved since you last looked. Both are read off the
- * session's own seen mark, so opening the conversation is what puts them out —
- * see `chats.attention.ts`.
+ * The one mark the row does keep is the state that changes — a working agent,
+ * a turn that ended badly, or a session that simply moved since you last looked
+ * — and it sits in the same right-hand column as the delete control, so the
+ * title runs to the same edge on every row and the hover swaps one mark for
+ * one button. It is read off the session's own seen mark, so opening the
+ * conversation is what puts it out — see `chats.attention.ts`.
  *
  * The list spans every project, but which one a session came from is the card's
  * to say, not the row's — a name on every row is noise on all of them.
@@ -19,7 +21,7 @@
  * The conversation tail is fetched only once a card opens, so scrolling past a
  * hundred rows costs nothing.
  */
-import { IconFolder, IconMessage, IconX } from "@tabler/icons-react";
+import { IconMessage, IconX } from "@tabler/icons-react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -30,13 +32,13 @@ import {
   PreviewCardTrigger,
 } from "@/components/ui/preview-card";
 import { agentLabel } from "@/interactions/threads/interfaces/agents";
+import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
 import { openSessionTab } from "@/interactions/chats/functions/open-session-tab";
 import {
   isChatUnread,
   unattendedTurnState,
   type ChatMessage,
   type ChatSummary,
-  type ChatTurnState,
 } from "@reviewer/core/chats";
 import { useChatPreview } from "@/lib/queries";
 import { timeAgo } from "@/lib/relative-time";
@@ -46,24 +48,31 @@ const HOVER_DELAY_MS = 120;
 const HOVER_CLOSE_DELAY_MS = 100;
 const PREVIEW_TURNS = 3;
 
-function TurnStateDot({ state }: { state: ChatTurnState | null }) {
-  if (state === null) return null;
-  return (
-    // A settled turn is a dot and a running one is the orb, so the two sit in
-    // the same box — the title starts at one place whatever the row is saying.
-    <span className="flex size-3.5 shrink-0 items-center justify-center">
-      {state === "running" ? (
-        <Orb size={14} label="turn running" />
-      ) : (
-        <span
-          className={cn(
-            "size-1.5 rounded-full",
-            state === "error" ? "bg-destructive" : "bg-brand-500"
-          )}
-          aria-label={`turn ${state}`}
-        />
+type RowMark = "running" | "error" | "unread";
+
+/**
+ * What the row's right-hand column shows when it isn't showing the delete
+ * control: the orb while an agent works, a red dot where a turn ended badly,
+ * and the blue dot for a session that has moved since it was last opened.
+ */
+function rowMark(chat: ChatSummary): RowMark | null {
+  const turn = unattendedTurnState(chat);
+  if (turn === "running") return "running";
+  if (turn === "error") return "error";
+  return isChatUnread(chat) ? "unread" : null;
+}
+
+function RowMarkDot({ mark }: { mark: RowMark }) {
+  return mark === "running" ? (
+    <Orb size={14} label="turn running" />
+  ) : (
+    <span
+      className={cn(
+        "size-2 rounded-full",
+        mark === "error" ? "bg-destructive" : "bg-brand-500"
       )}
-    </span>
+      aria-label={mark === "error" ? "turn error" : "unread"}
+    />
   );
 }
 
@@ -136,10 +145,10 @@ export function ChatRow({
   const [primed, setPrimed] = useState(false);
   const preview = useChatPreview(chat.id, primed || open);
   const assistantLabel = agentLabel(chat.provider);
-  // Both dots are the session's own mark answering "has this moved since you
-  // last had it open?" — so opening the conversation puts them out. See
+  // The mark is the session's own answer to "has this moved since you last had
+  // it open?" — so opening the conversation puts it out. See
   // `chats.attention.ts`.
-  const unread = isChatUnread(chat);
+  const mark = rowMark(chat);
 
   const tail = (preview.data?.messages ?? [])
     .filter((m) => m.text.trim().length > 0)
@@ -184,26 +193,22 @@ export function ChatRow({
           />
         }
       >
-        <TurnStateDot state={unattendedTurnState(chat)} />
         <span className="min-w-0 flex-1 truncate">{chat.title}</span>
-        {/* The unread dot and the delete control share the same column: the
-            dot steps aside the moment the row is hovered. */}
+        {/* The mark and the delete control share the same column: the mark
+            steps aside the moment the row is hovered. */}
         <span
           className={cn(
             "relative h-7 shrink-0 overflow-hidden transition-[width,margin] duration-160 ease-out",
-            unread
+            mark !== null
               ? "-mr-1 w-7"
               : "w-0 group-hover/row:-mr-1 group-hover/row:w-7 focus-within:-mr-1 focus-within:w-7"
           )}
         >
-          {unread && (
-            <span className="absolute inset-0 m-auto size-2 rounded-full bg-brand-500 transition-opacity duration-160 ease-out group-hover/row:opacity-0" />
-          )}
           <Button
             variant="ghost"
             size="icon-sm"
             aria-label="Delete session"
-            className="absolute inset-0 text-muted-foreground opacity-0 transition-[background,box-shadow,color,opacity] duration-160 ease-out group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100"
+            className="peer absolute inset-0 text-muted-foreground opacity-0 transition-[background,box-shadow,color,opacity] duration-160 ease-out group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100"
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -212,6 +217,13 @@ export function ChatRow({
           >
             <IconX className="size-3.5" />
           </Button>
+          {/* After the button in the markup so it can step aside for a
+              keyboard-focused one, and out of the way of its pointer. */}
+          {mark !== null && (
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center transition-opacity duration-160 ease-out group-hover/row:opacity-0 peer-focus-visible:opacity-0">
+              <RowMarkDot mark={mark} />
+            </span>
+          )}
         </span>
       </PreviewCardTrigger>
       <PreviewCardContent side="right" align="start" className="w-80 gap-2 p-3">
@@ -244,7 +256,10 @@ export function ChatRow({
               several git roots that is the part worth naming, so the root is
               shown whenever it isn't just the project over again. */}
           <span className="ml-auto flex min-w-0 items-center gap-1.5">
-            <IconFolder className="size-3.5 shrink-0" />
+            <ProjectAvatar
+              name={chat.origin.projectName}
+              className="size-3.5 rounded-[3px] text-[7px]"
+            />
             <span className="truncate" title={chat.origin.repoPath}>
               {chat.origin.repoName === chat.origin.projectName
                 ? chat.origin.projectName

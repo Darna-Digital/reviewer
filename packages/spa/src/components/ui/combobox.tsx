@@ -2,6 +2,7 @@ import { Combobox as ComboboxPrimitive } from "@base-ui/react/combobox";
 import { IconCheck, IconSearch, IconSelector } from "@tabler/icons-react";
 
 import { cn } from "@/lib/utils";
+import { HIDDEN_WITH_ANCHOR } from "@/components/ui/anchored-popup";
 import {
   ELEVATION,
   POPUP_SHADOW,
@@ -67,7 +68,7 @@ function ComboboxContent({
   return (
     <ComboboxPrimitive.Portal>
       <ComboboxPrimitive.Positioner
-        className="isolate z-50 outline-none"
+        className={cn("isolate z-50 outline-none", HIDDEN_WITH_ANCHOR)}
         sideOffset={sideOffset}
         align={align}
         side={side}

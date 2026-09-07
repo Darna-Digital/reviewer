@@ -1200,6 +1200,9 @@ export function CodeWorkspace() {
       actions={mode === "review" ? undefined : fileActions}
       onError={(message) => toast.error(message)}
       onShowHistory={showFileHistory}
+      onDiscardPaths={
+        mode === "commit" ? (paths) => void git.discard(paths) : undefined
+      }
       projectPath={workspace.data?.project ?? null}
       footer={
         mode === "commit" && changedFiles.length > 0 ? (

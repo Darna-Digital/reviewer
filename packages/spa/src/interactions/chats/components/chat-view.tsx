@@ -123,7 +123,7 @@ export function ChatView({ chatId }: { chatId: string }) {
             }
           />
         </div>
-        <SessionContextBar chat={chat} />
+        <SessionContextBar />
       </div>
     </div>
   );

@@ -13,7 +13,7 @@
  * button carries a dot while anything is set: the list is never quietly
  * narrower than it looks. See `chatListFilters`.
  */
-import { IconCheck, IconFilter2 } from "@tabler/icons-react";
+import { IconCheck, IconFilter2, IconFolder } from "@tabler/icons-react";
 import { useState } from "react";
 import { RailButton } from "@/components/layout/rail";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,16 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  ROW_TOOLTIP_PLACEMENT,
+  truncatedTooltipClass,
+} from "@/components/ui/truncated-text";
+import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
+import {
   setChatFilters,
   useChatFilters,
 } from "@/interactions/chats/adapters/chat-filters.store";
@@ -33,32 +43,71 @@ import {
   type ProjectFilter,
 } from "@/interactions/chats/functions/chat-filters.functions";
 import { DATE_FILTERS, type DateFilter } from "@/lib/date-filter";
-import { useChatProjects } from "@/lib/queries";
+import { displayPath } from "@/lib/display-path";
+import { useChatProjects, useWorkspace } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import type { ChatProjectTally } from "@reviewer/core/chats";
 
 const EMPTY_PROJECTS: ReadonlyArray<ChatProjectTally> = [];
 
+const rowClass =
+  "flex h-8 items-center gap-2 rounded-md px-1.5 text-[13px] outline-none hover:bg-elevate focus-visible:bg-elevate";
+
+/**
+ * The mark a project is known by, so a row here reads the same as the project
+ * chip in the window bar; "all projects" keeps the badge's shape so the names
+ * stay in one column.
+ */
+function AllProjectsMark() {
+  return (
+    <span className="flex size-5 shrink-0 items-center justify-center rounded-sm bg-elevate text-muted-foreground">
+      <IconFolder className="size-3" />
+    </span>
+  );
+}
+
 function FilterRow({
   selected,
   onSelect,
+  tooltip,
   children,
 }: {
   selected: boolean;
   onSelect: () => void;
+  /** Shown beside the row on hover — a project's path, which no row can spell. */
+  tooltip?: string;
   children: React.ReactNode;
 }) {
+  const check = (
+    <IconCheck className={cn("size-3.5 shrink-0", !selected && "invisible")} />
+  );
+
+  if (tooltip === undefined) {
+    return (
+      <button type="button" onClick={onSelect} className={rowClass}>
+        {check}
+        {children}
+      </button>
+    );
+  }
+
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className="flex h-8 items-center gap-2 rounded-md px-1.5 text-[13px] outline-none hover:bg-elevate focus-visible:bg-elevate"
-    >
-      <IconCheck
-        className={cn("size-3.5 shrink-0", !selected && "invisible")}
-      />
-      {children}
-    </button>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button type="button" onClick={onSelect} className={rowClass} />
+        }
+      >
+        {check}
+        {children}
+      </TooltipTrigger>
+      <TooltipContent
+        {...ROW_TOOLTIP_PLACEMENT}
+        className={truncatedTooltipClass}
+      >
+        {tooltip}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -66,6 +115,7 @@ export function SessionFilters() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const projectList = useChatProjects();
+  const home = useWorkspace().data?.home;
   const projects = projectList.data ?? EMPTY_PROJECTS;
   const stored = useChatFilters();
   const project = resolveProjectFilter(projects, stored.project);
@@ -117,6 +167,7 @@ export function SessionFilters() {
                   selected={project === ALL_PROJECTS}
                   onSelect={() => choose({ project: ALL_PROJECTS })}
                 >
+                  <AllProjectsMark />
                   <span className="min-w-0 flex-1 truncate text-left">
                     All projects
                   </span>
@@ -126,11 +177,10 @@ export function SessionFilters() {
                     key={option.path}
                     selected={project === option.path}
                     onSelect={() => choose({ project: option.path })}
+                    tooltip={displayPath(option.path, home)}
                   >
-                    <span
-                      className="min-w-0 flex-1 truncate text-left"
-                      title={option.path}
-                    >
+                    <ProjectAvatar name={option.name} />
+                    <span className="min-w-0 flex-1 truncate text-left">
                       {option.name}
                     </span>
                     <span className="shrink-0 text-xs text-muted-foreground tabular-nums">

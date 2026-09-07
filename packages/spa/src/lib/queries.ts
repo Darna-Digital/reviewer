@@ -193,12 +193,29 @@ const CHAT_PAGE_SIZE = 30;
  */
 const RECENT_CHATS = 30;
 
+/**
+ * A turn that settles only reaches the list when the list is asked again. The
+ * chat's own socket asks for the session in front of the reader, but nothing
+ * asks for the ones working in the background — so a list with work in it is
+ * watched, the way the cloud runs are, and left alone the moment it settles.
+ * Without this a row that finished elsewhere keeps its orb spinning.
+ */
+const RUNNING_TURN_POLL_MS = 4_000;
+
+const hasRunningTurn = (
+  items: ReadonlyArray<{ readonly turnState: string | null }> | undefined
+): boolean => (items ?? []).some((chat) => chat.turnState === "running");
+
 export const recentChatsOptions = () =>
   api.queryOptions(
     "get",
     "/api/chats",
     { params: { query: { limit: String(RECENT_CHATS) } } },
-    OWN_DATA
+    {
+      ...OWN_DATA,
+      refetchInterval: (query) =>
+        hasRunningTurn(query.state.data?.items) ? RUNNING_TURN_POLL_MS : false,
+    }
   );
 
 /** The newest sessions — the top of the list, not all of it. */
@@ -264,6 +281,10 @@ export const useChatPages = (filters: ChatListFilters, enabled = true) => {
     // Only the server can say the list has ended: with a `WHERE` clause behind
     // it, a page can come back short and still have more after it.
     getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
+    refetchInterval: (list) =>
+      (list.state.data?.pages ?? []).some((page) => hasRunningTurn(page?.items))
+        ? RUNNING_TURN_POLL_MS
+        : false,
   });
 
   const sessions = useMemo(

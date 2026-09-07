@@ -1,4 +1,5 @@
 import {
+  IconArrowBackUp,
   IconClipboard,
   IconClipboardCopy,
   IconClipboardText,
@@ -26,6 +27,7 @@ import {
   TREE_MENU_ITEM,
   TREE_MENU_PANEL,
 } from "@/components/tree/new-entry-submenu";
+import { confirm } from "@/components/ui/alerts";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { droppedFiles } from "@/interactions/file-actions/adapters/dropped-files.adapter";
 import {
@@ -60,6 +62,13 @@ interface FileSidebarProps {
   onRenamePath?: (from: string, to: string) => Promise<void>;
   /** Open the bottom dock on this path's commit history. */
   onShowHistory?: (path: string) => void;
+  /**
+   * Revert the given paths' working-tree changes. Only wired where the tree
+   * lists the working copy's own changes; absent means no discard row. The
+   * menu confirms before calling, and a folder arrives already spread into the
+   * changed files under it.
+   */
+  onDiscardPaths?: (paths: ReadonlyArray<string>) => void;
   onError?: (message: string) => void;
   /** The open project folder, for the absolute path the menu copies. */
   projectPath?: string | null;
@@ -215,6 +224,7 @@ export function FileSidebar({
   onDeletePaths,
   onRenamePath,
   onShowHistory,
+  onDiscardPaths,
   onError,
   projectPath,
   loading = false,
@@ -619,11 +629,45 @@ export function FileSidebar({
     );
   };
 
+  // What a row would revert: the file itself, or every changed file the folder
+  // holds — a folder is handed over spread out, so the new files under it are
+  // dropped too rather than left behind by a `git checkout` of the directory.
+  const changedUnder = (item: TreeItem): ReadonlyArray<string> => {
+    const path = withoutTrailingSlash(item.path);
+    if (item.kind === "file")
+      return gitStatus.some((entry) => entry.path === path) ? [path] : [];
+    const prefix = `${path}/`;
+    return gitStatus
+      .filter((entry) => entry.path.startsWith(prefix))
+      .map((entry) => entry.path);
+  };
+
+  const discardChanges = async (item: TreeItem) => {
+    const changed = changedUnder(item);
+    if (changed.length === 0) return;
+    const name = withoutTrailingSlash(item.path);
+    const files = `${changed.length} ${changed.length === 1 ? "file" : "files"}`;
+    const ok = await confirm({
+      title:
+        item.kind === "file"
+          ? `Discard all changes in ${name}?`
+          : `Discard changes in ${files} under ${name}?`,
+      description:
+        item.kind === "file"
+          ? "This reverts the file to the last commit and cannot be undone."
+          : "This reverts them to the last commit and cannot be undone.",
+      confirmLabel: "Discard",
+      destructive: true,
+    });
+    if (ok) onDiscardPaths?.(changed);
+  };
+
   const hasMenu =
     actions !== undefined ||
     onDeletePaths !== undefined ||
     onRenamePath !== undefined ||
-    onShowHistory !== undefined;
+    onShowHistory !== undefined ||
+    onDiscardPaths !== undefined;
   const renderContextMenu = hasMenu
     ? (
         item: TreeItem,
@@ -635,7 +679,11 @@ export function FileSidebar({
           Icon: MenuIcon,
           label: string,
           run: () => void,
-          options?: { readonly focusMoves?: boolean; readonly off?: boolean }
+          options?: {
+            readonly focusMoves?: boolean;
+            readonly off?: boolean;
+            readonly destructive?: boolean;
+          }
         ) => (
           <button
             key={label}
@@ -643,7 +691,7 @@ export function FileSidebar({
             disabled={options?.off === true}
             className={cn(
               TREE_MENU_ITEM,
-              label === "Delete" && "text-destructive"
+              options?.destructive === true && "text-destructive"
             )}
             onClick={() => {
               context.close(
@@ -715,6 +763,14 @@ export function FileSidebar({
               entry(IconHistory, "Show history", () =>
                 onShowHistory(item.path)
               )}
+            {onDiscardPaths !== undefined &&
+              changedUnder(item).length > 0 &&
+              entry(
+                IconArrowBackUp,
+                "Discard changes",
+                () => void discardChanges(item),
+                { destructive: true }
+              )}
             {(onRenamePath !== undefined || onDeletePaths !== undefined) &&
               separator("edit")}
             {onRenamePath !== undefined &&
@@ -725,7 +781,9 @@ export function FileSidebar({
                 { focusMoves: true }
               )}
             {onDeletePaths !== undefined &&
-              entry(IconTrash, "Delete", () => void onDeletePaths([item]))}
+              entry(IconTrash, "Delete", () => void onDeletePaths([item]), {
+                destructive: true,
+              })}
           </div>
         );
       }

@@ -2,17 +2,14 @@
  * The strip tucked under the composer, naming where the session will land, read
  * outside in: the project it belongs to, then the branch it starts from.
  *
- * A session that already exists answers the branch as a fact. The branch it is
- * on is the one it was started on, which is not necessarily the one this window
- * happens to be showing — so the chip stops being a switcher and simply says
- * so.
+ * The branch chip stays a live switcher once a session exists — a running
+ * session is no reason to lock the window out of its own git surface.
  *
  * It wires itself from the repo queries instead of taking a dozen props, since
  * the switcher wants its whole git surface and the composer has no reason to
  * carry it.
  */
 import { useNavigate } from "@tanstack/react-router";
-import { IconGitBranch } from "@tabler/icons-react";
 import { useState } from "react";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
@@ -26,23 +23,8 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
-import type { Chat } from "@reviewer/core/chats";
 
-/** A fact about a session, in the shape of the control it stands in for. */
-const PlaceChip = ({
-  icon: Icon,
-  label,
-}: {
-  icon: typeof IconGitBranch;
-  label: string;
-}) => (
-  <span className="flex max-w-48 shrink-0 items-center gap-2 px-2 py-1.5 text-sm">
-    <Icon className="size-3.5 shrink-0 text-muted-foreground" />
-    <span className="truncate">{label}</span>
-  </span>
-);
-
-export function SessionContextBar({ chat }: { chat?: Chat }) {
+export function SessionContextBar() {
   const navigate = useNavigate();
   const repo = useRepo();
   const workspace = useWorkspace();
@@ -66,38 +48,30 @@ export function SessionContextBar({ chat }: { chat?: Chat }) {
         onOpenChange={setProjectPickerOpen}
         side="top"
       />
-      {chat === undefined ? (
-        <BranchSwitcher
-          current={current?.currentBranch ?? null}
-          branches={branches.data ?? []}
-          remoteBranches={remoteBranches.data ?? []}
-          busy={false}
-          onCheckout={(b) => void git.checkout(b)}
-          onCheckoutAndUpdate={(b) => void git.checkoutAndUpdate(b)}
-          onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
-          onCompare={(base, head) =>
-            void navigate({
-              to: "/modes/code/browse/range",
-              search: { base, head },
-            })
-          }
-          onMerge={(b) => void git.merge(b)}
-          onRebase={(o) => void git.rebase(o)}
-          onRenameBranch={(from, to) => void git.renameBranch(from, to)}
-          onDeleteBranch={(name) => void git.deleteBranch(name)}
-          repos={projectBranchList.data?.repos}
-          currentRepo={activeRepo(
-            workspace.data ?? { repos: [], current: null }
-          )}
-          onFollowRepo={followRepo}
-          onFetch={() => void git.fetch()}
-          onPush={() => void git.push()}
-        />
-      ) : (
-        chat.branch.length > 0 && (
-          <PlaceChip icon={IconGitBranch} label={chat.branch} />
-        )
-      )}
+      <BranchSwitcher
+        current={current?.currentBranch ?? null}
+        branches={branches.data ?? []}
+        remoteBranches={remoteBranches.data ?? []}
+        busy={false}
+        onCheckout={(b) => void git.checkout(b)}
+        onCheckoutAndUpdate={(b) => void git.checkoutAndUpdate(b)}
+        onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
+        onCompare={(base, head) =>
+          void navigate({
+            to: "/modes/code/browse/range",
+            search: { base, head },
+          })
+        }
+        onMerge={(b) => void git.merge(b)}
+        onRebase={(o) => void git.rebase(o)}
+        onRenameBranch={(from, to) => void git.renameBranch(from, to)}
+        onDeleteBranch={(name) => void git.deleteBranch(name)}
+        repos={projectBranchList.data?.repos}
+        currentRepo={activeRepo(workspace.data ?? { repos: [], current: null })}
+        onFollowRepo={followRepo}
+        onFetch={() => void git.fetch()}
+        onPush={() => void git.push()}
+      />
     </div>
   );
 }
