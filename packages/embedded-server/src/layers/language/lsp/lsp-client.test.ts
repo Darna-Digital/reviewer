@@ -104,6 +104,71 @@ process.stdin.on("data", (chunk) => {
 })
 `;
 
+/**
+ * A server that indexes before it can answer, the way ruby-lsp and
+ * rust-analyzer do: it announces the work through `window/workDoneProgress`
+ * a beat after the handshake, answers `textDocument/definition` with nothing
+ * until that work ends, and answers properly afterwards.
+ */
+const INDEXING_SERVER = String.raw`
+let buffer = Buffer.alloc(0)
+const send = (message) => {
+  const body = Buffer.from(JSON.stringify(message), "utf8")
+  process.stdout.write("Content-Length: " + body.length + "\r\n\r\n")
+  process.stdout.write(body)
+}
+const RANGE = { start: { line: 0, character: 6 }, end: { line: 0, character: 14 } }
+let root = ""
+let indexed = false
+
+const handle = (message) => {
+  const { id, method, params } = message
+  if (method === "initialize") {
+    root = params.rootUri
+    send({ jsonrpc: "2.0", id, result: { capabilities: { definitionProvider: true } } })
+    // A beat later, as a real server does: the client can already have asked.
+    setTimeout(() => {
+      send({ jsonrpc: "2.0", id: 9002, method: "window/workDoneProgress/create", params: { token: "indexing" } })
+      send({ jsonrpc: "2.0", method: "$/progress", params: { token: "indexing", value: { kind: "begin", title: "indexing" } } })
+    }, 20)
+    setTimeout(() => {
+      indexed = true
+      send({ jsonrpc: "2.0", method: "$/progress", params: { token: "indexing", value: { kind: "end" } } })
+    }, 250)
+    return
+  }
+  if (method === "textDocument/definition") {
+    send({
+      jsonrpc: "2.0",
+      id,
+      result: indexed ? [{ uri: root + "/src/a.txt", range: RANGE }] : [],
+    })
+    return
+  }
+  if (method === "shutdown") {
+    send({ jsonrpc: "2.0", id, result: null })
+    return
+  }
+  if (method === "exit") process.exit(0)
+  if (id !== undefined) send({ jsonrpc: "2.0", id, result: null })
+}
+
+process.stdin.on("data", (chunk) => {
+  buffer = Buffer.concat([buffer, chunk])
+  for (;;) {
+    const headerEnd = buffer.indexOf("\r\n\r\n")
+    if (headerEnd === -1) return
+    const header = buffer.subarray(0, headerEnd).toString("ascii")
+    const length = Number(/content-length: *(\d+)/i.exec(header)[1])
+    const bodyStart = headerEnd + 4
+    if (buffer.length < bodyStart + length) return
+    const body = buffer.subarray(bodyStart, bodyStart + length).toString("utf8")
+    buffer = buffer.subarray(bodyStart + length)
+    handle(JSON.parse(body))
+  }
+})
+`;
+
 const A_TXT = "const greeting = 1\n// BROKEN marker\n";
 const B_TXT = "line0\nline1\nline2\nline3\n  greeting used here\n";
 
@@ -115,6 +180,7 @@ const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect);
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "reviewer-lsp-"));
   writeFileSync(join(root, "server.mjs"), FAKE_SERVER);
+  writeFileSync(join(root, "indexing.mjs"), INDEXING_SERVER);
   mkdirSync(join(root, "src"));
   writeFileSync(join(root, "src/a.txt"), A_TXT);
   writeFileSync(join(root, "src/b.txt"), B_TXT);
@@ -140,10 +206,21 @@ describe("languageIdOf", () => {
   it("maps known extensions", () => {
     expect(languageIdOf("src/main.rs")).toBe("rust");
     expect(languageIdOf("src/App.tsx")).toBe("typescriptreact");
+    expect(languageIdOf("app/models/user.rb")).toBe("ruby");
+    expect(languageIdOf("app/views/users/index.html.erb")).toBe("erb");
+    expect(languageIdOf("lib/tasks/db.rake")).toBe("ruby");
+  });
+  it("names the files a language owns outright", () => {
+    // No extension to go by, and a server told "plaintext" parses nothing.
+    expect(languageIdOf("Gemfile")).toBe("ruby");
+    expect(languageIdOf("api/Rakefile")).toBe("ruby");
+    expect(languageIdOf("Makefile")).toBe("makefile");
   });
   it("falls back to the extension itself", () => {
     expect(languageIdOf("a.zig")).toBe("zig");
-    expect(languageIdOf("Makefile")).toBe("plaintext");
+    expect(languageIdOf("LICENSE")).toBe("plaintext");
+    // A dotfile has no extension, so it is not a ".gitignore" file type.
+    expect(languageIdOf(".gitignore")).toBe("plaintext");
   });
 });
 
@@ -221,6 +298,45 @@ describe("connect", () => {
     const connection = await connect(config, root);
     await connection.dispose();
     expect(connection.alive()).toBe(false);
+  });
+});
+
+describe("a server that is still indexing", () => {
+  const indexingConfig = (): LspServerConfig => ({
+    ...config,
+    id: "indexing",
+    command: process.execPath,
+    args: [join(root, "indexing.mjs")],
+  });
+
+  it("is waited for, so the first question is not answered from an empty index", async () => {
+    const result = await run(
+      makeLspProvider(indexingConfig()).definition({
+        root,
+        path: "src/a.txt",
+        contents: null,
+        position: { line: 0, character: 8 },
+      })
+    );
+    // Without the wait this is the empty answer the server gives while it
+    // works — the "go to definition does nothing if you are quick" bug.
+    expect(result.targets).toHaveLength(1);
+    expect(result.targets[0]?.location.path).toBe("src/a.txt");
+  });
+
+  it("does not hold up a server that announces no work of its own", async () => {
+    const started = Date.now();
+    await run(
+      makeLspProvider(config).definition({
+        root,
+        path: "src/a.txt",
+        contents: null,
+        position: { line: 0, character: 8 },
+      })
+    );
+    // The grace period is a fifth of a second; the window it sits inside is
+    // measured in seconds, and waiting it out would be the bug.
+    expect(Date.now() - started).toBeLessThan(1_500);
   });
 });
 

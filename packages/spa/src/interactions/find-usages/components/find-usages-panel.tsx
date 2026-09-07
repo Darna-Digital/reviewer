@@ -178,7 +178,7 @@ export function FindUsagesPanel() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <PreviewHeader location={selectedLocation} />
+        <PreviewHeader location={selectedLocation} onOpen={open} />
         <div className="min-h-0 flex-1 overflow-hidden">
           <UsagePreview
             location={selectedLocation}
@@ -327,8 +327,21 @@ function ResultsHeader({
   );
 }
 
-/** The preview's own crumb: which file is on the right, and at which line. */
-function PreviewHeader({ location }: { readonly location: Location | null }) {
+/**
+ * The preview's own crumb: which file is on the right, and at which line.
+ *
+ * It is also the way out of the search. The pane is for reading around a
+ * result; when the reading is done the next thing wanted is the file itself,
+ * and the name of it — sitting right there over the code — is what a hand
+ * reaches for. Opening it lands on the same line the preview is showing.
+ */
+function PreviewHeader({
+  location,
+  onOpen,
+}: {
+  readonly location: Location | null;
+  readonly onOpen: (location: Location) => void;
+}) {
   return (
     <div
       className={cn(
@@ -339,9 +352,14 @@ function PreviewHeader({ location }: { readonly location: Location | null }) {
       {location === null ? (
         "Preview"
       ) : (
-        <span className="min-w-0 truncate font-mono">
+        <button
+          type="button"
+          className="min-w-0 cursor-pointer truncate font-mono hover:underline hover:underline-offset-2"
+          onClick={() => onOpen(location)}
+          title="Open this file"
+        >
           {location.path}:{location.range.start.line + 1}
-        </span>
+        </button>
       )}
     </div>
   );

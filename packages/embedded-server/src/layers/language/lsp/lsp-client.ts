@@ -13,6 +13,7 @@
  * rarely enough that the extra work does not matter.
  */
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { loginEnvironment } from "../../shell/login-environment.ts";
 import { encodeMessage, makeMessageDecoder } from "./lsp-codec.ts";
 import type { LspServerConfig } from "./lsp-config.ts";
 import { pathToUri } from "./lsp-mapping.ts";
@@ -21,6 +22,27 @@ import { pathToUri } from "./lsp-mapping.ts";
 const REQUEST_TIMEOUT_MS = 15_000;
 /** How long to wait for pushed diagnostics after a document opens. */
 export const PUBLISH_TIMEOUT_MS = 3_000;
+/**
+ * How long a freshly started server's work is waited on before it is asked
+ * anything.
+ *
+ * A language server that is still building its index answers "nothing found"
+ * rather than waiting — ruby-lsp does, and so does every server that indexes in
+ * the background — so a go-to-definition in the first second of a file being
+ * open silently fails and has to be repeated. Servers announce that work
+ * through `window/workDoneProgress`, so the window is only ever paid where a
+ * server said it had something to do, and only until it stops saying so or this
+ * runs out. It is measured from the connection, not from the request: once a
+ * server is warm, nothing waits for anything again.
+ */
+const WARMUP_MS = 2_500;
+/**
+ * How long a fresh server is given to say it has work to do. It announces that
+ * in the moments after `initialize` is answered — a beat later than the client
+ * can ask its first question — so a server that has said nothing yet is waited
+ * on this long before it is taken at its word.
+ */
+const ANNOUNCE_MS = 200;
 /** Grace period between `exit` and killing the process. */
 const SHUTDOWN_GRACE_MS = 1_000;
 /** Stderr kept for error messages, in lines. */
@@ -47,6 +69,12 @@ export interface LspConnection {
     absolutePath: string,
     text: string
   ) => { readonly uri: string; readonly changed: boolean };
+  /**
+   * Wait, briefly, for work the server announced when it started — see
+   * {@link WARMUP_MS}. Resolves at once for a server that announced none, and
+   * for every request once the connection is warm.
+   */
+  readonly warmup: () => Promise<void>;
   readonly diagnosticsFor: (uri: string) => ReadonlyArray<unknown>;
   /** Resolve when the server publishes diagnostics for `uri`, or on timeout. */
   readonly awaitDiagnostics: (
@@ -65,6 +93,8 @@ const LANGUAGE_IDS: Readonly<Record<string, string>> = {
   ".cs": "csharp",
   ".css": "css",
   ".cts": "typescript",
+  ".erb": "erb",
+  ".gemspec": "ruby",
   ".go": "go",
   ".h": "c",
   ".hpp": "cpp",
@@ -78,8 +108,10 @@ const LANGUAGE_IDS: Readonly<Record<string, string>> = {
   ".mts": "typescript",
   ".php": "php",
   ".py": "python",
+  ".rake": "ruby",
   ".rb": "ruby",
   ".rs": "rust",
+  ".ru": "ruby",
   ".scala": "scala",
   ".sh": "shellscript",
   ".swift": "swift",
@@ -89,11 +121,22 @@ const LANGUAGE_IDS: Readonly<Record<string, string>> = {
   ".yml": "yaml",
 };
 
+/** Files a language owns outright, which carry no extension to go by. */
+const BASENAME_LANGUAGE_IDS: Readonly<Record<string, string>> = {
+  dockerfile: "dockerfile",
+  gemfile: "ruby",
+  makefile: "makefile",
+  rakefile: "ruby",
+};
+
 /** LSP `languageId` for a path — the extension itself when unmapped. */
 export const languageIdOf = (path: string): string => {
-  const dot = path.lastIndexOf(".");
-  if (dot === -1) return "plaintext";
-  const extension = path.slice(dot).toLowerCase();
+  const name = path.slice(
+    Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\")) + 1
+  );
+  const dot = name.lastIndexOf(".");
+  if (dot <= 0) return BASENAME_LANGUAGE_IDS[name.toLowerCase()] ?? "plaintext";
+  const extension = name.slice(dot).toLowerCase();
   return LANGUAGE_IDS[extension] ?? extension.slice(1);
 };
 
@@ -122,7 +165,10 @@ export const connect = async (
   try {
     child = spawn(config.command, [...config.args], {
       cwd: root,
-      env: { ...process.env, ...config.env },
+      // The developer's environment, not this process's: finding `ruby-lsp` is
+      // only half of it — the server itself then runs `ruby`, and `bundle exec`
+      // needs the version manager that put both of them there.
+      env: { ...process.env, ...loginEnvironment(), ...config.env },
       stdio: ["pipe", "pipe", "pipe"],
     });
   } catch (error) {
@@ -138,6 +184,10 @@ export const connect = async (
     Set<(items: ReadonlyArray<unknown>) => void>
   >();
   const openDocuments = new Map<string, { version: number; text: string }>();
+  /** Work-done progress the server has begun and not yet ended. */
+  const working = new Set<string>();
+  /** Woken whenever that set changes, so a warm-up can stop waiting. */
+  const progressWaiters = new Set<() => void>();
   const stderr: Array<string> = [];
   const decoder = makeMessageDecoder();
 
@@ -155,6 +205,9 @@ export const connect = async (
       for (const waiter of waiters) waiter([]);
     }
     publishWaiters.clear();
+    working.clear();
+    for (const waiter of progressWaiters) waiter();
+    progressWaiters.clear();
   };
 
   const send = (message: unknown) => {
@@ -192,6 +245,20 @@ export const connect = async (
     send({ jsonrpc: "2.0", method, params });
   };
 
+  /** Note that the server has begun, or finished, a piece of announced work. */
+  const trackProgress = (params: unknown, begun: boolean) => {
+    if (typeof params !== "object" || params === null) return;
+    const token = (params as { token?: unknown }).token;
+    if (typeof token !== "string" && typeof token !== "number") return;
+    const key = String(token);
+    const before = working.size;
+    if (begun) working.add(key);
+    else working.delete(key);
+    if (working.size === before) return;
+    for (const waiter of progressWaiters) waiter();
+    progressWaiters.clear();
+  };
+
   /** Answer the few server-to-client requests a client must not ignore. */
   const respondToServer = (id: unknown, method: string) => {
     // `workspace/configuration` expects one entry per requested section; an
@@ -215,6 +282,40 @@ export const connect = async (
     send({ jsonrpc: "2.0", id, result });
   };
 
+  /** The window a fresh connection's answers are waited for; see {@link WARMUP_MS}. */
+  let warmUntil = 0;
+
+  /** Resolve when the announced work changes, or after `ms`. */
+  const progressChanged = (ms: number) =>
+    new Promise<void>((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        progressWaiters.delete(finish);
+        resolve();
+      };
+      const timer = setTimeout(finish, ms);
+      timer.unref?.();
+      progressWaiters.add(finish);
+    });
+
+  const warmup = async (): Promise<void> => {
+    if (working.size === 0) {
+      const grace = Math.min(ANNOUNCE_MS, warmUntil - Date.now());
+      if (grace <= 0) return;
+      await progressChanged(grace);
+      // Still nothing announced: the server has nothing to wait for.
+      if (working.size === 0) return;
+    }
+    while (alive && working.size > 0) {
+      const remaining = warmUntil - Date.now();
+      if (remaining <= 0) return;
+      await progressChanged(remaining);
+    }
+  };
+
   const handle = (message: unknown) => {
     if (typeof message !== "object" || message === null) return;
     const record = message as Record<string, unknown>;
@@ -223,7 +324,26 @@ export const connect = async (
 
     if (typeof method === "string") {
       if (id !== undefined) {
+        // A server asks before it reports; the token is what the reports carry.
+        if (method === "window/workDoneProgress/create") {
+          trackProgress(record["params"], true);
+        }
         respondToServer(id, method);
+        return;
+      }
+      if (method === "$/progress") {
+        const params = record["params"];
+        const value =
+          typeof params === "object" && params !== null
+            ? (params as { value?: unknown }).value
+            : undefined;
+        const kind =
+          typeof value === "object" && value !== null
+            ? (value as { kind?: unknown }).kind
+            : undefined;
+        // "report" says the same work is still going, which is already known.
+        if (kind === "begin") trackProgress(params, true);
+        else if (kind === "end") trackProgress(params, false);
         return;
       }
       if (method === "textDocument/publishDiagnostics") {
@@ -292,6 +412,9 @@ export const connect = async (
   })) as { capabilities?: unknown } | null;
 
   notify("initialized", {});
+  // From here, not from the spawn: a server that spends a second setting itself
+  // up before answering `initialize` has not started its real work yet.
+  warmUntil = Date.now() + WARMUP_MS;
 
   const capabilities =
     initializeResult !== null &&
@@ -370,6 +493,7 @@ export const connect = async (
     request,
     notify,
     syncDocument,
+    warmup,
     diagnosticsFor: (uri) => diagnostics.get(uri) ?? [],
     awaitDiagnostics,
     dispose,

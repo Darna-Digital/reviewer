@@ -419,9 +419,63 @@ describe("what Vim mode never takes", () => {
     expect(chord("k", { ctrlKey: true }).handled).toBe(false);
   });
 
-  it("leaves the arrow keys to the editor", () => {
-    expect(chord("ArrowLeft", {}).handled).toBe(false);
-    expect(chord("Home", {}).handled).toBe(false);
+  it("leaves keys that spell no motion to the editor", () => {
+    expect(chord("PageDown", {}).handled).toBe(false);
+    expect(chord("Tab", {}).handled).toBe(false);
+    expect(chord("F5", {}).handled).toBe(false);
+  });
+});
+
+describe("the navigation keys", () => {
+  it("moves with the arrows as it does with hjkl", () => {
+    expect(type(open(), ["ArrowRight", "ArrowRight"]).caret).toEqual({
+      line: 0,
+      character: 2,
+    });
+    expect(type(open(), ["ArrowDown", "ArrowDown"]).caret.line).toBe(2);
+    expect(type(open(), ["ArrowDown", "ArrowUp"]).caret.line).toBe(0);
+    expect(type(open(), ["ArrowLeft"]).caret.character).toBe(0);
+    expect(type(open(), ["ArrowDown", "Home"]).caret).toEqual({
+      line: 1,
+      character: 0,
+    });
+    expect(type(open(), ["End"]).caret.character).toBe(
+      "const greeting = 'hello';".length - 1
+    );
+  });
+
+  it("takes a count, and an operator takes an arrow as its motion", () => {
+    expect(type(open(), ["3", "ArrowRight"]).caret.character).toBe(3);
+    // `d→` is `dl`: one character gone, the rest of the line where it was.
+    expect(type(open(), ["d", "ArrowRight"]).text.split("\n")[0]).toBe(
+      "onst greeting = 'hello';"
+    );
+    // `d↓` is `dj`: this line and the one below it, taken whole.
+    expect(type(open(), ["d", "ArrowDown"]).text.split("\n")[0]).toBe("");
+  });
+
+  it("keeps visual mode rather than collapsing it", () => {
+    const selecting = type(open(), ["v", "ArrowDown", "ArrowRight"]);
+    expect(selecting.state.mode).toBe("visual");
+    expect(selecting.state.anchor).toEqual({ line: 0, character: 0 });
+    expect(selecting.caret).toEqual({ line: 1, character: 1 });
+    expect(selecting.handled).toBe(true);
+  });
+
+  it("does not let an arrow become the character `f` is waiting for", () => {
+    const after = type(open(), ["f", "ArrowRight"]);
+    // The half-typed command is dropped, and the caret has not gone looking
+    // for an "l" — but the keystroke is still Vim's, not the editor's.
+    expect(after.state.pending).toBe("");
+    expect(after.caret).toEqual({ line: 0, character: 0 });
+    expect(after.handled).toBe(true);
+    expect(type(open(), ["d", "f", "ArrowLeft"]).text).toBe(FILE);
+  });
+
+  it("still leaves the arrows to the editor while inserting", () => {
+    const inserting = type(open(), ["i", "ArrowRight"]);
+    expect(inserting.handled).toBe(false);
+    expect(inserting.state.mode).toBe("insert");
   });
 });
 

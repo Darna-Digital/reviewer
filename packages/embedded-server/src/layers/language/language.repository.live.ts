@@ -12,7 +12,9 @@
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import {
+  mapMarkdownLinks,
   selectProvider,
+  splitLinkTarget,
   type CodeActionItem,
   type CodeActionsResult,
   type Diagnostic,
@@ -68,8 +70,19 @@ const namedFromProject = (prefix: string) => {
     ...value,
     path: prefixProjectPath(prefix, value.path),
   });
+  /**
+   * Hover documentation is markdown, and a server may have written links to
+   * files into it (see `language.links`). They are paths like any other, so
+   * they are renamed like any other.
+   */
+  const documentation = (markdown: string): string =>
+    mapMarkdownLinks(markdown, (target) => {
+      const { path: file, fragment } = splitLinkTarget(target);
+      return `${prefixProjectPath(prefix, file)}${fragment}`;
+    });
   return {
     edits,
+    documentation,
     /** Anything anchored to one place — a definition target, a reference. */
     located: <A extends { readonly location: Location }>(value: A): A => ({
       ...value,
@@ -269,7 +282,10 @@ export const makeLanguageRepository = (
           contents,
           (provider, request) => provider.hover(request),
           { providerId: null, range: null, contents: "" },
-          (result) => result
+          (result, naming) => ({
+            ...result,
+            contents: naming.documentation(result.contents),
+          })
         ),
 
       completions: (path, position, prefix, contents) =>

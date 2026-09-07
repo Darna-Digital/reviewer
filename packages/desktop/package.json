@@ -2,7 +2,7 @@
   "name": "@reviewer/desktop",
   "productName": "Reviewer",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "reviewer desktop — Electron shell around the client",
   "main": "dist/main.js",
   "dependencies": {

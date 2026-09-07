@@ -55,8 +55,18 @@ import {
 
 /** How long the pointer must rest on a token before documentation is fetched. */
 const HOVER_DELAY_MS = 350;
-/** Grace period so the pointer can travel from the token into the card. */
-const HOVER_CLOSE_MS = 150;
+/**
+ * Grace period so the pointer can travel from the token into the card.
+ *
+ * Long enough for a hand rather than a cursor jump. The card hangs a few pixels
+ * below the token, and crossing that gap — reading what is in the card on the
+ * way, pausing over the code between them — took longer than the old sixth of a
+ * second, so a card carrying a link (ruby-lsp's hover is a list of definitions)
+ * was gone before it could be clicked. Leaving is measured from the last token
+ * the pointer was on, so a card that has been reached stays until the pointer
+ * leaves *it*.
+ */
+const HOVER_CLOSE_MS = 500;
 
 /** Annotation payload this layer contributes to a view's line annotations. */
 export interface DiagnosticsAnnotationMeta {
@@ -127,6 +137,15 @@ export interface LanguageLayerOptions {
    * visual modes, where a keystroke is a command rather than a word being typed.
    */
   completionsEnabled?: boolean;
+  /**
+   * Whether resting the pointer on a token should open documentation. Off while
+   * a comment composer is open on this file: the composer sits under the line
+   * the comment is about, which is exactly where the card would be drawn, and
+   * documentation nobody asked for covering the box being typed into is the
+   * one card that is purely in the way. Deliberate cards — a modifier-click, a
+   * choice of definitions — are unaffected: those were asked for.
+   */
+  hoverEnabled?: boolean;
   /** Resolves the element the rendered code lives under. */
   getContainer: () => ParentNode | null;
   /** Apply edits landing in files other than the open one. */
@@ -181,6 +200,7 @@ export function useLanguageLayer({
   subscribe,
   isFocused,
   completionsEnabled = true,
+  hoverEnabled = true,
   getContainer,
   onApplyForeignEdits,
   contents = null,
@@ -303,6 +323,7 @@ export function useLanguageLayer({
 
   const onTokenEnter = useCallback(
     (props: TokenEventBase) => {
+      if (!hoverEnabled) return;
       const token = spanOf(props);
       if (token === null) return;
       clearTimers();
@@ -335,7 +356,7 @@ export function useLanguageLayer({
           });
       }, HOVER_DELAY_MS);
     },
-    [actions, clearTimers, path]
+    [actions, clearTimers, hoverEnabled, path]
   );
 
   const onTokenLeave = useCallback(() => {
@@ -346,6 +367,15 @@ export function useLanguageLayer({
       setCard((current) => (current?.kind === "hover" ? null : current));
     }, HOVER_CLOSE_MS);
   }, []);
+
+  // A composer opening under the pointer would otherwise leave the card that
+  // was already up sitting on top of it.
+  useEffect(() => {
+    if (hoverEnabled) return;
+    clearTimers();
+    hoverToken.current = null;
+    setCard((current) => (current?.kind === "hover" ? null : current));
+  }, [clearTimers, hoverEnabled]);
 
   const onTokenClick = useCallback(
     (props: TokenEventBase, event: MouseEvent) => {
@@ -473,7 +503,7 @@ export function useLanguageLayer({
         card.contents === null ? (
           <CardSpinner label="Reading…" />
         ) : (
-          <HoverDocumentation contents={card.contents} />
+          <HoverDocumentation contents={card.contents} onOpen={openFromCard} />
         )
       ) : card.outcome.kind === "choose" ? (
         <TargetChoice targets={card.outcome.targets} onOpen={openFromCard} />
