@@ -93,8 +93,7 @@ afterEach(() => {
 });
 
 /** Whether the card is on screen — it is rendered in a portal. */
-const cardIsOpen = () =>
-  document.querySelector("[data-symbol-card]") !== null;
+const cardIsOpen = () => document.querySelector("[data-symbol-card]") !== null;
 
 const advance = async (ms: number) => {
   await act(async () => {
