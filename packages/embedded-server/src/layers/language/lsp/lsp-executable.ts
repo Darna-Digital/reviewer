@@ -8,6 +8,7 @@
  */
 import { accessSync, constants } from "node:fs";
 import { posix, win32 } from "node:path";
+import { loginEnvironment } from "../../shell/login-environment.ts";
 
 const isExecutable = (path: string): boolean => {
   try {
@@ -27,6 +28,11 @@ const executableSuffixes = (env: NodeJS.ProcessEnv, platform: string) =>
     : [""];
 
 export interface FindExecutableOptions {
+  /**
+   * Where to look. Defaults to the developer's own environment rather than this
+   * process's: a language server installed by Homebrew or behind a version
+   * manager's shims is not on the PATH a GUI-launched app inherits.
+   */
   readonly env?: NodeJS.ProcessEnv;
   readonly platform?: string;
   readonly cwd?: string;
@@ -43,7 +49,7 @@ export const findExecutable = (
   options: FindExecutableOptions = {}
 ): string | null => {
   const {
-    env = process.env,
+    env = loginEnvironment(),
     platform = process.platform,
     cwd = process.cwd(),
     exists = isExecutable,

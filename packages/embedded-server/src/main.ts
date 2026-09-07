@@ -58,6 +58,8 @@ import { layer as gitExecLayer } from "./layers/git/git-exec.ts";
 import { layer as gitHubClientLayer } from "./layers/github/github-client.ts";
 import { attachPtyServer } from "./layers/terminal/pty-socket.ts";
 import { layer as terminalExecLayer } from "./layers/terminal/terminal-exec.ts";
+import { resetProviders } from "./layers/language/language.providers.ts";
+import { loadLoginEnvironment } from "./layers/shell/login-environment.ts";
 import {
   layer as workspaceContextLayer,
   type InitialSelection,
@@ -187,5 +189,14 @@ const HttpLive = HttpRouter.serve(
   Layer.provide(InfraLive),
   Layer.provide(NodeHttpServer.layer(createServerWithPty, { port }))
 );
+
+/**
+ * Ask the shell for the developer's environment while the server starts, so a
+ * language server behind a version manager's shims is found — see
+ * `layers/shell/login-environment.ts`. Nothing waits for it: requests arriving
+ * first are answered from this process's own environment, and the provider
+ * lists built from it are dropped when the real one lands.
+ */
+void loadLoginEnvironment().then(resetProviders, resetProviders);
 
 NodeRuntime.runMain(Layer.launch(HttpLive));
