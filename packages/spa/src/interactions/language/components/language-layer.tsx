@@ -127,6 +127,15 @@ export interface LanguageLayerOptions {
    * visual modes, where a keystroke is a command rather than a word being typed.
    */
   completionsEnabled?: boolean;
+  /**
+   * Whether resting the pointer on a token should open documentation. Off while
+   * a comment composer is open on this file: the composer sits under the line
+   * the comment is about, which is exactly where the card would be drawn, and
+   * documentation nobody asked for covering the box being typed into is the
+   * one card that is purely in the way. Deliberate cards — a modifier-click, a
+   * choice of definitions — are unaffected: those were asked for.
+   */
+  hoverEnabled?: boolean;
   /** Resolves the element the rendered code lives under. */
   getContainer: () => ParentNode | null;
   /** Apply edits landing in files other than the open one. */
@@ -181,6 +190,7 @@ export function useLanguageLayer({
   subscribe,
   isFocused,
   completionsEnabled = true,
+  hoverEnabled = true,
   getContainer,
   onApplyForeignEdits,
   contents = null,
@@ -303,6 +313,7 @@ export function useLanguageLayer({
 
   const onTokenEnter = useCallback(
     (props: TokenEventBase) => {
+      if (!hoverEnabled) return;
       const token = spanOf(props);
       if (token === null) return;
       clearTimers();
@@ -335,7 +346,7 @@ export function useLanguageLayer({
           });
       }, HOVER_DELAY_MS);
     },
-    [actions, clearTimers, path]
+    [actions, clearTimers, hoverEnabled, path]
   );
 
   const onTokenLeave = useCallback(() => {
@@ -346,6 +357,15 @@ export function useLanguageLayer({
       setCard((current) => (current?.kind === "hover" ? null : current));
     }, HOVER_CLOSE_MS);
   }, []);
+
+  // A composer opening under the pointer would otherwise leave the card that
+  // was already up sitting on top of it.
+  useEffect(() => {
+    if (hoverEnabled) return;
+    clearTimers();
+    hoverToken.current = null;
+    setCard((current) => (current?.kind === "hover" ? null : current));
+  }, [clearTimers, hoverEnabled]);
 
   const onTokenClick = useCallback(
     (props: TokenEventBase, event: MouseEvent) => {
