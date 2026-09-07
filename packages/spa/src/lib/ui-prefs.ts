@@ -4,6 +4,16 @@
  * localStorage-backed store instead of the URL.
  */
 import { useSyncExternalStore } from "react";
+import type {
+  ChatAccess,
+  ChatEffort,
+  ChatProviderKind,
+} from "@reviewer/core/chats";
+import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignment.functions";
+import {
+  CHAT_MODES,
+  type ChatMode,
+} from "@/interactions/chats/functions/chat-mode.functions";
 import { isPreviewWindow } from "@/lib/preview-window";
 
 export type ThemePref = "light" | "dark" | "system";
@@ -14,6 +24,29 @@ export type CommitAgent = "claude" | "opencode" | "codex" | "cursor";
 /** Active tab in the shared bottom dock (git + find + services + threads). */
 export type BottomTab =
   "branches" | "history" | "find" | "services" | "threads";
+
+/**
+ * What the last session was composed with.
+ *
+ * A composer that opened on the catalog's first answer every time made the
+ * choice again on every session — and a review handed to a new chat always went
+ * to Claude, whoever you had actually been working with. So the choices are
+ * kept: the next session, started from the composer or handed a review, opens
+ * on the agent, model and mode the last one used.
+ */
+export interface LastSession {
+  /**
+   * Undefined until the choice has actually been made, which is not the same as
+   * a default: a composer that has never been touched wants whatever the
+   * catalog's own answer is that day, not last release's copy of it.
+   */
+  provider?: ChatProviderKind;
+  model?: string;
+  effort?: ChatEffort;
+  access?: ChatAccess;
+  /** Always answered — a composer is in a mode whether or not you picked it. */
+  mode: ChatMode;
+}
 
 export interface UiPrefs {
   /** The user's choice; "system" follows the OS. */
@@ -101,6 +134,8 @@ export interface UiPrefs {
   plansNotesHeight: number;
   /** Drag-resizable height of the launchpad panel, in px. */
   launchpadHeight: number;
+  /** The agent, model and mode the last session was composed with. */
+  lastSession: LastSession;
 }
 
 const STORE_KEY = "reviewer-ui";
@@ -155,6 +190,25 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   plansPaneWidth: 560,
   plansNotesHeight: 220,
   launchpadHeight: 380,
+  lastSession: { mode: "build" },
+};
+
+/**
+ * Storage holds whatever the last version of the app wrote, so a session read
+ * back out of it is filled in from the defaults and checked: an agent that is
+ * no longer assignable, or a mode that no longer exists, is not one the
+ * composer could open on.
+ */
+const readLastSession = (stored: LastSession | undefined): LastSession => {
+  const merged = { ...defaults.lastSession, ...stored };
+  return {
+    ...merged,
+    provider:
+      merged.provider !== undefined && isChatProviderKind(merged.provider)
+        ? merged.provider
+        : undefined,
+    mode: CHAT_MODES.includes(merged.mode) ? merged.mode : "build",
+  };
 };
 
 function load(): UiPrefs {
@@ -168,6 +222,7 @@ function load(): UiPrefs {
       // ignore malformed storage
     }
     if (!BOTTOM_TABS.includes(prefs.bottomTab)) prefs.bottomTab = "history";
+    prefs.lastSession = readLastSession(prefs.lastSession);
     const stored = window.localStorage.getItem(THEME_KEY);
     if (stored === "light" || stored === "dark" || stored === "system")
       prefs.theme = stored;
@@ -219,6 +274,7 @@ function persist() {
       plansPaneWidth,
       plansNotesHeight,
       launchpadHeight,
+      lastSession,
     } = state;
     window.localStorage.setItem(
       STORE_KEY,
@@ -254,6 +310,7 @@ function persist() {
         plansPaneWidth,
         plansNotesHeight,
         launchpadHeight,
+        lastSession,
       })
     );
     window.localStorage.setItem(THEME_KEY, state.theme);
@@ -298,6 +355,22 @@ export function setUiPrefs(patch: UiPrefsPatch) {
   persist();
   emit();
 }
+
+/**
+ * Keep what a session was composed with, so the next one opens on it. Patched
+ * rather than set whole: the agent is picked in one place and the mode in
+ * another, and neither knows what the other last chose.
+ */
+export function rememberSession(patch: Partial<LastSession>) {
+  const next = { ...state.lastSession, ...patch };
+  const changed = (Object.keys(next) as Array<keyof LastSession>).some(
+    (key) => next[key] !== state.lastSession[key]
+  );
+  if (changed) setUiPrefs({ lastSession: next });
+}
+
+/** The preferences as they stand, for stores that read them outside React. */
+export const readUiPrefs = (): UiPrefs => state;
 
 /** Show the bottom dock and select a tab (History / Find / Services / …). */
 export function openBottomTab(tab: BottomTab) {

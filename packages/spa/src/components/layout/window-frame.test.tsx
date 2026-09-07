@@ -14,7 +14,12 @@ vi.mock("@tanstack/react-router", async (importOriginal) => ({
     select: (state: { location: { pathname: string } }) => unknown;
   }) => select({ location: { pathname } }),
 }));
-vi.mock("@/lib/ui-prefs", () => ({ useUiPrefs: () => ({}) }));
+vi.mock("@/lib/ui-prefs", () => ({
+  useUiPrefs: () => ({}),
+  // The composer's remembered session, read by the chat-mode store on load.
+  readUiPrefs: () => ({ lastSession: { mode: "build" } }),
+  rememberSession: () => {},
+}));
 vi.mock("@/lib/queries", () => ({
   useRepo: () => ({ data: undefined }),
   // The launchpad asks which conversations have an agent working in them.

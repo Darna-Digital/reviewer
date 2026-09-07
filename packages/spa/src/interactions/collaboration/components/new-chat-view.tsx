@@ -27,7 +27,6 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
-import { DeviceSwitcher } from "@/components/layout/device-switcher";
 import { activeRepo } from "@reviewer/core/workspace";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { AgentMark } from "@/interactions/threads/components/agent-mark";
@@ -444,15 +443,10 @@ export function NewChatView() {
               : "Saved to the workspace, not this machine. Only the people you put in it will see it."}
           </p>
 
-          {/* Where the agent runs, outside in: project/runtime, then branch —
-              the same switchers as the title bar, opening upward from this bar. */}
+          {/* The branch the agent starts from — the same switcher as the
+              title bar, opening upward from this bar. */}
           {toAgent && (
             <div className="mt-1 flex h-10 items-center gap-1 rounded-xl border px-1.5">
-              <DeviceSwitcher
-                device={workspace.data?.device}
-                project={projectName}
-                side="top"
-              />
               {repo.data !== undefined && (
                 <BranchSwitcher
                   current={repo.data.currentBranch ?? null}

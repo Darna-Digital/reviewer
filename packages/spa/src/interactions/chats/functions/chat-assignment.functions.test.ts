@@ -3,7 +3,10 @@ import type { ChatModelCatalog } from "@reviewer/core/chats";
 import type { ReviewComment } from "@reviewer/core/comments";
 import type { VisualComment } from "@reviewer/core/visual-comments";
 import {
+  assignmentModel,
   buildChatAssignmentSettings,
+  buildHandoffPrompt,
+  buildHandoffTitle,
   buildReviewAssignmentPrompt,
   buildReviewAssignmentTitle,
   buildVisualAssignmentPrompt,
@@ -65,6 +68,20 @@ describe("chat assignment helpers", () => {
       effort: "high",
       access: "fullAccess",
     });
+  });
+
+  it("runs a new chat on the model asked for, but only its own agent's", () => {
+    expect(assignmentModel("codex", catalog, "gpt-5.5")).toBe("gpt-5.5");
+    // Claude's model under Codex would be a model that CLI cannot run, so the
+    // provider's own answer stands instead.
+    expect(assignmentModel("codex", catalog, "claude-opus-4-8")).toBe(
+      "gpt-5.5"
+    );
+    expect(assignmentModel("cursor", catalog, "gpt-5.5")).toBe("");
+    expect(
+      buildChatAssignmentSettings("opencode", catalog, "opencode/big-pickle")
+        .model
+    ).toBe("opencode/big-pickle");
   });
 
   it("builds review assignment title and prompt", () => {
@@ -131,6 +148,50 @@ describe("chat assignment helpers", () => {
     expect(prompt).toContain("disabled until the form is dirty");
     // The agent is pointed at the browser API rather than left to guess.
     expect(prompt).toContain("reviewer skill");
+  });
+
+  it("hands the code and the UI over as one review", () => {
+    const review: ReadonlyArray<ReviewComment> = [
+      {
+        id: "comment-1",
+        filePath: "src/a.ts",
+        side: "additions",
+        lineNumber: 12,
+        body: "Fix this",
+        author: "local",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        target: "worktree",
+        source: "local",
+      },
+    ];
+    const visual: ReadonlyArray<VisualComment> = [
+      {
+        id: "v-1",
+        url: "http://localhost:3000/settings",
+        selector: "#save",
+        elementLabel: 'button#save "Save"',
+        body: "Disabled until the form is dirty",
+        author: "you",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        screenshot: null,
+        viewport: { width: 1280, height: 800 },
+      },
+    ];
+
+    expect(buildHandoffTitle(1, 1)).toBe("Fix 2 review comments");
+    const prompt = buildHandoffPrompt(review, visual);
+    expect(prompt).toContain("src/a.ts:12 - Fix this");
+    expect(prompt).toContain("Element: #save");
+
+    // One kind on its own still reads as that kind, not as a combined review.
+    expect(buildHandoffTitle(0, 3)).toBe("Fix 3 UI comments");
+    expect(buildHandoffTitle(2, 0)).toBe("Fix 2 review comments");
+    expect(buildHandoffPrompt(review, [])).toBe(
+      buildReviewAssignmentPrompt(review)
+    );
+    expect(buildHandoffPrompt([], visual)).toBe(
+      buildVisualAssignmentPrompt(visual)
+    );
   });
 
   it("strips a provider @mention out of the instruction it carries", () => {

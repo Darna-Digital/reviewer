@@ -3,7 +3,12 @@ import { act, render } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Theme } from "./ui-prefs";
 
-import { setUiPrefs, useUiPrefs } from "./ui-prefs";
+import {
+  readUiPrefs,
+  rememberSession,
+  setUiPrefs,
+  useUiPrefs,
+} from "./ui-prefs";
 
 // A controllable matchMedia mock, installed before the store module loads so
 // its top-level load()/listener registration see it. `fire()` simulates the OS
@@ -97,5 +102,36 @@ describe("useUiPrefs system theme sync", () => {
 
     act(() => setUiPrefs({ diffStyle: "unified" }));
     expect(seen).toEqual(["split", "unified"]);
+  });
+});
+
+describe("rememberSession", () => {
+  it("keeps each choice as it is made, without unsaying the last one", () => {
+    act(() => rememberSession({ provider: "codex", model: "gpt-5.5" }));
+    act(() => rememberSession({ mode: "analysis" }));
+
+    expect(readUiPrefs().lastSession).toEqual({
+      provider: "codex",
+      model: "gpt-5.5",
+      mode: "analysis",
+    });
+  });
+
+  it("does not re-render consumers when nothing about the session changed", () => {
+    act(() => rememberSession({ provider: "claude", model: "opus" }));
+
+    const seen: string[] = [];
+    function SessionProbe() {
+      seen.push(useUiPrefs().lastSession.model ?? "");
+      return null;
+    }
+    act(() => void render(<SessionProbe />));
+    expect(seen).toEqual(["opus"]);
+
+    act(() => rememberSession({ model: "opus" }));
+    expect(seen).toEqual(["opus"]);
+
+    act(() => rememberSession({ model: "haiku" }));
+    expect(seen).toEqual(["opus", "haiku"]);
   });
 });

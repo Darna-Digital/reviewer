@@ -9,7 +9,7 @@
  * happens for every source — the changes in this checkout included, which is
  * why the way to those is on this page too.
  */
-import { IconCloud, IconGitBranch, IconGitCommit } from "@tabler/icons-react";
+import { IconCloud, IconGitBranch } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { PaneHeader } from "@/components/layout/pane-header";
@@ -23,7 +23,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePulls, useRepo } from "@/lib/queries";
 import { errorReason } from "@/lib/errors";
 import { timeAgo } from "@/lib/relative-time";
-import { REVIEW_HREF, reviewHref } from "@/lib/shell-route";
+import { reviewHref } from "@/lib/shell-route";
 import { NoReviewRemote, NoReviews } from "./reviews-empty";
 import {
   groupReviewsByBase,
@@ -117,20 +117,6 @@ export function ReviewsPage() {
           </div>
         }
       />
-      <div className="flex shrink-0 items-center gap-2 border-b px-3 py-1.5">
-        {/* The changes in front of you are read in the same view as everything
-            below, so the way to them belongs on the same page — but they are
-            not waiting on anybody, which is why they are not a row in the
-            list. */}
-        <Button
-          variant="ghost"
-          size="xs"
-          className="ml-auto"
-          onClick={() => void navigate({ to: REVIEW_HREF })}
-        >
-          <IconGitCommit /> Review this checkout
-        </Button>
-      </div>
       <ScrollArea className="min-h-0 flex-1" viewportClassName="px-2 py-2">
         {error !== null ? (
           <p className="px-3 py-8 text-center text-xs text-destructive">

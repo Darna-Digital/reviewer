@@ -1,5 +1,9 @@
 import { DIFFS_TAG_NAME } from "@pierre/diffs";
-import type { File as EditableFile, LineAnnotation } from "@pierre/diffs";
+import type {
+  File as EditableFile,
+  LineAnnotation,
+  SelectedLineRange,
+} from "@pierre/diffs";
 import { EditProvider, File, Virtualizer } from "@pierre/diffs/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -294,6 +298,19 @@ export function CodeView({
     return out;
   }, [comments, draft, path]);
 
+  // Anchors the open draft's row — gutter, code line and card tinted the same
+  // blue — same as `DiffPane` does for the diff surface. Without it the draft
+  // card renders fine but nothing marks which line it is pinned to.
+  const selectedLines: SelectedLineRange | null =
+    draft !== null && draft.filePath === path
+      ? {
+          start: draft.lineNumber,
+          end: draft.lineNumber,
+          side: FILE_COMMENT_SIDE,
+          endSide: FILE_COMMENT_SIDE,
+        }
+      : null;
+
   // Diagnostics stay out of the annotation slot: rows appearing under lines
   // while typing shove the code around under the caret. They live in the
   // problems bar below instead, with the squiggles still marking the spot.
@@ -398,6 +415,7 @@ export function CodeView({
             <File<AnnotationMeta>
               key={path}
               file={highlightFile}
+              selectedLines={selectedLines}
               options={{
                 theme: THEMES,
                 themeType: theme,

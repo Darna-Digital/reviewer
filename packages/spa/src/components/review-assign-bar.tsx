@@ -1,11 +1,11 @@
 /**
  * ReviewAssignBar — a floating bottom bar that appears while you have local
- * review comments (left in the commit/PR diff or a code view). It lets you pick
- * a target and hand the comments off: either start a fresh chat with a chosen
- * agent, or attach them to an existing session (chat) picked from a searchable
- * dropdown. Collapsing it parks a count chip against the right edge of whatever
- * it floats over; the bar comes back from that chip, and on its own whenever a
- * new comment is left.
+ * review comments (left in the commit/PR diff or a code view, or on the running
+ * UI in the browser pane). It lets you pick a target and hand the comments off:
+ * either start a fresh chat with a chosen agent and model, or attach them to an
+ * existing session (chat) picked from a searchable dropdown. Collapsing it parks
+ * a count chip against the right edge of whatever it floats over; the bar comes
+ * back from that chip, and on its own whenever a new comment is left.
  */
 import {
   IconChevronDown,
@@ -28,10 +28,19 @@ import {
   PreviewCardContent,
   PreviewCardTrigger,
 } from "@/components/ui/preview-card";
-import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignment.functions";
+import {
+  assignmentModel,
+  isChatProviderKind,
+} from "@/interactions/chats/functions/chat-assignment.functions";
+import { ModelPicker } from "@/interactions/chats/components/model-picker";
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents";
-import type { ChatProviderKind, ChatSummary } from "@reviewer/core/chats";
+import type {
+  ChatModelCatalog,
+  ChatProviderKind,
+  ChatSummary,
+} from "@reviewer/core/chats";
 import { timeAgo } from "@/lib/relative-time";
+import { rememberSession, useUiPrefs } from "@/lib/ui-prefs";
 import {
   ELEVATION,
   POPUP_SHADOW,
@@ -67,14 +76,19 @@ export interface AssignBarComment {
   body: string;
 }
 
-/** Where the review comments get handed off. */
+/**
+ * Where the review comments get handed off. A new chat carries the model as
+ * well as the agent: which agent runs the work and which model it runs on are
+ * two answers, and only saying the first leaves the second to the catalog.
+ */
 export type AssignTarget =
-  | { kind: "new"; agent: ChatProviderKind }
+  | { kind: "new"; agent: ChatProviderKind; model: string }
   | { kind: "existing"; chatId: string };
 
 export function ReviewAssignBar({
   comments,
   chats,
+  catalog,
   branch,
   onAssign,
   onOpenComment,
@@ -82,6 +96,8 @@ export function ReviewAssignBar({
 }: {
   comments: ReadonlyArray<AssignBarComment>;
   chats: ReadonlyArray<ChatSummary>;
+  /** The models each agent's CLI reported, for the model chip. */
+  catalog: ChatModelCatalog | undefined;
   /**
    * The branch the comments are about — the one this checkout is on. Sessions
    * already working there lead the picker, and the newest of them is what the
@@ -117,6 +133,9 @@ export function ReviewAssignBar({
     ELEVATION.menu,
     POPUP_SHADOW
   );
+  const remembered = useUiPrefs().lastSession;
+  /** Whoever you last worked with, or Claude until you have worked with anyone. */
+  const lastAgent = remembered.provider ?? "claude";
 
   /** Sessions working where the comments are, newest first. */
   const onBranch = useMemo(
@@ -135,10 +154,19 @@ export function ReviewAssignBar({
    * it, so that session is the answer until somebody says otherwise — which
    * makes the common case no clicks at all. A pick, once made, is held: the
    * list reloads as sessions come and go, and it must not quietly undo one.
+   *
+   * With no session to hand it to, the answer is a new one with whoever you
+   * were last working with rather than a fixed agent: the choice was made the
+   * last time this was asked, and asking again with a different answer is how
+   * work quietly ends up spread across agents nobody chose.
    */
   const target: AssignTarget = picked ?? {
     ...(onBranch[0] === undefined
-      ? { kind: "new" as const, agent: "claude" as const }
+      ? {
+          kind: "new" as const,
+          agent: lastAgent,
+          model: assignmentModel(lastAgent, catalog, remembered.model),
+        }
       : { kind: "existing" as const, chatId: onBranch[0].id }),
   };
 
@@ -188,6 +216,9 @@ export function ReviewAssignBar({
 
   const pick = (next: AssignTarget) => {
     setPicked(next);
+    if (next.kind === "new") {
+      rememberSession({ provider: next.agent, model: next.model });
+    }
     setQuery("");
     setOpen(false);
   };
@@ -257,7 +288,9 @@ export function ReviewAssignBar({
                         key={comment.id}
                         comment={comment}
                         onOpen={
-                          onOpenComment === undefined
+                          // A comment on the running UI sits on no line, so
+                          // there is nowhere in the code to send a click.
+                          onOpenComment === undefined || comment.line === null
                             ? undefined
                             : () => {
                                 setListOpen(false);
@@ -314,7 +347,20 @@ export function ReviewAssignBar({
                     <button
                       key={a.kind}
                       type="button"
-                      onClick={() => pick({ kind: "new", agent: a.kind })}
+                      onClick={() =>
+                        pick({
+                          kind: "new",
+                          agent: a.kind,
+                          // Swapping agents keeps the model you were on when
+                          // the new one can run it, and falls back to its own
+                          // first answer when it cannot.
+                          model: assignmentModel(
+                            a.kind,
+                            catalog,
+                            remembered.model
+                          ),
+                        })
+                      }
                       className={cn(
                         "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted",
                         active && "bg-muted"
@@ -371,6 +417,17 @@ export function ReviewAssignBar({
               </div>
             </PopoverContent>
           </Popover>
+          {/* Only a new chat has a model left to choose — an existing session
+              already runs on the one it was started with. */}
+          {target.kind === "new" && (
+            <ModelPicker
+              catalog={catalog}
+              model={target.model}
+              onSelect={(model, provider) =>
+                pick({ kind: "new", agent: provider, model })
+              }
+            />
+          )}
           <Button size="sm" disabled={busy} onClick={() => void assign()}>
             {busy ? "Assigning…" : "Assign"}
           </Button>

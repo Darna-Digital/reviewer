@@ -527,9 +527,24 @@ export function FileSidebar({
     if (clipboard.mode === "cut") setClipboard(null);
   };
 
+  // The rename and search inputs live in the tree's shadow root, so their keys
+  // reach this handler retargeted to the host element — the path is the only
+  // place the input itself still shows up.
+  const typingInTree = (event: ReactKeyboardEvent) =>
+    event.nativeEvent
+      .composedPath()
+      .some(
+        (node) =>
+          node instanceof HTMLElement &&
+          (node.isContentEditable ||
+            node.tagName === "INPUT" ||
+            node.tagName === "TEXTAREA")
+      );
+
   // The tree drives the arrows, Enter and F2 itself; these are the rest of what
   // a file tree is expected to answer to.
   const onKeyDown = (event: ReactKeyboardEvent) => {
+    if (typingInTree(event)) return;
     const chord = event.metaKey || event.ctrlKey;
     // Shift turns the key itself uppercase, and ⇧⌘Z is how redo is spelled.
     const key = event.key.toLowerCase();

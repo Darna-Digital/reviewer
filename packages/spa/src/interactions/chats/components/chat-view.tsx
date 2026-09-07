@@ -20,6 +20,7 @@ import type {
 import { modePrompt } from "@/interactions/chats/functions/chat-mode.functions";
 import { isChatRunning } from "@/interactions/chats/functions/chats.reducer";
 import { useChatModels } from "@/lib/queries";
+import { rememberSession } from "@/lib/ui-prefs";
 import { ChatComposer } from "./chat-composer";
 import { MessagesTimeline } from "./messages-timeline";
 import { SessionContextBar } from "./session-context-bar";
@@ -67,7 +68,10 @@ export function ChatView({ chatId }: { chatId: string }) {
     }
   };
 
+  // Changing a session's model is a choice about how you work, not only about
+  // this thread, so the next session opens where this one was left.
   const changeSettings = (patch: Partial<ChatSettings>) => {
+    rememberSession(patch);
     actions.updateSettings(chat.id, patch).catch((updateError: unknown) => {
       toast.error(
         updateError instanceof Error

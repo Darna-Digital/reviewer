@@ -1883,7 +1883,6 @@ export interface operations {
                         current: string | null;
                         recents: string[];
                         home: string;
-                        device: string;
                     };
                 };
             };
@@ -1929,7 +1928,6 @@ export interface operations {
                         current: string | null;
                         recents: string[];
                         home: string;
-                        device: string;
                     };
                 };
             };
@@ -1984,7 +1982,6 @@ export interface operations {
                         current: string | null;
                         recents: string[];
                         home: string;
-                        device: string;
                     };
                 };
             };

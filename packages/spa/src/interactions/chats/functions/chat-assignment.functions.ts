@@ -36,30 +36,43 @@ export const instructionWithoutChatProviderMention = (
   provider: ChatProviderKind
 ): string => body.replace(mentionPattern(provider), "").trim();
 
+/**
+ * Which model a new chat with `provider` runs.
+ *
+ * `wanted` is the model somebody asked for, and it is honoured only when this
+ * provider reported it: a model remembered from the last session belongs to
+ * whichever agent was chosen then, and handing it to another one asks a CLI for
+ * a model it cannot run.
+ *
+ * The catalog's models are whatever the provider's CLI reported, so the first
+ * is that CLI's own first choice. Nothing reported means no model at all — the
+ * chat then runs on whatever the CLI defaults to, which is a better answer than
+ * a model id we made up here.
+ */
+export const assignmentModel = (
+  provider: ChatProviderKind,
+  catalog: ChatModelCatalog | undefined,
+  wanted?: string
+): string => {
+  const models =
+    catalog?.providers.find((entry) => entry.id === provider)?.models ?? [];
+  const asked = models.find((model) => model.id === wanted)?.id;
+  const providerDefault = models.find(
+    (model) => model.id === catalog?.defaults.model
+  )?.id;
+  return asked ?? providerDefault ?? models[0]?.id ?? "";
+};
+
 export const buildChatAssignmentSettings = (
   provider: ChatProviderKind,
-  catalog: ChatModelCatalog | undefined
-): ChatSettings => {
-  const defaults = catalog?.defaults;
-  const providerEntry = catalog?.providers?.find(
-    (entry) => entry.id === provider
-  );
-  const providerDefaultModel = providerEntry?.models?.find(
-    (model) => model.id === defaults?.model
-  )?.id;
-  // The catalog's models are whatever the provider's CLI reported, so the first
-  // is that CLI's own first choice. Nothing reported means no model at all —
-  // the chat then runs on whatever the CLI defaults to, which is a better
-  // answer than a model id we made up here.
-  const firstDiscovered = providerEntry?.models[0]?.id ?? "";
-
-  return {
-    provider,
-    model: providerDefaultModel ?? firstDiscovered,
-    effort: defaults?.effort ?? "high",
-    access: defaults?.access ?? "fullAccess",
-  };
-};
+  catalog: ChatModelCatalog | undefined,
+  model?: string
+): ChatSettings => ({
+  provider,
+  model: assignmentModel(provider, catalog, model),
+  effort: catalog?.defaults.effort ?? "high",
+  access: catalog?.defaults.access ?? "fullAccess",
+});
 
 export const buildReviewAssignmentTitle = (count: number): string => {
   const plural = count === 1 ? "" : "s";
@@ -107,5 +120,33 @@ export const buildVisualAssignmentPrompt = (
     "",
     "Find the code that renders each element, then verify your change through",
     "reviewer's browser API (see the reviewer skill) rather than assuming it worked.",
+  ].join("\n");
+};
+
+/**
+ * A review handed over in one go.
+ *
+ * Notes left on the code and notes left on the running UI are one review — you
+ * read the app and you read what renders it — so they go to the agent together
+ * rather than as two hand-offs racing each other over the same files. Either
+ * kind on its own is still described in its own words.
+ */
+export const buildHandoffTitle = (review: number, visual: number): string => {
+  if (visual === 0) return buildReviewAssignmentTitle(review);
+  if (review === 0) return buildVisualAssignmentTitle(visual);
+  const total = review + visual;
+  return `Fix ${total} review comment${total === 1 ? "" : "s"}`;
+};
+
+export const buildHandoffPrompt = (
+  review: ReadonlyArray<ReviewComment>,
+  visual: ReadonlyArray<VisualComment>
+): string => {
+  if (visual.length === 0) return buildReviewAssignmentPrompt(review);
+  if (review.length === 0) return buildVisualAssignmentPrompt(visual);
+  return [
+    buildReviewAssignmentPrompt(review),
+    "",
+    buildVisualAssignmentPrompt(visual),
   ].join("\n");
 };

@@ -4,19 +4,16 @@
  * transcript for the composer to sit under, and centring it is what says the
  * page is waiting on you.
  *
- * Composer settings live in local state seeded from the favorite model and the
- * catalog defaults; the first send creates the chat, starts the turn, and
- * navigates to the conversation (create-on-first-message).
+ * Composer settings are the ones the last session was composed with, falling
+ * back to the favorite model and the catalog defaults while nothing has been
+ * chosen yet; the first send creates the chat, starts the turn, and navigates
+ * to the conversation (create-on-first-message).
  */
 import { IconSitemap, IconWorld } from "@tabler/icons-react";
 import { useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { toast } from "sonner";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
-import {
-  useCloudActions,
-  useCloudRunTarget,
-} from "@/interactions/cloud/adapters/cloud.hook.adapter";
 import {
   NEW_SESSION,
   setChatMode,
@@ -30,11 +27,14 @@ import {
   modePrompt,
   modeTitle,
 } from "@/interactions/chats/functions/chat-mode.functions";
-import { preferredChatModel } from "@/interactions/chats/functions/chat-model.functions";
+import {
+  catalogModels,
+  preferredChatModel,
+} from "@/interactions/chats/functions/chat-model.functions";
 import { NEW_CHAT_DRAFT, setDraft } from "@/lib/composer-drafts";
 import { isDesktop } from "@/lib/desktop";
 import { useChatModels, useRepo } from "@/lib/queries";
-import { useUiPrefs } from "@/lib/ui-prefs";
+import { rememberSession, useUiPrefs } from "@/lib/ui-prefs";
 import { ChatComposer } from "./chat-composer";
 import { SessionContextBar } from "./session-context-bar";
 
@@ -67,64 +67,30 @@ export function NewChatView() {
   const repo = useRepo();
   const actions = useChatsActions();
   const navigate = useNavigate();
-  const [overrides, setOverrides] = useState<Partial<ChatSettings>>({});
   const composerRef = useRef<HTMLTextAreaElement | null>(null);
   const mode = useChatMode(NEW_SESSION);
 
-  const runTarget = useCloudRunTarget();
-  const cloud = useCloudActions();
-
-  const favorites = useUiPrefs().chatModelFavorites;
+  const prefs = useUiPrefs();
+  const last = prefs.lastSession;
   const defaults = models.data?.defaults;
-  const preferred = preferredChatModel(models.data, favorites);
+  const preferred = preferredChatModel(models.data, prefs.chatModelFavorites);
+  // The remembered model is only offered back while its agent still reports it:
+  // a CLI that has dropped a model, or been uninstalled, cannot run it, and the
+  // favorites answer instead.
+  const remembered = catalogModels(models.data).find(
+    (model) => model.id === last.model && model.provider === last.provider
+  );
   const settings: ChatSettings = {
-    provider: overrides.provider ?? preferred?.provider ?? "claude",
-    model: overrides.model ?? preferred?.id ?? "",
-    effort: overrides.effort ?? defaults?.effort ?? "high",
-    access: overrides.access ?? defaults?.access ?? "fullAccess",
-  };
-
-  /**
-   * The prompt handed to reviewer cloud instead of a process here. The run
-   * clones the linked repository on its own, so nothing local is cut for it;
-   * the branch you are on is named as the base only when the cloud repository
-   * is this one on GitHub, since any other repository knows nothing of it.
-   */
-  const sendToCloud = async (prompt: string) => {
-    const cloudRepo = runTarget.cloudRepo;
-    if (cloudRepo === null) {
-      toast.error("Link a repository in reviewer cloud before sending to it.");
-      return;
-    }
-    const github = repo.data?.github ?? null;
-    const sameRepo =
-      github !== null &&
-      `${github.owner}/${github.repo}`.toLowerCase() ===
-        cloudRepo.fullName.toLowerCase();
-    const started = await cloud.startCloudRun(
-      settings,
-      {
-        repo: cloudRepo,
-        baseBranch: sameRepo ? (repo.data?.currentBranch ?? null) : null,
-      },
-      prompt
-    );
-    if (started !== null) {
-      void navigate({
-        to: "/modes/agent-session/cloud/$runId",
-        params: { runId: started.run.id },
-      });
-    }
+    provider: remembered?.provider ?? preferred?.provider ?? "claude",
+    model: remembered?.id ?? preferred?.id ?? "",
+    effort: last.effort ?? defaults?.effort ?? "high",
+    access: last.access ?? defaults?.access ?? "fullAccess",
   };
 
   const send = async (text: string, images: ReadonlyArray<ChatImage>) => {
     const prompt = modePrompt(mode, text);
     const title = modeTitle(mode, text);
     try {
-      if (runTarget.target === "cloud" && runTarget.connected) {
-        await sendToCloud(prompt);
-        return;
-      }
       const where = { branch: repo.data?.currentBranch ?? "" };
       const started =
         title === null
@@ -196,9 +162,7 @@ export function NewChatView() {
             <ChatComposer
               draftKey={NEW_CHAT_DRAFT}
               settings={settings}
-              onSettingsChange={(patch) =>
-                setOverrides((prev) => ({ ...prev, ...patch }))
-              }
+              onSettingsChange={rememberSession}
               mode={mode}
               onModeChange={(next) => setChatMode(NEW_SESSION, next)}
               catalog={models.data}

@@ -1,20 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
-import type { CloudRepo } from "@reviewer/core/cloud";
 import { fetchClient } from "@/lib/api/client";
-import {
-  cloudRunQueryOptions,
-  cloudStatusOptions,
-  useCloudRepos,
-  useCloudStatus,
-  useRepo,
-} from "@/lib/queries";
+import { cloudRunQueryOptions, cloudStatusOptions } from "@/lib/queries";
 import { createCloudFunctions } from "../functions/cloud.functions";
 import type {
   CloudAgentProvider,
   CloudFunctions,
 } from "../interfaces/cloud.interfaces";
-import { useRunTarget, type RunTarget } from "./run-target.store";
 
 const CLOUD_RUNS_KEY = ["get", "/api/cloud/runs"];
 
@@ -165,37 +157,4 @@ export function useCloudActions() {
       return cancelled;
     },
   };
-}
-
-/**
- * Where the next session goes, resolved: the sticky choice, whether the cloud
- * can take it, and which linked repository it would run in.
- *
- * The repository defaults to the one that is this project on GitHub — the
- * linked repository whose full name matches the open repository's remote —
- * and otherwise to the first one linked, so choosing the cloud is one click
- * for the common case and a second only when the project is not the obvious
- * one.
- */
-export function useCloudRunTarget(): {
-  readonly target: RunTarget;
-  readonly connected: boolean;
-  readonly repos: ReadonlyArray<CloudRepo>;
-  readonly cloudRepo: CloudRepo | null;
-} {
-  const { target, cloudRepoId } = useRunTarget();
-  const status = useCloudStatus();
-  const connected = status.data?.status === "connected";
-  const repos = useCloudRepos(connected).data ?? [];
-  const local = useRepo().data?.github ?? null;
-  const remoteName =
-    local === null ? null : `${local.owner}/${local.repo}`.toLowerCase();
-  const cloudRepo =
-    repos.find((repo) => repo.id === cloudRepoId) ??
-    (remoteName === null
-      ? undefined
-      : repos.find((repo) => repo.fullName.toLowerCase() === remoteName)) ??
-    repos[0] ??
-    null;
-  return { target, connected, repos, cloudRepo };
 }

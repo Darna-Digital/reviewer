@@ -80,10 +80,14 @@ import { assignToChat } from "@/interactions/chats/adapters/assign-to-chat.adapt
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import type { ChatPlace } from "@/interactions/chats/interfaces/chats.interfaces";
 import {
-  buildReviewAssignmentPrompt,
-  buildReviewAssignmentTitle,
+  buildHandoffPrompt,
+  buildHandoffTitle,
 } from "@/interactions/chats/functions/chat-assignment.functions";
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
+import {
+  useVisualCommentActions,
+  useVisualComments,
+} from "@/interactions/visual-comments/adapters/visual-comments.hook.adapter";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
@@ -212,6 +216,11 @@ export function CodeWorkspace() {
   const chats = useRecentChats();
   const files = useFiles();
   const localComments = useComments();
+  // Notes left on the running UI in the browser pane. They are read here too so
+  // that a review spread over the code and the app it renders is one review:
+  // one list, one hand-off, one session that sees both halves of it.
+  const uiComments = useVisualComments();
+  const visualComments = useVisualCommentActions();
   // Files carrying a local working-tree comment (left here or while browsing). Commit
   // mode surfaces these in the tree even when the file has no git changes.
   const commentedPaths = useMemo(
@@ -481,27 +490,51 @@ export function CodeWorkspace() {
   /** Where the comments' agent is to work — the checkout you are standing in. */
   const assignPlace: ChatPlace = { branch: repo.data?.currentBranch ?? "" };
 
+  /**
+   * Everything the hand-off would carry, as the bar reads it: the comments on
+   * the diff in front of you, then the ones left on the running app, which name
+   * the element they were drawn on and sit on no line.
+   */
+  const handoffComments = useMemo(
+    () => [
+      ...visibleComments.map((comment) => ({
+        id: comment.id,
+        file: comment.filePath,
+        line: comment.lineNumber,
+        body: comment.body,
+      })),
+      ...(uiComments.data ?? []).map((comment) => ({
+        id: comment.id,
+        file: comment.elementLabel,
+        line: null,
+        body: comment.body,
+      })),
+    ],
+    [visibleComments, uiComments.data]
+  );
+
   const assignReview = async (dest: AssignTarget) => {
-    if (visibleComments.length === 0) return;
-    const count = visibleComments.length;
+    const onUi = uiComments.data ?? [];
+    const count = visibleComments.length + onUi.length;
+    if (count === 0) return;
     const plural = count === 1 ? "" : "s";
-    const prompt = buildReviewAssignmentPrompt(visibleComments);
     try {
       const chatId = await assignToChat(chatActions, {
         target: dest,
         catalog: chatModels.data,
         place: assignPlace,
-        title: buildReviewAssignmentTitle(count),
-        prompt,
+        title: buildHandoffTitle(visibleComments.length, onUi.length),
+        prompt: buildHandoffPrompt(visibleComments, onUi),
       });
       if (chatId === null) return;
       // Handing the comments off resolves them: their text now lives in the chat,
       // so clear the local ones instead of leaving them lingering in the diff.
       // No pull request is passed, which is how the GitHub ones are spared —
       // they belong to the pull request rather than to this hand-off.
-      await Promise.all(
-        visibleComments.map((comment) => comments.remove(null, comment))
-      );
+      await Promise.all([
+        ...visibleComments.map((comment) => comments.remove(null, comment)),
+        ...onUi.map((comment) => visualComments.remove(comment.id)),
+      ]);
       toast.success(`Assigned ${count} comment${plural}`);
       void navigate({ to: "/modes/agent-session/$chatId", params: { chatId } });
     } catch (error) {
@@ -1367,15 +1400,11 @@ export function CodeWorkspace() {
                       window's. */}
           <div className="relative min-h-0 flex-1 overflow-hidden">
             {renderCenter()}
-            {visibleComments.length > 0 && (
+            {handoffComments.length > 0 && (
               <ReviewAssignBar
-                comments={visibleComments.map((comment) => ({
-                  id: comment.id,
-                  file: comment.filePath,
-                  line: comment.lineNumber,
-                  body: comment.body,
-                }))}
+                comments={handoffComments}
                 chats={chats.data?.items ?? []}
+                catalog={chatModels.data}
                 branch={assignPlace.branch}
                 onAssign={assignReview}
                 onOpenComment={openComment}

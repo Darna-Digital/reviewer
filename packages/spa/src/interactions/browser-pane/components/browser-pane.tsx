@@ -62,7 +62,7 @@ import {
   useVisualComments,
 } from "@/interactions/visual-comments/adapters/visual-comments.hook.adapter";
 import { useChatModels, useRecentChats, useRepo } from "@/lib/queries";
-import { isCodeSurface } from "@/lib/shell-route";
+import { isCodeSurface, shellRoute } from "@/lib/shell-route";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -126,10 +126,16 @@ export function BrowserPane() {
 
   // Handing visual comments to an agent is code work, so the bar keeps to code
   // mode even though the pane itself rides along beside every mode.
+  //
+  // Over a diff it does not appear at all: the review there carries these
+  // comments too, and two bars over one review are two hand-offs of the same
+  // notes. Everywhere else — a session, the branches dock — this is the only
+  // bar there is, so the pane grows its own.
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const inCodeMode = isCodeSurface(pathname);
+  const ownsHandoff =
+    isCodeSurface(pathname) && shellRoute(pathname).kind !== "code";
 
   const navigate = useNavigate();
   const comments = useVisualComments();
@@ -408,7 +414,7 @@ export function BrowserPane() {
             onCancel={() => updateBrowserPane({ draft: null })}
           />
         )}
-        {pane.draft === null && pending.length > 0 && inCodeMode && (
+        {pane.draft === null && pending.length > 0 && ownsHandoff && (
           <ReviewAssignBar
             comments={pending.map((comment) => ({
               id: comment.id,
@@ -417,6 +423,7 @@ export function BrowserPane() {
               body: comment.body,
             }))}
             chats={chats.data?.items ?? []}
+            catalog={chatModels.data}
             onAssign={assign}
             className="absolute inset-x-2 bottom-3"
           />

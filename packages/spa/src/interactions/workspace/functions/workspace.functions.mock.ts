@@ -12,7 +12,6 @@ export const multiRepoWorkspace: WorkspaceInfo = {
   current: "/work/backend",
   recents: ["/work"],
   home: "/home/ada",
-  device: "Ada's MacBook Pro",
 };
 
 export const createWorkspaceDependenciesMock = (
