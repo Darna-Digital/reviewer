@@ -7,7 +7,7 @@ import { captureSnapshot, parseClickSpec } from "./capture.ts";
 import type { CaptureConfig } from "./capture.ts";
 import type { SpaSnapshotScheme } from "../../src/lib/spa-snapshot.ts";
 
-const USAGE = `Capture live reviewer SPA views as inert DOM + CSS.
+const USAGE = `Capture live Reviewer SPA views as inert DOM + CSS.
 
 Usage
   pnpm capture:spa --url <page> --out <file.json> [options]

@@ -29,7 +29,7 @@ export function AppWindow({
           <span className="grid size-3.5 place-items-center rounded-[3px] bg-neutral-900 text-[7px] font-bold text-white dark:bg-white dark:text-neutral-950">
             BY
           </span>
-          reviewer
+          Reviewer
           <Chevron className="size-3 text-neutral-400 dark:text-neutral-500" />
         </span>
         <span className="flex items-center gap-1 rounded-md bg-white px-1.5 py-0.5 text-[11px] text-neutral-600 ring-1 ring-black/8 ring-inset dark:bg-white/5 dark:text-neutral-300 dark:ring-white/10">

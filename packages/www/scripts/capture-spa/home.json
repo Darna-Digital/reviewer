@@ -40,13 +40,6 @@
       "waitFor": "diffs-container"
     },
     {
-      "name": "collaboration",
-      "out": "public/spa-snapshots/collaboration.json",
-      "url": "http://localhost:41812/modes/collaboration",
-      "state": "./state/collaboration.json",
-      "settle": 5000
-    },
-    {
       "name": "local-dev",
       "out": "public/spa-snapshots/local-dev.json",
       "url": "http://localhost:41812/modes/code/browse?file=packages/spa/src/interactions/local-dev/functions/local-dev.functions.ts",

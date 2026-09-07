@@ -15,7 +15,7 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "reviewer — Tools for conversation based development",
+        title: "Reviewer — Tools for conversation based development",
       },
       {
         name: "description",

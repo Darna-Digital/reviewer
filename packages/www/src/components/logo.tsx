@@ -3,14 +3,14 @@ export function Logo({ className }: { className?: string }) {
     <picture>
       <source
         media="(prefers-color-scheme: dark)"
-        srcSet="/reviewer-logo-horizontal-white.svg"
+        srcSet="/reviewer-logo-mark-white.svg"
       />
       <img
         alt=""
         className={className}
         height={315}
-        src="/reviewer-logo-horizontal-black.svg"
-        width={1291}
+        src="/reviewer-logo-mark-black.svg"
+        width={315}
       />
     </picture>
   );

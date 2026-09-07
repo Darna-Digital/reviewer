@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 
 import { Asciify } from "#/components/canvasui/Asciify";
 import {
@@ -7,11 +6,12 @@ import {
   FeatureSection,
   SectionDivider,
 } from "#/components/feature-section";
-import { ArrowRight } from "#/components/icons";
+import { GitHub } from "#/components/icons";
 import { Logo } from "#/components/logo";
 import { SiteHeader } from "#/components/site-header";
 import { SpaSnapshot } from "#/components/spa-snapshot";
 import { usePrefersDark } from "#/hooks/use-prefers-dark";
+import { GITHUB_URL } from "#/lib/links";
 
 const HERO_SNAPSHOT = {
   src: "/spa-snapshots/hero.json",
@@ -45,25 +45,14 @@ const ASCII_INK_DARK: [number, number, number] = [0.42, 0.42, 0.42];
 
 const VIDEO_CREDIT_TOOLTIP_ID = "background-video-credit";
 
-function CtaButton({
-  href,
-  variant = "primary",
-  children,
-}: {
-  href: string;
-  variant?: "primary" | "secondary";
-  children: ReactNode;
-}) {
-  const tone =
-    variant === "primary"
-      ? "bg-neutral-900 text-white hover:bg-neutral-900/90 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
-      : "bg-white text-neutral-900 shadow-sm ring-1 ring-black/10 ring-inset hover:bg-neutral-50 dark:bg-white/5 dark:text-white dark:shadow-none dark:ring-white/15 dark:hover:bg-white/10";
+function GithubCta() {
   return (
     <a
-      className={`group inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-[15px] font-medium whitespace-nowrap transition-colors ${tone}`}
-      href={href}
+      className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-neutral-900 px-5 text-[15px] font-medium whitespace-nowrap text-white transition-colors hover:bg-neutral-900/90 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
+      href={GITHUB_URL}
     >
-      {children}
+      <GitHub className="size-4" />
+      View on GitHub
     </a>
   );
 }
@@ -160,7 +149,7 @@ function Home() {
                 className="rounded-xl ring-1 ring-black/10 dark:ring-white/10"
                 eager
                 height={HERO_SNAPSHOT.height}
-                label="reviewer reviewing a commit, with the file tree, the split diff and the project history"
+                label="Reviewer reviewing a commit, with the file tree, the split diff and the project history"
                 src={HERO_SNAPSHOT.src}
                 width={HERO_SNAPSHOT.width}
               />
@@ -174,7 +163,7 @@ function Home() {
       <section className="py-16 md:py-32">
         <Container>
           <p className="max-w-3xl text-[24px] leading-snug font-medium tracking-tight text-pretty text-neutral-900 sm:text-[32px] dark:text-neutral-100">
-            reviewer <StatementWord index="01" word="reviews" />
+            Reviewer <StatementWord index="01" word="reviews" />
             what the agent wrote, <StatementWord index="02" word="runs" />
             it on your machine, and <StatementWord index="03" word="keeps" />
             the conversation on the line it belongs to.
@@ -219,12 +208,12 @@ function Home() {
           "Work log",
         ]}
         capabilitiesLabel="Agents, on your machine"
-        description="Claude Code, Codex, opencode, Cursor, or a plain shell. reviewer builds the command, drops the prompt in, and streams back whatever the tool prints. Point it at your own CLI with a {prompt} token and it behaves like the built-in ones."
+        description="Claude Code, Codex, opencode, Cursor, or a plain shell. Reviewer builds the command, drops the prompt in, and streams back whatever the tool prints. Point it at your own CLI with a {prompt} token and it behaves like the built-in ones."
         index="02"
         title="Hand the review to whichever agent you already run"
       >
         <SectionSnapshot
-          label="An agent session in reviewer: the thread, the model picker and the branch it runs on"
+          label="An agent session in Reviewer: the thread, the model picker and the branch it runs on"
           name="agents"
         />
       </FeatureSection>
@@ -241,36 +230,13 @@ function Home() {
           "Drafts and saved analyses",
         ]}
         capabilitiesLabel="Analyses that age honestly"
-        description="An analysis is a graph: how one behaviour travels from the frontend through to storage, with notes pinned to real files and lines. When the code moves on, reviewer re-checks every anchor and tells you which parts of the analysis it can still stand behind."
+        description="An analysis is a graph: how one behaviour travels from the frontend through to storage, with notes pinned to real files and lines. When the code moves on, Reviewer re-checks every anchor and tells you which parts of the analysis it can still stand behind."
         index="03"
         title="The flow an agent worked out, drawn front to back"
       >
         <SectionSnapshot
           label="An analysis drawn front to back, with notes anchored to real files and lines"
           name="plans"
-        />
-      </FeatureSection>
-
-      <SectionDivider />
-
-      <FeatureSection
-        capabilities={[
-          "Task board",
-          "Chats",
-          "Docs",
-          "Up for grabs",
-          "Agent assignees",
-          "Inbox",
-          "Project-wide search",
-        ]}
-        capabilitiesLabel="One workspace"
-        description="Tasks, chats and docs sit in the same workspace. Assign a card to a person or to an agent, leave the brief in the thread beside it, and read back what the work turned up on the way through."
-        index="04"
-        title="Humans and agents, working the same board"
-      >
-        <SectionSnapshot
-          label="A project board in reviewer, with tasks assigned to people and to agents"
-          name="collaboration"
         />
       </FeatureSection>
 
@@ -287,7 +253,7 @@ function Home() {
         ]}
         capabilitiesLabel="From the diff to the running app"
         description="Named run configurations start your services from inside the app and keep their logs beside the diff. The browser pane loads the running site; pick an element and the comment is filed with a shot of what you were pointing at."
-        index="05"
+        index="04"
         title="Run it, look at it, point at what is wrong"
       >
         <SectionSnapshot
@@ -310,7 +276,7 @@ function Home() {
         ]}
         capabilitiesLabel="Git, in full"
         description="Browse and edit files, stage and commit, page through history, and open a pull request without leaving the review. Several repository roots can sit in one window when a project spans more than one."
-        index="06"
+        index="05"
         title="The whole repository, not only the diff"
       >
         <SectionSnapshot
@@ -329,18 +295,10 @@ function Home() {
               <span className="block">based development.</span>
             </h2>
             <p className="max-w-xl text-base text-balance text-neutral-600 dark:text-neutral-400">
-              reviewer runs on your machine, against your repository, with the
+              Reviewer runs on your machine, against your repository, with the
               agents you already run.
             </p>
-            <div className="flex items-center gap-3">
-              <CtaButton href="/docs" variant="secondary">
-                Read the docs
-              </CtaButton>
-              <CtaButton href="/download">
-                Get reviewer
-                <ArrowRight className="size-4 transition-transform group-hover:translate-x-0.5" />
-              </CtaButton>
-            </div>
+            <GithubCta />
           </div>
 
           <div
@@ -349,24 +307,7 @@ function Home() {
           />
 
           <div className="flex flex-col items-start justify-between gap-6 py-10 md:flex-row md:items-center">
-            <a aria-label="reviewer home" className="flex shrink-0" href="/">
-              <Logo className="h-6 w-auto" />
-            </a>
-            <nav aria-label="Footer" className="flex items-center gap-6">
-              {[
-                { label: "Changelog", href: "/changelog" },
-                { label: "Docs", href: "/docs" },
-                { label: "Download", href: "/download" },
-              ].map((link) => (
-                <a
-                  className="text-sm text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-                  href={link.href}
-                  key={link.href}
-                >
-                  {link.label}
-                </a>
-              ))}
-            </nav>
+            <Logo className="h-6 w-auto shrink-0" />
             <p className="text-xs text-neutral-400 dark:text-neutral-500">
               © 2026 Darna Digital. All rights reserved.
             </p>
