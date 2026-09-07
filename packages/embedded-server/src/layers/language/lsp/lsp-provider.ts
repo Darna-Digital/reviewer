@@ -39,6 +39,7 @@ import type { LspServerConfig } from "./lsp-config.ts";
 import { findExecutable } from "./lsp-executable.ts";
 import {
   hoverContents,
+  localiseHoverLinks,
   originSelectionRange,
   toCompletionItems,
   toDiagnostic,
@@ -161,6 +162,9 @@ export const makeLspProvider = (config: LspServerConfig): LanguageProvider => {
     if (text === null) return null;
     const connection = await connectionFor(config, request.root);
     const { uri, changed } = connection.syncDocument(absolute, text);
+    // A server that is still indexing answers "nothing found" rather than
+    // waiting, so the first question asked of a fresh one waits for it.
+    await connection.warmup();
     return { connection, absolute, text, uri, changed };
   };
 
@@ -376,7 +380,13 @@ export const makeLspProvider = (config: LspServerConfig): LanguageProvider => {
           providerId,
           range:
             result["range"] === undefined ? null : toRange(result["range"]),
-          contents: hoverContents(result["contents"]),
+          // A server writes its own links into a hover — ruby-lsp answers with
+          // the places a constant is defined — and they arrive as absolute
+          // `file://` URIs. Named from the repository, the card can open them.
+          contents: localiseHoverLinks(
+            hoverContents(result["contents"]),
+            request.root
+          ),
         };
       }),
 

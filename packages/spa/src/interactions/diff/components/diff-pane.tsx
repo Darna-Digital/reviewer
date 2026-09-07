@@ -236,12 +236,22 @@ const FileDiffSection = memo(function FileDiffSectionView({
   const [sectionEl, setSectionEl] = useState<HTMLElement | null>(null);
   const recomputeConnectors = useRef<() => void>(() => {});
 
+  // A comment being written on this file. The composer is a line annotation, so
+  // the draft is already here in the list — no extra prop, and nothing for the
+  // memo to see change on files the draft is not on.
+  const drafting = annotations.some(
+    (annotation) => annotation.metadata?.kind === "draft"
+  );
+
   // Hover documentation, go-to-definition and find-usages over the additions
   // side, which for a worktree diff is the file as it is on disk.
   const language = useDiffLanguage({
     path: file.name,
     section: sectionEl,
     enabled: languageEnabled,
+    // The composer sits under the line the comment is about, exactly where the
+    // card would be drawn.
+    hoverEnabled: !drafting,
     onOpenLocation,
   });
 

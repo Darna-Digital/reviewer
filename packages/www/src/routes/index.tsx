@@ -84,12 +84,14 @@ function VideoCredit() {
       >
         Video copyright
       </button>
-      <span
-        className="pointer-events-none absolute top-1/2 right-[calc(100%+0.5rem)] translate-x-1 -translate-y-1/2 rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs whitespace-nowrap text-white opacity-0 shadow-lg transition duration-150 group-focus-within:translate-x-0 group-focus-within:opacity-100 group-hover:translate-x-0 group-hover:opacity-100 dark:bg-white dark:text-neutral-950"
-        id={VIDEO_CREDIT_TOOLTIP_ID}
-        role="tooltip"
-      >
-        【=◈︿◈=】porter robinson - worlds
+      <span className="pointer-events-none absolute top-1/2 right-full translate-x-1 -translate-y-1/2 pr-2 opacity-0 transition duration-150 group-focus-within:pointer-events-auto group-focus-within:translate-x-0 group-focus-within:opacity-100 group-hover:pointer-events-auto group-hover:translate-x-0 group-hover:opacity-100">
+        <span
+          className="block rounded-lg bg-neutral-900 px-2.5 py-1.5 text-xs whitespace-nowrap text-white shadow-lg dark:bg-white dark:text-neutral-950"
+          id={VIDEO_CREDIT_TOOLTIP_ID}
+          role="tooltip"
+        >
+          【=◈︿◈=】porter robinson - worlds
+        </span>
       </span>
     </span>
   );

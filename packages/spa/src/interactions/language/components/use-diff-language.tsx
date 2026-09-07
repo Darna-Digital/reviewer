@@ -35,6 +35,11 @@ export interface DiffLanguageOptions {
    * would answer about from the current one, so the layer stays off.
    */
   readonly enabled: boolean;
+  /**
+   * Whether resting on a token opens documentation. Off while a comment is
+   * being written on this file, where the card would cover the composer.
+   */
+  readonly hoverEnabled?: boolean;
   readonly onOpenLocation: (path: string, lineNumber: number) => void;
 }
 
@@ -69,6 +74,7 @@ export function useDiffLanguage({
   path,
   section,
   enabled,
+  hoverEnabled = true,
   onOpenLocation,
 }: DiffLanguageOptions): DiffLanguage {
   // A diff pane holds every changed file at once, and asking about all of them
@@ -97,6 +103,7 @@ export function useDiffLanguage({
     editor: null,
     getContainer,
     enabled: enabled && seen,
+    hoverEnabled,
     // Two files are interleaved here, so a rendered line number is only this
     // file's on the additions side.
     lineNumbersMatchFile: false,

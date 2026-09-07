@@ -254,6 +254,10 @@ export function CodeView({
     // While `d` means delete, a list offering to finish a word is in the way —
     // Vim's insert mode is the only one where typing means typing.
     completionsEnabled: vim.mode === null || vim.mode === "insert",
+    // The composer opens under the line the comment is about, which is where
+    // hover documentation would be drawn: the offer to comment already stands
+    // aside for it, and so does this.
+    hoverEnabled: !drafting,
     getContainer: useCallback(() => scrollWrapper.current, []),
     onApplyForeignEdits: applyForeignEdits,
     // Diagnostics follow what is on screen, not what is on disk.

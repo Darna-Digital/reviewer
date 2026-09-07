@@ -21,7 +21,7 @@ I needed a tool that would help me use agents for writing code for clients. Revi
 ```sh
 pnpm install
 pnpm dev        # the embedded server and the app
-pnpm dev:www    # the marketing site on :3000
+pnpm dev:www    # the marketing site on :41822
 pnpm desktop    # the desktop app
 ```
 

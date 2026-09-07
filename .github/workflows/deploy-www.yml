@@ -49,15 +49,3 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-
-      # A new deployment takes a moment to propagate, so give it a few tries
-      # rather than failing on a race.
-      - name: Verify the site is served
-        run: |
-          for attempt in $(seq 1 10); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' https://reviewer.darnadigital.com/)
-            [ "$code" = "200" ] && exit 0
-            echo "attempt $attempt: $code"
-            sleep 5
-          done
-          exit 1

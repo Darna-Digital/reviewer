@@ -18,6 +18,7 @@ import type {
   Range,
   TextEdit,
 } from "@reviewer/core/language";
+import { mapMarkdownLinks, splitLinkTarget } from "@reviewer/core/language";
 import { toRepoRelative } from "../typescript/ts-mapping.ts";
 
 const ORIGIN: Position = { line: 0, character: 0 };
@@ -172,6 +173,32 @@ export const hoverContents = (raw: unknown): string => {
       .trim();
   return render(raw).trim();
 };
+
+/**
+ * Rewrite the `file://` links in hover documentation to repository-relative
+ * ones, so the card can open them.
+ *
+ * ruby-lsp answers a hover with the list of places a constant is defined, as
+ * links — which is the shortest way from "what is this" to "show me", and the
+ * one thing on the card worth clicking. They arrive as absolute `file://` URIs
+ * of the developer's machine, which the app can neither open (it addresses
+ * files by repository-relative path) nor should be handed (only those paths
+ * cross this port). A link to somewhere outside the repository — a gem, the
+ * standard library — is left as it came and is not made clickable.
+ */
+export const localiseHoverLinks = (markdown: string, root: string): string =>
+  mapMarkdownLinks(
+    markdown,
+    (target) => {
+      const { path: uri, fragment } = splitLinkTarget(target);
+      const absolute = uriToPath(uri);
+      if (absolute === null) return target;
+      const path = toRepoRelative(root, absolute);
+      return path === null ? target : `${path}${fragment}`;
+    },
+    // `file://` names a scheme, and rewriting it is the entire point here.
+    { includeSchemes: true }
+  );
 
 /**
  * LSP `CompletionItemKind` is a number; the port carries a name, because the UI
