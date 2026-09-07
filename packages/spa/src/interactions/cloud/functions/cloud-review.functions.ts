@@ -1,8 +1,8 @@
 /**
  * Where a cloud run's pull request is reviewed.
  *
- * A run finishes by opening a pull request, and the point of byconvo is that
- * you read it here rather than in a browser tab. byconvo reviews a pull
+ * A run finishes by opening a pull request, and the point of reviewer is that
+ * you read it here rather than in a browser tab. reviewer reviews a pull
  * request by number against whatever repository is open, though, so the number
  * alone is not enough: opening `#12` while a different repository is checked
  * out would show someone else's twelfth pull request. So the run's repository
@@ -10,14 +10,18 @@
  * they are the same repository.
  */
 
-/** The repository byconvo has open, as `/api/repo` answers it. */
+/** The repository reviewer has open, as `/api/repo` answers it. */
 export interface OpenRepo {
   readonly github: { readonly owner: string; readonly repo: string } | null;
 }
 
 export type ReviewDestination =
   /** Reviewed here, at this route. */
-  | { readonly kind: "byconvo"; readonly href: string; readonly number: number }
+  | {
+      readonly kind: "reviewer";
+      readonly href: string;
+      readonly number: number;
+    }
   /** Reviewable, but not against the repository that is open. */
   | {
       readonly kind: "elsewhere";
@@ -62,7 +66,7 @@ export const reviewDestination = (
     return { kind: "elsewhere", url, repoFullName: run.repoFullName };
   }
   return {
-    kind: "byconvo",
+    kind: "reviewer",
     href: `/modes/code/review/pull/${number}`,
     number,
   };

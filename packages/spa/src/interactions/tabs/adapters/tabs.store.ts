@@ -10,7 +10,7 @@ import { useSyncExternalStore } from "react";
 import { EMPTY_TABS } from "../functions/tabs.functions";
 import type { Tab, TabsState } from "../interfaces/tabs.interfaces";
 
-const KEY_PREFIX = "byconvo-tabs:";
+const KEY_PREFIX = "reviewer-tabs:";
 
 /** Which repository the strip in memory belongs to. */
 let scope: string | null = null;

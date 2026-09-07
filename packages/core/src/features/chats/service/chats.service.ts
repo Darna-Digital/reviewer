@@ -33,7 +33,7 @@ const MODELS_TTL_MS = 60 * 60 * 1000;
  * How long an *empty* answer is trusted, which is far shorter. An agent that
  * reported nothing is usually one that was still cold or lost the race with the
  * timeout, and remembering that for an hour turns a momentary miss into a rail
- * the developer can only fix by restarting byconvo.
+ * the developer can only fix by restarting reviewer.
  */
 const EMPTY_MODELS_TTL_MS = 60 * 1000;
 

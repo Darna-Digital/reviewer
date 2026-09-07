@@ -27,7 +27,7 @@ import {
   TerminalExec,
   type TerminalExecShape,
   type TerminalResult,
-} from "@byconvo/core/ports/terminal-exec";
+} from "@reviewer/core/ports/terminal-exec";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 
 export {
@@ -35,7 +35,7 @@ export {
   TerminalExec,
   type TerminalExecShape,
   type TerminalResult,
-} from "@byconvo/core/ports/terminal-exec";
+} from "@reviewer/core/ports/terminal-exec";
 
 export const make = Effect.gen(function* () {
   const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;

@@ -4,7 +4,7 @@ import {
   NotFound,
   StorageError,
   Ok,
-} from "@byconvo/core/shared";
+} from "@reviewer/core/shared";
 import {
   DevCommand,
   DevCommandView,
@@ -12,7 +12,7 @@ import {
   DevRepoScope,
   NewDevCommand,
   UpdateDevCommand,
-} from "@byconvo/core/local-dev";
+} from "@reviewer/core/local-dev";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 const errors = [NoRepoSelected, NotFound, StorageError] as const;

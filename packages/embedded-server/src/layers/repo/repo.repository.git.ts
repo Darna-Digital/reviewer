@@ -5,9 +5,9 @@
  */
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
-import { GitError } from "@byconvo/core/ports/git-exec";
+import { GitError } from "@reviewer/core/ports/git-exec";
 import { GitExec, type GitFailure } from "../git/git-exec.ts";
-import { ALL_REFS } from "@byconvo/core/repo";
+import { ALL_REFS } from "@reviewer/core/repo";
 import type {
   BranchInfo,
   CommitDetail,
@@ -24,7 +24,7 @@ import type {
   RepoStatus,
   RepoRepo,
   SearchQuery,
-} from "@byconvo/core/repo";
+} from "@reviewer/core/repo";
 
 /** Map a porcelain v2 unmerged `XY` field to a conflict kind. */
 const conflictKindFromXY = (xy: string): ConflictKind => {
@@ -741,7 +741,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
       yield* Effect.scoped(
         Effect.gen(function* () {
           const tmp = yield* fs
-            .makeTempFileScoped({ prefix: "byconvo-hunk-" })
+            .makeTempFileScoped({ prefix: "reviewer-hunk-" })
             .pipe(Effect.mapError(fsToGitError(["apply", "--reverse"])));
           yield* fs
             .writeFileString(tmp, single)

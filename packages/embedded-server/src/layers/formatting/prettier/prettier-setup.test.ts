@@ -26,7 +26,7 @@ const write = (root: string, path: string, contents: string) => {
 let root: string;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "byconvo-prettier-"));
+  root = mkdtempSync(join(tmpdir(), "reviewer-prettier-"));
 });
 
 afterEach(() => {

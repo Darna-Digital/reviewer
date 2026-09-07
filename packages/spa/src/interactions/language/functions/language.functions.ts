@@ -3,7 +3,7 @@ import type {
   DiagnosticSeverity,
   Position,
   Range,
-} from "@byconvo/core/language";
+} from "@reviewer/core/language";
 import type {
   DiagnosticCounts,
   DiagnosticMarker,

@@ -8,7 +8,7 @@ import {
   cloudRunStatusLabel,
   isCloudRunActive,
   type CloudRunSummary,
-} from "@byconvo/core/cloud";
+} from "@reviewer/core/cloud";
 import { Orb } from "@/components/ui/orb";
 import { cn } from "@/lib/utils";
 

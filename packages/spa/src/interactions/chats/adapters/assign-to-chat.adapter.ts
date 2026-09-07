@@ -9,7 +9,7 @@
  */
 import type { AssignTarget } from "@/components/review-assign-bar";
 import type { ChatPlace } from "@/interactions/chats/interfaces/chats.interfaces";
-import type { ChatModelCatalog } from "@byconvo/core/chats";
+import type { ChatModelCatalog } from "@reviewer/core/chats";
 import { buildChatAssignmentSettings } from "../functions/chat-assignment.functions";
 
 interface ChatStarters {

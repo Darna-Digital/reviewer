@@ -14,7 +14,7 @@ import type {
   BranchInfo,
   ContentMatch,
   RemoteBranchInfo,
-} from "@byconvo/core/repo";
+} from "@reviewer/core/repo";
 
 export type { BranchInfo, ContentMatch, RemoteBranchInfo };
 

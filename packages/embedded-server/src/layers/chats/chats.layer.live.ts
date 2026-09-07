@@ -3,7 +3,7 @@ import {
   ChatsRepository,
   ChatsService,
   makeChatsService,
-} from "@byconvo/core/chats";
+} from "@reviewer/core/chats";
 import { makeSqliteChatsRepository } from "./chats.repository.sqlite.ts";
 import { liveLayer as chatRuntimeLive } from "./chats.runtime.service.ts";
 

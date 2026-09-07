@@ -3,7 +3,7 @@ import {
   VisualCommentsRepository,
   VisualCommentsService,
   makeVisualCommentsService,
-} from "@byconvo/core/visual-comments";
+} from "@reviewer/core/visual-comments";
 import { makeSqliteVisualCommentsRepository } from "./visual-comments.repository.sqlite.ts";
 
 export const VisualCommentsLive = Layer.effect(VisualCommentsService)(

@@ -113,7 +113,7 @@ let config: LspServerConfig;
 const run = <A, E>(effect: Effect.Effect<A, E>) => Effect.runPromise(effect);
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "byconvo-lsp-"));
+  root = mkdtempSync(join(tmpdir(), "reviewer-lsp-"));
   writeFileSync(join(root, "server.mjs"), FAKE_SERVER);
   mkdirSync(join(root, "src"));
   writeFileSync(join(root, "src/a.txt"), A_TXT);

@@ -16,7 +16,7 @@ import { AgentMark } from "@/interactions/threads/components/agent-mark";
 import { useCustomAgents } from "@/interactions/session-agents/adapters/session-agents.store";
 import { AgentManagerDialog } from "@/interactions/session-agents/components/agent-manager-dialog";
 import { sessionAgents } from "@/interactions/session-agents/functions/session-agents.functions";
-import type { AgentKind } from "@byconvo/core/threads";
+import type { AgentKind } from "@reviewer/core/threads";
 import { useChatModels } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 

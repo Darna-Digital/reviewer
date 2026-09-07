@@ -7,7 +7,7 @@
  * answered. Everything the guest is asked runs through `executeJavaScript`,
  * which is the only way into an out-of-process page that runs no preload.
  */
-import type { BrowserState, ConsoleMessage } from "@byconvo/core/browser";
+import type { BrowserState, ConsoleMessage } from "@reviewer/core/browser";
 import { browserBridgeUrl } from "@/lib/api/client";
 import {
   browserPaneSnapshot,

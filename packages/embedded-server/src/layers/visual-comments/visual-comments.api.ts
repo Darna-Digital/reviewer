@@ -4,13 +4,13 @@ import {
   NotFound,
   StorageError,
   Ok,
-} from "@byconvo/core/shared";
+} from "@reviewer/core/shared";
 import {
   VisualComment,
   VisualCommentIdParam,
   NewVisualComment,
   UpdateVisualComment,
-} from "@byconvo/core/visual-comments";
+} from "@reviewer/core/visual-comments";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 const errors = [NoRepoSelected, NotFound, StorageError] as const;

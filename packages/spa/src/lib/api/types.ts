@@ -1,8 +1,8 @@
-import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
+import type { PullRequestInfo } from "@reviewer/core/ports/git-provider";
 
 /**
  * `ref` value asking the log for every ref instead of one branch's ancestry.
- * Mirrors `ALL_REFS` in `@byconvo/core/repo`, which the server maps to
+ * Mirrors `ALL_REFS` in `@reviewer/core/repo`, which the server maps to
  * `git log --all`.
  */
 export const ALL_REFS = "@all";

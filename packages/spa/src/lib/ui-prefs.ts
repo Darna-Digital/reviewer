@@ -103,8 +103,8 @@ export interface UiPrefs {
   launchpadHeight: number;
 }
 
-const STORE_KEY = "byconvo-ui";
-const THEME_KEY = "byconvo-theme";
+const STORE_KEY = "reviewer-ui";
+const THEME_KEY = "reviewer-theme";
 
 const systemTheme = (): Theme =>
   typeof window !== "undefined" &&

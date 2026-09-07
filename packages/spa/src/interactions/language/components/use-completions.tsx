@@ -23,7 +23,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Editor, TextEdit } from "@pierre/diffs/edit";
-import type { CompletionItem, FileEdits } from "@byconvo/core/language";
+import type { CompletionItem, FileEdits } from "@reviewer/core/language";
 import { caretRect } from "@/lib/code-root";
 import { rectAnchor, type VirtualAnchor } from "../functions/anchors";
 import {

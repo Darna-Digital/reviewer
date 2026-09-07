@@ -23,9 +23,9 @@ import type {
 } from "../interfaces/find-in-file.interfaces";
 
 /** Every match in the file. */
-export const FIND_HIGHLIGHT = "byconvo-find";
+export const FIND_HIGHLIGHT = "reviewer-find";
 /** The one the counter is pointing at, painted over the top of it. */
-export const FIND_CURRENT_HIGHLIGHT = "byconvo-find-current";
+export const FIND_CURRENT_HIGHLIGHT = "reviewer-find-current";
 
 /**
  * Styles for the marks, injected into the view's shadow root — nothing in

@@ -20,7 +20,7 @@ import {
   spreadLabels,
   zoomAt,
 } from "./plan-graph.functions";
-import type { PlanEdge, PlanNode } from "@byconvo/core/plans";
+import type { PlanEdge, PlanNode } from "@reviewer/core/plans";
 import type {
   PositionedNode,
   RoutedEdge,

@@ -10,7 +10,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { fetchClient } from "@/lib/api/client";
-import type { Chat } from "@byconvo/core/chats";
+import type { Chat } from "@reviewer/core/chats";
 import { chatSeenMark } from "../functions/chat-seen.functions";
 import { patchChatSummary } from "./chats.cache";
 

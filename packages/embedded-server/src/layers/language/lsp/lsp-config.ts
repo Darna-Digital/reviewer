@@ -1,9 +1,9 @@
 /**
- * `.byconvo/languages.json` — how a repository adds a language.
+ * `.reviewer/languages.json` — how a repository adds a language.
  *
- * This is the extensibility story: point byconvo at a language server binary
+ * This is the extensibility story: point reviewer at a language server binary
  * and the file extensions it owns, and every IDE feature in the app starts
- * working for that language. No plugin to write, no byconvo release to wait
+ * working for that language. No plugin to write, no reviewer release to wait
  * for. Configured servers take priority over the built-in TypeScript provider,
  * so a project that prefers its own TypeScript server can say so.
  *
@@ -43,7 +43,7 @@ export interface LanguageConfig {
   readonly problems: ReadonlyArray<string>;
 }
 
-export const CONFIG_PATH = ".byconvo/languages.json";
+export const CONFIG_PATH = ".reviewer/languages.json";
 
 const EMPTY: LanguageConfig = { servers: [], problems: [] };
 
@@ -104,7 +104,7 @@ const parseServer = (
   };
 };
 
-/** Parse the decoded contents of `.byconvo/languages.json`. */
+/** Parse the decoded contents of `.reviewer/languages.json`. */
 export const parseLanguageConfig = (raw: unknown): LanguageConfig => {
   if (raw === null || raw === undefined) return EMPTY;
   if (!isRecord(raw)) return { servers: [], problems: ["expected an object"] };

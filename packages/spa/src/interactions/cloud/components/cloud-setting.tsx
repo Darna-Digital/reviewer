@@ -16,7 +16,7 @@ import {
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { DEFAULT_CLOUD_SERVER_URL } from "@byconvo/core/cloud";
+import { DEFAULT_CLOUD_SERVER_URL } from "@reviewer/core/cloud";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SettingRow } from "@/interactions/settings/components/setting-row";
@@ -40,7 +40,9 @@ export function CloudSetting() {
       if (url !== undefined) window.open(url, "_blank", "noopener");
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "could not reach byconvo cloud"
+        error instanceof Error
+          ? error.message
+          : "could not reach reviewer cloud"
       );
     } finally {
       setBusy(false);
@@ -60,8 +62,8 @@ export function CloudSetting() {
       const connected = await actions.connectAgent("codex");
       setAgentNote(
         connected.kind === "reused"
-          ? "Codex was already signed in here — sent to byconvo cloud."
-          : "Codex connected. byconvo cloud runs it on your subscription."
+          ? "Codex was already signed in here — sent to reviewer cloud."
+          : "Codex connected. reviewer cloud runs it on your subscription."
       );
     } catch (error) {
       setAgentNote(
@@ -101,14 +103,14 @@ export function CloudSetting() {
       switch (result.kind) {
         case "connected":
           toast.success(
-            `Connected to byconvo cloud as ${result.connection.user?.name ?? "you"}`
+            `Connected to reviewer cloud as ${result.connection.user?.name ?? "you"}`
           );
           return;
         case "expired":
           toast("The code expired before it was approved — connect again.");
           return;
         case "denied":
-          toast.error("byconvo cloud refused the connection.");
+          toast.error("reviewer cloud refused the connection.");
           return;
         case "cancelled":
           return;
@@ -121,11 +123,11 @@ export function CloudSetting() {
   if (connection === null) {
     return (
       <SettingRow
-        title="byconvo cloud"
+        title="reviewer cloud"
         detail={
           status.isPending
             ? "Checking the connection…"
-            : "Could not check the connection to byconvo cloud"
+            : "Could not check the connection to reviewer cloud"
         }
       >
         <IconCloud className="size-4 text-muted-foreground" />
@@ -137,7 +139,7 @@ export function CloudSetting() {
     const user = connection.user;
     return (
       <SettingRow
-        title="byconvo cloud"
+        title="reviewer cloud"
         detail={
           user === null
             ? `Connected to ${connection.serverUrl}`
@@ -166,7 +168,7 @@ export function CloudSetting() {
           size="sm"
           disabled={busy}
           onClick={() => void connectCodex()}
-          title="Sign in to Codex here and use it in byconvo cloud"
+          title="Sign in to Codex here and use it in reviewer cloud"
         >
           Connect Codex
         </Button>
@@ -190,7 +192,7 @@ export function CloudSetting() {
     const pending = connection.pending;
     return (
       <SettingRow
-        title="byconvo cloud"
+        title="reviewer cloud"
         detail={`Enter this code at ${pending.verificationUri} to approve this machine. Waiting for approval…`}
       >
         <span
@@ -225,7 +227,7 @@ export function CloudSetting() {
 
   return (
     <SettingRow
-      title="byconvo cloud"
+      title="reviewer cloud"
       detail="Run agent sessions in the cloud and follow them from here. Disconnected."
     >
       <IconCloudOff className="size-4 text-muted-foreground" />

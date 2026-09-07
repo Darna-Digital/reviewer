@@ -1,5 +1,5 @@
 /**
- * Turns one `.byconvo/languages.json` entry into a language provider.
+ * Turns one `.reviewer/languages.json` entry into a language provider.
  *
  * This is what makes the feature pluggable: the port, the API and the whole UI
  * are language-agnostic, so a new language costs a few lines of configuration
@@ -12,7 +12,7 @@ import {
   type DocumentRequest,
   type LanguageProvider,
   type PositionRequest,
-} from "@byconvo/core/ports/language-provider";
+} from "@reviewer/core/ports/language-provider";
 import {
   filterCompletions,
   offsetAt,
@@ -28,7 +28,7 @@ import {
   type ReferencesResult,
   type SymbolReference,
   type SymbolTarget,
-} from "@byconvo/core/language";
+} from "@reviewer/core/language";
 import { toAbsolute, toRepoRelative } from "../typescript/ts-mapping.ts";
 import {
   connectionFor,

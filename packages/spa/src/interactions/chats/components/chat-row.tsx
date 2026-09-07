@@ -37,7 +37,7 @@ import {
   type ChatMessage,
   type ChatSummary,
   type ChatTurnState,
-} from "@byconvo/core/chats";
+} from "@reviewer/core/chats";
 import { useChatPreview } from "@/lib/queries";
 import { timeAgo } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";

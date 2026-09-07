@@ -42,7 +42,7 @@ import {
   type AgentRuntime,
 } from "@/interactions/collaboration/data/collaboration.mock";
 import { AGENTS, agentShort } from "@/interactions/threads/interfaces/agents";
-import type { AgentKind } from "@byconvo/core/threads";
+import type { AgentKind } from "@reviewer/core/threads";
 import { cn } from "@/lib/utils";
 
 /** The plain shell is not something you add to a workspace as a teammate. */

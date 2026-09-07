@@ -9,7 +9,7 @@ import { useSyncExternalStore } from "react";
 import { createStoredChatFilters } from "../functions/stored-chat-filters.functions";
 import type { ChatFilters } from "../functions/chat-filters.functions";
 
-const STORE_KEY = "byconvo-chat-filters";
+const STORE_KEY = "reviewer-chat-filters";
 
 const stored = createStoredChatFilters({
   data: {},

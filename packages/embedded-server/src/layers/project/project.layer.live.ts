@@ -3,7 +3,7 @@ import {
   ProjectRepository,
   makeProjectService,
   ProjectService,
-} from "@byconvo/core/project";
+} from "@reviewer/core/project";
 import { makeGitProjectRepository } from "./project.repository.git.ts";
 
 export const ProjectLive = Layer.effect(ProjectService)(

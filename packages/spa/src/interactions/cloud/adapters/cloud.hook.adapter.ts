@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
-import type { CloudRepo } from "@byconvo/core/cloud";
+import type { CloudRepo } from "@reviewer/core/cloud";
 import { fetchClient } from "@/lib/api/client";
 import {
   cloudRunQueryOptions,
@@ -39,12 +39,12 @@ export function useCloudActions() {
               "/api/cloud/connect",
               { body: { serverUrl } }
             );
-            if (error) return fail(error, "could not reach byconvo cloud");
+            if (error) return fail(error, "could not reach reviewer cloud");
             return data;
           },
           poll: async () => {
             const { data, error } = await fetchClient.POST("/api/cloud/poll");
-            if (error) return fail(error, "could not reach byconvo cloud");
+            if (error) return fail(error, "could not reach reviewer cloud");
             return data;
           },
           disconnect: async () => {

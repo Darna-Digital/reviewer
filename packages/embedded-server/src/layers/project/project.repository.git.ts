@@ -20,21 +20,21 @@ import {
   prefixDiffPaths,
   projectPath,
   splitProjectPath,
-} from "@byconvo/core/project";
-import { GitExec } from "@byconvo/core/ports/git-exec";
+} from "@reviewer/core/project";
+import { GitExec } from "@reviewer/core/ports/git-exec";
 import { makeGitRepoRepository } from "../repo/repo.repository.git.ts";
 import { makeAt } from "../git/git-exec.ts";
 import { scanRepos } from "../workspace/repo-scan.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
-import type { RepoRepo } from "@byconvo/core/repo";
+import type { RepoRepo } from "@reviewer/core/repo";
 import type {
   ProjectRepo,
   RepoBranches,
   RepoChanges,
   RepoCommitResult,
   RepoFailure,
-} from "@byconvo/core/project";
-import type { RepoEntry } from "@byconvo/core/workspace";
+} from "@reviewer/core/project";
+import type { RepoEntry } from "@reviewer/core/workspace";
 
 /** How many roots are read at once — enough to hide latency, bounded so a
  * folder of thirty repositories does not fork thirty gits at a time. */

@@ -450,7 +450,7 @@ describe("carryOut", () => {
     move: vi.fn(async () => undefined),
     copy: vi.fn(async () => undefined),
     upload: vi.fn(async () => undefined),
-    trash: vi.fn(async (path: string) => `.byconvo/trash/1/${path}`),
+    trash: vi.fn(async (path: string) => `.reviewer/trash/1/${path}`),
     ...overrides,
   });
 
@@ -474,7 +474,7 @@ describe("carryOut", () => {
       effects()
     );
     expect(back).toEqual([
-      { op: "move", from: ".byconvo/trash/1/src/a.ts", to: "src/a.ts" },
+      { op: "move", from: ".reviewer/trash/1/src/a.ts", to: "src/a.ts" },
     ]);
   });
 
@@ -561,7 +561,7 @@ describe("undo and redo", () => {
     ]);
     await createFileActionsFunctions(mock.deps()).undo();
     expect(mock.sideEffects.move).toHaveBeenCalledWith(
-      ".byconvo/trash/1/src/a.ts",
+      ".reviewer/trash/1/src/a.ts",
       "src/a.ts"
     );
     expect(mock.sideEffects.notify).toHaveBeenCalledWith(
@@ -578,7 +578,7 @@ describe("undo and redo", () => {
     // Moved back out of the trash rather than created empty, so whatever was
     // typed into it between the create and the undo survives.
     expect(mock.sideEffects.move).toHaveBeenCalledWith(
-      ".byconvo/trash/1/src/a.ts",
+      ".reviewer/trash/1/src/a.ts",
       "src/a.ts"
     );
     expect(mock.sideEffects.create).toHaveBeenCalledTimes(1);

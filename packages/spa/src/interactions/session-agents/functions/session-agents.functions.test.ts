@@ -79,7 +79,7 @@ describe("removeCustomAgent", () => {
 });
 
 describe("sessionAgents", () => {
-  it("lists the detected CLIs with the command byconvo runs, then the rest", () => {
+  it("lists the detected CLIs with the command reviewer runs, then the rest", () => {
     const strip = sessionAgents(
       ["claude", "codex"],
       [{ id: "a1", name: "Reviewer", command: "review run {prompt}" }]

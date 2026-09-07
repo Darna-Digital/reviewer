@@ -1,5 +1,5 @@
 /**
- * The provider list for a repository: whatever `.byconvo/languages.json`
+ * The provider list for a repository: whatever `.reviewer/languages.json`
  * configures, then the built-in TypeScript provider.
  *
  * Configured servers come first deliberately — `selectProvider` takes the first
@@ -7,7 +7,7 @@
  * can claim `.ts` and shadow the built-in one without any special case here.
  */
 import { readFileSync, statSync } from "node:fs";
-import type { LanguageProvider } from "@byconvo/core/ports/language-provider";
+import type { LanguageProvider } from "@reviewer/core/ports/language-provider";
 import {
   CONFIG_PATH,
   parseLanguageConfigText,

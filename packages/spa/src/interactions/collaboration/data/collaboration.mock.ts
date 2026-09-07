@@ -12,7 +12,7 @@ import {
 } from "@/interactions/collaboration/functions/task-flow.functions";
 import { agentShort } from "@/interactions/threads/interfaces/agents";
 import { VIEWER } from "@/interactions/collaboration/data/viewer.mock";
-import type { AgentKind } from "@byconvo/core/threads";
+import type { AgentKind } from "@reviewer/core/threads";
 
 // The signed-in account lives in its own module so the app shell's user menu can
 // read it without pulling this dataset in behind it (see `viewer.mock`); it is

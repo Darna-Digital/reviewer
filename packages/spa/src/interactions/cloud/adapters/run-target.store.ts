@@ -1,5 +1,5 @@
 /**
- * Where the next session runs: on this machine, or handed to byconvo cloud.
+ * Where the next session runs: on this machine, or handed to reviewer cloud.
  *
  * Held the way `run-location.store` is, and for the same reasons: it describes
  * the session that does not exist yet, the composer that asks unmounts on every

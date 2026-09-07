@@ -7,7 +7,7 @@
  * urgency and the file. Everything here is a plain function over diagnostics,
  * so the ordering and the labels can be tested without a rendered editor.
  */
-import type { Diagnostic, DiagnosticSeverity } from "@byconvo/core/language";
+import type { Diagnostic, DiagnosticSeverity } from "@reviewer/core/language";
 import type { DiagnosticCounts } from "../interfaces/language.interfaces";
 
 const SEVERITY_RANK: Record<DiagnosticSeverity, number> = {

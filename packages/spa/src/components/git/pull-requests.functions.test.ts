@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   unenrichedPull,
   type PullRequestInfo,
-} from "@byconvo/core/ports/git-provider";
+} from "@reviewer/core/ports/git-provider";
 import {
   blockedReason,
   checksHeadline,

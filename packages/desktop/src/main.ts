@@ -1,10 +1,10 @@
 /**
- * byconvo desktop — Electron main process.
+ * reviewer desktop — Electron main process.
  *
  * Wraps the SPA in a native window. The app is self-contained: it makes sure
  * the API server is running (spawning it if necessary) and then loads the SPA.
  *
- * - Dev (`BYCONVO_DESKTOP_DEV=1`): loads the Vite dev server and spawns the
+ * - Dev (`REVIEWER_DESKTOP_DEV=1`): loads the Vite dev server and spawns the
  *   server through pnpm if nothing answers on the API port yet.
  * - Prod/local package test: runs the bundled server and loads the built SPA
  *   from disk. No pnpm, tsx, or Vite server is required at runtime.
@@ -28,7 +28,7 @@ import { autoUpdater } from "electron-updater";
 
 protocol.registerSchemesAsPrivileged([
   {
-    scheme: "byconvo",
+    scheme: "reviewer",
     privileges: {
       standard: true,
       secure: true,
@@ -48,18 +48,18 @@ const isBeta = app.getVersion().includes("-beta.");
 
 // Branding: the product name shown in the macOS menu bar, dock, and window
 // title. Set before the app is ready so it replaces Electron's default name.
-app.setName(isBeta ? "Byconvo Beta" : "Byconvo");
+app.setName(isBeta ? "Reviewer Beta" : "Reviewer");
 
-const isDev = process.env["BYCONVO_DESKTOP_DEV"] === "1";
+const isDev = process.env["REVIEWER_DESKTOP_DEV"] === "1";
 const serverPort = Number(
-  process.env["BYCONVO_PORT"] ?? (isBeta ? 41821 : 41811)
+  process.env["REVIEWER_PORT"] ?? (isBeta ? 41821 : 41811)
 );
 // Propagate the resolved port so the preload/renderer (which reads
-// BYCONVO_PORT) and the spawned server agree on it, even when it wasn't set
+// REVIEWER_PORT) and the spawned server agree on it, even when it wasn't set
 // from the outside.
-process.env["BYCONVO_PORT"] = String(serverPort);
+process.env["REVIEWER_PORT"] = String(serverPort);
 const serverUrl = `http://localhost:${serverPort}`;
-const spaUrl = process.env["BYCONVO_DEV_URL"] ?? "http://localhost:41812";
+const spaUrl = process.env["REVIEWER_DEV_URL"] ?? "http://localhost:41812";
 
 // packages/desktop/dist/main.js → repository root.
 const repoRoot = resolve(__dirname, "..", "..", "..");
@@ -73,7 +73,7 @@ const bundledServerEntry = app.isPackaged
   : resolve(repoRoot, "packages", "embedded-server", "dist", "main.cjs");
 const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
-// The Byconvo brand logo, used for the window and the macOS dock icon so the
+// The Reviewer brand logo, used for the window and the macOS dock icon so the
 // app no longer shows Electron's default icon. Both variants are the `brand/`
 // square on the macOS icon grid — an 824px tile centred in a 1024px canvas, the
 // margin every other dock icon leaves — and differ only in whether the tile is
@@ -82,10 +82,10 @@ const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 // dev and packaged builds load the same files.
 const brandIcons = {
   dark: nativeImage.createFromPath(
-    resolve(__dirname, "..", "assets", "byconvo-icon-dark.png")
+    resolve(__dirname, "..", "assets", "reviewer-icon-dark.png")
   ),
   light: nativeImage.createFromPath(
-    resolve(__dirname, "..", "assets", "byconvo-icon-light.png")
+    resolve(__dirname, "..", "assets", "reviewer-icon-light.png")
   ),
 };
 
@@ -179,9 +179,9 @@ async function ensureServer(): Promise<void> {
   }
 
   serverProcess = isDev
-    ? spawn(pnpmBin, ["--filter", "@byconvo/embedded-server", "start"], {
+    ? spawn(pnpmBin, ["--filter", "@reviewer/embedded-server", "start"], {
         cwd: serverCwd,
-        env: { ...process.env, BYCONVO_PORT: String(serverPort) },
+        env: { ...process.env, REVIEWER_PORT: String(serverPort) },
         stdio: "inherit",
       })
     : spawn(process.execPath, [bundledServerEntry], {
@@ -189,8 +189,8 @@ async function ensureServer(): Promise<void> {
         env: {
           ...process.env,
           ELECTRON_RUN_AS_NODE: "1",
-          BYCONVO_PORT: String(serverPort),
-          ...(resolvedNodePty ? { BYCONVO_NODE_PTY: resolvedNodePty } : {}),
+          REVIEWER_PORT: String(serverPort),
+          ...(resolvedNodePty ? { REVIEWER_NODE_PTY: resolvedNodePty } : {}),
         },
         stdio: "inherit",
       });
@@ -221,7 +221,7 @@ function isNavigation(request: GlobalRequest): boolean {
 }
 
 function registerRendererProtocol(): void {
-  protocol.handle("byconvo", (request) => {
+  protocol.handle("reviewer", (request) => {
     const url = new URL(request.url);
     const pathname = decodeURIComponent(url.pathname);
     const candidate =
@@ -248,7 +248,7 @@ const isMac = process.platform === "darwin";
 
 /** Everything the app itself is served from — anything else is the web. */
 function isInternalUrl(url: string): boolean {
-  if (url.startsWith("byconvo://")) return true;
+  if (url.startsWith("reviewer://")) return true;
   try {
     const { origin } = new URL(url);
     return origin === new URL(spaUrl).origin || origin === serverUrl;
@@ -275,7 +275,7 @@ async function createWindow(): Promise<void> {
           visualEffectState: "active" as const,
         }
       : {}),
-    title: "Byconvo",
+    title: "Reviewer",
     icon: currentBrandIcon(),
     titleBarStyle: "hiddenInset",
     // Measured off screenshots rather than reasoned about: macOS lands a 14px
@@ -321,7 +321,7 @@ async function createWindow(): Promise<void> {
     await waitForUrl(spaUrl, 30_000);
     await window.loadURL(spaUrl);
   } else {
-    await window.loadURL("byconvo://app/");
+    await window.loadURL("reviewer://app/");
   }
 }
 
@@ -353,7 +353,7 @@ app.whenReady().then(async () => {
     await ensureServer();
     await createWindow();
   } catch (cause) {
-    console.error("failed to start byconvo desktop:", cause);
+    console.error("failed to start reviewer desktop:", cause);
     app.quit();
   }
 

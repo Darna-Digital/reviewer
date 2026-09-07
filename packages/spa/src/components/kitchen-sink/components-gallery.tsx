@@ -127,7 +127,7 @@ const TOAST_MOCKS: readonly { label: string; fire: () => void }[] = [
     label: "Long + description",
     fire: () =>
       toast.error(
-        "failed to push some refs to git@github.com:darna-digital/byconvo.git",
+        "failed to push some refs to git@github.com:darna-digital/reviewer.git",
         {
           description:
             "Updates were rejected because the tip of your current branch is behind its remote counterpart. Integrate the remote changes (e.g. 'git pull --rebase') before pushing again. See the 'Note about fast-forwards' section of 'git push --help' for details.",

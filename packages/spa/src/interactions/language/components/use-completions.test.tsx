@@ -2,7 +2,7 @@
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Editor, TextEdit } from "@pierre/diffs/edit";
-import type { CompletionItem } from "@byconvo/core/language";
+import type { CompletionItem } from "@reviewer/core/language";
 import { useCompletions } from "./use-completions";
 
 const requestCompletions = vi.fn();

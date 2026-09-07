@@ -1,5 +1,5 @@
 /**
- * `cloud` feature — byconvo's connection to byconvo cloud, and the runs it
+ * `cloud` feature — reviewer's connection to reviewer cloud, and the runs it
  * hands over. The orchestration worth testing lives behind injected side
  * effects: the device flow's polling (when to ask again, when to stop),
  * and turning the composer's local settings into a cloud run.
@@ -11,7 +11,7 @@ import type {
   CloudRunSnapshot,
   CloudRunSummary,
   NewCloudRun,
-} from "@byconvo/core/cloud";
+} from "@reviewer/core/cloud";
 import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces";
 
 /** The agents that can be signed in to on this machine. */

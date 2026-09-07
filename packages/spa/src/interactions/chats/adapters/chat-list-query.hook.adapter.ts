@@ -15,7 +15,7 @@ import {
 } from "@/interactions/chats/functions/chat-filters.functions";
 import { useChatProjects } from "@/lib/queries";
 import type { ChatListFilters } from "@/lib/queries";
-import type { ChatProjectTally } from "@byconvo/core/chats";
+import type { ChatProjectTally } from "@reviewer/core/chats";
 
 const EMPTY_PROJECTS: ReadonlyArray<ChatProjectTally> = [];
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ChatProjectTally } from "@byconvo/core/chats";
+import type { ChatProjectTally } from "@reviewer/core/chats";
 import {
   ALL_PROJECTS,
   chatListFilters,

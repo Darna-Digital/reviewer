@@ -4,7 +4,7 @@ import type {
   Position,
   SymbolReference,
   SymbolTarget,
-} from "@byconvo/core/language";
+} from "@reviewer/core/language";
 import type { LanguageDependencies } from "../interfaces/language.interfaces";
 
 export const range = (

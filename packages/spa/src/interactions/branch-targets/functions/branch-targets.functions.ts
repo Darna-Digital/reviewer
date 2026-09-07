@@ -1,5 +1,5 @@
 /**
- * Where a branch's work is aimed — byconvo's own record, not git's.
+ * Where a branch's work is aimed — reviewer's own record, not git's.
  *
  * Git knows a branch's tip and its upstream, never what it is meant to land
  * on, so the answer is recorded when the branch is made and read back here

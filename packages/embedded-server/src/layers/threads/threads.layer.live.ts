@@ -3,7 +3,7 @@ import {
   ThreadsRepository,
   ThreadsService,
   makeThreadsService,
-} from "@byconvo/core/threads";
+} from "@reviewer/core/threads";
 import { makeSqliteThreadsRepository } from "./threads.repository.sqlite.ts";
 
 export const ThreadsLive = Layer.effect(ThreadsService)(

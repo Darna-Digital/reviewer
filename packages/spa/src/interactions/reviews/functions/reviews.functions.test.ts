@@ -11,7 +11,7 @@ import {
 import {
   unenrichedPull,
   type PullRequestInfo,
-} from "@byconvo/core/ports/git-provider";
+} from "@reviewer/core/ports/git-provider";
 
 const pull = (
   number: number,

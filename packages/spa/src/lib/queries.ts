@@ -6,8 +6,8 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api, fetchClient } from "@/lib/api/client";
-import { isCloudRunActive } from "@byconvo/core/cloud";
-import { isMultiRepo } from "@byconvo/core/workspace";
+import { isCloudRunActive } from "@reviewer/core/cloud";
+import { isMultiRepo } from "@reviewer/core/workspace";
 import type { DiffTarget, LogQuery } from "@/lib/api/types";
 
 /**
@@ -56,7 +56,7 @@ export const useBranches = () =>
   api.useQuery("get", "/api/branches", {}, GIT_DATA);
 export const useRemoteBranches = () =>
   api.useQuery("get", "/api/remote-branches", {}, GIT_DATA);
-/** Where each branch's work is aimed — byconvo's own record, not git's. */
+/** Where each branch's work is aimed — reviewer's own record, not git's. */
 export const useBranchTargets = () =>
   api.useQuery("get", "/api/branch-targets", {}, OWN_DATA);
 export const useComments = () =>
@@ -520,10 +520,10 @@ export const useFile = (path: string | null) =>
     { ...GIT_DATA, enabled: path !== null, retry: false }
   );
 
-// --- byconvo cloud ---------------------------------------------------------
+// --- reviewer cloud ---------------------------------------------------------
 
 /**
- * Whether the app is connected to byconvo cloud, and as whom. Refetched on
+ * Whether the app is connected to reviewer cloud, and as whom. Refetched on
  * focus: the approval half of connecting happens in a browser tab, and coming
  * back to the window is the moment the answer is most likely to have changed.
  */

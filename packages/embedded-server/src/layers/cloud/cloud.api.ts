@@ -19,10 +19,10 @@ import {
   ConnectCloud,
   NewCloudRun,
   SendCloudRunMessage,
-} from "@byconvo/core/cloud";
-import { AgentAuthError } from "@byconvo/core/ports/agent-auth";
-import { CloudApiError } from "@byconvo/core/ports/cloud-api";
-import { StorageError } from "@byconvo/core/shared";
+} from "@reviewer/core/cloud";
+import { AgentAuthError } from "@reviewer/core/ports/agent-auth";
+import { CloudApiError } from "@reviewer/core/ports/cloud-api";
+import { StorageError } from "@reviewer/core/shared";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 const connectionErrors = [StorageError, CloudApiError] as const;

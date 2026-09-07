@@ -10,7 +10,7 @@
 import type {
   CheckState,
   PullRequestInfo,
-} from "@byconvo/core/ports/git-provider";
+} from "@reviewer/core/ports/git-provider";
 
 export interface PullRequestGroup {
   readonly base: string;

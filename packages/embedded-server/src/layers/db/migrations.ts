@@ -2,7 +2,7 @@
  * The database schema, as an ordered list of migrations.
  *
  * Each entry runs exactly once, inside a transaction, and its id is recorded in
- * `migration` — so a byconvo that has already opened the file only runs what it
+ * `migration` — so a reviewer that has already opened the file only runs what it
  * has not seen. Append; never edit a shipped entry.
  *
  * Two shapes of table live here on purpose:
@@ -215,12 +215,12 @@ CREATE INDEX collab_bookmark_repo ON collab_bookmark (repo_path, created_at DESC
 const chatSeenAt = `ALTER TABLE chat ADD COLUMN seen_at TEXT`;
 
 /**
- * The app's connection to byconvo cloud: which server, the bearer token once
+ * The app's connection to reviewer cloud: which server, the bearer token once
  * the device flow has granted one, and the code while it is still pending.
  * One row for the whole machine — the connection is the app's, not a
  * project's — held as a single JSON document decoded through
- * `@byconvo/core/cloud`'s `StoredCloudConnection`. The token rests here in
- * the clear like the rest of `~/.byconvo`: this is the user's own machine.
+ * `@reviewer/core/cloud`'s `StoredCloudConnection`. The token rests here in
+ * the clear like the rest of `~/.reviewer`: this is the user's own machine.
  */
 const cloudConnection = `
 CREATE TABLE cloud_connection (

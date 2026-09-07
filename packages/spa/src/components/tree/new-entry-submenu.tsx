@@ -27,8 +27,8 @@ const HOVER_CLOSE_DELAY = 150;
  * owns Up and Down turns ArrowRight and ArrowLeft into these events on the
  * trigger and the flyout panel.
  */
-export const SUBMENU_OPEN_EVENT = "byconvo:submenu-open";
-export const SUBMENU_CLOSE_EVENT = "byconvo:submenu-close";
+export const SUBMENU_OPEN_EVENT = "reviewer:submenu-open";
+export const SUBMENU_CLOSE_EVENT = "reviewer:submenu-close";
 
 /**
  * What was picked from the "New" flyout: what kind of row to draft, and the

@@ -4,13 +4,13 @@ import {
   CommentIdParam,
   NewComment,
   UpdateComment,
-} from "@byconvo/core/comments";
+} from "@reviewer/core/comments";
 import {
   NoRepoSelected,
   NotFound,
   StorageError,
   Ok,
-} from "@byconvo/core/shared";
+} from "@reviewer/core/shared";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 // The repository types every operation with the same failure union

@@ -15,7 +15,7 @@ import {
   type FormatterSetup,
   type FormatRequest,
   type FormattedDocument,
-} from "@byconvo/core/ports/formatter";
+} from "@reviewer/core/ports/formatter";
 import { loadPrettier, resolvePlugins } from "./prettier-module.ts";
 import { detectPrettier } from "./prettier-setup.ts";
 

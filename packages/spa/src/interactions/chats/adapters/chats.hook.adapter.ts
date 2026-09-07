@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { fetchClient } from "@/lib/api/client";
 import { chatQueryOptions } from "@/lib/queries";
-import type { Chat, ChatSummary } from "@byconvo/core/chats";
+import type { Chat, ChatSummary } from "@reviewer/core/chats";
 import { invalidateChatList, prependChatSummary } from "./chats.cache";
 import { createChatsFunctions } from "../functions/chats.functions";
 import type {

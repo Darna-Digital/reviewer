@@ -17,8 +17,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents";
-import type { CommitDraft } from "@byconvo/core/git-message";
-import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo";
+import type { CommitDraft } from "@reviewer/core/git-message";
+import type { GitFileStatus, GitStatusEntry } from "@reviewer/core/repo";
 import { useCommitMessage } from "@/lib/commit-drafts";
 import { STATUS_COLOR } from "@/lib/git-status";
 import {

@@ -35,7 +35,7 @@ import type {
   ChatAccess,
   ChatEffort,
   ChatModelCatalog,
-} from "@byconvo/core/chats";
+} from "@reviewer/core/chats";
 import { useDraft } from "@/lib/composer-drafts";
 import {
   addComposerAttachment,

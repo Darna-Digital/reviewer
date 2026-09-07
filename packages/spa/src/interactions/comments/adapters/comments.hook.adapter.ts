@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef } from "react";
 import { api, fetchClient } from "@/lib/api/client";
-import type { ReviewComment } from "@byconvo/core/comments";
+import type { ReviewComment } from "@reviewer/core/comments";
 import { createCommentsFunctions } from "../functions/comments.functions";
 import {
   optimisticComment,

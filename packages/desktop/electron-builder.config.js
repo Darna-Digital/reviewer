@@ -1,37 +1,37 @@
 // Channel-aware electron-builder configuration.
 //
-// BYCONVO_CHANNEL selects the app identity and the GitHub repository that
+// REVIEWER_CHANNEL selects the app identity and the GitHub repository that
 // releases are published to and that auto-updates are fetched from. Because
-// each channel has a distinct appId and productName, a "Byconvo Beta" install
-// coexists with a production "Byconvo" install and updates on its own feed —
-// beta from darna-digital/byconvo-beta, production from darna-digital/byconvo.
+// each channel has a distinct appId and productName, a "Reviewer Beta" install
+// coexists with a production "Reviewer" install and updates on its own feed —
+// beta from darna-digital/reviewer-beta, production from darna-digital/reviewer.
 //
 // Defaults to prod so a local `pnpm dist:desktop` (no channel set) behaves like
 // a production build.
 
 const channel = (() => {
-  const raw = process.env.BYCONVO_CHANNEL;
+  const raw = process.env.REVIEWER_CHANNEL;
   return raw === "beta" || raw === "prod" ? raw : "prod";
 })();
 
 const identities = {
   beta: {
     appId: "com.byconvo.desktop.beta",
-    productName: "Byconvo Beta",
+    productName: "Reviewer Beta",
     publish: {
       provider: "github",
       owner: "darna-digital",
-      repo: "byconvo-beta",
+      repo: "reviewer-beta",
       releaseType: "release",
     },
   },
   prod: {
     appId: "com.byconvo.desktop",
-    productName: "Byconvo",
+    productName: "Reviewer",
     publish: {
       provider: "github",
       owner: "darna-digital",
-      repo: "byconvo",
+      repo: "reviewer",
       releaseType: "release",
     },
   },
@@ -45,7 +45,7 @@ module.exports = {
   productName,
   // Space-free artifact name so the file electron-updater downloads is stable
   // across channels; the version already carries the -beta.N suffix on beta.
-  artifactName: "Byconvo-${version}-${os}-${arch}.${ext}",
+  artifactName: "Reviewer-${version}-${os}-${arch}.${ext}",
   asar: true,
 
   // @lydell/node-pty ships prebuilt, ABI-stable (N-API) binaries per platform,
@@ -73,7 +73,7 @@ module.exports = {
 
   mac: {
     category: "public.app-category.developer-tools",
-    icon: "assets/byconvo.icns",
+    icon: "assets/reviewer.icns",
     // Gatekeeper requires distributed apps to be signed with a Developer ID
     // certificate and notarized. `identity` is left unset so electron-builder
     // auto-discovers the "Developer ID Application" cert imported into the CI

@@ -3,7 +3,7 @@
  * onto the shared `GitHubClient` (owner/repo resolution + REST helpers).
  */
 import * as Effect from "effect/Effect";
-import { GitProviderError } from "@byconvo/core/ports/git-provider";
+import { GitProviderError } from "@reviewer/core/ports/git-provider";
 import { GitHubClient } from "./github-client.ts";
 import { diffFromPullFiles, parsePullFiles } from "./pull-files-diff.ts";
 import type { PullFileEntry } from "./pull-files-diff.ts";
@@ -13,11 +13,11 @@ import {
   pullFromRest,
   pullsFromGraphql,
 } from "./pull-request-mapping.ts";
-import type { ReviewComment } from "@byconvo/core/comments";
+import type { ReviewComment } from "@reviewer/core/comments";
 import type {
   PullRequestInfo,
   GitProviderShape,
-} from "@byconvo/core/ports/git-provider";
+} from "@reviewer/core/ports/git-provider";
 
 const FILES_PER_PAGE = 100;
 const MAX_FILE_PAGES = 30;

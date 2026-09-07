@@ -11,11 +11,11 @@ import * as FileSystem from "effect/FileSystem";
 import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { describe, expect } from "vitest";
-import { ProjectRepository } from "@byconvo/core/project";
+import { ProjectRepository } from "@reviewer/core/project";
 import { subcommandOf } from "../git/git-exec.ts";
 import { memoryLayer } from "../workspace/workspace-context.ts";
 import { makeGitProjectRepository } from "./project.repository.git.ts";
-import type { SearchQuery } from "@byconvo/core/repo";
+import type { SearchQuery } from "@reviewer/core/repo";
 
 const PROJECT = "/work";
 const ROOTS = ["/work/backend", "/work/frontend"];

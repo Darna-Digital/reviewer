@@ -4,7 +4,7 @@ import { Api } from "../../api.ts";
 import {
   DEFAULT_COMMIT_AGENT,
   GitMessageService,
-} from "@byconvo/core/git-message";
+} from "@reviewer/core/git-message";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 
 /**

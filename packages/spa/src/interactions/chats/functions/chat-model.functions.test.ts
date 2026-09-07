@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ChatModelCatalog } from "@byconvo/core/chats";
+import type { ChatModelCatalog } from "@reviewer/core/chats";
 import { preferredChatModel } from "./chat-model.functions";
 
 const catalog: ChatModelCatalog = {

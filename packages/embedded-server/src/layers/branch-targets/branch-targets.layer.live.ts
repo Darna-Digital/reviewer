@@ -3,7 +3,7 @@ import {
   BranchTargetsRepository,
   BranchTargetsService,
   makeBranchTargetsService,
-} from "@byconvo/core/branch-targets";
+} from "@reviewer/core/branch-targets";
 import { makeSqliteBranchTargetsRepository } from "./branch-targets.repository.sqlite.ts";
 
 export const BranchTargetsLive = Layer.effect(BranchTargetsService)(

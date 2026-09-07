@@ -7,7 +7,7 @@
  * skipping a blank command or a command with no repository) lives here behind
  * injected API side effects so it stays unit-testable without a server.
  */
-import type { DevCommand } from "@byconvo/core/local-dev";
+import type { DevCommand } from "@reviewer/core/local-dev";
 
 export interface LocalDevDependencies {
   data: Record<string, never>;

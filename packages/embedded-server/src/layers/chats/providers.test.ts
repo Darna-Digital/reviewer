@@ -8,8 +8,8 @@ import {
   CHAT_MODEL_CATALOG,
   CHAT_PROVIDER_KINDS,
   chatSessionOrigin,
-} from "@byconvo/core/chats";
-import type { Chat, ChatMessage } from "@byconvo/core/chats";
+} from "@reviewer/core/chats";
+import type { Chat, ChatMessage } from "@reviewer/core/chats";
 
 const msg = (
   role: ChatMessage["role"],

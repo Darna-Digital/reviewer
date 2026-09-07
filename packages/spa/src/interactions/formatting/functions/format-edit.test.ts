@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyTextEdits } from "@byconvo/core/language";
+import { applyTextEdits } from "@reviewer/core/language";
 import { minimalEdit } from "./format-edit";
 
 const applied = (before: string, after: string) => {

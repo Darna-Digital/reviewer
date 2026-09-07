@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect";
-import type { CloudSettingsRepo } from "@byconvo/core/cloud";
-import { StorageError } from "@byconvo/core/shared";
+import type { CloudSettingsRepo } from "@reviewer/core/cloud";
+import { StorageError } from "@reviewer/core/shared";
 import {
   clearCloudConnection,
   readCloudConnection,

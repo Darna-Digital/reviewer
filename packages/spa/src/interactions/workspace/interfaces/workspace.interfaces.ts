@@ -10,7 +10,7 @@
  * view. The API calls, cache and toasts are injected; the sequencing is the
  * real logic and is what the tests pin down.
  */
-import type { WorkspaceInfo } from "@byconvo/core/workspace";
+import type { WorkspaceInfo } from "@reviewer/core/workspace";
 
 export interface WorkspaceDependencies {
   data: Record<string, never>;

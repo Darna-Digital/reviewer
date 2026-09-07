@@ -1,9 +1,9 @@
 {
-  "name": "@byconvo/desktop",
-  "productName": "Byconvo",
+  "name": "@reviewer/desktop",
+  "productName": "Reviewer",
   "private": true,
   "version": "0.1.0",
-  "description": "byconvo desktop — Electron shell around the client",
+  "description": "reviewer desktop — Electron shell around the client",
   "main": "dist/main.js",
   "dependencies": {
     "@lydell/node-pty": "1.2.0-beta.15",
@@ -14,13 +14,13 @@
     "pack": "electron-builder --dir --config electron-builder.config.js",
     "dist": "electron-builder --config electron-builder.config.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "dev": "tsc -p tsconfig.json && BYCONVO_DESKTOP_DEV=1 electron .",
+    "dev": "tsc -p tsconfig.json && REVIEWER_DESKTOP_DEV=1 electron .",
     "start": "tsc -p tsconfig.json && electron .",
     "format": "prettier --write \"src/**/*.ts\" \"*.js\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"*.js\""
   },
   "devDependencies": {
-    "@byconvo/lint": "workspace:*",
+    "@reviewer/lint": "workspace:*",
     "@types/node": "^22.20.1",
     "electron": "^44.2.0",
     "electron-builder": "^26.15.3",

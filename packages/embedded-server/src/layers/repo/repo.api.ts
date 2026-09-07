@@ -1,14 +1,14 @@
 /** HTTP endpoints for git: repo info, files, branches, log, diff, commit, sync. */
 import * as Schema from "effect/Schema";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
-import { GitError } from "@byconvo/core/ports/git-exec";
+import { GitError } from "@reviewer/core/ports/git-exec";
 import {
   NoRepoSelected,
   DiffText,
   Ok,
   NotFound,
   StorageError,
-} from "@byconvo/core/shared";
+} from "@reviewer/core/shared";
 import {
   BranchInfo,
   BranchTarget,
@@ -43,7 +43,7 @@ import {
   ResolveConflict,
   SearchQueryParams,
   SetBranchTarget,
-} from "@byconvo/core/repo";
+} from "@reviewer/core/repo";
 
 const gitError = [GitError, NoRepoSelected] as const;
 /** Reading or writing a branch's target touches git *and* the local store. */

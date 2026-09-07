@@ -30,7 +30,7 @@ import {
   setCloudRepoId,
   setRunTarget,
 } from "@/interactions/cloud/adapters/run-target.store";
-import { activeRepo, folderName } from "@byconvo/core/workspace";
+import { activeRepo, folderName } from "@reviewer/core/workspace";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import {
@@ -40,7 +40,7 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
-import type { Chat } from "@byconvo/core/chats";
+import type { Chat } from "@reviewer/core/chats";
 
 /** A fact about a session, in the shape of the control it stands in for. */
 const PlaceChip = ({

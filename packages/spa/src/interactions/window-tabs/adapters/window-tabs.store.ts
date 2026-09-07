@@ -19,7 +19,7 @@ import type {
   WindowTabsState,
 } from "../interfaces/window-tabs.interfaces";
 
-const STORE_KEY = "byconvo-window-tabs";
+const STORE_KEY = "reviewer-window-tabs";
 
 let sequence = 0;
 export const nextTabId = (): string => `tab-${(sequence += 1)}`;

@@ -1,4 +1,4 @@
-import { devicePollDelayMs, type NewCloudRun } from "@byconvo/core/cloud";
+import { devicePollDelayMs, type NewCloudRun } from "@reviewer/core/cloud";
 import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces";
 import type {
   CloudApproval,

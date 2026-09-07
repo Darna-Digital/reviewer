@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ChatMessage } from "@byconvo/core/chats";
+import type { ChatMessage } from "@reviewer/core/chats";
 import { toConversationSections } from "./conversation-sections.functions";
 
 let seq = 0;

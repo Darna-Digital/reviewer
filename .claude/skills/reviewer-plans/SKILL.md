@@ -1,21 +1,21 @@
 ---
-name: byconvo-plans
-description: Work out how something in this codebase actually works and record it as an analysis in byconvo's Plans pane — a front-to-back flow graph with notes anchored to real files and lines. Use when asked to "analyse how X works", "draw the flow for X", "record an analysis", or when a byconvo Plans request arrives.
+name: reviewer-plans
+description: Work out how something in this codebase actually works and record it as an analysis in reviewer's Plans pane — a front-to-back flow graph with notes anchored to real files and lines. Use when asked to "analyse how X works", "draw the flow for X", "record an analysis", or when a reviewer Plans request arrives.
 ---
 
 ## What this does
 
-byconvo's Plans pane draws an **analysis**: a graph of how one piece of
+reviewer's Plans pane draws an **analysis**: a graph of how one piece of
 behaviour travels through the codebase, laid out from the frontend to the
 backend, with notes pinned to the places a reader would otherwise have to go
 digging for.
 
-You produce one by reading the code and POSTing it to the byconvo server. The
+You produce one by reading the code and POSTing it to the reviewer server. The
 human then reads it in the pane and clicks through to the files; anything they
 want changed about it comes back to you as a follow-up in this session, which is
 answered by posting a new analysis.
 
-The server listens on `http://localhost:41811` (override with `$BYCONVO_PORT`)
+The server listens on `http://localhost:41811` (override with `$REVIEWER_PORT`)
 and serves the currently selected repository. Interactive docs:
 `http://localhost:41811/api/reference`.
 
@@ -165,14 +165,14 @@ finding itself needs re-deriving.
 
 Your own findings come back with `"origin": "analysis"`. A note with `"origin":
 "review"` was left against the code rather than against the drawing — treat it
-as an instruction, the same way the `byconvo` skill treats an inline review
+as an instruction, the same way the `reviewer` skill treats an inline review
 comment, and remove it with `DELETE /api/plans/:id/annotations/:id` once it is
 done.
 
 ## Notes
 
-- Analyses persist per-repo in byconvo's local database
-  (`~/.byconvo/byconvo.db`), so they survive restarts. Read and write them
+- Analyses persist per-repo in reviewer's local database
+  (`~/.reviewer/reviewer.db`), so they survive restarts. Read and write them
   through the API above rather than touching the database.
-- If the API call fails, the byconvo server probably isn't running — say so
+- If the API call fails, the reviewer server probably isn't running — say so
   rather than guessing; do not start it yourself.

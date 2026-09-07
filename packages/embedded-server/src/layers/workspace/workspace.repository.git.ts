@@ -11,8 +11,12 @@ import * as Stream from "effect/Stream";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { homedir, hostname, platform } from "node:os";
 import { resolve as pathResolve } from "node:path";
-import { NoRepoSelected, StorageError } from "@byconvo/core/shared";
-import { InvalidRepo, mediaTypeFor, PathExists } from "@byconvo/core/workspace";
+import { NoRepoSelected, StorageError } from "@reviewer/core/shared";
+import {
+  InvalidRepo,
+  mediaTypeFor,
+  PathExists,
+} from "@reviewer/core/workspace";
 import { countRepos, isGitRoot, scanRepos } from "./repo-scan.ts";
 import { resolveWorkspace, WorkspaceContext } from "./workspace-context.ts";
 import type {
@@ -20,7 +24,7 @@ import type {
   BrowsePayload,
   WorkspaceInfo,
   WorkspaceRepo,
-} from "@byconvo/core/workspace";
+} from "@reviewer/core/workspace";
 
 const toStorageError = (error: PlatformError) =>
   new StorageError({ reason: error.message });
@@ -42,8 +46,8 @@ export const revealCommand = (
   };
 };
 
-/** Where a deleted path is kept, beside the rest of byconvo's project state. */
-const TRASH_DIR = ".byconvo/trash";
+/** Where a deleted path is kept, beside the rest of reviewer's project state. */
+const TRASH_DIR = ".reviewer/trash";
 
 // Git's own heuristic: a NUL byte in the first 8k means "not text".
 const BINARY_SNIFF_BYTES = 8000;

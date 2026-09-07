@@ -45,7 +45,7 @@ beforeEach(() => {
   resetTypeScriptCache();
   resetProjects();
 
-  root = mkdtempSync(join(tmpdir(), "byconvo-ts-project-"));
+  root = mkdtempSync(join(tmpdir(), "reviewer-ts-project-"));
   packageDir = join(root, "packages", "app");
   mkdirSync(join(packageDir, "src"), { recursive: true });
   writeFileSync(join(packageDir, "tsconfig.json"), TSCONFIG);
@@ -64,7 +64,7 @@ describe("projectFor", () => {
   // each package and nothing at the repository root, so a root-anchored lookup
   // finds no compiler and every file in the repository goes unanalysed. It hid
   // for a release because `tsx` — which runs the dev server, and the tests —
-  // answers a bare `require("typescript")` from byconvo's own dependencies no
+  // answers a bare `require("typescript")` from reviewer's own dependencies no
   // matter which directory it is asked from; only the bundled server on plain
   // node resolves strictly enough to fail.
   it("loads the compiler installed beside the file, not the one at the root", () => {

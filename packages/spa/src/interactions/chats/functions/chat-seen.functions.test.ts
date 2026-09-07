@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Chat, ChatTurn } from "@byconvo/core/chats";
+import type { Chat, ChatTurn } from "@reviewer/core/chats";
 import { chatSeenMark } from "./chat-seen.functions";
 
 const turn = (state: ChatTurn["state"]): ChatTurn => ({

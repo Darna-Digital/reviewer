@@ -8,7 +8,7 @@
  * the row settling under the pointer instead of a page-load later.
  */
 import type { QueryClient } from "@tanstack/react-query";
-import type { ChatPage, ChatSummary } from "@byconvo/core/chats";
+import type { ChatPage, ChatSummary } from "@reviewer/core/chats";
 
 /** Every cached read of the sessions list, in either shape. */
 const CHAT_LIST_KEY = ["get", "/api/chats"];

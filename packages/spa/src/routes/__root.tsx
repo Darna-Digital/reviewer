@@ -29,7 +29,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Byconvo" },
+      { title: "Reviewer" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -71,7 +71,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             the vibrancy layer waits is the exact thing this avoids. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(()=>{try{const r=document.documentElement;const t=localStorage.getItem("byconvo-theme")||"system";const d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);r.dataset.theme=d?"dark":"light";r.classList.toggle("desktop","byconvo" in window);const p=JSON.parse(localStorage.getItem("byconvo-ui")||"{}");r.classList.toggle("translucent",p.translucency!==false);}catch(e){}})()`,
+            __html: `(()=>{try{const r=document.documentElement;const t=localStorage.getItem("reviewer-theme")||"system";const d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);r.dataset.theme=d?"dark":"light";r.classList.toggle("desktop","reviewer" in window);const p=JSON.parse(localStorage.getItem("reviewer-ui")||"{}");r.classList.toggle("translucent",p.translucency!==false);}catch(e){}})()`,
           }}
         />
       </head>

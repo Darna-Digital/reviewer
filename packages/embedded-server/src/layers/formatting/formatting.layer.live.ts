@@ -3,7 +3,7 @@ import {
   FormattingRepository,
   FormattingService,
   makeFormattingService,
-} from "@byconvo/core/formatting";
+} from "@reviewer/core/formatting";
 import { makeLivePrettierRepository } from "./formatting.repository.live.ts";
 
 export const FormattingLive = Layer.effect(FormattingService)(

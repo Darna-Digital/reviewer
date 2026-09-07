@@ -17,7 +17,7 @@ import type {
   PlanLayer,
   PlanNode,
   PlanNodeKind,
-} from "@byconvo/core/plans";
+} from "@reviewer/core/plans";
 
 export interface Point {
   readonly x: number;

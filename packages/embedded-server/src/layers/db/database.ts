@@ -1,6 +1,6 @@
 /**
- * The byconvo database — one SQLite file at `~/.byconvo/byconvo.db` holding
- * every project's state, in place of the `.byconvo/*.json` files each
+ * The reviewer database — one SQLite file at `~/.reviewer/reviewer.db` holding
+ * every project's state, in place of the `.reviewer/*.json` files each
  * repository used to carry.
  *
  * One file, not one per repository, is what makes the sessions surface able to
@@ -53,11 +53,11 @@ export const execute = (sql: string, ...params: ReadonlyArray<Param>): void => {
     .run(...params);
 };
 
-/** `BYCONVO_DB` overrides it; `:memory:` is what the tests open. */
+/** `REVIEWER_DB` overrides it; `:memory:` is what the tests open. */
 export const databasePath = (): string => {
-  const configured = process.env["BYCONVO_DB"];
+  const configured = process.env["REVIEWER_DB"];
   if (configured !== undefined && configured.length > 0) return configured;
-  return `${homedir()}/.byconvo/byconvo.db`;
+  return `${homedir()}/.reviewer/reviewer.db`;
 };
 
 let handle: DatabaseSync | null = null;

@@ -14,7 +14,7 @@
  * popup that happens to be wide.
  */
 import { useSyncExternalStore } from "react";
-import type { Position } from "@byconvo/core/language";
+import type { Position } from "@reviewer/core/language";
 import { openBottomTab } from "@/lib/ui-prefs";
 import type { UsageQuery } from "../interfaces/find-usages.interfaces";
 

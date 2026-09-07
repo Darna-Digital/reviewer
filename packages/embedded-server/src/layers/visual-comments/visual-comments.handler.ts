@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
 import { Api } from "../../api.ts";
-import { VisualCommentsService } from "@byconvo/core/visual-comments";
+import { VisualCommentsService } from "@reviewer/core/visual-comments";
 
 const ok = { ok: true } as const;
 

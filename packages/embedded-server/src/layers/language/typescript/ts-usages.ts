@@ -13,7 +13,7 @@
  * syntactic, so it costs a walk of a source file the program already has.
  */
 import type * as TS from "typescript";
-import type { ReferenceKind } from "@byconvo/core/language";
+import type { ReferenceKind } from "@reviewer/core/language";
 import type { TypeScriptModule } from "./ts-module.ts";
 
 /** The symbol a usage sits inside, as a results tree files it. */

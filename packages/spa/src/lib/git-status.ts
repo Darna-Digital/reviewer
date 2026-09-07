@@ -1,4 +1,4 @@
-import type { GitFileStatus } from "@byconvo/core/repo";
+import type { GitFileStatus } from "@reviewer/core/repo";
 
 /** Per-status text colour, shared by every changed-file list. */
 export const STATUS_COLOR: Record<GitFileStatus, string> = {

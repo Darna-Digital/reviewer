@@ -1,5 +1,5 @@
 /**
- * byconvo cloud as the local app calls it: the device flow that hands out a
+ * reviewer cloud as the local app calls it: the device flow that hands out a
  * bearer token, and the authenticated endpoints behind it.
  *
  * A port because the service that uses it has rules worth testing without a
@@ -179,7 +179,7 @@ const memorySnapshot = (id: string): CloudRunSnapshot => ({
     effort: "high",
     access: "fullAccess",
     baseBranch: "main",
-    branch: `byconvo/${id}`,
+    branch: `reviewer/${id}`,
     sessionId: null,
     status: "queued",
     openPullRequest: true,

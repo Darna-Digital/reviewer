@@ -6,7 +6,7 @@ import {
   GitExec,
   GitError,
   type GitExecShape,
-} from "@byconvo/core/ports/git-exec";
+} from "@reviewer/core/ports/git-exec";
 import { makeGitRepoRepository } from "./repo.repository.git.ts";
 
 const STAGED_DELETION = "packages/visual-picker/src/index.ts";

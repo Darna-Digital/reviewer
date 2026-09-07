@@ -233,7 +233,7 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
             trashSlotRef,
             (last) => last + 1
           );
-          const path = `.byconvo/trash/${slot}/${relPath.split("/").at(-1) ?? relPath}`;
+          const path = `.reviewer/trash/${slot}/${relPath.split("/").at(-1) ?? relPath}`;
           const contents = files[relPath];
           if (contents !== undefined) {
             const next = { ...files, [path]: contents };

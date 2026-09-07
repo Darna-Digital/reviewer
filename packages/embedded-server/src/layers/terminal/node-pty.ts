@@ -76,7 +76,7 @@ export const loadNodePty = (): NodePty | null => {
   // resolution doesn't depend on walking up through the asar. Fall back to a
   // bare specifier for dev / standalone, where node-pty is in node_modules.
   const candidates = [
-    process.env["BYCONVO_NODE_PTY"],
+    process.env["REVIEWER_NODE_PTY"],
     "@lydell/node-pty",
   ].filter((c): c is string => typeof c === "string" && c.length > 0);
   for (const candidate of candidates) {

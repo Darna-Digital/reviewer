@@ -11,7 +11,7 @@
  * it changes: two visits to the same resting point produce the same key, and
  * the second one is not sent.
  */
-import type { Chat } from "@byconvo/core/chats";
+import type { Chat } from "@reviewer/core/chats";
 
 export const chatSeenMark = (chat: Chat | null): string | null =>
   chat === null

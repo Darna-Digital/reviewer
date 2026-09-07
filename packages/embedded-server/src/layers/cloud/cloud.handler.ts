@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
-import { CloudService } from "@byconvo/core/cloud";
+import { CloudService } from "@reviewer/core/cloud";
 import { Api } from "../../api.ts";
 
 export const CloudHandler = HttpApiBuilder.group(Api, "cloud", (handlers) =>

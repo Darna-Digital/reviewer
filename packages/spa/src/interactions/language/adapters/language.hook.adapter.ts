@@ -17,7 +17,7 @@ import {
   type Diagnostic,
   type FileEdits,
   type Position,
-} from "@byconvo/core/language";
+} from "@reviewer/core/language";
 import { api, fetchClient } from "@/lib/api/client";
 import { createLanguageFunctions } from "../functions/language.functions";
 import type { LanguageFunctions } from "../interfaces/language.interfaces";

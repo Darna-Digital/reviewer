@@ -8,7 +8,7 @@
  * otherwise left asking someone to type a device code.
  *
  * Nothing is parsed here. The file the CLI wrote is the credential, carried up
- * to byconvo cloud exactly as it is, and the cloud hands the same bytes back to
+ * to reviewer cloud exactly as it is, and the cloud hands the same bytes back to
  * a sandbox's `codex` later.
  */
 import { spawn } from "node:child_process";
@@ -21,7 +21,7 @@ import {
   AgentAuth,
   AgentAuthError,
   type AgentAuthProvider,
-} from "@byconvo/core/ports/agent-auth";
+} from "@reviewer/core/ports/agent-auth";
 
 /** Where each vendor's CLI keeps its credential, and how to make one. */
 interface AgentAuthProgram {

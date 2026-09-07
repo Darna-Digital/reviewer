@@ -20,7 +20,7 @@ import {
 } from "@tabler/icons-react";
 // import { useCanGoBack } from "@tanstack/react-router";
 import { useRouterState } from "@tanstack/react-router";
-import { isFeatureEnabled } from "@byconvo/feature-flags";
+import { isFeatureEnabled } from "@reviewer/feature-flags";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,7 +72,7 @@ import {
 } from "@/interactions/workspace/adapters/project-picker.store";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
 import { ROW_TOOLTIP_PLACEMENT } from "@/components/ui/truncated-text";
-import { isChatUnread } from "@byconvo/core/chats";
+import { isChatUnread } from "@reviewer/core/chats";
 import { openSearch } from "@/interactions/search/adapters/search.store";
 import { useThinkingChatIds } from "@/interactions/chats/adapters/thinking-chats.hook.adapter";
 import { isDesktop } from "@/lib/desktop";

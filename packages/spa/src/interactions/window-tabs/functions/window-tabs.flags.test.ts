@@ -8,7 +8,7 @@ import {
   withPinnedTabs,
 } from "./window-tabs.functions";
 
-vi.mock("@byconvo/feature-flags", () => ({
+vi.mock("@reviewer/feature-flags", () => ({
   isFeatureEnabled: (flag: string) => flag !== "sessions-button",
 }));
 

@@ -21,7 +21,7 @@ import {
   decodeCloudRunEvent,
   type CloudRunEvent,
   type CloudRunSnapshot,
-} from "@byconvo/core/cloud";
+} from "@reviewer/core/cloud";
 import { cloudRunEventsUrl } from "@/lib/api/client";
 import { cloudRunQueryOptions } from "@/lib/queries";
 

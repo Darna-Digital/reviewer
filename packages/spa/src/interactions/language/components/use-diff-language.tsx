@@ -18,7 +18,7 @@ import type {
   DiffLineAnnotation,
   DiffTokenEventBaseProps,
 } from "@pierre/diffs";
-import type { Diagnostic, Location } from "@byconvo/core/language";
+import type { Diagnostic, Location } from "@reviewer/core/language";
 import {
   useLanguageLayer,
   type DiagnosticsAnnotationMeta,

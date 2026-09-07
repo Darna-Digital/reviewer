@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils";
 import type {
   PullRequestInfo,
   PullRequestLabel,
-} from "@byconvo/core/ports/git-provider";
+} from "@reviewer/core/ports/git-provider";
 import { groupPullsByBase } from "./pull-requests.functions";
 
 interface PullRequestListProps {

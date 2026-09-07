@@ -81,7 +81,7 @@ export function ChatsPage() {
   );
 
   /**
-   * Runs handed to byconvo cloud, listed above the local sessions. They are
+   * Runs handed to reviewer cloud, listed above the local sessions. They are
    * the account's rather than any project's, which is why they are a group of
    * their own — and why there is none until the app is connected.
    */

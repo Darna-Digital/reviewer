@@ -10,12 +10,12 @@
  */
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
-import type { FormattingRepo, FormatterInfo } from "@byconvo/core/formatting";
-import { locateProjectPath, prefixProjectPath } from "@byconvo/core/project";
+import type { FormattingRepo, FormatterInfo } from "@reviewer/core/formatting";
+import { locateProjectPath, prefixProjectPath } from "@reviewer/core/project";
 import type {
   Formatter,
   FormattingFailure,
-} from "@byconvo/core/ports/formatter";
+} from "@reviewer/core/ports/formatter";
 import { scanRepos } from "../workspace/repo-scan.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 import { prettierFormatter } from "./prettier/prettier-formatter.ts";

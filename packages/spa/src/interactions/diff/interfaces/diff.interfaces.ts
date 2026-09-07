@@ -6,9 +6,9 @@
  */
 import type { FileDiffMetadata } from "@pierre/diffs";
 import type { AppMode, DiffTarget } from "@/lib/api/types";
-import type { ReviewComment } from "@byconvo/core/comments";
-import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
-import type { GitFileStatus, GitStatusEntry } from "@byconvo/core/repo";
+import type { ReviewComment } from "@reviewer/core/comments";
+import type { PullRequestInfo } from "@reviewer/core/ports/git-provider";
+import type { GitFileStatus, GitStatusEntry } from "@reviewer/core/repo";
 
 /** What the user has navigated to — the route state, normalised. */
 export interface DiffSelection {
@@ -45,7 +45,7 @@ export interface TreeInputs {
 
 export interface DiffDependencies {
   data: {
-    /** Path prefix hidden from review surfaces (byconvo's own comment store). */
+    /** Path prefix hidden from review surfaces (reviewer's own comment store). */
     readonly internalDir: string;
   };
   sideEffects: {
@@ -61,7 +61,7 @@ export interface DiffFunctions {
   readonly parseFiles: (
     diffText: string | null
   ) => ReadonlyArray<FileDiffMetadata>;
-  /** Is this path byconvo-internal (and thus hidden)? */
+  /** Is this path reviewer-internal (and thus hidden)? */
   readonly isInternalPath: (path: string) => boolean;
   /** Paths the sidebar tree should list for the current mode. */
   readonly treePaths: (inputs: TreeInputs) => ReadonlyArray<string>;

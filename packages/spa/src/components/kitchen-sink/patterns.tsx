@@ -49,7 +49,7 @@ const THREADS = [
   },
   {
     title: "Investigate ECS auto-scaling failures",
-    repo: "byconvo",
+    repo: "reviewer",
     when: "1mo",
     state: "Waiting",
     dot: "bg-warning",
@@ -135,7 +135,7 @@ export function Patterns() {
           <div className="rounded-3xl bg-muted p-5">
             <p className="text-base font-medium sm:text-sm">Project</p>
             <p className="mt-1 max-w-[56ch] font-mono text-sm/6 text-muted-foreground">
-              ~/programming/darna-digital-organization/byconvo
+              ~/programming/darna-digital-organization/reviewer
             </p>
           </div>
         </Subsection>

@@ -14,7 +14,7 @@
  * of references, and everything between is a fold. The fetching lives in the
  * adapter and the scrolling lives in the components.
  */
-import type { Position, SymbolReference } from "@byconvo/core/language";
+import type { Position, SymbolReference } from "@reviewer/core/language";
 
 /**
  * What a search is for.

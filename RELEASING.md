@@ -1,11 +1,11 @@
-# Releasing Byconvo (desktop)
+# Releasing Reviewer (desktop)
 
 Two channels, each a separate signed app with its own release feed:
 
 | Channel | Trigger | Publishes to | Signed | Notarized | Auto-update |
 | --- | --- | --- | --- | --- | --- |
-| **Beta** | push to `staging` | `darna-digital/byconvo-beta` | yes | no | no (manual download) |
-| **Production** | push to `main` | `darna-digital/byconvo` | yes | yes | yes |
+| **Beta** | push to `staging` | `darna-digital/reviewer-beta` | yes | no | no (manual download) |
+| **Production** | push to `main` | `darna-digital/reviewer` | yes | yes | yes |
 
 Local dev is unchanged: `pnpm dev:desktop`. It defaults to the production app
 identity and never touches CI or signing.
@@ -22,7 +22,7 @@ they preview the `X.Y.Z` you are working toward.
 ## The flow
 
 1. **Feature work → `staging`.** Every push to `staging` publishes a signed
-   beta (`X.Y.Z-beta.N`) to `byconvo-beta`. Testers download the newest one and,
+   beta (`X.Y.Z-beta.N`) to `reviewer-beta`. Testers download the newest one and,
    on first launch of a build, **right-click → Open** once (beta is signed but
    not notarized, so Gatekeeper prompts once per build).
 2. **Ready to ship?** Make sure `packages/desktop/package.json` holds the version
@@ -42,9 +42,9 @@ they preview the `X.Y.Z` you are working toward.
   `xcrun notarytool history --key <AuthKey.p8> --key-id <id> --issuer <uuid>`
   and `xcrun notarytool log <submission-id> ...` for the detailed result.
 
-## Required GitHub secrets (in `darna-digital/byconvo`)
+## Required GitHub secrets (in `darna-digital/reviewer`)
 
-- `BETA_GITHUB_TOKEN` — PAT with `contents:write` on `byconvo-beta`
+- `BETA_GITHUB_TOKEN` — PAT with `contents:write` on `reviewer-beta`
 - `APPLE_CERTIFICATE` — base64 of the Developer ID Application `.p12`
 - `APPLE_CERTIFICATE_PASSWORD` — password for that `.p12`
 - `APPLE_API_KEY` — base64 of the App Store Connect API `.p8`

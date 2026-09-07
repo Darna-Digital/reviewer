@@ -14,7 +14,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const ICON_SET = "complete";
-const SPRITE_ID = "byconvo-file-icon-sprite";
+const SPRITE_ID = "reviewer-file-icon-sprite";
 
 const { resolveIcon } = createFileTreeIconResolver(ICON_SET);
 

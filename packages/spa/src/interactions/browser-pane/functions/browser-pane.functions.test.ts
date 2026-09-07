@@ -107,7 +107,7 @@ describe("elementPickerScript", () => {
   it("carries the selector and label helpers into the guest", () => {
     const script = elementPickerScript();
     expect(script).toContain("nth-of-type");
-    expect(script).toContain("__byconvoCancelPick");
+    expect(script).toContain("__reviewerCancelPick");
     // The helpers are stringified, so they must not close over module scope.
     expect(script).not.toMatch(/\bimport\b|\bexports\./);
   });

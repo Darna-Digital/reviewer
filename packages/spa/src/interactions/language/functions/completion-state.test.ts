@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { CompletionItem } from "@byconvo/core/language";
+import type { CompletionItem } from "@reviewer/core/language";
 import {
   acceptedEdit,
   isEchoOfAccept,

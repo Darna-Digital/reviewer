@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
-import { ChatRuntime } from "@byconvo/core/chats";
+import { ChatRuntime } from "@reviewer/core/chats";
 import {
   broadcastChatSnapshot,
   isTurnRunning,

@@ -6,7 +6,7 @@
  * than listed flat, which is what makes a stack of related work read as one
  * thing.
  */
-import type { PullRequestInfo } from "@byconvo/core/ports/git-provider";
+import type { PullRequestInfo } from "@reviewer/core/ports/git-provider";
 
 export type ReviewItem = {
   readonly kind: "pull";

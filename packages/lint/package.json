@@ -1,9 +1,9 @@
 {
-  "name": "@byconvo/lint",
+  "name": "@reviewer/lint",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Shared ESLint and Prettier rules for byconvo.com",
+  "description": "Shared ESLint and Prettier rules for reviewer.darnadigital.com",
   "exports": {
     "./eslint": "./eslint.config.js",
     "./prettier": "./prettier.config.js"

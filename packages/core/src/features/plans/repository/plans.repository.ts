@@ -41,7 +41,7 @@ export class PlansRepository extends Context.Service<
  * "does this analysis still describe the code".
  *
  * Separate from the store because it is a different question asked of a
- * different place: the store owns `.byconvo/plans`, this reads the working tree.
+ * different place: the store owns `.reviewer/plans`, this reads the working tree.
  * A path that cannot be read comes back as null rather than as a failure — a
  * deleted file is an ordinary, expected finding here.
  */

@@ -8,15 +8,15 @@ import {
 
 describe("normalizeServerUrl", () => {
   it("assumes https when no scheme is typed", () => {
-    expect(normalizeServerUrl("api.byconvo.com")).toBe(
-      "https://api.byconvo.com"
+    expect(normalizeServerUrl("api.reviewer.darnadigital.com")).toBe(
+      "https://api.reviewer.darnadigital.com"
     );
   });
 
   it("trims whitespace and trailing slashes", () => {
-    expect(normalizeServerUrl("  https://api.byconvo.com//  ")).toBe(
-      "https://api.byconvo.com"
-    );
+    expect(
+      normalizeServerUrl("  https://api.reviewer.darnadigital.com//  ")
+    ).toBe("https://api.reviewer.darnadigital.com");
   });
 
   it("keeps plain http for a local server", () => {
@@ -29,8 +29,8 @@ describe("normalizeServerUrl", () => {
   });
 
   it("upgrades plain http elsewhere", () => {
-    expect(normalizeServerUrl("http://api.byconvo.com")).toBe(
-      "https://api.byconvo.com"
+    expect(normalizeServerUrl("http://api.reviewer.darnadigital.com")).toBe(
+      "https://api.reviewer.darnadigital.com"
     );
   });
 

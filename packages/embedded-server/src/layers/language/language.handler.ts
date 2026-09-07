@@ -4,8 +4,8 @@ import {
   LanguageService,
   parsePositionQuery,
   type Position,
-} from "@byconvo/core/language";
-import { LanguageError } from "@byconvo/core/ports/language-provider";
+} from "@reviewer/core/language";
+import { LanguageError } from "@reviewer/core/ports/language-provider";
 import { Api } from "../../api.ts";
 
 /**

@@ -3,7 +3,7 @@ import {
   GitMessageChanges,
   GitMessageService,
   makeGitMessageService,
-} from "@byconvo/core/git-message";
+} from "@reviewer/core/git-message";
 import { makeWorkspaceChanges } from "./git-message.changes.ts";
 
 // The changes are collected the workspace's way — one root, or every root a

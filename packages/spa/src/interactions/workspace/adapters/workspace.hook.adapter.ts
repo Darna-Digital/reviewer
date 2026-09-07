@@ -9,7 +9,7 @@ import {
   createWorkspaceFunctions,
   repoCommands,
 } from "../functions/workspace.functions";
-import type { WorkspaceInfo } from "@byconvo/core/workspace";
+import type { WorkspaceInfo } from "@reviewer/core/workspace";
 
 /** The query key `useWorkspace` reads, so a selection can seed it directly. */
 const WORKSPACE_KEY = ["get", "/api/workspace"];

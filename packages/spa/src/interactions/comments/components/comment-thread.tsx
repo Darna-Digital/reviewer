@@ -24,7 +24,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { timeAgo } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
 import { isOptimisticId } from "@/interactions/comments/functions/optimistic-comments.functions";
-import type { ReviewComment } from "@byconvo/core/comments";
+import type { ReviewComment } from "@reviewer/core/comments";
 
 /**
  * Where a draft (or new) comment is anchored. Declared with the rest of the

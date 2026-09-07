@@ -682,7 +682,7 @@
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss03";
   }
 }
-/* --- byconvo: the window frame and its content canvas ---------------------- */
+/* --- reviewer: the window frame and its content canvas ---------------------- */
 /* The canvas is a single sheet inset in the frame: darkest through the middle
    and lifting towards its edges, so the corners catch the light and the sheet
    reads as curving up out of the frame rather than sinking into it. Panels
@@ -801,7 +801,7 @@
   margin-top: 0.45rem;
 }
 
-/* --- byconvo: agent brand marks ------------------------------------------- */
+/* --- reviewer: agent brand marks ------------------------------------------- */
 /* Each agent CLI wears its own brand colour rather than the surrounding text
    colour, so a glance at a mark says which tool without reading the label.
    Only published values are used here — no invented accents.
@@ -835,7 +835,7 @@
   --agent: currentColor;
 }
 
-/* --- byconvo: terminals carry no surface of their own ---------------------- */
+/* --- reviewer: terminals carry no surface of their own ---------------------- */
 /* xterm.css paints `.xterm-viewport` solid black ("required in order for the
    scroll bar to appear fully opaque" on macOS). The renderer covers it with the
    theme's own background, but any strip it doesn't reach — the part-row left
@@ -847,7 +847,7 @@
   background-color: transparent;
 }
 
-/* --- byconvo: streaming "working" text ------------------------------------ */
+/* --- reviewer: streaming "working" text ------------------------------------ */
 /* A highlight sweeps left-to-right across the label while an agent turn is in
    flight, so a long silent stretch still reads as alive. The gradient is built
    from the theme's own tokens, so it tracks light/dark like everything else. */
@@ -882,7 +882,7 @@
   }
 }
 
-/* --- byconvo: Linear-style loading caret ---------------------------------- */
+/* --- reviewer: Linear-style loading caret ---------------------------------- */
 /* Hard on/off blink (no fade), like a terminal typing cursor. */
 @keyframes loading-cursor-blink {
   0%,
@@ -904,7 +904,7 @@
   }
 }
 
-/* --- byconvo: agent orb --------------------------------------------------- */
+/* --- reviewer: agent orb --------------------------------------------------- */
 /* The "S2" lattice from aicss.dev/components/orbs — see components/ui/orb.tsx
    for the geometry. The dots take `currentColor`, so the orb is the colour of
    whatever it stands in. The swell is a raised cosine sampled every eighth of
@@ -979,7 +979,7 @@
   }
 }
 
-/* --- byconvo: review-comment markdown bodies ------------------------------ */
+/* --- reviewer: review-comment markdown bodies ------------------------------ */
 /* Comment bodies live in a narrow gutter, so wrap aggressively: long words,
    URLs and inline code must break rather than force the card to overflow. */
 .markdown {
@@ -1222,7 +1222,7 @@ diffs-container {
   );
 }
 
-/* --- byconvo: file tree theming (pierre/trees web component) --------------- */
+/* --- reviewer: file tree theming (pierre/trees web component) --------------- */
 /* These custom properties pierce the shadow DOM and resolve against whichever
    theme (.dark or light) is active, so the tree follows the app theme. */
 file-tree-container {
@@ -1244,7 +1244,7 @@ file-tree-container {
   --trees-search-fg-override: var(--foreground);
 }
 
-/* --- byconvo: JetBrains-style split-diff connector ribbons ----------------- */
+/* --- reviewer: JetBrains-style split-diff connector ribbons ----------------- */
 .diff-connectors {
   position: absolute;
   inset: 0;

@@ -4,7 +4,7 @@ import type {
   ChatActivity,
   ChatMessage,
   ChatTurn,
-} from "@byconvo/core/chats";
+} from "@reviewer/core/chats";
 import type {
   ChatImage,
   ChatsDependencies,

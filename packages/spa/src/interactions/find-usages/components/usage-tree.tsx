@@ -19,7 +19,7 @@ import {
   IconFolder,
 } from "@tabler/icons-react";
 import { useEffect, useRef } from "react";
-import type { SymbolReference } from "@byconvo/core/language";
+import type { SymbolReference } from "@reviewer/core/language";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { cn } from "@/lib/utils";
 import { previewParts } from "../functions/find-usages.functions";

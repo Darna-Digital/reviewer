@@ -21,7 +21,7 @@ const open = async (cloudConnected: boolean) => {
   );
   await user.click(screen.getByRole("button", { name: "Run target" }));
   const cloud = await screen.findByRole("menuitem", {
-    name: /byconvo cloud/,
+    name: /reviewer cloud/,
   });
   return { user, onChange, cloud };
 };

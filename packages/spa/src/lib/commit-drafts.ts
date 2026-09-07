@@ -6,6 +6,6 @@
  */
 import { makeDraftStore } from "@/lib/drafts";
 
-const { useDraft } = makeDraftStore("byconvo-commit-drafts");
+const { useDraft } = makeDraftStore("reviewer-commit-drafts");
 
 export const useCommitMessage = (project: string) => useDraft(project);

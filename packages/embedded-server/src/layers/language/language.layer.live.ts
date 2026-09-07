@@ -3,7 +3,7 @@ import {
   LanguageRepository,
   LanguageService,
   makeLanguageService,
-} from "@byconvo/core/language";
+} from "@reviewer/core/language";
 import { makeLiveLanguageRepository } from "./language.repository.live.ts";
 
 export const LanguageLive = Layer.effect(LanguageService)(

@@ -1,6 +1,6 @@
 import { errorReason } from "@/lib/errors";
-import { isMultiRepo } from "@byconvo/core/workspace";
-import type { WorkspaceInfo } from "@byconvo/core/workspace";
+import { isMultiRepo } from "@reviewer/core/workspace";
+import type { WorkspaceInfo } from "@reviewer/core/workspace";
 import type {
   RepoCommand,
   WorkspaceDependencies,

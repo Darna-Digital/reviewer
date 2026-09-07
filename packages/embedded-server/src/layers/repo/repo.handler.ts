@@ -1,9 +1,13 @@
 import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
 import { Api } from "../../api.ts";
-import { BranchTargetsService } from "@byconvo/core/branch-targets";
-import type { DiffFileTarget, LogQuery, SearchQuery } from "@byconvo/core/repo";
-import { RepoService } from "@byconvo/core/repo";
+import { BranchTargetsService } from "@reviewer/core/branch-targets";
+import type {
+  DiffFileTarget,
+  LogQuery,
+  SearchQuery,
+} from "@reviewer/core/repo";
+import { RepoService } from "@reviewer/core/repo";
 
 const ok = { ok: true } as const;
 const MAX_SEARCH_MATCHES = 2000;

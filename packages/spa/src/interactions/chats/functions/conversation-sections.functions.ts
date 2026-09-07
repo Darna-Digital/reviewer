@@ -9,7 +9,7 @@
  *
  * Pure, so the headline rules stay testable without a rendered thread.
  */
-import type { ChatMessage } from "@byconvo/core/chats";
+import type { ChatMessage } from "@reviewer/core/chats";
 
 export interface ConversationSection {
   /** The user message the section starts at — also its scroll anchor. */

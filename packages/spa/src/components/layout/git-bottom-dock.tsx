@@ -30,8 +30,8 @@ import { BottomPanel } from "@/components/layout/bottom-panel";
 import { expandDock, keepDockDrawer } from "@/components/layout/dock-expansion";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
-import { filterCommitsByRepo } from "@byconvo/core/project";
-import { activeRepo, folderName, isMultiRepo } from "@byconvo/core/workspace";
+import { filterCommitsByRepo } from "@reviewer/core/project";
+import { activeRepo, folderName, isMultiRepo } from "@reviewer/core/workspace";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { resetFindUsages } from "@/interactions/find-usages/adapters/find-usages.store";
@@ -54,7 +54,7 @@ import {
 import { REVIEW_HREF } from "@/lib/shell-route";
 import { setUiPrefs, useUiPrefs, type BottomTab } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
-import type { CommitInfo } from "@byconvo/core/repo";
+import type { CommitInfo } from "@reviewer/core/repo";
 
 /** Below this the drag reads as closing the dock rather than sizing it. */
 const COLLAPSE_HEIGHT = 120;

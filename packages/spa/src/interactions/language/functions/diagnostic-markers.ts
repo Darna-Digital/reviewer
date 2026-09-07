@@ -12,7 +12,7 @@
  * marks are always cleared before being reapplied, so a stale squiggle cannot
  * survive a diagnostic being fixed.
  */
-import type { Diagnostic } from "@byconvo/core/language";
+import type { Diagnostic } from "@reviewer/core/language";
 import type { TokenSpan } from "../interfaces/language.interfaces";
 import { codeRootOf } from "@/lib/code-root";
 import { decoratesTokens, markerForToken } from "./language.functions";

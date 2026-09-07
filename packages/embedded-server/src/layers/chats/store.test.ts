@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import type { ChatMessage, ChatTurn } from "@byconvo/core/chats";
+import type { ChatMessage, ChatTurn } from "@reviewer/core/chats";
 import { closeDatabase, openDatabase } from "../db/database.ts";
 import { rememberProject } from "../db/scope.ts";
 import {

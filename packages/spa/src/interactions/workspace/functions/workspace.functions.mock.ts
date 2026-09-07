@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import type { WorkspaceInfo } from "@byconvo/core/workspace";
+import type { WorkspaceInfo } from "@reviewer/core/workspace";
 import type { WorkspaceDependencies } from "../interfaces/workspace.interfaces";
 
 /** A project holding a backend and a frontend, opened on the backend. */

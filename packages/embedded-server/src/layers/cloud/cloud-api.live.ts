@@ -1,5 +1,5 @@
 /**
- * byconvo cloud over `fetch`.
+ * reviewer cloud over `fetch`.
  *
  * Every call is JSON in and JSON out under a bearer token, and every answer
  * that is not 2xx is the cloud's own `{ _tag, reason }` — kept as the reason
@@ -15,17 +15,17 @@ import {
   CloudRunSnapshot,
   CloudRunSummary,
   CloudViewer,
-} from "@byconvo/core/cloud";
+} from "@reviewer/core/cloud";
 import {
   CloudApi,
   CloudApiError,
   type CloudApiShape,
   type DeviceCodeGrant,
   type DevicePollResult,
-} from "@byconvo/core/ports/cloud-api";
+} from "@reviewer/core/ports/cloud-api";
 
 /** The client id the cloud's device-authorization plugin knows us by. */
-export const DEVICE_CLIENT_ID = "byconvo-desktop";
+export const DEVICE_CLIENT_ID = "reviewer-desktop";
 const DEVICE_GRANT_TYPE = "urn:ietf:params:oauth:grant-type:device_code";
 
 const DeviceCodeResponse = Schema.Struct({
@@ -70,7 +70,7 @@ export const cloudReason = (status: number, body: string): string => {
   const trimmed = body.trim();
   return trimmed.length > 0
     ? trimmed.slice(0, 300)
-    : `byconvo cloud answered ${status}`;
+    : `reviewer cloud answered ${status}`;
 };
 
 /** Headers for an authenticated JSON request. */
@@ -107,7 +107,7 @@ const request = (
     },
     catch: (error) =>
       failure(
-        `could not reach byconvo cloud at ${url}: ${
+        `could not reach reviewer cloud at ${url}: ${
           error instanceof Error ? error.message : String(error)
         }`
       ),
@@ -125,7 +125,7 @@ const decodeWith =
       try: () => Schema.decodeUnknownSync(schema)(JSON.parse(response.body)),
       catch: (error) =>
         failure(
-          `byconvo cloud answered with something unexpected: ${
+          `reviewer cloud answered with something unexpected: ${
             error instanceof Error ? error.message : String(error)
           }`,
           response.status

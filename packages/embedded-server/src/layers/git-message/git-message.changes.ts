@@ -18,17 +18,17 @@ import {
   hasChanges,
   type DraftChanges,
   type GitMessageChangesShape,
-} from "@byconvo/core/git-message";
-import { GitExec } from "@byconvo/core/ports/git-exec";
+} from "@reviewer/core/git-message";
+import { GitExec } from "@reviewer/core/ports/git-exec";
 import {
   groupPathsByRepo,
   prefixDiffPaths,
   projectPath,
-} from "@byconvo/core/project";
+} from "@reviewer/core/project";
 import { makeAt } from "../git/git-exec.ts";
 import { scanRepos } from "../workspace/repo-scan.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
-import type { RepoEntry } from "@byconvo/core/workspace";
+import type { RepoEntry } from "@reviewer/core/workspace";
 
 /** As many roots at once as the project's other reads use. */
 const CONCURRENCY = 8;

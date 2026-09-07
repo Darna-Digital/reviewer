@@ -11,8 +11,8 @@
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import * as Schema from "effect/Schema";
-import { NotFound } from "@byconvo/core/shared";
-import { DevCommandDefinition } from "@byconvo/core/local-dev";
+import { NotFound } from "@reviewer/core/shared";
+import { DevCommandDefinition } from "@reviewer/core/local-dev";
 import { attempt } from "../db/db.service.ts";
 import { documentTable } from "../db/documents.ts";
 import { scanRepos } from "../workspace/repo-scan.ts";
@@ -22,8 +22,8 @@ import type {
   DevCommand,
   DevCommandsRepo,
   UpdateDevCommandInput,
-} from "@byconvo/core/local-dev";
-import type { RepoEntry } from "@byconvo/core/workspace";
+} from "@reviewer/core/local-dev";
+import type { RepoEntry } from "@reviewer/core/workspace";
 
 export const devCommands = documentTable<DevCommandDefinition>({
   table: "dev_command",

@@ -4,7 +4,7 @@
  *
  * Deliberate deviations, both to keep the HTTP API self-describing:
  *   - `Location` carries a project-relative `path` instead of LSP's `uri`;
- *     every other byconvo feature (comments, diffs) is path-addressed.
+ *     every other reviewer feature (comments, diffs) is path-addressed.
  *   - severities and reference kinds are named strings rather than LSP's
  *     integers, so the generated OpenAPI schema reads as an enum.
  * Positions stay exactly LSP's: zero-based lines and zero-based UTF-16

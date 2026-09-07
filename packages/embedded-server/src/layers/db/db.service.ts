@@ -16,8 +16,8 @@ import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import type { DatabaseSync } from "node:sqlite";
-import { NotFound, StorageError } from "@byconvo/core/shared";
-import type { NoRepoSelected } from "@byconvo/core/shared";
+import { NotFound, StorageError } from "@reviewer/core/shared";
+import type { NoRepoSelected } from "@reviewer/core/shared";
 import type { WorkspaceContextShape } from "../workspace/workspace-context.ts";
 import { closeDatabase, database, openDatabase } from "./database.ts";
 
@@ -29,7 +29,7 @@ export class Database extends Context.Service<Database, DatabaseShape>()(
   "Database"
 ) {}
 
-/** Open the configured file (`BYCONVO_DB`, else `~/.byconvo/byconvo.db`). */
+/** Open the configured file (`REVIEWER_DB`, else `~/.reviewer/reviewer.db`). */
 export const layer: Layer.Layer<Database> = Layer.effect(Database)(
   Effect.acquireRelease(
     Effect.sync(() => Database.of({ db: openDatabase() })),

@@ -5,7 +5,7 @@ import {
   CHAT_MODEL_CATALOG,
   ChatsService,
   parseChatListQuery,
-} from "@byconvo/core/chats";
+} from "@reviewer/core/chats";
 
 const ok = { ok: true } as const;
 const defaults = CHAT_MODEL_CATALOG.defaults;

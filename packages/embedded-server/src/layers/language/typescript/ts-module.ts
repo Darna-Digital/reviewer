@@ -1,7 +1,7 @@
 /**
  * Locating the TypeScript compiler to analyse a repository with.
  *
- * The repository's own `typescript` is used, never a copy bundled with byconvo
+ * The repository's own `typescript` is used, never a copy bundled with reviewer
  * — the same rule editors follow with "use workspace version". A project's
  * diagnostics have to match what its `tsc` would say, and a compiler two majors
  * ahead of the one in its lockfile would invent errors nobody can reproduce.
@@ -14,7 +14,7 @@
  * in exactly the repositories most likely to be reviewed here.
  *
  * Do not verify this path under `pnpm dev`. The dev server runs through `tsx`,
- * whose resolution hook answers every bare specifier from byconvo's own
+ * whose resolution hook answers every bare specifier from reviewer's own
  * dependency graph — `require("typescript")` succeeds there from any directory
  * on the machine, including ones with no `node_modules` at all. Only the
  * bundled server on plain node resolves the way this module intends.
@@ -27,7 +27,7 @@
  * first `ts.findConfigFile`. {@link hasCompilerApi} catches that here, where it
  * becomes "unavailable, and here is why" instead of a crash mid-hover.
  *
- * It is also why byconvo pins itself to TypeScript 6 rather than taking 7 with
+ * It is also why reviewer pins itself to TypeScript 6 rather than taking 7 with
  * the rest of its dependencies: this provider needs the classic API, both to
  * type against and to run its tests on, and the API is what the repositories
  * being reviewed ship anyway. (`typescript-eslint` refuses 7 outright as well,
@@ -39,7 +39,7 @@ import type * as TSModule from "typescript";
 export type TypeScriptModule = typeof TSModule;
 
 /** Absolute path to a `typescript` entry point, overriding repository lookup. */
-export const OVERRIDE_ENV = "BYCONVO_TYPESCRIPT_PATH";
+export const OVERRIDE_ENV = "REVIEWER_TYPESCRIPT_PATH";
 
 export interface TypeScriptLookup {
   readonly module: TypeScriptModule | null;

@@ -4,7 +4,7 @@ import { Effect, Layer } from "effect";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { afterAll, afterEach, beforeEach, describe, expect } from "vitest";
-import { DevCommandsRepository } from "@byconvo/core/local-dev";
+import { DevCommandsRepository } from "@reviewer/core/local-dev";
 import { closeDatabase, openDatabase } from "../db/database.ts";
 import { memoryLayer } from "../workspace/workspace-context.ts";
 import {
@@ -13,7 +13,7 @@ import {
 } from "./local-dev.repository.sqlite.ts";
 
 /** A real project folder holding two git roots — what the store is for. */
-const project = mkdtempSync(`${tmpdir()}/byconvo-local-dev-`);
+const project = mkdtempSync(`${tmpdir()}/reviewer-local-dev-`);
 const web = `${project}/web`;
 const api = `${project}/api`;
 for (const root of [web, api]) mkdirSync(`${root}/.git`, { recursive: true });

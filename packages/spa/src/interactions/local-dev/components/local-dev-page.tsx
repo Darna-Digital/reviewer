@@ -57,8 +57,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useLocalDevActions } from "@/interactions/local-dev/adapters/local-dev.hook.adapter";
-import type { DevCommandView } from "@byconvo/core/local-dev";
-import type { RepoEntry } from "@byconvo/core/workspace";
+import type { DevCommandView } from "@reviewer/core/local-dev";
+import type { RepoEntry } from "@reviewer/core/workspace";
 import { useDevCommands, useWorkspace } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";

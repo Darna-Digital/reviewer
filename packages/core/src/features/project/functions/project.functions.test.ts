@@ -117,7 +117,7 @@ describe("locateProjectPath", () => {
 
   it("leaves a project that is itself the repository unprefixed", () => {
     const itself: RepoEntry = {
-      name: "byconvo",
+      name: "reviewer",
       path: "/work",
       branch: "main",
     };

@@ -165,7 +165,7 @@ describe("GitExec", () => {
     );
 
   const lockFile = (age: Duration.Input) => {
-    const gitDir = mkdtempSync(join(tmpdir(), "byconvo-git-"));
+    const gitDir = mkdtempSync(join(tmpdir(), "reviewer-git-"));
     const lockPath = join(gitDir, "index.lock");
     writeFileSync(lockPath, "");
     const touched = new Date(Date.now() - Duration.toMillis(age));

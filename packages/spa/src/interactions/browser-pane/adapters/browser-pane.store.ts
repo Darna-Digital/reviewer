@@ -10,7 +10,7 @@
  * handle is the honest way to say that there is exactly one pane per window.
  */
 import { useSyncExternalStore } from "react";
-import type { ConsoleMessage } from "@byconvo/core/browser";
+import type { ConsoleMessage } from "@reviewer/core/browser";
 import type {
   BrowserPaneState,
   WebviewElement,

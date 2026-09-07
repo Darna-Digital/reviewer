@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Editor } from "@pierre/diffs/edit";
-import type { CodeActionItem, FileEdits } from "@byconvo/core/language";
+import type { CodeActionItem, FileEdits } from "@reviewer/core/language";
 import { pointerAnchor, type VirtualAnchor } from "../functions/anchors";
 import { requestCodeActions } from "../adapters/language.hook.adapter";
 import {

@@ -1,5 +1,5 @@
 import * as Schema from "effect/Schema";
-import { ReviewComment } from "@byconvo/core/comments";
+import { ReviewComment } from "@reviewer/core/comments";
 import {
   CloseResult,
   GitProviderError,
@@ -10,8 +10,8 @@ import {
   PrReply,
   PullNumberParam,
   PullCommentParams,
-} from "@byconvo/core/ports/git-provider";
-import { DiffText, Ok } from "@byconvo/core/shared";
+} from "@reviewer/core/ports/git-provider";
+import { DiffText, Ok } from "@reviewer/core/shared";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 export class GitHubApi extends HttpApiGroup.make("github")

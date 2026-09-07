@@ -3,8 +3,8 @@ import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 import { api, fetchClient } from "@/lib/api/client";
 import { useWorkspace } from "@/lib/queries";
-import { isMultiRepo } from "@byconvo/core/workspace";
-import type { CommitDraft } from "@byconvo/core/git-message";
+import { isMultiRepo } from "@reviewer/core/workspace";
+import type { CommitDraft } from "@reviewer/core/git-message";
 import type { CommitAgent } from "@/lib/ui-prefs";
 import { createGitActionsFunctions } from "../functions/git-actions.functions";
 import {

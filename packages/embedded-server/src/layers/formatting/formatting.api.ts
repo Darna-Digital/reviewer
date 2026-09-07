@@ -9,9 +9,9 @@ import {
   FormatPayload,
   FormatResult,
   FormatterInfo,
-} from "@byconvo/core/formatting";
-import { FormatError } from "@byconvo/core/ports/formatter";
-import { NoRepoSelected } from "@byconvo/core/shared";
+} from "@reviewer/core/formatting";
+import { FormatError } from "@reviewer/core/ports/formatter";
+import { NoRepoSelected } from "@reviewer/core/shared";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 const errors = [NoRepoSelected, FormatError] as const;

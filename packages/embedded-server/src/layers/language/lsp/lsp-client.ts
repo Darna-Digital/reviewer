@@ -284,7 +284,7 @@ export const connect = async (
 
   const initializeResult = (await request("initialize", {
     processId: process.pid,
-    clientInfo: { name: "byconvo" },
+    clientInfo: { name: "reviewer" },
     rootUri: pathToUri(root),
     workspaceFolders: [{ uri: pathToUri(root), name: "workspace" }],
     capabilities: clientCapabilities,

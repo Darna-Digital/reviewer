@@ -18,6 +18,6 @@ const fakeParse = (diffText: string): ReadonlyArray<FileDiffMetadata> =>
 export const createDiffDependenciesMock = (
   overrides?: Partial<DiffDependencies["data"]>
 ): DiffDependencies => ({
-  data: { internalDir: ".byconvo", ...overrides },
+  data: { internalDir: ".reviewer", ...overrides },
   sideEffects: { parsePatch: vi.fn(fakeParse) },
 });

@@ -1,7 +1,7 @@
 name: release-prod
 
 # Production channel. A push to `main` publishes the version in
-# packages/desktop/package.json to darna-digital/byconvo — but only once that
+# packages/desktop/package.json to darna-digital/reviewer — but only once that
 # version has a COMPLETE release (one carrying latest-mac.yml, the auto-update
 # manifest). Bumping the version is the "ship it" signal; other merges are
 # no-ops, and a half-finished release from a failed run is repaired rather than
@@ -96,12 +96,12 @@ jobs:
       - name: Package, sign, and notarize
         if: steps.v.outputs.release == 'true'
         run: >
-          pnpm --filter @byconvo/desktop exec electron-builder
+          pnpm --filter @reviewer/desktop exec electron-builder
           --mac --arm64 --x64
           --config electron-builder.config.js
           --publish never
         env:
-          BYCONVO_CHANNEL: prod
+          REVIEWER_CHANNEL: prod
           APPLE_API_KEY: ${{ runner.temp }}/apple-api-key.p8
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
@@ -115,7 +115,7 @@ jobs:
           test -f packages/desktop/dist-packaged/latest-mac.yml \
             || { echo "::error::latest-mac.yml was not generated — auto-update would break"; exit 1; }
 
-      - name: Publish to byconvo
+      - name: Publish to reviewer
         if: steps.v.outputs.release == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -131,5 +131,5 @@ jobs:
             packages/desktop/dist-packaged/latest-mac.yml \
             --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" \
-            --title "Byconvo v${{ steps.v.outputs.version }}" \
+            --title "Reviewer v${{ steps.v.outputs.version }}" \
             --notes "Signed and notarized production release. macOS auto-updates from here."

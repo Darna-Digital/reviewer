@@ -1,4 +1,4 @@
-import type { PlanNodeKind } from "@byconvo/core/plans";
+import type { PlanNodeKind } from "@reviewer/core/plans";
 
 /**
  * How a step's kind reads. `ui` is an initialism and stays set; the rest are

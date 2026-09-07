@@ -5,7 +5,7 @@ import type {
   CloudRunSnapshot,
   CloudRunSummary,
   NewCloudRun,
-} from "@byconvo/core/cloud";
+} from "@reviewer/core/cloud";
 import type { CloudDependencies } from "../interfaces/cloud.interfaces";
 
 const AT = "2026-01-01T00:00:00.000Z";
@@ -83,7 +83,7 @@ export const cloudRunSnapshot = (
     effort: "high",
     access: "fullAccess",
     baseBranch: "main",
-    branch: "byconvo/fix-the-build-run1",
+    branch: "reviewer/fix-the-build-run1",
     sessionId: null,
     status: "queued",
     openPullRequest: true,
@@ -107,7 +107,7 @@ export const cloudRunSummary = (
   title: "Fix the build",
   provider: "claude",
   model: "",
-  branch: "byconvo/fix-the-build-run1",
+  branch: "reviewer/fix-the-build-run1",
   status: "queued",
   pullRequestUrl: null,
   createdAt: AT,

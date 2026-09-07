@@ -26,7 +26,7 @@
  * GitHub comment carries no author rather than a guessed one — the thread shows
  * it as sending until the real name lands.
  */
-import type { ReviewComment } from "@byconvo/core/comments";
+import type { ReviewComment } from "@reviewer/core/comments";
 
 /** The `target` a pull request's comments are stored under. */
 export const pullTarget = (pullNumber: number): string => `pr-${pullNumber}`;

@@ -15,7 +15,7 @@
  */
 import { dateCutoff, type DateFilter } from "@/lib/date-filter";
 import type { ChatListFilters } from "@/lib/queries";
-import type { ChatProjectTally } from "@byconvo/core/chats";
+import type { ChatProjectTally } from "@reviewer/core/chats";
 
 /** `all` is the unfiltered case; anything else is a project's absolute path. */
 export type ProjectFilter = string;

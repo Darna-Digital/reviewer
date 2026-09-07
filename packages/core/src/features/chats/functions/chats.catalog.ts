@@ -1,5 +1,5 @@
 /**
- * The skeleton the composer's model picker is built on: which agents byconvo
+ * The skeleton the composer's model picker is built on: which agents reviewer
  * can drive, and what a new chat starts as.
  *
  * There is deliberately no list of models here. Models come from the agent

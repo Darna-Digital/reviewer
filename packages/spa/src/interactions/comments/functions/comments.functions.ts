@@ -1,4 +1,4 @@
-import type { ReviewComment } from "@byconvo/core/comments";
+import type { ReviewComment } from "@reviewer/core/comments";
 import type {
   CommentsDependencies,
   CommentsFunctions,

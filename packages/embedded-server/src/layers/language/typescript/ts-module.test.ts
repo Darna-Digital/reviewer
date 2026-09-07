@@ -30,7 +30,7 @@ const plantCompiler = (directory: string, api = true) => {
 let workspace: string | null = null;
 
 const makeWorkspace = () => {
-  workspace = mkdtempSync(join(tmpdir(), "byconvo-ts-module-"));
+  workspace = mkdtempSync(join(tmpdir(), "reviewer-ts-module-"));
   const packageDir = join(workspace, "packages", "app");
   mkdirSync(join(packageDir, "src"), { recursive: true });
   mkdirSync(join(workspace, "packages", "docs"), { recursive: true });
@@ -79,7 +79,7 @@ describe("loadTypeScript", () => {
   // handing it on would crash on the first call, so it is refused here, with a
   // reason the settings screen can show.
   it("refuses a compiler that exposes no in-process API", () => {
-    const workspaceDir = mkdtempSync(join(tmpdir(), "byconvo-ts-module-"));
+    const workspaceDir = mkdtempSync(join(tmpdir(), "reviewer-ts-module-"));
     workspace = workspaceDir;
     const packageDir = join(workspaceDir, "packages", "app");
     mkdirSync(packageDir, { recursive: true });

@@ -19,7 +19,7 @@ import {
   type PullRequestCheck,
   type PullRequestInfo,
   type PullRequestLabel,
-} from "@byconvo/core/ports/git-provider";
+} from "@reviewer/core/ports/git-provider";
 
 const str = (value: unknown, fallback = ""): string =>
   typeof value === "string" ? value : fallback;

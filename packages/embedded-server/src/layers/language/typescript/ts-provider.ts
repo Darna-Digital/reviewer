@@ -15,7 +15,7 @@ import {
   type DocumentRequest,
   type LanguageProvider,
   type PositionRequest,
-} from "@byconvo/core/ports/language-provider";
+} from "@reviewer/core/ports/language-provider";
 import {
   filterCompletions,
   identifierAt,
@@ -34,7 +34,7 @@ import {
   type ReferencesResult,
   type SymbolReference,
   type SymbolTarget,
-} from "@byconvo/core/language";
+} from "@reviewer/core/language";
 import { loadTypeScript } from "./ts-module.ts";
 import { projectFor, type TsProject } from "./ts-project.ts";
 import { containerAt, usageKind, NO_CONTAINER } from "./ts-usages.ts";

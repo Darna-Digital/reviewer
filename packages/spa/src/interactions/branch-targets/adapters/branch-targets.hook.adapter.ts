@@ -1,7 +1,7 @@
 /**
  * Aiming a branch: saying which branch its work is meant to land on.
  *
- * Git has no such notion, so byconvo records it — once, when the answer is
+ * Git has no such notion, so reviewer records it — once, when the answer is
  * known — and every later read of that branch's diff has something to be read
  * against without asking again.
  */

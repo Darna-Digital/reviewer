@@ -91,7 +91,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         continue-on-error: true
         with:
-          name: byconvo-desktop-macos
+          name: reviewer-desktop-macos
           path: packages/desktop/dist-packaged/**
           # A PR build is interesting for about as long as the PR is being
           # looked at. The default is 90 days, which is what let a few hundred

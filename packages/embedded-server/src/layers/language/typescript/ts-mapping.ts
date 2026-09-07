@@ -18,7 +18,7 @@ import {
   type FileEdits,
   type Range,
   type ReferenceKind,
-} from "@byconvo/core/language";
+} from "@reviewer/core/language";
 
 /**
  * `ts.DiagnosticCategory` as numbers, so the mapping needs no runtime import:

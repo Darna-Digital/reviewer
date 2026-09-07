@@ -17,7 +17,7 @@ import {
   parseHeadRef,
   repoName,
   type RepoEntry,
-} from "@byconvo/core/workspace";
+} from "@reviewer/core/workspace";
 
 /** How deep under a project folder a git root is still considered part of it. */
 export const SCAN_DEPTH = 2;

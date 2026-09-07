@@ -24,7 +24,7 @@
  * The project chip is what every tab in the strip is scoped to rather than a
  * place among them, so it takes ⇧ as well, on ⌘⇧P.
  */
-import { isFeatureEnabled } from "@byconvo/feature-flags";
+import { isFeatureEnabled } from "@reviewer/feature-flags";
 
 export type BarPane = "analysis" | "browser";
 

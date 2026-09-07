@@ -11,7 +11,7 @@
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { readFileSync } from "node:fs";
-import { NotFound } from "@byconvo/core/shared";
+import { NotFound } from "@reviewer/core/shared";
 import {
   Plan,
   PlanSources,
@@ -20,8 +20,8 @@ import {
   requestedPaths,
   saveAnalysis,
   summarizePlan,
-} from "@byconvo/core/plans";
-import type { PlanSourcesShape, PlansRepo } from "@byconvo/core/plans";
+} from "@reviewer/core/plans";
+import type { PlanSourcesShape, PlansRepo } from "@reviewer/core/plans";
 import { inRepo } from "../db/db.service.ts";
 import { documentTable } from "../db/documents.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";

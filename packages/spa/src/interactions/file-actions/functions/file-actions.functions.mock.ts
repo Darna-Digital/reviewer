@@ -17,7 +17,7 @@ export const createFileActionsDependenciesMock = (
     upload: vi.fn(async () => undefined),
     // The real trash numbers its slots; the double keeps that shape, so the
     // steps that undo a delete are the ones the app would really run.
-    trash: vi.fn(async (path: string) => `.byconvo/trash/1/${path}`),
+    trash: vi.fn(async (path: string) => `.reviewer/trash/1/${path}`),
     reveal: vi.fn(async () => undefined),
     rememberFolder: vi.fn(),
     openFile: vi.fn(),

@@ -27,7 +27,7 @@ import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { useRevealLine } from "@/interactions/language/components/use-reveal-line";
 import { useFile } from "@/lib/queries";
 import type { Theme } from "@/lib/ui-prefs";
-import type { Location } from "@byconvo/core/language";
+import type { Location } from "@reviewer/core/language";
 
 /**
  * The band under the usage. Warmer than the selection in the tree beside it on

@@ -43,6 +43,6 @@ describe("isPreviewShown", () => {
   it("refuses anything that is not an answer", () => {
     expect(isPreviewShown(previewGoto("/x", 3), 3)).toBe(false);
     expect(isPreviewShown(null, 3)).toBe(false);
-    expect(isPreviewShown({ type: "byconvo:preview:shown" }, 3)).toBe(false);
+    expect(isPreviewShown({ type: "reviewer:preview:shown" }, 3)).toBe(false);
   });
 });

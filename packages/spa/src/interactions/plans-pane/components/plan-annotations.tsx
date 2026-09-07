@@ -20,7 +20,7 @@ import { IconAlertTriangle, IconTrash } from "@tabler/icons-react";
 import { useEffect, useRef } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import type { Plan, PlanAnnotation, PlanStaleness } from "@byconvo/core/plans";
+import type { Plan, PlanAnnotation, PlanStaleness } from "@reviewer/core/plans";
 import { Button } from "@/components/ui/button";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import {
@@ -42,7 +42,7 @@ import { cn } from "@/lib/utils";
 /**
  * Note prose, rendered as markdown — agents write in backticks and emphasis, and
  * a note showing its own source is a note nobody can read. A note that makes
- * several points arrives as a numbered list (see the byconvo-plans skill), which
+ * several points arrives as a numbered list (see the reviewer-plans skill), which
  * `.plan-note` sets as the note's normal shape rather than as an aside.
  *
  * Full-strength ink, not muted: a finding is what the reader came here for, and

@@ -7,7 +7,7 @@ import {
   agentHint,
   agentLabel,
 } from "@/interactions/threads/interfaces/agents";
-import type { AgentKind } from "@byconvo/core/threads";
+import type { AgentKind } from "@reviewer/core/threads";
 import {
   PROMPT_TOKEN,
   type AgentDraft,
@@ -70,7 +70,7 @@ export const removeCustomAgent = (
 
 /**
  * The strip: every CLI the server found, then the ones added by hand. A
- * detected agent's command is the one byconvo already runs for it, so the two
+ * detected agent's command is the one reviewer already runs for it, so the two
  * halves of the list read as the same kind of thing.
  */
 export function sessionAgents(

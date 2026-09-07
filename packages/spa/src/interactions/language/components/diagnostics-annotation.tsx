@@ -9,7 +9,7 @@ import {
   IconInfoCircle,
   IconXboxX,
 } from "@tabler/icons-react";
-import type { Diagnostic, DiagnosticSeverity } from "@byconvo/core/language";
+import type { Diagnostic, DiagnosticSeverity } from "@reviewer/core/language";
 import { cn } from "@/lib/utils";
 
 /** One look per severity, shared by every surface that names a diagnostic. */

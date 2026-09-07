@@ -1,5 +1,5 @@
 /**
- * Where this session runs — this machine, or byconvo cloud.
+ * Where this session runs — this machine, or reviewer cloud.
  *
  * The last of the composer's answers, and the same kind of answer as the ones
  * beside it: a statement about the prompt being written, not a move. Picking
@@ -16,7 +16,7 @@ import {
   IconDeviceLaptop,
   IconBrandGithub,
 } from "@tabler/icons-react";
-import type { CloudRepo } from "@byconvo/core/cloud";
+import type { CloudRepo } from "@reviewer/core/cloud";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -91,7 +91,7 @@ export function RunTargetPicker({
                 >
                   <Icon className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="truncate">
-                    {value === "cloud" ? "byconvo cloud" : "This machine"}
+                    {value === "cloud" ? "reviewer cloud" : "This machine"}
                   </span>
                   <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
                 </Button>
@@ -101,7 +101,7 @@ export function RunTargetPicker({
         />
         <TooltipContent side={side}>
           {value === "cloud"
-            ? "This session runs in byconvo cloud, and this window follows it"
+            ? "This session runs in reviewer cloud, and this window follows it"
             : "This session runs on this machine"}
         </TooltipContent>
       </Tooltip>
@@ -113,7 +113,7 @@ export function RunTargetPicker({
           onSelect={() => onChange("local")}
         />
         <Choice
-          label="byconvo cloud"
+          label="reviewer cloud"
           hint={
             cloudConnected
               ? "Clones, works and pushes on its own; you follow it from here."
@@ -165,14 +165,14 @@ export function CloudRepoPicker({
         />
         <TooltipContent side={side}>
           {value === null
-            ? "Link a repository in byconvo cloud first"
+            ? "Link a repository in reviewer cloud first"
             : `Clones ${value.fullName} and works on a branch of it`}
         </TooltipContent>
       </Tooltip>
       <DropdownMenuContent align="start" side={side} className="w-80">
         {repos.length === 0 ? (
           <div className="px-2 py-1.5 text-xs text-muted-foreground">
-            No repositories are linked in byconvo cloud yet.
+            No repositories are linked in reviewer cloud yet.
           </div>
         ) : (
           repos.map((repo) => (

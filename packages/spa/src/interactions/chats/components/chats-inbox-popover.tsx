@@ -14,7 +14,7 @@ import {
   inboxPopoverLink,
 } from "@/components/layout/inbox-popover";
 import { AgentMark } from "@/interactions/threads/components/agent-mark";
-import { isChatUnread } from "@byconvo/core/chats";
+import { isChatUnread } from "@reviewer/core/chats";
 import { useRecentChats } from "@/lib/queries";
 import { timeAgo } from "@/lib/relative-time";
 import { cn } from "@/lib/utils";
