@@ -161,6 +161,9 @@ export const makeLspProvider = (config: LspServerConfig): LanguageProvider => {
     if (text === null) return null;
     const connection = await connectionFor(config, request.root);
     const { uri, changed } = connection.syncDocument(absolute, text);
+    // A server that is still indexing answers "nothing found" rather than
+    // waiting, so the first question asked of a fresh one waits for it.
+    await connection.warmup();
     return { connection, absolute, text, uri, changed };
   };
 
