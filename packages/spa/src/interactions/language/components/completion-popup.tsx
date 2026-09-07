@@ -13,7 +13,7 @@
  * trigger element — there is nothing in the DOM that *is* the caret.
  */
 import { useLayoutEffect, useRef } from "react";
-import type { CompletionItem } from "@byconvo/core/language";
+import type { CompletionItem } from "@reviewer/core/language";
 import { Popover, PopoverContent } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import type { VirtualAnchor } from "../functions/anchors";

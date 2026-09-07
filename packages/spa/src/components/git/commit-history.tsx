@@ -6,8 +6,8 @@ import { useCommitGraph } from "@/interactions/commit-graph/adapters/commit-grap
 import { DEFAULT_GRAPH_CONFIG } from "@/interactions/commit-graph/interfaces/commit-graph.interfaces";
 import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
 import type { LogQuery } from "@/lib/api/types";
-import type { BranchInfo, CommitInfo } from "@byconvo/core/repo";
-import type { RepoEntry } from "@byconvo/core/workspace";
+import type { BranchInfo, CommitInfo } from "@reviewer/core/repo";
+import type { RepoEntry } from "@reviewer/core/workspace";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 import { ResizeHandle } from "@/components/layout/resize-handle";

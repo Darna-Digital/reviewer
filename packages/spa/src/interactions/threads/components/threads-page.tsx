@@ -37,7 +37,7 @@ import {
 } from "@/interactions/threads/components/terminal";
 import { useThreadsActions } from "@/interactions/threads/adapters/threads.hook.adapter";
 import { agentLabel } from "@/interactions/threads/interfaces/agents";
-import type { ThreadSummary } from "@byconvo/core/threads";
+import type { ThreadSummary } from "@reviewer/core/threads";
 import { dateCutoff, type DateFilter } from "@/lib/date-filter";
 import { useBranches, useRepo, useThreads } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";

@@ -1,5 +1,5 @@
 /**
- * One-time import of the `.byconvo/*.json` files byconvo used to write.
+ * One-time import of the `.reviewer/*.json` files reviewer used to write.
  *
  * It runs per git root, on every project open, and does nothing at all once a
  * root has been imported — the `legacy_import` table records which features
@@ -10,7 +10,7 @@
  * far less alarming thing to run when the thing it read is still on disk.
  *
  * Everything here is best-effort by design: an unreadable or half-written file
- * from an older byconvo is a reason for that feature to start empty, not for
+ * from an older reviewer is a reason for that feature to start empty, not for
  * the project to fail to open. A feature that failed stays unmarked and is
  * retried next time, which is what you want if the file was mid-write.
  */
@@ -23,12 +23,12 @@ import {
   ChatMessage,
   ChatProviderKind,
   ChatTurn,
-} from "@byconvo/core/chats";
-import { ReviewComment } from "@byconvo/core/comments";
-import { DevCommandDefinition } from "@byconvo/core/local-dev";
-import { Plan } from "@byconvo/core/plans";
-import { Thread } from "@byconvo/core/threads";
-import { VisualComment } from "@byconvo/core/visual-comments";
+} from "@reviewer/core/chats";
+import { ReviewComment } from "@reviewer/core/comments";
+import { DevCommandDefinition } from "@reviewer/core/local-dev";
+import { Plan } from "@reviewer/core/plans";
+import { Thread } from "@reviewer/core/threads";
+import { VisualComment } from "@reviewer/core/visual-comments";
 import { database, transact } from "./database.ts";
 import { documentTable } from "./documents.ts";
 
@@ -65,7 +65,7 @@ const decodeDevCommands = Schema.decodeUnknownSync(
 );
 const decodePlan = Schema.decodeUnknownSync(Plan);
 
-/** Parse a `.byconvo` file, or null when it isn't there. */
+/** Parse a `.reviewer` file, or null when it isn't there. */
 const readJson = (path: string): unknown | null => {
   try {
     return JSON.parse(readFileSync(path, "utf8"));
@@ -108,7 +108,7 @@ const once = (repoPath: string, feature: string, take: () => void): boolean => {
     // Left unmarked on purpose: a file that was mid-write when we read it
     // deserves another attempt, and a permanently broken one costs one read.
     console.warn(
-      `byconvo: could not import ${feature} from ${repoPath}/.byconvo —`,
+      `reviewer: could not import ${feature} from ${repoPath}/.reviewer —`,
       error instanceof Error ? error.message : error
     );
     return false;
@@ -147,7 +147,7 @@ const devCommands = documentTable<DevCommandDefinition>({
 });
 
 const importChats = (repoPath: string): void => {
-  const raw = readJson(`${repoPath}/.byconvo/chats.json`);
+  const raw = readJson(`${repoPath}/.reviewer/chats.json`);
   if (raw === null) return;
   const db = database();
   const insertChat = db.prepare(
@@ -220,7 +220,7 @@ const importChats = (repoPath: string): void => {
 };
 
 const importPlans = (repoPath: string): void => {
-  const dir = `${repoPath}/.byconvo/plans`;
+  const dir = `${repoPath}/.reviewer/plans`;
   let names: ReadonlyArray<string>;
   try {
     names = readdirSync(dir);
@@ -245,7 +245,7 @@ const importPlans = (repoPath: string): void => {
 };
 
 /**
- * Take everything one git root still keeps in `.byconvo/*.json` into the
+ * Take everything one git root still keeps in `.reviewer/*.json` into the
  * database. Returns the features that were imported this time (empty once the
  * root is up to date), which is only used for logging.
  */
@@ -257,21 +257,21 @@ export const importLegacyJson = (repoPath: string): ReadonlyArray<string> => {
 
   run("chats", () => importChats(repoPath));
   run("comments", () => {
-    const raw = readJson(`${repoPath}/.byconvo/comments.json`);
+    const raw = readJson(`${repoPath}/.reviewer/comments.json`);
     if (raw === null) return;
     for (const comment of decodeComments(raw)) {
       comments.put(repoPath, comment.id, comment.createdAt, comment);
     }
   });
   run("visual-comments", () => {
-    const raw = readJson(`${repoPath}/.byconvo/visual-comments.json`);
+    const raw = readJson(`${repoPath}/.reviewer/visual-comments.json`);
     if (raw === null) return;
     for (const comment of decodeVisualComments(raw)) {
       visualComments.put(repoPath, comment.id, comment.createdAt, comment);
     }
   });
   run("threads", () => {
-    const raw = readJson(`${repoPath}/.byconvo/threads.json`);
+    const raw = readJson(`${repoPath}/.reviewer/threads.json`);
     if (raw === null) return;
     // Fields added after the file was first written have defaults, exactly as
     // the file store applied them on read.
@@ -288,7 +288,7 @@ export const importLegacyJson = (repoPath: string): ReadonlyArray<string> => {
   });
   run("plans", () => importPlans(repoPath));
   run("dev-commands", () => {
-    const raw = readJson(`${repoPath}/.byconvo/dev-commands.json`);
+    const raw = readJson(`${repoPath}/.reviewer/dev-commands.json`);
     if (raw === null) return;
     for (const command of decodeDevCommands(raw)) {
       devCommands.put(repoPath, command.id, command.createdAt, command);

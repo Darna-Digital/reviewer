@@ -22,12 +22,12 @@ import {
   type LanguageRepo,
   type Location,
   type Position,
-} from "@byconvo/core/language";
-import { locateProjectPath, prefixProjectPath } from "@byconvo/core/project";
+} from "@reviewer/core/language";
+import { locateProjectPath, prefixProjectPath } from "@reviewer/core/project";
 import type {
   LanguageFailure,
   LanguageProvider,
-} from "@byconvo/core/ports/language-provider";
+} from "@reviewer/core/ports/language-provider";
 import { scanRepos } from "../workspace/repo-scan.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 import {

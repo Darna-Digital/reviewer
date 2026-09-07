@@ -4,7 +4,7 @@
  * TerminalExec scoped to that repo.
  */
 import * as Effect from "effect/Effect";
-import { NotFound } from "@byconvo/core/shared";
+import { NotFound } from "@reviewer/core/shared";
 import { inRepo } from "../db/db.service.ts";
 import { TerminalExec } from "../terminal/terminal-exec.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
@@ -16,7 +16,7 @@ import {
   type Thread,
   type ThreadEntry,
   type ThreadsRepo,
-} from "@byconvo/core/threads";
+} from "@reviewer/core/threads";
 import { findThread, putThread, threads } from "./store.ts";
 
 const summarize = (thread: Thread) => ({

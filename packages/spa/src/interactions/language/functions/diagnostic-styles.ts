@@ -63,9 +63,9 @@ export const DIAGNOSTIC_CSS = `
 
 /* The line a jump landed on, flashed so the eye can find it. */
 [data-revealed] {
-  animation: byconvo-reveal-flash 1.6s ease-out;
+  animation: reviewer-reveal-flash 1.6s ease-out;
 }
-@keyframes byconvo-reveal-flash {
+@keyframes reviewer-reveal-flash {
   0%,
   30% {
     background-color: color-mix(in oklab, var(--primary, #3b82f6) 22%, transparent);

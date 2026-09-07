@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { LineAnnotation, TokenEventBase } from "@pierre/diffs";
 import type { Editor } from "@pierre/diffs/edit";
-import type { Diagnostic, FileEdits, Location } from "@byconvo/core/language";
+import type { Diagnostic, FileEdits, Location } from "@reviewer/core/language";
 import {
   forgetHovers,
   useDiagnostics,

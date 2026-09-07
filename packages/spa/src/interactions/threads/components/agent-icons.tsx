@@ -10,7 +10,7 @@
  */
 import { IconTerminal2 } from "@tabler/icons-react";
 import type { ComponentType } from "react";
-import type { AgentKind } from "@byconvo/core/threads";
+import type { AgentKind } from "@reviewer/core/threads";
 
 interface IconProps {
   className?: string;

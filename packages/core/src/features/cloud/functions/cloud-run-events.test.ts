@@ -22,7 +22,7 @@ const run: CloudRun = {
   effort: "high",
   access: "fullAccess",
   baseBranch: "main",
-  branch: "byconvo/fix-the-build-run1",
+  branch: "reviewer/fix-the-build-run1",
   sessionId: null,
   status: "queued",
   openPullRequest: true,
@@ -149,12 +149,12 @@ describe("applyCloudRunEvent", () => {
     const next = fold([
       event(1, {
         kind: "published",
-        branch: "byconvo/fix",
+        branch: "reviewer/fix",
         headSha: "abc",
         pullRequestUrl: "https://github.com/acme/api/pull/7",
       }),
     ]);
-    expect(next.run.branch).toBe("byconvo/fix");
+    expect(next.run.branch).toBe("reviewer/fix");
     expect(next.run.headSha).toBe("abc");
     expect(next.run.pullRequestUrl).toBe("https://github.com/acme/api/pull/7");
   });

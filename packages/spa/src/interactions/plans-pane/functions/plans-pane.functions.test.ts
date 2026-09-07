@@ -18,7 +18,7 @@ import type {
   PlanAnnotation,
   PlanNode,
   PlanStaleness,
-} from "@byconvo/core/plans";
+} from "@reviewer/core/plans";
 import type { AnnotationTarget } from "../interfaces/plans-pane.interfaces";
 
 const anchor = (filePath: string, line: number | null): PlanAnchor => ({

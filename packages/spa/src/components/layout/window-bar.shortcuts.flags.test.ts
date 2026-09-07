@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { barShortcut } from "./window-bar.shortcuts";
 
-vi.mock("@byconvo/feature-flags", () => ({
+vi.mock("@reviewer/feature-flags", () => ({
   isFeatureEnabled: (flag: string) => flag !== "sessions-button",
 }));
 

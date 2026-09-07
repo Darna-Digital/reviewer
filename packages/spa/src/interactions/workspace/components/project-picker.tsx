@@ -44,8 +44,8 @@ import { isDesktop, openDesktopDirectory } from "@/lib/desktop";
 import { cn } from "@/lib/utils";
 import { ProjectAvatar } from "./project-avatar";
 import { useWorkspaceActions } from "../adapters/workspace.hook.adapter";
-import { folderHint, folderName, isOpenable } from "@byconvo/core/workspace";
-import type { WorkspaceInfo } from "@byconvo/core/workspace";
+import { folderHint, folderName, isOpenable } from "@reviewer/core/workspace";
+import type { WorkspaceInfo } from "@reviewer/core/workspace";
 
 interface ProjectPickerProps {
   workspace: WorkspaceInfo | undefined;

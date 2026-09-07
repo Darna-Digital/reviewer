@@ -34,7 +34,7 @@ import {
   withHistory,
   type ChatTurnSession,
 } from "./providers.ts";
-import { chatSessionOrigin } from "@byconvo/core/chats";
+import { chatSessionOrigin } from "@reviewer/core/chats";
 import type {
   Chat,
   ChatActivity,
@@ -44,7 +44,7 @@ import type {
   ChatTurn,
   ChatWireEvent,
   StartTurnResult,
-} from "@byconvo/core/chats";
+} from "@reviewer/core/chats";
 import {
   appendActivity,
   appendPendingMessage,
@@ -454,8 +454,8 @@ const launchTurn = (input: {
     env: {
       ...process.env,
       ...program.env,
-      BYCONVO_CHAT_ID: chat.id,
-      BYCONVO_API: `http://localhost:${process.env["BYCONVO_PORT"] ?? 41811}`,
+      REVIEWER_CHAT_ID: chat.id,
+      REVIEWER_API: `http://localhost:${process.env["REVIEWER_PORT"] ?? 41811}`,
     },
     stdio: ["pipe", "pipe", "pipe"],
   });

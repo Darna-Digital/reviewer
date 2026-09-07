@@ -14,7 +14,7 @@ import {
   EvalResult,
   NavigateInput,
   SnapshotQuery,
-} from "@byconvo/core/browser";
+} from "@reviewer/core/browser";
 import * as Schema from "effect/Schema";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 

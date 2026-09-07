@@ -28,7 +28,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { DeviceSwitcher } from "@/components/layout/device-switcher";
-import { activeRepo } from "@byconvo/core/workspace";
+import { activeRepo } from "@reviewer/core/workspace";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { AgentMark } from "@/interactions/threads/components/agent-mark";
 import { PaneHeader } from "@/components/layout/pane-header";
@@ -47,7 +47,7 @@ import {
   PROJECTS,
   VIEWER,
 } from "@/interactions/collaboration/data/collaboration.mock";
-import type { AgentKind } from "@byconvo/core/threads";
+import type { AgentKind } from "@reviewer/core/threads";
 import { cn } from "@/lib/utils";
 
 interface Recipient {

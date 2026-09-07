@@ -1,7 +1,7 @@
 /**
  * Finding a language server binary — the difference between "not configured"
  * and "configured but not installed", which is the first thing anyone debugging
- * `.byconvo/languages.json` needs to know.
+ * `.reviewer/languages.json` needs to know.
  *
  * The filesystem check is injected so the search order itself can be tested
  * without planting executables on disk.

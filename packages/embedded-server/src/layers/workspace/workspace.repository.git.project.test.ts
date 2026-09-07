@@ -4,7 +4,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { describe, expect } from "vitest";
-import { WorkspaceRepository } from "@byconvo/core/workspace";
+import { WorkspaceRepository } from "@reviewer/core/workspace";
 import { memoryLayer } from "./workspace-context.ts";
 import { makeGitWorkspaceRepository } from "./workspace.repository.git.ts";
 

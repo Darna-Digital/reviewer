@@ -1,10 +1,10 @@
 /**
- * byconvo server entry point — a Node HTTP server exposing the HttpApi under
+ * reviewer server entry point — a Node HTTP server exposing the HttpApi under
  * /api. Replaces the darna-stack Cloudflare worker: same HttpApi, served with
  * `@effect/platform-node` instead of a Worker runtime. No Postgres, no
  * Cloudflare — feature state lives in one local SQLite file
- * (~/.byconvo/byconvo.db), and the repository is selected at runtime and
- * persisted to ~/.byconvo/state.json (BYCONVO_REPO / cwd seed the initial
+ * (~/.reviewer/reviewer.db), and the repository is selected at runtime and
+ * persisted to ~/.reviewer/state.json (REVIEWER_REPO / cwd seed the initial
  * selection).
  *
  * Composition mirrors darna's worker: feature controllers are provided to the
@@ -15,7 +15,7 @@
  */
 import { NodeHttpServer, NodeRuntime } from "@effect/platform-node";
 import * as Layer from "effect/Layer";
-import { commitDraftsLayer } from "@byconvo/core/git-message";
+import { commitDraftsLayer } from "@reviewer/core/git-message";
 import { FetchHttpClient, HttpRouter } from "effect/unstable/http";
 import { HttpApiBuilder, HttpApiScalar } from "effect/unstable/httpapi";
 import { createServer } from "node:http";
@@ -63,12 +63,12 @@ import {
   type InitialSelection,
 } from "./layers/workspace/workspace-context.ts";
 
-const envRepo = process.env["BYCONVO_REPO"];
+const envRepo = process.env["REVIEWER_REPO"];
 const initial: InitialSelection =
   envRepo !== undefined && envRepo.length > 0
     ? { path: envRepo, explicit: true }
     : { path: process.cwd(), explicit: false };
-const port = Number(process.env["BYCONVO_PORT"] ?? 41811);
+const port = Number(process.env["REVIEWER_PORT"] ?? 41811);
 
 /**
  * The API router with every feature controller attached. The OpenAPI document
@@ -124,7 +124,7 @@ const FeatureServices = Layer.mergeAll(
  * CLI outlives the request that started it, so its slot has to outlive it too).
  *
  * The database comes first — opening a project imports whatever its roots still
- * keep in `.byconvo/*.json`, so the file has to be there (and migrated) before
+ * keep in `.reviewer/*.json`, so the file has to be there (and migrated) before
  * the workspace context seeds its initial selection.
  */
 const InfraLive = gitHubClientLayer.pipe(
@@ -137,7 +137,7 @@ const InfraLive = gitHubClientLayer.pipe(
 );
 
 /**
- * The packaged desktop app loads the SPA from the `byconvo://app` protocol and
+ * The packaged desktop app loads the SPA from the `reviewer://app` protocol and
  * calls the API at `http://localhost:<port>`, so every request is cross-origin.
  * Allow all origins — this server is local-only and never credentialed.
  */

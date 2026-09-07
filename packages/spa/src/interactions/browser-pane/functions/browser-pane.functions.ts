@@ -93,7 +93,7 @@ export function elementLabel(element: Element): string {
 }
 
 /** Cancels a picker already running in the guest, from the host side. */
-export const PICKER_CANCEL_HOOK = "__byconvoCancelPick";
+export const PICKER_CANCEL_HOOK = "__reviewerCancelPick";
 
 /**
  * An expression evaluated in the guest page that resolves to the element the

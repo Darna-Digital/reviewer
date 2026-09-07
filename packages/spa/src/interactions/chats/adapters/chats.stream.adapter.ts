@@ -22,7 +22,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { chatStreamUrl } from "@/lib/api/client";
 import { chatQueryOptions } from "@/lib/queries";
-import type { Chat } from "@byconvo/core/chats";
+import type { Chat } from "@reviewer/core/chats";
 import type { ChatWireEvent } from "../interfaces/chats.interfaces";
 import { applyChatEvent } from "../functions/chats.reducer";
 

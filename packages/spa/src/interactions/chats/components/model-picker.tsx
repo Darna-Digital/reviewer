@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { TruncatedRow } from "@/components/ui/truncated-text";
-import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core/chats";
+import type { ChatModelCatalog, ChatProviderKind } from "@reviewer/core/chats";
 import {
   type CatalogModel,
   catalogModels,

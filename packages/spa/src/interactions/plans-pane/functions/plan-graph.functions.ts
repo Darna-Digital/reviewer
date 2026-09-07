@@ -7,8 +7,8 @@
  * simulation and no layout library — it is a grouped sort, which is also why the
  * result is stable between renders and assertable in a test.
  */
-import { PLAN_LAYERS } from "@byconvo/core/plans";
-import type { PlanEdge, PlanLayer, PlanNode } from "@byconvo/core/plans";
+import { PLAN_LAYERS } from "@reviewer/core/plans";
+import type { PlanEdge, PlanLayer, PlanNode } from "@reviewer/core/plans";
 import type {
   Curve,
   GraphLayout,

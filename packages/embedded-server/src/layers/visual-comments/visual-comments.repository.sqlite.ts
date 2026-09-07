@@ -4,12 +4,12 @@
  */
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
-import { VisualComment } from "@byconvo/core/visual-comments";
-import { NotFound } from "@byconvo/core/shared";
+import { VisualComment } from "@reviewer/core/visual-comments";
+import { NotFound } from "@reviewer/core/shared";
 import { inRepo } from "../db/db.service.ts";
 import { documentTable } from "../db/documents.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
-import type { VisualCommentsRepo } from "@byconvo/core/visual-comments";
+import type { VisualCommentsRepo } from "@reviewer/core/visual-comments";
 
 export const visualComments = documentTable<VisualComment>({
   table: "visual_comment",

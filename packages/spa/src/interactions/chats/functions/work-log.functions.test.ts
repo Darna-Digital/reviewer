@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ChatActivity } from "@byconvo/core/chats";
+import type { ChatActivity } from "@reviewer/core/chats";
 import { activeWorkStep, elapsedMs, toWorkSteps } from "./work-log.functions";
 
 let seq = 0;

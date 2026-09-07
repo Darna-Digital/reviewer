@@ -33,9 +33,9 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
 import { cn } from "@/lib/utils";
-import type { RepoBranches } from "@byconvo/core/project";
-import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo";
-import type { RepoEntry } from "@byconvo/core/workspace";
+import type { RepoBranches } from "@reviewer/core/project";
+import type { BranchInfo, RemoteBranchInfo } from "@reviewer/core/repo";
+import type { RepoEntry } from "@reviewer/core/workspace";
 
 interface VirtualAnchor {
   readonly getBoundingClientRect: () => DOMRect;

@@ -10,7 +10,7 @@
  * Pure, so the pairing rules (which are the fiddly part) are unit-testable
  * without a socket or a running agent.
  */
-import type { ChatActivity } from "@byconvo/core/chats";
+import type { ChatActivity } from "@reviewer/core/chats";
 
 export type WorkStepStatus = "running" | "done" | "failed";
 

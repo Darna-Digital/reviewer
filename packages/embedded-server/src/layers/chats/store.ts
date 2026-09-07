@@ -35,7 +35,7 @@ import {
   type ChatSummary,
   type ChatTurn,
   type ListChatsInput,
-} from "@byconvo/core/chats";
+} from "@reviewer/core/chats";
 import {
   allRows,
   database,

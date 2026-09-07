@@ -1,8 +1,8 @@
 /**
- * Wire shapes for the cloud feature — byconvo's connection to byconvo cloud,
+ * Wire shapes for the cloud feature — reviewer's connection to reviewer cloud,
  * and the runs that connection can start and follow.
  *
- * The run shapes mirror the cloud's own (`@byconvo-cloud/core/runs`,
+ * The run shapes mirror the cloud's own (`@reviewer-cloud/core/runs`,
  * `/repos`, `/identity`) field for field: the two repositories are separate,
  * so the shapes are copied rather than imported, and kept in the cloud's
  * naming so a JSON body from one decodes with the other's schema unchanged.

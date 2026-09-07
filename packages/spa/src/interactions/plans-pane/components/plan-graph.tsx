@@ -9,7 +9,7 @@
  */
 import { IconAlertTriangle } from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Plan, PlanStaleness } from "@byconvo/core/plans";
+import type { Plan, PlanStaleness } from "@reviewer/core/plans";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import {
   centerOn,

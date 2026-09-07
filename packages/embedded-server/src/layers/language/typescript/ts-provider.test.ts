@@ -10,7 +10,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Position } from "@byconvo/core/language";
+import type { Position } from "@reviewer/core/language";
 import { OVERRIDE_ENV, resetTypeScriptCache } from "./ts-module.ts";
 import { resetProjects } from "./ts-project.ts";
 import { typescriptProvider } from "./ts-provider.ts";
@@ -68,7 +68,7 @@ const request = (path: string, contents: string | null = null) => ({
 });
 
 beforeAll(() => {
-  root = mkdtempSync(join(tmpdir(), "byconvo-ts-"));
+  root = mkdtempSync(join(tmpdir(), "reviewer-ts-"));
   mkdirSync(join(root, "src"));
   writeFileSync(join(root, "tsconfig.json"), TSCONFIG);
   writeFileSync(join(root, "src/a.ts"), A_TS);
@@ -258,7 +258,7 @@ describe("typescriptProvider", () => {
   });
 
   it("analyses a file with no tsconfig above it as an inferred project", async () => {
-    const loose = mkdtempSync(join(tmpdir(), "byconvo-ts-loose-"));
+    const loose = mkdtempSync(join(tmpdir(), "reviewer-ts-loose-"));
     try {
       writeFileSync(join(loose, "solo.ts"), 'const n: number = "text"\n');
       const diagnostics = await run(
@@ -280,7 +280,7 @@ describe("typescriptProvider", () => {
   // same unavailable branch, which is what the assertions below cover.
   it("reports unavailable, and answers emptily, when the compiler cannot load", async () => {
     const previous = process.env[OVERRIDE_ENV];
-    const bare = mkdtempSync(join(tmpdir(), "byconvo-ts-bare-"));
+    const bare = mkdtempSync(join(tmpdir(), "reviewer-ts-bare-"));
     process.env[OVERRIDE_ENV] = join(bare, "no-such-typescript.js");
     resetTypeScriptCache();
     try {

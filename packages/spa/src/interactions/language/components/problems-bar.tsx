@@ -12,7 +12,7 @@
  */
 import { IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 import { useMemo } from "react";
-import type { Diagnostic } from "@byconvo/core/language";
+import type { Diagnostic } from "@reviewer/core/language";
 import { SEVERITY_STYLE } from "./diagnostics-annotation";
 import { countDiagnostics } from "../functions/language.functions";
 import {

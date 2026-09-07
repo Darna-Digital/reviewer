@@ -1,6 +1,6 @@
 import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
-import { FormattingService } from "@byconvo/core/formatting";
+import { FormattingService } from "@reviewer/core/formatting";
 import { Api } from "../../api.ts";
 
 export const FormattingHandler = HttpApiBuilder.group(

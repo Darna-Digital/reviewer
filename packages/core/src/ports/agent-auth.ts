@@ -7,8 +7,8 @@
  * browser and the listener are the same machine — which is here, and is not a
  * cloud sandbox.
  *
- * So this is the half byconvo can do that the cloud cannot: run the vendor's
- * own login, and hand back what it wrote so it can be carried to byconvo
+ * So this is the half reviewer can do that the cloud cannot: run the vendor's
+ * own login, and hand back what it wrote so it can be carried to reviewer
  * cloud. The person clicks once and approves in their browser; no code is
  * typed anywhere.
  *

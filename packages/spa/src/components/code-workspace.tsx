@@ -87,7 +87,7 @@ import { useCommentsActions } from "@/interactions/comments/adapters/comments.ho
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
-import { isMultiRepo } from "@byconvo/core/workspace";
+import { isMultiRepo } from "@reviewer/core/workspace";
 import {
   useRepoCommands,
   useWorkspaceActions,
@@ -124,8 +124,8 @@ import {
   type AppMode,
   type DiffTarget,
 } from "@/lib/api/types";
-import type { ReviewComment } from "@byconvo/core/comments";
-import { unenrichedPull } from "@byconvo/core/ports/git-provider";
+import type { ReviewComment } from "@reviewer/core/comments";
+import { unenrichedPull } from "@reviewer/core/ports/git-provider";
 import { pathName } from "@/lib/display-path";
 import { errorReason } from "@/lib/errors";
 import {

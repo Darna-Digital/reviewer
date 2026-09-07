@@ -10,8 +10,8 @@
  * keeps typing through both, so every answer here is expressed against the
  * caret *now* rather than the one that asked the question.
  */
-import { filterCompletions, prefixAt } from "@byconvo/core/language";
-import type { CompletionItem } from "@byconvo/core/language";
+import { filterCompletions, prefixAt } from "@reviewer/core/language";
+import type { CompletionItem } from "@reviewer/core/language";
 
 /** Shortest prefix worth asking about, unless a trigger character forces it. */
 export const MIN_PREFIX = 1;

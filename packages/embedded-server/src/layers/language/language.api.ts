@@ -19,9 +19,9 @@ import {
   LanguageProviderInfo,
   PositionQuery,
   ReferencesResult,
-} from "@byconvo/core/language";
-import { LanguageError } from "@byconvo/core/ports/language-provider";
-import { NoRepoSelected } from "@byconvo/core/shared";
+} from "@reviewer/core/language";
+import { LanguageError } from "@reviewer/core/ports/language-provider";
+import { NoRepoSelected } from "@reviewer/core/shared";
 import * as Schema from "effect/Schema";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 

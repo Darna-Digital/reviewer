@@ -7,7 +7,7 @@
  * costs less than remembering it would — and the only state the caller keeps is
  * which branches are shut.
  */
-import type { ReferenceKind, SymbolReference } from "@byconvo/core/language";
+import type { ReferenceKind, SymbolReference } from "@reviewer/core/language";
 import type {
   FindUsagesDependencies,
   FindUsagesFunctions,

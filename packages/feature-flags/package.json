@@ -1,9 +1,9 @@
 {
-  "name": "@byconvo/feature-flags",
+  "name": "@reviewer/feature-flags",
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "byconvo feature flags — one switch per feature, read wherever the feature is surfaced",
+  "description": "reviewer feature flags — one switch per feature, read wherever the feature is surfaced",
   "exports": {
     ".": "./src/feature-flags.ts"
   },
@@ -18,7 +18,7 @@
     "format:check": "prettier --check \"**/*.{ts,js}\""
   },
   "devDependencies": {
-    "@byconvo/lint": "workspace:*",
+    "@reviewer/lint": "workspace:*",
     "eslint": "^10.9.1",
     "prettier": "^3.9.6",
     "typescript": "~6.0.3"

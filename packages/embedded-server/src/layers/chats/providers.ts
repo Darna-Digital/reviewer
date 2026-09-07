@@ -10,7 +10,7 @@
  *   opencode `opencode run` — plain text streamed as it prints
  *   cursor   `cursor-agent -p --output-format stream-json` — token streaming
  */
-import type { Chat, ChatMessage } from "@byconvo/core/chats";
+import type { Chat, ChatMessage } from "@reviewer/core/chats";
 
 export interface ChatTurnProgram {
   readonly file: string;

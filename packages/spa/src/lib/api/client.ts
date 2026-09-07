@@ -2,8 +2,8 @@ import createFetchClient from "openapi-fetch";
 import createQueryClient from "openapi-react-query";
 import type { paths } from "./schema";
 
-type ByconvoWindow = Window & {
-  byconvo?: {
+type ReviewerWindow = Window & {
+  reviewer?: {
     apiBaseUrl?: string;
   };
 };
@@ -11,7 +11,7 @@ type ByconvoWindow = Window & {
 const desktopApiBaseUrl =
   typeof window === "undefined"
     ? undefined
-    : (window as ByconvoWindow).byconvo?.apiBaseUrl;
+    : (window as ReviewerWindow).reviewer?.apiBaseUrl;
 
 /**
  * Browser/dev stays same-origin through Vite's proxy. Packaged Electron loads

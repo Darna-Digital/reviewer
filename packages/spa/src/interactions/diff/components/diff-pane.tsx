@@ -47,7 +47,7 @@ import {
   useStableOptionalCallback,
 } from "@/lib/stable-callback";
 import { diffTargetKey, type DiffTarget } from "@/lib/api/types";
-import type { CommentSide, ReviewComment } from "@byconvo/core/comments";
+import type { CommentSide, ReviewComment } from "@reviewer/core/comments";
 import type { DiffStyle, Theme } from "@/lib/ui-prefs";
 
 export type { DraftLocation };

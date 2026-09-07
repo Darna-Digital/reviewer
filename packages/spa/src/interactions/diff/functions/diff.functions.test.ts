@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { ReviewComment } from "@byconvo/core/comments";
+import type { ReviewComment } from "@reviewer/core/comments";
 import {
   unenrichedPull,
   type PullRequestInfo,
-} from "@byconvo/core/ports/git-provider";
-import type { GitStatusEntry } from "@byconvo/core/repo";
+} from "@reviewer/core/ports/git-provider";
+import type { GitStatusEntry } from "@reviewer/core/repo";
 import { createDiffFunctions } from "./diff.functions";
 import { createDiffDependenciesMock } from "./diff.functions.mock";
 
@@ -76,13 +76,13 @@ describe("parseFiles", () => {
 describe("tree derivations", () => {
   const status: GitStatusEntry[] = [
     { path: "src/a.ts", status: "modified" },
-    { path: ".byconvo/comments.json", status: "modified" },
+    { path: ".reviewer/comments.json", status: "modified" },
   ];
 
   it("commit mode lists only changed, non-internal paths", () => {
     const paths = fns().treePaths({
       mode: "commit",
-      allPaths: ["src/a.ts", "src/b.ts", ".byconvo/comments.json"],
+      allPaths: ["src/a.ts", "src/b.ts", ".reviewer/comments.json"],
       gitStatus: status,
       parsedFiles: [],
     });
@@ -103,7 +103,7 @@ describe("tree derivations", () => {
   it("browse mode lists every non-internal path", () => {
     const paths = fns().treePaths({
       mode: "browse",
-      allPaths: ["src/a.ts", ".byconvo/x"],
+      allPaths: ["src/a.ts", ".reviewer/x"],
       gitStatus: [],
       parsedFiles: [],
     });

@@ -35,7 +35,7 @@ import {
 import { DATE_FILTERS, type DateFilter } from "@/lib/date-filter";
 import { useChatProjects } from "@/lib/queries";
 import { cn } from "@/lib/utils";
-import type { ChatProjectTally } from "@byconvo/core/chats";
+import type { ChatProjectTally } from "@reviewer/core/chats";
 
 const EMPTY_PROJECTS: ReadonlyArray<ChatProjectTally> = [];
 

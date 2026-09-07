@@ -9,7 +9,7 @@ import {
   type BrowserSnapshot,
   type BrowserState,
   type ConsoleMessage,
-} from "@byconvo/core/browser";
+} from "@reviewer/core/browser";
 import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
 import { Api } from "../../api.ts";

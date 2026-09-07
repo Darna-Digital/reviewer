@@ -6,9 +6,9 @@ import type {
   BranchInfo,
   RemoteBranchInfo,
   RepoInfo,
-} from "@byconvo/core/repo";
-import type { RepoEntry, WorkspaceInfo } from "@byconvo/core/workspace";
-import type { RepoBranches } from "@byconvo/core/project";
+} from "@reviewer/core/repo";
+import type { RepoEntry, WorkspaceInfo } from "@reviewer/core/workspace";
+import type { RepoBranches } from "@reviewer/core/project";
 import type { DiffStyle } from "@/lib/ui-prefs";
 
 interface TopBarProps {

@@ -23,7 +23,7 @@ import {
 
 // The transitions below are about the strip's shape, not about which features
 // are switched on, so they are stated against the full set of pinned tabs.
-vi.mock("@byconvo/feature-flags", () => ({ isFeatureEnabled: () => true }));
+vi.mock("@reviewer/feature-flags", () => ({ isFeatureEnabled: () => true }));
 
 const session = (
   id: string,
@@ -315,6 +315,6 @@ describe("tabTitle", () => {
       "Inbox"
     );
     expect(tabTitle("/settings")).toBe("Settings");
-    expect(tabTitle("/somewhere-else")).toBe("Byconvo");
+    expect(tabTitle("/somewhere-else")).toBe("Reviewer");
   });
 });

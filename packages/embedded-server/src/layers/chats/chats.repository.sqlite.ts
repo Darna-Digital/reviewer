@@ -10,8 +10,8 @@
  * answers exactly like one started in the selected root.
  */
 import * as Effect from "effect/Effect";
-import { DEFAULT_CHAT_TITLE } from "@byconvo/core/chats";
-import { NotFound } from "@byconvo/core/shared";
+import { DEFAULT_CHAT_TITLE } from "@reviewer/core/chats";
+import { NotFound } from "@reviewer/core/shared";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 import { attempt, inRepo } from "../db/db.service.ts";
 import { rememberRepo } from "../db/scope.ts";
@@ -20,7 +20,7 @@ import type {
   ChatsRepo,
   CreateChatInput,
   UpdateChatInput,
-} from "@byconvo/core/chats";
+} from "@reviewer/core/chats";
 import {
   findChat,
   insertChat,

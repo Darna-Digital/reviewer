@@ -4,7 +4,7 @@
  * is written — and the message is read off the draft once it lands.
  */
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
-import { CommitDraft, GenerateBody } from "@byconvo/core/git-message";
+import { CommitDraft, GenerateBody } from "@reviewer/core/git-message";
 
 export class GitMessageApi extends HttpApiGroup.make("gitMessage")
   .add(

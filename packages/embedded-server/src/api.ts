@@ -15,7 +15,7 @@ import { ThreadsApi } from "./layers/threads/threads.api.ts";
 import { VisualCommentsApi } from "./layers/visual-comments/visual-comments.api.ts";
 import { WorkspaceApi } from "./layers/workspace/workspace.api.ts";
 
-export class Api extends HttpApi.make("byconvo")
+export class Api extends HttpApi.make("reviewer")
   .add(WorkspaceApi)
   .add(RepoApi)
   .add(ProjectApi)

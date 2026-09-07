@@ -4,7 +4,7 @@ import { Api } from "../../api.ts";
 import {
   GitProviderError,
   GitProvider,
-} from "@byconvo/core/ports/git-provider";
+} from "@reviewer/core/ports/git-provider";
 
 const ok = { ok: true } as const;
 

@@ -7,7 +7,7 @@
 import { useSyncExternalStore } from "react";
 import type { CustomAgent } from "../interfaces/session-agents.interfaces";
 
-const STORE_KEY = "byconvo-session-agents";
+const STORE_KEY = "reviewer-session-agents";
 
 let sequence = 0;
 export const nextAgentId = (): string => `agent-${(sequence += 1)}`;

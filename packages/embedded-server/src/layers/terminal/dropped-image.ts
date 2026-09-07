@@ -38,7 +38,7 @@ export const saveDroppedImage = (
   }
   if (bytes.length === 0 || bytes.length > MAX_IMAGE_BYTES) return null;
   try {
-    const dir = join(tmpdir(), "byconvo-dropped");
+    const dir = join(tmpdir(), "reviewer-dropped");
     mkdirSync(dir, { recursive: true });
     const path = join(dir, `${randomUUID()}${ext}`);
     writeFileSync(path, bytes);

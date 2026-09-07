@@ -10,7 +10,7 @@ import * as FileSystem from "effect/FileSystem";
 import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { describe, expect } from "vitest";
-import { GitMessageChanges } from "@byconvo/core/git-message";
+import { GitMessageChanges } from "@reviewer/core/git-message";
 import { layer as gitExecLayer, subcommandOf } from "../git/git-exec.ts";
 import { memoryLayer } from "../workspace/workspace-context.ts";
 import { makeWorkspaceChanges } from "./git-message.changes.ts";

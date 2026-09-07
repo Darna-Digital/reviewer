@@ -1,13 +1,13 @@
 /**
  * `session-agents` feature — the agents an agent session can be handed to.
  *
- * An agent here is a command-line tool on this machine. Byconvo builds a shell
+ * An agent here is a command-line tool on this machine. Reviewer builds a shell
  * command from it, drops the prompt in, and reads back whatever the tool
  * prints — that is all `claude -p …` or `codex exec …` ever were. The built-in
  * ones are detected (the server asks each CLI what it can run); a custom one is
  * the same bargain written out by hand, so the two are described the same way.
  */
-import type { AgentKind } from "@byconvo/core/threads";
+import type { AgentKind } from "@reviewer/core/threads";
 
 /** Where the prompt is spliced into a custom agent's command. */
 export const PROMPT_TOKEN = "{prompt}";

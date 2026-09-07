@@ -7,7 +7,7 @@ import { IconArrowRight, IconLoader2 } from "@tabler/icons-react";
 import Markdown from "react-markdown";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
-import type { Location, SymbolTarget } from "@byconvo/core/language";
+import type { Location, SymbolTarget } from "@reviewer/core/language";
 import { cn } from "@/lib/utils";
 
 /** `src/a/b.ts` -> `src/a/`, so the name can be kept while the path clips. */

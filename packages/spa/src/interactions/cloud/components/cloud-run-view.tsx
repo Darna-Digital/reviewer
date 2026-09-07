@@ -27,7 +27,7 @@ import {
   type CloudRunMessage,
   type CloudRunSnapshot,
   type CloudRunTurn,
-} from "@byconvo/core/cloud";
+} from "@reviewer/core/cloud";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
@@ -295,7 +295,7 @@ export function CloudRunView({ runId }: { runId: string }) {
           <span className="truncate">{run.branch}</span>
         </span>
         <StatusBadge status={run.status} />
-        {review.kind === "byconvo" && (
+        {review.kind === "reviewer" && (
           <Link
             to="/modes/code/review/pull/$number"
             params={{ number: String(review.number) }}
@@ -311,7 +311,7 @@ export function CloudRunView({ runId }: { runId: string }) {
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1 text-xs text-brand-500 hover:underline"
-            title={`Opened against ${review.repoFullName}, which is not the repository byconvo has open`}
+            title={`Opened against ${review.repoFullName}, which is not the repository reviewer has open`}
           >
             Pull request
             <IconExternalLink className="size-3.5" />

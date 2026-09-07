@@ -1,11 +1,11 @@
 import * as Schema from "effect/Schema";
-import { TerminalError } from "@byconvo/core/ports/terminal-exec";
+import { TerminalError } from "@reviewer/core/ports/terminal-exec";
 import {
   NoRepoSelected,
   NotFound,
   Ok,
   StorageError,
-} from "@byconvo/core/shared";
+} from "@reviewer/core/shared";
 import {
   Thread,
   ThreadEntry,
@@ -14,7 +14,7 @@ import {
   RenameThread,
   RunCommand,
   ThreadIdParam,
-} from "@byconvo/core/threads";
+} from "@reviewer/core/threads";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 const errors = [NoRepoSelected, NotFound, StorageError, TerminalError] as const;

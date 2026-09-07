@@ -9,7 +9,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { HttpClient, HttpClientRequest } from "effect/unstable/http";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
-import { GitProviderError } from "@byconvo/core/ports/git-provider";
+import { GitProviderError } from "@reviewer/core/ports/git-provider";
 import { GitExec } from "../git/git-exec.ts";
 
 const API = "https://api.github.com";
@@ -158,7 +158,7 @@ export const make = Effect.gen(function* () {
   const headers = (accept: string, token: string | null) => ({
     accept,
     "x-github-api-version": "2022-11-28",
-    "user-agent": "byconvo.com",
+    "user-agent": "reviewer.darnadigital.com",
     ...(token === null ? {} : { authorization: `Bearer ${token}` }),
   });
 

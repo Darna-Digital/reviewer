@@ -17,7 +17,7 @@
  * stopped on their way down to it.
  */
 import { type File as EditableFile, type FileContents } from "@pierre/diffs";
-import type { TextEdit } from "@byconvo/core/language";
+import type { TextEdit } from "@reviewer/core/language";
 import {
   Editor,
   type EditorOptions,

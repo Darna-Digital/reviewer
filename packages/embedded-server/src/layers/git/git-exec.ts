@@ -29,20 +29,20 @@ import * as Semaphore from "effect/Semaphore";
 import * as Stream from "effect/Stream";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { rmSync, statSync } from "node:fs";
-import { NoRepoSelected } from "@byconvo/core/shared";
+import { NoRepoSelected } from "@reviewer/core/shared";
 import {
   GitError,
   GitExec,
   type GitExecShape,
   type GitFailure,
-} from "@byconvo/core/ports/git-exec";
+} from "@reviewer/core/ports/git-exec";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 
 export {
   GitExec,
   type GitExecShape,
   type GitFailure,
-} from "@byconvo/core/ports/git-exec";
+} from "@reviewer/core/ports/git-exec";
 
 interface CommandResult {
   readonly stdout: string;
@@ -131,7 +131,7 @@ const abandonedLock = (lockPath: string): boolean => {
 const removeLock = (lockPath: string): boolean => {
   try {
     rmSync(lockPath);
-    console.warn(`byconvo: cleared an abandoned git lock at ${lockPath}`);
+    console.warn(`reviewer: cleared an abandoned git lock at ${lockPath}`);
     return true;
   } catch {
     return false;

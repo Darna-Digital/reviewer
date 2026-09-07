@@ -29,8 +29,8 @@ import { TruncatedText } from "@/components/ui/truncated-text";
 import { ALL_REFS, logRefLabel, type LogQuery } from "@/lib/api/types";
 import { pathName } from "@/lib/display-path";
 import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
-import type { BranchInfo } from "@byconvo/core/repo";
-import type { RepoEntry } from "@byconvo/core/workspace";
+import type { BranchInfo } from "@reviewer/core/repo";
+import type { RepoEntry } from "@reviewer/core/workspace";
 import { cn } from "@/lib/utils";
 
 /** Parse a `YYYY-MM-DD` string as a local date (no timezone shift). */

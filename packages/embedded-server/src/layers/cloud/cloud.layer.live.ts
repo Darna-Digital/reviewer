@@ -3,7 +3,7 @@ import {
   CloudService,
   CloudSettingsRepository,
   makeCloudService,
-} from "@byconvo/core/cloud";
+} from "@reviewer/core/cloud";
 import { AgentAuthLive } from "./agent-auth.live.ts";
 import { CloudApiLive } from "./cloud-api.live.ts";
 import { makeSqliteCloudSettingsRepository } from "./cloud.repository.sqlite.ts";

@@ -5,9 +5,9 @@
  */
 import { IconFolder, IconGitBranch } from "@tabler/icons-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { folderName } from "@byconvo/core/workspace";
+import { folderName } from "@reviewer/core/workspace";
 import { ProjectAvatar } from "./project-avatar";
-import type { RepoEntry } from "@byconvo/core/workspace";
+import type { RepoEntry } from "@reviewer/core/workspace";
 
 interface ProjectReposProps {
   project: string;

@@ -7,7 +7,7 @@
  * as a terminal attaches.
  */
 import * as Schema from "effect/Schema";
-import { Thread } from "@byconvo/core/threads";
+import { Thread } from "@reviewer/core/threads";
 import { documentTable } from "../db/documents.ts";
 
 export const threads = documentTable<Thread>({

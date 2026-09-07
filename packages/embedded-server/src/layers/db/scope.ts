@@ -8,7 +8,7 @@
  * table rather than on every row means re-opening a repository under a
  * different project re-labels its history instead of splitting it.
  *
- * Nothing here fails. A repository byconvo has not been told about yet — a
+ * Nothing here fails. A repository reviewer has not been told about yet — a
  * chat imported from a folder that is no longer open — still needs a label, so
  * it stands as its own project, named after the directory.
  */

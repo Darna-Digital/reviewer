@@ -88,7 +88,7 @@ export function KitchenSinkPage() {
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <span className="size-3 shrink-0 rounded-full bg-brand-500" />
             <p className="truncate text-base font-medium sm:text-sm">
-              Byconvo design system
+              Reviewer design system
             </p>
             <Badge variant="ghost" className="max-sm:hidden">
               local dev only

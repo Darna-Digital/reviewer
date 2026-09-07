@@ -8,4 +8,4 @@ import { makeDraftStore } from "@/lib/drafts";
 /** Draft key for the new-thread composer on the /chats index. */
 export const NEW_CHAT_DRAFT = "new";
 
-export const { setDraft, useDraft } = makeDraftStore("byconvo-chat-drafts");
+export const { setDraft, useDraft } = makeDraftStore("reviewer-chat-drafts");

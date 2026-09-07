@@ -4,7 +4,7 @@
  * is already on the wire.
  */
 import * as Schema from "effect/Schema";
-import { StoredCloudConnection } from "@byconvo/core/cloud";
+import { StoredCloudConnection } from "@reviewer/core/cloud";
 import { execute, oneRow } from "../db/database.ts";
 
 const decode = Schema.decodeUnknownSync(StoredCloudConnection);

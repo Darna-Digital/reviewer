@@ -10,14 +10,14 @@ import {
   NewChat,
   SendChatMessage,
   UpdateChat,
-} from "@byconvo/core/chats";
-import { TerminalError } from "@byconvo/core/ports/terminal-exec";
+} from "@reviewer/core/chats";
+import { TerminalError } from "@reviewer/core/ports/terminal-exec";
 import {
   NoRepoSelected,
   NotFound,
   Ok,
   StorageError,
-} from "@byconvo/core/shared";
+} from "@reviewer/core/shared";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 const errors = [

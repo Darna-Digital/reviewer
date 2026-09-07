@@ -4,7 +4,7 @@ import {
   PlansRepository,
   PlansService,
   makePlansService,
-} from "@byconvo/core/plans";
+} from "@reviewer/core/plans";
 import {
   makeFilePlanSources,
   makeSqlitePlansRepository,

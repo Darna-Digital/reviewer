@@ -1,6 +1,6 @@
-import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core/chats";
-import type { ReviewComment } from "@byconvo/core/comments";
-import type { VisualComment } from "@byconvo/core/visual-comments";
+import type { ChatModelCatalog, ChatProviderKind } from "@reviewer/core/chats";
+import type { ReviewComment } from "@reviewer/core/comments";
+import type { VisualComment } from "@reviewer/core/visual-comments";
 import type { ChatSettings } from "../interfaces/chats.interfaces";
 
 export const ASSIGNABLE_CHAT_PROVIDERS = [
@@ -106,6 +106,6 @@ export const buildVisualAssignmentPrompt = (
     lines,
     "",
     "Find the code that renders each element, then verify your change through",
-    "byconvo's browser API (see the byconvo skill) rather than assuming it worked.",
+    "reviewer's browser API (see the reviewer skill) rather than assuming it worked.",
   ].join("\n");
 };

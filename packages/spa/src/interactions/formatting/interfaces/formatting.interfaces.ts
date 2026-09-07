@@ -9,7 +9,7 @@
  * that answers about a buffer the user has since typed past, gives way to the
  * text the editor holds.
  */
-import type { TextEdit } from "@byconvo/core/language";
+import type { TextEdit } from "@reviewer/core/language";
 
 export interface FormatOutcome {
   /** What to save: the formatted text, or the input when nothing changed. */

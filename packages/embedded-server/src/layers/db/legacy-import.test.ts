@@ -25,9 +25,9 @@ let api: string;
 let web: string;
 
 const write = (root: string, name: string, value: unknown) => {
-  mkdirSync(`${root}/.byconvo`, { recursive: true });
+  mkdirSync(`${root}/.reviewer`, { recursive: true });
   writeFileSync(
-    `${root}/.byconvo/${name}`,
+    `${root}/.reviewer/${name}`,
     `${JSON.stringify(value, null, 2)}\n`
   );
 };
@@ -67,7 +67,7 @@ const legacyChat = (id: string, title: string) => ({
 
 beforeEach(() => {
   openDatabase(":memory:");
-  project = mkdtempSync(`${tmpdir()}/byconvo-import-`);
+  project = mkdtempSync(`${tmpdir()}/reviewer-import-`);
   api = `${project}/api`;
   web = `${project}/web`;
   for (const root of [api, web]) mkdirSync(root, { recursive: true });
@@ -81,7 +81,7 @@ afterEach(() => {
   rmSync(project, { recursive: true, force: true });
 });
 
-describe("legacy .byconvo import", () => {
+describe("legacy .reviewer import", () => {
   it("takes every root of a multi-repo project across, once", () => {
     write(api, "chats.json", [legacyChat("c-api", "api chat")]);
     write(web, "chats.json", [legacyChat("c-web", "web chat")]);
@@ -180,7 +180,7 @@ describe("legacy .byconvo import", () => {
     });
   });
 
-  it("leaves a repository with no .byconvo folder empty and settled", () => {
+  it("leaves a repository with no .reviewer folder empty and settled", () => {
     expect(importLegacyJson(web)).toEqual([
       "chats",
       "comments",
@@ -197,7 +197,7 @@ describe("legacy .byconvo import", () => {
     write(api, "chats.json", [legacyChat("c-1", "a chat")]);
     importLegacyJson(api);
     expect(() =>
-      rmSync(`${api}/.byconvo/chats.json`, { force: false })
+      rmSync(`${api}/.reviewer/chats.json`, { force: false })
     ).not.toThrow();
   });
 });

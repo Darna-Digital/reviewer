@@ -11,7 +11,7 @@
  * which for the usual save — a missing semicolon, a reflowed line — is a few
  * characters, and leaves a caret outside that span exactly where it was.
  */
-import { positionAt, type TextEdit } from "@byconvo/core/language";
+import { positionAt, type TextEdit } from "@reviewer/core/language";
 
 const isHighSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
 const isLowSurrogate = (code: number) => code >= 0xdc00 && code <= 0xdfff;

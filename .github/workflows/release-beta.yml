@@ -1,7 +1,7 @@
 name: release-beta
 
 # Beta channel. Every push to `staging` builds a full both-arch prerelease
-# (X.Y.Z-beta.<run>) and publishes it to the darna-digital/byconvo-beta
+# (X.Y.Z-beta.<run>) and publishes it to the darna-digital/reviewer-beta
 # repository. The base X.Y.Z comes from packages/desktop/package.json; the run
 # number keeps each build newer than the last.
 #
@@ -12,7 +12,7 @@ name: release-beta
 # needed, unlike a fully unsigned app which macOS reports as "damaged".
 #
 # Secrets used:
-#   BETA_GITHUB_TOKEN           PAT with contents:write on darna-digital/byconvo-beta
+#   BETA_GITHUB_TOKEN           PAT with contents:write on darna-digital/reviewer-beta
 #   APPLE_CERTIFICATE           base64 of the Developer ID Application .p12
 #   APPLE_CERTIFICATE_PASSWORD  password for that .p12
 
@@ -68,31 +68,31 @@ jobs:
       # created below.
       - name: Package (signed, not notarized, both arches)
         run: >
-          pnpm --filter @byconvo/desktop exec electron-builder
+          pnpm --filter @reviewer/desktop exec electron-builder
           --mac --arm64 --x64
           --config electron-builder.config.js
           -c.extraMetadata.version=${{ steps.v.outputs.version }}
           -c.mac.notarize=false
           --publish never
         env:
-          BYCONVO_CHANNEL: beta
+          REVIEWER_CHANNEL: beta
           # Verbose electron-builder output so the packaging/signing step streams
           # progress (each binary as it's signed) instead of sitting silent.
           DEBUG: electron-builder
 
       # Publish with the gh CLI rather than electron-builder's own publisher:
-      # the build runs in this repo but the release lives in byconvo-beta, and
+      # the build runs in this repo but the release lives in reviewer-beta, and
       # electron-builder anchors the tag to a commit from *this* checkout that
       # doesn't exist there. `gh release create --target main` anchors the tag to
-      # byconvo-beta's own default branch, which is the valid reference.
-      - name: Publish signed build to byconvo-beta
+      # reviewer-beta's own default branch, which is the valid reference.
+      - name: Publish signed build to reviewer-beta
         env:
           GH_TOKEN: ${{ secrets.BETA_GITHUB_TOKEN }}
         run: |
           gh release create "v${{ steps.v.outputs.version }}" \
             packages/desktop/dist-packaged/*.dmg \
-            --repo darna-digital/byconvo-beta \
+            --repo darna-digital/reviewer-beta \
             --target main \
-            --title "Byconvo Beta v${{ steps.v.outputs.version }}" \
+            --title "Reviewer Beta v${{ steps.v.outputs.version }}" \
             --notes "Signed beta build (not notarized). On first launch, right-click the app and choose Open, then confirm." \
             --prerelease

@@ -1,7 +1,7 @@
 import { it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
 import { afterEach, beforeEach, describe, expect } from "vitest";
-import { CommentsRepository } from "@byconvo/core/comments";
+import { CommentsRepository } from "@reviewer/core/comments";
 import { closeDatabase, openDatabase } from "../db/database.ts";
 import { memoryLayer } from "../workspace/workspace-context.ts";
 import { makeSqliteCommentsRepository } from "./comments.repository.sqlite.ts";

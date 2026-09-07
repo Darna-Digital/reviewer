@@ -14,8 +14,8 @@
  * answers with the nonce it was given, so a reply that arrives after the mill
  * has moved on is recognisably not the one it is waiting for.
  */
-export const PREVIEW_GOTO = "byconvo:preview:goto";
-export const PREVIEW_SHOWN = "byconvo:preview:shown";
+export const PREVIEW_GOTO = "reviewer:preview:goto";
+export const PREVIEW_SHOWN = "reviewer:preview:shown";
 
 /** The window asking the preview for a section. */
 export interface PreviewGoto {

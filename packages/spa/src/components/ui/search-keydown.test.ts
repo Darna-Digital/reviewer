@@ -32,7 +32,7 @@ function popoverFixture() {
   root.innerHTML = `
     <div data-slot="popover-content">
       <input data-search-input />
-      <button type="button" data-search-row>byconvo</button>
+      <button type="button" data-search-row>reviewer</button>
       <button type="button" data-search-row>web-app</button>
       <button type="button" data-search-row>Browse folders</button>
     </div>
@@ -70,7 +70,7 @@ describe("topLevelMenuRows", () => {
   it("treats data-search-row elements in a popover as rows", () => {
     const { root, rows } = popoverFixture();
     expect(rows.map((el) => el.textContent)).toEqual([
-      "byconvo",
+      "reviewer",
       "web-app",
       "Browse folders",
     ]);

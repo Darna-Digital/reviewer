@@ -12,10 +12,10 @@ export type ChatMode = (typeof CHAT_MODES)[number];
 /** The prompt handed to an agent asked to work an analysis out. */
 export const buildAnalysisPrompt = (question: string): string =>
   [
-    `Work out and record an analysis in byconvo's Plans pane: ${question.trim()}`,
+    `Work out and record an analysis in reviewer's Plans pane: ${question.trim()}`,
     "",
     "Read the code first — do not guess at the flow. Then POST the analysis to",
-    "`/api/plans` on the byconvo server (see the byconvo-plans skill for the",
+    "`/api/plans` on the reviewer server (see the reviewer-plans skill for the",
     "schema). Lay the nodes out across the layers in the order the request",
     "actually travels — `frontend` through `transport` to `backend` and `data` —",
     "give every node an `anchor` of the file and line it stands for, and leave an",

@@ -29,7 +29,7 @@ import { cn } from "@/lib/utils";
 import type {
   CheckState,
   PullRequestInfo,
-} from "@byconvo/core/ports/git-provider";
+} from "@reviewer/core/ports/git-provider";
 
 const CHECK_ICON = {
   success: IconCircleCheckFilled,

@@ -10,11 +10,11 @@ import { Effect, Layer, Option } from "effect";
 import * as FileSystem from "effect/FileSystem";
 import * as PlatformError from "effect/PlatformError";
 import { describe, expect } from "vitest";
-import type { LanguageRepo } from "@byconvo/core/language";
+import type { LanguageRepo } from "@reviewer/core/language";
 import type {
   LanguageFailure,
   LanguageProvider,
-} from "@byconvo/core/ports/language-provider";
+} from "@reviewer/core/ports/language-provider";
 import {
   WorkspaceContext,
   makeMemory,

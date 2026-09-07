@@ -347,7 +347,7 @@ describe("mergeDiscoveredModels", () => {
   });
 
   it("leaves the provider rail intact even with no models anywhere", () => {
-    // The providers are the agents byconvo can drive — that set is ours, and
+    // The providers are the agents reviewer can drive — that set is ours, and
     // an agent that isn't installed should still be visible (and empty).
     const merged = mergeDiscoveredModels(new Map());
     expect(merged.providers.map((p) => p.id)).toEqual([

@@ -22,8 +22,8 @@ import { ThreadsPage } from "@/interactions/threads/components/threads-page";
 import type { LogQuery } from "@/lib/api/types";
 import { dockPage } from "@/lib/shell-route";
 import type { BottomTab } from "@/lib/ui-prefs";
-import type { BranchInfo, CommitInfo } from "@byconvo/core/repo";
-import type { RepoEntry } from "@byconvo/core/workspace";
+import type { BranchInfo, CommitInfo } from "@reviewer/core/repo";
+import type { RepoEntry } from "@reviewer/core/workspace";
 import { useState, type ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 

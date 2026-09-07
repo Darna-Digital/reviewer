@@ -9,8 +9,8 @@ import * as Effect from "effect/Effect";
 import { attempt } from "../db/db.service.ts";
 import { allRows, execute, oneRow } from "../db/database.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
-import type { BranchTarget } from "@byconvo/core/repo";
-import type { BranchTargetsRepo } from "@byconvo/core/branch-targets";
+import type { BranchTarget } from "@reviewer/core/repo";
+import type { BranchTargetsRepo } from "@reviewer/core/branch-targets";
 
 interface TargetRow {
   readonly branch: string;

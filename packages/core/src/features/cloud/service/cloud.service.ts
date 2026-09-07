@@ -1,5 +1,5 @@
 /**
- * The cloud service — the app's one connection to byconvo cloud, and every
+ * The cloud service — the app's one connection to reviewer cloud, and every
  * call that goes over it.
  *
  * Connecting is the OAuth device flow: `connect` asks the cloud for a code and
@@ -36,7 +36,7 @@ import type {
   NewCloudRun,
 } from "../schema/cloud.schema.ts";
 
-export const DEFAULT_CLOUD_SERVER_URL = "https://api.byconvo.com";
+export const DEFAULT_CLOUD_SERVER_URL = "https://api.reviewer.darnadigital.com";
 
 export type CloudFailure = StorageError | CloudApiError | CloudNotConnected;
 
@@ -81,7 +81,7 @@ export interface CloudServiceShape {
     id: string
   ) => Effect.Effect<CloudRunSnapshot, CloudFailure>;
   /**
-   * Put this machine's agent subscription into byconvo cloud, so its sandboxes
+   * Put this machine's agent subscription into reviewer cloud, so its sandboxes
    * can run that agent as the person.
    *
    * The login has to happen here: the vendors redirect to a port on localhost,
@@ -161,7 +161,7 @@ export const makeCloudService = Effect.gen(function* () {
         ? Effect.fail(
             new CloudNotConnected({
               reason:
-                "byconvo is not connected to byconvo cloud — connect in Settings",
+                "reviewer is not connected to reviewer cloud — connect in Settings",
             })
           )
         : Effect.succeed({ serverUrl: stored.serverUrl, token: stored.token })

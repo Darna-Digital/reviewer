@@ -18,8 +18,8 @@ describe("previewWindowUrl", () => {
   });
 
   it("stays on the packaged shell's own protocol", () => {
-    expect(previewWindowUrl("/modes/code/docs", "byconvo://app/")).toBe(
-      "byconvo://app/?preview=%2Fmodes%2Fcode%2Fdocs"
+    expect(previewWindowUrl("/modes/code/docs", "reviewer://app/")).toBe(
+      "reviewer://app/?preview=%2Fmodes%2Fcode%2Fdocs"
     );
   });
 });

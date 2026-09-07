@@ -29,7 +29,7 @@ import {
   IconPlayerPlay,
   IconTerminal2,
 } from "@tabler/icons-react";
-import { isFeatureEnabled } from "@byconvo/feature-flags";
+import { isFeatureEnabled } from "@reviewer/feature-flags";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import { dockPage } from "@/lib/shell-route";
 import type { BottomTab } from "@/lib/ui-prefs";

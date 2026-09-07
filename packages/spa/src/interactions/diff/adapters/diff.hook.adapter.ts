@@ -8,7 +8,7 @@ export function useDiffFunctions() {
   return useMemo(
     () =>
       createDiffFunctions({
-        data: { internalDir: ".byconvo" },
+        data: { internalDir: ".reviewer" },
         sideEffects: {
           // The prefix is what keys each parsed file in the worker pool's AST
           // cache; without it every re-parse re-highlights the whole diff.

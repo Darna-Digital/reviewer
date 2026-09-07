@@ -73,7 +73,7 @@ import type {
   CheckState,
   MergeMethod,
   PullRequestInfo,
-} from "@byconvo/core/ports/git-provider";
+} from "@reviewer/core/ports/git-provider";
 
 /** How many check rows are listed before the rest are counted instead. */
 const CHECKS_SHOWN = 6;

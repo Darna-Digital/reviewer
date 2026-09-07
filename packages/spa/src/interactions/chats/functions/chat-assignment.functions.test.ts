@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { ChatModelCatalog } from "@byconvo/core/chats";
-import type { ReviewComment } from "@byconvo/core/comments";
-import type { VisualComment } from "@byconvo/core/visual-comments";
+import type { ChatModelCatalog } from "@reviewer/core/chats";
+import type { ReviewComment } from "@reviewer/core/comments";
+import type { VisualComment } from "@reviewer/core/visual-comments";
 import {
   buildChatAssignmentSettings,
   buildReviewAssignmentPrompt,
@@ -130,7 +130,7 @@ describe("chat assignment helpers", () => {
     expect(prompt).toContain("Viewport: 1280×800");
     expect(prompt).toContain("disabled until the form is dirty");
     // The agent is pointed at the browser API rather than left to guess.
-    expect(prompt).toContain("byconvo skill");
+    expect(prompt).toContain("reviewer skill");
   });
 
   it("strips a provider @mention out of the instruction it carries", () => {

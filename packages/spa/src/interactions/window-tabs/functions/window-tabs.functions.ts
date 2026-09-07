@@ -2,7 +2,7 @@
  * Transitions over the window-tab strip. All of it is decidable from the state
  * and a tab id, so none of it needs a rendered strip — or a router — to test.
  */
-import { isFeatureEnabled } from "@byconvo/feature-flags";
+import { isFeatureEnabled } from "@reviewer/feature-flags";
 import { dockPages } from "@/lib/shell-route";
 import type {
   WindowTab,
@@ -51,7 +51,7 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
 /** What a location calls itself in the strip. */
 export function tabTitle(pathname: string): string {
   return (
-    TITLES.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? "Byconvo"
+    TITLES.find(([prefix]) => pathname.startsWith(prefix))?.[1] ?? "Reviewer"
   );
 }
 

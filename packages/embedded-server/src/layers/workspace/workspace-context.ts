@@ -10,9 +10,9 @@
  * For a single-repo project the two are the same path, which is why every
  * repo-scoped feature keeps working untouched.
  *
- * Both are persisted to ~/.byconvo/state.json, together with a recents list of
+ * Both are persisted to ~/.reviewer/state.json, together with a recents list of
  * projects and the root each project was last left on, and seeded at boot from
- * BYCONVO_REPO / cwd. Only primitives (paths) cross this boundary — domain
+ * REVIEWER_REPO / cwd. Only primitives (paths) cross this boundary — domain
  * shapes live in the workspace feature's schema.
  */
 import * as Context from "effect/Context";
@@ -24,9 +24,9 @@ import * as Stream from "effect/Stream";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { homedir } from "node:os";
 import { resolve as pathResolve } from "node:path";
-import { NoRepoSelected } from "@byconvo/core/shared";
-import { chooseRepo, InvalidRepo } from "@byconvo/core/workspace";
-import type { RepoEntry } from "@byconvo/core/workspace";
+import { NoRepoSelected } from "@reviewer/core/shared";
+import { chooseRepo, InvalidRepo } from "@reviewer/core/workspace";
+import type { RepoEntry } from "@reviewer/core/workspace";
 import { importLegacyJson } from "../db/legacy-import.ts";
 import { rememberProject } from "../db/scope.ts";
 import {
@@ -66,7 +66,7 @@ export class WorkspaceContext extends Context.Service<
   WorkspaceContextShape
 >()("WorkspaceContext") {}
 
-const STATE_DIR = `${homedir()}/.byconvo`;
+const STATE_DIR = `${homedir()}/.reviewer`;
 const STATE_FILE = `${STATE_DIR}/state.json`;
 const MAX_RECENTS = 10;
 
@@ -81,7 +81,7 @@ interface PersistedState {
 
 export interface InitialSelection {
   readonly path: string;
-  /** Explicit (BYCONVO_REPO) beats persisted state; a cwd guess does not. */
+  /** Explicit (REVIEWER_REPO) beats persisted state; a cwd guess does not. */
   readonly explicit: boolean;
 }
 
@@ -186,7 +186,7 @@ export const make = (initial: InitialSelection | null) =>
         ? Effect.succeed(null)
         : resolveWorkspace(fs, spawner, path);
 
-    // Boot order: explicit BYCONVO_REPO > last workspace used > cwd guess.
+    // Boot order: explicit REVIEWER_REPO > last workspace used > cwd guess.
     const persisted = yield* readState;
     const explicitValid =
       initial !== null && initial.explicit
@@ -220,7 +220,7 @@ export const make = (initial: InitialSelection | null) =>
 
     /**
      * Register the project and every root it holds, and take across anything
-     * those roots still keep in `.byconvo/*.json`.
+     * those roots still keep in `.reviewer/*.json`.
      *
      * Both are per-root on purpose: a folder holding a `backend` and a
      * `frontend` is one project made of two repositories, and each of them
@@ -234,7 +234,7 @@ export const make = (initial: InitialSelection | null) =>
           for (const repo of repos) importLegacyJson(repo.path);
         } catch (error) {
           console.warn(
-            "byconvo: could not register the open project —",
+            "reviewer: could not register the open project —",
             error instanceof Error ? error.message : error
           );
         }

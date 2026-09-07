@@ -1,4 +1,4 @@
-import type { ChatModelCatalog, ChatProviderKind } from "@byconvo/core/chats";
+import type { ChatModelCatalog, ChatProviderKind } from "@reviewer/core/chats";
 
 export interface CatalogModel {
   readonly id: string;

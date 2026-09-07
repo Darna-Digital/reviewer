@@ -150,7 +150,7 @@ const parseSlashModelOutput = (stdout: string): ReadonlyArray<ChatModel> => {
 /**
  * `cursor-agent --list-models` → a heading, then one `id - Label` line per
  * model. Which one is active is marked in the label (`Composer 2.5 (current)`,
- * `Auto (default)`); byconvo tracks the selection itself, so those markers are
+ * `Auto (default)`); reviewer tracks the selection itself, so those markers are
  * dropped rather than baked into a name the picker then shows forever.
  */
 const CURSOR_ACTIVE_MARKER = /\s*\((?:default|current)\)\s*$/i;

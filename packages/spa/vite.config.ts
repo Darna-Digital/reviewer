@@ -4,19 +4,19 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
-const SERVER_URL = process.env.BYCONVO_SERVER_URL ?? "http://localhost:41811";
+const SERVER_URL = process.env.REVIEWER_SERVER_URL ?? "http://localhost:41811";
 const isProduction = process.env.NODE_ENV === "production";
 
 // Assets are always referenced from the root of the origin, never relative to
 // the document. The desktop shell serves the built client over a custom
-// `byconvo://` scheme and the router rewrites the address as you navigate, so
+// `reviewer://` scheme and the router rewrites the address as you navigate, so
 // document-relative URLs resolve against whatever route is open — reloading on
 // `/modes/code/branches` would look for `/modes/code/assets/...`, get the HTML
 // shell back from the catch-all, and come up blank.
 const config = defineConfig({
   base: "/",
   resolve: { tsconfigPaths: true },
-  // No SSR — byconvo is a local single-page app served behind the API server.
+  // No SSR — reviewer is a local single-page app served behind the API server.
   plugins: [
     ...(!isProduction ? [devtools()] : []),
     tailwindcss(),

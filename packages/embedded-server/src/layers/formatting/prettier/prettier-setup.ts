@@ -15,8 +15,8 @@ import {
   formatterDetail,
   isPrettierConfigFile,
   pickConfigPath,
-} from "@byconvo/core/formatting";
-import type { FormatterSetup } from "@byconvo/core/ports/formatter";
+} from "@reviewer/core/formatting";
+import type { FormatterSetup } from "@reviewer/core/ports/formatter";
 import { prettierVersion } from "./prettier-module.ts";
 
 /** How far below the root a package's own configuration is still found. */

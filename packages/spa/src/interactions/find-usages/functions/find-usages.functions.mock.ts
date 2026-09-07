@@ -1,4 +1,4 @@
-import type { SymbolReference } from "@byconvo/core/language";
+import type { SymbolReference } from "@reviewer/core/language";
 import type { FindUsagesDependencies } from "../interfaces/find-usages.interfaces";
 
 export const at = (line: number, character = 0, length = 5) => ({

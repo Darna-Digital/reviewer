@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ReviewComment } from "@byconvo/core/comments";
+import type { ReviewComment } from "@reviewer/core/comments";
 import {
   isOptimisticId,
   optimisticComment,

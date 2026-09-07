@@ -4,7 +4,7 @@
  * its normal interactive mode inside that same shell, so it runs as a full TUI
  * with the developer's real PATH and environment.
  */
-import type { AgentKind } from "@byconvo/core/threads";
+import type { AgentKind } from "@reviewer/core/threads";
 
 export interface PtyProgram {
   readonly file: string;

@@ -2,7 +2,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as FileSystem from "effect/FileSystem";
 import { describe, expect, it } from "vitest";
-import { GitExec, type GitExecShape } from "@byconvo/core/ports/git-exec";
+import { GitExec, type GitExecShape } from "@reviewer/core/ports/git-exec";
 import { makeGitRepoRepository } from "./repo.repository.git.ts";
 
 const NEW_DIR_FILES = [

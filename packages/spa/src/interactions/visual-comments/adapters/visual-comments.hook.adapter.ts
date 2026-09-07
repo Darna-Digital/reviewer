@@ -4,7 +4,7 @@
  * place — so this is the API surface and the cache invalidation, nothing else.
  */
 import { useQueryClient } from "@tanstack/react-query";
-import type { NewVisualComment } from "@byconvo/core/visual-comments";
+import type { NewVisualComment } from "@reviewer/core/visual-comments";
 import { api, fetchClient } from "@/lib/api/client";
 
 const KEY = "/api/visual-comments";

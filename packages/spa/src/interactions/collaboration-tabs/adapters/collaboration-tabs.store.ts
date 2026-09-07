@@ -10,7 +10,7 @@ import type {
   CollaborationTabsState,
 } from "../interfaces/collaboration-tabs.interfaces";
 
-const STORE_KEY = "byconvo-collaboration-tabs";
+const STORE_KEY = "reviewer-collaboration-tabs";
 
 let sequence = 0;
 export const nextTabId = (): string => `collab-tab-${(sequence += 1)}`;

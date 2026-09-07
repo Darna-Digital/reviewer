@@ -1,8 +1,8 @@
 import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
 import { Api } from "../../api.ts";
-import { ProjectService } from "@byconvo/core/project";
-import type { LogQuery, SearchQuery } from "@byconvo/core/repo";
+import { ProjectService } from "@reviewer/core/project";
+import type { LogQuery, SearchQuery } from "@reviewer/core/repo";
 
 const MAX_SEARCH_MATCHES = 2000;
 

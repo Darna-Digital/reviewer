@@ -8,16 +8,16 @@ import {
   ProjectFiles,
   ProjectLog,
   ProjectMatches,
-} from "@byconvo/core/project";
+} from "@reviewer/core/project";
 import * as Schema from "effect/Schema";
 import {
   Discard,
   DiscardHunk,
   LogQueryParams,
   SearchQueryParams,
-} from "@byconvo/core/repo";
-import { GitError } from "@byconvo/core/ports/git-exec";
-import { NoRepoSelected, Ok } from "@byconvo/core/shared";
+} from "@reviewer/core/repo";
+import { GitError } from "@reviewer/core/ports/git-exec";
+import { NoRepoSelected, Ok } from "@reviewer/core/shared";
 
 const noProject = [NoRepoSelected] as const;
 /** Reverting runs git in each root, so a root's own failure has to be sayable. */

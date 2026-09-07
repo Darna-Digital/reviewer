@@ -10,7 +10,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { fetchClient } from "@/lib/api/client";
-import type { ReferencesResult } from "@byconvo/core/language";
+import type { ReferencesResult } from "@reviewer/core/language";
 import type { UsageQuery } from "../interfaces/find-usages.interfaces";
 
 /**

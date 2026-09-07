@@ -1,5 +1,5 @@
 /**
- * The desktop shell serves this build over a custom `byconvo://` scheme whose
+ * The desktop shell serves this build over a custom `reviewer://` scheme whose
  * catch-all hands any unknown path back to `_shell.html`, and the router
  * rewrites the address as you navigate. A document-relative asset URL therefore
  * resolves against whatever route is open: reloading on `/modes/code/branches`

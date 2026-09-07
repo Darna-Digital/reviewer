@@ -85,7 +85,7 @@ export function NewChatView() {
   };
 
   /**
-   * The prompt handed to byconvo cloud instead of a process here. The run
+   * The prompt handed to reviewer cloud instead of a process here. The run
    * clones the linked repository on its own, so nothing local is cut for it;
    * the branch you are on is named as the base only when the cloud repository
    * is this one on GitHub, since any other repository knows nothing of it.
@@ -93,7 +93,7 @@ export function NewChatView() {
   const sendToCloud = async (prompt: string) => {
     const cloudRepo = runTarget.cloudRepo;
     if (cloudRepo === null) {
-      toast.error("Link a repository in byconvo cloud before sending to it.");
+      toast.error("Link a repository in reviewer cloud before sending to it.");
       return;
     }
     const github = repo.data?.github ?? null;

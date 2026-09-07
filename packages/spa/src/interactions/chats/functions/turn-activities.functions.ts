@@ -17,7 +17,7 @@
  *
  * Pure, so the reuse rule is testable without a socket.
  */
-import type { ChatActivity } from "@byconvo/core/chats";
+import type { ChatActivity } from "@reviewer/core/chats";
 
 export type ActivitiesByTurn = ReadonlyMap<string, ReadonlyArray<ChatActivity>>;
 

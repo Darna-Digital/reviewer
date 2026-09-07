@@ -3,7 +3,7 @@ import {
   CommentsRepository,
   CommentsService,
   makeCommentsService,
-} from "@byconvo/core/comments";
+} from "@reviewer/core/comments";
 import { makeSqliteCommentsRepository } from "./comments.repository.sqlite.ts";
 
 export const CommentsLive = Layer.effect(CommentsService)(

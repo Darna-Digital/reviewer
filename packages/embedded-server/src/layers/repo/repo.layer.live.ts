@@ -3,7 +3,7 @@ import {
   RepoRepository,
   makeRepoService,
   RepoService,
-} from "@byconvo/core/repo";
+} from "@reviewer/core/repo";
 import { makeGitRepoRepository } from "./repo.repository.git.ts";
 
 export const RepoLive = Layer.effect(RepoService)(makeRepoService).pipe(

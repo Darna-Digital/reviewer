@@ -4,7 +4,7 @@ import {
   NotFound,
   Ok,
   StorageError,
-} from "@byconvo/core/shared";
+} from "@reviewer/core/shared";
 import {
   NewPlan,
   NewReviewAnnotation,
@@ -13,7 +13,7 @@ import {
   PlanIdParam,
   PlanSummary,
   PlanView,
-} from "@byconvo/core/plans";
+} from "@reviewer/core/plans";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 const errors = [NoRepoSelected, NotFound, StorageError] as const;

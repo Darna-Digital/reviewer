@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ChatActivity } from "@byconvo/core/chats";
+import type { ChatActivity } from "@reviewer/core/chats";
 import { groupActivitiesByTurn } from "./turn-activities.functions";
 
 let seq = 0;

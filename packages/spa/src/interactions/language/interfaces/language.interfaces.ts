@@ -19,7 +19,7 @@ import type {
   HoverResult,
   Position,
   SymbolTarget,
-} from "@byconvo/core/language";
+} from "@reviewer/core/language";
 
 /** A token as `@pierre/diffs` reports it, without its DOM element. */
 export interface TokenSpan {

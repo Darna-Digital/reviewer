@@ -103,7 +103,8 @@ export const handleCloudEvents = (
   if (connection === null || connection.token === null) {
     answerJson(res, 409, {
       _tag: "CloudNotConnected",
-      reason: "byconvo is not connected to byconvo cloud — connect in Settings",
+      reason:
+        "reviewer is not connected to reviewer cloud — connect in Settings",
     });
     return true;
   }
@@ -136,7 +137,7 @@ const relay = async (
     if (controller.signal.aborted) return;
     answerJson(res, 502, {
       _tag: "CloudApiError",
-      reason: `could not reach byconvo cloud: ${
+      reason: `could not reach reviewer cloud: ${
         error instanceof Error ? error.message : String(error)
       }`,
     });
@@ -144,7 +145,7 @@ const relay = async (
   }
   if (!upstream.ok || upstream.body === null) {
     const body = await upstream.text().catch(() => "");
-    let reason = `byconvo cloud answered ${upstream.status}`;
+    let reason = `reviewer cloud answered ${upstream.status}`;
     try {
       const parsed = JSON.parse(body) as { reason?: unknown };
       if (typeof parsed.reason === "string") reason = parsed.reason;

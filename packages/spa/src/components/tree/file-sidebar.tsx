@@ -42,7 +42,7 @@ import type {
 } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
 import type { AppMode } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
-import type { GitStatusEntry } from "@byconvo/core/repo";
+import type { GitStatusEntry } from "@reviewer/core/repo";
 
 interface FileSidebarProps {
   mode: AppMode;

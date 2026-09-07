@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/preview-card";
 import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignment.functions";
 import { AGENTS, agentLabel } from "@/interactions/threads/interfaces/agents";
-import type { ChatProviderKind, ChatSummary } from "@byconvo/core/chats";
+import type { ChatProviderKind, ChatSummary } from "@reviewer/core/chats";
 import { timeAgo } from "@/lib/relative-time";
 import {
   ELEVATION,

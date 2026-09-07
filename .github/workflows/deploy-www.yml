@@ -1,0 +1,63 @@
+name: deploy-www
+
+# reviewer.darnadigital.com. Only the marketing site is deployed from here —
+# the cloud's Workers are the Alchemy stack in the reviewer-cloud repository.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/www/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/deploy-www.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-www
+  cancel-in-progress: false
+
+jobs:
+  check:
+    uses: ./.github/workflows/check.yml
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://reviewer.darnadigital.com
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      # Electron is a large download none of this needs; the exclusion carries
+      # no `...` suffix so desktop's dependencies — `@reviewer/lint` among them
+      # — stay installed. Same reasoning as check.yml.
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter "!@reviewer/desktop"
+
+      # `vite build`, then `wrangler deploy` against the config the build wrote
+      # beside the bundle. The Worker's name and its custom domain come from
+      # packages/www/wrangler.jsonc, so there is nothing to keep in sync here.
+      - name: Deploy
+        run: pnpm --filter www run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      # A new deployment takes a moment to propagate, so give it a few tries
+      # rather than failing on a race.
+      - name: Verify the site is served
+        run: |
+          for attempt in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://reviewer.darnadigital.com/)
+            [ "$code" = "200" ] && exit 0
+            echo "attempt $attempt: $code"
+            sleep 5
+          done
+          exit 1

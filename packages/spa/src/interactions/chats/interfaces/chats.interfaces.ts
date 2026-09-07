@@ -10,9 +10,9 @@ import type {
   ChatEffort,
   ChatImageUpload,
   ChatProviderKind,
-} from "@byconvo/core/chats";
+} from "@reviewer/core/chats";
 
-export type { ChatWireEvent } from "@byconvo/core/chats";
+export type { ChatWireEvent } from "@reviewer/core/chats";
 
 /** Images sent with a prompt (server type ChatImageUpload). */
 export type ChatImage = ChatImageUpload;

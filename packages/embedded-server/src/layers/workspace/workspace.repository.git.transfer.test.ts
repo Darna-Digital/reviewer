@@ -3,7 +3,7 @@ import { Effect, Layer } from "effect";
 import * as FileSystem from "effect/FileSystem";
 import { ChildProcessSpawner } from "effect/unstable/process";
 import { describe, expect } from "vitest";
-import { WorkspaceRepository } from "@byconvo/core/workspace";
+import { WorkspaceRepository } from "@reviewer/core/workspace";
 import { memoryLayer } from "./workspace-context.ts";
 import {
   makeGitWorkspaceRepository,
@@ -118,22 +118,22 @@ describe("GitWorkspaceRepository.trashPath", () => {
     return Effect.gen(function* () {
       const repo = yield* WorkspaceRepository;
       const trashed = yield* repo.trashPath("src/a.ts");
-      expect(trashed.path).toBe(".byconvo/trash/1/a.ts");
+      expect(trashed.path).toBe(".reviewer/trash/1/a.ts");
       expect(writes.renames).toEqual([
         {
           from: `${REPO_ROOT}/src/a.ts`,
-          to: `${REPO_ROOT}/.byconvo/trash/1/a.ts`,
+          to: `${REPO_ROOT}/.reviewer/trash/1/a.ts`,
         },
       ]);
     }).pipe(Effect.provide(layer));
   });
 
   it.effect("takes the next slot, so two of a name can both be deleted", () => {
-    const { layer } = withStubFs([], { ".byconvo/trash": ["1", "2"] });
+    const { layer } = withStubFs([], { ".reviewer/trash": ["1", "2"] });
     return Effect.gen(function* () {
       const repo = yield* WorkspaceRepository;
       expect((yield* repo.trashPath("src/a.ts")).path).toBe(
-        ".byconvo/trash/3/a.ts"
+        ".reviewer/trash/3/a.ts"
       );
     }).pipe(Effect.provide(layer));
   });

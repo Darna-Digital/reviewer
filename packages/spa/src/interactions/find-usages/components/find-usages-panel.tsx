@@ -35,7 +35,7 @@ import {
 import { useOpenInEditor } from "@/lib/open-in-editor";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
-import type { Location } from "@byconvo/core/language";
+import type { Location } from "@reviewer/core/language";
 import { useUsages } from "../adapters/find-usages.hook.adapter";
 import {
   rerunFindUsages,

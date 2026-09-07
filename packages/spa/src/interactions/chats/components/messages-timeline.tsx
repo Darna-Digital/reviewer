@@ -14,7 +14,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { Chat, ChatActivity, ChatMessage } from "@byconvo/core/chats";
+import type { Chat, ChatActivity, ChatMessage } from "@reviewer/core/chats";
 import { ThinkingIndicator } from "@/components/ui/thinking-indicator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toConversationSections } from "../functions/conversation-sections.functions";

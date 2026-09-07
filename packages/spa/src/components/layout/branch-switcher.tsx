@@ -38,9 +38,9 @@ import { handleSearchKeyDown } from "@/components/ui/search-keydown";
 import { cn } from "@/lib/utils";
 import { useSurfaceBackground } from "@/lib/surface-context";
 import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
-import type { RepoBranches } from "@byconvo/core/project";
-import type { RepoEntry } from "@byconvo/core/workspace";
-import type { BranchInfo, RemoteBranchInfo } from "@byconvo/core/repo";
+import type { RepoBranches } from "@reviewer/core/project";
+import type { RepoEntry } from "@reviewer/core/workspace";
+import type { BranchInfo, RemoteBranchInfo } from "@reviewer/core/repo";
 
 interface BranchSwitcherProps {
   current: string | null;

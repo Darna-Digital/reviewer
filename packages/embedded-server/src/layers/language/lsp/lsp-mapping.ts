@@ -17,7 +17,7 @@ import type {
   Position,
   Range,
   TextEdit,
-} from "@byconvo/core/language";
+} from "@reviewer/core/language";
 import { toRepoRelative } from "../typescript/ts-mapping.ts";
 
 const ORIGIN: Position = { line: 0, character: 0 };

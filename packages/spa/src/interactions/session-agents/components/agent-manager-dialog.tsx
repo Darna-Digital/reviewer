@@ -2,7 +2,7 @@
  * The agents a session can be handed to, and how to add another.
  *
  * The dialog teaches by showing: the CLIs already found on this machine are
- * listed with the exact command byconvo runs for each, and the form underneath
+ * listed with the exact command reviewer runs for each, and the form underneath
  * asks for the same two things — a name, and that command with `{prompt}` where
  * the prompt goes. Nothing here is a new concept; it is the existing bargain
  * written down.
@@ -135,7 +135,7 @@ export function AgentManagerDialog({
           Agents in this session
         </DialogTitle>
         <DialogDescription className="px-4 pt-1 text-xs text-muted-foreground">
-          An agent is a command-line tool on this machine. Byconvo runs it with
+          An agent is a command-line tool on this machine. Reviewer runs it with
           your prompt and reads back whatever it prints.
         </DialogDescription>
 

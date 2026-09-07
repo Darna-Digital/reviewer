@@ -7,7 +7,7 @@
  * with whatever box size the caller passes.
  */
 import { agentIcon } from "@/interactions/threads/components/agent-icons";
-import type { AgentKind } from "@byconvo/core/threads";
+import type { AgentKind } from "@reviewer/core/threads";
 import { cn } from "@/lib/utils";
 
 export function AgentMark({

@@ -27,7 +27,7 @@ import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
-import { activeRepo } from "@byconvo/core/workspace";
+import { activeRepo } from "@reviewer/core/workspace";
 import {
   useBranches,
   useProjectBranches,

@@ -10,7 +10,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Plan, PlanStaleness } from "@byconvo/core/plans";
+import type { Plan, PlanStaleness } from "@reviewer/core/plans";
 import { PlanAnnotations } from "./plan-annotations";
 import { PlanGraph } from "./plan-graph";
 import {

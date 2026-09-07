@@ -4,12 +4,12 @@
  */
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
-import { ReviewComment } from "@byconvo/core/comments";
-import { NotFound } from "@byconvo/core/shared";
+import { ReviewComment } from "@reviewer/core/comments";
+import { NotFound } from "@reviewer/core/shared";
 import { inRepo } from "../db/db.service.ts";
 import { documentTable } from "../db/documents.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
-import type { CommentsRepo } from "@byconvo/core/comments";
+import type { CommentsRepo } from "@reviewer/core/comments";
 
 export const comments = documentTable<ReviewComment>({
   table: "comment",

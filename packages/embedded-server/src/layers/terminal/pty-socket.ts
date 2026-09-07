@@ -3,14 +3,14 @@
  * spawns a real PTY (node-pty) running the thread's program — the login shell for
  * a plain terminal, or an agent CLI (Claude Code / opencode / Codex / Cursor) in
  * its normal interactive mode — started in the open project folder. This is
- * the byconvo (web) equivalent of embedding a terminal like libghostty: the
+ * the reviewer (web) equivalent of embedding a terminal like libghostty: the
  * frontend renders an xterm.js terminal and streams bytes both ways.
  *
  * The project folder, not the selected repository: a project holding several
  * repositories (`backend`, `frontend`) opens at the level you can `cd` into any
  * of them from, and a session stays put when the repository selection moves
  * underneath it. Thread bookkeeping still lives in the selected repository's
- * `.byconvo/threads.json`, which is where the threads feature keeps it.
+ * `.reviewer/threads.json`, which is where the threads feature keeps it.
  *
  * It is attached straight onto the Node HTTP server's `upgrade` event rather than
  * going through the Effect HttpApi, since a PTY is a long-lived bidirectional
@@ -44,7 +44,7 @@ import {
   AGENT_KINDS,
   agentSessionOrigin,
   type AgentKind,
-} from "@byconvo/core/threads";
+} from "@reviewer/core/threads";
 import {
   agentPtyProgram,
   agentSessionArgs,
@@ -136,7 +136,7 @@ const loadNodePty = (): NodePty | null => {
   // resolution doesn't depend on walking up through the asar. Fall back to a
   // bare specifier for dev / standalone, where node-pty is in node_modules.
   const candidates = [
-    process.env["BYCONVO_NODE_PTY"],
+    process.env["REVIEWER_NODE_PTY"],
     "@lydell/node-pty",
   ].filter((c): c is string => typeof c === "string" && c.length > 0);
   for (const candidate of candidates) {
@@ -160,7 +160,7 @@ const loadNodePty = (): NodePty | null => {
 const sessionCwd = (): string =>
   getCurrentProject() ?? getCurrentRepo() ?? process.cwd();
 
-/** Where a thread's record lives — `.byconvo/` in the selected repository. */
+/** Where a thread's record lives — `.reviewer/` in the selected repository. */
 const threadStore = (): string => getCurrentRepo() ?? process.cwd();
 
 const parseAgent = (value: string | null): AgentKind =>
@@ -206,7 +206,7 @@ const saveDroppedImage = (name: unknown, data: unknown): string | null => {
   }
   if (bytes.length === 0 || bytes.length > MAX_IMAGE_BYTES) return null;
   try {
-    const dir = join(tmpdir(), "byconvo-dropped");
+    const dir = join(tmpdir(), "reviewer-dropped");
     mkdirSync(dir, { recursive: true });
     const path = join(dir, `${randomUUID()}${ext}`);
     writeFileSync(path, bytes);
@@ -316,8 +316,8 @@ const startSessionCapture = (
  * (GET /api/threads/{id}).
  */
 const buildSessionEnv = (threadId: string): Record<string, string> => ({
-  BYCONVO_THREAD_ID: threadId,
-  BYCONVO_API: `http://localhost:${process.env["BYCONVO_PORT"] ?? 41811}`,
+  REVIEWER_THREAD_ID: threadId,
+  REVIEWER_API: `http://localhost:${process.env["REVIEWER_PORT"] ?? 41811}`,
 });
 
 /** Wire a client socket to a session: replay scrollback, then stream both ways. */

@@ -4,7 +4,7 @@
  * commands, threading the current title through a branch edit) lives here
  * behind injected API side effects so it stays unit-testable without a server.
  */
-import type { AgentKind, Thread, ThreadEntry } from "@byconvo/core/threads";
+import type { AgentKind, Thread, ThreadEntry } from "@reviewer/core/threads";
 
 export interface ThreadsDependencies {
   data: Record<string, never>;

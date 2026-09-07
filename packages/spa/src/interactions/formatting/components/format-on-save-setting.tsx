@@ -6,7 +6,7 @@
  * line has to carry the rest — which formatter was found, which version, and
  * which file configures it. A project with no formatter says so and offers a
  * switch that would do nothing, which is why it is disabled rather than hidden:
- * "byconvo cannot format this project" is the answer someone came here for.
+ * "reviewer cannot format this project" is the answer someone came here for.
  */
 import { IconWand } from "@tabler/icons-react";
 import { Switch } from "@/components/ui/switch";
