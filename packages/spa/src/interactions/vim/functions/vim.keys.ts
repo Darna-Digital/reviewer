@@ -91,6 +91,48 @@ const takeCount = (input: string): Counted => {
 };
 
 /**
+ * The navigation keys, spelled as the motions they are.
+ *
+ * Vim itself defines them this way — `:help <Left>` — and it is what keeps them
+ * from moving the caret behind the emulation's back: an arrow the editor
+ * handles collapses a visual selection, strands an operator waiting for its
+ * motion, and leaves the next keystroke measuring from an anchor that no longer
+ * describes anything. Going through the grammar instead, `d→` deletes a
+ * character and `3↓` moves three lines, exactly as `dl` and `3j` do.
+ */
+export const NAVIGATION_MOTION_KEYS: Readonly<Record<string, string>> = {
+  ArrowLeft: "h",
+  ArrowRight: "l",
+  ArrowUp: "k",
+  ArrowDown: "j",
+  Home: "0",
+  End: "$",
+};
+
+/**
+ * Whether the keys typed so far are waiting for a literal character — `f`, `t`
+ * and `r` (and their capitals) take the next keystroke as an argument rather
+ * than as a command, including after an operator, as in `df,`.
+ *
+ * An arrow key is not a character, so it cannot be that argument; the caller
+ * uses this to drop the half-typed command rather than search for an "l".
+ */
+export const awaitsCharArgument = (pending: string): boolean => {
+  const { rest } = takeCount(pending);
+  const first = rest[0];
+  if (first === undefined) return false;
+  if (AWAITS_ARGUMENT.has(first)) return rest.length === 1;
+  if (OPERATORS[first] === undefined) return false;
+  const after = takeCount(rest.slice(1));
+  const argument = after.rest[0];
+  return (
+    argument !== undefined &&
+    after.rest.length === 1 &&
+    AWAITS_ARGUMENT.has(argument)
+  );
+};
+
+/**
  * `i` or `a` and the key naming what it applies to. Returns "pending" while the
  * object key has not been typed yet, so `di` waits rather than being dropped.
  */

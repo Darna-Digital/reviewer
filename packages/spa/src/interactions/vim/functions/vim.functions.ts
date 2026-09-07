@@ -13,6 +13,11 @@
  * And a chord is never Vim's. ⌘S, ⌘F, ⌘/ and the rest belong to the app and to
  * the editor whichever mode is current; the only modified keys taken are the
  * three Vim itself defines — ⌃d, ⌃u and ⌃r.
+ *
+ * The arrows, Home and End are the exception to "spelled with letters": Vim
+ * defines them as motions, and taking them as such is what stops them moving
+ * the caret behind the emulation's back and collapsing a visual selection or
+ * stranding a half-typed operator.
  */
 import type {
   VimOutcome,
@@ -20,7 +25,12 @@ import type {
   VimState,
 } from "../interfaces/vim.interfaces";
 import { caretLeavingInsert, runCommand } from "./vim.commands";
-import { parseNormal, parseVisual } from "./vim.keys";
+import {
+  awaitsCharArgument,
+  NAVIGATION_MOTION_KEYS,
+  parseNormal,
+  parseVisual,
+} from "./vim.keys";
 import { clampCaret } from "./vim.motions";
 
 /** The keystroke, reduced to what the grammar cares about. */
@@ -103,11 +113,30 @@ export function onVimKey(
   }
   if (key.metaKey || key.altKey) return untouched(state, caret);
 
-  // Arrow keys and the like are not spelled with letters, so they go to the
-  // editor — moving around with them in normal mode is nobody's mistake.
-  if (key.key.length !== 1) return untouched(state, caret);
+  // The arrows, Home and End are motions, spelled the way Vim spells them, so
+  // they run through the grammar rather than round it. Left to the editor they
+  // move the caret behind the emulation's back: a visual selection collapses
+  // while the badge still claims one, an operator waiting for its motion is
+  // stranded, and the next keystroke measures from an anchor that no longer
+  // describes anything — which is the whole of "the arrows cancel Vim".
+  const navigation = NAVIGATION_MOTION_KEYS[key.key];
+  if (navigation !== undefined && awaitsCharArgument(state.pending)) {
+    // `f` and an arrow: an arrow is not a character to search for, so the
+    // half-typed command is dropped rather than sent looking for an "l".
+    return {
+      state: { ...state, pending: "" },
+      edits: [],
+      caret,
+      handled: true,
+    };
+  }
+  const typed = navigation ?? key.key;
 
-  const pending = state.pending + key.key;
+  // Anything else spelled with more than one character — Tab, the function
+  // keys, PageDown — is not part of the grammar, and goes to the editor.
+  if (typed.length !== 1) return untouched(state, caret);
+
+  const pending = state.pending + typed;
   const parsed =
     state.mode === "normal" ? parseNormal(pending) : parseVisual(pending);
 
