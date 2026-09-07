@@ -1,6 +1,7 @@
 /** Assistant text rendered as markdown, matching the docs preview styling. */
 import { memo } from "react";
 import Markdown from "react-markdown";
+import { MARKDOWN_TABLE_COMPONENTS } from "@/components/ui/markdown-table";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 
@@ -26,7 +27,11 @@ export const ChatMarkdown = memo(function ChatMarkdownBody({
 }) {
   return (
     <div className="markdown min-w-0 text-sm">
-      <Markdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={REHYPE_PLUGINS}>
+      <Markdown
+        remarkPlugins={REMARK_PLUGINS}
+        rehypePlugins={REHYPE_PLUGINS}
+        components={MARKDOWN_TABLE_COMPONENTS}
+      >
         {text}
       </Markdown>
     </div>

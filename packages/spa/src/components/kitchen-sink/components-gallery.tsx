@@ -175,12 +175,30 @@ const ALERT_MOCKS: ReadonlyArray<{
     label: "Confirm — destructive",
     ask: () =>
       void confirm({
-        title: 'Delete the "task/inline-diff-comments" branch?',
+        title: "Delete this branch?",
+        subject: "task/inline-diff-comments",
         description:
           "It has six commits that are on no other branch. This cannot be undone.",
         confirmLabel: "Delete",
         destructive: true,
       }).then((ok) => toast[ok ? "success" : "info"](ok ? "Deleted" : "Kept")),
+  },
+  {
+    // The case the subject line exists for: a path long enough that naming it
+    // inside the question would wrap the question three times.
+    label: "Confirm — long subject",
+    ask: () =>
+      void confirm({
+        title: "Discard all changes in this file?",
+        subject:
+          "packages/core/src/features/chats/functions/model-discovery.ts",
+        description:
+          "This reverts the file to the last commit and cannot be undone.",
+        confirmLabel: "Discard",
+        destructive: true,
+      }).then((ok) =>
+        toast[ok ? "success" : "info"](ok ? "Discarded" : "Kept")
+      ),
   },
   {
     label: "Ask for text",

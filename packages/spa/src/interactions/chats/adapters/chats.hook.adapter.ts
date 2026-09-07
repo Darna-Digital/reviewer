@@ -16,6 +16,14 @@ const fail = (error: unknown, fallback: string): never => {
   throw new Error((error as { reason?: string })?.reason ?? fallback);
 };
 
+export interface RemoveFailure {
+  readonly id: string;
+  readonly message: string;
+}
+
+const messageOf = (error: unknown): string =>
+  error instanceof Error ? error.message : "delete failed";
+
 /** Wires the real chat API mutations + cache invalidation into the logic. */
 export function useChatsActions() {
   const queryClient = useQueryClient();
@@ -54,9 +62,10 @@ export function useChatsActions() {
             });
           },
           remove: async (id) => {
-            await fetchClient.DELETE("/api/chats/{id}", {
+            const { error } = await fetchClient.DELETE("/api/chats/{id}", {
               params: { path: { id } },
             });
+            if (error) fail(error, "failed to delete chat");
           },
         },
       }),
@@ -142,12 +151,32 @@ export function useChatsActions() {
       await fns.stop(id);
       invalidate();
     },
-    remove: async (id: string) => {
-      await fns.remove(id);
-      // Drop the conversation the live view seeds itself from, so a deleted
-      // session can't be reopened from cache.
-      queryClient.removeQueries({ queryKey: chatQueryOptions(id).queryKey });
+    /**
+     * Deletes a whole selection as one piece of work: the list is invalidated
+     * once at the end rather than once per row, so sweeping twenty sessions
+     * away refetches the list once. What would not go comes back — the
+     * failures are all a caller has anything to say about, and the rest are
+     * already gone.
+     */
+    removeMany: async (
+      ids: ReadonlyArray<string>
+    ): Promise<ReadonlyArray<RemoveFailure>> => {
+      const outcomes = await Promise.allSettled(
+        ids.map((id) => fns.remove(id))
+      );
+      const failed: RemoveFailure[] = [];
+      ids.forEach((id, i) => {
+        const outcome = outcomes[i];
+        if (outcome?.status === "rejected") {
+          failed.push({ id, message: messageOf(outcome.reason) });
+          return;
+        }
+        // Drop the conversation the live view seeds itself from, so a deleted
+        // session can't be reopened from cache.
+        queryClient.removeQueries({ queryKey: chatQueryOptions(id).queryKey });
+      });
       invalidate();
+      return failed;
     },
   };
 }

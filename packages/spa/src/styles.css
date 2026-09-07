@@ -43,6 +43,8 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  --color-destructive-fill: var(--destructive-fill);
+  --color-destructive-on-fill: var(--destructive-on-fill);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -78,6 +80,12 @@
   --shadow-surface-6: var(--shadow-6);
   --shadow-surface-7: var(--shadow-7);
   --shadow-surface-8: var(--shadow-8);
+  --color-table-surface: var(--table-surface);
+  --color-table-sheet: var(--table-sheet);
+  --color-table-line: var(--table-line);
+  --color-table-ink: var(--table-ink);
+  --color-table-head-ink: var(--table-head-ink);
+  --shadow-table: var(--table-shadow);
   --shadow-raised: var(--elev-raised);
   --shadow-floating: var(--elev-floating);
   --shadow-overlay: var(--elev-overlay);
@@ -146,6 +154,18 @@
   --surface-6: #ffffff;
   --surface-7: #ffffff;
   --surface-8: #ffffff;
+  /* Tables. A hairline sheet floating a rung above the page, with the header
+     row left on the page behind it. The ink is fixed rather than taken from
+     the surface ladder: the sheet has to stay one readable step off whatever
+     pane it lands in, and the ladder's rungs move with their substrate. */
+  --table-surface: #fafafa;
+  --table-sheet: #ffffff;
+  --table-line: #e6e8ec;
+  --table-ink: #1a1a1a;
+  --table-head-ink: #a1a1a1;
+  --table-shadow:
+    0 0 0 0.5px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.05),
+    0 2px 4px rgb(0 0 0 / 0.02);
   --shadow-color: rgb(0 0 0 / 0.06);
   --shadow-1: 0 0 0 1px var(--shadow-color);
   --shadow-2:
@@ -194,6 +214,16 @@
   --dm-ring-base: rgba(255, 255, 255, 0.02);
   --dm-ring-mid: rgba(255, 255, 255, 0.04);
   --dm-ring-high: rgba(255, 255, 255, 0.06);
+  --table-surface: #242424;
+  --table-sheet: #1a1a1a;
+  --table-line: #303030;
+  --table-ink: #f5f5f5;
+  --table-head-ink: #a1a1a1;
+  /* The ring flips to white: a black drop has nothing to darken against a
+     near-black pane, so in dark the edge is what separates sheet from page. */
+  --table-shadow:
+    0 0 0 0.5px rgb(255 255 255 / 0.12), 0 1px 2px rgb(0 0 0 / 0.4),
+    0 2px 4px rgb(0 0 0 / 0.3);
   --dm-drop: rgba(0, 0, 0, 0.18);
   --shadow-1: inset 0 0 0 1px var(--dm-ring-base);
   --shadow-2:
@@ -461,6 +491,32 @@
   }
 }
 
+/* The filled face for the answer that cannot be taken back — `face-contrast`
+   with the theme flip taken back out. The primary fill inverts (near-black in
+   light, near-white in dark), so its sheen and its hover have to invert with
+   it; red stays red and stays under white type in both themes, so the light
+   reading — lit along the top edge, lightened under the pointer — is the right
+   one everywhere. */
+@utility face-danger {
+  background-image: linear-gradient(
+    180deg,
+    var(--sheen-strong) 0%,
+    var(--sheen-none) 100%
+  );
+  box-shadow: var(--glow, var(--glow-none)), var(--elev-button-contrast);
+  text-shadow: 0 0.5px 0.5px rgb(0 0 0 / 0.3);
+  &:hover:not(:disabled) {
+    background-image:
+      linear-gradient(0deg, rgb(255 255 255 / 0.12), rgb(255 255 255 / 0.12)),
+      linear-gradient(180deg, var(--sheen-strong) 0%, var(--sheen-none) 100%);
+  }
+  &:active:not(:disabled) {
+    background-image:
+      linear-gradient(0deg, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0.22)),
+      linear-gradient(180deg, var(--sheen-strong) 0%, var(--sheen-none) 100%);
+  }
+}
+
 /* No face at all until touched — the overlay is the entire appearance, apart
    from the focus bloom every face has to leave room for. */
 @utility face-quiet {
@@ -528,6 +584,13 @@
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.585 0.21 25);
+  /* Red as ink and red as a fill are two different reds. `--destructive` is cut
+     to be read as type on a page; a button that is red all over has to carry
+     white type on itself, which needs a deeper rung. Unlike `--primary` this one
+     does not invert between themes — a warning that changed colour in the dark
+     would be a different warning. */
+  --destructive-fill: oklch(0.505 0.196 26);
+  --destructive-on-fill: oklch(0.99 0.005 25);
   --success: oklch(0.58 0.13 155);
   --success-foreground: oklch(1 0 0);
   --warning: oklch(0.72 0.15 75);
@@ -1036,29 +1099,6 @@
 .markdown a {
   color: var(--link);
   text-decoration: underline;
-}
-
-/* GFM tables (remark-gfm emits real <table> markup). Wide tables scroll
-   horizontally rather than forcing the chat/comment column to overflow. */
-.markdown table {
-  display: block;
-  max-width: 100%;
-  overflow-x: auto;
-  border-collapse: collapse;
-  font-size: 0.9em;
-}
-.markdown :where(th, td) {
-  border: 1px solid var(--border);
-  padding: 0.35rem 0.6rem;
-  text-align: left;
-  vertical-align: top;
-}
-.markdown th {
-  background: var(--muted);
-  font-weight: 600;
-}
-.markdown tbody tr:nth-child(even) {
-  background: color-mix(in oklch, var(--muted) 45%, transparent);
 }
 
 /* highlight.js token colours for fenced code blocks (rehype-highlight adds the

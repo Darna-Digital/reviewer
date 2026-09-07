@@ -20,24 +20,48 @@
  * Which rows are still waiting is the sessions' own business: each carries the
  * moment it was last opened, so a row settles when you open its conversation
  * rather than when you next arrive here. See `chats.attention.ts`.
+ *
+ * Rows can also be acted on in bulk: ⇧-click sweeps the run between the row
+ * last clicked and this one, and a right-click anywhere in the sweep opens the
+ * menu that deletes all of it at once. A right-click outside the sweep drops it
+ * and is about the one row under the pointer, so the menu never acts on
+ * sessions that are not under it. See `lib/row-selection`.
  */
+import { IconExternalLink, IconTrash } from "@tabler/icons-react";
 import {
   Outlet,
   useNavigate,
   useParams,
   useSearch,
 } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
+import { confirm } from "@/components/ui/alerts";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from "@/components/ui/context-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { pointerAnchor } from "@/interactions/language/functions/anchors";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import { useChatListQuery } from "@/interactions/chats/adapters/chat-list-query.hook.adapter";
 import { useOnSessionTab } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { ChatRow } from "@/interactions/chats/components/chat-row";
 import { CloudRunRow } from "@/interactions/cloud/components/cloud-run-row";
+import { openSessionTab } from "@/interactions/chats/functions/open-session-tab";
 import { useChatPages, useCloudRuns, useCloudStatus } from "@/lib/queries";
+import {
+  NO_ROWS,
+  anchorRow,
+  extendToRow,
+  selectRow,
+  selectedRows,
+  type RowSelection,
+} from "@/lib/row-selection";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 
 /** How close to the foot of the loaded list fetches the next page. */
@@ -134,12 +158,64 @@ export function ChatsPage() {
     if (el.scrollHeight <= el.clientHeight) void loadMore();
   }, [hasMore, loading, sessions.length, loadMore]);
 
-  const remove = async (id: string) => {
-    try {
-      await actions.remove(id);
-      if (id === chatId) void navigate({ to: "/modes/agent-session" });
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "delete failed");
+  /**
+   * The sweep a right-click acts on. ⇧-click is what makes one — see
+   * `lib/row-selection` — and it is held here rather than in the row, since a
+   * range is a fact about the list.
+   *
+   * Read back against the loaded list on every render, so rows that a filter,
+   * a refetch or a delete took away are not still selected in the dark.
+   */
+  const [selection, setSelection] = useState<RowSelection>(NO_ROWS);
+  const order = sessions.map((c) => c.id);
+  const selected = selectedRows(order, selection);
+  const selectedSet = new Set(selected);
+
+  const [menu, setMenu] = useState<{
+    readonly ids: ReadonlyArray<string>;
+    readonly anchor: ReturnType<typeof pointerAnchor>;
+  } | null>(null);
+
+  /**
+   * A right-click acts on the sweep it lands inside; landing anywhere else the
+   * sweep is dropped and the menu is about that one row, which is what makes
+   * "select, then right-click" safe to do without aiming.
+   */
+  const openMenu = (id: string, x: number, y: number) => {
+    const ids = selectedSet.has(id) ? selected : [id];
+    if (!selectedSet.has(id)) setSelection(selectRow(id));
+    setMenu({ ids, anchor: pointerAnchor(x, y) });
+  };
+
+  const remove = async (ids: ReadonlyArray<string>) => {
+    if (ids.length === 0) return;
+    // One session goes the way it always has — the ✕ on the row asks nothing
+    // either. A sweep is the case where a mis-aimed click costs more than the
+    // row under the pointer, so that is the one worth stopping for.
+    if (
+      ids.length > 1 &&
+      !(await confirm({
+        title: `Delete ${ids.length} sessions?`,
+        description: "Their conversations go with them. This can't be undone.",
+        confirmLabel: `Delete ${ids.length}`,
+        destructive: true,
+      }))
+    ) {
+      return;
+    }
+    setSelection(NO_ROWS);
+    const failed = await actions.removeMany(ids);
+    if (failed.length > 0) {
+      const [first] = failed;
+      toast.error(
+        failed.length === 1
+          ? (first?.message ?? "delete failed")
+          : `${failed.length} sessions could not be deleted`
+      );
+    }
+    const gone = ids.filter((id) => !failed.some((f) => f.id === id));
+    if (chatId !== undefined && gone.includes(chatId)) {
+      void navigate({ to: "/modes/agent-session" });
     }
   };
 
@@ -183,7 +259,13 @@ export function ChatsPage() {
                       key={c.id}
                       chat={c}
                       active={c.id === chatId}
-                      onDelete={() => void remove(c.id)}
+                      selected={selectedSet.has(c.id)}
+                      onSelect={() => setSelection(anchorRow(c.id))}
+                      onExtendSelection={() =>
+                        setSelection(extendToRow(order, selection, c.id))
+                      }
+                      onOpenMenu={(x, y) => openMenu(c.id, x, y)}
+                      onDelete={() => void remove([c.id])}
                     />
                   ))
                 )}
@@ -213,6 +295,51 @@ export function ChatsPage() {
       <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Outlet />
       </section>
+      {menu !== null && (
+        <ContextMenu
+          open
+          onOpenChange={(open) => {
+            if (!open) setMenu(null);
+          }}
+        >
+          <ContextMenuContent
+            anchor={menu.anchor}
+            side="bottom"
+            align="start"
+            className="min-w-52"
+          >
+            {menu.ids.length === 1 && (
+              <>
+                <ContextMenuItem
+                  onClick={() => {
+                    const id = menu.ids[0];
+                    const session = sessions.find((c) => c.id === id);
+                    if (session !== undefined) {
+                      openSessionTab(session.id, session.title);
+                    }
+                    setMenu(null);
+                  }}
+                >
+                  <IconExternalLink /> Open in a tab
+                </ContextMenuItem>
+                <ContextMenuSeparator />
+              </>
+            )}
+            <ContextMenuItem
+              variant="destructive"
+              onClick={() => {
+                setMenu(null);
+                void remove(menu.ids);
+              }}
+            >
+              <IconTrash />
+              {menu.ids.length === 1
+                ? "Delete session"
+                : `Delete ${menu.ids.length} sessions`}
+            </ContextMenuItem>
+          </ContextMenuContent>
+        </ContextMenu>
+      )}
     </div>
   );
 }

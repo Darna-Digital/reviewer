@@ -7,7 +7,18 @@ export const ChatProviderKind = Schema.Literals([
   "cursor",
 ]);
 export type ChatProviderKind = typeof ChatProviderKind.Type;
-export const ChatEffort = Schema.Literals(["low", "medium", "high"]);
+/**
+ * How hard the agent is asked to think. Not a fixed set: each CLI has its own
+ * vocabulary and each model its own slice of it — codex reports the levels a
+ * model accepts, opencode calls them variants (`minimal` … `max`, and `none`
+ * for no reasoning at all), claude has the three our thinking budget covers.
+ * The levels on offer come from the catalog (see `chats.capabilities.ts`);
+ * this is only the shape they travel in.
+ *
+ * Empty means the same as an empty `model`: nothing is passed to the CLI and
+ * the agent reasons however it would on its own.
+ */
+export const ChatEffort = Schema.String;
 export type ChatEffort = typeof ChatEffort.Type;
 export const ChatAccess = Schema.Literals([
   "supervised",
@@ -186,6 +197,11 @@ export const ChatModel = Schema.Struct({
    * through one CLI, and the picker groups them under this. Absent for agents
    * that only offer their own models. */
   group: Schema.optionalKey(Schema.String),
+  /** The reasoning levels this model accepts, as its own CLI reported them —
+   * codex lists them per model and opencode ships them as variants. Absent for
+   * an agent that says nothing about effort, which is not the same as a model
+   * that does no reasoning: see `chatCapabilities`. */
+  efforts: Schema.optionalKey(Schema.Array(ChatEffort)),
 });
 export type ChatModel = typeof ChatModel.Type;
 export const ChatModelProvider = Schema.Struct({

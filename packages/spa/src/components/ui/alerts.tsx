@@ -15,6 +15,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogSubject,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,12 @@ import { Input } from "@/components/ui/input";
 export interface ConfirmOptions {
   /** The question itself, as a short sentence. */
   readonly title: string;
+  /**
+   * What the question is about — a path, a branch name — when naming it inside
+   * the question would make the question long. It gets its own line below,
+   * which is what keeps `title` a short sentence at any width.
+   */
+  readonly subject?: string;
   /** What is about to happen, and whether it can be taken back. */
   readonly description?: ReactNode;
   /** Names the answer that goes ahead. Defaults to "Continue". */
@@ -177,8 +184,15 @@ export function Alerts() {
               answer(true);
             }}
           >
+            {/* Question, then the thing it is about, then the consequence —
+                the order the eye needs them in to decide. */}
             <AlertDialogHeader>
               <AlertDialogTitle>{options.title}</AlertDialogTitle>
+              {options.subject !== undefined && (
+                <AlertDialogSubject className="my-0.5">
+                  {options.subject}
+                </AlertDialogSubject>
+              )}
               {options.description !== undefined && (
                 <AlertDialogDescription>
                   {options.description}

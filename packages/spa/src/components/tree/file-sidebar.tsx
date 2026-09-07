@@ -650,8 +650,9 @@ export function FileSidebar({
     const ok = await confirm({
       title:
         item.kind === "file"
-          ? `Discard all changes in ${name}?`
-          : `Discard changes in ${files} under ${name}?`,
+          ? "Discard all changes in this file?"
+          : `Discard changes in ${files} under this folder?`,
+      subject: name,
       description:
         item.kind === "file"
           ? "This reverts the file to the last commit and cannot be undone."

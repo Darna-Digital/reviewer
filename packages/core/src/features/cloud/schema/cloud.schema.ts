@@ -86,7 +86,13 @@ export const CloudRunProvider = Schema.Literals([
 ]);
 export type CloudRunProvider = typeof CloudRunProvider.Type;
 
-export const CloudRunEffort = Schema.Literals(["low", "medium", "high"]);
+/**
+ * The levels the cloud takes. Narrower than a local chat's, which are whatever
+ * the agent CLI on the developer's machine reported it accepts — a run on its
+ * way up is moved onto the nearest of these (`toNewCloudRun`).
+ */
+export const CLOUD_RUN_EFFORTS = ["low", "medium", "high"] as const;
+export const CloudRunEffort = Schema.Literals(CLOUD_RUN_EFFORTS);
 export type CloudRunEffort = typeof CloudRunEffort.Type;
 
 export const CloudRunAccess = Schema.Literals([

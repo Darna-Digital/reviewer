@@ -31,6 +31,7 @@ import {
   catalogModels,
   preferredChatModel,
 } from "@/interactions/chats/functions/chat-model.functions";
+import { catalogCapabilities, withinCapabilities } from "@reviewer/core/chats";
 import { NEW_CHAT_DRAFT, setDraft } from "@/lib/composer-drafts";
 import { isDesktop } from "@/lib/desktop";
 import { useChatModels, useRepo } from "@/lib/queries";
@@ -80,12 +81,20 @@ export function NewChatView() {
   const remembered = catalogModels(models.data).find(
     (model) => model.id === last.model && model.provider === last.provider
   );
-  const settings: ChatSettings = {
-    provider: remembered?.provider ?? preferred?.provider ?? "claude",
-    model: remembered?.id ?? preferred?.id ?? "",
-    effort: last.effort ?? defaults?.effort ?? "high",
-    access: last.access ?? defaults?.access ?? "fullAccess",
-  };
+  // The model comes from the catalog and the rest from the last session, which
+  // may have been composed with another agent — so what they add up to is put
+  // through what this one can actually be run with before it is shown or sent.
+  const provider = remembered?.provider ?? preferred?.provider ?? "claude";
+  const model = remembered?.id ?? preferred?.id ?? "";
+  const settings: ChatSettings = withinCapabilities(
+    {
+      provider,
+      model,
+      effort: last.effort ?? defaults?.effort ?? "high",
+      access: last.access ?? defaults?.access ?? "fullAccess",
+    },
+    catalogCapabilities(models.data, provider, model)
+  );
 
   const send = async (text: string, images: ReadonlyArray<ChatImage>) => {
     const prompt = modePrompt(mode, text);

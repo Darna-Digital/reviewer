@@ -7,6 +7,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useListEditing } from "@/hooks/use-list-editing";
 import { Textarea } from "@/components/ui/textarea";
 import type { VisualCommentDraft } from "@/interactions/browser-pane/interfaces/browser-pane.interfaces";
 
@@ -22,6 +23,13 @@ export function VisualCommentComposer({
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const field = useRef<HTMLTextAreaElement | null>(null);
+  // The same list keys as everywhere else the app is typed into — a note on a
+  // page is usually several things about it, not one.
+  const editList = useListEditing({
+    textareaRef: field,
+    text: body,
+    setText: setBody,
+  });
 
   useEffect(() => field.current?.focus(), []);
 
@@ -60,11 +68,16 @@ export function VisualCommentComposer({
         className="mt-2 min-h-16 text-sm"
         onChange={(event) => setBody(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === "Escape") onCancel();
+          if (event.key === "Escape") {
+            onCancel();
+            return;
+          }
           if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
             event.preventDefault();
             void submit();
+            return;
           }
+          editList(event);
         }}
       />
       <div className="mt-2 flex justify-end gap-1.5">

@@ -113,11 +113,47 @@ function AlertDialogTitle({
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
       className={cn(
-        "font-heading text-base leading-none font-medium",
+        "font-heading text-base leading-snug font-medium text-balance",
         className
       )}
       {...props}
     />
+  );
+}
+
+/* The thing the question is about — the path, the branch, the file — kept out
+   of the question itself and given a line of its own.
+
+   A heading that ends in a full repository path is a heading that wraps three
+   times, breaks mid-word, and pushes the answer off the bottom of the sheet,
+   and it does it worse the more of the sentence there is to push. The question
+   above stays one short line at every width; the subject sits below it in the
+   monospace the rest of the app gives paths, on exactly one line however long
+   it is.
+
+   It is ellipsised from the *front*, which is what `dir="rtl"` buys: the end of
+   a path — the file's own name — is what identifies it, and the head is the
+   part that can be spent. `<bdi>` keeps the text itself running left to right
+   inside that flipped box. */
+function AlertDialogSubject({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="alert-dialog-subject"
+      className={cn(
+        "flex min-w-0 rounded-md bg-muted/60 px-2.5 py-1.5 font-mono text-xs text-foreground shadow-[inset_0_0_0_0.5px_var(--border)]",
+        className
+      )}
+      title={typeof children === "string" ? children : undefined}
+      {...props}
+    >
+      <span dir="rtl" className="min-w-0 truncate text-left select-text">
+        <bdi>{children}</bdi>
+      </span>
+    </div>
   );
 }
 
@@ -129,7 +165,7 @@ function AlertDialogDescription({
     <AlertDialogPrimitive.Description
       data-slot="alert-dialog-description"
       className={cn(
-        "text-sm whitespace-pre-line text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
+        "text-sm text-pretty whitespace-pre-line text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
         className
       )}
       {...props}
@@ -137,7 +173,7 @@ function AlertDialogDescription({
   );
 }
 
-/** The answer that goes ahead. `destructive` paints it as the quiet red face. */
+/** The answer that goes ahead. `destructive` paints it as the filled red one. */
 function AlertDialogAction({
   className,
   destructive = false,
@@ -181,6 +217,7 @@ export {
   AlertDialogHeader,
   AlertDialogOverlay,
   AlertDialogPortal,
+  AlertDialogSubject,
   AlertDialogTitle,
   AlertDialogTrigger,
 };

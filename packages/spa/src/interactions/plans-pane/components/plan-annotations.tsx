@@ -19,6 +19,7 @@
 import { IconAlertTriangle, IconTrash } from "@tabler/icons-react";
 import { useEffect, useRef } from "react";
 import Markdown from "react-markdown";
+import { MARKDOWN_TABLE_COMPONENTS } from "@/components/ui/markdown-table";
 import remarkGfm from "remark-gfm";
 import type { Plan, PlanAnnotation, PlanStaleness } from "@reviewer/core/plans";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,12 @@ import { cn } from "@/lib/utils";
 function NoteBody({ body }: { body: string }) {
   return (
     <div className="markdown plan-note min-w-0 text-[0.8125rem] text-foreground">
-      <Markdown remarkPlugins={[remarkGfm]}>{body}</Markdown>
+      <Markdown
+        remarkPlugins={[remarkGfm]}
+        components={MARKDOWN_TABLE_COMPONENTS}
+      >
+        {body}
+      </Markdown>
     </div>
   );
 }

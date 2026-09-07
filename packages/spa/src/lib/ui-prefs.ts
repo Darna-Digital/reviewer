@@ -211,6 +211,31 @@ const readLastSession = (stored: LastSession | undefined): LastSession => {
   };
 };
 
+/** The panes that split the canvas beside the page: analysis and browser. */
+export type SidePane = "analysis" | "browser";
+
+export const SIDE_PANE_MIN: Readonly<Record<SidePane, number>> = {
+  analysis: 380,
+  browser: 320,
+};
+
+/**
+ * A pane opens at half the window at most.
+ *
+ * Widths are remembered in pixels, so a pane pulled out on a large display
+ * reopened at that same width on a laptop — half the pane hanging off nothing
+ * and the page beside it squeezed to a sliver. Dragging one wider than half is
+ * still allowed; it is the width a pane *opens* at that is fitted to whatever
+ * window it is opening in.
+ */
+export const fitSidePane = (pane: SidePane, width: number): number =>
+  typeof window === "undefined"
+    ? width
+    : Math.max(
+        SIDE_PANE_MIN[pane],
+        Math.min(width, Math.round(window.innerWidth / 2))
+      );
+
 function load(): UiPrefs {
   let prefs = { ...defaults };
   if (typeof window !== "undefined") {
@@ -222,6 +247,8 @@ function load(): UiPrefs {
       // ignore malformed storage
     }
     if (!BOTTOM_TABS.includes(prefs.bottomTab)) prefs.bottomTab = "history";
+    prefs.plansPaneWidth = fitSidePane("analysis", prefs.plansPaneWidth);
+    prefs.browserPaneWidth = fitSidePane("browser", prefs.browserPaneWidth);
     prefs.lastSession = readLastSession(prefs.lastSession);
     const stored = window.localStorage.getItem(THEME_KEY);
     if (stored === "light" || stored === "dark" || stored === "system")
@@ -380,6 +407,21 @@ export function openBottomTab(tab: BottomTab) {
 /** Expand or collapse the bottom dock; its tab strip stays put either way. */
 export function toggleBottomVisible() {
   setUiPrefs({ bottomVisible: !state.bottomVisible });
+}
+
+/** Show or hide a side pane, at a width this window has the room for. */
+export function toggleSidePane(pane: SidePane) {
+  setUiPrefs(
+    pane === "browser"
+      ? {
+          browserPaneOpen: !state.browserPaneOpen,
+          browserPaneWidth: fitSidePane(pane, state.browserPaneWidth),
+        }
+      : {
+          plansPaneOpen: !state.plansPaneOpen,
+          plansPaneWidth: fitSidePane(pane, state.plansPaneWidth),
+        }
+  );
 }
 
 const THEME_ORDER: ThemePref[] = ["light", "dark", "system"];

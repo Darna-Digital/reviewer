@@ -16,8 +16,10 @@ import {
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
+import { MARKDOWN_TABLE_COMPONENTS } from "@/components/ui/markdown-table";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
+import { useListEditing } from "@/hooks/use-list-editing";
 import { AuthorAvatar } from "@/interactions/comments/components/author-avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -65,6 +67,13 @@ export function CommentComposer({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const ref = useRef<HTMLTextAreaElement>(null);
+  // A comment is written in the same hand as a prompt to an agent — a list of
+  // the things that should change — so it keeps a list going the same way.
+  const editList = useListEditing({
+    textareaRef: ref,
+    text: body,
+    setText: setBody,
+  });
 
   useEffect(() => {
     if (autoFocus) ref.current?.focus();
@@ -91,8 +100,16 @@ export function CommentComposer({
         className="min-h-20 resize-none"
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") void submit();
-          if (e.key === "Escape") onCancel();
+          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+            e.preventDefault();
+            void submit();
+            return;
+          }
+          if (e.key === "Escape") {
+            onCancel();
+            return;
+          }
+          editList(e);
         }}
       />
       {/* Actions sit under the left edge of the field, submit first: the eye
@@ -208,6 +225,7 @@ function CommentCard({
           <Markdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight]}
+            components={MARKDOWN_TABLE_COMPONENTS}
           >
             {comment.body}
           </Markdown>

@@ -1,8 +1,14 @@
 /**
- * Task-list editing for the composer: continuing a list on Shift+Enter and
- * re-nesting it with Tab. Sub-items are numbered under their parent (2 → 2.1),
- * and every structural edit renumbers the surrounding block, so a list stays in
- * order no matter where items were inserted or how they were re-nested.
+ * Task-list editing for every box the app is typed into — the session composer,
+ * a review comment, a note taken on the page in the browser pane: continuing a
+ * list on the newline key and re-nesting it with Tab. Sub-items are numbered
+ * under their parent (2 → 2.1), and every structural edit renumbers the
+ * surrounding block, so a list stays in order no matter where items were
+ * inserted or how they were re-nested.
+ *
+ * Pure text in, pure text out. `hooks/use-list-editing` is what wires it to a
+ * textarea; which key counts as the newline is the composer's own business, so
+ * it is not decided here.
  */
 
 export interface ComposerSelection {

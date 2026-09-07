@@ -1,4 +1,10 @@
-import { devicePollDelayMs, type NewCloudRun } from "@reviewer/core/cloud";
+import { nearestEffort } from "@reviewer/core/chats";
+import {
+  CLOUD_RUN_EFFORTS,
+  devicePollDelayMs,
+  type CloudRunEffort,
+  type NewCloudRun,
+} from "@reviewer/core/cloud";
 import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces";
 import type {
   CloudApproval,
@@ -7,12 +13,22 @@ import type {
   CloudRunPlace,
 } from "../interfaces/cloud.interfaces";
 
+const cloudEffort = (effort: string): { effort?: CloudRunEffort } => {
+  const nearest = nearestEffort(CLOUD_RUN_EFFORTS, effort);
+  return nearest === undefined || effort.length === 0
+    ? {}
+    : { effort: nearest };
+};
+
 /**
- * The composer's local settings as a cloud run asks for them. The two agree
- * on every word — the cloud's schema was cut from the chat's — so this is a
- * mapping in name only, kept as one place to change should they drift. An
- * empty model is left out rather than sent: the cloud reads "no model" as the
- * CLI's own default, which is what an empty local pick means too.
+ * The composer's local settings as a cloud run asks for them. An empty model is
+ * left out rather than sent: the cloud reads "no model" as the CLI's own
+ * default, which is what an empty local pick means too.
+ *
+ * Effort is the one word the two do not share. Locally it is whatever the agent
+ * CLI on this machine reported it takes — `xhigh`, a variant named `minimal` —
+ * while the cloud takes the three it was built with, so the level is moved onto
+ * the nearest one it knows rather than sent to be rejected.
  */
 export const toNewCloudRun = (
   settings: ChatSettings,
@@ -23,7 +39,7 @@ export const toNewCloudRun = (
   prompt,
   provider: settings.provider,
   ...(settings.model.length > 0 ? { model: settings.model } : {}),
-  effort: settings.effort,
+  ...cloudEffort(settings.effort),
   access: settings.access,
   ...(place.baseBranch !== null && place.baseBranch.length > 0
     ? { baseBranch: place.baseBranch }

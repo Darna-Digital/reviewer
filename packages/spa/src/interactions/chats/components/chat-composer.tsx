@@ -4,6 +4,13 @@
  * Owns only the draft text; settings and mode live with the caller (local state
  * on the new-thread page, the chat itself once it exists).
  *
+ * The row is not fixed: effort and access are what the chosen agent can be
+ * asked for while running the chosen model (`chatCapabilities`), so cursor —
+ * which has no reasoning flag — shows no effort menu at all, opencode offers
+ * the variants its model named, and an agent that cannot tell "auto-accept
+ * edits" from "full access" stops claiming to. Picking a model moves the
+ * settings onto what that model does offer, in the same patch.
+ *
  * The prompt box rests at a few lines and is dragged taller by its top edge —
  * the height is the app's, not this thread's, so a box pulled open for one long
  * prompt is still open at the next.
@@ -18,7 +25,7 @@ import {
   IconPlayerStopFilled,
   IconSitemap,
 } from "@tabler/icons-react";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,10 +38,11 @@ import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Separator } from "@/components/ui/separator";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
-import type {
-  ChatAccess,
-  ChatEffort,
-  ChatModelCatalog,
+import {
+  catalogCapabilities,
+  withinCapabilities,
+  type ChatModelCatalog,
+  type ChatProviderKind,
 } from "@reviewer/core/chats";
 import { useDraft } from "@/lib/composer-drafts";
 import {
@@ -46,12 +54,12 @@ import {
 import { cn } from "@/lib/utils";
 import type { ChatSettings } from "@/interactions/chats/interfaces/chats.interfaces";
 import type { ChatMode } from "@/interactions/chats/functions/chat-mode.functions";
+import { useListEditing } from "@/hooks/use-list-editing";
 import {
-  changedRange,
-  continueList,
-  shiftListIndent,
-  type ComposerSelection,
-} from "@/interactions/chats/functions/list-editing.functions";
+  accessOptions,
+  effortOptions,
+  type SelectorOption,
+} from "@/interactions/chats/functions/chat-capability.functions";
 import { AttachmentChip, AttachmentGrid } from "./image-attachments";
 import {
   attachmentSource,
@@ -68,30 +76,6 @@ const MODES: Array<{ value: ChatMode; label: string; hint: string }> = [
   { value: "analysis", label: "Analysis", hint: "Draw the flow in the pane" },
 ];
 
-const EFFORTS: Array<{ value: ChatEffort; label: string; hint: string }> = [
-  { value: "low", label: "Low", hint: "Fast, minimal reasoning" },
-  { value: "medium", label: "Medium", hint: "Balanced reasoning" },
-  { value: "high", label: "High", hint: "Deep reasoning" },
-];
-
-const ACCESS: Array<{ value: ChatAccess; label: string; hint: string }> = [
-  {
-    value: "supervised",
-    label: "Supervised",
-    hint: "Refuse gated commands and edits",
-  },
-  {
-    value: "acceptEdits",
-    label: "Auto-accept edits",
-    hint: "Edit files freely, gate commands",
-  },
-  {
-    value: "fullAccess",
-    label: "Full access",
-    hint: "Commands and edits without prompts",
-  },
-];
-
 function SelectorMenu<T extends string>({
   options,
   value,
@@ -99,7 +83,7 @@ function SelectorMenu<T extends string>({
   icon,
   ariaLabel,
 }: {
-  options: Array<{ value: T; label: string; hint: string }>;
+  options: ReadonlyArray<SelectorOption<T>>;
   value: T;
   onSelect: (value: T) => void;
   icon?: React.ReactNode;
@@ -138,25 +122,6 @@ function SelectorMenu<T extends string>({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
-
-/**
- * Keep the caret visible after an edit the browser did not scroll for. Lines
- * below the caret are measured off the line box; on the last line the exact
- * scroll height is used instead, so soft-wrapped text still lands right.
- */
-function scrollCaretIntoView(textarea: HTMLTextAreaElement) {
-  if (!textarea.value.slice(textarea.selectionEnd).includes("\n")) {
-    textarea.scrollTop = textarea.scrollHeight;
-    return;
-  }
-  const styles = getComputedStyle(textarea);
-  const lineHeight =
-    parseFloat(styles.lineHeight) || parseFloat(styles.fontSize) * 1.5;
-  const lines = textarea.value.slice(0, textarea.selectionEnd).split("\n");
-  const caretBottom = parseFloat(styles.paddingTop) + lines.length * lineHeight;
-  const overflow = caretBottom - (textarea.scrollTop + textarea.clientHeight);
-  if (overflow > 0) textarea.scrollTop += overflow;
 }
 
 export function ChatComposer({
@@ -207,35 +172,24 @@ export function ChatComposer({
   // dragenter/dragleave fire per descendant, so count depth to know when the
   // pointer has truly left the composer (matches lib/terminal/image-drop.ts).
   const dragDepth = useRef(0);
-  // The draft store owns the text, so a list edit can only restore the caret
-  // once React has painted the rewritten value.
-  const pendingSelection = useRef<[number, number] | null>(null);
+  const editList = useListEditing({ textareaRef, text, setText });
+  const capabilities = catalogCapabilities(
+    catalog,
+    settings.provider,
+    settings.model
+  );
+  const efforts = effortOptions(capabilities.efforts);
 
-  useLayoutEffect(() => {
-    const textarea = textareaRef.current;
-    const selection = pendingSelection.current;
-    if (textarea === null || selection === null) return;
-    pendingSelection.current = null;
-    textarea.setSelectionRange(selection[0], selection[1]);
-    scrollCaretIntoView(textarea);
-  }, [text, textareaRef]);
-
-  const applyListEdit = (edit: ComposerSelection | null) => {
-    if (edit === null) return false;
-    const textarea = textareaRef.current;
-    if (textarea !== null) {
-      const [start, end, replacement] = changedRange(text, edit.text);
-      textarea.setSelectionRange(start, end);
-      if (document.execCommand("insertText", false, replacement)) {
-        textarea.setSelectionRange(edit.selectionStart, edit.selectionEnd);
-        scrollCaretIntoView(textarea);
-        return true;
-      }
-    }
-    pendingSelection.current = [edit.selectionStart, edit.selectionEnd];
-    setText(edit.text);
-    return true;
-  };
+  // One patch, not two: the model and the settings it drags with it are stored
+  // together, so a chat is never briefly on a model at an effort it doesn't
+  // take.
+  const chooseModel = (model: string, provider: ChatProviderKind) =>
+    onSettingsChange(
+      withinCapabilities(
+        { ...settings, model, provider },
+        catalogCapabilities(catalog, provider, model)
+      )
+    );
 
   // A send while a turn is running is accepted, not blocked: the server appends
   // the message to the thread and the agent picks it up when the turn settles.
@@ -360,25 +314,12 @@ export function ChatComposer({
             }
           }}
           onKeyDown={(e) => {
-            const selection = {
-              text,
-              selectionStart: e.currentTarget.selectionStart,
-              selectionEnd: e.currentTarget.selectionEnd,
-            };
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
               void submit();
               return;
             }
-            if (e.key === "Enter" && e.shiftKey) {
-              if (applyListEdit(continueList(selection))) e.preventDefault();
-              return;
-            }
-            if (e.key === "Tab") {
-              const levels = e.shiftKey ? -1 : 1;
-              if (applyListEdit(shiftListIndent(selection, levels)))
-                e.preventDefault();
-            }
+            editList(e);
           }}
           style={prompt.style}
           placeholder={placeholder ?? "Ask anything about this repository…"}
@@ -393,24 +334,28 @@ export function ChatComposer({
           <ModelPicker
             catalog={catalog}
             model={settings.model}
-            onSelect={(model, provider) =>
-              onSettingsChange({ model, provider })
-            }
+            onSelect={chooseModel}
           />
           <Separator
             orientation="vertical"
             className="mx-0.5 h-4 self-center data-vertical:self-center"
           />
-          <SelectorMenu
-            options={EFFORTS}
-            value={settings.effort}
-            onSelect={(effort) => onSettingsChange({ effort })}
-            ariaLabel="Reasoning effort"
-          />
-          <Separator
-            orientation="vertical"
-            className="mx-0.5 h-4 self-center data-vertical:self-center"
-          />
+          {/* An agent that picks its own reasoning depth (cursor), or a model
+              that named no levels, gets no menu rather than a dead one. */}
+          {efforts.length > 0 && (
+            <>
+              <SelectorMenu
+                options={efforts}
+                value={settings.effort}
+                onSelect={(effort) => onSettingsChange({ effort })}
+                ariaLabel="Reasoning effort"
+              />
+              <Separator
+                orientation="vertical"
+                className="mx-0.5 h-4 self-center data-vertical:self-center"
+              />
+            </>
+          )}
           <SelectorMenu
             options={MODES}
             value={mode}
@@ -429,7 +374,7 @@ export function ChatComposer({
             className="mx-0.5 h-4 self-center data-vertical:self-center"
           />
           <SelectorMenu
-            options={ACCESS}
+            options={accessOptions(capabilities.access)}
             value={settings.access}
             onSelect={(access) => onSettingsChange({ access })}
             icon={

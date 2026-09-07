@@ -10,6 +10,13 @@ import { cn } from "@/lib/utils";
    text" as ours and "the primary action here" as simply the darkest thing on
    screen. Tabular numerals keep counts from reflowing as they tick.
 
+   `destructive` is the one exception, and it earns it: it appears only as the
+   go-ahead in a dialog that has stopped you to ask, where it *is* that view's
+   single filled action, and where the whole point is that it must not be
+   mistaken for the Cancel sitting next to it. Red type on the same quiet face
+   as Cancel was that mistake — it read as a broken label rather than as the
+   dangerous button.
+
    Neither focus nor invalid is written here. Both are blooms in the shadow
    stack rather than outlines, so they have to compose with whatever elevation
    the face already carries — see `--glow-focus`, `--glow-invalid` and the
@@ -31,7 +38,8 @@ const buttonVariants = cva(
           "face-quiet text-foreground aria-expanded:bg-pressed aria-expanded:text-foreground",
         "ghost-muted":
           "face-quiet text-muted-foreground aria-expanded:bg-pressed aria-expanded:text-foreground [&_svg]:text-muted-foreground aria-expanded:[&_svg]:text-foreground",
-        destructive: "bg-button-neutral face-raised text-destructive",
+        destructive:
+          "bg-destructive-fill face-danger text-destructive-on-fill disabled:opacity-40",
         link: "text-link underline-offset-4 hover:underline",
       },
       /* Each size carries its own whole type step, so a button never has to

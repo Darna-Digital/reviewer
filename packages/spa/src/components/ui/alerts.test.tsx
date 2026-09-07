@@ -53,6 +53,31 @@ describe("alerts", () => {
     expect(await answer).toBe(false);
   });
 
+  it("names what the question is about on its own line, not in the heading", async () => {
+    const user = userEvent.setup();
+    render(<Alerts />);
+
+    const path =
+      "packages/core/src/features/chats/functions/model-discovery.ts";
+    const answer = confirm({
+      title: "Discard all changes in this file?",
+      subject: path,
+      confirmLabel: "Discard",
+      destructive: true,
+    });
+    await dialog();
+
+    // The path is reachable in full — it is ellipsised by CSS, not by cutting
+    // the string — while the heading stays the one short sentence.
+    expect(screen.getByText(path)).toBeDefined();
+    expect(
+      screen.getByRole("heading", { name: "Discard all changes in this file?" })
+    ).toBeDefined();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(await answer).toBe(false);
+  });
+
   it("hands back the text that was typed, and null when it is dismissed", async () => {
     const user = userEvent.setup();
     render(<Alerts />);

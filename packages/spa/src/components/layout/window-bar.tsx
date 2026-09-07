@@ -79,7 +79,7 @@ import { isDesktop } from "@/lib/desktop";
 import { isCodeSurface } from "@/lib/shell-route";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import { useRecentChats, useWorkspace } from "@/lib/queries";
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import { toggleSidePane } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
 const NO_DRAG = "[-webkit-app-region:no-drag]";
@@ -309,12 +309,6 @@ export function WindowBar() {
   // at the top of it by definition, and a tab is minted from a new session.
   const chats = useRecentChats();
 
-  /**
-   * Threads touched since the inbox was last looked at. Only a session tab
-   * wears the dot, for its own conversation — the strip is where you watch a
-   * thread you have open, not a count of everything in the inbox.
-   */
-  const prefs = useUiPrefs();
   const inCodeMode = isCodeSurface(location.pathname);
   const workspace = useWorkspace();
   const pickerOpen = useProjectPickerOpen();
@@ -330,14 +324,14 @@ export function WindowBar() {
     inCodeMode || paneAvailable("analysis") || paneAvailable("browser");
   const togglePane = (pane: BarPane) => {
     if (!paneAvailable(pane)) return;
-    setUiPrefs(
-      pane === "browser"
-        ? { browserPaneOpen: !prefs.browserPaneOpen }
-        : { plansPaneOpen: !prefs.plansPaneOpen }
-    );
+    toggleSidePane(pane);
   };
-  // A tab waits when its session has moved since it was last opened — the
-  // session's own mark, so reading it here puts the tab's dot out too.
+  /**
+   * Threads touched since the inbox was last looked at. Only a session tab
+   * wears the dot, for its own conversation — the strip is where you watch a
+   * thread you have open, not a count of everything in the inbox. The mark is
+   * the session's own, so reading it here puts the tab's dot out too.
+   */
   const unread = useMemo(
     () =>
       new Set(

@@ -20,6 +20,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableCellText,
+  TableHead,
+  TableRow,
+} from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 import { usePulls, useRepo } from "@/lib/queries";
 import { errorReason } from "@/lib/errors";
 import { timeAgo } from "@/lib/relative-time";
@@ -36,34 +45,58 @@ import {
   type ReviewItem,
 } from "../functions/reviews.functions";
 
+/**
+ * The columns, written once so the header cells and the row cells stay in step.
+ * Each drops out at the width where the title would start losing characters to
+ * it: a review you cannot read the name of is not a list any more.
+ */
+const COL = {
+  title: "flex-[2]",
+  branch: "hidden flex-1 md:flex",
+  author: "hidden w-32 flex-none lg:flex",
+  updated: "hidden w-24 flex-none sm:flex",
+} as const;
+
+function ReviewsTableHead() {
+  return (
+    <TableHead>
+      <TableCell className={COL.title}>Pull request</TableCell>
+      <TableCell className={COL.branch}>Branch</TableCell>
+      <TableCell className={COL.author}>Author</TableCell>
+      <TableCell className={COL.updated}>Updated</TableCell>
+    </TableHead>
+  );
+}
+
 function Row({ item, onOpen }: { item: ReviewItem; onOpen: () => void }) {
   const updated = reviewUpdatedAt(item);
+  const branch = reviewBranch(item);
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-muted/60"
-    >
-      <IconCloud
-        className="size-4 shrink-0 text-muted-foreground"
-        aria-label="Runs in the cloud"
-      />
-      <span className="flex min-w-0 flex-[2] items-baseline gap-2">
-        <span className="shrink-0 font-mono text-xs text-muted-foreground">
+    <TableRow onClick={onOpen}>
+      <TableCell className={cn(COL.title, "gap-2")}>
+        <IconCloud
+          className="size-3.5 shrink-0 text-table-head-ink"
+          aria-label="Runs in the cloud"
+        />
+        <span className="shrink-0 font-mono text-table-head-ink">
           #{item.pull.number}
         </span>
-        <span className="truncate text-sm">{reviewTitle(item)}</span>
-      </span>
-      <span className="hidden min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground md:block">
-        {reviewTitle(item) === reviewBranch(item) ? "" : reviewBranch(item)}
-      </span>
-      <span className="hidden w-32 shrink-0 truncate text-xs text-muted-foreground lg:block">
-        {reviewAuthor(item)}
-      </span>
-      <span className="hidden w-24 shrink-0 truncate text-xs text-muted-foreground sm:block">
-        {updated.length > 0 ? timeAgo(updated) : ""}
-      </span>
-    </button>
+        <TableCellText>{reviewTitle(item)}</TableCellText>
+      </TableCell>
+      <TableCell className={cn(COL.branch, "font-mono text-table-head-ink")}>
+        <TableCellText>
+          {reviewTitle(item) === branch ? "" : branch}
+        </TableCellText>
+      </TableCell>
+      <TableCell className={cn(COL.author, "text-table-head-ink")}>
+        <TableCellText>{reviewAuthor(item)}</TableCellText>
+      </TableCell>
+      <TableCell className={cn(COL.updated, "text-table-head-ink")}>
+        <TableCellText>
+          {updated.length > 0 ? timeAgo(updated) : ""}
+        </TableCellText>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -143,21 +176,26 @@ export function ReviewsPage() {
           </div>
         ) : (
           groups.map((group) => (
-            <section key={group.base} className="mb-3">
-              <h2 className="flex items-center gap-1.5 px-3 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+            <section key={group.base} className="mb-4 px-1">
+              <h2 className="flex items-center gap-1.5 px-4 pt-2 pb-1.5 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                 <IconGitBranch className="size-3 shrink-0" />
                 <span className="truncate">{branchLabel(group.base)}</span>
                 <span className="ml-auto tabular-nums">
                   {group.items.length}
                 </span>
               </h2>
-              {group.items.map((item) => (
-                <Row
-                  key={reviewKey(item)}
-                  item={item}
-                  onOpen={() => open(item)}
-                />
-              ))}
+              <Table>
+                <ReviewsTableHead />
+                <TableBody>
+                  {group.items.map((item) => (
+                    <Row
+                      key={reviewKey(item)}
+                      item={item}
+                      onOpen={() => open(item)}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
             </section>
           ))
         )}

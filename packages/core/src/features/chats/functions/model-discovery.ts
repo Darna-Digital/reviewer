@@ -1,6 +1,7 @@
 /**
- * Asking each agent CLI which models it can run, instead of keeping a list by
- * hand. Every provider answers, but none of them answer the same way:
+ * Asking each agent CLI which models it can run — and what it will let them be
+ * run at — instead of keeping a list by hand. Every provider answers, but none
+ * of them answer the same way:
  *
  *   claude    `/model` piped into print mode. Answered locally — no API call,
  *             no turn, no cost — with a prose sentence listing its aliases.
@@ -24,6 +25,7 @@
  */
 import { CHAT_MODEL_CATALOG } from "./chats.catalog.ts";
 import type {
+  ChatEffort,
   ChatModel,
   ChatModelCatalog,
   ChatProviderKind,
@@ -90,6 +92,21 @@ const jsonObjectIn = (text: string): unknown => {
  */
 const PLAUSIBLE_MODEL_ID =
   /^[A-Za-z0-9][A-Za-z0-9._:/-]{1,127}(\[[\dA-Za-z]+\])?$/;
+
+/**
+ * A reasoning level a CLI named. The vocabularies differ per agent and per
+ * model — that is the point of reading them rather than listing them — but they
+ * are all short lowercase words, and anything else is output we misread.
+ */
+const PLAUSIBLE_EFFORT = /^[a-z][a-z0-9-]{0,15}$/;
+
+const efforts = (values: ReadonlyArray<unknown>): ReadonlyArray<ChatEffort> => {
+  const levels = values.filter(
+    (value): value is string =>
+      typeof value === "string" && PLAUSIBLE_EFFORT.test(value)
+  );
+  return [...new Set(levels)];
+};
 
 /**
  * The `provider/model` form opencode prints, and the form `--model` wants.
@@ -166,9 +183,13 @@ const parseListModelsOutput = (stdout: string): ReadonlyArray<ChatModel> =>
   });
 
 /**
- * `codex debug models` → `{models:[{slug, display_name, visibility, …}]}`.
- * `visibility` is codex's own call on what belongs in a picker, so hidden and
- * deprecated entries are left out here too.
+ * `codex debug models` → `{models:[{slug, display_name, visibility,
+ * supported_reasoning_levels, …}]}`. `visibility` is codex's own call on what
+ * belongs in a picker, so hidden and deprecated entries are left out here too.
+ *
+ * The reasoning levels come per model and really do differ between them — one
+ * model stops at `xhigh` where the next one takes `ultra` — which is why the
+ * effort menu is built from these rather than from a list of our own.
  */
 const parseCodexModels = (stdout: string): ReadonlyArray<ChatModel> => {
   const parsed = jsonObjectIn(stdout);
@@ -178,7 +199,19 @@ const parseCodexModels = (stdout: string): ReadonlyArray<ChatModel> => {
     if (entry["visibility"] !== "list") return [];
     const id = asString(entry["slug"]);
     if (id === null || !PLAUSIBLE_MODEL_ID.test(id)) return [];
-    return [{ id, label: asString(entry["display_name"]) ?? labelFromId(id) }];
+    const levels = entry["supported_reasoning_levels"];
+    const reported = efforts(
+      Array.isArray(levels)
+        ? levels.map((level) => (isRecord(level) ? level["effort"] : level))
+        : []
+    );
+    return [
+      {
+        id,
+        label: asString(entry["display_name"]) ?? labelFromId(id),
+        ...(reported.length > 0 ? { efforts: reported } : {}),
+      },
+    ];
   });
 };
 
@@ -225,12 +258,17 @@ const parseOpencodeModels = (stdout: string): ReadonlyArray<ChatModel> => {
     // A model opencode has retired can still be listed; don't offer it.
     if (parsed["status"] === "deprecated") continue;
     const group = provider ?? id.split("/")[0];
+    // opencode's variants are exactly the values `--variant` takes for this
+    // model, down to `none` for a model that can be asked not to reason.
+    const variants = parsed["variants"];
+    const reported = efforts(isRecord(variants) ? Object.keys(variants) : []);
     models.push({
       id,
       label: asString(parsed["name"]) ?? labelFromId(id),
       ...(group !== undefined && group.length > 0
         ? { group: vendorLabel(group) }
         : {}),
+      ...(reported.length > 0 ? { efforts: reported } : {}),
     });
   }
   return models;

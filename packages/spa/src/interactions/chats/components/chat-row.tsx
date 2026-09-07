@@ -17,6 +17,8 @@
  *
  * ⌘-click is "open elsewhere", as everywhere else: the conversation is lifted
  * into a window tab of its own, which is where a session gets the full width.
+ * ⇧-click is the list's own: it sweeps a range of rows rather than opening
+ * anything, and a right-click is what acts on the sweep. See `ChatsPage`.
  *
  * The conversation tail is fetched only once a card opens, so scrolling past a
  * hundred rows costs nothing.
@@ -128,10 +130,19 @@ function ConversationTail({
 export function ChatRow({
   chat,
   active,
+  selected,
+  onSelect,
+  onExtendSelection,
+  onOpenMenu,
   onDelete,
 }: {
   chat: ChatSummary;
   active: boolean;
+  /** In the sweep a right-click would act on. See `lib/row-selection`. */
+  selected: boolean;
+  onSelect: () => void;
+  onExtendSelection: () => void;
+  onOpenMenu: (x: number, y: number) => void;
   onDelete: () => void;
 }) {
   const navigate = useNavigate();
@@ -174,21 +185,48 @@ export function ChatRow({
             onPointerLeave={() => {
               clicked.current = false;
             }}
+            // A shift-click is a range, not a text drag: without this the sweep
+            // paints half the sidebar's titles blue on its way past them.
+            onMouseDown={(event) => {
+              if (event.shiftKey) event.preventDefault();
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              onOpenMenu(event.clientX, event.clientY);
+            }}
             // The tab is opened here rather than left to the browser: a
             // ⌘-click on a link opens a window Electron would hand to the
             // system browser, which is not what "a tab of its own" means here.
+            // A shift-click is the sidebar's own, too — the browser would take
+            // it as "open in a new window", and here it is a range of rows.
             onClick={(event) => {
-              if (!(event.metaKey || event.ctrlKey)) return;
-              event.preventDefault();
-              openSessionTab(chat.id, chat.title);
-              void navigate({
-                to: "/modes/agent-session/$chatId",
-                params: { chatId: chat.id },
-              });
+              if (event.shiftKey) {
+                event.preventDefault();
+                onExtendSelection();
+                return;
+              }
+              if (event.metaKey || event.ctrlKey) {
+                event.preventDefault();
+                openSessionTab(chat.id, chat.title);
+                void navigate({
+                  to: "/modes/agent-session/$chatId",
+                  params: { chatId: chat.id },
+                });
+                return;
+              }
+              onSelect();
             }}
             className={cn(
-              "group/row flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-sm outline-none hover:bg-elevate focus-visible:bg-elevate",
-              active && "bg-elevate-strong"
+              "group/row flex h-8 w-full items-center gap-2 rounded-lg px-2 text-left text-sm outline-none",
+              // One state or the other, never both: a selected row keeps its
+              // tint under the pointer, so a sweep stays legible while the
+              // pointer is still inside it.
+              selected
+                ? "bg-brand-500/15 hover:bg-brand-500/20"
+                : cn(
+                    "hover:bg-elevate focus-visible:bg-elevate",
+                    active && "bg-elevate-strong"
+                  )
             )}
           />
         }

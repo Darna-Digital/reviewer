@@ -25,7 +25,12 @@ import { TabSnapshotMill } from "@/interactions/tab-preview/components/tab-snaps
 import { isDesktop } from "@/lib/desktop";
 import { isPreviewWindow } from "@/lib/preview-window";
 import { isCodeSurface, shellRoute } from "@/lib/shell-route";
-import { setUiPrefs, toggleBottomVisible, useUiPrefs } from "@/lib/ui-prefs";
+import {
+  setUiPrefs,
+  SIDE_PANE_MIN,
+  toggleBottomVisible,
+  useUiPrefs,
+} from "@/lib/ui-prefs";
 
 export function WindowFrame({ children }: { children: React.ReactNode }) {
   // ⌘, opens Settings, as in every Mac app. It lives here rather than in either
@@ -128,8 +133,10 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
                   orientation="col"
                   label="Resize analysis"
                   value={plansPane.current}
-                  min={380}
-                  max={() => Math.max(380, window.innerWidth - 480)}
+                  min={SIDE_PANE_MIN.analysis}
+                  max={() =>
+                    Math.max(SIDE_PANE_MIN.analysis, window.innerWidth - 480)
+                  }
                   direction={-1}
                   onResize={plansPane.onResize}
                   onResizeEnd={(plansPaneWidth) =>
@@ -145,8 +152,10 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
                   orientation="col"
                   label="Resize browser"
                   value={browserPane.current}
-                  min={320}
-                  max={() => Math.max(320, window.innerWidth - 480)}
+                  min={SIDE_PANE_MIN.browser}
+                  max={() =>
+                    Math.max(SIDE_PANE_MIN.browser, window.innerWidth - 480)
+                  }
                   direction={-1}
                   onResize={browserPane.onResize}
                   onResizeEnd={(browserPaneWidth) =>

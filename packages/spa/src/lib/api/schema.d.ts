@@ -5529,8 +5529,7 @@ export interface operations {
                     /** @enum {string} */
                     provider?: "claude" | "codex" | "opencode" | "cursor";
                     model?: string;
-                    /** @enum {string} */
-                    effort?: "low" | "medium" | "high";
+                    effort?: string;
                     /** @enum {string} */
                     access?: "supervised" | "acceptEdits" | "fullAccess";
                     branch?: string;
@@ -5556,8 +5555,7 @@ export interface operations {
                         /** @enum {string} */
                         provider: "claude" | "codex" | "opencode" | "cursor";
                         model: string;
-                        /** @enum {string} */
-                        effort: "low" | "medium" | "high";
+                        effort: string;
                         /** @enum {string} */
                         access: "supervised" | "acceptEdits" | "fullAccess";
                         branch: string;
@@ -5656,14 +5654,14 @@ export interface operations {
                                 id: string;
                                 label: string;
                                 group?: string;
+                                efforts?: string[];
                             }[];
                         }[];
                         defaults: {
                             /** @enum {string} */
                             provider: "claude" | "codex" | "opencode" | "cursor";
                             model: string;
-                            /** @enum {string} */
-                            effort: "low" | "medium" | "high";
+                            effort: string;
                             /** @enum {string} */
                             access: "supervised" | "acceptEdits" | "fullAccess";
                         };
@@ -5779,8 +5777,7 @@ export interface operations {
                         /** @enum {string} */
                         provider: "claude" | "codex" | "opencode" | "cursor";
                         model: string;
-                        /** @enum {string} */
-                        effort: "low" | "medium" | "high";
+                        effort: string;
                         /** @enum {string} */
                         access: "supervised" | "acceptEdits" | "fullAccess";
                         branch: string;
@@ -5922,8 +5919,7 @@ export interface operations {
                     /** @enum {string} */
                     provider?: "claude" | "codex" | "opencode" | "cursor";
                     model?: string;
-                    /** @enum {string} */
-                    effort?: "low" | "medium" | "high";
+                    effort?: string;
                     /** @enum {string} */
                     access?: "supervised" | "acceptEdits" | "fullAccess";
                 };
@@ -5948,8 +5944,7 @@ export interface operations {
                         /** @enum {string} */
                         provider: "claude" | "codex" | "opencode" | "cursor";
                         model: string;
-                        /** @enum {string} */
-                        effort: "low" | "medium" | "high";
+                        effort: string;
                         /** @enum {string} */
                         access: "supervised" | "acceptEdits" | "fullAccess";
                         branch: string;
@@ -6064,8 +6059,7 @@ export interface operations {
                         /** @enum {string} */
                         provider: "claude" | "codex" | "opencode" | "cursor";
                         model: string;
-                        /** @enum {string} */
-                        effort: "low" | "medium" | "high";
+                        effort: string;
                         /** @enum {string} */
                         access: "supervised" | "acceptEdits" | "fullAccess";
                         branch: string;

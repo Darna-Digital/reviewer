@@ -28,12 +28,26 @@ const CODEX_MODELS_OUTPUT = JSON.stringify({
       slug: "gpt-5.6-sol",
       display_name: "GPT-5.6-Sol",
       description: "Latest frontier agentic coding model.",
+      default_reasoning_level: "low",
+      supported_reasoning_levels: [
+        { effort: "low", description: "Fast responses" },
+        { effort: "medium", description: "Balances speed and depth" },
+        { effort: "high", description: "Greater depth" },
+        { effort: "xhigh", description: "Extra high depth" },
+        { effort: "max", description: "Maximum depth" },
+        { effort: "ultra", description: "Beyond maximum" },
+      ],
       visibility: "list",
     },
     {
       slug: "gpt-5.6-terra",
       display_name: "GPT-5.6-Terra",
       description: "Balanced agentic coding model for everyday work.",
+      supported_reasoning_levels: [
+        { effort: "low", description: "Fast responses" },
+        { effort: "medium", description: "Balances speed and depth" },
+        { effort: "high", description: "Greater depth" },
+      ],
       visibility: "list",
     },
     { slug: "gpt-5.1-codex-mini", display_name: "Mini", visibility: "hide" },
@@ -65,7 +79,11 @@ const OPENCODE_MODELS_OUTPUT = [
   `  "id": "anthropic.claude-opus-5",`,
   `  "providerID": "amazon-bedrock",`,
   `  "name": "Claude Opus 5",`,
-  `  "status": "active"`,
+  `  "status": "active",`,
+  `  "variants": {`,
+  `    "high": { "thinking": { "type": "enabled", "budgetTokens": 16000 } },`,
+  `    "max": { "thinking": { "type": "enabled", "budgetTokens": 31999 } }`,
+  `  }`,
   "}",
   "",
 ].join("\n");
@@ -157,10 +175,34 @@ describe("parseDiscoveredModels", () => {
 
   it("keeps only the models codex lists in its own picker", () => {
     const models = parseDiscoveredModels("codex", CODEX_MODELS_OUTPUT);
-    expect(models).toEqual([
-      { id: "gpt-5.6-sol", label: "GPT-5.6-Sol" },
-      { id: "gpt-5.6-terra", label: "GPT-5.6-Terra" },
+    expect(ids(models)).toEqual(["gpt-5.6-sol", "gpt-5.6-terra"]);
+    expect(models.map((m) => m.label)).toEqual([
+      "GPT-5.6-Sol",
+      "GPT-5.6-Terra",
     ]);
+  });
+
+  it("reads the reasoning levels codex reports per model", () => {
+    // The point of reading them: two models in the same catalog stop at
+    // different levels, so one list for the agent would be wrong for both.
+    const models = parseDiscoveredModels("codex", CODEX_MODELS_OUTPUT);
+    expect(models[0]?.efforts).toEqual([
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max",
+      "ultra",
+    ]);
+    expect(models[1]?.efforts).toEqual(["low", "medium", "high"]);
+  });
+
+  it("reads opencode's variants as the levels its models take", () => {
+    const models = parseDiscoveredModels("opencode", OPENCODE_MODELS_OUTPUT);
+    expect(models[2]?.efforts).toEqual(["high", "max"]);
+    // A model that named no variants says nothing about effort — which is not
+    // the same as saying it does none.
+    expect(models[0]?.efforts).toBeUndefined();
   });
 
   it("reads opencode's qualified ids, not the bare ids in its objects", () => {
@@ -184,6 +226,7 @@ describe("parseDiscoveredModels", () => {
       id: "amazon-bedrock/anthropic.claude-opus-5",
       label: "Claude Opus 5",
       group: "Amazon Bedrock",
+      efforts: ["high", "max"],
     });
   });
 

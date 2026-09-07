@@ -9,7 +9,13 @@
  *   codex    `codex exec --json` — JSONL item/turn events
  *   opencode `opencode run` — plain text streamed as it prints
  *   cursor   `cursor-agent -p --output-format stream-json` — token streaming
+ *
+ * Effort and access are not one row of switches copied four times: each agent
+ * gets the flags it actually has, at the levels its own CLI reported (see
+ * `chats.capabilities.ts`), and nothing is sent for a dimension an agent has no
+ * say over.
  */
+import { resolveChatAccess } from "@reviewer/core/chats";
 import type { Chat, ChatMessage } from "@reviewer/core/chats";
 
 export interface ChatTurnProgram {
@@ -37,11 +43,20 @@ const userShell = (): string => process.env["SHELL"] ?? "bash";
  * Claude's reasoning budget per effort level, via the documented
  * MAX_THINKING_TOKENS setting env. An approximation of a first-class effort
  * option: enough thinking to matter at "high" without runaway turns at "low".
+ *
+ * These three are also the levels claude is offered at (`chatCapabilities`); a
+ * level from anywhere else buys no budget rather than a guessed one, and the
+ * turn runs on claude's own default.
  */
-const CLAUDE_THINKING_TOKENS: Record<Chat["effort"], string> = {
+const CLAUDE_THINKING_TOKENS: Readonly<Record<string, string>> = {
   low: "1024",
   medium: "8192",
   high: "31999",
+};
+
+const claudeEnv = (chat: Chat): Record<string, string> => {
+  const tokens = CLAUDE_THINKING_TOKENS[chat.effort];
+  return tokens === undefined ? {} : { MAX_THINKING_TOKENS: tokens };
 };
 
 /**
@@ -74,19 +89,21 @@ const codexAccessArgs = (chat: Chat): ReadonlyArray<string> => {
 
 /**
  * Cursor's one permission switch: `--force` lets the agent edit files and run
- * commands without asking. Print mode can't ask, so without it a turn stalls
- * on the first write. There is no sandbox tier between "ask" and "don't ask",
- * so acceptEdits and fullAccess land on the same flag.
+ * commands without asking. Print mode can't ask, so without it a turn stalls on
+ * the first write. There is no sandbox tier between "ask" and "don't ask" —
+ * which tier a chat's access lands on for an agent that coarse is decided once,
+ * in `resolveChatAccess`, so the menu and the flag cannot disagree.
  */
-const cursorAccessArgs = (chat: Chat): ReadonlyArray<string> => {
-  switch (chat.access) {
-    case "supervised":
-      return [];
-    case "acceptEdits":
-    case "fullAccess":
-      return ["--force"];
-  }
-};
+const cursorAccessArgs = (chat: Chat): ReadonlyArray<string> =>
+  resolveChatAccess("cursor", chat.access) === "fullAccess" ? ["--force"] : [];
+
+/**
+ * opencode's one permission switch: `--auto` approves everything the
+ * developer's own opencode config does not explicitly deny. Without it that
+ * config decides alone, which is what supervised means for this agent.
+ */
+const opencodeAccessArgs = (chat: Chat): ReadonlyArray<string> =>
+  resolveChatAccess("opencode", chat.access) === "fullAccess" ? ["--auto"] : [];
 
 /** Single-quote a string for safe interpolation into a shell command. */
 const quote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
@@ -186,7 +203,7 @@ export const chatTurnProgram = (
       ];
       return {
         ...inLoginShell("claude", parts),
-        env: { MAX_THINKING_TOKENS: CLAUDE_THINKING_TOKENS[chat.effort] },
+        env: claudeEnv(chat),
         stdin: prompt,
       };
     }
@@ -198,8 +215,12 @@ export const chatTurnProgram = (
           ? ["resume", session.id]
           : []),
         "--json",
-        "-c",
-        `model_reasoning_effort="${chat.effort}"`,
+        // Only levels the model itself reported (`supported_reasoning_levels`)
+        // are ever offered, and none at all when codex never answered — in
+        // which case the model reasons at its own default.
+        ...(chat.effort.length > 0
+          ? ["-c", `model_reasoning_effort="${chat.effort}"`]
+          : []),
         ...(chat.model.length > 0 ? ["--model", chat.model] : []),
         ...codexAccessArgs(chat),
         // "-" = read the prompt from stdin.
@@ -212,8 +233,10 @@ export const chatTurnProgram = (
         "opencode",
         "run",
         ...(chat.model.length > 0 ? ["--model", chat.model] : []),
-        // opencode has no effort/access flags — permissions come from the
-        // developer's own opencode config.
+        // opencode names its reasoning levels per model, as variants, and only
+        // those are offered — a model that named none is run as it comes.
+        ...(chat.effort.length > 0 ? ["--variant", chat.effort] : []),
+        ...opencodeAccessArgs(chat),
         ...(session.resume && session.id !== null
           ? ["--session", session.id]
           : []),

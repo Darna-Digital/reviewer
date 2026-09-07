@@ -102,7 +102,7 @@ function AssistantMessage({
     <Message align="start">
       <div className="flex w-full min-w-0 flex-col gap-2">
         <ProvisioningLog lines={logs} />
-        {steps.length > 0 && <WorkLog steps={steps} running={streaming} />}
+        {steps.length > 0 && <WorkLog steps={steps} />}
         {message.text.length > 0 ? (
           <ChatMarkdown text={message.text} />
         ) : streaming ? null : message.streaming ? (

@@ -160,7 +160,7 @@ const toChat = (row: ChatRow): Chat => ({
   title: row.title,
   provider: row.provider as Chat["provider"],
   model: row.model,
-  effort: row.effort as Chat["effort"],
+  effort: row.effort,
   access: row.access as Chat["access"],
   branch: row.branch,
   sessionId: row.session_id,

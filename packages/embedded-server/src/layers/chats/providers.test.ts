@@ -117,6 +117,59 @@ describe("chatTurnProgram", () => {
     expect(cmd).toContain("'--session' 'ses_1'");
   });
 
+  it("codex: leaves the effort out when the chat has none", () => {
+    // Nothing to send is not "send low": a codex model whose levels were never
+    // read runs at its own default.
+    const p = chatTurnProgram(
+      chat({ provider: "codex", model: "gpt-5.5", effort: "" }),
+      "do it",
+      { id: null, resume: false }
+    );
+    expect(shellCommand(p)).not.toContain("model_reasoning_effort");
+  });
+
+  it("claude: spends no thinking budget on a level it has no mapping for", () => {
+    const p = chatTurnProgram(chat({ effort: "xhigh" }), "hi", {
+      id: null,
+      resume: false,
+    });
+    expect(p.env["MAX_THINKING_TOKENS"]).toBeUndefined();
+  });
+
+  it("opencode: passes the model's own variant and approves on full access", () => {
+    const p = chatTurnProgram(
+      chat({
+        provider: "opencode",
+        model: "opencode/claude-opus-4-8",
+        effort: "xhigh",
+      }),
+      "hello",
+      { id: "ses_1", resume: true }
+    );
+    const cmd = shellCommand(p);
+    expect(cmd).toContain("'--variant' 'xhigh'");
+    expect(cmd).toContain("'--auto'");
+    expect(cmd).toContain("'--session' 'ses_1'");
+  });
+
+  it("opencode: leaves permissions to the developer's config below full access", () => {
+    // opencode has one switch, so auto-accept edits is not a tier it can be
+    // asked for — it runs as supervised does, on the config.
+    const p = chatTurnProgram(
+      chat({
+        provider: "opencode",
+        model: "opencode/big-pickle",
+        effort: "",
+        access: "acceptEdits",
+      }),
+      "hello",
+      { id: null, resume: false }
+    );
+    const cmd = shellCommand(p);
+    expect(cmd).not.toContain("--auto");
+    expect(cmd).not.toContain("--variant");
+  });
+
   it("cursor: streams partial json, forces edits, prompt on stdin", () => {
     const p = chatTurnProgram(
       chat({ provider: "cursor", model: "composer-2.5" }),

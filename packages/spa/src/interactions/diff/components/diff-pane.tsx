@@ -342,7 +342,8 @@ const FileDiffSection = memo(function FileDiffSectionView({
                 title={`Discard changes in ${meta.name}`}
                 onClick={() => {
                   void confirm({
-                    title: `Discard all changes in ${meta.name}?`,
+                    title: "Discard all changes in this file?",
+                    subject: meta.name,
                     description:
                       "This reverts the file to the last commit and cannot be undone.",
                     confirmLabel: "Discard",

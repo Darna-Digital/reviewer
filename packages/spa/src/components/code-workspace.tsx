@@ -574,7 +574,8 @@ export function CodeWorkspace() {
   const mayLeaveFile = async (next?: string | null): Promise<boolean> => {
     if (dirtyFile === null || dirtyFile === next) return true;
     const discard = await confirm({
-      title: `Discard unsaved changes in ${dirtyFile}?`,
+      title: "Discard unsaved changes in this file?",
+      subject: dirtyFile,
       description: "The edits in the buffer are the only copy of them.",
       confirmLabel: "Discard",
       destructive: true,
@@ -960,9 +961,10 @@ export function CodeWorkspace() {
     const what =
       only === null
         ? `${items.length} items`
-        : `${only.kind === "directory" ? "folder" : "file"} "${only.path}"`;
+        : `this ${only.kind === "directory" ? "folder" : "file"}`;
     const ok = await confirm({
       title: `Delete ${what}?`,
+      subject: only?.path,
       description:
         "Deleted files go to the project's trash, so ⌘Z can put them back.",
       confirmLabel: "Delete",

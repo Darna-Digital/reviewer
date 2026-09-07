@@ -4,7 +4,7 @@ import {
   continueList,
   shiftListIndent,
   type ComposerSelection,
-} from "./list-editing.functions";
+} from "./list-editing";
 
 /** `|` marks the caret in these fixtures. */
 function at(fixture: string): ComposerSelection {

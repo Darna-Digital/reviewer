@@ -5,6 +5,7 @@
  */
 import { IconArrowRight, IconLoader2 } from "@tabler/icons-react";
 import Markdown from "react-markdown";
+import { MARKDOWN_TABLE_COMPONENTS } from "@/components/ui/markdown-table";
 import rehypeHighlight from "rehype-highlight";
 import remarkGfm from "remark-gfm";
 import type { Location, SymbolTarget } from "@reviewer/core/language";
@@ -92,6 +93,7 @@ export function HoverDocumentation({
         // A file path is not a URL, and the default transform drops it.
         urlTransform={(url) => url}
         components={{
+          ...MARKDOWN_TABLE_COMPONENTS,
           a: ({ href, children }) => {
             const location =
               onOpen === undefined ? null : hoverLinkLocation(href);

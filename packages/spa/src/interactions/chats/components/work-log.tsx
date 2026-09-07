@@ -160,14 +160,10 @@ function WorkStepRow({ step, last }: { step: WorkStep; last: boolean }) {
 
 export function WorkLog({
   steps,
-  running,
 }: {
   readonly steps: ReadonlyArray<WorkStep>;
-  readonly running: boolean;
 }) {
-  const [readerChoice, setReaderChoice] = useState<boolean | null>(null);
-  const followTheTurn = readerChoice === null;
-  const open = followTheTurn ? running : readerChoice;
+  const [open, setOpen] = useState(false);
 
   const failures = steps.filter((s) => s.status === "failed").length;
   const elapsed = elapsedMs(steps);
@@ -183,7 +179,7 @@ export function WorkLog({
     <div className="mb-2">
       <button
         type="button"
-        onClick={() => setReaderChoice(!open)}
+        onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         className="group flex cursor-pointer items-center gap-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
       >

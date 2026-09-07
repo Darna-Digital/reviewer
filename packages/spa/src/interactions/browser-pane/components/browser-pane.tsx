@@ -273,6 +273,13 @@ export function BrowserPane() {
         screenshot = null;
       }
     }
+    // The click that made the pick landed in the guest, so the guest's own
+    // process is holding the keyboard — and while it does, this window counts as
+    // unfocused: the composer below would take DOM focus with no caret in it,
+    // nothing typed would arrive, and dragging over the words would highlight
+    // them in the greyed-out way an inactive window does. Handing focus back
+    // before the composer mounts is what makes it an ordinary text box.
+    element.blur();
     updateBrowserPane({ draft: { ...picked, screenshot } });
   };
 

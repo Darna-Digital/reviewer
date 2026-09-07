@@ -101,7 +101,8 @@ export function useFileActions(openFile: (path: string) => void) {
           notifyError: (text) => toast.error(text),
           confirm: (path) =>
             confirm({
-              title: `Replace ${path}?`,
+              title: "Replace this file?",
+              subject: path,
               description:
                 "The file already in the project moves to the trash, so ⌘Z can put it back.",
               confirmLabel: "Replace",

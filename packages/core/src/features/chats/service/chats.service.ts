@@ -5,6 +5,11 @@ import { TerminalExec } from "../../../ports/terminal-exec.ts";
 import { ChatBusy } from "../errors.ts";
 import { CHAT_PROVIDER_KINDS } from "../functions/chats.catalog.ts";
 import {
+  catalogCapabilities,
+  withinCapabilities,
+  type ChatSettingsShape,
+} from "../functions/chats.capabilities.ts";
+import {
   mergeDiscoveredModels,
   modelDiscoveryCommand,
   parseDiscoveredModels,
@@ -13,6 +18,8 @@ import {
   ChatsRepository,
   type ChatsFailure,
   type ChatsRepo,
+  type CreateChatInput,
+  type UpdateChatInput,
 } from "../repository/chats.repository.ts";
 import { ChatRuntime } from "../runtime/chats.runtime.ts";
 import type {
@@ -118,6 +125,42 @@ export const makeChatsService = Effect.gen(function* () {
     });
   };
 
+  /**
+   * The catalog as it already stands, without asking any CLI. Settings are
+   * narrowed against this on the way in (see `create`), and a create must not
+   * wait out a cold discovery to store what the composer has already agreed
+   * with the user — a provider that hasn't answered yet simply narrows nothing.
+   */
+  const rememberedCatalog = (): ChatModelCatalog =>
+    mergeDiscoveredModels(
+      new Map(
+        CHAT_PROVIDER_KINDS.map((provider) => [
+          provider,
+          answers.get(provider)?.models ?? [],
+        ])
+      )
+    );
+
+  /**
+   * Settings the chosen agent can actually be driven with. The composer already
+   * offers nothing else, but a chat can also arrive from the API, or sit on a
+   * model whose CLI has since changed what it accepts — and a flag the agent
+   * rejects fails the turn, while a tier it cannot express is a promise about
+   * permissions we would be breaking silently.
+   */
+  const supported = <T extends ChatSettingsShape>(settings: T): T =>
+    withinCapabilities(
+      settings,
+      catalogCapabilities(
+        rememberedCatalog(),
+        settings.provider,
+        settings.model
+      )
+    );
+
+  const create: ChatsRepo["create"] = (input: CreateChatInput) =>
+    repo.create(supported(input));
+
   const models: ChatsServiceShape["models"] = Effect.suspend(() => {
     const nowMs = Date.now();
     return Effect.map(
@@ -169,10 +212,33 @@ export const makeChatsService = Effect.gen(function* () {
     });
   const remove: ChatsServiceShape["remove"] = (id) =>
     Effect.flatMap(repo.remove(id), () => runtime.kill(id));
-  const update: ChatsServiceShape["update"] = (id, input) =>
-    Effect.tap(repo.update(id, input), () => runtime.broadcastSnapshot(id));
+  /**
+   * A patch is narrowed against the chat it lands on, not against itself: the
+   * composer changes one selector at a time, so "switch to this model" has to
+   * be checked with the effort the chat is already running at.
+   */
+  const update: ChatsServiceShape["update"] = (id, input: UpdateChatInput) =>
+    Effect.gen(function* () {
+      const chat = yield* repo.get(id);
+      const merged = supported({
+        provider: input.provider ?? chat.provider,
+        // A provider change without a model falls back to that CLI's own
+        // default, exactly as the repository stores it.
+        model:
+          input.model ??
+          (input.provider !== undefined && input.provider !== chat.provider
+            ? ""
+            : chat.model),
+        effort: input.effort ?? chat.effort,
+        access: input.access ?? chat.access,
+      });
+      const updated = yield* repo.update(id, { ...input, ...merged });
+      yield* runtime.broadcastSnapshot(id);
+      return updated;
+    });
   return ChatsService.of({
     ...repo,
+    create,
     list,
     update,
     remove,

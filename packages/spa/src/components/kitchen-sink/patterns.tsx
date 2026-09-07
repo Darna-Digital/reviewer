@@ -9,8 +9,15 @@ import {
   Section,
   Subsection,
 } from "@/components/kitchen-sink/kitchen-sink-primitives";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableCellText,
+  TableHead,
+  TableRow,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 const STATS = [
@@ -204,48 +211,32 @@ export function Patterns() {
         </Subsection>
 
         <Subsection title="Table">
-          <div className="-mx-4 -my-2 scroll-fade-x overflow-x-auto whitespace-nowrap sm:-mx-6 lg:mx-0">
-            <div className="inline-block min-w-full px-4 py-2 align-middle sm:px-6 lg:px-0">
-              <table className="w-full text-left">
-                <thead>
-                  <tr className="border-b border-foreground/10">
-                    <th className="pr-4 pb-2 text-base font-medium whitespace-nowrap sm:text-sm">
-                      Pull request
-                    </th>
-                    <th className="pr-4 pb-2 text-base font-medium whitespace-nowrap sm:text-sm">
-                      Branch
-                    </th>
-                    <th className="pr-4 pb-2 text-base font-medium whitespace-nowrap sm:text-sm">
-                      Author
-                    </th>
-                    <th className="pb-2 text-base font-medium whitespace-nowrap sm:text-sm">
-                      Checks
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-foreground/10">
-                  {PULLS.map(({ title, author, branch, checks, tone }) => (
-                    <tr key={branch}>
-                      <td className="py-3 pr-4 text-base sm:text-sm">
-                        {title}
-                      </td>
-                      <td className="py-3 pr-4">
-                        <Badge variant="outline" className="font-mono">
-                          {branch}
-                        </Badge>
-                      </td>
-                      <td className="py-3 pr-4 text-base text-muted-foreground sm:text-sm">
-                        {author}
-                      </td>
-                      <td className={cn("py-3 text-base sm:text-sm", tone)}>
-                        {checks}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <Table>
+            <TableHead>
+              <TableCell className="flex-[2]">Pull request</TableCell>
+              <TableCell>Branch</TableCell>
+              <TableCell>Author</TableCell>
+              <TableCell>Checks</TableCell>
+            </TableHead>
+            <TableBody>
+              {PULLS.map(({ title, author, branch, checks, tone }) => (
+                <TableRow key={branch}>
+                  <TableCell className="flex-[2]">
+                    <TableCellText>{title}</TableCellText>
+                  </TableCell>
+                  <TableCell className="font-mono text-table-head-ink">
+                    <TableCellText>{branch}</TableCellText>
+                  </TableCell>
+                  <TableCell className="text-table-head-ink">
+                    <TableCellText>{author}</TableCellText>
+                  </TableCell>
+                  <TableCell className={tone}>
+                    <TableCellText>{checks}</TableCellText>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </Subsection>
       </Section>
 

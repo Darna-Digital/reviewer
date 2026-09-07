@@ -23,6 +23,7 @@ const terminalReturning = (seen: string[] = []) =>
             {
               slug: "gpt-9-turbo",
               display_name: "GPT-9 Turbo",
+              supported_reasoning_levels: [{ effort: "xhigh" }],
               visibility: "list",
             },
           ],
@@ -264,6 +265,54 @@ describe("ChatsService", () => {
       expect(items).toHaveLength(0);
     }).pipe(Effect.provide(layer));
   });
+  it.effect("create stores only what the chosen agent can be run with", () => {
+    const { layer } = ChatsMemory();
+    return Effect.gen(function* () {
+      const chats = yield* ChatsService;
+      // cursor-agent has no reasoning flag and one permission switch, so an
+      // effort it never accepts is not stored as if it meant something, and
+      // auto-accept is recorded as the full access it has always run at.
+      const created = yield* chats.create({
+        ...newChat,
+        provider: "cursor",
+        model: "composer-2.5",
+        effort: "high",
+        access: "acceptEdits",
+      });
+      expect(created.effort).toBe("");
+      expect(created.access).toBe("fullAccess");
+    }).pipe(Effect.provide(layer));
+  });
+
+  it.effect("update moves a chat onto the levels its new model takes", () => {
+    const { layer } = ChatsMemory([], terminalReturning());
+    return Effect.gen(function* () {
+      const chats = yield* ChatsService;
+      // Warm the catalog: the levels come from the CLI, and the clamp only
+      // narrows against answers already in hand.
+      yield* chats.models;
+      const created = yield* chats.create(newChat);
+      const updated = yield* chats.update(created.id, {
+        provider: "codex",
+        model: "gpt-9-turbo",
+      });
+      expect(updated.effort).toBe("xhigh");
+      // Codex takes an effort for every model it runs, so one it never listed
+      // keeps the setting — at the nearest level codex is known to accept.
+      const unlisted = yield* chats.update(created.id, {
+        model: "gpt-unknown",
+      });
+      expect(unlisted.effort).toBe("high");
+      // opencode names its levels per model, so a model that named none has
+      // nothing to be asked for and the agent is left to decide.
+      const cleared = yield* chats.update(created.id, {
+        provider: "opencode",
+        model: "opencode/big-pickle",
+      });
+      expect(cleared.effort).toBe("");
+    }).pipe(Effect.provide(layer));
+  });
+
   it.effect("models offers nothing when no CLI answers", () => {
     const { layer } = ChatsMemory();
     return Effect.gen(function* () {
