@@ -59,6 +59,7 @@ const tokenEvent = (): TokenEventBase =>
   }) as unknown as TokenEventBase;
 
 let enter: (props: TokenEventBase) => void;
+let leave: () => void;
 
 function Harness({ hoverEnabled }: { readonly hoverEnabled: boolean }) {
   const layer = useLanguageLayer({
@@ -69,6 +70,7 @@ function Harness({ hoverEnabled }: { readonly hoverEnabled: boolean }) {
     onOpenLocation: () => undefined,
   });
   enter = layer.viewOptions.onTokenEnter;
+  leave = layer.viewOptions.onTokenLeave;
   return <>{layer.card}</>;
 }
 
@@ -90,11 +92,37 @@ afterEach(() => {
   cleanup();
 });
 
+/** Whether the card is on screen — it is rendered in a portal. */
+const cardIsOpen = () => document.querySelector("[data-symbol-card]") !== null;
+
+const advance = async (ms: number) => {
+  await act(async () => {
+    vi.advanceTimersByTime(ms);
+  });
+};
+
 describe("hover documentation", () => {
   it("opens on a token the pointer rests on", async () => {
     render(<Harness hoverEnabled />);
     await restOnToken();
     expect(describeSymbol).toHaveBeenCalledWith("src/a.ts", expect.anything());
+  });
+
+  it("stays up long enough for the pointer to reach it", async () => {
+    render(<Harness hoverEnabled />);
+    await restOnToken();
+    expect(cardIsOpen()).toBe(true);
+
+    // The pointer sets off for the card, crossing the gap below the token.
+    act(() => leave());
+    await advance(400);
+    // Half a second is the hand's; a sixth of one was not, and a card carrying
+    // a link to a definition was gone before it could be clicked.
+    expect(cardIsOpen()).toBe(true);
+
+    // Not reached: it goes, as it should.
+    await advance(200);
+    expect(cardIsOpen()).toBe(false);
   });
 
   it("is not offered while a comment is being written on the file", async () => {

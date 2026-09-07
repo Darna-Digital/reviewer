@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   hoverContents,
+  localiseHoverLinks,
   originSelectionRange,
   pathToUri,
   severityOfLsp,
@@ -211,5 +212,37 @@ describe("hoverContents", () => {
   it("returns an empty string for nothing usable", () => {
     expect(hoverContents(null)).toBe("");
     expect(hoverContents({})).toBe("");
+  });
+});
+
+describe("localiseHoverLinks", () => {
+  const root = "/work/blog";
+
+  it("names a link inside the repository the way the app addresses files", () => {
+    // ruby-lsp answers a hover for a constant with where it is defined.
+    expect(
+      localiseHoverLinks(
+        "**Definitions**: [article.rb](file:///work/blog/app/models/article.rb#L1,1-7,4)",
+        root
+      )
+    ).toBe("**Definitions**: [article.rb](app/models/article.rb#L1,1-7,4)");
+  });
+
+  it("leaves a definition outside the repository as it came", () => {
+    // A gem, or the standard library: nothing in the app can open it, and a
+    // link that still says `file://` is at least honest about that.
+    const gem =
+      "[base.rb](file:///home/me/.gem/activerecord-7.1.3/lib/base.rb#L12)";
+    expect(localiseHoverLinks(gem, root)).toBe(gem);
+  });
+
+  it("leaves documentation links alone", () => {
+    const docs = "See [the guide](https://guides.rubyonrails.org/#models).";
+    expect(localiseHoverLinks(docs, root)).toBe(docs);
+  });
+
+  it("passes documentation with no links through untouched", () => {
+    const markdown = "```ruby\nArticle\n```\n\nAn article (a model).";
+    expect(localiseHoverLinks(markdown, root)).toBe(markdown);
   });
 });

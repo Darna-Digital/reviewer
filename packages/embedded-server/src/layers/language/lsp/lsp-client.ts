@@ -13,6 +13,7 @@
  * rarely enough that the extra work does not matter.
  */
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
+import { loginEnvironment } from "../../shell/login-environment.ts";
 import { encodeMessage, makeMessageDecoder } from "./lsp-codec.ts";
 import type { LspServerConfig } from "./lsp-config.ts";
 import { pathToUri } from "./lsp-mapping.ts";
@@ -164,7 +165,10 @@ export const connect = async (
   try {
     child = spawn(config.command, [...config.args], {
       cwd: root,
-      env: { ...process.env, ...config.env },
+      // The developer's environment, not this process's: finding `ruby-lsp` is
+      // only half of it — the server itself then runs `ruby`, and `bundle exec`
+      // needs the version manager that put both of them there.
+      env: { ...process.env, ...loginEnvironment(), ...config.env },
       stdio: ["pipe", "pipe", "pipe"],
     });
   } catch (error) {
