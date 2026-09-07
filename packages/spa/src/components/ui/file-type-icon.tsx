@@ -102,3 +102,20 @@ export function FileTypeIcon({
     </svg>
   );
 }
+
+export function TreeChevronIcon({
+  className,
+}: {
+  readonly className?: string;
+}) {
+  const icon = resolveIcon("file-tree-icon-chevron");
+  return (
+    <svg
+      aria-hidden
+      viewBox={icon.viewBox ?? "0 0 16 16"}
+      className={cn("size-4 shrink-0", className)}
+    >
+      <use href={`#${icon.name}`} />
+    </svg>
+  );
+}
