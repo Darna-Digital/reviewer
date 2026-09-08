@@ -438,26 +438,6 @@ export function CodeView({
                 // stylesheet, and the view keeps one of each.
                 onPostRender,
                 unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}\n${folding.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}`,
-                // The gutter starts a comment here the same way it does on the
-                // diff: a line number under the pointer lights its row and
-                // turns into a `+`, and pressing either opens the composer on
-                // that line. Only the code area takes the caret on a click, so
-                // the gutter is free to carry the offer after all; the one
-                // floated over a selection stays, for commenting on a passage
-                // rather than a line.
-                enableGutterUtility: commentsEnabled,
-                onGutterUtilityClick: (range) =>
-                  draftRef.current?.({
-                    filePath: path,
-                    side: FILE_COMMENT_SIDE,
-                    lineNumber: range.end,
-                  }),
-                onLineNumberClick: (props) =>
-                  draftRef.current?.({
-                    filePath: path,
-                    side: FILE_COMMENT_SIDE,
-                    lineNumber: props.lineNumber,
-                  }),
               }}
               edit
               /* The editable view snapshots the rendered code when the editor
