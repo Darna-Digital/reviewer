@@ -522,12 +522,26 @@ export const useDiffText = (target: DiffTarget | null) => {
   }
 };
 
+/**
+ * How hard a read of one file tries before the viewer gives up on it.
+ *
+ * A missing or unreadable path — a staged-then-deleted "AD" ghost with no
+ * worktree content — has no answer coming, and retrying it just hangs the
+ * viewer on "Loading", so this stays short. But it is no longer none: writing
+ * a file refreshes every query in the app at once, and on a large project the
+ * read of the file that was just made queues behind a dozen `git` calls. That
+ * one is worth asking again — twice, a fifth of a second apart, is under half
+ * a second before the error shows and is the difference between a new file
+ * opening and a pane that says it could not be opened.
+ */
+const FILE_READ = { retry: 2, retryDelay: 200 } as const;
+
 export const useFileBytes = (path: string | null) =>
   api.useQuery(
     "get",
     "/api/file/raw",
     { params: { query: { path: path ?? "" } } },
-    { ...GIT_DATA, enabled: path !== null, retry: false }
+    { ...GIT_DATA, ...FILE_READ, enabled: path !== null }
   );
 
 export const useFile = (path: string | null) =>
@@ -535,10 +549,7 @@ export const useFile = (path: string | null) =>
     "get",
     "/api/file",
     { params: { query: { path: path ?? "" } } },
-    // A file read either succeeds or it doesn't — retrying a missing/unreadable
-    // path (e.g. a staged-then-deleted "AD" ghost that has no worktree content)
-    // just hangs the viewer on "Loading", so fail fast and surface the error.
-    { ...GIT_DATA, enabled: path !== null, retry: false }
+    { ...GIT_DATA, ...FILE_READ, enabled: path !== null }
   );
 
 // --- reviewer cloud ---------------------------------------------------------

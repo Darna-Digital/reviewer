@@ -18,7 +18,7 @@ import type {
   KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
 } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { NewEntryChoice } from "@/components/tree/new-entry-submenu";
 import {
   NewEntrySubmenu,
@@ -249,6 +249,16 @@ export function FileSidebar({
   // would take the row — and the half-typed name in it — down with it, so the
   // reset waits until the draft is committed or let go.
   const pendingResetRef = useRef(false);
+  // Rebuilding the tree is the only way to take a new listing, and a rebuilt
+  // tree starts from `initialExpansion` — "closed", in browse mode. Every
+  // folder the user had opened would therefore snap shut on the first refresh
+  // after it, which is every create, rename, delete and git refresh. So how
+  // each folder was left is kept here and handed to the tree that replaces it:
+  // true where it was open, false where it was closed, and absent for one
+  // never seen either way. Declared this high because the reset it feeds
+  // happens from four places, the earliest of them above the model itself.
+  const foldsRef = useRef<Map<string, boolean>>(new Map());
+  const resetPathsRef = useRef<() => void>(() => {});
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
   const pathsRef = useRef(paths);
@@ -325,9 +335,7 @@ export function FileSidebar({
             onDropComplete: ({ draggedPaths, target }) => {
               void actionsRef.current
                 ?.move(draggedPaths, dropDirectory(target))
-                .catch(() =>
-                  modelRef.current?.resetPaths([...pathsRef.current])
-                );
+                .catch(() => resetPathsRef.current());
             },
             onDropError: (message) => onErrorRef.current?.(message),
           },
@@ -353,8 +361,7 @@ export function FileSidebar({
         onErrorRef.current?.(message);
       },
       onRename: ({ destinationPath, isFolder, sourcePath }) => {
-        const revert = () =>
-          modelRef.current?.resetPaths([...pathsRef.current]);
+        const revert = () => resetPathsRef.current();
         const draft = draftRef.current;
         if (draft !== null && draft.path === sourcePath) {
           const target = withTemplateExtension(
@@ -434,18 +441,80 @@ export function FileSidebar({
   // dragging a panel handle was enough to join fifty thousand strings. They
   // change only when their input array is replaced, which is what the memo says.
   const pathsKey = useMemo(() => paths.join("\n"), [paths]);
-  // Rebuilding collapses the tree; seed the open file's ancestors as expanded
-  // so it doesn't flash closed. Selection/scroll/focus is re-applied by the
-  // reveal effect below (which also depends on `pathsKey`).
-  const resetTreePaths = () => {
-    const open = selectedFileRef.current;
-    modelRef.current?.resetPaths(
-      [...pathsRef.current],
-      open !== null
-        ? { initialExpandedPaths: [...ancestorDirs(open)] }
-        : undefined
+
+  /**
+   * Take note of how each folder is folded, so the next rebuild can restore it.
+   *
+   * Only the rows on screen can be asked — a folder inside one that has since
+   * been closed keeps whatever it was last seen as, which is exactly what it
+   * should unfold to when its parent opens again. A flattened row stands for
+   * every segment it spells (`pkg/a/b` is `pkg`, `pkg/a` and `pkg/a/b`), so
+   * they are all recorded together: the rebuilt tree may not flatten the same
+   * way once a file lands in one of them.
+   */
+  const rememberFolds = useCallback(() => {
+    const tree = modelRef.current;
+    if (tree == null) return;
+    const folds = foldsRef.current;
+    for (const row of tree.getVisibleRows(0, tree.getVisibleCount())) {
+      if (row.kind !== "directory") continue;
+      const segments = row.flattenedSegments ?? [];
+      for (const path of [
+        row.path,
+        ...segments.map((segment) => segment.path),
+      ]) {
+        folds.set(withoutTrailingSlash(path), row.isExpanded);
+      }
+    }
+  }, []);
+
+  // Noting them only as the tree is about to be rebuilt would be too late: a
+  // folder left open inside one that was then closed is off screen by the time
+  // the rebuild comes, and would never have been seen open at all. So the tree
+  // is read whenever it changes — coalesced to one pass a frame, since it also
+  // announces every selection and focus move.
+  useEffect(() => {
+    let frame: number | null = null;
+    const unsubscribe = model.subscribe(() => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        rememberFolds();
+      });
+    });
+    return () => {
+      if (frame !== null) window.cancelAnimationFrame(frame);
+      unsubscribe();
+    };
+  }, [model, rememberFolds]);
+
+  // Rebuilding collapses the tree; hand it back the folders that were open,
+  // plus the open file's ancestors so it doesn't flash closed. Selection,
+  // scroll and focus are re-applied by the reveal effect below (which also
+  // depends on `pathsKey`).
+  const resetTreePaths = useCallback(() => {
+    rememberFolds();
+    const folds = foldsRef.current;
+    // Seeding a folder open opens the whole chain down to it, so one left open
+    // inside a folder that was then closed must not be named — that would
+    // reopen the parent the user closed.
+    const expanded = new Set(
+      [...folds]
+        .filter(
+          ([path, open]) =>
+            open && ancestorDirs(path).every((dir) => folds.get(dir) !== false)
+        )
+        .map(([path]) => path)
     );
-  };
+    const open = selectedFileRef.current;
+    if (open !== null) for (const dir of ancestorDirs(open)) expanded.add(dir);
+    modelRef.current?.resetPaths([...pathsRef.current], {
+      // Sorted: the store walks the hints in order and keeps the parent it is
+      // already inside, rather than starting from the root for each one.
+      initialExpandedPaths: [...expanded].sort(),
+    });
+  }, [rememberFolds]);
+  resetPathsRef.current = resetTreePaths;
   useEffect(() => {
     // A reset would tear the row a draft is being named in out from under the
     // input, half-typed name and all — it waits for the draft to finish.
@@ -454,7 +523,7 @@ export function FileSidebar({
       return;
     }
     resetTreePaths();
-  }, [pathsKey, model]);
+  }, [pathsKey, model, resetTreePaths]);
 
   // The tree is the only one who knows a draft was let go — Escape, or a
   // committed blank name, removes the row without a rename ever firing. Seeing
@@ -470,7 +539,7 @@ export function FileSidebar({
           resetTreePaths();
         }
       }),
-    [model]
+    [model, resetTreePaths]
   );
 
   const statusKey = useMemo(

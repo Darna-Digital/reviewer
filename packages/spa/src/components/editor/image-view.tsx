@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import { CodeView } from "@/components/editor/code-view";
+import { OpenFailed } from "@/components/editor/open-failed";
 import { UnsupportedFile } from "@/components/editor/unsupported-file";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
@@ -46,7 +47,12 @@ function Preview({ path }: { path: string }) {
   }
   if (bytes.error || bytes.data === undefined) {
     return (
-      <div className="p-8 text-sm text-destructive">Could not open {path}</div>
+      <OpenFailed
+        path={path}
+        error={bytes.error}
+        onRetry={() => void bytes.refetch()}
+        retrying={bytes.isFetching}
+      />
     );
   }
 

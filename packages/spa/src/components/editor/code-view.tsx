@@ -40,6 +40,7 @@ import {
   useHighlightPrimed,
   useLangReady,
 } from "@/components/editor/highlighter";
+import { OpenFailed } from "@/components/editor/open-failed";
 import { UnsupportedFile } from "@/components/editor/unsupported-file";
 import {
   useFileEditing,
@@ -58,6 +59,10 @@ import type { Theme } from "@/lib/ui-prefs";
 // Comments on a plain (non-diff) file are always anchored to the current
 // content, i.e. the "additions" side of an eventual working-tree diff.
 const FILE_COMMENT_SIDE = "additions" as const;
+
+// How long a request for the caret keeps asking: about a second of frames,
+// which covers a file that is still painting without outliving the intent.
+const CARET_ATTEMPTS = 60;
 
 type AnnotationMeta =
   | {
@@ -88,6 +93,13 @@ interface CodeViewProps {
   onOpenLocation?: (path: string, lineNumber: number) => void;
   /** Scroll this one-based line into view and flash it. */
   reveal?: RevealTarget | null;
+  /**
+   * Put the caret in this file as soon as it is editable. Anything but null is
+   * a request; a new value re-asks, so the same file can be handed the caret
+   * twice. Used when a file is opened to be written rather than to be read —
+   * one just created from the tree.
+   */
+  caretKey?: number | null;
   /** Local review comments anchored to this file (optional — omit to disable). */
   comments?: ReadonlyArray<ReviewComment>;
   draft?: DraftLocation | null;
@@ -106,6 +118,7 @@ export function CodeView({
   actionsSlot,
   onOpenLocation,
   reveal = null,
+  caretKey = null,
   comments,
   draft = null,
   onDraftOpen,
@@ -183,6 +196,31 @@ export function CodeView({
   useEffect(() => {
     onDirtyChange?.(buffer.dirty);
   }, [buffer.dirty, onDirtyChange]);
+
+  // A file opened to be written — one just created from the tree — takes the
+  // caret as soon as it has an editor to put it in, so the naming the user was
+  // in the middle of carries straight on into the file itself. The editor
+  // exists before the view has painted the element that holds the text, and
+  // focusing it before then does nothing, so the request stands for a few
+  // frames rather than being spent on the first one.
+  const editor = buffer.editor;
+  const editorFocused = buffer.isFocused;
+  useEffect(() => {
+    if (caretKey === null || editor === null) return;
+    let frame = 0;
+    let attempts = 0;
+    const take = () => {
+      // The caret goes to the top of the file: it is empty, or the user is
+      // about to start writing at the start of it either way. Focusing without
+      // a position leaves the element focused but the caret nowhere, and what
+      // is typed next goes nowhere with it.
+      editor.focus({ lineNumber: 1, character: 0 });
+      if (editorFocused() || (attempts += 1) > CARET_ATTEMPTS) return;
+      frame = window.requestAnimationFrame(take);
+    };
+    frame = window.requestAnimationFrame(take);
+    return () => window.cancelAnimationFrame(frame);
+  }, [caretKey, editor, editorFocused]);
 
   // The editor keeps offering to comment for as long as the selection stands,
   // which would put the offer on top of the composer it just opened. The flag
@@ -385,7 +423,12 @@ export function CodeView({
   }
   if (file.error || file.data === undefined || highlightFile === null) {
     return (
-      <div className="p-8 text-sm text-destructive">Could not open {path}</div>
+      <OpenFailed
+        path={path}
+        error={file.error}
+        onRetry={() => void file.refetch()}
+        retrying={file.isFetching}
+      />
     );
   }
   // Binary content has no lines to render — handing it to the viewer throws
