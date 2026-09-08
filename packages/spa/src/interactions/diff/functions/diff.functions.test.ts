@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { FileDiffMetadata } from "@pierre/diffs";
 import type { ReviewComment } from "@reviewer/core/comments";
 import {
   unenrichedPull,
@@ -74,6 +75,12 @@ describe("parseFiles", () => {
 });
 
 describe("tree derivations", () => {
+  /** Parsed diff entries, as only their names and change type matter here. */
+  const file = (...names: ReadonlyArray<string>) =>
+    names.map(
+      (name) => ({ name, type: "modified" }) as unknown as FileDiffMetadata
+    );
+
   const status: GitStatusEntry[] = [
     { path: "src/a.ts", status: "modified" },
     { path: ".reviewer/comments.json", status: "modified" },
@@ -98,6 +105,60 @@ describe("tree derivations", () => {
       commentedPaths: ["src/c.ts"],
     });
     expect(paths).toEqual(["src/a.ts", "src/c.ts"]);
+  });
+
+  it("read against a branch, lists the comparison's files too", () => {
+    const paths = fns().treePaths({
+      mode: "commit",
+      allPaths: ["src/a.ts", "src/committed.ts", "src/untouched.ts"],
+      // Only `src/a.ts` is uncommitted; `src/committed.ts` was changed by a
+      // commit earlier on the branch and has been quiet since.
+      gitStatus: [{ path: "src/a.ts", status: "modified" }],
+      parsedFiles: file("src/a.ts", "src/committed.ts"),
+      comparing: true,
+    });
+    expect(paths).toEqual(["src/a.ts", "src/committed.ts"]);
+  });
+
+  it("keeps a file the branch deleted, which is in no file list", () => {
+    const paths = fns().treePaths({
+      mode: "commit",
+      allPaths: ["src/a.ts"],
+      gitStatus: [],
+      parsedFiles: file("src/a.ts", "src/gone.ts"),
+      comparing: true,
+    });
+    expect(paths).toEqual(["src/a.ts", "src/gone.ts"]);
+  });
+
+  it("ignores the comparison's files when nothing is being compared", () => {
+    const paths = fns().treePaths({
+      mode: "commit",
+      allPaths: ["src/a.ts", "src/committed.ts"],
+      gitStatus: [{ path: "src/a.ts", status: "modified" }],
+      parsedFiles: file("src/a.ts", "src/committed.ts"),
+    });
+    expect(paths).toEqual(["src/a.ts"]);
+  });
+
+  it("badges a compared file from the diff, and keeps untracked ones", () => {
+    const badges = fns().treeGitStatus({
+      mode: "commit",
+      allPaths: [],
+      gitStatus: [
+        { path: "src/a.ts", status: "modified" },
+        { path: "src/new.ts", status: "untracked" },
+        { path: ".reviewer/comments.json", status: "modified" },
+      ],
+      parsedFiles: file("src/a.ts", "src/committed.ts"),
+      comparing: true,
+    });
+    expect(badges).toEqual([
+      { path: "src/a.ts", status: "modified" },
+      { path: "src/committed.ts", status: "modified" },
+      // `git diff` never carries an untracked file, so its own badge stands.
+      { path: "src/new.ts", status: "untracked" },
+    ]);
   });
 
   it("browse mode lists every non-internal path", () => {

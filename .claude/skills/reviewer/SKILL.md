@@ -54,9 +54,11 @@ Field meaning:
   (left side).
 - `body` — the reviewer's instruction. **This is the change to make.**
 - `target` — which diff the comment was left on: `"worktree"` for the working
-  tree, `"commit-<sha>"` for a comment left in the commit view, or `"<base>...<head>"`
-  for a range. Informational — you resolve every local comment the same way
-  regardless of its target.
+  tree, `"branch-<ref>"` for the local changes read against another branch (the
+  header's compare picker — everything since the two parted, uncommitted work
+  included), `"commit-<sha>"` for a comment left in the commit view, or
+  `"<base>...<head>"` for a range. Informational — you resolve every local
+  comment the same way regardless of its target.
 
 ## Workflow
 

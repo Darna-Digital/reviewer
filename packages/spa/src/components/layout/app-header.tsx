@@ -21,6 +21,8 @@ import {
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { DockRestore } from "@/components/layout/dock-restore";
+import { ComparePicker } from "@/interactions/comparison/components/compare-picker";
+import { useLocalComparison } from "@/interactions/comparison/adapters/comparison.hook.adapter";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
 import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
@@ -58,6 +60,7 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   const projectBranchList = useProjectBranches();
   const workspaceActions = useWorkspaceActions();
   const git = useGitActions();
+  const comparing = useLocalComparison();
 
   /** Make a root current before a menu action runs in it. */
   const followRepo = (repoPath: string) =>
@@ -102,24 +105,36 @@ export function AppHeader({ route }: { route: ShellRoute }) {
         (params.sha !== undefined ||
           (search.base !== undefined && search.head !== undefined))));
 
+  /**
+   * What your own changes are read against — a question only your own changes
+   * have. A pull request's base is GitHub's to decide and is named on the trail
+   * instead; a commit and a range say what they are in the URL that named them.
+   */
+  const showComparePicker =
+    route.kind === "code" &&
+    route.mode === "review" &&
+    readingOwnChanges &&
+    search.file === undefined &&
+    repo.data != null;
+
   return (
     <header className="group/header flex h-9 shrink-0 items-center gap-2 px-2">
       {/*
        * Hidden by the trail's own presence, in CSS, rather than by asking the
        * route the same question the page just answered.
        *
-       * Both are branch pickers with the branch they picked written on them, so
-       * a third in front of them naming a branch that may be neither is the
-       * reading nobody wants — but the page portals its trail in from a
+       * Both are branch pickers with the branch they picked written on them,
+       * so a third in front of them naming a branch that may be neither is
+       * the reading nobody wants — but the page portals its trail in from a
        * different component, and when the two decided this separately they
        * decided it a frame and a half apart. You saw both, briefly, on every
-       * navigation. `:has` cannot be late: the picker is gone in the same paint
-       * the trail arrives in, and back in the paint it leaves.
+       * navigation. `:has` cannot be late: the picker is gone in the same
+       * paint the trail arrives in, and back in the paint it leaves.
        *
-       * Reading your own changes is the exception the rule was never about: the
-       * trail there opens with "Review", which names no branch, so the picker is
-       * the only thing on the row saying whose changes these are — and the only
-       * way to go and read another branch's.
+       * Reading your own changes is the exception the rule was never about:
+       * the trail there opens with "Review", which names no branch, so the
+       * picker is the only thing on the row saying whose changes these are —
+       * and the only way to go and read another branch's.
        */}
       {repo.data != null && (
         <div
@@ -162,6 +177,19 @@ export function AppHeader({ route }: { route: ShellRoute }) {
             onFollowRepo={followRepo}
           />
         </div>
+      )}
+
+      {/* Straight after the branch picker, because the two are one sentence:
+          the branch you are on, and what its changes are read against. */}
+      {showComparePicker && (
+        <ComparePicker
+          comparison={comparing.comparison}
+          branch={comparing.branch}
+          aim={comparing.aim}
+          branches={comparing.branches}
+          remoteBranches={comparing.remoteBranches}
+          onSelect={comparing.compareAgainst}
+        />
       )}
 
       {/* Lent to the page beneath, which hangs its trail here when the trail is

@@ -52,25 +52,14 @@ import { ImageView, isImagePath } from "@/components/editor/image-view";
 import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
 import { targetOf } from "@/interactions/branch-targets/functions/branch-targets.functions";
-import {
-  diffSourceKey,
-  diffSourceLabel,
-  diffSources,
-  LOCAL_SOURCE,
-  type DiffSource,
-} from "@/interactions/reviews/functions/reviews.functions";
-import {
-  CompareItems,
-  DiffSourceItems,
-  diffSourceIcon,
-} from "@/interactions/reviews/components/diff-source-menu";
+import { comparisonTarget, resolveComparison } from "@reviewer/core/comparison";
 import { PullRequestList } from "@/components/git/pull-request-list";
 import { PullRequestOverview } from "@/components/git/pull-request-overview";
 import type { Crumb } from "@/components/layout/breadcrumbs";
 import { EmptyPane } from "@/components/layout/empty-pane";
 import { NoPullRequests, NoReviewRemote } from "@/components/git/review-empty";
 import { PathBar } from "@/components/layout/path-bar";
-import { REVIEW_HREF, reviewHref, reviewSourceOf } from "@/lib/shell-route";
+import { reviewSourceOf } from "@/lib/shell-route";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
@@ -146,7 +135,6 @@ import {
   usePullComments,
   usePulls,
   useBranchTargets,
-  useBranches,
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
@@ -194,19 +182,6 @@ export function CodeWorkspace() {
     : routeSource === null || routeSource.kind === "local"
       ? "commit"
       : "review";
-
-  /**
-   * The open-file strip is browsing's, and only browsing's.
-   *
-   * Reading a diff — the local changes, or somebody's pull request — what the
-   * pane is showing is the review, and a file opened over it is one look at one
-   * file rather than a set of them you are working in. The strip standing there
-   * was a list of files from somewhere else entirely: whatever you had open
-   * while browsing, laid in a row across the top of somebody's pull request. So
-   * the review does not draw it, and does not add to it either — a file read
-   * out of a diff leaves the browsing strip exactly as it was.
-   */
-  const tabbed = mode === "browse";
 
   // --- queries ---------------------------------------------------------------
   const workspace = useWorkspace();
@@ -320,70 +295,42 @@ export function CodeWorkspace() {
   }, [params.sha, search.base, search.head]);
 
   /**
-   * What the local changes are read against. Aiming a branch is recorded once
-   * and meant to hold, so arriving at its changes should not ask again. The URL
-   * still wins when it says anything — including the empty string, which is how
-   * the trail drops back to what is merely uncommitted.
+   * The open-file strip is the files you are working in, and only those.
+   *
+   * Reading a diff — the local changes, somebody's merge request, a commit or
+   * a range out of History — what the pane is showing is one change, and a
+   * file opened over it is one look at one file rather than a set of them you
+   * are working in. The strip standing there was a list of files from
+   * somewhere else entirely: whatever you had open while browsing, laid in a
+   * row across the top of somebody's merge request or of a commit from three
+   * weeks ago. So a diff does not draw it, and does not add to it either — a
+   * file read out of one leaves the browsing strip exactly as it was.
    */
-  const branches = useBranches();
+  const tabbed = mode === "browse" && browse === null;
+
+  /**
+   * What the local changes are read against — the header's compare picker is
+   * how it is chosen, and this is the same answer read back. Aiming a branch is
+   * recorded once and meant to hold, so arriving at its changes should not ask
+   * again; the URL still wins when it says anything, the empty string included,
+   * which is how the picker drops back to what is merely uncommitted.
+   */
   const branchTargets = useBranchTargets();
   const aim = targetOf(
     branchTargets.data ?? [],
     repo.data?.currentBranch ?? null
   );
-  const reading = search.target ?? aim ?? null;
+  const comparison = resolveComparison(search.target, aim);
 
   const target: DiffTarget | null = diffFns.deriveTarget({
     mode,
     selectedPull,
     browse,
-    target: mode === "review" ? (search.target ?? null) : reading,
+    // A pull request is read against what GitHub says, so a comparison chosen
+    // for your own changes has no bearing on it.
+    target: mode === "review" ? null : comparisonTarget(comparison),
   });
   const targetKey = target === null ? "none" : diffTargetKey(target);
-
-  /**
-   * Everything the diff view could be showing, and which of them it is.
-   *
-   * The route says which one, and the trail is how it is changed: picking a
-   * crumb navigates, so the URL follows the choice instead of being the way the
-   * choice has to be made.
-   */
-  const sources = useMemo(() => diffSources(pulls.data ?? []), [pulls.data]);
-  const source: DiffSource =
-    selectedPull !== null ? { kind: "pull", pull: selectedPull } : LOCAL_SOURCE;
-
-  const openSource = (next: DiffSource) =>
-    void navigate({
-      to: reviewHref(
-        next.kind === "local"
-          ? { kind: "local" }
-          : { kind: "pull", number: next.pull.number }
-      ),
-      search: {},
-    });
-
-  /**
-   * What the source is read against, when that is something you can change.
-   *
-   * `own` is the answer it falls back to; a pull request has one but it is
-   * GitHub's, so it is named and not offered. Local changes have none — read
-   * against nothing, they are simply what is uncommitted — which is why that is
-   * the entry the menu offers instead.
-   */
-  const comparable =
-    source.kind === "pull"
-      ? null
-      : {
-          against: reading === null || reading.length === 0 ? null : reading,
-          own: null,
-          exclude: repo.data?.currentBranch ?? null,
-          shown: reading === null || reading.length === 0 ? null : reading,
-        };
-
-  const compareAgainst = (branch: string | null) =>
-    // Empty, not absent: absent would only let the branch's own aim answer
-    // again, and this is how you say you meant otherwise.
-    void navigate({ to: REVIEW_HREF, search: { target: branch ?? "" } });
 
   const diff = useDiffText(target);
   // The uncommitted diff of every root at once, its paths named from the
@@ -429,6 +376,9 @@ export function CodeWorkspace() {
     [listing?.gitStatus]
   );
   const allPaths = useMemo(() => listing?.paths ?? [], [listing?.paths]);
+  // Read against a branch, the tree is the comparison's files rather than only
+  // what git calls changed — see `treePaths`.
+  const comparing = target?.kind === "branch";
   const treePaths = useMemo(
     () =>
       diffFns.treePaths({
@@ -437,12 +387,20 @@ export function CodeWorkspace() {
         gitStatus,
         parsedFiles,
         commentedPaths,
+        comparing,
       }),
-    [diffFns, mode, allPaths, gitStatus, parsedFiles, commentedPaths]
+    [diffFns, mode, allPaths, gitStatus, parsedFiles, commentedPaths, comparing]
   );
   const treeGitStatus = useMemo(
-    () => diffFns.treeGitStatus({ mode, allPaths, gitStatus, parsedFiles }),
-    [diffFns, mode, allPaths, gitStatus, parsedFiles]
+    () =>
+      diffFns.treeGitStatus({
+        mode,
+        allPaths,
+        gitStatus,
+        parsedFiles,
+        comparing,
+      }),
+    [diffFns, mode, allPaths, gitStatus, parsedFiles, comparing]
   );
   const changedFiles = useMemo(
     () => diffFns.changedFiles(gitStatus),
@@ -468,25 +426,6 @@ export function CodeWorkspace() {
   );
 
   // --- review → agent: hand the comments in view (local + GitHub) to an agent.
-  /**
-   * The tree behind a source, and going to work in it.
-   *
-   * The changes in front of you belong to the checkout the project was opened
-   * on. A pull request has no tree here at all — nothing to check out until
-   * somebody fetches it.
-   *
-   * Reading a source and working in it are separate acts, so going there leaves
-   * the diff where it is: the diff you were reading is why you went.
-   */
-  const inTree = workspace.data?.current ?? null;
-  const treeOf = (of: DiffSource): string | null =>
-    of.kind === "local" ? inTree : null;
-  const checkedOut = sources.find((entry) => treeOf(entry) === inTree) ?? null;
-  const checkOut = (of: DiffSource) => {
-    const path = treeOf(of);
-    if (path !== null) void workspaceActions.followRepo(path, inTree);
-  };
-
   /** Where the comments' agent is to work — the checkout you are standing in. */
   const assignPlace: ChatPlace = { branch: repo.data?.currentBranch ?? "" };
 
@@ -857,60 +796,13 @@ export function CodeWorkspace() {
     const openPath = viewing;
     const list: Crumb[] = [];
     if (mode === "commit" || mode === "review") {
-      // One trail for both, because it is one view: the first crumb names what
-      // is on screen and carries every other thing it could be, so moving
-      // between your own changes and a pull request is a menu rather than a
-      // mode.
-      list.push({
-        id: "diff-source",
-        label: diffSourceLabel(source),
-        hint: source.kind === "pull" ? `#${source.pull.number}` : undefined,
-        icon: diffSourceIcon(source),
-        menu: () => (
-          <DiffSourceItems
-            sources={sources}
-            current={diffSourceKey(source)}
-            checkedOut={checkedOut === null ? null : diffSourceKey(checkedOut)}
-            onSelect={openSource}
-            onCheckout={checkOut}
-          />
-        ),
-      });
-      if (source.kind === "pull") {
-        // GitHub decides what a pull request is read against, so this one is
-        // told rather than offered.
-        list.push({
-          id: "diff-against",
-          label: source.pull.baseRef,
-          title: `Read against ‘${source.pull.baseRef}’`,
-          separator: IconGitCompare,
-        });
-      } else if (comparable !== null && comparable.shown !== null) {
-        // Only when there is something to say. Read against nothing, your own
-        // changes are simply what is uncommitted — a crumb saying so is a
-        // comparison crumb naming the absence of a comparison.
-        const shown = comparable.shown;
-        list.push({
-          id: "diff-against",
-          // The whole ref, folder and all. A branch's folder is part of its
-          // name — `task/x` and `fix/x` are different branches — and dropping
-          // it to save a few characters loses the half people sort by.
-          label: shown,
-          title: `Read against ‘${shown}’`,
-          // The compare glyph stands between the two, which is where the
-          // relation is: what is being read, against what.
-          separator: IconGitCompare,
-          menu: () => (
-            <CompareItems
-              branches={(branches.data ?? []).map((entry) => entry.name)}
-              against={comparable.against}
-              own={comparable.own}
-              exclude={comparable.exclude}
-              onSelect={compareAgainst}
-            />
-          ),
-        });
-      }
+      // Nothing. A diff used to open with a crumb naming its source and a menu
+      // of everything else it could have been, and a second crumb naming what
+      // it was read against — a strip along the foot of the pane restating
+      // what the chrome around it already said. What is on screen is chosen
+      // from the merge-request list and from the header: the branch picker,
+      // and the compare picker beside it. A file opened over the diff still
+      // brings the bar back, because then it has a path to say.
     } else if (browse !== null) {
       // A commit or a range came from the log, so the trail runs through
       // History — that's what tells this apart from plain file browsing, and
@@ -1187,10 +1079,16 @@ export function CodeWorkspace() {
         onEditFile={openFile}
         onShowFileHistory={showFileHistory}
         onDiscardFile={
-          mode === "commit" ? (p) => void git.discard([p]) : undefined
+          // Discarding restores a file from HEAD, and a hunk is found by its
+          // place in the diff against HEAD. Read against a branch, the pane is
+          // showing a different diff — one whose hunks are mostly committed —
+          // so the same gesture would undo something other than what it points
+          // at. It is offered on the working-tree diff, where it means what it
+          // says.
+          target?.kind === "worktree" ? (p) => void git.discard([p]) : undefined
         }
         onDiscardHunk={
-          mode === "commit"
+          target?.kind === "worktree"
             ? (p, hunkIndex) => void git.discardHunk(p, hunkIndex)
             : undefined
         }
@@ -1221,7 +1119,13 @@ export function CodeWorkspace() {
       onError={(message) => toast.error(message)}
       onShowHistory={showFileHistory}
       onDiscardPaths={
-        mode === "commit" ? (paths) => void git.discard(paths) : undefined
+        // A working-tree action, offered while the working tree is what is
+        // being read: against a branch, the tree's badges are the comparison's
+        // and a discard would answer for HEAD instead — see the pane's own
+        // discard above.
+        target?.kind === "worktree"
+          ? (paths) => void git.discard(paths)
+          : undefined
       }
       projectPath={workspace.data?.project ?? null}
       footer={
@@ -1275,7 +1179,7 @@ export function CodeWorkspace() {
         pulls={pulls.data ?? []}
         error={
           pulls.error
-            ? errorReason(pulls.error, "Could not load pull requests")
+            ? errorReason(pulls.error, "Could not load merge requests")
             : null
         }
         // A query that was never enabled is pending for as long as the window

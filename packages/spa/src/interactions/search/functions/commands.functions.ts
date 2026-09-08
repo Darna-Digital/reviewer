@@ -57,10 +57,10 @@ export const buildCodeCommands = (
     },
     {
       id: "go-reviews",
-      label: "Go to Reviews",
+      label: "Go to Merge requests",
       group: "Navigation",
       icon: IconGitPullRequest,
-      keywords: "review pr github pull requests",
+      keywords: "merge request mr review pr github pull requests",
       run: () => goTo("/modes/code/reviews"),
     },
     {

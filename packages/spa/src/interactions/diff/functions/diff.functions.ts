@@ -57,18 +57,35 @@ export function createDiffFunctions(d: DiffDependencies): DiffFunctions {
     gitStatus,
     parsedFiles,
     commentedPaths = [],
+    comparing = false,
   }: TreeInputs) => {
     if (mode === "browse")
       return allPaths.filter((path) => !isInternalPath(path));
     if (mode === "commit") {
       const commented = new Set(commentedPaths);
-      return allPaths
+      // Read against a branch, the diff's own files belong in the tree too:
+      // a file committed earlier on the branch is part of the change being
+      // read, however quiet it has been since.
+      const compared = new Set(
+        comparing ? parsedFiles.map((file) => file.name) : []
+      );
+      const listed = allPaths
         .filter((path) => !isInternalPath(path))
         .filter(
           (path) =>
             gitStatus.some((entry) => entry.path === path) ||
-            commented.has(path)
+            commented.has(path) ||
+            compared.has(path)
         );
+      // A file the branch deleted is in the diff and gone from disk, so the
+      // repository's file list cannot supply it.
+      const seen = new Set(listed);
+      return [
+        ...listed,
+        ...[...compared].filter(
+          (path) => !seen.has(path) && !isInternalPath(path)
+        ),
+      ];
     }
     return parsedFiles.map((file) => file.name);
   };
@@ -77,14 +94,24 @@ export function createDiffFunctions(d: DiffDependencies): DiffFunctions {
     mode,
     gitStatus,
     parsedFiles,
+    comparing = false,
   }: TreeInputs) => {
-    if (mode === "review") {
-      return parsedFiles.map((file) => ({
-        path: file.name,
-        status: fileTypeToStatus(file.type),
-      }));
-    }
-    return gitStatus.filter((entry) => !isInternalPath(entry.path));
+    const fromDiff = parsedFiles.map((file) => ({
+      path: file.name,
+      status: fileTypeToStatus(file.type),
+    }));
+    if (mode === "review") return fromDiff;
+    const live = gitStatus.filter((entry) => !isInternalPath(entry.path));
+    if (!comparing) return live;
+    // The badge says what the file is against what it is being read against —
+    // a file added by a commit on the branch reads as added, not as unchanged.
+    // Uncommitted entries the diff cannot carry (an untracked file) keep
+    // theirs, so nothing loses its badge by comparing.
+    const inDiff = new Set(fromDiff.map((entry) => entry.path));
+    return [
+      ...fromDiff.filter((entry) => !isInternalPath(entry.path)),
+      ...live.filter((entry) => !inDiff.has(entry.path)),
+    ];
   };
 
   const changedFiles: DiffFunctions["changedFiles"] = (gitStatus) =>
