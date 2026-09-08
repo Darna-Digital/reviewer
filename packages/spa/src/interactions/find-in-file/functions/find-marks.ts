@@ -173,6 +173,77 @@ export const paintFindMatches = (
   return rest.length + current.length;
 };
 
+/**
+ * How far a match sits outside the code's own sideways scroll, and what
+ * `scrollLeft` brings it in.
+ *
+ * With long lines scrolling rather than wrapping, a match can be a hundred
+ * columns off the right edge — highlighted, counted, and invisible. The gutter
+ * is pinned over the left of the code, so the room a match has to be seen in
+ * starts after it: `viewLeft` is the far side of the line numbers, not the
+ * scroller's own edge.
+ *
+ * Everything is in viewport pixels except the answer, which is a scroll offset.
+ */
+export const scrollLeftShowing = (
+  match: { readonly left: number; readonly right: number },
+  view: { readonly left: number; readonly right: number },
+  scrollLeft: number,
+  margin: number
+): number => {
+  const room = view.right - view.left;
+  // Nowhere to put it: the pane is narrower than the margins would ask for.
+  if (room <= 0) return scrollLeft;
+  if (match.left < view.left + margin) {
+    return Math.max(0, scrollLeft - (view.left + margin - match.left));
+  }
+  if (match.right > view.right - margin) {
+    // A match wider than the pane is shown from its start rather than its end,
+    // which is where reading it begins.
+    const wanted = match.right - (view.right - margin);
+    const most = match.left - view.left;
+    return Math.max(0, scrollLeft + Math.min(wanted, most));
+  }
+  return scrollLeft;
+};
+
+/** Room left either side of a match when the code is scrolled to show it. */
+const REVEAL_MARGIN_PX = 24;
+
+/**
+ * Scroll the code sideways until the current match is on screen. Answers
+ * whether there was a match rendered to scroll to — the caller retries as the
+ * virtualiser brings the line in.
+ */
+export const revealFindMatch = (
+  container: HTMLElement,
+  matches: ReadonlyArray<FindMatch>,
+  activeIndex: number
+): boolean => {
+  const { current } = findRanges(container, matches, activeIndex);
+  const range = current[0];
+  if (range === undefined) return false;
+  const line =
+    range.startContainer instanceof Element
+      ? range.startContainer
+      : range.startContainer.parentElement;
+  const code = line?.closest("[data-code]");
+  if (!(code instanceof HTMLElement)) return true;
+  // Nothing to slide: the lines are wrapped, or the file is narrower than the
+  // pane.
+  if (code.scrollWidth <= code.clientWidth) return true;
+  const bounds = code.getBoundingClientRect();
+  const gutter = code.querySelector("[data-gutter]");
+  const inset = gutter === null ? 0 : gutter.getBoundingClientRect().width;
+  code.scrollLeft = scrollLeftShowing(
+    range.getBoundingClientRect(),
+    { left: bounds.left + inset, right: bounds.right },
+    code.scrollLeft,
+    REVEAL_MARGIN_PX
+  );
+  return true;
+};
+
 /** Take every mark back off, leaving the view as it was found. */
 export const clearFindMarks = (): void => {
   if (!supported()) return;

@@ -229,7 +229,9 @@ describe("operators", () => {
   it("changes a word and leaves the caret typing", () => {
     const changed = type(open(), ["c", "w"]);
     expect(changed.state.mode).toBe("insert");
-    expect(changed.text.split("\n")[0]).toBe("greeting = 'hello';");
+    // `cw` on a word is `ce`, not `dw` and insert: the space after the word
+    // stays, so what is typed does not run into the next one.
+    expect(changed.text.split("\n")[0]).toBe(" greeting = 'hello';");
     expect(changed.caret).toEqual({ line: 0, character: 0 });
   });
 
@@ -528,5 +530,160 @@ describe("a press in the code", () => {
     expect(afterPointerPress(normal)).toBe(normal);
     const inserting = type(open(), ["i"]).state;
     expect(afterPointerPress(inserting)).toBe(inserting);
+  });
+});
+
+describe("where Vim's own special cases are", () => {
+  it("changes only the word with cw, leaving the space after it", () => {
+    // `cw` is `ce`, not `dw` and insert — otherwise what is typed runs into the
+    // next word.
+    const changed = type(open("foo bar"), ["c", "w"]);
+    expect(changed.text).toBe(" bar");
+    expect(changed.state.mode).toBe("insert");
+  });
+
+  it("changes only to the end of the word from inside it", () => {
+    // `ce` from here would run on to the end of `bar`; `cw` stops at `foo`.
+    expect(
+      type(open("foo bar", { line: 0, character: 2 }), ["c", "w"]).text
+    ).toBe("fo bar");
+  });
+
+  it("counts whole words for c2w", () => {
+    expect(type(open("foo bar baz"), ["c", "2", "w"]).text).toBe(" baz");
+  });
+
+  it("changes the whitespace itself when the caret is standing on it", () => {
+    // Nothing special about `cw` on a blank: it is `dw`, as in Vim.
+    expect(
+      type(open("a   b", { line: 0, character: 1 }), ["c", "w"]).text
+    ).toBe("ab");
+  });
+
+  it("stops dw at the end of a line rather than joining the next one", () => {
+    const one = type(open("foo bar\nbaz qux", { line: 0, character: 4 }), [
+      "d",
+      "w",
+    ]);
+    expect(one.text).toBe("foo \nbaz qux");
+    // Which is what the register holds too — no line break came with it.
+    expect(one.state.register).toEqual({ text: "bar", linewise: false });
+    // The rule counts words, not lines: `d2w` still stops at the end of the one
+    // the second word is on.
+    expect(type(open("foo bar\nbaz"), ["d", "2", "w"]).text).toBe("\nbaz");
+  });
+
+  it("still joins when the caret is on a line's trailing space", () => {
+    // No word was moved over, so the special case does not apply.
+    expect(
+      type(open("foo   \nbar", { line: 0, character: 4 }), ["d", "w"]).text
+    ).toBe("foo bar");
+  });
+
+  it("counts an empty line as a word of its own", () => {
+    const file = "a\n\nb";
+    expect(type(open(file), ["w"]).caret).toEqual({ line: 1, character: 0 });
+    expect(type(open(file), ["w", "w"]).caret).toEqual({
+      line: 2,
+      character: 0,
+    });
+    expect(type(open(file, { line: 2, character: 0 }), ["b"]).caret).toEqual({
+      line: 1,
+      character: 0,
+    });
+  });
+});
+
+describe("a motion that cannot be made", () => {
+  it("takes the whole operator with it rather than half of one", () => {
+    // `dfZ` with no Z on the line used to fall back on a zero-width range that
+    // the inclusive bump still turned into one deleted character.
+    expect(type(open("abc"), ["d", "f", "Z"]).text).toBe("abc");
+    expect(type(open("a ( b"), ["f", "(", "d", "%"]).text).toBe("a ( b");
+    expect(type(open("abc"), ["d", "[", "{"]).text).toBe("abc");
+  });
+
+  it("refuses dj on the last line and dk on the first", () => {
+    expect(type(open("a\nb", { line: 1, character: 0 }), ["d", "j"]).text).toBe(
+      "a\nb"
+    );
+    expect(type(open("a\nb"), ["d", "k"]).text).toBe("a\nb");
+    // And a count that reaches past the end takes nothing at all.
+    expect(type(open("a\nb\nc"), ["d", "3", "j"]).text).toBe("a\nb\nc");
+  });
+
+  it("still lets a plain motion stop where the file does", () => {
+    expect(
+      type(open("a\nb", { line: 1, character: 0 }), ["j"]).caret.line
+    ).toBe(1);
+    expect(type(open("abc"), ["f", "Z"]).caret.character).toBe(0);
+  });
+
+  it("keeps dd counting to the end of the file, which is not a failure", () => {
+    expect(
+      type(open("a\nb", { line: 1, character: 0 }), ["2", "d", "d"]).text
+    ).toBe("a");
+  });
+});
+
+describe("f, F, t and T", () => {
+  const LINE = "a,b,c";
+
+  it("counts occurrences rather than starting the search short of them", () => {
+    expect(type(open(LINE), ["2", "f", ","]).caret.character).toBe(3);
+    expect(type(open(LINE), ["2", "t", ","]).caret.character).toBe(2);
+    expect(
+      type(open(LINE, { line: 0, character: 4 }), ["2", "T", ","]).caret
+        .character
+    ).toBe(2);
+  });
+
+  it("stops before the very next character, and dt takes only what is behind it", () => {
+    expect(type(open("a,,b"), ["d", "t", ","]).text).toBe(",,b");
+    // The motion stands still, and the operator still takes the character the
+    // caret is on — exactly as Vim does.
+    expect(type(open("a,b"), ["t", ","]).caret.character).toBe(0);
+  });
+});
+
+describe("the caret after an edit", () => {
+  it("never sits past the end of the line the delete leaves behind", () => {
+    // Deleting to the end of the buffer used to leave the caret measured
+    // against the longer line that had just gone.
+    const run = type(open("ab\ncd", { line: 1, character: 1 }), [
+      "v",
+      "k",
+      "d",
+    ]);
+    expect(run.text).toBe("a");
+    expect(run.caret).toEqual({ line: 0, character: 0 });
+  });
+
+  it("lands on the last character replaced by a counted r", () => {
+    const run = type(open("abcd"), ["3", "r", "z"]);
+    expect(run.text).toBe("zzzd");
+    expect(run.caret).toEqual({ line: 0, character: 2 });
+  });
+
+  it("leaves a counted r alone when the line is too short for it", () => {
+    expect(type(open("ab"), ["3", "r", "z"]).text).toBe("ab");
+  });
+});
+
+describe("J, as Vim spells it", () => {
+  it("keeps the white space a line already ends with rather than adding more", () => {
+    const run = type(open("foo   \n  bar"), ["J"]);
+    expect(run.text).toBe("foo   bar");
+    expect(run.caret).toEqual({ line: 0, character: 6 });
+  });
+
+  it("closes a continuation up against the line it continues", () => {
+    expect(type(open("call(a,\n  )"), ["J"]).text).toBe("call(a,)");
+  });
+
+  it("leaves the caret on the seam it last closed", () => {
+    const run = type(open("a\nb\nc\nd"), ["3", "J"]);
+    expect(run.text).toBe("a b c\nd");
+    expect(run.caret).toEqual({ line: 0, character: 3 });
   });
 });

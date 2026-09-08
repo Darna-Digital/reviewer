@@ -34,6 +34,7 @@ import {
   FIND_CSS,
   clearFindMarks,
   paintFindMatches,
+  revealFindMatch,
   topVisibleLine,
 } from "../functions/find-marks";
 import type {
@@ -171,15 +172,42 @@ export function useFindInFile({
   const state = useRef({ open, matches, activeIndex });
   state.current = { open, matches, activeIndex };
 
+  /**
+   * The match the code was last scrolled sideways to show. Long lines scroll
+   * rather than wrap, so stepping to a match a hundred columns along has to
+   * bring it into view — but only once per match, or every re-render while the
+   * virtualiser works would drag the code back from wherever the reader has
+   * since scrolled it.
+   */
+  const revealed = useRef<string | null>(null);
+
   const paint = useCallback(() => {
     const node = container.current;
     if (node === null) return;
     const now = state.current;
-    if (!now.open) clearFindMarks();
-    else paintFindMatches(node, now.matches, now.activeIndex);
+    if (!now.open) {
+      clearFindMarks();
+      return;
+    }
+    paintFindMatches(node, now.matches, now.activeIndex);
+    const match = now.matches[now.activeIndex];
+    if (match === undefined) return;
+    const key = `${match.line}:${match.start}:${match.end}`;
+    // The line may not be rendered yet — the vertical scroll is still on its
+    // way there — so this runs again on the next paint until it is.
+    if (
+      revealed.current !== key &&
+      revealFindMatch(node, now.matches, now.activeIndex)
+    ) {
+      revealed.current = key;
+    }
   }, []);
 
   useEffect(paint, [paint, open, matches, activeIndex]);
+  // A closed bar, or another file, has nothing it has already shown.
+  useEffect(() => {
+    revealed.current = null;
+  }, [open, path]);
   useEffect(() => clearFindMarks, []);
 
   const onPostRender = useCallback(

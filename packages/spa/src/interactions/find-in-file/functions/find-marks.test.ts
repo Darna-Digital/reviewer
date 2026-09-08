@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import { findRanges, topVisibleLine } from "./find-marks";
+import { findRanges, scrollLeftShowing, topVisibleLine } from "./find-marks";
 import type { FindMatch } from "../interfaces/find-in-file.interfaces";
 
 /**
@@ -102,5 +102,53 @@ describe("topVisibleLine", () => {
     place(scroller, 100, 300);
     place(scroller.querySelector("[data-line]")!, 0, 20);
     expect(topVisibleLine(scroller)).toBeNull();
+  });
+});
+
+describe("scrollLeftShowing", () => {
+  // A pane running from 100 to 500 in viewport pixels, its line numbers taking
+  // the first 40 of it, currently scrolled 200 along.
+  const pane = { left: 140, right: 500 };
+
+  it("leaves the code where it is when the match is already in view", () => {
+    expect(scrollLeftShowing({ left: 200, right: 260 }, pane, 200, 24)).toBe(
+      200
+    );
+  });
+
+  it("brings a match back from off the right edge", () => {
+    // 60px past the right edge, plus the 24px margin.
+    expect(scrollLeftShowing({ left: 500, right: 560 }, pane, 200, 24)).toBe(
+      284
+    );
+  });
+
+  it("brings one back from behind the line numbers", () => {
+    expect(scrollLeftShowing({ left: 100, right: 160 }, pane, 200, 24)).toBe(
+      136
+    );
+  });
+
+  it("shows a match wider than the pane from its start", () => {
+    // Scrolling far enough to see its end would push its start out of sight,
+    // which is the half you read first.
+    expect(scrollLeftShowing({ left: 300, right: 2000 }, pane, 200, 24)).toBe(
+      360
+    );
+  });
+
+  it("never scrolls past the start of the line", () => {
+    expect(scrollLeftShowing({ left: 0, right: 60 }, pane, 20, 24)).toBe(0);
+  });
+
+  it("gives up rather than thrashing a pane with no room in it", () => {
+    expect(
+      scrollLeftShowing(
+        { left: 0, right: 10 },
+        { left: 140, right: 140 },
+        90,
+        24
+      )
+    ).toBe(90);
   });
 });

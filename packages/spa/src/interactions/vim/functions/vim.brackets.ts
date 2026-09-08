@@ -14,6 +14,11 @@
  */
 import type { VimPosition } from "../interfaces/vim.interfaces";
 
+/**
+ * What `%` jumps between. `<` is deliberately absent: it is a comparison far
+ * more often than it is a bracket, and `%` scans the whole line for the first
+ * one it can find.
+ */
 const PAIRS: Readonly<Record<string, string>> = {
   "(": ")",
   "[": "]",
@@ -23,6 +28,16 @@ const CLOSERS: Readonly<Record<string, string>> = {
   ")": "(",
   "]": "[",
   "}": "{",
+};
+
+/**
+ * What a block can be written in, for the motions and objects that are told
+ * which wall to look for — `[{`, `di(`, `ca<`. Naming the pair is what makes
+ * `<` safe here: nothing goes looking for one unless it was asked to.
+ */
+const BLOCK_PAIRS: Readonly<Record<string, string>> = {
+  ...PAIRS,
+  "<": ">",
 };
 
 const charAt = (
@@ -118,7 +133,7 @@ export function enclosingBracket(
   ahead: boolean,
   count: number
 ): VimPosition | null {
-  const close = PAIRS[open];
+  const close = BLOCK_PAIRS[open];
   if (close === undefined) return null;
   const step = ahead ? forward : backward;
   let at: VimPosition | null = caret;
@@ -207,4 +222,29 @@ export function sectionJump(
     line = Math.max(0, Math.min(next, lines.length - 1));
   }
   return { line, character: 0 };
+}
+
+/**
+ * The partner of the bracket the caret is standing on, whichever end of the
+ * pair that is. Null when it is not standing on one, or when the pair is not
+ * closed.
+ *
+ * `%` answers the same question for a caret merely *near* a bracket; the text
+ * objects need the stricter one, since standing on a wall is what tells `ci(`
+ * which block was meant.
+ */
+export function bracketPartner(
+  lines: ReadonlyArray<string>,
+  at: VimPosition
+): VimPosition | null {
+  const character = charAt(lines, at);
+  if (character === undefined) return null;
+  const close = BLOCK_PAIRS[character];
+  if (close !== undefined) return partnerOf(lines, at, character, close, true);
+  const open = Object.keys(BLOCK_PAIRS).find(
+    (key) => BLOCK_PAIRS[key] === character
+  );
+  return open === undefined
+    ? null
+    : partnerOf(lines, at, open, character, false);
 }

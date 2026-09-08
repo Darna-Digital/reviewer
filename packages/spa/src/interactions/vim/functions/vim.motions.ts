@@ -86,6 +86,15 @@ const toPosition = (
 
 const documentText = (lines: ReadonlyArray<string>) => lines.join("\n");
 
+/**
+ * Whether `at` is the start of an empty line.
+ *
+ * Vim counts one as a word of its own, which is what stops `w` running a whole
+ * blank stanza together and what makes `dw` on the line above stop at it.
+ */
+const startsEmptyLine = (text: string, at: number): boolean =>
+  at > 0 && text[at - 1] === "\n" && (at >= text.length || text[at] === "\n");
+
 /** One `w`: past the current run, then past any blanks. */
 const wordForwardOnce = (
   lines: ReadonlyArray<string>,
@@ -101,8 +110,10 @@ const wordForwardOnce = (
   if (start !== "blank") {
     while (at < end && klass(text[at]) === start && text[at] !== "\n") at += 1;
   }
-  while (at < end && (klass(text[at]) === "blank" || text[at] === "\n"))
+  while (at < end && (klass(text[at]) === "blank" || text[at] === "\n")) {
     at += 1;
+    if (startsEmptyLine(text, at)) break;
+  }
   return toPosition(lines, Math.min(at, end));
 };
 
@@ -117,7 +128,10 @@ const wordBackOnce = (
   let at = toOffset(lines, from);
   if (at <= 0) return { line: 0, character: 0 };
   at -= 1;
-  while (at > 0 && (klass(text[at]) === "blank" || text[at] === "\n")) at -= 1;
+  while (at > 0 && (klass(text[at]) === "blank" || text[at] === "\n")) {
+    if (startsEmptyLine(text, at)) return toPosition(lines, at);
+    at -= 1;
+  }
   const run = klass(text[at]);
   if (run === "blank") return toPosition(lines, 0);
   while (at > 0 && klass(text[at - 1]) === run && text[at - 1] !== "\n")
@@ -147,41 +161,54 @@ const wordEndOnce = (
   return toPosition(lines, at);
 };
 
-/** `f` / `t` and their capitals, which never leave the caret's own line. */
-const findCharOnce = (
+/**
+ * `f` / `t` and their capitals, which never leave the caret's own line.
+ *
+ * The count picks the occurrence, and `till` only steps off it once that
+ * occurrence has been found — searching from a column short of the caret would
+ * make `2t,` land on the first comma rather than the second, and `dt,` eat the
+ * comma when it is the very next character.
+ */
+const findCharTarget = (
   text: string,
   from: number,
   char: string,
   forward: boolean,
-  till: boolean
+  till: boolean,
+  count: number
 ): number | null => {
-  // `t` starts one further out, so repeating it does not stand still.
-  const start = forward ? from + (till ? 2 : 1) : from - (till ? 2 : 1);
-  if (forward) {
-    for (let at = start; at < text.length; at++) {
-      if (text[at] === char) return till ? at - 1 : at;
-    }
-    return null;
+  let at = from;
+  for (let n = 0; n < count; n++) {
+    const found = forward
+      ? text.indexOf(char, at + 1)
+      : at <= 0
+        ? -1
+        : text.lastIndexOf(char, at - 1);
+    if (found === -1) return null;
+    at = found;
   }
-  for (let at = start; at >= 0; at--) {
-    if (text[at] === char) return till ? at + 1 : at;
-  }
-  return null;
+  return till ? (forward ? at - 1 : at + 1) : at;
 };
 
 /**
- * Where `motion` lands, `count` times over.
+ * Where `motion` lands, or null when it cannot be made at all — a `f` that
+ * finds nothing, a `%` over an unbalanced bracket, a `j` on the last line.
+ *
+ * A plain move treats that as "stay put" (see `applyMotion`), but an operator
+ * has to abandon the whole command: `dfZ` where there is no Z deletes nothing,
+ * rather than falling back on a zero-width range that still takes a character
+ * with it.
  *
  * `past` says whether the caret may sit after a line's last character — true
  * while inserting, and for the end of the range an operator works on.
  */
-export function applyMotion(
+export function motionTarget(
   lines: ReadonlyArray<string>,
   caret: VimPosition,
   motion: VimMotion,
   count: number,
   past: boolean
-): VimPosition {
+): VimPosition | null {
   const at = clampCaret(lines, caret, past);
   const text = lines[at.line] ?? "";
 
@@ -195,15 +222,19 @@ export function applyMotion(
       };
     case "up":
     case "down": {
-      const line = clampLine(
-        lines,
-        at.line + (motion.kind === "down" ? count : -count)
-      );
+      const wanted = at.line + (motion.kind === "down" ? count : -count);
+      // Off the end of the file: as a move this stops at the last line, but as
+      // an operator's motion it is a failure — `dj` on the last line takes
+      // nothing with it, rather than quietly deleting the line it is on.
+      if (wanted < 0 || wanted > lines.length - 1) return null;
       // Vim keeps the column it was aiming for; this keeps the simpler promise
       // of never landing past the end of the line it arrives on.
       return {
-        line,
-        character: Math.min(at.character, lastColumn(lines[line] ?? "", past)),
+        line: wanted,
+        character: Math.min(
+          at.character,
+          lastColumn(lines[wanted] ?? "", past)
+        ),
       };
     }
     case "halfPageDown":
@@ -254,7 +285,7 @@ export function applyMotion(
     case "matchBracket": {
       // Unbalanced, or no bracket on the line: Vim beeps and stays put.
       const found = matchingBracket(lines, at);
-      return found === null ? at : clampCaret(lines, found, past);
+      return found === null ? null : clampCaret(lines, found, past);
     }
     case "enclosing": {
       const found = enclosingBracket(
@@ -264,7 +295,7 @@ export function applyMotion(
         motion.ahead,
         count
       );
-      return found === null ? at : clampCaret(lines, found, past);
+      return found === null ? null : clampCaret(lines, found, past);
     }
     case "paragraph":
       return clampCaret(
@@ -279,22 +310,64 @@ export function applyMotion(
         past
       );
     case "findChar": {
-      let column = at.character;
-      for (let n = 0; n < count; n++) {
-        const found = findCharOnce(
-          text,
-          column,
-          motion.char,
-          motion.forward,
-          motion.till
-        );
-        // A search that fails leaves the caret exactly where it was, as in Vim.
-        if (found === null) return at;
-        column = found;
-      }
-      return { line: at.line, character: column };
+      const column = findCharTarget(
+        text,
+        at.character,
+        motion.char,
+        motion.forward,
+        motion.till,
+        count
+      );
+      // A search that fails leaves the caret exactly where it was, as in Vim.
+      return column === null ? null : { line: at.line, character: column };
     }
   }
+}
+
+/**
+ * Where `motion` lands, with a motion that cannot be made leaving the caret
+ * where it is — which is what a plain move does, and what `applyMotion`'s
+ * callers have always been written against.
+ */
+export function applyMotion(
+  lines: ReadonlyArray<string>,
+  caret: VimPosition,
+  motion: VimMotion,
+  count: number,
+  past: boolean
+): VimPosition {
+  return (
+    motionTarget(lines, caret, motion, count, past) ??
+    clampCaret(lines, caret, past)
+  );
+}
+
+/**
+ * Where an operator's `w` stops.
+ *
+ * Vim's own special case: when the last word moved over ends a line, the
+ * operated text ends there too rather than running on into the first word of
+ * the next line — `dw` on the last word of a line does not join the two.
+ * Starting on whitespace there is no word being moved over, so the ordinary
+ * motion stands and `dw` on a line's trailing spaces still joins.
+ */
+export function wordOperatorEnd(
+  lines: ReadonlyArray<string>,
+  caret: VimPosition,
+  count: number,
+  big: boolean
+): VimPosition {
+  let at = clampCaret(lines, caret, true);
+  for (let n = 0; n < count; n++) {
+    const onWord = classOf((lines[at.line] ?? "")[at.character]) !== "blank";
+    const next = wordForwardOnce(lines, at, big);
+    if (onWord && next.line > at.line) {
+      return { line: at.line, character: (lines[at.line] ?? "").length };
+    }
+    if (next.line === at.line && next.character === at.character) break;
+    at = next;
+  }
+  return clampCaret(lines, at, true);
 }
 
 /** Whether a motion covers whole lines, which is what an operator acts on. */

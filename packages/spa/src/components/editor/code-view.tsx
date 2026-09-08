@@ -419,7 +419,14 @@ export function CodeView({
               options={{
                 theme: THEMES,
                 themeType: theme,
-                overflow: "wrap",
+                // Code is not prose: a long line runs off the side and is
+                // scrolled to, rather than being folded back under itself.
+                // Wrapping gave one statement several rows of its own, so the
+                // gutter no longer read as one number per row and the file
+                // reflowed whenever the pane was resized. The view pins the
+                // gutter and slides the code under it — see
+                // `[data-overflow="scroll"]` in the library's own stylesheet.
+                overflow: "scroll",
                 stickyHeader: false,
                 // The path, the file's actions and the trail that led here all
                 // belong on one line — the crumb bar above owns it, so the
