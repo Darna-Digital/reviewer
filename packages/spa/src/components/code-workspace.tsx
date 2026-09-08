@@ -608,7 +608,24 @@ export function CodeWorkspace() {
     whenMayLeaveFile(undefined, () => setSearch({ file: undefined }));
   };
 
-  const fileActions = useFileActions(openFile);
+  /**
+   * A file the tree has just made, opened with the caret in it.
+   *
+   * Naming a new file is the start of writing it, so the keyboard has to end
+   * up in the empty buffer rather than back on the row that made it — the
+   * counter re-asks for the caret each time, since the same path can be made,
+   * deleted and made again.
+   */
+  const [caretRequest, setCaretRequest] = useState<{
+    readonly path: string;
+    readonly key: number;
+  } | null>(null);
+  const openNewFile = (path: string) => {
+    openFile(path);
+    setCaretRequest((previous) => ({ path, key: (previous?.key ?? 0) + 1 }));
+  };
+
+  const fileActions = useFileActions(openNewFile);
   // A folder created here holds nothing for git to list, so the tree is told
   // about it separately until it does.
   const sidebarPaths = useMemo(
@@ -1111,6 +1128,7 @@ export function CodeWorkspace() {
         <CodeView
           path={viewing}
           theme={prefs.resolvedTheme}
+          caretKey={caretRequest?.path === viewing ? caretRequest.key : null}
           onSaved={git.refresh}
           onDirtyChange={onDirtyChange}
           actionsSlot={fileActionsSlot}
