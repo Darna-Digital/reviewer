@@ -43,4 +43,11 @@ describe("agentCommand", () => {
       "cursor-agent -p 'it'\\''s fine'"
     );
   });
+
+  it("drops NUL bytes, which a spawn's argv cannot carry", () => {
+    expect(agentCommand("claude", "diff\u0000 tail")).toBe(
+      "claude -p 'diff tail' --output-format text"
+    );
+    expect(agentCommand("terminal", "ls\u0000 -la")).toBe("ls -la");
+  });
 });

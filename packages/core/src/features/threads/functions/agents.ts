@@ -7,7 +7,16 @@ export const AGENT_KINDS = [
   "codex",
   "cursor",
 ] as const satisfies ReadonlyArray<AgentKind>;
-const quote = (value: string) => `'${value.replace(/'/g, "'\\''")}'`;
+/**
+ * A NUL byte cannot survive argv — Node rejects the spawn outright with
+ * "argument must be a string without null bytes" — and one reaches here for
+ * real: a git diff of a file git reads as text but which carries a NUL (past
+ * the first 8000 bytes, or forced text by .gitattributes) lands whole in a
+ * drafted commit-message prompt. Dropping it costs the prompt nothing.
+ */
+const withoutNulls = (value: string) => value.replace(/\0/g, "");
+const quote = (value: string) =>
+  `'${withoutNulls(value).replace(/'/g, "'\\''")}'`;
 export const agentLabel: Record<AgentKind, string> = {
   terminal: "Terminal",
   claude: "Claude Code",
@@ -20,7 +29,7 @@ export const agentDefaultTitle = (agent: AgentKind): string =>
 export const agentCommand = (agent: AgentKind, input: string): string => {
   switch (agent) {
     case "terminal":
-      return input;
+      return withoutNulls(input);
     case "claude":
       return `claude -p ${quote(input)} --output-format text`;
     case "opencode":

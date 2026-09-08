@@ -35,8 +35,64 @@ const plantMarkedCompiler = (directory: string) => {
   );
 };
 
+/**
+ * A solution-style tsconfig — the layout `npm create vite` produces — where the
+ * options that matter live in the referenced projects, not the root.
+ */
+const plantSolution = (directory: string) => {
+  mkdirSync(join(directory, "app"), { recursive: true });
+  mkdirSync(join(directory, "scripts"), { recursive: true });
+  writeFileSync(
+    join(directory, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: { paths: { "@/*": ["./app/*"] } },
+      files: [],
+      references: [
+        { path: "./tsconfig.app.json" },
+        { path: "./tsconfig.node.json" },
+      ],
+    })
+  );
+  writeFileSync(
+    join(directory, "tsconfig.app.json"),
+    JSON.stringify({
+      compilerOptions: {
+        composite: true,
+        target: "ES2022",
+        lib: ["ES2022", "DOM"],
+        module: "ESNext",
+        moduleResolution: "bundler",
+        jsx: "preserve",
+        noEmit: true,
+        strict: true,
+      },
+      include: ["app"],
+    })
+  );
+  writeFileSync(
+    join(directory, "tsconfig.node.json"),
+    JSON.stringify({
+      compilerOptions: { composite: true, module: "ESNext", noEmit: true },
+      include: ["scripts"],
+    })
+  );
+  writeFileSync(
+    join(directory, "app", "view.tsx"),
+    "export const View = () => <div />\n"
+  );
+  writeFileSync(
+    join(directory, "scripts", "build.ts"),
+    "export const build = 1\n"
+  );
+  plantMarkedCompiler(directory);
+};
+
+/** `--jsx` missing — what a solution root's empty options produce. */
+const JSX_FLAG_MISSING = 17004;
+
 let root: string;
 let packageDir: string;
+let solutionDir: string;
 
 beforeEach(() => {
   // A repository-anchored lookup is the thing under test, so the override that
@@ -51,6 +107,9 @@ beforeEach(() => {
   writeFileSync(join(packageDir, "tsconfig.json"), TSCONFIG);
   writeFileSync(join(packageDir, "src", "a.ts"), "export const one = 1\n");
   plantMarkedCompiler(packageDir);
+
+  solutionDir = join(root, "packages", "solution");
+  plantSolution(solutionDir);
 });
 
 afterEach(() => {
@@ -72,6 +131,33 @@ describe("projectFor", () => {
 
     expect(project).not.toBeNull();
     expect(project!.ts.version).toBe(MARKED_VERSION);
+  });
+
+  // The bug this guards against: a solution tsconfig owns no files and sets no
+  // `jsx`, so stopping at the nearest config checked every component against
+  // empty options and reported "Cannot use JSX unless the '--jsx' flag is
+  // provided" on every tag — a wall of errors the repository's own tsc never
+  // produces, because tsserver follows the references to the owning project.
+  it("checks a file against the referenced project that owns it", () => {
+    const file = join(solutionDir, "app", "view.tsx");
+    const project = projectFor(root, file)!;
+    project.openFile(file, null);
+
+    expect(project.configPath).toBe(join(solutionDir, "tsconfig.app.json"));
+    expect(
+      project.service.getSemanticDiagnostics(file).map((d) => d.code)
+    ).not.toContain(JSX_FLAG_MISSING);
+  });
+
+  it("falls back to the closest referenced project for a file none lists", () => {
+    const file = join(solutionDir, "app", "unsaved.tsx");
+    const project = projectFor(root, file)!;
+    project.openFile(file, "export const Unsaved = () => <span />\n");
+
+    expect(project.configPath).toBe(join(solutionDir, "tsconfig.app.json"));
+    expect(
+      project.service.getSemanticDiagnostics(file).map((d) => d.code)
+    ).not.toContain(JSX_FLAG_MISSING);
   });
 
   it("analyses a file whose compiler only exists under its package", () => {

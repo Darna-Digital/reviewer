@@ -22,6 +22,8 @@ import { loadTypeScript, type TypeScriptModule } from "./ts-module.ts";
 const STAT_TTL_MS = 500;
 /** Live projects kept in memory; the least recently used is disposed first. */
 const MAX_PROJECTS = 4;
+/** How many links of a solution tsconfig chain are followed before giving up. */
+const MAX_REFERENCE_DEPTH = 8;
 
 export interface TsProject {
   readonly ts: TypeScriptModule;
@@ -40,8 +42,8 @@ export interface TsProject {
 
 interface CachedProject {
   readonly project: TsProject;
-  /** mtime of the tsconfig when the project was built, for invalidation. */
-  readonly configMtimeMs: number;
+  /** Paths and mtimes of the tsconfigs the project was built from. */
+  readonly configSignature: string;
   usedAt: number;
 }
 
@@ -99,7 +101,118 @@ interface ParsedProject {
   readonly options: TS.CompilerOptions;
   readonly rootFileNames: ReadonlyArray<string>;
   readonly currentDirectory: string;
+  /** Every tsconfig read on the way here, for cache invalidation. */
+  readonly configPaths: ReadonlyArray<string>;
 }
+
+/** A tsconfig and what it parsed to, while the owning project is picked. */
+interface Candidate {
+  readonly configPath: string;
+  readonly parsed: TS.ParsedCommandLine;
+}
+
+const parseConfig = (
+  ts: TypeScriptModule,
+  configPath: string
+): TS.ParsedCommandLine => {
+  const config = ts.readConfigFile(configPath, ts.sys.readFile);
+  return ts.parseJsonConfigFileContent(
+    config.config ?? {},
+    ts.sys,
+    dirname(configPath),
+    undefined,
+    configPath
+  );
+};
+
+/** Comparable form of a path, matching the compiler's own case sensitivity. */
+const pathKey = (ts: TypeScriptModule, path: string): string => {
+  const resolved = ts.sys.resolvePath(path);
+  return ts.sys.useCaseSensitiveFileNames ? resolved : resolved.toLowerCase();
+};
+
+const covers = (
+  ts: TypeScriptModule,
+  parsed: TS.ParsedCommandLine,
+  fileKey: string
+): boolean => parsed.fileNames.some((name) => pathKey(ts, name) === fileKey);
+
+/** How much of their directory path two files share, in characters. */
+const sharedDirectoryLength = (a: string, b: string): number => {
+  let shared = 0;
+  const limit = Math.min(a.length, b.length);
+  for (let index = 0; index < limit; index++) {
+    if (a[index] !== b[index]) break;
+    if (a[index] === "/") shared = index;
+  }
+  return shared;
+};
+
+/**
+ * The referenced project that owns `absoluteFile`, searched breadth-first from
+ * a tsconfig that does not own it itself.
+ *
+ * A solution-style tsconfig — `files: []` plus `references` — carries no
+ * options worth checking against: `jsx`, `lib` and `target` live in the
+ * projects it points at. Stopping at the nearest config the way a naive lookup
+ * does reports "Cannot use JSX unless the '--jsx' flag is provided" on every
+ * tag of every component, which is why tsserver resolves the owning project
+ * and why this does too.
+ *
+ * A file no referenced project lists — excluded from every `include`, or an
+ * unsaved buffer with nothing on disk yet — falls back to the project whose
+ * files sit closest to it in the tree. That beats the solution root at the one
+ * job left, which is supplying options.
+ */
+const followReferences = (
+  ts: TypeScriptModule,
+  entry: Candidate,
+  absoluteFile: string
+): {
+  readonly candidate: Candidate;
+  readonly visited: ReadonlyArray<string>;
+} => {
+  const fileKey = pathKey(ts, absoluteFile);
+  const visited = [entry.configPath];
+  const seen = new Set([pathKey(ts, entry.configPath)]);
+  let frontier = [entry];
+  let nearest: { candidate: Candidate; closeness: number } | null = null;
+
+  for (
+    let depth = 0;
+    depth < MAX_REFERENCE_DEPTH && frontier.length > 0;
+    depth++
+  ) {
+    const next: Array<Candidate> = [];
+    for (const current of frontier) {
+      for (const reference of current.parsed.projectReferences ?? []) {
+        const referencedPath = ts.resolveProjectReferencePath(reference);
+        const key = pathKey(ts, referencedPath);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        if (!ts.sys.fileExists(referencedPath)) continue;
+        visited.push(referencedPath);
+        const candidate = {
+          configPath: referencedPath,
+          parsed: parseConfig(ts, referencedPath),
+        };
+        if (covers(ts, candidate.parsed, fileKey))
+          return { candidate, visited };
+        next.push(candidate);
+        if (candidate.parsed.fileNames.length === 0) continue;
+        const closeness = Math.max(
+          ...candidate.parsed.fileNames.map((name) =>
+            sharedDirectoryLength(pathKey(ts, name), fileKey)
+          )
+        );
+        if (nearest === null || closeness > nearest.closeness)
+          nearest = { candidate, closeness };
+      }
+    }
+    frontier = next;
+  }
+  return { candidate: nearest?.candidate ?? entry, visited };
+};
 
 const parseProject = (
   ts: TypeScriptModule,
@@ -117,24 +230,29 @@ const parseProject = (
       options: inferredOptions(ts),
       rootFileNames: [absoluteFile],
       currentDirectory: root,
+      configPaths: [],
     };
   }
-  const currentDirectory = dirname(configPath);
-  const config = ts.readConfigFile(configPath, ts.sys.readFile);
-  const parsed = ts.parseJsonConfigFileContent(
-    config.config ?? {},
-    ts.sys,
-    currentDirectory,
-    undefined,
-    configPath
-  );
-  return {
+  const nearest: Candidate = {
     configPath,
-    options: forEditor(ts, parsed.options),
-    // Solution-style tsconfigs (references only) contribute no files; the
-    // opened file is added below so such a project still answers.
-    rootFileNames: parsed.fileNames,
-    currentDirectory,
+    parsed: parseConfig(ts, configPath),
+  };
+  const { candidate, visited } = covers(
+    ts,
+    nearest.parsed,
+    pathKey(ts, absoluteFile)
+  )
+    ? { candidate: nearest, visited: [configPath] }
+    : followReferences(ts, nearest, absoluteFile);
+
+  return {
+    configPath: candidate.configPath,
+    options: forEditor(ts, candidate.parsed.options),
+    // A project the file is not a root of still answers for it: `openFile`
+    // adds it below.
+    rootFileNames: candidate.parsed.fileNames,
+    currentDirectory: dirname(candidate.configPath),
+    configPaths: visited,
   };
 };
 
@@ -257,14 +375,16 @@ export const projectFor = (
 
   const parsed = parseProject(ts, root, absoluteFile);
   const key = parsed.configPath ?? `${root} inferred`;
-  const configMtimeMs =
-    parsed.configPath === null ? 0 : mtimeOf(parsed.configPath);
+  const configSignature = parsed.configPaths
+    .map((path) => `${path}:${mtimeOf(path)}`)
+    .join("|");
 
   const cached = projects.get(key);
   if (cached !== undefined) {
     // A rewritten tsconfig changes the file set and the options; only a fresh
-    // program reflects that, so drop the stale one.
-    if (cached.configMtimeMs === configMtimeMs) {
+    // program reflects that, so drop the stale one. The whole chain counts: a
+    // reference retargeted in the solution root moves the project too.
+    if (cached.configSignature === configSignature) {
       cached.usedAt = ++tick;
       return cached.project;
     }
@@ -273,7 +393,7 @@ export const projectFor = (
   }
 
   const project = createProject(ts, parsed);
-  projects.set(key, { project, configMtimeMs, usedAt: ++tick });
+  projects.set(key, { project, configSignature, usedAt: ++tick });
   evictOldest();
   return project;
 };
