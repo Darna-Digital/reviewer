@@ -15,7 +15,7 @@ export function NoPullRequests() {
   return (
     <ReviewEmpty
       icon={IconGitPullRequest}
-      title="No open pull requests"
+      title="No open merge requests"
       body="When a branch is pushed and opened for review, it shows up in the sidebar with its files and comments."
     />
   );
@@ -31,7 +31,7 @@ export function NoReviewRemote() {
     <ReviewEmpty
       icon={IconPlugConnectedX}
       title="No GitHub remote"
-      body="This project is not on GitHub, so there are no pull requests to review here."
+      body="This project is not on GitHub, so there are no merge requests to read here."
     />
   );
 }

@@ -104,7 +104,7 @@ const emptyHint = (target: DiffTarget): string => {
     case "commit":
       return "This commit has no textual changes.";
     case "pull":
-      return "This pull request has no diff.";
+      return "This merge request has no diff.";
   }
 };
 
@@ -596,7 +596,7 @@ export function DiffPane({
         toast.error(`Couldn't load the rest of ${file.name}`, {
           description:
             target.kind === "pull"
-              ? "The pull request's commits may not be fetched locally yet — try Fetch, then expand again."
+              ? "The merge request's commits may not be fetched locally yet — try Fetch, then expand again."
               : "The server couldn't provide this file's full contents.",
         });
         setExpansion((prev) => {

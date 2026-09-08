@@ -59,7 +59,7 @@ const GIT_LINKS: RailLink[] = [
   },
   {
     to: REVIEWS_HREF,
-    label: "Reviews",
+    label: "Merge requests",
     icon: IconGitPullRequest,
     match: REVIEWS_HREF,
   },

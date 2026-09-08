@@ -32,7 +32,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MenuSearch } from "@/interactions/reviews/components/diff-source-menu";
+import { MenuSearch } from "@/components/ui/menu-search";
 import { cn } from "@/lib/utils";
 import {
   comparisonCandidates,

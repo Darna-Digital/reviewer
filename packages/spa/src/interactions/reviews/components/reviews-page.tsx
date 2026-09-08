@@ -60,7 +60,7 @@ const COL = {
 function ReviewsTableHead() {
   return (
     <TableHead>
-      <TableCell className={COL.title}>Pull request</TableCell>
+      <TableCell className={COL.title}>Merge request</TableCell>
       <TableCell className={COL.branch}>Branch</TableCell>
       <TableCell className={COL.author}>Author</TableCell>
       <TableCell className={COL.updated}>Updated</TableCell>
@@ -127,7 +127,7 @@ export function ReviewsPage() {
     });
 
   const error = pulls.error
-    ? errorReason(pulls.error, "Could not load pull requests")
+    ? errorReason(pulls.error, "Could not load merge requests")
     : null;
   // A query that was never enabled is pending for as long as the window is
   // open, and a list that says it is loading forever is worse than one that
@@ -138,12 +138,12 @@ export function ReviewsPage() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <PaneHeader
-        crumbs={[<span key="reviews">Reviews</span>]}
+        crumbs={[<span key="reviews">Merge requests</span>]}
         actions={
           <div className="flex w-72 items-center">
             <SidebarSearch
-              label="Search reviews"
-              placeholder="Search reviews…"
+              label="Search merge requests"
+              placeholder="Search merge requests…"
               value={search}
               onChange={setSearch}
             />
@@ -157,7 +157,7 @@ export function ReviewsPage() {
           </p>
         ) : loading && items.length === 0 ? (
           <div className="px-3 py-3">
-            <LoadingCursor label="Loading reviews…" />
+            <LoadingCursor label="Loading merge requests…" />
           </div>
         ) : items.length === 0 ? (
           hasGitHub ? (

@@ -95,7 +95,7 @@ const CODE_SECTIONS: ReadonlyArray<LaunchpadSection> = [
   {
     id: "/modes/code/reviews",
     href: "/modes/code/reviews",
-    title: "Reviews",
+    title: "Merge requests",
     icon: IconGitPullRequest,
   },
   dockSection("services", IconPlayerPlay),

@@ -53,24 +53,13 @@ import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
 import { targetOf } from "@/interactions/branch-targets/functions/branch-targets.functions";
 import { comparisonTarget, resolveComparison } from "@reviewer/core/comparison";
-import {
-  diffSourceKey,
-  diffSourceLabel,
-  diffSources,
-  LOCAL_SOURCE,
-  type DiffSource,
-} from "@/interactions/reviews/functions/reviews.functions";
-import {
-  DiffSourceItems,
-  diffSourceIcon,
-} from "@/interactions/reviews/components/diff-source-menu";
 import { PullRequestList } from "@/components/git/pull-request-list";
 import { PullRequestOverview } from "@/components/git/pull-request-overview";
 import type { Crumb } from "@/components/layout/breadcrumbs";
 import { EmptyPane } from "@/components/layout/empty-pane";
 import { NoPullRequests, NoReviewRemote } from "@/components/git/review-empty";
 import { PathBar } from "@/components/layout/path-bar";
-import { reviewHref, reviewSourceOf } from "@/lib/shell-route";
+import { reviewSourceOf } from "@/lib/shell-route";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
@@ -342,27 +331,6 @@ export function CodeWorkspace() {
   });
   const targetKey = target === null ? "none" : diffTargetKey(target);
 
-  /**
-   * Everything the diff view could be showing, and which of them it is.
-   *
-   * The route says which one, and the trail is how it is changed: picking a
-   * crumb navigates, so the URL follows the choice instead of being the way the
-   * choice has to be made.
-   */
-  const sources = useMemo(() => diffSources(pulls.data ?? []), [pulls.data]);
-  const source: DiffSource =
-    selectedPull !== null ? { kind: "pull", pull: selectedPull } : LOCAL_SOURCE;
-
-  const openSource = (next: DiffSource) =>
-    void navigate({
-      to: reviewHref(
-        next.kind === "local"
-          ? { kind: "local" }
-          : { kind: "pull", number: next.pull.number }
-      ),
-      search: {},
-    });
-
   const diff = useDiffText(target);
   // The uncommitted diff of every root at once, its paths named from the
   // project so they line up with the tree. Only the worktree target: a commit
@@ -457,25 +425,6 @@ export function CodeWorkspace() {
   );
 
   // --- review → agent: hand the comments in view (local + GitHub) to an agent.
-  /**
-   * The tree behind a source, and going to work in it.
-   *
-   * The changes in front of you belong to the checkout the project was opened
-   * on. A pull request has no tree here at all — nothing to check out until
-   * somebody fetches it.
-   *
-   * Reading a source and working in it are separate acts, so going there leaves
-   * the diff where it is: the diff you were reading is why you went.
-   */
-  const inTree = workspace.data?.current ?? null;
-  const treeOf = (of: DiffSource): string | null =>
-    of.kind === "local" ? inTree : null;
-  const checkedOut = sources.find((entry) => treeOf(entry) === inTree) ?? null;
-  const checkOut = (of: DiffSource) => {
-    const path = treeOf(of);
-    if (path !== null) void workspaceActions.followRepo(path, inTree);
-  };
-
   /** Where the comments' agent is to work — the checkout you are standing in. */
   const assignPlace: ChatPlace = { branch: repo.data?.currentBranch ?? "" };
 
@@ -846,38 +795,13 @@ export function CodeWorkspace() {
     const openPath = viewing;
     const list: Crumb[] = [];
     if (mode === "commit" || mode === "review") {
-      // One trail for both, because it is one view: the first crumb names what
-      // is on screen and carries every other thing it could be, so moving
-      // between your own changes and a pull request is a menu rather than a
-      // mode.
-      list.push({
-        id: "diff-source",
-        label: diffSourceLabel(source),
-        hint: source.kind === "pull" ? `#${source.pull.number}` : undefined,
-        icon: diffSourceIcon(source),
-        menu: () => (
-          <DiffSourceItems
-            sources={sources}
-            current={diffSourceKey(source)}
-            checkedOut={checkedOut === null ? null : diffSourceKey(checkedOut)}
-            onSelect={openSource}
-            onCheckout={checkOut}
-          />
-        ),
-      });
-      if (source.kind === "pull") {
-        // GitHub decides what a pull request is read against, so this one is
-        // told rather than offered.
-        list.push({
-          id: "diff-against",
-          label: source.pull.baseRef,
-          title: `Read against ‘${source.pull.baseRef}’`,
-          separator: IconGitCompare,
-        });
-      }
-      // Your own changes say what they are read against on the header row
-      // rather than here: the picker is there whether or not a branch has been
-      // chosen, which is what lets one be chosen in the first place.
+      // Nothing. A diff used to open with a crumb naming its source and a menu
+      // of everything else it could have been, and a second crumb naming what
+      // it was read against — a strip along the foot of the pane restating
+      // what the chrome around it already said. What is on screen is chosen
+      // from the merge-request list and from the header: the branch picker,
+      // and the compare picker beside it. A file opened over the diff still
+      // brings the bar back, because then it has a path to say.
     } else if (browse !== null) {
       // A commit or a range came from the log, so the trail runs through
       // History — that's what tells this apart from plain file browsing, and
@@ -1254,7 +1178,7 @@ export function CodeWorkspace() {
         pulls={pulls.data ?? []}
         error={
           pulls.error
-            ? errorReason(pulls.error, "Could not load pull requests")
+            ? errorReason(pulls.error, "Could not load merge requests")
             : null
         }
         // A query that was never enabled is pending for as long as the window

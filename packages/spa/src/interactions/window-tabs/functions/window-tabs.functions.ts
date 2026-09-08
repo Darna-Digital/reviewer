@@ -34,7 +34,7 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
   ["/modes/code/browse", "Project"],
   // Longest first: `/reviews` starts with `/review`, and a prefix match reads
   // the list as the diff view otherwise.
-  ["/modes/code/reviews", "Reviews"],
+  ["/modes/code/reviews", "Merge requests"],
   ["/modes/code/review", "Review"],
   // The dock's surfaces, when one of them is the whole page. Named where they
   // are named everywhere else, so a card, a tab and a trail agree.

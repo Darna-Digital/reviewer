@@ -180,13 +180,13 @@ export function PullRequestList({
     <section className={cn("flex min-h-0 flex-col", className)} style={style}>
       <div className="flex min-h-9 items-center gap-1.5 border-b px-2 py-0.5">
         <SidebarSearch
-          label="Search pull requests"
-          placeholder="Search pull requests…"
+          label="Search merge requests"
+          placeholder="Search merge requests…"
           value={search}
           onChange={setSearch}
         />
         <SidebarFilterMenu
-          label="Filter pull requests"
+          label="Filter merge requests"
           branchValue={baseFilter}
           branches={baseBranches}
           onBranchChange={setBaseFilter}
@@ -205,7 +205,7 @@ export function PullRequestList({
           </p>
         ) : loading ? (
           <div className="px-3 py-2">
-            <LoadingCursor label="Loading pull requests…" />
+            <LoadingCursor label="Loading merge requests…" />
           </div>
         ) : pulls.length === 0 ? (
           (empty ?? (
