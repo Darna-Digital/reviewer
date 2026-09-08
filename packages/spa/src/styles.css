@@ -1046,6 +1046,31 @@
   }
 }
 
+/* --- reviewer: review-comment cards ---------------------------------------- */
+/* Give the card back the caret and the selection band the browser would draw
+   anywhere else.
+
+   A comment card is slotted into the viewer's annotation slot, so on the diff
+   it behaves like any other text on the page. In the file view that slot sits
+   inside the editor's `contenteditable`, which blanks both — `caret-color` on
+   `[data-content]`, and a bare `::selection` rule in the editor's own
+   stylesheet — because the editor paints its own caret and selection bands for
+   the code. Neither was ever meant for a card slotted in among the lines: the
+   composer took the caret and typed, but nothing showed where, and text in a
+   filed comment could be selected without the selection appearing.
+
+   Both are inherited rather than matched on the card itself, so declaring them
+   here is enough — no `!important`, and the diff surface is unaffected, since
+   this only restates what it already had. The system colours are what the rest
+   of the app selects with, the agent composer included. */
+.comment-card {
+  caret-color: auto;
+}
+.comment-card ::selection {
+  background-color: Highlight;
+  color: HighlightText;
+}
+
 /* --- reviewer: review-comment markdown bodies ------------------------------ */
 /* Comment bodies live in a narrow gutter, so wrap aggressively: long words,
    URLs and inline code must break rather than force the card to overflow. */

@@ -318,7 +318,10 @@ export function parseNormal(input: string): VimParse {
     const after = rest.slice(1);
     return after.length === 0
       ? { kind: "pending" }
-      : { kind: "command", command: { kind: "replaceChar", char: after[0] } };
+      : {
+          kind: "command",
+          command: { kind: "replaceChar", char: after[0], count: times },
+        };
   }
 
   if (key === "z") {

@@ -113,8 +113,12 @@ export type VimCommand =
       readonly before: boolean;
       readonly count: number;
     }
-  /** `r{char}`. */
-  | { readonly kind: "replaceChar"; readonly char: string }
+  /** `r{char}`, and `{count}r{char}` over a run of that many characters. */
+  | {
+      readonly kind: "replaceChar";
+      readonly char: string;
+      readonly count: number;
+    }
   /** `p` / `P`. */
   | { readonly kind: "put"; readonly after: boolean; readonly count: number }
   | { readonly kind: "join"; readonly count: number }

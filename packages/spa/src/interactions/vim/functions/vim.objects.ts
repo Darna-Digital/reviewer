@@ -16,7 +16,7 @@
  * filetype plugin.
  */
 import type { VimPosition } from "../interfaces/vim.interfaces";
-import { enclosingBracket } from "./vim.brackets";
+import { bracketPartner, enclosingBracket } from "./vim.brackets";
 
 /** What `i` / `a` was applied to. */
 export type VimTextObject =
@@ -30,6 +30,12 @@ export type VimTextObject =
 export interface VimSpan {
   readonly start: VimPosition;
   readonly end: VimPosition;
+  /**
+   * Whether the object turned out to cover whole lines. Only the inner block
+   * does — see `pairSpan` — so an operator takes it the way `dd` takes a line
+   * rather than emptying the braces onto one.
+   */
+  readonly linewise?: boolean;
 }
 
 /** The object each key names, or undefined when the key names none. */
@@ -50,6 +56,14 @@ export const OBJECT_KEYS: Readonly<Record<string, VimTextObject>> = {
   '"': { kind: "quote", char: '"' },
   "'": { kind: "quote", char: "'" },
   "`": { kind: "quote", char: "`" },
+};
+
+/** The closer each opener is paired with, for the walls a block is written in. */
+const PAIRS: Readonly<Record<string, string>> = {
+  "(": ")",
+  "[": "]",
+  "{": "}",
+  "<": ">",
 };
 
 const WORD = /[\p{L}\p{N}_]/u;
@@ -131,8 +145,26 @@ function pairSpan(
   open: string,
   around: boolean
 ): VimSpan | null {
-  const before = enclosingBracket(lines, caret, open, false, 1);
-  const after = enclosingBracket(lines, caret, open, true, 1);
+  // Standing on one of the walls counts as being inside, as Vim says: `ci(`
+  // with the caret on the bracket changes what it holds. `enclosingBracket`
+  // steps off the caret before it starts looking — right for the `[{` motion,
+  // which climbs a level, and wrong for the object.
+  const here = (lines[caret.line] ?? "")[caret.character];
+  const close = PAIRS[open];
+  const partner =
+    here === open || here === close ? bracketPartner(lines, caret) : null;
+  const before =
+    here === open
+      ? caret
+      : here === close
+        ? partner
+        : enclosingBracket(lines, caret, open, false, 1);
+  const after =
+    here === close
+      ? caret
+      : here === open
+        ? partner
+        : enclosingBracket(lines, caret, open, true, 1);
   if (before === null || after === null) return null;
   if (around) {
     return {
@@ -140,10 +172,29 @@ function pairSpan(
       end: { line: after.line, character: after.character + 1 },
     };
   }
-  return {
-    start: { line: before.line, character: before.character + 1 },
-    end: after,
-  };
+  const start = { line: before.line, character: before.character + 1 };
+  // A block written the way code is written — nothing after the opening brace,
+  // nothing but indentation before the closing one — is whole lines, as Vim
+  // says: `di{` empties the body and leaves the braces on their own lines,
+  // rather than closing them up into `{}`.
+  const opensLine =
+    (lines[before.line] ?? "").slice(start.character).trim() === "";
+  const closesLine =
+    (lines[after.line] ?? "").slice(0, after.character).trim() === "";
+  // Braces on their own lines with nothing between them hold no block at all;
+  // Vim deletes nothing there rather than closing the two lines up into one.
+  if (opensLine && closesLine && after.line - before.line === 1) return null;
+  if (opensLine && closesLine && after.line - before.line > 1) {
+    return {
+      start: { line: before.line + 1, character: 0 },
+      end: {
+        line: after.line - 1,
+        character: (lines[after.line - 1] ?? "").length,
+      },
+      linewise: true,
+    };
+  }
+  return { start, end: after };
 }
 
 /**

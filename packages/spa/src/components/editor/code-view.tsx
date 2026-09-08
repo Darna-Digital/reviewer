@@ -419,7 +419,14 @@ export function CodeView({
               options={{
                 theme: THEMES,
                 themeType: theme,
-                overflow: "wrap",
+                // Code is not prose: a long line runs off the side and is
+                // scrolled to, rather than being folded back under itself.
+                // Wrapping gave one statement several rows of its own, so the
+                // gutter no longer read as one number per row and the file
+                // reflowed whenever the pane was resized. The view pins the
+                // gutter and slides the code under it — see
+                // `[data-overflow="scroll"]` in the library's own stylesheet.
+                overflow: "scroll",
                 stickyHeader: false,
                 // The path, the file's actions and the trail that led here all
                 // belong on one line — the crumb bar above owns it, so the
@@ -431,26 +438,6 @@ export function CodeView({
                 // stylesheet, and the view keeps one of each.
                 onPostRender,
                 unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}\n${folding.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}`,
-                // The gutter starts a comment here the same way it does on the
-                // diff: a line number under the pointer lights its row and
-                // turns into a `+`, and pressing either opens the composer on
-                // that line. Only the code area takes the caret on a click, so
-                // the gutter is free to carry the offer after all; the one
-                // floated over a selection stays, for commenting on a passage
-                // rather than a line.
-                enableGutterUtility: commentsEnabled,
-                onGutterUtilityClick: (range) =>
-                  draftRef.current?.({
-                    filePath: path,
-                    side: FILE_COMMENT_SIDE,
-                    lineNumber: range.end,
-                  }),
-                onLineNumberClick: (props) =>
-                  draftRef.current?.({
-                    filePath: path,
-                    side: FILE_COMMENT_SIDE,
-                    lineNumber: props.lineNumber,
-                  }),
               }}
               edit
               /* The editable view snapshots the rendered code when the editor

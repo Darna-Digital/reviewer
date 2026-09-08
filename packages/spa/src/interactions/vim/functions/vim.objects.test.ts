@@ -189,3 +189,107 @@ describe("visual objects and the ordinary ones together", () => {
     expect(run.mode).toBe("visual-line");
   });
 });
+
+describe("a block written across lines", () => {
+  const BLOCK = [
+    "function main() {",
+    "  const a = 1;",
+    "  return a;",
+    "}",
+  ].join("\n");
+
+  it("takes the body as whole lines, leaving the braces where they are", () => {
+    // Vim's own rule: nothing after the `{` and nothing but indent before the
+    // `}` makes the inner block linewise, so `di{` empties the body rather than
+    // closing the braces up into `{}`.
+    const run = type(["d", "i", "{"], { line: 1, character: 2 }, BLOCK);
+    expect(run.text).toBe("function main() {\n}");
+  });
+
+  it("leaves a line to type on when changing it, indented as the body was", () => {
+    const run = type(["c", "i", "{"], { line: 1, character: 2 }, BLOCK);
+    expect(run.text).toBe("function main() {\n  \n}");
+    expect(run.mode).toBe("insert");
+    expect(run.caret).toEqual({ line: 1, character: 2 });
+  });
+
+  it("selects it linewise", () => {
+    expect(type(["v", "i", "{"], { line: 1, character: 2 }, BLOCK).mode).toBe(
+      "visual-line"
+    );
+  });
+
+  it("still takes the braces themselves with `a{`", () => {
+    const run = type(["d", "a", "{"], { line: 1, character: 2 }, BLOCK);
+    expect(run.text).toBe("function main() ");
+  });
+
+  it("holds no block at all when the braces are on consecutive lines", () => {
+    const empty = "function main() {\n}";
+    expect(type(["d", "i", "{"], { line: 0, character: 16 }, empty).text).toBe(
+      empty
+    );
+  });
+
+  it("stays a character range when the braces share a line with the body", () => {
+    const inline = "const o = { a: 1 };";
+    expect(type(["d", "i", "{"], { line: 0, character: 13 }, inline).text).toBe(
+      "const o = {};"
+    );
+  });
+});
+
+describe("standing on the wall of a pair", () => {
+  const CALL = "call(a, b);";
+
+  it("counts the opening bracket as being inside, as Vim does", () => {
+    expect(type(["d", "i", "("], { line: 0, character: 4 }, CALL).text).toBe(
+      "call();"
+    );
+  });
+
+  it("counts the closing one too", () => {
+    expect(type(["d", "i", "("], { line: 0, character: 9 }, CALL).text).toBe(
+      "call();"
+    );
+  });
+
+  it("takes the walls with it for `a(`", () => {
+    expect(type(["d", "a", "("], { line: 0, character: 4 }, CALL).text).toBe(
+      "call;"
+    );
+  });
+
+  it("finds the pair the caret is on rather than the one around it", () => {
+    const nested = "f(g(x), y)";
+    expect(type(["d", "i", "("], { line: 0, character: 3 }, nested).text).toBe(
+      "f(g(), y)"
+    );
+  });
+});
+
+describe("angle brackets", () => {
+  const GENERIC = "const m: Map<K, V> = new Map();";
+
+  it("takes what is between them", () => {
+    expect(
+      type(["d", "i", "<"], { line: 0, character: 14 }, GENERIC).text
+    ).toBe("const m: Map<> = new Map();");
+  });
+
+  it("takes them too with `a<`", () => {
+    expect(
+      type(["d", "a", "<"], { line: 0, character: 14 }, GENERIC).text
+    ).toBe("const m: Map = new Map();");
+  });
+
+  it("is not something `%` goes looking for — a `<` is usually a comparison", () => {
+    const compare = "if (a < b) {}";
+    // From the `<`, `%` reads on to the `)` at column 9 and jumps to the `(`
+    // that opened it, rather than pairing the comparison with anything.
+    expect(type(["%"], { line: 0, character: 6 }, compare).caret).toEqual({
+      line: 0,
+      character: 3,
+    });
+  });
+});

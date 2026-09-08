@@ -310,8 +310,14 @@ export function useFileEditing({
       if (error)
         throw new Error((error as { reason?: string }).reason ?? "save failed");
       originalRef.current = contents;
-      setDirty(false);
-      setBufferForAnalysis(null);
+      // What went to disk is what the buffer held when the write started, and
+      // typing does not stop for a network round trip: a keystroke that landed
+      // in between leaves the file dirty again the moment it is saved. Marking
+      // it clean regardless would take the tab's marker off a document that no
+      // longer matches what is on disk.
+      const settled = valueRef.current === contents;
+      setDirty(!settled);
+      setBufferForAnalysis(settled ? null : valueRef.current);
       toast.success("Saved");
       onSaved();
     } catch (cause) {

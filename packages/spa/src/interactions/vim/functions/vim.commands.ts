@@ -23,6 +23,8 @@ import {
   isInclusive,
   isLinewise,
   lastColumn,
+  motionTarget,
+  wordOperatorEnd,
 } from "./vim.motions";
 import { isLinewiseObject, textObjectSpan } from "./vim.objects";
 
@@ -221,6 +223,12 @@ function operateOnRange(
   }
 
   const mode = operator === "change" ? "insert" : "normal";
+  // The caret lands where the text was, and in normal mode may not sit past the
+  // end of a line — measured against the line the deletion leaves behind, not
+  // the longer one that is about to go.
+  const remainder =
+    (lines[from.line] ?? "").slice(0, from.character) +
+    (lines[to.line] ?? "").slice(to.character);
   return {
     state: {
       ...state,
@@ -230,7 +238,13 @@ function operateOnRange(
       pending: "",
     },
     edits: [edit(from, to, "")],
-    caret: mode === "insert" ? from : clampCaret(lines, from, false),
+    caret:
+      mode === "insert"
+        ? from
+        : {
+            line: from.line,
+            character: Math.min(from.character, lastColumn(remainder, false)),
+          },
     handled: true,
   };
 }
@@ -297,6 +311,36 @@ function enterInsert(
     }
   }
 }
+
+/** Whether the caret is standing on something other than white space. */
+const onWord = (lines: ReadonlyArray<string>, caret: VimPosition): boolean => {
+  const character = (lines[caret.line] ?? "")[caret.character];
+  return character !== undefined && character.trim().length > 0;
+};
+
+/**
+ * Where `cw` stops: the end of the word the caret is standing in, once
+ * `count - 1` whole words have been moved over.
+ *
+ * Not `ce`, which from the last character of a word runs on to the end of the
+ * next one — `cw` there changes that one character and no more. Null when the
+ * caret is not inside a word after all, which sends the command back to the
+ * ordinary `w` path.
+ */
+const changeWordEnd = (
+  lines: ReadonlyArray<string>,
+  caret: VimPosition,
+  count: number,
+  big: boolean
+): VimPosition | null => {
+  const at =
+    count > 1
+      ? applyMotion(lines, caret, { kind: "wordForward", big }, count - 1, true)
+      : caret;
+  const span = textObjectSpan(lines, at, { kind: "word", big }, false);
+  if (span === null || !precedes(caret, span.end)) return null;
+  return span.end;
+};
 
 /**
  * Run `command` against the buffer.
@@ -381,26 +425,44 @@ export function runCommand(
 
     case "operate": {
       if (isLinewise(command.motion)) {
-        const to = applyMotion(
+        const to = motionTarget(
           lines,
           caret,
           command.motion,
           command.count,
           false
         );
+        // A motion that cannot be made takes the whole command with it: `dj` on
+        // the last line is not a `dd`.
+        if (to === null) return stay(cleared, caret);
         const [lo, hi] = [
           Math.min(caret.line, to.line),
           Math.max(caret.line, to.line),
         ];
         return operateOnLines(cleared, lines, command.operator, lo, hi);
       }
-      const landed = applyMotion(
-        lines,
-        caret,
-        command.motion,
-        command.count,
-        true
-      );
+      // `cw` on a word changes just that word, leaving the space after it —
+      // Vim's own special case, and the reason `cw` is not `dw` and insert.
+      if (
+        command.operator === "change" &&
+        command.motion.kind === "wordForward" &&
+        onWord(lines, caret)
+      ) {
+        const end = changeWordEnd(
+          lines,
+          caret,
+          command.count,
+          command.motion.big
+        );
+        if (end !== null) {
+          return operateOnRange(cleared, lines, "change", caret, end);
+        }
+      }
+      const landed =
+        command.motion.kind === "wordForward"
+          ? wordOperatorEnd(lines, caret, command.count, command.motion.big)
+          : motionTarget(lines, caret, command.motion, command.count, true);
+      if (landed === null) return stay(cleared, caret);
       const [from, to] = ordered(caret, landed);
       // `de` and `df,` take the character they land on; `dw` stops before it.
       const end =
@@ -456,17 +518,22 @@ export function runCommand(
 
     case "replaceChar": {
       const text = lines[caret.line] ?? "";
-      if (caret.character >= text.length) return stay(cleared, caret);
+      const upTo = caret.character + command.count;
+      // `3rx` needs three characters to replace; short of them Vim does nothing
+      // rather than replacing what it can.
+      if (upTo > text.length) return stay(cleared, caret);
       return {
         state: cleared,
         edits: [
           edit(
             caret,
-            { line: caret.line, character: caret.character + 1 },
-            command.char
+            { line: caret.line, character: upTo },
+            command.char.repeat(command.count)
           ),
         ],
-        caret,
+        // The caret ends on the last character replaced, so `rx` can be
+        // repeated along a line and `3rx` leaves it where the run ends.
+        caret: { line: caret.line, character: upTo - 1 },
         handled: true,
       };
     }
@@ -525,13 +592,21 @@ export function runCommand(
         lines.length - 1
       );
       if (bottom === top) return stay(cleared, caret);
-      const head = lines[top] ?? "";
-      const joined = lines
-        .slice(top + 1, bottom + 1)
-        .map((line) => line.trimStart());
-      const text = [head.trimEnd(), ...joined]
-        .filter((s) => s.length > 0)
-        .join(" ");
+      // One space in place of each line break, except where Vim leaves it out:
+      // a first line that already ends in white space keeps its own, and a
+      // continuation starting with `)` closes up against what it continues.
+      let text = lines[top] ?? "";
+      let seam = text.length;
+      for (let line = top + 1; line <= bottom; line++) {
+        const next = (lines[line] ?? "").trimStart();
+        if (next.length === 0) continue;
+        seam = text.length;
+        const gap =
+          text.length === 0 || /\s$/.test(text) || next.startsWith(")")
+            ? ""
+            : " ";
+        text = text + gap + next;
+      }
       return {
         state: cleared,
         edits: [
@@ -541,7 +616,11 @@ export function runCommand(
             text
           ),
         ],
-        caret: { line: top, character: Math.max(0, head.trimEnd().length) },
+        // Vim leaves the caret on the seam it last closed up.
+        caret: {
+          line: top,
+          character: Math.max(0, Math.min(seam, lastColumn(text, false))),
+        },
         handled: true,
       };
     }
@@ -549,8 +628,9 @@ export function runCommand(
     case "operateObject": {
       const span = textObjectSpan(lines, caret, command.object, command.around);
       if (span === null) return stay(cleared, caret);
-      // `dip` takes whole lines, the way `dd` does, rather than emptying them.
-      if (isLinewiseObject(command.object)) {
+      // `dip` takes whole lines, the way `dd` does, rather than emptying them —
+      // and so does `di{` over a block whose braces sit on their own lines.
+      if (isLinewiseObject(command.object) || span.linewise === true) {
         return operateOnLines(
           cleared,
           lines,
@@ -571,7 +651,8 @@ export function runCommand(
     case "selectObject": {
       const span = textObjectSpan(lines, caret, command.object, command.around);
       if (span === null) return stay(cleared, caret);
-      const linewise = isLinewiseObject(command.object);
+      const linewise =
+        isLinewiseObject(command.object) || span.linewise === true;
       // The anchor is the far end and the caret the near one, so a motion after
       // the object carries on extending from where it left the caret.
       return {

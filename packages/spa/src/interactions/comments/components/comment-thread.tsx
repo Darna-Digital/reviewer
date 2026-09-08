@@ -44,9 +44,13 @@ const REPLY_INDENT = "ml-9";
  * beside that line, and a card that runs the width of the diff stops looking
  * pinned to anything. It also keeps the prose to a measure you can actually
  * scan — the same cap opencode puts on its line comments.
+ *
+ * `comment-card` is the hook `styles.css` hangs the caret and selection colours
+ * on: the file view slots this card inside the editor's `contenteditable`,
+ * which blanks both for the code it is drawing itself.
  */
 const COMMENT_CARD =
-  "group/thread my-2 mr-3 ml-12 w-full max-w-100 min-w-0 overflow-hidden rounded-md bg-surface-2 p-2.5 font-sans text-card-foreground shadow-raised";
+  "comment-card group/thread my-2 mr-3 ml-12 w-full max-w-100 min-w-0 overflow-hidden rounded-md bg-surface-2 p-2.5 font-sans text-card-foreground shadow-raised";
 
 export function CommentComposer({
   onCancel,
