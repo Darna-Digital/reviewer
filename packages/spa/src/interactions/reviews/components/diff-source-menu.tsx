@@ -1,12 +1,15 @@
 /**
- * The two questions the trail asks above a diff, as menus: what am I looking
- * at, and what is it read against.
+ * What the diff above is looking at, as a menu.
  *
- * Both hang off the breadcrumb rather than sitting in a bar of their own,
- * because both are already answered there in words — "Local changes", "vs
- * master" — and a crumb that names the answer is the natural place to change
- * it. That is what makes local work and a pull request one view instead of
- * two: the pane never changes, only the crumb does.
+ * It hangs off the breadcrumb rather than sitting in a bar of its own, because
+ * the crumb already answers the question in words — "Local changes", "#41" —
+ * and a crumb that names the answer is the natural place to change it. That is
+ * what makes local work and a pull request one view instead of two: the pane
+ * never changes, only the crumb does.
+ *
+ * What your own changes are read *against* is the header row's compare picker,
+ * which is offered whether or not anything has been chosen — see
+ * `interactions/comparison`.
  */
 import {
   IconArrowBarToRight,
@@ -14,11 +17,9 @@ import {
   IconCloud,
   IconGitCommit,
   IconGitCompare,
-  IconGitMerge,
-  IconRefresh,
   IconSearch,
 } from "@tabler/icons-react";
-import { useMemo, useRef, useState } from "react";
+import { useRef } from "react";
 import {
   DropdownMenuGroup,
   DropdownMenuItem,
@@ -191,146 +192,5 @@ export function MenuSearch({
         className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
       />
     </div>
-  );
-}
-
-/**
- * Which branch the changes are read against — and, where the work can be
- * landed, which branch it lands on.
- *
- * The two are one question asked twice: the branch you read a change against is
- * nearly always the branch you mean to put it on. So one list answers both,
- * each row opening into the two things a branch can be to this diff, the way
- * the source list beside it opens into the two things a source can be. There is
- * no separate merge button because there was never a separate list.
- *
- * `own` is the answer that needs no choosing — the branch this checkout is
- * aimed at — so it is marked rather than repeated, and choosing it means "stop
- * comparing" rather than "compare with that". `null` from `onSelect` says
- * exactly that.
- */
-export function CompareItems({
-  branches,
-  against,
-  own,
-  exclude,
-  onSelect,
-  onUpdate,
-  onMerge,
-}: {
-  branches: ReadonlyArray<string>;
-  against: string | null;
-  /** What it is read against when nothing has been chosen, if anything. */
-  own: string | null;
-  /** The branch the changes are *on* — diffing it with itself says nothing. */
-  exclude: string | null;
-  onSelect: (branch: string | null) => void;
-  /**
-   * Bring that branch into the work — including before there are any commits,
-   * since falling behind starts the moment somebody else pushes.
-   */
-  onUpdate?: (branch: string) => void;
-  /** Omitted where there is nothing to land. */
-  onMerge?: (branch: string) => void;
-}) {
-  const [query, setQuery] = useState("");
-  const q = query.trim().toLowerCase();
-  const shown = useMemo(
-    () =>
-      branches
-        .filter((branch) => branch !== exclude)
-        .filter((branch) => q === "" || branch.toLowerCase().includes(q)),
-    [branches, exclude, q]
-  );
-  return (
-    <>
-      <MenuSearch label="Search branches" value={query} onChange={setQuery} />
-      {own === null && q === "" && (
-        <DropdownMenuItem onClick={() => onSelect(null)}>
-          <span className="min-w-0 flex-1 truncate">Uncommitted only</span>
-          <IconCheck
-            className={cn(
-              "size-4 shrink-0",
-              against === null ? "opacity-100" : "opacity-0"
-            )}
-          />
-        </DropdownMenuItem>
-      )}
-      {shown.map((branch) => {
-        const row = (
-          <>
-            <span className="min-w-0 flex-1 truncate">{branch}</span>
-            {branch === own && (
-              <span className="shrink-0 text-xs text-muted-foreground">
-                lands here
-              </span>
-            )}
-            <IconCheck
-              className={cn(
-                "size-4 shrink-0",
-                branch === (against ?? own) ? "opacity-100" : "opacity-0"
-              )}
-            />
-          </>
-        );
-        if (onUpdate === undefined && onMerge === undefined) {
-          return (
-            <DropdownMenuItem
-              key={branch}
-              onClick={() => onSelect(branch === own ? null : branch)}
-            >
-              {row}
-            </DropdownMenuItem>
-          );
-        }
-        return (
-          <DropdownMenuSub key={branch}>
-            <DropdownMenuSubTrigger>{row}</DropdownMenuSubTrigger>
-            {/* Named, not "this". A submenu is read on its own — you got here
-                by pointing at a row and the row is now behind the panel — so an
-                action that says only "this" is asking you to remember which
-                branch you were on. Each row is a menu item, and a menu item
-                tooltips whatever it has had to cut off, so the whole name is
-                still a hover away. */}
-            <DropdownMenuSubContent className="max-w-80 min-w-56">
-              <DropdownMenuItem
-                onClick={() => onSelect(branch === own ? null : branch)}
-              >
-                <IconGitCompare className="size-4 shrink-0 text-muted-foreground" />
-                <span className="min-w-0 flex-1 truncate">
-                  Read against ‘{branch}’
-                </span>
-              </DropdownMenuItem>
-              {/* Between reading and landing, because that is where it falls:
-                  a branch you are behind cannot be merged into, and this is the
-                  one thing that changes that. Naming the same branch all three
-                  actions name is the point — catching up and landing are one
-                  choice made twice, not two questions. */}
-              {onUpdate !== undefined && (
-                <DropdownMenuItem onClick={() => onUpdate(branch)}>
-                  <IconRefresh className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate">
-                    Update from ‘{branch}’
-                  </span>
-                </DropdownMenuItem>
-              )}
-              {onMerge !== undefined && (
-                <DropdownMenuItem onClick={() => onMerge(branch)}>
-                  <IconGitMerge className="size-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0 flex-1 truncate">
-                    Merge into ‘{branch}’
-                  </span>
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        );
-      })}
-      {shown.length === 0 && (
-        <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-          No branch matches.
-        </p>
-      )}
-    </>
   );
 }

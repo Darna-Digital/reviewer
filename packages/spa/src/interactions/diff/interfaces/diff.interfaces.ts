@@ -41,6 +41,17 @@ export interface TreeInputs {
    * browsing. Defaults to none.
    */
   readonly commentedPaths?: ReadonlyArray<string>;
+  /**
+   * The local changes are being read against a branch rather than against
+   * HEAD, so the diff is the whole task: every commit since the two branches
+   * parted, and the uncommitted work on top.
+   *
+   * The tree has to follow it. Listing only what git calls changed answers a
+   * different question from the one the pane is showing — a file committed on
+   * the branch and left alone since is in the diff and would be missing from
+   * the tree beside it. Defaults to false.
+   */
+  readonly comparing?: boolean;
 }
 
 export interface DiffDependencies {

@@ -21,6 +21,8 @@ import {
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
 import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { DockRestore } from "@/components/layout/dock-restore";
+import { ComparePicker } from "@/interactions/comparison/components/compare-picker";
+import { useLocalComparison } from "@/interactions/comparison/adapters/comparison.hook.adapter";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
 import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
@@ -58,6 +60,7 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   const projectBranchList = useProjectBranches();
   const workspaceActions = useWorkspaceActions();
   const git = useGitActions();
+  const comparing = useLocalComparison();
 
   /** Make a root current before a menu action runs in it. */
   const followRepo = (repoPath: string) =>
@@ -101,6 +104,18 @@ export function AppHeader({ route }: { route: ShellRoute }) {
       (route.mode === "browse" &&
         (params.sha !== undefined ||
           (search.base !== undefined && search.head !== undefined))));
+
+  /**
+   * What your own changes are read against — a question only your own changes
+   * have. A pull request's base is GitHub's to decide and is named on the trail
+   * instead; a commit and a range say what they are in the URL that named them.
+   */
+  const showComparePicker =
+    route.kind === "code" &&
+    route.mode === "review" &&
+    readingOwnChanges &&
+    search.file === undefined &&
+    repo.data != null;
 
   return (
     <header className="group/header flex h-9 shrink-0 items-center gap-2 px-2">
@@ -174,6 +189,16 @@ export function AppHeader({ route }: { route: ShellRoute }) {
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {route.kind === "dock" && <DockRestore tab={route.tab} />}
+        {showComparePicker && (
+          <ComparePicker
+            comparison={comparing.comparison}
+            branch={comparing.branch}
+            aim={comparing.aim}
+            branches={comparing.branches}
+            remoteBranches={comparing.remoteBranches}
+            onSelect={comparing.compareAgainst}
+          />
+        )}
         {showDiffStyleToggle && (
           <DiffStyleToggle
             value={prefs.diffStyle}
