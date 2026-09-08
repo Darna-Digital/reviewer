@@ -23,7 +23,9 @@
 import type { ComponentProps, ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-const RADIUS = "rounded-[12px]";
+/* The sheet wears the app's own radius, so a table and a chat box read as the
+   same kind of object rather than two different ones. */
+const RADIUS = "rounded-lg";
 
 export function Table({
   className,
@@ -76,7 +78,7 @@ export function TableBody({
     <div
       role="rowgroup"
       className={cn(
-        "-mx-[0.5px] -mb-[0.5px] flex flex-col rounded-t-[12px] border-[0.5px] border-table-line bg-table-sheet",
+        "-mx-[0.5px] -mb-[0.5px] flex flex-col rounded-t-lg border-[0.5px] border-table-line bg-table-sheet",
         className
       )}
       {...props}

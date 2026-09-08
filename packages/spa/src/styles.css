@@ -162,7 +162,11 @@
   --table-sheet: #ffffff;
   --table-line: #e6e8ec;
   --table-ink: #1a1a1a;
-  --table-head-ink: #a1a1a1;
+  /* The secondary ink is not the same grey in both themes: a mid grey that
+     reads as quiet against a dark sheet is barely there on paper, so light
+     takes it down to `--muted-foreground`'s value, which clears 4.5:1 on
+     white. Columns of real content wear this, not just column labels. */
+  --table-head-ink: #737373;
   --table-shadow:
     0 0 0 0.5px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.05),
     0 2px 4px rgb(0 0 0 / 0.02);

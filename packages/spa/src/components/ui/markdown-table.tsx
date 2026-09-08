@@ -15,9 +15,9 @@ import type { Components } from "react-markdown";
 
 export const MARKDOWN_TABLE_COMPONENTS = {
   table: ({ node: _node, className: _className, ...props }) => (
-    <div className="my-3 max-w-full overflow-x-auto rounded-[12px] bg-table-surface shadow-table">
+    <div className="my-3 max-w-full overflow-x-auto rounded-lg bg-table-surface shadow-table">
       <table
-        className="w-full border-separate border-spacing-0 text-[13px] [&_tbody_tr:first-child_td:first-child]:rounded-tl-[12px] [&_tbody_tr:first-child_td:last-child]:rounded-tr-[12px]"
+        className="w-full border-separate border-spacing-0 text-[13px] [&_tbody_tr:first-child_td:first-child]:rounded-tl-lg [&_tbody_tr:first-child_td:last-child]:rounded-tr-lg"
         {...props}
       />
     </div>
