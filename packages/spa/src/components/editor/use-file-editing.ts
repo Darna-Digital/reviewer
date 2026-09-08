@@ -67,6 +67,13 @@ export interface FileEditing {
    * fires while the user is typing in the find bar or a comment composer.
    */
   readonly isFocused: () => boolean;
+  /**
+   * What the editor is holding right now, or null before one is attached.
+   *
+   * The view reads this to tell a genuinely new document from a re-read that
+   * only says back what was just written — see `CodeView`.
+   */
+  readonly readBuffer: () => string | null;
   readonly dirty: boolean;
   readonly saving: boolean;
   readonly save: () => void;
@@ -399,6 +406,10 @@ export function useFileEditing({
     createEditor,
     subscribe,
     isFocused: useCallback(() => focusedRef.current, []),
+    readBuffer: useCallback(
+      () => (editor === null ? null : valueRef.current),
+      [editor]
+    ),
     dirty,
     saving,
     save: useCallback(() => void save(), [save]),

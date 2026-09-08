@@ -137,3 +137,28 @@ describe("saving", () => {
     expect(put).not.toHaveBeenCalled();
   });
 });
+
+describe("reading the buffer", () => {
+  it("has nothing to say before an editor is attached", () => {
+    let api!: FileEditing;
+    function Host() {
+      api = useFileEditing({
+        path: "src/a.ts",
+        loadedContents: "one\n",
+        onSaved: () => {},
+      });
+      return null;
+    }
+    render(<Host />);
+    expect(api.readBuffer()).toBeNull();
+  });
+
+  it("answers with what the editor is holding", () => {
+    // The view compares this against what the file API last returned, to tell
+    // a document that changed underneath it from the read that follows a save.
+    const editing = mount("one\n");
+    expect(editing().readBuffer()).toBe("one\n");
+    type("two\n");
+    expect(editing().readBuffer()).toBe("two\n");
+  });
+});

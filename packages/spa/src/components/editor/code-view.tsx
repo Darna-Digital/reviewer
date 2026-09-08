@@ -1,6 +1,7 @@
 import { DIFFS_TAG_NAME } from "@pierre/diffs";
 import type {
   File as EditableFile,
+  FileContents,
   LineAnnotation,
   SelectedLineRange,
 } from "@pierre/diffs";
@@ -36,7 +37,7 @@ import { useVim } from "@/interactions/vim/adapters/vim.hook.adapter";
 import { useFolding } from "@/interactions/folding/adapters/folding.hook.adapter";
 import {
   THEMES,
-  fileForHighlighting,
+  externalFileFor,
   useHighlightPrimed,
   useLangReady,
 } from "@/components/editor/highlighter";
@@ -131,12 +132,6 @@ export function CodeView({
   const prefs = useUiPrefs();
   const langReady = useLangReady(path, true);
   const contents = file.data?.contents;
-  const highlightFile = useMemo(
-    () => (contents === undefined ? null : fileForHighlighting(path, contents)),
-    [path, contents]
-  );
-  // The editable view renders off the pool, so there is nothing to prime.
-  const highlightPrimed = useHighlightPrimed(highlightFile, false);
   const scrollWrapper = useRef<HTMLDivElement>(null);
   const commentsEnabled =
     onCommentSubmit !== undefined && onCommentDelete !== undefined;
@@ -196,6 +191,28 @@ export function CodeView({
   useEffect(() => {
     onDirtyChange?.(buffer.dirty);
   }, [buffer.dirty, onDirtyChange]);
+
+  /**
+   * The file handed to the view, which is not simply whatever the last read
+   * returned: saving re-reads the file, and a read that only says back what the
+   * editor is holding is not a new document to open — see `externalFileFor`.
+   * The file it settles on is held rather than derived, since what makes a read
+   * a repeat is the buffer, which no dependency array can watch.
+   */
+  const readBuffer = buffer.readBuffer;
+  const externalFile = useRef<FileContents | null>(null);
+  const highlightFile = useMemo(() => {
+    if (contents === undefined) return null;
+    externalFile.current = externalFileFor(
+      externalFile.current,
+      path,
+      contents,
+      readBuffer()
+    );
+    return externalFile.current;
+  }, [path, contents, readBuffer]);
+  // The editable view renders off the pool, so there is nothing to prime.
+  const highlightPrimed = useHighlightPrimed(highlightFile, false);
 
   // A file opened to be written — one just created from the tree — takes the
   // caret as soon as it has an editor to put it in, so the naming the user was
