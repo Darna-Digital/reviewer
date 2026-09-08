@@ -78,6 +78,42 @@ export function fileForHighlighting(
 }
 
 /**
+ * The file to hand the editable view, given the one it already has.
+ *
+ * The view treats every file it has not seen before as a replacement document:
+ * it tears the edit session down and builds a new one around the incoming text.
+ * That is right when the file really did change, and wrong when the read is
+ * only the round trip of a save — which is what every ⌘S produces, since
+ * writing the buffer refreshes git and the refresh re-reads the file. The
+ * rebuild loses the caret and the undo history, and the virtualizer, whose
+ * prepared layout still points at the session that just went away, throws
+ * outright and takes the pane down with it.
+ *
+ * So a read that only says back what the editor is holding is not a new
+ * document: the view keeps the file it has, and that file is brought up to date
+ * in place. Updating it matters — it is the text a later change on disk is
+ * merged against, and a file left at what it said before the save merges the
+ * incoming change into text nobody is looking at any more.
+ *
+ * Anything else — a different path, text neither the view nor the editor is
+ * showing — is a new document, and is built as one.
+ */
+export function externalFileFor(
+  held: FileContents | null,
+  path: string,
+  contents: string,
+  buffer: string | null
+): FileContents {
+  if (held === null || held.name !== path)
+    return fileForHighlighting(path, contents);
+  if (held.contents === contents) return held;
+  if (buffer !== contents) return fileForHighlighting(path, contents);
+  held.contents = contents;
+  held.cacheKey = `${path}:${contentCacheKey(contents)}`;
+  return held;
+}
+
+/**
  * Highlight `file` in the shared worker pool *before* it is mounted.
  *
  * A `File` reads the pool's AST cache synchronously as it hydrates, so a primed
