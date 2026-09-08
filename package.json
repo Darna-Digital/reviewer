@@ -1,7 +1,7 @@
 {
   "name": "reviewer",
   "private": true,
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "reviewer.darnadigital.com — local git review tool",
   "scripts": {
     "dev": "pnpm --parallel --filter @reviewer/embedded-server --filter spa dev",
