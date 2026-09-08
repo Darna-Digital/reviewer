@@ -120,88 +120,67 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   return (
     <header className="group/header flex h-9 shrink-0 items-center gap-2 px-2">
       {/*
-       * Two equal side tracks, when something is being centred between them.
-       * A middle child sits on the row's midpoint only if what flanks it is
-       * the same width, and the branch picker is a good deal wider than the
-       * layout toggle — so the sides share the leftover room equally and the
-       * picker lands on the window's midline rather than a little right of it.
-       * With nothing to centre the row is the plain strip it has always been.
+       * Hidden by the trail's own presence, in CSS, rather than by asking the
+       * route the same question the page just answered.
+       *
+       * Both are branch pickers with the branch they picked written on them,
+       * so a third in front of them naming a branch that may be neither is
+       * the reading nobody wants — but the page portals its trail in from a
+       * different component, and when the two decided this separately they
+       * decided it a frame and a half apart. You saw both, briefly, on every
+       * navigation. `:has` cannot be late: the picker is gone in the same
+       * paint the trail arrives in, and back in the paint it leaves.
+       *
+       * Reading your own changes is the exception the rule was never about:
+       * the trail there opens with "Review", which names no branch, so the
+       * picker is the only thing on the row saying whose changes these are —
+       * and the only way to go and read another branch's.
        */}
-      <div
-        className={cn(
-          "flex min-w-0 items-center gap-2",
-          showComparePicker ? "flex-1" : "contents"
-        )}
-      >
-        {/*
-         * Hidden by the trail's own presence, in CSS, rather than by asking the
-         * route the same question the page just answered.
-         *
-         * Both are branch pickers with the branch they picked written on them,
-         * so a third in front of them naming a branch that may be neither is
-         * the reading nobody wants — but the page portals its trail in from a
-         * different component, and when the two decided this separately they
-         * decided it a frame and a half apart. You saw both, briefly, on every
-         * navigation. `:has` cannot be late: the picker is gone in the same
-         * paint the trail arrives in, and back in the paint it leaves.
-         *
-         * Reading your own changes is the exception the rule was never about:
-         * the trail there opens with "Review", which names no branch, so the
-         * picker is the only thing on the row saying whose changes these are —
-         * and the only way to go and read another branch's.
-         */}
-        {repo.data != null && (
-          <div
-            className={cn(
-              "contents",
-              !readingOwnChanges &&
-                "group-has-[[data-trail]:not(:empty)]/header:hidden"
-            )}
-          >
-            <BranchSwitcher
-              current={repo.data.currentBranch}
-              branches={branches.data ?? []}
-              remoteBranches={remoteBranches.data ?? []}
-              busy={false}
-              onCheckout={(b) => {
-                void git.checkout(b);
-                void navigate({ to: REVIEW_HREF });
-              }}
-              onCheckoutAndUpdate={(b) => {
-                void git.checkoutAndUpdate(b);
-                void navigate({ to: REVIEW_HREF });
-              }}
-              onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
-              onCompare={(base, head) =>
-                void navigate({
-                  to: "/modes/code/browse/range",
-                  search: { base, head },
-                })
-              }
-              onMerge={(b) => void git.merge(b)}
-              onRebase={(o) => void git.rebase(o)}
-              onRenameBranch={(from, to) => void git.renameBranch(from, to)}
-              onDeleteBranch={(name) => void git.deleteBranch(name)}
-              onFetch={() => void git.fetch()}
-              onPush={() => void git.push()}
-              repos={projectBranchList.data?.repos}
-              currentRepo={activeRepo(
-                workspace.data ?? { repos: [], current: null }
-              )}
-              onFollowRepo={followRepo}
-            />
-          </div>
-        )}
-
-        {/* Lent to the page beneath, which hangs its trail here when the trail
-            is what steers the page rather than what reports on it. */}
+      {repo.data != null && (
         <div
-          data-trail
-          ref={setHeaderTrailSlot}
-          className="flex min-w-0 flex-1 items-center gap-2 empty:hidden"
-        />
-      </div>
+          className={cn(
+            "contents",
+            !readingOwnChanges &&
+              "group-has-[[data-trail]:not(:empty)]/header:hidden"
+          )}
+        >
+          <BranchSwitcher
+            current={repo.data.currentBranch}
+            branches={branches.data ?? []}
+            remoteBranches={remoteBranches.data ?? []}
+            busy={false}
+            onCheckout={(b) => {
+              void git.checkout(b);
+              void navigate({ to: REVIEW_HREF });
+            }}
+            onCheckoutAndUpdate={(b) => {
+              void git.checkoutAndUpdate(b);
+              void navigate({ to: REVIEW_HREF });
+            }}
+            onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
+            onCompare={(base, head) =>
+              void navigate({
+                to: "/modes/code/browse/range",
+                search: { base, head },
+              })
+            }
+            onMerge={(b) => void git.merge(b)}
+            onRebase={(o) => void git.rebase(o)}
+            onRenameBranch={(from, to) => void git.renameBranch(from, to)}
+            onDeleteBranch={(name) => void git.deleteBranch(name)}
+            onFetch={() => void git.fetch()}
+            onPush={() => void git.push()}
+            repos={projectBranchList.data?.repos}
+            currentRepo={activeRepo(
+              workspace.data ?? { repos: [], current: null }
+            )}
+            onFollowRepo={followRepo}
+          />
+        </div>
+      )}
 
+      {/* Straight after the branch picker, because the two are one sentence:
+          the branch you are on, and what its changes are read against. */}
       {showComparePicker && (
         <ComparePicker
           comparison={comparing.comparison}
@@ -213,12 +192,15 @@ export function AppHeader({ route }: { route: ShellRoute }) {
         />
       )}
 
+      {/* Lent to the page beneath, which hangs its trail here when the trail is
+          what steers the page rather than what reports on it. */}
       <div
-        className={cn(
-          "flex items-center gap-1",
-          showComparePicker ? "min-w-0 flex-1 justify-end" : "ml-auto shrink-0"
-        )}
-      >
+        data-trail
+        ref={setHeaderTrailSlot}
+        className="flex min-w-0 flex-1 items-center gap-2 empty:hidden"
+      />
+
+      <div className="ml-auto flex shrink-0 items-center gap-1">
         {route.kind === "dock" && <DockRestore tab={route.tab} />}
         {showDiffStyleToggle && (
           <DiffStyleToggle

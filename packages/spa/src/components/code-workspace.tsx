@@ -183,19 +183,6 @@ export function CodeWorkspace() {
       ? "commit"
       : "review";
 
-  /**
-   * The open-file strip is browsing's, and only browsing's.
-   *
-   * Reading a diff — the local changes, or somebody's pull request — what the
-   * pane is showing is the review, and a file opened over it is one look at one
-   * file rather than a set of them you are working in. The strip standing there
-   * was a list of files from somewhere else entirely: whatever you had open
-   * while browsing, laid in a row across the top of somebody's pull request. So
-   * the review does not draw it, and does not add to it either — a file read
-   * out of a diff leaves the browsing strip exactly as it was.
-   */
-  const tabbed = mode === "browse";
-
   // --- queries ---------------------------------------------------------------
   const workspace = useWorkspace();
   const workspaceActions = useWorkspaceActions();
@@ -306,6 +293,20 @@ export function CodeWorkspace() {
     }
     return null;
   }, [params.sha, search.base, search.head]);
+
+  /**
+   * The open-file strip is the files you are working in, and only those.
+   *
+   * Reading a diff — the local changes, somebody's merge request, a commit or
+   * a range out of History — what the pane is showing is one change, and a
+   * file opened over it is one look at one file rather than a set of them you
+   * are working in. The strip standing there was a list of files from
+   * somewhere else entirely: whatever you had open while browsing, laid in a
+   * row across the top of somebody's merge request or of a commit from three
+   * weeks ago. So a diff does not draw it, and does not add to it either — a
+   * file read out of one leaves the browsing strip exactly as it was.
+   */
+  const tabbed = mode === "browse" && browse === null;
 
   /**
    * What the local changes are read against — the header's compare picker is

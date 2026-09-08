@@ -190,26 +190,28 @@ export function ComparePicker(props: ComparePickerProps) {
             // Shrinkable, unlike the buttons it sits among: it is the widest
             // thing on the row and the row is shared, so it gives way rather
             // than pushing what flanks it off the edge.
-            // A share of the row rather than a fixed width: it sits between
-            // two things that will not shrink for it — a branch picker and the
-            // layout toggle — so on a narrow window it has to be the one that
-            // gives way, or it grows out over them.
-            className="max-w-[min(24rem,38%)] min-w-0 shrink gap-1.5 px-2 font-normal"
+            // Shrinkable, unlike the buttons it shares the row with: it is the
+            // widest thing on it and the only one that can afford to give way,
+            // so a narrow window shortens this rather than pushing the layout
+            // toggle off the edge. The head side goes first, then the base.
+            className="min-w-0 shrink gap-1.5 px-2 font-normal"
             aria-label={labels.summary}
             title={labels.summary}
           >
             <BaseIcon className="size-3.5 shrink-0 text-muted-foreground" />
             {/* The left-hand side is the half that changes, so it keeps its
                 room and the right gives way first — and only once the right
-                has nothing left to give does this start to go. */}
-            <span className="max-w-48 shrink-[0.15] truncate">
+                has nothing left to give does this start to go. Capped to the
+                branch picker's measure, so one enormous ref cannot take the
+                row. */}
+            <span className="max-w-64 shrink-[0.15] truncate">
               {labels.base}
             </span>
             {/* The relation, between the two things it relates — the same
                 glyph the trail puts between a diff and what it is read
                 against. */}
             <IconGitCompare className="size-3.5 shrink-0 text-muted-foreground" />
-            <span className="truncate text-muted-foreground">
+            <span className="max-w-64 truncate text-muted-foreground">
               {labels.headShort}
             </span>
             <IconChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
