@@ -100,8 +100,7 @@ export function ReviewAssignBar({
   catalog: ChatModelCatalog | undefined;
   /**
    * The branch the comments are about — the one this checkout is on. Sessions
-   * already working there lead the picker, and the newest of them is what the
-   * bar opens on.
+   * already working there lead the picker, under a heading that names it.
    */
   branch?: string;
   onAssign: (target: AssignTarget) => Promise<void> | void;
@@ -150,24 +149,22 @@ export function ReviewAssignBar({
   /**
    * What the bar is aimed at.
    *
-   * A note left on a branch's diff is nearly always for whoever is working on
-   * it, so that session is the answer until somebody says otherwise — which
-   * makes the common case no clicks at all. A pick, once made, is held: the
-   * list reloads as sessions come and go, and it must not quietly undo one.
-   *
-   * With no session to hand it to, the answer is a new one with whoever you
-   * were last working with rather than a fixed agent: the choice was made the
-   * last time this was asked, and asking again with a different answer is how
-   * work quietly ends up spread across agents nobody chose.
+   * A fresh chat with whoever you were last working with, until somebody says
+   * otherwise: the agent and its model are the two answers a handoff needs, and
+   * only a new chat still has them open, so leading with one puts both on the
+   * bar where they can be changed in a click. Aiming at a running session
+   * instead would hide the model behind a pick nobody asked to make — the
+   * sessions are still a heading away in the picker. Which agent is the one you
+   * last chose rather than a fixed default: that choice was made the last time
+   * this was asked, and asking again with a different answer is how work
+   * quietly ends up spread across agents nobody picked. A pick, once made, is
+   * held: the list reloads as sessions come and go, and it must not quietly
+   * undo one.
    */
   const target: AssignTarget = picked ?? {
-    ...(onBranch[0] === undefined
-      ? {
-          kind: "new" as const,
-          agent: lastAgent,
-          model: assignmentModel(lastAgent, catalog, remembered.model),
-        }
-      : { kind: "existing" as const, chatId: onBranch[0].id }),
+    kind: "new",
+    agent: lastAgent,
+    model: assignmentModel(lastAgent, catalog, remembered.model),
   };
 
   const q = query.trim().toLowerCase();
