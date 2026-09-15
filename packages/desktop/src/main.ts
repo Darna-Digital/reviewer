@@ -93,16 +93,22 @@ const currentBrandIcon = () =>
   nativeTheme.shouldUseDarkColors ? brandIcons.dark : brandIcons.light;
 
 /**
- * The bundle icon (compiled from `assets/Reviewer.icon` at build time) can't
- * follow the appearance, so the running app repaints its own dock tile and
- * window icon instead — which is also what gives dev, where there is no bundle
- * at all, the same icon.
+ * A packaged macOS app leaves its dock tile to the system: the bundle icon
+ * (compiled from `assets/Reviewer.icon` at build time) is rendered by macOS
+ * 26 with its glass treatment and appearance variants, and `dock.setIcon`
+ * would replace that with the flat PNG — a duller tile than the one shown
+ * before launch. Dev has no bundle at all and so still paints the PNG, as do
+ * the window icons elsewhere, following the appearance as it flips.
  */
-function applyBrandIcon(): void {
+function applyBrandIcon() {
   const icon = currentBrandIcon();
   if (icon.isEmpty()) return;
-  if (process.platform === "darwin") app.dock?.setIcon(icon);
-  else for (const window of BrowserWindow.getAllWindows()) window.setIcon(icon);
+  if (process.platform === "darwin") {
+    if (app.isPackaged) return;
+    app.dock?.setIcon(icon);
+    return;
+  }
+  for (const window of BrowserWindow.getAllWindows()) window.setIcon(icon);
 }
 
 let serverProcess: ChildProcess | null = null;
