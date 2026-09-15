@@ -93,9 +93,10 @@ const currentBrandIcon = () =>
   nativeTheme.shouldUseDarkColors ? brandIcons.dark : brandIcons.light;
 
 /**
- * The bundle `.icns` is baked at build time and can't follow the appearance, so
- * the running app repaints its own dock tile and window icon instead — which is
- * also what gives dev, where there is no bundle at all, the same icon.
+ * The bundle icon (compiled from `assets/Reviewer.icon` at build time) can't
+ * follow the appearance, so the running app repaints its own dock tile and
+ * window icon instead — which is also what gives dev, where there is no bundle
+ * at all, the same icon.
  */
 function applyBrandIcon(): void {
   const icon = currentBrandIcon();

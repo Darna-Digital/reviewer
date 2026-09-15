@@ -61,7 +61,9 @@ module.exports = {
 
   files: [
     { from: "dist", to: "dist", filter: ["**/*"] },
-    { from: "assets", to: "assets", filter: ["**/*"] },
+    // The Icon Composer bundle is build-time input only; the PNGs stay, the
+    // running app paints them onto the dock (see main.ts).
+    { from: "assets", to: "assets", filter: ["**/*", "!Reviewer.icon{,/**}"] },
     { from: "../spa/dist/client", to: "renderer", filter: ["**/*"] },
     { from: "../embedded-server/dist", to: "server", filter: ["**/*"] },
     // Production dependencies (@lydell/node-pty + its platform binary packages,
@@ -73,7 +75,12 @@ module.exports = {
 
   mac: {
     category: "public.app-category.developer-tools",
-    icon: "assets/reviewer.icns",
+    // An Icon Composer bundle rather than a plain .icns: macOS 26 draws legacy
+    // .icns icons shrunken inside a system glass tile ("icon jail"), so a
+    // full-size dock icon needs the layered format, which electron-builder
+    // compiles into an asset catalog (plus a derived .icns for older macOS) with
+    // actool — packaging therefore needs Xcode 26+ selected, on CI too.
+    icon: "assets/Reviewer.icon",
     // Gatekeeper requires distributed apps to be signed with a Developer ID
     // certificate and notarized. `identity` is left unset so electron-builder
     // auto-discovers the "Developer ID Application" cert imported into the CI

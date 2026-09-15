@@ -1,0 +1,29 @@
+{
+  "fill" : {
+    "automatic-gradient" : "srgb:0.13000,0.13000,0.13000,1.00000"
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "mark.svg",
+          "name" : "mark",
+          "fill" : {
+            "solid" : "srgb:1.00000,1.00000,1.00000,1.00000"
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "squares" : "shared"
+  }
+}

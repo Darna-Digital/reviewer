@@ -38,7 +38,9 @@ jobs:
 
   release:
     needs: check
-    runs-on: macos-14
+    # macOS 26 image: packaging compiles assets/Reviewer.icon with actool, which
+    # needs the image's default Xcode 26.
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4.2.2
 
