@@ -77,7 +77,7 @@ const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 // app no longer shows Electron's default icon. Both variants are the `brand/`
 // square on the macOS icon grid — an 824px tile centred in a 1024px canvas, the
 // margin every other dock icon leaves — and differ only in whether the tile is
-// black with a white mark or white with a black one, so nothing moves or
+// dark with a white mark or white with a black one, so nothing moves or
 // resizes as the appearance flips. Resolved relative to `dist/` (../assets) so
 // dev and packaged builds load the same files.
 const brandIcons = {
