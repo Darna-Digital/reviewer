@@ -21,6 +21,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { setUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
 export function Rail({
@@ -98,4 +99,19 @@ export function RailButton({
       <TooltipContent side="right">{label}</TooltipContent>
     </Tooltip>
   );
+}
+
+/**
+ * Bring the shell's sidebar back, for the rail buttons that act on it.
+ *
+ * Some of what the rail carries is a control for the column beside it rather
+ * than for the pane: the surfaces whose left column *is* the sidebar, the
+ * filters that narrow the list in it. The sidebar is put away by dragging its
+ * edge shut (see `SidebarResizeHandle`), which leaves the rail standing with
+ * its column gone — and pressing one of those is then a click that changes
+ * nothing you can see. Reaching for a control that acts on the sidebar is
+ * asking to be looking at the sidebar, so it opens.
+ */
+export function revealSidebar() {
+  setUiPrefs({ sidebarVisible: true });
 }

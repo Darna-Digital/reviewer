@@ -68,10 +68,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
         {/* Apply the persisted theme, and flag the native shell, before paint —
             the frame is translucent there, and a flash of opaque chrome while
-            the vibrancy layer waits is the exact thing this avoids. */}
+            the vibrancy layer waits is the exact thing this avoids.
+
+            The shell is looked for in the window this document hangs in as well
+            as in this one: a preview frame gets no preload of its own, and a
+            picture drawn without the flag is a picture of the app as the
+            browser wears it. See `lib/desktop`. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(()=>{try{const r=document.documentElement;const t=localStorage.getItem("reviewer-theme")||"system";const d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);r.dataset.theme=d?"dark":"light";r.classList.toggle("desktop","reviewer" in window);const p=JSON.parse(localStorage.getItem("reviewer-ui")||"{}");r.classList.toggle("translucent",p.translucency!==false);}catch(e){}})()`,
+            __html: `(()=>{try{const r=document.documentElement;const t=localStorage.getItem("reviewer-theme")||"system";const d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);r.dataset.theme=d?"dark":"light";let k=false;try{k="reviewer" in window||(window!==parent&&"reviewer" in parent)}catch(e){}r.classList.toggle("desktop",k);const p=JSON.parse(localStorage.getItem("reviewer-ui")||"{}");r.classList.toggle("translucent",p.translucency!==false);}catch(e){}})()`,
           }}
         />
       </head>

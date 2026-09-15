@@ -16,7 +16,12 @@ import {
 } from "@tabler/icons-react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { restoreDock, showDockPage } from "@/components/layout/dock-expansion";
-import { Rail, RailButton, RailFoot } from "@/components/layout/rail";
+import {
+  Rail,
+  RailButton,
+  RailFoot,
+  revealSidebar,
+} from "@/components/layout/rail";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +44,11 @@ interface RailLink {
   icon: typeof IconGitCommit;
   /** The route that lights the button up, it or anything under it. */
   match: string;
+  /**
+   * Whether the surface is drawn in the shell's sidebar, so that going to it
+   * with the sidebar shut has to open it — see `revealSidebar`.
+   */
+  needsSidebar?: boolean;
 }
 
 /** Code mode's inbox is the repo's agent threads. */
@@ -50,12 +60,14 @@ const GIT_LINKS: RailLink[] = [
     label: "Browse the project",
     icon: IconFolder,
     match: "/modes/code/browse",
+    needsSidebar: true,
   },
   {
     to: REVIEW_HREF,
     label: "Review",
     icon: IconGitCommit,
     match: REVIEW_HREF,
+    needsSidebar: true,
   },
   {
     to: REVIEWS_HREF,
@@ -98,12 +110,19 @@ export function ModeRail() {
     else showDockPage(navigate, tab);
   };
 
-  const renderLink = ({ to, label, icon: Icon, match }: RailLink) => (
+  const renderLink = ({
+    to,
+    label,
+    icon: Icon,
+    match,
+    needsSidebar,
+  }: RailLink) => (
     <RailButton
       key={to}
       to={to}
       label={label}
       active={pathname === match || pathname.startsWith(`${match}/`)}
+      onClick={needsSidebar === true ? revealSidebar : undefined}
     >
       <Icon className="size-4" />
     </RailButton>

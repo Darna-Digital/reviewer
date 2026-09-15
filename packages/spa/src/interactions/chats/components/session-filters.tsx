@@ -15,7 +15,7 @@
  */
 import { IconCheck, IconFilter2, IconFolder } from "@tabler/icons-react";
 import { useState } from "react";
-import { RailButton } from "@/components/layout/rail";
+import { RailButton, revealSidebar } from "@/components/layout/rail";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -135,6 +135,9 @@ export function SessionFilters() {
       onOpenChange={(next) => {
         setOpen(next);
         if (!next) setQuery("");
+        // Narrowing a list you cannot see is a control with nothing under it,
+        // so reaching for it brings the list back.
+        else revealSidebar();
       }}
     >
       <RailButton label="Filter sessions" render={<PopoverTrigger />}>
