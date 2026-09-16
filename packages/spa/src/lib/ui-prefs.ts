@@ -14,7 +14,11 @@ import {
   CHAT_MODES,
   type ChatMode,
 } from "@/interactions/chats/functions/chat-mode.functions";
+import type { MarkdownView } from "@/interactions/markdown/interfaces/markdown.interfaces";
+import { asMarkdownView } from "@/interactions/markdown/functions/markdown-view.functions";
 import { isPreviewWindow } from "@/lib/preview-window";
+import { asEditMode } from "@/interactions/edit-mode/functions/edit-mode.functions";
+import type { EditMode } from "@/interactions/edit-mode/interfaces/edit-mode.interfaces";
 
 export type ThemePref = "light" | "dark" | "system";
 export type Theme = "light" | "dark";
@@ -63,10 +67,10 @@ export interface UiPrefs {
   /** Whether the shell's left sidebar (the file tree) shows. */
   sidebarVisible: boolean;
   /**
-   * Modal editing in the code view: Vim motions and operators, a block caret,
-   * and line numbers counted from the caret rather than from the top.
+   * How an open file answers the keyboard — typing, modal editing, or
+   * commenting rather than editing at all.
    */
-  vimMode: boolean;
+  editMode: EditMode;
   /**
    * Whether saving a file runs the project's own formatter over it first. Inert
    * in a project that configures none.
@@ -83,6 +87,14 @@ export interface UiPrefs {
   inboxListWidth: number;
   /** Drag-resizable source pane width in the SVG split view, in px. */
   svgSourceWidth: number;
+  /**
+   * Which of the three readings a markdown file opens on: its source, its
+   * document, or both. One preference for every `.md` file rather than one per
+   * file — it is a way of working, not a property of a document.
+   */
+  markdownView: MarkdownView;
+  /** Drag-resizable source pane width in the split markdown view, in px. */
+  markdownSourceWidth: number;
   /** Drag-resizable bottom panel height, in px. */
   bottomHeight: number;
   /** Drag-resizable width of the Find window's results list, in px. */
@@ -164,7 +176,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   connectors: true,
   translucency: true,
   sidebarVisible: true,
-  vimMode: false,
+  editMode: "normal",
   formatOnSave: true,
   bottomVisible: true,
   bottomTab: "history",
@@ -172,6 +184,8 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   workspaceSidebarWidth: 256,
   inboxListWidth: 320,
   svgSourceWidth: 420,
+  markdownView: "source",
+  markdownSourceWidth: 480,
   bottomHeight: 256,
   findResultsWidth: 380,
   commitFilesHeight: 180,
@@ -236,17 +250,28 @@ export const fitSidePane = (pane: SidePane, width: number): number =>
         Math.min(width, Math.round(window.innerWidth / 2))
       );
 
+/** Storage holds whatever the last version of the app wrote, whatever that was. */
+type StoredPrefs = Partial<typeof defaults> & { readonly vimMode?: unknown };
+
 function load(): UiPrefs {
   let prefs = { ...defaults };
   if (typeof window !== "undefined") {
+    // Held as it was read as well as merged in: the edit mode is worked out
+    // from the whole stored profile, since a profile old enough states it as a
+    // `vimMode` boolean instead.
+    let storedPrefs: StoredPrefs = {};
     try {
       const raw = window.localStorage.getItem(STORE_KEY);
-      if (raw !== null)
-        prefs = { ...prefs, ...(JSON.parse(raw) as Partial<typeof defaults>) };
+      if (raw !== null) {
+        storedPrefs = JSON.parse(raw) as StoredPrefs;
+        prefs = { ...prefs, ...storedPrefs };
+      }
     } catch {
       // ignore malformed storage
     }
+    prefs.editMode = asEditMode(storedPrefs);
     if (!BOTTOM_TABS.includes(prefs.bottomTab)) prefs.bottomTab = "history";
+    prefs.markdownView = asMarkdownView(prefs.markdownView);
     prefs.plansPaneWidth = fitSidePane("analysis", prefs.plansPaneWidth);
     prefs.browserPaneWidth = fitSidePane("browser", prefs.browserPaneWidth);
     prefs.lastSession = readLastSession(prefs.lastSession);
@@ -275,7 +300,7 @@ function persist() {
       connectors,
       translucency,
       sidebarVisible,
-      vimMode,
+      editMode,
       formatOnSave,
       bottomVisible,
       bottomTab,
@@ -283,6 +308,8 @@ function persist() {
       workspaceSidebarWidth,
       inboxListWidth,
       svgSourceWidth,
+      markdownView,
+      markdownSourceWidth,
       bottomHeight,
       findResultsWidth,
       commitFilesHeight,
@@ -311,7 +338,7 @@ function persist() {
         connectors,
         translucency,
         sidebarVisible,
-        vimMode,
+        editMode,
         formatOnSave,
         bottomVisible,
         bottomTab,
@@ -319,6 +346,8 @@ function persist() {
         workspaceSidebarWidth,
         inboxListWidth,
         svgSourceWidth,
+        markdownView,
+        markdownSourceWidth,
         bottomHeight,
         findResultsWidth,
         commitFilesHeight,

@@ -215,15 +215,17 @@ export function BranchesPanel(props: BranchesPanelProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b px-2">
+      {/* Same band and same inset as the history toolbar next door, so the row
+          under the dock's tabs doesn't move when the tab does. */}
+      <div className="flex min-h-9 shrink-0 items-center gap-1 border-b px-1 py-0.5">
         <div className="relative min-w-40 flex-1">
-          <IconSearch className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          <IconSearch className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search branches"
             aria-label="Search branches"
-            className="h-7 pl-8"
+            className="h-7 pl-7 text-xs"
           />
         </div>
       </div>

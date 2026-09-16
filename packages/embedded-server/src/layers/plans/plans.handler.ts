@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
 import { Api } from "../../api.ts";
 import { PlansService } from "@reviewer/core/plans";
+import { authorOf } from "../git/git-identity.ts";
 
 const ok = { ok: true } as const;
 
@@ -26,17 +27,15 @@ export const PlansHandler = HttpApiBuilder.group(Api, "plans", (handlers) =>
       Effect.flatMap(PlansService, (s) => s.save(params.id))
     )
     .handle("annotate", ({ params, payload }) =>
-      Effect.flatMap(PlansService, (s) =>
-        s.addAnnotation(params.id, {
+      Effect.gen(function* () {
+        const plans = yield* PlansService;
+        return yield* plans.addAnnotation(params.id, {
           nodeId: payload.nodeId ?? null,
           body: payload.body,
-          author:
-            payload.author !== undefined && payload.author.length > 0
-              ? payload.author
-              : "you",
+          author: yield* authorOf(payload.author),
           anchor: payload.anchor ?? null,
-        })
-      )
+        });
+      })
     )
     .handle("removeAnnotation", ({ params }) =>
       Effect.flatMap(PlansService, (s) =>

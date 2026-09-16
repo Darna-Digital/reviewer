@@ -64,6 +64,14 @@ export function filetypeOf(path: string): string {
   return /^\.?env(\..+)?$/i.test(name) ? "dotenv" : filetype;
 }
 
+/**
+ * The identity the pool caches a file's highlight under. Composed in one place
+ * because the library refuses an edited file that comes back wearing the key of
+ * the one it replaces — see `CodeView`'s `onEditComplete`.
+ */
+export const fileCacheKey = (path: string, contents: string): string =>
+  `${path}:${contentCacheKey(contents)}`;
+
 /** The file as the pool wants it: named, and keyed so its highlight is cached. */
 export function fileForHighlighting(
   path: string,
@@ -73,7 +81,7 @@ export function fileForHighlighting(
     name: path,
     contents,
     lang: filetypeOf(path),
-    cacheKey: `${path}:${contentCacheKey(contents)}`,
+    cacheKey: fileCacheKey(path, contents),
   };
 }
 
@@ -109,7 +117,7 @@ export function externalFileFor(
   if (held.contents === contents) return held;
   if (buffer !== contents) return fileForHighlighting(path, contents);
   held.contents = contents;
-  held.cacheKey = `${path}:${contentCacheKey(contents)}`;
+  held.cacheKey = fileCacheKey(path, contents);
   return held;
 }
 

@@ -12,12 +12,25 @@ import { cn } from "@/lib/utils";
  * Row tooltips sit flush against the row they explain, like a submenu opening
  * off it, but centred on it — the tooltip is taller than a row, so aligning
  * their top edges leaves it hanging visibly low.
+ *
+ * They stay on the right whatever the row's place on screen. Left to flip, a
+ * list near the window's right edge would speak from its left and an identical
+ * list in the middle from its right, so the same menu reads as two different
+ * components depending on where it was opened. Shifting instead of flipping
+ * keeps that one habit while still fitting: the tooltip's width is already
+ * capped at `--available-width`, so it wraps into the space on its side rather
+ * than needing to be pushed back over the row.
  */
 export const ROW_TOOLTIP_PLACEMENT = {
   side: "right",
   sideOffset: 0,
   align: "center",
   alignOffset: 0,
+  collisionAvoidance: {
+    side: "shift",
+    align: "shift",
+    fallbackAxisSide: "none",
+  },
 } as const;
 
 interface Props {

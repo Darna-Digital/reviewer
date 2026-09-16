@@ -211,16 +211,31 @@ export function useFolding({
 
   // Clicking the chevron, or the `⋯` on a folded line — the only part of a
   // folded block still on screen to click.
+  //
+  // The fold happens on the way down, but the `click` that follows is a
+  // separate event the view still gets, and the chevron lives in the gutter:
+  // in comment mode a click there opens a composer on the line. Taking the
+  // whole gesture, down and up, is what keeps a fold from also leaving a
+  // comment behind.
   useEffect(() => {
-    const onClick = (event: Event) => {
+    const onPointerDown = (event: Event) => {
       const line = foldTargetOf(event);
       if (line === null) return;
       event.preventDefault();
       event.stopPropagation();
       toggle(line);
     };
-    window.addEventListener("pointerdown", onClick, true);
-    return () => window.removeEventListener("pointerdown", onClick, true);
+    const onClick = (event: Event) => {
+      if (foldTargetOf(event) === null) return;
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    window.addEventListener("pointerdown", onPointerDown, true);
+    window.addEventListener("click", onClick, true);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown, true);
+      window.removeEventListener("click", onClick, true);
+    };
   }, [toggle]);
 
   // ⌘⌥[ and ⌘⌥], as in VS Code, plus ⌘K⌘0 / ⌘K⌘J spelled without the chord.

@@ -31,6 +31,7 @@ import {
   caretAfterDelete,
   deleteLinesEdits,
 } from "@/components/editor/editor-commands";
+import { minimalEdit } from "@/interactions/formatting/functions/format-edit";
 import { fetchClient } from "@/lib/api/client";
 
 /** How long typing settles before the buffer is handed to the analyser. */
@@ -74,6 +75,15 @@ export interface FileEditing {
    * only says back what was just written — see `CodeView`.
    */
   readonly readBuffer: () => string | null;
+  /**
+   * Replace the buffer with `text`, as the smallest edit that gets there.
+   *
+   * For a second view over the same file — the document editor beside a split
+   * markdown file. Applying an edit rather than resetting the document is what
+   * keeps the caret, the selection and the undo history intact on the side the
+   * user is not typing in.
+   */
+  readonly replaceBuffer: (text: string) => void;
   readonly dirty: boolean;
   readonly saving: boolean;
   readonly save: () => void;
@@ -89,6 +99,13 @@ export interface FileEditing {
 export interface FileEditingOptions {
   /** Repository-relative path of the file being edited. */
   readonly path: string;
+  /**
+   * Whether the view is holding an edit session open. False in comment mode,
+   * where the file is read rather than written: the session is torn down and
+   * the editor with it, so everything that reaches for one — folding, find,
+   * the caret — has to be told there is no longer one to reach for.
+   */
+  readonly editing: boolean;
   /** What was loaded from disk, or undefined while it is still being read. */
   readonly loadedContents: string | undefined;
   /** Called after the buffer is written back, so git state can refresh. */
@@ -129,6 +146,7 @@ export interface SelectionActionContext {
 
 export function useFileEditing({
   path,
+  editing,
   loadedContents,
   onSaved,
   onAttach,
@@ -165,8 +183,12 @@ export function useFileEditing({
   } | null>(null);
   const pathRef = useRef(path);
   pathRef.current = path;
+  // The view disposes the editor itself when editing stops, so an attachment
+  // that outlives the session names something already torn down.
   const editor =
-    attachment !== null && attachment.path === path ? attachment.editor : null;
+    editing && attachment !== null && attachment.path === path
+      ? attachment.editor
+      : null;
 
   /**
    * Build the editor the view asked for, with this hook's own listeners folded
@@ -396,6 +418,14 @@ export function useFileEditing({
     setBufferForAnalysis(null);
   }, []);
 
+  const replaceBuffer = useCallback((text: string) => {
+    const instance = editorRef.current;
+    if (instance === null) return;
+    const edit = minimalEdit(valueRef.current, text);
+    if (edit === null) return;
+    instance.applyEdits([edit], true);
+  }, []);
+
   const subscribe = useCallback((listener: () => void) => {
     listeners.current.add(listener);
     return () => listeners.current.delete(listener);
@@ -410,6 +440,7 @@ export function useFileEditing({
       () => (editor === null ? null : valueRef.current),
       [editor]
     ),
+    replaceBuffer,
     dirty,
     saving,
     save: useCallback(() => void save(), [save]),

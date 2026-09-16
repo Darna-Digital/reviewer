@@ -2,6 +2,7 @@ import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
 import { Api } from "../../api.ts";
 import { CommentsService } from "@reviewer/core/comments";
+import { authorOf } from "../git/git-identity.ts";
 
 const ok = { ok: true } as const;
 
@@ -12,19 +13,17 @@ export const CommentsHandler = HttpApiBuilder.group(
     handlers
       .handle("list", () => Effect.flatMap(CommentsService, (s) => s.list))
       .handle("add", ({ payload }) =>
-        Effect.flatMap(CommentsService, (s) =>
-          s.add({
+        Effect.gen(function* () {
+          const comments = yield* CommentsService;
+          return yield* comments.add({
             filePath: payload.filePath,
             side: payload.side,
             lineNumber: payload.lineNumber,
             body: payload.body,
-            author:
-              payload.author !== undefined && payload.author.length > 0
-                ? payload.author
-                : "you",
+            author: yield* authorOf(payload.author),
             target: payload.target ?? "worktree",
-          })
-        )
+          });
+        })
       )
       .handle("update", ({ params, payload }) =>
         Effect.flatMap(CommentsService, (s) =>

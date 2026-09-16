@@ -1736,3 +1736,120 @@ body.is-resizing-row * {
   cursor: row-resize !important;
   user-select: none;
 }
+
+/* --- reviewer: the markdown document editor -------------------------------- */
+/* The block editor's own surface. It sits inside the code pane, which sets a
+   monospace font and `white-space: pre` for diffs, so prose has to say plainly
+   that it is prose. Soft line breaks in a paragraph are kept as the newlines
+   the file actually holds — see `mdast-to-doc` — which is why `pre-wrap` rather
+   than `normal`: a hard-wrapped document should look hard-wrapped. */
+.document-content {
+  font-family: var(--font-sans);
+  white-space: pre-wrap;
+  line-height: 1.65;
+  font-size: 0.9375rem;
+  overflow-wrap: anywhere;
+}
+.document-content > * + * {
+  margin-top: 0.5rem;
+}
+.document-content :where(h1, h2, h3, h4, h5, h6) {
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.5rem;
+}
+.document-content h1 {
+  font-size: 1.75rem;
+}
+.document-content h2 {
+  font-size: 1.4rem;
+}
+.document-content h3 {
+  font-size: 1.15rem;
+}
+.document-content :where(h4, h5, h6) {
+  font-size: 1rem;
+}
+.document-content :where(ul, ol) {
+  padding-left: 1.4rem;
+  list-style: revert;
+}
+/* A to-do list is a list of checkboxes, not of bullets. */
+.document-content ul[data-type="taskList"] {
+  padding-left: 0;
+  list-style: none;
+}
+.document-content ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.document-content ul[data-type="taskList"] li > label {
+  margin-top: 0.3rem;
+}
+.document-content blockquote {
+  border-left: 2px solid var(--border);
+  padding-left: 0.85rem;
+  color: var(--muted-foreground);
+}
+.document-content :where(code, pre) {
+  font-family:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+}
+.document-content code {
+  font-size: 0.85em;
+  background: var(--muted);
+  border-radius: var(--radius-sm);
+  padding: 0.1em 0.3em;
+}
+.document-content pre {
+  background: var(--muted);
+  border-radius: var(--radius-md);
+  padding: 0.7rem 0.85rem;
+  font-size: 0.85em;
+}
+.document-content pre code {
+  background: transparent;
+  padding: 0;
+}
+.document-content a {
+  color: var(--link);
+  text-decoration: underline;
+}
+.document-content hr {
+  border-top: 1px solid var(--border);
+  margin: 1.25rem 0;
+}
+.document-content table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+.document-content :where(th, td) {
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.5rem;
+  vertical-align: top;
+}
+.document-content th {
+  background: var(--muted);
+  font-weight: 600;
+}
+/* The empty-block hint the Placeholder extension paints. It is a pseudo-element
+   so it can never be selected, copied, or saved into the file. */
+.document-content p.is-empty::before,
+.document-content h1.is-empty::before,
+.document-content h2.is-empty::before,
+.document-content h3.is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--muted-foreground);
+}
+/* A block dragged by its handle lands where this cursor says it will. */
+.document-content .ProseMirror-selectednode {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}

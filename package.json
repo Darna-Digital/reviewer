@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "pnpm --parallel --filter @reviewer/embedded-server --filter spa dev",
     "dev:www": "pnpm --filter www dev",
+    "dev:brand": "pnpm --filter @reviewer/brand dev",
     "dev:desktop": "pnpm --parallel --filter spa --filter @reviewer/desktop dev",
     "desktop": "pnpm build:desktop && pnpm --filter @reviewer/desktop start",
     "build:desktop": "pnpm --filter @reviewer/embedded-server build:bundle && pnpm --filter spa build:desktop && pnpm --filter @reviewer/desktop build",

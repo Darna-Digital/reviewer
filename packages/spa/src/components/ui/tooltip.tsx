@@ -60,12 +60,13 @@ function TooltipContent({
   sideOffset = 6,
   align = "center",
   alignOffset = 0,
+  collisionAvoidance,
   children,
   ...props
 }: TooltipPrimitive.Popup.Props &
   Pick<
     TooltipPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
+    "align" | "alignOffset" | "collisionAvoidance" | "side" | "sideOffset"
   >) {
   const { className: surface } = useElevation(ELEVATION.tooltip, POPUP_SHADOW);
   return (
@@ -75,6 +76,7 @@ function TooltipContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
+        collisionAvoidance={collisionAvoidance}
         className={cn("isolate z-50", HIDDEN_WITH_ANCHOR)}
       >
         <TooltipPrimitive.Popup

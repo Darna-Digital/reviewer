@@ -7,7 +7,6 @@ import {
   IconMoon,
   IconRoute,
   IconSun,
-  IconKeyboard,
 } from "@tabler/icons-react";
 import type { ComponentType } from "react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +23,10 @@ import {
   type DiffStyle,
   type ThemePref,
 } from "@/lib/ui-prefs";
+import {
+  EDIT_MODE_OPTIONS,
+  editModeOption,
+} from "@/interactions/edit-mode/components/edit-mode-options";
 import { cn } from "@/lib/utils";
 
 type SettingsIcon = ComponentType<{ className?: string }>;
@@ -163,24 +166,21 @@ export function SettingsPage() {
                   </SettingRow>
                 )}
                 <SettingRow
-                  title="Vim mode"
-                  detail="Modal editing in the code view: Vim motions and operators, a block caret, and line numbers counted from the caret"
+                  title="Edit mode"
+                  detail={editModeOption(prefs.editMode).detail}
                 >
-                  <label className="flex items-center gap-2">
-                    <IconKeyboard
-                      className={cn(
-                        "size-4 text-muted-foreground",
-                        prefs.vimMode && "text-foreground"
-                      )}
-                    />
-                    <Switch
-                      checked={prefs.vimMode}
-                      onChange={(event) =>
-                        setUiPrefs({ vimMode: event.currentTarget.checked })
-                      }
-                      aria-label="Vim mode"
-                    />
-                  </label>
+                  <div className="flex flex-wrap gap-0.5 rounded-md border p-0.5">
+                    {EDIT_MODE_OPTIONS.map((option) => (
+                      <SegmentedOption
+                        key={option.value}
+                        value={option.value}
+                        label={option.label}
+                        icon={option.icon}
+                        selected={prefs.editMode === option.value}
+                        onSelect={(editMode) => setUiPrefs({ editMode })}
+                      />
+                    ))}
+                  </div>
                 </SettingRow>
                 <FormatOnSaveSetting />
                 <SettingRow title="Git dock">

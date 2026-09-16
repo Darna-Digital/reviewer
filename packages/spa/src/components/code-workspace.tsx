@@ -50,6 +50,8 @@ import {
 import { CodeView } from "@/components/editor/code-view";
 import type { RevealTarget } from "@/interactions/language/components/use-reveal-line";
 import { ImageView, isImagePath } from "@/components/editor/image-view";
+import { MarkdownFileView } from "@/interactions/markdown/components/markdown-file-view";
+import { isMarkdownPath } from "@/interactions/markdown/functions/markdown-view.functions";
 import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
 import { targetOf } from "@/interactions/branch-targets/functions/branch-targets.functions";
@@ -1036,8 +1038,12 @@ export function CodeWorkspace() {
       return <ImageView path={viewing} theme={prefs.resolvedTheme} />;
     }
     if (viewing !== null) {
+      // A markdown file is the one filetype with more than one honest reading,
+      // so it gets the view switch and the document editor wrapped around the
+      // same code view every other file gets on its own.
+      const Viewer = isMarkdownPath(viewing) ? MarkdownFileView : CodeView;
       return (
-        <CodeView
+        <Viewer
           path={viewing}
           theme={prefs.resolvedTheme}
           caretKey={caretRequest?.path === viewing ? caretRequest.key : null}

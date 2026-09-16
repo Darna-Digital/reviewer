@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: "Space Grotesk";
+  font-weight: 300;
+  font-display: block;
+  src: url("/fonts/SpaceGrotesk-300.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-weight: 400;
+  font-display: block;
+  src: url("/fonts/SpaceGrotesk-400.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-weight: 500;
+  font-display: block;
+  src: url("/fonts/SpaceGrotesk-500.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-weight: 600;
+  font-display: block;
+  src: url("/fonts/SpaceGrotesk-600.ttf") format("truetype");
+}
+@font-face {
+  font-family: "Space Grotesk";
+  font-weight: 700;
+  font-display: block;
+  src: url("/fonts/SpaceGrotesk-700.ttf") format("truetype");
+}
+
+@theme {
+  --font-sans:
+    "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+
+  --color-ink: #09090b;
+  --color-panel: #101013;
+  --color-raised: #17171b;
+  --color-line: #26262c;
+  --color-muted: #8b8b95;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-ink text-white antialiased;
+    font-family: var(--font-sans);
+  }
+
+  /* Range inputs are the workhorse of this tool — give them a track and a
+     thumb that read at a glance instead of the platform default. */
+  input[type="range"] {
+    @apply h-1.5 w-full cursor-ew-resize appearance-none rounded-full bg-line outline-none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    @apply size-3.5 appearance-none rounded-full border-2 border-ink bg-white transition-transform;
+  }
+  input[type="range"]:hover::-webkit-slider-thumb {
+    @apply scale-115;
+  }
+  input[type="range"]:active::-webkit-slider-thumb {
+    @apply scale-95;
+  }
+
+  input[type="color"] {
+    @apply size-7 cursor-pointer appearance-none rounded-md border border-line bg-transparent p-0.5;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper {
+    @apply p-0;
+  }
+  input[type="color"]::-webkit-color-swatch {
+    @apply rounded;
+    border: none;
+  }
+}
+
+@utility checkerboard {
+  background-color: #0d0d10;
+  background-image:
+    linear-gradient(45deg, #17171b 25%, transparent 25%),
+    linear-gradient(-45deg, #17171b 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #17171b 75%),
+    linear-gradient(-45deg, transparent 75%, #17171b 75%);
+  background-size: 16px 16px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+}

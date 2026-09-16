@@ -35,16 +35,22 @@ export const FOLD_CSS = `
 
 [data-column-number][${FOLDABLE}] { position: relative; }
 
+/* The same square as the gutter's add-a-comment `+`: pierre gives that button
+   a box of 1lh around a 16px icon, so the chevron takes both. There is exactly
+   1ch of gutter padding and 1ch of the code's own on either side of the number
+   column's edge, so a 1lh box pulled out by half its width centres on that
+   channel and the icon fills it — clear of the last digit on one side and the
+   first character on the other. The z-index is the button's, so the two halves
+   of the row's chrome float over the code the same way. */
 [${TOGGLE}] {
   position: absolute;
   inset-block: 0;
-  inset-inline-end: 0;
-  width: 1.1ch;
+  inset-inline-end: -0.5lh;
+  width: 1lh;
+  z-index: 4;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7em;
-  line-height: 1;
   opacity: 0;
   cursor: pointer;
   user-select: none;
@@ -60,6 +66,17 @@ export const FOLD_CSS = `
 }
 [${TOGGLE}]:hover { opacity: 1; }
 `;
+
+/**
+ * The arrow itself, drawn rather than typed: the triangles `▾`/`▸` render at
+ * whatever size and weight the fallback font happens to give them, which is
+ * nowhere near the 16px icon in the `+` beside it. A path of the same size is
+ * the only way the two read as one control in two states.
+ */
+const chevronSVG = (closed: boolean): string =>
+  `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${
+    closed ? "M6 3l5 5-5 5" : "M3 6l5 5 5-5"
+  }"/></svg>`;
 
 const indexOf = (element: Element): number | null => {
   const raw = element.getAttribute("data-line-index");
@@ -86,7 +103,7 @@ function toggleChevron(cell: Element, closed: boolean, foldable: boolean) {
   const label = closed ? "Unfold" : "Fold";
   if (chevron.getAttribute("aria-label") !== label) {
     chevron.setAttribute("aria-label", label);
-    chevron.textContent = closed ? "▸" : "▾";
+    chevron.innerHTML = chevronSVG(closed);
   }
 }
 

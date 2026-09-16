@@ -6,6 +6,7 @@ description: Generate boilerplate for composable, testable TypeScript features u
 ## Pattern
 
 The composable functions pattern uses:
+
 - Interfaces defining dependencies (data + side effects) and function contracts
 - Pure functions that receive injected dependencies
 - Mock factories for testing

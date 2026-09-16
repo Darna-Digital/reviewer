@@ -25,7 +25,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { TruncatedText } from "@/components/ui/truncated-text";
 import { ALL_REFS, logRefLabel, type LogQuery } from "@/lib/api/types";
 import { pathName } from "@/lib/display-path";
 import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
@@ -131,7 +130,14 @@ export function LogFilters({
     repos?.find((repo) => repo.path === path)?.name ?? pathName(path);
 
   return (
-    <div className="flex min-h-9 flex-wrap items-center gap-2 border-b px-2 py-0.5">
+    /* The tab strip this row sits under measures its rhythm in one unit: a 4px
+       inset off the pane edge and the 10px each item carries inside itself, so
+       the first control's edge lands on the first tab's and the two rows read
+       as one piece of chrome rather than two strips that happen to be stacked.
+       Between neighbours it takes double the strip's 2px: a tab only draws its
+       chip under the pointer or the selection, so its neighbours are never two
+       boxes side by side — these always are, and at 2px their edges touch. */
+    <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-1 py-0.5">
       {byRepo && (
         <Combobox<string>
           value={repoFilter ?? ALL_REPOS}
@@ -143,7 +149,7 @@ export function LogFilters({
         >
           <ComboboxTrigger
             size="sm"
-            className="w-48 text-xs"
+            className="w-48 px-2.5 text-xs"
             aria-label="Repository"
           >
             <ProjectAvatar
@@ -200,7 +206,7 @@ export function LogFilters({
         >
           <ComboboxTrigger
             size="sm"
-            className="w-48 text-xs"
+            className="w-48 px-2.5 text-xs"
             aria-label="Branch"
           >
             {refName === ALL_REFS ? (
@@ -218,7 +224,7 @@ export function LogFilters({
             <ComboboxList>
               {(name: string) => (
                 <ComboboxItem key={name} value={name}>
-                  <TruncatedText text={logRefLabel(name)} />
+                  {logRefLabel(name)}
                 </ComboboxItem>
               )}
             </ComboboxList>

@@ -77,11 +77,14 @@ describe("paintFolds", () => {
   it("puts a chevron on a foldable line and takes it off the others", () => {
     const root = rendered(4);
     paintFolds(root, painting([], [1], []));
-    expect(root.querySelectorAll("[data-fold-toggle]")).toHaveLength(1);
+    const chevrons = root.querySelectorAll("[data-fold-toggle]");
+    expect(chevrons).toHaveLength(1);
     expect(
-      root.querySelector("[data-column-number][data-line-index='1']")
-        ?.textContent
-    ).toContain("▾");
+      root
+        .querySelector("[data-column-number][data-line-index='1']")
+        ?.contains(chevrons[0])
+    ).toBe(true);
+    expect(chevrons[0].getAttribute("aria-label")).toBe("Fold");
   });
 
   it("turns the chevron round when the fold closes, without adding another", () => {
@@ -90,7 +93,7 @@ describe("paintFolds", () => {
     paintFolds(root, painting([2], [1], [1]));
     const chevrons = root.querySelectorAll("[data-fold-toggle]");
     expect(chevrons).toHaveLength(1);
-    expect(chevrons[0].textContent).toBe("▸");
+    expect(chevrons[0].getAttribute("aria-label")).toBe("Unfold");
   });
 
   it("undoes itself when a fold is opened again", () => {

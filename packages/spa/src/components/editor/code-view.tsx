@@ -38,9 +38,11 @@ import { useFolding } from "@/interactions/folding/adapters/folding.hook.adapter
 import {
   THEMES,
   externalFileFor,
+  fileCacheKey,
   useHighlightPrimed,
   useLangReady,
 } from "@/components/editor/highlighter";
+import { EditModePicker } from "@/interactions/edit-mode/components/edit-mode-picker";
 import { OpenFailed } from "@/components/editor/open-failed";
 import { UnsupportedFile } from "@/components/editor/unsupported-file";
 import {
@@ -49,6 +51,7 @@ import {
 } from "@/components/editor/use-file-editing";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
+import { commentGutterCSS } from "@/lib/comment-gutter-css";
 import { useFile } from "@/lib/queries";
 import { useUiPrefs } from "@/lib/ui-prefs";
 import type { ReviewComment } from "@reviewer/core/comments";
@@ -56,6 +59,7 @@ import type { Diagnostic, FileEdits, Location } from "@reviewer/core/language";
 import type { VimFoldAction } from "@/interactions/vim/interfaces/vim.interfaces";
 import { writeFileEdits } from "@/interactions/language/adapters/language.hook.adapter";
 import type { Theme } from "@/lib/ui-prefs";
+import type { FileBufferBridge } from "@/interactions/markdown/interfaces/markdown.interfaces";
 
 // Comments on a plain (non-diff) file are always anchored to the current
 // content, i.e. the "additions" side of an eventual working-tree diff.
@@ -101,6 +105,12 @@ interface CodeViewProps {
    * one just created from the tree.
    */
   caretKey?: number | null;
+  /**
+   * Hands out a live handle on this file's buffer, for a second view over the
+   * same document — the block editor beside a split markdown file. Called with
+   * null when the editor goes away. Omit when nothing else is watching.
+   */
+  onBuffer?: (bridge: FileBufferBridge | null) => void;
   /** Local review comments anchored to this file (optional — omit to disable). */
   comments?: ReadonlyArray<ReviewComment>;
   draft?: DraftLocation | null;
@@ -120,6 +130,7 @@ export function CodeView({
   onOpenLocation,
   reveal = null,
   caretKey = null,
+  onBuffer,
   comments,
   draft = null,
   onDraftOpen,
@@ -130,6 +141,12 @@ export function CodeView({
 }: CodeViewProps) {
   const file = useFile(path);
   const prefs = useUiPrefs();
+  /**
+   * Comment mode reads rather than writes: the view is handed no edit session,
+   * so a click puts no caret in the code, and the gutter is free to carry the
+   * offer to comment that a diff's gutter carries.
+   */
+  const commenting = prefs.editMode === "comment";
   const langReady = useLangReady(path, true);
   const contents = file.data?.contents;
   const scrollWrapper = useRef<HTMLDivElement>(null);
@@ -151,19 +168,64 @@ export function CodeView({
   const foldAttach = useRef<
     ((component: EditableFile<undefined, undefined>) => void) | null
   >(null);
-  // Starting a comment. The gutter `+` has nowhere left to live — an editable
-  // view takes the caret on every click — so a comment begins from the passage
-  // it is about: select, and the editor floats an offer over the selection.
+  // Starting a comment. While the file is editable the gutter `+` has nowhere
+  // to live — the view takes the caret on every click — so a comment begins
+  // from the passage it is about: select, and the editor floats an offer over
+  // the selection. Comment mode has no caret to lose, and gets the gutter.
   const draftRef = useRef<((draft: DraftLocation) => void) | undefined>(
     undefined
   );
   draftRef.current = commentsEnabled ? onDraftOpen : undefined;
+
+  /** Open a composer on a one-based line of this file. */
+  const openDraft = useCallback(
+    (lineNumber: number) =>
+      draftRef.current?.({
+        filePath: path,
+        side: FILE_COMMENT_SIDE,
+        lineNumber,
+      }),
+    [path]
+  );
+
+  /**
+   * Commenting the way a diff is commented: the `+` the gutter floats over the
+   * hovered line, and the line number itself.
+   *
+   * Held rather than written inline, because the view compares its options key
+   * by key and by reference — a handler rebuilt on every render would have it
+   * re-render the whole file on every render with it.
+   */
+  const gutterCommenting = useMemo(
+    () =>
+      commentsEnabled && commenting
+        ? {
+            enableGutterUtility: true,
+            // Nothing else marks the row in comment mode — there is no caret,
+            // and the `+` alone is a button floating next to a number. Lighting
+            // the whole row under the pointer, gutter and code together, says
+            // which line the offer is about before it is taken up.
+            lineHoverHighlight: "both" as const,
+            onGutterUtilityClick: (range: SelectedLineRange) =>
+              openDraft(range.end),
+            onLineNumberClick: (props: { lineNumber: number }) =>
+              openDraft(props.lineNumber),
+          }
+        : {
+            enableGutterUtility: false,
+            // An editable view already marks the line the caret is on; a second
+            // band chasing the pointer around it is noise.
+            lineHoverHighlight: "disabled" as const,
+          },
+    [commentsEnabled, commenting, openDraft]
+  );
 
   // Saving a file formats it, when the project says how and the user wants it.
   const formatting = useFormatOnSave();
 
   const buffer = useFileEditing({
     path,
+    editing: !commenting,
     loadedContents: file.data?.contents,
     onSaved: useCallback(() => onSaved?.(), [onSaved]),
     formatBeforeSave: formatting.formatBeforeSave,
@@ -191,6 +253,22 @@ export function CodeView({
   useEffect(() => {
     onDirtyChange?.(buffer.dirty);
   }, [buffer.dirty, onDirtyChange]);
+
+  // A second view over the same buffer, when one is watching. Published only
+  // once there is an editor to read, and withdrawn when the file goes away, so
+  // a watcher can never be holding a handle on a buffer that no longer exists.
+  const { subscribe, replaceBuffer } = buffer;
+  const readLiveBuffer = buffer.readBuffer;
+  const hasEditor = buffer.editor !== null;
+  useEffect(() => {
+    if (onBuffer === undefined) return;
+    if (!hasEditor) {
+      onBuffer(null);
+      return;
+    }
+    onBuffer({ subscribe, read: readLiveBuffer, write: replaceBuffer });
+    return () => onBuffer(null);
+  }, [onBuffer, hasEditor, subscribe, readLiveBuffer, replaceBuffer]);
 
   /**
    * The file handed to the view, which is not simply whatever the last read
@@ -287,7 +365,7 @@ export function CodeView({
   // Modal editing, when the user has asked for it.
   const vim = useVim({
     editor: buffer.editor,
-    enabled: prefs.vimMode,
+    enabled: prefs.editMode === "vim",
     isFocused: buffer.isFocused,
     subscribe: buffer.subscribe,
     visibleFrom: folding.visibleFrom,
@@ -497,9 +575,25 @@ export function CodeView({
                 // Both layers paint from the same callback and into the same
                 // stylesheet, and the view keeps one of each.
                 onPostRender,
-                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}\n${folding.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}`,
+                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}\n${folding.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}\n${commentGutterCSS}`,
+                ...gutterCommenting,
               }}
-              edit
+              edit={!commenting}
+              /* Leaving the file editable ends its edit session, and the view
+                 goes back to the file it was handed — which is what is on disk.
+                 A buffer with unsaved work in it would empty itself onto the
+                 floor on the way into comment mode, and ⌘S would go on writing
+                 text nobody could see. Accepting installs what the editor was
+                 holding as the document instead, so the mode changes and the
+                 text does not. An accepted file may not wear the key of the one
+                 it replaces, so an untouched buffer — same text, same key — is
+                 refused rather than accepted: there is nothing to keep. */
+              onEditComplete={(event) => {
+                if (event.file.contents === event.originalFile.contents)
+                  return "reject";
+                event.file.cacheKey = fileCacheKey(path, event.file.contents);
+                return "accept";
+              }}
               /* The editable view snapshots the rendered code when the editor
                attaches, so a worker highlight landing afterwards would never
                reach it; `useLangReady` primes the main-thread highlighter so
@@ -544,9 +638,19 @@ export function CodeView({
             />
           </section>
         </EditProvider>
+        {/* The file's own readouts and controls, on the trail below it: the
+            Vim mode line, and the picker that says which edit mode produced
+            it — a mode is changed about the file you are looking at, so it is
+            offered where you are looking. */}
         {actionsSlot !== null &&
           actionsSlot !== undefined &&
-          createPortal(vim.status, actionsSlot)}
+          createPortal(
+            <>
+              {vim.status}
+              <EditModePicker />
+            </>,
+            actionsSlot
+          )}
         {language.card}
         {language.completions}
         {language.menu}

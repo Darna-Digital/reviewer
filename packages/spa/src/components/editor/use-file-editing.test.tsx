@@ -48,6 +48,7 @@ function mount(loaded: string) {
   function Host() {
     api = useFileEditing({
       path: "src/a.ts",
+      editing: true,
       loadedContents: loaded,
       onSaved: () => {},
     });
@@ -144,6 +145,7 @@ describe("reading the buffer", () => {
     function Host() {
       api = useFileEditing({
         path: "src/a.ts",
+        editing: true,
         loadedContents: "one\n",
         onSaved: () => {},
       });

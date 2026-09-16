@@ -35,8 +35,12 @@ import type { ReviewComment } from "@reviewer/core/comments";
  */
 export type { DraftLocation } from "@/interactions/comments/interfaces/comments.interfaces";
 
-/** Indent (avatar + gap) used to nest replies under the opening comment. */
-const REPLY_INDENT = "ml-9";
+/**
+ * Indent used to nest replies — and to line the action row up with what a
+ * comment says. Matches the avatar (`size-7`) plus the `gap-3` beside it, so
+ * "Edit" starts under the author's name rather than a few pixels shy of it.
+ */
+const REPLY_INDENT = "ml-10";
 
 /**
  * The card a thread and a draft both sit in. Capped at 400px rather than
