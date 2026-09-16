@@ -56,9 +56,15 @@ import { cn } from "@/lib/utils";
  * It sits *on* the page rather than beside it — what it names is what is
  * underneath — so it gives up its bottom edge and corners to it and the two
  * read as one surface. See `app-sheet-joined-below`.
+ *
+ * The inset is one number on all four sides. A 36px band around 28px chips —
+ * a tab, or the branch picker at `size="chip"` — leaves 4px above and below
+ * whatever the padding says, and that is also the gap between two tabs, so any
+ * other figure on the sides makes the same chip look further from the edge it
+ * is near than from the one it is not.
  */
 const HEADER_BAND =
-  "app-sheet app-sheet-joined-below flex h-9 min-w-0 items-center gap-2 px-2";
+  "app-sheet app-sheet-joined-below flex h-9 min-w-0 items-center gap-2 px-1";
 
 /**
  * The header, cut where the page under it is cut.

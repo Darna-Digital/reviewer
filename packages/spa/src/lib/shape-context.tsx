@@ -19,11 +19,13 @@ interface ShapeClasses {
   container: string;
   button: string;
   input: string;
-  // Numeric counterparts of `bg` / `mergedBg`, in px. Needed where individual
-  // corners are animated (e.g. the selected-background merge/split animation),
-  // which requires per-corner numeric border-radii rather than a class.
-  bgRadius: number;
-  mergedRadius: number;
+  // CSS-length counterparts of `bg` / `mergedBg`, for the corners set outside
+  // Tailwind: the variable published below, and the selected-background
+  // merge/split animation, which needs per-corner radii rather than a class.
+  // The rounded variant names the token rather than restating its value, so it
+  // follows `--radius` instead of drifting the next time that dial moves.
+  bgRadius: string;
+  mergedRadius: string;
 }
 
 const shapeMap: Record<ShapeVariant, ShapeClasses> = {
@@ -32,14 +34,14 @@ const shapeMap: Record<ShapeVariant, ShapeClasses> = {
     bg: "rounded-[20px]",
     // +2px over `item` because the focus ring sits 2px outside the element
     // (top/left -2, width/height +4); this keeps the corners concentric so a
-    // pill element gets a pill ring (matches the rounded-mode 6px→8px bump).
+    // pill element gets a pill ring (matches the rounded-mode md→lg bump).
     focusRing: "rounded-[22px]",
     mergedBg: "rounded-2xl",
     container: "rounded-3xl",
     button: "rounded-[20px]",
     input: "rounded-[20px]",
-    bgRadius: 20,
-    mergedRadius: 16,
+    bgRadius: "20px",
+    mergedRadius: "16px",
   },
   rounded: {
     item: "rounded-md",
@@ -49,8 +51,8 @@ const shapeMap: Record<ShapeVariant, ShapeClasses> = {
     container: "rounded-lg",
     button: "rounded-md",
     input: "rounded-md",
-    bgRadius: 6,
-    mergedRadius: 6,
+    bgRadius: "var(--radius-md)",
+    mergedRadius: "var(--radius-md)",
   },
 };
 
@@ -117,7 +119,7 @@ function ShapeProvider({
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--shape-input-radius",
-      `${shapeMap[shape].bgRadius}px`
+      shapeMap[shape].bgRadius
     );
   }, [shape]);
 

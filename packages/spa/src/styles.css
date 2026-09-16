@@ -619,7 +619,13 @@
   --chart-3: var(--brand-700);
   --chart-4: oklch(0.72 0.115 205);
   --chart-5: oklch(0.66 0.13 305);
-  --radius: 0.5rem;
+  /* The one dial every corner in the app turns on: `lg` is this, and the rest
+     of the scale is a multiple of it. Deliberately tight — a console is mostly
+     rectangles meeting other rectangles, and a soft corner costs a rectangle
+     its edge, which is the thing that says where one region stops and the next
+     begins. 6px is enough to take the bite off a corner and not enough to
+     round it. */
+  --radius: 0.375rem;
   --sidebar: var(--surface-1);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -769,9 +775,18 @@
      window's edge — one number, so a seam in the middle of the window reads as
      the same gap as the one around it. */
   --frame-seam: 0.375rem;
-  /* Tucked inside the window's own corner by the width of that inset, which is
-     what keeps the two curves concentric rather than one cutting the other. */
-  --sheet-radius: 0.75rem;
+  /* A sheet turns the same corner as a card: `--radius` itself, kept under its
+     own name because a sheet is the one surface whose corner also has to answer
+     to the window's.
+
+     Held tight by what a sheet carries in that corner. The header band and
+     every pane's chrome row are 36px tall around 28px chips, so the first chip
+     starts 4px below the sheet's top edge and 8px in from its side. At 12px the
+     corner was still curving that far down and had eaten 3px of the 8px — the
+     gap measuring wider at the corner than down the side, which reads as the
+     tab sitting crooked rather than as a corner being round. At 6px the curve
+     is 0.3px in by the time it reaches the chip, which is no gap at all. */
+  --sheet-radius: var(--radius);
 }
 
 .app-canvas {
@@ -847,6 +862,9 @@
    a border. */
 .browser-pane {
   background-color: var(--pane);
+  /* A sheet's corner, from the sheet's own token — the panes stand in the same
+     row as the page and must turn the same way it does. */
+  border-radius: var(--sheet-radius);
 }
 .desktop.translucent .browser-pane {
   background-color: var(--pane-translucent);
@@ -860,6 +878,7 @@
    than needing a second value per theme. */
 .plans-pane {
   background-color: var(--pane);
+  border-radius: var(--sheet-radius);
 }
 .desktop.translucent .plans-pane {
   background-color: var(--pane-translucent);

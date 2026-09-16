@@ -144,11 +144,11 @@ export function PlansPane() {
     <aside
       ref={frame}
       aria-label="Analysis"
-      className="plans-pane flex min-h-0 shrink-0 flex-col overflow-hidden rounded-xl border border-frame-border"
+      className="plans-pane flex min-h-0 shrink-0 flex-col overflow-hidden border border-frame-border"
       // Same variable the frame's handle drags — see `usePanelSize`.
       style={plansPaneWidth.style}
     >
-      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-frame-border px-1.5">
+      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-frame-border px-1">
         <Popover>
           <PopoverTrigger
             render={

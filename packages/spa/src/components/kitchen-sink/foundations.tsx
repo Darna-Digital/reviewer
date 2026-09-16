@@ -70,9 +70,9 @@ const INK_TOKENS = [
 ];
 
 const RADII = [
-  { token: "rounded-sm", radius: "rounded-sm", role: "4px — xs controls" },
-  { token: "rounded-md", radius: "rounded-md", role: "6px — the default" },
-  { token: "rounded-lg", radius: "rounded-lg", role: "8px — cards, sheets" },
+  { token: "rounded-sm", radius: "rounded-sm", role: "3px — xs controls" },
+  { token: "rounded-md", radius: "rounded-md", role: "4.5px — the default" },
+  { token: "rounded-lg", radius: "rounded-lg", role: "6px — cards, sheets" },
   { token: "rounded-full", radius: "rounded-full", role: "Dots, avatars" },
 ];
 
