@@ -203,12 +203,16 @@ export function GitBottomDock({
             setUiPrefs({ bottomVisible: false });
           }}
           label="Resize bottom panel"
+          className="resize-handle-seam"
         />
       )}
+      {/* Expanded, the dock stands where the page did: directly under the
+          header, which carries no bottom corners of its own. Its own top ones
+          would open a notch either side of that seam, so they go too. */}
       <div
         className={cn(
-          "overflow-hidden",
-          expanded ? "min-h-0 flex-1" : "shrink-0 border-t",
+          "app-sheet overflow-hidden",
+          expanded ? "app-page-joined min-h-0 flex-1" : "shrink-0",
           !shown && "hidden"
         )}
         style={expanded ? undefined : dock.style}

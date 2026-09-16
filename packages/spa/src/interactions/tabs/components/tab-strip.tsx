@@ -1,5 +1,5 @@
 /**
- * The open-file strip over the centre pane.
+ * The open-file strip, in the header band over the centre pane.
  *
  * Reads as an IDE's: the file's type icon — the tree's own — then its name,
  * italic while the tab is only a preview, a pin marker when it is pinned, and a
@@ -14,6 +14,10 @@
  *
  * A tab shows only the file's name; its path is a tooltip, and what acts on the
  * file — edit it, read its history — sits on the path bar under the pane.
+ *
+ * It draws no band of its own: the header lends it one (see `header-tabs`), and
+ * a strip with its own background and rule inside that band would be a second
+ * header drawn on top of the first.
  */
 import { IconPin, IconPinnedFilled } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
@@ -109,10 +113,7 @@ export function TabStrip({
         ref={stripRef}
         role="tablist"
         aria-label="Open files"
-        className={cn(
-          TAB_STRIP,
-          "h-9 shrink-0 border-b border-border bg-background px-2"
-        )}
+        className={cn(TAB_STRIP, "min-w-0 flex-1")}
       >
         {ordered.map((tab, index) => {
           const isActive = tab.path === active;

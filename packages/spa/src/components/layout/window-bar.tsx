@@ -61,6 +61,7 @@ import {
   type BarShortcut,
 } from "@/components/layout/window-bar.shortcuts";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
+import { TAB_STRIP } from "@/components/layout/tab-chip";
 import {
   closeTabOverview,
   toggleTabOverview,
@@ -477,10 +478,7 @@ export function WindowBar() {
           // row's gap, the same as the tabs stand off each other. An extra
           // margin here made the one button before the strip the only thing on
           // the bar with more room around it than its neighbours.
-          className={cn(
-            "flex min-w-0 items-center gap-1 overflow-x-auto",
-            NO_DRAG
-          )}
+          className={cn(TAB_STRIP, NO_DRAG)}
         >
           {strip.map((tab, at) => {
             const active = tab.id === showingId;

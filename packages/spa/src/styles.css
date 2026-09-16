@@ -765,10 +765,57 @@
     var(--canvas) 45%,
     var(--canvas-edge) 100%
   );
+  /* The run of frame between two sheets, and the inset that holds them off the
+     window's edge — one number, so a seam in the middle of the window reads as
+     the same gap as the one around it. */
+  --frame-seam: 0.375rem;
+  /* Tucked inside the window's own corner by the width of that inset, which is
+     what keeps the two curves concentric rather than one cutting the other. */
+  --sheet-radius: 0.75rem;
 }
 
 .app-canvas {
   background: var(--canvas-paint);
+}
+
+/* A sheet is one region of the window — a sidebar, the page beside it, the dock
+   under both — resting on the frame with its own edge and corners. What
+   separates two of them is not a line drawn between them but the frame showing
+   through, so with translucency on the seam is the desktop, exactly as the run
+   above the topmost sheet already is. */
+.app-sheet,
+.app-page {
+  background: var(--canvas-paint);
+  border: 1px solid var(--frame-border);
+  border-radius: var(--sheet-radius);
+}
+
+/* The header stands on the page, not clear of it, so the two meet as one
+   surface: square corners where they touch, and a single edge between them —
+   the page's own top border, which is the rule the header has always worn. The
+   page's columns keep their seams, and those seams run right up under it. */
+.app-sheet-joined-below {
+  border-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.app-page-joined,
+.app-page-joined > .app-split > .app-sheet {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* A page that lays out sheets of its own — a sidebar beside its content, or a
+   review's three columns — marks its root `app-split`, and the box it is
+   rendered into stops being a sheet: it is only the run of frame they stand on. */
+.app-page:has(> .app-split) {
+  background: none;
+  /* No edge and no corners of its own: the ones that matter are the sheets'
+     inside it, and either would shave them. Dropping the border is also what
+     lines those sheets up with the dock below — the edge each of them carries
+     stands where this one's would have. */
+  border: 0;
+  border-radius: 0;
 }
 
 .app-frame {
@@ -1410,8 +1457,25 @@ file-tree-container {
   }
 }
 
+/* No bar at all, for the strips that answer with something else — a tab strip
+   fades its edges instead. It has to be said here rather than with a utility
+   class: the rule above sets `scrollbar-width` on `*` unlayered, and an
+   unlayered declaration beats every layered utility whatever its specificity,
+   so `[scrollbar-width:none]` loses to it and the bar stays. Both properties
+   are needed — Chromium honours the standard one, and the WebKit pseudo-element
+   covers the rest. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
 /* shadcn scroll-fade — mask dissolves content at edges that still scroll.
-   Drop `scroll-fade` / `scroll-fade-x` on the scrolling viewport. */
+   Drop `scroll-fade` / `scroll-fade-x` on the scrolling viewport. The fade runs
+   48px unless the viewport sets `--scroll-fade-size`; it is read with that
+   default inline rather than declared here, since these rules are unlayered and
+   would beat a utility class trying to set it. */
 @property --sf-start {
   syntax: "<number>";
   inherits: false;
@@ -1438,23 +1502,19 @@ file-tree-container {
     --sf-end: 1;
   }
 }
-.scroll-fade,
-.scroll-fade-x {
-  --scroll-fade-size: 48px;
-}
 .scroll-fade {
   -webkit-mask-image: linear-gradient(
     to bottom,
     transparent 0,
-    #000 var(--scroll-fade-size),
-    #000 calc(100% - var(--scroll-fade-size)),
+    #000 var(--scroll-fade-size, 48px),
+    #000 calc(100% - var(--scroll-fade-size, 48px)),
     transparent 100%
   );
   mask-image: linear-gradient(
     to bottom,
     transparent 0,
-    #000 var(--scroll-fade-size),
-    #000 calc(100% - var(--scroll-fade-size)),
+    #000 var(--scroll-fade-size, 48px),
+    #000 calc(100% - var(--scroll-fade-size, 48px)),
     transparent 100%
   );
 }
@@ -1462,15 +1522,15 @@ file-tree-container {
   -webkit-mask-image: linear-gradient(
     to right,
     transparent 0,
-    #000 var(--scroll-fade-size),
-    #000 calc(100% - var(--scroll-fade-size)),
+    #000 var(--scroll-fade-size, 48px),
+    #000 calc(100% - var(--scroll-fade-size, 48px)),
     transparent 100%
   );
   mask-image: linear-gradient(
     to right,
     transparent 0,
-    #000 var(--scroll-fade-size),
-    #000 calc(100% - var(--scroll-fade-size)),
+    #000 var(--scroll-fade-size, 48px),
+    #000 calc(100% - var(--scroll-fade-size, 48px)),
     transparent 100%
   );
 }
@@ -1479,45 +1539,57 @@ file-tree-container {
     -webkit-mask-image: linear-gradient(
       to bottom,
       rgba(0, 0, 0, var(--sf-start)) 0,
-      #000 var(--scroll-fade-size),
-      #000 calc(100% - var(--scroll-fade-size)),
+      #000 var(--scroll-fade-size, 48px),
+      #000 calc(100% - var(--scroll-fade-size, 48px)),
       rgba(0, 0, 0, var(--sf-end)) 100%
     );
     mask-image: linear-gradient(
       to bottom,
       rgba(0, 0, 0, var(--sf-start)) 0,
-      #000 var(--scroll-fade-size),
-      #000 calc(100% - var(--scroll-fade-size)),
+      #000 var(--scroll-fade-size, 48px),
+      #000 calc(100% - var(--scroll-fade-size, 48px)),
       rgba(0, 0, 0, var(--sf-end)) 100%
     );
     animation:
       sf-reveal-start linear both,
       sf-reveal-end linear both;
     animation-timeline: scroll(self), scroll(self);
-    animation-range-start: 0, calc(100% - var(--scroll-fade-size));
-    animation-range-end: var(--scroll-fade-size), 100%;
+    animation-range-start: 0, calc(100% - var(--scroll-fade-size, 48px));
+    animation-range-end: var(--scroll-fade-size, 48px), 100%;
   }
   .scroll-fade-x {
     -webkit-mask-image: linear-gradient(
       to right,
       rgba(0, 0, 0, var(--sf-start)) 0,
-      #000 var(--scroll-fade-size),
-      #000 calc(100% - var(--scroll-fade-size)),
+      #000 var(--scroll-fade-size, 48px),
+      #000 calc(100% - var(--scroll-fade-size, 48px)),
       rgba(0, 0, 0, var(--sf-end)) 100%
     );
     mask-image: linear-gradient(
       to right,
       rgba(0, 0, 0, var(--sf-start)) 0,
-      #000 var(--scroll-fade-size),
-      #000 calc(100% - var(--scroll-fade-size)),
+      #000 var(--scroll-fade-size, 48px),
+      #000 calc(100% - var(--scroll-fade-size, 48px)),
       rgba(0, 0, 0, var(--sf-end)) 100%
     );
     animation:
       sf-reveal-start linear both,
       sf-reveal-end linear both;
     animation-timeline: scroll(self inline), scroll(self inline);
-    animation-range-start: 0, calc(100% - var(--scroll-fade-size));
-    animation-range-end: var(--scroll-fade-size), 100%;
+    animation-range-start: 0, calc(100% - var(--scroll-fade-size, 48px));
+    animation-range-end: var(--scroll-fade-size, 48px), 100%;
+  }
+}
+
+/* Paired with `scroll-fade` / `scroll-fade-x` where the mask is the only cue
+   that there is more to see — a tab strip with its scrollbar taken away. Where
+   the scroll timelines that switch each edge on are missing, the static mask
+   would dim edges that have nothing behind them, so there it is dropped and the
+   strip simply ends. */
+@supports not (animation-timeline: scroll()) {
+  .scroll-fade-when-scrollable {
+    -webkit-mask-image: none;
+    mask-image: none;
   }
 }
 
@@ -1542,6 +1614,16 @@ file-tree-container {
   height: 6px;
   margin-block: -3px;
   cursor: row-resize;
+}
+/* A handle lying in one of the frame's seams rather than on a border. Its box
+   is the seam's own width, and the negative margins give back the two gaps the
+   flex row would otherwise put either side of it — so the run between the
+   sheets stays exactly one seam wide, with the handle over it. */
+.resize-handle-col.resize-handle-seam {
+  margin-inline: calc(-1 * var(--frame-seam));
+}
+.resize-handle-row.resize-handle-seam {
+  margin-block: calc(-1 * var(--frame-seam));
 }
 .resize-handle-col::after,
 .resize-handle-row::after {

@@ -94,8 +94,8 @@ export function AppLayout() {
   const bare = route.kind === "session" && route.composing;
 
   /**
-   * Pages that wear no header, and so no rule under one either — the composer,
-   * because the shell is getting out of its way entirely.
+   * Pages that wear no header — the composer, because the shell is getting out
+   * of its way entirely.
    */
   const headerless = bare;
 
@@ -168,22 +168,24 @@ export function AppLayout() {
     <DiffWorkerPoolProvider>
       <WindowFrame>
         {railed && (route.kind === "session" ? <SessionsRail /> : <ModeRail />)}
+        {/* The rail is the one thing left standing on the frame; the header,
+            the page and the dock are all sheets.
+
+            The header stands *on* the page rather than clear of it — the branch
+            picker and the trail name what is underneath them, and a run of
+            desktop between the two put them on different surfaces. So there is
+            no seam there; the seams are the one under the page, and the ones
+            the page draws between its own columns. */}
         <div className="flex min-w-0 flex-1 flex-col">
           {!headerless && <AppHeader route={route} />}
-          {/* The rule under the header goes with the header: on the composer it
-              would be a line drawn across the top of an empty page. */}
-          <div
-            className={cn(
-              "flex min-h-0 flex-1 flex-col overflow-hidden",
-              !headerless && "border-t"
-            )}
-          >
+          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
             {/* Put away rather than unmounted: the outlet is where the router
                 keeps whatever the location matched, and a dock page matches a
                 route that draws nothing. */}
             <div
               className={cn(
-                "flex min-h-0 flex-1 flex-col overflow-hidden",
+                "app-page flex min-h-0 flex-1 flex-col overflow-hidden",
+                !headerless && "app-page-joined",
                 dockExpanded && "hidden"
               )}
             >

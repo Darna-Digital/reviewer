@@ -60,7 +60,7 @@ const TabsSubtle = forwardRef<HTMLDivElement, TabsSubtleProps>(
             activateOnFocus={false}
             ref={ref}
             className={cn(
-              "flex max-w-full [scrollbar-width:none] items-center gap-0.5 overflow-x-auto select-none [&::-webkit-scrollbar]:hidden",
+              "scrollbar-none flex max-w-full items-center gap-0.5 overflow-x-auto select-none",
               className
             )}
             {...props}

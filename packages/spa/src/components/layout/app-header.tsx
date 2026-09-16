@@ -37,7 +37,8 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
-import { setHeaderTrailSlot } from "@/components/layout/header-trail";
+import { useHeaderLeadWidths } from "@/components/layout/header-lead";
+import { setHeaderTabsSlot } from "@/components/layout/header-tabs";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import {
   REVIEW_HREF,
@@ -45,6 +46,59 @@ import {
   type ShellRoute,
 } from "@/lib/shell-route";
 import { cn } from "@/lib/utils";
+
+/**
+ * A band of the header. It is a sheet like the page under it, not a strip of
+ * the frame: the branch picker, the open files and the toggles are read at a glance,
+ * and through a translucent window the desktop is the one thing behind them
+ * that cannot be kept out of the way.
+ *
+ * It sits *on* the page rather than beside it — what it names is what is
+ * underneath — so it gives up its bottom edge and corners to it and the two
+ * read as one surface. See `app-sheet-joined-below`.
+ */
+const HEADER_BAND =
+  "app-sheet app-sheet-joined-below flex h-9 min-w-0 items-center gap-2 px-2";
+
+/**
+ * The header, cut where the page under it is cut.
+ *
+ * `lead` stands over the page's outermost column, in that column's width and
+ * clipped to it — the branch picker names the repository the tree beneath it is
+ * of. Everything else goes in the band over the page itself, at the end. Any
+ * column in between gets a band of its own with nothing in it, because what it
+ * is there for is the seam beside it: the same seam the page draws, running
+ * from the window bar to the dock without the header lying across it.
+ *
+ * A page with no columns publishes none (see `header-lead`), and there is
+ * nothing to cut at: one band across, with the lead at the start of it.
+ */
+function HeaderRow({
+  lead,
+  children,
+}: {
+  lead?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const leads = useHeaderLeadWidths();
+  return (
+    <header className="flex shrink-0 gap-1.5">
+      {leads.map((width, index) => (
+        <div
+          key={width}
+          className={cn(HEADER_BAND, "shrink-0")}
+          style={{ width }}
+        >
+          {index === 0 && lead}
+        </div>
+      ))}
+      <div className={cn(HEADER_BAND, "flex-1")}>
+        {leads.length === 0 && lead}
+        {children}
+      </div>
+    </header>
+  );
+}
 
 export function AppHeader({ route }: { route: ShellRoute }) {
   const navigate = useNavigate();
@@ -73,9 +127,9 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   // so this only names the conversation.
   if (route.kind === "session") {
     return (
-      <header className="flex h-9 shrink-0 items-center gap-2 px-2">
+      <HeaderRow>
         <SessionCrumbs />
-      </header>
+      </HeaderRow>
     );
   }
 
@@ -83,11 +137,11 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   // carries what the branch switcher would have said.
   if (route.kind === "experimentation") {
     return (
-      <header className="flex h-9 shrink-0 items-center gap-2 px-2">
+      <HeaderRow>
         <WorkspacePicker />
         <NewTaskButton />
         <CollaborationSearch />
-      </header>
+      </HeaderRow>
     );
   }
 
@@ -117,70 +171,48 @@ export function AppHeader({ route }: { route: ShellRoute }) {
     search.file === undefined &&
     repo.data != null;
 
-  return (
-    <header className="group/header flex h-9 shrink-0 items-center gap-2 px-2">
-      {/*
-       * Hidden by the trail's own presence, in CSS, rather than by asking the
-       * route the same question the page just answered.
-       *
-       * Both are branch pickers with the branch they picked written on them,
-       * so a third in front of them naming a branch that may be neither is
-       * the reading nobody wants — but the page portals its trail in from a
-       * different component, and when the two decided this separately they
-       * decided it a frame and a half apart. You saw both, briefly, on every
-       * navigation. `:has` cannot be late: the picker is gone in the same
-       * paint the trail arrives in, and back in the paint it leaves.
-       *
-       * Reading your own changes is the exception the rule was never about:
-       * the trail there opens with "Review", which names no branch, so the
-       * picker is the only thing on the row saying whose changes these are —
-       * and the only way to go and read another branch's.
-       */}
+  /**
+   * What stands over the page's first column: the branch you are on, and what
+   * its changes are read against — the two of them one sentence, and both about
+   * the repository the tree beside them is of.
+   */
+  const lead = (
+    <>
       {repo.data != null && (
-        <div
-          className={cn(
-            "contents",
-            !readingOwnChanges &&
-              "group-has-[[data-trail]:not(:empty)]/header:hidden"
+        <BranchSwitcher
+          current={repo.data.currentBranch}
+          branches={branches.data ?? []}
+          remoteBranches={remoteBranches.data ?? []}
+          busy={false}
+          onCheckout={(b) => {
+            void git.checkout(b);
+            void navigate({ to: REVIEW_HREF });
+          }}
+          onCheckoutAndUpdate={(b) => {
+            void git.checkoutAndUpdate(b);
+            void navigate({ to: REVIEW_HREF });
+          }}
+          onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
+          onCompare={(base, head) =>
+            void navigate({
+              to: "/modes/code/browse/range",
+              search: { base, head },
+            })
+          }
+          onMerge={(b) => void git.merge(b)}
+          onRebase={(o) => void git.rebase(o)}
+          onRenameBranch={(from, to) => void git.renameBranch(from, to)}
+          onDeleteBranch={(name) => void git.deleteBranch(name)}
+          onFetch={() => void git.fetch()}
+          onPush={() => void git.push()}
+          repos={projectBranchList.data?.repos}
+          currentRepo={activeRepo(
+            workspace.data ?? { repos: [], current: null }
           )}
-        >
-          <BranchSwitcher
-            current={repo.data.currentBranch}
-            branches={branches.data ?? []}
-            remoteBranches={remoteBranches.data ?? []}
-            busy={false}
-            onCheckout={(b) => {
-              void git.checkout(b);
-              void navigate({ to: REVIEW_HREF });
-            }}
-            onCheckoutAndUpdate={(b) => {
-              void git.checkoutAndUpdate(b);
-              void navigate({ to: REVIEW_HREF });
-            }}
-            onCreateBranch={(name, sp) => void git.createBranch(name, sp)}
-            onCompare={(base, head) =>
-              void navigate({
-                to: "/modes/code/browse/range",
-                search: { base, head },
-              })
-            }
-            onMerge={(b) => void git.merge(b)}
-            onRebase={(o) => void git.rebase(o)}
-            onRenameBranch={(from, to) => void git.renameBranch(from, to)}
-            onDeleteBranch={(name) => void git.deleteBranch(name)}
-            onFetch={() => void git.fetch()}
-            onPush={() => void git.push()}
-            repos={projectBranchList.data?.repos}
-            currentRepo={activeRepo(
-              workspace.data ?? { repos: [], current: null }
-            )}
-            onFollowRepo={followRepo}
-          />
-        </div>
+          onFollowRepo={followRepo}
+        />
       )}
 
-      {/* Straight after the branch picker, because the two are one sentence:
-          the branch you are on, and what its changes are read against. */}
       {showComparePicker && (
         <ComparePicker
           comparison={comparing.comparison}
@@ -191,12 +223,17 @@ export function AppHeader({ route }: { route: ShellRoute }) {
           onSelect={comparing.compareAgainst}
         />
       )}
+    </>
+  );
 
-      {/* Lent to the page beneath, which hangs its trail here when the trail is
-          what steers the page rather than what reports on it. */}
+  return (
+    <HeaderRow lead={lead}>
+      {/* Lent to the page beneath, which hangs its open-file strip here: the
+          tabs choose what the pane holds, which is the same kind of control as
+          the picker at the head of the row. It stands over the pane rather than
+          over the tree, because what it names is what is in the pane. */}
       <div
-        data-trail
-        ref={setHeaderTrailSlot}
+        ref={setHeaderTabsSlot}
         className="flex min-w-0 flex-1 items-center gap-2 empty:hidden"
       />
 
@@ -209,6 +246,6 @@ export function AppHeader({ route }: { route: ShellRoute }) {
           />
         )}
       </div>
-    </header>
+    </HeaderRow>
   );
 }

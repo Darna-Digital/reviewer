@@ -9,10 +9,11 @@
  * drawing their own column is how the page beneath ends up stepping sideways on
  * the way across.
  *
- * It measures 36px inside its edge — the same as the window bar's band, the
- * header's, and the tab strip's inside its rule — with a 28px button in it,
- * the square the project chip beside it and the tabs above it are. The 37 is
- * that 36 plus the edge, so the band reads the same whichever way it is turned.
+ * It measures 36px — the same as the window bar's band, the header's, and the
+ * tab strip's inside its rule — with a 28px button in it, the square the
+ * project chip beside it and the tabs above it are. It has no edge of its own:
+ * it stands on the frame rather than being a sheet, and the seam between it and
+ * the column beside it is the frame showing through.
  */
 import { Link } from "@tanstack/react-router";
 import { buttonVariants } from "@/components/ui/button";
@@ -34,7 +35,7 @@ export function Rail({
   return (
     <nav
       aria-label={label}
-      className="relative flex h-full w-[37px] shrink-0 flex-col items-center border-r border-border py-1"
+      className="relative flex h-full w-9 shrink-0 flex-col items-center py-1"
     >
       <div className="flex w-full flex-1 flex-col items-center gap-1">
         {children}

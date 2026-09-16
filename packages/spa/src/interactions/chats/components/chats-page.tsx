@@ -36,6 +36,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useHeaderLead } from "@/components/layout/header-lead";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { confirm } from "@/components/ui/alerts";
@@ -91,6 +92,9 @@ export function ChatsPage() {
   // that.
   const composing = useSearch({ strict: false }).new === true;
   const showList = !composing && !ownTab && prefs.sidebarVisible;
+  // The header is cut to the list, so the seam beside it runs the height of the
+  // window rather than starting under a band laid across both. See `header-lead`.
+  useHeaderLead(showList ? ["var(--panel-chats-list-w)"] : []);
   /** The surface with the list on it and nothing yet opened from it. */
   const landing = !composing && !ownTab && chatId === undefined;
 
@@ -220,9 +224,12 @@ export function ChatsPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0">
+    <div className="app-split flex h-full min-h-0 gap-1.5">
       {showList && (
-        <aside className="flex shrink-0 flex-col border-r" style={list.style}>
+        <aside
+          className="app-sheet flex shrink-0 flex-col overflow-hidden"
+          style={list.style}
+        >
           <ScrollArea
             className="min-h-0 flex-1"
             viewportClassName="scroll-fade"
@@ -290,9 +297,10 @@ export function ChatsPage() {
           onResize={list.onResize}
           onResizeEnd={(w) => setUiPrefs({ inboxListWidth: w })}
           label="Resize the session list"
+          className="resize-handle-seam"
         />
       )}
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+      <section className="app-sheet flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <Outlet />
       </section>
       {menu !== null && (

@@ -118,11 +118,12 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
             window clips both without either being given a size. */}
         <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
           <TabOverview />
-          {/* Two sheets on the frame rather than one split in half: the gap
-              between them is the frame's own material, so the seam reads as the
-              window showing through instead of a painted divider. */}
+          {/* Sheets on the frame rather than one canvas split by borders: every
+              gap between them is the frame's own material, so each seam reads as
+              the window showing through instead of a painted divider. The rail
+              is the one part that stays on the frame itself. */}
           <TabOverviewPush>
-            <div className="app-canvas flex min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-frame-border">
+            <div className="flex min-h-0 min-w-0 flex-1 gap-1.5 overflow-hidden">
               {children}
             </div>
             {prefs.plansPaneOpen && (

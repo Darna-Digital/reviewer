@@ -34,6 +34,7 @@ import {
   useSearch,
 } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { confirm } from "@/components/ui/alerts";
@@ -62,6 +63,8 @@ import { PathBar } from "@/components/layout/path-bar";
 import { reviewSourceOf } from "@/lib/shell-route";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
+import { useHeaderLead } from "@/components/layout/header-lead";
+import { useHeaderTabsSlot } from "@/components/layout/header-tabs";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { FileSidebar } from "@/components/tree/file-sidebar";
@@ -1156,7 +1159,23 @@ export function CodeWorkspace() {
   const reviewing = mode === "review" && selectedPull !== null;
   const firstColumn = reviewing ? reviewInfo : sidebar;
 
+  /**
+   * The header is cut to these columns, so every seam beside them runs from the
+   * window bar down without a band of header lying across it. Nothing to cut to
+   * while the columns are away, or on the list below, which has none.
+   */
+  useHeaderLead(
+    !prefs.sidebarVisible || (mode === "review" && selectedPull === null)
+      ? []
+      : reviewing
+        ? prefs.reviewTreeVisible
+          ? ["var(--panel-review-info-w)", "var(--panel-review-tree-w)"]
+          : ["var(--panel-review-info-w)"]
+        : ["var(--panel-sidebar-w)"]
+  );
+
   const crumbs = buildCrumbs();
+  const headerTabsSlot = useHeaderTabsSlot();
 
   /**
    * Review mode before a pull request is picked: the list, and nothing else.
@@ -1199,17 +1218,20 @@ export function CodeWorkspace() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1">
+    <div className="app-split flex min-h-0 flex-1 gap-1.5">
       {/* A pull request under review is three columns: what it is, what files
           it touches, and the diff. The other modes are the tree beside the
           diff, as they were.
+
+          Each is its own sheet on the frame, so what separates them is the
+          window showing through rather than a rule — see `app-sheet`.
 
           Both auxiliary columns answer to the same "hide sidebar" toggle. Two
           of the three going away is what makes it a way to look at the code
           alone; hiding one of them and leaving the other is neither thing. */}
       <div
         className={cn(
-          "flex shrink-0 flex-col overflow-hidden border-r",
+          "app-sheet flex shrink-0 flex-col overflow-hidden",
           !prefs.sidebarVisible && "hidden"
         )}
         style={firstColumn.style}
@@ -1254,12 +1276,13 @@ export function CodeWorkspace() {
           onResizeEnd={(w) =>
             setUiPrefs(reviewing ? { reviewInfoWidth: w } : { sidebarWidth: w })
           }
+          className="resize-handle-seam"
         />
       )}
       {reviewing && prefs.sidebarVisible && prefs.reviewTreeVisible && (
         <>
           <div
-            className="flex shrink-0 flex-col overflow-hidden border-r"
+            className="app-sheet flex shrink-0 flex-col overflow-hidden"
             style={reviewTree.style}
           >
             <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
@@ -1272,10 +1295,11 @@ export function CodeWorkspace() {
             onResize={reviewTree.onResize}
             onResizeEnd={(w) => setUiPrefs({ reviewTreeWidth: w })}
             label="Resize file tree"
+            className="resize-handle-seam"
           />
         </>
       )}
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
+      <main className="app-sheet flex min-w-0 flex-1 flex-col overflow-hidden">
         {mode === "commit" &&
           mergeState.data != null &&
           mergeState.data.operation !== "none" && (
@@ -1288,40 +1312,47 @@ export function CodeWorkspace() {
             />
           )}
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {tabbed && (
-            <TabStrip
-              tabs={tabs.tabs}
-              active={tabs.active}
-              dirty={dirtyPaths}
-              onSelect={selectTab}
-              onKeep={(path) => updateTabs((state) => keepTab(state, path))}
-              onClose={closeTabAt}
-              onTogglePin={(path) =>
-                updateTabs((state) => togglePin(state, path))
-              }
-              onCloseOthers={(path) => {
-                whenMayLeaveFile(path, () =>
-                  updateTabs((state) => {
-                    const next = closeOthers(state, path);
-                    setSearch({ file: next.active ?? undefined });
-                    return next;
-                  })
-                );
-              }}
-              onCloseAll={() => {
-                whenMayLeaveFile(undefined, () =>
-                  updateTabs((state) => {
-                    const next = closeAll(state);
-                    setSearch({ file: next.active ?? undefined });
-                    return next;
-                  })
-                );
-              }}
-              onMove={(path, toIndex) =>
-                updateTabs((state) => moveTab(state, path, toIndex))
-              }
-            />
-          )}
+          {/* The strip is drawn into the header band over this pane rather than
+              inside it — see `header-tabs`. It is rendered from here because
+              the tabs are this page's state; only the row it lands on is the
+              layout's. */}
+          {tabbed &&
+            headerTabsSlot !== null &&
+            createPortal(
+              <TabStrip
+                tabs={tabs.tabs}
+                active={tabs.active}
+                dirty={dirtyPaths}
+                onSelect={selectTab}
+                onKeep={(path) => updateTabs((state) => keepTab(state, path))}
+                onClose={closeTabAt}
+                onTogglePin={(path) =>
+                  updateTabs((state) => togglePin(state, path))
+                }
+                onCloseOthers={(path) => {
+                  whenMayLeaveFile(path, () =>
+                    updateTabs((state) => {
+                      const next = closeOthers(state, path);
+                      setSearch({ file: next.active ?? undefined });
+                      return next;
+                    })
+                  );
+                }}
+                onCloseAll={() => {
+                  whenMayLeaveFile(undefined, () =>
+                    updateTabs((state) => {
+                      const next = closeAll(state);
+                      setSearch({ file: next.active ?? undefined });
+                      return next;
+                    })
+                  );
+                }}
+                onMove={(path, toIndex) =>
+                  updateTabs((state) => moveTab(state, path, toIndex))
+                }
+              />,
+              headerTabsSlot
+            )}
           {/* The assign bar floats over the code itself, so it clears
                       the path bar and stops at the panes' edge rather than the
                       window's. */}
@@ -1340,7 +1371,7 @@ export function CodeWorkspace() {
             )}
           </div>
           {/* The trail closes the pane, and only once it says more than
-                      which mode you are in. */}
+              which mode you are in. */}
           {(crumbs.length > 1 || viewing !== null) && (
             <PathBar
               crumbs={crumbs}

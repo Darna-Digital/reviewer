@@ -18,6 +18,7 @@ export function SidebarResizeHandle({
   onResize,
   onResizeEnd,
   label = "Resize sidebar",
+  className,
 }: {
   /** The live width the drag measures from — see `ResizeHandle`'s `value`. */
   width: number | (() => number);
@@ -27,11 +28,18 @@ export function SidebarResizeHandle({
   onResize: (width: number) => void;
   onResizeEnd: (width: number) => void;
   label?: string;
+  /**
+   * `resize-handle-seam` where the sidebar is a sheet on the frame rather than
+   * a column inside one, so the handle lies in the seam between the two instead
+   * of straddling a border.
+   */
+  className?: string;
 }) {
   return (
     <ResizeHandle
       orientation="col"
       label={label}
+      className={className}
       value={width}
       min={COLLAPSE_WIDTH}
       max={max}

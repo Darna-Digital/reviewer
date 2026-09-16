@@ -76,10 +76,12 @@ const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 // The Reviewer brand logo, used for the window and the macOS dock icon so the
 // app no longer shows Electron's default icon. Both variants are the `brand/`
 // square on the macOS icon grid — an 824px tile centred in a 1024px canvas, the
-// margin every other dock icon leaves — and differ only in whether the tile is
-// dark with a white mark or white with a black one, so nothing moves or
-// resizes as the appearance flips. Resolved relative to `dist/` (../assets) so
-// dev and packaged builds load the same files.
+// margin every other dock icon leaves — carrying the same top-to-bottom
+// gradient the packaged icon gets from its `automatic-gradient` fills, and
+// differ only in whether the tile is dark with a white mark or light with a
+// black one, so nothing moves or resizes as the appearance flips. Resolved
+// relative to `dist/` (../assets) so dev and packaged builds load the same
+// files.
 const brandIcons = {
   dark: nativeImage.createFromPath(
     resolve(__dirname, "..", "assets", "reviewer-icon-dark.png")

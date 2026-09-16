@@ -19,7 +19,20 @@ export const tabChipClass = (active: boolean, dragging = false) =>
     dragging && "opacity-50"
   );
 
-export const TAB_STRIP = "flex min-w-0 items-center gap-1 overflow-x-auto";
+/**
+ * A strip of those chips. It scrolls, but without a scrollbar: the bar is drawn
+ * inside a band only a tab tall, where it cuts across the chips and the rule
+ * under them. The edges fade instead — and only the edge that still has tabs
+ * behind it, so the fade is the count of what is out of sight rather than a
+ * decoration on both ends.
+ */
+export const TAB_STRIP = cn(
+  "flex min-w-0 items-center gap-1 overflow-x-auto",
+  "scrollbar-none",
+  // Narrower than the utility's default: a tab is not a page, and a 48px fade
+  // would swallow the icon and half the name of the tab it lands on.
+  "scroll-fade-x scroll-fade-when-scrollable [--scroll-fade-size:1.5rem]"
+);
 
 export function TabClose({
   label,

@@ -48,8 +48,6 @@ export interface PathBarProps {
    * ride with the crumbs instead of ending the line on the right.
    */
   readonly trailActions?: ReactNode;
-  /** `inline` fills a row somebody else drew; `bottom` draws its own. */
-  readonly placement?: "inline" | "bottom";
 }
 
 export function PathBar({
@@ -61,22 +59,12 @@ export function PathBar({
   onClose,
   actions,
   trailActions,
-  placement = "bottom",
 }: PathBarProps) {
   const folderCrumbs = useMemo<ReadonlyArray<Crumb>>(
     () =>
       path === null
         ? []
-        : // On the header row the trail shares one line with the branch picker,
-          // what the pane is showing and its controls, and a deep path put on
-          // top of that shrinks every folder to a single letter — a path of
-          // initials names nothing. So only the file itself goes up there; its
-          // own crumb still opens the folder it sits in, and the tab above
-          // carries the full path.
-          (placement === "inline"
-            ? pathSegments(path).slice(-1)
-            : pathSegments(path)
-          ).map((segment, index, segments) => ({
+        : pathSegments(path).map((segment, index, segments) => ({
             id: `path:${segment.path}`,
             label: segment.name,
             // Only the file at the end of the trail wears a mark: the folders
@@ -98,22 +86,13 @@ export function PathBar({
               />
             ),
           })),
-    [path, paths, onOpenFile, placement]
+    [path, paths, onOpenFile]
   );
 
   return (
-    <div
-      className={cn(
-        "flex min-w-0 items-center gap-2",
-        placement === "inline" ? "flex-1" : "h-9 shrink-0 border-t px-2"
-      )}
-    >
-      <Breadcrumbs
-        crumbs={[...crumbs, ...folderCrumbs]}
-        // On the header row the crumbs lead it, and are built to the measure the
-        // pickers there use; along the foot of the pane they are a caption.
-        size={placement === "inline" ? "md" : "sm"}
-      />
+    <div className="flex h-9 min-w-0 shrink-0 items-center gap-2 border-t px-2">
+      {/* Along the foot of the pane the crumbs are a caption to it. */}
+      <Breadcrumbs crumbs={[...crumbs, ...folderCrumbs]} size="sm" />
       {trailActions}
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {onShowHistory !== undefined && (
