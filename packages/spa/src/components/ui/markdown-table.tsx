@@ -6,6 +6,11 @@
  * `<tbody>` is never painted, which means the sheet's own edge is the top
  * border of the first row and the outer borders of the cells on its rim.
  *
+ * Column labels are written by whoever wrote the markdown, so they arrive in
+ * whatever case that was — `::first-letter` puts them in the sentence case the
+ * app's own tables are authored in, without touching the words after it the way
+ * `capitalize` would.
+ *
  * The wrapper is what carries the radius and the crop, so a table wider than
  * the column scrolls inside the sheet rather than pushing the prose open, and
  * the last row's bottom corners are rounded by that crop — the body has no
@@ -24,7 +29,7 @@ export const MARKDOWN_TABLE_COMPONENTS = {
   ),
   th: ({ node: _node, className: _className, ...props }) => (
     <th
-      className="border-table-line px-3 py-[7px] text-left font-medium whitespace-nowrap text-table-head-ink [&:not(:last-child)]:border-r-[0.5px]"
+      className="border-table-line px-3 py-[7px] text-left font-medium whitespace-nowrap text-table-label-ink first-letter:uppercase [&:not(:last-child)]:border-r-[0.5px]"
       {...props}
     />
   ),

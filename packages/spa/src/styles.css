@@ -85,6 +85,7 @@
   --color-table-line: var(--table-line);
   --color-table-ink: var(--table-ink);
   --color-table-head-ink: var(--table-head-ink);
+  --color-table-label-ink: var(--table-label-ink);
   --shadow-table: var(--table-shadow);
   --shadow-raised: var(--elev-raised);
   --shadow-floating: var(--elev-floating);
@@ -167,6 +168,11 @@
      takes it down to `--muted-foreground`'s value, which clears 4.5:1 on
      white. Columns of real content wear this, not just column labels. */
   --table-head-ink: #737373;
+  /* Column labels are a rung darker than the secondary ink they used to share.
+     A label is read once, at a glance, and has no row context to lean on, so
+     it has to survive the header's dimmer surface — but it stays short of the
+     row ink, which is what the eye should land on. */
+  --table-label-ink: #525252;
   --table-shadow:
     0 0 0 0.5px rgb(0 0 0 / 0.08), 0 1px 2px rgb(0 0 0 / 0.05),
     0 2px 4px rgb(0 0 0 / 0.02);
@@ -223,6 +229,7 @@
   --table-line: #303030;
   --table-ink: #f5f5f5;
   --table-head-ink: #a1a1a1;
+  --table-label-ink: #b8b8b8;
   /* The ring flips to white: a black drop has nothing to darken against a
      near-black pane, so in dark the edge is what separates sheet from page. */
   --table-shadow:
@@ -312,6 +319,16 @@
   --overlay-pressed: rgb(0 0 0 / 0.08);
   --overlay-contrast-hover: rgb(255 255 255 / 0.12);
   --overlay-contrast-pressed: rgb(255 255 255 / 0.24);
+  /* Selection is a tint that has to hold with nothing touching it, so it sits a
+     step past the pressed overlay: a control you are holding down must never
+     look more chosen than the one that *is* chosen. It is written against
+     `--overlay` rather than as a fixed grey because the things that wear it —
+     the rails above all — stand on the frame rather than on a sheet, where a
+     fixed grey like `--muted` lands within a hair of the column it is supposed
+     to stand out from. */
+  --selected: rgb(var(--overlay) / 0.1);
+  --selected-hover: rgb(var(--overlay) / 0.14);
+  --selected-edge: inset 0 0 0 0.5px rgb(0 0 0 / 0.1);
   --elev-raised:
     0 2px 4px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.08),
     0 0 0 0.5px rgb(0 0 0 / 0.12);
@@ -374,6 +391,11 @@
   --overlay-pressed: rgb(255 255 255 / 0.1);
   --overlay-contrast-hover: rgb(0 0 0 / 0.24);
   --overlay-contrast-pressed: rgb(0 0 0 / 0.4);
+  /* Twice as open as light, for the reason the whole dark ramp is: the same
+     alpha buys far less separation over a near-black frame than over paper. */
+  --selected: rgb(var(--overlay) / 0.2);
+  --selected-hover: rgb(var(--overlay) / 0.26);
+  --selected-edge: inset 0 0 0 0.5px rgb(255 255 255 / 0.12);
   --elev-raised:
     0 2px 4px 0 rgb(0 0 0 / 0.3), 0 1px 2px 0 rgb(0 0 0 / 0.3),
     0 0 0 0.5px rgb(255 255 255 / 0.16), 0 -0.5px 0 0 rgb(255 255 255 / 0.06);
@@ -530,6 +552,27 @@
   }
   &:active:not(:disabled) {
     background-color: var(--overlay-pressed);
+  }
+}
+
+/* `face-quiet` once it is the one you chose — the rail button whose surface is
+   on screen, the toggle that is on. The difference is not loudness but
+   permanence: a quiet face appears under the pointer and is gone with it, where
+   this one has to say which of a column of identical icons you are standing in
+   from the corner of the eye, untouched. So the tint stands rather than
+   hovering, and it closes with a hairline, which is the part hover can never
+   counterfeit — a chip with an edge reads as a thing, a wash reads as a
+   pointer passing over. Hover on top of it deepens the tint it already has
+   rather than replacing it, so pointing at the chosen one never makes it look
+   like any of the others. */
+@utility face-selected {
+  background-color: var(--selected);
+  box-shadow: var(--glow, var(--glow-none)), var(--selected-edge);
+  &:hover:not(:disabled) {
+    background-color: var(--selected-hover);
+  }
+  &:active:not(:disabled) {
+    background-color: var(--selected-hover);
   }
 }
 

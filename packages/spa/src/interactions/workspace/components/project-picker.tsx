@@ -284,13 +284,12 @@ export function ProjectPicker({
                 )}
                 {filteredRecents.map((recent) => {
                   const isCurrent = recent === workspace?.project;
+                  const name = pathName(recent);
                   return (
                     <PathRow
                       key={recent}
-                      icon={
-                        <IconFolder className="size-4 h-lh shrink-0 text-muted-foreground" />
-                      }
-                      label={pathName(recent)}
+                      icon={<ProjectAvatar name={name} />}
+                      label={name}
                       path={displayPath(recent, home)}
                       emphasized={isCurrent}
                       trailing={

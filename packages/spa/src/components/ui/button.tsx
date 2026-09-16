@@ -38,6 +38,11 @@ const buttonVariants = cva(
           "face-quiet text-foreground aria-expanded:bg-pressed aria-expanded:text-foreground",
         "ghost-muted":
           "face-quiet text-muted-foreground aria-expanded:bg-pressed aria-expanded:text-foreground [&_svg]:text-muted-foreground aria-expanded:[&_svg]:text-foreground",
+        /* The quiet button that is currently the chosen one — swapped in for
+           `ghost`/`ghost-muted` rather than layered over it, since the two
+           faces would otherwise be fighting over the same background on
+           hover. */
+        selected: "face-selected text-foreground [&_svg]:text-foreground",
         destructive:
           "bg-destructive-fill face-danger text-destructive-on-fill disabled:opacity-40",
         link: "text-link underline-offset-4 hover:underline",

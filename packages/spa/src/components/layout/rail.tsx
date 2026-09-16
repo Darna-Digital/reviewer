@@ -74,10 +74,20 @@ export function RailButton({
   render?: React.ReactElement;
   children: React.ReactNode;
 }) {
+  /* A rail is a column of icons with no labels under them, so where a list can
+     say which row is selected by one difference, this has to say it by three at
+     once: the chip it sits in, the weight of its ink, and the weight of the
+     stroke the icon is drawn with. A tint alone was the whole of it before, and
+     on the frame the rail stands on, that tint was very nearly the frame. */
   const className = cn(
-    buttonVariants({ variant: "ghost", size: "icon-sm" }),
-    "relative text-muted-foreground [-webkit-app-region:no-drag]",
-    active === true && "bg-muted text-foreground"
+    buttonVariants({
+      variant: active === true ? "selected" : "ghost",
+      size: "icon-sm",
+    }),
+    "relative [-webkit-app-region:no-drag]",
+    active === true
+      ? "[&_svg]:stroke-2"
+      : "text-muted-foreground hover:text-foreground [&_svg]:stroke-[1.5]"
   );
   return (
     <Tooltip>
