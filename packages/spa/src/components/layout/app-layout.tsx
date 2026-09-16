@@ -95,9 +95,12 @@ export function AppLayout() {
 
   /**
    * Pages that wear no header — the composer, because the shell is getting out
-   * of its way entirely.
+   * of its way entirely, and the rest of the sessions surface, which carries
+   * the only thing the band held for it, the trail, inside the pane the trail
+   * names. That leaves the list running to the top of the window and the seam
+   * beside it unbroken. See `ChatsPage`.
    */
-  const headerless = bare;
+  const headerless = route.kind === "session";
 
   // Both rails are the same column carrying different things — code's git
   // surfaces, sessions' new-and-find — so crossing between them leaves the page

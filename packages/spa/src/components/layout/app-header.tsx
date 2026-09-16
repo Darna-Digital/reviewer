@@ -25,7 +25,6 @@ import { ComparePicker } from "@/interactions/comparison/components/compare-pick
 import { useLocalComparison } from "@/interactions/comparison/adapters/comparison.hook.adapter";
 import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
 import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
-import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
 import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
@@ -125,19 +124,6 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   /** Make a root current before a menu action runs in it. */
   const followRepo = (repoPath: string) =>
     workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
-
-  // A session is one conversation, held by its own tab: the branch switcher is
-  // how you move around a repository, which is not what this surface is for.
-  // Minting a session and finding one act on the list rather than on the
-  // conversation, and are in the rail with the rest of what moves you about —
-  // so this only names the conversation.
-  if (route.kind === "session") {
-    return (
-      <HeaderRow>
-        <SessionCrumbs />
-      </HeaderRow>
-    );
-  }
 
   // The collaboration prototype drops the git chrome entirely — its own sidebar
   // carries what the branch switcher would have said.

@@ -49,9 +49,11 @@ import {
   useFileEditing,
   type SelectionActionContext,
 } from "@/components/editor/use-file-editing";
+import { GutterRule, useGutterRule } from "@/components/editor/gutter-rule";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
 import { commentGutterCSS } from "@/lib/comment-gutter-css";
+import { gutterDividerCSS } from "@/lib/gutter-divider-css";
 import { useFile } from "@/lib/queries";
 import { useUiPrefs } from "@/lib/ui-prefs";
 import type { ReviewComment } from "@reviewer/core/comments";
@@ -476,13 +478,14 @@ export function CodeView({
     [onOpenLocation, path]
   );
 
-  // The view keeps one `onPostRender`, and four layers paint from it: the
-  // diagnostic underlines, the find highlight, the relative line numbers and
-  // the folds.
+  // The view keeps one `onPostRender`, and five layers read from it: the
+  // diagnostic underlines, the find highlight, the relative line numbers, the
+  // folds, and the measurement that places the gutter rule.
   const languagePostRender = language.viewOptions.onPostRender;
   const findPostRender = find.viewOptions.onPostRender;
   const vimPostRender = vim.viewOptions.onPostRender;
   const foldPostRender = folding.viewOptions.onPostRender;
+  const measureGutter = useGutterRule(scrollWrapper);
   const onPostRender = useCallback(
     (
       node: HTMLElement,
@@ -493,8 +496,15 @@ export function CodeView({
       findPostRender(node, instance, phase);
       vimPostRender(node, instance, phase);
       foldPostRender(node, instance, phase);
+      measureGutter(node);
     },
-    [languagePostRender, findPostRender, vimPostRender, foldPostRender]
+    [
+      languagePostRender,
+      findPostRender,
+      vimPostRender,
+      foldPostRender,
+      measureGutter,
+    ]
   );
 
   // Line count drives the first scroll estimate for a line that has not been
@@ -575,7 +585,7 @@ export function CodeView({
                 // Both layers paint from the same callback and into the same
                 // stylesheet, and the view keeps one of each.
                 onPostRender,
-                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}\n${folding.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}\n${commentGutterCSS}`,
+                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}\n${folding.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}\n${commentGutterCSS}\n${gutterDividerCSS}`,
                 ...gutterCommenting,
               }}
               edit={!commenting}
@@ -664,6 +674,7 @@ export function CodeView({
           />
         )}
       </Virtualizer>
+      <GutterRule />
       {/* Floats over the code rather than sitting under it: diagnostics come
           and go while typing, and a bar that resizes the view would shove the
           text around under the caret every time the last problem cleared. */}

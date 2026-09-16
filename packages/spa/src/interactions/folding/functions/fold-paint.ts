@@ -36,16 +36,16 @@ export const FOLD_CSS = `
 [data-column-number][${FOLDABLE}] { position: relative; }
 
 /* The same square as the gutter's add-a-comment `+`: pierre gives that button
-   a box of 1lh around a 16px icon, so the chevron takes both. There is exactly
-   1ch of gutter padding and 1ch of the code's own on either side of the number
-   column's edge, so a 1lh box pulled out by half its width centres on that
-   channel and the icon fills it — clear of the last digit on one side and the
-   first character on the other. The z-index is the button's, so the two halves
-   of the row's chrome float over the code the same way. */
+   a box of 1lh around a 16px icon, so the chevron takes both. gutter-divider-css
+   widens the number column's right padding to exactly that 1lh and rules a line
+   down the far side of it, so a chevron pinned to that edge fills the lane and
+   stops at the border — numbers on one side of the rule, the comment button on
+   the other. The z-index is the button's, so the two halves of the row's chrome
+   float over the code the same way. */
 [${TOGGLE}] {
   position: absolute;
   inset-block: 0;
-  inset-inline-end: -0.5lh;
+  inset-inline-end: 0;
   width: 1lh;
   z-index: 4;
   display: flex;

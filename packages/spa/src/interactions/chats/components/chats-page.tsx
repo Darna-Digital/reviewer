@@ -17,10 +17,13 @@
  * filters — and the rail's search — are part of what is asked for rather than
  * applied to what came back. See `useChatPages`.
  *
- * The header is not cut to the list: nothing in the toolbar is about the list
- * — the rail carries what acts on it, and the trail names the conversation
- * beside it — so cutting would stand an empty band over the column and buy a
- * seam with it. One band across instead. See `header-lead`.
+ * There is no header over this surface at all. Nothing the toolbar carries is
+ * about the list — the rail holds what acts on it — and the one thing left, the
+ * trail, is about the conversation, so it sits in the conversation's own pane.
+ * Cutting a band to the columns instead would have stood an empty strip over
+ * the list; a band across them both stopped the seam between them short of the
+ * window bar. With neither, the list starts at the top of the window and that
+ * seam runs the whole height of it. See `SessionCrumbs` and `AppLayout`.
  *
  * Which rows are still waiting is the sessions' own business: each carries the
  * moment it was last opened, so a row settles when you open its conversation
@@ -57,6 +60,7 @@ import { useChatListQuery } from "@/interactions/chats/adapters/chat-list-query.
 import { useOnSessionTab } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { ChatRow } from "@/interactions/chats/components/chat-row";
 import { CloudRunRow } from "@/interactions/cloud/components/cloud-run-row";
+import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
 import { openSessionTab } from "@/interactions/chats/functions/open-session-tab";
 import { useChatPages, useCloudRuns, useCloudStatus } from "@/lib/queries";
 import {
@@ -302,7 +306,13 @@ export function ChatsPage() {
         />
       )}
       <section className="app-sheet flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <Outlet />
+        {/* The trail names the conversation, so it stands over the conversation
+            rather than over both columns: the blank composer is the one session
+            surface with nothing to name yet. See `SessionCrumbs`. */}
+        {!composing && <SessionCrumbs />}
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <Outlet />
+        </div>
       </section>
       {menu !== null && (
         <ContextMenu
