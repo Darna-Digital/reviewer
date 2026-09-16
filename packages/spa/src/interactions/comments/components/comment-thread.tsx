@@ -12,7 +12,7 @@
 import {
   IconBrandGithub,
   IconCornerDownRight,
-  IconTrash,
+  IconX,
 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import Markdown from "react-markdown";
@@ -141,11 +141,11 @@ export function CommentComposer({
 }
 
 /**
- * Take a comment off the pull request. Offered per comment rather than on the
- * thread's action row, which acts on the thread as a whole: a GitHub thread is
- * several people's comments stacked together, and "delete" there would not say
- * whose. Kept quiet until the comment is under the cursor — a destructive
- * control on every card, always lit, is louder than every comment it sits on.
+ * Take a single comment off the review. Offered per comment rather than on the
+ * thread's action row, which acts on the thread as a whole: a thread is several
+ * comments stacked together, and "delete" there would not say whose. Kept quiet
+ * until the comment is under the cursor — a destructive control on every card,
+ * always lit, is louder than every comment it sits on.
  */
 function DeleteCommentButton({ onDelete }: { onDelete: () => Promise<void> }) {
   const [deleting, setDeleting] = useState(false);
@@ -161,7 +161,7 @@ function DeleteCommentButton({ onDelete }: { onDelete: () => Promise<void> }) {
       }}
       className="ml-auto rounded-sm p-0.5 text-muted-foreground opacity-0 outline-offset-2 outline-ring transition group-hover/comment:opacity-100 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-2 disabled:opacity-40"
     >
-      <IconTrash className="size-3.5" />
+      <IconX className="size-3.5" />
     </button>
   );
 }
@@ -270,8 +270,8 @@ function ThreadAction({
  * A stack of comments anchored to one line, rendered as a single rounded card.
  * The opening comment sits flush; later comments are nested as replies. The
  * footer offers "Add reply…" (GitHub threads) and "Resolve" (removes the local
- * comments — deletion is how a local thread is resolved). A GitHub comment,
- * which "Resolve" cannot touch, carries its own delete on its card.
+ * comments — deletion is how a local thread is resolved). Each comment also
+ * carries its own delete on its card, for taking one note off on its own.
  */
 export function CommentThread({
   comments,
@@ -304,11 +304,10 @@ export function CommentThread({
   const canEdit = editableComment !== undefined && onEdit !== undefined;
   const canReply = onReply !== undefined && lastGithub !== undefined;
   const canResolve = localComments.length > 0;
-  // A local comment is taken off the thread by resolving it, which the footer
-  // already offers; a GitHub one has no such gesture, so its own card carries
-  // the delete instead.
-  const deletable = (c: ReviewComment) =>
-    c.source === "github" && settled.includes(c);
+  // Every comment the store has acknowledged carries its own delete. "Resolve"
+  // in the footer still clears the local ones in one go; this is how a single
+  // note goes without taking the rest of the thread with it.
+  const deletable = (c: ReviewComment) => settled.includes(c);
   const showActions =
     !replying && editingId === null && (canEdit || canReply || canResolve);
 

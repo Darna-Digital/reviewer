@@ -4,7 +4,10 @@
  * place — so this is the API surface and the cache invalidation, nothing else.
  */
 import { useQueryClient } from "@tanstack/react-query";
-import type { NewVisualComment } from "@reviewer/core/visual-comments";
+import type {
+  NewVisualComment,
+  UpdateVisualComment,
+} from "@reviewer/core/visual-comments";
 import { api, fetchClient } from "@/lib/api/client";
 
 const KEY = "/api/visual-comments";
@@ -22,15 +25,25 @@ export function useVisualCommentActions() {
 
   return {
     add: async (input: NewVisualComment) => {
-      const { data, error } = await fetchClient.POST(KEY, { body: input });
+      // The generated client wants a mutable array where the schema gives a
+      // readonly one; the copy is the whole difference.
+      const body = {
+        ...input,
+        styleChanges: input.styleChanges?.map((change) => ({ ...change })),
+      };
+      const { data, error } = await fetchClient.POST(KEY, { body });
       if (error) failed(error, "failed to save the comment");
       await invalidate();
       return data;
     },
-    update: async (id: string, body: string) => {
+    update: async (id: string, input: UpdateVisualComment) => {
+      const body = {
+        ...input,
+        styleChanges: input.styleChanges?.map((change) => ({ ...change })),
+      };
       const { data, error } = await fetchClient.PATCH(
         "/api/visual-comments/{id}",
-        { params: { path: { id } }, body: { body } }
+        { params: { path: { id } }, body }
       );
       if (error) failed(error, "failed to update the comment");
       await invalidate();

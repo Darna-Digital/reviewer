@@ -8308,6 +8308,15 @@ export interface operations {
                             width: number;
                             height: number;
                         };
+                        styleChanges?: {
+                            property: string;
+                            from: string;
+                            to: string;
+                        }[];
+                        anchor?: {
+                            x: number;
+                            y: number;
+                        };
                     }[];
                 };
             };
@@ -8360,6 +8369,15 @@ export interface operations {
                         width: number;
                         height: number;
                     };
+                    styleChanges?: {
+                        property: string;
+                        from: string;
+                        to: string;
+                    }[];
+                    anchor?: {
+                        x: number;
+                        y: number;
+                    };
                 };
             };
         };
@@ -8382,6 +8400,15 @@ export interface operations {
                         viewport: {
                             width: number;
                             height: number;
+                        };
+                        styleChanges?: {
+                            property: string;
+                            from: string;
+                            to: string;
+                        }[];
+                        anchor?: {
+                            x: number;
+                            y: number;
                         };
                     };
                 };
@@ -8479,6 +8506,11 @@ export interface operations {
             content: {
                 "application/json": {
                     body: string;
+                    styleChanges?: {
+                        property: string;
+                        from: string;
+                        to: string;
+                    }[];
                 };
             };
         };
@@ -8501,6 +8533,15 @@ export interface operations {
                         viewport: {
                             width: number;
                             height: number;
+                        };
+                        styleChanges?: {
+                            property: string;
+                            from: string;
+                            to: string;
+                        }[];
+                        anchor?: {
+                            x: number;
+                            y: number;
                         };
                     };
                 };

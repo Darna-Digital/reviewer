@@ -24,6 +24,7 @@ const initial: BrowserPaneState = {
   canGoForward: false,
   mode: "browse",
   draft: null,
+  expanded: false,
 };
 
 let state: BrowserPaneState = initial;

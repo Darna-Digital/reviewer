@@ -8,7 +8,11 @@
  * They are ordinary exported functions here so they can be unit-tested against
  * jsdom rather than only through a live webview.
  */
-import type { PickedElement } from "../interfaces/browser-pane.interfaces";
+import { STYLE_PROPERTIES } from "@/interactions/visual-comments/functions/visual-style.functions";
+import type {
+  PickedElement,
+  PickedRect,
+} from "../interfaces/browser-pane.interfaces";
 
 const WEB_SCHEME = /^https?:\/\//i;
 /**
@@ -96,6 +100,91 @@ export function elementLabel(element: Element): string {
 export const PICKER_CANCEL_HOOK = "__reviewerCancelPick";
 
 /**
+ * Where the guest keeps the element under inspection between the pick and the
+ * comment: the node itself, the inline declarations it had before any edit, and
+ * the outline drawn over it. Held on `window` because each `executeJavaScript`
+ * is a fresh script with nothing else in common with the last.
+ */
+const INSPECT_STATE = "__reviewerInspect";
+
+const inspectedElementScript = `
+  const state = window.${INSPECT_STATE};
+  const element = state && state.element && state.element.isConnected
+    ? state.element
+    : null;
+`;
+
+/**
+ * Takes an element under inspection: reads what the panel opens on and keeps
+ * the node, with the inline declarations it had, for the edits to come. Shared
+ * by the picker and by re-opening a saved comment, so both read the same things.
+ * A pick over an unfinished inspection replaces it, outline and all — otherwise
+ * the old outline would go on following its element forever.
+ */
+const inspectSnippet = `
+  const uniqueSelector = ${String(uniqueSelector)};
+  const elementLabel = ${String(elementLabel)};
+  const styleProperties = ${JSON.stringify(STYLE_PROPERTIES)};
+  const inspect = (element) => {
+    const rect = element.getBoundingClientRect();
+    const computed = getComputedStyle(element);
+    const styles = {};
+    const originals = {};
+    for (const property of styleProperties) {
+      styles[property] = computed.getPropertyValue(property);
+      originals[property] = [
+        element.style.getPropertyValue(property),
+        element.style.getPropertyPriority(property),
+      ];
+    }
+    const previous = window.${INSPECT_STATE};
+    if (previous && previous.outline) previous.outline.remove();
+    window.${INSPECT_STATE} = { element, originals, outline: null };
+    return {
+      selector: uniqueSelector(element),
+      label: elementLabel(element),
+      rect: { x: rect.left, y: rect.top, width: rect.width, height: rect.height },
+      url: location.href,
+      viewport: { width: innerWidth, height: innerHeight },
+      styles,
+    };
+  };
+`;
+
+/**
+ * Re-opens a saved comment's element by the selector it was stored under.
+ * Resolves to the same shape as a pick, minus the click, or to null when the
+ * page no longer has such an element.
+ */
+export const inspectSelectorScript = (selector: string): string => `
+(() => {
+  ${inspectSnippet}
+  const element = document.querySelector(${JSON.stringify(selector)});
+  return element === null ? null : inspect(element);
+})()
+`;
+
+/**
+ * Where each saved comment's element is right now, keyed by selector, so the
+ * host can keep a dot on every one. One round trip for all of them.
+ */
+export const locateSelectorsScript = (
+  selectors: ReadonlyArray<string>
+): string => `
+(() => {
+  const found = {};
+  for (const selector of ${JSON.stringify(selectors)}) {
+    let element = null;
+    try { element = document.querySelector(selector); } catch {}
+    if (element === null) { found[selector] = null; continue; }
+    const rect = element.getBoundingClientRect();
+    found[selector] = { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
+  }
+  return found;
+})()
+`;
+
+/**
  * An expression evaluated in the guest page that resolves to the element the
  * user clicks, or to null when they press Escape or the host cancels.
  * `executeJavaScript` awaits a returned promise, which is the whole channel —
@@ -103,8 +192,7 @@ export const PICKER_CANCEL_HOOK = "__reviewerCancelPick";
  */
 export const elementPickerScript = (): string => `
 (() => new Promise((resolve) => {
-  const uniqueSelector = ${String(uniqueSelector)};
-  const elementLabel = ${String(elementLabel)};
+  ${inspectSnippet}
   const overlay = document.createElement("div");
   Object.assign(overlay.style, {
     position: "fixed",
@@ -156,19 +244,13 @@ export const elementPickerScript = (): string => `
   const pick = (event) => {
     event.preventDefault();
     event.stopPropagation();
+    // The click's own target, when the pointer never moved first — a click
+    // straight after the picker opened, or one that was not from a mouse.
+    if (event.target instanceof Element) hovered = event.target;
     if (hovered === null) return finish(null);
-    const rect = hovered.getBoundingClientRect();
     finish({
-      selector: uniqueSelector(hovered),
-      label: elementLabel(hovered),
-      rect: {
-        x: rect.left,
-        y: rect.top,
-        width: rect.width,
-        height: rect.height,
-      },
-      url: location.href,
-      viewport: { width: innerWidth, height: innerHeight },
+      ...inspect(hovered),
+      point: { x: event.clientX, y: event.clientY },
     });
   };
 
@@ -188,10 +270,104 @@ export const elementPickerScript = (): string => `
 }))()
 `;
 
+/**
+ * Draws a persistent outline over the inspected element for as long as the
+ * comment is being written, redrawn every frame so it follows the page as it
+ * scrolls or reflows under a style edit.
+ */
+export const outlineInspectedScript = (): string => `
+(() => {
+  ${inspectedElementScript}
+  if (element === null || state.outline !== null) return;
+  const outline = document.createElement("div");
+  Object.assign(outline.style, {
+    position: "fixed",
+    zIndex: "2147483647",
+    pointerEvents: "none",
+    borderRadius: "3px",
+    outline: "2px solid rgb(56 189 248)",
+    outlineOffset: "1px",
+  });
+  document.documentElement.appendChild(outline);
+  let frame = 0;
+  const follow = () => {
+    const rect = element.getBoundingClientRect();
+    Object.assign(outline.style, {
+      left: rect.left + "px",
+      top: rect.top + "px",
+      width: rect.width + "px",
+      height: rect.height + "px",
+    });
+    frame = requestAnimationFrame(follow);
+  };
+  follow();
+  state.outline = { remove: () => { cancelAnimationFrame(frame); outline.remove(); } };
+})()
+`;
+
+/** Where the inspected element is right now, so the host's dot can keep up. */
+export const inspectedRectScript = (): string => `
+(() => {
+  ${inspectedElementScript}
+  if (element === null) return null;
+  const rect = element.getBoundingClientRect();
+  return { x: rect.left, y: rect.top, width: rect.width, height: rect.height };
+})()
+`;
+
+/**
+ * A live edit: written inline with `!important` so it wins over whatever the
+ * page's own stylesheets say, which is the point of trying it on.
+ */
+export const applyStyleScript = (property: string, value: string): string => `
+(() => {
+  ${inspectedElementScript}
+  if (element === null) return false;
+  element.style.setProperty(
+    ${JSON.stringify(property)},
+    ${JSON.stringify(value)},
+    "important"
+  );
+  return true;
+})()
+`;
+
+/**
+ * Puts one property back to the inline declaration it had before the pick —
+ * usually none at all, in which case the stylesheet value shows through again.
+ */
+export const restoreStyleScript = (property: string): string => `
+(() => {
+  ${inspectedElementScript}
+  if (element === null) return false;
+  const original = state.originals[${JSON.stringify(property)}] || ["", ""];
+  if (original[0] === "") element.style.removeProperty(${JSON.stringify(property)});
+  else element.style.setProperty(${JSON.stringify(property)}, original[0], original[1]);
+  return true;
+})()
+`;
+
+/**
+ * Ends the inspection: the outline goes, and with `revert` so do the edits.
+ * A saved comment keeps its edits on the page, so several notes can be tried
+ * together; a cancelled one leaves no trace.
+ */
+export const endInspectionScript = (revert: boolean): string => `
+(() => {
+  ${inspectedElementScript}
+  if (state && state.outline) state.outline.remove();
+  if (element !== null && ${revert}) {
+    for (const [property, original] of Object.entries(state.originals)) {
+      if (original[0] === "") element.style.removeProperty(property);
+      else element.style.setProperty(property, original[0], original[1]);
+    }
+  }
+  delete window.${INSPECT_STATE};
+})()
+`;
+
 /** Screenshot bounds for a pick — integral, clamped to the visible viewport. */
-export const captureRect = (
-  picked: PickedElement
-): { x: number; y: number; width: number; height: number } | null => {
+export const captureRect = (picked: PickedElement): PickedRect | null => {
   const left = Math.max(0, Math.floor(picked.rect.x));
   const top = Math.max(0, Math.floor(picked.rect.y));
   const right = Math.min(

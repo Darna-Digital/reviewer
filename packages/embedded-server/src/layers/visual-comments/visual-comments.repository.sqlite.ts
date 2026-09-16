@@ -48,7 +48,13 @@ export const makeSqliteVisualCommentsRepository = Effect.gen(function* () {
       if (existing === undefined) {
         throw new NotFound({ reason: `visual comment ${id} not found` });
       }
-      const updated: VisualComment = { ...existing, body: input.body };
+      const updated: VisualComment = {
+        ...existing,
+        body: input.body,
+        ...(input.styleChanges !== undefined
+          ? { styleChanges: input.styleChanges }
+          : {}),
+      };
       visualComments.put(repoPath, id, updated.createdAt, updated);
       return updated;
     });

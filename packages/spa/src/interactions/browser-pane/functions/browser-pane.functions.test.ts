@@ -1,11 +1,16 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import {
+  applyStyleScript,
   captureRect,
   displayUrl,
   elementLabel,
   elementPickerScript,
+  endInspectionScript,
+  inspectSelectorScript,
+  locateSelectorsScript,
   normalizeUrl,
+  restoreStyleScript,
   uniqueSelector,
 } from "./browser-pane.functions";
 import type { PickedElement } from "../interfaces/browser-pane.interfaces";
@@ -111,14 +116,53 @@ describe("elementPickerScript", () => {
     // The helpers are stringified, so they must not close over module scope.
     expect(script).not.toMatch(/\bimport\b|\bexports\./);
   });
+
+  it("reads the inspector's properties off the picked element", () => {
+    const script = elementPickerScript();
+    expect(script).toContain('"background-color"');
+    expect(script).toContain("getComputedStyle(element)");
+    expect(script).toContain("window.__reviewerInspect");
+  });
+
+  it("re-opens a saved element by its selector, or says it is gone", () => {
+    const script = inspectSelectorScript("#a > b:nth-of-type(2)");
+    expect(script).toContain('document.querySelector("#a > b:nth-of-type(2)")');
+    expect(script).toContain("element === null ? null : inspect(element)");
+  });
+
+  it("locates every saved element in one trip", () => {
+    const script = locateSelectorsScript(["#a", ".b"]);
+    expect(script).toContain('["#a",".b"]');
+    expect(script).toContain("getBoundingClientRect");
+  });
+});
+
+describe("inspection scripts", () => {
+  it("writes a live edit inline with priority, from a quoted value", () => {
+    const script = applyStyleScript("background-color", 'url("x") #fff');
+    expect(script).toContain('"background-color"');
+    expect(script).toContain('"url(\\"x\\") #fff"');
+    expect(script).toContain('"important"');
+  });
+
+  it("restores a property from the inline declaration it started with", () => {
+    expect(restoreStyleScript("color")).toContain('state.originals["color"]');
+  });
+
+  it("only reverts edits when the draft is cancelled", () => {
+    expect(endInspectionScript(true)).toContain("element !== null && true");
+    expect(endInspectionScript(false)).toContain("element !== null && false");
+  });
 });
 
 const picked = (rect: PickedElement["rect"]): PickedElement => ({
   selector: "#a",
   label: "div",
   rect,
+  point: { x: rect.x, y: rect.y },
   url: "http://localhost:3000/",
   viewport: { width: 800, height: 600 },
+  styles: {},
 });
 
 describe("captureRect", () => {

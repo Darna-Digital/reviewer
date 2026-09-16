@@ -26,12 +26,19 @@ export const VisualCommentsHandler = HttpApiBuilder.group(
                 : "you",
             screenshot: payload.screenshot ?? null,
             viewport: payload.viewport,
+            styleChanges: payload.styleChanges ?? [],
+            anchor: payload.anchor ?? { x: 8, y: 8 },
           })
         )
       )
       .handle("update", ({ params, payload }) =>
         Effect.flatMap(VisualCommentsService, (s) =>
-          s.update(params.id, { body: payload.body })
+          s.update(params.id, {
+            body: payload.body,
+            ...(payload.styleChanges !== undefined
+              ? { styleChanges: payload.styleChanges }
+              : {}),
+          })
         )
       )
       .handle("remove", ({ params }) =>

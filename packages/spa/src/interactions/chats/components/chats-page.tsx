@@ -17,6 +17,11 @@
  * filters — and the rail's search — are part of what is asked for rather than
  * applied to what came back. See `useChatPages`.
  *
+ * The header is not cut to the list: nothing in the toolbar is about the list
+ * — the rail carries what acts on it, and the trail names the conversation
+ * beside it — so cutting would stand an empty band over the column and buy a
+ * seam with it. One band across instead. See `header-lead`.
+ *
  * Which rows are still waiting is the sessions' own business: each carries the
  * moment it was last opened, so a row settles when you open its conversation
  * rather than when you next arrive here. See `chats.attention.ts`.
@@ -36,7 +41,6 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useHeaderLead } from "@/components/layout/header-lead";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { confirm } from "@/components/ui/alerts";
@@ -92,9 +96,6 @@ export function ChatsPage() {
   // that.
   const composing = useSearch({ strict: false }).new === true;
   const showList = !composing && !ownTab && prefs.sidebarVisible;
-  // The header is cut to the list, so the seam beside it runs the height of the
-  // window rather than starting under a band laid across both. See `header-lead`.
-  useHeaderLead(showList ? ["var(--panel-chats-list-w)"] : []);
   /** The surface with the list on it and nothing yet opened from it. */
   const landing = !composing && !ownTab && chatId === undefined;
 

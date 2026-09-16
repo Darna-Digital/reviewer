@@ -80,6 +80,7 @@ import {
   useVisualCommentActions,
   useVisualComments,
 } from "@/interactions/visual-comments/adapters/visual-comments.hook.adapter";
+import { visualCommentSummary } from "@/interactions/visual-comments/functions/visual-style.functions";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
@@ -449,7 +450,7 @@ export function CodeWorkspace() {
         id: comment.id,
         file: comment.elementLabel,
         line: null,
-        body: comment.body,
+        body: visualCommentSummary(comment),
       })),
     ],
     [visibleComments, uiComments.data]
@@ -614,6 +615,22 @@ export function CodeWorkspace() {
       line: comment.lineNumber,
     });
     revealLine(comment.filePath, comment.lineNumber);
+  };
+
+  /**
+   * Take one comment off the review from the bar's list. The list mixes the two
+   * kinds, so the id decides which store answers for it: a note on the diff goes
+   * back through the comments store (GitHub's own, when that is where it lives),
+   * a note on the running app through the visual-comment store.
+   */
+  const deleteListedComment = async (id: string) => {
+    const onDiff = visibleComments.find((c) => c.id === id);
+    if (onDiff !== undefined) {
+      await deleteComment(onDiff);
+      return;
+    }
+    if ((uiComments.data ?? []).some((c) => c.id === id))
+      await visualComments.remove(id);
   };
 
   // A `line` in the URL is how another surface points at code — the comments
@@ -1353,9 +1370,9 @@ export function CodeWorkspace() {
               />,
               headerTabsSlot
             )}
-          {/* The assign bar floats over the code itself, so it clears
-                      the path bar and stops at the panes' edge rather than the
-                      window's. */}
+          {/* The assign bar floats at the foot of the whole window, centred
+              on it rather than on this pane: with the browser open beside the
+              code, a bar centred on the code alone sits off to one side. */}
           <div className="relative min-h-0 flex-1 overflow-hidden">
             {renderCenter()}
             {handoffComments.length > 0 && (
@@ -1366,7 +1383,7 @@ export function CodeWorkspace() {
                 branch={assignPlace.branch}
                 onAssign={assignReview}
                 onOpenComment={openComment}
-                className="absolute inset-x-3 bottom-8"
+                onDeleteComment={deleteListedComment}
               />
             )}
           </div>

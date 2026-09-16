@@ -92,6 +92,7 @@ export function ReviewAssignBar({
   branch,
   onAssign,
   onOpenComment,
+  onDeleteComment,
   className,
 }: {
   comments: ReadonlyArray<AssignBarComment>;
@@ -109,6 +110,11 @@ export function ReviewAssignBar({
    * nowhere in the code to jump to — the list then just reads them back.
    */
   onOpenComment?: (id: string) => void;
+  /**
+   * Take a comment off the review from the list. Omitted by callers who have no
+   * way to delete one — the list then just reads them back.
+   */
+  onDeleteComment?: (id: string) => Promise<void> | void;
   /**
    * Where the bar sits. Defaults to the bottom of the window; a caller that
    * owns a panel of its own passes positioning that keeps the bar inside it.
@@ -294,6 +300,11 @@ export function ReviewAssignBar({
                                 onOpenComment(comment.id);
                               }
                         }
+                        onDelete={
+                          onDeleteComment === undefined
+                            ? undefined
+                            : () => onDeleteComment(comment.id)
+                        }
                       />
                     ))}
                   </div>
@@ -466,10 +477,13 @@ function FileHeading({ file }: { file: string }) {
 function CommentRow({
   comment,
   onOpen,
+  onDelete,
 }: {
   comment: AssignBarComment;
   onOpen?: () => void;
+  onDelete?: () => Promise<void> | void;
 }) {
+  const [deleting, setDeleting] = useState(false);
   const content = (
     <>
       {comment.line !== null && (
@@ -480,18 +494,39 @@ function CommentRow({
       <span className="line-clamp-2 min-w-0 flex-1">{comment.body}</span>
     </>
   );
-  const className = "flex min-w-0 items-baseline gap-2 px-2 py-1 type-body";
-  if (onOpen === undefined) {
-    return <div className={className}>{content}</div>;
-  }
+  const className =
+    "flex min-w-0 flex-1 items-baseline gap-2 px-2 py-1 type-body";
+
   return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className={cn(className, "w-full rounded-md text-left hover:bg-muted")}
-    >
-      {content}
-    </button>
+    <div className="group/row flex min-w-0 items-start rounded-md hover:bg-muted">
+      {onOpen === undefined ? (
+        <div className={className}>{content}</div>
+      ) : (
+        <button
+          type="button"
+          onClick={onOpen}
+          className={cn(className, "text-left")}
+        >
+          {content}
+        </button>
+      )}
+      {onDelete !== undefined && (
+        // Kept dark until the row is under the cursor: a delete lit on every
+        // comment is louder than the comments it sits beside.
+        <button
+          type="button"
+          aria-label="Delete comment"
+          disabled={deleting}
+          onClick={() => {
+            setDeleting(true);
+            void Promise.resolve(onDelete()).finally(() => setDeleting(false));
+          }}
+          className="mt-1 mr-1 shrink-0 rounded-sm p-0.5 text-muted-foreground opacity-0 outline-offset-2 outline-ring transition group-hover/row:opacity-100 hover:text-destructive focus-visible:opacity-100 focus-visible:outline-2 disabled:opacity-40"
+        >
+          <IconX className="size-3.5" />
+        </button>
+      )}
+    </div>
   );
 }
 

@@ -7,6 +7,25 @@ export const Viewport = Schema.Struct({
 export type Viewport = typeof Viewport.Type;
 
 /**
+ * One CSS property the reviewer changed on the element while commenting, with
+ * the computed value it had before. The agent is told the exact delta rather
+ * than asked to guess it from a description like "make it darker".
+ */
+export const StyleChange = Schema.Struct({
+  property: Schema.String,
+  from: Schema.String,
+  to: Schema.String,
+});
+export type StyleChange = typeof StyleChange.Type;
+
+/**
+ * Where on the element the comment's dot sits, in px from its top-left — the
+ * spot that was clicked, so the dot comes back exactly there.
+ */
+export const Anchor = Schema.Struct({ x: Schema.Number, y: Schema.Number });
+export type Anchor = typeof Anchor.Type;
+
+/**
  * A review comment left on rendered UI rather than on a line of code: the human
  * clicked an element in the browser pane and said what is wrong with it.
  *
@@ -30,6 +49,11 @@ export const VisualComment = Schema.Struct({
   /** The window the selector was resolved against, so a layout-dependent
    * comment can say which size it was talking about. */
   viewport: Viewport,
+  /** Style edits made live on the element before the comment was left. Absent
+   * on rows stored before the inspector existed, which is why it is optional
+   * rather than an empty array. */
+  styleChanges: Schema.optionalKey(Schema.Array(StyleChange)),
+  anchor: Schema.optionalKey(Anchor),
 });
 export type VisualComment = typeof VisualComment.Type;
 
@@ -41,10 +65,16 @@ export const NewVisualComment = Schema.Struct({
   author: Schema.optionalKey(Schema.String),
   screenshot: Schema.optionalKey(Schema.NullOr(Schema.String)),
   viewport: Viewport,
+  styleChanges: Schema.optionalKey(Schema.Array(StyleChange)),
+  anchor: Schema.optionalKey(Anchor),
 });
 export type NewVisualComment = typeof NewVisualComment.Type;
 
-export const UpdateVisualComment = Schema.Struct({ body: Schema.String });
+export const UpdateVisualComment = Schema.Struct({
+  body: Schema.String,
+  /** Left out when only the words changed; the tweaks stay as they were. */
+  styleChanges: Schema.optionalKey(Schema.Array(StyleChange)),
+});
 export type UpdateVisualComment = typeof UpdateVisualComment.Type;
 
 export const VisualCommentIdParam = Schema.Struct({ id: Schema.String });

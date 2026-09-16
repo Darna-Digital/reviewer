@@ -1,6 +1,7 @@
 import type { ChatModelCatalog, ChatProviderKind } from "@reviewer/core/chats";
 import type { ReviewComment } from "@reviewer/core/comments";
 import type { VisualComment } from "@reviewer/core/visual-comments";
+import { formatStyleChanges } from "@/interactions/visual-comments/functions/visual-style.functions";
 import type { ChatSettings } from "../interfaces/chats.interfaces";
 
 export const ASSIGNABLE_CHAT_PROVIDERS = [
@@ -104,14 +105,20 @@ export const buildVisualAssignmentPrompt = (
   comments: ReadonlyArray<VisualComment>
 ): string => {
   const lines = comments
-    .map((comment) =>
-      [
+    .map((comment) => {
+      // Tried on the element live, so these are the values that looked right,
+      // not a guess at them — the agent should land exactly these.
+      const changes = formatStyleChanges(comment.styleChanges ?? []);
+      return [
         `${comment.url}`,
         `Element: ${comment.selector} (${comment.elementLabel})`,
         `Viewport: ${comment.viewport.width}×${comment.viewport.height}`,
-        comment.body,
-      ].join("\n")
-    )
+        ...(changes.length > 0
+          ? ["Style changes:", ...changes.map((change) => `  ${change}`)]
+          : []),
+        ...(comment.body.length > 0 ? [comment.body] : []),
+      ].join("\n");
+    })
     .join("\n\n");
   return [
     "Address these comments left on the running UI:",

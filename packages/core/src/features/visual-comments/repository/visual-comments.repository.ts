@@ -6,6 +6,8 @@ import type {
   StorageError,
 } from "../../../shared.ts";
 import type {
+  Anchor,
+  StyleChange,
   VisualComment,
   Viewport,
 } from "../schema/visual-comments.schema.ts";
@@ -18,9 +20,12 @@ export interface AddVisualCommentInput {
   readonly author: string;
   readonly screenshot: string | null;
   readonly viewport: Viewport;
+  readonly styleChanges: ReadonlyArray<StyleChange>;
+  readonly anchor: Anchor;
 }
 export interface UpdateVisualCommentInput {
   readonly body: string;
+  readonly styleChanges?: ReadonlyArray<StyleChange>;
 }
 export type VisualCommentsFailure = NoRepoSelected | NotFound | StorageError;
 

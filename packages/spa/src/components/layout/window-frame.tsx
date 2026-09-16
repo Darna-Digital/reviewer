@@ -8,11 +8,15 @@
  * `<webview>`.
  */
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { restoreDock } from "@/components/layout/dock-expansion";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { WindowBar } from "@/components/layout/window-bar";
+import {
+  updateBrowserPane,
+  useBrowserPane,
+} from "@/interactions/browser-pane/adapters/browser-pane.store";
 import { BrowserPane } from "@/interactions/browser-pane/components/browser-pane";
 import { PlansPane } from "@/interactions/plans-pane/components/plans-pane";
 import { SearchHost } from "@/interactions/search/components/search-host";
@@ -24,6 +28,7 @@ import {
 import { TabSnapshotMill } from "@/interactions/tab-preview/components/tab-snapshot-mill";
 import { isDesktop } from "@/lib/desktop";
 import { isPreviewWindow } from "@/lib/preview-window";
+import { cn } from "@/lib/utils";
 import { isCodeSurface, shellRoute } from "@/lib/shell-route";
 import {
   setUiPrefs,
@@ -58,6 +63,23 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
   });
   const prefs = useUiPrefs();
   const inCodeMode = isCodeSurface(pathname);
+
+  // An expanded browser is the whole canvas: the page and the analysis pane
+  // are hidden rather than unmounted, so the editor, the tree and any terminal
+  // come back exactly as they were the moment the browser is put back.
+  const browser = useBrowserPane();
+  const browserFills = isDesktop && prefs.browserPaneOpen && browser.expanded;
+
+  // Going somewhere in the app — a tab, a mode, a ⌘K jump — while the browser
+  // has the whole canvas means wanting to see that page, so the browser steps
+  // back to its split as the route changes. Only on a change: the expanded
+  // pane must not collapse on the route it was expanded over.
+  const lastPathname = useRef(pathname);
+  useEffect(() => {
+    if (lastPathname.current === pathname) return;
+    lastPathname.current = pathname;
+    if (browserFills) updateBrowserPane({ expanded: false });
+  }, [pathname, browserFills]);
 
   // Both side panes hang off the frame, so dragging either used to re-render
   // the entire window — and, because these two wrote straight to the prefs,
@@ -123,10 +145,15 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
               the window showing through instead of a painted divider. The rail
               is the one part that stays on the frame itself. */}
           <TabOverviewPush>
-            <div className="flex min-h-0 min-w-0 flex-1 gap-1.5 overflow-hidden">
+            <div
+              className={cn(
+                "flex min-h-0 min-w-0 flex-1 gap-1.5 overflow-hidden",
+                browserFills && "hidden"
+              )}
+            >
               {children}
             </div>
-            {prefs.plansPaneOpen && (
+            {prefs.plansPaneOpen && !browserFills && (
               // The handle rides inside the pane's own group so the flex gap
               // counts once — one seam, the same width as the frame's inset.
               <div className="flex min-h-0 shrink-0">
@@ -148,21 +175,28 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
               </div>
             )}
             {isDesktop && prefs.browserPaneOpen && (
-              <div className="flex min-h-0 shrink-0">
-                <ResizeHandle
-                  orientation="col"
-                  label="Resize browser"
-                  value={browserPane.current}
-                  min={SIDE_PANE_MIN.browser}
-                  max={() =>
-                    Math.max(SIDE_PANE_MIN.browser, window.innerWidth - 480)
-                  }
-                  direction={-1}
-                  onResize={browserPane.onResize}
-                  onResizeEnd={(browserPaneWidth) =>
-                    setUiPrefs({ browserPaneWidth })
-                  }
-                />
+              <div
+                className={cn(
+                  "flex min-h-0 shrink-0",
+                  browserFills && "min-w-0 flex-1"
+                )}
+              >
+                {!browserFills && (
+                  <ResizeHandle
+                    orientation="col"
+                    label="Resize browser"
+                    value={browserPane.current}
+                    min={SIDE_PANE_MIN.browser}
+                    max={() =>
+                      Math.max(SIDE_PANE_MIN.browser, window.innerWidth - 480)
+                    }
+                    direction={-1}
+                    onResize={browserPane.onResize}
+                    onResizeEnd={(browserPaneWidth) =>
+                      setUiPrefs({ browserPaneWidth })
+                    }
+                  />
+                )}
                 <BrowserPane />
               </div>
             )}

@@ -14,11 +14,13 @@
 import {
   IconArrowLeft,
   IconArrowRight,
+  IconArrowsMaximize,
+  IconArrowsMinimize,
   IconMessagePlus,
   IconReload,
   IconX,
 } from "@tabler/icons-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,16 +38,28 @@ import {
   useBrowserPane,
 } from "../adapters/browser-pane.store";
 import {
+  applyStyleScript,
   captureRect,
   displayUrl,
   elementPickerScript,
+  endInspectionScript,
+  inspectedRectScript,
+  inspectSelectorScript,
+  locateSelectorsScript,
   normalizeUrl,
+  outlineInspectedScript,
   PICKER_CANCEL_HOOK,
+  restoreStyleScript,
 } from "../functions/browser-pane.functions";
 import type {
   PickedElement,
+  PickedRect,
   WebviewElement,
 } from "../interfaces/browser-pane.interfaces";
+import type {
+  StyleChange,
+  VisualComment,
+} from "@reviewer/core/visual-comments";
 import {
   ReviewAssignBar,
   type AssignTarget,
@@ -58,6 +72,10 @@ import {
 } from "@/interactions/chats/functions/chat-assignment.functions";
 import { VisualCommentComposer } from "@/interactions/visual-comments/components/visual-comment-composer";
 import {
+  samePage,
+  visualCommentSummary,
+} from "@/interactions/visual-comments/functions/visual-style.functions";
+import {
   useVisualCommentActions,
   useVisualComments,
 } from "@/interactions/visual-comments/adapters/visual-comments.hook.adapter";
@@ -69,6 +87,31 @@ import { toast } from "sonner";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 
 const CONSOLE_LEVELS = ["verbose", "info", "warning", "error"] as const;
+
+/**
+ * How often the dot re-measures the element it marks. The guest has no way to
+ * push a scroll or reflow to the host, so the host asks — seldom enough to be
+ * free, often enough that the dot never visibly lags a scroll.
+ */
+const DOT_FOLLOW_MS = 120;
+
+/**
+ * Saved comments' dots are re-measured a little less eagerly than the draft's:
+ * there may be many, and none is being edited.
+ */
+const MARKER_FOLLOW_MS = 200;
+
+/** Where a dot goes on a comment saved before dots remembered their spot. */
+const DEFAULT_ANCHOR = { x: 8, y: 8 };
+
+const DOT =
+  "absolute z-10 size-3 -translate-1/2 rounded-full bg-sky-400 shadow-[0_0_0_2px_white,0_1px_4px_rgb(0_0_0/0.4)]";
+
+interface Marker {
+  readonly comment: VisualComment;
+  readonly x: number;
+  readonly y: number;
+}
 
 function ChromeButton({
   label,
@@ -189,9 +232,11 @@ export function BrowserPane() {
       updateBrowserPane({ loading: false, title: element.getTitle() });
       syncHistory();
     };
+    // A draft is about an element on the page that just left, so it goes too
+    // — the guest's inspection state went with the old document.
     const onNavigate = () => {
       clearConsoleMessages();
-      updateBrowserPane({ url: element.getURL() });
+      updateBrowserPane({ url: element.getURL(), draft: null });
       syncHistory();
     };
     const onTitle = (event: Event) =>
@@ -241,6 +286,68 @@ export function BrowserPane() {
     updateBrowserPane({ url: next });
   };
 
+  const close = () => {
+    updateBrowserPane({ expanded: false });
+    setUiPrefs({ browserPaneOpen: false });
+  };
+
+  /**
+   * The dot sits where the click landed, and keeps that spot on the element as
+   * the page scrolls under it. Measured from the guest at a steady tick; when
+   * the element cannot be found any more the dot simply stays put.
+   */
+  const [dot, setDot] = useState<HTMLElement | null>(null);
+  const [dotAt, setDotAt] = useState<{ x: number; y: number } | null>(null);
+  const draft = pane.draft;
+  useEffect(() => {
+    if (draft === null || guest === null) {
+      setDotAt(null);
+      return;
+    }
+    setDotAt(draft.point);
+    const offset = {
+      x: draft.point.x - draft.rect.x,
+      y: draft.point.y - draft.rect.y,
+    };
+    let cancelled = false;
+    const follow = async () => {
+      const rect = (await guest.executeJavaScript(
+        inspectedRectScript()
+      )) as PickedRect | null;
+      if (cancelled || rect === null) return;
+      setDotAt({ x: rect.x + offset.x, y: rect.y + offset.y });
+    };
+    const timer = window.setInterval(() => void follow(), DOT_FOLLOW_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [draft, guest]);
+
+  // Everything the inspection asks of the guest goes one after another, in
+  // the order it was asked: a fast drag on a colour swatch cannot land an older
+  // value after a newer, and a cancel cannot overtake the outline it removes.
+  const styleQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const runInGuest = (script: string): Promise<unknown> => {
+    const element = guest;
+    if (element === null) return Promise.resolve(null);
+    styleQueue.current = styleQueue.current
+      .catch(() => undefined)
+      .then(() => element.executeJavaScript(script));
+    return styleQueue.current;
+  };
+  const tweakStyle = (property: string, value: string | null) =>
+    void runInGuest(
+      value === null
+        ? restoreStyleScript(property)
+        : applyStyleScript(property, value)
+    );
+
+  const cancelDraft = () => {
+    void runInGuest(endInspectionScript(true));
+    updateBrowserPane({ draft: null });
+  };
+
   /**
    * Comment mode runs the picker inside the guest and waits. The click that
    * resolves it is swallowed there, so the page never sees it; what comes back
@@ -256,6 +363,9 @@ export function BrowserPane() {
       );
       return;
     }
+    // Picking again while a draft is open means the draft was the wrong
+    // element: it goes, with its edits, before the next one is chosen.
+    if (pane.draft !== null) cancelDraft();
     updateBrowserPane({ mode: "picking" });
     const picked = (await element.executeJavaScript(
       elementPickerScript()
@@ -280,27 +390,146 @@ export function BrowserPane() {
     // them in the greyed-out way an inactive window does. Handing focus back
     // before the composer mounts is what makes it an ordinary text box.
     element.blur();
-    updateBrowserPane({ draft: { ...picked, screenshot } });
+    void runInGuest(outlineInspectedScript());
+    updateBrowserPane({ draft: { ...picked, screenshot, existing: null } });
   };
 
-  const close = () => setUiPrefs({ browserPaneOpen: false });
+  /**
+   * Every comment saved on this page keeps its dot, so a note can be found
+   * again and opened. The dots are measured from the guest like the draft's:
+   * one trip for all of them, on a steady tick, and only while there is a page
+   * and no picker over it.
+   */
+  const blank = pane.url === "";
+  const pageComments = useMemo(
+    () =>
+      (comments.data ?? []).filter((comment) =>
+        samePage(comment.url, pane.url)
+      ),
+    [comments.data, pane.url]
+  );
+  const [markers, setMarkers] = useState<ReadonlyArray<Marker>>([]);
+  useEffect(() => {
+    if (
+      guest === null ||
+      blank ||
+      pane.loading ||
+      pane.mode === "picking" ||
+      pageComments.length === 0
+    ) {
+      setMarkers([]);
+      return;
+    }
+    const selectors = [...new Set(pageComments.map((c) => c.selector))];
+    let cancelled = false;
+    const locate = async () => {
+      let found: Record<string, PickedRect | null>;
+      try {
+        found = (await guest.executeJavaScript(
+          locateSelectorsScript(selectors)
+        )) as Record<string, PickedRect | null>;
+      } catch {
+        return;
+      }
+      if (cancelled) return;
+      setMarkers(
+        pageComments.flatMap((comment) => {
+          const rect = found[comment.selector];
+          if (rect === null || rect === undefined) return [];
+          const anchor = comment.anchor ?? DEFAULT_ANCHOR;
+          return [{ comment, x: rect.x + anchor.x, y: rect.y + anchor.y }];
+        })
+      );
+    };
+    void locate();
+    const timer = window.setInterval(() => void locate(), MARKER_FOLLOW_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [guest, blank, pane.loading, pane.mode, pageComments]);
 
-  const saveDraft = async (body: string) => {
-    const draft = pane.draft;
+  /**
+   * A dot clicked opens its comment for editing: the element is taken under
+   * inspection again, the words and tweaks come back into the composer, and
+   * the tweaks' "before" is what was recorded, not whatever the page shows
+   * now — a reload may have undone them, and the record must not drift.
+   */
+  const reopen = async (comment: VisualComment) => {
+    const element = guest;
+    if (element === null) return;
+    if (draft !== null) cancelDraft();
+    const inspected = (await runInGuest(
+      inspectSelectorScript(comment.selector)
+    )) as Omit<PickedElement, "point"> | null;
+    if (inspected === null) {
+      toast.error("that element is no longer on the page");
+      return;
+    }
+    const anchor = comment.anchor ?? DEFAULT_ANCHOR;
+    const styleChanges = comment.styleChanges ?? [];
+    element.blur();
+    void runInGuest(outlineInspectedScript());
+    updateBrowserPane({
+      draft: {
+        ...inspected,
+        point: {
+          x: inspected.rect.x + anchor.x,
+          y: inspected.rect.y + anchor.y,
+        },
+        styles: {
+          ...inspected.styles,
+          ...Object.fromEntries(styleChanges.map((c) => [c.property, c.from])),
+        },
+        screenshot: comment.screenshot,
+        existing: { id: comment.id, body: comment.body, styleChanges },
+      },
+    });
+  };
+
+  const saveDraft = async (
+    body: string,
+    styleChanges: ReadonlyArray<StyleChange>
+  ) => {
     if (draft === null) return;
     try {
-      await visualComments.add({
-        url: draft.url,
-        selector: draft.selector,
-        elementLabel: draft.label,
-        body,
-        screenshot: draft.screenshot,
-        viewport: draft.viewport,
-      });
+      if (draft.existing !== null) {
+        await visualComments.update(draft.existing.id, { body, styleChanges });
+      } else {
+        await visualComments.add({
+          url: draft.url,
+          selector: draft.selector,
+          elementLabel: draft.label,
+          body,
+          screenshot: draft.screenshot,
+          viewport: draft.viewport,
+          styleChanges,
+          anchor: {
+            x: draft.point.x - draft.rect.x,
+            y: draft.point.y - draft.rect.y,
+          },
+        });
+      }
+      void runInGuest(endInspectionScript(false));
       updateBrowserPane({ draft: null });
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "could not save the comment"
+      );
+    }
+  };
+
+  const deleteDraft = async () => {
+    if (draft?.existing === null || draft === undefined || draft === null) {
+      return;
+    }
+    try {
+      await visualComments.remove(draft.existing.id);
+      void runInGuest(endInspectionScript(true));
+      updateBrowserPane({ draft: null });
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "could not delete the comment"
       );
     }
   };
@@ -336,14 +565,16 @@ export function BrowserPane() {
     }
   };
 
-  const blank = pane.url === "";
   const pending = comments.data ?? [];
 
   return (
     <aside
       aria-label="Browser"
-      className="browser-pane flex min-h-0 shrink-0 flex-col overflow-hidden rounded-xl border border-frame-border"
-      style={width.style}
+      className={cn(
+        "browser-pane flex min-h-0 shrink-0 flex-col overflow-hidden rounded-xl border border-frame-border",
+        pane.expanded && "min-w-0 flex-1"
+      )}
+      style={pane.expanded ? undefined : width.style}
     >
       <div className="flex h-9 shrink-0 items-center gap-1 border-b border-frame-border px-1.5">
         <ChromeButton
@@ -399,6 +630,17 @@ export function BrowserPane() {
         >
           <IconMessagePlus className="size-4" />
         </ChromeButton>
+        <ChromeButton
+          label={pane.expanded ? "Show the code" : "Expand browser"}
+          active={pane.expanded}
+          onClick={() => updateBrowserPane({ expanded: !pane.expanded })}
+        >
+          {pane.expanded ? (
+            <IconArrowsMinimize className="size-4" />
+          ) : (
+            <IconArrowsMaximize className="size-4" />
+          )}
+        </ChromeButton>
         <ChromeButton label="Close browser" onClick={close}>
           <IconX className="size-4" />
         </ChromeButton>
@@ -414,25 +656,53 @@ export function BrowserPane() {
         ) : (
           <webview ref={attach} src={pane.url} className="min-h-0 flex-1" />
         )}
-        {pane.draft !== null && (
-          <VisualCommentComposer
-            draft={pane.draft}
-            onSubmit={saveDraft}
-            onCancel={() => updateBrowserPane({ draft: null })}
-          />
+        {markers.map((marker) =>
+          draft?.existing?.id === marker.comment.id ? null : (
+            <button
+              key={marker.comment.id}
+              type="button"
+              aria-label={`Open comment: ${visualCommentSummary(marker.comment)}`}
+              title={visualCommentSummary(marker.comment)}
+              onClick={() => void reopen(marker.comment)}
+              className={cn(
+                DOT,
+                "cursor-pointer transition-transform hover:scale-125"
+              )}
+              style={{ left: marker.x, top: marker.y }}
+            />
+          )
         )}
-        {pane.draft === null && pending.length > 0 && ownsHandoff && (
+        {draft !== null && dotAt !== null && (
+          <>
+            <span
+              ref={setDot}
+              aria-hidden
+              className={cn(DOT, "pointer-events-none")}
+              style={{ left: dotAt.x, top: dotAt.y }}
+            />
+            <VisualCommentComposer
+              key={draft.existing?.id ?? "new"}
+              draft={draft}
+              anchor={dot}
+              onStyle={tweakStyle}
+              onSubmit={saveDraft}
+              onCancel={cancelDraft}
+              {...(draft.existing !== null ? { onDelete: deleteDraft } : {})}
+            />
+          </>
+        )}
+        {draft === null && pending.length > 0 && ownsHandoff && (
           <ReviewAssignBar
             comments={pending.map((comment) => ({
               id: comment.id,
               file: comment.elementLabel,
               line: null,
-              body: comment.body,
+              body: visualCommentSummary(comment),
             }))}
             chats={chats.data?.items ?? []}
             catalog={chatModels.data}
             onAssign={assign}
-            className="absolute inset-x-2 bottom-3"
+            onDeleteComment={(id) => visualComments.remove(id)}
           />
         )}
       </div>

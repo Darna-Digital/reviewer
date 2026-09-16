@@ -32,7 +32,13 @@ export const makeMemoryVisualCommentsRepository = (
               new NotFound({ reason: `visual comment ${id} not found` })
             );
           }
-          const updated: VisualComment = { ...existing, body: input.body };
+          const updated: VisualComment = {
+            ...existing,
+            body: input.body,
+            ...(input.styleChanges !== undefined
+              ? { styleChanges: input.styleChanges }
+              : {}),
+          };
           yield* Ref.update(store, (comments) =>
             comments.map((c) => (c.id === id ? updated : c))
           );

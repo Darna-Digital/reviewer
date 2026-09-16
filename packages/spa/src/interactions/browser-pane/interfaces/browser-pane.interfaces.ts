@@ -7,6 +7,8 @@
  * do neither across origins, so in a plain browser tab the pane never renders.
  */
 
+import type { StyleChange } from "@reviewer/core/visual-comments";
+
 /**
  * The subset of Electron's `WebviewTag` the pane uses. Declared structurally
  * rather than imported so the SPA keeps no dependency on `electron` — the tag is
@@ -40,13 +42,29 @@ export interface PickedElement {
   readonly selector: string;
   readonly label: string;
   readonly rect: PickedRect;
+  /** Where in the viewport the click landed — the dot is left exactly there. */
+  readonly point: { readonly x: number; readonly y: number };
   readonly url: string;
   readonly viewport: { readonly width: number; readonly height: number };
+  /**
+   * Computed values of the properties the style inspector edits, read in the
+   * same tick as the click so the fields open showing the element as it was.
+   */
+  readonly styles: Readonly<Record<string, string>>;
 }
 
 /** A picked element plus the screenshot taken of it, awaiting a comment body. */
 export interface VisualCommentDraft extends PickedElement {
   readonly screenshot: string | null;
+  /**
+   * The saved comment this draft re-opens — its words and tweaks come back
+   * into the composer and a send updates it — or null for a fresh one.
+   */
+  readonly existing: {
+    readonly id: string;
+    readonly body: string;
+    readonly styleChanges: ReadonlyArray<StyleChange>;
+  } | null;
 }
 
 /**
@@ -64,4 +82,10 @@ export interface BrowserPaneState {
   readonly canGoForward: boolean;
   readonly mode: BrowserPaneMode;
   readonly draft: VisualCommentDraft | null;
+  /**
+   * Whether the pane has taken the whole canvas, pushing the tree and editor
+   * out of view. Not remembered across launches: a window that opens straight
+   * into a full-width browser has hidden the app it is for.
+   */
+  readonly expanded: boolean;
 }

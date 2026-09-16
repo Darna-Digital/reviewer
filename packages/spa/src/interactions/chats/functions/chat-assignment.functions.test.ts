@@ -148,6 +148,29 @@ describe("chat assignment helpers", () => {
     expect(prompt).toContain("disabled until the form is dirty");
     // The agent is pointed at the browser API rather than left to guess.
     expect(prompt).toContain("reviewer skill");
+    expect(prompt).not.toContain("Style changes");
+  });
+
+  it("hands over the style changes tried on the element", () => {
+    const prompt = buildVisualAssignmentPrompt([
+      {
+        id: "v-2",
+        url: "http://localhost:3000/",
+        selector: "header > h1",
+        elementLabel: 'h1 "Tools"',
+        body: "",
+        author: "you",
+        createdAt: "2026-01-01T00:00:00.000Z",
+        screenshot: null,
+        viewport: { width: 1280, height: 800 },
+        styleChanges: [
+          { property: "color", from: "rgb(0, 0, 0)", to: "#38bdf8" },
+          { property: "font-size", from: "48px", to: "56px" },
+        ],
+      },
+    ]);
+    expect(prompt).toContain("Style changes:\n  color: rgb(0, 0, 0) → #38bdf8");
+    expect(prompt).toContain("  font-size: 48px → 56px");
   });
 
   it("hands the code and the UI over as one review", () => {
