@@ -49,6 +49,13 @@ import {
 } from "@/lib/surface-context";
 import { cn } from "@/lib/utils";
 
+/**
+ * Where the bar floats when its caller has no opinion: clear of the path bar
+ * (h-9) along the foot of the pane, so the collapsed chip parks above the
+ * trail's buttons rather than over them.
+ */
+const FLOATING = "fixed inset-x-4 bottom-[3.25rem]";
+
 /** Agent CLIs that can be assigned to chat flows (excludes the plain shell). */
 const ASSIGNABLE = AGENTS.filter(
   (agent): agent is (typeof AGENTS)[number] & { kind: ChatProviderKind } =>
@@ -241,7 +248,7 @@ export function ReviewAssignBar({
       <div
         className={cn(
           "pointer-events-none z-40 flex justify-end",
-          className ?? "fixed inset-x-4 bottom-6"
+          className ?? FLOATING
         )}
       >
         <Button
@@ -262,7 +269,7 @@ export function ReviewAssignBar({
     <div
       className={cn(
         "pointer-events-none z-40 flex justify-center",
-        className ?? "fixed inset-x-4 bottom-6"
+        className ?? FLOATING
       )}
     >
       <SurfaceProvider value={level}>
