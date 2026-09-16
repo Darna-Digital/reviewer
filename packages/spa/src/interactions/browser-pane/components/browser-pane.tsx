@@ -173,12 +173,14 @@ export function BrowserPane() {
   // Over a diff it does not appear at all: the review there carries these
   // comments too, and two bars over one review are two hand-offs of the same
   // notes. Everywhere else — a session, the branches dock — this is the only
-  // bar there is, so the pane grows its own.
+  // bar there is, so the pane grows its own. Expanded, the pane is everywhere:
+  // the review and its bar are hidden behind it, so the pane's bar stands in.
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
   const ownsHandoff =
-    isCodeSurface(pathname) && shellRoute(pathname).kind !== "code";
+    isCodeSurface(pathname) &&
+    (shellRoute(pathname).kind !== "code" || pane.expanded);
 
   const navigate = useNavigate();
   const comments = useVisualComments();
