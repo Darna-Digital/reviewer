@@ -7,7 +7,9 @@
     "compile": "swift build -c release",
     "bundle": "swift build -c release && ./scripts/bundle.sh release",
     "dev": "swift build && ./scripts/bundle.sh debug && open -W .build/Reviewer.app",
+    "watch": "./scripts/watch.sh",
     "start": "swift run Reviewer",
-    "clean": "rm -rf .build"
+    "clean": "rm -rf .build",
+    "import-icons": "node scripts/import-file-icons.mjs"
   }
 }

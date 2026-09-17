@@ -65,6 +65,23 @@ struct ReviewerClient: Sendable {
         try await get("/api/status")
     }
 
+    // MARK: search
+
+    /// A content search over the working tree. The repo endpoint answers for
+    /// the root being followed and names its hits from it; the project one
+    /// greps every root and names them from the project folder — the same
+    /// names the file endpoints resolve, so a hit opens with nothing added.
+    func search(_ query: String, options: GrepOptions, scope: SearchScope, limit: Int) async throws -> ContentMatches {
+        let path = scope == .project ? "/api/project/search" : "/api/search"
+        return try await get(path, query: [
+            "q": query,
+            "case": options.caseSensitive ? "1" : "0",
+            "word": options.wholeWord ? "1" : "0",
+            "regex": options.regex ? "1" : "0",
+            "limit": String(limit),
+        ])
+    }
+
     // MARK: chats
 
     func chats(limit: Int = 50) async throws -> ChatPage {
@@ -153,6 +170,53 @@ struct ReviewerClient: Sendable {
     func setBranchTarget(branch: String, target: String) async throws {
         struct Target: Decodable {}
         let _: Target = try await send("POST", "/api/branch-targets", body: SetBranchTargetBody(branch: branch, target: target))
+    }
+
+    // MARK: threads
+
+    func threads() async throws -> [ThreadSummary] {
+        try await get("/api/threads")
+    }
+
+    func createThread(_ thread: NewThread) async throws -> ThreadSummary {
+        struct Created: Decodable {
+            let id: String
+            let title: String
+            let agent: String
+            let branch: String
+            let createdAt: String
+            let updatedAt: String
+        }
+        let created: Created = try await send("POST", "/api/threads", body: thread)
+        return ThreadSummary(
+            id: created.id, title: created.title, agent: created.agent, branch: created.branch,
+            createdAt: created.createdAt, updatedAt: created.updatedAt, entryCount: 0, lastCommand: nil)
+    }
+
+    func renameThread(id: String, title: String) async throws {
+        struct Renamed: Decodable {}
+        let _: Renamed = try await send("PATCH", "/api/threads/\(id)", body: RenameThread(title: title))
+    }
+
+    func removeThread(id: String) async throws {
+        let _: Ok = try await send("DELETE", "/api/threads/\(id)", body: nil as EmptyBody?)
+    }
+
+    /// The live terminal of a thread — `ws://` on the same host. The server
+    /// starts the shell on first attach and keeps it between attachments,
+    /// replaying what was on screen.
+    func threadPtyURL(id: String, cols: Int, rows: Int, theme: String) -> URL {
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
+        components.scheme = "ws"
+        components.path = "/api/threads/pty"
+        components.queryItems = [
+            URLQueryItem(name: "id", value: id),
+            URLQueryItem(name: "agent", value: "terminal"),
+            URLQueryItem(name: "cols", value: String(cols)),
+            URLQueryItem(name: "rows", value: String(rows)),
+            URLQueryItem(name: "theme", value: theme),
+        ]
+        return components.url!
     }
 
     // MARK: local dev

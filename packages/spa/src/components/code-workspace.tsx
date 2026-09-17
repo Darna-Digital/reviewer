@@ -72,6 +72,10 @@ import { seamAfter, useSeamSlot } from "@/components/layout/seam-slot";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { FileSidebar } from "@/components/tree/file-sidebar";
+import {
+  shellDrawsTree,
+  useShellTree,
+} from "@/components/tree/file-sidebar.shell";
 import { assignToChat } from "@/interactions/chats/adapters/assign-to-chat.adapter";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import type { ChatPlace } from "@/interactions/chats/interfaces/chats.interfaces";
@@ -130,6 +134,7 @@ import {
   type DiffTarget,
 } from "@/lib/api/types";
 import type { ReviewComment } from "@reviewer/core/comments";
+import type { CommitDraft } from "@reviewer/core/git-message";
 import { unenrichedPull } from "@reviewer/core/ports/git-provider";
 import { pathName } from "@/lib/display-path";
 import { errorReason } from "@/lib/errors";
@@ -156,7 +161,12 @@ import {
   useHistoryFilters,
 } from "@/interactions/history/history-filters.store";
 import { useCodeReveal } from "@/lib/code-reveal";
-import { openBottomTab, setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import {
+  type CommitAgent,
+  openBottomTab,
+  setUiPrefs,
+  useUiPrefs,
+} from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
 type Search = {
@@ -919,6 +929,9 @@ export function CodeWorkspace() {
       destructive: true,
     });
     if (!ok) return;
+    await trashPaths(items);
+  };
+  const trashPaths = async (items: ReadonlyArray<TreeItem>) => {
     await fileActions.trash(items);
     for (const item of items) {
       if (search.file === withoutTrailingSlash(item.path)) closeFile();
@@ -1147,48 +1160,82 @@ export function CodeWorkspace() {
    * The tree of changed files. Review mode puts it in the middle column, under
    * the pull request's metadata; the other modes have it as the whole sidebar.
    */
+  const treeSource = {
+    mode,
+    paths: sidebarPaths,
+    gitStatus: treeGitStatus,
+    loading: mode === "review" ? diff.isPending : files.isPending,
+    selectedFile: mode === "browse" ? viewing : (search.path ?? null),
+    onFileSelect,
+    onRenamePath: mode === "review" ? undefined : renamePath,
+    actions: mode === "review" ? undefined : fileActions,
+    onShowHistory: showFileHistory,
+    // A working-tree action, offered while the working tree is what is being
+    // read: against a branch, the tree's badges are the comparison's and a
+    // discard would answer for HEAD instead — see the pane's own discard
+    // above.
+    onDiscardPaths:
+      target?.kind === "worktree"
+        ? (paths: ReadonlyArray<string>) => void git.discard(paths)
+        : undefined,
+    projectPath: workspace.data?.project ?? null,
+  };
+  const commitSource =
+    mode === "commit" && changedFiles.length > 0
+      ? {
+          changes: changedFiles,
+          draft: commitDraft.data,
+          onCommit: (m: string, p: ReadonlyArray<string>, push: boolean) =>
+            git.commitChanges(m, p, push),
+          onGenerate: (p: ReadonlyArray<string>, agent: CommitAgent) =>
+            git.startCommitMessage(p, agent),
+          onDraftSettled: (settled: CommitDraft) => {
+            if (settled.status === "error" && settled.error !== null)
+              toast.error(settled.error);
+            void git.clearCommitDraft();
+          },
+        }
+      : undefined;
   const fileTree = (
     <FileSidebar
       key={mode}
-      mode={mode}
-      paths={sidebarPaths}
-      gitStatus={treeGitStatus}
-      loading={mode === "review" ? diff.isPending : files.isPending}
-      selectedFile={mode === "browse" ? viewing : (search.path ?? null)}
-      onFileSelect={onFileSelect}
+      {...treeSource}
       onDeletePaths={mode === "review" ? undefined : deletePaths}
-      onRenamePath={mode === "review" ? undefined : renamePath}
-      actions={mode === "review" ? undefined : fileActions}
       onError={(message) => toast.error(message)}
-      onShowHistory={showFileHistory}
-      onDiscardPaths={
-        // A working-tree action, offered while the working tree is what is
-        // being read: against a branch, the tree's badges are the comparison's
-        // and a discard would answer for HEAD instead — see the pane's own
-        // discard above.
-        target?.kind === "worktree"
-          ? (paths) => void git.discard(paths)
-          : undefined
-      }
-      projectPath={workspace.data?.project ?? null}
       footer={
-        mode === "commit" && changedFiles.length > 0 ? (
+        commitSource === undefined ? undefined : (
           <CommitPanel
-            changes={changedFiles}
+            changes={commitSource.changes}
             busy={false}
             project={workspace.data?.project ?? ""}
-            onCommit={(m, p, push) => git.commitChanges(m, p, push)}
-            onGenerate={(p, agent) => git.startCommitMessage(p, agent)}
-            draft={commitDraft.data}
-            onDraftSettled={(settled) => {
-              if (settled.status === "error" && settled.error !== null)
-                toast.error(settled.error);
-              void git.clearCommitDraft();
-            }}
+            onCommit={commitSource.onCommit}
+            onGenerate={commitSource.onGenerate}
+            draft={commitSource.draft}
+            onDraftSettled={commitSource.onDraftSettled}
           />
-        ) : undefined
+        )
       }
     />
+  );
+  // Inside the macOS shell the tree is the window's own, a native sidebar
+  // beside this island drawn from the same source — see `file-sidebar.shell`.
+  useShellTree(
+    shellDrawsTree
+      ? {
+          ...treeSource,
+          onTrashPaths: mode === "review" ? undefined : trashPaths,
+          commit:
+            commitSource === undefined
+              ? undefined
+              : {
+                  ...commitSource,
+                  onDraftSettled: () => {
+                    if (commitDraft.data !== undefined)
+                      commitSource.onDraftSettled(commitDraft.data);
+                  },
+                },
+        }
+      : null
   );
 
   /**
@@ -1300,21 +1347,6 @@ export function CodeWorkspace() {
         }
         className="min-h-0 flex-1"
       />
-    );
-  }
-
-  /**
-   * In the macOS shell the tree is an island of its own in the native sidebar,
-   * beside the page island showing the diff: this same page, rendered down to
-   * its first column. Everything the tree needs — the changed files, the
-   * actions, the commit panel — is wired above, so it is the whole of what is
-   * drawn; a file picked here is a navigation the shell carries to the page.
-   */
-  if (island === "tree") {
-    return (
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {fileTree}
-      </div>
     );
   }
 

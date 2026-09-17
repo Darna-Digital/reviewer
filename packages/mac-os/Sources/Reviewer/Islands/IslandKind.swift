@@ -7,7 +7,5 @@ import Foundation
 enum IslandKind: String, Sendable {
     case tabs
     case launchpad
-    case dock
-    case tree
     case code
 }

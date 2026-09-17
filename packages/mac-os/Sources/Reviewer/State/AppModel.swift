@@ -1,14 +1,13 @@
 // The window's model: the connection to the server, the open project, the
-// window tabs and which one holds the window, the two islands the tabs and
-// the bottom pane show, and the pane's own native surfaces. One instance per
-// app — the same server serves every window, and a single tab list is what
-// the strip, the launchpad and the menu commands all act on.
+// window tabs and which one holds the window, the page island the tabs
+// show, the sidebar's tree and the pane's own native surfaces. One instance
+// per app — the same server serves every window, and a single tab list is
+// what the strip, the launchpad and the menu commands all act on.
 //
-// Islands cannot share a JavaScript heap, so everything two of them would
-// both need lives here, and the model is the one that navigates: a tab
-// chosen here is an address the page island is sent to, a pane tab chosen
-// here is one the dock island is sent to. The islands report back where
-// they went, which is how a tab remembers its place.
+// The model is the one that navigates: a tab chosen here is an address the
+// page island is sent to. The island reports back where it went, which is
+// how a tab remembers its place, and what it is showing — its open files,
+// its tree — which is what the native chrome around it draws.
 import AppKit
 import Foundation
 import Observation
@@ -44,38 +43,42 @@ final class AppModel {
     /// The code page's open files, as it last reported them; nil while it
     /// shows no strip — a diff, a merge request, another tab's page.
     private(set) var fileTabs: FileTabStrip?
+    /// The code page's file tree, as it last reported it, with the sidebar's
+    /// own folds, search and selection over it.
+    let sidebar = SidebarTree()
 
     var bottomExpanded = true
-    var bottomTab: BottomPaneTab = .terminal {
-        didSet { showBottomTabInDockIsland() }
-    }
+    var bottomTab: BottomPaneTab = .terminal
     var bottomHeight: CGFloat = 280
 
     /// The SPA's routed page — the tab in front is where it is pointed.
     let page: IslandHost
-    /// The SPA's dock surfaces — history, branches, find, threads — pointed
-    /// at whichever the bottom pane is on.
-    let dock: IslandHost
-    /// The SPA's file tree — the project, or the changed files — in the
-    /// native sidebar, kept on the same code page as the page island.
-    let tree: IslandHost
-    let terminal = TerminalSession()
+    let threads: Threads
     let services: DevServices
+    /// The search dialog — a file by name, or a grep of the working tree.
+    let search: QuickSearch
+    @ObservationIgnored private var shiftTaps: ShiftTapMonitor?
 
     init(client: ReviewerClient = ReviewerClient(baseURL: ServerLauncher.shared.baseURL)) {
         self.client = client
         let source = SpaSource.resolve()
         page = IslandHost(kind: .code, href: WindowTab.code.href, source: source, apiBaseURL: client.baseURL)
-        dock = IslandHost(kind: .dock, href: BottomPaneTab.history.dockHref!, source: source, apiBaseURL: client.baseURL)
-        tree = IslandHost(kind: .tree, href: Href.browsePath, source: source, apiBaseURL: client.baseURL)
         services = DevServices(client: client)
+        threads = Threads(client: client)
+        search = QuickSearch(client: client)
+        search.onOpen = { [weak self] path, line in self?.show(file: path, line: line) }
+        // The web app keeps the gesture out of its inputs; here the one
+        // input it could land in is the dialog's own box, where two Shifts
+        // in a row are typing, not a request to switch lists.
+        shiftTaps = ShiftTapMonitor { [weak self] in
+            guard let self, !search.isShown else { return }
+            findFile()
+        }
         page.onNavigated = { [weak self] href in self?.pageNavigated(to: href) }
         page.onFileTabsReported = { [weak self] strip in self?.fileTabs = strip }
-        dock.onNavigated = { [weak self] href in self?.dockNavigated(to: href) }
-        tree.onNavigated = { [weak self] href in self?.treeNavigated(to: href) }
-        for island in [page, dock, tree] {
-            island.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
-        }
+        page.onTreeReported = { [weak self] listing in self?.sidebar.take(listing) }
+        page.onTreeStateReported = { [weak self] state in self?.sidebar.take(state) }
+        page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
     }
 
     var hasProject: Bool { workspace?.project != nil }
@@ -120,10 +123,11 @@ final class AppModel {
             lastError = error.localizedDescription
         }
         await refreshProjectState()
-        for island in [page, dock, tree] { island.refresh() }
+        page.refresh()
     }
 
     private func refreshProjectState() async {
+        search.projectChanged(scope: (workspace?.repos.count ?? 0) > 1 ? .project : .repo)
         guard hasProject else {
             status = nil
             branches = []
@@ -133,6 +137,7 @@ final class AppModel {
         status = try? await client.repoStatus()
         await loadBranches()
         await services.load()
+        await threads.load()
     }
 
     /// The Code tab, at an address: what every native control that reaches
@@ -143,6 +148,41 @@ final class AppModel {
         selectedTabId = WindowTab.code.id
     }
 
+    /// A file, at a line: where a search result opens. In place when the
+    /// page already shows files — reading a pull request stays a review —
+    /// and otherwise on the diff, which can show any file.
+    func show(file: String, line: Int?) {
+        let base = CodeSurface.forHref(page.href) != nil ? page.href : Href.review
+        showOnCodeTab(Href.file(file, line: line, on: base))
+    }
+
+    // MARK: search
+
+    func findFile() {
+        guard hasProject, !launchpadShown else { return }
+        search.open(.files)
+    }
+
+    /// ⌘⇧F: the grep, opening on whatever the page has highlighted, so the
+    /// chord over a word searches for it.
+    func findInFiles() {
+        guard hasProject, !launchpadShown else { return }
+        Task {
+            let selected = try? await page.webView.evaluateJavaScript("window.getSelection().toString()") as? String
+            search.open(.text, seed: Self.seed(fromSelection: selected ?? ""))
+        }
+    }
+
+    /// The part of a selection that can seed the box: one line of it,
+    /// trimmed, and short enough to be a phrase. A paragraph dragged out of
+    /// a file is not a query, and seeding it would throw away what the box
+    /// held.
+    static func seed(fromSelection selected: String) -> String {
+        let trimmed = selected.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= 200, !trimmed.contains(where: \.isNewline) else { return "" }
+        return trimmed
+    }
+
     // MARK: sidebar
 
     /// The sidebar's rail: which of the code surfaces the page is on, as
@@ -151,24 +191,15 @@ final class AppModel {
         CodeSurface.forHref(page.href)
     }
 
-    /// A rail button: the Code tab, on that surface — and the tree with it.
+    /// A rail button: the Code tab, on that surface — and the tree with it,
+    /// since the page reports the tree of whatever surface it is on.
     func show(surface: CodeSurface) {
         showOnCodeTab(surface.href)
     }
 
-    /// The tree moved — a file picked, a folder's file opened — and the page
-    /// shows what it names. Same page, so the same address.
-    private func treeNavigated(to href: String) {
-        guard Href.isCodePage(href), page.href != href else { return }
-        showOnCodeTab(href)
-    }
-
-    /// The page moved on a code surface — and the tree, being the same page
-    /// down to its first column, is sent along so its selection and its mode
-    /// (the project, or the changes) follow.
-    private func keepTreeWithPage(_ href: String) {
-        guard Href.isCodePage(href), tree.href != href else { return }
-        tree.navigate(to: href)
+    /// The sidebar acted on a row of the page's tree — see `TreeAction`.
+    func act(onTree action: TreeAction) {
+        page.send(action)
     }
 
     // MARK: project
@@ -178,8 +209,8 @@ final class AppModel {
             workspace = try await client.openProject(path: path)
             closeUnpinnedTabs()
             snapshots = [:]
-            terminal.stop()
             services.reset()
+            threads.reset()
             await refresh()
         } catch {
             lastError = error.localizedDescription
@@ -293,7 +324,6 @@ final class AppModel {
     /// that tab takes it and the window; and a session composed in a fresh
     /// tab becomes that session's tab the moment the composer lands on it.
     private func pageNavigated(to href: String) {
-        keepTreeWithPage(href)
         guard var index = tabs.firstIndex(where: { $0.id == selectedTabId }) else { return }
         let owner = WindowTab.owner(of: href)
         if tabs[index].isPinned, tabs[index].kind != owner,
@@ -343,25 +373,14 @@ final class AppModel {
         bottomExpanded = true
     }
 
-    /// The dock reached for the page — a commit picked out of History, a
-    /// branch compared — which in the browser is the one window moving. Here
-    /// it is the Code tab's to show, and the dock is put back on its surface.
-    private func dockNavigated(to href: String) {
-        guard BottomPaneTab.forDockHref(href) == nil else { return }
-        if let index = tabs.firstIndex(where: { $0.id == WindowTab.code.id }) {
-            tabs[index].href = href
+    /// A rail button: the surface it names, or with that surface already
+    /// up, the pane put away — the click that opened it closes it.
+    func toggle(bottomTab tab: BottomPaneTab) {
+        if bottomExpanded && bottomTab == tab {
+            bottomExpanded = false
+        } else {
+            show(bottomTab: tab)
         }
-        selectedTabId = WindowTab.code.id
-        if let back = bottomTab.dockHref { dock.navigate(to: back) }
     }
 
-    private func showBottomTabInDockIsland() {
-        guard let href = bottomTab.dockHref, dock.href != href else { return }
-        dock.navigate(to: href)
-    }
-
-    /// The Terminal's shell, in the project folder; nil before one is open.
-    var terminalDirectory: String? {
-        workspace?.current ?? workspace?.project
-    }
 }

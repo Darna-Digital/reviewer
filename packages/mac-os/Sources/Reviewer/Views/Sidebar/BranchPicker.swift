@@ -61,7 +61,6 @@ struct BranchPicker: View {
         .popover(isPresented: $searching, arrowEdge: .bottom) {
             BranchSearch(dismiss: { searching = false })
         }
-        .branchPrompts()
     }
 
     private func badge(_ branch: BranchInfo) -> String? {
@@ -220,7 +219,8 @@ private struct BranchSearch: View {
     }
 }
 
-/// The picker's prompts, as alerts on whatever view wears them: a name for
+/// The picker's prompts, as alerts on whatever view wears them — the
+/// sidebar, so the picker's own row isn't the thing presenting: a name for
 /// a branch, a new name, a yes to a deletion.
 private struct BranchPromptModifier: ViewModifier {
     @Environment(AppModel.self) private var model

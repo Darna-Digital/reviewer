@@ -1,9 +1,9 @@
 // The window: the native sidebar (the project tree) beside the detail
 // column — the page island with the bottom pane under it — with the window
 // tabs on the toolbar, the way the web app's window bar carries them, and
-// the launchpad over all of it when it is up. Before the
-// server answers, and before a project is open, the detail column shows the
-// matching placeholder instead.
+// the search dialog and the launchpad over all of it when they are up.
+// Before the server answers, and before a project is open, the detail
+// column shows the matching placeholder instead.
 import SwiftUI
 
 struct ContentView: View {
@@ -13,7 +13,7 @@ struct ContentView: View {
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView()
-                .navigationSplitViewColumnWidth(min: 200, ideal: 260, max: 420)
+                .navigationSplitViewColumnWidth(min: 240, ideal: 300, max: 460)
         } detail: {
             detail
         }
@@ -22,6 +22,13 @@ struct ContentView: View {
         // button hugs the tabs instead of the trailing edge.
         .navigationTitle("")
         .toolbar { ToolbarItems() }
+        .overlay {
+            if model.search.isShown {
+                SearchOverlay()
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.12), value: model.search.isShown)
         .overlay {
             if model.launchpadShown {
                 LaunchpadView()
@@ -56,9 +63,13 @@ struct ContentView: View {
 }
 
 /// The page the tab in front points at — under the open-file strip, when
-/// the page has one — and the bottom pane beneath.
+/// the page has one — and the bottom pane beneath. With the pane put away
+/// the page stands off the window's bottom edge, the way a sheet stands
+/// off the frame's, so its trail is not set into the rounded corner.
 private struct DetailColumn: View {
     @Environment(AppModel.self) private var model
+
+    private static let footInset: CGFloat = 8
 
     var body: some View {
         VStack(spacing: 0) {
@@ -69,6 +80,7 @@ private struct DetailColumn: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             BottomPane()
         }
+        .padding(.bottom, model.bottomExpanded ? 0 : Self.footInset)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 }

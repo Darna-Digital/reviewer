@@ -1,10 +1,12 @@
-// The native sidebar: a rail of the code surfaces down its leading edge —
-// the web app's mode rail, as native buttons — and beside it the project
-// and branch pickers over the tree island, the SPA's file tree drawn with no
-// paper of its own so it stands on the sidebar's material like a native
-// outline would. The rail moves the page island between the project, the
-// diff and the merge requests; the tree follows the page, and a file picked
-// in the tree is carried to the page.
+// The native sidebar: the rail down its leading edge — the web app's mode
+// rail, as native buttons (see `AppRail`) — and beside it the code page's
+// file tree, drawn natively from what the page reports (see `SidebarTree`)
+// in the layout the web sidebar gives that surface: the project's files as
+// an outline on the browse page, and on a diff the changed files under a
+// search, with the commit composer beneath them while the changes are your
+// own. The project and branch pickers sit on the toolbar. The rail moves
+// the page island between the surfaces; the tree follows the page, and a
+// file picked in the tree is carried to the page.
 import SwiftUI
 
 struct SidebarView: View {
@@ -12,65 +14,126 @@ struct SidebarView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            SurfaceRail()
-            VStack(spacing: 0) {
-                HStack(spacing: 6) {
-                    ProjectChip()
-                    BranchPicker()
-                        .layoutPriority(-1)
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 10)
-                .padding(.bottom, 6)
-                if model.hasProject {
-                    IslandView(host: model.tree)
-                } else {
-                    Spacer()
-                }
+            AppRail()
+            if model.hasProject {
+                TreeColumn()
+                    .frame(maxWidth: .infinity)
+            } else {
+                Spacer()
             }
         }
     }
 }
 
-/// The code surfaces, one button each, the one the page is on held down.
-private struct SurfaceRail: View {
+/// The layout for the surface the page is on, or nothing while the page
+/// shows no tree — a session, the git page.
+private struct TreeColumn: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        VStack(spacing: 4) {
-            ForEach(CodeSurface.allCases) { surface in
-                RailButton(surface: surface, isOn: model.codeSurface == surface) {
-                    model.show(surface: surface)
-                }
-                .disabled(!model.hasProject)
-            }
+        switch model.sidebar.mode {
+        case .browse:
+            ProjectTreeLayout()
+        case .commit, .review:
+            ChangesLayout()
+        case nil:
             Spacer()
         }
-        .padding(.horizontal, 4)
-        .padding(.top, 2)
-        .frame(width: 36)
     }
 }
 
-private struct RailButton: View {
-    let surface: CodeSurface
-    let isOn: Bool
-    let action: () -> Void
-    @State private var isHovering = false
+/// The file tree layout: the project, as an outline.
+private struct ProjectTreeLayout: View {
+    @Environment(AppModel.self) private var model
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: surface.symbol)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(isOn ? .primary : .secondary)
-                .frame(width: 28, height: 28)
-                .background(
-                    isOn ? Color.primary.opacity(0.12) : isHovering ? Color.primary.opacity(0.06) : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 6))
-                .contentShape(Rectangle())
+        if model.sidebar.isEmpty {
+            TreePlaceholder(loading: model.sidebar.listing?.loading ?? false, empty: "No files")
+        } else {
+            FileTreeOutline()
         }
-        .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
-        .help(surface.title)
+    }
+}
+
+/// The git diff layout: the changed files, a search over them, and while
+/// they are your own, the commit composer.
+private struct ChangesLayout: View {
+    @Environment(AppModel.self) private var model
+
+    private var tree: SidebarTree { model.sidebar }
+
+    var body: some View {
+        @Bindable var tree = model.sidebar
+        VStack(spacing: 0) {
+            ChangesHeader(query: $tree.query, count: tree.listing?.paths.count ?? 0)
+            if tree.isEmpty {
+                TreePlaceholder(loading: tree.listing?.loading ?? false, empty: "No changes")
+            } else {
+                FileTreeOutline()
+            }
+            if let commit = tree.commit {
+                CommitComposer(composer: commit, project: tree.listing?.projectPath ?? "")
+            }
+        }
+    }
+}
+
+/// The search over the changed files, with how many there are.
+private struct ChangesHeader: View {
+    @Binding var query: String
+    let count: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 5) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                TextField("Filter changed files", text: $query)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12))
+                if !query.isEmpty {
+                    Button {
+                        query = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 7)
+            .frame(height: 24)
+            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+            Text(count == 1 ? "1 changed file" : "\(count) changed files")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .padding(.leading, 4)
+        }
+        .padding(.horizontal, 10)
+        .padding(.top, 2)
+        .padding(.bottom, 6)
+    }
+}
+
+private struct TreePlaceholder: View {
+    let loading: Bool
+    let empty: String
+
+    var body: some View {
+        VStack {
+            Spacer()
+            if loading {
+                ProgressView()
+                    .controlSize(.small)
+            } else {
+                Text(empty)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
     }
 }

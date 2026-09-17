@@ -46,13 +46,12 @@ private struct FileTabChip: View {
     /// The tab's place in the strip's order, which is where a drop lands.
     let index: Int
     @Environment(AppModel.self) private var model
-    @Environment(\.colorScheme) private var colorScheme
     @State private var isHovering = false
     @State private var isTargeted = false
 
     var body: some View {
         HStack(spacing: 6) {
-            FileIconView(icon: tab.icon, dark: colorScheme == .dark)
+            FileIconView(path: tab.path)
             Text(tab.name)
                 .font(.system(size: 13))
                 .italic(tab.preview)
@@ -124,24 +123,5 @@ private struct FileTabChip: View {
             }
         }
         .frame(width: 18, height: 18)
-    }
-}
-
-private struct FileIconView: View {
-    let icon: FileIcon
-    let dark: Bool
-
-    var body: some View {
-        Group {
-            if let image = icon.image(dark: dark) {
-                Image(nsImage: image)
-                    .resizable()
-                    .interpolation(.high)
-            } else {
-                Image(systemName: "doc")
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(width: 16, height: 16)
     }
 }

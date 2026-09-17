@@ -3,9 +3,10 @@
 // and when what it holds has gone stale (`refresh`); the island tells the
 // shell when it is up (`ready`) and where it has gone (`navigated`). That is
 // the whole protocol — the SPA's `lib/shell` is the other half of it — but
-// for the open-file strip, which the code island reports (`tabs`) for the
-// shell to draw natively, and which the shell acts on by sending each click
-// back (`tabs` again, the other way).
+// for the chrome the code island reports for the shell to draw natively: the
+// open-file strip (`tabs`) and the sidebar's file tree (`tree`, and
+// `treeState` for what moves under it), each acted on by sending the click
+// back (`tabs` and `tree` again, the other way).
 //
 // The web view is made once and kept for the life of the host: SwiftUI can
 // take it out of the hierarchy and put it back — a chat tab in front of the
@@ -24,6 +25,8 @@ final class IslandHost: NSObject {
     @ObservationIgnored var onNavigated: ((String) -> Void)?
     @ObservationIgnored var onOpenDirectory: (() -> String?)?
     @ObservationIgnored var onFileTabsReported: ((FileTabStrip?) -> Void)?
+    @ObservationIgnored var onTreeReported: ((ShellTree?) -> Void)?
+    @ObservationIgnored var onTreeStateReported: ((ShellTreeState) -> Void)?
 
     @ObservationIgnored private let source: SpaSource
     @ObservationIgnored private let apiBaseURL: URL
@@ -68,6 +71,12 @@ final class IslandHost: NSObject {
     func send(_ action: FileTabAction) {
         guard isReady else { return }
         dispatch(["type": "tabs", "action": action.payload])
+    }
+
+    /// The native sidebar acted on a row of the island's tree — see `TreeAction`.
+    func send(_ action: TreeAction) {
+        guard isReady else { return }
+        dispatch(["type": "tree", "action": action.payload])
     }
 
     private func dispatch(_ event: [String: Any]) {
@@ -183,6 +192,12 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             return (onOpenDirectory?() as Any?, nil)
         case "tabs":
             onFileTabsReported?(FileTabStrip.decode(body["strip"]))
+            return (nil, nil)
+        case "tree":
+            onTreeReported?(ShellTree.decode(body["tree"]))
+            return (nil, nil)
+        case "treeState":
+            if let state = ShellTreeState.decode(body["state"]) { onTreeStateReported?(state) }
             return (nil, nil)
         default:
             return (nil, "unknown shell message: \(type)")

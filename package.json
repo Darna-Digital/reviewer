@@ -13,6 +13,7 @@
     "pack:desktop": "pnpm build:desktop && pnpm --filter @reviewer/desktop run pack",
     "dist:desktop": "pnpm build:desktop && pnpm --filter @reviewer/desktop run dist",
     "dev:mac": "pnpm --filter @reviewer/mac-os dev",
+    "dev:mac:watch": "pnpm --filter @reviewer/mac-os watch",
     "build:mac": "pnpm --filter @reviewer/mac-os bundle",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",

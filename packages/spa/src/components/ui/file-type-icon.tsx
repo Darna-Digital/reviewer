@@ -5,12 +5,13 @@
  * ships is a plain `<symbol>` sheet: mounting one copy in the document lets any
  * `<use>` reach it. Its palette is declared on the tree element, so it is
  * restated here — the tokens and hues are the tree's own, kept in step with
- * `getBuiltInSpriteSheet`.
+ * `getBuiltInSpriteSheet` in `file-type-hues`.
  */
 import {
   createFileTreeIconResolver,
   getBuiltInSpriteSheet,
 } from "@pierre/trees";
+import { HUE, hueOf } from "@/components/ui/file-type-hues";
 import { cn } from "@/lib/utils";
 
 const ICON_SET = "complete";
@@ -18,58 +19,8 @@ const SPRITE_ID = "reviewer-file-icon-sprite";
 
 const { resolveIcon } = createFileTreeIconResolver(ICON_SET);
 
-/** Each hue in both palettes, the light one first. */
-const HUE = {
-  gray: ["#84848a", "#adadb1"],
-  red: ["#d52c36", "#ff6762"],
-  vermilion: ["#ff8c5b", "#d5512f"],
-  orange: ["#d47628", "#ffa359"],
-  yellow: ["#d5a910", "#ffd452"],
-  green: ["#199f43", "#5ecc71"],
-  teal: ["#17a5af", "#64d1db"],
-  cyan: ["#1ca1c7", "#68cdf2"],
-  blue: ["#1a85d4", "#69b1ff"],
-  indigo: ["#693acf", "#9d6afb"],
-  purple: ["#a631be", "#d568ea"],
-  pink: ["#d32a61", "#ff678d"],
-  mauve: ["#594c5b", "#79697b"],
-} as const satisfies Record<string, readonly [string, string]>;
-
-type Hue = keyof typeof HUE;
-
 const cssColor = ([light, dark]: readonly [string, string]) =>
   `light-dark(${light}, ${dark})`;
-
-const HUE_TOKENS: Record<Hue, ReadonlyArray<string>> = {
-  gray: ["default", "text"],
-  red: ["npm", "postcss", "ruby", "svelte", "yml"],
-  vermilion: ["git"],
-  orange: ["claude", "html", "json", "rust", "svg", "swift", "zig", "zip"],
-  yellow: ["babel", "browserslist", "javascript"],
-  green: ["bash", "markdown", "svgo", "vue"],
-  teal: ["mcp", "prettier", "table"],
-  cyan: ["go", "oxc", "react", "tailwind"],
-  blue: [
-    "biome",
-    "c",
-    "cpp",
-    "docker",
-    "python",
-    "typescript",
-    "vscode",
-    "webpack",
-  ],
-  indigo: ["bootstrap", "css", "eslint", "terraform", "wasm"],
-  purple: ["astro", "database", "vite"],
-  pink: ["graphql", "image", "sass"],
-  mauve: ["bun"],
-};
-
-const TOKEN_HUE = new Map<string, Hue>(
-  Object.entries(HUE_TOKENS).flatMap(([hue, tokens]) =>
-    tokens.map((token) => [token, hue as Hue] as const)
-  )
-);
 
 function mountSprite() {
   if (typeof document === "undefined") return;
@@ -93,36 +44,9 @@ const resolveFileIcon = (path: string) => {
   return {
     name: icon.name,
     viewBox: icon.viewBox ?? DEFAULT_VIEW_BOX,
-    hue: TOKEN_HUE.get(icon.token ?? "default") ?? "gray",
+    hue: hueOf(icon.token ?? "default"),
   };
 };
-
-export interface FileIconMarkup {
-  /** A standalone `<svg>` of the icon, painting in `currentColor`. */
-  readonly svg: string;
-  readonly light: string;
-  readonly dark: string;
-}
-
-/**
- * The same icon as a document of its own, for a surface that has no DOM to
- * `<use>` the sprite from — the native shell's tab strip. The symbol's body is
- * lifted out of the mounted sprite; the hue comes as two colours rather than
- * `light-dark()`, which only a stylesheet can read.
- */
-export function fileIconMarkup(path: string): FileIconMarkup {
-  const icon = resolveFileIcon(path);
-  const body =
-    typeof document === "undefined"
-      ? ""
-      : (document.getElementById(icon.name)?.innerHTML ?? "");
-  const [light, dark] = HUE[icon.hue];
-  return {
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${icon.viewBox}">${body}</svg>`,
-    light,
-    dark,
-  };
-}
 
 export function FileTypeIcon({
   path,

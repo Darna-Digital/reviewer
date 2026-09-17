@@ -1,8 +1,7 @@
-// One running dev command's output, live: the server's `/api/local-dev/pty`
-// socket on one end and a SwiftTerm view on the other. The server owns the
-// process — starting and stopping are REST calls — so this only attaches to
-// what is already running: it replays the backlog, streams what follows,
-// carries keystrokes and resizes back, and notes the exit.
+// A terminal drawn from one of the server's PTY sockets — a thread's shell,
+// or a running dev command's output. The server owns the process; this
+// attaches to it: replays what was on screen, streams what follows, carries
+// keystrokes and resizes back, and notes the exit.
 //
 // Frames are the ones the SPA's terminal speaks: `{d}` for bytes either way,
 // `{r:{cols,rows}}` for a resize, `{exit}` and `{error}` from the server.
@@ -11,28 +10,27 @@ import Foundation
 import SwiftTerm
 
 @MainActor
-final class DevProcessStream: NSObject {
-    let commandId: String
+final class PtyStream: NSObject {
     let view: TerminalView
 
-    private let client: ReviewerClient
+    /// The socket for the terminal's current size — asked for on every
+    /// attach, since the size is part of the address.
+    private let url: (_ cols: Int, _ rows: Int) -> URL
     private var socket: URLSessionWebSocketTask?
     private let session = URLSession(configuration: .ephemeral)
 
-    init(commandId: String, client: ReviewerClient) {
-        self.commandId = commandId
-        self.client = client
+    init(url: @escaping (_ cols: Int, _ rows: Int) -> URL) {
+        self.url = url
         view = TerminalView(frame: .zero)
         super.init()
-        TerminalSession.style(view)
+        TerminalStyle.apply(to: view)
         view.terminalDelegate = self
     }
 
     func attach() {
         socket?.cancel()
         let terminal = view.getTerminal()
-        let socket = session.webSocketTask(
-            with: client.devProcessURL(command: commandId, cols: terminal.cols, rows: terminal.rows))
+        let socket = session.webSocketTask(with: url(terminal.cols, terminal.rows))
         self.socket = socket
         socket.resume()
         receive(on: socket)
@@ -80,7 +78,7 @@ final class DevProcessStream: NSObject {
     }
 }
 
-extension DevProcessStream: TerminalViewDelegate {
+extension PtyStream: TerminalViewDelegate {
     nonisolated func send(source: TerminalView, data: ArraySlice<UInt8>) {
         let text = String(decoding: data, as: UTF8.self)
         Task { @MainActor in self.post(["d": text]) }
@@ -98,4 +96,15 @@ extension DevProcessStream: TerminalViewDelegate {
         NSPasteboard.general.setData(content, forType: .string)
     }
     nonisolated func rangeChanged(source: TerminalView, startY: Int, endY: Int) {}
+}
+
+/// The system monospace face and the window's own text colours, so a
+/// terminal reads as part of the app rather than a black box set into it.
+enum TerminalStyle {
+    @MainActor
+    static func apply(to view: TerminalView) {
+        view.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        view.nativeBackgroundColor = .clear
+        view.nativeForegroundColor = .textColor
+    }
 }

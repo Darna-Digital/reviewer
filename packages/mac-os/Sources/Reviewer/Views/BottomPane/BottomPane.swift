@@ -1,45 +1,46 @@
-// The bottom pane: a native strip choosing between its surfaces, a drag
-// seam above it, and beneath the strip either a native surface — the
-// Terminal, the Services — or the dock island on one of the web app's dock
-// pages. Collapsed, only the strip remains, so the surfaces are one click
-// away and the shell in the Terminal keeps running behind it.
+// The bottom pane: a bar with a segmented switch between its two surfaces
+// — the Terminal and the Run — and the mark that puts the pane away, then
+// the surface beneath, the way Xcode's debug area is laid out. The rail
+// reaches the same surfaces (see `AppRail`); the switch here is for when
+// the pane is already up. Put away, the pane leaves nothing behind; the
+// shells behind the Terminal keep running.
 import SwiftUI
 
 struct BottomPane: View {
     @Environment(AppModel.self) private var model
 
-    private static let stripHeight: CGFloat = 32
     private static let minHeight: CGFloat = 120
 
     var body: some View {
-        VStack(spacing: 0) {
-            if model.bottomExpanded { seam }
-            strip
-            if model.bottomExpanded {
+        if model.bottomExpanded {
+            VStack(spacing: 0) {
+                header
                 content
                     .frame(height: model.bottomHeight)
             }
+            .overlay(alignment: .top) { seam }
         }
     }
 
-    private var strip: some View {
-        HStack(spacing: 2) {
-            ForEach(BottomPaneTab.allCases) { tab in
-                PaneTabButton(tab: tab, isSelected: model.bottomTab == tab && model.bottomExpanded) {
-                    model.show(bottomTab: tab)
+    private var header: some View {
+        HStack(spacing: 8) {
+            Picker("Surface", selection: surface) {
+                ForEach(BottomPaneTab.allCases) { tab in
+                    Text(tab.title).tag(tab)
                 }
             }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .controlSize(.small)
+            .fixedSize()
             Spacer(minLength: 8)
-            Button { model.toggleBottomPane() } label: {
-                Image(systemName: model.bottomExpanded ? "chevron.down" : "chevron.up")
-                    .font(.system(size: 11, weight: .semibold))
-                    .frame(width: 24, height: 24)
+            PaneBarButton(symbol: "chevron.down", help: "Hide the pane (⌘B)") {
+                model.toggleBottomPane()
             }
-            .buttonStyle(.borderless)
-            .help(model.bottomExpanded ? "Collapse" : "Expand")
         }
-        .padding(.horizontal, 6)
-        .frame(height: Self.stripHeight)
+        .padding(.leading, 8)
+        .padding(.trailing, 6)
+        .frame(height: PaneMetrics.barHeight)
         .background(.bar)
         .overlay(alignment: .top) { Divider() }
     }
@@ -49,19 +50,23 @@ struct BottomPane: View {
         switch model.bottomTab {
         case .terminal:
             TerminalPane()
-        case .services:
-            ServicesPane()
-        case .branches, .history, .find, .threads:
-            IslandView(host: model.dock)
+        case .run:
+            RunPane()
         }
     }
 
-    /// The seam is the pane's top edge: dragging it resizes the pane, live,
-    /// since the terminal and the island both reflow as it moves.
+    private var surface: Binding<BottomPaneTab> {
+        Binding(get: { model.bottomTab }, set: { model.show(bottomTab: $0) })
+    }
+
+    /// The seam is the pane's top rule: a hit area straddling it that
+    /// resizes the pane live, since the terminal and the island both
+    /// reflow as it moves.
     private var seam: some View {
         Rectangle()
             .fill(Color.clear)
-            .frame(height: 6)
+            .frame(height: 7)
+            .offset(y: -3)
             .contentShape(Rectangle())
             .onHover { hovering in
                 if hovering { NSCursor.resizeUpDown.push() } else { NSCursor.pop() }
@@ -80,25 +85,4 @@ struct BottomPane: View {
     }
 
     @State private var dragStart: CGFloat?
-}
-
-private struct PaneTabButton: View {
-    let tab: BottomPaneTab
-    let isSelected: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Label(tab.title, systemImage: tab.symbol)
-                .font(.system(size: 11.5, weight: isSelected ? .medium : .regular))
-                .labelStyle(.titleAndIcon)
-                .padding(.horizontal, 8)
-                .frame(height: 22)
-                .foregroundStyle(isSelected ? .primary : .secondary)
-                .background(
-                    isSelected ? Color.secondary.opacity(0.16) : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 5))
-        }
-        .buttonStyle(.plain)
-    }
 }

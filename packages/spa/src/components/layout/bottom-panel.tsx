@@ -19,6 +19,7 @@ import {
 import { FindUsagesPanel } from "@/interactions/find-usages/components/find-usages-panel";
 import { LocalDevPage } from "@/interactions/local-dev/components/local-dev-page";
 import { ThreadsPage } from "@/interactions/threads/components/threads-page";
+import { island } from "@/lib/shell";
 import type { LogQuery } from "@/lib/api/types";
 import { dockPage } from "@/lib/shell-route";
 import type { BottomTab } from "@/lib/ui-prefs";
@@ -51,6 +52,19 @@ const TABS: ReadonlyArray<{
   { id: "services", label: "Services", icon: ICONS.services },
   { id: "threads", label: "Terminal sessions", icon: ICONS.threads },
 ];
+
+/**
+ * The surfaces the macOS shell draws natively in its own bottom pane — its
+ * Terminal and its Run — so inside an island the drawer holds the other
+ * three and never mounts these.
+ */
+const NATIVE_IN_SHELL: ReadonlySet<BottomTab> = new Set([
+  "services",
+  "threads",
+]);
+
+const shownTabs = () =>
+  island === undefined ? TABS : TABS.filter((t) => !NATIVE_IN_SHELL.has(t.id));
 
 interface BottomPanelProps {
   tab: BottomTab;
@@ -114,10 +128,12 @@ const paneProps = (index: number, expanded: boolean): ComponentProps<"div"> =>
       };
 
 export function BottomPanel(props: BottomPanelProps) {
+  const tabs = shownTabs();
   const selectedIndex = Math.max(
     0,
-    TABS.findIndex((t) => t.id === props.tab)
+    tabs.findIndex((t) => t.id === props.tab)
   );
+  const at = (tab: BottomTab) => tabs.findIndex((t) => t.id === tab);
 
   // Services and Threads own live terminals, so once opened they stay mounted
   // while hidden. Until first opened they cost nothing.
@@ -139,11 +155,11 @@ export function BottomPanel(props: BottomPanelProps) {
             className="min-w-0"
             selectedIndex={selectedIndex}
             onSelect={(index) => {
-              const next = TABS[index];
+              const next = tabs[index];
               if (next) props.onTabChange(next.id);
             }}
           >
-            {TABS.map((t, index) => (
+            {tabs.map((t, index) => (
               <TabsSubtleItem
                 key={t.id}
                 index={index}
@@ -168,7 +184,7 @@ export function BottomPanel(props: BottomPanelProps) {
       )}
 
       <div
-        {...paneProps(0, props.expanded)}
+        {...paneProps(at("branches"), props.expanded)}
         hidden={props.tab !== "branches"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
@@ -179,7 +195,7 @@ export function BottomPanel(props: BottomPanelProps) {
       </div>
 
       <div
-        {...paneProps(1, props.expanded)}
+        {...paneProps(at("history"), props.expanded)}
         hidden={props.tab !== "history"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
@@ -211,7 +227,7 @@ export function BottomPanel(props: BottomPanelProps) {
       </div>
 
       <div
-        {...paneProps(2, props.expanded)}
+        {...paneProps(at("find"), props.expanded)}
         hidden={props.tab !== "find"}
         className={cn(
           "min-h-0 flex-1 overflow-hidden outline-none",
@@ -221,27 +237,31 @@ export function BottomPanel(props: BottomPanelProps) {
         {props.active && props.tab === "find" && <FindUsagesPanel />}
       </div>
 
-      <div
-        {...paneProps(3, props.expanded)}
-        hidden={props.tab !== "services"}
-        className={cn(
-          "min-h-0 flex-1 overflow-hidden outline-none",
-          props.tab !== "services" && "hidden"
-        )}
-      >
-        {visitedTabs.has("services") && <LocalDevPage />}
-      </div>
+      {at("services") >= 0 && (
+        <div
+          {...paneProps(at("services"), props.expanded)}
+          hidden={props.tab !== "services"}
+          className={cn(
+            "min-h-0 flex-1 overflow-hidden outline-none",
+            props.tab !== "services" && "hidden"
+          )}
+        >
+          {visitedTabs.has("services") && <LocalDevPage />}
+        </div>
+      )}
 
-      <div
-        {...paneProps(4, props.expanded)}
-        hidden={props.tab !== "threads"}
-        className={cn(
-          "min-h-0 flex-1 overflow-hidden outline-none",
-          props.tab !== "threads" && "hidden"
-        )}
-      >
-        {visitedTabs.has("threads") && <ThreadsPage />}
-      </div>
+      {at("threads") >= 0 && (
+        <div
+          {...paneProps(at("threads"), props.expanded)}
+          hidden={props.tab !== "threads"}
+          className={cn(
+            "min-h-0 flex-1 overflow-hidden outline-none",
+            props.tab !== "threads" && "hidden"
+          )}
+        >
+          {visitedTabs.has("threads") && <ThreadsPage />}
+        </div>
+      )}
     </div>
   );
 }

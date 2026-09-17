@@ -84,6 +84,18 @@ enum Href {
 
     static func session(id: String) -> String { "\(sessions)/\(id)" }
 
+    /// `href` showing `path` — at `line`, when there is one — the way the
+    /// web app's search opens a result: the page's own address with the
+    /// file named in its query, whatever else the query already held.
+    static func file(_ path: String, line: Int?, on href: String) -> String {
+        guard var components = URLComponents(string: href) else { return href }
+        var items = (components.queryItems ?? []).filter { $0.name != "file" && $0.name != "line" }
+        items.append(URLQueryItem(name: "file", value: path))
+        if let line { items.append(URLQueryItem(name: "line", value: String(line))) }
+        components.queryItems = items
+        return components.string ?? href
+    }
+
     /// A code surface — the diff, the browse page, the merge requests — as
     /// opposed to the sessions and the settings.
     static func isCodePage(_ href: String) -> Bool {
@@ -112,6 +124,14 @@ enum CodeSurface: CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .browse: return "Browse the project"
+        case .review: return "Review"
+        }
+    }
+
+    /// The word the rail shows beside the symbol once the surface is on.
+    var label: String {
+        switch self {
+        case .browse: return "Browse"
         case .review: return "Review"
         }
     }

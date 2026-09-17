@@ -8,9 +8,15 @@ the SPA.
 
 What it does today:
 
-- **Native sidebar** — the project's file tree (git status tinted) on the
-  system's full-height sidebar material. Picking a file sends the code island
-  to it; a file the island opens on its own highlights here.
+- **Native sidebar** — the code page's file tree as a native outline on the
+  system's full-height sidebar material, in the web sidebar's two layouts:
+  the project's files while browsing, and on a diff the changed files under
+  a search, badged and tinted by git status, with the commit composer under
+  them while the changes are your own. The rows wear @pierre/trees' own
+  file-type icons, imported at build time (`scripts/import-file-icons.mjs`).
+  Picking a file sends the code island to it; a file the island opens on its
+  own highlights here; the context menu is the web tree's — history, copy
+  path, reveal, new, rename, discard, delete.
 - **Native tabs** — the window bar's tabs, natively: Code and Sessions pinned,
   then one per agent session (⌘T mints one; ⌘W closes, ⌘⇧] / ⌘⇧[ cycle, ⌘1–9
   jump). Each remembers the last place it was.
@@ -20,11 +26,22 @@ What it does today:
   off: the diff, the file view, review comments, edit mode, the sessions
   surface. Its open-file strip is drawn natively above it, wearing the tree's
   file-type icons.
-- **Bottom pane** (⌘B) — a native strip over six surfaces. Terminal is the
-  user's shell in the project (SwiftTerm); Services is the project's dev
-  commands, listed, started and stopped natively, with each one's output
-  drawn from the server's process socket. Branches, History, Find and
-  Threads are the dock island, on the SPA's own dock pages.
+- **Bottom pane** (⌘B) — laid out like Xcode's debug area: a bar with a
+  segmented switch between its two native surfaces, then a source list
+  beside a detail column. Terminal is the project's terminal sessions
+  (SwiftTerm over the server's PTY sockets): a filtered list with open and
+  close in its footer, and the selected shell under a bar that names it and
+  its branch and renames it in place. Run is the project's dev commands: a
+  status dot and a run/stop mark on each row, add, remove, start-all and
+  stop-all in the footer, and the selected command's output under a bar
+  with its command line, its state and play/stop/restart.
+- **Search** — the web app's palette as a Liquid Glass pane over the page:
+  ⇧⇧ or ⌘⇧O finds a file by name (the same fuzzy match, capped the same),
+  ⌘⇧F greps the working tree through the server (`/api/search`, or the
+  project-wide one for a multi-root project) with the case, whole-word and
+  regex toggles, opening on whatever the page has selected. A result opens
+  in the page island where the web palette would open it — in place on a
+  code surface, otherwise on the diff.
 - **Projects** — ⌘O opens a folder through `NSOpenPanel`; recents come from
   the server.
 
@@ -37,13 +54,16 @@ no frame, rail, header or dock around it, since those are the window's. Same
 routes and URLs, so the shell steers an island with the hrefs the app already
 uses. The contract is small and lives in `packages/spa/src/lib/shell.ts`:
 
-- shell → island: `navigate(href)`, `refresh`, `tabs(action)`
-- island → shell: `ready`, `navigated(href)`, `tabs(strip)`
+- shell → island: `navigate(href)`, `refresh`, `tabs(action)`, `tree(action)`
+- island → shell: `ready`, `navigated(href)`, `tabs(strip)`, `tree(listing)`,
+  `treeState(selection, commit composer)`
 
-The last pair is the open-file strip: the code island reports its tabs — each
-with its @pierre/trees type icon as inline SVG — and the shell draws them
-natively under the window tabs (`FileTabStripView`), sending every click back
-as an action for the page to apply to its own store.
+The last pairs are the chrome the code island reports for the shell to draw
+natively: its open-file strip under the window tabs (`FileTabStripView`), and
+its file tree in the sidebar (`FileTreeOutline`, over `SidebarTree`). The
+shell sends every click back as an action for the page to apply to its own
+store, its file actions or its git actions, having already asked what the
+web tree asks first — a yes to a deletion, a name for a new file.
 
 Islands cannot share a JavaScript heap, so whatever two of them both need —
 project, tabs, selection, where the code surface points — lives in `AppModel`,
@@ -73,6 +93,19 @@ That builds with SwiftPM, wraps the binary in `.build/Reviewer.app` (see
 the bare binary via `swift run` instead — fine for iterating, but without a
 bundle there is no dock icon.
 
+To iterate on the Swift side without leaving the editor:
+
+```bash
+pnpm --filter @reviewer/mac-os watch
+```
+
+Same debug build and bundle, but the tab stays: every save under `Sources/`
+or `Resources/` rebuilds and replaces the running app (`scripts/watch.sh`).
+A build that fails prints its errors and leaves the old app up until the next
+save. The project comes back on relaunch because it is the server's, not the
+window's. This is what the cmux "reviewer: start" workspace runs in its
+mac-os tab.
+
 The app looks for the API server on `127.0.0.1:41811` (`REVIEWER_PORT` to
 change it). If nothing answers it spawns one from the repository root with
 `pnpm --filter @reviewer/embedded-server start`, exactly like the Electron dev
@@ -88,11 +121,12 @@ Sources/Reviewer/
   ReviewerApp.swift      @main, menu commands, app delegate
   Server/ServerLauncher  reachability check + spawn of the embedded server
   Api/                   Codable mirrors of the core schemas, HTTP client, chat socket
-  State/                 AppModel, WindowTab, BottomPaneTab, FileTree
+  State/                 AppModel, WindowTab, BottomPaneTab, FileTree, SidebarTree, QuickSearch (+ the ⇧⇧ monitor)
+  FileIcons/             FileIcon (resolver + rasteriser) over the generated @pierre/trees sprite
   Islands/               IslandHost (web view + bridge), SpaSource, SpaSchemeHandler, IslandView
   Terminal/              TerminalSession — the shell behind the Terminal surface
   Services/              DevServices + DevProcessStream — dev commands and their output
-  Views/                 ContentView (split view), Sidebar, Tabs, BottomPane, Launchpad, Welcome
+  Views/                 ContentView (split view), Sidebar, Tabs, BottomPane, Search, Launchpad, Welcome
 ```
 
 Not here yet: native menus for the islands' popovers, drag and drop between

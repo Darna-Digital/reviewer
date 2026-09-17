@@ -47,6 +47,18 @@ struct ReviewerCommands: Commands {
                 .keyboardShortcut("w", modifiers: .command)
                 .disabled(model.selectedTab?.isPinned != false)
         }
+        // Into the Edit menu, under the pasteboard: the web app's ⌘⇧F, and
+        // the IDEs' chord for the file search — the web app's ⇧⇧ is heard
+        // too, but a double tap is no menu equivalent.
+        CommandGroup(after: .pasteboard) {
+            Divider()
+            Button("Go to File…") { model.findFile() }
+                .keyboardShortcut("o", modifiers: [.command, .shift])
+                .disabled(!model.hasProject)
+            Button("Search in Files…") { model.findInFiles() }
+                .keyboardShortcut("f", modifiers: [.command, .shift])
+                .disabled(!model.hasProject)
+        }
         // Into the system's own View menu, ahead of its sidebar and tab-bar
         // items, rather than a second menu of the same name beside it.
         CommandGroup(before: .sidebar) {
@@ -61,10 +73,7 @@ struct ReviewerCommands: Commands {
             Divider()
             Button("Refresh Project") { Task { await model.refresh() } }
                 .keyboardShortcut("r", modifiers: .command)
-            Button("Reload Islands") {
-                model.page.reload()
-                model.dock.reload()
-            }
+            Button("Reload Island") { model.page.reload() }
             .keyboardShortcut("r", modifiers: [.command, .shift])
             Divider()
         }

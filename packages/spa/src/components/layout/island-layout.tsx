@@ -1,13 +1,18 @@
 /**
  * The layout an island wears instead of `AppLayout`.
  *
- * Inside the macOS shell the frame, the rail, the header and the dock are the
- * window's own — native views, or islands of their own — so this document is
- * one part of the app with nothing around it: the routed page, edge to edge,
- * on the canvas. Everything `AppLayout` mounts once for the life of the window
- * that the page underneath still depends on is mounted here for the same
- * reason — the Shiki pool, so leaving and returning to a diff does not spawn
- * the workers and refill their cache.
+ * Inside the macOS shell the frame, the rail, the header, the sidebar and the
+ * bottom pane are the window's own — native views, or islands of their own —
+ * so this document is one part of the app with nothing around it: the routed
+ * page, edge to edge, on the canvas. Everything `AppLayout` mounts once for the
+ * life of the window that the page underneath still depends on is mounted
+ * here for the same reason — the Shiki pool, so leaving and returning to a
+ * diff does not spawn the workers and refill their cache.
+ *
+ * The code island keeps the git dock too, under the page as `AppLayout` has
+ * it: branches, history and find-usages are the page's to draw, while the
+ * terminal and the run surfaces are the shell's, drawn natively in its own
+ * pane — see `BottomPanel`.
  *
  * The one thing it does that `AppLayout` never has to is talk to the shell:
  * go where the shell says, say where it went, and re-ask for everything when
@@ -15,12 +20,13 @@
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
+import { useWorkspace } from "@/lib/queries";
 import { type Island, shell } from "@/lib/shell";
-import { shellRoute } from "@/lib/shell-route";
-import type { BottomTab } from "@/lib/ui-prefs";
+import { shellRoute, showsGitChrome } from "@/lib/shell-route";
+import { cn } from "@/lib/utils";
 
 export function IslandLayout({ island }: { island: Island }) {
   useShellNavigation(island);
@@ -36,35 +42,42 @@ export function IslandLayout({ island }: { island: Island }) {
 
 function IslandBody({ island }: { island: Island }) {
   switch (island) {
-    // The tree is the code page down to its first column — see
-    // `CodeWorkspace` — so it is the same routed page.
     case "code":
-    case "tree":
-      return <Outlet />;
-    case "dock":
-      return <DockIsland />;
+      return <CodeIsland />;
     default:
       return <UnbuiltIsland island={island} />;
   }
 }
 
 /**
- * The dock's surfaces — branches, history, find, threads — with the window's
- * native pane around them. Which surface is the one the dock's own page URLs
- * say (`/modes/code/history` and the rest, see `shell-route`), so the shell
- * chooses one by navigating here, exactly as it steers the code island; the
- * page for that route draws nothing, and the dock draws in its place.
+ * The page with the git dock under it, the shape `AppLayout` gives the git
+ * surfaces: a drawer on the code pages, and on one of the dock's own pages
+ * the whole canvas, with the outlet put away behind it rather than unmounted.
  */
-function DockIsland() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+function CodeIsland() {
+  const pathname = useRouterState({
+    select: (s) => (s.resolvedLocation ?? s.location).pathname,
+  });
+  const workspace = useWorkspace();
+  const current = workspace.data?.current ?? null;
   const route = shellRoute(pathname, false, false);
-  // The dock reaches for the page — a commit picked out of History — and in
-  // the browser that is the one window moving. Here the shell hears where it
-  // went and sends the page island there, then puts this one back; the surface
-  // stays up meanwhile rather than unmounting for the round trip.
-  const lastTab = useRef<BottomTab>("history");
-  if (route.kind === "dock") lastTab.current = route.tab;
-  return <GitBottomDock expandedTab={lastTab.current} chromeless />;
+  const expandedTab =
+    route.kind === "dock" && current !== null ? route.tab : undefined;
+  const dockShown = current !== null && showsGitChrome(route);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
+      <div
+        className={cn(
+          "app-page flex min-h-0 flex-col overflow-hidden",
+          expandedTab !== undefined ? "hidden" : "flex-1"
+        )}
+      >
+        <Outlet />
+      </div>
+      {dockShown && <GitBottomDock expandedTab={expandedTab} />}
+    </div>
+  );
 }
 
 function useShellNavigation(island: Island): void {

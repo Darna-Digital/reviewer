@@ -1,9 +1,9 @@
 // The window tabs, in the toolbar: Code and Sessions as icons, each session
 // by its title, and the mark that mints one — the same row the web app's
-// window bar draws, on the window's own bar. Toolbar toggles rather than
-// views of our own: the bar groups them under one piece of glass and draws
-// the one that is on, so the row is laid out and lit the way the system
-// lays out and lights everything else on it.
+// window bar draws, on the window's own bar. Toolbar toggles rather than views of our own: the bar
+// groups them under one piece of glass and draws the one that is on, so
+// the row is laid out and lit the way the system lays out and lights
+// everything else on it.
 import SwiftUI
 
 struct TabStripItems: ToolbarContent {
@@ -16,6 +16,7 @@ struct TabStripItems: ToolbarContent {
             }
             Button { model.newSession() } label: {
                 Label("New Session", systemImage: "plus")
+                    .toolbarGlyph()
             }
             .help("New Session")
         }
@@ -29,8 +30,10 @@ private struct TabToggle: View {
     var body: some View {
         Group {
             if tab.isPinned {
-                Toggle(isOn: isSelected) { label }
-                    .labelStyle(.iconOnly)
+                Toggle(isOn: isSelected) {
+                    Label(model.title(of: tab), systemImage: tab.symbol)
+                        .toolbarGlyph()
+                }
             } else {
                 Toggle(isOn: isSelected) { label }
                     .labelStyle(.titleAndIcon)
@@ -58,8 +61,8 @@ private struct TabToggle: View {
             .lineLimit(1)
             .truncationMode(.tail)
             .frame(maxWidth: 180)
-            .padding(.horizontal, tab.isPinned ? 0 : 8)
-            .padding(.vertical, tab.isPinned ? 0 : 2)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
     }
 
     /// Only ever turned on: the tab in front stays in front when clicked
@@ -69,6 +72,22 @@ private struct TabToggle: View {
             get: { model.selectedTabId == tab.id },
             set: { if $0 { model.select(tabId: tab.id) } })
     }
+}
+
+/// An icon-only toolbar control: every glyph sits in the same box, so the
+/// pills the bar draws around them come out the same size whatever the
+/// symbol's own width.
+private struct ToolbarGlyph: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .labelStyle(.iconOnly)
+            .font(.system(size: 13, weight: .medium))
+            .frame(width: 24, height: 22)
+    }
+}
+
+extension View {
+    func toolbarGlyph() -> some View { modifier(ToolbarGlyph()) }
 }
 
 /// The project by name, with its recents and the folder panel behind it.

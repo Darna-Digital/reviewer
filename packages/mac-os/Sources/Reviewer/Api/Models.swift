@@ -61,6 +61,34 @@ struct FilesPayload: Decodable, Sendable {
     let gitStatus: [GitStatusEntry]
 }
 
+/// One hit of a content search — `ContentMatch` in core: the file and the
+/// position the pattern struck at, and the whole line it struck on. The
+/// server says where the hit starts but not how long it is — under a regex
+/// only the pattern knows — so the dialog runs the same match over the line
+/// again to pick the hit out of it.
+struct ContentMatch: Decodable, Hashable, Sendable {
+    let path: String
+    let line: Int
+    let column: Int
+    let text: String
+}
+
+struct ContentMatches: Decodable, Sendable {
+    let matches: [ContentMatch]
+    /// More matches existed than the request's limit allowed through.
+    let truncated: Bool
+
+    static let empty = ContentMatches(matches: [], truncated: false)
+}
+
+/// The match modifiers of a content search, mirroring the `git grep` flags
+/// behind them.
+struct GrepOptions: Hashable, Sendable {
+    var caseSensitive = false
+    var wholeWord = false
+    var regex = false
+}
+
 struct RepoStatus: Decodable, Sendable {
     let branch: String
     let upstream: String?
@@ -291,7 +319,33 @@ enum ChatWireEvent: Decodable, Sendable {
     }
 }
 
-// MARK: local dev (Services)
+// MARK: threads (Terminal)
+
+/// A terminal session as `/api/threads` lists it — `ThreadSummary` in core.
+/// The server keeps the PTY behind it running between attachments, so a
+/// thread is a place to come back to rather than a process to hold.
+struct ThreadSummary: Decodable, Identifiable, Hashable, Sendable {
+    let id: String
+    let title: String
+    let agent: String
+    let branch: String
+    let createdAt: String
+    let updatedAt: String
+    let entryCount: Int
+    let lastCommand: String?
+}
+
+struct NewThread: Encodable, Sendable {
+    let title: String?
+    let agent: String
+    let branch: String?
+}
+
+struct RenameThread: Encodable, Sendable {
+    let title: String
+}
+
+// MARK: local dev (Run)
 
 /// A dev command and whether its process is up — `DevCommandView` in core.
 struct DevCommandView: Decodable, Identifiable, Hashable, Sendable {

@@ -2,8 +2,8 @@
 // SPA's `lib/shell`. The tabs are the page's own state, kept in its store
 // with its preview slot and its pinning; what arrives here is a picture of
 // the strip to draw natively under the window tabs, and what goes back is
-// each thing the native strip was asked to do to it.
-import AppKit
+// each thing the native strip was asked to do to it. The file's type icon is
+// the shell's own (`FileIcon`), so only the path crosses.
 import Foundation
 
 struct FileTabStrip: Decodable, Hashable, Sendable {
@@ -31,23 +31,8 @@ struct FileTab: Decodable, Identifiable, Hashable, Sendable {
     let pinned: Bool
     let preview: Bool
     let dirty: Bool
-    let icon: FileIcon
 
     var id: String { path }
-}
-
-/// The file's type icon, as the web strip draws it — @pierre/trees' sprite
-/// symbol, standalone, painting in `currentColor` — with the hue it is given
-/// in either palette.
-struct FileIcon: Decodable, Hashable, Sendable {
-    let svg: String
-    let light: String
-    let dark: String
-
-    @MainActor
-    func image(dark isDark: Bool) -> NSImage? {
-        FileIconImages.image(for: self, dark: isDark)
-    }
 }
 
 /// The strip's actions, in the shape the island's `ShellTabAction` takes.
@@ -70,22 +55,5 @@ enum FileTabAction {
         case .closeAll: return ["kind": "closeAll"]
         case .move(let path, let toIndex): return ["kind": "move", "path": path, "toIndex": toIndex]
         }
-    }
-}
-
-/// One rasteriser per icon and palette: an SVG is parsed into an `NSImage`
-/// once, and the strip redraws from the cache as tabs come and go.
-@MainActor
-private enum FileIconImages {
-    private static var cache: [String: NSImage] = [:]
-
-    static func image(for icon: FileIcon, dark: Bool) -> NSImage? {
-        let color = dark ? icon.dark : icon.light
-        let key = color + icon.svg
-        if let cached = cache[key] { return cached }
-        let painted = icon.svg.replacingOccurrences(of: "currentColor", with: color, options: .caseInsensitive)
-        guard let data = painted.data(using: .utf8), let image = NSImage(data: data) else { return nil }
-        cache[key] = image
-        return image
     }
 }

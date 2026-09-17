@@ -14,7 +14,7 @@ final class DevServices {
     var lastError: String?
 
     @ObservationIgnored private let client: ReviewerClient
-    @ObservationIgnored private var streams: [String: DevProcessStream] = [:]
+    @ObservationIgnored private var streams: [String: PtyStream] = [:]
 
     init(client: ReviewerClient) {
         self.client = client
@@ -54,9 +54,9 @@ final class DevServices {
     /// it is asked for. Kept once made, so the backlog is not replayed and
     /// scroll position survives moving between commands.
     @discardableResult
-    func stream(for id: String) -> DevProcessStream {
+    func stream(for id: String) -> PtyStream {
         if let existing = streams[id] { return existing }
-        let stream = DevProcessStream(commandId: id, client: client)
+        let stream = PtyStream { [client] cols, rows in client.devProcessURL(command: id, cols: cols, rows: rows) }
         streams[id] = stream
         stream.attach()
         return stream

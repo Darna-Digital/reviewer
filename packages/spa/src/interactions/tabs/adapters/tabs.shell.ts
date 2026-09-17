@@ -7,12 +7,8 @@
  * page's state — the store, the preview slot, the pinning — so what crosses
  * the bridge is a picture of the strip going out and the clicks coming back,
  * the same props `TabStrip` takes, minus the DOM.
- *
- * The icon crosses as markup: the shell has no sprite to `<use>`, so each tab
- * carries its own copy of the symbol, coloured for either palette.
  */
 import { useEffect, useMemo, useRef } from "react";
-import { fileIconMarkup } from "@/components/ui/file-type-icon";
 import { pathName } from "@/lib/display-path";
 import {
   island,
@@ -56,7 +52,6 @@ const report = (
     pinned: tab.pinned,
     preview: tab.preview,
     dirty: dirty.has(tab.path),
-    icon: fileIconMarkup(tab.path),
   })),
   active,
 });

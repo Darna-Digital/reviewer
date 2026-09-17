@@ -7,7 +7,8 @@ import SwiftUI
 struct LaunchpadView: View {
     @Environment(AppModel.self) private var model
 
-    private let columns = [GridItem(.adaptive(minimum: 300, maximum: 420), spacing: 24)]
+    private let gap: CGFloat = 32
+    private var columns: [GridItem] { [GridItem(.adaptive(minimum: 300, maximum: 420), spacing: gap)] }
 
     var body: some View {
         ZStack {
@@ -16,7 +17,7 @@ struct LaunchpadView: View {
                 .ignoresSafeArea()
                 .onTapGesture { model.launchpadShown = false }
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 24) {
+                LazyVGrid(columns: columns, spacing: gap) {
                     ForEach(model.tabs) { tab in
                         LaunchpadCard(tab: tab, image: model.snapshots[tab.id], isCurrent: tab.id == model.selectedTabId)
                     }
@@ -41,39 +42,42 @@ private struct LaunchpadCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(nsColor: .windowBackgroundColor))
-                if let image {
-                    Image(nsImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    Image(systemName: tab.symbol)
-                        .font(.system(size: 28))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .aspectRatio(16 / 10, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(isCurrent ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isCurrent ? 2 : 1)
-            )
-            .overlay(alignment: .topTrailing) {
-                if !tab.isPinned && isHovering {
-                    Button { model.closeTab(id: tab.id) } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 18))
-                            .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, .black.opacity(0.6))
+            // The rounded rect alone decides the card's size; the snapshot is
+            // drawn as an overlay so a `.fill`-scaled image can't push the
+            // card wider than its grid cell.
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(nsColor: .windowBackgroundColor))
+                .aspectRatio(16 / 10, contentMode: .fit)
+                .overlay {
+                    if let image {
+                        Image(nsImage: image)
+                            .resizable()
+                            .scaledToFill()
+                    } else {
+                        Image(systemName: tab.symbol)
+                            .font(.system(size: 28))
+                            .foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.plain)
-                    .padding(8)
-                    .help("Close tab")
                 }
-            }
-            .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 14 : 8, y: 4)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(isCurrent ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isCurrent ? 2 : 1)
+                )
+                .overlay(alignment: .topTrailing) {
+                    if !tab.isPinned && isHovering {
+                        Button { model.closeTab(id: tab.id) } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 18))
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(.white, .black.opacity(0.6))
+                        }
+                        .buttonStyle(.plain)
+                        .padding(8)
+                        .help("Close tab")
+                    }
+                }
+                .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 14 : 8, y: 4)
             HStack(spacing: 6) {
                 Image(systemName: tab.symbol)
                     .font(.system(size: 11))
