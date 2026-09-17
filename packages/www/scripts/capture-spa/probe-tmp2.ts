@@ -2,7 +2,11 @@ import { launchBrowser, delay } from "./browser.ts";
 
 const url = process.argv[2] ?? "http://localhost:41812/modes/code/review";
 const browser = await launchBrowser();
-const page = await browser.openPage({ width: 1600, height: 1000, scheme: "dark" });
+const page = await browser.openPage({
+  width: 1600,
+  height: 1000,
+  scheme: "dark",
+});
 await page.goto(url);
 await delay(8000);
 

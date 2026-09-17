@@ -1,9 +1,12 @@
 import { launchBrowser, delay } from "./browser.ts";
 
-const url = "http://localhost:41812/modes/code/browse?file=packages/spa/src/lib/comment-gutter-css.ts";
+const url =
+  "http://localhost:41812/modes/code/browse?file=packages/spa/src/lib/comment-gutter-css.ts";
 const browser = await launchBrowser();
 const page = await browser.openPage({
-  width: 1600, height: 1000, scheme: "dark",
+  width: 1600,
+  height: 1000,
+  scheme: "dark",
   initScript: `localStorage.setItem("reviewer-ui", ${JSON.stringify(JSON.stringify({ editMode: "comment", bottomVisible: false, sidebarVisible: true }))});`,
 });
 await page.goto(url);

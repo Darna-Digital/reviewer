@@ -1,7 +1,11 @@
 import { launchBrowser, delay } from "./browser.ts";
 
 const browser = await launchBrowser();
-const page = await browser.openPage({ width: 1600, height: 1000, scheme: "dark" });
+const page = await browser.openPage({
+  width: 1600,
+  height: 1000,
+  scheme: "dark",
+});
 
 const read = `(() => {
   const box = (el) => el ? (({x, right, y, bottom}) => ({x, right, y, bottom}))(el.getBoundingClientRect()) : null;

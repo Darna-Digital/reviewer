@@ -1,7 +1,11 @@
 import { launchBrowser, delay } from "./browser.ts";
 
 const browser = await launchBrowser();
-const page = await browser.openPage({ width: 1600, height: 1000, scheme: "dark" });
+const page = await browser.openPage({
+  width: 1600,
+  height: 1000,
+  scheme: "dark",
+});
 
 const read = `(() => {
   const dockSheet = [...document.querySelectorAll(".app-sheet")].find((el) => el.classList.contains("app-page-joined"));

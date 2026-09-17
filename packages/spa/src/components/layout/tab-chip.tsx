@@ -31,7 +31,7 @@ export const TAB_STRIP = cn(
   "scrollbar-none",
   // Narrower than the utility's default: a tab is not a page, and a 48px fade
   // would swallow the icon and half the name of the tab it lands on.
-  "scroll-fade-x scroll-fade-when-scrollable [--scroll-fade-size:1.5rem]"
+  "scroll-fade-when-scrollable scroll-fade-x [--scroll-fade-size:1.5rem]"
 );
 
 export function TabClose({
