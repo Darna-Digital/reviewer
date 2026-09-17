@@ -1,27 +1,73 @@
 // The window tabs, in the toolbar: Code and Sessions as icons, each session
 // by its title, and the mark that mints one — the same row the web app's
-// window bar draws, on the window's own bar. The project chip is here too,
-// for the sidebar to lead with.
+// window bar draws, on the window's own bar. Toolbar toggles rather than
+// views of our own: the bar groups them under one piece of glass and draws
+// the one that is on, so the row is laid out and lit the way the system
+// lays out and lights everything else on it.
 import SwiftUI
 
-struct TabStrip: View {
-    @Environment(AppModel.self) private var model
+struct TabStripItems: ToolbarContent {
+    let model: AppModel
 
-    var body: some View {
-        HStack(spacing: 2) {
+    var body: some ToolbarContent {
+        ToolbarItemGroup(placement: .navigation) {
             ForEach(model.tabs) { tab in
-                TabItem(tab: tab, isSelected: tab.id == model.selectedTabId)
+                TabToggle(tab: tab, model: model)
             }
             Button { model.newSession() } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 12, weight: .medium))
-                    .frame(width: 26, height: 26)
+                Label("New Session", systemImage: "plus")
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
             .help("New Session")
-            .disabled(!model.hasProject)
         }
+    }
+}
+
+private struct TabToggle: View {
+    let tab: WindowTab
+    let model: AppModel
+
+    var body: some View {
+        Group {
+            if tab.isPinned {
+                Toggle(isOn: isSelected) { label }
+                    .labelStyle(.iconOnly)
+            } else {
+                Toggle(isOn: isSelected) { label }
+                    .labelStyle(.titleAndIcon)
+            }
+        }
+        .toggleStyle(.button)
+        .help(model.title(of: tab))
+        .contextMenu {
+            if !tab.isPinned {
+                Button("Close Tab") { model.closeTab(id: tab.id) }
+            }
+            Button("Close Other Tabs") {
+                for other in model.tabs where other.id != tab.id { model.closeTab(id: other.id) }
+            }
+        }
+    }
+
+    /// A session's title gets room either side of it: the toggle's pill is
+    /// drawn to the label, and text set flush in it reads as a chip cut too
+    /// close.
+    private var label: some View {
+        Label(model.title(of: tab), systemImage: tab.symbol)
+            .font(.system(size: 12, weight: .medium))
+            .imageScale(.small)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .frame(maxWidth: 180)
+            .padding(.horizontal, tab.isPinned ? 0 : 8)
+            .padding(.vertical, tab.isPinned ? 0 : 2)
+    }
+
+    /// Only ever turned on: the tab in front stays in front when clicked
+    /// again, as a tab does.
+    private var isSelected: Binding<Bool> {
+        Binding(
+            get: { model.selectedTabId == tab.id },
+            set: { if $0 { model.select(tabId: tab.id) } })
     }
 }
 
@@ -132,58 +178,3 @@ private struct PickerRow: View {
     }
 }
 
-private struct TabItem: View {
-    let tab: WindowTab
-    let isSelected: Bool
-    @Environment(AppModel.self) private var model
-    @State private var isHovering = false
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: tab.symbol)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(isSelected ? .primary : .secondary)
-            if !tab.isPinned {
-                Text(model.title(of: tab))
-                    .font(.system(size: 12, weight: isSelected ? .medium : .regular))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .foregroundStyle(isSelected ? .primary : .secondary)
-                    .frame(maxWidth: 180, alignment: .leading)
-                closeButton
-            }
-        }
-        .padding(.horizontal, tab.isPinned ? 8 : 10)
-        .frame(height: 28)
-        .background(
-            isSelected ? Color.primary.opacity(0.12) : isHovering ? Color.primary.opacity(0.06) : Color.clear,
-            in: RoundedRectangle(cornerRadius: 7))
-        .contentShape(Rectangle())
-        .onTapGesture { model.select(tabId: tab.id) }
-        .onHover { isHovering = $0 }
-        .help(model.title(of: tab))
-        .contextMenu {
-            if !tab.isPinned {
-                Button("Close Tab") { model.closeTab(id: tab.id) }
-            }
-            Button("Close Other Tabs") {
-                for other in model.tabs where other.id != tab.id { model.closeTab(id: other.id) }
-            }
-        }
-    }
-
-    private var closeButton: some View {
-        Button {
-            model.closeTab(id: tab.id)
-        } label: {
-            Image(systemName: "xmark")
-                .font(.system(size: 9, weight: .bold))
-                .frame(width: 16, height: 16)
-                .background(isHovering ? Color.primary.opacity(0.1) : Color.clear, in: RoundedRectangle(cornerRadius: 4))
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
-        .opacity(isHovering || isSelected ? 1 : 0)
-        .help("Close tab")
-    }
-}

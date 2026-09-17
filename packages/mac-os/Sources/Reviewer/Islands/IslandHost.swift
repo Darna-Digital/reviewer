@@ -25,6 +25,7 @@ final class IslandHost: NSObject {
     @ObservationIgnored private let apiBaseURL: URL
     @ObservationIgnored private var loaded = false
     @ObservationIgnored private lazy var view: WKWebView = makeWebView()
+    @ObservationIgnored private var appearanceObservation: NSKeyValueObservation?
 
     init(kind: IslandKind, href: String, source: SpaSource, apiBaseURL: URL) {
         self.kind = kind
@@ -78,8 +79,7 @@ final class IslandHost: NSObject {
         }
         let content = configuration.userContentController
         content.addScriptMessageHandler(self, contentWorld: .page, name: Self.messageHandlerName)
-        content.addUserScript(
-            WKUserScript(source: bridgeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        installUserScripts(in: content)
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
@@ -89,7 +89,31 @@ final class IslandHost: NSObject {
         // and the window's own material shows through where it paints nothing.
         webView.underPageBackgroundColor = .clear
         webView.setValue(false, forKey: "drawsBackground")
+        observeAppearance(for: webView)
         return webView
+    }
+
+    /// The bridge, and the window's colours — both before the first script
+    /// of the page runs, so nothing paints in the wrong palette first.
+    private func installUserScripts(in content: WKUserContentController) {
+        content.removeAllUserScripts()
+        content.addUserScript(
+            WKUserScript(source: bridgeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        content.addUserScript(
+            WKUserScript(source: NativePalette.applyScript(), injectionTime: .atDocumentStart, forMainFrameOnly: true))
+    }
+
+    /// Dark to light and back: the live document is repainted, and the
+    /// document-start script rewritten so a reload paints right from the
+    /// start too.
+    private func observeAppearance(for webView: WKWebView) {
+        appearanceObservation = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.installUserScripts(in: webView.configuration.userContentController)
+                webView.evaluateJavaScript(NativePalette.applyScript()) { _, _ in }
+            }
+        }
     }
 
     private static let messageHandlerName = "reviewerShell"

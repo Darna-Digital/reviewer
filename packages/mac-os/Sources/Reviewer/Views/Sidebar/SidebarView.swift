@@ -11,14 +11,12 @@ struct SidebarView: View {
 
     var body: some View {
         List(selection: selection) {
-            Section(model.workspace?.projectName ?? "Files") {
-                if model.isLoadingFiles && model.fileTree.isEmpty {
-                    ProgressView().controlSize(.small)
-                }
-                OutlineGroup(FileTree.filter(model.fileTree, query: filter), children: \.children) { node in
-                    FileRow(node: node)
-                        .tag(node.isDirectory ? "dir:\(node.path)" : node.path)
-                }
+            if model.isLoadingFiles && model.fileTree.isEmpty {
+                ProgressView().controlSize(.small)
+            }
+            OutlineGroup(FileTree.filter(model.fileTree, query: filter), children: \.children) { node in
+                FileRow(node: node)
+                    .tag(node.isDirectory ? "dir:\(node.path)" : node.path)
             }
         }
         .listStyle(.sidebar)

@@ -38,11 +38,13 @@ struct WindowTab: Identifiable, Hashable, Sendable {
         }
     }
 
+    /// The web app's icons for the same tabs — Tabler's code, send and
+    /// message — in their SF Symbols shapes.
     var symbol: String {
         switch kind {
         case .code: return "chevron.left.forwardslash.chevron.right"
-        case .sessions: return "sparkles"
-        case .session, .newSession: return "bubble.left.and.text.bubble.right"
+        case .sessions: return "paperplane"
+        case .session, .newSession: return "message"
         }
     }
 

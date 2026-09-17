@@ -73,10 +73,8 @@ struct ToolbarItems: ToolbarContent {
     @Environment(AppModel.self) private var model
 
     var body: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
-            if model.hasProject {
-                TabStrip()
-            }
+        if model.hasProject {
+            TabStripItems(model: model)
         }
         ToolbarItem(placement: .primaryAction) {
             Button { model.toggleLaunchpad() } label: {

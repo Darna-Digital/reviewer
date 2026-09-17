@@ -1113,6 +1113,43 @@
   border-radius: 0;
 }
 
+/* An island wears the window's own palette rather than its own. The shell
+   hands over the system colours it is drawn with as `--native-*` (see
+   `NativePalette` in the macOS app), resolved for the appearance the window is
+   in and rewritten when that changes, and the tokens the surfaces read are
+   pointed at them: the canvas and every sheet on it are the window's
+   background, type is the label colour, rules are the separator, so a diff
+   beside a native list and over a native pane reads as one material. Brand
+   ink — links, rings, charts — stays the app's own, the way it does in any
+   native app. Declared for both themes at once: the values are already the
+   dark or the light ones. */
+.island,
+.island.dark {
+  --canvas: var(--native-window);
+  --canvas-edge: var(--native-window);
+  --frame: var(--native-window);
+  --frame-translucent: transparent;
+  --pane: var(--native-window);
+  --surface-1: var(--native-window);
+  --surface-2: var(--native-control);
+  --surface-3: var(--native-under-page);
+  --foreground: var(--native-text);
+  --card-foreground: var(--native-text);
+  --popover-foreground: var(--native-text);
+  --secondary-foreground: var(--native-text);
+  --accent-foreground: var(--native-text);
+  --sidebar-foreground: var(--native-text);
+  --muted-foreground: var(--native-text-secondary);
+  --accent: var(--native-selection-unemphasized);
+  --sidebar-accent: var(--native-selection-unemphasized);
+  --border: var(--native-separator);
+  --sidebar-border: var(--native-separator);
+  --hairline: var(--native-separator);
+  --frame-border: var(--native-separator);
+  --input: var(--native-separator);
+  --ring-accent: var(--native-accent);
+}
+
 /* The rail is not a sheet of its own. Given a tone and a seam of its own it read
    as a strip of chrome floating on the frame. So it is the left edge of the
    sheet beside it, the way it was when the whole window was one canvas: the
