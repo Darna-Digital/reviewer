@@ -5,9 +5,18 @@
 // agent, a red dot where a turn ended badly, the accent dot for a session
 // that moved since it was last opened — and the delete control taking the
 // mark's place under the pointer. The cloud runs stand in a group of their
-// own above, as they do in the web list. Picking a row sends the page to
-// that session; the menu lifts it into a tab of its own, or deletes it; and
-// the foot of the list coming into view asks the page for its next page.
+// own above, as they do in the web list.
+//
+// What the web rail carries stands at the head of the list instead: a
+// search field, and a filter menu for the project and how far back to look
+// — both of them the page's query, so they narrow every session the server
+// has rather than the pages loaded so far. What the web row keeps behind
+// hover is here too, as a popover: the untruncated title, when it moved,
+// the tail of the conversation and the session's project.
+//
+// Picking a row sends the page to that session; the menu lifts it into a
+// tab of its own, or deletes it; and the foot of the list coming into view
+// asks the page for its next page.
 import SwiftUI
 
 struct SessionsList: View {
@@ -20,9 +29,9 @@ struct SessionsList: View {
     var body: some View {
         if let list = model.sessions {
             VStack(spacing: 0) {
-                SessionsHeader(count: list.sessions.count, hasMore: list.hasMore)
+                SessionsHeader(filters: list.filters, count: list.sessions.count, hasMore: list.hasMore)
                 if list.isEmpty {
-                    SessionsPlaceholder(loading: list.loading)
+                    SessionsPlaceholder(loading: list.loading, searching: !list.filters.search.isEmpty)
                 } else {
                     rows(of: list)
                 }
@@ -36,14 +45,14 @@ struct SessionsList: View {
             if !list.cloudRuns.isEmpty {
                 Section("Cloud") {
                     ForEach(list.cloudRuns) { run in
-                        SessionRow(session: run, deletable: false)
+                        SessionRow(session: run)
                             .tag(run.id)
                     }
                 }
             }
             Section {
                 ForEach(list.sessions) { session in
-                    SessionRow(session: session, deletable: true)
+                    SessionRow(session: session)
                         .tag(session.id)
                         .contextMenu {
                             Button("Open in a Tab") { model.act(onSessions: .openInTab(session.id)) }
@@ -79,33 +88,143 @@ struct SessionsList: View {
     }
 }
 
-/// How many sessions the list holds — of the ones loaded so far, while the
-/// server has more to give.
+/// The search over every session and the filter menu beside it — the web
+/// rail's two controls, in the changed-files layout's shape — then how many
+/// sessions the list holds: of the ones loaded so far, while the server has
+/// more to give.
 private struct SessionsHeader: View {
+    let filters: ShellSessionFilters
     let count: Int
     let hasMore: Bool
+    @Environment(AppModel.self) private var model
+    @State private var query = ""
 
     var body: some View {
-        HStack {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 6) {
+                SearchField(query: $query)
+                SessionFilterMenu(filters: filters)
+            }
             Text(count == 1 ? "1 session" : "\(count)\(hasMore ? "+" : "") sessions")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
-            Spacer()
+                .padding(.leading, 4)
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 2)
-        .padding(.bottom, 4)
+        .padding(.horizontal, 10)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
+        // The field is the source of what is searched, but not the only
+        // copy: the page holds the query, so a header made afresh — the
+        // sidebar put away and brought back — starts from what it has.
+        .onAppear { query = filters.search }
+        .onChange(of: query) { _, text in
+            guard text != filters.search else { return }
+            model.act(onSessions: .search(text))
+        }
+    }
+}
+
+private struct SearchField: View {
+    @Binding var query: String
+
+    var body: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+            TextField("Search sessions", text: $query)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 7)
+        .frame(height: 24)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+    }
+}
+
+/// The web filter popover as a pull-down: the projects with a session in
+/// them, each with its count, over how far back to look, the chosen one in
+/// each ticked. The projects are left out while there is only one to name.
+/// The button carries a dot while anything is set, as the web's does: the
+/// list is never quietly narrower than it looks.
+private struct SessionFilterMenu: View {
+    let filters: ShellSessionFilters
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Menu {
+            if filters.projects.count > 1 {
+                Section("Project") {
+                    Toggle("All projects", isOn: projectBinding(ShellSessionFilters.allProjects))
+                    ForEach(filters.projects) { project in
+                        Toggle(isOn: projectBinding(project.path)) {
+                            Text("\(project.name)  \(project.count)")
+                        }
+                        .help(project.path)
+                    }
+                }
+            }
+            Section("Updated") {
+                ForEach(SessionDateFilter.allCases) { date in
+                    Toggle(date.label, isOn: dateBinding(date))
+                }
+            }
+        } label: {
+            Image(systemName: "line.3.horizontal.decrease")
+                .font(.system(size: 11, weight: .medium))
+                .frame(width: 24, height: 24)
+                .overlay(alignment: .topTrailing) {
+                    if filters.isNarrowed {
+                        Circle()
+                            .fill(Color.accentColor)
+                            .frame(width: 5, height: 5)
+                            .padding(3)
+                    }
+                }
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Filter sessions")
+    }
+
+    private func projectBinding(_ path: String) -> Binding<Bool> {
+        Binding(
+            get: { filters.project == path },
+            set: { on in if on { model.act(onSessions: .filter(project: path, date: nil)) } })
+    }
+
+    private func dateBinding(_ date: SessionDateFilter) -> Binding<Bool> {
+        Binding(
+            get: { filters.date == date },
+            set: { on in if on { model.act(onSessions: .filter(project: nil, date: date)) } })
     }
 }
 
 /// A session's row: its title, and at the trailing edge its mark — or, with
 /// the pointer over it, the delete control in the mark's place, so the title
-/// runs to the same edge on every row.
+/// runs to the same edge on every row. The pointer resting on the row opens
+/// the preview beside it, and leaving closes it; a click closes it too, the
+/// page being the thing to look at once a session is open.
 private struct SessionRow: View {
     let session: ShellSession
-    let deletable: Bool
     @Environment(AppModel.self) private var model
     @State private var isHovering = false
+    @State private var previewShown = false
+    @State private var hoverTask: Task<Void, Never>?
+
+    private static let openDelay: Duration = .milliseconds(120)
+    private static let closeDelay: Duration = .milliseconds(100)
 
     var body: some View {
         HStack(spacing: 6) {
@@ -115,7 +234,7 @@ private struct SessionRow: View {
                 .truncationMode(.tail)
             Spacer(minLength: 4)
             ZStack {
-                if isHovering && deletable {
+                if isHovering && session.kind == .session {
                     PaneBarButton(symbol: "xmark", help: "Delete session") {
                         model.act(onSessions: .delete(session.id))
                     }
@@ -127,8 +246,19 @@ private struct SessionRow: View {
         }
         .frame(height: 24)
         .contentShape(Rectangle())
-        .onHover { isHovering = $0 }
-        .help("\(session.title) — \(session.origin)")
+        .onHover { hovering in
+            isHovering = hovering
+            hoverTask?.cancel()
+            hoverTask = Task {
+                try? await Task.sleep(for: hovering ? Self.openDelay : Self.closeDelay)
+                guard !Task.isCancelled else { return }
+                previewShown = hovering
+            }
+        }
+        .simultaneousGesture(TapGesture().onEnded { previewShown = false })
+        .popover(isPresented: $previewShown, arrowEdge: .trailing) {
+            SessionPreview(session: session)
+        }
     }
 }
 
@@ -149,6 +279,7 @@ private struct SessionMarkDot: View {
 
 private struct SessionsPlaceholder: View {
     let loading: Bool
+    let searching: Bool
 
     var body: some View {
         VStack {
@@ -157,7 +288,7 @@ private struct SessionsPlaceholder: View {
                 ProgressView()
                     .controlSize(.small)
             } else {
-                Text("No sessions")
+                Text(searching ? "Nothing matches" : "No sessions")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }

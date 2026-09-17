@@ -24,12 +24,7 @@ const STORE_KEY = "reviewer-window-tabs";
 let sequence = 0;
 export const nextTabId = (): string => `tab-${(sequence += 1)}`;
 
-const KINDS: ReadonlyArray<WindowTabKind> = [
-  "project",
-  "git",
-  "sessions",
-  "session",
-];
+const KINDS: ReadonlyArray<WindowTabKind> = ["project", "sessions", "session"];
 
 // A strip written before the pinned tabs existed carries no `kind`, so every
 // tab in it fails here and the restore falls back to a fresh pinned strip.

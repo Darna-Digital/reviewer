@@ -1,5 +1,5 @@
-// The window tabs — Code, Git and Sessions pinned, then one per agent
-// session — are the page island's own strip, the same one the web app's
+// The window tabs — Code and Sessions pinned, then one per agent session
+// — are the page island's own strip, the same one the web app's
 // window bar draws: the store and the switching live in the document, so a
 // tab is a route change in a page that has already primed it rather than a
 // trip over the bridge. What the shell holds is a picture of the strip,
@@ -46,14 +46,12 @@ struct WindowTab: Decodable, Identifiable, Hashable, Sendable {
 /// message, in their SF Symbols shapes.
 enum WindowTabKind: String, Decodable, Sendable {
     case project
-    case git
     case sessions
     case session
 
     var symbol: String {
         switch self {
         case .project: return "chevron.left.forwardslash.chevron.right"
-        case .git: return "arrow.triangle.branch"
         case .sessions: return "paperplane"
         case .session: return "message"
         }
@@ -88,6 +86,7 @@ enum WindowTabAction {
 /// bar uses, so an island asked for one behaves exactly as the page would.
 enum Href {
     static let review = "/modes/code/review"
+    static let reviews = "/modes/code/reviews"
     static let browsePath = "/modes/code/browse"
 
     /// `href` showing `path` — at `line`, when there is one — the way the
@@ -108,6 +107,7 @@ enum Href {
 enum CodeSurface: CaseIterable, Identifiable {
     case browse
     case review
+    case reviews
 
     var id: Self { self }
 
@@ -115,6 +115,7 @@ enum CodeSurface: CaseIterable, Identifiable {
         switch self {
         case .browse: return "Browse the project"
         case .review: return "Review"
+        case .reviews: return "Merge requests"
         }
     }
 
@@ -123,6 +124,7 @@ enum CodeSurface: CaseIterable, Identifiable {
         switch self {
         case .browse: return "Browse"
         case .review: return "Review"
+        case .reviews: return "Merge requests"
         }
     }
 
@@ -130,6 +132,7 @@ enum CodeSurface: CaseIterable, Identifiable {
         switch self {
         case .browse: return "folder"
         case .review: return "plus.forwardslash.minus"
+        case .reviews: return "arrow.triangle.pull"
         }
     }
 
@@ -137,15 +140,28 @@ enum CodeSurface: CaseIterable, Identifiable {
         switch self {
         case .browse: return Href.browsePath
         case .review: return Href.review
+        case .reviews: return Href.reviews
+        }
+    }
+
+    /// Whether the surface shows files, so one can be opened on it in place:
+    /// the merge requests are a list, and a file found while it is up opens
+    /// on the diff instead.
+    var opensFiles: Bool {
+        switch self {
+        case .browse, .review: return true
+        case .reviews: return false
         }
     }
 
     /// The surface an address is on, by its path: the browse page and every
-    /// commit or range read on it, or the diff and every pull request read
-    /// in it.
+    /// commit or range read on it, the diff and every pull request read in
+    /// it, or the merge requests — read first, its path being the diff's
+    /// with a letter on the end.
     static func forHref(_ href: String) -> CodeSurface? {
         let path = URLComponents(string: href)?.path ?? ""
         if path.hasPrefix(Href.browsePath) { return .browse }
+        if path.hasPrefix(Href.reviews) { return .reviews }
         if path.hasPrefix(Href.review) { return .review }
         return nil
     }

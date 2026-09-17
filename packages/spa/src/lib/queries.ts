@@ -222,8 +222,8 @@ export const recentChatsOptions = () =>
 export const useRecentChats = () => useQuery(recentChatsOptions());
 
 /** Every project holding a session, for the list's filter menu. */
-export const useChatProjects = () =>
-  api.useQuery("get", "/api/chats/projects", {}, OWN_DATA);
+export const useChatProjects = (enabled = true) =>
+  api.useQuery("get", "/api/chats/projects", {}, { ...OWN_DATA, enabled });
 
 /** How many hits the search popover shows — one screenful, not a second list. */
 const SEARCH_HITS = 12;

@@ -5,9 +5,11 @@
 // the sidebar's project tree, the page island wearing
 // the open-file band along its top, and the bottom pane under it. The seams
 // between them are the frame showing through, and two of them resize what
-// they part. The search dialog and the launchpad go over all of it when
-// they are up. Before the server answers, and before a project is open, the
-// page's island shows the matching placeholder instead.
+// they part. The search dialog goes over all of it when it is up; the
+// launchpad slides out from under the toolbar and pushes all of it down,
+// dimmed under a scrim, by exactly its own height (see `Launchpad`). Before
+// the server answers, and before a project is open, the page's island shows
+// the matching placeholder instead.
 import SwiftUI
 
 struct ContentView: View {
@@ -17,8 +19,56 @@ struct ContentView: View {
     private static let bottomHeights: ClosedRange<CGFloat> = 120...800
 
     var body: some View {
+        let launchpad = model.launchpad
+        ZStack(alignment: .top) {
+            workspace
+                .overlay {
+                    if launchpad.isShown {
+                        LaunchpadScrim()
+                            .transition(.opacity)
+                    }
+                }
+                .overlay(alignment: .top) {
+                    LaunchpadSeam(edge: .pageHead)
+                }
+                // Moved, not resized: the islands keep the size they have
+                // and slide off the bottom of the window, so the web view,
+                // the outline and the terminal are composited down rather
+                // than laid out again on every frame.
+                .offset(y: launchpad.isShown ? launchpad.height : 0)
+            if launchpad.isShown {
+                LaunchpadPanel()
+                    .frame(height: launchpad.height)
+                    .transition(.move(edge: .top))
+                    // Kept above the workspace on its way out too: a view
+                    // leaving a stack loses its place in it.
+                    .zIndex(1)
+            }
+        }
+        .clipped()
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { launchpad.canvas = $0 }
+        .background(Color(nsColor: IslandPalette.frame))
+        .navigationTitle("")
+        .toolbar { ToolbarItems() }
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .overlay {
+            if model.search.isShown {
+                SearchOverlay()
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.12), value: model.search.isShown)
+        .alert("Something went wrong", isPresented: errorShown) {
+            Button("OK") { model.lastError = nil }
+        } message: {
+            Text(model.lastError ?? "")
+        }
+    }
+
+    /// The rail and the three islands: everything the launchpad pushes.
+    private var workspace: some View {
         @Bindable var model = model
-        HStack(spacing: 0) {
+        return HStack(spacing: 0) {
             AppRail()
             if model.sidebarShown {
                 SidebarView()
@@ -42,30 +92,7 @@ struct ContentView: View {
         .padding(.top, IslandMetrics.gap)
         .padding(.trailing, IslandMetrics.gap)
         .padding(.bottom, IslandMetrics.gap)
-        .background(Color(nsColor: IslandPalette.frame))
         .animation(.easeOut(duration: 0.18), value: model.sidebarShown)
-        .navigationTitle("")
-        .toolbar { ToolbarItems() }
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-        .overlay {
-            if model.search.isShown {
-                SearchOverlay()
-                    .transition(.opacity)
-            }
-        }
-        .animation(.easeOut(duration: 0.12), value: model.search.isShown)
-        .overlay {
-            if model.launchpadShown {
-                LaunchpadView()
-                    .transition(.opacity)
-            }
-        }
-        .animation(.easeOut(duration: 0.15), value: model.launchpadShown)
-        .alert("Something went wrong", isPresented: errorShown) {
-            Button("OK") { model.lastError = nil }
-        } message: {
-            Text(model.lastError ?? "")
-        }
     }
 
     @ViewBuilder
@@ -90,8 +117,9 @@ struct ContentView: View {
 /// The toolbar: the sidebar's switch and the project chip — what the window
 /// is on — then the window tabs, and the launchpad trailing: the web app's
 /// window bar, on the window's own bar, so nothing on it is drawn a second
-/// time inside the island. The branch picker is the sidebar's, over the tree
-/// it names, as the web header has it.
+/// time inside the island. Every item wears the web bar's chip rather than
+/// the system's glass, put away per item (see `BarChipStyle`). The branch
+/// picker is the sidebar's, over the tree it names, as the web header has it.
 private struct ToolbarItems: ToolbarContent {
     @Environment(AppModel.self) private var model
 
@@ -99,27 +127,36 @@ private struct ToolbarItems: ToolbarContent {
         ToolbarItem(placement: .navigation) {
             Button { model.toggleSidebar() } label: {
                 Label("Sidebar", systemImage: "sidebar.leading")
+                    .barGlyph()
             }
+            .buttonStyle(BarChipStyle())
             .help(model.sidebarShown ? "Hide the sidebar (⌃⌘S)" : "Show the sidebar (⌃⌘S)")
         }
+        .sharedBackgroundVisibility(.hidden)
         ToolbarItem(placement: .navigation) {
             ProjectChip()
         }
+        .sharedBackgroundVisibility(.hidden)
         if model.hasProject {
             TabStripItems(model: model)
         }
         ToolbarItem(placement: .primaryAction) {
             Button { model.toggleLaunchpad() } label: {
                 Label("Launchpad", systemImage: "square.grid.2x2")
+                    .barGlyph()
             }
+            .buttonStyle(BarChipStyle(isOn: model.launchpad.isShown))
             .help("Show every open tab (⌘L)")
             .disabled(!model.hasProject)
         }
+        .sharedBackgroundVisibility(.hidden)
     }
 }
 
 /// The project the window is on, as a pull-down: the recents the server
-/// remembers, and the folder panel for any other.
+/// remembers, and the folder panel for any other. The chevron is the
+/// chip's own, in place of the arrow the system's menu button wears, so the
+/// chip is cut like the web bar's.
 private struct ProjectChip: View {
     @Environment(AppModel.self) private var model
 
@@ -133,9 +170,24 @@ private struct ProjectChip: View {
             Divider()
             Button("Open Project…") { model.chooseProject() }
         } label: {
-            Label(model.workspace?.projectName ?? "No Project", systemImage: "folder")
-                .labelStyle(.titleAndIcon)
+            HStack(spacing: 6) {
+                Image(systemName: "folder")
+                    .font(.system(size: 12, weight: .medium))
+                Text(model.workspace?.projectName ?? "No Project")
+                    .font(.system(size: 13))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.leading, 8)
+            .padding(.trailing, 6)
+            .frame(maxWidth: 176)
         }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .buttonStyle(BarChipStyle())
         .help("Switch project")
     }
 }

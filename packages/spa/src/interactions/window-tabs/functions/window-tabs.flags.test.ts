@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { WindowTab } from "../interfaces/window-tabs.interfaces";
 import {
-  GIT_TAB_ID,
   initialWindowTabs,
   PROJECT_TAB_ID,
   SESSIONS_TAB_ID,
@@ -63,7 +62,6 @@ describe("a switched-off sessions button", () => {
   it("leaves its tab out of the bar, and out of ⌘<digit> with it", () => {
     expect(stripTabs(initialWindowTabs()).map((t) => t.id)).toEqual([
       PROJECT_TAB_ID,
-      GIT_TAB_ID,
     ]);
   });
 
@@ -71,10 +69,9 @@ describe("a switched-off sessions button", () => {
     const tabs = withPinnedTabs(saved);
     expect(
       stripTabs({ tabs, activeId: SESSIONS_TAB_ID }).map((t) => t.id)
-    ).toEqual([PROJECT_TAB_ID, GIT_TAB_ID, SESSIONS_TAB_ID, "a"]);
+    ).toEqual([PROJECT_TAB_ID, SESSIONS_TAB_ID, "a"]);
     expect(stripTabs({ tabs, activeId: "a" }).map((t) => t.id)).toEqual([
       PROJECT_TAB_ID,
-      GIT_TAB_ID,
       "a",
     ]);
   });

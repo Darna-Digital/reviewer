@@ -12,7 +12,12 @@
  * it, and the dock outlives every page it is asked about.
  */
 import { BROWSE_HREF, dockPage } from "@/lib/shell-route";
-import { setUiPrefs, type BottomTab } from "@/lib/ui-prefs";
+import {
+  type BottomTab,
+  openBottomTab,
+  readUiPrefs,
+  setUiPrefs,
+} from "@/lib/ui-prefs";
 
 type Navigate = (options: { href: string }) => void;
 
@@ -43,4 +48,43 @@ export function restoreDock(navigate: Navigate, tab: BottomTab) {
 /** Leaving a dock page for somewhere the surface is worth keeping beside. */
 export function keepDockDrawer(tab: BottomTab) {
   setUiPrefs({ bottomVisible: true, bottomTab: tab });
+}
+
+/**
+ * A rail button pressed: the surface it names, or with that surface already
+ * up, the drawer put away — the click that opened it closes it. Once a surface
+ * has the window to itself the buttons move between the pages rather than
+ * dropping the window back into the drawer for every click; the one you are
+ * already on is the click that puts it down. `expandedTab` is that surface,
+ * or null while the dock is a drawer.
+ *
+ * The web rail's and the macOS shell's alike: the native rail presses the
+ * same button over the bridge — see `lib/shell`.
+ */
+export function pickDockTab(
+  navigate: Navigate,
+  tab: BottomTab,
+  expandedTab: BottomTab | null
+) {
+  if (expandedTab === null) {
+    const prefs = readUiPrefs();
+    if (prefs.bottomVisible && prefs.bottomTab === tab) {
+      setUiPrefs({ bottomVisible: false });
+    } else {
+      openBottomTab(tab);
+    }
+    return;
+  }
+  if (expandedTab === tab) restoreDock(navigate, tab);
+  else showDockPage(navigate, tab);
+}
+
+/**
+ * The dock put away, whichever shape it is in: a page goes back to where it
+ * was expanded from, and the drawer shuts. What the macOS shell asks when its
+ * own pane takes the foot of the window.
+ */
+export function closeDock(navigate: Navigate, expandedTab: BottomTab | null) {
+  if (expandedTab !== null) navigate({ href: cameFrom });
+  setUiPrefs({ bottomVisible: false });
 }

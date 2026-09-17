@@ -66,11 +66,8 @@ export function GitBottomDock({
    * surface it is in its URL, so the preference is not consulted while one is up.
    */
   expandedTab,
-  chromeless = false,
 }: {
   readonly expandedTab?: BottomTab;
-  /** The surface with no strip or trail of its own — see `BottomPanel`. */
-  readonly chromeless?: boolean;
 }) {
   const prefs = useUiPrefs();
   const navigate = useNavigate();
@@ -233,7 +230,6 @@ export function GitBottomDock({
           tab={tab}
           active={shown}
           expanded={expanded}
-          chromeless={chromeless}
           onTabChange={(next) => setUiPrefs({ bottomTab: next })}
           onCollapse={() => setUiPrefs({ bottomVisible: false })}
           onExpand={() => expandDock(navigate, tab, router.state.location.href)}

@@ -73,6 +73,10 @@ struct ReviewerCommands: Commands {
             Button(model.bottomExpanded ? "Hide Bottom Pane" : "Show Bottom Pane") { model.toggleBottomPane() }
                 .keyboardShortcut("b", modifiers: .command)
             Divider()
+            ForEach(DockSurface.allCases) { surface in
+                Button(surface.title) { model.toggle(dock: surface) }
+                    .disabled(!model.hasProject)
+            }
             ForEach(BottomPaneTab.allCases) { tab in
                 Button(tab.title) { model.show(bottomTab: tab) }
             }

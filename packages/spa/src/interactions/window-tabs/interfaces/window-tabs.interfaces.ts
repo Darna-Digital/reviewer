@@ -1,15 +1,14 @@
 /**
  * `window-tabs` feature — the browser-style strip in the window's title bar.
  *
- * The strip leads with three pinned tabs: Code, which follows the code
- * surfaces the way a browser tab follows the address bar; Git, the branches,
- * the history and the merge requests; and Sessions, the agent conversations.
- * None of them closes, so the window always has somewhere to be.
+ * The strip leads with two pinned tabs: Code, which follows the git surfaces
+ * the way a browser tab follows the address bar, and Sessions, the agent
+ * conversations. Neither closes, so the window always has somewhere to be.
  * Behind them sit the session tabs `+` opens — one chat each, closable and
  * reorderable, and unlike the editor's file strip never a preview slot.
  */
 
-export type WindowTabKind = "project" | "git" | "sessions" | "session";
+export type WindowTabKind = "project" | "sessions" | "session";
 
 export interface WindowTab {
   /** Stable across navigation, so a tab keeps its slot as its href changes. */

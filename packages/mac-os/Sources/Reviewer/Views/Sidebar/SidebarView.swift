@@ -5,10 +5,12 @@
 // them while the changes are your own — on an island floating beside the
 // rail (see `ContentView`), under the branch picker, which stands over the
 // tree the way the web header's does: the branch you are on is what the
-// tree beneath it is a tree of. The project picker sits on the toolbar; the
-// rail that moves the page between the surfaces stands beside the island
-// (see `AppRail`). The tree follows the page, and a file picked in the tree
-// is carried to the page.
+// tree beneath it is a tree of. On the sessions surface the island holds
+// the sessions list instead (see `SessionsList`) — every project's, so no
+// branch names it, and the picker stands down with the tree. The project
+// picker sits on the toolbar; the rail that moves the page between the
+// surfaces stands beside the island (see `AppRail`). The sidebar follows
+// the page, and a file or a session picked in it is carried to the page.
 import SwiftUI
 
 struct SidebarView: View {
@@ -16,7 +18,9 @@ struct SidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SidebarHeader()
+            if model.hasProject && model.sessions == nil {
+                SidebarHeader()
+            }
             if model.hasProject {
                 TreeColumn()
                     .frame(maxWidth: .infinity)
@@ -28,15 +32,12 @@ struct SidebarView: View {
 }
 
 /// The band along the island's top: the web header's 36pt around a 28pt
-/// chip, with the branch picker leading it.
+/// chip, with the branch picker leading it. Over the tree only — the
+/// sessions list is not one branch's.
 private struct SidebarHeader: View {
-    @Environment(AppModel.self) private var model
-
     var body: some View {
         HStack(spacing: 4) {
-            if model.hasProject {
-                BranchPicker()
-            }
+            BranchPicker()
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 4)
@@ -45,7 +46,8 @@ private struct SidebarHeader: View {
 }
 
 /// The layout for the surface the page is on — its tree, or its sessions
-/// — or nothing while the page reports neither: the git page.
+/// — or nothing while the page reports neither: the merge requests, a dock
+/// surface with the window to itself.
 private struct TreeColumn: View {
     @Environment(AppModel.self) private var model
 

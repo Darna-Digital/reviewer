@@ -43,13 +43,20 @@ final class AppModel {
     private(set) var sessions: ShellSessions?
     var sidebarShown = true
     var sidebarWidth: CGFloat = 280
-    var launchpadShown = false
+    /// The launchpad — out or in, how far it pushes the page, the pull
+    /// moving it — and the trackpad's ways into it, heard app-wide.
+    let launchpad = Launchpad()
+    @ObservationIgnored private var launchpadGestures: LaunchpadGestureMonitor?
     /// The last picture of each tab, taken as it was left, for the launchpad.
     private(set) var snapshots: [String: NSImage] = [:]
 
     var bottomExpanded = true
     var bottomTab: BottomPaneTab = .terminal
     var bottomHeight: CGFloat = 280
+    /// The git dock under the page island, as it last reported itself: the
+    /// other thing that can stand at the foot of the window, one at a time
+    /// with the pane above.
+    private(set) var dock: DockState = .down
 
     /// The SPA's routed page, with the window tabs along its top.
     let page: IslandHost
@@ -74,10 +81,18 @@ final class AppModel {
             guard let self, !search.isShown else { return }
             findFile()
         }
+        // Whichever way the launchpad is asked for — the chord, the button,
+        // a swipe, a seam pulled — the tab being left is photographed as it
+        // comes out, so its card shows the page as it was.
+        launchpad.onShow = { [weak self] in self?.snapshotActiveTab() }
+        launchpadGestures = LaunchpadGestureMonitor(launchpad: launchpad) { [weak self] gesture in
+            self?.hear(gesture)
+        }
         page.onWindowTabsReported = { [weak self] strip in self?.take(strip) }
         page.onTreeReported = { [weak self] listing in self?.sidebar.take(listing) }
         page.onTreeStateReported = { [weak self] state in self?.sidebar.take(state) }
         page.onSessionsReported = { [weak self] list in self?.sessions = list }
+        page.onDockReported = { [weak self] state in self?.take(dock: state) }
         page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
     }
 
@@ -135,21 +150,21 @@ final class AppModel {
     /// page already shows files — reading a pull request stays a review —
     /// and otherwise on the diff, which can show any file.
     func show(file: String, line: Int?) {
-        let base = CodeSurface.forHref(page.href) != nil ? page.href : Href.review
+        let base = CodeSurface.forHref(page.href)?.opensFiles == true ? page.href : Href.review
         showOnCodeTab(Href.file(file, line: line, on: base))
     }
 
     // MARK: search
 
     func findFile() {
-        guard hasProject, !launchpadShown else { return }
+        guard hasProject, !launchpad.isShown else { return }
         search.open(.files)
     }
 
     /// ⌘⇧F: the grep, opening on whatever the page has highlighted, so the
     /// chord over a word searches for it.
     func findInFiles() {
-        guard hasProject, !launchpadShown else { return }
+        guard hasProject, !launchpad.isShown else { return }
         Task {
             let selected = try? await page.webView.evaluateJavaScript("window.getSelection().toString()") as? String
             search.open(.text, seed: Self.seed(fromSelection: selected ?? ""))
@@ -244,6 +259,7 @@ final class AppModel {
         windowTabs = strip
         let open = Set(strip.tabs.map(\.id))
         snapshots = snapshots.filter { open.contains($0.key) }
+        launchpad.cards = strip.tabs.count
     }
 
     func newSession() {
@@ -276,8 +292,22 @@ final class AppModel {
     }
 
     func toggleLaunchpad() {
-        if !launchpadShown { snapshotActiveTab() }
-        launchpadShown.toggle()
+        guard hasProject else { return }
+        launchpad.toggle()
+    }
+
+    /// The trackpad over the bar, or over the panel — see
+    /// `LaunchpadGestureMonitor`. Nothing to lay out without a project, so
+    /// the gestures wait for one as the button and the chord do.
+    private func hear(_ gesture: LaunchpadGesture) {
+        guard hasProject else { return }
+        switch gesture {
+        case .swipeDown: launchpad.open()
+        case .swipeUp: launchpad.close()
+        case .pullBegan: launchpad.beginPull()
+        case .pulled(let travel): launchpad.pull(travel: travel)
+        case .pullEnded: launchpad.endPull()
+        }
     }
 
     /// Leaving a tab takes its picture first, so the launchpad shows it as
@@ -285,7 +315,7 @@ final class AppModel {
     /// the ask may have come from — is put away.
     private func leaveTab(_ switching: @escaping (IslandHost) -> Void) {
         let leaving = windowTabs.activeId
-        launchpadShown = false
+        launchpad.close()
         Task {
             snapshots[leaving] = try? await page.webView.takeSnapshot(configuration: nil)
             switching(page)
@@ -299,13 +329,20 @@ final class AppModel {
 
     // MARK: bottom pane
 
+    /// ⌘B: the pane put away, or brought back on the surface it was on —
+    /// and the island's dock down with that, the foot being one thing's.
     func toggleBottomPane() {
-        bottomExpanded.toggle()
+        if bottomExpanded {
+            bottomExpanded = false
+        } else {
+            show(bottomTab: bottomTab)
+        }
     }
 
     func show(bottomTab tab: BottomPaneTab) {
         bottomTab = tab
         bottomExpanded = true
+        if dock.isUp { page.send(DockAction.close) }
     }
 
     /// A rail button: the surface it names, or with that surface already
@@ -316,6 +353,25 @@ final class AppModel {
         } else {
             show(bottomTab: tab)
         }
+    }
+
+    // MARK: dock
+
+    /// A rail button for one of the dock's surfaces: the web rail's own
+    /// press, sent to the island that keeps the dock — it opens the surface,
+    /// or with that surface already up puts the drawer away — and the pane
+    /// put away first, so the two never stack at the foot of the window.
+    func toggle(dock surface: DockSurface) {
+        bottomExpanded = false
+        page.send(DockAction.pick(surface))
+    }
+
+    /// The island says what its dock shows. Up — by the rail, or by the page
+    /// itself, a find-usages opened from a file — it takes the foot of the
+    /// window from the pane.
+    private func take(dock state: DockState) {
+        dock = state
+        if state.isUp { bottomExpanded = false }
     }
 
 }

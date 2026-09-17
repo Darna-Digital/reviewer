@@ -1,7 +1,8 @@
 // The surfaces the bottom pane holds, both native: Terminal, the project's
 // terminal sessions, and Run, its dev commands. The rest of what the web
 // app's dock holds — branches, history, find usages — is the page's, drawn
-// under it inside the code island.
+// under it inside the code island and reached from the same rail; see
+// `DockSurface`.
 import Foundation
 
 enum BottomPaneTab: String, CaseIterable, Identifiable, Sendable {

@@ -10,7 +10,9 @@
 // surface (`sessions`, both ways); and the window tabs, which are the
 // island's own strip — reported as a picture (`windowTabs`) for the menu bar
 // to name, and asked things of by the menu items that claim the strip's
-// chords (`windowTabs`, the other way).
+// chords (`windowTabs`, the other way). And one more for the git dock the
+// code island keeps under its page: which surface is up (`dock`), for the
+// rail to light, and the rail's button pressed (`dock`, the other way).
 //
 // The web view is made once and kept for the life of the host: SwiftUI can
 // take it out of the hierarchy and put it back, and the page, its scroll and
@@ -32,6 +34,7 @@ final class IslandHost: NSObject {
     @ObservationIgnored var onTreeReported: ((ShellTree?) -> Void)?
     @ObservationIgnored var onTreeStateReported: ((ShellTreeState) -> Void)?
     @ObservationIgnored var onSessionsReported: ((ShellSessions?) -> Void)?
+    @ObservationIgnored var onDockReported: ((DockState) -> Void)?
 
     @ObservationIgnored private let source: SpaSource
     @ObservationIgnored private let apiBaseURL: URL
@@ -89,6 +92,12 @@ final class IslandHost: NSObject {
     func send(_ action: SessionAction) {
         guard isReady else { return }
         dispatch(["type": "sessions", "action": action.payload])
+    }
+
+    /// The native rail reached for the island's git dock — see `DockAction`.
+    func send(_ action: DockAction) {
+        guard isReady else { return }
+        dispatch(["type": "dock", "action": action.payload])
     }
 
     private func dispatch(_ event: [String: Any]) {
@@ -217,6 +226,9 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             return (nil, nil)
         case "sessions":
             onSessionsReported?(ShellSessions.decode(body["list"]))
+            return (nil, nil)
+        case "dock":
+            onDockReported?(DockState.decode(body["shown"]))
             return (nil, nil)
         default:
             return (nil, "unknown shell message: \(type)")

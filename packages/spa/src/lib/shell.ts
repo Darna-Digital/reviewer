@@ -31,7 +31,7 @@ import type { AppMode } from "@/lib/api/types";
 import type { DateFilter } from "@/lib/date-filter";
 import { islandBridge } from "@/lib/desktop";
 import { isPreviewWindow } from "@/lib/preview-window";
-import type { CommitAgent } from "@/lib/ui-prefs";
+import type { BottomTab, CommitAgent } from "@/lib/ui-prefs";
 import type { ChatProjectTally } from "@reviewer/core/chats";
 import type { CommitDraft } from "@reviewer/core/git-message";
 import type { GitStatusEntry } from "@reviewer/core/repo";
@@ -49,7 +49,9 @@ export type ShellEvent =
   /** The shell's own file tree was acted on — see `ShellTree`. */
   | { readonly type: "tree"; readonly action: ShellTreeAction }
   /** The shell's own sessions list was acted on — see `ShellSessions`. */
-  | { readonly type: "sessions"; readonly action: ShellSessionAction };
+  | { readonly type: "sessions"; readonly action: ShellSessionAction }
+  /** The shell's own rail reached for the git dock — see `ShellDockAction`. */
+  | { readonly type: "dock"; readonly action: ShellDockAction };
 
 /** Island → shell. */
 export type ShellIntent =
@@ -65,7 +67,11 @@ export type ShellIntent =
   | { readonly type: "treeState"; readonly state: ShellTreeState }
   /** The sessions list as the sessions surface holds it, for the shell to draw
    * in its sidebar; null once the page leaves the surface. */
-  | { readonly type: "sessions"; readonly list: ShellSessions | null };
+  | { readonly type: "sessions"; readonly list: ShellSessions | null }
+  /** The git dock's surface that is up — in the drawer under the page, or
+   * with the window to itself — for the shell's rail to light; null while
+   * the dock is down or the page has none. */
+  | { readonly type: "dock"; readonly shown: BottomTab | null };
 
 /**
  * The window tabs, as the shell draws them on its toolbar and names them in
@@ -239,6 +245,18 @@ export type ShellSessionAction =
       readonly project?: string;
       readonly date?: DateFilter;
     };
+
+/**
+ * What the shell's rail asks of the git dock, which stays the code island's
+ * — branches, history and find-usages are the page's to draw, under it, as
+ * `AppLayout` has them. The foot of the native rail presses the web rail's
+ * own buttons over the bridge (`pick`, see `pickDockTab`), and puts the dock
+ * away when the shell's own pane — its Terminal, its Run — takes the foot of
+ * the window instead (`close`), so one surface stands at the bottom at a time.
+ */
+export type ShellDockAction =
+  | { readonly kind: "pick"; readonly tab: BottomTab }
+  | { readonly kind: "close" };
 
 export interface ShellChannel {
   post: (intent: ShellIntent) => Promise<void>;

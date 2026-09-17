@@ -1,8 +1,9 @@
 // The rail: the column of icons down the leading edge of the window, the
 // web app's mode rail drawn natively. The code surfaces stand at its head
-// and the bottom pane's surfaces at its foot, the way the web rail splits
-// them, so the sidebar's tree and the page island both move from the same
-// column. It measures 36pt with a 28pt button in it — the web rail's own
+// and at its foot what can stand at the foot of the window — the git dock's
+// surfaces, which are the page island's drawer, and the bottom pane's, which
+// are native — the way the web rail splits them, so the sidebar's tree and
+// the page island both move from the same column. It measures 36pt with a 28pt button in it — the web rail's own
 // sizes — held off the window's edge by the islands' own gap, and stands on
 // the bare frame beside the sidebar's pane with no rule of its own: the
 // panel's edge is what parts it from the tree.
@@ -22,6 +23,12 @@ struct AppRail: View {
                 }
             }
             Spacer(minLength: 0)
+            ForEach(DockSurface.allCases) { surface in
+                RailButton(symbol: surface.symbol, title: surface.title,
+                           isOn: model.dock.surface == surface) {
+                    model.toggle(dock: surface)
+                }
+            }
             ForEach(BottomPaneTab.allCases) { tab in
                 RailButton(symbol: tab.symbol, title: tab.title,
                            isOn: model.bottomExpanded && model.bottomTab == tab) {

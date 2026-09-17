@@ -1,6 +1,6 @@
 /**
- * The window-tab strip: Code, Git and Sessions pinned, then the sessions lifted
- * into tabs of their own, and the ✛ that mints one.
+ * The window-tab strip: Code and Sessions pinned, then the sessions lifted into
+ * tabs of their own, and the ✛ that mints one.
  *
  * The one strip, drawn in two bars: the window bar in the browser and the
  * Electron window, and — natively, from the picture the island sends it — the

@@ -10,17 +10,14 @@ import type {
 } from "../interfaces/window-tabs.interfaces";
 
 export const PROJECT_TAB_ID = "pinned-project";
-export const GIT_TAB_ID = "pinned-git";
 export const SESSIONS_TAB_ID = "pinned-sessions";
 
 export const HOME_HREF = "/modes/code/review";
-export const GIT_HREF = "/modes/git";
 export const SESSIONS_HREF = "/modes/agent-session";
 /** `?new` holds the composer open instead of resuming the latest chat. */
 export const NEW_SESSION_HREF = "/modes/agent-session?new=true";
 
 const SESSIONS_PREFIX = "/modes/agent-session";
-const GIT_PREFIX = "/modes/git";
 /**
  * The collaboration prototype, kept as a reference.
  *
@@ -39,7 +36,6 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
   // the list as the diff view otherwise.
   ["/modes/code/reviews", "Merge requests"],
   ["/modes/code/review", "Review"],
-  [GIT_PREFIX, "Git"],
   // The dock's surfaces, when one of them is the whole page. Named where they
   // are named everywhere else, so a card, a tab and a trail agree.
   ...dockPages.map((page): readonly [string, string] => [
@@ -66,18 +62,6 @@ const SESSIONS_TAB: WindowTab = {
   kind: "sessions",
 };
 
-/**
- * Git keeps its place like Code does — the tab you were on, the history
- * filter you had set — but is named for the mode rather than for the surface,
- * since its surfaces are its own tabs.
- */
-const GIT_TAB: WindowTab = {
-  id: GIT_TAB_ID,
-  href: GIT_HREF,
-  title: "Git",
-  kind: "git",
-};
-
 const PINNED_TABS: ReadonlyArray<WindowTab> = [
   {
     id: PROJECT_TAB_ID,
@@ -85,7 +69,6 @@ const PINNED_TABS: ReadonlyArray<WindowTab> = [
     title: tabTitle(HOME_HREF),
     kind: "project",
   },
-  GIT_TAB,
   SESSIONS_TAB,
 ];
 
@@ -114,8 +97,6 @@ const firstSessionSlot = (tabs: ReadonlyArray<WindowTab>): number =>
 
 const inSessions = (pathname: string): boolean =>
   pathname.startsWith(SESSIONS_PREFIX);
-
-const inGit = (pathname: string): boolean => pathname.startsWith(GIT_PREFIX);
 
 /** Whether a location is the prototype's, which no tab in the strip holds. */
 const inExperimentation = (pathname: string): boolean =>
@@ -146,7 +127,6 @@ function ownsLocation(tab: WindowTab, pathname: string): boolean {
   if (pathname.startsWith(LEGACY_COLLABORATION_PREFIX)) return false;
   if (inExperimentation(pathname)) return false;
   if (inSessions(pathname)) return tab.kind === "sessions";
-  if (inGit(pathname)) return tab.kind === "git";
   return tab.kind === "project";
 }
 
@@ -231,11 +211,7 @@ function tabForLocation(
   const sessions = inSessions(pathname);
   if (current !== null && current.kind === "session" && sessions)
     return current;
-  const owner = sessions
-    ? SESSIONS_TAB_ID
-    : inGit(pathname)
-      ? GIT_TAB_ID
-      : PROJECT_TAB_ID;
+  const owner = sessions ? SESSIONS_TAB_ID : PROJECT_TAB_ID;
   return state.tabs.find((tab) => tab.id === owner) ?? null;
 }
 

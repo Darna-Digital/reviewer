@@ -20,21 +20,30 @@
  * The code island keeps the git dock too, under the page as `AppLayout` has
  * it: branches, history and find-usages are the page's to draw, while the
  * terminal and the run surfaces are the shell's, drawn natively in its own
- * pane — see `BottomPanel`.
+ * pane — see `BottomPanel`. The shell's rail reaches the dock the way the
+ * web rail does, over the bridge, and is told which surface is up so it can
+ * light the button — see `useShellDock`.
  *
  * The one thing it does that `AppLayout` never has to is talk to the shell:
  * go where the shell says, say where it went, and re-ask for everything when
  * the shell says something changed. See `lib/shell`.
  */
 import { useQueryClient } from "@tanstack/react-query";
-import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
+import {
+  Outlet,
+  useNavigate,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
 import { useEffect } from "react";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
+import { closeDock, pickDockTab } from "@/components/layout/dock-expansion";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
 import { IslandBar } from "@/components/layout/island-bar";
 import { useWorkspace } from "@/lib/queries";
 import { type Island, shell } from "@/lib/shell";
 import { shellRoute, showsGitChrome } from "@/lib/shell-route";
+import { type BottomTab, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
 export function IslandLayout({ island }: { island: Island }) {
@@ -81,6 +90,11 @@ function CodePage() {
   const expandedTab =
     route.kind === "dock" && current !== null ? route.tab : undefined;
   const dockShown = current !== null && showsGitChrome(route);
+  const prefs = useUiPrefs();
+  useShellDock(
+    expandedTab ?? (dockShown && prefs.bottomVisible ? prefs.bottomTab : null),
+    expandedTab ?? null
+  );
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-hidden">
@@ -94,6 +108,39 @@ function CodePage() {
       </div>
       {dockShown && <GitBottomDock expandedTab={expandedTab} />}
     </div>
+  );
+}
+
+/**
+ * The dock, as the shell's rail sees it and presses it: `shown` is the
+ * surface that is up — in the drawer, or with the window to it — reported
+ * whenever it changes, and a button pressed on the native rail comes back as
+ * a `dock` event to answer with the web rail's own moves.
+ */
+function useShellDock(
+  shown: BottomTab | null,
+  expandedTab: BottomTab | null
+): void {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    void shell.post({ type: "dock", shown });
+  }, [shown]);
+
+  useEffect(
+    () =>
+      shell.subscribe((event) => {
+        if (event.type !== "dock") return;
+        switch (event.action.kind) {
+          case "pick":
+            pickDockTab(navigate, event.action.tab, expandedTab);
+            return;
+          case "close":
+            closeDock(navigate, expandedTab);
+            return;
+        }
+      }),
+    [navigate, expandedTab]
   );
 }
 

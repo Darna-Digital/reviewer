@@ -115,6 +115,13 @@ enum Wire {
         else { return nil }
         return try? JSONDecoder().decode(T.self, from: data)
     }
+
+    /// The server's timestamps — ISO 8601, with the fraction JavaScript's
+    /// `toISOString` writes, or without one.
+    static func date(_ iso: String) -> Date? {
+        let fractional = Date.ISO8601FormatStyle(includingFractionalSeconds: true)
+        return (try? fractional.parse(iso)) ?? (try? Date.ISO8601FormatStyle().parse(iso))
+    }
 }
 
 @MainActor

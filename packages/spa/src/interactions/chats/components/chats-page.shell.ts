@@ -178,7 +178,9 @@ export function useShellSessions(source: ShellSessionsSource | null): void {
           return current.search(action.text);
         case "filter":
           return setChatFilters({
-            ...(action.project === undefined ? {} : { project: action.project }),
+            ...(action.project === undefined
+              ? {}
+              : { project: action.project }),
             ...(action.date === undefined ? {} : { date: action.date }),
           });
       }

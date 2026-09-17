@@ -77,12 +77,6 @@ interface BottomPanelProps {
    * so the page wears the trail every other page in code mode wears instead.
    */
   expanded: boolean;
-  /**
-   * Neither strip nor trail: the surface alone, for a host that draws its own
-   * way of choosing between them — the macOS shell's bottom pane, where the
-   * dock is an island and the tabs are native. See `IslandLayout`.
-   */
-  chromeless?: boolean;
   onTabChange: (tab: BottomTab) => void;
   onCollapse: () => void;
   /** Give this surface the window. */
@@ -146,7 +140,7 @@ export function BottomPanel(props: BottomPanelProps) {
 
   return (
     <div className="flex h-full flex-col gap-0">
-      {props.chromeless ? null : props.expanded ? (
+      {props.expanded ? (
         <PageTrail tab={props.tab} />
       ) : (
         <div className="flex h-9 shrink-0 items-center border-b border-hairline px-1">
