@@ -8,8 +8,11 @@ showing one part of the SPA.
 
 What it does today:
 
-- **Native sidebar** — the code page's file tree as a native outline on an
-  island floating beside the rail, in the web sidebar's two layouts:
+- **Native sidebar** — the system's own sidebar, the full-height column of
+  glass running up to the window's top edge with the traffic lights and
+  the sidebar toggle inside it, as Music has it, and the rail down its
+  leading edge, holding the code page's file
+  tree as a native outline in the web sidebar's two layouts:
   the project's files while browsing, and on a diff the changed files under
   a search, badged and tinted by git status, with the commit composer under
   them while the changes are your own. The rows wear @pierre/trees' own
@@ -26,10 +29,11 @@ What it does today:
   the web card's preview as a popover — the tail of the conversation, its
   count and project; the context menu lifts it into a tab of its own or
   deletes it, and the foot of the list fetches the next page.
-- **Islands** — the window is laid out as rounded panels standing a few
-  points apart on the web app's frame colour: the sidebar, the page island
-  and the bottom pane, with seams between them that resize the
-  sidebar and the pane (⌃⌘S puts the sidebar away). The toolbar and the
+- **Islands** — beside the sidebar the window is laid out as rounded
+  panels standing a few points apart on the web app's frame colour: the
+  page island and the bottom pane, with a seam between them that resizes
+  the pane; the sidebar's own edge resizes it, and its toggle or ⌃⌘S puts
+  it away, when the rail moves out onto the frame beside the page. The toolbar and the
   rail are the bare window around them.
 - **Window tabs** — the web app's own strip, drawn natively on the toolbar:
   Code and Sessions pinned, then one per agent session (⌘T mints one;
@@ -46,29 +50,46 @@ What it does today:
   edge. That edge is a seam: pull it down from the top of the page to draw
   the panel out under the pointer, pull it up to shrink it, and far enough
   to put it away. The trackpad does the same on the toolbar — two fingers
-  drawn down it pull the panel out live, a three-finger swipe down flings
-  it open and a swipe up closes it (`LaunchpadGestureMonitor`; vertical
-  three-finger swipes only reach the app when Mission Control and App
-  Exposé are on four fingers in System Settings).
+  drawn down it pull the panel out live, and three fingers pull it the same
+  way — read off the trackpad's own touches, since the system makes no
+  event of a vertical three-finger swipe — and let go of, fling it the rest
+  of the way open or shut (`LaunchpadGestureMonitor`; three vertical
+  fingers are free for the app only while Mission Control and App Exposé
+  are on four fingers in System Settings).
 - **Page island** — the SPA's routed page, with the window's own chrome and
   file tree off: the diff, the file view, review comments, edit mode, the
   merge requests, the sessions surface, with its open-file strip along its
-  top — and under it the web app's git dock, as the web layout has it:
-  Branches and History as a drawer under the page, or with the window to
-  themselves. The rail's foot reaches them the way the web rail does, over
-  the bridge, and lights up from what the island reports back; find usages
-  is the page's own, opened from a file.
-- **Bottom pane** (⌘B) — laid out like Xcode's debug area: a bar with a
-  segmented switch between its two native surfaces, then a source list
-  beside a detail column. It shares the foot of the window with the dock
-  above — one of them up at a time, whichever the rail was last pressed
-  for. Terminal is the project's terminal sessions
-  (SwiftTerm over the server's PTY sockets): a filtered list with open and
-  close in its footer, and the selected shell under a bar that names it and
-  its branch and renames it in place. Run is the project's dev commands: a
-  status dot and a run/stop mark on each row, add, remove, start-all and
-  stop-all in the footer, and the selected command's output under a bar
-  with its command line, its state and play/stop/restart.
+  top. The one drawer it keeps under the page is find usages, which is
+  opened from a symbol in the page's own code; it takes the foot of the
+  window from the bottom pane while it is up, and is put away when the
+  pane takes it back.
+- **Bottom pane** (⌘B) — the web app's dock, drawn natively: a bar with a
+  segmented switch between its four surfaces, in the web strip's order,
+  laid out like Xcode's debug area — a bar along the top, a list, a detail
+  column. Branches is the web branches dock: a search over every branch,
+  then Recent, Local folded by folder and Remote folded by remote, the
+  branch you are on starred and the others carrying their distance from
+  upstream, each root of a multi-root project under a header of its own;
+  a double-click checks out, the context menu is the switcher's, and the
+  empty space under the rows has the surface's own — new branch, update,
+  push. History is the web history dock: the filter bar — the branch the
+  log follows, or the root it is narrowed to; the file it is narrowed to;
+  a text or hash with the regex and case toggles; an author; a date to
+  start from — over the commits, each row its lane in the graph, its
+  refs, its subject, its author and its date, paged in as the list nears
+  its end (`/api/log`, or `/api/project/log` merged across a multi-root
+  project). A commit picked opens on the page and stands beside the list
+  in full — subject, body, sha, author, date, refs, and the files it
+  touched as a tree wearing the @pierre/trees icons, a file picked opening
+  the commit's diff on it. "Show History" — the tree's menu, the page's
+  path bar — lands here narrowed to that file. Terminal is the project's
+  terminal sessions (SwiftTerm over the server's PTY sockets): a filtered
+  list with open and close in its footer, and the selected shell under a
+  bar that names it and its branch and renames it in place. Run is the
+  project's dev commands: a status dot and a run/stop mark on each row,
+  add, remove, start-all and stop-all in the footer, and the selected
+  command's output under a bar with its command line, its state and
+  play/stop/restart.
 - **Search** — the web app's palette as a Liquid Glass pane over the page:
   ⇧⇧ or ⌘⇧O finds a file by name (the same fuzzy match, capped the same),
   ⌘⇧F greps the working tree through the server (`/api/search`, or the
@@ -89,10 +110,10 @@ routes and URLs, so the shell steers an island with the hrefs the app already
 uses. The contract is small and lives in `packages/spa/src/lib/shell.ts`:
 
 - shell → island: `navigate(href)`, `refresh`, `windowTabs(action)`,
-  `tree(action)`, `sessions(action)`, `dock(action)`
+  `tree(action)`, `sessions(action)`, `dock(close)`
 - island → shell: `ready`, `navigated(href)`, `windowTabs(strip)`,
   `tree(listing)`, `treeState(selection, commit composer)`, `sessions(list)`,
-  `dock(shown)`
+  `dock(shown)`, `history(path)`
 
 The tree and sessions pairs are the chrome the code island reports for the
 shell to draw natively in its sidebar: the file tree on the code pages
@@ -109,11 +130,13 @@ the project, where the code surface points — lives in `AppModel`, and the
 shell is the one that navigates between them. A native control reaching for a
 code surface — the rail, a search result, a commit in the history — sends the
 page island to that address, and the strip hands the window to the Code tab
-as the page arrives, the way it does for a link. The dock pair is the git
-dock the code island keeps under its page: the island says which surface is
-up, and the rail's Branches and History press the web rail's own button back
-over the bridge (`pickDockTab`), or put the dock away when the native pane
-takes the foot of the window. One island is hosted today: the page (`code`).
+as the page arrives, the way it does for a link. The dock pair is the
+find-usages drawer the code island keeps under its page: the island says
+when it is up, so the native pane leaves the foot of the window to it, and
+the pane puts it away when it takes the foot back. `history(path)` runs the
+other way: the page's own "Show history" — its path bar, a file's tab —
+asks the shell, whose History surface answers. One island is hosted today:
+the page (`code`).
 
 Where the documents come from is `SpaSource`: a debug build takes the Vite
 dev server on `:41812` (HMR inside the native window); a release build takes
@@ -163,7 +186,7 @@ Sources/Reviewer/
   ReviewerApp.swift      @main, menu commands, app delegate
   Server/ServerLauncher  reachability check + spawn of the embedded server
   Api/                   Codable mirrors of the core schemas, HTTP client, chat socket
-  State/                 AppModel, WindowTab, BottomPaneTab, DockSurface, FileTree, SidebarTree, SidebarSessions, QuickSearch (+ the ⇧⇧ monitor)
+  State/                 AppModel, WindowTab, BottomPaneTab, DockSurface, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, QuickSearch (+ the ⇧⇧ monitor)
   FileIcons/             FileIcon (resolver + rasteriser) over the generated @pierre/trees sprite
   Islands/               IslandHost (web view + bridge), SpaSource, SpaSchemeHandler, IslandView
   Terminal/              TerminalSession — the shell behind the Terminal surface

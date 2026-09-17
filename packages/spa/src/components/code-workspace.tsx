@@ -63,7 +63,7 @@ import { EmptyPane } from "@/components/layout/empty-pane";
 import { NoPullRequests, NoReviewRemote } from "@/components/git/review-empty";
 import { PathBar } from "@/components/layout/path-bar";
 import { reviewSourceOf } from "@/lib/shell-route";
-import { island } from "@/lib/shell";
+import { island, shell } from "@/lib/shell";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useHeaderLead } from "@/components/layout/header-lead";
@@ -688,8 +688,13 @@ export function CodeWorkspace() {
   }, [revealRequest, search.file]);
 
   // Show one file's past: the log filters down to it (following renames) and
-  // the dock swings open on History.
+  // the dock swings open on History — the shell's own History, when this is
+  // an island, since the drawer under it holds no history there.
   const showFileHistory = (path: string) => {
+    if (island !== undefined) {
+      void shell.post({ type: "history", path });
+      return;
+    }
     setHistoryQuery(fileHistoryQuery(path));
     openBottomTab("history");
   };

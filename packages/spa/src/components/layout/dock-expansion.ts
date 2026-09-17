@@ -57,9 +57,6 @@ export function keepDockDrawer(tab: BottomTab) {
  * dropping the window back into the drawer for every click; the one you are
  * already on is the click that puts it down. `expandedTab` is that surface,
  * or null while the dock is a drawer.
- *
- * The web rail's and the macOS shell's alike: the native rail presses the
- * same button over the bridge — see `lib/shell`.
  */
 export function pickDockTab(
   navigate: Navigate,
@@ -82,7 +79,7 @@ export function pickDockTab(
 /**
  * The dock put away, whichever shape it is in: a page goes back to where it
  * was expanded from, and the drawer shuts. What the macOS shell asks when its
- * own pane takes the foot of the window.
+ * own pane takes the foot of the window from the find-usages drawer.
  */
 export function closeDock(navigate: Navigate, expandedTab: BottomTab | null) {
   if (expandedTab !== null) navigate({ href: cameFrom });

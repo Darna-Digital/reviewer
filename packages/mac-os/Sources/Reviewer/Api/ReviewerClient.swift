@@ -45,6 +45,13 @@ struct ReviewerClient: Sendable {
         try await send("POST", "/api/workspace", body: SetWorkspace(path: path))
     }
 
+    /// Follow another of the project's roots: every git view reads from the
+    /// current one, so a branch or a commit of another root is reached by
+    /// following that root first.
+    func selectRepo(path: String) async throws -> WorkspaceInfo {
+        try await send("POST", "/api/workspace/repo", body: SetWorkspace(path: path))
+    }
+
     func files() async throws -> FilesPayload {
         try await get("/api/files")
     }
@@ -124,6 +131,36 @@ struct ReviewerClient: Sendable {
 
     func remoteBranches() async throws -> [RemoteBranchInfo] {
         try await get("/api/remote-branches")
+    }
+
+    func projectBranches() async throws -> ProjectBranches {
+        try await get("/api/project/branches")
+    }
+
+    // MARK: history
+
+    /// One page of the log, `skip` commits in: `ref`'s ancestry, or every
+    /// ref's for `allRefs`, narrowed by `query`.
+    func log(ref: String, query: LogQuery, skip: Int, limit: Int) async throws -> [CommitInfo] {
+        try await get("/api/log", query: logParameters(ref: ref, query: query, skip: skip, limit: limit))
+    }
+
+    /// One page of the project's merged history — every root's, each commit
+    /// saying which — for a project of several.
+    func projectLog(query: LogQuery, skip: Int, limit: Int) async throws -> ProjectLog {
+        try await get("/api/project/log", query: logParameters(ref: "HEAD", query: query, skip: skip, limit: limit))
+    }
+
+    func commitDetail(sha: String) async throws -> CommitDetail {
+        try await get("/api/commit/\(sha)")
+    }
+
+    private func logParameters(ref: String, query: LogQuery, skip: Int, limit: Int) -> [String: String] {
+        var parameters = query.queryItems
+        parameters["ref"] = ref
+        parameters["limit"] = String(limit)
+        if skip > 0 { parameters["skip"] = String(skip) }
+        return parameters
     }
 
     func checkout(branch: String) async throws {

@@ -17,12 +17,13 @@
  * over the window, wearing the pictures it takes of the page — so neither is
  * drawn in here.
  *
- * The code island keeps the git dock too, under the page as `AppLayout` has
- * it: branches, history and find-usages are the page's to draw, while the
- * terminal and the run surfaces are the shell's, drawn natively in its own
- * pane — see `BottomPanel`. The shell's rail reaches the dock the way the
- * web rail does, over the bridge, and is told which surface is up so it can
- * light the button — see `useShellDock`.
+ * The code island keeps one of the dock's surfaces too, under the page as
+ * `AppLayout` has it: find usages, opened from a symbol in the page's own
+ * code. Branches, history, the terminal and the run surfaces are the shell's,
+ * drawn natively in its own pane — see `BottomPanel`. The shell is told when
+ * the drawer is up, so its pane can leave the foot of the window to it, and
+ * puts the drawer away when the pane takes the foot back — see
+ * `useShellDock`.
  *
  * The one thing it does that `AppLayout` never has to is talk to the shell:
  * go where the shell says, say where it went, and re-ask for everything when
@@ -37,8 +38,9 @@ import {
 } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
-import { closeDock, pickDockTab } from "@/components/layout/dock-expansion";
+import { closeDock } from "@/components/layout/dock-expansion";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
+import { nativeInShell } from "@/components/layout/bottom-panel";
 import { IslandBar } from "@/components/layout/island-bar";
 import { useWorkspace } from "@/lib/queries";
 import { type Island, shell } from "@/lib/shell";
@@ -76,9 +78,11 @@ function CodeIsland() {
 }
 
 /**
- * The page with the git dock under it, the shape `AppLayout` gives the git
- * surfaces: a drawer on the code pages, and on one of the dock's own pages
- * the whole canvas, with the outlet put away behind it rather than unmounted.
+ * The page with the find-usages drawer under it, the shape `AppLayout` gives
+ * the git surfaces: a drawer on the code pages, and on one of the dock's own
+ * pages the whole canvas, with the outlet put away behind it rather than
+ * unmounted. Only the drawer's own surface counts as up: a preference left on
+ * one the shell draws itself — its History, its Terminal — opens nothing here.
  */
 function CodePage() {
   const pathname = useRouterState({
@@ -91,10 +95,11 @@ function CodePage() {
     route.kind === "dock" && current !== null ? route.tab : undefined;
   const dockShown = current !== null && showsGitChrome(route);
   const prefs = useUiPrefs();
-  useShellDock(
-    expandedTab ?? (dockShown && prefs.bottomVisible ? prefs.bottomTab : null),
-    expandedTab ?? null
-  );
+  const drawerTab =
+    dockShown && prefs.bottomVisible && !nativeInShell(prefs.bottomTab)
+      ? prefs.bottomTab
+      : null;
+  useShellDock(expandedTab ?? drawerTab, expandedTab ?? null);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-hidden">
@@ -112,10 +117,10 @@ function CodePage() {
 }
 
 /**
- * The dock, as the shell's rail sees it and presses it: `shown` is the
- * surface that is up — in the drawer, or with the window to it — reported
- * whenever it changes, and a button pressed on the native rail comes back as
- * a `dock` event to answer with the web rail's own moves.
+ * The dock, as the shell sees it: `shown` is the surface that is up — in the
+ * drawer, or with the window to it — reported whenever it changes, and the
+ * shell's own pane taking the foot of the window comes back as a `dock` event
+ * that puts the drawer away.
  */
 function useShellDock(
   shown: BottomTab | null,
@@ -132,9 +137,6 @@ function useShellDock(
       shell.subscribe((event) => {
         if (event.type !== "dock") return;
         switch (event.action.kind) {
-          case "pick":
-            pickDockTab(navigate, event.action.tab, expandedTab);
-            return;
           case "close":
             closeDock(navigate, expandedTab);
             return;

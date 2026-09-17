@@ -1,11 +1,14 @@
-// The surfaces the bottom pane holds, both native: Terminal, the project's
-// terminal sessions, and Run, its dev commands. The rest of what the web
-// app's dock holds — branches, history, find usages — is the page's, drawn
-// under it inside the code island and reached from the same rail; see
-// `DockSurface`.
+// The surfaces the bottom pane holds, all native, in the order the web
+// app's dock strip has them: Branches, the repository's branches and what
+// can be done to them; History, its commit log; Terminal, the project's
+// terminal sessions; and Run, its dev commands. The one surface of the web
+// dock not here — find usages — stays the page's, drawn under it inside the
+// code island; see `DockSurface`.
 import Foundation
 
 enum BottomPaneTab: String, CaseIterable, Identifiable, Sendable {
+    case branches
+    case history
     case terminal
     case run
 
@@ -13,6 +16,8 @@ enum BottomPaneTab: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
+        case .branches: return "Branches"
+        case .history: return "History"
         case .terminal: return "Terminal"
         case .run: return "Run"
         }
@@ -20,6 +25,8 @@ enum BottomPaneTab: String, CaseIterable, Identifiable, Sendable {
 
     var symbol: String {
         switch self {
+        case .branches: return "arrow.triangle.branch"
+        case .history: return "clock.arrow.circlepath"
         case .terminal: return "terminal"
         case .run: return "play.circle"
         }

@@ -89,6 +89,15 @@ enum Href {
     static let reviews = "/modes/code/reviews"
     static let browsePath = "/modes/code/browse"
 
+    /// One commit's diff, read on the browse page — on `path`'s own diff,
+    /// when one is named.
+    static func commit(_ sha: String, path: String?) -> String {
+        var components = URLComponents()
+        components.path = "\(browsePath)/commit/\(sha)"
+        if let path { components.queryItems = [URLQueryItem(name: "path", value: path)] }
+        return components.string ?? "\(browsePath)/commit/\(sha)"
+    }
+
     /// `href` showing `path` — at `line`, when there is one — the way the
     /// web app's search opens a result: the page's own address with the
     /// file named in its query, whatever else the query already held.

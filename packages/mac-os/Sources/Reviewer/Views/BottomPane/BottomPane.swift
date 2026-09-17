@@ -1,10 +1,12 @@
-// The bottom pane: a bar with a segmented switch between its two surfaces
-// — the Terminal and the Run — and the mark that puts the pane away, then
-// the surface beneath, the way Xcode's debug area is laid out. The rail
-// reaches the same surfaces (see `AppRail`); the switch here is for when
-// the pane is already up. The window decides whether the pane is shown and
-// how tall it stands, and resizes it by the seam above it. Put away, the
-// pane leaves nothing behind; the shells behind the Terminal keep running.
+// The bottom pane: a bar with a segmented switch between its four surfaces
+// — Branches, History, Terminal and Run, the web dock's own strip — and the
+// mark that puts the pane away, then the surface beneath, the way Xcode's
+// debug area is laid out. The rail reaches the same surfaces (see
+// `AppRail`); the switch here is for when the pane is already up. The
+// window decides whether the pane is shown and how tall it stands, and
+// resizes it by the seam above it. Put away, the pane leaves nothing
+// behind; the shells behind the Terminal keep running, and the history
+// keeps its place.
 import SwiftUI
 
 struct BottomPane: View {
@@ -42,6 +44,10 @@ struct BottomPane: View {
     @ViewBuilder
     private var content: some View {
         switch model.bottomTab {
+        case .branches:
+            BranchesPane()
+        case .history:
+            HistoryPane()
         case .terminal:
             TerminalPane()
         case .run:

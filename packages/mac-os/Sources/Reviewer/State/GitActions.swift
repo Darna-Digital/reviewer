@@ -28,6 +28,48 @@ struct BranchRef: Hashable, Sendable {
     }
 }
 
+/// Branches under the folder their names share — `feature/x` and
+/// `feature/y` under `feature` — the way the switcher folds them.
+struct BranchFolder {
+    let name: String?
+    let items: [BranchRef]
+}
+
+extension BranchRef {
+    /// The part of the name before its first slash, when it has one.
+    var folder: String? {
+        display.contains("/") ? String(display.prefix { $0 != "/" }) : nil
+    }
+
+    /// The name with its folder taken off, for a row already under it.
+    var leaf: String {
+        folder == nil ? display : String(display.drop { $0 != "/" }.dropFirst())
+    }
+}
+
+extension Array where Element == BranchRef {
+    /// Folded by folder, in the order the server listed them.
+    func groupedByFolder() -> [BranchFolder] {
+        var order: [String?] = []
+        var grouped: [String?: [BranchRef]] = [:]
+        for branch in self {
+            let folder = branch.folder
+            if grouped[folder] == nil { order.append(folder) }
+            grouped[folder, default: []].append(branch)
+        }
+        return order.map { BranchFolder(name: $0, items: grouped[$0] ?? []) }
+    }
+}
+
+/// Where a branch action runs, for a project of several roots: the root
+/// the branch belongs to — nil for the one the git views already follow —
+/// and the branch that root is on, which compare, merge and rebase are
+/// worded against.
+struct BranchScope: Hashable, Sendable {
+    let repoPath: String?
+    let head: String
+}
+
 /// What the picker asks before it acts: a name for a branch, a new name, or
 /// a yes to a deletion.
 enum BranchPrompt: Identifiable, Equatable {
@@ -54,8 +96,10 @@ extension AppModel {
     func loadBranches() async {
         async let local = client.branches()
         async let remote = client.remoteBranches()
+        async let project = client.projectBranches()
         branches = (try? await local) ?? []
         remoteBranches = (try? await remote) ?? []
+        projectBranches = (workspace?.repos.count ?? 0) > 1 ? (try? await project)?.repos ?? [] : []
     }
 
     // MARK: actions
@@ -117,6 +161,21 @@ extension AppModel {
             components.path = Href.review
             components.queryItems = [URLQueryItem(name: "target", value: target)]
             showOnCodeTab(components.string ?? Href.review)
+        }
+    }
+
+    /// `action`, in the root at `path`: run outright when that is the root
+    /// the git views follow, otherwise once that root has been followed —
+    /// every git call reads from the current root, so a branch of another
+    /// is acted on by going there first.
+    func inRepo(_ path: String?, _ action: @escaping () -> Void) {
+        guard let path, path != workspace?.current else {
+            action()
+            return
+        }
+        Task {
+            guard await follow(repo: path) else { return }
+            action()
         }
     }
 

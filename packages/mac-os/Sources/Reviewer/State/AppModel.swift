@@ -30,6 +30,8 @@ final class AppModel {
     var status: RepoStatus?
     var branches: [BranchInfo] = []
     var remoteBranches: [RemoteBranchInfo] = []
+    /// Every root's branches, for a project of several; empty otherwise.
+    var projectBranches: [RepoBranches] = []
     var branchPrompt: BranchPrompt?
     var lastError: String?
 
@@ -41,8 +43,9 @@ final class AppModel {
     /// The sessions list, as the page last reported it — while it is on the
     /// sessions surface, where the sidebar draws this in the tree's place.
     private(set) var sessions: ShellSessions?
+    /// Whether the system's sidebar column is out; the split view's own
+    /// toggle and the View menu both move it.
     var sidebarShown = true
-    var sidebarWidth: CGFloat = 280
     /// The launchpad — out or in, how far it pushes the page, the pull
     /// moving it — and the trackpad's ways into it, heard app-wide.
     let launchpad = Launchpad()
@@ -53,15 +56,18 @@ final class AppModel {
     var bottomExpanded = true
     var bottomTab: BottomPaneTab = .terminal
     var bottomHeight: CGFloat = 280
-    /// The git dock under the page island, as it last reported itself: the
-    /// other thing that can stand at the foot of the window, one at a time
-    /// with the pane above.
+    /// The find-usages drawer under the page island, as it last reported
+    /// itself: the other thing that can stand at the foot of the window,
+    /// one at a time with the pane above.
     private(set) var dock: DockState = .down
 
     /// The SPA's routed page, with the window tabs along its top.
     let page: IslandHost
     let threads: Threads
     let services: DevServices
+    /// The bottom pane's History: the commit log, its filters and the
+    /// commit picked out of it.
+    let history: CommitHistory
     /// The search dialog — a file by name, or a grep of the working tree.
     let search: QuickSearch
     @ObservationIgnored private var shiftTaps: ShiftTapMonitor?
@@ -72,6 +78,7 @@ final class AppModel {
         page = IslandHost(kind: .code, href: Href.review, source: source, apiBaseURL: client.baseURL)
         services = DevServices(client: client)
         threads = Threads(client: client)
+        history = CommitHistory(client: client)
         search = QuickSearch(client: client)
         search.onOpen = { [weak self] path, line in self?.show(file: path, line: line) }
         // The web app keeps the gesture out of its inputs; here the one
@@ -93,6 +100,7 @@ final class AppModel {
         page.onTreeStateReported = { [weak self] state in self?.sidebar.take(state) }
         page.onSessionsReported = { [weak self] list in self?.sessions = list }
         page.onDockReported = { [weak self] state in self?.take(dock: state) }
+        page.onHistoryRequested = { [weak self] path in self?.showHistory(of: path) }
         page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
     }
 
@@ -131,9 +139,12 @@ final class AppModel {
             status = nil
             branches = []
             remoteBranches = []
+            projectBranches = []
+            history.projectChanged(repos: [], head: nil)
             return
         }
         status = try? await client.repoStatus()
+        history.projectChanged(repos: workspace?.repos ?? [], head: status?.branch)
         await loadBranches()
         await services.load()
         await threads.load()
@@ -195,8 +206,14 @@ final class AppModel {
         showOnCodeTab(surface.href)
     }
 
-    /// The sidebar acted on a row of the page's tree — see `TreeAction`.
+    /// The sidebar acted on a row of the page's tree — see `TreeAction`. A
+    /// file's history is the pane's own to show; everything else is the
+    /// page's to carry out.
     func act(onTree action: TreeAction) {
+        if case .history(let path) = action {
+            showHistory(of: path)
+            return
+        }
         page.send(action)
     }
 
@@ -205,10 +222,6 @@ final class AppModel {
     /// file picked in the tree is carried to the page.
     func act(onSessions action: SessionAction) {
         page.send(action)
-    }
-
-    func toggleSidebar() {
-        sidebarShown.toggle()
     }
 
 
@@ -302,11 +315,10 @@ final class AppModel {
     private func hear(_ gesture: LaunchpadGesture) {
         guard hasProject else { return }
         switch gesture {
-        case .swipeDown: launchpad.open()
-        case .swipeUp: launchpad.close()
         case .pullBegan: launchpad.beginPull()
         case .pulled(let travel): launchpad.pull(travel: travel)
         case .pullEnded: launchpad.endPull()
+        case .flung(let down): launchpad.fling(down: down)
         }
     }
 
@@ -355,20 +367,54 @@ final class AppModel {
         }
     }
 
-    // MARK: dock
+    // MARK: history
 
-    /// A rail button for one of the dock's surfaces: the web rail's own
-    /// press, sent to the island that keeps the dock — it opens the surface,
-    /// or with that surface already up puts the drawer away — and the pane
-    /// put away first, so the two never stack at the foot of the window.
-    func toggle(dock surface: DockSurface) {
-        bottomExpanded = false
-        page.send(DockAction.pick(surface))
+    /// One file's past, from wherever it is asked for — the tree's menu, the
+    /// page's own path bar: the History surface up, narrowed to that file.
+    func showHistory(of path: String) {
+        history.show(historyOf: path)
+        show(bottomTab: .history)
     }
 
-    /// The island says what its dock shows. Up — by the rail, or by the page
-    /// itself, a find-usages opened from a file — it takes the foot of the
-    /// window from the pane.
+    /// A commit picked out of the history: the page on its diff. In a project
+    /// of several roots the commit may belong to one that is not current, so
+    /// that root is followed first — every git view reads from the current
+    /// one, and a sha means nothing to the wrong one. A history narrowed to
+    /// a file opens the commit on that file.
+    func show(commit: CommitInfo) {
+        Task {
+            if let owner = history.owners[commit.sha], owner.path != workspace?.current {
+                guard await follow(repo: owner.path) else { return }
+            }
+            showOnCodeTab(Href.commit(commit.sha, path: history.query.path))
+        }
+    }
+
+    /// A file of the selected commit: the commit's diff, on that file.
+    func show(commitFile path: String) {
+        guard let sha = history.selectedSha else { return }
+        history.selectedFile = path
+        showOnCodeTab(Href.commit(sha, path: path))
+    }
+
+    /// Another of the project's roots followed, and everything re-read from
+    /// it. False when the server would not.
+    func follow(repo path: String) async -> Bool {
+        do {
+            workspace = try await client.selectRepo(path: path)
+        } catch {
+            lastError = error.localizedDescription
+            return false
+        }
+        await refresh()
+        return true
+    }
+
+    // MARK: dock
+
+    /// The island says whether its find-usages drawer is up. Up — opened by
+    /// the page from a symbol in its code — it takes the foot of the window
+    /// from the pane.
     private func take(dock state: DockState) {
         dock = state
         if state.isUp { bottomExpanded = false }

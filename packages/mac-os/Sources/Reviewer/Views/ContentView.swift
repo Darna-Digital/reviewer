@@ -1,27 +1,91 @@
-// The window, laid out as panels on the web app's frame colour: the
-// toolbar along the top — the project chip, the window tabs, the sidebar
-// and launchpad buttons — and the rail down the leading edge
-// are the window's own bare surface, and on it stand three rounded panels:
-// the sidebar's project tree, the page island wearing
-// the open-file band along its top, and the bottom pane under it. The seams
-// between them are the frame showing through, and two of them resize what
-// they part. The search dialog goes over all of it when it is up; the
-// launchpad slides out from under the toolbar and pushes all of it down,
-// dimmed under a scrim, by exactly its own height (see `Launchpad`). Before
-// the server answers, and before a project is open, the page's island shows
-// the matching placeholder instead.
+// The window: the system's own sidebar — the full-height pane of glass the
+// current design gives a window, carrying the rail down its leading edge
+// and the project tree beside it — and on the detail column, the web app's
+// frame colour with two rounded panels standing on it: the page island
+// wearing the open-file band along its top, and the bottom pane under it.
+// The toolbar — the project chip, the window tabs, the launchpad button —
+// is the window's own bare surface over the detail. The title bar is put
+// away, so the pane runs to the window's top edge with the traffic lights
+// and the sidebar's own toggle standing inside it, as Music has it — which
+// the system only does for the full-height unified toolbar (see
+// `ReviewerApp`); ⌃⌘S and the View menu move the sidebar too.
+// The seam between the islands is the frame showing through, and resizes
+// what it parts; the seam between the sidebar and the detail is the
+// system's. The search dialog goes over all of it when it is up; the
+// launchpad slides out from under the toolbar and pushes the islands down,
+// dimmed under a scrim, by exactly its own height (see `Launchpad`) — the
+// sidebar stands where it is, the way a system sidebar does. With the
+// sidebar put away, the rail moves onto the frame beside the page: the dock
+// and the bottom pane are reached from it either way. Before the server
+// answers, and before a project is open, the page's island shows the
+// matching placeholder instead.
 import SwiftUI
 
 struct ContentView: View {
     @Environment(AppModel.self) private var model
 
-    private static let sidebarWidths: ClosedRange<CGFloat> = 200...520
+    var body: some View {
+        NavigationSplitView(columnVisibility: columnVisibility) {
+            SidebarColumn()
+                .navigationSplitViewColumnWidth(min: 240, ideal: 320, max: 560)
+        } detail: {
+            DetailColumn()
+        }
+        .navigationTitle("")
+        .toolbar { ToolbarItems() }
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .overlay {
+            if model.search.isShown {
+                SearchOverlay()
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.12), value: model.search.isShown)
+        .branchPrompts()
+        .alert("Something went wrong", isPresented: errorShown) {
+            Button("OK") { model.lastError = nil }
+        } message: {
+            Text(model.lastError ?? "")
+        }
+    }
+
+    /// The system's column state as the model's one switch, so the sidebar
+    /// button on the bar, ⌃⌘S and the View menu all move the same thing,
+    /// and the rail knows which column to stand in.
+    private var columnVisibility: Binding<NavigationSplitViewVisibility> {
+        Binding(
+            get: { model.sidebarShown ? .all : .detailOnly },
+            set: { model.sidebarShown = $0 != .detailOnly })
+    }
+
+    private var errorShown: Binding<Bool> {
+        Binding(get: { model.lastError != nil }, set: { if !$0 { model.lastError = nil } })
+    }
+}
+
+/// The rail down the sidebar's leading edge, and the tree beside it.
+private struct SidebarColumn: View {
+    var body: some View {
+        HStack(spacing: 0) {
+            AppRail()
+            SidebarView()
+                .frame(maxWidth: .infinity)
+        }
+    }
+}
+
+/// The islands on the frame — the page and the bottom pane under it — with
+/// the rail beside them while the sidebar is away, and the launchpad
+/// pushing them down when it is out.
+private struct DetailColumn: View {
+    @Environment(AppModel.self) private var model
+
     private static let bottomHeights: ClosedRange<CGFloat> = 120...800
 
     var body: some View {
         let launchpad = model.launchpad
         ZStack(alignment: .top) {
-            workspace
+            islands
                 .overlay {
                     if launchpad.isShown {
                         LaunchpadScrim()
@@ -40,7 +104,7 @@ struct ContentView: View {
                 LaunchpadPanel()
                     .frame(height: launchpad.height)
                     .transition(.move(edge: .top))
-                    // Kept above the workspace on its way out too: a view
+                    // Kept above the islands on its way out too: a view
                     // leaving a stack loses its place in it.
                     .zIndex(1)
             }
@@ -48,34 +112,13 @@ struct ContentView: View {
         .clipped()
         .onGeometryChange(for: CGSize.self) { $0.size } action: { launchpad.canvas = $0 }
         .background(Color(nsColor: IslandPalette.frame))
-        .navigationTitle("")
-        .toolbar { ToolbarItems() }
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-        .overlay {
-            if model.search.isShown {
-                SearchOverlay()
-                    .transition(.opacity)
-            }
-        }
-        .animation(.easeOut(duration: 0.12), value: model.search.isShown)
-        .alert("Something went wrong", isPresented: errorShown) {
-            Button("OK") { model.lastError = nil }
-        } message: {
-            Text(model.lastError ?? "")
-        }
     }
 
-    /// The rail and the three islands: everything the launchpad pushes.
-    private var workspace: some View {
+    private var islands: some View {
         @Bindable var model = model
         return HStack(spacing: 0) {
-            AppRail()
-            if model.sidebarShown {
-                SidebarView()
-                    .frame(width: model.sidebarWidth)
-                    .island()
-                    .transition(.move(edge: .leading).combined(with: .opacity))
-                IslandSeam(between: .columns, size: $model.sidebarWidth, range: Self.sidebarWidths)
+            if !model.sidebarShown {
+                AppRail()
             }
             VStack(spacing: 0) {
                 page
@@ -88,11 +131,11 @@ struct ContentView: View {
                         .island()
                 }
             }
+            .padding(.leading, model.sidebarShown ? IslandMetrics.gap : 0)
         }
         .padding(.top, IslandMetrics.gap)
         .padding(.trailing, IslandMetrics.gap)
         .padding(.bottom, IslandMetrics.gap)
-        .animation(.easeOut(duration: 0.18), value: model.sidebarShown)
     }
 
     @ViewBuilder
@@ -108,31 +151,20 @@ struct ContentView: View {
             IslandView(host: model.page)
         }
     }
-
-    private var errorShown: Binding<Bool> {
-        Binding(get: { model.lastError != nil }, set: { if !$0 { model.lastError = nil } })
-    }
 }
 
-/// The toolbar: the sidebar's switch and the project chip — what the window
-/// is on — then the window tabs, and the launchpad trailing: the web app's
-/// window bar, on the window's own bar, so nothing on it is drawn a second
-/// time inside the island. Every item wears the web bar's chip rather than
-/// the system's glass, put away per item (see `BarChipStyle`). The branch
-/// picker is the sidebar's, over the tree it names, as the web header has it.
+/// The toolbar: the project chip — what the window is on — then the window
+/// tabs, and the launchpad trailing: the web app's window bar, on the
+/// window's own bar, so nothing on it is drawn a second time inside the
+/// island. Every item wears the web bar's chip rather than the system's
+/// glass, put away per item (see `BarChipStyle`). The sidebar's toggle is
+/// the system's, standing in the sidebar's own pane beside the traffic
+/// lights rather than here. The branch picker is the sidebar's, over the
+/// tree it names, as the web header has it.
 private struct ToolbarItems: ToolbarContent {
     @Environment(AppModel.self) private var model
 
     var body: some ToolbarContent {
-        ToolbarItem(placement: .navigation) {
-            Button { model.toggleSidebar() } label: {
-                Label("Sidebar", systemImage: "sidebar.leading")
-                    .barGlyph()
-            }
-            .buttonStyle(BarChipStyle())
-            .help(model.sidebarShown ? "Hide the sidebar (⌃⌘S)" : "Show the sidebar (⌃⌘S)")
-        }
-        .sharedBackgroundVisibility(.hidden)
         ToolbarItem(placement: .navigation) {
             ProjectChip()
         }

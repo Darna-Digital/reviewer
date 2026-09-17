@@ -16,8 +16,12 @@ struct ReviewerApp: App {
                 .task { await model.bootstrap() }
                 .frame(minWidth: 900, minHeight: 560)
         }
-        .windowStyle(.titleBar)
-        .windowToolbarStyle(.unifiedCompact)
+        .windowStyle(.hiddenTitleBar)
+        // The full-height toolbar, not the compact one: only under it does
+        // the system run the sidebar's pane up to the window's top edge,
+        // with the traffic lights and the sidebar toggle inside it, as
+        // Music has it. Compact keeps a title bar strip above the pane.
+        .windowToolbarStyle(.unified)
         .defaultSize(width: 1280, height: 800)
         .commands { ReviewerCommands(model: model) }
     }
@@ -62,21 +66,17 @@ struct ReviewerCommands: Commands {
                 .keyboardShortcut("f", modifiers: [.command, .shift])
                 .disabled(!model.hasProject)
         }
-        // Into the system's own View menu, ahead of its sidebar and tab-bar
-        // items, rather than a second menu of the same name beside it.
+        // The system's own Toggle Sidebar (⌃⌘S), which moves the split
+        // view's column, and the rest into the View menu ahead of it, rather
+        // than a second menu of the same name beside it.
+        SidebarCommands()
         CommandGroup(before: .sidebar) {
-            Button(model.sidebarShown ? "Hide Sidebar" : "Show Sidebar") { model.toggleSidebar() }
-                .keyboardShortcut("s", modifiers: [.command, .control])
             Button("Launchpad") { model.toggleLaunchpad() }
                 .keyboardShortcut("l", modifiers: .command)
                 .disabled(!model.hasProject)
             Button(model.bottomExpanded ? "Hide Bottom Pane" : "Show Bottom Pane") { model.toggleBottomPane() }
                 .keyboardShortcut("b", modifiers: .command)
             Divider()
-            ForEach(DockSurface.allCases) { surface in
-                Button(surface.title) { model.toggle(dock: surface) }
-                    .disabled(!model.hasProject)
-            }
             ForEach(BottomPaneTab.allCases) { tab in
                 Button(tab.title) { model.show(bottomTab: tab) }
             }

@@ -147,6 +147,21 @@ final class Launchpad {
         }
     }
 
+    /// A pull let go of as a swipe: the panel goes the rest of the way it
+    /// was going — down, out onto its rows; up, back in.
+    func fling(down: Bool) {
+        isPulling = false
+        guard down else {
+            close()
+            return
+        }
+        if isShown {
+            animated { height = fittedHeight }
+        } else {
+            open()
+        }
+    }
+
     /// A press on a seam that did not travel: the seam pulled out of a shut
     /// panel opens it onto its rows, and pressed under an open one puts it
     /// back — one edge, pressed the same way, whichever side of it the panel

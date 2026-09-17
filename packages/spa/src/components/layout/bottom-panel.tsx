@@ -55,13 +55,19 @@ const TABS: ReadonlyArray<{
 
 /**
  * The surfaces the macOS shell draws natively in its own bottom pane — its
- * Terminal and its Run — so inside an island the drawer holds the other
- * three and never mounts these.
+ * Branches, History, Terminal and Run — so inside an island the drawer holds
+ * only find usages and never mounts these.
  */
 const NATIVE_IN_SHELL: ReadonlySet<BottomTab> = new Set([
+  "branches",
+  "history",
   "services",
   "threads",
 ]);
+
+/** Whether `tab` is the shell's to draw rather than this document's. */
+export const nativeInShell = (tab: BottomTab): boolean =>
+  island !== undefined && NATIVE_IN_SHELL.has(tab);
 
 const shownTabs = () =>
   island === undefined ? TABS : TABS.filter((t) => !NATIVE_IN_SHELL.has(t.id));

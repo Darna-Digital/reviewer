@@ -1869,47 +1869,52 @@ file-tree-container {
 /* Native scrollbars for leftover overflow containers + the touch-primary
    ScrollArea fallback. Matches the Fluid Functionalism thumb ramp so custom
    and native scroll affordances share one look. Fine pointers only — touch
-   keeps the platform scrollbar. */
+   keeps the platform scrollbar. So does an island of the macOS shell: there
+   the web view sits beside the shell's own lists and outline, and a bar of
+   its own would be a second kind of scrollbar in one window, so the page
+   keeps the system's overlay scrollers and `ScrollArea` scrolls natively
+   (see `scroll-area.tsx`). The island check is wrapped in `:where()` so the
+   rules keep the zero specificity `.scrollbar-none` below counts on. */
 @media (pointer: fine) {
-  *,
-  .scroll-thin {
+  :where(:root:not(.island)) *,
+  :where(:root:not(.island)) .scroll-thin {
     scrollbar-width: thin;
     scrollbar-color: rgb(var(--overlay) / 0.08) transparent;
   }
-  *::-webkit-scrollbar,
-  .scroll-thin::-webkit-scrollbar {
+  :where(:root:not(.island)) *::-webkit-scrollbar,
+  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar {
     width: 10px;
     height: 10px;
   }
-  *::-webkit-scrollbar-corner,
-  *::-webkit-scrollbar-track,
-  .scroll-thin::-webkit-scrollbar-corner,
-  .scroll-thin::-webkit-scrollbar-track {
+  :where(:root:not(.island)) *::-webkit-scrollbar-corner,
+  :where(:root:not(.island)) *::-webkit-scrollbar-track,
+  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-corner,
+  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-track {
     background: transparent;
   }
-  *::-webkit-scrollbar-thumb,
-  .scroll-thin::-webkit-scrollbar-thumb {
+  :where(:root:not(.island)) *::-webkit-scrollbar-thumb,
+  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-thumb {
     background-color: rgb(var(--overlay) / 0.08);
     background-clip: content-box;
     border: 3px solid transparent;
     border-radius: 9999px;
   }
-  *::-webkit-scrollbar-thumb:vertical,
-  .scroll-thin::-webkit-scrollbar-thumb:vertical {
+  :where(:root:not(.island)) *::-webkit-scrollbar-thumb:vertical,
+  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-thumb:vertical {
     border-left-width: 1px;
     border-right-width: 5px;
   }
-  *::-webkit-scrollbar-thumb:horizontal,
-  .scroll-thin::-webkit-scrollbar-thumb:horizontal {
+  :where(:root:not(.island)) *::-webkit-scrollbar-thumb:horizontal,
+  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-thumb:horizontal {
     border-top-width: 1px;
     border-bottom-width: 5px;
   }
-  *::-webkit-scrollbar-thumb:hover,
-  .scroll-thin::-webkit-scrollbar-thumb:hover {
+  :where(:root:not(.island)) *::-webkit-scrollbar-thumb:hover,
+  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-thumb:hover {
     background-color: rgb(var(--overlay) / 0.12);
   }
-  *::-webkit-scrollbar-thumb:active,
-  .scroll-thin::-webkit-scrollbar-thumb:active {
+  :where(:root:not(.island)) *::-webkit-scrollbar-thumb:active,
+  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-thumb:active {
     background-color: rgb(var(--overlay) / 0.16);
   }
 }

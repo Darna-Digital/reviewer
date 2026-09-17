@@ -26,7 +26,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
 import { BranchesPanel } from "@/components/git/branches-panel";
-import { BottomPanel } from "@/components/layout/bottom-panel";
+import { BottomPanel, nativeInShell } from "@/components/layout/bottom-panel";
 import { expandDock, keepDockDrawer } from "@/components/layout/dock-expansion";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
@@ -77,7 +77,9 @@ export function GitBottomDock({
 
   const expanded = expandedTab !== undefined;
   const tab = expandedTab ?? prefs.bottomTab;
-  const shown = expanded || prefs.bottomVisible;
+  // A preference left on a surface the shell draws itself opens nothing here:
+  // the drawer has no such tab to stand on.
+  const shown = expanded || (prefs.bottomVisible && !nativeInShell(tab));
 
   const repo = useRepo();
   const branches = useBranches();

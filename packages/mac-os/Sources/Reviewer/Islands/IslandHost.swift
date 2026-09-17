@@ -10,9 +10,12 @@
 // surface (`sessions`, both ways); and the window tabs, which are the
 // island's own strip — reported as a picture (`windowTabs`) for the menu bar
 // to name, and asked things of by the menu items that claim the strip's
-// chords (`windowTabs`, the other way). And one more for the git dock the
-// code island keeps under its page: which surface is up (`dock`), for the
-// rail to light, and the rail's button pressed (`dock`, the other way).
+// chords (`windowTabs`, the other way). And two more for what the island
+// and the shell share of the foot of the window: the find-usages drawer the
+// code island keeps under its page — up or down (`dock`), so the native
+// pane can leave the foot to it, and put away (`dock`, the other way) when
+// the pane takes it back — and a file's history asked for from the page
+// (`history`), which the shell's own History surface answers.
 //
 // The web view is made once and kept for the life of the host: SwiftUI can
 // take it out of the hierarchy and put it back, and the page, its scroll and
@@ -35,6 +38,7 @@ final class IslandHost: NSObject {
     @ObservationIgnored var onTreeStateReported: ((ShellTreeState) -> Void)?
     @ObservationIgnored var onSessionsReported: ((ShellSessions?) -> Void)?
     @ObservationIgnored var onDockReported: ((DockState) -> Void)?
+    @ObservationIgnored var onHistoryRequested: ((String) -> Void)?
 
     @ObservationIgnored private let source: SpaSource
     @ObservationIgnored private let apiBaseURL: URL
@@ -94,7 +98,8 @@ final class IslandHost: NSObject {
         dispatch(["type": "sessions", "action": action.payload])
     }
 
-    /// The native rail reached for the island's git dock — see `DockAction`.
+    /// The native pane took the foot of the window from the island's
+    /// find-usages drawer — see `DockAction`.
     func send(_ action: DockAction) {
         guard isReady else { return }
         dispatch(["type": "dock", "action": action.payload])
@@ -229,6 +234,9 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             return (nil, nil)
         case "dock":
             onDockReported?(DockState.decode(body["shown"]))
+            return (nil, nil)
+        case "history":
+            if let path = body["path"] as? String { onHistoryRequested?(path) }
             return (nil, nil)
         default:
             return (nil, "unknown shell message: \(type)")

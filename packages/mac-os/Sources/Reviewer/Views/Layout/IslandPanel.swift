@@ -1,13 +1,11 @@
-// The window's regions — the sidebar's project tree, the page island, the
-// bottom pane — are islands: rounded panels of the web app's sheet colour,
-// ringed by the separator, standing a few points apart on its frame colour
-// (see `IslandPalette`), the way the JetBrains islands layout sets its tool
-// windows beside the editor, and the sidebar floating beside the rail the
-// way the current design floats one over its window. One fill for all
-// three: the system's sidebar material was tried for the tree and came out
-// a tone apart from the panels beside it. The toolbar and the rail are not
-// islands: they are the window itself, bare, which is what the panels
-// stand on.
+// The page island and the bottom pane are islands: rounded panels of the
+// web app's sheet colour, ringed by the separator, standing a few points
+// apart on its frame colour (see `IslandPalette`), the way the JetBrains
+// islands layout sets its tool windows beside the editor. The sidebar is
+// not one: it is the system's own column of glass, standing full height
+// beside the frame the islands are on (see `ContentView`). The toolbar and
+// the rail are not islands either: they are the window itself, bare, which
+// is what the panels stand on.
 import SwiftUI
 
 enum IslandMetrics {

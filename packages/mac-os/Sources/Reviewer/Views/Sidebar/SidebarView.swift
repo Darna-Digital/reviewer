@@ -2,15 +2,16 @@
 // page reports (see `SidebarTree`) in the layout the web sidebar gives that
 // surface — the project's files as an outline on the browse page, and on a
 // diff the changed files under a search, with the commit composer beneath
-// them while the changes are your own — on an island floating beside the
-// rail (see `ContentView`), under the branch picker, which stands over the
-// tree the way the web header's does: the branch you are on is what the
-// tree beneath it is a tree of. On the sessions surface the island holds
-// the sessions list instead (see `SessionsList`) — every project's, so no
-// branch names it, and the picker stands down with the tree. The project
-// picker sits on the toolbar; the rail that moves the page between the
-// surfaces stands beside the island (see `AppRail`). The sidebar follows
-// the page, and a file or a session picked in it is carried to the page.
+// them while the changes are your own — on the system's own sidebar, the
+// full-height column of glass, beside the rail (see `ContentView`), under
+// the branch picker, which stands over the tree the way the web header's
+// does: the branch you are on is what the tree beneath it is a tree of. On
+// the sessions surface the column holds the sessions list instead (see
+// `SessionsList`) — every project's, so no branch names it, and the picker
+// stands down with the tree. The project picker sits on the toolbar; the
+// rail that moves the page between the surfaces stands down the sidebar's
+// leading edge (see `AppRail`). The sidebar follows the page, and a file or
+// a session picked in it is carried to the page.
 import SwiftUI
 
 struct SidebarView: View {

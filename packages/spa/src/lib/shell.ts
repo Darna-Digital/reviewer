@@ -50,7 +50,7 @@ export type ShellEvent =
   | { readonly type: "tree"; readonly action: ShellTreeAction }
   /** The shell's own sessions list was acted on — see `ShellSessions`. */
   | { readonly type: "sessions"; readonly action: ShellSessionAction }
-  /** The shell's own rail reached for the git dock — see `ShellDockAction`. */
+  /** The shell's own pane took the foot of the window — see `ShellDockAction`. */
   | { readonly type: "dock"; readonly action: ShellDockAction };
 
 /** Island → shell. */
@@ -68,10 +68,13 @@ export type ShellIntent =
   /** The sessions list as the sessions surface holds it, for the shell to draw
    * in its sidebar; null once the page leaves the surface. */
   | { readonly type: "sessions"; readonly list: ShellSessions | null }
-  /** The git dock's surface that is up — in the drawer under the page, or
-   * with the window to itself — for the shell's rail to light; null while
-   * the dock is down or the page has none. */
-  | { readonly type: "dock"; readonly shown: BottomTab | null };
+  /** The find-usages drawer the page keeps under itself is up — the one dock
+   * surface still the page's, opened from a symbol in its code — or down
+   * (null), so the shell's own pane can leave the foot of the window to it. */
+  | { readonly type: "dock"; readonly shown: BottomTab | null }
+  /** The page asked for one file's past — from its path bar, a file's tab —
+   * and the History surface is the shell's own, so the ask crosses over. */
+  | { readonly type: "history"; readonly path: string };
 
 /**
  * The window tabs, as the shell draws them on its toolbar and names them in
@@ -247,16 +250,14 @@ export type ShellSessionAction =
     };
 
 /**
- * What the shell's rail asks of the git dock, which stays the code island's
- * — branches, history and find-usages are the page's to draw, under it, as
- * `AppLayout` has them. The foot of the native rail presses the web rail's
- * own buttons over the bridge (`pick`, see `pickDockTab`), and puts the dock
- * away when the shell's own pane — its Terminal, its Run — takes the foot of
- * the window instead (`close`), so one surface stands at the bottom at a time.
+ * What the shell asks of the dock the code island still keeps: find usages,
+ * the one surface that stays the page's — it is opened from a symbol in the
+ * page's own code and previews the page's own files. Branches, history, the
+ * terminal and the run surfaces are the shell's, drawn natively in its own
+ * pane, and when that pane takes the foot of the window the drawer is put
+ * away (`close`), so one surface stands at the bottom at a time.
  */
-export type ShellDockAction =
-  | { readonly kind: "pick"; readonly tab: BottomTab }
-  | { readonly kind: "close" };
+export type ShellDockAction = { readonly kind: "close" };
 
 export interface ShellChannel {
   post: (intent: ShellIntent) => Promise<void>;

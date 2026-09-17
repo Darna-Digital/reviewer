@@ -409,6 +409,20 @@ struct RemoteBranchInfo: Decodable, Identifiable, Hashable, Sendable {
     var id: String { name }
 }
 
+/// One root's branches, as `/api/project/branches` lists them for a
+/// project of several — `RepoBranches` in core.
+struct RepoBranches: Decodable, Identifiable, Sendable {
+    let repo: RepoEntry
+    let branches: [BranchInfo]
+    let remoteBranches: [RemoteBranchInfo]
+
+    var id: String { repo.path }
+}
+
+struct ProjectBranches: Decodable, Sendable {
+    let repos: [RepoBranches]
+}
+
 struct CommandOutput: Decodable, Sendable {
     let output: String
 }
@@ -443,4 +457,100 @@ struct DeleteBranchBody: Encodable, Sendable {
 struct SetBranchTargetBody: Encodable, Sendable {
     let branch: String
     let target: String
+}
+
+// MARK: history
+
+/// The `ref` that asks the log for every ref instead of one branch's
+/// ancestry — `ALL_REFS` in core, which the server maps to `git log --all`.
+let allRefs = "@all"
+
+/// The filters over a log — the web app's `LogQuery`, with the same wire
+/// names: a text or hash, an author, a date range, and one file's own past,
+/// followed back through its renames.
+struct LogQuery: Hashable, Sendable {
+    var author: String? = nil
+    var grep: String? = nil
+    var regex = false
+    var caseSensitive = false
+    var after: String? = nil
+    var before: String? = nil
+    var path: String? = nil
+    var follow = false
+
+    static let empty = LogQuery()
+
+    /// The query behind "show the history of this file".
+    static func history(of path: String) -> LogQuery {
+        LogQuery(path: path, follow: true)
+    }
+
+    /// Whether anything narrows the log — the toggles alone do not.
+    var hasFilters: Bool {
+        author != nil || grep != nil || path != nil || after != nil || before != nil
+    }
+
+    /// The query with its filters cleared and its toggles kept, the way the
+    /// web bar's Clear leaves them.
+    var cleared: LogQuery {
+        LogQuery(regex: regex, caseSensitive: caseSensitive)
+    }
+
+    var queryItems: [String: String] {
+        var items: [String: String] = [:]
+        if let author { items["author"] = author }
+        if let grep { items["grep"] = grep }
+        if regex { items["regex"] = "1" }
+        if caseSensitive { items["case"] = "1" }
+        if let after { items["after"] = after }
+        if let before { items["before"] = before }
+        if let path { items["path"] = path }
+        if follow { items["follow"] = "1" }
+        return items
+    }
+}
+
+/// One commit as `/api/log` lists it — `CommitInfo` in core.
+struct CommitInfo: Decodable, Identifiable, Hashable, Sendable {
+    let sha: String
+    let shortSha: String
+    let author: String
+    let authoredAt: String
+    let subject: String
+    let refs: [String]
+    let parents: [String]
+
+    var id: String { sha }
+}
+
+/// One commit of a project's merged history, with the root it came from.
+struct ProjectLogEntry: Decodable, Sendable {
+    let repo: RepoEntry
+    let commit: CommitInfo
+}
+
+struct ProjectLog: Decodable, Sendable {
+    let commits: [ProjectLogEntry]
+}
+
+/// A file a commit touched — `CommitFile` in core; `oldPath` when renamed.
+struct CommitFile: Decodable, Hashable, Sendable {
+    let path: String
+    let status: GitFileStatus
+    let oldPath: String?
+}
+
+/// A commit in full, as `/api/commit/{sha}` describes it — `CommitDetail`
+/// in core.
+struct CommitDetail: Decodable, Sendable {
+    let sha: String
+    let shortSha: String
+    let author: String
+    let authorEmail: String
+    let authoredAt: String
+    let subject: String
+    let body: String
+    let refs: [String]
+    let parents: [String]
+    let files: [CommitFile]
 }

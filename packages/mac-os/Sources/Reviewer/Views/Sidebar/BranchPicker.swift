@@ -22,7 +22,7 @@ struct BranchPicker: View {
                 }
             }
             Section("Local · \(model.branches.count)") {
-                ForEach(folders(of: model.branches.map(BranchRef.init)), id: \.name) { folder in
+                ForEach(model.branches.map(BranchRef.init).groupedByFolder(), id: \.name) { folder in
                     if let name = folder.name {
                         Menu(name) {
                             ForEach(folder.items, id: \.ref) { branch in
@@ -37,7 +37,7 @@ struct BranchPicker: View {
                 }
             }
             Section("Remote · \(model.remoteBranches.count)") {
-                ForEach(folders(of: model.remoteBranches.map(BranchRef.init)), id: \.name) { folder in
+                ForEach(model.remoteBranches.map(BranchRef.init).groupedByFolder(), id: \.name) { folder in
                     Menu(folder.name ?? "remote") {
                         ForEach(folder.items, id: \.ref) { branch in
                             BranchMenu(branch: branch, badge: nil)
@@ -75,24 +75,6 @@ struct BranchPicker: View {
     private func badge(_ branch: BranchRef) -> String? {
         model.branches.first { $0.name == branch.ref }.flatMap(badge)
     }
-
-    private struct Folder {
-        let name: String?
-        let items: [BranchRef]
-    }
-
-    /// `feature/x` and `feature/y` under one `feature` submenu, the way the
-    /// switcher folds them, in the order the server listed them.
-    private func folders(of branches: [BranchRef]) -> [Folder] {
-        var order: [String?] = []
-        var grouped: [String?: [BranchRef]] = [:]
-        for branch in branches {
-            let folder = branch.display.contains("/") ? String(branch.display.prefix { $0 != "/" }) : nil
-            if grouped[folder] == nil { order.append(folder) }
-            grouped[folder, default: []].append(branch)
-        }
-        return order.map { Folder(name: $0, items: grouped[$0] ?? []) }
-    }
 }
 
 /// One branch's submenu — the same actions the web app's switcher gives it,
@@ -118,35 +100,44 @@ struct BranchMenu: View {
     }
 }
 
+/// The same actions the web app's switcher gives a branch, in the same
+/// order, worded against the branch you are on — in the repository the
+/// git views follow, or in another of the project's roots, followed first
+/// (see `BranchScope`).
 struct BranchActions: View {
     let branch: BranchRef
+    var scope: BranchScope? = nil
     @Environment(AppModel.self) private var model
 
-    private var head: String { model.currentBranch ?? "HEAD" }
+    private var head: String { scope?.head ?? model.currentBranch ?? "HEAD" }
 
     var body: some View {
         if !branch.isCurrent {
-            Button("Checkout") { model.checkout(branch.ref) }
+            Button("Checkout") { run { model.checkout(branch.ref) } }
         }
-        Button("New Branch from ‘\(branch.display)’…") { model.branchPrompt = .create(startPoint: branch.ref) }
+        Button("New Branch from ‘\(branch.display)’…") { run { model.branchPrompt = .create(startPoint: branch.ref) } }
         if !branch.isCurrent {
-            Button("Checkout and Update") { model.checkoutAndUpdate(branch.ref) }
+            Button("Checkout and Update") { run { model.checkoutAndUpdate(branch.ref) } }
             Divider()
-            Button("Compare with ‘\(head)’") { model.compare(base: branch.ref, head: head) }
-            Button("Review ‘\(head)’ against ‘\(branch.display)’") { model.review(head, against: branch.ref) }
-            Button("Merge ‘\(branch.display)’ into ‘\(head)’") { model.merge(branch.ref) }
-            Button("Rebase ‘\(head)’ onto ‘\(branch.display)’") { model.rebase(onto: branch.ref) }
+            Button("Compare with ‘\(head)’") { run { model.compare(base: branch.ref, head: head) } }
+            Button("Review ‘\(head)’ against ‘\(branch.display)’") { run { model.review(head, against: branch.ref) } }
+            Button("Merge ‘\(branch.display)’ into ‘\(head)’") { run { model.merge(branch.ref) } }
+            Button("Rebase ‘\(head)’ onto ‘\(branch.display)’") { run { model.rebase(onto: branch.ref) } }
         }
         Divider()
-        Button("Update") { model.fetch() }
-        Button("Push…") { model.push() }
+        Button("Update") { run { model.fetch() } }
+        Button("Push…") { run { model.push() } }
         if !branch.isRemote {
             Divider()
-            Button("Rename…") { model.branchPrompt = .rename(from: branch.ref) }
+            Button("Rename…") { run { model.branchPrompt = .rename(from: branch.ref) } }
             if !branch.isCurrent {
-                Button("Delete", role: .destructive) { model.branchPrompt = .delete(name: branch.ref) }
+                Button("Delete", role: .destructive) { run { model.branchPrompt = .delete(name: branch.ref) } }
             }
         }
+    }
+
+    private func run(_ action: @escaping () -> Void) {
+        model.inRepo(scope?.repoPath, action)
     }
 }
 
