@@ -1149,6 +1149,13 @@
   --input: var(--native-separator);
   --ring-accent: var(--native-accent);
 }
+/* The sheets of a split page — a session list beside its conversation — stand
+   on the same flat window colour they are painted in, so what tells them apart
+   is a rule around each: the separator hairline, drawn as a ring outside the
+   corner so it follows the radius and takes no room. */
+.island .app-split .app-sheet {
+  box-shadow: 0 0 0 1px var(--hairline);
+}
 
 /* The rail is not a sheet of its own. Given a tone and a seam of its own it read
    as a strip of chrome floating on the frame. So it is the left edge of the

@@ -47,7 +47,9 @@ struct ReviewerCommands: Commands {
                 .keyboardShortcut("w", modifiers: .command)
                 .disabled(model.selectedTab?.isPinned != false)
         }
-        CommandMenu("View") {
+        // Into the system's own View menu, ahead of its sidebar and tab-bar
+        // items, rather than a second menu of the same name beside it.
+        CommandGroup(before: .sidebar) {
             Button("Launchpad") { model.toggleLaunchpad() }
                 .keyboardShortcut("l", modifiers: .command)
             Button(model.bottomExpanded ? "Hide Bottom Pane" : "Show Bottom Pane") { model.toggleBottomPane() }
@@ -64,6 +66,7 @@ struct ReviewerCommands: Commands {
                 model.dock.reload()
             }
             .keyboardShortcut("r", modifiers: [.command, .shift])
+            Divider()
         }
         CommandMenu("Tabs") {
             Button("Next Tab") { model.selectNextTab(offset: 1) }
