@@ -314,7 +314,7 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
               // Shrinkable as well as capped: the picker stands in the header
               // band cut to the column beside it, and a column dragged narrow
               // takes the branch name with it rather than pushing past the seam.
-              className="max-w-64 min-w-0 gap-1.5 px-2"
+              className="min-w-0 max-w-64 gap-1.5 px-2"
             >
               <IconGitBranch className="size-3.5 shrink-0 text-muted-foreground" />
               <span className="truncate">{currentName}</span>

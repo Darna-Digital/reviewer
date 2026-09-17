@@ -12,6 +12,8 @@
     "build:desktop": "pnpm --filter @reviewer/embedded-server build:bundle && pnpm --filter spa build:desktop && pnpm --filter @reviewer/desktop build",
     "pack:desktop": "pnpm build:desktop && pnpm --filter @reviewer/desktop run pack",
     "dist:desktop": "pnpm build:desktop && pnpm --filter @reviewer/desktop run dist",
+    "dev:mac": "pnpm --filter @reviewer/mac-os dev",
+    "build:mac": "pnpm --filter @reviewer/mac-os bundle",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r --if-present lint",

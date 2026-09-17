@@ -11,13 +11,15 @@
  */
 import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { isAbsolute, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   app,
   BrowserWindow,
   dialog,
   ipcMain,
+  Menu,
+  type MenuItemConstructorOptions,
   net,
   nativeImage,
   nativeTheme,
@@ -97,18 +99,19 @@ const currentBrandIcon = () =>
   nativeTheme.shouldUseDarkColors ? brandIcons.dark : brandIcons.light;
 
 /**
- * A packaged macOS app leaves its dock tile to the system: the bundle icon
- * (compiled from `assets/Reviewer.icon` at build time) is rendered by macOS
- * 26 with its glass treatment and appearance variants, and `dock.setIcon`
- * would replace that with the flat PNG — a duller tile than the one shown
- * before launch. Dev has no bundle at all and so still paints the PNG, as do
- * the window icons elsewhere, following the appearance as it flips.
+ * The dock tile follows the Light/Dark appearance while the app runs. macOS
+ * 26 never does that on its own: the bundle icon (compiled from
+ * `assets/Reviewer.icon` at build time) is picked by the separate "Icon &
+ * widget style" setting, so under the default style it stays light even in
+ * Dark Mode. Painting the matching PNG via `dock.setIcon` — in packaged and
+ * dev builds alike — trades the system glass rendering for a tile that flips
+ * with the appearance; the PNGs sit on the same pixels the packaged icon is
+ * drawn on, so nothing jumps at launch. Elsewhere the window icons do the same.
  */
 function applyBrandIcon() {
   const icon = currentBrandIcon();
   if (icon.isEmpty()) return;
   if (process.platform === "darwin") {
-    if (app.isPackaged) return;
     app.dock?.setIcon(icon);
     return;
   }
@@ -268,7 +271,15 @@ function isInternalUrl(url: string): boolean {
   }
 }
 
-async function createWindow(): Promise<void> {
+/**
+ * A window is a tab of any other on macOS: the identifier groups them under the
+ * system tab bar (⌘⇧[ / ⌘⇧], Merge All Windows, the ＋ button) and one repo per
+ * tab is just one window per tab. `tabbedInto` is the window a new one is
+ * asked to join — the ＋ button and the menu item both go through here.
+ */
+async function createWindow(
+  tabbedInto: BrowserWindow | null = null
+): Promise<void> {
   const window = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -294,6 +305,7 @@ async function createWindow(): Promise<void> {
     // centre falls on an odd pixel — and 23 is the one the WindowBar rides its
     // controls on. The bar's lead gutter is what leaves room for them.
     trafficLightPosition: { x: 20, y: 16 },
+    ...(isMac ? { tabbingIdentifier: "reviewer" } : {}),
     webPreferences: {
       preload: resolve(__dirname, "preload.js"),
       contextIsolation: true,
@@ -302,6 +314,7 @@ async function createWindow(): Promise<void> {
       webviewTag: true,
     },
   });
+  tabbedInto?.addTabbedWindow(window);
 
   // The pane loads whatever the user types into its address bar, so the guest is
   // untrusted: hold it to the sandbox regardless of the attributes the renderer
@@ -336,6 +349,42 @@ async function createWindow(): Promise<void> {
   }
 }
 
+const newTab = () => void createWindow(BrowserWindow.getFocusedWindow());
+
+/**
+ * Electron's stock menu, plus the two File items that mint windows. ⌘N and
+ * ⌘⇧N are the only chords free of the renderer's own: ⌘T is a new session
+ * there, and an accelerator here would take it before the page saw it.
+ */
+function buildMenu(): Menu {
+  const newTabItem: MenuItemConstructorOptions = {
+    label: "New Tab",
+    accelerator: "Cmd+Shift+N",
+    click: newTab,
+  };
+  const file: MenuItemConstructorOptions = {
+    label: "File",
+    submenu: [
+      {
+        label: "New Window",
+        accelerator: "CmdOrCtrl+N",
+        click: () => void createWindow(),
+      },
+      ...(isMac ? [newTabItem] : []),
+      { type: "separator" },
+      isMac ? { role: "close" } : { role: "quit" },
+    ],
+  };
+  const appMenu: MenuItemConstructorOptions = { role: "appMenu" };
+  return Menu.buildFromTemplate([
+    ...(isMac ? [appMenu] : []),
+    file,
+    { role: "editMenu" },
+    { role: "viewMenu" },
+    { role: "windowMenu" },
+  ]);
+}
+
 // Native folder picker, invoked from the renderer through the preload bridge.
 ipcMain.handle("dialog:open-directory", async (event) => {
   const owner = BrowserWindow.fromWebContents(event.sender);
@@ -352,8 +401,17 @@ ipcMain.handle("dialog:open-directory", async (event) => {
   return result.filePaths[0];
 });
 
+// Quick Look for a file in the review, opened from the renderer with the
+// absolute path it already shows in "Copy path". macOS only: nothing else has
+// the panel.
+ipcMain.handle("quicklook:preview", (event, path: unknown) => {
+  if (!isMac || typeof path !== "string" || !isAbsolute(path)) return;
+  BrowserWindow.fromWebContents(event.sender)?.previewFile(path);
+});
+
 app.whenReady().then(async () => {
   ensureBinPath();
+  Menu.setApplicationMenu(buildMenu());
 
   if (!isDev) registerRendererProtocol();
 
@@ -383,6 +441,7 @@ app.whenReady().then(async () => {
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) void createWindow();
   });
+  app.on("new-window-for-tab", newTab);
 });
 
 app.on("window-all-closed", () => {

@@ -7,6 +7,7 @@ import {
   IconCopyPlus,
   IconCursorText,
   IconCut,
+  IconEye,
   IconFolderSearch,
   IconHistory,
   IconTrash,
@@ -43,6 +44,7 @@ import type {
   TreeItem,
 } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
 import type { AppMode } from "@/lib/api/types";
+import { canQuickLook, quickLookFile } from "@/lib/desktop";
 import { cn } from "@/lib/utils";
 import type { GitStatusEntry } from "@reviewer/core/repo";
 
@@ -640,6 +642,11 @@ export function FileSidebar({
       void onDeletePaths?.(items);
       return;
     }
+    if (!chord && key === " " && canQuickLook && first.kind === "file") {
+      event.preventDefault();
+      quickLookFile(absolutePath(first.path));
+      return;
+    }
     if (!chord || actions === undefined) return;
     if (key === "c" || key === "x") {
       event.preventDefault();
@@ -829,6 +836,11 @@ export function FileSidebar({
                 () => void actions.reveal(item.path)
               ),
             ]}
+            {canQuickLook &&
+              item.kind === "file" &&
+              entry(IconEye, "Quick Look", () =>
+                quickLookFile(absolutePath(item.path))
+              )}
             {onShowHistory !== undefined &&
               entry(IconHistory, "Show history", () =>
                 onShowHistory(item.path)

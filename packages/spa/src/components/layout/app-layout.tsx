@@ -194,6 +194,11 @@ export function AppLayout() {
             <div
               className={cn(
                 "relative flex min-h-0 flex-col",
+                // Every sheet with a corner on the rail is in here — the page,
+                // and the columns a split page lays out — so this is the box
+                // that carries the rail's paper behind them. See
+                // `app-rail-paper`.
+                railed && "app-rail-paper",
                 // Expanded, the dock is the canvas and the page is put away, so
                 // what is left here is the header: as tall as it is, and no more.
                 dockExpanded ? "shrink-0" : "flex-1"

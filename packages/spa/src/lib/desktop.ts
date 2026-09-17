@@ -21,6 +21,8 @@ import { isPreviewWindow } from "@/lib/preview-window";
 interface ReviewerBridge {
   apiBaseUrl?: string;
   openDirectory: () => Promise<string | null>;
+  /** Present only where the shell has a Quick Look panel to show — macOS. */
+  previewFile?: (path: string) => Promise<void>;
 }
 
 type ReviewerWindow = Window & {
@@ -53,4 +55,11 @@ export const desktopApiBaseUrl = bridge?.apiBaseUrl;
 
 export async function openDesktopDirectory(): Promise<string | null> {
   return bridge?.openDirectory() ?? null;
+}
+
+export const canQuickLook = bridge?.previewFile !== undefined;
+
+/** Quick Look `absolutePath`; a no-op where the shell has no panel for it. */
+export function quickLookFile(absolutePath: string): void {
+  void bridge?.previewFile?.(absolutePath);
 }

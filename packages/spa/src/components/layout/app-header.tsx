@@ -137,7 +137,6 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   const workspaceActions = useWorkspaceActions();
   const git = useGitActions();
   const comparing = useLocalComparison();
-
   /** Make a root current before a menu action runs in it. */
   const followRepo = (repoPath: string) =>
     workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
@@ -181,9 +180,8 @@ export function AppHeader({ route }: { route: ShellRoute }) {
     repo.data != null;
 
   /**
-   * What stands over the page's first column: the branch you are on, and what
-   * its changes are read against — the two of them one sentence, and both about
-   * the repository the tree beside them is of.
+   * What stands over the page's first column: the branch you are on, which is
+   * what the tree beneath it is a tree of.
    */
   const lead = (
     <>
@@ -221,7 +219,19 @@ export function AppHeader({ route }: { route: ShellRoute }) {
           onFollowRepo={followRepo}
         />
       )}
+    </>
+  );
 
+  /* Every page that reaches here wears the rail: the prototype is answered
+     above, and the two surfaces that go without one — the blank composer and a
+     conversation with the window to itself — wear no header either. See
+     `AppLayout`. */
+  return (
+    <HeaderRow lead={lead} railed>
+      {/* What the diff is read against stands over the diff, at the head of its
+          band: it names what is in the pane, not what is in the tree, and over
+          the tree it was cut to that column's width — a branch name shortened
+          by how wide you happen to keep the file list. */}
       {showComparePicker && (
         <ComparePicker
           comparison={comparing.comparison}
@@ -232,19 +242,11 @@ export function AppHeader({ route }: { route: ShellRoute }) {
           onSelect={comparing.compareAgainst}
         />
       )}
-    </>
-  );
 
-  /* Every page that reaches here wears the rail: the prototype is answered
-     above, and the two surfaces that go without one — the blank composer and a
-     conversation with the window to itself — wear no header either. See
-     `AppLayout`. */
-  return (
-    <HeaderRow lead={lead} railed>
       {/* Lent to the page beneath, which hangs its open-file strip here: the
           tabs choose what the pane holds, which is the same kind of control as
-          the picker at the head of the row. It stands over the pane rather than
-          over the tree, because what it names is what is in the pane. */}
+          the picker beside them. It stands over the pane rather than over the
+          tree, because what it names is what is in the pane. */}
       <div
         ref={setHeaderTabsSlot}
         className="flex min-w-0 flex-1 items-center gap-2 empty:hidden"

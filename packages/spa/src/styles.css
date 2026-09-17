@@ -919,11 +919,6 @@
      to read down the sides and the sheets looked cropped by the window rather
      than laid inside it. */
   --frame-inset: 0.5rem;
-  /* The band the trail takes along the foot of the page — a chrome row's 36px
-     and the hairline that tells it from the columns standing on it. Named here
-     as well as drawn in `PathBar`, because the seams between those columns are
-     placed rather than laid out and have to be told where to stop. */
-  --trail-band: calc(2.25rem + 1px);
   /* A sheet turns the same corner as a card: `--radius` itself, kept under its
      own name because a sheet is the one surface whose corner also has to answer
      to the window's.
@@ -1013,21 +1008,9 @@
   border-bottom-right-radius: 0;
 }
 .app-page-joined,
-.app-page-joined > .app-split > .app-sheet,
-.app-page-joined > .app-split > .app-columns > .app-sheet {
+.app-page-joined > .app-split > .app-sheet {
   /* Square corners, so the line has no bend to stop before: it runs the whole
      width, on the tone an inside rule wears rather than a lit outer edge. */
-  --sheet-edge-tone: var(--hairline);
-  --sheet-edge-inset: 0px;
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-}
-
-/* The mirror of the rule above, for any sheet standing flush under another: the
-   trail a page lays along its own foot, and the drawer that opens against that
-   trail. Same rule, same square corners — the line runs the full width because
-   there is no corner for it to stop before. */
-.app-sheet-joined-above {
   --sheet-edge-tone: var(--hairline);
   --sheet-edge-inset: 0px;
   border-top-left-radius: 0;
@@ -1082,10 +1065,7 @@
 
 /* A page that lays out sheets of its own — a sidebar beside its content, or a
    review's three columns — marks its root `app-split`, and the box it is
-   rendered into stops being a sheet: it is only the run of frame they stand on.
-   Where such a page also wears a trail along its foot, the columns are a row of
-   their own (`app-columns`) with that bar under all of them, so the rule the
-   header draws has one more step to reach through. */
+   rendered into stops being a sheet: it is only the run of frame they stand on. */
 .app-page:has(> .app-split) {
   background: none;
   /* No corners and no rule of its own: the ones that matter are the sheets'
@@ -1149,17 +1129,24 @@
 /* The rail's paper, carried on under the sheets standing against it, so their
    corners turn on it rather than on a gap: they are flush with the rule, and a
    6px corner would otherwise cut a notch of frame out of it at every top and
-   bottom edge. Behind them — it is only ever seen through those corners. */
-.app-rail::after {
+   bottom edge. Behind them — it is only ever seen through those corners.
+
+   Carried by the box the sheets are in rather than by the rail itself, which is
+   as tall as the window: a strip that long ran on down past the last of them and
+   filled the first corner's worth of the seam the dock opens under the page, so
+   the one run of frame meant to cross the window whole started a step to the
+   right of the rule. Here it is as tall as the sheets it is for and no taller,
+   and the seam under them is frame again from the rule out. */
+.app-rail-paper::before {
   content: "";
   position: absolute;
   inset-block: 0;
-  left: 100%;
+  left: 0;
   z-index: -1;
-  /* A corner's worth, and the rule it starts behind: the strip is measured from
-     inside the rail's border, where the sheets begin a pixel further on. The
-     widest corner it has to cover is the foot's. */
-  width: calc(var(--sheet-radius-foot) + 1px);
+  /* A corner's worth, taken from inside the sheets rather than from the rail
+     they stand on — it is their corners it is for, and the rule between the two
+     is the rail's own. The widest corner it has to cover is the foot's. */
+  width: var(--sheet-radius-foot);
   background-color: var(--canvas);
 }
 
@@ -1992,18 +1979,6 @@ file-tree-container {
   margin-inline: 0;
   /* The box it hangs in is transparent to the pointer so the header and page
      under it are still reached; the handle is the one part that is not. */
-  pointer-events: auto;
-}
-
-/* The same, laid the other way: the dock's seam, where the page it opens under
-   ends in a trail. The run of frame then lies above that bar rather than below
-   it, which puts it inside the page — so the handle leaves the dock's row and
-   is hung over the page with the column seams, placed off the band's height. */
-.resize-handle-row.resize-handle-crossing {
-  position: absolute;
-  inset-inline: 0;
-  height: var(--frame-seam);
-  margin-block: 0;
   pointer-events: auto;
 }
 .resize-handle-col::after,

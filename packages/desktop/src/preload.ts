@@ -11,6 +11,15 @@ const bridge = {
   /** Show the native folder picker; resolves to the chosen path or null. */
   openDirectory: (): Promise<string | null> =>
     ipcRenderer.invoke("dialog:open-directory"),
+  // Quick Look is macOS only, so the method's presence is how the renderer
+  // knows it has a panel to offer.
+  ...(process.platform === "darwin"
+    ? {
+        /** Open the native Quick Look panel on an absolute path. */
+        previewFile: (path: string): Promise<void> =>
+          ipcRenderer.invoke("quicklook:preview", path),
+      }
+    : {}),
 };
 
 export type DesktopBridge = typeof bridge;
