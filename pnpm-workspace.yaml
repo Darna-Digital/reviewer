@@ -26,3 +26,19 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   workerd: true
+
+# Taken on purpose ahead of the release-age gate: 1.4.3 carries the fix for
+# "VirtualizedFileDiff.render: rendered a different diff than its prepared
+# layout", which 1.4.0 throws when a diff is replaced mid-render.
+minimumReleaseAgeExclude:
+  - '@pierre/diffs@1.4.3'
+
+# `@effect/platform-node` pins `effect`, `@effect/platform-node` and
+# `@effect/vitest` to one beta, but asks for `@effect/platform-node-shared`
+# with a caret. A caret over a prerelease also matches the `rc` line, so a
+# refreshed lockfile drifts that one package onto an rc built against a newer
+# `effect` — and it imports modules that beta does not ship (NodeFileSystem
+# fails on `effect/dist/ByteSize.js`). Hold it at the same beta as the rest of
+# the stack; lift this when the whole effect stack moves.
+overrides:
+  '@effect/platform-node-shared': 4.0.0-beta.74
