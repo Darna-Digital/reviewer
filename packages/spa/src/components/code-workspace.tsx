@@ -67,6 +67,8 @@ import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useHeaderLead } from "@/components/layout/header-lead";
 import { useHeaderTabsSlot } from "@/components/layout/header-tabs";
+import { usePublishPageTrail } from "@/components/layout/page-trail";
+import { seamAfter, useSeamSlot } from "@/components/layout/seam-slot";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { FileSidebar } from "@/components/tree/file-sidebar";
@@ -1198,7 +1200,37 @@ export function CodeWorkspace() {
   );
 
   const crumbs = buildCrumbs();
+  /**
+   * Whether the page wears a trail — it does once it says more than which mode
+   * you are in. Read this high because it is the page's own foot rather than
+   * the centre pane's: the columns end on it, and the seams between them stop
+   * where it starts.
+   */
+  const trailed =
+    (crumbs.length > 1 || viewing !== null) &&
+    // Review mode before a pull request is picked is the list and nothing else
+    // — see the early return below.
+    !(mode === "review" && selectedPull === null);
+  /**
+   * And whether the drawer is open under it. The dock is the page's sibling
+   * with a run of frame between them, and that run belongs *above* the trail:
+   * the bar is the page's last line and the drawer opens against it, so the two
+   * read as one stack and the gap you pull to size the drawer is over the bar
+   * rather than through it. The dock is told the same thing from the other side
+   * — see `page-trail`.
+   */
+  const onDock =
+    trailed && prefs.bottomVisible && workspace.data?.current != null;
+  usePublishPageTrail(trailed);
+  // Where the column seams stop: the trail's band, and the seam over it once
+  // the drawer has pushed one in.
+  const seamFoot = !trailed
+    ? 0
+    : onDock
+      ? "calc(var(--trail-band) + var(--frame-seam))"
+      : "var(--trail-band)";
   const headerTabsSlot = useHeaderTabsSlot();
+  const seamSlot = useSeamSlot();
 
   /**
    * Review mode before a pull request is picked: the list, and nothing else.
@@ -1240,9 +1272,30 @@ export function CodeWorkspace() {
     );
   }
 
+  const columnSheet = cn(
+    "app-sheet flex flex-col overflow-hidden",
+    // The columns end on the trail, so their feet go square and the bar under
+    // them reads as the foot of the same page — until the drawer opens and the
+    // seam moves up between them, when they turn their own corners again.
+    trailed && !onDock && "app-sheet-joined-below"
+  );
+
   return (
-    <div className="app-split flex min-h-0 flex-1 gap-1.5">
-      {/* A pull request under review is three columns: what it is, what files
+    /* The page is its columns with the trail along the foot of all of them.
+       The trail used to be the last row inside the centre pane, which left its
+       rule starting where that pane did — the tree beside it running on past
+       the bottom of the window, and the line reading as an edge of the diff
+       rather than as the foot of the page. It is a sheet of its own now, the
+       width of the page, with the tree, the pane and the seam between them
+       ending on it. */
+    <div
+      className={cn(
+        "app-split flex min-h-0 flex-1 flex-col",
+        onDock && "gap-1.5"
+      )}
+    >
+      <div className="app-columns flex min-h-0 flex-1 gap-1.5">
+        {/* A pull request under review is three columns: what it is, what files
           it touches, and the diff. The other modes are the tree beside the
           diff, as they were.
 
@@ -1252,171 +1305,201 @@ export function CodeWorkspace() {
           Both auxiliary columns answer to the same "hide sidebar" toggle. Two
           of the three going away is what makes it a way to look at the code
           alone; hiding one of them and leaving the other is neither thing. */}
-      <div
-        className={cn(
-          "app-sheet flex shrink-0 flex-col overflow-hidden",
-          !prefs.sidebarVisible && "hidden"
-        )}
-        style={firstColumn.style}
-      >
-        {reviewing ? (
-          <PullRequestOverview
-            pull={selectedPull}
-            currentBranch={repo.data?.currentBranch ?? null}
-            onCheckout={async (p, branch) => {
-              await git.checkoutPull(p.number, branch);
-            }}
-            onMerge={(p, method) => git.mergePull(p.number, method)}
-            onClose={(p) => git.closePull(p.number)}
-            onBack={() => void navigate({ to: "/modes/code/review" })}
-            treeVisible={prefs.reviewTreeVisible}
-            onToggleTree={() =>
-              setUiPrefs({ reviewTreeVisible: !prefs.reviewTreeVisible })
-            }
-            className="min-h-0 flex-1"
-          />
-        ) : (
-          <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
-        )}
-      </div>
-      {prefs.sidebarVisible && (
-        <SidebarResizeHandle
-          width={firstColumn.current}
-          stored={reviewing ? prefs.reviewInfoWidth : prefs.sidebarWidth}
-          // Review mode has a third column between this one and the diff, so
-          // the room this may take is what is left after that one has had its.
-          max={() =>
-            Math.max(
-              240,
-              window.innerWidth -
-                400 -
-                (reviewing && prefs.reviewTreeVisible
-                  ? reviewTree.current()
-                  : 0)
-            )
-          }
-          onResize={firstColumn.onResize}
-          onResizeEnd={(w) =>
-            setUiPrefs(reviewing ? { reviewInfoWidth: w } : { sidebarWidth: w })
-          }
-          className="resize-handle-seam"
-        />
-      )}
-      {reviewing && prefs.sidebarVisible && prefs.reviewTreeVisible && (
-        <>
-          <div
-            className="app-sheet flex shrink-0 flex-col overflow-hidden"
-            style={reviewTree.style}
-          >
-            <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
-          </div>
-          <ResizeHandle
-            orientation="col"
-            value={reviewTree.current}
-            min={180}
-            max={() => Math.max(240, window.innerWidth - 520)}
-            onResize={reviewTree.onResize}
-            onResizeEnd={(w) => setUiPrefs({ reviewTreeWidth: w })}
-            label="Resize file tree"
-            className="resize-handle-seam"
-          />
-        </>
-      )}
-      <main className="app-sheet flex min-w-0 flex-1 flex-col overflow-hidden">
-        {mode === "commit" &&
-          mergeState.data != null &&
-          mergeState.data.operation !== "none" && (
-            <ConflictBanner
-              state={mergeState.data}
-              selectedPath={search.path ?? null}
-              onSelectFile={openConflict}
-              onAbort={() => void git.abortMerge()}
-              onContinue={() => void git.continueMerge()}
-            />
+        <div
+          className={cn(
+            columnSheet,
+            "shrink-0",
+            !prefs.sidebarVisible && "hidden"
           )}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {/* The strip is drawn into the header band over this pane rather than
+          style={firstColumn.style}
+        >
+          {reviewing ? (
+            <PullRequestOverview
+              pull={selectedPull}
+              currentBranch={repo.data?.currentBranch ?? null}
+              onCheckout={async (p, branch) => {
+                await git.checkoutPull(p.number, branch);
+              }}
+              onMerge={(p, method) => git.mergePull(p.number, method)}
+              onClose={(p) => git.closePull(p.number)}
+              onBack={() => void navigate({ to: "/modes/code/review" })}
+              treeVisible={prefs.reviewTreeVisible}
+              onToggleTree={() =>
+                setUiPrefs({ reviewTreeVisible: !prefs.reviewTreeVisible })
+              }
+              className="min-h-0 flex-1"
+            />
+          ) : (
+            <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
+          )}
+        </div>
+        {/* The seams are drawn over the header as well as over the page, so
+            they are hung in the box spanning both rather than laid out between
+            the columns here — the flex gap alone is already the run of frame
+            they lie on. They stop where the trail starts: the columns end on
+            it, so past that there is no seam left to pull. See `seam-slot`. */}
+        {prefs.sidebarVisible &&
+          seamSlot !== null &&
+          createPortal(
+            <SidebarResizeHandle
+              width={firstColumn.current}
+              stored={reviewing ? prefs.reviewInfoWidth : prefs.sidebarWidth}
+              // Review mode has a third column between this one and the diff, so
+              // the room this may take is what is left after that one has had its.
+              max={() =>
+                Math.max(
+                  240,
+                  window.innerWidth -
+                    400 -
+                    (reviewing && prefs.reviewTreeVisible
+                      ? reviewTree.current()
+                      : 0)
+                )
+              }
+              onResize={firstColumn.onResize}
+              onResizeEnd={(w) =>
+                setUiPrefs(
+                  reviewing ? { reviewInfoWidth: w } : { sidebarWidth: w }
+                )
+              }
+              className="resize-handle-crossing"
+              style={{
+                left: seamAfter(
+                  reviewing
+                    ? "var(--panel-review-info-w)"
+                    : "var(--panel-sidebar-w)"
+                ),
+                bottom: seamFoot,
+              }}
+            />,
+            seamSlot
+          )}
+        {reviewing && prefs.sidebarVisible && prefs.reviewTreeVisible && (
+          <>
+            <div
+              className={cn(columnSheet, "shrink-0")}
+              style={reviewTree.style}
+            >
+              <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>
+            </div>
+            {seamSlot !== null &&
+              createPortal(
+                <ResizeHandle
+                  orientation="col"
+                  value={reviewTree.current}
+                  min={180}
+                  max={() => Math.max(240, window.innerWidth - 520)}
+                  onResize={reviewTree.onResize}
+                  onResizeEnd={(w) => setUiPrefs({ reviewTreeWidth: w })}
+                  label="Resize file tree"
+                  className="resize-handle-crossing"
+                  style={{
+                    left: seamAfter(
+                      "var(--panel-review-info-w)",
+                      "var(--panel-review-tree-w)"
+                    ),
+                    bottom: seamFoot,
+                  }}
+                />,
+                seamSlot
+              )}
+          </>
+        )}
+        {/* The diff fills this pane from its very first pixel and paints its own
+            tone there, so the rule under the header is drawn over it rather than
+            behind it — see `app-sheet-ruled`. */}
+        <main className={cn(columnSheet, "app-sheet-ruled min-w-0 flex-1")}>
+          {mode === "commit" &&
+            mergeState.data != null &&
+            mergeState.data.operation !== "none" && (
+              <ConflictBanner
+                state={mergeState.data}
+                selectedPath={search.path ?? null}
+                onSelectFile={openConflict}
+                onAbort={() => void git.abortMerge()}
+                onContinue={() => void git.continueMerge()}
+              />
+            )}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {/* The strip is drawn into the header band over this pane rather than
               inside it — see `header-tabs`. It is rendered from here because
               the tabs are this page's state; only the row it lands on is the
               layout's. */}
-          {tabbed &&
-            headerTabsSlot !== null &&
-            createPortal(
-              <TabStrip
-                tabs={tabs.tabs}
-                active={tabs.active}
-                dirty={dirtyPaths}
-                onSelect={selectTab}
-                onKeep={(path) => updateTabs((state) => keepTab(state, path))}
-                onClose={closeTabAt}
-                onTogglePin={(path) =>
-                  updateTabs((state) => togglePin(state, path))
-                }
-                onCloseOthers={(path) => {
-                  whenMayLeaveFile(path, () =>
-                    updateTabs((state) => {
-                      const next = closeOthers(state, path);
-                      setSearch({ file: next.active ?? undefined });
-                      return next;
-                    })
-                  );
-                }}
-                onCloseAll={() => {
-                  whenMayLeaveFile(undefined, () =>
-                    updateTabs((state) => {
-                      const next = closeAll(state);
-                      setSearch({ file: next.active ?? undefined });
-                      return next;
-                    })
-                  );
-                }}
-                onMove={(path, toIndex) =>
-                  updateTabs((state) => moveTab(state, path, toIndex))
-                }
-              />,
-              headerTabsSlot
-            )}
-          {/* The assign bar floats at the foot of the whole window, centred
+            {tabbed &&
+              headerTabsSlot !== null &&
+              createPortal(
+                <TabStrip
+                  tabs={tabs.tabs}
+                  active={tabs.active}
+                  dirty={dirtyPaths}
+                  onSelect={selectTab}
+                  onKeep={(path) => updateTabs((state) => keepTab(state, path))}
+                  onClose={closeTabAt}
+                  onTogglePin={(path) =>
+                    updateTabs((state) => togglePin(state, path))
+                  }
+                  onCloseOthers={(path) => {
+                    whenMayLeaveFile(path, () =>
+                      updateTabs((state) => {
+                        const next = closeOthers(state, path);
+                        setSearch({ file: next.active ?? undefined });
+                        return next;
+                      })
+                    );
+                  }}
+                  onCloseAll={() => {
+                    whenMayLeaveFile(undefined, () =>
+                      updateTabs((state) => {
+                        const next = closeAll(state);
+                        setSearch({ file: next.active ?? undefined });
+                        return next;
+                      })
+                    );
+                  }}
+                  onMove={(path, toIndex) =>
+                    updateTabs((state) => moveTab(state, path, toIndex))
+                  }
+                />,
+                headerTabsSlot
+              )}
+            {/* The assign bar floats at the foot of the whole window, centred
               on it rather than on this pane: with the browser open beside the
               code, a bar centred on the code alone sits off to one side. */}
-          <div className="relative min-h-0 flex-1 overflow-hidden">
-            {renderCenter()}
-            {handoffComments.length > 0 && (
-              <ReviewAssignBar
-                comments={handoffComments}
-                chats={chats.data?.items ?? []}
-                catalog={chatModels.data}
-                branch={assignPlace.branch}
-                onAssign={assignReview}
-                onOpenComment={openComment}
-                onDeleteComment={deleteListedComment}
-              />
-            )}
-          </div>
-          {/* The trail closes the pane, and only once it says more than
-              which mode you are in. */}
-          {(crumbs.length > 1 || viewing !== null) && (
-            <PathBar
-              crumbs={crumbs}
-              path={viewing}
-              paths={allPaths}
-              onOpenFile={openFile}
-              onShowHistory={
-                viewing === null ? undefined : () => showFileHistory(viewing)
-              }
-              // Over a diff the trail is the only thing naming the open file,
-              // now that no strip does, so it is also what puts it down again.
-              onClose={!tabbed && viewing !== null ? closeFile : undefined}
-              actions={
-                <div
-                  ref={setFileActionsSlot}
-                  className="flex items-center gap-1"
+            <div className="relative min-h-0 flex-1 overflow-hidden">
+              {renderCenter()}
+              {handoffComments.length > 0 && (
+                <ReviewAssignBar
+                  comments={handoffComments}
+                  chats={chats.data?.items ?? []}
+                  catalog={chatModels.data}
+                  branch={assignPlace.branch}
+                  onAssign={assignReview}
+                  onOpenComment={openComment}
+                  onDeleteComment={deleteListedComment}
                 />
-              }
-            />
-          )}
-        </div>
-      </main>
+              )}
+            </div>
+          </div>
+        </main>
+      </div>
+      {trailed && (
+        <PathBar
+          crumbs={crumbs}
+          path={viewing}
+          paths={allPaths}
+          onOpenFile={openFile}
+          onShowHistory={
+            viewing === null ? undefined : () => showFileHistory(viewing)
+          }
+          // Over a diff the trail is the only thing naming the open file, now
+          // that no strip does, so it is also what puts it down again.
+          onClose={!tabbed && viewing !== null ? closeFile : undefined}
+          onDock={onDock}
+          actions={
+            <div ref={setFileActionsSlot} className="flex items-center gap-1" />
+          }
+        />
+      )}
     </div>
   );
 }

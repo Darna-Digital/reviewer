@@ -74,14 +74,16 @@ const bundledServerEntry = app.isPackaged
 const pnpmBin = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 
 // The Reviewer brand logo, used for the window and the macOS dock icon so the
-// app no longer shows Electron's default icon. Both variants are the `brand/`
-// square on the macOS icon grid — an 824px tile centred in a 1024px canvas, the
-// margin every other dock icon leaves — carrying the same top-to-bottom
-// gradient the packaged icon gets from its `automatic-gradient` fills, and
-// differ only in whether the tile is dark with a white mark or light with a
-// black one, so nothing moves or resizes as the appearance flips. Resolved
-// relative to `dist/` (../assets) so dev and packaged builds load the same
-// files.
+// app no longer shows Electron's default icon. Each is the matching
+// `reviewer-icon-*.svg` placed on the macOS icon grid — an 824px tile centred
+// in a 1024px canvas, the margin every other dock icon leaves — clipped to the
+// system's continuous ("squircle") corner rather than a circular one, so the
+// silhouette lands on the same pixels macOS 26 draws the packaged icon on. The
+// two carry the top-to-bottom gradient macOS 26 renders over the packaged
+// icon: dark fades its tile behind a flat white mark, light keeps a flat white
+// tile and fades the mark itself, so nothing moves or resizes as the
+// appearance flips. Resolved relative to `dist/` (../assets) so dev and
+// packaged builds load the same files.
 const brandIcons = {
   dark: nativeImage.createFromPath(
     resolve(__dirname, "..", "assets", "reviewer-icon-dark.png")

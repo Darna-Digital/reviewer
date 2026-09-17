@@ -248,7 +248,11 @@ export function ThreadsPage() {
         )}
         style={sidebar.style}
       >
-        <div className="flex min-h-9 items-center gap-1.5 border-b px-2 py-0.5">
+        {/* The same band as the dock's tab strip above it, down to the inset:
+            36px tall with a 4px margin around its 28px controls, so the search
+            box sits under the tabs' own chips and its icon lands in the column
+            the tab icons are drawn in. See `BottomPanel`. */}
+        <div className="flex h-9 shrink-0 items-center gap-1.5 border-b px-1">
           <SidebarSearch
             label="Search sessions"
             placeholder="Search sessions…"
@@ -358,7 +362,12 @@ export function ThreadsPage() {
           </div>
         ) : (
           <>
-            <header className="flex items-center gap-2 border-b px-3 py-1.5">
+            {/* Fixed at the sidebar band's height rather than sized by its
+                contents: padding around a 20px title left it three pixels
+                short, so the rule under it ran below the one beside it and the
+                two columns started at different lines. The rename box is 28px
+                and fits the band as it stands. */}
+            <header className="flex h-9 shrink-0 items-center gap-2 border-b px-3">
               <ActiveIcon className="size-4 shrink-0 text-muted-foreground" />
               {renaming?.id === active.id ? (
                 <Input

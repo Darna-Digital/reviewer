@@ -21,6 +21,7 @@ import { useMemo } from "react";
 import { AppHeader } from "@/components/layout/app-header";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
 import { ModeRail } from "@/components/layout/mode-rail";
+import { setSeamSlot } from "@/components/layout/seam-slot";
 import { SessionsRail } from "@/components/layout/sessions-rail";
 import { WindowFrame } from "@/components/layout/window-frame";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
@@ -170,49 +171,74 @@ export function AppLayout() {
      */
     <DiffWorkerPoolProvider>
       <WindowFrame>
-        {railed && (route.kind === "session" ? <SessionsRail /> : <ModeRail />)}
-        {/* The rail is the one thing left standing on the frame; the header,
-            the page and the dock are all sheets.
+        {/* The rail and what stands against it are one box with no gap between
+            them: the rail is not a sheet of its own but the left edge of the one
+            beside it, carrying the same paper as the header and the page with a
+            rule where they meet — see `app-rail`. Every other seam in here is
+            the frame showing through, and this is the one that is a line.
 
             The header stands *on* the page rather than clear of it — the branch
             picker and the trail name what is underneath them, and a run of
             desktop between the two put them on different surfaces. So there is
             no seam there; the seams are the one under the page, and the ones
             the page draws between its own columns. */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          {!headerless && <AppHeader route={route} />}
-          <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
-            {/* Put away rather than unmounted: the outlet is where the router
-                keeps whatever the location matched, and a dock page matches a
-                route that draws nothing. */}
+        <div className="flex min-w-0 flex-1 overflow-hidden">
+          {railed &&
+            (route.kind === "session" ? <SessionsRail /> : <ModeRail />)}
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5 overflow-hidden">
+            {/* The header and the page it stands on are one box, because the
+              seams the page draws between its columns carry on up through the
+              header and have to be dragged there too. A handle for one of them
+              hangs in the overlay at the end of this box, which is the one
+              thing spanning both — see `seam-slot`. */}
             <div
               className={cn(
-                "app-page flex min-h-0 flex-1 flex-col overflow-hidden",
-                !headerless && "app-page-joined",
-                dockExpanded && "hidden"
+                "relative flex min-h-0 flex-col",
+                // Expanded, the dock is the canvas and the page is put away, so
+                // what is left here is the header: as tall as it is, and no more.
+                dockExpanded ? "shrink-0" : "flex-1"
               )}
             >
-              {/* The pages that sit *over* a repository say so when there
+              {!headerless && <AppHeader route={route} />}
+              {/* Put away rather than unmounted: the outlet is where the router
+                keeps whatever the location matched, and a dock page matches a
+                route that draws nothing. */}
+              <div
+                className={cn(
+                  "app-page flex min-h-0 flex-1 flex-col overflow-hidden",
+                  !headerless && "app-page-joined",
+                  dockExpanded && "hidden"
+                )}
+              >
+                {/* The pages that sit *over* a repository say so when there
                   isn't one. The code surfaces answer for themselves — a
                   project can be open while holding no git root, and they
                   explain that case in the centre rather than here. */}
-              {current === null && needsRepo ? (
-                <div className="flex h-full flex-col items-center justify-center gap-1 text-sm">
-                  <div className="font-medium">No repository selected</div>
-                  <div className="text-muted-foreground">
-                    Open one from the repo picker above to use this workspace.
+                {current === null && needsRepo ? (
+                  <div className="flex h-full flex-col items-center justify-center gap-1 text-sm">
+                    <div className="font-medium">No repository selected</div>
+                    <div className="text-muted-foreground">
+                      Open one from the repo picker above to use this workspace.
+                    </div>
                   </div>
-                </div>
-              ) : pendingIntoSessions ? (
-                <div className="flex min-h-0 flex-1 flex-col" />
-              ) : (
-                <Outlet />
-              )}
+                ) : pendingIntoSessions ? (
+                  <div className="flex min-h-0 flex-1 flex-col" />
+                ) : (
+                  <Outlet />
+                )}
+              </div>
+              {/* Lent to the page, which hangs its column seams here. Transparent
+                to the pointer but for the handles themselves, so the header and
+                the page underneath are reached through it as usual. */}
+              <div
+                ref={setSeamSlot}
+                className="pointer-events-none absolute inset-0 z-20"
+              />
             </div>
             {/* The dock is git's, so it follows the git surfaces — but it is
-                the same dock throughout, which is what lets a terminal opened
-                on the services tab still be running when you come back to it
-                from a diff. */}
+              the same dock throughout, which is what lets a terminal opened
+              on the services tab still be running when you come back to it
+              from a diff. */}
             {current !== null && gitChrome && (
               <GitBottomDock expandedTab={expandedTab} />
             )}

@@ -95,7 +95,17 @@ export function MarkdownFileView(props: CodeViewProps) {
             : undefined
         }
       >
-        <CodeView {...props} onBuffer={onBuffer} />
+        {/* A document on screen is a document to type into, whatever the edit
+            mode says: comment mode would otherwise leave the block editor
+            showing the file and refusing every keystroke, since it writes
+            through the buffer this view owns and comment mode keeps none.
+            Source alone still follows the mode, which is where the mode is
+            about something the user can see. */}
+        <CodeView
+          {...props}
+          onBuffer={onBuffer}
+          editing={withDocument ? true : undefined}
+        />
       </div>
 
       {withSource && withDocument && (
@@ -107,6 +117,7 @@ export function MarkdownFileView(props: CodeViewProps) {
           onResize={sourceColumn.onResize}
           onResizeEnd={(width) => setUiPrefs({ markdownSourceWidth: width })}
           label="Resize markdown source pane"
+          className="resize-handle-divider"
         />
       )}
 

@@ -10,6 +10,7 @@
 import {
   useCallback,
   useState,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,12 @@ interface ResizeHandleProps {
    */
   onResizeEnd?: (next: number, moved: boolean) => void;
   className?: string;
+  /**
+   * Where the handle lies, for a seam that is placed rather than laid out —
+   * see `resize-handle-crossing`, where the handle has left the row it divides
+   * and is put back over it by the same widths the columns are sized by.
+   */
+  style?: CSSProperties;
   label?: string;
   /**
    * What the browser says about the handle on a hover. Given `null` where the
@@ -76,6 +83,7 @@ export function ResizeHandle({
   onResize,
   onResizeEnd,
   className,
+  style,
   label = "Resize panel",
   hint = "Drag to resize",
 }: ResizeHandleProps) {
@@ -148,6 +156,7 @@ export function ResizeHandle({
       title={hint ?? undefined}
       data-dragging={dragging || undefined}
       onPointerDown={onPointerDown}
+      style={style}
       className={cn(
         orientation === "col" ? "resize-handle-col" : "resize-handle-row",
         className

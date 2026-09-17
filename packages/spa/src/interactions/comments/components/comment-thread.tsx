@@ -52,9 +52,15 @@ const REPLY_INDENT = "ml-10";
  * `comment-card` is the hook `styles.css` hangs the caret and selection colours
  * on: the file view slots this card inside the editor's `contenteditable`,
  * which blanks both for the code it is drawing itself.
+ *
+ * The card starts under the gutter's add-a-comment `+`, so the note lines up
+ * with the button that opened it. An annotation begins at the code column, and
+ * the diff leaves its `+` straddling that edge, so 0 is where it belongs there;
+ * the file view pushes its `+` a character clear of the fold chevron and says
+ * so by setting `--comment-card-indent` (see `comment-gutter-css`).
  */
 const COMMENT_CARD =
-  "comment-card group/thread my-2 mr-3 ml-12 w-full max-w-100 min-w-0 overflow-hidden rounded-md bg-surface-2 p-2.5 font-sans text-card-foreground shadow-raised";
+  "comment-card group/thread my-2 mr-3 ml-[var(--comment-card-indent,0px)] w-full max-w-100 min-w-0 overflow-hidden rounded-md bg-surface-2 p-2.5 font-sans text-card-foreground shadow-raised";
 
 export function CommentComposer({
   onCancel,

@@ -45,6 +45,14 @@ export type BrandConfig = {
   canvasPadding: number;
 };
 
+/**
+ * Top-to-bottom, in the CSS convention `gradientVector` reads (0° points up).
+ * The square mark reads as a lit surface rather than a tilted one, and it is the
+ * angle the macOS icon's `automatic-gradient` fills use, so the packaged app
+ * icon and the exported assets match.
+ */
+export const VERTICAL = 180;
+
 export const BLACK = "#000000";
 export const WHITE = "#ffffff";
 
@@ -52,14 +60,14 @@ const SOLID = (color: string): Fill => ({
   kind: "solid",
   color,
   colorTo: BLACK,
-  angle: 135,
+  angle: VERTICAL,
 });
 
 const GRADIENT = (color: string, colorTo: string): Fill => ({
   kind: "gradient",
   color,
   colorTo,
-  angle: 135,
+  angle: VERTICAL,
 });
 
 /** Graphite fading to black — for a tile the mark sits on. */
@@ -71,7 +79,7 @@ export const TRANSPARENT: Fill = {
   kind: "transparent",
   color: BLACK,
   colorTo: BLACK,
-  angle: 135,
+  angle: VERTICAL,
 };
 
 export const DEFAULT_CONFIG: BrandConfig = {

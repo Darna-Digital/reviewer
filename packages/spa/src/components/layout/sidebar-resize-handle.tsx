@@ -5,6 +5,7 @@
  * it back brings back the panel you left rather than the sliver you dragged it
  * down to.
  */
+import type { CSSProperties } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { setUiPrefs } from "@/lib/ui-prefs";
 
@@ -19,6 +20,7 @@ export function SidebarResizeHandle({
   onResizeEnd,
   label = "Resize sidebar",
   className,
+  style,
 }: {
   /** The live width the drag measures from — see `ResizeHandle`'s `value`. */
   width: number | (() => number);
@@ -34,12 +36,15 @@ export function SidebarResizeHandle({
    * of straddling a border.
    */
   className?: string;
+  /** Where the handle lies, for a seam that is placed — see `ResizeHandle`. */
+  style?: CSSProperties;
 }) {
   return (
     <ResizeHandle
       orientation="col"
       label={label}
       className={className}
+      style={style}
       value={width}
       min={COLLAPSE_WIDTH}
       max={max}

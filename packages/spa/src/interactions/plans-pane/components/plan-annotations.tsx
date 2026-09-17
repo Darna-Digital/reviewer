@@ -197,7 +197,7 @@ function Group({
       ref={row}
       className={cn(
         // The lightest thing that separates siblings: a hairline, not a card.
-        "border-t border-frame-border first:border-t-0",
+        "border-t border-hairline first:border-t-0",
         selected && "bg-elevate"
       )}
     >

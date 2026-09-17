@@ -237,12 +237,11 @@ export function ChatsPage() {
         >
           <ScrollArea
             className="min-h-0 flex-1"
-            viewportClassName="scroll-fade"
             onViewportScroll={onListScroll}
             viewportRef={listViewport}
           >
             {cloudConnected && cloudRuns.length > 0 && (
-              <div className="flex flex-col gap-px border-b px-2 pt-2 pb-2">
+              <div className="flex flex-col gap-px border-b border-hairline px-2 pt-2 pb-2">
                 <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
                   Cloud
                 </p>

@@ -22,6 +22,7 @@ import { isChatRunning } from "@/interactions/chats/functions/chats.reducer";
 import { useChatModels } from "@/lib/queries";
 import { rememberSession } from "@/lib/ui-prefs";
 import { ChatComposer } from "./chat-composer";
+import { ImageDropZone } from "./image-drop-zone";
 import { MessagesTimeline } from "./messages-timeline";
 import { SessionContextBar } from "./session-context-bar";
 
@@ -82,7 +83,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <ImageDropZone draftKey={chat.id} className="flex h-full min-h-0 flex-col">
       {/* Streamed text keeps rendering from the last snapshot while this shows,
           so say the connection dropped rather than let a stalled reply read as
           an agent that simply stopped talking. The turn itself keeps running on
@@ -125,6 +126,6 @@ export function ChatView({ chatId }: { chatId: string }) {
         </div>
         <SessionContextBar />
       </div>
-    </div>
+    </ImageDropZone>
   );
 }

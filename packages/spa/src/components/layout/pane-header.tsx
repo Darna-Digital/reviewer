@@ -26,7 +26,9 @@ export function PaneHeader({
       data-slot="pane-header"
       className={cn(
         "flex h-9 shrink-0 items-center gap-2 px-3",
-        foot ? "order-last border-t" : "border-b"
+        foot
+          ? "order-last border-t border-hairline"
+          : "border-b border-hairline"
       )}
     >
       <nav

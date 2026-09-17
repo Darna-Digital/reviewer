@@ -11,22 +11,24 @@
  * edits" from "full access" stops claiming to. Picking a model moves the
  * settings onto what that model does offer, in the same patch.
  *
+ * Images can be picked or pasted here, but they are not dropped here: the drop
+ * target is the whole session pane, so a file can be let go anywhere in the
+ * conversation (see `ImageDropZone`) and still arrive as a chip on this box.
+ *
  * The prompt box rests at a few lines and is dragged taller by its top edge —
  * the height is the app's, not this thread's, so a box pulled open for one long
  * prompt is still open at the next.
  */
 import {
   IconSend,
+  IconCheck,
   IconChevronDown,
   IconHammer,
-  IconLock,
-  IconLockOpen,
   IconPhotoPlus,
   IconPlayerStopFilled,
   IconSitemap,
 } from "@tabler/icons-react";
 import { useRef, useState } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -46,7 +48,6 @@ import {
 } from "@reviewer/core/chats";
 import { useDraft } from "@/lib/composer-drafts";
 import {
-  addComposerAttachment,
   clearComposerAttachments,
   removeComposerAttachment,
   useComposerAttachments,
@@ -64,32 +65,47 @@ import { AttachmentChip, AttachmentGrid } from "./image-attachments";
 import {
   attachmentSource,
   isImageFile,
-  MAX_IMAGE_BYTES,
-  readImageAttachment,
   toImagePayload,
   type ChatImagePayload,
 } from "./attachments";
+import { attachImageFiles } from "./image-drop-zone";
 import { ModelPicker } from "./model-picker";
 
-const MODES: Array<{ value: ChatMode; label: string; hint: string }> = [
-  { value: "build", label: "Build", hint: "Read, change and run the code" },
-  { value: "analysis", label: "Analysis", hint: "Draw the flow in the pane" },
+const MODES: ReadonlyArray<SelectorOption<ChatMode>> = [
+  {
+    value: "build",
+    label: "Build",
+    hint: "Read, change and run the code",
+    icon: IconHammer,
+  },
+  {
+    value: "analysis",
+    label: "Analysis",
+    hint: "Draw the flow in the pane",
+    icon: IconSitemap,
+  },
 ];
 
+/**
+ * One selector — effort, mode, access — as a picker rather than a word list:
+ * each option wears its own icon, its label, and the line saying what choosing
+ * it does, because these are settings whose consequences are not guessable from
+ * a single word ("Supervised" of what?). The trigger borrows the chosen
+ * option's icon, so the row reads as a set of states rather than of buttons.
+ */
 function SelectorMenu<T extends string>({
   options,
   value,
   onSelect,
-  icon,
   ariaLabel,
 }: {
   options: ReadonlyArray<SelectorOption<T>>;
   value: T;
   onSelect: (value: T) => void;
-  icon?: React.ReactNode;
   ariaLabel: string;
 }) {
   const current = options.find((o) => o.value === value);
+  const CurrentIcon = current?.icon;
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -102,23 +118,45 @@ function SelectorMenu<T extends string>({
           />
         }
       >
-        {icon}
+        {CurrentIcon && (
+          <CurrentIcon className="size-3.5 text-muted-foreground" />
+        )}
         {current?.label ?? value}
         <IconChevronDown className="size-3 text-muted-foreground" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" side="top" className="min-w-52">
-        {options.map((option) => (
-          <DropdownMenuItem
-            key={option.value}
-            onClick={() => onSelect(option.value)}
-            className={cn("gap-3", option.value === value && "bg-muted/60")}
-          >
-            <span className="font-medium">{option.label}</span>
-            <span className="ml-auto pl-4 text-xs text-muted-foreground">
-              {option.hint}
-            </span>
-          </DropdownMenuItem>
-        ))}
+      <DropdownMenuContent align="start" side="top" className="w-72">
+        {options.map((option) => {
+          const OptionIcon = option.icon;
+          const chosen = option.value === value;
+          return (
+            <DropdownMenuItem
+              key={option.value}
+              onClick={() => onSelect(option.value)}
+              className={cn(
+                "items-start gap-2.5 py-2 whitespace-normal",
+                chosen && "bg-muted/60"
+              )}
+            >
+              <OptionIcon
+                className={cn(
+                  "mt-0.5 size-4 text-muted-foreground",
+                  chosen && "text-foreground"
+                )}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5 text-sm font-medium">
+                  {option.label}
+                  {chosen && <IconCheck className="size-3.5 text-primary" />}
+                </span>
+                {option.hint.length > 0 && (
+                  <span className="block text-xs text-muted-foreground">
+                    {option.hint}
+                  </span>
+                )}
+              </span>
+            </DropdownMenuItem>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -165,13 +203,9 @@ export function ChatComposer({
   // Pending images are kept beside the draft text, under the same key, so
   // navigating away and back finds the composer exactly as it was left.
   const attachments = useComposerAttachments(draftKey);
-  const [dragging, setDragging] = useState(false);
   const ownTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const textareaRef = externalTextareaRef ?? ownTextareaRef;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // dragenter/dragleave fire per descendant, so count depth to know when the
-  // pointer has truly left the composer (matches lib/terminal/image-drop.ts).
-  const dragDepth = useRef(0);
   const editList = useListEditing({ textareaRef, text, setText });
   const capabilities = catalogCapabilities(
     catalog,
@@ -195,25 +229,6 @@ export function ChatComposer({
   // the message to the thread and the agent picks it up when the turn settles.
   const canSend =
     !sending && (text.trim().length > 0 || attachments.length > 0);
-
-  const addFiles = async (files: ReadonlyArray<File>) => {
-    const images = files.filter(isImageFile);
-    if (images.length === 0) {
-      if (files.length > 0) toast.error("Only image files can be attached");
-      return;
-    }
-    for (const file of images) {
-      if (file.size > MAX_IMAGE_BYTES) {
-        toast.error(`${file.name || "image"} is too large (max 15 MB)`);
-        continue;
-      }
-      try {
-        addComposerAttachment(draftKey, await readImageAttachment(file));
-      } catch {
-        toast.error(`Could not read ${file.name || "image"}`);
-      }
-    }
-  };
 
   const removeAttachment = (id: string) =>
     removeComposerAttachment(draftKey, id);
@@ -247,35 +262,7 @@ export function ChatComposer({
         onResizeEnd={(height) => setUiPrefs({ composerHeight: height })}
         label="Resize the message box"
       />
-      <div
-        className={cn(
-          "relative rounded-lg border bg-background shadow-sm focus-within:border-ring/60",
-          dragging && "border-primary"
-        )}
-        onDragEnter={(e) => {
-          if (!e.dataTransfer.types.includes("Files")) return;
-          e.preventDefault();
-          dragDepth.current += 1;
-          setDragging(true);
-        }}
-        onDragOver={(e) => {
-          if (!e.dataTransfer.types.includes("Files")) return;
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "copy";
-        }}
-        onDragLeave={(e) => {
-          if (!e.dataTransfer.types.includes("Files")) return;
-          dragDepth.current = Math.max(0, dragDepth.current - 1);
-          if (dragDepth.current === 0) setDragging(false);
-        }}
-        onDrop={(e) => {
-          if (!e.dataTransfer.types.includes("Files")) return;
-          e.preventDefault();
-          dragDepth.current = 0;
-          setDragging(false);
-          void addFiles(Array.from(e.dataTransfer.files));
-        }}
-      >
+      <div className="relative rounded-lg border bg-background shadow-sm focus-within:border-ring/60">
         {attachments.length > 0 && (
           <AttachmentGrid className="px-3 pt-3">
             {attachments.map((attachment) => (
@@ -297,7 +284,7 @@ export function ChatComposer({
           multiple
           className="hidden"
           onChange={(e) => {
-            void addFiles(Array.from(e.target.files ?? []));
+            void attachImageFiles(draftKey, Array.from(e.target.files ?? []));
             e.target.value = "";
           }}
         />
@@ -310,7 +297,7 @@ export function ChatComposer({
             const files = Array.from(e.clipboardData.files);
             if (files.some(isImageFile)) {
               e.preventDefault();
-              void addFiles(files);
+              void attachImageFiles(draftKey, files);
             }
           }}
           onKeyDown={(e) => {
@@ -325,11 +312,6 @@ export function ChatComposer({
           placeholder={placeholder ?? "Ask anything about this repository…"}
           className="w-full resize-none bg-transparent px-4 pt-3 text-sm outline-none placeholder:text-muted-foreground"
         />
-        {dragging && (
-          <div className="pointer-events-none absolute inset-1 z-10 flex items-center justify-center rounded-xl border-2 border-dashed border-primary bg-primary/10 text-sm font-medium text-foreground">
-            Drop images to attach them
-          </div>
-        )}
         <div className="flex items-center gap-1 px-2 pb-2">
           <ModelPicker
             catalog={catalog}
@@ -360,13 +342,6 @@ export function ChatComposer({
             options={MODES}
             value={mode}
             onSelect={onModeChange}
-            icon={
-              mode === "analysis" ? (
-                <IconSitemap className="size-3.5 text-muted-foreground" />
-              ) : (
-                <IconHammer className="size-3.5 text-muted-foreground" />
-              )
-            }
             ariaLabel="Session mode"
           />
           <Separator
@@ -377,13 +352,6 @@ export function ChatComposer({
             options={accessOptions(capabilities.access)}
             value={settings.access}
             onSelect={(access) => onSettingsChange({ access })}
-            icon={
-              settings.access === "fullAccess" ? (
-                <IconLockOpen className="size-3.5 text-muted-foreground" />
-              ) : (
-                <IconLock className="size-3.5 text-muted-foreground" />
-              )
-            }
             ariaLabel="Access level"
           />
           <Separator

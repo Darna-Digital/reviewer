@@ -43,7 +43,6 @@ import { timeAgo } from "@/lib/relative-time";
 import { rememberSession, useUiPrefs } from "@/lib/ui-prefs";
 import {
   ELEVATION,
-  POPUP_SHADOW,
   SurfaceProvider,
   useElevation,
 } from "@/lib/surface-context";
@@ -141,10 +140,13 @@ export function ReviewAssignBar({
     if (count > seen.current) setCollapsed(false);
     seen.current = count;
   }, [count]);
-  const { level, className: surface } = useElevation(
-    ELEVATION.menu,
-    POPUP_SHADOW
-  );
+  /**
+   * Only the level is taken from the ladder: the bar wears glass rather than a
+   * surface (see `.glass` in styles.css), but anything opening off it — the
+   * comment list, the target picker — still has to lift from where the bar
+   * sits, not from the pane behind it.
+   */
+  const { level } = useElevation(ELEVATION.menu);
   const remembered = useUiPrefs().lastSession;
   /** Whoever you last worked with, or Claude until you have worked with anyone. */
   const lastAgent = remembered.provider ?? "claude";
@@ -275,10 +277,7 @@ export function ReviewAssignBar({
       <SurfaceProvider value={level}>
         <div
           data-surface={level}
-          className={cn(
-            "pointer-events-auto flex max-w-full animate-in items-center gap-1 rounded-xl p-1 duration-150 fade-in slide-in-from-bottom-2",
-            surface
-          )}
+          className="pointer-events-auto flex max-w-full animate-in items-center gap-1 rounded-xl glass p-1 duration-150 fade-in slide-in-from-bottom-2"
         >
           <Popover open={listOpen} onOpenChange={setListOpen}>
             <PopoverTrigger

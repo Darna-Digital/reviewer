@@ -37,6 +37,7 @@ import { isDesktop } from "@/lib/desktop";
 import { useChatModels, useRepo } from "@/lib/queries";
 import { rememberSession, useUiPrefs } from "@/lib/ui-prefs";
 import { ChatComposer } from "./chat-composer";
+import { ImageDropZone } from "./image-drop-zone";
 import { SessionContextBar } from "./session-context-bar";
 
 /**
@@ -149,58 +150,63 @@ export function NewChatView() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-6 py-8">
-      <div className="flex w-full max-w-3xl flex-col gap-5">
-        <div className="mb-6 flex flex-col items-center gap-1.5">
-          <h1 className="text-center text-2xl font-medium tracking-tight">
-            {mode === "analysis"
-              ? "What should we analyse?"
-              : "What should we work on?"}
-          </h1>
-          {mode === "analysis" && (
-            <p className="max-w-md text-center text-sm text-pretty text-muted-foreground">
-              An agent reads the code and draws the flow, front to back, into
-              the analysis pane.
-            </p>
-          )}
-        </div>
-        <div className="flex flex-col">
-          {/* Lifted so the composer's own sheet occludes the strip sliding up
-              underneath it, which is what makes the two read as one block. */}
-          <div className="relative z-10">
-            <ChatComposer
-              draftKey={NEW_CHAT_DRAFT}
-              settings={settings}
-              onSettingsChange={rememberSession}
-              mode={mode}
-              onModeChange={(next) => setChatMode(NEW_SESSION, next)}
-              catalog={models.data}
-              onSend={send}
-              running={false}
-              placeholder={
-                mode === "analysis"
-                  ? "How is a new branch created?"
-                  : "Ask anything, or describe a change…"
-              }
-              textareaRef={composerRef}
-            />
+    <ImageDropZone
+      draftKey={NEW_CHAT_DRAFT}
+      className="flex min-h-0 flex-1 flex-col"
+    >
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-6 py-8">
+        <div className="flex w-full max-w-3xl flex-col gap-5">
+          <div className="mb-6 flex flex-col items-center gap-1.5">
+            <h1 className="text-center text-2xl font-medium tracking-tight">
+              {mode === "analysis"
+                ? "What should we analyse?"
+                : "What should we work on?"}
+            </h1>
+            {mode === "analysis" && (
+              <p className="max-w-md text-center text-sm text-pretty text-muted-foreground">
+                An agent reads the code and draws the flow, front to back, into
+                the analysis pane.
+              </p>
+            )}
           </div>
-          <SessionContextBar />
-        </div>
-        <div className="flex flex-col gap-px empty:hidden">
-          {suggestions.map((suggestion) => (
-            <button
-              key={suggestion.label}
-              type="button"
-              onClick={() => applySuggestion(suggestion)}
-              className="flex h-9 items-center gap-2.5 rounded-lg px-2 text-left text-sm text-muted-foreground outline-none hover:bg-elevate hover:text-foreground focus-visible:bg-elevate focus-visible:text-foreground"
-            >
-              <suggestion.icon className="size-4 shrink-0" />
-              <span className="min-w-0 truncate">{suggestion.label}</span>
-            </button>
-          ))}
+          <div className="flex flex-col">
+            {/* Lifted so the composer's own sheet occludes the strip sliding up
+              underneath it, which is what makes the two read as one block. */}
+            <div className="relative z-10">
+              <ChatComposer
+                draftKey={NEW_CHAT_DRAFT}
+                settings={settings}
+                onSettingsChange={rememberSession}
+                mode={mode}
+                onModeChange={(next) => setChatMode(NEW_SESSION, next)}
+                catalog={models.data}
+                onSend={send}
+                running={false}
+                placeholder={
+                  mode === "analysis"
+                    ? "How is a new branch created?"
+                    : "Ask anything, or describe a change…"
+                }
+                textareaRef={composerRef}
+              />
+            </div>
+            <SessionContextBar />
+          </div>
+          <div className="flex flex-col gap-px empty:hidden">
+            {suggestions.map((suggestion) => (
+              <button
+                key={suggestion.label}
+                type="button"
+                onClick={() => applySuggestion(suggestion)}
+                className="flex h-9 items-center gap-2.5 rounded-lg px-2 text-left text-sm text-muted-foreground outline-none hover:bg-elevate hover:text-foreground focus-visible:bg-elevate focus-visible:text-foreground"
+              >
+                <suggestion.icon className="size-4 shrink-0" />
+                <span className="min-w-0 truncate">{suggestion.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </ImageDropZone>
   );
 }

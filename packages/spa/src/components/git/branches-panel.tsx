@@ -239,7 +239,9 @@ export function BranchesPanel(props: BranchesPanelProps) {
           setSurfaceMenu(pointerAnchor(event.clientX, event.clientY));
         }}
       >
-        <div className="w-full px-2 py-2">
+        {/* One 4px unit everywhere: the same inset as the tab strip and the
+            search row above, and the same gap between the rows inside. */}
+        <div className="w-full p-1">
           {multiRepo
             ? props.repos?.map((entry) => (
                 <RepositoryBranches
@@ -333,7 +335,7 @@ function BranchSection({
         <span className="text-muted-foreground/70">{count}</span>
       </button>
       {!collapsed && (
-        <div className="mt-0.5 flex flex-col gap-px">{children}</div>
+        <div className="mt-1 flex flex-col gap-1">{children}</div>
       )}
     </section>
   );
@@ -365,7 +367,7 @@ function BranchFolder({
         <IconFolder className="size-3.5 shrink-0" />
         <span className="truncate">{name}</span>
       </button>
-      {expanded && <div className="flex flex-col gap-px pl-6">{children}</div>}
+      {expanded && <div className="flex flex-col gap-1 pl-6">{children}</div>}
     </div>
   );
 }

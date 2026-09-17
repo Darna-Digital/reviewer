@@ -87,7 +87,7 @@ interface FileSidebarProps {
 const TREE_UNSAFE_CSS = `
   [data-type='item'] {
     box-sizing: border-box;
-    border-block: 2px solid transparent;
+    border-block: 1px solid transparent;
     background-clip: padding-box;
   }
 `;
@@ -863,7 +863,7 @@ export function FileSidebar({
     <aside className="flex h-full flex-col">
       <div
         className={cn(
-          "-mx-2 mt-2 min-h-0 flex-1 overflow-auto",
+          "mt-1 min-h-0 flex-1 overflow-auto",
           menuOpen && "relative z-20",
           dropping && "rounded-md ring-1 ring-ring ring-inset"
         )}

@@ -80,9 +80,16 @@ const HEADER_BAND =
  */
 function HeaderRow({
   lead,
+  railed,
   children,
 }: {
   lead?: React.ReactNode;
+  /**
+   * Whether the rail stands to the left of the row. The band at the head of it
+   * is then flush against the rail's rule rather than resting on the frame, so
+   * it gives up its start corners to it — see `app-sheet-joined-start`.
+   */
+  railed?: boolean;
   children: React.ReactNode;
 }) {
   const leads = useHeaderLeadWidths();
@@ -91,13 +98,23 @@ function HeaderRow({
       {leads.map((width, index) => (
         <div
           key={width}
-          className={cn(HEADER_BAND, "shrink-0")}
+          className={cn(
+            HEADER_BAND,
+            "shrink-0",
+            index === 0 && railed === true && "app-sheet-joined-start"
+          )}
           style={{ width }}
         >
           {index === 0 && lead}
         </div>
       ))}
-      <div className={cn(HEADER_BAND, "flex-1")}>
+      <div
+        className={cn(
+          HEADER_BAND,
+          "flex-1",
+          leads.length === 0 && railed === true && "app-sheet-joined-start"
+        )}
+      >
         {leads.length === 0 && lead}
         {children}
       </div>
@@ -218,8 +235,12 @@ export function AppHeader({ route }: { route: ShellRoute }) {
     </>
   );
 
+  /* Every page that reaches here wears the rail: the prototype is answered
+     above, and the two surfaces that go without one — the blank composer and a
+     conversation with the window to itself — wear no header either. See
+     `AppLayout`. */
   return (
-    <HeaderRow lead={lead}>
+    <HeaderRow lead={lead} railed>
       {/* Lent to the page beneath, which hangs its open-file strip here: the
           tabs choose what the pane holds, which is the same kind of control as
           the picker at the head of the row. It stands over the pane rather than

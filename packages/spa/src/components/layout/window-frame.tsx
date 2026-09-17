@@ -143,7 +143,8 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
           {/* Sheets on the frame rather than one canvas split by borders: every
               gap between them is the frame's own material, so each seam reads as
               the window showing through instead of a painted divider. The rail
-              is the one part that stays on the frame itself. */}
+              is the exception — it paves its own seam over and joins the sheet
+              beside it, as it did when the window was one canvas. */}
           <TabOverviewPush>
             <div
               className={cn(

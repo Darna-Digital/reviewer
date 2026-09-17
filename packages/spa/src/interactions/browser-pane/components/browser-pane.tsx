@@ -573,12 +573,12 @@ export function BrowserPane() {
     <aside
       aria-label="Browser"
       className={cn(
-        "browser-pane flex min-h-0 shrink-0 flex-col overflow-hidden border border-frame-border",
+        "browser-pane flex min-h-0 shrink-0 flex-col overflow-hidden",
         pane.expanded && "min-w-0 flex-1"
       )}
       style={pane.expanded ? undefined : width.style}
     >
-      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-frame-border px-1">
+      <div className="flex h-9 shrink-0 items-center gap-1 border-b border-hairline px-1">
         <ChromeButton
           label="Back"
           disabled={!pane.canGoBack}

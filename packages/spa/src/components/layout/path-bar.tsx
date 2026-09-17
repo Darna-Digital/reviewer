@@ -1,5 +1,10 @@
 /**
- * The centre pane's trail: where you are, and what acts on it.
+ * The page's trail: where you are, and what acts on it.
+ *
+ * It is a sheet the width of the page, lying along the foot of every column —
+ * the tree, the pane, and the seam between them all end on it. Drawn as the
+ * last row inside the centre pane instead, its rule started where that pane
+ * did, which read as an edge of the diff rather than as the foot of the window.
  *
  * The trail runs from the mode you are in through every folder of the open
  * file, and each of those folders is a dropdown of what else sits beside it —
@@ -48,6 +53,12 @@ export interface PathBarProps {
    * ride with the crumbs instead of ending the line on the right.
    */
   readonly trailActions?: ReactNode;
+  /**
+   * Whether the bottom dock is open under the bar. The drawer opens directly
+   * against it — the run of frame it brings lies above the trail, not below —
+   * so the bar gives up its feet and the two read as one stack.
+   */
+  readonly onDock?: boolean;
 }
 
 export function PathBar({
@@ -59,6 +70,7 @@ export function PathBar({
   onClose,
   actions,
   trailActions,
+  onDock = false,
 }: PathBarProps) {
   const folderCrumbs = useMemo<ReadonlyArray<Crumb>>(
     () =>
@@ -90,8 +102,13 @@ export function PathBar({
   );
 
   return (
-    <div className="flex h-9 min-w-0 shrink-0 items-center gap-2 border-t px-2">
-      {/* Along the foot of the pane the crumbs are a caption to it. */}
+    <div
+      className={cn(
+        "app-sheet app-sheet-joined-above flex h-9 shrink-0 items-center gap-2 px-2",
+        onDock && "app-sheet-joined-below"
+      )}
+    >
+      {/* Along the foot of the page the crumbs are a caption to it. */}
       <Breadcrumbs crumbs={[...crumbs, ...folderCrumbs]} size="sm" />
       {trailActions}
       <div className="ml-auto flex shrink-0 items-center gap-1">

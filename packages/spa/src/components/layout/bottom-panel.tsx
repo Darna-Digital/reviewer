@@ -127,7 +127,7 @@ export function BottomPanel(props: BottomPanelProps) {
       {props.expanded ? (
         <PageTrail tab={props.tab} />
       ) : (
-        <div className="flex h-9 shrink-0 items-center border-b px-1">
+        <div className="flex h-9 shrink-0 items-center border-b border-hairline px-1">
           <TabsSubtle
             idPrefix="bottom-dock"
             className="min-w-0"

@@ -121,7 +121,7 @@ export function VisualCommentComposer({
         finalFocus={false}
         className="flex max-h-(--available-height) w-[25rem] flex-col gap-0 overflow-hidden p-0"
       >
-        <div className="flex items-start gap-2 border-b border-frame-border p-2.5">
+        <div className="flex items-start gap-2 border-b border-hairline p-2.5">
           {draft.screenshot !== null && (
             <img
               src={draft.screenshot}
@@ -162,7 +162,7 @@ export function VisualCommentComposer({
             onReset={reset}
           />
         </div>
-        <div className="flex items-center gap-1.5 border-t border-frame-border p-2">
+        <div className="flex items-center gap-1.5 border-t border-hairline p-2">
           <span className="flex-1 truncate text-xs text-muted-foreground">
             {changes.length === 0
               ? "Edit styles to try a change live"

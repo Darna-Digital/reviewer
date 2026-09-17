@@ -494,7 +494,11 @@ export function TabOverviewPush({ children }: { children: React.ReactNode }) {
       ref={pushRef}
       style={SLIDE}
       className={cn(
-        "absolute inset-0 mx-1.5 mb-1.5 flex min-h-0 min-w-0 gap-1.5",
+        // The run of window left down the sides and along the foot is the
+        // frame's inset, which is wider than the seams between the sheets it
+        // holds — see `--frame-inset`. The top has no inset of its own: the
+        // window bar leaves its own air under the tab strip.
+        "absolute inset-0 mx-(--frame-inset) mb-(--frame-inset) flex min-h-0 min-w-0 gap-1.5",
         // A drag has to track the pointer, so the page follows the handle
         // frame for frame instead of easing towards where it used to be.
         resizing

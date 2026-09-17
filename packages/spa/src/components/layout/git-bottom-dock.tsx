@@ -25,10 +25,13 @@ import {
   useSearch,
 } from "@tanstack/react-router";
 import { useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { BranchesPanel } from "@/components/git/branches-panel";
 import { BottomPanel } from "@/components/layout/bottom-panel";
 import { expandDock, keepDockDrawer } from "@/components/layout/dock-expansion";
+import { usePageTrail } from "@/components/layout/page-trail";
 import { ResizeHandle } from "@/components/layout/resize-handle";
+import { useSeamSlot } from "@/components/layout/seam-slot";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { filterCommitsByRepo } from "@reviewer/core/project";
 import { activeRepo, folderName, isMultiRepo } from "@reviewer/core/workspace";
@@ -105,6 +108,42 @@ export function GitBottomDock({
   // Not React state: the dock holds the history list and the terminals, and a
   // drag re-rendering them per pointer frame is the jank. See `usePanelSize`.
   const dock = usePanelSize("bottom-h", prefs.bottomHeight, "height");
+
+  /**
+   * Whether the page above ends in a trail — see `page-trail`.
+   *
+   * The drawer opens against that bar rather than under the whole page: the run
+   * of frame between the two belongs above it, so the bar rides on the drawer
+   * and the two read as one stack at the foot of the window. That moves the
+   * seam this is dragged by out of the row, up over the page, where it is hung
+   * in the same box the column seams are — see `seam-slot`.
+   */
+  const onTrail = usePageTrail() && shown && !expanded;
+  const seamSlot = useSeamSlot();
+
+  const dockSeam = (
+    <ResizeHandle
+      orientation="row"
+      value={dock.current}
+      min={COLLAPSE_HEIGHT}
+      max={() => Math.max(160, window.innerHeight - 200)}
+      direction={-1}
+      onResize={dock.onResize}
+      onResizeEnd={(height) => {
+        if (height > COLLAPSE_HEIGHT) {
+          setUiPrefs({ bottomHeight: height });
+          return;
+        }
+        // Keep the useful height the dock had before it was dragged shut, so
+        // opening it again does not bring back the collapsed sliver.
+        dock.onResize(prefs.bottomHeight);
+        setUiPrefs({ bottomVisible: false });
+      }}
+      label="Resize bottom panel"
+      className={onTrail ? "resize-handle-crossing" : "resize-handle-seam"}
+      style={onTrail ? { bottom: "var(--trail-band)" } : undefined}
+    />
+  );
 
   const ref = logRef ?? repo.data?.currentBranch ?? null;
   const log = usePagedLog(ref, logFilters);
@@ -183,36 +222,28 @@ export function GitBottomDock({
   return (
     <>
       {/* A page has no seam to drag: it is as tall as the window, and the height
-          the drawer was left at is waiting for it to be put back down. */}
-      {!expanded && prefs.bottomVisible && (
-        <ResizeHandle
-          orientation="row"
-          value={dock.current}
-          min={COLLAPSE_HEIGHT}
-          max={() => Math.max(160, window.innerHeight - 200)}
-          direction={-1}
-          onResize={dock.onResize}
-          onResizeEnd={(height) => {
-            if (height > COLLAPSE_HEIGHT) {
-              setUiPrefs({ bottomHeight: height });
-              return;
-            }
-            // Keep the useful height the dock had before it was dragged shut,
-            // so opening it again does not bring back the collapsed sliver.
-            dock.onResize(prefs.bottomHeight);
-            setUiPrefs({ bottomVisible: false });
-          }}
-          label="Resize bottom panel"
-          className="resize-handle-seam"
-        />
-      )}
+          the drawer was left at is waiting for it to be put back down.
+
+          Where the page ends in a trail the seam is not in this row either — it
+          lies above that bar, over the page, and is hung in the box that spans
+          the header and the page the way the column seams are. */}
+      {!expanded &&
+        prefs.bottomVisible &&
+        (onTrail
+          ? seamSlot !== null && createPortal(dockSeam, seamSlot)
+          : dockSeam)}
       {/* Expanded, the dock stands where the page did: directly under the
           header, which carries no bottom corners of its own. Its own top ones
-          would open a notch either side of that seam, so they go too. */}
+          would open a notch either side of that seam, so they go too.
+
+          Under a trail it does the same against the bar: the negative margin
+          takes back the gap the layout leaves between the page and the dock,
+          since that run of frame has moved above the bar. */}
       <div
         className={cn(
           "app-sheet overflow-hidden",
           expanded ? "app-page-joined min-h-0 flex-1" : "shrink-0",
+          onTrail && "app-sheet-joined-above -mt-1.5",
           !shown && "hidden"
         )}
         style={expanded ? undefined : dock.style}

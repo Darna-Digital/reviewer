@@ -61,9 +61,14 @@ module.exports = {
 
   files: [
     { from: "dist", to: "dist", filter: ["**/*"] },
-    // The Icon Composer bundle is build-time input only; the PNGs stay, the
-    // running app paints them onto the dock (see main.ts).
-    { from: "assets", to: "assets", filter: ["**/*", "!Reviewer.icon{,/**}"] },
+    // The Icon Composer bundle and the SVGs the dock PNGs are rendered from are
+    // build-time input only; the PNGs stay, the running app paints them onto
+    // the dock (see main.ts).
+    {
+      from: "assets",
+      to: "assets",
+      filter: ["**/*", "!Reviewer.icon{,/**}", "!*.svg"],
+    },
     { from: "../spa/dist/client", to: "renderer", filter: ["**/*"] },
     { from: "../embedded-server/dist", to: "server", filter: ["**/*"] },
     // Production dependencies (@lydell/node-pty + its platform binary packages,

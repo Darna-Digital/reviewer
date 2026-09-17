@@ -90,7 +90,7 @@ export function StyleInspector({
           .filter((property) => property.name in edits).length;
         const isOpen = !closed.has(group.id);
         return (
-          <section key={group.id} className="border-t border-frame-border">
+          <section key={group.id} className="border-t border-hairline">
             <button
               type="button"
               aria-expanded={isOpen}

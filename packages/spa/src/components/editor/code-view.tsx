@@ -49,11 +49,9 @@ import {
   useFileEditing,
   type SelectionActionContext,
 } from "@/components/editor/use-file-editing";
-import { GutterRule, useGutterRule } from "@/components/editor/gutter-rule";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
 import { commentGutterCSS } from "@/lib/comment-gutter-css";
-import { gutterDividerCSS } from "@/lib/gutter-divider-css";
 import { useFile } from "@/lib/queries";
 import { useUiPrefs } from "@/lib/ui-prefs";
 import type { ReviewComment } from "@reviewer/core/comments";
@@ -113,6 +111,14 @@ interface CodeViewProps {
    * null when the editor goes away. Omit when nothing else is watching.
    */
   onBuffer?: (bridge: FileBufferBridge | null) => void;
+  /**
+   * Whether to hold an edit session open, overriding what the edit mode would
+   * decide. Set by the markdown split, where the document beside the source is
+   * typed into through this view's buffer: it has to have one even in comment
+   * mode, or the document would be a picture of the file with no way to write
+   * to it. Omit to follow the mode.
+   */
+  editing?: boolean;
   /** Local review comments anchored to this file (optional — omit to disable). */
   comments?: ReadonlyArray<ReviewComment>;
   draft?: DraftLocation | null;
@@ -133,6 +139,7 @@ export function CodeView({
   reveal = null,
   caretKey = null,
   onBuffer,
+  editing: editingOverride,
   comments,
   draft = null,
   onDraftOpen,
@@ -147,8 +154,15 @@ export function CodeView({
    * Comment mode reads rather than writes: the view is handed no edit session,
    * so a click puts no caret in the code, and the gutter is free to carry the
    * offer to comment that a diff's gutter carries.
+   *
+   * Which gutter the view gets follows the session and not the mode. They part
+   * company only where a caller keeps the session open through comment mode —
+   * the markdown split — and there the `+` would have nowhere to live anyway,
+   * since the caret takes every click. Commenting falls back to the offer the
+   * editor floats over a selection, exactly as it does in browse mode.
    */
   const commenting = prefs.editMode === "comment";
+  const editing = editingOverride ?? !commenting;
   const langReady = useLangReady(path, true);
   const contents = file.data?.contents;
   const scrollWrapper = useRef<HTMLDivElement>(null);
@@ -200,7 +214,7 @@ export function CodeView({
    */
   const gutterCommenting = useMemo(
     () =>
-      commentsEnabled && commenting
+      commentsEnabled && !editing
         ? {
             enableGutterUtility: true,
             // Nothing else marks the row in comment mode — there is no caret,
@@ -219,7 +233,7 @@ export function CodeView({
             // band chasing the pointer around it is noise.
             lineHoverHighlight: "disabled" as const,
           },
-    [commentsEnabled, commenting, openDraft]
+    [commentsEnabled, editing, openDraft]
   );
 
   // Saving a file formats it, when the project says how and the user wants it.
@@ -227,7 +241,7 @@ export function CodeView({
 
   const buffer = useFileEditing({
     path,
-    editing: !commenting,
+    editing,
     loadedContents: file.data?.contents,
     onSaved: useCallback(() => onSaved?.(), [onSaved]),
     formatBeforeSave: formatting.formatBeforeSave,
@@ -478,14 +492,13 @@ export function CodeView({
     [onOpenLocation, path]
   );
 
-  // The view keeps one `onPostRender`, and five layers read from it: the
-  // diagnostic underlines, the find highlight, the relative line numbers, the
-  // folds, and the measurement that places the gutter rule.
+  // The view keeps one `onPostRender`, and four layers paint from it: the
+  // diagnostic underlines, the find highlight, the relative line numbers and
+  // the folds.
   const languagePostRender = language.viewOptions.onPostRender;
   const findPostRender = find.viewOptions.onPostRender;
   const vimPostRender = vim.viewOptions.onPostRender;
   const foldPostRender = folding.viewOptions.onPostRender;
-  const measureGutter = useGutterRule(scrollWrapper);
   const onPostRender = useCallback(
     (
       node: HTMLElement,
@@ -496,15 +509,8 @@ export function CodeView({
       findPostRender(node, instance, phase);
       vimPostRender(node, instance, phase);
       foldPostRender(node, instance, phase);
-      measureGutter(node);
     },
-    [
-      languagePostRender,
-      findPostRender,
-      vimPostRender,
-      foldPostRender,
-      measureGutter,
-    ]
+    [languagePostRender, findPostRender, vimPostRender, foldPostRender]
   );
 
   // Line count drives the first scroll estimate for a line that has not been
@@ -585,10 +591,10 @@ export function CodeView({
                 // Both layers paint from the same callback and into the same
                 // stylesheet, and the view keeps one of each.
                 onPostRender,
-                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}\n${folding.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}\n${commentGutterCSS}\n${gutterDividerCSS}`,
+                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}\n${folding.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}\n${commentGutterCSS}`,
                 ...gutterCommenting,
               }}
-              edit={!commenting}
+              edit={editing}
               /* Leaving the file editable ends its edit session, and the view
                  goes back to the file it was handed — which is what is on disk.
                  A buffer with unsaved work in it would empty itself onto the
@@ -674,7 +680,6 @@ export function CodeView({
           />
         )}
       </Virtualizer>
-      <GutterRule />
       {/* Floats over the code rather than sitting under it: diagnostics come
           and go while typing, and a bar that resizes the view would shove the
           text around under the caret every time the last problem cleared. */}

@@ -63,6 +63,7 @@
   --color-elevate-strong: var(--elevate-strong);
   --color-frame: var(--frame);
   --color-frame-border: var(--frame-border);
+  --color-hairline: var(--hairline);
   --color-pane: var(--pane);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
@@ -270,6 +271,86 @@
     0 3px 3px -1.5px var(--dm-drop), 0 6px 6px -3px var(--dm-drop),
     0 12px 12px -6px var(--dm-drop), 0 24px 24px -12px var(--dm-drop),
     0 48px 48px -24px var(--dm-drop), 0 96px 96px -48px var(--dm-drop);
+}
+
+/* Glass — the one material in the app that is sampled rather than painted.
+
+   A sheet from the surface ladder stands *on* the page: it is opaque, and its
+   rung says how far off the page it is. The floating bars don't stand on
+   anything — they hover over content that keeps scrolling underneath, so they
+   take their colour from whatever happens to be behind them at the time, the
+   way the macOS toolbars and the Music mini-player do.
+
+   Three parts, and all three are needed before it reads as glass rather than as
+   a translucent rectangle:
+
+   1. Blur, wide enough that no glyph behind the bar survives as a shape. A
+      short blur leaves legible ghosts of the code underneath and the bar's own
+      text has to compete with them.
+   2. Saturation, because a gaussian blur averages colour towards grey and a
+      dulled backdrop is exactly what cheap glass looks like. Pushing saturation
+      back up is what makes the material feel like it is *transmitting* what is
+      behind it. Light lifts brightness with it and dark drops it: frosted glass
+      scatters the light in the room, and the room is the theme.
+   3. The rim. A lens has an edge, and the edge catches light: a bright inset
+      line along the top, a fainter one around the whole shape, then the drop
+      that says the bar is above the page rather than cut into it. Without it
+      the shape ends abruptly wherever the backdrop happens to be dark, and the
+      blur reads as a blurred hole instead of a pane of something.
+
+   Squircle corners because the rim is drawn *on* the corner: a circular arc
+   meeting the straight edges puts a visible kink in the highlight where the
+   curvature jumps, and at this radius that is the difference between a pill of
+   glass and a rounded div. */
+:root {
+  --glass-blur: 28px;
+  --glass-filter: saturate(190%) brightness(1.08) blur(var(--glass-blur));
+  --glass-tint: rgb(250 250 252 / 0.6);
+  --glass-rim:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.85),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.5), 0 0 0 0.5px rgb(0 0 0 / 0.08),
+    0 1px 2px -0.5px rgb(0 0 0 / 0.06), 0 6px 12px -4px rgb(0 0 0 / 0.1),
+    0 16px 32px -12px rgb(0 0 0 / 0.14);
+}
+
+.dark {
+  --glass-filter: saturate(170%) brightness(0.82) blur(var(--glass-blur));
+  --glass-tint: rgb(38 38 40 / 0.55);
+  /* The rim flips to white for the same reason the surface ladder's does: a
+     black edge has nothing to darken against a near-black pane. */
+  --glass-rim:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.12),
+    inset 0 0 0 0.5px rgb(255 255 255 / 0.08), 0 0 0 0.5px rgb(0 0 0 / 0.5),
+    0 1px 2px -0.5px rgb(0 0 0 / 0.4), 0 6px 12px -4px rgb(0 0 0 / 0.45),
+    0 16px 32px -12px rgb(0 0 0 / 0.55);
+}
+
+/* Both fallbacks put the bar back on the popover surface: glass that cannot
+   sample its backdrop is just a tinted sheet with the contrast of neither. */
+@supports not (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  :root,
+  .dark {
+    --glass-tint: var(--popover);
+    --glass-filter: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  .dark {
+    --glass-tint: var(--popover);
+    --glass-filter: none;
+  }
+}
+
+@utility glass {
+  background-color: var(--glass-tint);
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  box-shadow: var(--glass-rim);
+  corner-shape: squircle;
 }
 
 /* The material every interactive control is cut from — one physical story told
@@ -689,6 +770,18 @@
      effect only starts to read once rather more of it is let through. */
   --frame-translucent: rgb(240 240 243 / 0.28);
   --frame-border: rgb(0 0 0 / 0.1);
+  /* The line drawn *inside* a surface — under a chrome row, between a header
+     band and the page it stands on — as opposed to `--frame-border`, which is
+     the edge of a control. Half the weight of that one: a separator on the same
+     sheet has only to say "these are two things", and at the edge weight it
+     read as the sheet being cut in two. */
+  --hairline: rgb(0 0 0 / 0.05);
+  /* The lit top edge of a sheet, where it meets the frame above it. Lighter
+     again than the hairline: this one is not dividing anything, it is only
+     catching where the sheet begins, and the row of them across a window is
+     read all at once. At the edge weight the sheets weren't resting on the
+     frame so much as being outlined against it. */
+  --sheet-edge: rgb(0 0 0 / 0.06);
   --canvas: #ffffff;
   --canvas-edge: #f6f6f8;
   /* The browser pane is a sheet like the canvas, not part of the surround, so
@@ -747,6 +840,8 @@
   --frame: #000000;
   --frame-translucent: rgb(0 0 0 / 0.35);
   --frame-border: rgb(255 255 255 / 0.12);
+  --hairline: rgb(255 255 255 / 0.07);
+  --sheet-edge: rgb(255 255 255 / 0.06);
   --canvas: #141417;
   --canvas-edge: #1c1c21;
   /* Here the frame's own true black is already the extreme, so the pane sinks
@@ -814,10 +909,21 @@
     var(--canvas) 45%,
     var(--canvas-edge) 100%
   );
-  /* The run of frame between two sheets, and the inset that holds them off the
-     window's edge — one number, so a seam in the middle of the window reads as
-     the same gap as the one around it. */
+  /* The run of frame between two sheets: the window showing through where one
+     ends and the next begins. */
   --frame-seam: 0.375rem;
+  /* What holds the sheets off the window's own edge. Wider than a seam, because
+     the two are not the same run: a seam has a sheet either side of it holding
+     it open, where the inset has the window's edge on one side and its rounded
+     corners eating into it at both ends. At a seam's 6px there was nothing left
+     to read down the sides and the sheets looked cropped by the window rather
+     than laid inside it. */
+  --frame-inset: 0.5rem;
+  /* The band the trail takes along the foot of the page — a chrome row's 36px
+     and the hairline that tells it from the columns standing on it. Named here
+     as well as drawn in `PathBar`, because the seams between those columns are
+     placed rather than laid out and have to be told where to stop. */
+  --trail-band: calc(2.25rem + 1px);
   /* A sheet turns the same corner as a card: `--radius` itself, kept under its
      own name because a sheet is the one surface whose corner also has to answer
      to the window's.
@@ -830,6 +936,21 @@
      tab sitting crooked rather than as a corner being round. At 6px the curve
      is 0.3px in by the time it reaches the chip, which is no gap at all. */
   --sheet-radius: var(--radius);
+  /* The two corners along the window's foot are the ones that answer to the
+     window's own, and macOS turns that one far wider than 6px — measured off a
+     screenshot of the shipped window, about 12px, and on a continuous curve
+     rather than a circular arc. A 6px arc held inside it read as a square
+     corner sitting in a round one.
+
+     So the foot turns on the window's radius less the inset it stands off,
+     which is the corner that stays parallel to it the whole way round, and
+     turns it as a squircle — the curve the OS is drawing. Only the foot: the
+     top corners have no window corner to answer to, and are held at 6px by what
+     the header band carries into them, per the note above.
+
+     `corner-shape` is Chromium 139+, which the desktop app is well past; a
+     browser tab without it falls back to the same radius drawn round. */
+  --sheet-radius-foot: 0.625rem;
 }
 
 .app-canvas {
@@ -837,42 +958,141 @@
 }
 
 /* A sheet is one region of the window — a sidebar, the page beside it, the dock
-   under both — resting on the frame with its own edge and corners. What
-   separates two of them is not a line drawn between them but the frame showing
-   through, so with translucency on the seam is the desktop, exactly as the run
-   above the topmost sheet already is. */
+   under both — resting on the frame with its own corners and one edge: the top.
+   What separates two of them sideways is the seam between: the frame showing
+   through, which with translucency on is the desktop, exactly as the run above
+   the topmost sheet already is. A hairline all the way around only drew that
+   seam twice, and with three or four sheets in a row the window read as a grid
+   of framed boxes rather than as pages lying on a surface.
+
+   The top is the one side with nothing beside it to draw the seam for it. Above
+   every sheet in the row is the frame, and against a frame as dark as this one a
+   sheet with no lit edge has nothing to catch where it begins — it fades up into
+   the window instead of resting on it. So the top edge is lit and the other
+   three are left to the seam, which is also how a real sheet reads: the light is
+   overhead, so the near edge is the one that shows.
+
+   Drawn as a line in the background rather than as a `border-top`, because it
+   has to stop where the corner starts to bend. A border follows the radius
+   round and tapers off down the side, which reads as a hairline outline that
+   someone rubbed out halfway — the eye still finishes the box. Held to the flat
+   run between the two corners it reads as what it is: the lit top of a sheet,
+   with the corners turning away into the frame unlit. `--sheet-edge-inset` is
+   how far in from each corner it starts, so a sheet joined to something above
+   can take the line back out to full width. It costs no layout either, which
+   keeps the 36px band's 4px gaps exactly where they were measured. */
 .app-sheet,
 .app-page {
-  background: var(--canvas-paint);
-  border: 1px solid var(--frame-border);
+  --sheet-edge-tone: var(--sheet-edge);
+  --sheet-edge-inset: var(--sheet-radius);
+  background-image:
+    linear-gradient(var(--sheet-edge-tone), var(--sheet-edge-tone)),
+    var(--canvas-paint);
+  background-repeat: no-repeat;
+  background-position:
+    var(--sheet-edge-inset) 0,
+    0 0;
+  background-size:
+    calc(100% - 2 * var(--sheet-edge-inset)) 1px,
+    auto;
   border-radius: var(--sheet-radius);
+  border-end-start-radius: var(--sheet-radius-foot);
+  border-end-end-radius: var(--sheet-radius-foot);
+  corner-bottom-left-shape: squircle;
+  corner-bottom-right-shape: squircle;
 }
 
 /* The header stands on the page, not clear of it, so the two meet as one
-   surface: square corners where they touch, and a single edge between them —
-   the page's own top border, which is the rule the header has always worn. The
-   page's columns keep their seams, and those seams run right up under it. */
+   surface: square corners where they touch, and no seam between them. The
+   page's columns keep their seams, and those seams run right up under it.
+   The sheets no longer carry edges, so the one line that survives here is the
+   page's own top rule — what the open-file tabs sit on, and what keeps the
+   band from reading as the first row of the file under it. */
 .app-sheet-joined-below {
-  border-bottom: 0;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
 .app-page-joined,
-.app-page-joined > .app-split > .app-sheet {
+.app-page-joined > .app-split > .app-sheet,
+.app-page-joined > .app-split > .app-columns > .app-sheet {
+  /* Square corners, so the line has no bend to stop before: it runs the whole
+     width, on the tone an inside rule wears rather than a lit outer edge. */
+  --sheet-edge-tone: var(--hairline);
+  --sheet-edge-inset: 0px;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
 
+/* The mirror of the rule above, for any sheet standing flush under another: the
+   trail a page lays along its own foot, and the drawer that opens against that
+   trail. Same rule, same square corners — the line runs the full width because
+   there is no corner for it to stop before. */
+.app-sheet-joined-above {
+  --sheet-edge-tone: var(--hairline);
+  --sheet-edge-inset: 0px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* The sheet standing against the rail. The rail is not a column beside it but
+   its left edge (see `app-rail`), so the two meet on the rule and nothing else:
+   square on that side, where a corner left the frame showing through as a notch
+   of window between them. The lit top edge is carried out to the rule for the
+   same reason — held off a corner that is no longer there, the line broke for a
+   radius' worth at the join and started again a step to the right. */
+.app-sheet-joined-start {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  background-position:
+    0 0,
+    0 0;
+  background-size:
+    calc(100% - var(--sheet-edge-inset)) 1px,
+    auto;
+}
+
+/* A sheet whose content paints a tone of its own over the first pixel of it —
+   the diff, which is a web component pinned to `--background`, and which starts
+   flush with the top of the pane. The rule is a background, so that content
+   wins it, and the line under the header ran the width of the branch picker and
+   then stopped: the open files read as the first row of the file under them
+   while the tree beside them stood on a rule.
+
+   So it is drawn over the content instead, in the same place, the same tone and
+   the same inset — whatever the sheet's own rule would have been — and the
+   background layer gives it up, or the two would stack into a heavier line
+   across the stretch where nothing covers it. */
+.app-sheet-ruled {
+  position: relative;
+  background-size:
+    0 0,
+    auto;
+}
+.app-sheet-ruled::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--sheet-edge-inset);
+  right: var(--sheet-edge-inset);
+  height: 1px;
+  z-index: 1;
+  background-color: var(--sheet-edge-tone);
+  pointer-events: none;
+}
+
 /* A page that lays out sheets of its own — a sidebar beside its content, or a
    review's three columns — marks its root `app-split`, and the box it is
-   rendered into stops being a sheet: it is only the run of frame they stand on. */
+   rendered into stops being a sheet: it is only the run of frame they stand on.
+   Where such a page also wears a trail along its foot, the columns are a row of
+   their own (`app-columns`) with that bar under all of them, so the rule the
+   header draws has one more step to reach through. */
 .app-page:has(> .app-split) {
   background: none;
-  /* No edge and no corners of its own: the ones that matter are the sheets'
-     inside it, and either would shave them. Dropping the border is also what
-     lines those sheets up with the dock below — the edge each of them carries
-     stands where this one's would have. */
-  border: 0;
+  /* No corners and no rule of its own: the ones that matter are the sheets'
+     inside it. The corners would be shaved, and the rule under the header would
+     run across the seams between the columns instead of stopping at each of
+     them — the sheets draw their own, which is what the joined rule above is
+     for. */
   border-radius: 0;
 }
 
@@ -898,6 +1118,51 @@
   background-color: var(--frame-translucent);
 }
 
+/* The rail is not a sheet of its own. Given a tone and a seam of its own it read
+   as a strip of chrome floating on the frame — and through a translucent window
+   the icons stood on the desktop, which is the one thing a column of 20px glyphs
+   cannot be read against. So it is the left edge of the sheet beside it, the way
+   it was when the whole window was one canvas: the same paper, running under the
+   header and the page without a break, with a hairline where they meet.
+
+   The tone is `--canvas` flat rather than `--canvas-paint`: the gradient is
+   drawn to the box it is on, and a 36px column would fall away to the edge tone
+   over its own width where the sheet beside it is barely off the middle of its.
+   Flat canvas *is* what the gradient holds across that stretch, so the join
+   disappears. */
+.app-rail {
+  background-color: var(--canvas);
+  /* The same lit top edge every sheet wears, because the rail is the left end of
+     the one beside it: the line has to cross the two without a step in it. Held
+     off its own rounded top-left corner like a sheet's, but run right out to the
+     square right-hand edge, where the strip below picks it up. */
+  background-image: linear-gradient(var(--sheet-edge), var(--sheet-edge));
+  background-repeat: no-repeat;
+  background-position: var(--sheet-radius) 0;
+  background-size: calc(100% - var(--sheet-radius)) 1px;
+  border-right: 1px solid var(--hairline);
+  border-start-start-radius: var(--sheet-radius);
+  border-end-start-radius: var(--sheet-radius-foot);
+  corner-bottom-left-shape: squircle;
+}
+
+/* The rail's paper, carried on under the sheets standing against it, so their
+   corners turn on it rather than on a gap: they are flush with the rule, and a
+   6px corner would otherwise cut a notch of frame out of it at every top and
+   bottom edge. Behind them — it is only ever seen through those corners. */
+.app-rail::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  left: 100%;
+  z-index: -1;
+  /* A corner's worth, and the rule it starts behind: the strip is measured from
+     inside the rail's border, where the sheets begin a pixel further on. The
+     widest corner it has to cover is the foot's. */
+  width: calc(var(--sheet-radius-foot) + 1px);
+  background-color: var(--canvas);
+}
+
 /* The browser pane is its own sheet beside the canvas, on the `--pane` tone each
    theme sets: white here, true black in the dark theme. The gap the split leaves
    between the two is the frame itself, so with translucency on the seam is the
@@ -905,9 +1170,20 @@
    a border. */
 .browser-pane {
   background-color: var(--pane);
-  /* A sheet's corner, from the sheet's own token — the panes stand in the same
-     row as the page and must turn the same way it does. */
+  /* A sheet's corner and a sheet's lit top edge, from the sheet's own tokens —
+     the panes stand in the same row as the page and must turn, and catch the
+     light, the way it does. Painted rather than bordered for the same reason,
+     and as a background *image*, so the translucent overrides below can go on
+     setting the colour underneath it. */
+  background-image: linear-gradient(var(--sheet-edge), var(--sheet-edge));
+  background-repeat: no-repeat;
+  background-position: var(--sheet-radius) 0;
+  background-size: calc(100% - 2 * var(--sheet-radius)) 1px;
   border-radius: var(--sheet-radius);
+  border-end-start-radius: var(--sheet-radius-foot);
+  border-end-end-radius: var(--sheet-radius-foot);
+  corner-bottom-left-shape: squircle;
+  corner-bottom-right-shape: squircle;
 }
 .desktop.translucent .browser-pane {
   background-color: var(--pane-translucent);
@@ -921,7 +1197,15 @@
    than needing a second value per theme. */
 .plans-pane {
   background-color: var(--pane);
+  background-image: linear-gradient(var(--sheet-edge), var(--sheet-edge));
+  background-repeat: no-repeat;
+  background-position: var(--sheet-radius) 0;
+  background-size: calc(100% - 2 * var(--sheet-radius)) 1px;
   border-radius: var(--sheet-radius);
+  border-end-start-radius: var(--sheet-radius-foot);
+  border-end-end-radius: var(--sheet-radius-foot);
+  corner-bottom-left-shape: squircle;
+  corner-bottom-right-shape: squircle;
 }
 .desktop.translucent .plans-pane {
   background-color: var(--pane-translucent);
@@ -1404,6 +1688,13 @@ diffs-container {
 /* These custom properties pierce the shadow DOM and resolve against whichever
    theme (.dark or light) is active, so the tree follows the app theme. */
 file-tree-container {
+  /* The tree's rows stand under the header's branch picker, so they start where
+     it does: the header band's `px-1` plus the chip's own `px-2`, which is the
+     4px the chip's hover fill begins at. The tree spends this inset on its
+     scroll padding first (less the row's 2px margin), so 4px here puts a row's
+     pill and the chip's fill on the same edge — and their icons, each a further
+     8px in, in the same column. */
+  --trees-padding-inline-override: 4px;
   --trees-bg-override: var(--background);
   /* Rows take the same substrate-relative ramp as menu rows, two rungs apart so
      hover and selection stay tellable. Both were `--muted` before — one fixed
@@ -1687,6 +1978,34 @@ file-tree-container {
 .resize-handle-row.resize-handle-seam {
   margin-block: calc(-1 * var(--frame-seam));
 }
+/* A seam handle that has left the row it divides. The header is cut to the
+   page's columns, so the run of frame between two of them carries on up past
+   the branch picker and the open files — and a handle laid out inside the page
+   stopped at the page's top edge, leaving the stretch of seam beside the tabs
+   visible but not draggable. So it is hung in the box spanning the header and
+   the page instead (see `seam-slot`) and placed by the same widths that lay the
+   columns out: one line, one drag, the length of the seam. */
+.resize-handle-col.resize-handle-crossing {
+  position: absolute;
+  inset-block: 0;
+  width: var(--frame-seam);
+  margin-inline: 0;
+  /* The box it hangs in is transparent to the pointer so the header and page
+     under it are still reached; the handle is the one part that is not. */
+  pointer-events: auto;
+}
+
+/* The same, laid the other way: the dock's seam, where the page it opens under
+   ends in a trail. The run of frame then lies above that bar rather than below
+   it, which puts it inside the page — so the handle leaves the dock's row and
+   is hung over the page with the column seams, placed off the band's height. */
+.resize-handle-row.resize-handle-crossing {
+  position: absolute;
+  inset-inline: 0;
+  height: var(--frame-seam);
+  margin-block: 0;
+  pointer-events: auto;
+}
 .resize-handle-col::after,
 .resize-handle-row::after {
   content: "";
@@ -1706,6 +2025,34 @@ file-tree-container {
 .resize-handle-row:hover::after,
 .resize-handle-col[data-dragging]::after,
 .resize-handle-row[data-dragging]::after {
+  background: var(--primary);
+}
+/* A handle that is also the border between the two panes it sits between, for a
+   split where neither side draws one of its own — two readings of the same file
+   would otherwise run together with nothing to say where one ends. A hairline at
+   rest, the weight of every other border in the app; the usual line under the
+   pointer, so it still reads as something to pull. */
+.resize-handle-col.resize-handle-divider::after,
+.resize-handle-row.resize-handle-divider::after {
+  background: var(--border);
+}
+.resize-handle-col.resize-handle-divider::after {
+  width: 1px;
+}
+.resize-handle-row.resize-handle-divider::after {
+  height: 1px;
+}
+/* The primary line is repeated rather than inherited from the rule above: this
+   variant's resting colour is written with a class more than that rule carries,
+   so it would win the cascade on hover too and the seam would never light up. */
+.resize-handle-col.resize-handle-divider:hover::after,
+.resize-handle-col.resize-handle-divider[data-dragging]::after {
+  width: 2px;
+  background: var(--primary);
+}
+.resize-handle-row.resize-handle-divider:hover::after,
+.resize-handle-row.resize-handle-divider[data-dragging]::after {
+  height: 2px;
   background: var(--primary);
 }
 /* A seam that lies where the pointer passes on its way to everything else — the

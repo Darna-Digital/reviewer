@@ -5,20 +5,29 @@
  * `margin-right: calc(-1lh + 1ch)`, which leaves a third of it sitting on top
  * of the numbers. Sliding it out by a further character and a half clears the
  * column entirely: the button stands in the channel before the code rather than
- * over the number — on the code's side of the rule `gutter-divider-css` draws
- * down that edge, where the fold chevron cannot reach it.
+ * over the number — and, more to the point, off the fold chevron.
  *
- * That chevron is the floor on how far left the button may sit. It fills the
- * gutter's 1lh of right padding, up to the rule, and the button carries a
- * `:before` that bleeds its hit area 4px past its own left edge — so anything
- * short of `-1lh - 4px` puts an invisible target over the right end of the
- * chevron and folding stops answering clicks. The `1ch` spent here leaves the
- * whole chevron, and a little air, to itself.
+ * That chevron is the floor on how far left the button may sit. `fold-paint`
+ * pins it to the same column's right edge with a width of 1.1ch, and the button
+ * carries a `:before` that bleeds its hit area 4px past its own left edge — so
+ * anything short of `-1lh - 4px` puts an invisible target over the right half of
+ * the chevron and folding stops answering clicks. The `1ch` spent here leaves
+ * the whole chevron, and a little air, to itself.
  *
  * Pierre lands `unsafeCSS` in its shadow root's `unsafe` layer, which outranks
  * the `base` rule this replaces.
+ *
+ * A comment card has to match the same shove to sit under the button that
+ * opened it. The button hangs a character past the number column's padding box,
+ * which the column's 2px right border holds back from the code the annotation
+ * starts at — so the card is inset by the difference. The variable inherits
+ * down the flattened tree into the slot the card is rendered into.
  */
 export const commentGutterCSS = `
 [data-utility-button] {
   margin-right: calc(-1lh - 1ch);
+}
+
+[data-annotation-content] {
+  --comment-card-indent: calc(1ch - 2px);
 }`;

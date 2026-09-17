@@ -187,7 +187,7 @@ export function CommitPanel({
   );
 
   return (
-    <div className="flex shrink-0 flex-col border-t">
+    <div className="flex shrink-0 flex-col border-t border-hairline">
       {/* Drag the top edge to grow/shrink the changed-files list. The handle
           straddles the panel's top border (negative margin), so dragging up
           expands the list into the tree above it. */}
@@ -239,7 +239,7 @@ export function CommitPanel({
           icon (its hover box, not the glyph): the rail icon button is 8px off
           the viewport bottom and taller than our sm button, so matching its
           centre -- not its bottom edge -- is what visually lines them up. */}
-      <div className="flex flex-col gap-2 border-t px-3 pt-3 pb-2.5">
+      <div className="flex flex-col gap-2 border-t border-hairline px-3 pt-3 pb-2.5">
         <div
           className="relative"
           onFocus={() => setComposerFocused(true)}
