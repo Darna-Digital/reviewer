@@ -36,7 +36,10 @@ export function IslandLayout({ island }: { island: Island }) {
 
 function IslandBody({ island }: { island: Island }) {
   switch (island) {
+    // The tree is the code page down to its first column — see
+    // `CodeWorkspace` — so it is the same routed page.
     case "code":
+    case "tree":
       return <Outlet />;
     case "dock":
       return <DockIsland />;

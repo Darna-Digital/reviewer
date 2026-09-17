@@ -18,23 +18,27 @@ const SPRITE_ID = "reviewer-file-icon-sprite";
 
 const { resolveIcon } = createFileTreeIconResolver(ICON_SET);
 
+/** Each hue in both palettes, the light one first. */
 const HUE = {
-  gray: "light-dark(#84848a, #adadb1)",
-  red: "light-dark(#d52c36, #ff6762)",
-  vermilion: "light-dark(#ff8c5b, #d5512f)",
-  orange: "light-dark(#d47628, #ffa359)",
-  yellow: "light-dark(#d5a910, #ffd452)",
-  green: "light-dark(#199f43, #5ecc71)",
-  teal: "light-dark(#17a5af, #64d1db)",
-  cyan: "light-dark(#1ca1c7, #68cdf2)",
-  blue: "light-dark(#1a85d4, #69b1ff)",
-  indigo: "light-dark(#693acf, #9d6afb)",
-  purple: "light-dark(#a631be, #d568ea)",
-  pink: "light-dark(#d32a61, #ff678d)",
-  mauve: "light-dark(#594c5b, #79697b)",
-};
+  gray: ["#84848a", "#adadb1"],
+  red: ["#d52c36", "#ff6762"],
+  vermilion: ["#ff8c5b", "#d5512f"],
+  orange: ["#d47628", "#ffa359"],
+  yellow: ["#d5a910", "#ffd452"],
+  green: ["#199f43", "#5ecc71"],
+  teal: ["#17a5af", "#64d1db"],
+  cyan: ["#1ca1c7", "#68cdf2"],
+  blue: ["#1a85d4", "#69b1ff"],
+  indigo: ["#693acf", "#9d6afb"],
+  purple: ["#a631be", "#d568ea"],
+  pink: ["#d32a61", "#ff678d"],
+  mauve: ["#594c5b", "#79697b"],
+} as const satisfies Record<string, readonly [string, string]>;
 
 type Hue = keyof typeof HUE;
+
+const cssColor = ([light, dark]: readonly [string, string]) =>
+  `light-dark(${light}, ${dark})`;
 
 const HUE_TOKENS: Record<Hue, ReadonlyArray<string>> = {
   gray: ["default", "text"],
@@ -82,6 +86,44 @@ function mountSprite() {
 
 mountSprite();
 
+const DEFAULT_VIEW_BOX = "0 0 16 16";
+
+const resolveFileIcon = (path: string) => {
+  const icon = resolveIcon("file-tree-icon-file", path);
+  return {
+    name: icon.name,
+    viewBox: icon.viewBox ?? DEFAULT_VIEW_BOX,
+    hue: TOKEN_HUE.get(icon.token ?? "default") ?? "gray",
+  };
+};
+
+export interface FileIconMarkup {
+  /** A standalone `<svg>` of the icon, painting in `currentColor`. */
+  readonly svg: string;
+  readonly light: string;
+  readonly dark: string;
+}
+
+/**
+ * The same icon as a document of its own, for a surface that has no DOM to
+ * `<use>` the sprite from — the native shell's tab strip. The symbol's body is
+ * lifted out of the mounted sprite; the hue comes as two colours rather than
+ * `light-dark()`, which only a stylesheet can read.
+ */
+export function fileIconMarkup(path: string): FileIconMarkup {
+  const icon = resolveFileIcon(path);
+  const body =
+    typeof document === "undefined"
+      ? ""
+      : (document.getElementById(icon.name)?.innerHTML ?? "");
+  const [light, dark] = HUE[icon.hue];
+  return {
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${icon.viewBox}">${body}</svg>`,
+    light,
+    dark,
+  };
+}
+
 export function FileTypeIcon({
   path,
   className,
@@ -89,14 +131,13 @@ export function FileTypeIcon({
   readonly path: string;
   readonly className?: string;
 }) {
-  const icon = resolveIcon("file-tree-icon-file", path);
-  const hue = TOKEN_HUE.get(icon.token ?? "default") ?? "gray";
+  const icon = resolveFileIcon(path);
   return (
     <svg
       aria-hidden
-      viewBox={icon.viewBox ?? "0 0 16 16"}
+      viewBox={icon.viewBox}
       className={cn("size-4 shrink-0", className)}
-      style={{ color: HUE[hue] }}
+      style={{ color: cssColor(HUE[icon.hue]) }}
     >
       <use href={`#${icon.name}`} />
     </svg>
@@ -112,7 +153,7 @@ export function TreeChevronIcon({
   return (
     <svg
       aria-hidden
-      viewBox={icon.viewBox ?? "0 0 16 16"}
+      viewBox={icon.viewBox ?? DEFAULT_VIEW_BOX}
       className={cn("size-4 shrink-0", className)}
     >
       <use href={`#${icon.name}`} />

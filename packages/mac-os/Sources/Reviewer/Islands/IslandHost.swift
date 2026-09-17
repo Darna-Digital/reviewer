@@ -2,7 +2,10 @@
 // two sides talk over. The shell tells the island where to be (`navigate`)
 // and when what it holds has gone stale (`refresh`); the island tells the
 // shell when it is up (`ready`) and where it has gone (`navigated`). That is
-// the whole protocol — the SPA's `lib/shell` is the other half of it.
+// the whole protocol — the SPA's `lib/shell` is the other half of it — but
+// for the open-file strip, which the code island reports (`tabs`) for the
+// shell to draw natively, and which the shell acts on by sending each click
+// back (`tabs` again, the other way).
 //
 // The web view is made once and kept for the life of the host: SwiftUI can
 // take it out of the hierarchy and put it back — a chat tab in front of the
@@ -20,6 +23,7 @@ final class IslandHost: NSObject {
 
     @ObservationIgnored var onNavigated: ((String) -> Void)?
     @ObservationIgnored var onOpenDirectory: (() -> String?)?
+    @ObservationIgnored var onFileTabsReported: ((FileTabStrip?) -> Void)?
 
     @ObservationIgnored private let source: SpaSource
     @ObservationIgnored private let apiBaseURL: URL
@@ -60,7 +64,13 @@ final class IslandHost: NSObject {
         view.load(URLRequest(url: source.url(for: href)))
     }
 
-    private func dispatch(_ event: [String: String]) {
+    /// The native strip acted on a tab of the island's — see `FileTabAction`.
+    func send(_ action: FileTabAction) {
+        guard isReady else { return }
+        dispatch(["type": "tabs", "action": action.payload])
+    }
+
+    private func dispatch(_ event: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: event),
             let json = String(data: data, encoding: .utf8)
         else { return }
@@ -120,8 +130,11 @@ final class IslandHost: NSObject {
 
     /// The `window.reviewer` bridge, installed before the first script runs.
     /// The same shape the Electron preload exposes (`lib/desktop` reads it),
-    /// plus the island's name and the channel `lib/shell` talks over. Replies
-    /// come back as the promise `postMessage` returns.
+    /// plus the island's name, the appearance the window is in — said
+    /// outright, since inside the sidebar's vibrancy the view inherits a
+    /// vibrant variant that WebKit does not report as dark — and the channel
+    /// `lib/shell` talks over. Replies come back as the promise `postMessage`
+    /// returns.
     private var bridgeScript: String {
         """
         (() => {
@@ -129,6 +142,7 @@ final class IslandHost: NSObject {
           const listeners = new Set();
           window.reviewer = {
             island: "\(kind.rawValue)",
+            appearance: "\(NativePalette.appearanceName())",
             apiBaseUrl: "\(apiBaseURL.absoluteString)",
             openDirectory: () => handler.postMessage({ type: "openDirectory" }),
             shell: {
@@ -167,6 +181,9 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             return (nil, nil)
         case "openDirectory":
             return (onOpenDirectory?() as Any?, nil)
+        case "tabs":
+            onFileTabsReported?(FileTabStrip.decode(body["strip"]))
+            return (nil, nil)
         default:
             return (nil, "unknown shell message: \(type)")
         }

@@ -120,12 +120,6 @@ extension AppModel {
         }
     }
 
-    private func showOnCodeTab(_ href: String) {
-        guard let index = tabs.firstIndex(where: { $0.id == WindowTab.code.id }) else { return }
-        tabs[index].href = href
-        selectedTabId = WindowTab.code.id
-    }
-
     private func runGit(_ body: @escaping () async throws -> Void) {
         Task {
             do {

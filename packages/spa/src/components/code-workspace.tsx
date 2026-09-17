@@ -93,7 +93,11 @@ import {
   useRepoCommands,
   useWorkspaceActions,
 } from "@/interactions/workspace/adapters/workspace.hook.adapter";
-import { TabStrip } from "@/interactions/tabs/components/tab-strip";
+import {
+  TabStrip,
+  type TabStripProps,
+} from "@/interactions/tabs/components/tab-strip";
+import { useShellTabStrip } from "@/interactions/tabs/adapters/tabs.shell";
 import {
   readTabs,
   scopeTabsTo,
@@ -1223,6 +1227,43 @@ export function CodeWorkspace() {
   const seamSlot = useSeamSlot();
 
   /**
+   * The strip, wherever it is drawn: portalled into the header band here, or
+   * handed to the native shell where the band is the window's own.
+   */
+  const stripProps: TabStripProps | null = tabbed
+    ? {
+        tabs: tabs.tabs,
+        active: tabs.active,
+        dirty: dirtyPaths,
+        onSelect: selectTab,
+        onKeep: (path) => updateTabs((state) => keepTab(state, path)),
+        onClose: closeTabAt,
+        onTogglePin: (path) => updateTabs((state) => togglePin(state, path)),
+        onCloseOthers: (path) => {
+          whenMayLeaveFile(path, () =>
+            updateTabs((state) => {
+              const next = closeOthers(state, path);
+              setSearch({ file: next.active ?? undefined });
+              return next;
+            })
+          );
+        },
+        onCloseAll: () => {
+          whenMayLeaveFile(undefined, () =>
+            updateTabs((state) => {
+              const next = closeAll(state);
+              setSearch({ file: next.active ?? undefined });
+              return next;
+            })
+          );
+        },
+        onMove: (path, toIndex) =>
+          updateTabs((state) => moveTab(state, path, toIndex)),
+      }
+    : null;
+  useShellTabStrip(stripProps);
+
+  /**
    * Review mode before a pull request is picked: the list, and nothing else.
    *
    * It used to be a column beside a diff, and the window opened itself on the
@@ -1259,6 +1300,21 @@ export function CodeWorkspace() {
         }
         className="min-h-0 flex-1"
       />
+    );
+  }
+
+  /**
+   * In the macOS shell the tree is an island of its own in the native sidebar,
+   * beside the page island showing the diff: this same page, rendered down to
+   * its first column. Everything the tree needs — the changed files, the
+   * actions, the commit panel — is wired above, so it is the whole of what is
+   * drawn; a file picked here is a navigation the shell carries to the page.
+   */
+  if (island === "tree") {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {fileTree}
+      </div>
     );
   }
 
@@ -1387,43 +1443,9 @@ export function CodeWorkspace() {
             inside it — see `header-tabs`. It is rendered from here because
             the tabs are this page's state; only the row it lands on is the
             layout's. */}
-          {tabbed &&
+          {stripProps !== null &&
             headerTabsSlot !== null &&
-            createPortal(
-              <TabStrip
-                tabs={tabs.tabs}
-                active={tabs.active}
-                dirty={dirtyPaths}
-                onSelect={selectTab}
-                onKeep={(path) => updateTabs((state) => keepTab(state, path))}
-                onClose={closeTabAt}
-                onTogglePin={(path) =>
-                  updateTabs((state) => togglePin(state, path))
-                }
-                onCloseOthers={(path) => {
-                  whenMayLeaveFile(path, () =>
-                    updateTabs((state) => {
-                      const next = closeOthers(state, path);
-                      setSearch({ file: next.active ?? undefined });
-                      return next;
-                    })
-                  );
-                }}
-                onCloseAll={() => {
-                  whenMayLeaveFile(undefined, () =>
-                    updateTabs((state) => {
-                      const next = closeAll(state);
-                      setSearch({ file: next.active ?? undefined });
-                      return next;
-                    })
-                  );
-                }}
-                onMove={(path, toIndex) =>
-                  updateTabs((state) => moveTab(state, path, toIndex))
-                }
-              />,
-              headerTabsSlot
-            )}
+            createPortal(<TabStrip {...stripProps} />, headerTabsSlot)}
           {/* The assign bar floats at the foot of the whole window, centred
             on it rather than on this pane: with the browser open beside the
             code, a bar centred on the code alone sits off to one side. */}

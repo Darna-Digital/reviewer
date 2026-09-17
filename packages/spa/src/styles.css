@@ -1149,6 +1149,20 @@
   --input: var(--native-separator);
   --ring-accent: var(--native-accent);
 }
+/* The tree island sits in the native sidebar, on the system's own sidebar
+   material, and paints nothing of its own: no canvas, no sheet, so the rows
+   stand on the same translucent surface a native outline would. */
+.island[data-island="tree"] {
+  --canvas: transparent;
+  --canvas-paint: none;
+  --surface-1: transparent;
+}
+.island[data-island="tree"] .island-page,
+.island[data-island="tree"] .app-sheet {
+  background: none;
+  box-shadow: none;
+}
+
 /* The sheets of a split page — a session list beside its conversation — stand
    on the same flat window colour they are painted in, so what tells them apart
    is a rule around each: the separator hairline, drawn as a ring outside the

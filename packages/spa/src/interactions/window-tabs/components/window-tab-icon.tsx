@@ -3,12 +3,18 @@
  * the strip, so the mark is the whole of the tab; a session tab is its title
  * there and takes the mark only where there is room for both — the overview.
  */
-import { IconCode, IconMessage, IconSend } from "@tabler/icons-react";
+import {
+  IconCode,
+  IconGitBranch,
+  IconMessage,
+  IconSend,
+} from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import type { WindowTabKind } from "../interfaces/window-tabs.interfaces";
 
 const ICONS: Record<WindowTabKind, typeof IconCode> = {
   project: IconCode,
+  git: IconGitBranch,
   sessions: IconSend,
   session: IconMessage,
 };

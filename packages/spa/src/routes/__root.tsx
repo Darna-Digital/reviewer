@@ -73,10 +73,17 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             The shell is looked for in the window this document hangs in as well
             as in this one: a preview frame gets no preload of its own, and a
             picture drawn without the flag is a picture of the app as the
-            browser wears it. See `lib/desktop`. */}
+            browser wears it. See `lib/desktop`.
+
+            An island — one part of the app in a web view of the macOS shell's
+            own (see `lib/shell`) — is flagged too, for the styles that take the
+            frame off the page, and takes the theme from the appearance the
+            shell names rather than from the media query: inside the sidebar's
+            vibrancy that query answers for a variant WebKit does not read as
+            dark. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(()=>{try{const r=document.documentElement;const t=localStorage.getItem("reviewer-theme")||"system";const d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme: dark)").matches);r.classList.toggle("dark",d);r.dataset.theme=d?"dark":"light";let k=false;try{k="reviewer" in window||(window!==parent&&"reviewer" in parent)}catch(e){}r.classList.toggle("desktop",k);let i=false;try{i=!!(window.reviewer&&window.reviewer.island)}catch(e){}r.classList.toggle("island",i);const p=JSON.parse(localStorage.getItem("reviewer-ui")||"{}");r.classList.toggle("translucent",p.translucency!==false);}catch(e){}})()`,
+            __html: `(()=>{try{const r=document.documentElement;const t=localStorage.getItem("reviewer-theme")||"system";let a=null;try{a=(window.reviewer&&window.reviewer.appearance)||null}catch(e){}const d=t==="dark"||(t!=="light"&&(a?a==="dark":matchMedia("(prefers-color-scheme: dark)").matches));r.classList.toggle("dark",d);r.dataset.theme=d?"dark":"light";let k=false;try{k="reviewer" in window||(window!==parent&&"reviewer" in parent)}catch(e){}r.classList.toggle("desktop",k);let i="";try{i=(window.reviewer&&window.reviewer.island)||""}catch(e){}r.classList.toggle("island",i!=="");if(i)r.dataset.island=i;const p=JSON.parse(localStorage.getItem("reviewer-ui")||"{}");r.classList.toggle("translucent",p.translucency!==false);}catch(e){}})()`,
           }}
         />
       </head>

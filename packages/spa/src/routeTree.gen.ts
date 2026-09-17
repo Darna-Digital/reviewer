@@ -14,6 +14,7 @@ import { Route as KitchenSinkRouteImport } from './routes/kitchen-sink'
 import { Route as AppIndexRouteImport } from './routes/_app/index'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppModesAgentSessionRouteImport } from './routes/_app/modes.agent-session'
+import { Route as AppModesGitRouteImport } from './routes/_app/modes.git'
 import { Route as AppModesAgentSessionIndexRouteImport } from './routes/_app/modes.agent-session.index'
 import { Route as AppModesAgentSessionChatIdRouteImport } from './routes/_app/modes.agent-session.$chatId'
 import { Route as AppModesCodeIndexRouteImport } from './routes/_app/modes.code.index'
@@ -56,6 +57,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
 const AppModesAgentSessionRoute = AppModesAgentSessionRouteImport.update({
   id: '/modes/agent-session',
   path: '/modes/agent-session',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppModesGitRoute = AppModesGitRouteImport.update({
+  id: '/modes/git',
+  path: '/modes/git',
   getParentRoute: () => AppRoute,
 } as any)
 const AppModesAgentSessionIndexRoute =
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/kitchen-sink': typeof KitchenSinkRoute
   '/settings': typeof AppSettingsRoute
   '/modes/agent-session': typeof AppModesAgentSessionRouteWithChildren
+  '/modes/git': typeof AppModesGitRoute
   '/modes/agent-session/$chatId': typeof AppModesAgentSessionChatIdRoute
   '/modes/code/branches': typeof AppModesCodeBranchesRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/kitchen-sink': typeof KitchenSinkRoute
   '/settings': typeof AppSettingsRoute
   '/': typeof AppIndexRoute
+  '/modes/git': typeof AppModesGitRoute
   '/modes/agent-session/$chatId': typeof AppModesAgentSessionChatIdRoute
   '/modes/code/branches': typeof AppModesCodeBranchesRoute
   '/modes/code/commit': typeof AppModesCodeCommitRoute
@@ -217,6 +225,7 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/': typeof AppIndexRoute
   '/_app/modes/agent-session': typeof AppModesAgentSessionRouteWithChildren
+  '/_app/modes/git': typeof AppModesGitRoute
   '/_app/modes/agent-session/$chatId': typeof AppModesAgentSessionChatIdRoute
   '/_app/modes/code/branches': typeof AppModesCodeBranchesRoute
   '/_app/modes/code/commit': typeof AppModesCodeCommitRoute
@@ -244,6 +253,7 @@ export interface FileRouteTypes {
     | '/kitchen-sink'
     | '/settings'
     | '/modes/agent-session'
+    | '/modes/git'
     | '/modes/agent-session/$chatId'
     | '/modes/code/branches'
     | '/modes/code/commit'
@@ -268,6 +278,7 @@ export interface FileRouteTypes {
     | '/kitchen-sink'
     | '/settings'
     | '/'
+    | '/modes/git'
     | '/modes/agent-session/$chatId'
     | '/modes/code/branches'
     | '/modes/code/commit'
@@ -294,6 +305,7 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/'
     | '/_app/modes/agent-session'
+    | '/_app/modes/git'
     | '/_app/modes/agent-session/$chatId'
     | '/_app/modes/code/branches'
     | '/_app/modes/code/commit'
@@ -355,6 +367,13 @@ declare module '@tanstack/react-router' {
       path: '/modes/agent-session'
       fullPath: '/modes/agent-session'
       preLoaderRoute: typeof AppModesAgentSessionRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/modes/git': {
+      id: '/_app/modes/git'
+      path: '/modes/git'
+      fullPath: '/modes/git'
+      preLoaderRoute: typeof AppModesGitRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/modes/agent-session/': {
@@ -512,6 +531,7 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppIndexRoute: typeof AppIndexRoute
   AppModesAgentSessionRoute: typeof AppModesAgentSessionRouteWithChildren
+  AppModesGitRoute: typeof AppModesGitRoute
   AppModesCodeBranchesRoute: typeof AppModesCodeBranchesRoute
   AppModesCodeCommitRoute: typeof AppModesCodeCommitRoute
   AppModesCodeFindRoute: typeof AppModesCodeFindRoute
@@ -534,6 +554,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppIndexRoute: AppIndexRoute,
   AppModesAgentSessionRoute: AppModesAgentSessionRouteWithChildren,
+  AppModesGitRoute: AppModesGitRoute,
   AppModesCodeBranchesRoute: AppModesCodeBranchesRoute,
   AppModesCodeCommitRoute: AppModesCodeCommitRoute,
   AppModesCodeFindRoute: AppModesCodeFindRoute,

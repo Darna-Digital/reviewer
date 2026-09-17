@@ -29,20 +29,21 @@ final class AppModel {
     var workspace: WorkspaceInfo?
     var status: RepoStatus?
     var chats: [ChatSummary] = []
-    var fileTree: [FileNode] = []
-    var isLoadingFiles = false
     var branches: [BranchInfo] = []
     var remoteBranches: [RemoteBranchInfo] = []
     var branchPrompt: BranchPrompt?
     var lastError: String?
 
-    var tabs: [WindowTab] = [.code, .sessions]
+    var tabs: [WindowTab] = [.code, .git, .sessions]
     var selectedTabId: String = WindowTab.code.id {
         didSet { tabSelectionChanged(from: oldValue) }
     }
     var launchpadShown = false
     /// The last picture of each tab, taken as it was left, for the launchpad.
     private(set) var snapshots: [String: NSImage] = [:]
+    /// The code page's open files, as it last reported them; nil while it
+    /// shows no strip — a diff, a merge request, another tab's page.
+    private(set) var fileTabs: FileTabStrip?
 
     var bottomExpanded = true
     var bottomTab: BottomPaneTab = .terminal {
@@ -55,6 +56,9 @@ final class AppModel {
     /// The SPA's dock surfaces — history, branches, find, threads — pointed
     /// at whichever the bottom pane is on.
     let dock: IslandHost
+    /// The SPA's file tree — the project, or the changed files — in the
+    /// native sidebar, kept on the same code page as the page island.
+    let tree: IslandHost
     let terminal = TerminalSession()
     let services: DevServices
 
@@ -63,11 +67,15 @@ final class AppModel {
         let source = SpaSource.resolve()
         page = IslandHost(kind: .code, href: WindowTab.code.href, source: source, apiBaseURL: client.baseURL)
         dock = IslandHost(kind: .dock, href: BottomPaneTab.history.dockHref!, source: source, apiBaseURL: client.baseURL)
+        tree = IslandHost(kind: .tree, href: Href.browsePath, source: source, apiBaseURL: client.baseURL)
         services = DevServices(client: client)
         page.onNavigated = { [weak self] href in self?.pageNavigated(to: href) }
+        page.onFileTabsReported = { [weak self] strip in self?.fileTabs = strip }
         dock.onNavigated = { [weak self] href in self?.dockNavigated(to: href) }
-        page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
-        dock.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
+        tree.onNavigated = { [weak self] href in self?.treeNavigated(to: href) }
+        for island in [page, dock, tree] {
+            island.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
+        }
     }
 
     var hasProject: Bool { workspace?.project != nil }
@@ -76,6 +84,7 @@ final class AppModel {
     func title(of tab: WindowTab) -> String {
         switch tab.kind {
         case .code: return "Code"
+        case .git: return "Git"
         case .sessions: return "Sessions"
         case .newSession: return "New Session"
         case .session(let id):
@@ -111,64 +120,55 @@ final class AppModel {
             lastError = error.localizedDescription
         }
         await refreshProjectState()
-        page.refresh()
-        dock.refresh()
+        for island in [page, dock, tree] { island.refresh() }
     }
 
     private func refreshProjectState() async {
         guard hasProject else {
-            fileTree = []
             status = nil
             branches = []
             remoteBranches = []
             return
         }
-        isLoadingFiles = true
-        defer { isLoadingFiles = false }
-        // The status is per selected root and the tree is per project, so
-        // one failing must not blank the other.
         status = try? await client.repoStatus()
         await loadBranches()
-        do {
-            let files = try await loadFiles()
-            fileTree = FileTree.build(paths: files.paths, gitStatus: files.gitStatus)
-        } catch {
-            lastError = error.localizedDescription
-        }
         await services.load()
     }
 
-    /// The file endpoints resolve paths from the project folder. With one
-    /// root that folder *is* the repository, so the repo-relative listing is
-    /// the right one; a multi-root project needs every root's files named
-    /// from the parent, which is what the project-wide listing gives. Same
-    /// split the web app makes with `useMultiRepo`.
-    private func loadFiles() async throws -> FilesPayload {
-        let isMultiRepo = (workspace?.repos.count ?? 0) > 1
-        return try await isMultiRepo ? client.projectFiles() : client.files()
-    }
-
-    // MARK: files
-
-    /// The file the page island has open, as the browse address names it —
-    /// what the sidebar highlights.
-    var openFilePath: String? {
-        Self.file(inBrowseHref: page.href)
-    }
-
-    /// A file picked in the sidebar: the Code tab, on the browse page, with
-    /// that file open over it.
-    func openFile(path: String) {
+    /// The Code tab, at an address: what every native control that reaches
+    /// for a code surface goes through.
+    func showOnCodeTab(_ href: String) {
         guard let index = tabs.firstIndex(where: { $0.id == WindowTab.code.id }) else { return }
-        tabs[index].href = Href.browse(file: path)
+        tabs[index].href = href
         selectedTabId = WindowTab.code.id
     }
 
-    static func file(inBrowseHref href: String) -> String? {
-        guard let components = URLComponents(string: href), components.path == Href.browsePath else {
-            return nil
-        }
-        return components.queryItems?.first { $0.name == "file" }?.value
+    // MARK: sidebar
+
+    /// The sidebar's rail: which of the code surfaces the page is on, as
+    /// its address says.
+    var codeSurface: CodeSurface? {
+        CodeSurface.forHref(page.href)
+    }
+
+    /// A rail button: the Code tab, on that surface — and the tree with it.
+    func show(surface: CodeSurface) {
+        showOnCodeTab(surface.href)
+    }
+
+    /// The tree moved — a file picked, a folder's file opened — and the page
+    /// shows what it names. Same page, so the same address.
+    private func treeNavigated(to href: String) {
+        guard Href.isCodePage(href), page.href != href else { return }
+        showOnCodeTab(href)
+    }
+
+    /// The page moved on a code surface — and the tree, being the same page
+    /// down to its first column, is sent along so its selection and its mode
+    /// (the project, or the changes) follow.
+    private func keepTreeWithPage(_ href: String) {
+        guard Href.isCodePage(href), tree.href != href else { return }
+        tree.navigate(to: href)
     }
 
     // MARK: project
@@ -288,10 +288,21 @@ final class AppModel {
     }
 
     /// The page moved — a link, a file, a session picked in the list. The
-    /// tab in front remembers the place; and a session composed in a fresh
+    /// tab in front remembers the place, unless the place belongs to another
+    /// pinned tab — a link out of a diff into the git mode — in which case
+    /// that tab takes it and the window; and a session composed in a fresh
     /// tab becomes that session's tab the moment the composer lands on it.
     private func pageNavigated(to href: String) {
-        guard let index = tabs.firstIndex(where: { $0.id == selectedTabId }) else { return }
+        keepTreeWithPage(href)
+        guard var index = tabs.firstIndex(where: { $0.id == selectedTabId }) else { return }
+        let owner = WindowTab.owner(of: href)
+        if tabs[index].isPinned, tabs[index].kind != owner,
+            let owning = tabs.firstIndex(where: { $0.kind == owner })
+        {
+            index = owning
+            tabs[index].href = href
+            selectedTabId = tabs[index].id
+        }
         tabs[index].href = href
         if case .newSession = tabs[index].kind, let id = Href.sessionId(in: href) {
             let session = WindowTab.session(id: id)
@@ -306,6 +317,19 @@ final class AppModel {
         if href.hasPrefix(Href.sessions) {
             Task { chats = (try? await client.chats().items) ?? chats }
         }
+    }
+
+    // MARK: file tabs
+
+    /// The strip belongs to the Code tab: another tab's page is on its way in
+    /// while the code page's last report is still standing.
+    var fileTabStrip: FileTabStrip? {
+        guard selectedTabId == WindowTab.code.id, let strip = fileTabs, !strip.tabs.isEmpty else { return nil }
+        return strip
+    }
+
+    func act(onFileTab action: FileTabAction) {
+        page.send(action)
     }
 
     // MARK: bottom pane

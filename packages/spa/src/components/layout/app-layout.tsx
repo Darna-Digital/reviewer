@@ -122,6 +122,7 @@ export function AppLayout() {
   /** Pages that are meaningless without a repository open behind them. */
   const needsRepo =
     route.kind === "workspace" ||
+    route.kind === "git" ||
     route.kind === "session" ||
     route.kind === "experimentation" ||
     route.kind === "dock";

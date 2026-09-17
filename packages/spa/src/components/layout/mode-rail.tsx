@@ -8,7 +8,6 @@ import {
   IconFolder,
   IconGitBranch,
   IconGitCommit,
-  IconGitPullRequest,
   IconHistory,
   IconPlayerPlay,
   IconSearch,
@@ -30,7 +29,7 @@ import {
 import { SearchMenuItems } from "@/interactions/search/components/search-menu";
 // The Sessions tab is the way into the threads now, so the rail's inbox is parked.
 // import { ChatsInboxPopover } from "@/interactions/chats/components/chats-inbox-popover";
-import { REVIEW_HREF, REVIEWS_HREF, shellRoute } from "@/lib/shell-route";
+import { REVIEW_HREF, shellRoute } from "@/lib/shell-route";
 import {
   openBottomTab,
   setUiPrefs,
@@ -68,12 +67,6 @@ const GIT_LINKS: RailLink[] = [
     icon: IconGitCommit,
     match: REVIEW_HREF,
     needsSidebar: true,
-  },
-  {
-    to: REVIEWS_HREF,
-    label: "Merge requests",
-    icon: IconGitPullRequest,
-    match: REVIEWS_HREF,
   },
 ];
 

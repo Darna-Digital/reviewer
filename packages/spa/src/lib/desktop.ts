@@ -30,6 +30,8 @@ interface ReviewerBridge {
    * in `lib/shell`; the bridge only carries the name.
    */
   island?: string;
+  /** "dark" or "light" — the appearance the shell's window is in. */
+  appearance?: string;
   shell?: ShellChannel;
 }
 

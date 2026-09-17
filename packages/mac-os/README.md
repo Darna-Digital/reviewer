@@ -17,8 +17,9 @@ What it does today:
 - **Launchpad** (⌘L) — every tab as a card wearing the last picture taken of
   it, over the window.
 - **Page island** — the SPA's routed page, with its own chrome and file tree
-  off: the diff, the file view with its file strip, review comments, edit
-  mode, the sessions surface.
+  off: the diff, the file view, review comments, edit mode, the sessions
+  surface. Its open-file strip is drawn natively above it, wearing the tree's
+  file-type icons.
 - **Bottom pane** (⌘B) — a native strip over six surfaces. Terminal is the
   user's shell in the project (SwiftTerm); Services is the project's dev
   commands, listed, started and stopped natively, with each one's output
@@ -36,8 +37,13 @@ no frame, rail, header or dock around it, since those are the window's. Same
 routes and URLs, so the shell steers an island with the hrefs the app already
 uses. The contract is small and lives in `packages/spa/src/lib/shell.ts`:
 
-- shell → island: `navigate(href)`, `refresh`
-- island → shell: `ready`, `navigated(href)`
+- shell → island: `navigate(href)`, `refresh`, `tabs(action)`
+- island → shell: `ready`, `navigated(href)`, `tabs(strip)`
+
+The last pair is the open-file strip: the code island reports its tabs — each
+with its @pierre/trees type icon as inline SVG — and the shell draws them
+natively under the window tabs (`FileTabStripView`), sending every click back
+as an action for the page to apply to its own store.
 
 Islands cannot share a JavaScript heap, so whatever two of them both need —
 project, tabs, selection, where the code surface points — lives in `AppModel`,

@@ -55,12 +55,16 @@ struct ContentView: View {
     }
 }
 
-/// The page the tab in front points at, and the bottom pane beneath.
+/// The page the tab in front points at — under the open-file strip, when
+/// the page has one — and the bottom pane beneath.
 private struct DetailColumn: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
         VStack(spacing: 0) {
+            if let strip = model.fileTabStrip {
+                FileTabStripView(strip: strip)
+            }
             IslandView(host: model.page)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             BottomPane()

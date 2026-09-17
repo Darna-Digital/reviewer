@@ -30,14 +30,27 @@ enum NativePalette {
         return variables
     }
 
+    /// "dark" or "light", by the app's effective appearance.
+    static func appearanceName() -> String {
+        NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? "dark" : "light"
+    }
+
     /// The script that applies them to the document — run before the first
-    /// paint, and again when the appearance changes.
+    /// paint, and again when the appearance changes, when it also flips the
+    /// theme the way the SPA's own boot script would have on a system change.
     static func applyScript() -> String {
         let pairs = cssVariables().map { "[\(json($0.key)), \(json($0.value))]" }.joined(separator: ",")
+        let dark = appearanceName() == "dark"
         return """
         (() => {
-          const style = document.documentElement.style;
-          for (const [name, value] of [\(pairs)]) style.setProperty(name, value);
+          const root = document.documentElement;
+          for (const [name, value] of [\(pairs)]) root.style.setProperty(name, value);
+          if (window.reviewer) window.reviewer.appearance = "\(appearanceName())";
+          const theme = localStorage.getItem("reviewer-theme") || "system";
+          if (theme === "system") {
+            root.classList.toggle("dark", \(dark));
+            root.dataset.theme = \(dark) ? "dark" : "light";
+          }
         })();
         """
     }

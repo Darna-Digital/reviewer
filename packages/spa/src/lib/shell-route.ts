@@ -56,10 +56,20 @@ export type ShellRoute =
    * side by side without either being bent towards the other.
    */
   | { readonly kind: "experimentation" }
+  /**
+   * The git mode: the branches, the history and the merge requests as tabs of
+   * one page, with the window to it. What the dock holds a drawer's worth of,
+   * given the canvas — so the dock stays down here, and the page is the one
+   * copy of those surfaces.
+   */
+  | { readonly kind: "git" }
   | { readonly kind: "settings" };
 
 /** The collaboration prototype, which is not one of the app's own surfaces. */
 const EXPERIMENTATION_PREFIX = "/modes/experimentation";
+
+/** The git mode. */
+export const GIT_HREF = "/modes/git";
 
 /** Pages under `/modes/code/` that are workspace pages rather than the diff. */
 const CODE_WORKSPACE_PAGES = ["reviews"];
@@ -198,6 +208,7 @@ export function shellRoute(
   if (pathname.startsWith(EXPERIMENTATION_PREFIX)) {
     return { kind: "experimentation" };
   }
+  if (pathname.startsWith(GIT_HREF)) return { kind: "git" };
 
   if (pathname.startsWith("/modes/code/")) {
     const rest = pathname.slice("/modes/code/".length);
