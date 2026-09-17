@@ -101,7 +101,6 @@ import {
   TabStrip,
   type TabStripProps,
 } from "@/interactions/tabs/components/tab-strip";
-import { useShellTabStrip } from "@/interactions/tabs/adapters/tabs.shell";
 import {
   readTabs,
   scopeTabsTo,
@@ -1273,10 +1272,7 @@ export function CodeWorkspace() {
   const headerTabsSlot = useHeaderTabsSlot();
   const seamSlot = useSeamSlot();
 
-  /**
-   * The strip, wherever it is drawn: portalled into the header band here, or
-   * handed to the native shell where the band is the window's own.
-   */
+  /** The strip, portalled into the header band over this pane. */
   const stripProps: TabStripProps | null = tabbed
     ? {
         tabs: tabs.tabs,
@@ -1308,7 +1304,6 @@ export function CodeWorkspace() {
           updateTabs((state) => moveTab(state, path, toIndex)),
       }
     : null;
-  useShellTabStrip(stripProps);
 
   /**
    * Review mode before a pull request is picked: the list, and nothing else.

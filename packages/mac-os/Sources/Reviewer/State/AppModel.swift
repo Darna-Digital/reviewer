@@ -1,13 +1,14 @@
 // The window's model: the connection to the server, the open project, the
-// window tabs and which one holds the window, the page island the tabs
-// show, the sidebar's tree and the pane's own native surfaces. One instance
-// per app — the same server serves every window, and a single tab list is
-// what the strip, the launchpad and the menu commands all act on.
+// page island, the sidebar's tree and the pane's own native surfaces. One
+// instance per app — the same server serves every window.
 //
-// The model is the one that navigates: a tab chosen here is an address the
-// page island is sent to. The island reports back where it went, which is
-// how a tab remembers its place, and what it is showing — its open files,
-// its tree — which is what the native chrome around it draws.
+// The window tabs are the island's own strip (see `WindowTabStrip`), so the
+// model does not switch them: what it does is send the page to an address
+// when a native control reaches for a code surface — the rail, a search
+// result, a commit in the history — and the strip hands the window to the
+// tab that owns it. The island reports back where it went, and what it is
+// showing — its tree, its tabs — which is what the native chrome around it
+// draws and names.
 import AppKit
 import Foundation
 import Observation
@@ -27,31 +28,27 @@ final class AppModel {
     var connection: ConnectionState = .starting
     var workspace: WorkspaceInfo?
     var status: RepoStatus?
-    var chats: [ChatSummary] = []
     var branches: [BranchInfo] = []
     var remoteBranches: [RemoteBranchInfo] = []
     var branchPrompt: BranchPrompt?
     var lastError: String?
 
-    var tabs: [WindowTab] = [.code, .git, .sessions]
-    var selectedTabId: String = WindowTab.code.id {
-        didSet { tabSelectionChanged(from: oldValue) }
-    }
-    var launchpadShown = false
-    /// The last picture of each tab, taken as it was left, for the launchpad.
-    private(set) var snapshots: [String: NSImage] = [:]
-    /// The code page's open files, as it last reported them; nil while it
-    /// shows no strip — a diff, a merge request, another tab's page.
-    private(set) var fileTabs: FileTabStrip?
+    /// The window tabs as the island last reported them, for the menu bar.
+    private(set) var windowTabs: WindowTabStrip = .empty
     /// The code page's file tree, as it last reported it, with the sidebar's
     /// own folds, search and selection over it.
     let sidebar = SidebarTree()
+    var sidebarShown = true
+    var sidebarWidth: CGFloat = 280
+    var launchpadShown = false
+    /// The last picture of each tab, taken as it was left, for the launchpad.
+    private(set) var snapshots: [String: NSImage] = [:]
 
     var bottomExpanded = true
     var bottomTab: BottomPaneTab = .terminal
     var bottomHeight: CGFloat = 280
 
-    /// The SPA's routed page — the tab in front is where it is pointed.
+    /// The SPA's routed page, with the window tabs along its top.
     let page: IslandHost
     let threads: Threads
     let services: DevServices
@@ -62,7 +59,7 @@ final class AppModel {
     init(client: ReviewerClient = ReviewerClient(baseURL: ServerLauncher.shared.baseURL)) {
         self.client = client
         let source = SpaSource.resolve()
-        page = IslandHost(kind: .code, href: WindowTab.code.href, source: source, apiBaseURL: client.baseURL)
+        page = IslandHost(kind: .code, href: Href.review, source: source, apiBaseURL: client.baseURL)
         services = DevServices(client: client)
         threads = Threads(client: client)
         search = QuickSearch(client: client)
@@ -74,27 +71,13 @@ final class AppModel {
             guard let self, !search.isShown else { return }
             findFile()
         }
-        page.onNavigated = { [weak self] href in self?.pageNavigated(to: href) }
-        page.onFileTabsReported = { [weak self] strip in self?.fileTabs = strip }
+        page.onWindowTabsReported = { [weak self] strip in self?.take(strip) }
         page.onTreeReported = { [weak self] listing in self?.sidebar.take(listing) }
         page.onTreeStateReported = { [weak self] state in self?.sidebar.take(state) }
         page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
     }
 
     var hasProject: Bool { workspace?.project != nil }
-    var selectedTab: WindowTab? { tabs.first { $0.id == selectedTabId } }
-
-    func title(of tab: WindowTab) -> String {
-        switch tab.kind {
-        case .code: return "Code"
-        case .git: return "Git"
-        case .sessions: return "Sessions"
-        case .newSession: return "New Session"
-        case .session(let id):
-            let title = chats.first { $0.id == id }?.title ?? ""
-            return title.isEmpty ? "Session" : title
-        }
-    }
 
     // MARK: lifecycle
 
@@ -113,11 +96,8 @@ final class AppModel {
     /// enough to call after any action that could have changed the branch or
     /// the sessions — a project switch, ⌘R.
     func refresh() async {
-        async let workspaceInfo = client.workspace()
-        async let chatPage = client.chats()
         do {
-            workspace = try await workspaceInfo
-            chats = try await chatPage.items
+            workspace = try await client.workspace()
             lastError = nil
         } catch {
             lastError = error.localizedDescription
@@ -140,12 +120,11 @@ final class AppModel {
         await threads.load()
     }
 
-    /// The Code tab, at an address: what every native control that reaches
-    /// for a code surface goes through.
+    /// The page at a code address: what every native control that reaches
+    /// for a code surface goes through. The strip hands the window to the
+    /// Code tab as the page arrives there, the way it does for a link.
     func showOnCodeTab(_ href: String) {
-        guard let index = tabs.firstIndex(where: { $0.id == WindowTab.code.id }) else { return }
-        tabs[index].href = href
-        selectedTabId = WindowTab.code.id
+        page.navigate(to: href)
     }
 
     /// A file, at a line: where a search result opens. In place when the
@@ -202,13 +181,16 @@ final class AppModel {
         page.send(action)
     }
 
+    func toggleSidebar() {
+        sidebarShown.toggle()
+    }
+
+
     // MARK: project
 
     func openProject(path: String) async {
         do {
             workspace = try await client.openProject(path: path)
-            closeUnpinnedTabs()
-            snapshots = [:]
             services.reset()
             threads.reset()
             await refresh()
@@ -240,126 +222,68 @@ final class AppModel {
 
     // MARK: tabs
 
+    /// Whether Close Tab has anything to close: the pinned tabs stay.
+    var canCloseTab: Bool {
+        windowTabs.active?.pinned == false
+    }
+
+    /// The strip as the island last drew it. A tab gone from it takes its
+    /// picture with it.
+    private func take(_ strip: WindowTabStrip) {
+        windowTabs = strip
+        let open = Set(strip.tabs.map(\.id))
+        snapshots = snapshots.filter { open.contains($0.key) }
+    }
+
     func newSession() {
         guard hasProject else {
             lastError = "open a project before starting an agent session"
             return
         }
-        show(.newSession())
-    }
-
-    func select(tabId: String) {
-        guard tabs.contains(where: { $0.id == tabId }) else { return }
-        selectedTabId = tabId
-        launchpadShown = false
-    }
-
-    func select(slot: Int) {
-        guard tabs.indices.contains(slot - 1) else { return }
-        select(tabId: tabs[slot - 1].id)
-    }
-
-    func closeTab(id: String) {
-        guard let index = tabs.firstIndex(where: { $0.id == id }), !tabs[index].isPinned else { return }
-        tabs.remove(at: index)
-        snapshots[id] = nil
-        if selectedTabId == id {
-            // Fall back to the neighbour on the left, the way Xcode does, so
-            // closing the last tab of a run lands you on the one you came from.
-            selectedTabId = tabs[max(0, index - 1)].id
-        }
+        leaveTab { $0.send(WindowTabAction.newSession) }
     }
 
     func closeCurrentTab() {
-        closeTab(id: selectedTabId)
+        page.send(WindowTabAction.closeActive)
     }
 
-    func closeUnpinnedTabs() {
-        for tab in tabs where !tab.isPinned { closeTab(id: tab.id) }
+    func select(tabId: String) {
+        leaveTab { $0.send(WindowTabAction.select(id: tabId)) }
+    }
+
+    func closeTab(id: String) {
+        page.send(WindowTabAction.close(id: id))
     }
 
     func selectNextTab(offset: Int) {
-        guard let current = tabs.firstIndex(where: { $0.id == selectedTabId }) else { return }
-        let next = (current + offset + tabs.count) % tabs.count
-        selectedTabId = tabs[next].id
+        leaveTab { $0.send(WindowTabAction.step(offset)) }
     }
 
-    func moveTab(from source: IndexSet, to destination: Int) {
-        tabs.move(fromOffsets: source, toOffset: destination)
+    /// ⌘1–9: the session in that slot, the pinned tabs not counted.
+    func select(sessionSlot slot: Int) {
+        leaveTab { $0.send(WindowTabAction.session(slot: slot)) }
     }
 
     func toggleLaunchpad() {
-        if !launchpadShown { snapshotCurrentTab() }
+        if !launchpadShown { snapshotActiveTab() }
         launchpadShown.toggle()
     }
 
-    private func show(_ tab: WindowTab) {
-        if !tabs.contains(where: { $0.id == tab.id }) { tabs.append(tab) }
-        selectedTabId = tab.id
-    }
-
     /// Leaving a tab takes its picture first, so the launchpad shows it as
-    /// it was; then the page is sent where the new tab points.
-    private func tabSelectionChanged(from previous: String) {
-        guard let tab = selectedTab else { return }
-        if previous != tab.id, let index = tabs.firstIndex(where: { $0.id == previous }) {
-            let leaving = tabs[index].id
-            Task {
-                snapshots[leaving] = try? await page.webView.takeSnapshot(configuration: nil)
-                page.navigate(to: tab.href)
-            }
-        } else if page.href != tab.href {
-            page.navigate(to: tab.href)
+    /// it was; then the strip is asked to switch, and the launchpad — which
+    /// the ask may have come from — is put away.
+    private func leaveTab(_ switching: @escaping (IslandHost) -> Void) {
+        let leaving = windowTabs.activeId
+        launchpadShown = false
+        Task {
+            snapshots[leaving] = try? await page.webView.takeSnapshot(configuration: nil)
+            switching(page)
         }
     }
 
-    private func snapshotCurrentTab() {
-        let id = selectedTabId
+    private func snapshotActiveTab() {
+        let id = windowTabs.activeId
         Task { snapshots[id] = try? await page.webView.takeSnapshot(configuration: nil) }
-    }
-
-    /// The page moved — a link, a file, a session picked in the list. The
-    /// tab in front remembers the place, unless the place belongs to another
-    /// pinned tab — a link out of a diff into the git mode — in which case
-    /// that tab takes it and the window; and a session composed in a fresh
-    /// tab becomes that session's tab the moment the composer lands on it.
-    private func pageNavigated(to href: String) {
-        guard var index = tabs.firstIndex(where: { $0.id == selectedTabId }) else { return }
-        let owner = WindowTab.owner(of: href)
-        if tabs[index].isPinned, tabs[index].kind != owner,
-            let owning = tabs.firstIndex(where: { $0.kind == owner })
-        {
-            index = owning
-            tabs[index].href = href
-            selectedTabId = tabs[index].id
-        }
-        tabs[index].href = href
-        if case .newSession = tabs[index].kind, let id = Href.sessionId(in: href) {
-            let session = WindowTab.session(id: id)
-            if let existing = tabs.firstIndex(where: { $0.id == session.id }) {
-                tabs.remove(at: index)
-                selectedTabId = tabs[existing < index ? existing : existing - 1].id
-            } else {
-                tabs[index] = session
-                selectedTabId = session.id
-            }
-        }
-        if href.hasPrefix(Href.sessions) {
-            Task { chats = (try? await client.chats().items) ?? chats }
-        }
-    }
-
-    // MARK: file tabs
-
-    /// The strip belongs to the Code tab: another tab's page is on its way in
-    /// while the code page's last report is still standing.
-    var fileTabStrip: FileTabStrip? {
-        guard selectedTabId == WindowTab.code.id, let strip = fileTabs, !strip.tabs.isEmpty else { return nil }
-        return strip
-    }
-
-    func act(onFileTab action: FileTabAction) {
-        page.send(action)
     }
 
     // MARK: bottom pane

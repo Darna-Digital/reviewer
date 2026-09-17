@@ -1,75 +1,86 @@
-// What the strip along the top of the window holds — the same tabs the web
-// app's window bar holds: Code, Git and Sessions pinned, then one per agent
-// session lifted into a tab of its own. Files are not window tabs; they are
-// the code surface's own strip, inside the island.
-//
-// Every tab is a place in the SPA, and remembers the last place it was — the
-// diff you were reading on Code, the conversation open on Sessions — so
-// coming back lands where you left, the way the window bar's `trackLocation`
-// does in the browser.
+// The window tabs — Code, Git and Sessions pinned, then one per agent
+// session — are the page island's own strip, the same one the web app's
+// window bar draws: the store and the switching live in the document, so a
+// tab is a route change in a page that has already primed it rather than a
+// trip over the bridge. What the shell holds is a picture of the strip,
+// reported whenever it changes, which the toolbar draws natively (see
+// `TabStripItems`), the launchpad lays out as cards, and the menu bar
+// names: the sessions ⌘1–9 reach, and whether the tab in front can be
+// closed. See `ShellWindowTabStrip` in the SPA's `lib/shell`.
 import Foundation
 
-enum WindowTabKind: Hashable, Sendable {
-    case code
-    case git
-    case sessions
-    case session(id: String)
-    /// A session being composed — its tab exists before the server has an id
-    /// for it, and becomes `.session` the moment the composer lands on one.
-    case newSession(token: String)
+struct WindowTabStrip: Decodable, Hashable, Sendable {
+    var tabs: [WindowTab]
+    var activeId: String
+
+    static let empty = WindowTabStrip(tabs: [], activeId: "")
+
+    var active: WindowTab? { tabs.first { $0.id == activeId } }
+
+    /// The sessions in strip order, which is what ⌘1–9 count.
+    var sessions: [WindowTab] { tabs.filter { !$0.pinned } }
+
+    /// From the message body as WebKit hands it over. Anything but a
+    /// dictionary is no strip: `JSONSerialization` raises an Objective-C
+    /// exception on a non-container rather than throwing, and one of those
+    /// inside a task on the main actor leaves the concurrency runtime's
+    /// executor tracking stale, which WebKit's next isolation check then
+    /// crashes on.
+    static func decode(_ body: Any?) -> WindowTabStrip? {
+        guard let object = body as? [String: Any],
+            let data = try? JSONSerialization.data(withJSONObject: object)
+        else { return nil }
+        return try? JSONDecoder().decode(WindowTabStrip.self, from: data)
+    }
 }
 
-struct WindowTab: Identifiable, Hashable, Sendable {
+struct WindowTab: Decodable, Identifiable, Hashable, Sendable {
+    let id: String
+    let title: String
     let kind: WindowTabKind
-    var href: String
+    let pinned: Bool
+}
 
-    var id: String {
-        switch kind {
-        case .code: return "code"
-        case .git: return "git"
-        case .sessions: return "sessions"
-        case .session(let id): return "session:\(id)"
-        case .newSession(let token): return "new:\(token)"
-        }
-    }
+/// What a tab is, as the web strip sorts them — its `WindowTabKind` — with
+/// the web app's icons for each, Tabler's code, git branch, send and
+/// message, in their SF Symbols shapes.
+enum WindowTabKind: String, Decodable, Sendable {
+    case project
+    case git
+    case sessions
+    case session
 
-    var isPinned: Bool {
-        switch kind {
-        case .code, .git, .sessions: return true
-        case .session, .newSession: return false
-        }
-    }
-
-    /// The web app's icons for the same tabs — Tabler's code, send and
-    /// message — in their SF Symbols shapes.
     var symbol: String {
-        switch kind {
-        case .code: return "chevron.left.forwardslash.chevron.right"
+        switch self {
+        case .project: return "chevron.left.forwardslash.chevron.right"
         case .git: return "arrow.triangle.branch"
         case .sessions: return "paperplane"
-        case .session, .newSession: return "message"
+        case .session: return "message"
         }
     }
+}
 
-    static let code = WindowTab(kind: .code, href: Href.review)
-    static let git = WindowTab(kind: .git, href: Href.git)
-    static let sessions = WindowTab(kind: .sessions, href: Href.sessions)
+/// The shell's asks of the strip, in the shape the island's
+/// `ShellWindowTabAction` takes: a tab pressed on the toolbar, and the web
+/// app's own chords, claimed by menu items so they answer while a native
+/// view has the keyboard.
+enum WindowTabAction {
+    case select(id: String)
+    case close(id: String)
+    case newSession
+    case closeActive
+    case step(Int)
+    case session(slot: Int)
 
-    /// The pinned tab an address belongs to — the way the web app's strip
-    /// hands the window to the tab that owns where it went.
-    static func owner(of href: String) -> WindowTabKind {
-        let path = URLComponents(string: href)?.path ?? ""
-        if path.hasPrefix(Href.sessions) { return .sessions }
-        if path.hasPrefix(Href.git) { return .git }
-        return .code
-    }
-
-    static func newSession() -> WindowTab {
-        WindowTab(kind: .newSession(token: UUID().uuidString), href: Href.composer)
-    }
-
-    static func session(id: String) -> WindowTab {
-        WindowTab(kind: .session(id: id), href: Href.session(id: id))
+    var payload: [String: Any] {
+        switch self {
+        case .select(let id): return ["kind": "select", "id": id]
+        case .close(let id): return ["kind": "close", "id": id]
+        case .newSession: return ["kind": "newSession"]
+        case .closeActive: return ["kind": "closeActive"]
+        case .step(let offset): return ["kind": "step", "offset": offset]
+        case .session(let slot): return ["kind": "session", "slot": slot]
+        }
     }
 }
 
@@ -78,11 +89,6 @@ struct WindowTab: Identifiable, Hashable, Sendable {
 enum Href {
     static let review = "/modes/code/review"
     static let browsePath = "/modes/code/browse"
-    static let git = "/modes/git"
-    static let sessions = "/modes/agent-session"
-    static let composer = "/modes/agent-session?new=true"
-
-    static func session(id: String) -> String { "\(sessions)/\(id)" }
 
     /// `href` showing `path` — at `line`, when there is one — the way the
     /// web app's search opens a result: the page's own address with the
@@ -94,22 +100,6 @@ enum Href {
         if let line { items.append(URLQueryItem(name: "line", value: String(line))) }
         components.queryItems = items
         return components.string ?? href
-    }
-
-    /// A code surface — the diff, the browse page, the merge requests — as
-    /// opposed to the sessions and the settings.
-    static func isCodePage(_ href: String) -> Bool {
-        (URLComponents(string: href)?.path ?? "").hasPrefix("/modes/code")
-    }
-
-    /// The session a conversation address names, if it is one.
-    static func sessionId(in href: String) -> String? {
-        guard let components = URLComponents(string: href) else { return nil }
-        let prefix = sessions + "/"
-        guard components.path.hasPrefix(prefix) else { return nil }
-        let rest = components.path.dropFirst(prefix.count)
-        guard !rest.isEmpty, !rest.contains("/") else { return nil }
-        return String(rest)
     }
 }
 

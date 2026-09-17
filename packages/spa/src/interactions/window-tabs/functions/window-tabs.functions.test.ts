@@ -17,6 +17,7 @@ import {
   selectTab,
   sessionAtSlot,
   SESSIONS_TAB_ID,
+  stepTab,
   tabTitle,
   trackLocation,
   withPinnedTabs,
@@ -295,6 +296,21 @@ describe("nextModeTab", () => {
     const { tabs } = stripOf("a");
     const alone = tabs.filter((tab) => tab.id === PROJECT_TAB_ID);
     expect(nextModeTab(alone, PROJECT_TAB_ID)).toBeNull();
+  });
+});
+
+describe("stepTab", () => {
+  it("walks the whole strip, pinned tabs included, wrapping at both ends", () => {
+    const { tabs } = stripOf("a", "b");
+    expect(stepTab(tabs, SESSIONS_TAB_ID, 1)?.id).toBe("a");
+    expect(stepTab(tabs, "b", 1)?.id).toBe(PROJECT_TAB_ID);
+    expect(stepTab(tabs, PROJECT_TAB_ID, -1)?.id).toBe("b");
+  });
+
+  it("starts from the head when nothing is active, and has nowhere to go on an empty strip", () => {
+    const { tabs } = stripOf("a");
+    expect(stepTab(tabs, null, 1)?.id).toBe(PROJECT_TAB_ID);
+    expect(stepTab([], PROJECT_TAB_ID, 1)).toBeNull();
   });
 });
 

@@ -1,13 +1,21 @@
 /**
  * The layout an island wears instead of `AppLayout`.
  *
- * Inside the macOS shell the frame, the rail, the header, the sidebar and the
- * bottom pane are the window's own — native views, or islands of their own —
- * so this document is one part of the app with nothing around it: the routed
- * page, edge to edge, on the canvas. Everything `AppLayout` mounts once for the
- * life of the window that the page underneath still depends on is mounted
- * here for the same reason — the Shiki pool, so leaving and returning to a
- * diff does not spawn the workers and refill their cache.
+ * Inside the macOS shell the frame, the rail, the sidebar and the bottom pane
+ * are the window's own — native views, or islands of their own — so this
+ * document is one part of the app with little around it: the open-file band
+ * along its top edge, and under it the routed page, edge to edge, on the
+ * canvas. Everything `AppLayout` mounts once for the life of the window that
+ * the page underneath still depends on is mounted here for the same reason —
+ * the Shiki pool, so leaving and returning to a diff does not spawn the
+ * workers and refill their cache.
+ *
+ * The window tabs are the island's to keep, for the same reason the window
+ * bar's are the app's in Electron: switching one is a route change in a
+ * document that has already primed the page. They are the toolbar's to draw
+ * (see `IslandBar`), and the launchpad that lays them out is the shell's own,
+ * over the window, wearing the pictures it takes of the page — so neither is
+ * drawn in here.
  *
  * The code island keeps the git dock too, under the page as `AppLayout` has
  * it: branches, history and find-usages are the page's to draw, while the
@@ -23,6 +31,7 @@ import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
+import { IslandBar } from "@/components/layout/island-bar";
 import { useWorkspace } from "@/lib/queries";
 import { type Island, shell } from "@/lib/shell";
 import { shellRoute, showsGitChrome } from "@/lib/shell-route";
@@ -33,7 +42,7 @@ export function IslandLayout({ island }: { island: Island }) {
 
   return (
     <DiffWorkerPoolProvider>
-      <div className="island-page app-page flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="island-page flex h-full min-h-0 flex-col overflow-hidden">
         <IslandBody island={island} />
       </div>
     </DiffWorkerPoolProvider>
@@ -44,9 +53,19 @@ function IslandBody({ island }: { island: Island }) {
   switch (island) {
     case "code":
       return <CodeIsland />;
-    default:
-      return <UnbuiltIsland island={island} />;
   }
+}
+
+/** The bar, and under it the page, in the box the island has for them. */
+function CodeIsland() {
+  return (
+    <>
+      <IslandBar />
+      <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
+        <CodePage />
+      </div>
+    </>
+  );
 }
 
 /**
@@ -54,7 +73,7 @@ function IslandBody({ island }: { island: Island }) {
  * surfaces: a drawer on the code pages, and on one of the dock's own pages
  * the whole canvas, with the outlet put away behind it rather than unmounted.
  */
-function CodeIsland() {
+function CodePage() {
   const pathname = useRouterState({
     select: (s) => (s.resolvedLocation ?? s.location).pathname,
   });
@@ -66,7 +85,7 @@ function CodeIsland() {
   const dockShown = current !== null && showsGitChrome(route);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-1.5 overflow-hidden">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-hidden">
       <div
         className={cn(
           "app-page flex min-h-0 flex-col overflow-hidden",
@@ -94,6 +113,8 @@ function useShellNavigation(island: Island): void {
           case "refresh":
             void queryClient.invalidateQueries();
             return;
+          default:
+            return;
         }
       }),
     [router, queryClient]
@@ -109,12 +130,4 @@ function useShellNavigation(island: Island): void {
   useEffect(() => {
     void shell.post({ type: "navigated", href });
   }, [href]);
-}
-
-function UnbuiltIsland({ island }: { island: Island }) {
-  return (
-    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-      The {island} island is not built yet.
-    </div>
-  );
 }

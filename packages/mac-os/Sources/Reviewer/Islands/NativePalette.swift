@@ -5,10 +5,34 @@
 // that appearance changes.
 import AppKit
 
+/// The two tones the window is made of, the web app's own rather than the
+/// system's: the frame every island stands on — black in the dark theme,
+/// where the system's window grey read as a lighter band around darker
+/// panels — and the sheet each island is. The same values the SPA's
+/// `--frame` and `--canvas` carry, so a window of islands reads as the web
+/// app's window of sheets.
+enum IslandPalette {
+    static let frame = NSColor(name: nil) { appearance in
+        appearance.isDark ? NSColor(srgbRed: 0, green: 0, blue: 0, alpha: 1) : NSColor(srgbRed: 0.941, green: 0.941, blue: 0.953, alpha: 1)
+    }
+
+    static let island = NSColor(name: nil) { appearance in
+        appearance.isDark ? NSColor(srgbRed: 0.078, green: 0.078, blue: 0.09, alpha: 1) : .white
+    }
+}
+
+private extension NSAppearance {
+    var isDark: Bool {
+        bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+    }
+}
+
 enum NativePalette {
     /// Every `--native-*` property the SPA's `.island` styles read.
     static func cssVariables() -> [String: String] {
         let colors: [(String, NSColor)] = [
+            ("--native-frame", IslandPalette.frame),
+            ("--native-island", IslandPalette.island),
             ("--native-window", .windowBackgroundColor),
             ("--native-control", .controlBackgroundColor),
             ("--native-under-page", .underPageBackgroundColor),

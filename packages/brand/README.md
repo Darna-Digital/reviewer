@@ -37,6 +37,6 @@ pnpm dev:brand           # or: pnpm --filter @reviewer/brand dev
   coordinates small enough to print in exponential notation).
 - `src/brand/raster.ts`, `pack.ts` — PNG, ICO and the zipped pack.
 
-Space Grotesk is vendored under `public/fonts` (SIL Open Font License 1.1) so
-the studio works offline and the outlines never depend on what is installed
+Space Grotesk is vendored under `public/fonts` (SIL Open Font License 1.1) so\
+the studio works offline and the outlines never depend on what is installed\
 locally.

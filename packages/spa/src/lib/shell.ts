@@ -5,28 +5,36 @@
  * app in web views of its own — the code surface with its dock — each one a
  * document of its own, loaded from the same build, told which island it is by
  * the bridge the shell installs before the first script runs
- * (`window.reviewer.island`, see `lib/desktop`). The chrome around an island
- * — the window tabs, the open-file strip, the file tree in the sidebar — is
- * the shell's own, drawn natively from what the island reports.
+ * (`window.reviewer.island`, see `lib/desktop`). The chrome around an island —
+ * the file tree in the sidebar — is the shell's own, drawn natively from what
+ * the island reports. The window tabs are not: they are the island's own strip,
+ * the same one the window bar draws in the browser and in Electron, so a tab is
+ * switched the way the router switches a page — in the document, primed ahead
+ * of the click — rather than by a trip over the bridge and back. What the shell
+ * has of them is a picture, for its menus.
  *
  * Islands cannot share a JavaScript heap, so what two of them both need — the
- * open project, the window tabs, which one is selected, where the code surface
- * is pointed — lives in the shell, and the shell is the one that navigates. An
- * island never moves itself between pages; it *reports* where it is, and it
- * goes where it is *told*. That is the whole contract, in the two unions below.
+ * open project, where the code surface is pointed — lives in the shell, and the
+ * shell is the one that navigates between them. An island never moves itself
+ * out of its part of the app; it *reports* where it is, and it goes where it is
+ * *told*. That is the whole contract, in the two unions below.
  *
  * Absent the shell, `shell` is a channel nobody is on the other end of, so an
  * island renders in a plain browser tab exactly as it does in the window — the
- * way every island is developed.
+ * way every island is developed. A preview — the app in a frame of the island,
+ * photographed for the launchpad — is cut off the same way: it borrows the
+ * island's bridge to know it is one, and must not be heard as one.
  */
 import type { TreeItem } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
+import type { WindowTabKind } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import type { AppMode } from "@/lib/api/types";
 import { islandBridge } from "@/lib/desktop";
+import { isPreviewWindow } from "@/lib/preview-window";
 import type { CommitAgent } from "@/lib/ui-prefs";
 import type { CommitDraft } from "@reviewer/core/git-message";
 import type { GitStatusEntry } from "@reviewer/core/repo";
 
-export type Island = "tabs" | "launchpad" | "code";
+export type Island = "code";
 
 /** Shell → island. */
 export type ShellEvent =
@@ -34,8 +42,8 @@ export type ShellEvent =
   /** Something changed behind the island's back — a save, an agent turn ending,
    * a project switch — so everything it holds is re-asked for. */
   | { readonly type: "refresh" }
-  /** The shell's own open-file strip was acted on — see `ShellTabStrip`. */
-  | { readonly type: "tabs"; readonly action: ShellTabAction }
+  /** A menu chord for the window tabs — see `ShellWindowTabAction`. */
+  | { readonly type: "windowTabs"; readonly action: ShellWindowTabAction }
   /** The shell's own file tree was acted on — see `ShellTree`. */
   | { readonly type: "tree"; readonly action: ShellTreeAction };
 
@@ -43,9 +51,8 @@ export type ShellEvent =
 export type ShellIntent =
   | { readonly type: "ready"; readonly island: Island }
   | { readonly type: "navigated"; readonly href: string }
-  /** The code island's open-file strip as it stands, for the shell to draw in
-   * its own chrome; null once the page stops showing one. */
-  | { readonly type: "tabs"; readonly strip: ShellTabStrip | null }
+  /** The window tabs as the strip stands, for the shell's menus to name. */
+  | { readonly type: "windowTabs"; readonly strip: ShellWindowTabStrip }
   /** The code page's file tree as it stands, for the shell to draw in its
    * sidebar; null once the page stops showing one. */
   | { readonly type: "tree"; readonly tree: ShellTree | null }
@@ -54,33 +61,40 @@ export type ShellIntent =
   | { readonly type: "treeState"; readonly state: ShellTreeState };
 
 /**
- * The open-file strip, as the shell draws it: the tabs in the order the web
- * strip shows them, and whether each is a preview, pinned, or holding an
- * unsaved buffer. The file's type icon is the shell's own — it carries the
- * tree's sprite, imported at build time — so only the path crosses.
+ * The window tabs, as the shell draws them on its toolbar and names them in
+ * its menus: the strip in the order it is shown, which of them holds the
+ * window, and what each is. The strip itself — the store, the priming, the
+ * switch — is the island's; what crosses is the picture, so the toolbar can
+ * draw the tabs, the Tabs menu can list the sessions ⌘1–9 reach and Close Tab
+ * can stand down on a pinned one.
  */
-export interface ShellTabStrip {
-  readonly tabs: ReadonlyArray<ShellTab>;
-  readonly active: string | null;
+export interface ShellWindowTabStrip {
+  readonly tabs: ReadonlyArray<ShellWindowTab>;
+  readonly activeId: string;
 }
 
-export interface ShellTab {
-  readonly path: string;
-  readonly name: string;
+export interface ShellWindowTab {
+  readonly id: string;
+  readonly title: string;
+  readonly kind: WindowTabKind;
   readonly pinned: boolean;
-  readonly preview: boolean;
-  readonly dirty: boolean;
 }
 
-/** What the shell's strip can do to the island's tabs — `TabStripProps` again. */
-export type ShellTabAction =
-  | { readonly kind: "select"; readonly path: string }
-  | { readonly kind: "keep"; readonly path: string }
-  | { readonly kind: "close"; readonly path: string }
-  | { readonly kind: "togglePin"; readonly path: string }
-  | { readonly kind: "closeOthers"; readonly path: string }
-  | { readonly kind: "closeAll" }
-  | { readonly kind: "move"; readonly path: string; readonly toIndex: number };
+/**
+ * What the shell asks of the strip — a tab pressed on its toolbar, and the
+ * window bar's own chords, claimed by menu items so they answer while a native
+ * view has the keyboard — handed back to the strip that answers them
+ * everywhere else.
+ */
+export type ShellWindowTabAction =
+  | { readonly kind: "select"; readonly id: string }
+  | { readonly kind: "close"; readonly id: string }
+  | { readonly kind: "newSession" }
+  | { readonly kind: "closeActive" }
+  /** The tab beside the active one, wrapping round. */
+  | { readonly kind: "step"; readonly offset: 1 | -1 }
+  /** The session in that slot of the strip, counting from 1 — ⌘1–9. */
+  | { readonly kind: "session"; readonly slot: number };
 
 /**
  * The file tree, as the shell draws it in its sidebar: what the web tree is
@@ -154,11 +168,7 @@ export interface ShellChannel {
   dispatch: (event: ShellEvent) => void;
 }
 
-const ISLANDS: ReadonlySet<string> = new Set<Island>([
-  "tabs",
-  "launchpad",
-  "code",
-]);
+const ISLANDS: ReadonlySet<string> = new Set<Island>(["code"]);
 
 const isIsland = (value: unknown): value is Island =>
   typeof value === "string" && ISLANDS.has(value);
@@ -174,4 +184,6 @@ const unhosted: ShellChannel = {
   dispatch: () => {},
 };
 
-export const shell: ShellChannel = islandBridge?.shell ?? unhosted;
+export const shell: ShellChannel = isPreviewWindow
+  ? unhosted
+  : (islandBridge?.shell ?? unhosted);

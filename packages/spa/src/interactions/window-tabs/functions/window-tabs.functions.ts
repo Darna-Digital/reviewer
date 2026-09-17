@@ -355,6 +355,22 @@ export function nextModeTab(
 }
 
 /**
+ * The tab `offset` places along from the active one, wrapping round at either
+ * end — what the macOS shell's Next Tab and Previous Tab step through. Every
+ * tab counts, pinned or not: it is a walk along the strip as drawn, not the
+ * ⌘<digit> run of the sessions alone.
+ */
+export function stepTab(
+  tabs: ReadonlyArray<WindowTab>,
+  activeId: string | null,
+  offset: number
+): WindowTab | null {
+  if (tabs.length === 0) return null;
+  const at = tabs.findIndex((tab) => tab.id === activeId);
+  return tabs[(at + offset + tabs.length) % tabs.length] ?? null;
+}
+
+/**
  * The session standing in that slot of a strip, counting from 1. The pinned
  * tabs are skipped: they are off the digits altogether, so the conversations
  * are counted among themselves and none of them moves when a pinned tab is

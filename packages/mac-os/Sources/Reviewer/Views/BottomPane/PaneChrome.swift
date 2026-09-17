@@ -131,8 +131,8 @@ extension DevCommandView {
     var isRunning: Bool { status == .running }
 }
 
-/// The material a terminal is set on: the text background, so the shell
-/// reads as a document set into the window rather than a hole in it.
+/// The material a terminal is set on: the island's own, so the shell reads
+/// as part of the pane rather than a hole in it.
 struct TerminalWell<Content: View>: View {
     @ViewBuilder let content: Content
 
@@ -140,7 +140,7 @@ struct TerminalWell<Content: View>: View {
         content
             .padding(EdgeInsets(top: 6, leading: 8, bottom: 4, trailing: 4))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(nsColor: .textBackgroundColor))
+            .background(Color(nsColor: IslandPalette.island))
     }
 }
 

@@ -1,26 +1,24 @@
-// The native sidebar: the rail down its leading edge — the web app's mode
-// rail, as native buttons (see `AppRail`) — and beside it the code page's
-// file tree, drawn natively from what the page reports (see `SidebarTree`)
-// in the layout the web sidebar gives that surface: the project's files as
-// an outline on the browse page, and on a diff the changed files under a
-// search, with the commit composer beneath them while the changes are your
-// own. The project and branch pickers sit on the toolbar. The rail moves
-// the page island between the surfaces; the tree follows the page, and a
-// file picked in the tree is carried to the page.
+// The sidebar: the code page's file tree, drawn natively from what the
+// page reports (see `SidebarTree`) in the layout the web sidebar gives that
+// surface — the project's files as an outline on the browse page, and on a
+// diff the changed files under a search, with the commit composer beneath
+// them while the changes are your own — on a pane of glass floating beside
+// the rail (see `ContentView`). The project and branch pickers sit on the
+// toolbar; the rail that moves the page between the surfaces stands beside
+// the pane (see `AppRail`). The tree follows the page, and a file picked in
+// the tree is carried to the page.
 import SwiftUI
 
 struct SidebarView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        HStack(spacing: 0) {
-            AppRail()
-            if model.hasProject {
-                TreeColumn()
-                    .frame(maxWidth: .infinity)
-            } else {
-                Spacer()
-            }
+        if model.hasProject {
+            TreeColumn()
+                .frame(maxWidth: .infinity)
+                .padding(.top, 6)
+        } else {
+            Spacer()
         }
     }
 }

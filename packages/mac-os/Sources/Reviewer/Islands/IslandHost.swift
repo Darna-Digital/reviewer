@@ -3,14 +3,16 @@
 // and when what it holds has gone stale (`refresh`); the island tells the
 // shell when it is up (`ready`) and where it has gone (`navigated`). That is
 // the whole protocol — the SPA's `lib/shell` is the other half of it — but
-// for the chrome the code island reports for the shell to draw natively: the
-// open-file strip (`tabs`) and the sidebar's file tree (`tree`, and
-// `treeState` for what moves under it), each acted on by sending the click
-// back (`tabs` and `tree` again, the other way).
+// for two more pairs: the sidebar's file tree the code island reports for
+// the shell to draw natively (`tree`, and `treeState` for what moves under
+// it), acted on by sending the click back (`tree` again, the other way); and
+// the window tabs, which are the island's own strip — reported as a picture
+// (`windowTabs`) for the menu bar to name, and asked things of by the menu
+// items that claim the strip's chords (`windowTabs`, the other way).
 //
 // The web view is made once and kept for the life of the host: SwiftUI can
-// take it out of the hierarchy and put it back — a chat tab in front of the
-// code island — and the page, its scroll and its open file survive the trip.
+// take it out of the hierarchy and put it back, and the page, its scroll and
+// its open file survive the trip.
 import AppKit
 import Observation
 import WebKit
@@ -24,7 +26,7 @@ final class IslandHost: NSObject {
 
     @ObservationIgnored var onNavigated: ((String) -> Void)?
     @ObservationIgnored var onOpenDirectory: (() -> String?)?
-    @ObservationIgnored var onFileTabsReported: ((FileTabStrip?) -> Void)?
+    @ObservationIgnored var onWindowTabsReported: ((WindowTabStrip) -> Void)?
     @ObservationIgnored var onTreeReported: ((ShellTree?) -> Void)?
     @ObservationIgnored var onTreeStateReported: ((ShellTreeState) -> Void)?
 
@@ -67,10 +69,10 @@ final class IslandHost: NSObject {
         view.load(URLRequest(url: source.url(for: href)))
     }
 
-    /// The native strip acted on a tab of the island's — see `FileTabAction`.
-    func send(_ action: FileTabAction) {
+    /// A menu item claimed one of the strip's chords — see `WindowTabAction`.
+    func send(_ action: WindowTabAction) {
         guard isReady else { return }
-        dispatch(["type": "tabs", "action": action.payload])
+        dispatch(["type": "windowTabs", "action": action.payload])
     }
 
     /// The native sidebar acted on a row of the island's tree — see `TreeAction`.
@@ -113,13 +115,17 @@ final class IslandHost: NSObject {
     }
 
     /// The bridge, and the window's colours — both before the first script
-    /// of the page runs, so nothing paints in the wrong palette first.
+    /// of the page runs, so nothing paints in the wrong palette first. Into
+    /// every frame, not only the top one: the launchpad photographs the app
+    /// in a frame of the page, and a picture painted in the app's own palette
+    /// would not match the page it stands for. The SPA keeps a frame from
+    /// talking back over the bridge (`lib/shell`).
     private func installUserScripts(in content: WKUserContentController) {
         content.removeAllUserScripts()
         content.addUserScript(
-            WKUserScript(source: bridgeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+            WKUserScript(source: bridgeScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
         content.addUserScript(
-            WKUserScript(source: NativePalette.applyScript(), injectionTime: .atDocumentStart, forMainFrameOnly: true))
+            WKUserScript(source: NativePalette.applyScript(), injectionTime: .atDocumentStart, forMainFrameOnly: false))
     }
 
     /// Dark to light and back: the live document is repainted, and the
@@ -190,8 +196,8 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             return (nil, nil)
         case "openDirectory":
             return (onOpenDirectory?() as Any?, nil)
-        case "tabs":
-            onFileTabsReported?(FileTabStrip.decode(body["strip"]))
+        case "windowTabs":
+            if let strip = WindowTabStrip.decode(body["strip"]) { onWindowTabsReported?(strip) }
             return (nil, nil)
         case "tree":
             onTreeReported?(ShellTree.decode(body["tree"]))

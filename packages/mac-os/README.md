@@ -1,15 +1,16 @@
 # @reviewer/mac-os
 
 A native macOS shell for Reviewer, written in SwiftUI. Same embedded API
-server as the Electron desktop app; the window, sidebar, tabs and menu bar are
-AppKit's own, and the web app's surfaces are hosted inside it as **islands** —
-each one a web view of its own, set in the native layout, showing one part of
-the SPA.
+server as the Electron desktop app; the window, sidebar, bottom pane and menu
+bar are AppKit's own, and the web app's surfaces are hosted inside it as
+**islands** — each one a web view of its own, set in the native layout,
+showing one part of the SPA.
 
 What it does today:
 
-- **Native sidebar** — the code page's file tree as a native outline on the
-  system's full-height sidebar material, in the web sidebar's two layouts:
+- **Native sidebar** — the code page's file tree as a native outline on a
+  pane of the system's glass floating beside the rail, in the web sidebar's
+  two layouts:
   the project's files while browsing, and on a diff the changed files under
   a search, badged and tinted by git status, with the commit composer under
   them while the changes are your own. The rows wear @pierre/trees' own
@@ -17,15 +18,23 @@ What it does today:
   Picking a file sends the code island to it; a file the island opens on its
   own highlights here; the context menu is the web tree's — history, copy
   path, reveal, new, rename, discard, delete.
-- **Native tabs** — the window bar's tabs, natively: Code and Sessions pinned,
-  then one per agent session (⌘T mints one; ⌘W closes, ⌘⇧] / ⌘⇧[ cycle, ⌘1–9
-  jump). Each remembers the last place it was.
-- **Launchpad** (⌘L) — every tab as a card wearing the last picture taken of
-  it, over the window.
-- **Page island** — the SPA's routed page, with its own chrome and file tree
-  off: the diff, the file view, review comments, edit mode, the sessions
-  surface. Its open-file strip is drawn natively above it, wearing the tree's
-  file-type icons.
+- **Islands** — the window is laid out as rounded panels standing a few
+  points apart on the web app's frame colour: the sidebar's glass pane, the
+  page island and the bottom pane, with seams between them that resize the
+  sidebar and the pane (⌃⌘S puts the sidebar away). The toolbar and the
+  rail are the bare window around them.
+- **Window tabs** — the web app's own strip, drawn natively on the toolbar:
+  Code, Git and Sessions pinned, then one per agent session (⌘T mints one;
+  ⌘W closes, ⌘1–9 jump to a session, ⌘⇧] / ⌘⇧[ step along the strip). The
+  strip lives in the page island — switching is a route change inside it,
+  every tab's page primed while the window is idle, as in Electron — and
+  sends the toolbar a picture of itself; a tab pressed there, and each menu
+  chord, goes back down to the strip to answer.
+- **Launchpad** (⌘L) — every tab as a card wearing the last picture taken
+  of it, over the window.
+- **Page island** — the SPA's routed page, with the window's own chrome and
+  file tree off: the diff, the file view, review comments, edit mode, the
+  sessions surface, with its open-file strip along its top.
 - **Bottom pane** (⌘B) — laid out like Xcode's debug area: a bar with a
   segmented switch between its two native surfaces, then a source list
   beside a detail column. Terminal is the project's terminal sessions
@@ -54,24 +63,27 @@ no frame, rail, header or dock around it, since those are the window's. Same
 routes and URLs, so the shell steers an island with the hrefs the app already
 uses. The contract is small and lives in `packages/spa/src/lib/shell.ts`:
 
-- shell → island: `navigate(href)`, `refresh`, `tabs(action)`, `tree(action)`
-- island → shell: `ready`, `navigated(href)`, `tabs(strip)`, `tree(listing)`,
-  `treeState(selection, commit composer)`
+- shell → island: `navigate(href)`, `refresh`, `windowTabs(action)`,
+  `tree(action)`
+- island → shell: `ready`, `navigated(href)`, `windowTabs(strip)`,
+  `tree(listing)`, `treeState(selection, commit composer)`
 
-The last pairs are the chrome the code island reports for the shell to draw
-natively: its open-file strip under the window tabs (`FileTabStripView`), and
-its file tree in the sidebar (`FileTreeOutline`, over `SidebarTree`). The
-shell sends every click back as an action for the page to apply to its own
-store, its file actions or its git actions, having already asked what the
-web tree asks first — a yes to a deletion, a name for a new file.
+The tree pair is the chrome the code island reports for the shell to draw
+natively: its file tree in the sidebar (`FileTreeOutline`, over
+`SidebarTree`). The shell sends every click back as an action for the page to
+apply to its own store, its file actions or its git actions, having already
+asked what the web tree asks first — a yes to a deletion, a name for a new
+file. The window-tabs pair runs the other way round: the strip is the
+island's, and what crosses is a picture of it for the Tabs menu to name, and
+the chords the menu bar claims (`WindowTabAction`) for the strip to answer.
 
 Islands cannot share a JavaScript heap, so whatever two of them both need —
-project, tabs, selection, where the code surface points — lives in `AppModel`,
-and the shell is the one that navigates. Two islands are hosted: the page
-(`code`) and the dock (`dock`, `GitBottomDock` chromeless on one of the dock
-pages). When the dock reaches for the page — a commit picked out of History —
-the shell hears where it went, sends the page island there on the Code tab,
-and puts the dock back.
+the project, where the code surface points — lives in `AppModel`, and the
+shell is the one that navigates between them. A native control reaching for a
+code surface — the rail, a search result, a commit in the history — sends the
+page island to that address, and the strip hands the window to the Code tab
+as the page arrives, the way it does for a link. One island is hosted today:
+the page (`code`).
 
 Where the documents come from is `SpaSource`: a debug build takes the Vite
 dev server on `:41812` (HMR inside the native window); a release build takes

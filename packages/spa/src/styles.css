@@ -1113,25 +1113,37 @@
   --sheet-edge-tone: transparent;
   border-radius: 0;
 }
+/* No run of window down the sides either: the launchpad pushes the page down
+   inside the island's own box, and the shell holds that box off the window's
+   edge already. */
+.island {
+  --frame-inset: 0px;
+}
 
 /* An island wears the window's own palette rather than its own. The shell
    hands over the system colours it is drawn with as `--native-*` (see
    `NativePalette` in the macOS app), resolved for the appearance the window is
    in and rewritten when that changes, and the tokens the surfaces read are
-   pointed at them: the canvas and every sheet on it are the window's
-   background, type is the label colour, rules are the separator, so a diff
-   beside a native list and over a native pane reads as one material. Brand
-   ink — links, rings, charts — stays the app's own, the way it does in any
-   native app. Declared for both themes at once: the values are already the
-   dark or the light ones. */
+   pointed at them: the canvas and every sheet on it are the island's fill,
+   and the frame is what the islands stand on — the app's own frame and sheet
+   colours, handed back by the shell so the page is the same paper as the
+   panels beside it — type is the label colour, rules are the separator, so a
+   diff beside a native list and over a native pane reads as one material.
+   What stands above the page — a popover, a card — keeps the control
+   background, a step lighter than the sheet in both themes. The
+   primary fill — the loud button, the checked box, the dirty dot — is the
+   system accent, so it matches the prominent controls the shell draws around
+   it. Brand ink — links, rings, charts — stays the app's own, the way it does
+   in any native app. Declared for both themes at once: the values are already
+   the dark or the light ones. */
 .island,
 .island.dark {
-  --canvas: var(--native-window);
-  --canvas-edge: var(--native-window);
-  --frame: var(--native-window);
+  --canvas: var(--native-island);
+  --canvas-edge: var(--native-island);
+  --frame: var(--native-frame);
   --frame-translucent: transparent;
-  --pane: var(--native-window);
-  --surface-1: var(--native-window);
+  --pane: var(--native-island);
+  --surface-1: var(--native-island);
   --surface-2: var(--native-control);
   --surface-3: var(--native-under-page);
   --foreground: var(--native-text);
@@ -1149,6 +1161,27 @@
   --frame-border: var(--native-separator);
   --input: var(--native-separator);
   --ring-accent: var(--native-accent);
+  --primary: var(--native-accent);
+  --primary-foreground: white;
+  /* The accent is a mid tone in both themes, under white type in both, so
+     the filled face wants the light reading everywhere — lit along the top,
+     lightened under the pointer, the type's edge drawn back — rather than
+     the dark theme's inversion, which was tuned for a near-white fill. */
+  --sheen-filled: linear-gradient(
+    180deg,
+    var(--sheen-strong) 0%,
+    var(--sheen-none) 100%
+  );
+  --text-shadow-filled: 0 0.5px 0.5px rgb(0 0 0 / 0.3);
+  --overlay-contrast-hover: rgb(255 255 255 / 0.12);
+  --overlay-contrast-pressed: rgb(255 255 255 / 0.24);
+}
+/* Pierre paints the gutter's add-a-comment glyph in `--diffs-bg`, which
+   inverts the near-black/near-white primary it sits on. On the accent it
+   is the one filled control whose ink would still flip with the theme, so
+   it takes the primary's own foreground like the rest. */
+.island diffs-container [data-utility-button] {
+  color: var(--primary-foreground);
 }
 /* The sheets of a split page — a session list beside its conversation — stand
    on the same flat window colour they are painted in, so what tells them apart

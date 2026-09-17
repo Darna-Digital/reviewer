@@ -1,7 +1,9 @@
 // The launchpad: every window tab laid out as a card over the window, each
 // wearing the last picture taken of it, so the one you want is found by
 // look rather than by title. Click a card to go there, its mark to close it,
-// anywhere else — or Escape, or ⌘L again — to put the launchpad away.
+// anywhere else — or Escape, or ⌘L again — to put the launchpad away. The
+// tabs are the island's (see `WindowTabStrip`); the pictures are the
+// shell's, taken of the page as each tab is left.
 import SwiftUI
 
 struct LaunchpadView: View {
@@ -18,8 +20,8 @@ struct LaunchpadView: View {
                 .onTapGesture { model.launchpadShown = false }
             ScrollView {
                 LazyVGrid(columns: columns, spacing: gap) {
-                    ForEach(model.tabs) { tab in
-                        LaunchpadCard(tab: tab, image: model.snapshots[tab.id], isCurrent: tab.id == model.selectedTabId)
+                    ForEach(model.windowTabs.tabs) { tab in
+                        LaunchpadCard(tab: tab, image: model.snapshots[tab.id], isCurrent: tab.id == model.windowTabs.activeId)
                     }
                 }
                 .frame(maxWidth: 1400)
@@ -46,7 +48,7 @@ private struct LaunchpadCard: View {
             // drawn as an overlay so a `.fill`-scaled image can't push the
             // card wider than its grid cell.
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color(nsColor: .windowBackgroundColor))
+                .fill(Color(nsColor: IslandPalette.island))
                 .aspectRatio(16 / 10, contentMode: .fit)
                 .overlay {
                     if let image {
@@ -54,7 +56,7 @@ private struct LaunchpadCard: View {
                             .resizable()
                             .scaledToFill()
                     } else {
-                        Image(systemName: tab.symbol)
+                        Image(systemName: tab.kind.symbol)
                             .font(.system(size: 28))
                             .foregroundStyle(.secondary)
                     }
@@ -65,7 +67,7 @@ private struct LaunchpadCard: View {
                         .strokeBorder(isCurrent ? Color.accentColor : Color.primary.opacity(0.12), lineWidth: isCurrent ? 2 : 1)
                 )
                 .overlay(alignment: .topTrailing) {
-                    if !tab.isPinned && isHovering {
+                    if !tab.pinned && isHovering {
                         Button { model.closeTab(id: tab.id) } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 18))
@@ -79,10 +81,10 @@ private struct LaunchpadCard: View {
                 }
                 .shadow(color: .black.opacity(isHovering ? 0.25 : 0.12), radius: isHovering ? 14 : 8, y: 4)
             HStack(spacing: 6) {
-                Image(systemName: tab.symbol)
+                Image(systemName: tab.kind.symbol)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
-                Text(model.title(of: tab))
+                Text(tab.title)
                     .font(.system(size: 12, weight: .medium))
                     .lineLimit(1)
             }

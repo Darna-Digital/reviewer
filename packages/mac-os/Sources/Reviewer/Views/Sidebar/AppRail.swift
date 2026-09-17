@@ -1,18 +1,17 @@
-// The rail: the column of icons down the leading edge of the sidebar, the
+// The rail: the column of icons down the leading edge of the window, the
 // web app's mode rail drawn natively. The code surfaces stand at its head
 // and the bottom pane's surfaces at its foot, the way the web rail splits
 // them, so the sidebar's tree and the page island both move from the same
 // column. It measures 36pt with a 28pt button in it — the web rail's own
-// sizes — on the sidebar's paper, with a rule along its top and down its
-// trailing edge, turning the corner between them, parting it from the
-// tree the way a sheet's edge parts it from the frame.
+// sizes — held off the window's edge by the islands' own gap, and stands on
+// the bare frame beside the sidebar's glass with no rule of its own: the
+// panel's edge is what parts it from the tree.
 import SwiftUI
 
 struct AppRail: View {
     @Environment(AppModel.self) private var model
 
     static let width: CGFloat = 36
-    static let footInset: CGFloat = 10
 
     var body: some View {
         VStack(spacing: 4) {
@@ -30,35 +29,12 @@ struct AppRail: View {
                 }
             }
         }
-        // The foot keeps clear of the window's rounded corner, which would
-        // otherwise cut into the last chip.
         .padding(.top, 4)
-        .padding(.bottom, Self.footInset)
+        .padding(.bottom, 4)
         .frame(width: Self.width)
         .frame(maxHeight: .infinity)
-        .overlay {
-            RailEdge(radius: 8)
-                .stroke(Color(nsColor: .separatorColor), lineWidth: 1)
-        }
+        .padding(.leading, IslandMetrics.gap)
         .disabled(!model.hasProject)
-    }
-}
-
-/// The rail's rule: across its top and down its trailing edge as one
-/// stroke, the corner between them rounded. Inset half a point so the
-/// hairline lands on whole pixels rather than straddling the frame.
-private struct RailEdge: Shape {
-    let radius: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        let inset = rect.insetBy(dx: 0.5, dy: 0.5)
-        var path = Path()
-        path.move(to: CGPoint(x: inset.minX, y: inset.minY))
-        path.addLine(to: CGPoint(x: inset.maxX - radius, y: inset.minY))
-        path.addArc(center: CGPoint(x: inset.maxX - radius, y: inset.minY + radius),
-                    radius: radius, startAngle: .degrees(-90), endAngle: .degrees(0), clockwise: false)
-        path.addLine(to: CGPoint(x: inset.maxX, y: rect.maxY))
-        return path
     }
 }
 

@@ -1,27 +1,52 @@
-// The window: the native sidebar (the project tree) beside the detail
-// column — the page island with the bottom pane under it — with the window
-// tabs on the toolbar, the way the web app's window bar carries them, and
-// the search dialog and the launchpad over all of it when they are up.
-// Before the server answers, and before a project is open, the detail
-// column shows the matching placeholder instead.
+// The window, laid out as panels on the web app's frame colour: the
+// toolbar along the top — the project and branch chips, the window tabs,
+// the sidebar and launchpad buttons — and the rail down the leading edge
+// are the window's own bare surface, and on it stand three rounded panels:
+// the sidebar's project tree on a pane of glass, the page island wearing
+// the open-file band along its top, and the bottom pane under it. The seams
+// between them are the frame showing through, and two of them resize what
+// they part. The search dialog and the launchpad go over all of it when
+// they are up. Before the server answers, and before a project is open, the
+// page's island shows the matching placeholder instead.
 import SwiftUI
 
 struct ContentView: View {
     @Environment(AppModel.self) private var model
-    @State private var columnVisibility: NavigationSplitViewVisibility = .all
+
+    private static let sidebarWidths: ClosedRange<CGFloat> = 200...520
+    private static let bottomHeights: ClosedRange<CGFloat> = 120...800
 
     var body: some View {
-        NavigationSplitView(columnVisibility: $columnVisibility) {
-            SidebarView()
-                .navigationSplitViewColumnWidth(min: 240, ideal: 300, max: 460)
-        } detail: {
-            detail
+        @Bindable var model = model
+        HStack(spacing: 0) {
+            AppRail()
+            if model.sidebarShown {
+                SidebarView()
+                    .frame(width: model.sidebarWidth)
+                    .glassPane()
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+                IslandSeam(between: .columns, size: $model.sidebarWidth, range: Self.sidebarWidths)
+            }
+            VStack(spacing: 0) {
+                page
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .island()
+                if model.hasProject && model.bottomExpanded {
+                    IslandSeam(between: .rows, size: $model.bottomHeight, range: Self.bottomHeights)
+                    BottomPane()
+                        .frame(height: model.bottomHeight)
+                        .island()
+                }
+            }
         }
-        // An empty title rather than none: the title slot is what holds the
-        // leading and trailing groups apart, and without it the launchpad
-        // button hugs the tabs instead of the trailing edge.
+        .padding(.top, IslandMetrics.gap)
+        .padding(.trailing, IslandMetrics.gap)
+        .padding(.bottom, IslandMetrics.gap)
+        .background(Color(nsColor: IslandPalette.frame))
+        .animation(.easeOut(duration: 0.18), value: model.sidebarShown)
         .navigationTitle("")
         .toolbar { ToolbarItems() }
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .overlay {
             if model.search.isShown {
                 SearchOverlay()
@@ -44,7 +69,7 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private var detail: some View {
+    private var page: some View {
         switch model.connection {
         case .starting:
             ConnectionView(state: .starting)
@@ -53,7 +78,7 @@ struct ContentView: View {
         case .ready where !model.hasProject:
             WelcomeView()
         case .ready:
-            DetailColumn()
+            IslandView(host: model.page)
         }
     }
 
@@ -62,43 +87,58 @@ struct ContentView: View {
     }
 }
 
-/// The page the tab in front points at — under the open-file strip, when
-/// the page has one — and the bottom pane beneath. With the pane put away
-/// the page stands off the window's bottom edge, the way a sheet stands
-/// off the frame's, so its trail is not set into the rounded corner.
-private struct DetailColumn: View {
-    @Environment(AppModel.self) private var model
-
-    private static let footInset: CGFloat = 8
-
-    var body: some View {
-        VStack(spacing: 0) {
-            if let strip = model.fileTabStrip {
-                FileTabStripView(strip: strip)
-            }
-            IslandView(host: model.page)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            BottomPane()
-        }
-        .padding(.bottom, model.bottomExpanded ? 0 : Self.footInset)
-        .background(Color(nsColor: .windowBackgroundColor))
-    }
-}
-
-struct ToolbarItems: ToolbarContent {
+/// The toolbar: the sidebar's switch, the project chip and the branch chip
+/// — what the window is on — then the window tabs, and the launchpad
+/// trailing: the web app's window bar, on the window's own bar, so nothing
+/// on it is drawn a second time inside the island.
+private struct ToolbarItems: ToolbarContent {
     @Environment(AppModel.self) private var model
 
     var body: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            Button { model.toggleSidebar() } label: {
+                Label("Sidebar", systemImage: "sidebar.leading")
+            }
+            .help(model.sidebarShown ? "Hide the sidebar (⌃⌘S)" : "Show the sidebar (⌃⌘S)")
+        }
+        ToolbarItem(placement: .navigation) {
+            ProjectChip()
+        }
         if model.hasProject {
+            ToolbarItem(placement: .navigation) {
+                BranchPicker()
+            }
             TabStripItems(model: model)
         }
         ToolbarItem(placement: .primaryAction) {
             Button { model.toggleLaunchpad() } label: {
                 Label("Launchpad", systemImage: "square.grid.2x2")
             }
-            .help("Show every open tab")
+            .help("Show every open tab (⌘L)")
             .disabled(!model.hasProject)
         }
+    }
+}
+
+/// The project the window is on, as a pull-down: the recents the server
+/// remembers, and the folder panel for any other.
+private struct ProjectChip: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        Menu {
+            ForEach(model.workspace?.recents ?? [], id: \.self) { path in
+                Button(URL(fileURLWithPath: path).lastPathComponent) {
+                    Task { await model.openProject(path: path) }
+                }
+            }
+            Divider()
+            Button("Open Project…") { model.chooseProject() }
+        } label: {
+            Label(model.workspace?.projectName ?? "No Project", systemImage: "folder")
+                .labelStyle(.titleAndIcon)
+        }
+        .help("Switch project")
     }
 }
 

@@ -51,6 +51,7 @@ struct BranchPicker: View {
             Button("Push…") { model.push() }
         } label: {
             Label(model.currentBranch ?? "No branch", systemImage: "arrow.triangle.branch")
+                .labelStyle(.titleAndIcon)
                 .lineLimit(1)
                 .truncationMode(.middle)
         }
