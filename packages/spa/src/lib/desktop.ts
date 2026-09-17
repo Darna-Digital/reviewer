@@ -17,12 +17,20 @@
  * SPA-only (no SSR), so reading `window` at module load is safe.
  */
 import { isPreviewWindow } from "@/lib/preview-window";
+import type { ShellChannel } from "@/lib/shell";
 
 interface ReviewerBridge {
   apiBaseUrl?: string;
   openDirectory: () => Promise<string | null>;
   /** Present only where the shell has a Quick Look panel to show — macOS. */
   previewFile?: (path: string) => Promise<void>;
+  /**
+   * Set by the macOS shell, which hosts the app one island at a time: this
+   * document is that island and nothing else. Which one is checked and typed
+   * in `lib/shell`; the bridge only carries the name.
+   */
+  island?: string;
+  shell?: ShellChannel;
 }
 
 type ReviewerWindow = Window & {
@@ -45,6 +53,9 @@ const bridge =
       (isPreviewWindow ? bridgeIn(window.parent) : undefined));
 
 export const isDesktop = bridge !== undefined;
+
+/** The raw bridge, for `lib/shell` to read the island name and channel from. */
+export const islandBridge = bridge;
 
 /**
  * The local API server's origin in the packaged app, where the renderer is

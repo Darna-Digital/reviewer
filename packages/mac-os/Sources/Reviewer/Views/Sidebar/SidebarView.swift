@@ -1,91 +1,71 @@
-// The native sidebar: agent sessions on top, the project tree beneath. Both
-// are rows of one `List` so the system sidebar styling, selection highlight
-// and keyboard navigation apply to everything; the selection is the tab id,
-// which is how picking a row opens (or switches to) its tab, and how
-// switching tabs from the strip highlights the matching row.
+// The native sidebar: the project and branch pickers over the project tree,
+// on the system's sidebar material running the full height of the window. Picking
+// a file sends the code island to it; a file the island opens on its own —
+// from a diff, a search — highlights here, so the row and the page always
+// name the same file.
 import SwiftUI
 
 struct SidebarView: View {
     @Environment(AppModel.self) private var model
-    @State private var agentsExpanded = true
-    @State private var filesExpanded = true
-
-    /// The sessions list is long-lived and project-wide; the sidebar shows
-    /// only the newest few so the tree stays within reach, and a session
-    /// already open in a tab stays listed however old it is.
-    private static let recentSessionLimit = 8
-
-    private var visibleChats: [ChatSummary] {
-        let recent = model.chats.prefix(Self.recentSessionLimit)
-        let open = model.chats.filter { model.sessions[$0.id] != nil && !recent.contains($0) }
-        return Array(recent) + open
-    }
+    @State private var filter = ""
 
     var body: some View {
         List(selection: selection) {
-            Section("Agents", isExpanded: $agentsExpanded) {
-                if model.chats.isEmpty {
-                    Text(model.hasProject ? "No sessions yet" : "Open a project to start one")
-                        .foregroundStyle(.secondary)
-                        .font(.callout)
-                }
-                ForEach(visibleChats) { chat in
-                    ChatRow(chat: chat)
-                        .tag(EditorTab.chatId(chat.id))
-                        .contextMenu {
-                            Button("Delete Session", role: .destructive) {
-                                Task { await model.deleteChat(id: chat.id) }
-                            }
-                        }
-                }
-            }
-            Section(model.workspace?.projectName ?? "Files", isExpanded: $filesExpanded) {
+            Section(model.workspace?.projectName ?? "Files") {
                 if model.isLoadingFiles && model.fileTree.isEmpty {
                     ProgressView().controlSize(.small)
                 }
-                OutlineGroup(model.fileTree, children: \.children) { node in
+                OutlineGroup(FileTree.filter(model.fileTree, query: filter), children: \.children) { node in
                     FileRow(node: node)
-                        .tag(node.isDirectory ? "dir:\(node.path)" : EditorTab.fileId(node.path))
+                        .tag(node.isDirectory ? "dir:\(node.path)" : node.path)
                 }
             }
         }
         .listStyle(.sidebar)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack(spacing: 6) {
+                ProjectChip()
+                BranchPicker()
+                    .layoutPriority(-1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 10)
+            .padding(.bottom, 6)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) { filterField }
+    }
+
+    /// The filter, at the foot of the tree the way Xcode's navigator has it.
+    private var filterField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .foregroundStyle(.secondary)
+            TextField("Filter", text: $filter)
+                .textFieldStyle(.plain)
+            if !filter.isEmpty {
+                Button { filter = "" } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .font(.callout)
+        .padding(.horizontal, 8)
+        .frame(height: 26)
+        .background(.quaternary.opacity(0.5), in: Capsule())
+        .padding(8)
     }
 
     /// Folders carry a tag too so the disclosure rows highlight when clicked,
-    /// but only a file or session tag becomes a tab.
+    /// but only a file is opened.
     private var selection: Binding<String?> {
         Binding(
-            get: { model.selectedTabId },
-            set: { id in
-                guard let id, !id.hasPrefix("dir:") else { return }
-                model.activate(tabId: id)
+            get: { model.openFilePath },
+            set: { path in
+                guard let path, !path.hasPrefix("dir:") else { return }
+                model.openFile(path: path)
             })
-    }
-}
-
-struct ChatRow: View {
-    let chat: ChatSummary
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: chat.turnState == .running ? "circle.dotted.circle" : "bubble.left.and.text.bubble.right")
-                .foregroundStyle(chat.turnState == .running ? Color.accentColor : Color.secondary)
-                .symbolEffect(.pulse, isActive: chat.turnState == .running)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(chat.title.isEmpty ? "Untitled session" : chat.title)
-                    .lineLimit(1)
-                Text("\(chat.provider.rawValue) · \(chat.branch)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 0)
-            if chat.turnState == .error {
-                Image(systemName: "exclamationmark.circle")
-                    .foregroundStyle(.red)
-            }
-        }
     }
 }
 

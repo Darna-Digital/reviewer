@@ -290,3 +290,103 @@ enum ChatWireEvent: Decodable, Sendable {
         }
     }
 }
+
+// MARK: local dev (Services)
+
+/// A dev command and whether its process is up — `DevCommandView` in core.
+struct DevCommandView: Decodable, Identifiable, Hashable, Sendable {
+    enum Status: String, Decodable, Sendable {
+        case stopped, running, exited
+    }
+
+    let id: String
+    let name: String
+    let command: String
+    let repo: String
+    let repoPath: String
+    let status: Status
+    let exitCode: Int?
+}
+
+struct DevCommand: Decodable, Sendable {
+    let id: String
+    let name: String
+    let command: String
+    let repo: String
+    let repoPath: String
+}
+
+struct NewDevCommand: Encodable, Sendable {
+    let name: String
+    let command: String
+    let repoPath: String
+}
+
+struct DevRepoScope: Encodable, Sendable {
+    let repoPath: String?
+}
+
+// MARK: branches
+
+/// A local branch as `/api/branches` lists it — `BranchInfo` in core.
+struct BranchInfo: Decodable, Identifiable, Hashable, Sendable {
+    let name: String
+    let sha: String
+    let isCurrent: Bool
+    let upstream: String?
+    let ahead: Int
+    let behind: Int
+    let committedAt: String
+    let subject: String
+
+    var id: String { name }
+}
+
+/// A remote-tracking branch — `RemoteBranchInfo` in core. `name` is the
+/// full `origin/feature` ref; `shortName` is what is after the remote.
+struct RemoteBranchInfo: Decodable, Identifiable, Hashable, Sendable {
+    let name: String
+    let remote: String
+    let shortName: String
+    let sha: String
+    let committedAt: String
+    let subject: String
+
+    var id: String { name }
+}
+
+struct CommandOutput: Decodable, Sendable {
+    let output: String
+}
+
+struct CheckoutBody: Encodable, Sendable {
+    let branch: String
+}
+
+struct MergeBody: Encodable, Sendable {
+    let branch: String
+}
+
+struct RebaseBody: Encodable, Sendable {
+    let onto: String
+}
+
+struct CreateBranchBody: Encodable, Sendable {
+    let name: String
+    let startPoint: String?
+}
+
+struct RenameBranchBody: Encodable, Sendable {
+    let from: String
+    let to: String
+}
+
+struct DeleteBranchBody: Encodable, Sendable {
+    let name: String
+    let force: Bool?
+}
+
+struct SetBranchTargetBody: Encodable, Sendable {
+    let branch: String
+    let target: String
+}

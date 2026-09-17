@@ -173,9 +173,9 @@ export function AppLayout() {
       <WindowFrame>
         {/* The rail and what stands against it are one box with no gap between
             them: the rail is not a sheet of its own but the left edge of the one
-            beside it, carrying the same paper as the header and the page with a
-            rule where they meet — see `app-rail`. Every other seam in here is
-            the frame showing through, and this is the one that is a line.
+            beside it, carrying the same paper as the header and the page and
+            drawing nothing where they meet — see `app-rail`. Every other seam in
+            here is the frame showing through; this one is not a seam at all.
 
             The header stands *on* the page rather than clear of it — the branch
             picker and the trail name what is underneath them, and a run of

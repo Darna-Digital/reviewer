@@ -1,7 +1,9 @@
-// The window: a native sidebar (project tree and agent sessions) beside the
-// tabbed editor area, with the project, branch and working-tree summary in
-// the unified toolbar. Before the server answers, and before a project is
-// open, the detail column shows the matching placeholder instead.
+// The window: the native sidebar (the project tree) beside the detail
+// column — the page island with the bottom pane under it — with the window
+// tabs on the toolbar, the way the web app's window bar carries them, and
+// the launchpad over all of it when it is up. Before the
+// server answers, and before a project is open, the detail column shows the
+// matching placeholder instead.
 import SwiftUI
 
 struct ContentView: View {
@@ -15,9 +17,18 @@ struct ContentView: View {
         } detail: {
             detail
         }
-        .navigationTitle(model.workspace?.projectName ?? "Reviewer")
-        .navigationSubtitle(subtitle)
+        // An empty title rather than none: the title slot is what holds the
+        // leading and trailing groups apart, and without it the launchpad
+        // button hugs the tabs instead of the trailing edge.
+        .navigationTitle("")
         .toolbar { ToolbarItems() }
+        .overlay {
+            if model.launchpadShown {
+                LaunchpadView()
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.15), value: model.launchpadShown)
         .alert("Something went wrong", isPresented: errorShown) {
             Button("OK") { model.lastError = nil }
         } message: {
@@ -35,21 +46,26 @@ struct ContentView: View {
         case .ready where !model.hasProject:
             WelcomeView()
         case .ready:
-            EditorArea()
+            DetailColumn()
         }
-    }
-
-    private var subtitle: String {
-        guard let status = model.status else { return "" }
-        var parts = [status.branch]
-        if status.ahead > 0 { parts.append("↑\(status.ahead)") }
-        if status.behind > 0 { parts.append("↓\(status.behind)") }
-        if status.changed > 0 { parts.append("\(status.changed) changed") }
-        return parts.joined(separator: "  ")
     }
 
     private var errorShown: Binding<Bool> {
         Binding(get: { model.lastError != nil }, set: { if !$0 { model.lastError = nil } })
+    }
+}
+
+/// The page the tab in front points at, and the bottom pane beneath.
+private struct DetailColumn: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        VStack(spacing: 0) {
+            IslandView(host: model.page)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            BottomPane()
+        }
+        .background(Color(nsColor: .windowBackgroundColor))
     }
 }
 
@@ -58,24 +74,16 @@ struct ToolbarItems: ToolbarContent {
 
     var body: some ToolbarContent {
         ToolbarItem(placement: .navigation) {
-            Button { model.chooseProject() } label: {
-                Label("Open Project", systemImage: "folder")
+            if model.hasProject {
+                TabStrip()
             }
-            .help("Open a project folder")
         }
         ToolbarItem(placement: .primaryAction) {
-            Button { Task { await model.newChat() } } label: {
-                Label("New Agent Session", systemImage: "sparkles")
+            Button { model.toggleLaunchpad() } label: {
+                Label("Launchpad", systemImage: "square.grid.2x2")
             }
-            .help("Start a new agent session in this project")
+            .help("Show every open tab")
             .disabled(!model.hasProject)
-        }
-        ToolbarItem(placement: .primaryAction) {
-            Button { Task { await model.refresh() } } label: {
-                Label("Refresh", systemImage: "arrow.clockwise")
-            }
-            .help("Reload the project tree, status and sessions")
-            .disabled(model.connection != .ready)
         }
     }
 }

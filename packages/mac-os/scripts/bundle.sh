@@ -18,12 +18,21 @@ mkdir -p "${contents}/MacOS" "${contents}/Resources"
 cp "${bin_dir}/Reviewer" "${contents}/MacOS/Reviewer"
 cp "${package_dir}/Resources/Info.plist" "${contents}/Info.plist"
 
-# Dependencies with resources (Highlightr's highlight.js and themes) come out
+# Dependencies with resources — SwiftTerm's compiled Metal shaders — come out
 # of SwiftPM as `<Package>_<Target>.bundle` beside the binary; inside an app
-# their `Bundle.module` accessor looks in Contents/Resources instead.
-for resource_bundle in "${bin_dir}"/*.bundle; do
+# they are looked for in Contents/Resources instead.
+for resource_bundle in "${bin_dir}"/SwiftTerm_*.bundle; do
   [[ -d "$resource_bundle" ]] && cp -R "$resource_bundle" "${contents}/Resources/"
 done
+
+# A built SPA (`pnpm --filter spa build`) rides along as Contents/Resources/spa
+# and the islands are served from it over `reviewer://app` — see SpaSource.
+# Without one the app falls back to the working-tree build or the Vite dev
+# server, so a missing build only skips this step.
+spa_build="${package_dir}/../spa/dist/client"
+if [[ -f "${spa_build}/_shell.html" ]]; then
+  cp -R "$spa_build" "${contents}/Resources/spa"
+fi
 
 # The dock icon is the desktop package's brand PNG, turned into an .icns with
 # the system tools so the two shells share one identity. Every size macOS asks

@@ -2,26 +2,65 @@
 
 A native macOS shell for Reviewer, written in SwiftUI. Same embedded API
 server as the Electron desktop app; the window, sidebar, tabs and menu bar are
-AppKit's own.
+AppKit's own, and the web app's surfaces are hosted inside it as **islands** —
+each one a web view of its own, set in the native layout, showing one part of
+the SPA.
 
-What it does today (a deliberately basic agentic IDE):
+What it does today:
 
-- **Native sidebar** — the project's file tree (git status tinted) and the
-  most recent agent sessions, both in one system sidebar list.
-- **Tabs** — files and agent sessions open as tabs in an Xcode-style strip;
-  ⌘W closes, ⌘⇧] / ⌘⇧[ cycle, unsaved files show a dot.
-- **Editor** — a plain monospaced buffer with ⌘S save through the server.
-- **Agent sessions** — ⌘N starts one in the open project (the server's default
-  provider/model); the transcript streams over the chat WebSocket with tool
-  activity folded in, and can be stopped mid-turn.
+- **Native sidebar** — the project's file tree (git status tinted) on the
+  system's full-height sidebar material. Picking a file sends the code island
+  to it; a file the island opens on its own highlights here.
+- **Native tabs** — the window bar's tabs, natively: Code and Sessions pinned,
+  then one per agent session (⌘T mints one; ⌘W closes, ⌘⇧] / ⌘⇧[ cycle, ⌘1–9
+  jump). Each remembers the last place it was.
+- **Launchpad** (⌘L) — every tab as a card wearing the last picture taken of
+  it, over the window.
+- **Page island** — the SPA's routed page, with its own chrome and file tree
+  off: the diff, the file view with its file strip, review comments, edit
+  mode, the sessions surface.
+- **Bottom pane** (⌘B) — a native strip over six surfaces. Terminal is the
+  user's shell in the project (SwiftTerm); Services is the project's dev
+  commands, listed, started and stopped natively, with each one's output
+  drawn from the server's process socket. Branches, History, Find and
+  Threads are the dock island, on the SPA's own dock pages.
 - **Projects** — ⌘O opens a folder through `NSOpenPanel`; recents come from
   the server.
+
+## Islands
+
+An island is the SPA loaded with `window.reviewer.island` set — the bridge the
+shell installs before the first script runs (`IslandHost`). The app's `_app`
+layout then renders `IslandLayout` instead of `AppLayout`: the routed page with
+no frame, rail, header or dock around it, since those are the window's. Same
+routes and URLs, so the shell steers an island with the hrefs the app already
+uses. The contract is small and lives in `packages/spa/src/lib/shell.ts`:
+
+- shell → island: `navigate(href)`, `refresh`
+- island → shell: `ready`, `navigated(href)`
+
+Islands cannot share a JavaScript heap, so whatever two of them both need —
+project, tabs, selection, where the code surface points — lives in `AppModel`,
+and the shell is the one that navigates. Two islands are hosted: the page
+(`code`) and the dock (`dock`, `GitBottomDock` chromeless on one of the dock
+pages). When the dock reaches for the page — a commit picked out of History —
+the shell hears where it went, sends the page island there on the Code tab,
+and puts the dock back.
+
+Where the documents come from is `SpaSource`: a debug build takes the Vite
+dev server on `:41812` (HMR inside the native window); a release build takes
+the SPA build bundled into `Contents/Resources/spa` by `scripts/bundle.sh`,
+served over `reviewer://app` like the Electron shell does. `REVIEWER_SPA_URL`
+overrides either — an http origin, or a `file://` directory holding a build.
 
 ## Running
 
 ```bash
 pnpm --filter @reviewer/mac-os dev
 ```
+
+For the code island, also have the SPA dev server up (`pnpm dev` at the root
+runs it with the API server).
 
 That builds with SwiftPM, wraps the binary in `.build/Reviewer.app` (see
 `scripts/bundle.sh`) and opens it. `pnpm --filter @reviewer/mac-os start` runs
@@ -43,10 +82,12 @@ Sources/Reviewer/
   ReviewerApp.swift      @main, menu commands, app delegate
   Server/ServerLauncher  reachability check + spawn of the embedded server
   Api/                   Codable mirrors of the core schemas, HTTP client, chat socket
-  State/                 AppModel (tabs, project, sessions), OpenFile, ChatSession, FileTree
-  Views/                 ContentView (split view), Sidebar, Tabs, Editor, Chat, Welcome
+  State/                 AppModel, WindowTab, BottomPaneTab, FileTree
+  Islands/               IslandHost (web view + bridge), SpaSource, SpaSchemeHandler, IslandView
+  Terminal/              TerminalSession — the shell behind the Terminal surface
+  Services/              DevServices + DevProcessStream — dev commands and their output
+  Views/                 ContentView (split view), Sidebar, Tabs, BottomPane, Launchpad, Welcome
 ```
 
-Not here yet: syntax highlighting, diffs/review comments, terminal, model
-picker for new sessions, image attachments. The web SPA remains the full
-product; this is the native shell to grow those into.
+Not here yet: native menus for the islands' popovers, drag and drop between
+the sidebar and the islands, more than one terminal.

@@ -75,7 +75,7 @@ final class ServerLauncher {
     /// run` leaves it under `packages/mac-os/.build/...`, and the bundled app
     /// under `.build/Reviewer.app/Contents/MacOS`. REVIEWER_REPO_ROOT wins when
     /// set, for a binary copied elsewhere.
-    private static func repositoryRoot() -> URL? {
+    nonisolated static func repositoryRoot() -> URL? {
         if let explicit = ProcessInfo.processInfo.environment["REVIEWER_REPO_ROOT"] {
             return URL(fileURLWithPath: explicit)
         }

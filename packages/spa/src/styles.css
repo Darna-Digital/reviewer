@@ -1018,9 +1018,9 @@
 }
 
 /* The sheet standing against the rail. The rail is not a column beside it but
-   its left edge (see `app-rail`), so the two meet on the rule and nothing else:
+   its left edge (see `app-rail`), so the two meet flush and on nothing at all:
    square on that side, where a corner left the frame showing through as a notch
-   of window between them. The lit top edge is carried out to the rule for the
+   of window between them. The lit top edge is carried out to that join for the
    same reason — held off a corner that is no longer there, the line broke for a
    radius' worth at the join and started again a step to the right. */
 .app-sheet-joined-start {
@@ -1098,12 +1098,29 @@
   background-color: var(--frame-translucent);
 }
 
+/* An island is one part of the app in a web view of the macOS shell's own —
+   the code surface, the tree, the dock — set in the window's native layout
+   (see `lib/shell`). The window draws the frame and the seams between islands,
+   so the sheet inside runs to every edge of its view with no corner and no
+   lit top edge: those belong to a sheet standing in a frame, and here the frame
+   is the view's. The window behind is opaque material, so the document shows
+   nothing of its own. */
+.island body {
+  background-color: transparent;
+}
+.island .island-page {
+  --sheet-edge-tone: transparent;
+  border-radius: 0;
+}
+
 /* The rail is not a sheet of its own. Given a tone and a seam of its own it read
-   as a strip of chrome floating on the frame — and through a translucent window
-   the icons stood on the desktop, which is the one thing a column of 20px glyphs
-   cannot be read against. So it is the left edge of the sheet beside it, the way
-   it was when the whole window was one canvas: the same paper, running under the
-   header and the page without a break, with a hairline where they meet.
+   as a strip of chrome floating on the frame. So it is the left edge of the
+   sheet beside it, the way it was when the whole window was one canvas: the
+   same paper, running under the header and the page without a break and with
+   nothing drawn where they meet: a rule there was the seam that made it a strip
+   again, and the icons' own column of space is separation enough. Through a
+   translucent window it is the frame instead — the other surface it can belong
+   to, rather than a third one of its own; see the override below.
 
    The tone is `--canvas` flat rather than `--canvas-paint`: the gradient is
    drawn to the box it is on, and a 36px column would fall away to the edge tone
@@ -1120,10 +1137,27 @@
   background-repeat: no-repeat;
   background-position: var(--sheet-radius) 0;
   background-size: calc(100% - var(--sheet-radius)) 1px;
-  border-right: 1px solid var(--hairline);
   border-start-start-radius: var(--sheet-radius);
   border-end-start-radius: var(--sheet-radius-foot);
   corner-bottom-left-shape: squircle;
+}
+
+/* Through a translucent window it gives that paper up and stands on the frame's
+   own material, so the left edge of the window is one surface from the traffic
+   lights down rather than a strip of paper hung under them. Transparent rather
+   than tinted: `.app-frame` beneath has already laid the frame's veil over the
+   material, and a second one here would stack into a column darker than the
+   band it is meant to carry on.
+
+   The lit top edge goes with the paper. It is the edge of the sheet beside it,
+   carried across the rail so the line crosses the two without a step; with no
+   paper under it there is no sheet here to catch the light, only a hairline
+   drawn on the window. The sheet still draws its own, out from its own left
+   edge, and that is the whole of the boundary: the tone the sheet is against
+   the material the rail lets through. */
+.desktop.translucent .app-rail {
+  background-color: transparent;
+  background-image: none;
 }
 
 /* The rail's paper, carried on under the sheets standing against it, so their
@@ -1144,10 +1178,15 @@
   left: 0;
   z-index: -1;
   /* A corner's worth, taken from inside the sheets rather than from the rail
-     they stand on — it is their corners it is for, and the rule between the two
-     is the rail's own. The widest corner it has to cover is the foot's. */
+     they stand on — it is their corners it is for. The widest corner it has to
+     cover is the foot's. */
   width: var(--sheet-radius-foot);
   background-color: var(--canvas);
+}
+/* Transparent along with the rail, or the corners it fills would be the one
+   opaque thing left on a column that is otherwise window. */
+.desktop.translucent .app-rail-paper::before {
+  background-color: transparent;
 }
 
 /* The browser pane is its own sheet beside the canvas, on the `--pane` tone each

@@ -17,6 +17,20 @@ struct FileNode: Identifiable, Hashable, Sendable {
 }
 
 enum FileTree {
+    /// The tree narrowed to the files whose name contains `query`, keeping
+    /// the folders on the way to them — what the sidebar's filter field shows.
+    static func filter(_ nodes: [FileNode], query: String) -> [FileNode] {
+        let needle = query.trimmingCharacters(in: .whitespaces)
+        guard !needle.isEmpty else { return nodes }
+        return nodes.compactMap { node in
+            guard let children = node.children else {
+                return node.name.localizedCaseInsensitiveContains(needle) ? node : nil
+            }
+            let kept = filter(children, query: needle)
+            return kept.isEmpty ? nil : FileNode(path: node.path, name: node.name, status: node.status, children: kept)
+        }
+    }
+
     static func build(paths: [String], gitStatus: [GitStatusEntry]) -> [FileNode] {
         let status = Dictionary(gitStatus.map { ($0.path, $0.status) }, uniquingKeysWith: { first, _ in first })
         let root = Folder()

@@ -63,6 +63,7 @@ import { EmptyPane } from "@/components/layout/empty-pane";
 import { NoPullRequests, NoReviewRemote } from "@/components/git/review-empty";
 import { PathBar } from "@/components/layout/path-bar";
 import { reviewSourceOf } from "@/lib/shell-route";
+import { island } from "@/lib/shell";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useHeaderLead } from "@/components/layout/header-lead";
@@ -174,7 +175,18 @@ export function CodeWorkspace() {
   const comments = useCommentsActions();
   const chatActions = useChatsActions();
 
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  /**
+   * The page on screen, not the one being navigated to. `location` moves the
+   * moment a navigation starts, while the params and search below come from
+   * the matches, which stay on the old page until the new one has resolved.
+   * Read from `location`, a hop from the diff straight to a file — the shell
+   * around the island does exactly that — rendered one frame as "browsing,
+   * nothing open", and the strip's restore replaced the file being opened with
+   * the last one it remembered. Same distinction `AppLayout` draws.
+   */
+  const pathname = useRouterState({
+    select: (s) => (s.resolvedLocation ?? s.location).pathname,
+  });
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
 
@@ -1188,8 +1200,16 @@ export function CodeWorkspace() {
    * window bar down without a band of header lying across it. Nothing to cut to
    * while the columns are away, or on the list below, which has none.
    */
+  /**
+   * The first column — the tree, or a pull request's overview. Inside the
+   * macOS shell the tree is the window's own, a native sidebar beside this
+   * island, so the column stays away there unless it is the overview.
+   */
+  const firstColumnShown =
+    prefs.sidebarVisible && (reviewing || island === undefined);
+
   useHeaderLead(
-    !prefs.sidebarVisible || (mode === "review" && selectedPull === null)
+    !firstColumnShown || (mode === "review" && selectedPull === null)
       ? []
       : reviewing
         ? prefs.reviewTreeVisible
@@ -1257,11 +1277,7 @@ export function CodeWorkspace() {
         of the three going away is what makes it a way to look at the code
         alone; hiding one of them and leaving the other is neither thing. */}
       <div
-        className={cn(
-          columnSheet,
-          "shrink-0",
-          !prefs.sidebarVisible && "hidden"
-        )}
+        className={cn(columnSheet, "shrink-0", !firstColumnShown && "hidden")}
         style={firstColumn.style}
       >
         {reviewing ? (
@@ -1289,7 +1305,7 @@ export function CodeWorkspace() {
           the columns here — the flex gap alone is already the run of frame
           they lie on. They stop where the trail starts: the columns end on
           it, so past that there is no seam left to pull. See `seam-slot`. */}
-      {prefs.sidebarVisible &&
+      {firstColumnShown &&
         seamSlot !== null &&
         createPortal(
           <SidebarResizeHandle

@@ -1,102 +1,189 @@
-// The editor's tab bar. SwiftUI's own `TabView` renders a centred segmented
-// control on macOS, which is not what an editor wants, so this is the
-// Xcode-style strip drawn by hand out of system materials: a row of titles on
-// the window's bar material, the current one lifted to the content
-// background, a close affordance that appears on hover and turns into a dot
-// while the buffer is unsaved.
+// The window tabs, in the toolbar: Code and Sessions as icons, each session
+// by its title, and the mark that mints one — the same row the web app's
+// window bar draws, on the window's own bar. The project chip is here too,
+// for the sidebar to lead with.
 import SwiftUI
 
 struct TabStrip: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    ForEach(model.tabs) { tab in
-                        TabItem(tab: tab, isSelected: tab.id == model.selectedTabId)
-                            .id(tab.id)
-                        Divider().frame(height: 18)
+        HStack(spacing: 2) {
+            ForEach(model.tabs) { tab in
+                TabItem(tab: tab, isSelected: tab.id == model.selectedTabId)
+            }
+            Button { model.newSession() } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 12, weight: .medium))
+                    .frame(width: 26, height: 26)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("New Session")
+            .disabled(!model.hasProject)
+        }
+    }
+}
+
+/// The project by name, with its recents and the folder panel behind it.
+struct ProjectChip: View {
+    @Environment(AppModel.self) private var model
+    @State private var picking = false
+
+    var body: some View {
+        Button { picking.toggle() } label: {
+            HStack(spacing: 6) {
+                Text(initials)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 20, height: 20)
+                    .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 5))
+                Text(model.workspace?.projectName ?? "Reviewer")
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 6)
+            .frame(height: 24)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+        .help("Switch project")
+        .popover(isPresented: $picking, arrowEdge: .bottom) {
+            ProjectPicker(dismiss: { picking = false })
+        }
+    }
+
+    private var initials: String {
+        let name = model.workspace?.projectName ?? "R"
+        return String(name.prefix(2)).uppercased()
+    }
+}
+
+private struct ProjectPicker: View {
+    let dismiss: () -> Void
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if let recents = model.workspace?.recents, !recents.isEmpty {
+                Text("Recent")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.top, 4)
+                ForEach(recents, id: \.self) { path in
+                    PickerRow(title: URL(fileURLWithPath: path).lastPathComponent, subtitle: path,
+                              isCurrent: path == model.workspace?.project) {
+                        dismiss()
+                        Task { await model.openProject(path: path) }
                     }
                 }
+                Divider().padding(.vertical, 4)
             }
-            .onChange(of: model.selectedTabId) { _, id in
-                if let id { withAnimation { proxy.scrollTo(id) } }
+            PickerRow(title: "Open Project…", subtitle: nil, isCurrent: false) {
+                dismiss()
+                model.chooseProject()
             }
         }
-        .frame(height: 34)
-        .background(.bar)
-        .overlay(alignment: .bottom) { Divider() }
+        .padding(6)
+        .frame(width: 300)
+    }
+}
+
+private struct PickerRow: View {
+    let title: String
+    let subtitle: String?
+    let isCurrent: Bool
+    let action: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(.system(size: 13, weight: isCurrent ? .semibold : .regular))
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.head)
+                    }
+                }
+                Spacer(minLength: 0)
+                if isCurrent {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 11, weight: .semibold))
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isHovering ? Color.primary.opacity(0.08) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
     }
 }
 
 private struct TabItem: View {
-    let tab: EditorTab
+    let tab: WindowTab
     let isSelected: Bool
     @Environment(AppModel.self) private var model
     @State private var isHovering = false
 
     var body: some View {
         HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 11))
-                .foregroundStyle(isSelected ? Color.accentColor : Color.secondary)
-            Text(title)
-                .font(.system(size: 12))
-                .lineLimit(1)
+            Image(systemName: tab.symbol)
+                .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(isSelected ? .primary : .secondary)
-            closeButton
+            if !tab.isPinned {
+                Text(model.title(of: tab))
+                    .font(.system(size: 12, weight: isSelected ? .medium : .regular))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .foregroundStyle(isSelected ? .primary : .secondary)
+                    .frame(maxWidth: 180, alignment: .leading)
+                closeButton
+            }
         }
-        .padding(.horizontal, 12)
-        .frame(height: 34)
-        .frame(minWidth: 120, maxWidth: 240)
-        .background(isSelected ? Color(nsColor: .controlBackgroundColor) : Color.clear)
+        .padding(.horizontal, tab.isPinned ? 8 : 10)
+        .frame(height: 28)
+        .background(
+            isSelected ? Color.primary.opacity(0.12) : isHovering ? Color.primary.opacity(0.06) : Color.clear,
+            in: RoundedRectangle(cornerRadius: 7))
         .contentShape(Rectangle())
-        .onTapGesture { model.selectedTabId = tab.id }
+        .onTapGesture { model.select(tabId: tab.id) }
         .onHover { isHovering = $0 }
+        .help(model.title(of: tab))
         .contextMenu {
-            Button("Close Tab") { model.closeTab(id: tab.id) }
+            if !tab.isPinned {
+                Button("Close Tab") { model.closeTab(id: tab.id) }
+            }
             Button("Close Other Tabs") {
                 for other in model.tabs where other.id != tab.id { model.closeTab(id: other.id) }
             }
         }
     }
 
-    /// The dot stays visible on a dirty tab so unsaved work is never hidden
-    /// behind a hover; a clean tab only shows the close mark under the mouse.
-    @ViewBuilder
     private var closeButton: some View {
-        let dirty = isDirty
         Button {
             model.closeTab(id: tab.id)
         } label: {
-            Image(systemName: isHovering ? "xmark" : "circle.fill")
-                .font(.system(size: isHovering ? 9 : 7, weight: .bold))
+            Image(systemName: "xmark")
+                .font(.system(size: 9, weight: .bold))
                 .frame(width: 16, height: 16)
-                .background(isHovering ? Color.secondary.opacity(0.18) : Color.clear, in: RoundedRectangle(cornerRadius: 4))
+                .background(isHovering ? Color.primary.opacity(0.1) : Color.clear, in: RoundedRectangle(cornerRadius: 4))
         }
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
-        .opacity(isHovering || dirty ? 1 : 0)
+        .opacity(isHovering || isSelected ? 1 : 0)
         .help("Close tab")
-    }
-
-    private var title: String {
-        switch tab.kind {
-        case .file(let path): return URL(fileURLWithPath: path).lastPathComponent
-        case .chat(let id): return model.sessions[id]?.title ?? "Session"
-        }
-    }
-
-    private var icon: String {
-        switch tab.kind {
-        case .file(let path): return FileIcons.symbol(for: path)
-        case .chat: return "sparkles"
-        }
-    }
-
-    private var isDirty: Bool {
-        guard case .file(let path) = tab.kind else { return false }
-        return model.openFiles[path]?.isDirty ?? false
     }
 }

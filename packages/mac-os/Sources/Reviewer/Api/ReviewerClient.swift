@@ -99,6 +99,105 @@ struct ReviewerClient: Sendable {
         let _: Ok = try await send("DELETE", "/api/chats/\(id)", body: nil as EmptyBody?)
     }
 
+    // MARK: branches
+
+    func branches() async throws -> [BranchInfo] {
+        try await get("/api/branches")
+    }
+
+    func remoteBranches() async throws -> [RemoteBranchInfo] {
+        try await get("/api/remote-branches")
+    }
+
+    func checkout(branch: String) async throws {
+        let _: Ok = try await send("POST", "/api/checkout", body: CheckoutBody(branch: branch))
+    }
+
+    func pull() async throws -> String {
+        let result: CommandOutput = try await send("POST", "/api/pull", body: EmptyBody())
+        return result.output
+    }
+
+    func fetch() async throws -> String {
+        let result: CommandOutput = try await send("POST", "/api/fetch", body: EmptyBody())
+        return result.output
+    }
+
+    func push() async throws -> String {
+        let result: CommandOutput = try await send("POST", "/api/push", body: EmptyBody())
+        return result.output
+    }
+
+    func merge(branch: String) async throws -> String {
+        let result: CommandOutput = try await send("POST", "/api/merge", body: MergeBody(branch: branch))
+        return result.output
+    }
+
+    func rebase(onto: String) async throws -> String {
+        let result: CommandOutput = try await send("POST", "/api/rebase", body: RebaseBody(onto: onto))
+        return result.output
+    }
+
+    func createBranch(name: String, startPoint: String?) async throws {
+        let _: Ok = try await send("POST", "/api/branch", body: CreateBranchBody(name: name, startPoint: startPoint))
+    }
+
+    func renameBranch(from: String, to: String) async throws {
+        let _: Ok = try await send("POST", "/api/branch/rename", body: RenameBranchBody(from: from, to: to))
+    }
+
+    func deleteBranch(name: String, force: Bool = false) async throws {
+        let _: Ok = try await send("POST", "/api/branch/delete", body: DeleteBranchBody(name: name, force: force ? true : nil))
+    }
+
+    func setBranchTarget(branch: String, target: String) async throws {
+        struct Target: Decodable {}
+        let _: Target = try await send("POST", "/api/branch-targets", body: SetBranchTargetBody(branch: branch, target: target))
+    }
+
+    // MARK: local dev
+
+    func devCommands() async throws -> [DevCommandView] {
+        try await get("/api/local-dev/commands")
+    }
+
+    func createDevCommand(_ command: NewDevCommand) async throws {
+        let _: DevCommand = try await send("POST", "/api/local-dev/commands", body: command)
+    }
+
+    func removeDevCommand(id: String) async throws {
+        let _: Ok = try await send("DELETE", "/api/local-dev/commands/\(id)", body: nil as EmptyBody?)
+    }
+
+    func startDevCommand(id: String) async throws -> DevCommandView {
+        try await send("POST", "/api/local-dev/commands/\(id)/start", body: EmptyBody())
+    }
+
+    func stopDevCommand(id: String) async throws {
+        let _: Ok = try await send("POST", "/api/local-dev/commands/\(id)/stop", body: EmptyBody())
+    }
+
+    func startAllDevCommands() async throws {
+        let _: [DevCommandView] = try await send("POST", "/api/local-dev/start-all", body: DevRepoScope(repoPath: nil))
+    }
+
+    func stopAllDevCommands() async throws {
+        let _: Ok = try await send("POST", "/api/local-dev/stop-all", body: DevRepoScope(repoPath: nil))
+    }
+
+    /// The output socket of a running dev command — `ws://` on the same host.
+    func devProcessURL(command: String, cols: Int, rows: Int) -> URL {
+        var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)!
+        components.scheme = "ws"
+        components.path = "/api/local-dev/pty"
+        components.queryItems = [
+            URLQueryItem(name: "command", value: command),
+            URLQueryItem(name: "cols", value: String(cols)),
+            URLQueryItem(name: "rows", value: String(rows)),
+        ]
+        return components.url!
+    }
+
     // MARK: plumbing
 
     private struct EmptyBody: Encodable {}
