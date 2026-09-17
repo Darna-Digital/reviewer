@@ -2,7 +2,7 @@
   "name": "@reviewer/desktop",
   "productName": "Reviewer",
   "private": true,
-  "version": "0.2.7",
+  "version": "0.2.8",
   "description": "reviewer desktop — Electron shell around the client",
   "main": "dist/main.js",
   "dependencies": {
@@ -21,10 +21,10 @@
   },
   "devDependencies": {
     "@reviewer/lint": "workspace:*",
-    "@types/node": "^22.20.1",
-    "electron": "^44.2.0",
+    "@types/node": "^22.20.3",
+    "electron": "^44.4.1",
     "electron-builder": "^26.15.3",
-    "prettier": "^3.9.6",
+    "prettier": "^3.9.7",
     "typescript": "~6.0.3"
   }
 }

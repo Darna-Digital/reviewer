@@ -35,7 +35,7 @@ export const FOLD_CSS = `
 
 [data-column-number][${FOLDABLE}] { position: relative; }
 
-/* The same square as the gutter's add-a-comment `+`: pierre gives that button
+/* The same square as the gutter's add-a-comment \`+\`: pierre gives that button
    a box of 1lh around a 16px icon, so the chevron takes both. There is exactly
    1ch of gutter padding and 1ch of the code's own on either side of the number
    column's edge, so a 1lh box pulled out by half its width centres on that

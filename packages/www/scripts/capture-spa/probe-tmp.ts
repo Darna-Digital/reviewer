@@ -9,7 +9,11 @@ const page = await browser.openPage({
   height: 1000,
   scheme: "dark",
   initScript: `localStorage.setItem("reviewer-ui", ${JSON.stringify(
-    JSON.stringify({ editMode: "comment", bottomVisible: false, sidebarVisible: true })
+    JSON.stringify({
+      editMode: "comment",
+      bottomVisible: false,
+      sidebarVisible: true,
+    })
   )});`,
 });
 await page.goto(url);

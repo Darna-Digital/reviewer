@@ -17,20 +17,20 @@
     "format:check": "prettier --check \"**/*.{ts,js}\""
   },
   "dependencies": {
-    "@reviewer/core": "workspace:*",
     "@effect/platform-node": "4.0.0-beta.74",
     "@lydell/node-pty": "1.2.0-beta.15",
+    "@reviewer/core": "workspace:*",
     "@types/ws": "^8.18.1",
     "effect": "4.0.0-beta.74",
     "ws": "^8.21.3"
   },
   "devDependencies": {
-    "@reviewer/lint": "workspace:*",
     "@effect/vitest": "4.0.0-beta.74",
-    "@types/node": "^22.20.1",
+    "@reviewer/lint": "workspace:*",
+    "@types/node": "^22.20.3",
     "esbuild": "^0.28.2",
-    "eslint": "^10.9.1",
-    "prettier": "^3.9.6",
+    "eslint": "^10.10.0",
+    "prettier": "^3.9.7",
     "tsx": "^4.23.13",
     "typescript": "~6.0.3",
     "vitest": "^4.1.11"
