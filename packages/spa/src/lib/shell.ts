@@ -28,9 +28,11 @@
 import type { TreeItem } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
 import type { WindowTabKind } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import type { AppMode } from "@/lib/api/types";
+import type { DateFilter } from "@/lib/date-filter";
 import { islandBridge } from "@/lib/desktop";
 import { isPreviewWindow } from "@/lib/preview-window";
 import type { CommitAgent } from "@/lib/ui-prefs";
+import type { ChatProjectTally } from "@reviewer/core/chats";
 import type { CommitDraft } from "@reviewer/core/git-message";
 import type { GitStatusEntry } from "@reviewer/core/repo";
 
@@ -45,7 +47,9 @@ export type ShellEvent =
   /** A menu chord for the window tabs — see `ShellWindowTabAction`. */
   | { readonly type: "windowTabs"; readonly action: ShellWindowTabAction }
   /** The shell's own file tree was acted on — see `ShellTree`. */
-  | { readonly type: "tree"; readonly action: ShellTreeAction };
+  | { readonly type: "tree"; readonly action: ShellTreeAction }
+  /** The shell's own sessions list was acted on — see `ShellSessions`. */
+  | { readonly type: "sessions"; readonly action: ShellSessionAction };
 
 /** Island → shell. */
 export type ShellIntent =
@@ -58,7 +62,10 @@ export type ShellIntent =
   | { readonly type: "tree"; readonly tree: ShellTree | null }
   /** What moves under the tree without the listing moving — the selection, the
    * commit composer — sent apart so a click does not carry every path again. */
-  | { readonly type: "treeState"; readonly state: ShellTreeState };
+  | { readonly type: "treeState"; readonly state: ShellTreeState }
+  /** The sessions list as the sessions surface holds it, for the shell to draw
+   * in its sidebar; null once the page leaves the surface. */
+  | { readonly type: "sessions"; readonly list: ShellSessions | null };
 
 /**
  * The window tabs, as the shell draws them on its toolbar and names them in
@@ -160,6 +167,78 @@ export type ShellTreeAction =
     }
   /** The finished draft has been taken into the composer, so it can go. */
   | { readonly kind: "draftSettled" };
+
+/**
+ * The sessions list, as the shell draws it in its sidebar: the rows the
+ * sessions surface would list beside the conversation — every project's
+ * sessions, newest first, under the filters the surface keeps, and above them
+ * the runs handed to reviewer cloud while the app is connected. The list
+ * itself — the paged fetch, the filters, the marks read off each session —
+ * stays the page's; what crosses is the rows, and what was done to them comes
+ * back as a `ShellSessionAction`.
+ */
+export interface ShellSessions {
+  readonly sessions: ReadonlyArray<ShellSession>;
+  readonly cloudRuns: ReadonlyArray<ShellSession>;
+  /** The session — or cloud run — the page is on, if any. */
+  readonly activeId: string | null;
+  /** The first page still on its way. */
+  readonly loading: boolean;
+  /** Whether the server has more rows after the loaded ones. */
+  readonly hasMore: boolean;
+  /** What the list is narrowed to, and what it could be narrowed to. */
+  readonly filters: ShellSessionFilters;
+}
+
+/** The state a row wears, as `ChatRow` reads it off the session. */
+export type ShellSessionMark = "running" | "error" | "unread";
+
+export interface ShellSession {
+  readonly id: string;
+  readonly kind: "session" | "cloud";
+  readonly title: string;
+  /** Where the session runs — its project, or a cloud run's repository. */
+  readonly origin: string;
+  readonly updatedAt: string;
+  readonly mark: ShellSessionMark | null;
+  /** For the preview the shell shows over a row — what the web card shows
+   * before the tail arrives, and what a cloud run has instead of one. */
+  readonly messageCount: number;
+  readonly lastMessage: string | null;
+}
+
+/**
+ * The three ways the web narrows the list — the rail's search, and the filter
+ * popover's project and date — all of them part of what the page asks the
+ * server for, so the shell's field and menu narrow every session rather than
+ * the pages loaded so far. The projects are the ones the filter can name, with
+ * how many sessions each holds. See `chatListFilters`.
+ */
+export interface ShellSessionFilters {
+  readonly search: string;
+  /** `all`, or a project folder's absolute path. */
+  readonly project: string;
+  readonly date: DateFilter;
+  readonly projects: ReadonlyArray<ChatProjectTally>;
+}
+
+/**
+ * What the shell's list can do — the row's own gestures, and the list's:
+ * a click shows the session on the Sessions tab, the menu lifts it into a tab
+ * of its own or deletes it, scrolling to the foot asks for the next page, and
+ * the field and the filter menu narrow what is asked for.
+ */
+export type ShellSessionAction =
+  | { readonly kind: "select"; readonly id: string }
+  | { readonly kind: "openInTab"; readonly id: string }
+  | { readonly kind: "delete"; readonly id: string }
+  | { readonly kind: "loadMore" }
+  | { readonly kind: "search"; readonly text: string }
+  | {
+      readonly kind: "filter";
+      readonly project?: string;
+      readonly date?: DateFilter;
+    };
 
 export interface ShellChannel {
   post: (intent: ShellIntent) => Promise<void>;

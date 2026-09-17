@@ -108,7 +108,7 @@ enum TreeAction {
 /// rather than throwing, and one of those inside a task on the main actor
 /// leaves the concurrency runtime's executor tracking stale, which WebKit's
 /// next isolation check then crashes on.
-private enum Wire {
+enum Wire {
     static func decode<T: Decodable>(_ body: Any?) -> T? {
         guard let object = body as? [String: Any],
             let data = try? JSONSerialization.data(withJSONObject: object)

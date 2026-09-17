@@ -3,12 +3,14 @@
 // and when what it holds has gone stale (`refresh`); the island tells the
 // shell when it is up (`ready`) and where it has gone (`navigated`). That is
 // the whole protocol — the SPA's `lib/shell` is the other half of it — but
-// for two more pairs: the sidebar's file tree the code island reports for
+// for three more pairs: the sidebar's file tree the code island reports for
 // the shell to draw natively (`tree`, and `treeState` for what moves under
-// it), acted on by sending the click back (`tree` again, the other way); and
-// the window tabs, which are the island's own strip — reported as a picture
-// (`windowTabs`) for the menu bar to name, and asked things of by the menu
-// items that claim the strip's chords (`windowTabs`, the other way).
+// it), acted on by sending the click back (`tree` again, the other way); the
+// sessions list it reports the same way while the page is on the sessions
+// surface (`sessions`, both ways); and the window tabs, which are the
+// island's own strip — reported as a picture (`windowTabs`) for the menu bar
+// to name, and asked things of by the menu items that claim the strip's
+// chords (`windowTabs`, the other way).
 //
 // The web view is made once and kept for the life of the host: SwiftUI can
 // take it out of the hierarchy and put it back, and the page, its scroll and
@@ -29,6 +31,7 @@ final class IslandHost: NSObject {
     @ObservationIgnored var onWindowTabsReported: ((WindowTabStrip) -> Void)?
     @ObservationIgnored var onTreeReported: ((ShellTree?) -> Void)?
     @ObservationIgnored var onTreeStateReported: ((ShellTreeState) -> Void)?
+    @ObservationIgnored var onSessionsReported: ((ShellSessions?) -> Void)?
 
     @ObservationIgnored private let source: SpaSource
     @ObservationIgnored private let apiBaseURL: URL
@@ -79,6 +82,13 @@ final class IslandHost: NSObject {
     func send(_ action: TreeAction) {
         guard isReady else { return }
         dispatch(["type": "tree", "action": action.payload])
+    }
+
+    /// The native sidebar acted on a row of the island's sessions list — see
+    /// `SessionAction`.
+    func send(_ action: SessionAction) {
+        guard isReady else { return }
+        dispatch(["type": "sessions", "action": action.payload])
     }
 
     private func dispatch(_ event: [String: Any]) {
@@ -204,6 +214,9 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             return (nil, nil)
         case "treeState":
             if let state = ShellTreeState.decode(body["state"]) { onTreeStateReported?(state) }
+            return (nil, nil)
+        case "sessions":
+            onSessionsReported?(ShellSessions.decode(body["list"]))
             return (nil, nil)
         default:
             return (nil, "unknown shell message: \(type)")

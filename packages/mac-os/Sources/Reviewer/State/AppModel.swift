@@ -38,6 +38,9 @@ final class AppModel {
     /// The code page's file tree, as it last reported it, with the sidebar's
     /// own folds, search and selection over it.
     let sidebar = SidebarTree()
+    /// The sessions list, as the page last reported it — while it is on the
+    /// sessions surface, where the sidebar draws this in the tree's place.
+    private(set) var sessions: ShellSessions?
     var sidebarShown = true
     var sidebarWidth: CGFloat = 280
     var launchpadShown = false
@@ -74,6 +77,7 @@ final class AppModel {
         page.onWindowTabsReported = { [weak self] strip in self?.take(strip) }
         page.onTreeReported = { [weak self] listing in self?.sidebar.take(listing) }
         page.onTreeStateReported = { [weak self] state in self?.sidebar.take(state) }
+        page.onSessionsReported = { [weak self] list in self?.sessions = list }
         page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
     }
 
@@ -178,6 +182,13 @@ final class AppModel {
 
     /// The sidebar acted on a row of the page's tree — see `TreeAction`.
     func act(onTree action: TreeAction) {
+        page.send(action)
+    }
+
+    /// The sidebar acted on a row of the page's sessions list — see
+    /// `SessionAction`. A pick sends the page to that session, the way a
+    /// file picked in the tree is carried to the page.
+    func act(onSessions action: SessionAction) {
         page.send(action)
     }
 

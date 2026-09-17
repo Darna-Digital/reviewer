@@ -1,8 +1,8 @@
 // The window, laid out as panels on the web app's frame colour: the
-// toolbar along the top — the project and branch chips, the window tabs,
-// the sidebar and launchpad buttons — and the rail down the leading edge
+// toolbar along the top — the project chip, the window tabs, the sidebar
+// and launchpad buttons — and the rail down the leading edge
 // are the window's own bare surface, and on it stand three rounded panels:
-// the sidebar's project tree on a pane of glass, the page island wearing
+// the sidebar's project tree, the page island wearing
 // the open-file band along its top, and the bottom pane under it. The seams
 // between them are the frame showing through, and two of them resize what
 // they part. The search dialog and the launchpad go over all of it when
@@ -23,7 +23,7 @@ struct ContentView: View {
             if model.sidebarShown {
                 SidebarView()
                     .frame(width: model.sidebarWidth)
-                    .glassPane()
+                    .island()
                     .transition(.move(edge: .leading).combined(with: .opacity))
                 IslandSeam(between: .columns, size: $model.sidebarWidth, range: Self.sidebarWidths)
             }
@@ -87,10 +87,11 @@ struct ContentView: View {
     }
 }
 
-/// The toolbar: the sidebar's switch, the project chip and the branch chip
-/// — what the window is on — then the window tabs, and the launchpad
-/// trailing: the web app's window bar, on the window's own bar, so nothing
-/// on it is drawn a second time inside the island.
+/// The toolbar: the sidebar's switch and the project chip — what the window
+/// is on — then the window tabs, and the launchpad trailing: the web app's
+/// window bar, on the window's own bar, so nothing on it is drawn a second
+/// time inside the island. The branch picker is the sidebar's, over the tree
+/// it names, as the web header has it.
 private struct ToolbarItems: ToolbarContent {
     @Environment(AppModel.self) private var model
 
@@ -105,9 +106,6 @@ private struct ToolbarItems: ToolbarContent {
             ProjectChip()
         }
         if model.hasProject {
-            ToolbarItem(placement: .navigation) {
-                BranchPicker()
-            }
             TabStripItems(model: model)
         }
         ToolbarItem(placement: .primaryAction) {

@@ -1,4 +1,4 @@
-// The branch picker at the head of the sidebar: a pull-down button naming
+// The branch picker at the head of the sidebar: a flat pull-down naming
 // the branch you are on, whose menu is the web app's switcher done in
 // NSMenu — Recent, Local by folder, Remote by remote, each branch a submenu
 // of everything you can do to it — plus a search, since a menu of sixty
@@ -56,6 +56,7 @@ struct BranchPicker: View {
                 .truncationMode(.middle)
         }
         .menuStyle(.button)
+        .buttonStyle(.accessoryBar)
         .controlSize(.regular)
         .disabled(!model.hasProject)
         .help("Branches")

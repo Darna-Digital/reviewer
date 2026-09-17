@@ -1,11 +1,13 @@
-// The window's regions stand a few points apart on the web app's frame
-// colour (see `IslandPalette`), the way the JetBrains islands layout sets
-// its tool windows beside the editor. The page island and the bottom pane
-// are islands: rounded panels of the sheet colour, ringed by the separator.
-// The sidebar is a pane of the system's glass, the same shape, floating
-// beside the rail the way the current design floats a sidebar over its
-// window. The toolbar and the rail are neither: they are the window
-// itself, bare, which is what the panels stand on.
+// The window's regions — the sidebar's project tree, the page island, the
+// bottom pane — are islands: rounded panels of the web app's sheet colour,
+// ringed by the separator, standing a few points apart on its frame colour
+// (see `IslandPalette`), the way the JetBrains islands layout sets its tool
+// windows beside the editor, and the sidebar floating beside the rail the
+// way the current design floats one over its window. One fill for all
+// three: the system's sidebar material was tried for the tree and came out
+// a tone apart from the panels beside it. The toolbar and the rail are not
+// islands: they are the window itself, bare, which is what the panels
+// stand on.
 import SwiftUI
 
 enum IslandMetrics {
@@ -23,10 +25,6 @@ extension View {
     func island() -> some View {
         modifier(IslandPanel())
     }
-
-    func glassPane() -> some View {
-        modifier(GlassPane())
-    }
 }
 
 private struct IslandPanel: ViewModifier {
@@ -37,14 +35,6 @@ private struct IslandPanel: ViewModifier {
             .overlay {
                 IslandMetrics.shape.strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1)
             }
-    }
-}
-
-private struct GlassPane: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .clipShape(IslandMetrics.shape)
-            .glassEffect(.regular, in: IslandMetrics.shape)
     }
 }
 

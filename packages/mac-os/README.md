@@ -8,19 +8,24 @@ showing one part of the SPA.
 
 What it does today:
 
-- **Native sidebar** — the code page's file tree as a native outline on a
-  pane of the system's glass floating beside the rail, in the web sidebar's
-  two layouts:
+- **Native sidebar** — the code page's file tree as a native outline on an
+  island floating beside the rail, in the web sidebar's two layouts:
   the project's files while browsing, and on a diff the changed files under
   a search, badged and tinted by git status, with the commit composer under
   them while the changes are your own. The rows wear @pierre/trees' own
   file-type icons, imported at build time (`scripts/import-file-icons.mjs`).
   Picking a file sends the code island to it; a file the island opens on its
   own highlights here; the context menu is the web tree's — history, copy
-  path, reveal, new, rename, discard, delete.
+  path, reveal, new, rename, discard, delete. On the sessions surface the
+  same pane holds the agent sessions instead — every project's, newest
+  first, with the web list's marks on each row and the cloud runs grouped
+  above — drawn natively from what the page reports (`SessionsList`).
+  Picking one sends the page island to that conversation on the Sessions
+  tab; the context menu lifts it into a tab of its own or deletes it, and
+  the foot of the list fetches the next page.
 - **Islands** — the window is laid out as rounded panels standing a few
-  points apart on the web app's frame colour: the sidebar's glass pane, the
-  page island and the bottom pane, with seams between them that resize the
+  points apart on the web app's frame colour: the sidebar, the page island
+  and the bottom pane, with seams between them that resize the
   sidebar and the pane (⌃⌘S puts the sidebar away). The toolbar and the
   rail are the bare window around them.
 - **Window tabs** — the web app's own strip, drawn natively on the toolbar:
@@ -64,16 +69,17 @@ routes and URLs, so the shell steers an island with the hrefs the app already
 uses. The contract is small and lives in `packages/spa/src/lib/shell.ts`:
 
 - shell → island: `navigate(href)`, `refresh`, `windowTabs(action)`,
-  `tree(action)`
+  `tree(action)`, `sessions(action)`
 - island → shell: `ready`, `navigated(href)`, `windowTabs(strip)`,
-  `tree(listing)`, `treeState(selection, commit composer)`
+  `tree(listing)`, `treeState(selection, commit composer)`, `sessions(list)`
 
-The tree pair is the chrome the code island reports for the shell to draw
-natively: its file tree in the sidebar (`FileTreeOutline`, over
-`SidebarTree`). The shell sends every click back as an action for the page to
-apply to its own store, its file actions or its git actions, having already
-asked what the web tree asks first — a yes to a deletion, a name for a new
-file. The window-tabs pair runs the other way round: the strip is the
+The tree and sessions pairs are the chrome the code island reports for the
+shell to draw natively in its sidebar: the file tree on the code pages
+(`FileTreeOutline`, over `SidebarTree`) and the sessions list on the sessions
+surface (`SessionsList`, over `ShellSessions`). The shell sends every click
+back as an action for the page to apply to its own store, its file actions,
+its git actions or its chat actions, having already asked what the web tree
+asks first — a yes to a deletion, a name for a new file. The window-tabs pair runs the other way round: the strip is the
 island's, and what crosses is a picture of it for the Tabs menu to name, and
 the chords the menu bar claims (`WindowTabAction`) for the strip to answer.
 
@@ -133,7 +139,7 @@ Sources/Reviewer/
   ReviewerApp.swift      @main, menu commands, app delegate
   Server/ServerLauncher  reachability check + spawn of the embedded server
   Api/                   Codable mirrors of the core schemas, HTTP client, chat socket
-  State/                 AppModel, WindowTab, BottomPaneTab, FileTree, SidebarTree, QuickSearch (+ the ⇧⇧ monitor)
+  State/                 AppModel, WindowTab, BottomPaneTab, FileTree, SidebarTree, SidebarSessions, QuickSearch (+ the ⇧⇧ monitor)
   FileIcons/             FileIcon (resolver + rasteriser) over the generated @pierre/trees sprite
   Islands/               IslandHost (web view + bridge), SpaSource, SpaSchemeHandler, IslandView
   Terminal/              TerminalSession — the shell behind the Terminal surface

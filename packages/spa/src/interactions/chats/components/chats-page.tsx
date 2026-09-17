@@ -34,6 +34,10 @@
  * menu that deletes all of it at once. A right-click outside the sweep drops it
  * and is about the one row under the pointer, so the menu never acts on
  * sessions that are not under it. See `lib/row-selection`.
+ *
+ * Inside the macOS shell the list is the window's sidebar rather than this
+ * page's column: the rows are handed over and drawn natively, and what was
+ * done to them comes back here. See `chats-page.shell`.
  */
 import { IconExternalLink, IconTrash } from "@tabler/icons-react";
 import {
@@ -42,7 +46,7 @@ import {
   useParams,
   useSearch,
 } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
@@ -55,14 +59,25 @@ import {
 } from "@/components/ui/context-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { pointerAnchor } from "@/interactions/language/functions/anchors";
+import { useChatFilters } from "@/interactions/chats/adapters/chat-filters.store";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import { useChatListQuery } from "@/interactions/chats/adapters/chat-list-query.hook.adapter";
 import { useOnSessionTab } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { ChatRow } from "@/interactions/chats/components/chat-row";
+import {
+  shellDrawsSessions,
+  useShellSessions,
+} from "@/interactions/chats/components/chats-page.shell";
 import { CloudRunRow } from "@/interactions/cloud/components/cloud-run-row";
 import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
+import { resolveProjectFilter } from "@/interactions/chats/functions/chat-filters.functions";
 import { openSessionTab } from "@/interactions/chats/functions/open-session-tab";
-import { useChatPages, useCloudRuns, useCloudStatus } from "@/lib/queries";
+import {
+  useChatPages,
+  useChatProjects,
+  useCloudRuns,
+  useCloudStatus,
+} from "@/lib/queries";
 import {
   NO_ROWS,
   anchorRow,
@@ -72,9 +87,28 @@ import {
   type RowSelection,
 } from "@/lib/row-selection";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
+import type { ChatProjectTally } from "@reviewer/core/chats";
 
 /** How close to the foot of the loaded list fetches the next page. */
 const LOAD_MORE_WITHIN_PX = 400;
+
+const NO_PROJECTS: ReadonlyArray<ChatProjectTally> = [];
+
+/**
+ * What the shell's filter menu shows: the stored filters as `SessionFilters`
+ * reads them — the project resolved against the ones that exist — and the
+ * projects it could name. Fetched only in the shell, where the menu is.
+ */
+function useShellFilters(search: string) {
+  const projects = useChatProjects(shellDrawsSessions).data ?? NO_PROJECTS;
+  const stored = useChatFilters();
+  const project = resolveProjectFilter(projects, stored.project);
+  const filters = useMemo(
+    () => ({ search, project, date: stored.date }),
+    [search, project, stored.date]
+  );
+  return { filters, projects };
+}
 
 export function ChatsPage() {
   const actions = useChatsActions();
@@ -99,18 +133,34 @@ export function ChatsPage() {
   // screen worth looking at, and it is the one place under here that asks for
   // that.
   const composing = useSearch({ strict: false }).new === true;
-  const showList = !composing && !ownTab && prefs.sidebarVisible;
+  const showList =
+    !composing && !ownTab && prefs.sidebarVisible && !shellDrawsSessions;
   /** The surface with the list on it and nothing yet opened from it. */
   const landing = !composing && !ownTab && chatId === undefined;
+  /**
+   * The shell's sidebar draws the list wherever inside Sessions the page is —
+   * it is the window's column, not this page's — so the rows are fetched for
+   * it even where the web list would be down.
+   */
+  const listed = showList || shellDrawsSessions;
 
-  // The filters go to the server with the page — see `useChatPages`.
-  const filters = useChatListQuery();
+  // The filters go to the server with the page — see `useChatPages`. The
+  // shell's search field is the one narrowing the web rail's popover does
+  // with a list of its own: here it goes into the same query, so the native
+  // list is the hits.
+  const stored = useChatListQuery();
+  const [shellSearch, setShellSearch] = useState("");
+  const filters = useMemo(
+    () =>
+      shellSearch.length === 0 ? stored : { ...stored, search: shellSearch },
+    [stored, shellSearch]
+  );
   // Not fetched at all where there is neither a list to fill nor a session to
   // land on: the composer and a session in its own tab are whole pages that
   // happen to hang off this one.
   const { sessions, loading, hasMore, loadMore } = useChatPages(
     filters,
-    showList || landing
+    listed || landing
   );
 
   /**
@@ -120,7 +170,7 @@ export function ChatsPage() {
    */
   const cloudStatus = useCloudStatus();
   const cloudConnected = cloudStatus.data?.status === "connected";
-  const cloudRuns = useCloudRuns(cloudConnected && showList).data ?? [];
+  const cloudRuns = useCloudRuns(cloudConnected && listed).data ?? [];
 
   /**
    * Landing on the surface opens the newest session the filters leave in the
@@ -227,6 +277,24 @@ export function ChatsPage() {
       void navigate({ to: "/modes/agent-session" });
     }
   };
+
+  const shellFilters = useShellFilters(shellSearch);
+  useShellSessions(
+    shellDrawsSessions
+      ? {
+          sessions,
+          cloudRuns: cloudConnected ? cloudRuns : [],
+          activeId: chatId ?? runId ?? null,
+          loading,
+          hasMore,
+          filters: shellFilters.filters,
+          projects: shellFilters.projects,
+          loadMore: () => void loadMore(),
+          remove: (id) => void remove([id]),
+          search: setShellSearch,
+        }
+      : null
+  );
 
   return (
     <div className="app-split flex h-full min-h-0 gap-1.5">

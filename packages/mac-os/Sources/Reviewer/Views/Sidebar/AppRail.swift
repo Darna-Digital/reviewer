@@ -4,7 +4,7 @@
 // them, so the sidebar's tree and the page island both move from the same
 // column. It measures 36pt with a 28pt button in it — the web rail's own
 // sizes — held off the window's edge by the islands' own gap, and stands on
-// the bare frame beside the sidebar's glass with no rule of its own: the
+// the bare frame beside the sidebar's pane with no rule of its own: the
 // panel's edge is what parts it from the tree.
 import SwiftUI
 

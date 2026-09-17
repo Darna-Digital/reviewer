@@ -2,29 +2,50 @@
 // page reports (see `SidebarTree`) in the layout the web sidebar gives that
 // surface — the project's files as an outline on the browse page, and on a
 // diff the changed files under a search, with the commit composer beneath
-// them while the changes are your own — on a pane of glass floating beside
-// the rail (see `ContentView`). The project and branch pickers sit on the
-// toolbar; the rail that moves the page between the surfaces stands beside
-// the pane (see `AppRail`). The tree follows the page, and a file picked in
-// the tree is carried to the page.
+// them while the changes are your own — on an island floating beside the
+// rail (see `ContentView`), under the branch picker, which stands over the
+// tree the way the web header's does: the branch you are on is what the
+// tree beneath it is a tree of. The project picker sits on the toolbar; the
+// rail that moves the page between the surfaces stands beside the island
+// (see `AppRail`). The tree follows the page, and a file picked in the tree
+// is carried to the page.
 import SwiftUI
 
 struct SidebarView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        if model.hasProject {
-            TreeColumn()
-                .frame(maxWidth: .infinity)
-                .padding(.top, 6)
-        } else {
-            Spacer()
+        VStack(spacing: 0) {
+            SidebarHeader()
+            if model.hasProject {
+                TreeColumn()
+                    .frame(maxWidth: .infinity)
+            } else {
+                Spacer()
+            }
         }
     }
 }
 
-/// The layout for the surface the page is on, or nothing while the page
-/// shows no tree — a session, the git page.
+/// The band along the island's top: the web header's 36pt around a 28pt
+/// chip, with the branch picker leading it.
+private struct SidebarHeader: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if model.hasProject {
+                BranchPicker()
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 4)
+        .frame(height: 36)
+    }
+}
+
+/// The layout for the surface the page is on — its tree, or its sessions
+/// — or nothing while the page reports neither: the git page.
 private struct TreeColumn: View {
     @Environment(AppModel.self) private var model
 
@@ -34,6 +55,8 @@ private struct TreeColumn: View {
             ProjectTreeLayout()
         case .commit, .review:
             ChangesLayout()
+        case nil where model.sessions != nil:
+            SessionsList()
         case nil:
             Spacer()
         }
