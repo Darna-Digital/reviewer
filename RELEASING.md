@@ -19,6 +19,10 @@ identity and never touches CI or signing.
 Beta builds derive their version automatically as `X.Y.Z-beta.<run-number>`, so
 they preview the `X.Y.Z` you are working toward.
 
+For why `0.2.8` is already the smallest possible increment — and why a fourth
+segment like `0.2.8.1` must never be used — see
+[`docs/VERSIONING.md`](docs/VERSIONING.md).
+
 ## The flow
 
 1. **Feature work → `staging`.** Every push to `staging` publishes a signed
