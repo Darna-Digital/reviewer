@@ -334,9 +334,7 @@ function BranchSection({
         <span>{title}</span>
         <span className="text-muted-foreground/70">{count}</span>
       </button>
-      {!collapsed && (
-        <div className="mt-1 flex flex-col gap-1">{children}</div>
-      )}
+      {!collapsed && <div className="mt-1 flex flex-col gap-1">{children}</div>}
     </section>
   );
 }

@@ -30,7 +30,7 @@ export function ConversationSections({
   return (
     <nav
       aria-label="Questions in this conversation"
-      className="scrollbar-none absolute top-1/2 left-2 flex max-h-[70vh] -translate-y-1/2 flex-col overflow-y-auto py-1 @max-4xl:hidden"
+      className="absolute top-1/2 left-2 flex max-h-[70vh] -translate-y-1/2 scrollbar-none flex-col overflow-y-auto py-1 @max-4xl:hidden"
     >
       {sections.map((section) => (
         <SectionTick
