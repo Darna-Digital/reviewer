@@ -14,10 +14,14 @@
  * own too, over the window.
  *
  * The band is the header's open-file slot, lent to the code page the way
- * `AppHeader` lends it: the page portals its `TabStrip` in, and the band folds
- * away while there is nothing in it.
+ * `AppHeader` lends it — the page portals its `TabStrip` in — with the
+ * diff-style toggle at its end while a diff is on screen, where the header
+ * band keeps it. The band folds away while there is nothing in it: no file
+ * open over a page that is not a diff.
  */
+import { useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { HeaderDiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { setHeaderTabsSlot } from "@/components/layout/header-tabs";
 import { useWindowTabs } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { useWindowTabStrip } from "@/interactions/window-tabs/components/window-tab-strip";
@@ -29,6 +33,7 @@ import {
 } from "@/interactions/window-tabs/functions/window-tabs.functions";
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import { shell, type ShellWindowTabStrip } from "@/lib/shell";
+import { shellRoute } from "@/lib/shell-route";
 
 const picture = (
   tabs: ReadonlyArray<WindowTab>,
@@ -44,6 +49,12 @@ const picture = (
 });
 
 export function IslandBar() {
+  // The page that is on screen rather than the one being navigated to, as
+  // `CodePage` reads it, so the toggle comes and goes with the diff it is for.
+  const pathname = useRouterState({
+    select: (s) => (s.resolvedLocation ?? s.location).pathname,
+  });
+  const route = shellRoute(pathname);
   const windowTabs = useWindowTabs();
   const { strip, activeId, show, mint, close } = useWindowTabStrip();
 
@@ -90,13 +101,27 @@ export function IslandBar() {
 
   return (
     <div
-      ref={setHeaderTabsSlot}
       // The 36px band every chrome row keeps, around 28px chips — but set
       // from the top rather than centred: the panel's 1pt ring (see
       // `IslandPanel`) is drawn over the band's first row, so centred chips
       // showed a hair less air above than below. Pinned at 4px they stand 3px
       // clear of the ring above and 3px clear of the rule below.
-      className="flex h-9 min-w-0 shrink-0 items-start gap-2 border-b border-hairline px-1 pt-1 empty:hidden"
-    />
+      //
+      // Whether there is anything in it is only known to the DOM — the strip
+      // is portalled into the slot by the page, which mounts in either order
+      // with this — so the band shows itself by what it holds: any child with
+      // something in it, the filled slot or the toggle.
+      className="hidden h-9 min-w-0 shrink-0 items-start gap-2 border-b border-hairline px-1 pt-1 has-[>*:not(:empty)]:flex"
+    >
+      <div
+        ref={setHeaderTabsSlot}
+        className="flex min-w-0 flex-1 items-center gap-2 empty:hidden"
+      />
+      {/* Centred on the chip row the strip stands on, so the toggle sits
+          level with the tabs rather than on the band's top edge. */}
+      <div className="ml-auto flex h-7 shrink-0 items-center gap-1 empty:hidden">
+        <HeaderDiffStyleToggle route={route} />
+      </div>
+    </div>
   );
 }

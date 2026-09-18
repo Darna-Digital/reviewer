@@ -1,7 +1,10 @@
-// The bottom pane: a bar with a segmented switch between its four surfaces
+// The bottom pane: a bar with a row of flat tabs between its four surfaces
 // — Branches, History, Terminal and Run, the web dock's own strip — and the
 // mark that puts the pane away, then the surface beneath, the way Xcode's
-// debug area is laid out. The rail reaches the same surfaces (see
+// debug area is laid out. The tabs are the system's accessory-bar toggles,
+// the flat switch Finder's and Xcode's bars wear: no bezel at rest, a tint
+// while on, so the bar reads as a strip of names rather than a run of
+// buttons. The rail reaches the same surfaces (see
 // `AppRail`); the switch here is for when the pane is already up. The
 // window decides whether the pane is shown and how tall it stands, and
 // resizes it by the seam above it. Put away, the pane leaves nothing
@@ -20,16 +23,12 @@ struct BottomPane: View {
     }
 
     private var header: some View {
-        HStack(spacing: 8) {
-            Picker("Surface", selection: surface) {
-                ForEach(BottomPaneTab.allCases) { tab in
-                    Text(tab.title).tag(tab)
+        HStack(spacing: 2) {
+            ForEach(BottomPaneTab.allCases) { tab in
+                SurfaceTab(tab: tab, isOn: model.bottomTab == tab) {
+                    model.show(bottomTab: tab)
                 }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .controlSize(.small)
-            .fixedSize()
             Spacer(minLength: 8)
             PaneBarButton(symbol: "chevron.down", help: "Hide the pane (⌘B)") {
                 model.toggleBottomPane()
@@ -55,7 +54,24 @@ struct BottomPane: View {
         }
     }
 
-    private var surface: Binding<BottomPaneTab> {
-        Binding(get: { model.bottomTab }, set: { model.show(bottomTab: $0) })
+}
+
+/// One surface's tab: a toggle in the accessory-bar style that lights while
+/// its surface is up. A surface is left by going to another, never by
+/// pressing its tab again, so the toggle answers only to being switched on.
+private struct SurfaceTab: View {
+    let tab: BottomPaneTab
+    let isOn: Bool
+    let select: () -> Void
+
+    var body: some View {
+        Toggle(isOn: Binding(get: { isOn }, set: { if $0 { select() } })) {
+            Text(tab.title)
+                .font(.system(size: 11, weight: .medium))
+                .padding(.horizontal, 2)
+        }
+        .toggleStyle(.button)
+        .buttonStyle(.accessoryBar)
+        .help(tab.title)
     }
 }

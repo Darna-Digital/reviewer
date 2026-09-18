@@ -139,6 +139,19 @@ export interface ShellTree {
 export interface ShellTreeState {
   readonly selected: string | null;
   readonly commit: ShellCommitComposer | null;
+  /** What your own changes are read against — a question only your own
+   * changes have, so null on every other surface. See `LocalComparison`. */
+  readonly comparison: ShellComparison | null;
+}
+
+/**
+ * The local comparison, flattened for the wire: the branch the changes are
+ * read against, or null for what is merely uncommitted, and where the branch's
+ * work is aimed, which the shell's picker marks the way the web one does.
+ */
+export interface ShellComparison {
+  readonly against: string | null;
+  readonly aim: string | null;
 }
 
 export interface ShellCommitComposer {

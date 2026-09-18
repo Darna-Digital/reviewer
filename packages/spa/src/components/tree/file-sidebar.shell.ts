@@ -23,6 +23,7 @@ import type { AppMode } from "@/lib/api/types";
 import {
   island,
   shell,
+  type ShellComparison,
   type ShellTree,
   type ShellTreeAction,
   type ShellTreeState,
@@ -48,6 +49,8 @@ export interface ShellTreeSource {
   readonly onRenamePath?: (from: string, to: string) => Promise<void>;
   readonly actions?: FileActionsFunctions;
   readonly commit?: ShellCommitSource;
+  /** What the changes are read against, while they are your own. */
+  readonly comparison?: ShellComparison;
 }
 
 export interface ShellCommitSource {
@@ -111,6 +114,9 @@ export function useShellTree(source: ShellTreeSource | null): void {
   const discardable = source?.onDiscardPaths !== undefined;
   const changes = source?.commit?.changes ?? null;
   const draft = source?.commit?.draft ?? null;
+  const against = source?.comparison?.against ?? null;
+  const aim = source?.comparison?.aim ?? null;
+  const comparing = source?.comparison !== undefined;
   const listing = useMemo<ShellTree | null>(
     () =>
       shellDrawsTree && mode !== null && paths !== null && gitStatus !== null
@@ -134,8 +140,9 @@ export function useShellTree(source: ShellTreeSource | null): void {
     () => ({
       selected,
       commit: changes === null ? null : { changes, draft },
+      comparison: comparing ? { against, aim } : null,
     }),
-    [selected, changes, draft]
+    [selected, changes, draft, comparing, against, aim]
   );
   useEffect(() => {
     if (!shellDrawsTree || listing === null) return;

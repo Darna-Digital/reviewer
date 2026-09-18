@@ -12,14 +12,9 @@
  * anything on its behalf, which is what lets it sit in the layout and stay
  * mounted while the page beneath it changes.
  */
-import {
-  useNavigate,
-  useParams,
-  useRouterState,
-  useSearch,
-} from "@tanstack/react-router";
+import { useNavigate, useRouterState, useSearch } from "@tanstack/react-router";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
-import { DiffStyleToggle } from "@/components/layout/diff-style-toggle";
+import { HeaderDiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { DockRestore } from "@/components/layout/dock-restore";
 import { ComparePicker } from "@/interactions/comparison/components/compare-picker";
 import { useLocalComparison } from "@/interactions/comparison/adapters/comparison.hook.adapter";
@@ -38,7 +33,6 @@ import {
 } from "@/lib/queries";
 import { useHeaderLeadWidths } from "@/components/layout/header-lead";
 import { setHeaderTabsSlot } from "@/components/layout/header-tabs";
-import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import {
   REVIEW_HREF,
   reviewSourceOf,
@@ -124,10 +118,8 @@ function HeaderRow({
 
 export function AppHeader({ route }: { route: ShellRoute }) {
   const navigate = useNavigate();
-  const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const prefs = useUiPrefs();
 
   const repo = useRepo();
   const workspace = useWorkspace();
@@ -154,18 +146,6 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   }
 
   const readingOwnChanges = reviewSourceOf(pathname)?.kind === "local";
-
-  /**
-   * The diff-style toggle belongs to a diff, so it shows when one is on screen:
-   * a code page, with no file open over it, pointed at something to diff.
-   */
-  const showDiffStyleToggle =
-    route.kind === "code" &&
-    search.file === undefined &&
-    (route.mode === "review" ||
-      (route.mode === "browse" &&
-        (params.sha !== undefined ||
-          (search.base !== undefined && search.head !== undefined))));
 
   /**
    * What your own changes are read against — a question only your own changes
@@ -254,12 +234,7 @@ export function AppHeader({ route }: { route: ShellRoute }) {
 
       <div className="ml-auto flex shrink-0 items-center gap-1">
         {route.kind === "dock" && <DockRestore tab={route.tab} />}
-        {showDiffStyleToggle && (
-          <DiffStyleToggle
-            value={prefs.diffStyle}
-            onChange={(diffStyle) => setUiPrefs({ diffStyle })}
-          />
-        )}
+        <HeaderDiffStyleToggle route={route} />
       </div>
     </HeaderRow>
   );

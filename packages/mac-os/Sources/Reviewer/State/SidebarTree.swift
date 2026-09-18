@@ -26,8 +26,17 @@ struct ShellTree: Decodable, Equatable, Sendable {
 struct ShellTreeState: Decodable, Sendable {
     let selected: String?
     let commit: ShellCommitComposer?
+    let comparison: ShellComparison?
 
     static func decode(_ body: Any?) -> ShellTreeState? { Wire.decode(body) }
+}
+
+/// What your own changes are read against — `LocalComparison` in core,
+/// flattened: the branch, or nil for what is merely uncommitted — and where
+/// the branch's work is aimed, which the picker marks as the web one does.
+struct ShellComparison: Decodable, Equatable, Sendable {
+    let against: String?
+    let aim: String?
 }
 
 struct ShellCommitComposer: Decodable, Hashable, Sendable {
@@ -130,6 +139,9 @@ final class SidebarTree {
     private(set) var listing: ShellTree?
     private(set) var selected: String?
     private(set) var commit: ShellCommitComposer?
+    /// The comparison the changed files are read against, while they are
+    /// your own — the compare picker's answer.
+    private(set) var comparison: ShellComparison?
     private(set) var roots: [FileTreeNode] = []
     private(set) var nodes: [String: FileTreeNode] = [:]
     private(set) var statusByPath: [String: GitFileStatus] = [:]
@@ -196,6 +208,7 @@ final class SidebarTree {
             foldersWithChanges = []
             ignoredFolders = []
             commit = nil
+            comparison = nil
             refilter()
             return
         }
@@ -223,6 +236,7 @@ final class SidebarTree {
 
     func take(_ state: ShellTreeState) {
         commit = state.commit
+        comparison = state.comparison
         guard state.selected != selected else { return }
         selected = state.selected
         reveal(state.selected)

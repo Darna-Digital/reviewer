@@ -34,13 +34,23 @@ struct SidebarView: View {
 }
 
 /// The band along the island's top: the web header's 36pt around a 28pt
-/// chip, with the branch picker leading it. Over the tree only — the
-/// sessions list is not one branch's.
+/// chip, with the branch picker leading it and, while the changes are your
+/// own, the compare picker at the trailing edge — the branch the tree is a
+/// tree of, and what its changes are measured from, each at its own width
+/// and the room between them the sidebar's to give. The web app puts the
+/// compare picker at the head of the band over the diff; the shell's
+/// sidebar is where its commit view keeps its controls. Over the tree only
+/// — the sessions list is not one branch's.
 private struct SidebarHeader: View {
+    @Environment(AppModel.self) private var model
+
     var body: some View {
         HStack(spacing: 4) {
             BranchPicker()
             Spacer(minLength: 0)
+            if let comparison = model.sidebar.comparison {
+                ComparePicker(comparison: comparison)
+            }
         }
         .padding(.horizontal, 4)
         .frame(height: 36)

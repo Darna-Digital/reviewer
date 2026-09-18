@@ -164,6 +164,18 @@ extension AppModel {
         }
     }
 
+    /// Your own changes read against `target` — or against nothing, when
+    /// it is nil: only what is uncommitted. The choice lives in the page's
+    /// address, as in the web app, so it is something the page can go back
+    /// out of; written even when empty, since an absent target would only
+    /// let the branch's aim answer again, and this is how you say otherwise.
+    func readChanges(against target: String?) {
+        var components = URLComponents()
+        components.path = Href.review
+        components.queryItems = [URLQueryItem(name: "target", value: target ?? "")]
+        showOnCodeTab(components.string ?? Href.review)
+    }
+
     /// `action`, in the root at `path`: run outright when that is the root
     /// the git views follow, otherwise once that root has been followed —
     /// every git call reads from the current root, so a branch of another

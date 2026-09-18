@@ -16,7 +16,11 @@ What it does today:
   tree as a native outline in the web sidebar's two layouts:
   the project's files while browsing, and on a diff the changed files under
   a search, badged and tinted by git status, with the commit composer under
-  them while the changes are your own. The rows wear @pierre/trees' own
+  them while the changes are your own — and across from the branch picker,
+  at the header's other edge, what those changes are read against: the web
+  header's compare picker (uncommitted only, or the merge base with a
+  branch), stood in the sidebar since that is where the shell keeps the
+  commit view's controls. The rows wear @pierre/trees' own
   file-type icons, imported at build time (`scripts/import-file-icons.mjs`).
   Picking a file sends the code island to it; a file the island opens on its
   own highlights here; the context menu is the web tree's — history, copy
@@ -61,10 +65,11 @@ What it does today:
 - **Page island** — the SPA's routed page, with the window's own chrome and
   file tree off: the diff, the file view, review comments, edit mode, the
   merge requests, the sessions surface, with its open-file strip along its
-  top. The one drawer it keeps under the page is find usages, which is
-  opened from a symbol in the page's own code; it takes the foot of the
-  window from the bottom pane while it is up, and is put away when the
-  pane takes it back.
+  top and, on a diff, the web header's horizontal-or-vertical layout toggle
+  at the end of the same band. The one drawer it keeps under the page is
+  find usages, which is opened from a symbol in the page's own code; it
+  takes the foot of the window from the bottom pane while it is up, and is
+  put away when the pane takes it back.
 - **Bottom pane** (⌘B) — the web app's dock, drawn natively: a bar with a
   segmented switch between its four surfaces, in the web strip's order,
   laid out like Xcode's debug area — a bar along the top, a list, a detail

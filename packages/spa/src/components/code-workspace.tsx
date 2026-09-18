@@ -1228,6 +1228,13 @@ export function CodeWorkspace() {
       ? {
           ...treeSource,
           onTrashPaths: mode === "review" ? undefined : trashPaths,
+          // The header's compare picker is the shell's to draw too — it stands
+          // in the shell's sidebar, over the changed files — and it reads the
+          // same answer, resolved here once for the diff and the picker both.
+          comparison:
+            mode === "commit"
+              ? { against: comparisonTarget(comparison), aim }
+              : undefined,
           commit:
             commitSource === undefined
               ? undefined
