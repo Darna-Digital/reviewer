@@ -12,9 +12,12 @@ enum IslandMetrics {
     /// The system sidebar's own corner, so the islands beside it read as
     /// the same family of panel.
     static let radius: CGFloat = 16
-    /// The run of frame between two panels, and between a panel and the
-    /// window's edge.
+    /// The run of frame between two panels.
     static let gap: CGFloat = 6
+    /// The run of frame between a panel and the window's edge: the inset
+    /// the system gives its sidebar's glass, so an island's bottom edge
+    /// stands level with the sidebar's beside it.
+    static let margin: CGFloat = 8
 
     static var shape: RoundedRectangle {
         RoundedRectangle(cornerRadius: radius, style: .continuous)

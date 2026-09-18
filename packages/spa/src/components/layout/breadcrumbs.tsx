@@ -87,7 +87,7 @@ export function Breadcrumbs({
   return (
     <nav
       aria-label="Breadcrumb"
-      className={cn("flex min-w-0 items-center", metrics.trail)}
+      className={cn("flex min-w-0 items-center select-none", metrics.trail)}
     >
       {crumbs.map((crumb, index) => {
         const last = index === crumbs.length - 1;

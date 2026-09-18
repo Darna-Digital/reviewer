@@ -36,6 +36,9 @@ struct SessionsList: View {
                 }
             }
             .onChange(of: list.activeId, initial: true) { _, active in selected = active }
+        } else {
+            // The surface is up and its first list is on its way.
+            SessionsPlaceholder(loading: true, searching: false)
         }
     }
 

@@ -40,8 +40,11 @@ final class AppModel {
     /// The code page's file tree, as it last reported it, with the sidebar's
     /// own folds, search and selection over it.
     let sidebar = SidebarTree()
-    /// The sessions list, as the page last reported it — while it is on the
-    /// sessions surface, where the sidebar draws this in the tree's place.
+    /// The sessions list, as the page last reported it — on the sessions
+    /// surface, where the sidebar draws this in the tree's place — and kept
+    /// as it stood once the page leaves the surface and takes the list
+    /// down, so the sidebar's list fades out whole (see `SidebarLayout`);
+    /// the surface reports a fresh list on the way back in.
     private(set) var sessions: ShellSessions?
     /// The sessions surface itself — the conversation, the composer — drawn
     /// by the shell in the page's place while the island is on it, read
@@ -115,7 +118,9 @@ final class AppModel {
         page.onWindowTabsReported = { [weak self] strip in self?.take(strip) }
         page.onTreeReported = { [weak self] listing in self?.sidebar.take(listing) }
         page.onTreeStateReported = { [weak self] state in self?.sidebar.take(state) }
-        page.onSessionsReported = { [weak self] list in self?.sessions = list }
+        page.onSessionsReported = { [weak self] list in
+            if let list { self?.sessions = list }
+        }
         page.onDockReported = { [weak self] state in self?.take(dock: state) }
         page.onHistoryRequested = { [weak self] path in self?.showHistory(of: path) }
         page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
@@ -242,6 +247,22 @@ final class AppModel {
     var onSessions: Bool {
         let path = URLComponents(string: page.href)?.path ?? ""
         return path == SessionsPage.sessionsPath || path.hasPrefix("\(SessionsPage.sessionsPath)/")
+    }
+
+    /// What the sidebar's column holds, by the page's address: the merge
+    /// requests, the tree in one of its two forms, the sessions, or nothing
+    /// — the one reading the sidebar lays itself out from, whatever the page
+    /// has reported so far (see `SidebarLayout`). The merge requests are
+    /// read ahead of the tree: the page reports a tree for the pull request
+    /// it is on, and on that surface the tree stands beside the sidebar.
+    var sidebarLayout: SidebarLayout {
+        if onSessions { return .sessions }
+        switch codeSurface {
+        case .reviews: return .pulls
+        case .browse: return .files(changes: false)
+        case .review: return .files(changes: true)
+        case nil: return .nothing
+        }
     }
 
     /// Whether the rail stands. Its buttons are the code surfaces' and the

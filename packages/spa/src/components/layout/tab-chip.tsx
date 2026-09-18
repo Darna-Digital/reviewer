@@ -35,6 +35,10 @@ export const tabChipClass = (active: boolean, dragging = false) =>
  */
 export const TAB_STRIP = cn(
   "flex min-w-0 items-center gap-1 overflow-x-auto",
+  // Chrome, not text: a double-click on a chip keeps or opens it, and a press
+  // that moves picks it up — neither should leave the name lit as a selection,
+  // which is what WebKit (the macOS shell's island) does with a double-click.
+  "select-none",
   "scrollbar-none",
   // Narrower than the utility's default: a tab is not a page, and a 48px fade
   // would swallow the icon and half the name of the tab it lands on.

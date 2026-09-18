@@ -33,7 +33,14 @@ import {
   useRouterState,
   useSearch,
 } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
@@ -67,7 +74,10 @@ import { island, shell } from "@/lib/shell";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { useHeaderLead } from "@/components/layout/header-lead";
-import { useHeaderTabsSlot } from "@/components/layout/header-tabs";
+import {
+  setHeaderTabsFilled,
+  useHeaderTabsSlot,
+} from "@/components/layout/header-tabs";
 import { seamAfter, useSeamSlot } from "@/components/layout/seam-slot";
 import { SidebarResizeHandle } from "@/components/layout/sidebar-resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
@@ -1288,6 +1298,14 @@ export function CodeWorkspace() {
   const crumbs = buildCrumbs();
   const headerTabsSlot = useHeaderTabsSlot();
   const seamSlot = useSeamSlot();
+  // The band the strip lands in folds away while there is nothing in it, and
+  // is told so here rather than reading it off the DOM — see `header-tabs`.
+  // A layout effect, so the band unfolds in the same frame the strip goes in.
+  const stripShown = tabbed && tabs.tabs.length > 0;
+  useLayoutEffect(() => {
+    setHeaderTabsFilled(stripShown);
+    return () => setHeaderTabsFilled(false);
+  }, [stripShown]);
 
   /** The strip, portalled into the header band over this pane. */
   const stripProps: TabStripProps | null = tabbed

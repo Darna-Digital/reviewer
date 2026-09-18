@@ -21,8 +21,14 @@
  */
 import { useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { HeaderDiffStyleToggle } from "@/components/layout/diff-style-toggle";
-import { setHeaderTabsSlot } from "@/components/layout/header-tabs";
+import {
+  HeaderDiffStyleToggle,
+  useShowsDiffStyleToggle,
+} from "@/components/layout/diff-style-toggle";
+import {
+  setHeaderTabsSlot,
+  useHeaderTabsFilled,
+} from "@/components/layout/header-tabs";
 import { useWindowTabs } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { useWindowTabStrip } from "@/interactions/window-tabs/components/window-tab-strip";
 import {
@@ -34,6 +40,7 @@ import {
 import type { WindowTab } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import { shell, type ShellWindowTabStrip } from "@/lib/shell";
 import { shellRoute } from "@/lib/shell-route";
+import { cn } from "@/lib/utils";
 
 const picture = (
   tabs: ReadonlyArray<WindowTab>,
@@ -55,6 +62,8 @@ export function IslandBar() {
     select: (s) => (s.resolvedLocation ?? s.location).pathname,
   });
   const route = shellRoute(pathname);
+  const stripShown = useHeaderTabsFilled();
+  const toggleShown = useShowsDiffStyleToggle(route);
   const windowTabs = useWindowTabs();
   const { strip, activeId, show, mint, close } = useWindowTabStrip();
 
@@ -107,21 +116,32 @@ export function IslandBar() {
       // showed a hair less air above than below. Pinned at 4px they stand 3px
       // clear of the ring above and 3px clear of the rule below.
       //
-      // Whether there is anything in it is only known to the DOM — the strip
-      // is portalled into the slot by the page, which mounts in either order
-      // with this — so the band shows itself by what it holds: any child with
-      // something in it, the filled slot or the toggle.
-      className="hidden h-9 min-w-0 shrink-0 items-start gap-2 border-b border-hairline px-1 pt-1 has-[>*:not(:empty)]:flex"
+      // Shown while it holds something — the strip the page says it has put
+      // in the slot, or the toggle — and folded away otherwise. Said in React
+      // rather than read off the DOM with `:has()` and `:empty`: the strip is
+      // portalled in by the page, which mounts in either order with this, and
+      // WebKit did not always re-evaluate the band's selector when the portal
+      // appended into a subtree it was not drawing — the strip was in the
+      // document, in a band still folded. See `header-tabs`.
+      className={cn(
+        "h-9 min-w-0 shrink-0 items-start gap-2 border-b border-hairline px-1 pt-1",
+        stripShown || toggleShown ? "flex" : "hidden"
+      )}
     >
       <div
         ref={setHeaderTabsSlot}
-        className="flex min-w-0 flex-1 items-center gap-2 empty:hidden"
+        className={cn(
+          "min-w-0 flex-1 items-center gap-2",
+          stripShown ? "flex" : "hidden"
+        )}
       />
       {/* Centred on the chip row the strip stands on, so the toggle sits
           level with the tabs rather than on the band's top edge. */}
-      <div className="ml-auto flex h-7 shrink-0 items-center gap-1 empty:hidden">
-        <HeaderDiffStyleToggle route={route} />
-      </div>
+      {toggleShown && (
+        <div className="ml-auto flex h-7 shrink-0 items-center gap-1">
+          <HeaderDiffStyleToggle route={route} />
+        </div>
+      )}
     </div>
   );
 }

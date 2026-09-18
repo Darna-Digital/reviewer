@@ -12,24 +12,52 @@
  * it, so they are siblings with no prop between them: the header lends a node,
  * the page portals into it. Held outside React because the two mount in either
  * order and neither may wait for the other.
+ *
+ * Whether the slot holds anything is kept here too, said by the page as it
+ * fills or empties it. A band that folds away while empty cannot read that
+ * off the DOM: `:empty` and `:has()` are re-evaluated by the engine on its own
+ * schedule, and WebKit — the macOS shell's island — does not always notice a
+ * portal appending into a subtree it is not drawing, leaving the band folded
+ * over a strip that is there. See `IslandBar`.
  */
 import { useSyncExternalStore } from "react";
 
 let slot: HTMLElement | null = null;
+let filled = false;
 const listeners = new Set<() => void>();
+
+const notify = () => {
+  for (const listener of listeners) listener();
+};
+
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
 
 export const setHeaderTabsSlot = (next: HTMLElement | null): void => {
   if (slot === next) return;
   slot = next;
-  for (const listener of listeners) listener();
+  notify();
 };
 
 export const useHeaderTabsSlot = (): HTMLElement | null =>
   useSyncExternalStore(
-    (listener) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
+    subscribe,
     () => slot,
     () => null
+  );
+
+/** The page says whether it is showing a strip in the slot. */
+export const setHeaderTabsFilled = (next: boolean): void => {
+  if (filled === next) return;
+  filled = next;
+  notify();
+};
+
+export const useHeaderTabsFilled = (): boolean =>
+  useSyncExternalStore(
+    subscribe,
+    () => filled,
+    () => false
   );

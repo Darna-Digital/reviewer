@@ -178,7 +178,11 @@ final class SidebarTree {
     private var foldsKey: String?
 
     var mode: TreeMode? { listing?.mode }
-    var isEmpty: Bool { listing?.paths.isEmpty ?? true }
+    /// Whether the outline has no rows: none listed, or none yet.
+    var isEmpty: Bool { roots.isEmpty }
+    /// Whether rows are still on their way: the page is loading them, or
+    /// has not reported a tree at all since it last took one down.
+    var isLoading: Bool { listing?.loading ?? true }
     var isSearching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
 
     /// The web tree opens a diff's few files and closes the project's many.
@@ -202,21 +206,16 @@ final class SidebarTree {
 
     // MARK: reports
 
+    /// The tree as the page reports it. A page that shows no tree takes the
+    /// listing down and leaves the rows standing: the sidebar is crossfading
+    /// to another layout over them (see `SidebarLayout`), and rows cleared
+    /// under a fading outline vanish before it does; the next tree reported
+    /// replaces them, remade if it is another mode's or project's.
     func take(_ listing: ShellTree?) {
         let previous = self.listing
         guard listing != previous else { return }
         self.listing = listing
-        guard let listing else {
-            roots = []
-            nodes = [:]
-            statusByPath = [:]
-            foldersWithChanges = []
-            ignoredFolders = []
-            commit = nil
-            comparison = nil
-            refilter()
-            return
-        }
+        guard let listing else { return }
         var changed = false
         if previous?.paths != listing.paths {
             roots = FileTree.build(paths: listing.paths)

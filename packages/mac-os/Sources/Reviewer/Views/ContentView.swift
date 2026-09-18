@@ -198,16 +198,20 @@ private struct DetailColumn: View {
     }
 
     /// Whether the rail stands on the frame ahead of the islands, holding
-    /// them off the window's edge by its own gap; otherwise they keep that
-    /// gap themselves.
+    /// them off the window's edge by its own margin; otherwise they keep
+    /// that margin themselves, or the gap from the sidebar's column.
     private var railed: Bool { !model.sidebarShown && model.railShown }
+
+    private var leading: CGFloat {
+        if railed { return 0 }
+        return model.sidebarShown ? IslandMetrics.gap : IslandMetrics.margin
+    }
 
     private var islands: some View {
         @Bindable var model = model
-        let leading: CGFloat = railed ? 0 : IslandMetrics.gap
         return HStack(spacing: 0) {
             if railed {
-                AppRail()
+                AppRail(inset: IslandMetrics.margin)
                     .transition(.move(edge: .leading).combined(with: .opacity))
             }
             if model.connection == .ready, let pull = model.reviewingPull {
@@ -232,8 +236,8 @@ private struct DetailColumn: View {
         // its items as it keeps over them, and that air is the gap — a gap
         // of ours on top of it set the island further from the tabs than
         // the tabs stand from the window's edge.
-        .padding(.trailing, IslandMetrics.gap)
-        .padding(.bottom, IslandMetrics.gap)
+        .padding(.trailing, IslandMetrics.margin)
+        .padding(.bottom, IslandMetrics.margin)
         .clipped()
         .animation(SidebarMotion.change, value: railed)
     }
