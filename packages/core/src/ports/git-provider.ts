@@ -5,7 +5,7 @@ import * as Schema from "effect/Schema";
 import { CommentSide } from "../features/comments/schema/comments.schema.ts";
 import type { ReviewComment } from "../features/comments/schema/comments.schema.ts";
 
-export class GitProviderError extends Schema.TaggedErrorClass<GitProviderError>()(
+export class GitProviderError extends Schema.TaggedError<GitProviderError>()(
   "GitProviderError",
   { reason: Schema.String, status: Schema.optionalKey(Schema.Number) },
   { httpApiStatus: 502 }

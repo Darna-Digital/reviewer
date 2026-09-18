@@ -3,7 +3,7 @@ import type * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import type { NoRepoSelected } from "../shared.ts";
 
-export class GitError extends Schema.TaggedErrorClass<GitError>()(
+export class GitError extends Schema.TaggedError<GitError>()(
   "GitError",
   {
     args: Schema.Array(Schema.String),

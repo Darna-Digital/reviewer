@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@reviewer/lint": "workspace:*",
-    "@types/node": "^22.20.3",
+    "@types/node": "^26.6.1",
     "electron": "^44.4.1",
     "electron-builder": "^26.15.3",
     "prettier": "^3.9.7",

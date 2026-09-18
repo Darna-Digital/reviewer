@@ -19,14 +19,14 @@
     "format:check": "prettier --check \"**/*.{ts,js}\""
   },
   "dependencies": {
-    "effect": "4.0.0-beta.74"
+    "effect": "4.0.0-rc.115"
   },
   "devDependencies": {
-    "@effect/vitest": "4.0.0-beta.74",
+    "@effect/vitest": "4.0.0-rc.115",
     "@reviewer/lint": "workspace:*",
     "eslint": "^10.10.0",
     "prettier": "^3.9.7",
     "typescript": "~6.0.3",
-    "vitest": "^4.1.11"
+    "vitest": "^5.0.1"
   }
 }

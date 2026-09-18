@@ -15,7 +15,7 @@ import type * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import type { NoRepoSelected } from "../shared.ts";
 
-export class FormatError extends Schema.TaggedErrorClass<FormatError>()(
+export class FormatError extends Schema.TaggedError<FormatError>()(
   "FormatError",
   { formatterId: Schema.String, reason: Schema.String },
   { httpApiStatus: 500 }

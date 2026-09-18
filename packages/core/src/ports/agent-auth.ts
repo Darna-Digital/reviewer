@@ -20,7 +20,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 
-export class AgentAuthError extends Schema.TaggedErrorClass<AgentAuthError>()(
+export class AgentAuthError extends Schema.TaggedError<AgentAuthError>()(
   "AgentAuthError",
   { reason: Schema.String },
   { httpApiStatus: 500 }

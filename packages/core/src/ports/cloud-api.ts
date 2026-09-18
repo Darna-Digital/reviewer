@@ -19,7 +19,7 @@ import type {
 } from "../features/cloud/schema/cloud.schema.ts";
 
 /** The cloud answered badly, or not at all. `reason` is its own wording. */
-export class CloudApiError extends Schema.TaggedErrorClass<CloudApiError>()(
+export class CloudApiError extends Schema.TaggedError<CloudApiError>()(
   "CloudApiError",
   { reason: Schema.String, status: Schema.optionalKey(Schema.Number) },
   { httpApiStatus: 502 }

@@ -3,7 +3,7 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import * as Schema from "effect/Schema";
 
-export class TerminalError extends Schema.TaggedErrorClass<TerminalError>()(
+export class TerminalError extends Schema.TaggedError<TerminalError>()(
   "TerminalError",
   { reason: Schema.String },
   { httpApiStatus: 500 }

@@ -1,7 +1,7 @@
 import * as Schema from "effect/Schema";
 
 /** Something asked for the cloud before the app was connected to it. */
-export class CloudNotConnected extends Schema.TaggedErrorClass<CloudNotConnected>()(
+export class CloudNotConnected extends Schema.TaggedError<CloudNotConnected>()(
   "CloudNotConnected",
   { reason: Schema.String },
   { httpApiStatus: 409 }

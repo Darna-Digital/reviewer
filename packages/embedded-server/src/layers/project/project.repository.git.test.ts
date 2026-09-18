@@ -7,6 +7,7 @@
  */
 import { it } from "@effect/vitest";
 import { Effect, Layer, Option, Sink, Stream } from "effect";
+import * as ByteSize from "effect/ByteSize";
 import * as FileSystem from "effect/FileSystem";
 import * as PlatformError from "effect/PlatformError";
 import { ChildProcessSpawner } from "effect/unstable/process";
@@ -32,7 +33,7 @@ const directory: FileSystem.File.Info = {
   uid: Option.none(),
   gid: Option.none(),
   rdev: Option.none(),
-  size: FileSystem.Size(0),
+  size: ByteSize.bytes(0),
   blksize: Option.none(),
   blocks: Option.none(),
 };

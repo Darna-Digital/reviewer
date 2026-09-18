@@ -32,12 +32,12 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.54.10",
+    "@cloudflare/vite-plugin": "^1.54.11",
     "@reviewer/lint": "workspace:*",
     "@tanstack/devtools-vite": "latest",
     "@tanstack/eslint-config": "latest",
-    "@tanstack/router-cli": "^1.167.36",
-    "@types/node": "^22.20.3",
+    "@tanstack/router-cli": "^1.167.38",
+    "@types/node": "^26.6.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
@@ -47,6 +47,6 @@
     "prettier-plugin-tailwindcss": "^0.8.1",
     "typescript": "~6.0.3",
     "vite": "^8.3.0",
-    "wrangler": "^4.132.0"
+    "wrangler": "^4.133.0"
   }
 }

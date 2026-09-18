@@ -56,7 +56,7 @@ export type BrowserScreenshot = typeof BrowserScreenshot.Type;
  * failed command: it means the human has not opened the pane, which an agent
  * should report rather than work around.
  */
-export class BrowserUnavailable extends Schema.TaggedErrorClass<BrowserUnavailable>()(
+export class BrowserUnavailable extends Schema.TaggedError<BrowserUnavailable>()(
   "BrowserUnavailable",
   { reason: Schema.String },
   { httpApiStatus: 503 }
