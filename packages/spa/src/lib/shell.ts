@@ -32,7 +32,7 @@ import type { DateFilter } from "@/lib/date-filter";
 import { islandBridge } from "@/lib/desktop";
 import { isPreviewWindow } from "@/lib/preview-window";
 import type { BottomTab, CommitAgent } from "@/lib/ui-prefs";
-import type { ChatProjectTally } from "@reviewer/core/chats";
+import type { ChatProjectTally, ChatProviderKind } from "@reviewer/core/chats";
 import type { CommitDraft } from "@reviewer/core/git-message";
 import type { GitStatusEntry } from "@reviewer/core/repo";
 
@@ -51,7 +51,9 @@ export type ShellEvent =
   /** The shell's own sessions list was acted on — see `ShellSessions`. */
   | { readonly type: "sessions"; readonly action: ShellSessionAction }
   /** The shell's own pane took the foot of the window — see `ShellDockAction`. */
-  | { readonly type: "dock"; readonly action: ShellDockAction };
+  | { readonly type: "dock"; readonly action: ShellDockAction }
+  /** The shell's own assign bar was acted on — see `ShellReview`. */
+  | { readonly type: "review"; readonly action: ShellReviewAction };
 
 /** Island → shell. */
 export type ShellIntent =
@@ -74,7 +76,10 @@ export type ShellIntent =
   | { readonly type: "dock"; readonly shown: BottomTab | null }
   /** The page asked for one file's past — from its path bar, a file's tab —
    * and the History surface is the shell's own, so the ask crosses over. */
-  | { readonly type: "history"; readonly path: string };
+  | { readonly type: "history"; readonly path: string }
+  /** The review comments the page is holding for a hand-off, for the shell
+   * to float its assign bar over the page; null once there are none. */
+  | { readonly type: "review"; readonly review: ShellReview | null };
 
 /**
  * The window tabs, as the shell draws them on its toolbar and names them in
@@ -109,8 +114,8 @@ export type ShellWindowTabAction =
   | { readonly kind: "closeActive" }
   /** The tab beside the active one, wrapping round. */
   | { readonly kind: "step"; readonly offset: 1 | -1 }
-  /** The session in that slot of the strip, counting from 1 — ⌘1–9. */
-  | { readonly kind: "session"; readonly slot: number };
+  /** The way of working after the one the window is on — Code, Sessions — ⌘G. */
+  | { readonly kind: "mode" };
 
 /**
  * The file tree, as the shell draws it in its sidebar: what the web tree is
@@ -275,6 +280,49 @@ export type ShellSessionAction =
  * away (`close`), so one surface stands at the bottom at a time.
  */
 export type ShellDockAction = { readonly kind: "close" };
+
+/**
+ * The review in hand, as the shell floats its assign bar over the page: the
+ * comments left on the diff and on the running app, flattened the way the web
+ * bar lists them (see `AssignBarComment`), the branch they are about — the
+ * sessions already working there lead the shell's picker — and whether a
+ * hand-off is under way, so the bar can say so while the page does it. The
+ * comments, the hand-off itself — the chat made, the prompt built, the
+ * comments resolved after — and the jump to a comment's line stay the page's;
+ * what crosses is the picture, and what was done to it comes back as a
+ * `ShellReviewAction`.
+ */
+export interface ShellReview {
+  readonly comments: ReadonlyArray<ShellReviewComment>;
+  readonly branch: string;
+  readonly assigning: boolean;
+}
+
+export interface ShellReviewComment {
+  readonly id: string;
+  readonly file: string;
+  /** Null for a note on the running UI, which sits on no line. */
+  readonly line: number | null;
+  readonly body: string;
+}
+
+/**
+ * Where the shell's bar hands the review: a fresh chat with an agent on a
+ * model, or a session already running — `AssignTarget`, on the wire.
+ */
+export type ShellReviewTarget =
+  | {
+      readonly kind: "new";
+      readonly agent: ChatProviderKind;
+      readonly model: string;
+    }
+  | { readonly kind: "existing"; readonly chatId: string };
+
+/** What the shell's bar can do — the web bar's own three. */
+export type ShellReviewAction =
+  | { readonly kind: "assign"; readonly target: ShellReviewTarget }
+  | { readonly kind: "open"; readonly id: string }
+  | { readonly kind: "delete"; readonly id: string };
 
 export interface ShellChannel {
   post: (intent: ShellIntent) => Promise<void>;

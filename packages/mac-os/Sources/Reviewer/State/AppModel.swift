@@ -54,6 +54,9 @@ final class AppModel {
     /// sidebar draws on that surface, and the overview beside a pull
     /// request's diff.
     let pullRequests: PullRequests
+    /// The review the page is holding for a hand-off, and the assign bar
+    /// the shell floats over the page for it in the web bar's place.
+    let reviewHandoff: ReviewHandoff
     /// The width of the pull request's own column — its overview over its
     /// files — between the sidebar and the diff, and the height of the
     /// files under the overview; both resized by the seams beside them.
@@ -96,6 +99,7 @@ final class AppModel {
         threads = Threads(client: client)
         pullRequests = PullRequests(client: client)
         chats = Chats(client: client)
+        reviewHandoff = ReviewHandoff(client: client, chats: chats)
         history = CommitHistory(client: client)
         search = QuickSearch(client: client)
         search.onOpen = { [weak self] path, line in self?.show(file: path, line: line) }
@@ -123,6 +127,7 @@ final class AppModel {
         }
         page.onDockReported = { [weak self] state in self?.take(dock: state) }
         page.onHistoryRequested = { [weak self] path in self?.showHistory(of: path) }
+        page.onReviewReported = { [weak self] review in self?.reviewHandoff.take(review) }
         page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
     }
 
@@ -450,9 +455,11 @@ final class AppModel {
         leaveTab { $0.send(WindowTabAction.step(offset)) }
     }
 
-    /// ⌘1–9: the session in that slot, the pinned tabs not counted.
-    func select(sessionSlot slot: Int) {
-        leaveTab { $0.send(WindowTabAction.session(slot: slot)) }
+    /// ⌘G: across to the other way of working — Sessions from Code, Code
+    /// from Sessions or a conversation — the strip's own rule for which.
+    func switchMode() {
+        guard windowTabs.canSwitchMode else { return }
+        leaveTab { $0.send(WindowTabAction.mode) }
     }
 
     func toggleLaunchpad() {
@@ -567,6 +574,15 @@ final class AppModel {
         }
         await refresh()
         return true
+    }
+
+    // MARK: review
+
+    /// The assign bar acted on the page's review — see `ReviewAction`. All
+    /// of it is the page's to carry out: the hand-off, the jump to a
+    /// comment, a comment taken off the review.
+    func act(onReview action: ReviewAction) {
+        page.send(action)
     }
 
     // MARK: dock

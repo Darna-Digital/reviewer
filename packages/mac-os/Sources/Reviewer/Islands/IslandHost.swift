@@ -15,7 +15,10 @@
 // code island keeps under its page — up or down (`dock`), so the native
 // pane can leave the foot to it, and put away (`dock`, the other way) when
 // the pane takes it back — and a file's history asked for from the page
-// (`history`), which the shell's own History surface answers.
+// (`history`), which the shell's own History surface answers. And one
+// for the review in hand: the comments the code island holds for a
+// hand-off (`review`), which the shell floats its assign bar over the page
+// for, and what the bar was asked to do (`review`, the other way).
 //
 // The web view is made once and kept for the life of the host: SwiftUI can
 // take it out of the hierarchy and put it back, and the page, its scroll and
@@ -39,6 +42,7 @@ final class IslandHost: NSObject {
     @ObservationIgnored var onSessionsReported: ((ShellSessions?) -> Void)?
     @ObservationIgnored var onDockReported: ((DockState) -> Void)?
     @ObservationIgnored var onHistoryRequested: ((String) -> Void)?
+    @ObservationIgnored var onReviewReported: ((ShellReview?) -> Void)?
 
     @ObservationIgnored private let source: SpaSource
     @ObservationIgnored private let apiBaseURL: URL
@@ -107,6 +111,13 @@ final class IslandHost: NSObject {
     func send(_ action: DockAction) {
         guard isReady else { return }
         dispatch(["type": "dock", "action": action.payload])
+    }
+
+    /// The native assign bar acted on the island's review — see
+    /// `ReviewAction`.
+    func send(_ action: ReviewAction) {
+        guard isReady else { return }
+        dispatch(["type": "review", "action": action.payload])
     }
 
     private func dispatch(_ event: [String: Any]) {
@@ -241,6 +252,9 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
             return (nil, nil)
         case "history":
             if let path = body["path"] as? String { onHistoryRequested?(path) }
+            return (nil, nil)
+        case "review":
+            onReviewReported?(ShellReview.decode(body["review"]))
             return (nil, nil)
         default:
             return (nil, "unknown shell message: \(type)")

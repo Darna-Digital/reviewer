@@ -7,9 +7,11 @@
  * the document, primed ahead of the click, exactly as it is there. What the
  * shell has of it is a picture, posted whenever it changes, which the toolbar
  * draws natively where the window bar would draw it; a tab pressed there comes
- * back as a `windowTabs` event, along with the strip's chords — ⌘T, ⌘W, ⌘1–9 —
- * which the shell's menu items claim so they answer while a native view has
- * the keyboard. Nothing of the strip is drawn here, so the island's tabs are
+ * back as a `windowTabs` event, along with the strip's chords — ⌘T, ⌘W, ⌘G,
+ * ⌘1–9 — which the shell's menu items claim so they answer while a native view
+ * has the keyboard. The digits count the sessions alone, as here, and land
+ * as `select` by id; ⌘G is the one chord the strip settles itself, since
+ * which mode is next is its own rule. Nothing of the strip is drawn here, so the island's tabs are
  * never in two places at once; the launchpad that lays them out is the shell's
  * own too, over the window.
  *
@@ -33,7 +35,7 @@ import { useWindowTabs } from "@/interactions/window-tabs/adapters/window-tabs.s
 import { useWindowTabStrip } from "@/interactions/window-tabs/components/window-tab-strip";
 import {
   isPinnedTab,
-  sessionAtSlot,
+  nextModeTab,
   stepTab,
   tabById,
 } from "@/interactions/window-tabs/functions/window-tabs.functions";
@@ -100,8 +102,8 @@ export function IslandBar() {
           case "step":
             showTab(stepTab(strip, activeId, event.action.offset));
             return;
-          case "session":
-            showTab(sessionAtSlot(strip, event.action.slot));
+          case "mode":
+            showTab(nextModeTab(strip, activeId));
             return;
         }
       }),

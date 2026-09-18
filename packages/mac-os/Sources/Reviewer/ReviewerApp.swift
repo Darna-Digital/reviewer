@@ -63,13 +63,13 @@ struct ReviewerApp: App {
 /// not only while the page island has the keyboard.
 ///
 /// The chords are the web app's own — ⌘T for a session, ⌘L the launchpad,
-/// ⌘B the bottom pane, ⌘1–9 the sessions — so the window answers the hands
-/// that learned it in the browser. The tab chords are the island's strip's
-/// to answer, and a menu equivalent takes the key before the page sees it,
-/// so each of those items hands its chord back to the strip
-/// (`WindowTabAction`) rather than acting on tabs of its own. Nothing here
-/// claims a chord the page alone answers: ⌘S is the SPA's save in edit
-/// mode.
+/// ⌘B the bottom pane, ⌘G across Code and Sessions, ⌘1–9 the sessions — so
+/// the window answers the hands that learned it in the browser. The tab
+/// chords are the island's strip's to answer, and a menu equivalent takes
+/// the key before the page sees it, so each of those items hands its chord
+/// back to the strip (`WindowTabAction`) rather than acting on tabs of its
+/// own. Nothing here claims a chord the page alone answers: ⌘S is the SPA's
+/// save in edit mode.
 struct ReviewerCommands: Commands {
     let model: AppModel
 
@@ -118,16 +118,21 @@ struct ReviewerCommands: Commands {
             .keyboardShortcut("r", modifiers: [.command, .shift])
             Divider()
         }
-        // The sessions alone take the digits, as they do on the web strip:
-        // the pinned tabs are ways of working rather than tabs among them.
+        // ⌘G crosses between the two ways of working the strip leads with,
+        // and the sessions alone take the digits, as on the web strip: the
+        // pinned tabs are ways of working rather than tabs among them.
         CommandMenu("Tabs") {
+            Button("Switch Between Code and Sessions") { model.switchMode() }
+                .keyboardShortcut("g", modifiers: .command)
+                .disabled(!model.windowTabs.canSwitchMode)
+            Divider()
             Button("Next Tab") { model.selectNextTab(offset: 1) }
                 .keyboardShortcut("]", modifiers: [.command, .shift])
             Button("Previous Tab") { model.selectNextTab(offset: -1) }
                 .keyboardShortcut("[", modifiers: [.command, .shift])
             Divider()
             ForEach(Array(model.windowTabs.sessions.prefix(9).enumerated()), id: \.element.id) { slot, tab in
-                Button(tab.title) { model.select(sessionSlot: slot + 1) }
+                Button(tab.title) { model.select(tabId: tab.id) }
                     .keyboardShortcut(KeyEquivalent(Character(String(slot + 1))), modifiers: .command)
             }
         }

@@ -51,6 +51,10 @@ import {
   type AssignTarget,
 } from "@/components/review-assign-bar";
 import {
+  shellDrawsAssignBar,
+  useShellReview,
+} from "@/components/review-assign-bar.shell";
+import {
   DiffPane,
   type DraftLocation,
 } from "@/interactions/diff/components/diff-pane";
@@ -670,6 +674,20 @@ export function CodeWorkspace() {
     if ((uiComments.data ?? []).some((c) => c.id === id))
       await visualComments.remove(id);
   };
+
+  // Inside the macOS shell the bar is the window's own, floated natively over
+  // this island from the same comments — see `review-assign-bar.shell`.
+  useShellReview(
+    shellDrawsAssignBar
+      ? {
+          comments: handoffComments,
+          branch: assignPlace.branch,
+          onAssign: assignReview,
+          onOpenComment: openComment,
+          onDeleteComment: deleteListedComment,
+        }
+      : null
+  );
 
   // A `line` in the URL is how another surface points at code — the comments
   // page linking a comment back to the line it was left on.
@@ -1513,7 +1531,7 @@ export function CodeWorkspace() {
             code, a bar centred on the code alone sits off to one side. */}
           <div className="relative min-h-0 flex-1 overflow-hidden">
             {renderCenter()}
-            {handoffComments.length > 0 && (
+            {handoffComments.length > 0 && !shellDrawsAssignBar && (
               <ReviewAssignBar
                 comments={handoffComments}
                 chats={chats.data?.items ?? []}

@@ -223,6 +223,10 @@ private struct DetailColumn: View {
                 page
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .island()
+                    // The assign bar hangs over the page alone, not the
+                    // pane under it: it is the page's review, and Music
+                    // hangs its player over the content, not the window.
+                    .overlay { ReviewAssignBarLayer() }
                 if model.hasProject && model.bottomExpanded {
                     IslandSeam(between: .rows, size: $model.bottomHeight, range: Self.bottomHeights)
                     BottomPane()

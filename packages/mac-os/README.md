@@ -78,7 +78,8 @@ What it does today:
   rail are the bare window around them.
 - **Window tabs** — the web app's own strip, drawn natively on the toolbar:
   Code and Sessions pinned, then one per agent session (⌘T mints one;
-  ⌘W closes, ⌘1–9 jump to a session, ⌘⇧] / ⌘⇧[ step along the strip). The
+  ⌘W closes, ⌘1–9 jump to a session, ⌘G crosses between Code and Sessions,
+  ⌘⇧] / ⌘⇧[ step along the strip). The
   strip lives in the page island — switching is a route change inside it,
   every tab's page primed while the window is idle, as in Electron — and
   sends the toolbar a picture of itself; a tab pressed there, and each menu
@@ -157,10 +158,10 @@ routes and URLs, so the shell steers an island with the hrefs the app already
 uses. The contract is small and lives in `packages/spa/src/lib/shell.ts`:
 
 - shell → island: `navigate(href)`, `refresh`, `windowTabs(action)`,
-  `tree(action)`, `sessions(action)`, `dock(close)`
+  `tree(action)`, `sessions(action)`, `dock(close)`, `review(action)`
 - island → shell: `ready`, `navigated(href)`, `windowTabs(strip)`,
   `tree(listing)`, `treeState(selection, commit composer)`, `sessions(list)`,
-  `dock(shown)`, `history(path)`
+  `dock(shown)`, `history(path)`, `review(comments)`
 
 The tree and sessions pairs are the chrome the code island reports for the
 shell to draw natively in its sidebar: the file tree on the code pages
@@ -188,8 +189,20 @@ find-usages drawer the code island keeps under its page: the island says
 when it is up, so the native pane leaves the foot of the window to it, and
 the pane puts it away when it takes the foot back. `history(path)` runs the
 other way: the page's own "Show history" — its path bar, a file's tab —
-asks the shell, whose History surface answers. One island is hosted today:
-the page (`code`).
+asks the shell, whose History surface answers. The review pair is the web
+assign bar, floated over the page island natively (`ReviewAssignBar`, over
+`ReviewHandoff`): while the page holds review comments — on the diff, on
+the running app — it reports them, and the shell hangs a capsule of Liquid
+Glass near the page's foot, as Music hangs its player over the window: the
+count, opening the comments as a list to jump around the review from; the
+target — a fresh chat with an agent, or a session already running, the ones
+on the comments' branch leading — with the composer's own model picker
+beside it while a fresh chat still has a model to choose; Assign; and the
+fold to a count chip at the page's trailing edge. The sessions and the
+catalog the picker lists are the shell's own reads of the server; what the
+bar does goes back to the page, whose comments and hand-off these are — the
+chat made, the prompt built, the comments resolved, the jump to a line.
+One island is hosted today: the page (`code`).
 
 Where the documents come from is `SpaSource`: a debug build takes the Vite
 dev server on `:41812` (HMR inside the native window); a release build takes

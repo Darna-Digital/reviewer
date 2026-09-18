@@ -5,8 +5,9 @@
 // trip over the bridge. What the shell holds is a picture of the strip,
 // reported whenever it changes, which the toolbar draws natively (see
 // `TabStripItems`), the launchpad lays out as cards, and the menu bar
-// names: the sessions ⌘1–9 reach, and whether the tab in front can be
-// closed. See `ShellWindowTabStrip` in the SPA's `lib/shell`.
+// names: the sessions ⌘1–9 reach, the modes ⌘G crosses between, and
+// whether the tab in front can be closed. See `ShellWindowTabStrip` in the
+// SPA's `lib/shell`.
 import Foundation
 
 struct WindowTabStrip: Decodable, Hashable, Sendable {
@@ -17,8 +18,13 @@ struct WindowTabStrip: Decodable, Hashable, Sendable {
 
     var active: WindowTab? { tabs.first { $0.id == activeId } }
 
-    /// The sessions in strip order, which is what ⌘1–9 count.
+    /// The sessions in strip order, which is what ⌘1–9 count: the pinned
+    /// tabs are ways of working rather than tabs among them, and ⌘G's.
     var sessions: [WindowTab] { tabs.filter { !$0.pinned } }
+
+    /// The ways of working the strip leads with — Code, Sessions — which
+    /// ⌘G crosses between, so it has somewhere to go only with two of them.
+    var canSwitchMode: Bool { tabs.filter(\.pinned).count > 1 }
 
     /// From the message body as WebKit hands it over. Anything but a
     /// dictionary is no strip: `JSONSerialization` raises an Objective-C
@@ -68,7 +74,7 @@ enum WindowTabAction {
     case newSession
     case closeActive
     case step(Int)
-    case session(slot: Int)
+    case mode
 
     var payload: [String: Any] {
         switch self {
@@ -77,7 +83,7 @@ enum WindowTabAction {
         case .newSession: return ["kind": "newSession"]
         case .closeActive: return ["kind": "closeActive"]
         case .step(let offset): return ["kind": "step", "offset": offset]
-        case .session(let slot): return ["kind": "session", "slot": slot]
+        case .mode: return ["kind": "mode"]
         }
     }
 }
