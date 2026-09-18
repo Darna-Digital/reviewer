@@ -143,14 +143,24 @@ private struct LaunchpadLayer: View {
     }
 }
 
-/// The rail down the sidebar's leading edge, and the tree beside it.
+/// The rail down the sidebar's leading edge, and the tree beside it. On
+/// the sessions surface the rail collapses and the list takes its column
+/// (see `AppModel.railShown`), sliding out and back at the sidebar's own
+/// tempo.
 private struct SidebarColumn: View {
+    @Environment(AppModel.self) private var model
+
     var body: some View {
         HStack(spacing: 0) {
-            AppRail()
+            if model.railShown {
+                AppRail()
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+            }
             SidebarView()
                 .frame(maxWidth: .infinity)
         }
+        .clipped()
+        .animation(SidebarMotion.change, value: model.railShown)
     }
 }
 
@@ -170,8 +180,10 @@ private struct SidebarToolbarItems: ToolbarContent {
 /// The islands on the frame — the page and the bottom pane under it, and
 /// while a pull request is open, its own column ahead of them (see
 /// `PullRequestColumn`) — with the rail beside them while the sidebar is
-/// away. The seam the launchpad is pulled out by lies along their top
-/// edge, on the run of frame under the bar.
+/// away and the page is on a surface the rail serves; on the sessions
+/// surface it collapses here as it does in the sidebar, and the islands
+/// take the gap it stood in. The seam the launchpad is pulled out by lies
+/// along their top edge, on the run of frame under the bar.
 private struct DetailColumn: View {
     @Environment(AppModel.self) private var model
 
@@ -185,15 +197,22 @@ private struct DetailColumn: View {
             .background(Color(nsColor: IslandPalette.frame))
     }
 
+    /// Whether the rail stands on the frame ahead of the islands, holding
+    /// them off the window's edge by its own gap; otherwise they keep that
+    /// gap themselves.
+    private var railed: Bool { !model.sidebarShown && model.railShown }
+
     private var islands: some View {
         @Bindable var model = model
+        let leading: CGFloat = railed ? 0 : IslandMetrics.gap
         return HStack(spacing: 0) {
-            if !model.sidebarShown {
+            if railed {
                 AppRail()
+                    .transition(.move(edge: .leading).combined(with: .opacity))
             }
             if model.connection == .ready, let pull = model.reviewingPull {
                 PullRequestColumn(pull: pull)
-                    .padding(.leading, model.sidebarShown ? IslandMetrics.gap : 0)
+                    .padding(.leading, leading)
                 IslandSeam(between: .columns, size: $model.pullColumnWidth, range: PullRequestColumn.widths)
             }
             VStack(spacing: 0) {
@@ -207,7 +226,7 @@ private struct DetailColumn: View {
                         .island()
                 }
             }
-            .padding(.leading, model.sidebarShown && model.reviewingPull == nil ? IslandMetrics.gap : 0)
+            .padding(.leading, model.reviewingPull == nil ? leading : 0)
         }
         // No run of our own along the top: the bar keeps as much air under
         // its items as it keeps over them, and that air is the gap — a gap
@@ -215,6 +234,8 @@ private struct DetailColumn: View {
         // the tabs stand from the window's edge.
         .padding(.trailing, IslandMetrics.gap)
         .padding(.bottom, IslandMetrics.gap)
+        .clipped()
+        .animation(SidebarMotion.change, value: railed)
     }
 
     @ViewBuilder

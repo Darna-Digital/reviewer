@@ -44,7 +44,7 @@ private struct SessionsLanding: View {
             if let list, !list.loading, list.sessions.isEmpty {
                 Text("No sessions here")
                     .font(.system(size: 13, weight: .medium))
-                Text("Start one with + in the rail, or widen the filters beside it.")
+                Text("Start one with ⌘T, or widen the filters above the list.")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             } else {

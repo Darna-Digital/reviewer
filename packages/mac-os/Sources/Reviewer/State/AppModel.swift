@@ -236,6 +236,22 @@ final class AppModel {
         showOnCodeTab(surface.href)
     }
 
+    /// Whether the page is anywhere inside Sessions — the composer, a
+    /// conversation, the landing, a cloud run — where the shell draws the
+    /// page natively and the sidebar holds the list.
+    var onSessions: Bool {
+        let path = URLComponents(string: page.href)?.path ?? ""
+        return path == SessionsPage.sessionsPath || path.hasPrefix("\(SessionsPage.sessionsPath)/")
+    }
+
+    /// Whether the rail stands. Its buttons are the code surfaces' and the
+    /// bottom pane's; on the sessions surface the web rail carries the
+    /// list's own controls instead, and here those stand at the head of
+    /// the sidebar's list (see `SessionsList`), so the column has nothing
+    /// left to hold and collapses — the way the web rail leaves the
+    /// composer to the window on ⌘T.
+    var railShown: Bool { !onSessions }
+
     /// The sidebar acted on a row of the page's tree — see `TreeAction`. A
     /// file's history is the pane's own to show; everything else is the
     /// page's to carry out.

@@ -7,7 +7,9 @@
 // edge by the islands' own gap. It stands on the system sidebar's glass,
 // down its leading edge, with no rule of its own between it and the tree;
 // with the sidebar put away it stands on the bare frame beside the page
-// island instead (see `ContentView`).
+// island instead (see `ContentView`). On the sessions surface it is not
+// drawn at all: what the web rail carries there stands at the head of the
+// sidebar's list instead (see `AppModel.railShown`).
 import SwiftUI
 
 struct AppRail: View {
