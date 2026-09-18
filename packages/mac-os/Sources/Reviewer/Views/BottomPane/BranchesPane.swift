@@ -26,7 +26,7 @@ struct BranchesPane: View {
     var body: some View {
         VStack(spacing: 0) {
             PaneBar {
-                PaneFilterField(prompt: "Search branches", text: $query)
+                PaneFilterField(prompt: "Search branches", text: $query, size: .small)
                     .frame(maxWidth: 320)
                 Spacer(minLength: 0)
             }
@@ -155,7 +155,7 @@ struct BranchesPane: View {
                     BranchRowView(branch: ref, name: name, trailing: trailing, indent: indent)
                         .tag(row.id)
                         .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 1, leading: 8, bottom: 1, trailing: 8))
+                        .listRowInsets(EdgeInsets(top: 1, leading: PaneMetrics.barInset, bottom: 1, trailing: PaneMetrics.barInset))
                         .contextMenu { BranchActions(branch: ref, scope: scope) }
                         .onTapGesture(count: 2) {
                             guard !ref.isCurrent else { return }
@@ -210,19 +210,77 @@ private extension View {
         self
             .selectionDisabled()
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 1, leading: 8, bottom: 1, trailing: 8))
+            .listRowInsets(EdgeInsets(top: 1, leading: PaneMetrics.barInset, bottom: 1, trailing: PaneMetrics.barInset))
     }
 }
 
-private struct Chevron: View {
-    let open: Bool
+/// One line of the outline, laid out as the sidebar's `NSOutlineView` lays
+/// its rows: a level in per level of depth, then the disclosure slot —
+/// the chevron for a row that folds, kept empty for one that does not, so
+/// a folder and a branch beside it start their icons on one line and a
+/// child's icon stands one level in from its parent's label — then the
+/// row's own content. A row that folds toggles on a click; a leaf takes
+/// no gesture of its own, so the list's selection gets the click.
+private struct OutlineRow<Content: View>: View {
+    let indent: Int
+    let open: Bool?
+    let toggle: (() -> Void)?
+    @ViewBuilder let content: Content
+
+    init(indent: Int, open: Bool? = nil, toggle: (() -> Void)? = nil, @ViewBuilder content: () -> Content) {
+        self.indent = indent
+        self.open = open
+        self.toggle = toggle
+        self.content = content()
+    }
 
     var body: some View {
-        Image(systemName: "chevron.right")
-            .font(.system(size: 9, weight: .semibold))
-            .foregroundStyle(.secondary)
-            .rotationEffect(.degrees(open ? 90 : 0))
-            .frame(width: 12)
+        let row = HStack(spacing: 6) {
+            Chevron(open: open)
+            content
+        }
+        .padding(.leading, CGFloat(indent) * PaneMetrics.indentUnit)
+        .frame(height: PaneMetrics.rowHeight)
+        .contentShape(Rectangle())
+        if let toggle {
+            row.onTapGesture(perform: toggle)
+        } else {
+            row
+        }
+    }
+}
+
+/// The disclosure slot: a chevron turned down while open, or the same
+/// width of nothing for a row that has nothing to fold.
+private struct Chevron: View {
+    let open: Bool?
+
+    var body: some View {
+        Group {
+            if let open {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .rotationEffect(.degrees(open ? 90 : 0))
+            } else {
+                Color.clear
+            }
+        }
+        .frame(width: 12, height: 12)
+    }
+}
+
+/// The glyph a row is known by — a branch, a star, a folder — in one
+/// square, so the labels after them line up whatever the symbol's width.
+private struct RowGlyph: View {
+    let symbol: String
+    var tint: Color = .secondary
+
+    var body: some View {
+        Image(systemName: symbol)
+            .font(.system(size: 11))
+            .foregroundStyle(tint)
+            .frame(width: PaneMetrics.indentUnit, height: PaneMetrics.indentUnit)
     }
 }
 
@@ -235,20 +293,15 @@ private struct SectionHeader: View {
     let toggle: () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
-            Chevron(open: open)
+        OutlineRow(indent: indent, open: open, toggle: toggle) {
             Text(title)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
             Text("\(count)")
-                .font(.system(size: 11))
+                .font(.system(size: 11).monospacedDigit())
                 .foregroundStyle(.tertiary)
             Spacer(minLength: 0)
         }
-        .padding(.leading, CGFloat(indent) * 14)
-        .frame(height: 26)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: toggle)
     }
 }
 
@@ -260,22 +313,14 @@ private struct FolderHeader: View {
     let toggle: () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
-            Chevron(open: open)
-            Image(systemName: "folder")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .frame(width: 14)
+        OutlineRow(indent: indent, open: open, toggle: toggle) {
+            RowGlyph(symbol: "folder")
             Text(name)
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 0)
         }
-        .padding(.leading, CGFloat(indent) * 14)
-        .frame(height: 26)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: toggle)
     }
 }
 
@@ -288,8 +333,7 @@ private struct RepoHeader: View {
     let toggle: () -> Void
 
     var body: some View {
-        HStack(spacing: 6) {
-            Chevron(open: open)
+        OutlineRow(indent: 0, open: open, toggle: toggle) {
             RepoAvatar(name: entry.repo.name)
             Text(entry.repo.name)
                 .font(.system(size: 12, weight: current ? .medium : .regular))
@@ -302,9 +346,6 @@ private struct RepoHeader: View {
                 .truncationMode(.middle)
                 .frame(maxWidth: 200, alignment: .trailing)
         }
-        .frame(height: 28)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: toggle)
     }
 }
 
@@ -318,11 +359,9 @@ private struct BranchRowView: View {
     let indent: Int
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: branch.isCurrent ? "star.fill" : "arrow.triangle.branch")
-                .font(.system(size: 11))
-                .foregroundStyle(branch.isCurrent ? Color.orange : Color.secondary)
-                .frame(width: 14)
+        OutlineRow(indent: indent) {
+            RowGlyph(symbol: branch.isCurrent ? "star.fill" : "arrow.triangle.branch",
+                     tint: branch.isCurrent ? .orange : .secondary)
             Text(name)
                 .font(.system(size: 12, weight: branch.isCurrent ? .medium : .regular))
                 .lineLimit(1)
@@ -332,9 +371,6 @@ private struct BranchRowView: View {
                 DistanceLabel(distance: trailing, remote: branch.isRemote)
             }
         }
-        .padding(.leading, CGFloat(indent) * 14)
-        .frame(height: 26)
-        .contentShape(Rectangle())
     }
 }
 

@@ -4,9 +4,11 @@
 // debug area is laid out. The tabs are the system's accessory-bar toggles,
 // the flat switch Finder's and Xcode's bars wear: no bezel at rest, a tint
 // while on, so the bar reads as a strip of names rather than a run of
-// buttons. The rail reaches the same surfaces (see
-// `AppRail`); the switch here is for when the pane is already up. The
-// window decides whether the pane is shown and how tall it stands, and
+// buttons. The strip stands at the pane bar's own height and inset, so
+// the surface's bar under it reads as a second line of the same
+// instrument rather than a different one. The rail reaches the same
+// surfaces (see `AppRail`); the switch here is for when the pane is
+// already up. The window decides whether the pane is shown and how tall it stands, and
 // resizes it by the seam above it. Put away, the pane leaves nothing
 // behind; the shells behind the Terminal keep running, and the history
 // keeps its place.
@@ -34,9 +36,8 @@ struct BottomPane: View {
                 model.toggleBottomPane()
             }
         }
-        .padding(.leading, 8)
-        .padding(.trailing, 6)
-        .frame(height: PaneMetrics.barHeight + 4)
+        .padding(.horizontal, PaneMetrics.barInset)
+        .frame(height: PaneMetrics.barHeight)
         .overlay(alignment: .bottom) { Divider() }
     }
 

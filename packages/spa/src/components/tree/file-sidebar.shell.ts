@@ -3,8 +3,10 @@
  *
  * In the macOS window the sidebar is the window's own: the shell draws the
  * tree there natively — the project's files, or the changed ones with the
- * commit composer under them — from a picture of what `FileSidebar` would be
- * given, and sends back what was done to it. The tree's data and every action
+ * commit composer under them; a pull request's it draws beside the sidebar
+ * instead, under the pull request's overview, the sidebar holding the list
+ * of them — from a picture of what `FileSidebar` would be given, and sends
+ * back what was done to it. The tree's data and every action
  * on it stay this page's: the listing, the diff, the file actions and the git
  * actions are all wired here, and the shell only ever asks.
  *
@@ -67,6 +69,13 @@ export interface ShellCommitSource {
   ) => Promise<void>;
   readonly onDraftSettled: () => void;
 }
+
+/**
+ * How many listings this document has posted. A page's take-down waits a
+ * tick and is cancelled by a listing posted in the meantime — see
+ * `useShellTree`.
+ */
+let listingsPosted = 0;
 
 const act = (source: ShellTreeSource, action: ShellTreeAction): void => {
   switch (action.kind) {
@@ -134,6 +143,7 @@ export function useShellTree(source: ShellTreeSource | null): void {
   );
   useEffect(() => {
     if (!shellDrawsTree) return;
+    listingsPosted += 1;
     void shell.post({ type: "tree", tree: listing });
   }, [listing]);
   const state = useMemo<ShellTreeState>(
@@ -148,9 +158,21 @@ export function useShellTree(source: ShellTreeSource | null): void {
     if (!shellDrawsTree || listing === null) return;
     void shell.post({ type: "treeState", state });
   }, [listing, state]);
+  // The code pages are sibling routes, so browse to review is this page
+  // unmounting and the next mounting in the same commit. Taken down here and
+  // put up again there, the shell's tree would be emptied for a frame between
+  // them; instead the take-down waits a tick, and the next page's listing,
+  // posted before it runs, cancels it. A page that leaves for a surface with
+  // no tree posts nothing in that tick, and the take-down goes through.
   useEffect(() => {
     if (!shellDrawsTree) return;
-    return () => void shell.post({ type: "tree", tree: null });
+    return () => {
+      const seen = listingsPosted;
+      queueMicrotask(() => {
+        if (listingsPosted === seen)
+          void shell.post({ type: "tree", tree: null });
+      });
+    };
   }, []);
 
   useEffect(() => {

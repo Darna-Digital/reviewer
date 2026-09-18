@@ -106,6 +106,126 @@ struct Ok: Decodable, Sendable {
     let ok: Bool
 }
 
+/// The repository the current root is, as `/api/repo` describes it — read
+/// here for the one thing the shell asks of it: whether it is on GitHub,
+/// which is where its merge requests come from.
+struct RepoInfo: Decodable, Sendable {
+    let root: String
+    let name: String
+    let currentBranch: String
+    let github: GitHubRemote?
+}
+
+struct GitHubRemote: Decodable, Hashable, Sendable {
+    let owner: String
+    let repo: String
+}
+
+// MARK: merge requests
+
+/// How one CI check came back — `CheckState` in core's git-provider port:
+/// every spelling GitHub has for it folded onto the four words the review
+/// asks about.
+enum CheckState: String, Decodable, Hashable, Sendable {
+    case success, failure, pending, neutral
+}
+
+struct PullRequestCheck: Decodable, Hashable, Sendable {
+    let name: String
+    let state: CheckState
+    /// Where the run is on GitHub, or "" when it published no page.
+    let url: String
+}
+
+/// Whether the pull request can be merged as it stands. `unknown` is a
+/// real answer: GitHub works mergeability out lazily.
+enum MergeableState: String, Decodable, Hashable, Sendable {
+    case mergeable, conflicting, unknown
+}
+
+struct PullRequestLabel: Decodable, Hashable, Sendable {
+    let name: String
+    /// Six hex digits, no leading "#" — GitHub's own spelling.
+    let color: String
+}
+
+/// One open pull request, with everything the review reads off it —
+/// `PullRequestInfo` in core.
+struct PullRequestInfo: Decodable, Identifiable, Hashable, Sendable {
+    let number: Int
+    let title: String
+    let author: String
+    let baseRef: String
+    let headRef: String
+    let headSha: String
+    let url: String
+    let updatedAt: String
+    let createdAt: String
+    /// The description, as markdown. "" when it has none.
+    let body: String
+    let draft: Bool
+    /// Opened from a fork, so its head branch is not one of ours to check out.
+    let fromFork: Bool
+    let mergeable: MergeableState
+    /// Every check on the head commit. Empty when the repo runs no CI.
+    let checks: [PullRequestCheck]
+    let assignees: [String]
+    let reviewers: [String]
+    let labels: [PullRequestLabel]
+    let additions: Int
+    let deletions: Int
+    let changedFiles: Int
+
+    var id: Int { number }
+}
+
+/// How a pull request's commits land on its base — GitHub's three, under
+/// its own names.
+enum MergeMethod: String, Encodable, CaseIterable, Identifiable, Sendable {
+    case merge, squash, rebase
+
+    var id: Self { self }
+
+    var label: String {
+        switch self {
+        case .merge: return "Merge commit"
+        case .squash: return "Squash and merge"
+        case .rebase: return "Rebase and merge"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .merge: return "Keeps every commit, under one merge"
+        case .squash: return "One commit for all"
+        case .rebase: return "Replay, no merge"
+        }
+    }
+}
+
+struct MergePullBody: Encodable, Sendable {
+    let method: MergeMethod
+}
+
+struct MergeResult: Decodable, Sendable {
+    let sha: String
+    /// GitHub's own wording for what happened.
+    let message: String
+}
+
+struct CloseResult: Decodable, Sendable {
+    let message: String
+}
+
+struct CheckoutPullBody: Encodable, Sendable {
+    let number: Int
+    let branch: String
+}
+
+struct CheckedOutBranch: Decodable, Sendable {
+    let branch: String
+}
+
 // MARK: chats
 
 enum ChatProviderKind: String, Codable, Sendable, CaseIterable {

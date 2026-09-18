@@ -24,7 +24,24 @@ What it does today:
   file-type icons, imported at build time (`scripts/import-file-icons.mjs`).
   Picking a file sends the code island to it; a file the island opens on its
   own highlights here; the context menu is the web tree's — history, copy
-  path, reveal, new, rename, discard, delete. On the sessions surface the
+  path, reveal, new, rename, discard, delete. On the merge-requests surface
+  the same pane holds the project's open pull requests instead, read by the
+  shell itself from the server (`PullRequests` over `/api/github/pulls`,
+  re-read whenever the app comes to the front, as the web query refetches
+  on focus): every one under the branch it targets, its title over its
+  author and branch, what CI said and whether anything blocks it at the
+  trailing edge, under the web list's search and its branch-and-time
+  filter (`PullRequestList`). Picking one sends the page island to its
+  diff and stands the pull request's own column up between the sidebar and
+  the diff — two islands, its overview over its files: everything about it
+  that is not its diff, drawn natively (`PullRequestOverview`) — title,
+  byline, branches, size, the checks and why a merge is blocked, who is on
+  it, its description as markdown — with merge (confirmed, any of GitHub's
+  three ways), check out, close (confirmed) and the link out to GitHub;
+  and under it the files it touches, the same native outline under the
+  changed-files search (`PullRequestColumn`). The row stays picked while
+  the page is on it, so the list is the way between pull requests, as
+  Mail's is between messages. On the sessions surface the
   same pane holds the agent sessions instead — every project's, newest
   first, with the web list's marks on each row and the cloud runs grouped
   above — drawn natively from what the page reports (`SessionsList`), under
@@ -63,8 +80,9 @@ What it does today:
   fingers are free for the app only while Mission Control and App Exposé
   are on four fingers in System Settings).
 - **Page island** — the SPA's routed page, with the window's own chrome and
-  file tree off: the diff, the file view, review comments, edit mode, the
-  merge requests, the sessions surface, with its open-file strip along its
+  file tree off: the diff, the file view, review comments, edit mode, a
+  pull request's diff alone — its overview, its files and the list of them
+  being the shell's — the sessions surface, with its open-file strip along its
   top and, on a diff, the web header's horizontal-or-vertical layout toggle
   at the end of the same band. The one drawer it keeps under the page is
   find usages, which is opened from a symbol in the page's own code; it
@@ -126,8 +144,14 @@ uses. The contract is small and lives in `packages/spa/src/lib/shell.ts`:
 
 The tree and sessions pairs are the chrome the code island reports for the
 shell to draw natively in its sidebar: the file tree on the code pages
-(`FileTreeOutline`, over `SidebarTree`) and the sessions list on the sessions
-surface (`SessionsList`, over `ShellSessions`). The shell sends every click
+(`FileTreeOutline`, over `SidebarTree`) — beside the sidebar rather than in
+it while the page is on a pull request, whose files stand under its
+overview — and the sessions list on the sessions
+surface (`SessionsList`, over `ShellSessions`). The merge requests cross no
+bridge: the shell reads them from the server itself (`PullRequests`) and
+steers the island to a pull request's address when one is picked; the
+island's own overview and file columns stand down there, and its list page
+is only the room the diff will take. The shell sends every click
 back as an action for the page to apply to its own store, its file actions,
 its git actions or its chat actions, having already asked what the web tree
 asks first — a yes to a deletion, a name for a new file. The window-tabs pair runs the other way round: the strip is the
@@ -195,12 +219,12 @@ Sources/Reviewer/
   ReviewerApp.swift      @main, menu commands, app delegate
   Server/ServerLauncher  reachability check + spawn of the embedded server
   Api/                   Codable mirrors of the core schemas, HTTP client, chat socket
-  State/                 AppModel, WindowTab, BottomPaneTab, DockSurface, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, QuickSearch (+ the ⇧⇧ monitor)
+  State/                 AppModel, WindowTab, BottomPaneTab, DockSurface, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, PullRequests, QuickSearch (+ the ⇧⇧ monitor)
   FileIcons/             FileIcon (resolver + rasteriser) over the generated @pierre/trees sprite
   Islands/               IslandHost (web view + bridge), SpaSource, SpaSchemeHandler, IslandView
   Terminal/              TerminalSession — the shell behind the Terminal surface
   Services/              DevServices + DevProcessStream — dev commands and their output
-  Views/                 ContentView (split view), Sidebar, Tabs, BottomPane, Search, Launchpad, Welcome
+  Views/                 ContentView (split view), Sidebar, PullRequests (list, overview, column), Tabs, BottomPane, Search, Launchpad, Welcome
 ```
 
 Not here yet: native menus for the islands' popovers, drag and drop between

@@ -157,6 +157,11 @@ final class SidebarTree {
     /// Bumped whenever `shown` is a different tree, or its folds start over
     /// — what the outline reloads on.
     private(set) var treeVersion = 0
+    /// Bumped when the tree is remade wholesale — another mode's, another
+    /// project's — rather than the same one refiltered or restatused: what
+    /// the outline crossfades on, a reload from one tree's rows to another's
+    /// being nothing an outline can animate row by row.
+    private(set) var remadeVersion = 0
     /// Bumped whenever a row's status may have changed — what the outline
     /// redraws its visible rows on.
     private(set) var statusVersion = 0
@@ -229,7 +234,15 @@ final class SidebarTree {
             toggled = []
             query = ""
             reveal(selected)
+            remadeVersion += 1
             changed = true
+        }
+        // The composer and the comparison are the commit view's; on any
+        // other surface they are gone with the listing, not a state report
+        // later, so the sidebar leaves them in one move with the tree.
+        if listing.mode != .commit {
+            commit = nil
+            comparison = nil
         }
         if changed { refilter() }
     }

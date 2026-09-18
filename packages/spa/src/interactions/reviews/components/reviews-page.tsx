@@ -32,8 +32,9 @@ import { cn } from "@/lib/utils";
 import { usePulls, useRepo } from "@/lib/queries";
 import { errorReason } from "@/lib/errors";
 import { timeAgo } from "@/lib/relative-time";
+import { island } from "@/lib/shell";
 import { reviewHref } from "@/lib/shell-route";
-import { NoReviewRemote, NoReviews } from "./reviews-empty";
+import { NoReviewRemote, NoReviews, PickReview } from "./reviews-empty";
 import {
   groupReviewsByBase,
   reviewAuthor,
@@ -101,6 +102,13 @@ function Row({ item, onOpen }: { item: ReviewItem; onOpen: () => void }) {
 }
 
 export function ReviewsPage() {
+  // Inside the macOS shell the list is the sidebar's, native, reading the
+  // same endpoint itself; the page is the room a picked one's diff takes.
+  if (island !== undefined) return <PickReview />;
+  return <ReviewsList />;
+}
+
+function ReviewsList() {
   const navigate = useNavigate();
   const repo = useRepo();
   const hasGitHub = repo.data?.github != null;

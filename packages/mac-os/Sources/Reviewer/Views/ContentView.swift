@@ -167,10 +167,11 @@ private struct SidebarToolbarItems: ToolbarContent {
     }
 }
 
-/// The islands on the frame — the page and the bottom pane under it — with
-/// the rail beside them while the sidebar is away. The seam the launchpad
-/// is pulled out by lies along their top edge, on the run of frame under
-/// the bar.
+/// The islands on the frame — the page and the bottom pane under it, and
+/// while a pull request is open, its own column ahead of them (see
+/// `PullRequestColumn`) — with the rail beside them while the sidebar is
+/// away. The seam the launchpad is pulled out by lies along their top
+/// edge, on the run of frame under the bar.
 private struct DetailColumn: View {
     @Environment(AppModel.self) private var model
 
@@ -190,6 +191,11 @@ private struct DetailColumn: View {
             if !model.sidebarShown {
                 AppRail()
             }
+            if model.connection == .ready, let pull = model.reviewingPull {
+                PullRequestColumn(pull: pull)
+                    .padding(.leading, model.sidebarShown ? IslandMetrics.gap : 0)
+                IslandSeam(between: .columns, size: $model.pullColumnWidth, range: PullRequestColumn.widths)
+            }
             VStack(spacing: 0) {
                 page
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -201,7 +207,7 @@ private struct DetailColumn: View {
                         .island()
                 }
             }
-            .padding(.leading, model.sidebarShown ? IslandMetrics.gap : 0)
+            .padding(.leading, model.sidebarShown && model.reviewingPull == nil ? IslandMetrics.gap : 0)
         }
         // No run of our own along the top: the bar keeps as much air under
         // its items as it keeps over them, and that air is the gap — a gap

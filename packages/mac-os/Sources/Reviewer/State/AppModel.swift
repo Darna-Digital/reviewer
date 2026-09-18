@@ -43,6 +43,15 @@ final class AppModel {
     /// The sessions list, as the page last reported it — while it is on the
     /// sessions surface, where the sidebar draws this in the tree's place.
     private(set) var sessions: ShellSessions?
+    /// The project's merge requests, read by the shell itself: the list the
+    /// sidebar draws on that surface, and the overview beside a pull
+    /// request's diff.
+    let pullRequests: PullRequests
+    /// The width of the pull request's own column — its overview over its
+    /// files — between the sidebar and the diff, and the height of the
+    /// files under the overview; both resized by the seams beside them.
+    var pullColumnWidth: CGFloat = 320
+    var pullFilesHeight: CGFloat = 300
     /// Whether the system's sidebar column is out; the split view's own
     /// toggle and the View menu both move it.
     var sidebarShown = true
@@ -78,6 +87,7 @@ final class AppModel {
         page = IslandHost(kind: .code, href: Href.review, source: source, apiBaseURL: client.baseURL)
         services = DevServices(client: client)
         threads = Threads(client: client)
+        pullRequests = PullRequests(client: client)
         history = CommitHistory(client: client)
         search = QuickSearch(client: client)
         search.onOpen = { [weak self] path, line in self?.show(file: path, line: line) }
@@ -150,6 +160,7 @@ final class AppModel {
             remoteBranches = []
             projectBranches = []
             history.projectChanged(repos: [], head: nil)
+            await pullRequests.projectChanged(github: nil)
             return
         }
         status = try? await client.repoStatus()
@@ -157,6 +168,8 @@ final class AppModel {
         await loadBranches()
         await services.load()
         await threads.load()
+        let repo = try? await client.repoInfo()
+        await pullRequests.projectChanged(github: repo?.github)
     }
 
     /// The page at a code address: what every native control that reaches
@@ -170,7 +183,7 @@ final class AppModel {
     /// page already shows files — reading a pull request stays a review —
     /// and otherwise on the diff, which can show any file.
     func show(file: String, line: Int?) {
-        let base = CodeSurface.forHref(page.href)?.opensFiles == true ? page.href : Href.review
+        let base = CodeSurface.opensFiles(page.href) ? page.href : Href.review
         showOnCodeTab(Href.file(file, line: line, on: base))
     }
 
@@ -231,6 +244,82 @@ final class AppModel {
     /// file picked in the tree is carried to the page.
     func act(onSessions action: SessionAction) {
         page.send(action)
+    }
+
+    // MARK: merge requests
+
+    /// The pull request the page is reading, by its address — as the list
+    /// has it, or by its number alone until the list answers. Nil on every
+    /// other page, the merge requests with none picked included.
+    var reviewingPull: PullRequestInfo? {
+        Href.pullNumber(of: page.href).map { pullRequests.pull(numbered: $0) }
+    }
+
+    /// A row of the sidebar's list picked: the page on that pull request's
+    /// diff, the overview and its files standing up beside it.
+    func show(pull: PullRequestInfo) {
+        showOnCodeTab(Href.pull(pull.number))
+    }
+
+    /// Back to the list with nothing picked — where a merged or closed pull
+    /// request leaves the window, since nothing on its page is true any
+    /// more, and where the merged row disappearing is worth seeing.
+    func leavePull() {
+        showOnCodeTab(Href.reviews)
+    }
+
+    /// The pull request's page on GitHub, in the default browser — the
+    /// window having no address bar to come back with.
+    func open(pull: PullRequestInfo) {
+        guard let url = URL(string: pull.url) else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    func copyLink(of pull: PullRequestInfo) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(pull.url, forType: .string)
+    }
+
+    /// Fetch the pull request's head and check it out as its local branch;
+    /// the branch changing under the diff, everything is re-read after.
+    func checkout(pull: PullRequestInfo) {
+        Task {
+            do {
+                _ = try await pullRequests.checkout(pull, as: pull.localBranch)
+            } catch {
+                lastError = error.localizedDescription
+            }
+            await refresh()
+        }
+    }
+
+    /// Land the pull request on GitHub, already confirmed by the overview.
+    /// Once it has gone through, its page is left for the list.
+    func merge(pull: PullRequestInfo, method: MergeMethod) {
+        Task {
+            do {
+                _ = try await pullRequests.merge(pull, method: method)
+                leavePull()
+            } catch {
+                lastError = error.localizedDescription
+            }
+            await pullRequests.reload()
+        }
+    }
+
+    /// Close the pull request without merging it, already confirmed by the
+    /// overview; the closed one leaves the open list the way a merged one
+    /// does, and so does its page.
+    func close(pull: PullRequestInfo) {
+        Task {
+            do {
+                _ = try await pullRequests.close(pull)
+                leavePull()
+            } catch {
+                lastError = error.localizedDescription
+            }
+            await pullRequests.reload()
+        }
     }
 
 

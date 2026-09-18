@@ -42,7 +42,7 @@ private struct CommandList: View {
                 ForEach(services.commands) { command in
                     CommandRow(command: command)
                         .tag(command.id)
-                        .listRowInsets(EdgeInsets(top: 3, leading: 8, bottom: 3, trailing: 6))
+                        .listRowInsets(EdgeInsets(top: 2, leading: PaneMetrics.barInset, bottom: 2, trailing: PaneMetrics.barInset))
                         .contextMenu { menu(for: command) }
                 }
             }

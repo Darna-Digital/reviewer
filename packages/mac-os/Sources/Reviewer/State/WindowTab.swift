@@ -88,6 +88,24 @@ enum Href {
     static let review = "/modes/code/review"
     static let reviews = "/modes/code/reviews"
     static let browsePath = "/modes/code/browse"
+    private static let pullPath = "/modes/code/review/pull/"
+
+    /// One pull request's diff, read in the diff view — the web app's
+    /// `reviewHref` for a pull source.
+    static func pull(_ number: Int) -> String {
+        "\(pullPath)\(number)"
+    }
+
+    /// The pull request an address reads, by its number, or nil for any
+    /// other page.
+    static func pullNumber(of href: String) -> Int? {
+        let path = URLComponents(string: href)?.path ?? ""
+        guard path.hasPrefix(pullPath) else { return nil }
+        let rest = path.dropFirst(pullPath.count)
+        let digits = rest.prefix { $0 != "/" }
+        guard !digits.isEmpty, digits.allSatisfy(\.isNumber) else { return nil }
+        return Int(digits)
+    }
 
     /// One commit's diff, read on the browse page — on `path`'s own diff,
     /// when one is named.
@@ -153,24 +171,27 @@ enum CodeSurface: CaseIterable, Identifiable {
         }
     }
 
-    /// Whether the surface shows files, so one can be opened on it in place:
-    /// the merge requests are a list, and a file found while it is up opens
-    /// on the diff instead.
-    var opensFiles: Bool {
-        switch self {
+    /// Whether `href`, on this surface, shows files, so one can be opened on
+    /// it in place: the browse page and the diff always do; the merge
+    /// requests only once one of them is open, its diff being the page —
+    /// with none picked the page is a list, and a file found while it is
+    /// up opens on the diff instead.
+    static func opensFiles(_ href: String) -> Bool {
+        switch forHref(href) {
         case .browse, .review: return true
-        case .reviews: return false
+        case .reviews: return Href.pullNumber(of: href) != nil
+        case nil: return false
         }
     }
 
     /// The surface an address is on, by its path: the browse page and every
-    /// commit or range read on it, the diff and every pull request read in
-    /// it, or the merge requests — read first, its path being the diff's
-    /// with a letter on the end.
+    /// commit or range read on it; the merge requests — the list, and every
+    /// pull request read out of it, which is the diff's own path with the
+    /// pull request named on the end; or the diff of your own changes.
     static func forHref(_ href: String) -> CodeSurface? {
         let path = URLComponents(string: href)?.path ?? ""
         if path.hasPrefix(Href.browsePath) { return .browse }
-        if path.hasPrefix(Href.reviews) { return .reviews }
+        if path.hasPrefix(Href.reviews) || Href.pullNumber(of: href) != nil { return .reviews }
         if path.hasPrefix(Href.review) { return .review }
         return nil
     }

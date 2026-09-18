@@ -72,6 +72,34 @@ struct ReviewerClient: Sendable {
         try await get("/api/status")
     }
 
+    func repoInfo() async throws -> RepoInfo {
+        try await get("/api/repo")
+    }
+
+    // MARK: merge requests
+
+    /// Every open pull request on the repository's GitHub remote, with CI
+    /// and mergeability on each. Refused where the root has no such remote.
+    func pulls() async throws -> [PullRequestInfo] {
+        try await get("/api/github/pulls")
+    }
+
+    func mergePull(number: Int, method: MergeMethod) async throws -> MergeResult {
+        try await send("POST", "/api/github/pulls/\(number)/merge", body: MergePullBody(method: method))
+    }
+
+    func closePull(number: Int) async throws -> CloseResult {
+        try await send("POST", "/api/github/pulls/\(number)/close", body: EmptyBody())
+    }
+
+    /// Fetch a pull request's head and check it out as `branch`: an existing
+    /// local branch is fast-forwarded, never reset.
+    func checkoutPull(number: Int, branch: String) async throws -> String {
+        let result: CheckedOutBranch = try await send(
+            "POST", "/api/checkout-pull", body: CheckoutPullBody(number: number, branch: branch))
+        return result.branch
+    }
+
     // MARK: search
 
     /// A content search over the working tree. The repo endpoint answers for

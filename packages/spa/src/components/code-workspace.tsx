@@ -1256,6 +1256,12 @@ export function CodeWorkspace() {
    */
   const reviewing = mode === "review" && selectedPull !== null;
   const firstColumn = reviewing ? reviewInfo : sidebar;
+  /**
+   * Inside the macOS shell a pull request's overview and its files are the
+   * window's own — a native column beside the sidebar's list of pull requests
+   * (see `PullRequestColumn` there) — so the island shows only the diff.
+   */
+  const reviewingInPage = reviewing && island === undefined;
 
   /**
    * The header is cut to these columns, so every seam beside them runs from the
@@ -1264,16 +1270,15 @@ export function CodeWorkspace() {
    */
   /**
    * The first column — the tree, or a pull request's overview. Inside the
-   * macOS shell the tree is the window's own, a native sidebar beside this
-   * island, so the column stays away there unless it is the overview.
+   * macOS shell both are the window's own, native beside this island, so the
+   * column stays away there.
    */
-  const firstColumnShown =
-    prefs.sidebarVisible && (reviewing || island === undefined);
+  const firstColumnShown = prefs.sidebarVisible && island === undefined;
 
   useHeaderLead(
     !firstColumnShown || (mode === "review" && selectedPull === null)
       ? []
-      : reviewing
+      : reviewingInPage
         ? prefs.reviewTreeVisible
           ? ["var(--panel-review-info-w)", "var(--panel-review-tree-w)"]
           : ["var(--panel-review-info-w)"]
@@ -1375,7 +1380,7 @@ export function CodeWorkspace() {
         className={cn(columnSheet, "shrink-0", !firstColumnShown && "hidden")}
         style={firstColumn.style}
       >
-        {reviewing ? (
+        {reviewingInPage ? (
           <PullRequestOverview
             pull={selectedPull}
             currentBranch={repo.data?.currentBranch ?? null}
@@ -1435,7 +1440,7 @@ export function CodeWorkspace() {
           />,
           seamSlot
         )}
-      {reviewing && prefs.sidebarVisible && prefs.reviewTreeVisible && (
+      {reviewingInPage && prefs.sidebarVisible && prefs.reviewTreeVisible && (
         <>
           <div className={cn(columnSheet, "shrink-0")} style={reviewTree.style}>
             <div className="min-h-0 flex-1 overflow-hidden">{fileTree}</div>

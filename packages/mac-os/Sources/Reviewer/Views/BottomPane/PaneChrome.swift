@@ -1,16 +1,65 @@
-// The pieces the bottom pane's two surfaces are built from, so they read as
-// one instrument: the 28pt bar a detail column wears along its top, the
-// footer a source list wears along its bottom — the system's own add and
-// remove marks, as in Settings and Xcode — the flat bar button both carry,
-// and the dot that says whether a process is up.
+// The pieces the bottom pane's surfaces are built from, so they read as
+// one instrument: the 28pt bar a column wears along its top — the tab
+// strip, the filters, a detail's title all stand at that height, with the
+// same 8pt inset the rows below keep — the footer a source list wears
+// along its bottom (the system's own add and remove marks, as in Settings
+// and Xcode), the flat bar button both carry, the one shape every field on
+// a bar takes, and the dot that says whether a process is up. The pane is
+// set at the small control size throughout: 11pt text in 22pt fields, the
+// proportion of the system's own small controls, three points of air above
+// and below in the bar.
 import SwiftUI
 
 enum PaneMetrics {
     static let barHeight: CGFloat = 28
+    static let barInset: CGFloat = 8
     static let footerHeight: CGFloat = 24
+    static let rowHeight: CGFloat = 26
+    /// One level of an outline, the sidebar's own `indentationPerLevel`.
+    static let indentUnit: CGFloat = 16
     static let listMinWidth: CGFloat = 200
     static let listIdealWidth: CGFloat = 240
     static let listMaxWidth: CGFloat = 380
+}
+
+/// The two sizes a field comes in: the sidebar's, and the pane bar's a
+/// step smaller, in the ratio the system's regular and small controls keep.
+enum PaneFieldSize {
+    case regular
+    case small
+
+    var height: CGFloat { self == .regular ? 24 : 22 }
+    var fontSize: CGFloat { self == .regular ? 12 : 11 }
+}
+
+/// The quiet input the web bar draws, as a modifier so a picker, a chip and
+/// a text field on the same bar come out the same height and radius.
+private struct PaneFieldChrome: ViewModifier {
+    let size: PaneFieldSize
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 7)
+            .frame(height: size.height)
+            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+    }
+}
+
+/// The glyph that leads a field — a magnifier, a branch, a calendar — at
+/// the field's own text size.
+private struct PaneFieldGlyph: ViewModifier {
+    let size: PaneFieldSize
+
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: size.fontSize, weight: .medium))
+            .foregroundStyle(.secondary)
+    }
+}
+
+extension View {
+    func paneField(_ size: PaneFieldSize = .small) -> some View { modifier(PaneFieldChrome(size: size)) }
+    func paneFieldGlyph(_ size: PaneFieldSize = .small) -> some View { modifier(PaneFieldGlyph(size: size)) }
 }
 
 /// The bar along the top of a detail column: what is shown, and what can
@@ -21,8 +70,7 @@ struct PaneBar<Content: View>: View {
     var body: some View {
         HStack(spacing: 8) { content }
             .controlSize(.small)
-            .padding(.leading, 10)
-            .padding(.trailing, 6)
+            .padding(.horizontal, PaneMetrics.barInset)
             .frame(height: PaneMetrics.barHeight)
             .frame(maxWidth: .infinity)
             .overlay(alignment: .bottom) { Divider() }
@@ -62,31 +110,31 @@ struct PaneBarButton: View {
     }
 }
 
-/// The filter over a list, in the shape the sidebar's own filter has.
+/// The filter over a list, in the shape the sidebar's own filter has: at
+/// the sidebar's size where it stands in the sidebar, at the bar's on a
+/// pane bar.
 struct PaneFilterField: View {
     let prompt: String
     @Binding var text: String
+    var size: PaneFieldSize = .regular
 
     var body: some View {
         HStack(spacing: 5) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
+                .paneFieldGlyph(size)
             TextField(prompt, text: $text)
                 .textFieldStyle(.plain)
-                .font(.system(size: 12))
+                .font(.system(size: size.fontSize))
             if !text.isEmpty {
                 Button { text = "" } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 11))
+                        .font(.system(size: size.fontSize))
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 7)
-        .frame(height: 24)
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+        .paneField(size)
     }
 }
 

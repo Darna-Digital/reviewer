@@ -96,9 +96,9 @@ private struct ColumnResizeHandle: View {
     }
 }
 
-/// The bar: the web history toolbar's controls, on the pane's own bar. The
-/// text fields apply on Return and on losing focus; the pickers, the
-/// toggles and the date apply at once.
+/// The bar: the web history toolbar's controls, on the pane's own bar, each
+/// in the pane's field shape. The text fields apply on Return and on losing
+/// focus; the pickers, the toggles and the date apply at once.
 private struct HistoryFilterBar: View {
     @Environment(AppModel.self) private var model
     @State private var grep = ""
@@ -121,9 +121,9 @@ private struct HistoryFilterBar: View {
                       commit: { apply { $0.grep = blank(grep) } },
                       toggleRegex: { apply { $0.grep = blank(grep); $0.regex.toggle() } },
                       toggleCase: { apply { $0.grep = blank(grep); $0.caseSensitive.toggle() } })
-                .frame(minWidth: 160, idealWidth: 260, maxWidth: 360)
+                .frame(minWidth: FilterWidths.picker, maxWidth: .infinity)
             FilterTextField(prompt: "User", text: $author) { apply { $0.author = blank(author) } }
-                .frame(width: 110)
+                .frame(width: FilterWidths.narrow)
             SinceDateButton(after: history.query.after, presented: $pickingDate) { date in
                 apply { $0.after = date }
             }
@@ -136,7 +136,6 @@ private struct HistoryFilterBar: View {
                 }
                 .buttonStyle(.accessoryBar)
             }
-            Spacer(minLength: 0)
         }
         .onChange(of: history.query.grep, initial: true) { _, value in grep = value ?? "" }
         .onChange(of: history.query.author, initial: true) { _, value in author = value ?? "" }
@@ -154,14 +153,13 @@ private struct HistoryFilterBar: View {
     }
 }
 
-/// The chip the bar's pickers and fields wear: the web bar's quiet input.
-private struct FilterChip: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .padding(.horizontal, 7)
-            .frame(height: 22)
-            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
-    }
+/// The widths the bar's fields are cut to, on one scale: the pickers and
+/// the least the search gets — the search takes whatever the bar has left,
+/// holding the two short fields, author and date, against the trailing
+/// edge as a pair.
+private enum FilterWidths {
+    static let picker: CGFloat = 176
+    static let narrow: CGFloat = 120
 }
 
 /// The ref the log follows: every branch, or one of them — folded by
@@ -197,18 +195,16 @@ private struct RefPicker: View {
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: current == allRefs ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .paneFieldGlyph()
                 Text(label)
                     .font(.system(size: 11))
                     .lineLimit(1)
                     .truncationMode(.middle)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                MenuChevron()
             }
-            .modifier(FilterChip())
-            .frame(width: 176)
+            .paneField()
+            .frame(width: FilterWidths.picker)
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
@@ -239,21 +235,30 @@ private struct RepoPicker: View {
             }
         } label: {
             HStack(spacing: 5) {
-                RepoAvatar(name: chosen?.name ?? projectName)
+                RepoAvatar(name: chosen?.name ?? projectName, size: 14)
                 Text(chosen?.name ?? "All repositories")
                     .font(.system(size: 11))
                     .lineLimit(1)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                Spacer(minLength: 0)
+                MenuChevron()
             }
-            .modifier(FilterChip())
-            .frame(width: 176)
+            .paneField()
+            .frame(width: FilterWidths.picker)
         }
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .help("Repository")
+    }
+}
+
+/// The up-and-down chevron a picker on the bar ends in, held at the
+/// field's trailing edge whatever the pick's length.
+private struct MenuChevron: View {
+    var body: some View {
+        Image(systemName: "chevron.up.chevron.down")
+            .font(.system(size: 8, weight: .semibold))
+            .foregroundStyle(.secondary)
     }
 }
 
@@ -273,13 +278,13 @@ private struct PathChip: View {
                 .truncationMode(.middle)
             Button(action: clear) {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
                     .foregroundStyle(.tertiary)
             }
             .buttonStyle(.plain)
             .help("Show all files")
         }
-        .modifier(FilterChip())
+        .paneField()
         .frame(maxWidth: 220)
         .help("History of \(path)")
     }
@@ -297,20 +302,21 @@ private struct GrepField: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 5) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.secondary)
+                .paneFieldGlyph()
             TextField("Text or hash", text: $text)
                 .textFieldStyle(.plain)
                 .font(.system(size: 11))
                 .focused($focused)
                 .onSubmit(commit)
                 .onChange(of: focused) { _, isFocused in if !isFocused { commit() } }
-            FilterToggle(label: ".*", help: "Regular expression", isOn: regex, action: toggleRegex)
-            FilterToggle(label: "Cc", help: "Match case", isOn: caseSensitive, action: toggleCase)
+            HStack(spacing: 2) {
+                FilterToggle(label: ".*", help: "Regular expression", isOn: regex, action: toggleRegex)
+                FilterToggle(label: "Cc", help: "Match case", isOn: caseSensitive, action: toggleCase)
+            }
         }
-        .modifier(FilterChip())
+        .paneField()
     }
 }
 
@@ -323,11 +329,10 @@ private struct FilterToggle: View {
     var body: some View {
         Button(action: action) {
             Text(label)
-                .font(.system(size: 10, design: .monospaced))
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
                 .foregroundStyle(isOn ? Color.white : Color.secondary)
-                .padding(.horizontal, 4)
-                .frame(height: 16)
-                .background(isOn ? Color.accentColor : Color.clear, in: RoundedRectangle(cornerRadius: 3))
+                .frame(width: 20, height: 16)
+                .background(isOn ? Color.accentColor : Color.clear, in: RoundedRectangle(cornerRadius: 4))
         }
         .buttonStyle(.plain)
         .help(help)
@@ -348,7 +353,7 @@ private struct FilterTextField: View {
             .focused($focused)
             .onSubmit(commit)
             .onChange(of: focused) { _, isFocused in if !isFocused { commit() } }
-            .modifier(FilterChip())
+            .paneField()
     }
 }
 
@@ -374,15 +379,15 @@ private struct SinceDateButton: View {
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: "calendar")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(.secondary)
+                    .paneFieldGlyph()
                 Text(date.map { $0.formatted(date: .abbreviated, time: .omitted) } ?? "Since date")
                     .font(.system(size: 11))
                     .foregroundStyle(date == nil ? .secondary : .primary)
                     .lineLimit(1)
+                Spacer(minLength: 0)
             }
-            .modifier(FilterChip())
-            .frame(width: 120)
+            .paneField()
+            .frame(width: FilterWidths.narrow)
         }
         .buttonStyle(.plain)
         .help("Since date")
@@ -423,7 +428,7 @@ private struct CommitList: View {
                               selected: commit.sha == history.selectedSha) { select(commit) }
                         .id(commit.sha)
                         .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
+                        .listRowInsets(EdgeInsets(top: 0, leading: PaneMetrics.barInset, bottom: 0, trailing: PaneMetrics.barInset))
                         .onAppear {
                             if commit.sha == commits.last?.sha { history.loadMore() }
                         }
@@ -433,7 +438,7 @@ private struct CommitList: View {
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 8)
+                        .padding(.horizontal, PaneMetrics.barInset)
                         .listRowSeparator(.hidden)
                 }
             }
@@ -483,7 +488,9 @@ private struct CommitList: View {
 
 /// A commit's row: its cell of the graph, the root it came from in a
 /// project of several, up to three of its refs as badges, its subject, and
-/// at the trailing edge its author and the day it was authored.
+/// at the trailing edge its author and the day it was authored, each in a
+/// column of its own so the dates stand in one line down the list whatever
+/// the authors' names run to.
 private struct CommitRow: View {
     let commit: CommitInfo
     let graph: GraphRow
@@ -511,10 +518,13 @@ private struct CommitRow: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: Self.authorWidth, alignment: .trailing)
                 Text(CommitDates.day(commit.authoredAt))
-                    .font(.system(size: 11))
+                    .font(.system(size: 11).monospacedDigit())
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .frame(width: Self.dayWidth, alignment: .trailing)
             }
             .padding(.horizontal, 6)
             .frame(height: CommitGraphLayout.rowHeight)
@@ -523,6 +533,9 @@ private struct CommitRow: View {
         }
         .buttonStyle(.plain)
     }
+
+    private static let authorWidth: CGFloat = 160
+    private static let dayWidth: CGFloat = 44
 }
 
 /// A ref a commit carries, as the small badge the web list wears.

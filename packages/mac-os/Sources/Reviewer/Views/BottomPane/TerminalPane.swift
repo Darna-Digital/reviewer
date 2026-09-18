@@ -1,8 +1,9 @@
 // The Terminal surface, laid out as the web app's Terminal sessions are: a
 // source list of the project's shells down the left — a filter over them
-// above, open and close in the footer — and the selected one's live
-// terminal on the right, under a bar naming it and its branch that turns
-// into a field to rename it. Every shell visited stays attached while
+// on a bar above, open and close in the footer — and the selected one's
+// live terminal on the right, under a bar of the same height naming it and
+// its branch that turns into a field to rename it, so the rule under the
+// filter runs on into the rule under the title. Every shell visited stays attached while
 // hidden, so coming back is the screen as you left it.
 import SwiftTerm
 import SwiftUI
@@ -40,14 +41,14 @@ private struct ThreadList: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            PaneFilterField(prompt: "Filter sessions", text: $query)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+            PaneBar {
+                PaneFilterField(prompt: "Filter sessions", text: $query, size: .small)
+            }
             List(selection: selection) {
                 ForEach(shells) { thread in
                     ThreadRow(thread: thread)
                         .tag(thread.id)
-                        .listRowInsets(EdgeInsets(top: 3, leading: 8, bottom: 3, trailing: 6))
+                        .listRowInsets(EdgeInsets(top: 2, leading: PaneMetrics.barInset, bottom: 2, trailing: PaneMetrics.barInset))
                         .contextMenu {
                             Button("Close Session", role: .destructive) {
                                 Task { await threads.close(id: thread.id) }
@@ -158,12 +159,13 @@ private struct ThreadTerminal: View {
                 .foregroundStyle(.secondary)
             if renaming {
                 TextField("Title", text: $title)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.system(size: 12))
-                    .frame(maxWidth: 280)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 11))
                     .focused($titleFocused)
                     .onSubmit { commitRename(thread) }
                     .onExitCommand { renaming = false }
+                    .paneField()
+                    .frame(maxWidth: 280)
             } else {
                 Text(thread.displayTitle)
                     .font(.system(size: 12, weight: .medium))

@@ -12,6 +12,12 @@
 // tree is another one, redraws the rows on screen when the statuses moved,
 // and follows the page's selection — and reports each fold and each pick
 // back. Selecting a file is the one thing it does to the page.
+//
+// One outline serves every mode — the sidebar keeps it up across browse and
+// the diff rather than making another — and a tree remade for another mode
+// or project crossfades: the rows as they were stay over the outline as a
+// picture while the new ones come up under them, since a reload is instant
+// and one tree's rows cannot be moved to another's.
 import AppKit
 import SwiftUI
 
@@ -24,6 +30,7 @@ struct FileTreeOutline: View {
         OutlineRepresentable(
             model: model,
             treeVersion: tree.treeVersion,
+            remadeVersion: tree.remadeVersion,
             statusVersion: tree.statusVersion,
             selected: tree.selected,
             prompt: $prompt
@@ -35,6 +42,7 @@ struct FileTreeOutline: View {
 private struct OutlineRepresentable: NSViewRepresentable {
     let model: AppModel
     let treeVersion: Int
+    let remadeVersion: Int
     let statusVersion: Int
     let selected: String?
     @Binding var prompt: TreePrompt?
@@ -43,7 +51,7 @@ private struct OutlineRepresentable: NSViewRepresentable {
         OutlineCoordinator(model: model, prompt: $prompt)
     }
 
-    func makeNSView(context: Context) -> NSScrollView {
+    func makeNSView(context: Context) -> CrossfadingHost {
         let outline = FileTreeOutlineView()
         let column = NSTableColumn(identifier: .init("path"))
         column.resizingMask = .autoresizingMask
@@ -79,12 +87,78 @@ private struct OutlineRepresentable: NSViewRepresentable {
         scroll.autohidesScrollers = true
         scroll.drawsBackground = false
         scroll.borderType = .noBorder
-        return scroll
+        let host = CrossfadingHost(over: scroll)
+        context.coordinator.host = host
+        return host
     }
 
-    func updateNSView(_ scroll: NSScrollView, context: Context) {
+    func updateNSView(_ host: CrossfadingHost, context: Context) {
         context.coordinator.prompt = $prompt
-        context.coordinator.sync(treeVersion: treeVersion, statusVersion: statusVersion, selected: selected)
+        context.coordinator.sync(
+            treeVersion: treeVersion, remadeVersion: remadeVersion, statusVersion: statusVersion,
+            selected: selected)
+    }
+}
+
+/// The scroll view's holder, which can lay a picture of it over it and fade
+/// the picture away: what the outline crossfades through when the tree it
+/// shows is replaced. The picture is pinned to the top-left corner and
+/// clipped, so the outline resizing under it — the search band sliding in
+/// over the tree — moves nothing in it; it is only what was there, going.
+final class CrossfadingHost: NSView {
+    let scroll: NSScrollView
+
+    init(over scroll: NSScrollView) {
+        self.scroll = scroll
+        super.init(frame: .zero)
+        scroll.autoresizingMask = [.width, .height]
+        addSubview(scroll)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override func layout() {
+        super.layout()
+        scroll.frame = bounds
+    }
+
+    private static let duration: TimeInterval = 0.22
+
+    /// Runs the change with the scroll view as it was held over it, fading;
+    /// bare when there is nothing on screen to fade from, or the user asked
+    /// for less motion.
+    func crossfade(_ change: () -> Void) {
+        guard window != nil, !bounds.isEmpty,
+            !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
+            let picture = picture()
+        else {
+            change()
+            return
+        }
+        let ghost = NSImageView(frame: scroll.frame)
+        ghost.image = picture
+        ghost.imageScaling = .scaleNone
+        ghost.imageAlignment = .alignTopLeft
+        ghost.autoresizingMask = [.width, .height]
+        ghost.clipsToBounds = true
+        ghost.wantsLayer = true
+        addSubview(ghost, positioned: .above, relativeTo: scroll)
+        change()
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Self.duration
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            ghost.animator().alphaValue = 0
+        } completionHandler: {
+            ghost.removeFromSuperview()
+        }
+    }
+
+    private func picture() -> NSImage? {
+        guard let bitmap = scroll.bitmapImageRepForCachingDisplay(in: scroll.bounds) else { return nil }
+        scroll.cacheDisplay(in: scroll.bounds, to: bitmap)
+        let image = NSImage(size: scroll.bounds.size)
+        image.addRepresentation(bitmap)
+        return image
     }
 }
 
@@ -93,8 +167,10 @@ private final class OutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOut
     let model: AppModel
     var prompt: Binding<TreePrompt?>
     weak var outline: FileTreeOutlineView?
+    weak var host: CrossfadingHost?
 
     private var shownTreeVersion = -1
+    private var shownRemadeVersion = -1
     private var drawnStatusVersion = -1
     private var followedSelection: String?
     private var applyingFolds = false
@@ -108,15 +184,23 @@ private final class OutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOut
 
     // MARK: driven from the model
 
-    func sync(treeVersion: Int, statusVersion: Int, selected: String?) {
+    func sync(treeVersion: Int, remadeVersion: Int, statusVersion: Int, selected: String?) {
         guard let outline else { return }
         if treeVersion != shownTreeVersion {
             shownTreeVersion = treeVersion
             drawnStatusVersion = statusVersion
-            applyingFolds = true
-            outline.reloadData()
-            expandAsFolded(tree.shown)
-            applyingFolds = false
+            let remade = remadeVersion != shownRemadeVersion
+            shownRemadeVersion = remadeVersion
+            let reload = {
+                self.applyingFolds = true
+                outline.reloadData()
+                self.expandAsFolded(self.tree.shown)
+                self.applyingFolds = false
+                // Another tree starts at its top; the same one filtered
+                // keeps its place.
+                if remade { outline.scroll(.zero) }
+            }
+            if remade, let host { host.crossfade(reload) } else { reload() }
             followedSelection = nil
         } else if statusVersion != drawnStatusVersion {
             drawnStatusVersion = statusVersion
