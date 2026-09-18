@@ -10,9 +10,8 @@
 // What the web rail carries stands at the head of the list instead: a
 // search field, and a filter menu for the project and how far back to look
 // — both of them the page's query, so they narrow every session the server
-// has rather than the pages loaded so far. What the web row keeps behind
-// hover is here too, as a popover: the untruncated title, when it moved,
-// the tail of the conversation and the session's project.
+// has rather than the pages loaded so far. The untruncated title stands in
+// the row's tooltip.
 //
 // Picking a row sends the page to that session; the menu lifts it into a
 // tab of its own, or deletes it; and the foot of the list coming into view
@@ -213,18 +212,13 @@ private struct SessionFilterMenu: View {
 
 /// A session's row: its title, and at the trailing edge its mark — or, with
 /// the pointer over it, the delete control in the mark's place, so the title
-/// runs to the same edge on every row. The pointer resting on the row opens
-/// the preview beside it, and leaving closes it; a click closes it too, the
-/// page being the thing to look at once a session is open.
+/// runs to the same edge on every row. The row carries no gesture of its
+/// own: on macOS a gesture on a row's content takes the mouse-down before
+/// the list does, and the row is never selected.
 private struct SessionRow: View {
     let session: ShellSession
     @Environment(AppModel.self) private var model
     @State private var isHovering = false
-    @State private var previewShown = false
-    @State private var hoverTask: Task<Void, Never>?
-
-    private static let openDelay: Duration = .milliseconds(120)
-    private static let closeDelay: Duration = .milliseconds(100)
 
     var body: some View {
         HStack(spacing: 6) {
@@ -246,19 +240,8 @@ private struct SessionRow: View {
         }
         .frame(height: 24)
         .contentShape(Rectangle())
-        .onHover { hovering in
-            isHovering = hovering
-            hoverTask?.cancel()
-            hoverTask = Task {
-                try? await Task.sleep(for: hovering ? Self.openDelay : Self.closeDelay)
-                guard !Task.isCancelled else { return }
-                previewShown = hovering
-            }
-        }
-        .simultaneousGesture(TapGesture().onEnded { previewShown = false })
-        .popover(isPresented: $previewShown, arrowEdge: .trailing) {
-            SessionPreview(session: session)
-        }
+        .onHover { isHovering = $0 }
+        .help(session.title)
     }
 }
 

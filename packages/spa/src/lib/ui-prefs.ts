@@ -193,7 +193,7 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   reviewInfoWidth: 320,
   reviewTreeWidth: 300,
   reviewTreeVisible: true,
-  commitDetailsWidth: 320,
+  commitDetailsWidth: 520,
   commitAgent: "claude",
   chatModelFavorites: [],
   composerHeight: 92,
@@ -250,6 +250,13 @@ export const fitSidePane = (pane: SidePane, width: number): number =>
         Math.min(width, Math.round(window.innerWidth / 2))
       );
 
+/**
+ * The commit details panel used to open at 320px — too narrow to read a diff
+ * in. A stored width still sitting at that old default was never dragged
+ * there, so it follows the new default rather than being kept.
+ */
+const LEGACY_COMMIT_DETAILS_WIDTH = 320;
+
 /** Storage holds whatever the last version of the app wrote, whatever that was. */
 type StoredPrefs = Partial<typeof defaults> & { readonly vimMode?: unknown };
 
@@ -270,6 +277,8 @@ function load(): UiPrefs {
       // ignore malformed storage
     }
     prefs.editMode = asEditMode(storedPrefs);
+    if (prefs.commitDetailsWidth === LEGACY_COMMIT_DETAILS_WIDTH)
+      prefs.commitDetailsWidth = defaults.commitDetailsWidth;
     if (!BOTTOM_TABS.includes(prefs.bottomTab)) prefs.bottomTab = "history";
     prefs.markdownView = asMarkdownView(prefs.markdownView);
     prefs.plansPaneWidth = fitSidePane("analysis", prefs.plansPaneWidth);

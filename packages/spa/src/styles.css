@@ -3,6 +3,8 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+/* Inside a web view of the macOS shell — see `.island` below. */
+@custom-variant island (&:is(.island *));
 
 @theme inline {
   --font-heading: var(--font-sans);
@@ -949,6 +951,26 @@
      `corner-shape` is Chromium 139+, which the desktop app is well past; a
      browser tab without it falls back to the same radius drawn round. */
   --sheet-radius-foot: 0.625rem;
+  /* The composer is the one card that stands free on the page, with nothing
+     in its corners to hold them tight, so it turns the corner the macOS shell
+     draws round its own islands: `IslandMetrics.radius`, 16pt, on a continuous
+     curve. At the sheet's 6px it read as a text field cut into the page next to
+     the shell's own panels; matched, it reads as one of them. */
+  --composer-radius: 1rem;
+}
+
+/* The message box and the context strip tucked under it turn the same corner,
+   so the two read as one panel with the strip as its foot. `corner-shape` is
+   Chromium 139+; a browser tab without it draws the same radius round. */
+.composer-sheet {
+  border-radius: var(--composer-radius);
+  corner-shape: squircle;
+}
+.composer-foot {
+  border-end-start-radius: var(--composer-radius);
+  border-end-end-radius: var(--composer-radius);
+  corner-bottom-left-shape: squircle;
+  corner-bottom-right-shape: squircle;
 }
 
 .app-canvas {
@@ -1103,16 +1125,19 @@
 
 /* An island is one part of the app in a web view of the macOS shell's own —
    the code surface, the tree, the dock — set in the window's native layout
-   (see `lib/shell`). The window draws the frame and the seams between islands,
-   so the sheet inside runs to every edge of its view with no corner and no
-   lit top edge: those belong to a sheet standing in a frame, and here the frame
-   is the view's. The window behind is opaque material, so the document shows
-   nothing of its own. */
+   (see `lib/shell`). The window draws the frame, the panel's own 16pt corner
+   and the ring around it (see `IslandPanel`), so the sheets inside run to
+   every edge of their view with no corner, no ring and no lit top edge: those
+   belong to a sheet standing in a frame, and here the frame is the view's. A
+   corner or a rule of the sheet's own inside the panel drew a second, smaller
+   box a step in from the panel's edge. The window behind is opaque material,
+   so the document shows nothing of its own. */
 .island body {
   background-color: transparent;
 }
 .island .island-page,
-.island .app-page {
+.island .app-page,
+.island .app-split .app-sheet {
   --sheet-edge-tone: transparent;
   border-radius: 0;
 }
@@ -1153,7 +1178,7 @@
   --pane: var(--native-island);
   --surface-1: var(--native-island);
   --surface-2: var(--native-control);
-  --surface-3: var(--native-under-page);
+  --surface-3: var(--native-control);
   --foreground: var(--native-text);
   --card-foreground: var(--native-text);
   --popover-foreground: var(--native-text);
@@ -1184,6 +1209,14 @@
   --overlay-contrast-hover: rgb(255 255 255 / 0.12);
   --overlay-contrast-pressed: rgb(255 255 255 / 0.24);
 }
+/* In the dark theme the system's under-page colour is the step above the
+   control background, so a popover lifts off the sheet the way it does in the
+   app's own scale. In the light theme that colour is a translucent mid grey —
+   the well a page scrolls out of — which painted every menu as smoked glass
+   over the code, so the popover stays on the control white there. */
+.island.dark {
+  --surface-3: var(--native-under-page);
+}
 /* Pierre paints the gutter's add-a-comment glyph in `--diffs-bg`, which
    inverts the near-black/near-white primary it sits on. On the accent it
    is the one filled control whose ink would still flip with the theme, so
@@ -1191,14 +1224,6 @@
 .island diffs-container [data-utility-button] {
   color: var(--primary-foreground);
 }
-/* The sheets of a split page — a session list beside its conversation — stand
-   on the same flat window colour they are painted in, so what tells them apart
-   is a rule around each: the separator hairline, drawn as a ring outside the
-   corner so it follows the radius and takes no room. */
-.island .app-split .app-sheet {
-  box-shadow: 0 0 0 1px var(--hairline);
-}
-
 /* The rail is not a sheet of its own. Given a tone and a seam of its own it read
    as a strip of chrome floating on the frame. So it is the left edge of the
    sheet beside it, the way it was when the whole window was one canvas: the

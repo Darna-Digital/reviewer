@@ -40,8 +40,10 @@ export function SessionContextBar() {
 
   const current = repo.data ?? null;
 
+  // Tucked under the composer by its full corner radius, so the strip's own
+  // square top corners never show through where the composer's curve away.
   return (
-    <div className="-mt-3 flex items-center gap-1 rounded-b-lg border border-t-0 bg-elevate px-2 pt-4 pb-1.5">
+    <div className="composer-foot -mt-4 flex items-center gap-1 border border-t-0 bg-elevate px-2 pt-5 pb-1.5">
       <ProjectPicker
         workspace={workspace.data}
         open={projectPickerOpen}

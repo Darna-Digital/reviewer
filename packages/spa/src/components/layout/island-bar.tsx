@@ -91,8 +91,12 @@ export function IslandBar() {
   return (
     <div
       ref={setHeaderTabsSlot}
-      // The 36px band every chrome row keeps, around 28px chips.
-      className="flex h-9 min-w-0 shrink-0 items-center gap-2 border-b border-hairline px-1 empty:hidden"
+      // The 36px band every chrome row keeps, around 28px chips — but set
+      // from the top rather than centred: the panel's 1pt ring (see
+      // `IslandPanel`) is drawn over the band's first row, so centred chips
+      // showed a hair less air above than below. Pinned at 4px they stand 3px
+      // clear of the ring above and 3px clear of the rule below.
+      className="flex h-9 min-w-0 shrink-0 items-start gap-2 border-b border-hairline px-1 pt-1 empty:hidden"
     />
   );
 }

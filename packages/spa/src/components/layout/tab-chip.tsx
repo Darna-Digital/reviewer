@@ -6,6 +6,12 @@
  * The window bar's own strip is the reference; the strips beneath it — the
  * open files in code, the prototype's open surfaces — wear the same chip so
  * moving between them is a change of contents, not of furniture.
+ *
+ * In the macOS shell the chip is the toolbar's: a capsule, with a round ✕ in
+ * its tail, the shape the native window tabs above it are cut to (see
+ * `BarChipStyle` and `TabCloseButton` in the macOS app), so the open files
+ * under the shell's own tabs read as one strip on two lines rather than two
+ * strips of different furniture.
  */
 import { IconX } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
@@ -13,6 +19,7 @@ import { cn } from "@/lib/utils";
 export const tabChipClass = (active: boolean, dragging = false) =>
   cn(
     "group/tab flex h-7 max-w-56 min-w-0 shrink-0 cursor-default items-center gap-1.5 rounded-md pr-1.5 pl-2.5 text-[0.8125rem] transition-colors",
+    "island:rounded-full island:pl-3",
     active
       ? "bg-elevate-strong text-foreground"
       : "text-muted-foreground hover:bg-elevate hover:text-foreground",
@@ -58,7 +65,7 @@ export function TabClose({
         type="button"
         aria-label={label}
         className={cn(
-          "absolute inset-0 flex items-center justify-center rounded hover:bg-elevate-strong",
+          "absolute inset-0 flex items-center justify-center rounded hover:bg-elevate-strong island:rounded-full",
           active && !dirty
             ? "opacity-70"
             : "opacity-0 group-hover/tab:opacity-70"

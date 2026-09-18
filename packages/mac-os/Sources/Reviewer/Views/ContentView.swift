@@ -250,6 +250,9 @@ private struct ProjectPicker: View {
             ForEach(model.workspace?.recents ?? [], id: \.self) { path in
                 Toggle(isOn: isOpen(path)) {
                     Text(URL(fileURLWithPath: path).lastPathComponent)
+                    // Two recents can share a name; the directory tells
+                    // them apart, and the subtitle keeps it under the name.
+                    Text(abbreviated(path))
                 }
             }
             Divider()
@@ -284,6 +287,13 @@ private struct ProjectPicker: View {
         // The toggle's air above and below its glyph, around the avatar.
         .buttonStyle(BarChipStyle(height: 30))
         .help("Switch project")
+    }
+
+    /// The path with the home folder folded to `~`, the way the shell
+    /// and Finder's title bar would show it.
+    private func abbreviated(_ path: String) -> String {
+        guard let home = model.workspace?.home, path.hasPrefix(home) else { return path }
+        return "~" + path.dropFirst(home.count)
     }
 
     /// A recent as a menu tick: on for the project that is open, and

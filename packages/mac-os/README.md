@@ -26,10 +26,9 @@ What it does today:
   above — drawn natively from what the page reports (`SessionsList`), under
   the web rail's search and filter menu (the project, how far back), both
   of them the page's own server query. Picking one sends the page island to
-  that conversation on the Sessions tab; the pointer resting on a row opens
-  the web card's preview as a popover — the tail of the conversation, its
-  count and project; the context menu lifts it into a tab of its own or
-  deletes it, and the foot of the list fetches the next page.
+  that conversation on the Sessions tab; the context menu lifts it into a
+  tab of its own or deletes it, and the foot of the list fetches the next
+  page.
 - **Islands** — beside the sidebar the window is laid out as rounded
   panels standing a few points apart on the web app's frame colour: the
   page island and the bottom pane, with a seam between them that resizes

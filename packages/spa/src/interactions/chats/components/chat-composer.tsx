@@ -262,7 +262,7 @@ export function ChatComposer({
         onResizeEnd={(height) => setUiPrefs({ composerHeight: height })}
         label="Resize the message box"
       />
-      <div className="relative rounded-lg border bg-background shadow-sm focus-within:border-ring/60">
+      <div className="composer-sheet relative border bg-background shadow-sm focus-within:border-ring/60">
         {attachments.length > 0 && (
           <AttachmentGrid className="px-3 pt-3">
             {attachments.map((attachment) => (
