@@ -247,7 +247,7 @@ export function Foundations() {
       <Section
         id="type"
         title="Typography"
-        description="Inter throughout, with the character alternates switched on. Semibold is the heaviest weight the system uses — bold reads shouty at this scale."
+        description="The platform's own face throughout — SF Pro on a Mac — matching the native shell. Semibold is the heaviest weight the system uses — bold reads shouty at this scale."
       >
         <Subsection title="Scale">
           <div className="flex flex-col divide-y divide-foreground/10">

@@ -1,11 +1,16 @@
-// The window tabs, on the toolbar: Code, Git and Sessions as icons, each
+// The window tabs, on the toolbar: Code and Sessions as icons, each
 // session by its title with its ✕, and the mark that mints one — the row
 // the web app's window bar draws, on the window's own bar, from the picture
 // the island sends up (see `WindowTabStrip`). Toolbar items rather than
 // views of our own, so the bar lays out and tips the row the way it does
-// everything else on it, but in the web bar's own chips rather than the
-// system's glass (see `BarChipStyle`). A press goes back down to the
-// island's strip, which is the one that switches.
+// everything else on it. The pinned pair are the system's own toggles in
+// the one pane of glass the bar gives a group — the way Notes sets its
+// format buttons — the one that is on lit the way the system lights it;
+// the sessions after them, and the mark that mints one, wear the web
+// bar's chips instead, cut to the glass's own height and capsule, so a row
+// of titles reads as the SPA's strip on the pinned pair's line rather than
+// a run of glass buttons (see `BarChipStyle`). A press goes back down to
+// the island's strip, which is the one that switches.
 import SwiftUI
 
 struct TabStripItems: ToolbarContent {
@@ -13,12 +18,13 @@ struct TabStripItems: ToolbarContent {
 
     var body: some ToolbarContent {
         ToolbarItemGroup(placement: .navigation) {
-            ForEach(model.windowTabs.tabs) { tab in
-                if tab.pinned {
-                    PinnedTab(tab: tab, model: model)
-                } else {
-                    SessionTab(tab: tab, model: model)
-                }
+            ForEach(model.windowTabs.tabs.filter(\.pinned)) { tab in
+                PinnedTab(tab: tab, model: model)
+            }
+        }
+        ToolbarItemGroup(placement: .navigation) {
+            ForEach(model.windowTabs.tabs.filter { !$0.pinned }) { tab in
+                SessionTab(tab: tab, model: model)
             }
             Button { model.newSession() } label: {
                 Label("New Session", systemImage: "plus")
@@ -31,20 +37,27 @@ struct TabStripItems: ToolbarContent {
     }
 }
 
-/// A pinned tab is its icon and nothing else, so it wears the same square
-/// — and the same states — as the buttons at either end of the bar.
+/// A pinned tab is its icon and nothing else: a system toggle on the bar,
+/// which draws it in the toolbar's own glass and lights it while its tab
+/// is in front. A tab is left by going to another, never by pressing it
+/// again, so the toggle answers only to being switched on.
 private struct PinnedTab: View {
     let tab: WindowTab
     let model: AppModel
 
     var body: some View {
-        Button { model.select(tabId: tab.id) } label: {
+        Toggle(isOn: isInFront) {
             Label(tab.title, systemImage: tab.kind.symbol)
-                .barGlyph()
         }
-        .buttonStyle(BarChipStyle(isOn: model.windowTabs.activeId == tab.id))
+        .toggleStyle(.button)
         .help(tab.title)
         .contextMenu { TabContextMenu(tab: tab, model: model) }
+    }
+
+    private var isInFront: Binding<Bool> {
+        Binding(
+            get: { model.windowTabs.activeId == tab.id },
+            set: { if $0 { model.select(tabId: tab.id) } })
     }
 }
 
@@ -63,8 +76,9 @@ private struct SessionTab: View {
     @State private var isHovering = false
 
     private static let maxWidth: CGFloat = 208
-    private static let closeSlot: CGFloat = 18
-    private static let trailingInset: CGFloat = 4
+    private static let closeSlot: CGFloat = 20
+    private static let leadingInset: CGFloat = 14
+    private static let trailingInset: CGFloat = 8
 
     var body: some View {
         let isActive = model.windowTabs.activeId == tab.id
@@ -77,7 +91,7 @@ private struct SessionTab: View {
                 Color.clear
                     .frame(width: Self.closeSlot, height: Self.closeSlot)
             }
-            .padding(.leading, 10)
+            .padding(.leading, Self.leadingInset)
             .padding(.trailing, Self.trailingInset)
             .frame(maxWidth: Self.maxWidth)
         }
@@ -103,10 +117,10 @@ private struct SessionTab: View {
     }
 }
 
-/// The ✕ in a session tab's slot: a smaller chip inside the chip, lit only
-/// under the pointer so it reads as part of the tab until it is reached
-/// for. Its own button, so pressing it closes the tab rather than picking
-/// it.
+/// The ✕ in a session tab's slot: a smaller chip inside the chip — round,
+/// as the tab's ends are — lit only under the pointer so it reads as part
+/// of the tab until it is reached for. Its own button, so pressing it
+/// closes the tab rather than picking it.
 private struct TabCloseButton: View {
     let title: String
     let action: () -> Void
@@ -120,7 +134,7 @@ private struct TabCloseButton: View {
                 .foregroundStyle(.primary.opacity(isHovering ? 1 : 0.7))
                 .background(
                     isHovering ? Color.primary.opacity(BarChipMetrics.onTint) : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 4))
+                    in: Circle())
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

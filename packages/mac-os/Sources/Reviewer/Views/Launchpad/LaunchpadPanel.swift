@@ -1,12 +1,13 @@
 // The launchpad: every window tab laid out as a card, each wearing the last
 // picture taken of it, so the one you want is found by look rather than by
-// title. It slides out from under the toolbar and pushes the islands down
-// — the web app's `tab-overview`, native — standing on the frame's own
-// material and nothing else: no sheet, no fill, the bare window the panels
-// stand on. Click a card to go there, its mark to close it; the dimmed page
-// under the panel, the tab on its bottom edge, Escape, or ⌘L again put it
-// away. The seam along that same edge sizes it, and pulled up far enough
-// shuts it; the same seam along the top of the page pulls it out again.
+// title. It slides out from under the toolbar, across the whole window,
+// and pushes the sidebar's glass and the islands down together — the web
+// app's `tab-overview`, native — standing on the bare frame the push
+// uncovers and nothing else: no sheet, no fill. Click a card to go there,
+// its mark to close it; the dimmed window under the panel, the tab on its
+// bottom edge, Escape, or ⌘L again put it away. The seam along that same
+// edge sizes it, and pulled up far enough shuts it; the same seam along
+// the top of the page pulls it out again.
 // The tabs are the island's (see `WindowTabStrip`); the pictures are the
 // shell's, taken of the page as each tab is left; the height and the moves
 // are `Launchpad`'s.
@@ -127,10 +128,11 @@ private struct LaunchpadCard: View {
     }
 }
 
-/// The page giving way to the launchpad: still there, and plainly not the
-/// thing being looked at. Dimmed, not blurred — it is still the page you
-/// were reading, and a blur is a full-surface filter on every frame of the
-/// push. Clicking it is the way back, as with any scrim.
+/// The window giving way to the launchpad — the sidebar and the islands
+/// alike: still there, and plainly not the thing being looked at. Dimmed,
+/// not blurred — it is still the page you were reading, and a blur is a
+/// full-surface filter on every frame of the push. Clicking it is the way
+/// back, as with any scrim.
 struct LaunchpadScrim: View {
     @Environment(AppModel.self) private var model
 

@@ -1,13 +1,17 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/inter";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: "Inter Variable", sans-serif;
+  /* The UI takes the platform's own face — SF Pro on a Mac — so the web app
+     and the native macOS shell set their chrome in the same type. Only pierre's
+     diff code keeps its own mono stack. */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto,
+    sans-serif;
   --color-brand-50: var(--brand-50);
   --color-brand-100: var(--brand-100);
   --color-brand-200: var(--brand-200);
@@ -890,7 +894,6 @@
   }
   html {
     @apply font-sans antialiased;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss03";
   }
 }
 /* --- reviewer: the window frame and its content canvas ---------------------- */
@@ -1118,6 +1121,11 @@
    edge already. */
 .island {
   --frame-inset: 0px;
+  /* The shell's own chips — the bar's buttons, the rail's, the pane heads' —
+     turn a 6pt corner (see `BarChipMetrics`), and the buttons, tabs and
+     comment cards inside an island all turn `md`. So the dial is set where
+     `md` lands on 6px, and the rest of the scale follows: `sm` 4px, `lg` 8px. */
+  --radius: 0.5rem;
 }
 
 /* An island wears the window's own palette rather than its own. The shell
@@ -1572,7 +1580,7 @@
 /* Comment bodies live in a narrow gutter, so wrap aggressively: long words,
    URLs and inline code must break rather than force the card to overflow. */
 .markdown {
-  /* Comment prose uses the UI sans font (Inter) and wraps normally, overriding
+  /* Comment prose uses the UI sans font and wraps normally, overriding
      the monospace + `white-space: pre` it would otherwise inherit from the
      surrounding Pierre diff surface (which would make long lines overflow the
      card instead of wrapping). Only real code (code/pre, below) opts back in. */
@@ -1718,11 +1726,9 @@
    from --diffs-bg, so overriding the root recomputes them against our bg. */
 diffs-container {
   --diffs-bg: var(--background);
-  /* The file header falls back to system-ui, and the buttons we render into it
-     inherit that — so the same `font-plus` that reads as medium in Inter came
-     out looking bold in SF Pro. The weight was never wrong; the typeface was.
-     The header is app chrome, so it takes the app's face. (Only the header: the
-     code itself stays on pierre's mono stack.) */
+  /* The file header is app chrome, so it takes the app's face rather than
+     pierre's own fallback. (Only the header: the code itself stays on pierre's
+     mono stack.) */
   --diffs-header-font-family: var(--font-sans);
   /* Pierre's "modified" colour is its own blue (#009fff/#69b1ff), and the
      gutter's add-a-comment button is painted with it. Take it to `--primary` so

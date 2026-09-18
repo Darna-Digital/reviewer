@@ -9,7 +9,9 @@
 import SwiftUI
 
 enum IslandMetrics {
-    static let radius: CGFloat = 10
+    /// The system sidebar's own corner, so the islands beside it read as
+    /// the same family of panel.
+    static let radius: CGFloat = 16
     /// The run of frame between two panels, and between a panel and the
     /// window's edge.
     static let gap: CGFloat = 6

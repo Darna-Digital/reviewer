@@ -8,9 +8,10 @@
 // does: the branch you are on is what the tree beneath it is a tree of. On
 // the sessions surface the column holds the sessions list instead (see
 // `SessionsList`) — every project's, so no branch names it, and the picker
-// stands down with the tree. The project picker sits on the toolbar; the
-// rail that moves the page between the surfaces stands down the sidebar's
-// leading edge (see `AppRail`). The sidebar follows the page, and a file or
+// stands down with the tree. The project picker stands in the sidebar's
+// run of the toolbar, beside its toggle (see `ContentView`); the rail that
+// moves the page between the surfaces stands down the sidebar's leading
+// edge (see `AppRail`). The sidebar follows the page, and a file or
 // a session picked in it is carried to the page.
 import SwiftUI
 

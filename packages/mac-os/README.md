@@ -9,9 +9,10 @@ showing one part of the SPA.
 What it does today:
 
 - **Native sidebar** — the system's own sidebar, the full-height column of
-  glass running up to the window's top edge with the traffic lights and
-  the sidebar toggle inside it, as Music has it, and the rail down its
-  leading edge, holding the code page's file
+  glass running up to the window's top edge with the traffic lights, the
+  project picker and the sidebar toggle inside it — the toggle as Music has
+  it, the picker beside it as Notes has its folder button — and the
+  rail down its leading edge, holding the code page's file
   tree as a native outline in the web sidebar's two layouts:
   the project's files while browsing, and on a diff the changed files under
   a search, badged and tinted by git status, with the commit composer under
@@ -43,10 +44,12 @@ What it does today:
   sends the toolbar a picture of itself; a tab pressed there, and each menu
   chord, goes back down to the strip to answer.
 - **Launchpad** (⌘L) — every tab as a card wearing the last picture taken
-  of it. As in the web app, it slides out from under the toolbar and pushes
-  the islands down by its own height rather than covering them — moved, not
-  resized, so the web view and the terminal are composited down instead of
-  laid out again — with the page dimmed under it and a collapse tab on its
+  of it. As in the web app, it slides out from under the toolbar — across
+  the whole window, one grid on the bare frame — and pushes everything
+  under the bar down by its own height rather than covering it: the
+  sidebar's pane of glass along with the islands, moved, not resized, so
+  the web view and the terminal are composited down instead of laid out
+  again — with what it pushed dimmed under it and a collapse tab on its
   edge. That edge is a seam: pull it down from the top of the page to draw
   the panel out under the pointer, pull it up to shrink it, and far enough
   to put it away. The trackpad does the same on the toolbar — two fingers
@@ -97,8 +100,10 @@ What it does today:
   regex toggles, opening on whatever the page has selected. A result opens
   in the page island where the web palette would open it — in place on a
   code surface, otherwise on the diff.
-- **Projects** — ⌘O opens a folder through `NSOpenPanel`; recents come from
-  the server.
+- **Projects** — the chip at the head of the sidebar, the open project's
+  avatar and name, pulls down the recents the server remembers, the open
+  one ticked; ⌘O, or its last row, opens any other folder through
+  `NSOpenPanel`.
 
 ## Islands
 

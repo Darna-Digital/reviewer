@@ -2,9 +2,10 @@
 // exactly how far the page under it is pushed — and the pull that is
 // moving it, when one is.
 //
-// It slides out from under the toolbar and pushes the page down rather than
-// covering it, as the web app's does (`tab-overview`): the app reads as
-// having made room for itself instead of having been replaced. Open, it
+// It slides out from under the toolbar and pushes the window's content —
+// the sidebar and the page alike — down rather than covering it, as the web
+// app's does (`tab-overview`): the app reads as having made room for itself
+// instead of having been replaced. Open, it
 // stands at the height its rows come to, held between one row and what the
 // window can spare; a pull — the seam on its edge, or two fingers drawn
 // down the toolbar — draws it out under the pointer, frame for frame, and
@@ -40,8 +41,9 @@ final class Launchpad {
     private(set) var height: CGFloat = Launchpad.minHeight
     /// A pull is moving the panel: it follows the pointer, unanimated.
     private(set) var isPulling = false
-    /// The box under the toolbar the panel slides into, as the view reports
-    /// it — what the fitted height and the ceiling are worked out against.
+    /// The box under the toolbar the panel slides into — the whole window's
+    /// content, sidebar and detail across, as `LaunchpadLayer` reports it —
+    /// what the fitted height and the ceiling are worked out against.
     var canvas: CGSize = .zero {
         didSet { if isShown, height > maxHeight { height = maxHeight } }
     }
