@@ -13,10 +13,12 @@
 // events are the horizontal page swipes), but every touch on the trackpad
 // reaches the app as a gesture event carrying the fingers on the surface.
 // Three of them together, over the bar or the panel, are a pull: their
-// travel down the trackpad, scaled up to the screen, is the pull's — and
-// let go of, three fingers are a swipe: the panel is flung the rest of the
-// way it was going, out onto its rows or back in, rather than left where a
-// flick happened to end.
+// travel up the trackpad, scaled up to the screen, is the pull's — the
+// panel is drawn out by fingers moving away from it, the way the system's
+// own three-finger swipe up brings its overview out — and let go of, three
+// fingers are a swipe: the panel is flung the rest of the way it was going,
+// out onto its rows or back in, rather than left where a flick happened to
+// end.
 //
 // Only the events the launchpad claims are swallowed. A scroll that did not
 // start on the bar, the momentum that follows a pull, and every gesture
@@ -48,12 +50,13 @@ final class LaunchpadGestureMonitor {
         var spent = false
     }
 
-    /// Screen points per point of travel on the trackpad — the pointer's
-    /// own ratio, near enough, so a pull feels like moving the panel with
-    /// the fingers rather than winding it.
-    private static let fingerGain: CGFloat = 3
-    /// Three fingers moved at least this far, and let go: a swipe.
-    private static let flickTravel: CGFloat = 24
+    /// Screen points per point of travel on the trackpad — well above the
+    /// pointer's own ratio, so the panel comes the whole way out for a
+    /// short swipe rather than a reach across the trackpad.
+    private static let fingerGain: CGFloat = 6
+    /// Three fingers moved at least this far, and let go: a swipe. Low, so
+    /// a flick barely begun still carries the panel the rest of the way.
+    private static let flickTravel: CGFloat = 10
 
     private let launchpad: Launchpad
     private let hear: @MainActor (LaunchpadGesture) -> Void
@@ -121,7 +124,7 @@ final class LaunchpadGestureMonitor {
                 if underPointer { hear(.pullBegan) }
             }
             guard var fingers, !fingers.spent else { return }
-            fingers.travel = (fingers.startY - y) * fingers.surfaceHeight * Self.fingerGain
+            fingers.travel = (y - fingers.startY) * fingers.surfaceHeight * Self.fingerGain
             self.fingers = fingers
             hear(.pulled(fingers.travel))
         case ..<3:

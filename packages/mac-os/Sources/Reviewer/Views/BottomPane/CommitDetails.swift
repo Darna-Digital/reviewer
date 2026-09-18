@@ -160,7 +160,7 @@ private struct FileRow: View {
             .padding(.trailing, 8)
             .frame(height: 26)
             .background(
-                selected ? Color.accentColor.opacity(0.18) : isHovering ? Color.primary.opacity(0.05) : Color.clear,
+                selected ? TreeSelection.color : isHovering ? Color.primary.opacity(0.05) : Color.clear,
                 in: RoundedRectangle(cornerRadius: 5))
             .contentShape(Rectangle())
         }

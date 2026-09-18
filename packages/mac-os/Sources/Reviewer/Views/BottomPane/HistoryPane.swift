@@ -11,22 +11,88 @@ import SwiftUI
 
 struct HistoryPane: View {
     @Environment(AppModel.self) private var model
+    // The width the details column was last dragged to, or none until it
+    // has been: opened fresh, it takes a share of the pane instead, so a
+    // wide window shows the file tree without truncating its paths while
+    // a narrow one still leaves the list room. HSplitView can't do this —
+    // it sizes its columns once, before the pane has a width to share.
+    // The live width during a drag is state; the defaults get it on release.
+    @AppStorage("history-details-width") private var savedDetailsWidth = 0.0
+    @State private var draggedDetailsWidth: Double?
 
     private var history: CommitHistory { model.history }
 
     var body: some View {
         VStack(spacing: 0) {
             HistoryFilterBar()
-            HSplitView {
-                CommitList()
-                    .frame(minWidth: 320, maxWidth: .infinity, maxHeight: .infinity)
-                    .layoutPriority(1)
-                if history.selectedSha != nil {
-                    CommitDetails()
-                        .frame(minWidth: 240, idealWidth: 320, maxWidth: 520, maxHeight: .infinity)
+            GeometryReader { proxy in
+                let range = Self.detailsRange(in: proxy.size.width)
+                let width = detailsWidth(in: proxy.size.width, range: range)
+                HStack(spacing: 0) {
+                    CommitList()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // CommitDetails uses a missing loaded detail as its loading state. Keep
+                    // the column out of the layout until a commit is selected so an empty
+                    // history shows neither a permanent spinner nor unused column space.
+                    if history.selectedSha != nil {
+                        ColumnResizeHandle(width: Binding(get: { width }, set: { draggedDetailsWidth = $0 }),
+                                           range: range) { savedDetailsWidth = $0 }
+                        CommitDetails()
+                            .frame(width: width)
+                            .frame(maxHeight: .infinity)
+                    }
                 }
             }
         }
+    }
+
+    private func detailsWidth(in paneWidth: CGFloat, range: ClosedRange<Double>) -> Double {
+        let wanted = draggedDetailsWidth
+            ?? (savedDetailsWidth > 0 ? savedDetailsWidth : paneWidth * Self.detailsShare)
+        return min(max(wanted, range.lowerBound), range.upperBound)
+    }
+
+    private static let detailsMinWidth = 280.0
+    private static let listMinWidth = 320.0
+    private static let detailsShare = 0.36
+
+    private static func detailsRange(in paneWidth: CGFloat) -> ClosedRange<Double> {
+        detailsMinWidth...max(detailsMinWidth, paneWidth - listMinWidth)
+    }
+}
+
+/// A hairline down the leading edge of a column, dragged to give the
+/// column more or less room — left for more. Measured in the window, as
+/// the composer's handles are, since the handle moves with the edge it
+/// drags.
+private struct ColumnResizeHandle: View {
+    @Binding var width: Double
+    let range: ClosedRange<Double>
+    let onRelease: (Double) -> Void
+    @State private var startWidth: Double?
+
+    var body: some View {
+        Divider()
+            .frame(width: 7)
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                if hovering { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                    .onChanged { drag in
+                        let start = startWidth ?? width
+                        startWidth = start
+                        var transaction = Transaction()
+                        transaction.disablesAnimations = true
+                        withTransaction(transaction) {
+                            width = min(max(start - drag.translation.width, range.lowerBound), range.upperBound)
+                        }
+                    }
+                    .onEnded { _ in
+                        startWidth = nil
+                        onRelease(width)
+                    })
     }
 }
 
@@ -338,7 +404,9 @@ private struct SinceDateButton: View {
     }
 }
 
-/// The commits: one row each, the graph's cell down the leading edge.
+/// The commits: one row each, the graph's cell down the leading edge. The
+/// list paints its own pick, in `TreeSelection`'s wash, since a selecting
+/// `List` would paint the accent blue; Up and Down still walk the rows.
 private struct CommitList: View {
     @Environment(AppModel.self) private var model
 
@@ -347,29 +415,38 @@ private struct CommitList: View {
     var body: some View {
         let commits = history.commits
         let layout = history.graph
-        List(selection: selection) {
-            ForEach(Array(commits.enumerated()), id: \.element.sha) { index, commit in
-                CommitRow(commit: commit, graph: layout.rows[index], width: layout.width,
-                          owner: history.owners[commit.sha])
-                    .tag(commit.sha)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
-                    .onAppear {
-                        if commit.sha == commits.last?.sha { history.loadMore() }
-                    }
+        ScrollViewReader { scroller in
+            List {
+                ForEach(Array(commits.enumerated()), id: \.element.sha) { index, commit in
+                    CommitRow(commit: commit, graph: layout.rows[index], width: layout.width,
+                              owner: history.owners[commit.sha],
+                              selected: commit.sha == history.selectedSha) { select(commit) }
+                        .id(commit.sha)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 8, bottom: 0, trailing: 8))
+                        .onAppear {
+                            if commit.sha == commits.last?.sha { history.loadMore() }
+                        }
+                }
+                if !commits.isEmpty && history.hasMore {
+                    Text("Loading older commits…")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 8)
+                        .listRowSeparator(.hidden)
+                }
             }
-            if !commits.isEmpty && history.hasMore {
-                Text("Loading older commits…")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 8)
-                    .listRowSeparator(.hidden)
-                    .selectionDisabled()
+            .listStyle(.inset)
+            .scrollContentBackground(.hidden)
+            .focusable()
+            .focusEffectDisabled()
+            .onMoveCommand { direction in
+                guard let commit = neighbour(direction) else { return }
+                select(commit)
+                scroller.scrollTo(commit.sha)
             }
         }
-        .listStyle(.inset)
-        .scrollContentBackground(.hidden)
         .overlay {
             if commits.isEmpty {
                 if history.isLoading {
@@ -386,13 +463,21 @@ private struct CommitList: View {
 
     /// A commit picked is the commit shown: the details beside the list,
     /// and the page on its diff.
-    private var selection: Binding<String?> {
-        Binding(
-            get: { history.selectedSha },
-            set: { sha in
-                history.selectedSha = sha
-                if let commit = history.commits.first(where: { $0.sha == sha }) { model.show(commit: commit) }
-            })
+    private func select(_ commit: CommitInfo) {
+        history.selectedSha = commit.sha
+        model.show(commit: commit)
+    }
+
+    private func neighbour(_ direction: MoveCommandDirection) -> CommitInfo? {
+        let commits = history.commits
+        guard let current = commits.firstIndex(where: { $0.sha == history.selectedSha }) else {
+            return direction == .down ? commits.first : nil
+        }
+        switch direction {
+        case .up: return current > 0 ? commits[current - 1] : nil
+        case .down: return current + 1 < commits.count ? commits[current + 1] : nil
+        default: return nil
+        }
     }
 }
 
@@ -404,33 +489,40 @@ private struct CommitRow: View {
     let graph: GraphRow
     let width: Int
     let owner: RepoEntry?
+    let selected: Bool
+    let open: () -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            GraphCell(row: graph, width: width)
-            if let owner {
-                RepoAvatar(name: owner.name)
-                    .help(owner.name)
+        Button(action: open) {
+            HStack(spacing: 8) {
+                GraphCell(row: graph, width: width)
+                if let owner {
+                    RepoAvatar(name: owner.name)
+                        .help(owner.name)
+                }
+                ForEach(commit.refs.prefix(3), id: \.self) { ref in
+                    RefBadge(ref: ref)
+                }
+                Text(commit.subject)
+                    .font(.system(size: 12))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 8)
+                Text(commit.author)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Text(CommitDates.day(commit.authoredAt))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
-            ForEach(commit.refs.prefix(3), id: \.self) { ref in
-                RefBadge(ref: ref)
-            }
-            Text(commit.subject)
-                .font(.system(size: 12))
-                .lineLimit(1)
-                .truncationMode(.tail)
-            Spacer(minLength: 8)
-            Text(commit.author)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Text(CommitDates.day(commit.authoredAt))
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+            .padding(.horizontal, 6)
+            .frame(height: CommitGraphLayout.rowHeight)
+            .background(selected ? TreeSelection.color : Color.clear, in: RoundedRectangle(cornerRadius: 5))
+            .contentShape(Rectangle())
         }
-        .frame(height: CommitGraphLayout.rowHeight)
-        .contentShape(Rectangle())
+        .buttonStyle(.plain)
     }
 }
 

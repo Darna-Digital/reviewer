@@ -18,12 +18,12 @@
  * applied to what came back. See `useChatPages`.
  *
  * There is no header over this surface at all. Nothing the toolbar carries is
- * about the list — the rail holds what acts on it — and the one thing left, the
- * trail, is about the conversation, so it sits in the conversation's own pane.
- * Cutting a band to the columns instead would have stood an empty strip over
- * the list; a band across them both stopped the seam between them short of the
- * window bar. With neither, the list starts at the top of the window and that
- * seam runs the whole height of it. See `SessionCrumbs` and `AppLayout`.
+ * about the list — the rail holds what acts on it — and the conversation is
+ * named by the row that opened it. A band across both columns stopped the seam
+ * between them short of the window bar; a trail over the conversation alone
+ * was a row of chrome saying what the list beside it already said. With
+ * neither, both columns start at the top of the window and the seam runs the
+ * whole height of it. See `AppLayout`.
  *
  * Which rows are still waiting is the sessions' own business: each carries the
  * moment it was last opened, so a row settles when you open its conversation
@@ -69,7 +69,6 @@ import {
   useShellSessions,
 } from "@/interactions/chats/components/chats-page.shell";
 import { CloudRunRow } from "@/interactions/cloud/components/cloud-run-row";
-import { SessionCrumbs } from "@/interactions/chats/components/session-crumbs";
 import { resolveProjectFilter } from "@/interactions/chats/functions/chat-filters.functions";
 import { openSessionTab } from "@/interactions/chats/functions/open-session-tab";
 import {
@@ -373,10 +372,6 @@ export function ChatsPage() {
         />
       )}
       <section className="app-sheet flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        {/* The trail names the conversation, so it stands over the conversation
-            rather than over both columns: the blank composer is the one session
-            surface with nothing to name yet. See `SessionCrumbs`. */}
-        {!composing && <SessionCrumbs />}
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <Outlet />
         </div>

@@ -1217,13 +1217,6 @@
 .island.dark {
   --surface-3: var(--native-under-page);
 }
-/* Pierre paints the gutter's add-a-comment glyph in `--diffs-bg`, which
-   inverts the near-black/near-white primary it sits on. On the accent it
-   is the one filled control whose ink would still flip with the theme, so
-   it takes the primary's own foreground like the rest. */
-.island diffs-container [data-utility-button] {
-  color: var(--primary-foreground);
-}
 /* The rail is not a sheet of its own. Given a tone and a seam of its own it read
    as a strip of chrome floating on the frame. So it is the left edge of the
    sheet beside it, the way it was when the whole window was one canvas: the
@@ -1758,7 +1751,8 @@ diffs-container {
   /* Pierre's "modified" colour is its own blue (#009fff/#69b1ff), and the
      gutter's add-a-comment button is painted with it. Take it to `--primary` so
      that button flips near-black on light and near-white on dark like every
-     other filled control — its label reads `--diffs-bg`, so it inverts with it.
+     other filled control (its glyph is inked `--primary-foreground` from
+     inside the shadow root; see code-selection-css.ts).
 
      Both halves of selection are pinned back to pierre's blues on purpose: they
      derive from the same variable, but as `color-mix(…65-75%, black)`, so

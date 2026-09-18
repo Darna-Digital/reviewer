@@ -198,6 +198,11 @@ private final class OutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOut
         return cell
     }
 
+    func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? {
+        outlineView.makeView(withIdentifier: FileTreeRowView.identifier, owner: nil) as? FileTreeRowView
+            ?? FileTreeRowView()
+    }
+
     func outlineViewSelectionDidChange(_ notification: Notification) {
         guard let outline, outline.selectedRow >= 0,
             let node = outline.item(atRow: outline.selectedRow) as? FileTreeNode,
@@ -272,6 +277,32 @@ extension NSView {
     fileprivate var isDark: Bool { effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua }
 }
 
+/// The selected row wears `TreeSelection`'s quiet fill and never counts as
+/// emphasized, so the cell's labels keep their own colours.
+private final class FileTreeRowView: NSTableRowView {
+    static let identifier = NSUserInterfaceItemIdentifier("FileTreeRow")
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        identifier = Self.identifier
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    override var isEmphasized: Bool {
+        get { false }
+        set {}
+    }
+
+    override var interiorBackgroundStyle: NSView.BackgroundStyle { .normal }
+
+    override func drawSelection(in dirtyRect: NSRect) {
+        guard isSelected else { return }
+        TreeSelection.fill.setFill()
+        NSBezierPath(roundedRect: bounds.insetBy(dx: 10, dy: 0), xRadius: 5, yRadius: 5).fill()
+    }
+}
+
 /// One row: icon, name, and the status letter or the changes dot at the
 /// trailing edge, laid out by hand — a reused cell has nothing to solve.
 /// The row is the web tree's size, 13pt text on a 30pt line, and the fields
@@ -292,10 +323,6 @@ private final class FileTreeCellView: NSTableCellView {
 
     private var isDirectory = false
     private var nameColor: NSColor = .labelColor
-
-    override var backgroundStyle: NSView.BackgroundStyle {
-        didSet { paintName() }
-    }
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -352,11 +379,8 @@ private final class FileTreeCellView: NSTableCellView {
         needsLayout = true
     }
 
-    /// A plain name goes white on the selection the way a sidebar label
-    /// does; a status hue stays its own, as in the web tree.
     private func paintName() {
-        nameField.textColor =
-            backgroundStyle == .emphasized && nameColor == .labelColor ? .alternateSelectedControlTextColor : nameColor
+        nameField.textColor = nameColor
     }
 
     func setExpanded(_ expanded: Bool) {
