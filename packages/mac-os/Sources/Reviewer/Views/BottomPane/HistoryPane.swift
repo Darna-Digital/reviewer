@@ -418,7 +418,7 @@ private struct CommitList: View {
         ScrollViewReader { scroller in
             List {
                 ForEach(Array(commits.enumerated()), id: \.element.sha) { index, commit in
-                    CommitRow(commit: commit, graph: layout.rows[index], width: layout.width,
+                    CommitRow(commit: commit, graph: layout.rows[index],
                               owner: history.owners[commit.sha],
                               selected: commit.sha == history.selectedSha) { select(commit) }
                         .id(commit.sha)
@@ -487,7 +487,6 @@ private struct CommitList: View {
 private struct CommitRow: View {
     let commit: CommitInfo
     let graph: GraphRow
-    let width: Int
     let owner: RepoEntry?
     let selected: Bool
     let open: () -> Void
@@ -495,7 +494,7 @@ private struct CommitRow: View {
     var body: some View {
         Button(action: open) {
             HStack(spacing: 8) {
-                GraphCell(row: graph, width: width)
+                GraphCell(row: graph)
                 if let owner {
                     RepoAvatar(name: owner.name)
                         .help(owner.name)

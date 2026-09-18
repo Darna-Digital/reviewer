@@ -26,12 +26,19 @@ struct GraphRow: Equatable {
     let after: [GraphLane?]
     /// The columns this row wrote into: its dot's, and any merge lane it opened.
     let written: [Int]
+
+    /// The columns this row draws in: its dot's, and every lane passing above
+    /// or below it. The cell is only this wide, so a busy stretch of merges
+    /// pushes its own rows' text right without indenting the whole list.
+    var columns: Int {
+        let lastBefore = before.lastIndex { $0 != nil } ?? -1
+        let lastAfter = after.lastIndex { $0 != nil } ?? -1
+        return max(dotColumn, lastBefore, lastAfter) + 1
+    }
 }
 
 struct CommitGraphLayout: Equatable {
     var rows: [GraphRow] = []
-    /// The widest lane count across the rows, which sets every cell's width.
-    var width = 1
 
     static let empty = CommitGraphLayout()
 
@@ -90,7 +97,6 @@ struct CommitGraphLayout: Equatable {
             }
 
             let after = lanes
-            layout.width = max(layout.width, before.count, after.count)
             layout.rows.append(GraphRow(
                 sha: commit.sha, dotColumn: dotColumn, color: color, isMerge: commit.parents.count > 1,
                 before: before, after: after, written: written))
@@ -122,13 +128,13 @@ struct CommitGraphLayout: Equatable {
 
 /// One commit's cell of the graph: the lanes passing through it, the edges
 /// converging into and branching out of its dot, and the dot — hollow for
-/// a merge.
+/// a merge. Sized to the row's own lanes, so the subject sits right after
+/// the graph and steps out only where the graph widens.
 struct GraphCell: View {
     let row: GraphRow
-    let width: Int
 
     var body: some View {
-        let cellWidth = CGFloat(max(width, 1)) * CommitGraphLayout.columnWidth
+        let cellWidth = CGFloat(row.columns) * CommitGraphLayout.columnWidth
         let height = CommitGraphLayout.rowHeight
         let middle = height / 2
         Canvas { context, _ in
