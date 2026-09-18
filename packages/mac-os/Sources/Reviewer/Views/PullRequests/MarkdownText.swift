@@ -133,30 +133,34 @@ enum MarkdownBlock: Identifiable {
 
 struct MarkdownText: View {
     let text: String
+    /// The body size; the headings and the code step from it. A pull
+    /// request's description reads at the column's caption size, a reply
+    /// in a conversation at the page's.
+    var size: CGFloat = 12
 
     var body: some View {
         let blocks = MarkdownBlock.parse(text)
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: size * 0.66) {
             ForEach(blocks) { block in
                 switch block {
                 case .heading(let level, let text):
                     Text(text)
-                        .font(.system(size: level == 1 ? 15 : level == 2 ? 14 : 13, weight: .semibold))
+                        .font(.system(size: size + (level == 1 ? 3 : level == 2 ? 2 : 1), weight: .semibold))
                         .padding(.top, 4)
                 case .paragraph(let text):
                     Text(text)
-                        .font(.system(size: 12))
+                        .font(.system(size: size))
                         .lineSpacing(3)
                 case .list(let items, let ordered):
                     VStack(alignment: .leading, spacing: 3) {
                         ForEach(Array(items.enumerated()), id: \.offset) { index, item in
                             HStack(alignment: .firstTextBaseline, spacing: 6) {
                                 Text(ordered ? "\(index + 1)." : "•")
-                                    .font(.system(size: 12))
+                                    .font(.system(size: size))
                                     .foregroundStyle(.secondary)
                                     .frame(minWidth: 12, alignment: .trailing)
                                 Text(item)
-                                    .font(.system(size: 12))
+                                    .font(.system(size: size))
                                     .lineSpacing(3)
                             }
                         }
@@ -164,7 +168,7 @@ struct MarkdownText: View {
                 case .code(let text):
                     ScrollView(.horizontal, showsIndicators: false) {
                         Text(text)
-                            .font(.system(size: 11, design: .monospaced))
+                            .font(.system(size: size - 1, design: .monospaced))
                             .lineSpacing(2)
                             .padding(8)
                     }
@@ -175,7 +179,7 @@ struct MarkdownText: View {
                             .fill(.quaternary)
                             .frame(width: 2)
                         Text(text)
-                            .font(.system(size: 12))
+                            .font(.system(size: size))
                             .foregroundStyle(.secondary)
                             .lineSpacing(3)
                     }

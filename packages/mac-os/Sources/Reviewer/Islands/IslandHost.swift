@@ -63,8 +63,12 @@ final class IslandHost: NSObject {
         return view
     }
 
+    /// The address is the shell's own as soon as it is asked for, not once
+    /// the island confirms it, so what follows the address natively — the
+    /// sessions surface in the page's place — moves with the click.
     func navigate(to href: String) {
         self.href = href
+        onNavigated?(href)
         guard isReady else { return }
         dispatch(["type": "navigate", "href": href])
     }

@@ -369,8 +369,28 @@ struct NewChat: Encodable {
     var branch: String?
 }
 
+/// A patch to a chat's composer settings, or its title — `UpdateChat` in
+/// core; only what is set is sent.
+struct UpdateChat: Encodable {
+    var title: String?
+    var provider: ChatProviderKind?
+    var model: String?
+    var effort: String?
+    var access: ChatAccess?
+}
+
+/// An image sent with a prompt: the full-resolution bytes for the agent,
+/// base64 without the `data:` prefix, and the small data-URL thumbnail the
+/// message keeps for its preview — `ChatImageUpload` in core.
+struct ChatImageUpload: Encodable, Hashable, Sendable {
+    let name: String
+    let data: String
+    let thumbnail: String
+}
+
 struct SendChatMessage: Encodable {
     let text: String
+    var images: [ChatImageUpload]?
 }
 
 /// One frame of the chat stream socket. The server sends a `snapshot` on

@@ -248,13 +248,17 @@ export interface ShellSessionFilters {
  * What the shell's list can do — the row's own gestures, and the list's:
  * a click shows the session on the Sessions tab, the menu lifts it into a tab
  * of its own or deletes it, scrolling to the foot asks for the next page, and
- * the field and the filter menu narrow what is asked for.
+ * the field and the filter menu narrow what is asked for. `refetch` is the
+ * conversation's: inside the shell the conversation is drawn natively, read
+ * from the server by the shell itself, so the rows' marks — a turn running, a
+ * session just started, one just opened — are re-read when it says they moved.
  */
 export type ShellSessionAction =
   | { readonly kind: "select"; readonly id: string }
   | { readonly kind: "openInTab"; readonly id: string }
   | { readonly kind: "delete"; readonly id: string }
   | { readonly kind: "loadMore" }
+  | { readonly kind: "refetch" }
   | { readonly kind: "search"; readonly text: string }
   | {
       readonly kind: "filter";

@@ -14,9 +14,11 @@
  * from a session's tab shows on the Sessions tab — the list's own — the way a
  * click in the web list always did.
  */
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef } from "react";
 import { setChatFilters } from "@/interactions/chats/adapters/chat-filters.store";
+import { invalidateChatList } from "@/interactions/chats/adapters/chats.cache";
 import { openSessionTab } from "@/interactions/chats/functions/open-session-tab";
 import { updateWindowTabs } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import {
@@ -41,6 +43,14 @@ import { isCloudRunActive, type CloudRunSummary } from "@reviewer/core/cloud";
 
 /** Whether the list is the shell's to draw rather than this document's. */
 export const shellDrawsSessions = island === "code";
+
+/**
+ * Whether the conversation is the shell's to draw too — natively, in this
+ * page's place, from its own reading of the chat stream — so the routed
+ * `ChatView` and the composer stand down here rather than stream a second
+ * copy under it. See the shell's `Chats`.
+ */
+export const shellDrawsConversation = island === "code";
 
 /** What the shell's list is drawn from, and what its rows can do. */
 export interface ShellSessionsSource {
@@ -100,6 +110,7 @@ const cloudRow = (run: CloudRunSummary): ShellSession => ({
  */
 export function useShellSessions(source: ShellSessionsSource | null): void {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const latest = useRef(source);
   latest.current = source;
 
@@ -140,6 +151,9 @@ export function useShellSessions(source: ShellSessionsSource | null): void {
   useEffect(() => {
     if (!shellDrawsSessions) return;
     const act = (action: ShellSessionAction) => {
+      // The shell's conversation moved; the rows are stale whatever the
+      // page is holding for them.
+      if (action.kind === "refetch") return invalidateChatList(queryClient);
       const current = latest.current;
       if (current === null) return;
       switch (action.kind) {
@@ -188,5 +202,5 @@ export function useShellSessions(source: ShellSessionsSource | null): void {
     return shell.subscribe((event) => {
       if (event.type === "sessions") act(event.action);
     });
-  }, [navigate]);
+  }, [navigate, queryClient]);
 }

@@ -103,6 +103,9 @@ enum SessionAction {
     case loadMore
     case search(String)
     case filter(project: String?, date: SessionDateFilter?)
+    /// The shell's own conversation moved — a session started, a turn began
+    /// or ended, one was opened — so the rows' marks are stale.
+    case refetch
 
     var payload: [String: Any] {
         switch self {
@@ -110,6 +113,7 @@ enum SessionAction {
         case .openInTab(let id): return ["kind": "openInTab", "id": id]
         case .delete(let id): return ["kind": "delete", "id": id]
         case .loadMore: return ["kind": "loadMore"]
+        case .refetch: return ["kind": "refetch"]
         case .search(let text): return ["kind": "search", "text": text]
         case .filter(let project, let date):
             var payload: [String: Any] = ["kind": "filter"]

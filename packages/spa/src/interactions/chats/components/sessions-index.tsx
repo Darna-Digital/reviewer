@@ -8,9 +8,14 @@
  * reason to mint a session, so nothing here does.
  *
  * The composer is what `?new` is for, and only the rail's + asks for it.
+ *
+ * Inside the macOS shell both — the composer and the wait — are drawn
+ * natively in this page's place (see the shell's `Chats`), so the page shows
+ * nothing of its own there.
  */
 import { useSearch } from "@tanstack/react-router";
 import { useChatListQuery } from "@/interactions/chats/adapters/chat-list-query.hook.adapter";
+import { shellDrawsConversation } from "@/interactions/chats/components/chats-page.shell";
 import { NewChatView } from "@/interactions/chats/components/new-chat-view";
 import { useChatPages } from "@/lib/queries";
 
@@ -21,6 +26,7 @@ export function SessionsIndex() {
   // started rather than starting a second one.
   const { sessions, loading } = useChatPages(filters, !startingNew);
 
+  if (shellDrawsConversation) return null;
   if (startingNew) return <NewChatView />;
   // Empty until the list has answered: a page that says there is nothing here
   // and then opens a session is a page that was wrong for as long as it showed.

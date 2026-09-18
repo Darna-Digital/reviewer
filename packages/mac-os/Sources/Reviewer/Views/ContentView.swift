@@ -227,7 +227,15 @@ private struct DetailColumn: View {
         case .ready where !model.hasProject:
             Color.clear
         case .ready:
-            IslandView(host: model.page)
+            // The island stays under the native page: the tab strip and the
+            // sessions list are still its, and a web view out of the window
+            // would be throttled. On these pages it shows nothing of its own.
+            ZStack {
+                IslandView(host: model.page)
+                if model.chats.page != nil {
+                    ChatPageView()
+                }
+            }
         }
     }
 }

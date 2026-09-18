@@ -43,6 +43,10 @@ final class AppModel {
     /// The sessions list, as the page last reported it — while it is on the
     /// sessions surface, where the sidebar draws this in the tree's place.
     private(set) var sessions: ShellSessions?
+    /// The sessions surface itself — the conversation, the composer — drawn
+    /// by the shell in the page's place while the island is on it, read
+    /// from the server by the shell itself.
+    let chats: Chats
     /// The project's merge requests, read by the shell itself: the list the
     /// sidebar draws on that surface, and the overview beside a pull
     /// request's diff.
@@ -88,6 +92,7 @@ final class AppModel {
         services = DevServices(client: client)
         threads = Threads(client: client)
         pullRequests = PullRequests(client: client)
+        chats = Chats(client: client)
         history = CommitHistory(client: client)
         search = QuickSearch(client: client)
         search.onOpen = { [weak self] path, line in self?.show(file: path, line: line) }
@@ -105,6 +110,8 @@ final class AppModel {
         launchpadGestures = LaunchpadGestureMonitor { [weak self] gesture in
             self?.hear(gesture)
         }
+        page.onNavigated = { [weak self] href in self?.chats.follow(href: href) }
+        chats.onListChanged = { [weak self] in self?.page.send(SessionAction.refetch) }
         page.onWindowTabsReported = { [weak self] strip in self?.take(strip) }
         page.onTreeReported = { [weak self] listing in self?.sidebar.take(listing) }
         page.onTreeStateReported = { [weak self] state in self?.sidebar.take(state) }
@@ -170,6 +177,7 @@ final class AppModel {
         await threads.load()
         let repo = try? await client.repoInfo()
         await pullRequests.projectChanged(github: repo?.github)
+        await chats.refresh()
     }
 
     /// The page at a code address: what every native control that reaches
@@ -244,6 +252,13 @@ final class AppModel {
     /// file picked in the tree is carried to the page.
     func act(onSessions action: SessionAction) {
         page.send(action)
+    }
+
+    /// A session just started natively: the page on its conversation. The
+    /// tab follows the address — a session's own tab keeps it, the Sessions
+    /// tab shows it — the way the web composer's navigate is followed.
+    func show(chat: Chat) {
+        page.navigate(to: SessionsPage.href(of: chat.id))
     }
 
     // MARK: merge requests
@@ -427,14 +442,23 @@ final class AppModel {
         let leaving = windowTabs.activeId
         launchpad.close()
         Task {
-            snapshots[leaving] = try? await page.webView.takeSnapshot(configuration: nil)
+            snapshots[leaving] = await snapshotPage()
             switching(page)
         }
     }
 
     private func snapshotActiveTab() {
         let id = windowTabs.activeId
-        Task { snapshots[id] = try? await page.webView.takeSnapshot(configuration: nil) }
+        Task { snapshots[id] = await snapshotPage() }
+    }
+
+    /// The page as it stands: the native sessions surface while the shell
+    /// draws one in the island's place, otherwise the web view.
+    private func snapshotPage() async -> NSImage? {
+        if chats.page != nil, let view = chats.pageView {
+            return view.snapshotRegion()
+        }
+        return try? await page.webView.takeSnapshot(configuration: nil)
     }
 
     // MARK: bottom pane

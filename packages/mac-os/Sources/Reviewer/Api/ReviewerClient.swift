@@ -135,8 +135,14 @@ struct ReviewerClient: Sendable {
         try await send("POST", "/api/chats", body: chat)
     }
 
-    func sendMessage(chatId: String, text: String) async throws -> Chat {
-        try await send("POST", "/api/chats/\(chatId)/messages", body: SendChatMessage(text: text))
+    func sendMessage(chatId: String, text: String, images: [ChatImageUpload] = []) async throws -> Chat {
+        try await send(
+            "POST", "/api/chats/\(chatId)/messages",
+            body: SendChatMessage(text: text, images: images.isEmpty ? nil : images))
+    }
+
+    func updateChat(id: String, _ patch: UpdateChat) async throws -> Chat {
+        try await send("PATCH", "/api/chats/\(id)", body: patch)
     }
 
     func stopChat(id: String) async throws {
