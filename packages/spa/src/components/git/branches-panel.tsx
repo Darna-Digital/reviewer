@@ -37,6 +37,18 @@ import type { RepoBranches } from "@reviewer/core/project";
 import type { BranchInfo, RemoteBranchInfo } from "@reviewer/core/repo";
 import type { RepoEntry } from "@reviewer/core/workspace";
 
+/**
+ * One step per level of the tree, 20px wide — the width of a disclosure
+ * triangle and the gap after it — so a row's glyph lands in the column its
+ * parent's glyph is drawn in: a branch under "Recent" starts where the word
+ * "Recent" does, and a branch inside a folder starts at the folder's icon.
+ *
+ * The first step is the 10px every control in this pane carries inside itself,
+ * which puts the section headers' chevrons in the same 14px column as the
+ * icons on the dock's tabs above.
+ */
+const INDENT = ["pl-2.5", "pl-7.5", "pl-12.5"] as const;
+
 interface VirtualAnchor {
   readonly getBoundingClientRect: () => DOMRect;
 }
@@ -131,6 +143,7 @@ export function BranchesPanel(props: BranchesPanelProps) {
               key={`recent:${branch.name}`}
               branch={branch}
               displayName={branch.name}
+              depth={1}
               scope={scope}
               actions={actions.actionItems}
               selected={
@@ -160,6 +173,7 @@ export function BranchesPanel(props: BranchesPanelProps) {
                   key={branch.name}
                   branch={branch}
                   displayName={splitBranchFolder(branch.name)[1]}
+                  depth={group.folder === null ? 1 : 2}
                   scope={scope}
                   actions={actions.actionItems}
                   selected={
@@ -190,6 +204,7 @@ export function BranchesPanel(props: BranchesPanelProps) {
                 <RemoteBranchRow
                   key={branch.name}
                   branch={branch}
+                  depth={group.folder === null ? 1 : 2}
                   scope={scope}
                   actions={actions.actionItems}
                   selected={
@@ -215,17 +230,22 @@ export function BranchesPanel(props: BranchesPanelProps) {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Same band and same inset as the history toolbar next door, so the row
-          under the dock's tabs doesn't move when the tab does. */}
-      <div className="flex min-h-9 shrink-0 items-center gap-1 border-b px-1 py-0.5">
-        <div className="relative min-w-40 flex-1">
-          <IconSearch className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+      {/* The dock's band again — 36px, a 4px margin round a 28px control — so
+          the row under the tabs doesn't move when the tab does, and the field's
+          icon lands in the same 14px column the tab icons are drawn in.
+
+          Flexible but capped: a search box stretched across the whole window
+          reads as a text area rather than a control, and nothing about a branch
+          name needs a thousand pixels to type. */}
+      <div className="flex h-9 shrink-0 items-center gap-1.5 border-b px-1">
+        <div className="relative max-w-96 min-w-48 flex-1">
+          <IconSearch className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search branches"
             aria-label="Search branches"
-            className="h-7 pl-7 text-xs"
+            className="h-7 pr-2.5 pl-8 text-xs"
           />
         </div>
       </div>
@@ -321,10 +341,13 @@ function BranchSection({
 }) {
   if (count === 0) return null;
   return (
-    <section className="mb-1" aria-label={title}>
+    /* 8px between groups, nothing between the rows inside one: a list of
+       branches is one run of rows the way a source list is, and a gap at every
+       row turns the run into a stack of separate chips. */
+    <section className="mb-2 last:mb-0" aria-label={title}>
       <button
         type="button"
-        className="flex h-7 w-full items-center gap-1.5 rounded-md px-2 text-left text-xs font-medium text-muted-foreground outline-none hover:bg-elevate focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
+        className="flex h-7 w-full items-center gap-1.5 rounded-md px-2.5 text-left text-xs font-medium text-muted-foreground outline-none hover:bg-elevate focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
         aria-expanded={!collapsed}
         onClick={onToggle}
       >
@@ -334,7 +357,7 @@ function BranchSection({
         <span>{title}</span>
         <span className="text-muted-foreground/70">{count}</span>
       </button>
-      {!collapsed && <div className="mt-1 flex flex-col gap-1">{children}</div>}
+      {!collapsed && <div className="flex flex-col">{children}</div>}
     </section>
   );
 }
@@ -355,7 +378,7 @@ function BranchFolder({
     <div>
       <button
         type="button"
-        className="flex h-7 w-full items-center gap-1.5 rounded-md px-5 text-left text-sm text-muted-foreground outline-none hover:bg-elevate focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
+        className="flex h-7 w-full items-center gap-1.5 rounded-md pr-2.5 pl-7.5 text-left text-sm text-muted-foreground outline-none hover:bg-elevate focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
         aria-expanded={expanded}
         onClick={() => setOpen((current) => !current)}
       >
@@ -365,7 +388,7 @@ function BranchFolder({
         <IconFolder className="size-3.5 shrink-0" />
         <span className="truncate">{name}</span>
       </button>
-      {expanded && <div className="flex flex-col gap-1 pl-6">{children}</div>}
+      {expanded && <div className="flex flex-col">{children}</div>}
     </div>
   );
 }
@@ -373,6 +396,7 @@ function BranchFolder({
 function LocalBranchRow({
   branch,
   displayName,
+  depth,
   scope,
   actions,
   selected,
@@ -381,6 +405,7 @@ function LocalBranchRow({
 }: {
   readonly branch: BranchInfo;
   readonly displayName: string;
+  readonly depth: number;
   readonly scope: BranchActionScope;
   readonly actions: (
     target: BranchActionTarget,
@@ -398,6 +423,7 @@ function LocalBranchRow({
         isCurrent: branch.isCurrent,
         isRemote: false,
       }}
+      depth={depth}
       scope={scope}
       actions={actions}
       current={branch.isCurrent}
@@ -440,6 +466,7 @@ function LocalBranchRow({
 
 function RemoteBranchRow({
   branch,
+  depth,
   scope,
   actions,
   selected,
@@ -447,6 +474,7 @@ function RemoteBranchRow({
   onCheckout,
 }: {
   readonly branch: RemoteBranchInfo;
+  readonly depth: number;
   readonly scope: BranchActionScope;
   readonly actions: (
     target: BranchActionTarget,
@@ -464,6 +492,7 @@ function RemoteBranchRow({
         isCurrent: false,
         isRemote: true,
       }}
+      depth={depth}
       scope={scope}
       actions={actions}
       selected={selected}
@@ -480,6 +509,7 @@ function RemoteBranchRow({
 
 function BranchRowMenu({
   target,
+  depth,
   scope,
   actions,
   current = false,
@@ -491,6 +521,7 @@ function BranchRowMenu({
   suffix,
 }: {
   readonly target: BranchActionTarget;
+  readonly depth: number;
   readonly scope: BranchActionScope;
   readonly actions: (
     target: BranchActionTarget,
@@ -512,7 +543,8 @@ function BranchRowMenu({
       <button
         type="button"
         className={cn(
-          "flex h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-elevate focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring",
+          "flex h-7 w-full min-w-0 items-center gap-1.5 rounded-md pr-2.5 text-left text-sm outline-none hover:bg-elevate focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring",
+          INDENT[Math.min(depth, INDENT.length - 1)],
           current && "font-medium",
           (selected || current) && "bg-elevate"
         )}
@@ -580,7 +612,7 @@ function RepositoryBranches({
     <section className="mb-2 rounded-lg border bg-muted/20 p-1">
       <button
         type="button"
-        className="flex h-8 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-sm outline-none hover:bg-elevate focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
+        className="flex h-7 w-full min-w-0 items-center gap-1.5 rounded-md px-2.5 text-left text-sm outline-none hover:bg-elevate focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring"
         aria-expanded={expanded}
         onClick={() => setOpen((value) => !value)}
       >

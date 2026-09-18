@@ -132,12 +132,20 @@ export function LogFilters({
   return (
     /* The tab strip this row sits under measures its rhythm in one unit: a 4px
        inset off the pane edge and the 10px each item carries inside itself, so
-       the first control's edge lands on the first tab's and the two rows read
-       as one piece of chrome rather than two strips that happen to be stacked.
-       Between neighbours it takes double the strip's 2px: a tab only draws its
-       chip under the pointer or the selection, so its neighbours are never two
-       boxes side by side — these always are, and at 2px their edges touch. */
-    <div className="flex min-h-9 flex-wrap items-center gap-1 border-b px-1 py-0.5">
+       the first control's edge lands on the first tab's, its icon lands in the
+       tab icons' column, and the two rows read as one piece of chrome rather
+       than two strips that happen to be stacked.
+
+       Between neighbours it takes 6px. A tab only draws its chip under the
+       pointer or the selection, so its neighbours are never two boxes side by
+       side — these always are, and at 2px their edges would touch.
+
+       Sizes are held to three: the scope picker is the widest thing here
+       because a branch name is the longest, the two one-word filters share a
+       width, and the text field takes what is left up to a limit. Uncapped it
+       ran the width of the window while its neighbours stayed at 140px, which
+       is what made this row read as a pile rather than a set. */
+    <div className="flex min-h-9 flex-wrap items-center gap-1.5 border-b px-1 py-1">
       {byRepo && (
         <Combobox<string>
           value={repoFilter ?? ALL_REPOS}
@@ -149,7 +157,7 @@ export function LogFilters({
         >
           <ComboboxTrigger
             size="sm"
-            className="w-48 px-2.5 text-xs"
+            className="w-56 px-2.5 text-xs"
             aria-label="Repository"
           >
             <ProjectAvatar
@@ -206,7 +214,7 @@ export function LogFilters({
         >
           <ComboboxTrigger
             size="sm"
-            className="w-48 px-2.5 text-xs"
+            className="w-56 px-2.5 text-xs"
             aria-label="Branch"
           >
             {refName === ALL_REFS ? (
@@ -251,10 +259,10 @@ export function LogFilters({
         </div>
       )}
 
-      <div className="relative flex min-w-44 flex-1 items-center">
-        <IconSearch className="pointer-events-none absolute left-2 size-3.5 text-muted-foreground" />
+      <div className="relative flex max-w-96 min-w-48 flex-1 items-center">
+        <IconSearch className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
         <Input
-          className="h-7 pr-16 pl-7 text-xs"
+          className="h-7 pr-16 pl-8 text-xs"
           placeholder="Text or hash"
           aria-label="Filter by text or hash"
           value={grep}
@@ -295,7 +303,7 @@ export function LogFilters({
       </div>
 
       <Input
-        className="h-7 w-32 text-xs"
+        className="h-7 w-36 px-2.5 text-xs"
         placeholder="User"
         aria-label="Filter by author"
         value={author}

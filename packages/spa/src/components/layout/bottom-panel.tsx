@@ -124,10 +124,15 @@ export function BottomPanel(props: BottomPanelProps) {
 
   return (
     <div className="flex h-full flex-col gap-0">
+      {/* The dock's chrome band, and the measure every row under it repeats:
+          36px tall, a 4px margin all round its 28px controls, and 6px between
+          neighbours. The tab strip and whichever surface's toolbar sits below
+          it are then the same band twice over, so the rhythm at the foot of the
+          window does not change when the tab does. */}
       {props.expanded ? (
         <PageTrail tab={props.tab} />
       ) : (
-        <div className="flex h-9 shrink-0 items-center border-b border-hairline px-1">
+        <div className="flex h-9 shrink-0 items-center gap-1.5 border-b border-hairline px-1">
           <TabsSubtle
             idPrefix="bottom-dock"
             className="min-w-0"
@@ -146,7 +151,7 @@ export function BottomPanel(props: BottomPanelProps) {
               />
             ))}
           </TabsSubtle>
-          <div className="ml-auto flex items-center">
+          <div className="ml-auto flex items-center gap-0.5">
             <PanelButton
               label="Expand to full page"
               icon={IconArrowsDiagonal}

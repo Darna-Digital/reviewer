@@ -70,5 +70,10 @@ export const DEFAULT_GRAPH_CONFIG: CommitGraphConfig = {
   colors: GRAPH_COLORS,
   colWidth: 14,
   dotRadius: 3.5,
-  rowHeight: 30,
+  /* The same 28px every other row in the dock stands at — a branch, a section
+     header, a control in the band above — so the history does not run to a
+     different beat than the surface next door. The cell is drawn the full
+     height of the row, which is what keeps a lane meeting the rows either
+     side of it, so this is the row's height as well as the graph's. */
+  rowHeight: 28,
 };

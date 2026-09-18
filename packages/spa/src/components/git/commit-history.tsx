@@ -193,7 +193,11 @@ export function CommitHistory({
                       else rowRefs.current.delete(commit.sha);
                     }}
                     className={cn(
-                      "flex cursor-pointer items-center gap-2 px-2 text-sm outline-none",
+                      // 14px in: the graph's first lane is drawn 7px into its
+                      // own cell, so the dots come down the middle of the same
+                      // 14px column the tabs' icons above and the branch
+                      // sections' chevrons next door stand in.
+                      "flex cursor-pointer items-center gap-2 pr-2.5 pl-3.5 text-sm outline-none",
                       // The graph cell spans the full row so its lanes meet the
                       // rows above and below; the gap between highlights is
                       // carved out of the row instead, as a transparent block
@@ -231,7 +235,7 @@ export function CommitHistory({
                           <Badge
                             key={ref}
                             variant="secondary"
-                            className="px-1 py-0 text-[10px] font-normal"
+                            className="px-1.5 py-0 text-[11px] font-normal"
                           >
                             {ref}
                           </Badge>
@@ -239,10 +243,18 @@ export function CommitHistory({
                       </span>
                     )}
                     <span className="truncate">{commit.subject}</span>
-                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                    {/* Two columns rather than two more words on the end of the
+                        line: fixed widths mean the dates stack in one column
+                        down the right edge and the names in another, so the eye
+                        finds either by running straight down instead of along
+                        every row to wherever that row's name happens to end. */}
+                    <span
+                      className="ml-auto w-28 shrink-0 truncate text-right text-xs text-muted-foreground"
+                      title={commit.author}
+                    >
                       {commit.author}
                     </span>
-                    <span className="shrink-0 text-xs text-muted-foreground">
+                    <span className="w-14 shrink-0 truncate text-right text-xs text-muted-foreground tabular-nums">
                       {formatDate(commit.authoredAt)}
                     </span>
                   </div>

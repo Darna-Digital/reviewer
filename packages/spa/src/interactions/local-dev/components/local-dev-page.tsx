@@ -243,8 +243,12 @@ export function LocalDevPage() {
         )}
         style={sidebar.style}
       >
-        <div className="flex items-center justify-between gap-1 px-3 py-2">
-          <span className="text-sm font-medium">Services</span>
+        {/* The dock's band, worn the way the sessions list next door wears it:
+            36px with a 4px margin round its 28px controls, closed by the same
+            hairline, and the title carrying the 10px inside itself that puts it
+            in the column the tabs' icons stand in. */}
+        <div className="flex h-9 shrink-0 items-center justify-between gap-1.5 border-b px-1">
+          <span className="px-2.5 text-sm font-medium">Services</span>
           <div className="flex items-center gap-0.5">
             <Button
               size="icon"
