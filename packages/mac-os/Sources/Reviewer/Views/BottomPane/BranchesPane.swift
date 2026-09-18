@@ -361,9 +361,12 @@ private struct DistanceLabel: View {
 }
 
 /// The square initials badge a root is known by, the web app's own: its
-/// initials on a hue picked from its name.
+/// initials on a hue picked from its name. The chips and rows wear it at
+/// 16pt; the welcome's recents at twice that, the lettering and the
+/// corner scaled with it.
 struct RepoAvatar: View {
     let name: String
+    var size: CGFloat = 16
 
     private static let palette = [
         "#4c79ff", "#16a34a", "#d4861a", "#9333ea", "#dc2626", "#0891b2", "#db2777", "#65a30d",
@@ -371,10 +374,10 @@ struct RepoAvatar: View {
 
     var body: some View {
         Text(Self.initials(of: name))
-            .font(.system(size: 8, weight: .semibold))
+            .font(.system(size: size / 2, weight: .semibold))
             .foregroundStyle(.white)
-            .frame(width: 16, height: 16)
-            .background(Color(hex: Self.hue(of: name)), in: RoundedRectangle(cornerRadius: 3))
+            .frame(width: size, height: size)
+            .background(Color(hex: Self.hue(of: name)), in: RoundedRectangle(cornerRadius: size * 3 / 16))
     }
 
     static func initials(of name: String) -> String {

@@ -22,12 +22,16 @@
 // window shows above it (see `Launchpad`, `LaunchpadLayer`). With the
 // sidebar put away, the rail moves onto the frame beside the page: the dock
 // and the bottom pane are reached from it either way. Before the server
-// answers, and before a project is open, the page's island shows the
-// matching placeholder instead.
+// answers, the page's island shows the connection instead; answered with
+// no project, the window hands over to the welcome (see `WelcomeWindow`)
+// and puts itself away, so the island's bare sheet is only ever a frame
+// of that handover.
 import SwiftUI
 
 struct ContentView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
         let launchpad = model.launchpad
@@ -71,10 +75,11 @@ struct ContentView: View {
         }
         .animation(.easeOut(duration: 0.12), value: model.search.isShown)
         .branchPrompts()
-        .alert("Something went wrong", isPresented: errorShown) {
-            Button("OK") { model.lastError = nil }
-        } message: {
-            Text(model.lastError ?? "")
+        .serverErrorAlert()
+        .onChange(of: model.awaitingProject) { _, awaiting in
+            guard awaiting else { return }
+            openWindow(id: ReviewerWindow.welcome)
+            dismissWindow(id: ReviewerWindow.workspace)
         }
     }
 
@@ -85,6 +90,27 @@ struct ContentView: View {
         Binding(
             get: { model.sidebarShown ? .all : .detailOnly },
             set: { model.sidebarShown = $0 != .detailOnly })
+    }
+
+}
+
+extension View {
+    /// The server's last refusal, as an alert over whichever window asked:
+    /// the workspace, or the welcome opening a project.
+    func serverErrorAlert() -> some View {
+        modifier(ServerErrorAlert())
+    }
+}
+
+private struct ServerErrorAlert: ViewModifier {
+    @Environment(AppModel.self) private var model
+
+    func body(content: Content) -> some View {
+        content.alert("Something went wrong", isPresented: errorShown) {
+            Button("OK") { model.lastError = nil }
+        } message: {
+            Text(model.lastError ?? "")
+        }
     }
 
     private var errorShown: Binding<Bool> {
@@ -193,7 +219,7 @@ private struct DetailColumn: View {
         case .failed(let reason):
             ConnectionView(state: .failed(reason))
         case .ready where !model.hasProject:
-            WelcomeView()
+            Color.clear
         case .ready:
             IslandView(host: model.page)
         }
@@ -236,27 +262,20 @@ private struct ToolbarItems: ToolbarContent {
     }
 }
 
-/// The project the window is on, as the web bar's chip — its avatar, its
-/// name, a chevron — pulling down the recents the server remembers, the
-/// open one ticked, and the folder panel for any other. Level with the
+/// The project the window is on, as the web bar's chip — its avatar and
+/// its name — and the way to any other: pressing it brings up the
+/// welcome window, where the recents the server remembers are listed and
+/// the folder panel is reached (see `WelcomeWindow`). Level with the
 /// toggle beside it rather than riding low as the detail's chips do: this
 /// run of the bar has the system's own control on it, and the chip keeps
 /// its line.
 private struct ProjectPicker: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        Menu {
-            ForEach(model.workspace?.recents ?? [], id: \.self) { path in
-                Toggle(isOn: isOpen(path)) {
-                    Text(URL(fileURLWithPath: path).lastPathComponent)
-                    // Two recents can share a name; the directory tells
-                    // them apart, and the subtitle keeps it under the name.
-                    Text(abbreviated(path))
-                }
-            }
-            Divider()
-            Button("Open Project…") { model.chooseProject() }
+        Button {
+            openWindow(id: ReviewerWindow.welcome)
         } label: {
             HStack(spacing: 6) {
                 if let name = model.workspace?.projectName {
@@ -271,37 +290,15 @@ private struct ProjectPicker: View {
                     Text("Choose project")
                         .font(.system(size: 13))
                 }
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 9, weight: .semibold))
-                    .foregroundStyle(.secondary)
             }
             // A little more than the air above and below: the capsule's
-            // rounded ends cut into the sides. The chevron carries a point
-            // of its own, so the trailing pad gives that up.
-            .padding(.leading, 8)
-            .padding(.trailing, 7)
+            // rounded ends cut into the sides.
+            .padding(.horizontal, 8)
             .frame(maxWidth: 176)
         }
-        .menuStyle(.button)
-        .menuIndicator(.hidden)
         // The toggle's air above and below its glyph, around the avatar.
         .buttonStyle(BarChipStyle(height: 30))
-        .help("Switch project")
-    }
-
-    /// The path with the home folder folded to `~`, the way the shell
-    /// and Finder's title bar would show it.
-    private func abbreviated(_ path: String) -> String {
-        guard let home = model.workspace?.home, path.hasPrefix(home) else { return path }
-        return "~" + path.dropFirst(home.count)
-    }
-
-    /// A recent as a menu tick: on for the project that is open, and
-    /// picking any other opens it — the tick is the row's whole state.
-    private func isOpen(_ path: String) -> Binding<Bool> {
-        Binding(
-            get: { path == model.workspace?.project },
-            set: { _ in Task { await model.openProject(path: path) } })
+        .help("Switch project (⇧⌘1)")
     }
 }
 

@@ -1,8 +1,22 @@
-// reviewer mac-os — the app entry. One model shared by the window and the
+// reviewer mac-os — the app entry. One model shared by the windows and the
 // menu bar, the server it depends on brought up before the first view asks
 // for anything, and shut down again on quit when this process started it.
+//
+// Two windows, as Xcode has them: the workspace, and the welcome. The
+// server holds one project at a time, so each is a single `Window` rather
+// than a group. The workspace is the one that opens at launch — the server
+// usually remembers a project, and the welcome would only flash ahead of
+// it — and hands over to the welcome once the server answers with none
+// (see `ContentView`); the welcome hands back as a project is opened in
+// it (see `WelcomeWindow`), and is otherwise reached from the Window menu
+// and the project chip while the workspace stays up.
 import AppKit
 import SwiftUI
+
+enum ReviewerWindow {
+    static let workspace = "workspace"
+    static let welcome = "welcome"
+}
 
 @main
 struct ReviewerApp: App {
@@ -10,10 +24,12 @@ struct ReviewerApp: App {
     @NSApplicationDelegateAdaptor private var delegate: AppDelegate
 
     var body: some Scene {
-        WindowGroup("Reviewer") {
+        Window("Reviewer", id: ReviewerWindow.workspace) {
             ContentView()
                 .environment(model)
-                .task { await model.bootstrap() }
+                // Re-opened from the welcome, the window finds the server
+                // already answering, and only the first opening boots it.
+                .task { if model.connection != .ready { await model.bootstrap() } }
                 .frame(minWidth: 900, minHeight: 560)
         }
         .windowStyle(.hiddenTitleBar)
@@ -24,6 +40,21 @@ struct ReviewerApp: App {
         .windowToolbarStyle(.unified)
         .defaultSize(width: 1280, height: 800)
         .commands { ReviewerCommands(model: model) }
+
+        Window("Welcome to Reviewer", id: ReviewerWindow.welcome) {
+            WelcomeWindow()
+                .environment(model)
+        }
+        .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentSize)
+        .defaultPosition(.center)
+        // Xcode's chord for its welcome, on the Window menu item the system
+        // adds for the scene.
+        .keyboardShortcut("1", modifiers: [.command, .shift])
+        // Never the window a relaunch restores, and never the one the
+        // launch opens: the workspace decides whether it is wanted.
+        .restorationBehavior(.disabled)
+        .defaultLaunchBehavior(.suppressed)
     }
 }
 

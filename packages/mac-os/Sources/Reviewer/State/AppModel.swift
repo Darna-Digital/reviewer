@@ -89,10 +89,10 @@ final class AppModel {
             findFile()
         }
         // Whichever way the launchpad is asked for — the chord, the button,
-        // a swipe, a seam pulled — the tab being left is photographed as it
+        // two fingers on the bar, a seam pulled — the tab being left is photographed as it
         // comes out, so its card shows the page as it was.
         launchpad.onShow = { [weak self] in self?.snapshotActiveTab() }
-        launchpadGestures = LaunchpadGestureMonitor(launchpad: launchpad) { [weak self] gesture in
+        launchpadGestures = LaunchpadGestureMonitor { [weak self] gesture in
             self?.hear(gesture)
         }
         page.onWindowTabsReported = { [weak self] strip in self?.take(strip) }
@@ -105,6 +105,15 @@ final class AppModel {
     }
 
     var hasProject: Bool { workspace?.project != nil }
+
+    /// The server has answered, and remembers no open project: the window
+    /// to be on is the welcome, not the workspace (see `ReviewerApp`).
+    var awaitingProject: Bool { workspace != nil && !hasProject }
+
+    /// How many projects have been opened this run — the welcome window
+    /// watches it, since a project opened over one already open changes
+    /// nothing else it could watch.
+    private(set) var projectOpens = 0
 
     // MARK: lifecycle
 
@@ -233,6 +242,7 @@ final class AppModel {
             services.reset()
             threads.reset()
             await refresh()
+            projectOpens += 1
         } catch {
             lastError = error.localizedDescription
         }
@@ -309,16 +319,15 @@ final class AppModel {
         launchpad.toggle()
     }
 
-    /// The trackpad over the bar, or over the panel — see
-    /// `LaunchpadGestureMonitor`. Nothing to lay out without a project, so
-    /// the gestures wait for one as the button and the chord do.
+    /// Two fingers over the bar — see `LaunchpadGestureMonitor`. Nothing to
+    /// lay out without a project, so the pull waits for one as the button
+    /// and the chord do.
     private func hear(_ gesture: LaunchpadGesture) {
         guard hasProject else { return }
         switch gesture {
         case .pullBegan: launchpad.beginPull()
         case .pulled(let travel): launchpad.pull(travel: travel)
         case .pullEnded: launchpad.endPull()
-        case .flung(let down): launchpad.fling(down: down)
         }
     }
 
