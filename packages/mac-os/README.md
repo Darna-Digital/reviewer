@@ -50,6 +50,26 @@ What it does today:
   that conversation on the Sessions tab; the context menu lifts it into a
   tab of its own or deletes it, and the foot of the list fetches the next
   page.
+- **Sessions** — the conversation itself is drawn natively in the page
+  island's place while the island is on a session's address, read from the
+  server by the shell itself (`ChatSession` over `/api/chats/:id` and the
+  `/api/chats/stream` socket, folded through the web reducer's twin, with
+  the same reconnect-and-watchdog): prompts as bubbles with their images,
+  replies as markdown under each turn's work log — the tool calls and
+  thinking folded to one line, opening to a row per step and each step to
+  its input and output — the indicator naming the work in flight, a failed
+  turn's error, and the composer under it all (`ChatComposer`): the prompt
+  box, dragged taller by its top edge, over the model picker (agents down a
+  rail, a search, stars for favourites), the effort, mode and access
+  selectors — each only what the chosen agent can be asked for — the attach
+  button, and send or stop; images are picked, pasted or dropped anywhere
+  on the pane. Under it the strip naming the project and the branch, the
+  sidebar's own picker. ⌘T's composer is the same, centred, opening on the
+  settings the last session was composed with; the first send makes the
+  chat and steers the island to it. The island keeps the tab strip and the
+  sessions list; on these pages it shows nothing of its own, and is told
+  when the conversation moved (`sessions(refetch)`) so the rows' marks
+  follow. Cloud runs stay the island's.
 - **Islands** — beside the sidebar the window is laid out as rounded
   panels standing a few points apart on the web app's frame colour: the
   page island and the bottom pane, with a seam between them that resizes
@@ -219,12 +239,12 @@ Sources/Reviewer/
   ReviewerApp.swift      @main, menu commands, app delegate
   Server/ServerLauncher  reachability check + spawn of the embedded server
   Api/                   Codable mirrors of the core schemas, HTTP client, chat socket
-  State/                 AppModel, WindowTab, BottomPaneTab, DockSurface, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, PullRequests, QuickSearch (+ the ⇧⇧ monitor)
+  State/                 AppModel, WindowTab, BottomPaneTab, DockSurface, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, PullRequests, Chats, ChatSession, ChatSettings, WorkLog, ComposerAttachment, QuickSearch (+ the ⇧⇧ monitor)
   FileIcons/             FileIcon (resolver + rasteriser) over the generated @pierre/trees sprite
   Islands/               IslandHost (web view + bridge), SpaSource, SpaSchemeHandler, IslandView
   Terminal/              TerminalSession — the shell behind the Terminal surface
   Services/              DevServices + DevProcessStream — dev commands and their output
-  Views/                 ContentView (split view), Sidebar, PullRequests (list, overview, column), Tabs, BottomPane, Search, Launchpad, Welcome
+  Views/                 ContentView (split view), Sidebar, PullRequests (list, overview, column), Chat (conversation, composer, model picker), Tabs, BottomPane, Search, Launchpad, Welcome
 ```
 
 Not here yet: native menus for the islands' popovers, drag and drop between

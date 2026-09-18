@@ -30,7 +30,6 @@ struct ModelPicker: View {
                 AgentGlyph(kind: current?.provider ?? provider, size: 12)
                 Text(current?.label ?? (model.isEmpty ? "Model" : model))
                     .lineLimit(1)
-                    .frame(maxWidth: 160, alignment: .leading)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(.secondary)
