@@ -60,9 +60,9 @@ private struct ReviewAssignBar: View {
 
     var body: some View {
         let target = handoff.target
-        HStack(spacing: 2) {
+        HStack(spacing: 4) {
             Button { listOpen.toggle() } label: {
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     Text("\(review.comments.count)")
                         .monospacedDigit()
                     Text(review.comments.count == 1 ? "comment" : "comments")
@@ -78,8 +78,8 @@ private struct ReviewAssignBar: View {
             }
             BarDivider()
             Button { pickerOpen.toggle() } label: {
-                HStack(spacing: 5) {
-                    AgentGlyph(kind: targetAgent(target), size: 12)
+                HStack(spacing: 6) {
+                    AgentGlyph(kind: targetAgent(target), size: ChipSize.large.glyph)
                     Text(targetLabel(target))
                         .lineLimit(1)
                         .truncationMode(.tail)
@@ -87,7 +87,7 @@ private struct ReviewAssignBar: View {
                 }
                 // Clamped rather than filled: as wide as its title, and no
                 // wider than this, where the title truncates instead.
-                .frame(maxWidth: 220)
+                .frame(maxWidth: 260)
                 .fixedSize()
             }
             .buttonStyle(ComposerChipStyle())
@@ -108,15 +108,16 @@ private struct ReviewAssignBar: View {
             .keyboardShortcut(.defaultAction)
             Button { handoff.collapsed = true } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.secondary)
-                    .frame(width: 22)
+                    .frame(width: 26)
             }
             .buttonStyle(ComposerChipStyle())
             .help("Hide")
         }
-        .padding(6)
+        .padding(8)
         .environment(\.chipShape, .capsule)
+        .environment(\.chipSize, .large)
         .glassEffect(.regular, in: .capsule)
         .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
     }
@@ -144,16 +145,16 @@ private struct CollapsedChip: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 5) {
+            HStack(spacing: 6) {
                 Image(systemName: "bubble.left")
-                    .font(.system(size: 11, weight: .medium))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.secondary)
                 Text("\(count)")
                     .monospacedDigit()
             }
-            .font(.system(size: 11, weight: .medium))
-            .padding(.horizontal, 10)
-            .frame(height: 30)
+            .font(.system(size: 13, weight: .medium))
+            .padding(.horizontal, 14)
+            .frame(height: 36)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -174,15 +175,15 @@ private struct CommentList: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 16) {
                 ForEach(review.byFile, id: \.file) { group in
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(group.comments.first?.fileName ?? group.file)
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
-                            .padding(.horizontal, 8)
-                            .padding(.bottom, 2)
+                            .padding(.horizontal, 10)
+                            .padding(.bottom, 4)
                         ForEach(group.comments) { comment in
                             CommentRow(
                                 comment: comment,
@@ -195,10 +196,10 @@ private struct CommentList: View {
                     }
                 }
             }
-            .padding(4)
+            .padding(8)
         }
-        .frame(width: 320)
-        .frame(maxHeight: 300)
+        .frame(width: 360)
+        .frame(maxHeight: 320)
     }
 }
 
@@ -214,14 +215,14 @@ private struct CommentRow: View {
                 .buttonStyle(.plain)
             Button(action: onDelete) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(.secondary)
-                    .frame(width: 16, height: 16)
+                    .frame(width: 20, height: 20)
             }
             .buttonStyle(.plain)
             .opacity(isHovering ? 1 : 0)
-            .padding(.top, 5)
-            .padding(.trailing, 4)
+            .padding(.top, 6)
+            .padding(.trailing, 6)
             .help("Delete comment")
         }
         .background(Color.primary.opacity(isHovering ? 0.08 : 0), in: RoundedRectangle(cornerRadius: 6))
@@ -229,19 +230,20 @@ private struct CommentRow: View {
     }
 
     private var content: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text("\(comment.line)")
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
                 .frame(minWidth: 28, alignment: .trailing)
             Text(comment.body)
-                .lineLimit(2)
+                .lineLimit(3)
+                .lineSpacing(2)
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .font(.system(size: 12))
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
+        .font(.system(size: 13))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
         .contentShape(Rectangle())
     }
 }
@@ -402,10 +404,10 @@ private struct AssignButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 11, weight: .semibold))
+            .font(.system(size: 13, weight: .semibold))
             .foregroundStyle(.white)
-            .padding(.horizontal, 12)
-            .frame(height: 26)
+            .padding(.horizontal, 16)
+            .frame(height: 32)
             .background(
                 Color.accentColor.opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.5),
                 in: Capsule())
@@ -416,7 +418,7 @@ private struct AssignButtonStyle: ButtonStyle {
 private struct Chevron: View {
     var body: some View {
         Image(systemName: "chevron.down")
-            .font(.system(size: 8, weight: .semibold))
+            .font(.system(size: ChipSize.large.chevron, weight: .semibold))
             .foregroundStyle(.secondary)
     }
 }
@@ -425,7 +427,7 @@ private struct BarDivider: View {
     var body: some View {
         Rectangle()
             .fill(Color(nsColor: .separatorColor))
-            .frame(width: 1, height: 14)
-            .padding(.horizontal, 2)
+            .frame(width: 1, height: 18)
+            .padding(.horizontal, 4)
     }
 }

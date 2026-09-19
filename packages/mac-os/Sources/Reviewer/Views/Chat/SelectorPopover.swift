@@ -93,18 +93,20 @@ private struct SelectorRow<Value: Hashable>: View {
 }
 
 /// The quiet chip the composer's row is made of: the label alone, a wash
-/// under the pointer, 26pt tall. The wash is cut to the row it stands in
-/// — the composer's rounded corners, or the capsule of a bar that is one
-/// (see `chipShape`).
+/// under the pointer, 26pt tall — or 32pt, in a bar cut to the larger
+/// size (see `chipSize`). The wash is cut to the row it stands in — the
+/// composer's rounded corners, or the capsule of a bar that is one (see
+/// `chipShape`).
 struct ComposerChipStyle: ButtonStyle {
     @Environment(\.chipShape) private var shape
+    @Environment(\.chipSize) private var size
     @State private var isHovering = false
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 11, weight: .medium))
-            .padding(.horizontal, shape == .capsule ? 9 : 7)
-            .frame(height: 26)
+            .font(.system(size: size.text, weight: .medium))
+            .padding(.horizontal, size.inset(for: shape))
+            .frame(height: size.height)
             .background(
                 Color.primary.opacity(configuration.isPressed ? 0.12 : isHovering ? 0.07 : 0),
                 in: shape.insettable)
@@ -125,7 +127,30 @@ enum ChipShape {
     }
 }
 
+/// How big a chip is cut: the composer's compact row, or the assign bar's
+/// larger one, where the type, the glyphs and the height all step up
+/// together.
+enum ChipSize {
+    case compact
+    case large
+
+    var text: CGFloat { self == .large ? 13 : 11 }
+    var glyph: CGFloat { self == .large ? 14 : 12 }
+    var chevron: CGFloat { self == .large ? 9 : 8 }
+    var height: CGFloat { self == .large ? 32 : 26 }
+
+    func inset(for shape: ChipShape) -> CGFloat {
+        switch (self, shape) {
+        case (.large, _): return 12
+        case (.compact, .capsule): return 9
+        case (.compact, .rounded): return 7
+        }
+    }
+}
+
 extension EnvironmentValues {
     /// The shape every `ComposerChipStyle` under it is cut to.
     @Entry var chipShape: ChipShape = .rounded
+    /// The size every `ComposerChipStyle` under it is cut to.
+    @Entry var chipSize: ChipSize = .compact
 }

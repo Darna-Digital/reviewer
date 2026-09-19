@@ -19,6 +19,9 @@ struct CommitComposer: View {
     @State private var message = ""
     @State private var excluded: Set<String> = []
     @AppStorage("commit-agent") private var agent: CommitAgent = .claude
+    @FocusState private var composerFocused: Bool
+    @State private var agentPickerOpen = false
+    @State private var controlsHovered = false
     @AppStorage("commit-files-height") private var savedFilesHeight = 180.0
     @AppStorage("commit-message-height") private var savedMessageHeight = 80.0
     // The heights a drag moves live, written back to the defaults only on
@@ -73,12 +76,19 @@ struct CommitComposer: View {
         .frame(height: filesHeight)
     }
 
+    // The draft controls float over the message box's bottom trailing
+    // corner, as in the web sidebar, and show only while the message is
+    // being written — the box focused, the picker open, a draft running —
+    // so the box reads as a plain field until it is in hand. The editor is
+    // padded past their height, so the last line scrolls clear of them.
     private var messageBox: some View {
         TextEditor(text: $message)
             .font(.system(size: 12))
             .scrollContentBackground(.hidden)
+            .focused($composerFocused)
             .padding(.horizontal, 6)
-            .padding(.vertical, 6)
+            .padding(.top, 6)
+            .padding(.bottom, Self.controlsClearance)
             .frame(height: messageHeight)
             .overlay(alignment: .topLeading) {
                 if message.isEmpty {
@@ -90,37 +100,55 @@ struct CommitComposer: View {
                         .allowsHitTesting(false)
                 }
             }
+            .overlay(alignment: .bottomTrailing) { draftControls }
+    }
+
+    private static let controlsClearance: CGFloat = 40
+
+    private var draftControlsShown: Bool {
+        composerFocused || agentPickerOpen || drafting || controlsHovered
+    }
+
+    private var draftControls: some View {
+        HStack(spacing: 2) {
+            GenerateButton(agent: agent, drafting: drafting, action: draft)
+                .disabled(chosen.isEmpty || drafting)
+            agentPicker
+        }
+        .padding(2)
+        .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 8))
+        .shadow(color: .black.opacity(0.14), radius: 8, y: 3)
+        .padding(6)
+        .opacity(draftControlsShown ? 1 : 0)
+        .allowsHitTesting(draftControlsShown)
+        .animation(.easeOut(duration: 0.15), value: draftControlsShown)
+        .onHover { controlsHovered = $0 }
+    }
+
+    private var agentPicker: some View {
+        Button { agentPickerOpen.toggle() } label: {
+            AgentGlyph(kind: agent.provider, size: 13)
+                .frame(width: 14)
+        }
+        .buttonStyle(ComposerChipStyle())
+        .disabled(drafting)
+        .help("Draft with \(agent.label)")
+        .popover(isPresented: $agentPickerOpen, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 1) {
+                ForEach(CommitAgent.allCases) { candidate in
+                    CommitAgentRow(agent: candidate, chosen: candidate == agent) {
+                        agent = candidate
+                        agentPickerOpen = false
+                    }
+                }
+            }
+            .padding(4)
+            .frame(width: 160)
+        }
     }
 
     private var controls: some View {
         HStack(spacing: 6) {
-            Menu {
-                ForEach(CommitAgent.allCases) { candidate in
-                    Button {
-                        agent = candidate
-                        draft()
-                    } label: {
-                        if candidate == agent {
-                            Label(candidate.label, systemImage: "checkmark")
-                        } else {
-                            Text(candidate.label)
-                        }
-                    }
-                }
-            } label: {
-                if drafting {
-                    ProgressView()
-                        .controlSize(.mini)
-                } else {
-                    Image(systemName: "sparkles")
-                }
-            } primaryAction: {
-                draft()
-            }
-            .menuStyle(.button)
-            .fixedSize()
-            .disabled(chosen.isEmpty || drafting)
-            .help("Draft a message with \(agent.label)")
             Spacer()
             Button("Commit and Push") { commit(push: true) }
                 .disabled(!canCommit)
@@ -179,6 +207,76 @@ struct CommitComposer: View {
         } else {
             UserDefaults.standard.set(message, forKey: key(for: project))
         }
+    }
+}
+
+/// The sparkle that drafts. At rest it is the glyph alone; under the
+/// pointer, or while a draft runs, its name fades in beside it — the web
+/// sidebar's hover affordance — so the floating pair stays narrow until
+/// it is looked at.
+private struct GenerateButton: View {
+    let agent: CommitAgent
+    let drafting: Bool
+    let action: () -> Void
+    @State private var isHovering = false
+
+    private var expanded: Bool { isHovering || drafting }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 0) {
+                if drafting {
+                    Orb(size: 13)
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                // Only the fade is animated: the width snaps, so the label
+                // does not slide as the trailing-aligned button grows.
+                Text(drafting ? "Generating…" : "Generate")
+                    .fixedSize()
+                    .opacity(expanded ? 1 : 0)
+                    .animation(.easeOut(duration: 0.15), value: expanded)
+                    .frame(width: expanded ? nil : 0, alignment: .leading)
+                    .padding(.leading, expanded ? 5 : 0)
+                    .clipped()
+            }
+        }
+        .buttonStyle(ComposerChipStyle())
+        .onHover { isHovering = $0 }
+        .help("Generate a commit message with \(agent.label)")
+    }
+}
+
+private struct CommitAgentRow: View {
+    let agent: CommitAgent
+    let chosen: Bool
+    let action: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                AgentGlyph(kind: agent.provider, size: 14)
+                Text(agent.label)
+                    .font(.system(size: 13, weight: .medium))
+                Spacer(minLength: 0)
+                if chosen {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                Color.primary.opacity(chosen ? 0.06 : isHovering ? 0.08 : 0),
+                in: RoundedRectangle(cornerRadius: 6))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
     }
 }
 

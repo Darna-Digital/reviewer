@@ -68,6 +68,15 @@ enum CommitAgent: String, CaseIterable, Identifiable, Sendable {
         case .cursor: return "Cursor"
         }
     }
+
+    var provider: ChatProviderKind {
+        switch self {
+        case .claude: return .claude
+        case .codex: return .codex
+        case .opencode: return .opencode
+        case .cursor: return .cursor
+        }
+    }
 }
 
 /// The tree's actions, in the shape the island's `ShellTreeAction` takes.

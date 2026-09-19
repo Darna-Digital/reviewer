@@ -13,6 +13,7 @@ struct ModelPicker: View {
     let provider: ChatProviderKind
     let onSelect: (CatalogModel) -> Void
     @Environment(AppModel.self) private var appModel
+    @Environment(\.chipSize) private var chipSize
     @State private var open = false
     @State private var rail: Rail = .favorites
     @State private var query = ""
@@ -27,11 +28,11 @@ struct ModelPicker: View {
         let current = models.first { $0.id == model && $0.provider == provider } ?? models.first { $0.id == model }
         Button { open.toggle() } label: {
             HStack(spacing: 5) {
-                AgentGlyph(kind: current?.provider ?? provider, size: 12)
+                AgentGlyph(kind: current?.provider ?? provider, size: chipSize.glyph)
                 Text(current?.label ?? (model.isEmpty ? "Model" : model))
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .semibold))
+                    .font(.system(size: chipSize.chevron, weight: .semibold))
                     .foregroundStyle(.secondary)
             }
         }
