@@ -13,9 +13,9 @@
 //   4. That same build in the working tree (packages/spa/dist/client).
 //   5. The Vite dev server, for a release binary with no build to show.
 //
-// Files on disk are served over the `reviewer://app` scheme, the same one the
-// Electron shell uses, so the SPA's absolute asset paths and its router both
-// behave as they do there.
+// Files on disk are served over the `reviewer://app` scheme, so the SPA's
+// absolute asset paths and its router both behave as they do on an http
+// origin.
 import Foundation
 
 enum SpaSource {

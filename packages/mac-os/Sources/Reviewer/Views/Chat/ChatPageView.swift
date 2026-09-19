@@ -70,39 +70,26 @@ private struct NewChatView: View {
     @State private var viewport: CGFloat = 0
 
     private var chats: Chats { model.chats }
-    private var mode: ChatMode { chats.mode(for: Chats.newSessionKey) }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                VStack(spacing: 6) {
-                    Text(mode == .analysis ? "What should we analyse?" : "What should we work on?")
-                        .font(.system(size: 24, weight: .medium))
-                        .tracking(-0.3)
-                    if mode == .analysis {
-                        Text("An agent reads the code and draws the flow, front to back, into the analysis pane.")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: 420)
-                    }
-                }
-                .padding(.bottom, 16)
+                Text("What should we work on?")
+                    .font(.system(size: 24, weight: .medium))
+                    .tracking(-0.3)
+                    .padding(.bottom, 16)
                 VStack(spacing: 0) {
                     ChatComposer(
                         draftKey: Chats.newSessionKey,
                         settings: chats.newSessionSettings,
                         onSettingsChange: { chats.remember($0) },
-                        mode: mode,
-                        onModeChange: { chats.setMode($0, for: Chats.newSessionKey) },
                         running: false,
-                        placeholder: mode == .analysis ? "How is a new branch created?" : "Ask anything, or describe a change…",
+                        placeholder: "Ask anything, or describe a change…",
                         onSend: start
                     )
                     .zIndex(1)
                     SessionContextBar()
                 }
-                suggestions
             }
             .frame(maxWidth: ChatLayout.columnWidth)
             .frame(maxWidth: .infinity)
@@ -114,60 +101,16 @@ private struct NewChatView: View {
         .imageDropZone(draftKey: Chats.newSessionKey)
     }
 
-    /// Openers for the two things this app can do that a chat box does not
-    /// advertise: neither sends — one flips the mode, the other types the
-    /// opening of the prompt and leaves the subject to be filled in.
-    private var suggestions: some View {
-        VStack(spacing: 1) {
-            SuggestionRow(symbol: "point.3.connected.trianglepath.dotted", label: "Create analysis of a feature") {
-                chats.setMode(.analysis, for: Chats.newSessionKey)
-            }
-            SuggestionRow(symbol: "globe", label: "Preview changes in browser") {
-                var draft = chats.draft(for: Chats.newSessionKey)
-                draft.text = "Preview my changes in the browser and check "
-                chats.setDraft(draft, for: Chats.newSessionKey)
-            }
-        }
-    }
-
     private func start(_ text: String, _ images: [ComposerAttachment]) async throws {
         do {
             let chat = try await chats.start(
-                settings: chats.newSessionSettings, mode: mode, text: text, images: images,
+                settings: chats.newSessionSettings, text: text, images: images,
                 branch: model.currentBranch)
             model.show(chat: chat)
         } catch {
             model.lastError = error.localizedDescription
             throw error
         }
-    }
-}
-
-private struct SuggestionRow: View {
-    let symbol: String
-    let label: String
-    let action: () -> Void
-    @State private var isHovering = false
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: symbol)
-                    .font(.system(size: 13))
-                    .frame(width: 18)
-                Text(label)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-            }
-            .font(.system(size: 13))
-            .foregroundStyle(isHovering ? Color.primary : Color.secondary)
-            .padding(.horizontal, 8)
-            .frame(height: 36)
-            .background(Color.primary.opacity(isHovering ? 0.06 : 0), in: RoundedRectangle(cornerRadius: 8))
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .onHover { isHovering = $0 }
     }
 }
 

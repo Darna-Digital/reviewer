@@ -24,13 +24,11 @@ import { Route as AppModesCodeHistoryRouteImport } from './routes/_app/modes.cod
 import { Route as AppModesCodeLocalDevRouteImport } from './routes/_app/modes.code.local-dev'
 import { Route as AppModesCodeReviewsRouteImport } from './routes/_app/modes.code.reviews'
 import { Route as AppModesCodeThreadsRouteImport } from './routes/_app/modes.code.threads'
-import { Route as AppModesExperimentationCollaborationRouteImport } from './routes/_app/modes.experimentation.collaboration'
 import { Route as AppModesAgentSessionCloudRunIdRouteImport } from './routes/_app/modes.agent-session.cloud.$runId'
 import { Route as AppModesCodeBrowseIndexRouteImport } from './routes/_app/modes.code.browse.index'
 import { Route as AppModesCodeBrowseRangeRouteImport } from './routes/_app/modes.code.browse.range'
 import { Route as AppModesCodeReviewIndexRouteImport } from './routes/_app/modes.code.review.index'
 import { Route as AppModesCodeReviewPullRouteImport } from './routes/_app/modes.code.review.$pull'
-import { Route as AppModesExperimentationCollaborationInboxRouteImport } from './routes/_app/modes.experimentation.collaboration_.inbox'
 import { Route as AppModesCodeBrowseCommitShaRouteImport } from './routes/_app/modes.code.browse.commit.$sha'
 import { Route as AppModesCodeReviewPullNumberRouteImport } from './routes/_app/modes.code.review.pull.$number'
 
@@ -110,12 +108,6 @@ const AppModesCodeThreadsRoute = AppModesCodeThreadsRouteImport.update({
   path: '/modes/code/threads',
   getParentRoute: () => AppRoute,
 } as any)
-const AppModesExperimentationCollaborationRoute =
-  AppModesExperimentationCollaborationRouteImport.update({
-    id: '/modes/experimentation/collaboration',
-    path: '/modes/experimentation/collaboration',
-    getParentRoute: () => AppRoute,
-  } as any)
 const AppModesAgentSessionCloudRunIdRoute =
   AppModesAgentSessionCloudRunIdRouteImport.update({
     id: '/cloud/$runId',
@@ -142,12 +134,6 @@ const AppModesCodeReviewPullRoute = AppModesCodeReviewPullRouteImport.update({
   path: '/modes/code/review/$pull',
   getParentRoute: () => AppRoute,
 } as any)
-const AppModesExperimentationCollaborationInboxRoute =
-  AppModesExperimentationCollaborationInboxRouteImport.update({
-    id: '/modes/experimentation/collaboration_/inbox',
-    path: '/modes/experimentation/collaboration/inbox',
-    getParentRoute: () => AppRoute,
-  } as any)
 const AppModesCodeBrowseCommitShaRoute =
   AppModesCodeBrowseCommitShaRouteImport.update({
     id: '/modes/code/browse/commit/$sha',
@@ -174,13 +160,11 @@ export interface FileRoutesByFullPath {
   '/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
   '/modes/code/reviews': typeof AppModesCodeReviewsRoute
   '/modes/code/threads': typeof AppModesCodeThreadsRoute
-  '/modes/experimentation/collaboration': typeof AppModesExperimentationCollaborationRoute
   '/modes/agent-session/': typeof AppModesAgentSessionIndexRoute
   '/modes/code/': typeof AppModesCodeIndexRoute
   '/modes/agent-session/cloud/$runId': typeof AppModesAgentSessionCloudRunIdRoute
   '/modes/code/browse/range': typeof AppModesCodeBrowseRangeRoute
   '/modes/code/review/$pull': typeof AppModesCodeReviewPullRoute
-  '/modes/experimentation/collaboration/inbox': typeof AppModesExperimentationCollaborationInboxRoute
   '/modes/code/browse/': typeof AppModesCodeBrowseIndexRoute
   '/modes/code/review/': typeof AppModesCodeReviewIndexRoute
   '/modes/code/browse/commit/$sha': typeof AppModesCodeBrowseCommitShaRoute
@@ -198,13 +182,11 @@ export interface FileRoutesByTo {
   '/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
   '/modes/code/reviews': typeof AppModesCodeReviewsRoute
   '/modes/code/threads': typeof AppModesCodeThreadsRoute
-  '/modes/experimentation/collaboration': typeof AppModesExperimentationCollaborationRoute
   '/modes/agent-session': typeof AppModesAgentSessionIndexRoute
   '/modes/code': typeof AppModesCodeIndexRoute
   '/modes/agent-session/cloud/$runId': typeof AppModesAgentSessionCloudRunIdRoute
   '/modes/code/browse/range': typeof AppModesCodeBrowseRangeRoute
   '/modes/code/review/$pull': typeof AppModesCodeReviewPullRoute
-  '/modes/experimentation/collaboration/inbox': typeof AppModesExperimentationCollaborationInboxRoute
   '/modes/code/browse': typeof AppModesCodeBrowseIndexRoute
   '/modes/code/review': typeof AppModesCodeReviewIndexRoute
   '/modes/code/browse/commit/$sha': typeof AppModesCodeBrowseCommitShaRoute
@@ -225,13 +207,11 @@ export interface FileRoutesById {
   '/_app/modes/code/local-dev': typeof AppModesCodeLocalDevRoute
   '/_app/modes/code/reviews': typeof AppModesCodeReviewsRoute
   '/_app/modes/code/threads': typeof AppModesCodeThreadsRoute
-  '/_app/modes/experimentation/collaboration': typeof AppModesExperimentationCollaborationRoute
   '/_app/modes/agent-session/': typeof AppModesAgentSessionIndexRoute
   '/_app/modes/code/': typeof AppModesCodeIndexRoute
   '/_app/modes/agent-session/cloud/$runId': typeof AppModesAgentSessionCloudRunIdRoute
   '/_app/modes/code/browse/range': typeof AppModesCodeBrowseRangeRoute
   '/_app/modes/code/review/$pull': typeof AppModesCodeReviewPullRoute
-  '/_app/modes/experimentation/collaboration_/inbox': typeof AppModesExperimentationCollaborationInboxRoute
   '/_app/modes/code/browse/': typeof AppModesCodeBrowseIndexRoute
   '/_app/modes/code/review/': typeof AppModesCodeReviewIndexRoute
   '/_app/modes/code/browse/commit/$sha': typeof AppModesCodeBrowseCommitShaRoute
@@ -252,13 +232,11 @@ export interface FileRouteTypes {
     | '/modes/code/local-dev'
     | '/modes/code/reviews'
     | '/modes/code/threads'
-    | '/modes/experimentation/collaboration'
     | '/modes/agent-session/'
     | '/modes/code/'
     | '/modes/agent-session/cloud/$runId'
     | '/modes/code/browse/range'
     | '/modes/code/review/$pull'
-    | '/modes/experimentation/collaboration/inbox'
     | '/modes/code/browse/'
     | '/modes/code/review/'
     | '/modes/code/browse/commit/$sha'
@@ -276,13 +254,11 @@ export interface FileRouteTypes {
     | '/modes/code/local-dev'
     | '/modes/code/reviews'
     | '/modes/code/threads'
-    | '/modes/experimentation/collaboration'
     | '/modes/agent-session'
     | '/modes/code'
     | '/modes/agent-session/cloud/$runId'
     | '/modes/code/browse/range'
     | '/modes/code/review/$pull'
-    | '/modes/experimentation/collaboration/inbox'
     | '/modes/code/browse'
     | '/modes/code/review'
     | '/modes/code/browse/commit/$sha'
@@ -302,13 +278,11 @@ export interface FileRouteTypes {
     | '/_app/modes/code/local-dev'
     | '/_app/modes/code/reviews'
     | '/_app/modes/code/threads'
-    | '/_app/modes/experimentation/collaboration'
     | '/_app/modes/agent-session/'
     | '/_app/modes/code/'
     | '/_app/modes/agent-session/cloud/$runId'
     | '/_app/modes/code/browse/range'
     | '/_app/modes/code/review/$pull'
-    | '/_app/modes/experimentation/collaboration_/inbox'
     | '/_app/modes/code/browse/'
     | '/_app/modes/code/review/'
     | '/_app/modes/code/browse/commit/$sha'
@@ -427,13 +401,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppModesCodeThreadsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/modes/experimentation/collaboration': {
-      id: '/_app/modes/experimentation/collaboration'
-      path: '/modes/experimentation/collaboration'
-      fullPath: '/modes/experimentation/collaboration'
-      preLoaderRoute: typeof AppModesExperimentationCollaborationRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/_app/modes/agent-session/cloud/$runId': {
       id: '/_app/modes/agent-session/cloud/$runId'
       path: '/cloud/$runId'
@@ -467,13 +434,6 @@ declare module '@tanstack/react-router' {
       path: '/modes/code/review/$pull'
       fullPath: '/modes/code/review/$pull'
       preLoaderRoute: typeof AppModesCodeReviewPullRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/modes/experimentation/collaboration_/inbox': {
-      id: '/_app/modes/experimentation/collaboration_/inbox'
-      path: '/modes/experimentation/collaboration/inbox'
-      fullPath: '/modes/experimentation/collaboration/inbox'
-      preLoaderRoute: typeof AppModesExperimentationCollaborationInboxRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/modes/code/browse/commit/$sha': {
@@ -519,11 +479,9 @@ interface AppRouteChildren {
   AppModesCodeLocalDevRoute: typeof AppModesCodeLocalDevRoute
   AppModesCodeReviewsRoute: typeof AppModesCodeReviewsRoute
   AppModesCodeThreadsRoute: typeof AppModesCodeThreadsRoute
-  AppModesExperimentationCollaborationRoute: typeof AppModesExperimentationCollaborationRoute
   AppModesCodeIndexRoute: typeof AppModesCodeIndexRoute
   AppModesCodeBrowseRangeRoute: typeof AppModesCodeBrowseRangeRoute
   AppModesCodeReviewPullRoute: typeof AppModesCodeReviewPullRoute
-  AppModesExperimentationCollaborationInboxRoute: typeof AppModesExperimentationCollaborationInboxRoute
   AppModesCodeBrowseIndexRoute: typeof AppModesCodeBrowseIndexRoute
   AppModesCodeReviewIndexRoute: typeof AppModesCodeReviewIndexRoute
   AppModesCodeBrowseCommitShaRoute: typeof AppModesCodeBrowseCommitShaRoute
@@ -541,13 +499,9 @@ const AppRouteChildren: AppRouteChildren = {
   AppModesCodeLocalDevRoute: AppModesCodeLocalDevRoute,
   AppModesCodeReviewsRoute: AppModesCodeReviewsRoute,
   AppModesCodeThreadsRoute: AppModesCodeThreadsRoute,
-  AppModesExperimentationCollaborationRoute:
-    AppModesExperimentationCollaborationRoute,
   AppModesCodeIndexRoute: AppModesCodeIndexRoute,
   AppModesCodeBrowseRangeRoute: AppModesCodeBrowseRangeRoute,
   AppModesCodeReviewPullRoute: AppModesCodeReviewPullRoute,
-  AppModesExperimentationCollaborationInboxRoute:
-    AppModesExperimentationCollaborationInboxRoute,
   AppModesCodeBrowseIndexRoute: AppModesCodeBrowseIndexRoute,
   AppModesCodeReviewIndexRoute: AppModesCodeReviewIndexRoute,
   AppModesCodeBrowseCommitShaRoute: AppModesCodeBrowseCommitShaRoute,

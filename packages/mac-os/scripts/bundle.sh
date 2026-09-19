@@ -34,11 +34,11 @@ if [[ -f "${spa_build}/_shell.html" ]]; then
   cp -R "$spa_build" "${contents}/Resources/spa"
 fi
 
-# The dock icon is the desktop package's brand PNG, turned into an .icns with
-# the system tools so the two shells share one identity. Every size macOS asks
-# for is derived from the 1024px source with sips; the app still runs without
-# an icon, so a missing PNG only skips this step.
-brand_png="${package_dir}/../desktop/assets/reviewer-icon-light.png"
+# The dock icon is the brand PNG under Resources/icons, turned into an .icns
+# with the system tools. Every size macOS asks for is derived from the 1024px
+# source with sips; the app still runs without an icon, so a missing PNG only
+# skips this step.
+brand_png="${package_dir}/Resources/icons/reviewer-icon-light.png"
 if [[ -f "$brand_png" ]]; then
   iconset="${package_dir}/.build/Reviewer.iconset"
   rm -rf "$iconset" && mkdir -p "$iconset"

@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { findChat, listChatSummaries } from "../chats/store.ts";
 import { comments } from "../comments/comments.repository.sqlite.ts";
 import { devCommands } from "../local-dev/local-dev.repository.sqlite.ts";
-import { plans } from "../plans/plans.repository.sqlite.ts";
 import { threads } from "../threads/store.ts";
 import { closeDatabase, openDatabase } from "./database.ts";
 import { importLegacyJson } from "./legacy-import.ts";
@@ -110,7 +109,7 @@ describe("legacy .reviewer import", () => {
     ]);
   });
 
-  it("carries comments, threads, plans, dev commands and the board across", () => {
+  it("carries comments, threads and dev commands across", () => {
     write(api, "comments.json", [
       {
         id: "c-1",
@@ -155,8 +154,6 @@ describe("legacy .reviewer import", () => {
     expect(comments.list(api).map((c) => c.body)).toEqual(["looks good"]);
     expect(threads.list(api).map((t) => t.id)).toEqual(["t-1"]);
     expect(devCommands.list(api).map((d) => d.name)).toEqual(["dev"]);
-    // No plans directory at all is not a failure, just nothing to import.
-    expect(plans.list(api)).toEqual([]);
   });
 
   it("defaults thread fields that older files were written without", () => {
@@ -184,9 +181,7 @@ describe("legacy .reviewer import", () => {
     expect(importLegacyJson(web)).toEqual([
       "chats",
       "comments",
-      "visual-comments",
       "threads",
-      "plans",
       "dev-commands",
     ]);
     expect(allChats()).toEqual([]);

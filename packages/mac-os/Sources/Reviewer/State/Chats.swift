@@ -3,8 +3,8 @@
 // session that does not exist yet, one conversation, or the landing the
 // page passes through on its way to the newest — and what every one of
 // them shares: the model catalog the server discovered, the favourites and
-// the settings the last session was composed with, the draft each composer
-// is holding, and the mode each session is in. The conversation itself is
+// the settings the last session was composed with, and the draft each
+// composer is holding. The conversation itself is
 // a `ChatSession`, one at a time, following the address; the snapshot a
 // conversation was left at is kept so coming back to it shows it at once,
 // as the web view's query cache does.
@@ -54,7 +54,6 @@ struct LastSession: Codable, Equatable {
     var model: String?
     var effort: String?
     var access: ChatAccess?
-    var mode: ChatMode = .build
 }
 
 /// What a composer is holding for one key — a chat's id, or the composer
@@ -76,7 +75,6 @@ final class Chats {
     private(set) var session: ChatSession?
     private(set) var catalog: ChatModelCatalog?
     private(set) var drafts: [String: ComposerDraft] = [:]
-    private(set) var modes: [String: ChatMode] = [:]
     /// The native view standing in for the page, for the launchpad to
     /// photograph in the web view's place.
     @ObservationIgnored weak var pageView: NSView?
@@ -112,7 +110,6 @@ final class Chats {
         favorites = defaults.stringArray(forKey: Keys.favorites) ?? []
         lastSession = last
         composerHeight = height > 0 ? height : 92
-        modes[Self.newSessionKey] = last.mode
     }
 
     // MARK: following the island
@@ -172,17 +169,6 @@ final class Chats {
         setDraft(draft, for: key)
     }
 
-    func mode(for key: String) -> ChatMode {
-        modes[key] ?? .build
-    }
-
-    /// The mode a session's composer is in. The one for a session not yet
-    /// started is a way of working, and is kept across launches.
-    func setMode(_ mode: ChatMode, for key: String) {
-        modes[key] = mode
-        if key == Self.newSessionKey { lastSession.mode = mode }
-    }
-
     func remember(_ settings: ChatSettings) {
         lastSession.provider = settings.provider
         lastSession.model = settings.model
@@ -216,18 +202,16 @@ final class Chats {
     }
 
     /// The new-thread flow: the chat made with `settings`, its first prompt
-    /// sent at once, and the mode it was opened in carried onto it.
-    func start(settings: ChatSettings, mode: ChatMode, text: String, images: [ComposerAttachment], branch: String?) async throws -> Chat {
+    /// sent at once.
+    func start(settings: ChatSettings, text: String, images: [ComposerAttachment], branch: String?) async throws -> Chat {
         var request = NewChat()
-        request.title = mode.title(for: text)
         request.provider = settings.provider
         request.model = settings.model
         request.effort = settings.effort
         request.access = settings.access
         request.branch = branch
         let created = try await client.createChat(request)
-        let started = try await client.sendMessage(chatId: created.id, text: mode.prompt(for: text), images: images.map(\.upload))
-        modes[started.id] = mode
+        let started = try await client.sendMessage(chatId: created.id, text: text, images: images.map(\.upload))
         snapshots.append((started.id, started))
         onListChanged?()
         return started

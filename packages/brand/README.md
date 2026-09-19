@@ -2,7 +2,7 @@
 
 The brand studio — a local Vite SPA on **:41813** that draws the reviewer mark
 from its grid definition and exports every asset the app, the site and the
-desktop build need.
+macOS build need.
 
 ```sh
 pnpm dev:brand           # or: pnpm --filter @reviewer/brand dev

@@ -55,17 +55,6 @@ describe("the window bar's chords", () => {
     expect(chord("l", { altKey: true })).toBeNull();
   });
 
-  it("puts the panes on ⌘⇧A and ⌘⇧B, either side of the page", () => {
-    expect(chord("a", { shiftKey: true })).toEqual({
-      kind: "pane",
-      pane: "analysis",
-    });
-    expect(chord("B", { shiftKey: true })).toEqual({
-      kind: "pane",
-      pane: "browser",
-    });
-  });
-
   it("raises the project chip's dropdown on ⌘⇧P", () => {
     expect(chord("p", { shiftKey: true })).toEqual({ kind: "project-picker" });
     expect(chord("P", { shiftKey: true })).toEqual({ kind: "project-picker" });
@@ -75,6 +64,8 @@ describe("the window bar's chords", () => {
   it("leaves ⌘B to the bottom dock, and ⌘A to the page", () => {
     expect(chord("a")).toBeNull();
     expect(chord("b")).toBeNull();
+    expect(chord("a", { shiftKey: true })).toBeNull();
+    expect(chord("B", { shiftKey: true })).toBeNull();
   });
 
   it("answers Ctrl the same as ⌘", () => {

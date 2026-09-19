@@ -8,7 +8,7 @@
  * (`window.reviewer.island`, see `lib/desktop`). The chrome around an island —
  * the file tree in the sidebar — is the shell's own, drawn natively from what
  * the island reports. The window tabs are not: they are the island's own strip,
- * the same one the window bar draws in the browser and in Electron, so a tab is
+ * the same one the window bar draws in a browser tab, so a tab is
  * switched the way the router switches a page — in the document, primed ahead
  * of the click — rather than by a trip over the bridge and back. What the shell
  * has of them is a picture, for its menus.
@@ -301,8 +301,7 @@ export interface ShellReview {
 export interface ShellReviewComment {
   readonly id: string;
   readonly file: string;
-  /** Null for a note on the running UI, which sits on no line. */
-  readonly line: number | null;
+  readonly line: number;
   readonly body: string;
 }
 

@@ -1,13 +1,11 @@
 import { DIFFS_TAG_NAME } from "@pierre/diffs";
 import type {
-  File as EditableFile,
   FileContents,
   LineAnnotation,
   SelectedLineRange,
 } from "@pierre/diffs";
 import { EditProvider, File, Virtualizer } from "@pierre/diffs/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   CommentThread,
   DraftCard,
@@ -17,12 +15,6 @@ import {
   SELECTION_COMMENT_CSS,
   selectionCommentAction,
 } from "@/interactions/comments/components/selection-comment-action";
-import { SelectionCommentPopover } from "@/interactions/comments/components/selection-comment-popover";
-import {
-  rectAnchor,
-  type VirtualAnchor,
-} from "@/interactions/language/functions/anchors";
-import { codeRootsWithin } from "@/lib/code-root";
 import { commentLineFor } from "@/interactions/comments/functions/selection-anchor";
 import { ProblemsBar } from "@/interactions/language/components/problems-bar";
 import { useLanguageLayer } from "@/interactions/language/components/language-layer";
@@ -32,9 +24,6 @@ import {
   type RevealTarget,
 } from "@/interactions/language/components/use-reveal-line";
 import { useFindInFile } from "@/interactions/find-in-file/adapters/find-in-file.hook.adapter";
-import { useFormatOnSave } from "@/interactions/formatting/adapters/formatting.hook.adapter";
-import { useVim } from "@/interactions/vim/adapters/vim.hook.adapter";
-import { useFolding } from "@/interactions/folding/adapters/folding.hook.adapter";
 import {
   THEMES,
   externalFileFor,
@@ -42,7 +31,6 @@ import {
   useHighlightPrimed,
   useLangReady,
 } from "@/components/editor/highlighter";
-import { EditModePicker } from "@/interactions/edit-mode/components/edit-mode-picker";
 import { OpenFailed } from "@/components/editor/open-failed";
 import { UnsupportedFile } from "@/components/editor/unsupported-file";
 import {
@@ -53,13 +41,11 @@ import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
 import { commentGutterCSS } from "@/lib/comment-gutter-css";
 import { useFile } from "@/lib/queries";
-import { useUiPrefs } from "@/lib/ui-prefs";
 import type { ReviewComment } from "@reviewer/core/comments";
 import type { Diagnostic, FileEdits, Location } from "@reviewer/core/language";
-import type { VimFoldAction } from "@/interactions/vim/interfaces/vim.interfaces";
 import { writeFileEdits } from "@/interactions/language/adapters/language.hook.adapter";
 import type { Theme } from "@/lib/ui-prefs";
-import type { FileBufferBridge } from "@/interactions/markdown/interfaces/markdown.interfaces";
+import { isEditablePath } from "@/components/editor/editable-path";
 
 // Comments on a plain (non-diff) file are always anchored to the current
 // content, i.e. the "additions" side of an eventual working-tree diff.
@@ -86,12 +72,6 @@ interface CodeViewProps {
   /** Whether this file has unsaved changes — the tab strip shows a marker. */
   onDirtyChange?: (dirty: boolean) => void;
   /**
-   * Where this file's own readouts — the Vim mode line — render. Saving is not
-   * among them: an unsaved buffer says so on its tab, and ⌘S writes it, as in
-   * any editor. Omit to leave the file without them.
-   */
-  actionsSlot?: HTMLElement | null;
-  /**
    * Open another file at a line — go-to-definition and find-usages need it.
    * Omit to leave the IDE layer off.
    */
@@ -105,20 +85,6 @@ interface CodeViewProps {
    * one just created from the tree.
    */
   caretKey?: number | null;
-  /**
-   * Hands out a live handle on this file's buffer, for a second view over the
-   * same document — the block editor beside a split markdown file. Called with
-   * null when the editor goes away. Omit when nothing else is watching.
-   */
-  onBuffer?: (bridge: FileBufferBridge | null) => void;
-  /**
-   * Whether to hold an edit session open, overriding what the edit mode would
-   * decide. Set by the markdown split, where the document beside the source is
-   * typed into through this view's buffer: it has to have one even in comment
-   * mode, or the document would be a picture of the file with no way to write
-   * to it. Omit to follow the mode.
-   */
-  editing?: boolean;
   /** Local review comments anchored to this file (optional — omit to disable). */
   comments?: ReadonlyArray<ReviewComment>;
   draft?: DraftLocation | null;
@@ -134,12 +100,9 @@ export function CodeView({
   theme,
   onSaved,
   onDirtyChange,
-  actionsSlot,
   onOpenLocation,
   reveal = null,
   caretKey = null,
-  onBuffer,
-  editing: editingOverride,
   comments,
   draft = null,
   onDraftOpen,
@@ -149,20 +112,15 @@ export function CodeView({
   onCommentEdit,
 }: CodeViewProps) {
   const file = useFile(path);
-  const prefs = useUiPrefs();
   /**
-   * Comment mode reads rather than writes: the view is handed no edit session,
-   * so a click puts no caret in the code, and the gutter is free to carry the
-   * offer to comment that a diff's gutter carries.
-   *
-   * Which gutter the view gets follows the session and not the mode. They part
-   * company only where a caller keeps the session open through comment mode —
-   * the markdown split — and there the `+` would have nowhere to live anyway,
-   * since the caret takes every click. Commenting falls back to the offer the
-   * editor floats over a selection, exactly as it does in browse mode.
+   * Code is read rather than written: the view is handed no edit session, so a
+   * click puts no caret in the code, and the gutter is free to carry the offer
+   * to comment that a diff's gutter carries. The `.env` files are the one kind
+   * that is typed into here — see `isEditablePath` — and there the `+` has
+   * nowhere to live, since the caret takes every click; commenting falls back
+   * to the offer the editor floats over a selection.
    */
-  const commenting = prefs.editMode === "comment";
-  const editing = editingOverride ?? !commenting;
+  const editing = isEditablePath(path);
   const langReady = useLangReady(path, true);
   const contents = file.data?.contents;
   const scrollWrapper = useRef<HTMLDivElement>(null);
@@ -177,17 +135,10 @@ export function CodeView({
     []
   );
 
-  // `useFolding` needs the file component to give it the collapsed-region hooks
-  // it has none of, and it only turns up when the editor attaches. The ref
-  // breaks the cycle: folding is declared below, since it needs the editor this
-  // call produces.
-  const foldAttach = useRef<
-    ((component: EditableFile<undefined, undefined>) => void) | null
-  >(null);
   // Starting a comment. While the file is editable the gutter `+` has nowhere
   // to live — the view takes the caret on every click — so a comment begins
   // from the passage it is about: select, and the editor floats an offer over
-  // the selection. Comment mode has no caret to lose, and gets the gutter.
+  // the selection. A read-only file has no caret to lose, and gets the gutter.
   const draftRef = useRef<((draft: DraftLocation) => void) | undefined>(
     undefined
   );
@@ -217,8 +168,8 @@ export function CodeView({
       commentsEnabled && !editing
         ? {
             enableGutterUtility: true,
-            // Nothing else marks the row in comment mode — there is no caret,
-            // and the `+` alone is a button floating next to a number. Lighting
+            // Nothing else marks the row on a read-only file — there is no
+            // caret, and the `+` alone is a button floating next to a number. Lighting
             // the whole row under the pointer, gutter and code together, says
             // which line the offer is about before it is taken up.
             lineHoverHighlight: "both" as const,
@@ -236,18 +187,11 @@ export function CodeView({
     [commentsEnabled, editing, openDraft]
   );
 
-  // Saving a file formats it, when the project says how and the user wants it.
-  const formatting = useFormatOnSave();
-
   const buffer = useFileEditing({
     path,
     editing,
     loadedContents: file.data?.contents,
     onSaved: useCallback(() => onSaved?.(), [onSaved]),
-    formatBeforeSave: formatting.formatBeforeSave,
-    onAttach: useCallback((component: EditableFile<undefined, undefined>) => {
-      foldAttach.current?.(component);
-    }, []),
     renderSelectionAction: useCallback(
       (context: SelectionActionContext) =>
         selectionCommentAction({
@@ -269,22 +213,6 @@ export function CodeView({
   useEffect(() => {
     onDirtyChange?.(buffer.dirty);
   }, [buffer.dirty, onDirtyChange]);
-
-  // A second view over the same buffer, when one is watching. Published only
-  // once there is an editor to read, and withdrawn when the file goes away, so
-  // a watcher can never be holding a handle on a buffer that no longer exists.
-  const { subscribe, replaceBuffer } = buffer;
-  const readLiveBuffer = buffer.readBuffer;
-  const hasEditor = buffer.editor !== null;
-  useEffect(() => {
-    if (onBuffer === undefined) return;
-    if (!hasEditor) {
-      onBuffer(null);
-      return;
-    }
-    onBuffer({ subscribe, read: readLiveBuffer, write: replaceBuffer });
-    return () => onBuffer(null);
-  }, [onBuffer, hasEditor, subscribe, readLiveBuffer, replaceBuffer]);
 
   /**
    * The file handed to the view, which is not simply whatever the last read
@@ -337,27 +265,6 @@ export function CodeView({
   // which would put the offer on top of the composer it just opened. The flag
   // rides on the shadow host, where the popover's own stylesheet can see it —
   // `unsafeCSS` is read once at mount, so the CSS cannot be made conditional.
-  /** Open a comment on whatever the editor currently has selected. */
-  const commentOnSelection = useCallback(() => {
-    const selection = buffer.editor?.getViewState().selections?.at(-1);
-    if (selection === undefined) return;
-    const lineNumber = commentLineFor(selection);
-    if (lineNumber === null) return;
-    draftRef.current?.({ filePath: path, side: FILE_COMMENT_SIDE, lineNumber });
-  }, [buffer.editor, path]);
-
-  // Where Vim's own offer hangs: the last band of the selection it painted.
-  const selectionAnchor = useCallback((): VirtualAnchor | null => {
-    const container = scrollWrapper.current;
-    if (container === null) return null;
-    for (const root of codeRootsWithin(container)) {
-      const bands = root.querySelectorAll("[data-selection-range]");
-      const last = bands[bands.length - 1];
-      if (last !== undefined) return rectAnchor(last.getBoundingClientRect());
-    }
-    return null;
-  }, []);
-
   const drafting = draft !== null && draft.filePath === path;
   useEffect(() => {
     const host = scrollWrapper.current?.querySelector(DIFFS_TAG_NAME);
@@ -370,33 +277,6 @@ export function CodeView({
   // outlive the view that owned it.
   useEffect(() => () => onDirtyChange?.(false), [onDirtyChange]);
 
-  const folding = useFolding({
-    editor: buffer.editor,
-    contents: contents ?? "",
-    subscribe: buffer.subscribe,
-    isFocused: buffer.isFocused,
-  });
-  foldAttach.current = folding.attach;
-
-  // Modal editing, when the user has asked for it.
-  const vim = useVim({
-    editor: buffer.editor,
-    enabled: prefs.editMode === "vim",
-    isFocused: buffer.isFocused,
-    subscribe: buffer.subscribe,
-    visibleFrom: folding.visibleFrom,
-    onFold: useCallback(
-      (action: VimFoldAction, line: number) => {
-        if (action === "toggle") folding.toggle(line);
-        else if (action === "close") folding.close(line);
-        else if (action === "open") folding.open(line);
-        else if (action === "closeAll") folding.closeAll();
-        else folding.openAll();
-      },
-      [folding]
-    ),
-  });
-
   // The IDE layer: diagnostics, go-to-definition and find-usages, driven by
   // `@pierre/diffs` token hooks. Only active when the host can navigate.
   const language = useLanguageLayer({
@@ -404,9 +284,7 @@ export function CodeView({
     editor: buffer.editor,
     subscribe: buffer.subscribe,
     isFocused: buffer.isFocused,
-    // While `d` means delete, a list offering to finish a word is in the way —
-    // Vim's insert mode is the only one where typing means typing.
-    completionsEnabled: vim.mode === null || vim.mode === "insert",
+    completionsEnabled: true,
     // The composer opens under the line the comment is about, which is where
     // hover documentation would be drawn: the offer to comment already stands
     // aside for it, and so does this.
@@ -492,13 +370,10 @@ export function CodeView({
     [onOpenLocation, path]
   );
 
-  // The view keeps one `onPostRender`, and four layers paint from it: the
-  // diagnostic underlines, the find highlight, the relative line numbers and
-  // the folds.
+  // The view keeps one `onPostRender`, and both layers paint from it: the
+  // diagnostic underlines and the find highlight.
   const languagePostRender = language.viewOptions.onPostRender;
   const findPostRender = find.viewOptions.onPostRender;
-  const vimPostRender = vim.viewOptions.onPostRender;
-  const foldPostRender = folding.viewOptions.onPostRender;
   const onPostRender = useCallback(
     (
       node: HTMLElement,
@@ -507,10 +382,8 @@ export function CodeView({
     ) => {
       languagePostRender(node, instance, phase);
       findPostRender(node, instance, phase);
-      vimPostRender(node, instance, phase);
-      foldPostRender(node, instance, phase);
     },
-    [languagePostRender, findPostRender, vimPostRender, foldPostRender]
+    [languagePostRender, findPostRender]
   );
 
   // Line count drives the first scroll estimate for a line that has not been
@@ -591,19 +464,19 @@ export function CodeView({
                 // Both layers paint from the same callback and into the same
                 // stylesheet, and the view keeps one of each.
                 onPostRender,
-                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${vim.viewOptions.unsafeCSS}\n${folding.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}\n${commentGutterCSS}`,
+                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}\n${commentGutterCSS}`,
                 ...gutterCommenting,
               }}
               edit={editing}
               /* Leaving the file editable ends its edit session, and the view
                  goes back to the file it was handed — which is what is on disk.
                  A buffer with unsaved work in it would empty itself onto the
-                 floor on the way into comment mode, and ⌘S would go on writing
-                 text nobody could see. Accepting installs what the editor was
-                 holding as the document instead, so the mode changes and the
-                 text does not. An accepted file may not wear the key of the one
-                 it replaces, so an untouched buffer — same text, same key — is
-                 refused rather than accepted: there is nothing to keep. */
+                 floor, and ⌘S would go on writing text nobody could see.
+                 Accepting installs what the editor was holding as the document
+                 instead, so the session ends and the text does not. An accepted
+                 file may not wear the key of the one it replaces, so an
+                 untouched buffer — same text, same key — is refused rather than
+                 accepted: there is nothing to keep. */
               onEditComplete={(event) => {
                 if (event.file.contents === event.originalFile.contents)
                   return "reject";
@@ -654,31 +527,9 @@ export function CodeView({
             />
           </section>
         </EditProvider>
-        {/* The file's own readouts and controls, on the trail below it: the
-            Vim mode line, and the picker that says which edit mode produced
-            it — a mode is changed about the file you are looking at, so it is
-            offered where you are looking. */}
-        {actionsSlot !== null &&
-          actionsSlot !== undefined &&
-          createPortal(
-            <>
-              {vim.status}
-              <EditModePicker />
-            </>,
-            actionsSlot
-          )}
         {language.card}
         {language.completions}
         {language.menu}
-        {/* The editor makes its own offer over a selection the pointer made; a
-            Vim visual selection is set programmatically, so it never gets one
-            and this one stands in. */}
-        {vim.hasSelection && commentsEnabled && !drafting && (
-          <SelectionCommentPopover
-            anchor={selectionAnchor}
-            onComment={commentOnSelection}
-          />
-        )}
       </Virtualizer>
       {/* Floats over the code rather than sitting under it: diagnostics come
           and go while typing, and a bar that resizes the view would shove the

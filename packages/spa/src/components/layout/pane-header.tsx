@@ -2,8 +2,7 @@ import { Fragment, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The bar a two-pane surface wears — the prototype's panes, the inbox and the
- * sessions list: a breadcrumb on the left, the subject's one-line context
+ * The bar a two-pane surface wears — the sessions list: a breadcrumb on the left, the subject's one-line context
  * beside it, and the pane's actions on the right.
  *
  * `foot` puts it along the bottom instead, where the code surfaces keep the

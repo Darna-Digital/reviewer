@@ -12,8 +12,7 @@
      and the native macOS shell set their chrome in the same type. Only pierre's
      diff code keeps its own mono stack. */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto,
-    sans-serif;
+    -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
   --color-brand-50: var(--brand-50);
   --color-brand-100: var(--brand-100);
   --color-brand-200: var(--brand-200);
@@ -30,7 +29,6 @@
   --color-warning: var(--warning);
   --color-warning-foreground: var(--warning-foreground);
   --color-link: var(--link);
-  --color-collab-accent: var(--collab-accent);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -70,7 +68,6 @@
   --color-frame: var(--frame);
   --color-frame-border: var(--frame-border);
   --color-hairline: var(--hairline);
-  --color-pane: var(--pane);
   --color-surface-1: var(--surface-1);
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
@@ -729,11 +726,6 @@
   --success-foreground: oklch(1 0 0);
   --warning: oklch(0.72 0.15 75);
   --warning-foreground: oklch(0.28 0.06 75);
-  /* Collaboration's section labels. Warm, and the one colour on an otherwise
-     grey page — it is what tells one tool on a project's page from the next
-     without a rule being drawn between them. Off the brand ramp on purpose:
-     brand is reserved for focus and links, and a section label is neither. */
-  --collab-accent: oklch(0.62 0.15 55);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -790,14 +782,6 @@
   --sheet-edge: rgb(0 0 0 / 0.06);
   --canvas: #ffffff;
   --canvas-edge: #f6f6f8;
-  /* The browser pane is a sheet like the canvas, not part of the surround, so
-     it sits at this theme's extreme rather than taking the frame's grey — beside
-     white paper (and usually a white page inside it) the frame tone reads as a
-     slab rather than as the same sheet continuing. */
-  --pane: #ffffff;
-  /* Held further open than the frame's tint: this is a white veil over the
-     material rather than a grey one, which is what keeps it reading as paper. */
-  --pane-translucent: rgb(255 255 255 / 0.62);
 }
 
 .dark {
@@ -824,7 +808,6 @@
   --success-foreground: oklch(0.22 0.05 158);
   --warning: oklch(0.8 0.14 78);
   --warning-foreground: oklch(0.26 0.06 78);
-  --collab-accent: oklch(0.82 0.11 58);
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
@@ -850,10 +833,6 @@
   --sheet-edge: rgb(255 255 255 / 0.06);
   --canvas: #141417;
   --canvas-edge: #1c1c21;
-  /* Here the frame's own true black is already the extreme, so the pane sinks
-     to it and the page inside carries the contrast. */
-  --pane: #000000;
-  --pane-translucent: rgb(0 0 0 / 0.35);
 }
 
 @layer base {
@@ -904,7 +883,7 @@
    reads as curving up out of the frame rather than sinking into it. Panels
    drawn on it stay transparent, so the ramp shows through. */
 /* The page material, named once so the two things made of it agree: the canvas
-   every code surface rests on, and the sheet collaboration's column stands on.
+   every code surface rests on.
    The gradient reads `--canvas` lazily, so the dark theme's redefinition is
    picked up without a second copy of the paint. */
 :root {
@@ -1175,7 +1154,6 @@
   --canvas-edge: var(--native-island);
   --frame: var(--native-frame);
   --frame-translucent: transparent;
-  --pane: var(--native-island);
   --surface-1: var(--native-island);
   --surface-2: var(--native-control);
   --surface-3: var(--native-control);
@@ -1291,104 +1269,6 @@
    opaque thing left on a column that is otherwise window. */
 .desktop.translucent .app-rail-paper::before {
   background-color: transparent;
-}
-
-/* The browser pane is its own sheet beside the canvas, on the `--pane` tone each
-   theme sets: white here, true black in the dark theme. The gap the split leaves
-   between the two is the frame itself, so with translucency on the seam is the
-   desktop showing through — which is the point of the split being a gap and not
-   a border. */
-.browser-pane {
-  background-color: var(--pane);
-  /* A sheet's corner and a sheet's lit top edge, from the sheet's own tokens —
-     the panes stand in the same row as the page and must turn, and catch the
-     light, the way it does. Painted rather than bordered for the same reason,
-     and as a background *image*, so the translucent overrides below can go on
-     setting the colour underneath it. */
-  background-image: linear-gradient(var(--sheet-edge), var(--sheet-edge));
-  background-repeat: no-repeat;
-  background-position: var(--sheet-radius) 0;
-  background-size: calc(100% - 2 * var(--sheet-radius)) 1px;
-  border-radius: var(--sheet-radius);
-  border-end-start-radius: var(--sheet-radius-foot);
-  border-end-end-radius: var(--sheet-radius-foot);
-  corner-bottom-left-shape: squircle;
-  corner-bottom-right-shape: squircle;
-}
-.desktop.translucent .browser-pane {
-  background-color: var(--pane-translucent);
-}
-
-/* The analysis pane is the browser's twin on the other side of the canvas, on
-   the same `--pane` tone. Its canvas is the exception: a dotted grid, which is
-   what says "this is a drawing surface" before a single node has loaded, and
-   gives the eye something fixed to read the pan and zoom against. The dots are
-   drawn in the border colour at low alpha so they recede in both themes rather
-   than needing a second value per theme. */
-.plans-pane {
-  background-color: var(--pane);
-  background-image: linear-gradient(var(--sheet-edge), var(--sheet-edge));
-  background-repeat: no-repeat;
-  background-position: var(--sheet-radius) 0;
-  background-size: calc(100% - 2 * var(--sheet-radius)) 1px;
-  border-radius: var(--sheet-radius);
-  border-end-start-radius: var(--sheet-radius-foot);
-  border-end-end-radius: var(--sheet-radius-foot);
-  corner-bottom-left-shape: squircle;
-  corner-bottom-right-shape: squircle;
-}
-.desktop.translucent .plans-pane {
-  background-color: var(--pane-translucent);
-}
-.plans-canvas {
-  --plans-dot: color-mix(in oklab, var(--border) 70%, transparent);
-  background-image: radial-gradient(var(--plans-dot) 1px, transparent 1px);
-  background-size: 16px 16px;
-  background-position: -1px -1px;
-  cursor: grab;
-}
-.plans-canvas:active {
-  cursor: grabbing;
-}
-/* The node boxes ride over the grid, so they carry the pane's own tone rather
-   than sitting transparent the way panels on the canvas do. */
-.plan-node {
-  background-color: var(--pane);
-}
-.desktop.translucent .plan-node {
-  background-color: var(--pane-translucent);
-}
-
-/* The outline below the drawing is a reading surface, so it takes the canvas
-   tone the editor uses rather than the pane's own: the pane is a true-black
-   sheet in the dark theme, which is right behind a dotted grid and far too deep
-   behind paragraphs of text. It also stays opaque with translucency on — the
-   grid can afford to show the desktop through it, body text cannot — so there
-   is deliberately no `.desktop.translucent` override here. */
-.plans-notes {
-  background-color: var(--canvas);
-}
-
-/* A note is written as a numbered list of its points, so the list is the note's
-   normal shape rather than an aside inside a paragraph: the items are spaced
-   apart enough to be read as separate findings, and the numbers are set in the
-   quiet tone outside the text column, so a point that wraps hangs under its own
-   first word instead of under its number. */
-.plan-note :where(ol, ul) {
-  margin: 0;
-  padding-left: 1.5rem;
-}
-.plan-note :where(ol, ul) > li + li {
-  margin-top: 0.45rem;
-}
-.plan-note :where(ol, ul) > li::marker {
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
-/* Nothing separates a note's items but the gap above, so a nested list keeps its
-   own indent without also inheriting that gap as a top margin. */
-.plan-note :where(li) > :where(ol, ul) {
-  margin-top: 0.45rem;
 }
 
 /* --- reviewer: agent brand marks ------------------------------------------- */

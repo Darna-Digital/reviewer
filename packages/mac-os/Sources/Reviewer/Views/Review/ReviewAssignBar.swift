@@ -186,7 +186,7 @@ private struct CommentList: View {
                         ForEach(group.comments) { comment in
                             CommentRow(
                                 comment: comment,
-                                onOpen: comment.line == nil ? nil : {
+                                onOpen: {
                                     dismiss()
                                     model.act(onReview: .open(comment.id))
                                 },
@@ -204,20 +204,14 @@ private struct CommentList: View {
 
 private struct CommentRow: View {
     let comment: ShellReviewComment
-    let onOpen: (() -> Void)?
+    let onOpen: () -> Void
     let onDelete: () -> Void
     @State private var isHovering = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 4) {
-            Group {
-                if let onOpen {
-                    Button(action: onOpen) { content }
-                        .buttonStyle(.plain)
-                } else {
-                    content
-                }
-            }
+            Button(action: onOpen) { content }
+                .buttonStyle(.plain)
             Button(action: onDelete) {
                 Image(systemName: "xmark")
                     .font(.system(size: 9, weight: .semibold))
@@ -236,12 +230,10 @@ private struct CommentRow: View {
 
     private var content: some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            if let line = comment.line {
-                Text("\(line)")
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 28, alignment: .trailing)
-            }
+            Text("\(comment.line)")
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 28, alignment: .trailing)
             Text(comment.body)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)

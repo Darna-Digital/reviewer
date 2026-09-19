@@ -3,7 +3,6 @@ import {
   dockPage,
   dockPages,
   isBrowsingCode,
-  isCodeSurface,
   reviewHref,
   reviewSourceOf,
   shellRoute,
@@ -78,7 +77,7 @@ describe("shellRoute", () => {
     }
   });
 
-  it("recognises sessions, the prototype and settings", () => {
+  it("recognises sessions and settings", () => {
     expect(shellRoute("/modes/agent-session")).toEqual({
       kind: "session",
       composing: false,
@@ -101,12 +100,6 @@ describe("shellRoute", () => {
       composing: false,
       solo: true,
     });
-    expect(shellRoute("/modes/experimentation/collaboration")).toEqual({
-      kind: "experimentation",
-    });
-    expect(shellRoute("/modes/experimentation/collaboration/inbox")).toEqual({
-      kind: "experimentation",
-    });
     expect(shellRoute("/settings")).toEqual({ kind: "settings" });
   });
 
@@ -120,18 +113,6 @@ describe("shellRoute", () => {
       kind: "code",
       mode: "review",
     });
-  });
-});
-
-describe("isCodeSurface", () => {
-  it("is off only on the collaboration prototype", () => {
-    expect(isCodeSurface("/modes/code/review")).toBe(true);
-    expect(isCodeSurface("/modes/agent-session")).toBe(true);
-    expect(isCodeSurface("/settings")).toBe(true);
-    expect(isCodeSurface("/modes/experimentation/collaboration")).toBe(false);
-    expect(isCodeSurface("/modes/experimentation/collaboration/inbox")).toBe(
-      false
-    );
   });
 });
 

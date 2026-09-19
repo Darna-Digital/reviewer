@@ -20,8 +20,6 @@ import { FetchHttpClient, HttpRouter } from "effect/unstable/http";
 import { HttpApiBuilder, HttpApiScalar } from "effect/unstable/httpapi";
 import { createServer } from "node:http";
 import { Api } from "./api.ts";
-import { BrowserHandler } from "./layers/browser/browser.handler.ts";
-import { BrowserRuntimeLive } from "./layers/browser/browser.runtime.ts";
 import { ChatsHandler } from "./layers/chats/chats.handler.ts";
 import { ChatsLive } from "./layers/chats/chats.layer.live.ts";
 import { handleCloudEvents } from "./layers/cloud/cloud-events-proxy.ts";
@@ -29,8 +27,6 @@ import { CloudHandler } from "./layers/cloud/cloud.handler.ts";
 import { CloudLive } from "./layers/cloud/cloud.layer.live.ts";
 import { CommentsHandler } from "./layers/comments/comments.handler.ts";
 import { CommentsLive } from "./layers/comments/comments.layer.live.ts";
-import { FormattingHandler } from "./layers/formatting/formatting.handler.ts";
-import { FormattingLive } from "./layers/formatting/formatting.layer.live.ts";
 import { GitMessageHandler } from "./layers/git-message/git-message.handler.ts";
 import { GitMessageLive } from "./layers/git-message/git-message.layer.live.ts";
 import { GitHubHandler } from "./layers/github/github.handler.ts";
@@ -40,8 +36,6 @@ import { LanguageLive } from "./layers/language/language.layer.live.ts";
 import { LocalDevHandler } from "./layers/local-dev/local-dev.handler.ts";
 import { LocalDevLive } from "./layers/local-dev/local-dev.layer.live.ts";
 import { DevRuntimeLive } from "./layers/local-dev/local-dev.runtime.ts";
-import { PlansHandler } from "./layers/plans/plans.handler.ts";
-import { PlansLive } from "./layers/plans/plans.layer.live.ts";
 import { ProjectHandler } from "./layers/project/project.handler.ts";
 import { ProjectLive } from "./layers/project/project.layer.live.ts";
 import { BranchTargetsLive } from "./layers/branch-targets/branch-targets.layer.live.ts";
@@ -49,8 +43,6 @@ import { RepoHandler } from "./layers/repo/repo.handler.ts";
 import { RepoLive } from "./layers/repo/repo.layer.live.ts";
 import { ThreadsHandler } from "./layers/threads/threads.handler.ts";
 import { ThreadsLive } from "./layers/threads/threads.layer.live.ts";
-import { VisualCommentsHandler } from "./layers/visual-comments/visual-comments.handler.ts";
-import { VisualCommentsLive } from "./layers/visual-comments/visual-comments.layer.live.ts";
 import { WorkspaceHandler } from "./layers/workspace/workspace.handler.ts";
 import { WorkspaceLive } from "./layers/workspace/workspace.layer.live.ts";
 import { layer as databaseLayer } from "./layers/db/db.service.ts";
@@ -90,11 +82,7 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(ThreadsHandler),
   Layer.provide(ChatsHandler),
   Layer.provide(LanguageHandler),
-  Layer.provide(FormattingHandler),
   Layer.provide(LocalDevHandler),
-  Layer.provide(BrowserHandler),
-  Layer.provide(PlansHandler),
-  Layer.provide(VisualCommentsHandler),
   Layer.provide(CloudHandler)
 );
 
@@ -110,12 +98,8 @@ const FeatureServices = Layer.mergeAll(
   ThreadsLive,
   ChatsLive,
   LanguageLive,
-  FormattingLive,
   LocalDevLive,
   DevRuntimeLive,
-  BrowserRuntimeLive,
-  PlansLive,
-  VisualCommentsLive,
   CloudLive
 );
 
@@ -139,8 +123,8 @@ const InfraLive = gitHubClientLayer.pipe(
 );
 
 /**
- * The packaged desktop app loads the SPA from the `reviewer://app` protocol and
- * calls the API at `http://localhost:<port>`, so every request is cross-origin.
+ * The macOS shell loads the SPA from the `reviewer://app` protocol and calls
+ * the API at `http://localhost:<port>`, so every request is cross-origin.
  * Allow all origins — this server is local-only and never credentialed.
  */
 // Wrap node's createServer so every server instance also hosts the live-terminal

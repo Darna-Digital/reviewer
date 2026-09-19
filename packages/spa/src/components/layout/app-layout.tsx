@@ -6,7 +6,7 @@
  * with its own `WindowFrame`, mode rail, header and bottom dock. They were
  * siblings in the route tree, so moving between a diff and an agent session
  * unmounted one of them whole and built the other: the frame, the rail, the
- * browser and analysis panes, the tab overview, the search host, and the dock
+ * tab overview, the search host, and the dock
  * with whatever history you had scrolled and whichever terminals you had open.
  * All of it, on every trip, to swap the page in the middle.
  *
@@ -105,25 +105,20 @@ export function AppLayout() {
 
   // Both rails are the same column carrying different things — code's git
   // surfaces, sessions' new-and-find — so crossing between them leaves the page
-  // beside it exactly where it was. The prototype is the one surface without
-  // one: its own sidebar carries the equivalent.
+  // beside it exactly where it was.
   //
-  // So is a conversation with the window to itself. Every button in the
+  // A conversation with the window to itself has no rail. Every button in the
   // sessions rail acts on the list, and on a session tab there is no list — the
   // column would be three controls for a surface that is not on screen, drawn
   // down the side of a page that has nothing else in the margin. The strip
   // above it mints a session and the trail leads back to the list, which is
   // what was worth having here.
-  const railed =
-    route.kind !== "experimentation" &&
-    !bare &&
-    !(route.kind === "session" && route.solo);
+  const railed = !bare && !(route.kind === "session" && route.solo);
 
   /** Pages that are meaningless without a repository open behind them. */
   const needsRepo =
     route.kind === "workspace" ||
     route.kind === "session" ||
-    route.kind === "experimentation" ||
     route.kind === "dock";
 
   /**

@@ -1,13 +1,12 @@
 // Makes sure the embedded API server is answering before the UI asks it for
-// anything — the same job the Electron shell does in `ensureServer`. Nothing
-// running on the port yet means the shell spawns it: through pnpm from the
-// repository root, exactly as the Electron dev path does, so no bundling step
-// is needed and the server runs on whatever Node the developer's shell
-// resolves (a login shell, so version-manager shims are found).
+// anything. Nothing running on the port yet means the shell spawns it: through
+// pnpm from the repository root, so no bundling step is needed and the server
+// runs on whatever Node the developer's shell resolves (a login shell, so
+// version-manager shims are found).
 //
-// The port is shared with the desktop app's production default, so an already
-// running Reviewer desktop (or a `pnpm dev` server) is simply reused. Override
-// with REVIEWER_PORT for a second instance.
+// The port is the server's default, so an already running server (a `pnpm
+// dev` one, or another Reviewer window's) is simply reused. Override with
+// REVIEWER_PORT for a second instance.
 import Foundation
 
 enum ServerLauncherError: LocalizedError {

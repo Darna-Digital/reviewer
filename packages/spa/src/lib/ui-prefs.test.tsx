@@ -4,12 +4,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Theme } from "./ui-prefs";
 
 import {
-  fitSidePane,
   readUiPrefs,
   rememberSession,
   setUiPrefs,
-  SIDE_PANE_MIN,
-  toggleSidePane,
   useUiPrefs,
 } from "./ui-prefs";
 
@@ -111,12 +108,12 @@ describe("useUiPrefs system theme sync", () => {
 describe("rememberSession", () => {
   it("keeps each choice as it is made, without unsaying the last one", () => {
     act(() => rememberSession({ provider: "codex", model: "gpt-5.5" }));
-    act(() => rememberSession({ mode: "analysis" }));
+    act(() => rememberSession({ effort: "high" }));
 
     expect(readUiPrefs().lastSession).toEqual({
       provider: "codex",
       model: "gpt-5.5",
-      mode: "analysis",
+      effort: "high",
     });
   });
 
@@ -136,36 +133,5 @@ describe("rememberSession", () => {
 
     act(() => rememberSession({ model: "haiku" }));
     expect(seen).toEqual(["opus", "haiku"]);
-  });
-});
-
-describe("side panes", () => {
-  const resizeWindow = (width: number) => {
-    (window as { innerWidth: number }).innerWidth = width;
-  };
-
-  it("opens a pane at half the window when it was left wider than that", () => {
-    resizeWindow(1440);
-    act(() => setUiPrefs({ plansPaneOpen: false, plansPaneWidth: 1200 }));
-
-    act(() => toggleSidePane("analysis"));
-
-    expect(readUiPrefs().plansPaneOpen).toBe(true);
-    expect(readUiPrefs().plansPaneWidth).toBe(720);
-  });
-
-  it("leaves a width the window has room for alone", () => {
-    resizeWindow(1440);
-    act(() => setUiPrefs({ browserPaneOpen: false, browserPaneWidth: 480 }));
-
-    act(() => toggleSidePane("browser"));
-
-    expect(readUiPrefs().browserPaneWidth).toBe(480);
-  });
-
-  it("never fits a pane below the width it can be dragged to", () => {
-    resizeWindow(600);
-
-    expect(fitSidePane("analysis", 900)).toBe(SIDE_PANE_MIN.analysis);
   });
 });

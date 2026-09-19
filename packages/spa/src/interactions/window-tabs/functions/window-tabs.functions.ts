@@ -18,18 +18,6 @@ export const SESSIONS_HREF = "/modes/agent-session";
 export const NEW_SESSION_HREF = "/modes/agent-session?new=true";
 
 const SESSIONS_PREFIX = "/modes/agent-session";
-/**
- * The collaboration prototype, kept as a reference.
- *
- * It belongs to no tab in the strip. The two the bar leads with are ways of
- * working, and the prototype is not one — it is the previous draft of one, kept
- * reachable by its URL. Letting Code hold it would leave that tab labelled
- * after the old design and pointing there, since a pinned tab remembers where
- * it was left. So the strip stays as it was while the prototype is on screen —
- * see `tabForLocation`.
- */
-const EXPERIMENTATION_PREFIX = "/modes/experimentation";
-
 const TITLES: ReadonlyArray<readonly [string, string]> = [
   ["/modes/code/browse", "Project"],
   // Longest first: `/reviews` starts with `/review`, and a prefix match reads
@@ -42,9 +30,6 @@ const TITLES: ReadonlyArray<readonly [string, string]> = [
     page.href,
     page.title,
   ]),
-  // Longest first: `startsWith` takes the first entry that matches.
-  ["/modes/experimentation/collaboration/inbox", "Inbox"],
-  ["/modes/experimentation/collaboration", "Experimentation"],
   ["/settings", "Settings"],
 ];
 
@@ -98,10 +83,6 @@ const firstSessionSlot = (tabs: ReadonlyArray<WindowTab>): number =>
 const inSessions = (pathname: string): boolean =>
   pathname.startsWith(SESSIONS_PREFIX);
 
-/** Whether a location is the prototype's, which no tab in the strip holds. */
-const inExperimentation = (pathname: string): boolean =>
-  pathname.startsWith(EXPERIMENTATION_PREFIX);
-
 /** A pinned tab that is named after wherever it has been left. */
 const followsLocation = (tab: WindowTab): boolean => tab.kind === "project";
 
@@ -115,17 +96,18 @@ const keepsLocation = (tab: WindowTab): boolean => tab.kind !== "sessions";
 
 /**
  * Collaboration was a mode of its own, with a pinned tab and pages under
- * `/modes/collaboration`. Both are gone, but a strip saved before they went
+ * `/modes/collaboration`, and its prototype lived on for a while under
+ * `/modes/experimentation`. Both are gone, but a strip saved before they went
  * still names those pages, so no tab owns them any more — which sends the one
  * that was left there back to its own default rather than restoring it pointed
  * at a route that no longer exists.
  */
-const LEGACY_COLLABORATION_PREFIX = "/modes/collaboration";
+const LEGACY_PREFIXES = ["/modes/collaboration", "/modes/experimentation"];
 
 /** Whether a location is a pinned tab's to hold. */
 function ownsLocation(tab: WindowTab, pathname: string): boolean {
-  if (pathname.startsWith(LEGACY_COLLABORATION_PREFIX)) return false;
-  if (inExperimentation(pathname)) return false;
+  if (LEGACY_PREFIXES.some((prefix) => pathname.startsWith(prefix)))
+    return false;
   if (inSessions(pathname)) return tab.kind === "sessions";
   return tab.kind === "project";
 }
@@ -195,18 +177,11 @@ export const onSessionTab = (state: WindowTabsState): boolean =>
  * anything inside Sessions; everything else lands on the pinned tab that owns
  * that part of the app, whichever tab you set off from — leaving Sessions from
  * a chat hands the window back to Code rather than overwriting the chat.
- *
- * A surface with no tab of its own — the collaboration prototype — is not the
- * active tab's to take either: a strip that let it in would rename whichever
- * tab you were on and point it somewhere it does not belong.
  */
 function tabForLocation(
   state: WindowTabsState,
   pathname: string
 ): WindowTab | null {
-  // The prototype is nobody's: the strip keeps its place rather than renaming
-  // a mode button after a reference surface. See `EXPERIMENTATION_PREFIX`.
-  if (inExperimentation(pathname)) return null;
   const current = activeTab(state);
   const sessions = inSessions(pathname);
   if (current !== null && current.kind === "session" && sessions)

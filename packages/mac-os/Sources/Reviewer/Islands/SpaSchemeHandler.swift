@@ -1,5 +1,5 @@
-// Serves a built SPA out of a directory over `reviewer://app`, the way the
-// Electron shell's protocol handler does: a path that names a file on disk is
+// Serves a built SPA out of a directory over `reviewer://app`: a path that
+// names a file on disk is
 // that file; any other path a *navigation* asks for is the SPA's shell
 // document, since the router owns everything below the root; and anything
 // else — a script or stylesheet the build no longer has — is a plain 404

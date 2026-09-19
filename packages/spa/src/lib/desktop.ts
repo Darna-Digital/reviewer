@@ -1,17 +1,17 @@
 /**
- * Desktop-shell detection, and the bridge the shell hands the renderer.
+ * Native-shell detection, and the bridge the shell hands the web view.
  *
- * The Electron preload bridge injects `window.reviewer` (see
- * packages/desktop/src/preload.ts). When present we're running inside the
+ * The macOS shell installs `window.reviewer` before the first script runs (see
+ * `IslandHost` in packages/mac-os). When present we're running inside the
  * native window, where the macOS traffic lights sit over the top-left of the
- * web content (`titleBarStyle: "hiddenInset"`) — the window bar reserves space
- * for them. In the plain browser the bridge is absent and no space is reserved.
+ * web content — the window bar reserves space for them. In the plain browser
+ * the bridge is absent and no space is reserved.
  *
  * A preview is the app in an iframe of that same window (see `preview-window`),
- * and Electron runs a preload in the main frame only: the frame comes up with
- * no bridge at all and would otherwise take the browser's path — no API origin,
- * so every request goes to `reviewer://app/api/…` and 404s against the shell's
- * own protocol handler, and a picture of a page that never loaded. It is
+ * and the shell installs the bridge in the main frame only: the frame comes up
+ * with no bridge at all and would otherwise take the browser's path — no API
+ * origin, so every request goes to `reviewer://app/api/…` and 404s against the
+ * shell's own scheme handler, and a picture of a page that never loaded. It is
  * same-origin with the window it hangs in, so it borrows that window's bridge.
  *
  * SPA-only (no SSR), so reading `window` at module load is safe.

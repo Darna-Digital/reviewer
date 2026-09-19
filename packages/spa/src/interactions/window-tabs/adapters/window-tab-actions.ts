@@ -9,10 +9,6 @@
 import { useRouter } from "@tanstack/react-router";
 import { useMemo } from "react";
 import {
-  NEW_SESSION,
-  setChatMode,
-} from "@/interactions/chats/adapters/chat-mode.store";
-import {
   closeTab,
   NEW_SESSION_HREF,
   NEW_SESSION_TITLE,
@@ -114,9 +110,6 @@ function makeWindowTabActions(router: RouterHandle): WindowTabActions {
       });
     },
     openSession: () => {
-      // A session minted here is for building, whatever the last one opened
-      // from the analysis pane was for.
-      setChatMode(NEW_SESSION, "build");
       updateWindowTabs((state) =>
         openTab(state, {
           id: nextTabId(),

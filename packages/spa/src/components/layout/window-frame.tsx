@@ -3,22 +3,12 @@
  *
  * The frame is the sheet carrying the tab strip and the window controls, with
  * the app inset within it on its own canvas, so the content reads as a solid
- * page resting on top. Native window and browser tab draw the same frame; the
- * browser pane is the one part a tab cannot have, since it is an Electron
- * `<webview>`.
+ * page resting on top. Native window and browser tab draw the same frame.
  */
 import { useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { restoreDock } from "@/components/layout/dock-expansion";
-import { ResizeHandle } from "@/components/layout/resize-handle";
-import { usePanelSize } from "@/components/layout/use-panel-size";
 import { WindowBar } from "@/components/layout/window-bar";
-import {
-  updateBrowserPane,
-  useBrowserPane,
-} from "@/interactions/browser-pane/adapters/browser-pane.store";
-import { BrowserPane } from "@/interactions/browser-pane/components/browser-pane";
-import { PlansPane } from "@/interactions/plans-pane/components/plans-pane";
 import { SearchHost } from "@/interactions/search/components/search-host";
 import {
   TabOverview,
@@ -26,16 +16,9 @@ import {
   TabOverviewScrim,
 } from "@/interactions/tab-preview/components/tab-overview";
 import { TabSnapshotMill } from "@/interactions/tab-preview/components/tab-snapshot-mill";
-import { isDesktop } from "@/lib/desktop";
 import { isPreviewWindow } from "@/lib/preview-window";
-import { cn } from "@/lib/utils";
-import { isCodeSurface, shellRoute } from "@/lib/shell-route";
-import {
-  setUiPrefs,
-  SIDE_PANE_MIN,
-  toggleBottomVisible,
-  useUiPrefs,
-} from "@/lib/ui-prefs";
+import { shellRoute } from "@/lib/shell-route";
+import { toggleBottomVisible } from "@/lib/ui-prefs";
 
 export function WindowFrame({ children }: { children: React.ReactNode }) {
   // ⌘, opens Settings, as in every Mac app. It lives here rather than in either
@@ -55,48 +38,16 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [navigate]);
 
-  // For the same reason, code mode's search dialog (⌘K, ⇧⇧, ⌘⇧F) is mounted
-  // here: one host for every code page, whichever shell is showing it.
-  // Collaboration is left alone — it has a search of its own.
+  // For the same reason, the search dialog (⌘K, ⇧⇧, ⌘⇧F) is mounted here: one
+  // host for every page, whichever shell is showing it.
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const prefs = useUiPrefs();
-  const inCodeMode = isCodeSurface(pathname);
-
-  // An expanded browser is the whole canvas: the page and the analysis pane
-  // are hidden rather than unmounted, so the editor, the tree and any terminal
-  // come back exactly as they were the moment the browser is put back.
-  const browser = useBrowserPane();
-  const browserFills = isDesktop && prefs.browserPaneOpen && browser.expanded;
-
-  // Going somewhere in the app — a tab, a mode, a ⌘K jump — while the browser
-  // has the whole canvas means wanting to see that page, so the browser steps
-  // back to its split as the route changes. Only on a change: the expanded
-  // pane must not collapse on the route it was expanded over.
-  const lastPathname = useRef(pathname);
-  useEffect(() => {
-    if (lastPathname.current === pathname) return;
-    lastPathname.current = pathname;
-    if (browserFills) updateBrowserPane({ expanded: false });
-  }, [pathname, browserFills]);
-
-  // Both side panes hang off the frame, so dragging either used to re-render
-  // the entire window — and, because these two wrote straight to the prefs,
-  // also serialise and store every preference in the app on each pointer frame.
-  // The panes read their width from a CSS variable now, and the prefs are
-  // written once, when the drag ends. See `usePanelSize`.
-  const plansPane = usePanelSize("plans-w", prefs.plansPaneWidth, "width");
-  const browserPane = usePanelSize(
-    "browser-w",
-    prefs.browserPaneWidth,
-    "width"
-  );
 
   // ⌘B expands or collapses the bottom dock. Every code page carries the dock —
   // the git shell embeds its own, the workspace shell mounts `GitBottomDock` —
   // so the shortcut belongs to the frame under both rather than to either one;
-  // living in the git shell alone left it dead on sessions, services and docs.
+  // living in the git shell alone left it dead on sessions and services.
   // Capture phase, so a field that stops its own keydown (the menu search) can't
   // swallow it either.
   //
@@ -106,7 +57,6 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
   const route = shellRoute(pathname);
   const dockPageTab = route.kind === "dock" ? route.tab : null;
   useEffect(() => {
-    if (!inCodeMode) return;
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) {
         return;
@@ -118,10 +68,10 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [inCodeMode, dockPageTab, navigate]);
+  }, [dockPageTab, navigate]);
 
   // A preview is the page and nothing around it: the chrome belongs to the
-  // window it is being previewed in, and the panes beside it are its own.
+  // window it is being previewed in.
   if (isPreviewWindow) {
     return (
       <div className="app-canvas flex h-svh w-full overflow-hidden text-foreground">
@@ -132,7 +82,7 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {inCodeMode && <SearchHost />}
+      <SearchHost />
       <div className="app-frame flex h-svh w-full flex-col overflow-hidden text-foreground">
         <WindowBar />
         {/* Everything under the bar shares one box: the launchpad slides down
@@ -146,61 +96,9 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
               is the exception — it paves its own seam over and joins the sheet
               beside it, as it did when the window was one canvas. */}
           <TabOverviewPush>
-            <div
-              className={cn(
-                "flex min-h-0 min-w-0 flex-1 gap-1.5 overflow-hidden",
-                browserFills && "hidden"
-              )}
-            >
+            <div className="flex min-h-0 min-w-0 flex-1 gap-1.5 overflow-hidden">
               {children}
             </div>
-            {prefs.plansPaneOpen && !browserFills && (
-              // The handle rides inside the pane's own group so the flex gap
-              // counts once — one seam, the same width as the frame's inset.
-              <div className="flex min-h-0 shrink-0">
-                <ResizeHandle
-                  orientation="col"
-                  label="Resize analysis"
-                  value={plansPane.current}
-                  min={SIDE_PANE_MIN.analysis}
-                  max={() =>
-                    Math.max(SIDE_PANE_MIN.analysis, window.innerWidth - 480)
-                  }
-                  direction={-1}
-                  onResize={plansPane.onResize}
-                  onResizeEnd={(plansPaneWidth) =>
-                    setUiPrefs({ plansPaneWidth })
-                  }
-                />
-                <PlansPane />
-              </div>
-            )}
-            {isDesktop && prefs.browserPaneOpen && (
-              <div
-                className={cn(
-                  "flex min-h-0 shrink-0",
-                  browserFills && "min-w-0 flex-1"
-                )}
-              >
-                {!browserFills && (
-                  <ResizeHandle
-                    orientation="col"
-                    label="Resize browser"
-                    value={browserPane.current}
-                    min={SIDE_PANE_MIN.browser}
-                    max={() =>
-                      Math.max(SIDE_PANE_MIN.browser, window.innerWidth - 480)
-                    }
-                    direction={-1}
-                    onResize={browserPane.onResize}
-                    onResizeEnd={(browserPaneWidth) =>
-                      setUiPrefs({ browserPaneWidth })
-                    }
-                  />
-                )}
-                <BrowserPane />
-              </div>
-            )}
             <TabOverviewScrim />
           </TabOverviewPush>
         </div>

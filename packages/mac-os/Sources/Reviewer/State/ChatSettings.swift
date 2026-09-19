@@ -193,61 +193,6 @@ enum AccessCopy {
     }
 }
 
-/// What a session is for — the SPA's `chat-mode.functions`. Build is the
-/// ordinary conversation; analysis asks the agent to record its answer in
-/// the Plans pane. The mode is the composer's, not the server's: it decides
-/// what is sent, on every send, since a follow-up in an analysis session is
-/// another pass at the drawing.
-enum ChatMode: String, Codable, CaseIterable, Hashable, Sendable {
-    case build, analysis
-
-    var option: SelectorOption<ChatMode> {
-        switch self {
-        case .build:
-            return SelectorOption(value: self, label: "Build", hint: "Read, change and run the code", symbol: "hammer")
-        case .analysis:
-            return SelectorOption(value: self, label: "Analysis", hint: "Draw the flow in the pane", symbol: "point.3.connected.trianglepath.dotted")
-        }
-    }
-
-    static var options: [SelectorOption<ChatMode>] { allCases.map(\.option) }
-
-    /// What actually goes to the agent.
-    func prompt(for text: String) -> String {
-        switch self {
-        case .build: return text
-        case .analysis: return Self.analysisPrompt(text)
-        }
-    }
-
-    /// The title a session opened in this mode is filed under, or nil to let
-    /// the server name it from the prompt.
-    func title(for text: String) -> String? {
-        guard self == .analysis else { return nil }
-        let cleaned = text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        guard !cleaned.isEmpty else { return "Analysis" }
-        let titled = cleaned.prefix(1).uppercased() + cleaned.dropFirst()
-        return titled.count > 60 ? String(titled.prefix(60)) + "…" : titled
-    }
-
-    private static func analysisPrompt(_ question: String) -> String {
-        [
-            "Work out and record an analysis in reviewer's Plans pane: \(question.trimmingCharacters(in: .whitespacesAndNewlines))",
-            "",
-            "Read the code first — do not guess at the flow. Then POST the analysis to",
-            "`/api/plans` on the reviewer server (see the reviewer-plans skill for the",
-            "schema). Lay the nodes out across the layers in the order the request",
-            "actually travels — `frontend` through `transport` to `backend` and `data` —",
-            "give every node an `anchor` of the file and line it stands for, and leave an",
-            "annotation at each place a reader would otherwise have to go digging.",
-            "",
-            "Write an annotation that makes more than one point as a numbered list, one",
-            "point per item — the pane renders the notes as markdown, and a wall of",
-            "findings welded into two sentences is unreadable.",
-        ].joined(separator: "\n")
-    }
-}
-
 extension ChatProviderKind {
     var label: String {
         switch self {

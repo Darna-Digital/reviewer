@@ -8,7 +8,7 @@ syntax highlighting, no screenshot and no mock.
 ```bash
 # the SPA needs to be running (pnpm dev in the repo root)
 pnpm capture:home                        # the whole homepage, hero + 6 sections
-pnpm capture:home --only plans           # just one entry
+pnpm capture:home --only review          # just one entry
 pnpm capture:spa --help                  # every option
 pnpm capture:spa \
   --url http://localhost:41812/modes/collaboration \
@@ -16,7 +16,7 @@ pnpm capture:spa \
   --out public/spa-snapshots/collaboration.json
 ```
 
-Render one with `<SpaSnapshot src="/spa-snapshots/plans.json" … />`.
+Render one with `<SpaSnapshot src="/spa-snapshots/review.json" … />`.
 
 ## Capturing part of the UI
 

@@ -60,13 +60,10 @@ struct ConversationView: View {
                     draftKey: chat.id,
                     settings: ChatSettings(of: chat),
                     onSettingsChange: { change(settings: $0) },
-                    mode: model.chats.mode(for: chat.id),
-                    onModeChange: { model.chats.setMode($0, for: chat.id) },
                     running: chat.isRunning,
                     onStop: { Task { await session.stop() } },
-                    placeholder: model.chats.mode(for: chat.id) == .analysis
-                        ? "What should the analysis cover?" : "Ask for follow-up changes or attach images…",
-                    onSend: { text, images in try await send(text, images, mode: model.chats.mode(for: chat.id)) }
+                    placeholder: "Ask for follow-up changes or attach images…",
+                    onSend: send
                 )
                 .zIndex(1)
                 SessionContextBar()
@@ -77,9 +74,9 @@ struct ConversationView: View {
         }
     }
 
-    private func send(_ text: String, _ images: [ComposerAttachment], mode: ChatMode) async throws {
+    private func send(_ text: String, _ images: [ComposerAttachment]) async throws {
         do {
-            try await session.send(text: mode.prompt(for: text), images: images.map(\.upload))
+            try await session.send(text: text, images: images.map(\.upload))
         } catch {
             model.lastError = error.localizedDescription
             throw error

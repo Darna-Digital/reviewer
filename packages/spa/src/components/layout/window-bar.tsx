@@ -13,11 +13,8 @@ import {
   IconCommand,
   IconDotsVertical,
   IconLayoutGrid,
-  IconSitemap,
-  IconWorld,
 } from "@tabler/icons-react";
 // import { useCanGoBack } from "@tanstack/react-router";
-import { useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +37,6 @@ import {
 import { WindowTabStrip } from "@/interactions/window-tabs/components/window-tab-strip";
 import {
   barShortcut,
-  type BarPane,
   type BarShortcut,
 } from "@/components/layout/window-bar.shortcuts";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
@@ -56,9 +52,7 @@ import { ProjectPicker } from "@/interactions/workspace/components/project-picke
 import { ROW_TOOLTIP_PLACEMENT } from "@/components/ui/truncated-text";
 import { openSearch } from "@/interactions/search/adapters/search.store";
 import { isDesktop } from "@/lib/desktop";
-import { isCodeSurface } from "@/lib/shell-route";
 import { useWorkspace } from "@/lib/queries";
-import { toggleSidePane } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
 /**
@@ -75,19 +69,14 @@ import { cn } from "@/lib/utils";
  */
 const LEAD_GUTTER = "w-22";
 
-/** Stay on the page the project was switched from, now scoped to the new one. */
-const stayPut = () => {};
-
 const PROJECT_PICKER_KEYS = "⌘⇧P";
 const LAUNCHPAD_KEYS = "⌘L";
 const COMMANDS_KEYS = "⌘K";
-const ANALYSIS_KEYS = "⌘⇧A";
-const BROWSER_KEYS = "⌘⇧B";
 
 /** The chords that are the bar's to answer; the strip answers its own. */
 const BAR_SHORTCUTS: ReadonlySet<BarShortcut["kind"]> = new Set<
   BarShortcut["kind"]
->(["project-picker", "pane"]);
+>(["project-picker"]);
 
 /**
  * A row of the window menu: its name, and its chord on hover rather than set
@@ -126,35 +115,17 @@ function MenuRow({
 
 export function WindowBar() {
   // const canGoBack = useCanGoBack();
-  const location = useRouterState({ select: (s) => s.location });
   const overviewOpen = useTabOverview();
 
-  const inCodeMode = isCodeSurface(location.pathname);
   const workspace = useWorkspace();
   const pickerOpen = useProjectPickerOpen();
-  // Both panes are there to be read against something else the window is
-  // showing, and in the native shell there is always something — the browser
-  // pane is a window of its own, and an analysis is opened from either mode. A
-  // browser tab has no <webview> to put behind the second, and only reads an
-  // analysis beside the code. A pane the window cannot show is off the menu,
-  // and its chord does nothing.
-  const paneAvailable = (pane: BarPane): boolean =>
-    pane === "browser" ? isDesktop : isDesktop || inCodeMode;
-  const windowMenu =
-    inCodeMode || paneAvailable("analysis") || paneAvailable("browser");
-  const togglePane = (pane: BarPane) => {
-    if (!paneAvailable(pane)) return;
-    toggleSidePane(pane);
-  };
-  // The bar's own chords: the project chip's, and the side panes'. The strip's
-  // — a session, the launchpad, a tab — are answered by the strip itself.
+  // The bar's own chord is the project chip's. The strip's — a session, the
+  // launchpad, a tab — are answered by the strip itself.
   useEffect(() => {
     const run = (shortcut: BarShortcut) => {
       switch (shortcut.kind) {
         case "project-picker":
           return setProjectPickerOpen(true);
-        case "pane":
-          return togglePane(shortcut.pane);
         default:
           return undefined;
       }
@@ -187,8 +158,8 @@ export function WindowBar() {
       <div className="flex min-w-0 flex-1 items-center gap-1">
         {/* The traffic lights are drawn by macOS over the bar's top-left, so the
             lead gutter is what the window's own controls sit in (see
-            `trafficLightPosition` in the desktop main process). A browser tab
-            has no controls there, so the bar starts at its edge. */}
+            the shell's window). A browser tab has no controls there, so the
+            bar starts at its edge. */}
         <div
           aria-hidden
           className={cn("shrink-0", isDesktop ? LEAD_GUTTER : "w-2")}
@@ -207,15 +178,13 @@ export function WindowBar() {
 
         {/* The project the window is on leads the strip: every tab behind it is
             a place within that project, so the chip names them all rather than
-            being one more thing on the page under them. Switching project keeps
-            a session or a board where it is; on the code surfaces it lands in
-            the arriving project's tree, as it always has. */}
+            being one more thing on the page under them. Switching project
+            lands in the arriving project's tree, as it always has. */}
         <div className={cn("flex min-w-0 shrink-0", NO_DRAG)}>
           <ProjectPicker
             workspace={workspace.data}
             open={pickerOpen}
             onOpenChange={setProjectPickerOpen}
-            onChosen={inCodeMode ? undefined : stayPut}
             onWindowBar
             tooltip={<BarLabel label="Projects" keys={PROJECT_PICKER_KEYS} />}
           />
@@ -238,60 +207,35 @@ export function WindowBar() {
         >
           <IconLayoutGrid className="size-4" />
         </BarButton>
-        {/* Everything the window can put beside the page, under one handle:
-            each row names itself, and hovering it says which chord does the
-            same. Off the modes that have any, the handle itself goes. */}
-        {windowMenu && (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Window menu"
-                  className={cn("text-muted-foreground", NO_DRAG)}
-                />
-              }
-            >
-              <IconDotsVertical className="size-4" />
-            </DropdownMenuTrigger>
+        {/* The window menu: each row names itself, and hovering it says which
+            chord does the same. */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Window menu"
+                className={cn("text-muted-foreground", NO_DRAG)}
+              />
+            }
+          >
+            <IconDotsVertical className="size-4" />
+          </DropdownMenuTrigger>
 
-            {/* Narrower than a menu's default: these rows are short names, and
+          {/* Narrower than a menu's default: these rows are short names, and
                 the chords that would have set the width are in the tooltips
                 rather than along them. */}
-            <DropdownMenuContent align="end" className="min-w-48">
-              {/* The palette is code mode's, and so is the host that answers
-                  ⌘K: off it there is nothing behind the row to open. */}
-              {inCodeMode && (
-                <MenuRow
-                  label="Command menu"
-                  keys={COMMANDS_KEYS}
-                  onClick={() => openSearch("commands")}
-                >
-                  <IconCommand className="size-4 shrink-0" />
-                </MenuRow>
-              )}
-              {paneAvailable("analysis") && (
-                <MenuRow
-                  label="Analysis"
-                  keys={ANALYSIS_KEYS}
-                  onClick={() => togglePane("analysis")}
-                >
-                  <IconSitemap className="size-4 shrink-0" />
-                </MenuRow>
-              )}
-              {paneAvailable("browser") && (
-                <MenuRow
-                  label="Browser"
-                  keys={BROWSER_KEYS}
-                  onClick={() => togglePane("browser")}
-                >
-                  <IconWorld className="size-4 shrink-0" />
-                </MenuRow>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+          <DropdownMenuContent align="end" className="min-w-48">
+            <MenuRow
+              label="Command menu"
+              keys={COMMANDS_KEYS}
+              onClick={() => openSearch("commands")}
+            >
+              <IconCommand className="size-4 shrink-0" />
+            </MenuRow>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <div aria-hidden className="w-2 shrink-0" />
       </div>
     </header>

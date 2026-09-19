@@ -16,25 +16,17 @@
  * off the run of digits too: it answers to ⌘L, beside ⌘T for a new session, the
  * two chords that are about the window rather than about a place in it.
  *
- * The side panes are a third sort of thing: neither a place in the window nor
- * the window itself, but something read beside whatever is open. They take ⇧ as
- * their mark — ⌘⇧A and ⌘⇧B, as the content search takes ⌘⇧F — which also keeps
- * the browser pane clear of ⌘B, the bottom dock's.
- *
  * The project chip is what every tab in the strip is scoped to rather than a
- * place among them, so it takes ⇧ as well, on ⌘⇧P.
+ * place among them, so it takes ⇧ as its mark — ⌘⇧P, as the content search
+ * takes ⌘⇧F.
  */
 import { isFeatureEnabled } from "@reviewer/feature-flags";
-
-export type BarPane = "analysis" | "browser";
 
 export type BarShortcut =
   | { readonly kind: "new-session" }
   | { readonly kind: "launchpad" }
   /** Raise the project chip's dropdown, to switch what the window is on. */
   | { readonly kind: "project-picker" }
-  /** Open or close one of the panes beside the page. */
-  | { readonly kind: "pane"; readonly pane: BarPane }
   /** Cross to the next way of working the bar leads with. */
   | { readonly kind: "mode" }
   /** Go to the session standing in that slot of the strip, counting from 1. */
@@ -68,19 +60,10 @@ const sessionAt = (digit: number): BarShortcut | null =>
 
 const DIGIT = /^[0-9]$/;
 
-const PANE_KEYS: Readonly<Record<string, BarPane>> = {
-  a: "analysis",
-  b: "browser",
-};
-
 export function barShortcut(event: Chord): BarShortcut | null {
   if (!(event.metaKey || event.ctrlKey) || event.altKey) return null;
   const key = event.key.toLowerCase();
-  if (event.shiftKey) {
-    if (key === "p") return { kind: "project-picker" };
-    const pane = PANE_KEYS[key];
-    return pane === undefined ? null : { kind: "pane", pane };
-  }
+  if (event.shiftKey) return key === "p" ? { kind: "project-picker" } : null;
   if (key === "g") return { kind: "mode" };
   if (key === "l") return { kind: "launchpad" };
   if (key === "t") return sessionsEnabled() ? { kind: "new-session" } : null;

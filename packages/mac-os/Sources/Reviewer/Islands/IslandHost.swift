@@ -182,9 +182,9 @@ final class IslandHost: NSObject {
 
     private static let messageHandlerName = "reviewerShell"
 
-    /// The `window.reviewer` bridge, installed before the first script runs.
-    /// The same shape the Electron preload exposes (`lib/desktop` reads it),
-    /// plus the island's name, the appearance the window is in — said
+    /// The `window.reviewer` bridge, installed before the first script runs
+    /// (`lib/desktop` reads it): the API origin and the folder picker, plus
+    /// the island's name, the appearance the window is in — said
     /// outright, since inside the sidebar's vibrancy the view inherits a
     /// vibrant variant that WebKit does not report as dark — and the channel
     /// `lib/shell` talks over. Replies come back as the promise `postMessage`

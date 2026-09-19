@@ -168,26 +168,6 @@ describe("trackLocation", () => {
     expect(state.tabs.map((t) => t.title)).toEqual(["Review", "Sessions"]);
   });
 
-  it("leaves the strip where it was while the prototype is on screen", () => {
-    // A pinned tab remembers where it was left, so one trip to the old design
-    // would otherwise leave Code labelled after it and pointing there.
-    const before = trackLocation(
-      initialWindowTabs(),
-      "/modes/code/review/pull/12",
-      "/modes/code/review/pull/12"
-    );
-    const after = trackLocation(
-      before,
-      "/modes/experimentation/collaboration",
-      "/modes/experimentation/collaboration"
-    );
-    expect(after).toBe(before);
-    expect(after.tabs[0]).toMatchObject({
-      href: "/modes/code/review/pull/12",
-      title: "Review",
-    });
-  });
-
   it("leaves Sessions and its conversations under their own names", () => {
     const state = trackLocation(
       stripOf("a"),
@@ -324,12 +304,6 @@ describe("tabTitle", () => {
   it("names the mode surface a location belongs to", () => {
     expect(tabTitle("/modes/code/browse/commit/abc123")).toBe("Project");
     expect(tabTitle("/modes/code/review/pull/12")).toBe("Review");
-    expect(tabTitle("/modes/experimentation/collaboration")).toBe(
-      "Experimentation"
-    );
-    expect(tabTitle("/modes/experimentation/collaboration/inbox")).toBe(
-      "Inbox"
-    );
     expect(tabTitle("/settings")).toBe("Settings");
     expect(tabTitle("/somewhere-else")).toBe("Reviewer");
   });

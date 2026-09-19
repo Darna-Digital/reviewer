@@ -1,8 +1,7 @@
 # @reviewer/mac-os
 
-A native macOS shell for Reviewer, written in SwiftUI. Same embedded API
-server as the Electron desktop app; the window, sidebar, bottom pane and menu
-bar are AppKit's own, and the web app's surfaces are hosted inside it as
+A native macOS shell for Reviewer, written in SwiftUI, over the embedded API
+server; the window, sidebar, bottom pane and menu bar are AppKit's own, and the web app's surfaces are hosted inside it as
 **islands** — each one a web view of its own, set in the native layout,
 showing one part of the SPA.
 
@@ -81,7 +80,7 @@ What it does today:
   ⌘W closes, ⌘1–9 jump to a session, ⌘G crosses between Code and Sessions,
   ⌘⇧] / ⌘⇧[ step along the strip). The
   strip lives in the page island — switching is a route change inside it,
-  every tab's page primed while the window is idle, as in Electron — and
+  every tab's page primed while the window is idle — and
   sends the toolbar a picture of itself; a tab pressed there, and each menu
   chord, goes back down to the strip to answer.
 - **Launchpad** (⌘L) — every tab as a card wearing the last picture taken
@@ -101,7 +100,7 @@ What it does today:
   fingers are free for the app only while Mission Control and App Exposé
   are on four fingers in System Settings).
 - **Page island** — the SPA's routed page, with the window's own chrome and
-  file tree off: the diff, the file view, review comments, edit mode, a
+  file tree off: the diff, the file view, review comments, a
   pull request's diff alone — its overview, its files and the list of them
   being the shell's — the sessions surface, with its open-file strip along its
   top and, on a diff, the web header's horizontal-or-vertical layout toggle
@@ -207,7 +206,7 @@ One island is hosted today: the page (`code`).
 Where the documents come from is `SpaSource`: a debug build takes the Vite
 dev server on `:41812` (HMR inside the native window); a release build takes
 the SPA build bundled into `Contents/Resources/spa` by `scripts/bundle.sh`,
-served over `reviewer://app` like the Electron shell does. `REVIEWER_SPA_URL`
+served over `reviewer://app`. `REVIEWER_SPA_URL`
 overrides either — an http origin, or a `file://` directory holding a build.
 
 ## Running
@@ -239,9 +238,8 @@ mac-os tab.
 
 The app looks for the API server on `127.0.0.1:41811` (`REVIEWER_PORT` to
 change it). If nothing answers it spawns one from the repository root with
-`pnpm --filter @reviewer/embedded-server start`, exactly like the Electron dev
-path, and stops it again on quit. A server already running — `pnpm dev`, or
-the desktop app — is reused as is.
+`pnpm --filter @reviewer/embedded-server start`, and stops it again on quit.
+A server already running — `pnpm dev`, or another window's — is reused as is.
 
 Requires Xcode 16+ (Swift 6 language mode) and macOS 15.
 

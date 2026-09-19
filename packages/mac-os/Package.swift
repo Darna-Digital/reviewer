@@ -1,8 +1,7 @@
 // swift-tools-version: 6.2
 //
-// reviewer mac-os — a native SwiftUI shell around the same embedded server the
-// Electron desktop app runs, hosting the web app's surfaces as islands in its
-// own layout. One executable target, no Xcode project: `swift build` produces
+// reviewer mac-os — a native SwiftUI shell around the embedded server,
+// hosting the web app's surfaces as islands in its own layout. One executable target, no Xcode project: `swift build` produces
 // the binary and `scripts/bundle.sh` wraps it in a `.app` so it gets a dock
 // icon, an Info.plist and the ordinary Finder launch path.
 import PackageDescription

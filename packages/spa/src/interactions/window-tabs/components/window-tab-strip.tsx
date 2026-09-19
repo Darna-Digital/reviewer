@@ -2,9 +2,9 @@
  * The window-tab strip: Code and Sessions pinned, then the sessions lifted into
  * tabs of their own, and the ✛ that mints one.
  *
- * The one strip, drawn in two bars: the window bar in the browser and the
- * Electron window, and — natively, from the picture the island sends it — the
- * toolbar of the macOS shell. Everything that makes a strip a strip is in
+ * The one strip, drawn in two bars: the window bar in the browser tab, and —
+ * natively, from the picture the island sends it — the toolbar of the macOS
+ * shell. Everything that makes a strip a strip is in
  * `useWindowTabStrip` rather than in either bar — following the location,
  * naming session tabs after their conversations, priming every tab's page while
  * the window is idle, and the chords that pick a tab — so the two bars differ

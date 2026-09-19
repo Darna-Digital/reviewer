@@ -1,9 +1,9 @@
 /**
  * Opening the code something points at, from outside the code page.
  *
- * The analysis pane hangs off the window frame and the Find window lives in the
- * bottom dock; both sit *above* the router's outlet, so neither can reach the
- * file viewer directly. They go the way every jump to code goes: a tab in the
+ * The Find window lives in the bottom dock, *above* the router's outlet, so it
+ * cannot reach the file viewer directly. It goes the way every jump to code
+ * goes: a tab in the
  * strip, and the path and line in the URL. A file opened this way is opened
  * `permanent`, since following a result is a deliberate act and should not be
  * thrown away by the next preview click.

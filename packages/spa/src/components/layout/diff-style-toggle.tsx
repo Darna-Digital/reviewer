@@ -204,8 +204,8 @@ export function useShowsDiffStyleToggle(route: ShellRoute): boolean {
 /**
  * The toggle as a chrome row wears it: up while a diff is on screen, and
  * wired to the preference the diff pane reads. The header band has it at its
- * end in the browser and in Electron, and the macOS shell's island bar has it
- * in the same place — see `IslandBar`.
+ * end in the browser tab, and the macOS shell's island bar has it in the same
+ * place — see `IslandBar`.
  */
 export function HeaderDiffStyleToggle({ route }: { route: ShellRoute }) {
   const shown = useShowsDiffStyleToggle(route);

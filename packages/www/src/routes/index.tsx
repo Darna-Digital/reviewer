@@ -224,39 +224,14 @@ function Home() {
 
       <FeatureSection
         capabilities={[
-          "Front-to-back flow graph",
-          "Layer lanes",
-          "Notes anchored to lines",
-          "Anchor re-checking",
-          "Relocated & lost anchors",
-          "Drafts and saved analyses",
-        ]}
-        capabilitiesLabel="Analyses that age honestly"
-        description="An analysis is a graph: how one behaviour travels from the frontend through to storage, with notes pinned to real files and lines. When the code moves on, Reviewer re-checks every anchor and tells you which parts of the analysis it can still stand behind."
-        index="03"
-        title="The flow an agent worked out, drawn front to back"
-      >
-        <SectionSnapshot
-          label="An analysis drawn front to back, with notes anchored to real files and lines"
-          name="plans"
-        />
-      </FeatureSection>
-
-      <SectionDivider />
-
-      <FeatureSection
-        capabilities={[
           "Run configurations",
           "Service logs",
           "Start & stop all",
-          "Browser pane",
-          "Element picker",
-          "Visual comments",
         ]}
         capabilitiesLabel="From the diff to the running app"
-        description="Named run configurations start your services from inside the app and keep their logs beside the diff. The browser pane loads the running site; pick an element and the comment is filed with a shot of what you were pointing at."
-        index="04"
-        title="Run it, look at it, point at what is wrong"
+        description="Named run configurations start your services from inside the app and keep their logs beside the diff, so the change and what it does at runtime are read in one window."
+        index="03"
+        title="Run it and look at it"
       >
         <SectionSnapshot
           label="A run configuration and its service logs, docked beneath the code"
@@ -268,7 +243,7 @@ function Home() {
 
       <FeatureSection
         capabilities={[
-          "Browse & edit",
+          "Browse the project",
           "Commit & push",
           "Branch switcher",
           "History graph",
@@ -277,8 +252,8 @@ function Home() {
           "Multi-repo roots",
         ]}
         capabilitiesLabel="Git, in full"
-        description="Browse and edit files, stage and commit, page through history, and open a pull request without leaving the review. Several repository roots can sit in one window when a project spans more than one."
-        index="05"
+        description="Browse files, stage and commit, page through history, and open a pull request without leaving the review. Several repository roots can sit in one window when a project spans more than one."
+        index="04"
         title="The whole repository, not only the diff"
       >
         <SectionSnapshot

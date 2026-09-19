@@ -1,5 +1,5 @@
 // The chat composer — the prompt box over a row of selectors: the model,
-// the effort, the mode, the access level, the attach button, and send or
+// the effort, the access level, the attach button, and send or
 // stop at the trailing end. The web `ChatComposer`, drawn natively. The
 // row is not fixed: effort and access are what the chosen agent can be
 // asked for while running the chosen model (see `ChatCapability`), so an
@@ -8,7 +8,7 @@
 //
 // The composer owns only the draft — text and pending images, kept under
 // its key in `Chats` so leaving and coming back finds it as it was left;
-// the settings and the mode are the caller's. Return sends, ⇧Return breaks
+// the settings are the caller's. Return sends, ⇧Return breaks
 // the line; images are picked, pasted, or dropped anywhere on the pane
 // (see `imageDropZone`). The box rests at a few lines and is dragged taller
 // by its top edge — a height that is the app's, not this thread's.
@@ -20,8 +20,6 @@ struct ChatComposer: View {
     let draftKey: String
     let settings: ChatSettings
     let onSettingsChange: (ChatSettings) -> Void
-    let mode: ChatMode
-    let onModeChange: (ChatMode) -> Void
     let running: Bool
     var onStop: (() -> Void)?
     let placeholder: String
@@ -75,8 +73,6 @@ struct ChatComposer: View {
                         }
                         ComposerDivider()
                     }
-                    SelectorPopover(options: ChatMode.options, value: mode, help: "Session mode", onSelect: onModeChange)
-                    ComposerDivider()
                     SelectorPopover(options: AccessCopy.options(capabilities.access), value: settings.access, help: "Access level") { access in
                         var next = settings
                         next.access = access

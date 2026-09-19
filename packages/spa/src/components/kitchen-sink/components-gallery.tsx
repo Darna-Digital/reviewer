@@ -139,7 +139,7 @@ const TOAST_MOCKS: readonly { label: string; fire: () => void }[] = [
     fire: () =>
       toast.error("Cannot resolve path", {
         description:
-          "packages/spa/src/interactions/collaboration/components/announce-move-into-the-deepest-possible-directory.ts",
+          "packages/spa/src/interactions/find-usages/components/announce-move-into-the-deepest-possible-directory.ts",
       }),
   },
   {

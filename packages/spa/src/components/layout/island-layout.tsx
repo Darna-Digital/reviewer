@@ -11,7 +11,7 @@
  * workers and refill their cache.
  *
  * The window tabs are the island's to keep, for the same reason the window
- * bar's are the app's in Electron: switching one is a route change in a
+ * bar's are the app's in a browser tab: switching one is a route change in a
  * document that has already primed the page. They are the toolbar's to draw
  * (see `IslandBar`), and the launchpad that lays them out is the shell's own,
  * over the window, wearing the pictures it takes of the page — so neither is

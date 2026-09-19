@@ -35,11 +35,8 @@ jobs:
           node-version: lts/*
           cache: pnpm
 
-      # Electron is a large download none of this needs; the exclusion carries
-      # no `...` suffix so desktop's dependencies — `@reviewer/lint` among them
-      # — stay installed. Same reasoning as check.yml.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter "!@reviewer/desktop"
+        run: pnpm install --frozen-lockfile
 
       # `vite build`, then `wrangler deploy` against the config the build wrote
       # beside the bundle. The Worker's name and its custom domain come from

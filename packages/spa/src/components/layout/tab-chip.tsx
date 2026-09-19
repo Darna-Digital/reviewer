@@ -3,8 +3,8 @@
  * icon, names itself, and keeps a fixed slot at its tail for the ✕ — so a tab
  * neither resizes nor leaves a hole as the control comes and goes.
  *
- * The window bar's own strip is the reference; the strips beneath it — the
- * open files in code, the prototype's open surfaces — wear the same chip so
+ * The window bar's own strip is the reference; the strip beneath it — the
+ * open files in code — wears the same chip so
  * moving between them is a change of contents, not of furniture.
  *
  * In the macOS shell the chip is the toolbar's: a capsule, with a round ✕ in

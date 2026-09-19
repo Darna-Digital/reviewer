@@ -61,8 +61,6 @@ import {
 import { CodeView } from "@/components/editor/code-view";
 import type { RevealTarget } from "@/interactions/language/components/use-reveal-line";
 import { ImageView, isImagePath } from "@/components/editor/image-view";
-import { MarkdownFileView } from "@/interactions/markdown/components/markdown-file-view";
-import { isMarkdownPath } from "@/interactions/markdown/functions/markdown-view.functions";
 import { ConflictBanner } from "@/components/git/conflict-banner";
 import { ConflictView } from "@/components/git/conflict-view";
 import { targetOf } from "@/interactions/branch-targets/functions/branch-targets.functions";
@@ -94,15 +92,10 @@ import { assignToChat } from "@/interactions/chats/adapters/assign-to-chat.adapt
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
 import type { ChatPlace } from "@/interactions/chats/interfaces/chats.interfaces";
 import {
-  buildHandoffPrompt,
-  buildHandoffTitle,
+  buildReviewAssignmentPrompt,
+  buildReviewAssignmentTitle,
 } from "@/interactions/chats/functions/chat-assignment.functions";
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
-import {
-  useVisualCommentActions,
-  useVisualComments,
-} from "@/interactions/visual-comments/adapters/visual-comments.hook.adapter";
-import { visualCommentSummary } from "@/interactions/visual-comments/functions/visual-style.functions";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
@@ -237,11 +230,6 @@ export function CodeWorkspace() {
   const chats = useRecentChats();
   const files = useFiles();
   const localComments = useComments();
-  // Notes left on the running UI in the browser pane. They are read here too so
-  // that a review spread over the code and the app it renders is one review:
-  // one list, one hand-off, one session that sees both halves of it.
-  const uiComments = useVisualComments();
-  const visualComments = useVisualCommentActions();
   // Files carrying a local working-tree comment (left here or while browsing). Commit
   // mode surfaces these in the tree even when the file has no git changes.
   const commentedPaths = useMemo(
@@ -275,11 +263,6 @@ export function CodeWorkspace() {
   const { ref: logRef, query: logFilters } = useHistoryFilters();
   const multiRepo = isMultiRepo({ repos: workspace.data?.repos ?? [] });
 
-  // Callback-ref state, not a ref object: the file view renders into this node,
-  // so it has to re-render once the node exists.
-  const [fileActionsSlot, setFileActionsSlot] = useState<HTMLElement | null>(
-    null
-  );
   const [draft, setDraft] = useState<DraftLocation | null>(null);
 
   // Panel sizes live in the DOM, not in this component's state: a drag reports
@@ -475,32 +458,20 @@ export function CodeWorkspace() {
   /** Where the comments' agent is to work — the checkout you are standing in. */
   const assignPlace: ChatPlace = { branch: repo.data?.currentBranch ?? "" };
 
-  /**
-   * Everything the hand-off would carry, as the bar reads it: the comments on
-   * the diff in front of you, then the ones left on the running app, which name
-   * the element they were drawn on and sit on no line.
-   */
+  /** The hand-off as the bar reads it: the comments on the diff in front of you. */
   const handoffComments = useMemo(
-    () => [
-      ...visibleComments.map((comment) => ({
+    () =>
+      visibleComments.map((comment) => ({
         id: comment.id,
         file: comment.filePath,
         line: comment.lineNumber,
         body: comment.body,
       })),
-      ...(uiComments.data ?? []).map((comment) => ({
-        id: comment.id,
-        file: comment.elementLabel,
-        line: null,
-        body: visualCommentSummary(comment),
-      })),
-    ],
-    [visibleComments, uiComments.data]
+    [visibleComments]
   );
 
   const assignReview = async (dest: AssignTarget) => {
-    const onUi = uiComments.data ?? [];
-    const count = visibleComments.length + onUi.length;
+    const count = visibleComments.length;
     if (count === 0) return;
     const plural = count === 1 ? "" : "s";
     try {
@@ -508,18 +479,17 @@ export function CodeWorkspace() {
         target: dest,
         catalog: chatModels.data,
         place: assignPlace,
-        title: buildHandoffTitle(visibleComments.length, onUi.length),
-        prompt: buildHandoffPrompt(visibleComments, onUi),
+        title: buildReviewAssignmentTitle(count),
+        prompt: buildReviewAssignmentPrompt(visibleComments),
       });
       if (chatId === null) return;
       // Handing the comments off resolves them: their text now lives in the chat,
       // so clear the local ones instead of leaving them lingering in the diff.
       // No pull request is passed, which is how the GitHub ones are spared —
       // they belong to the pull request rather than to this hand-off.
-      await Promise.all([
-        ...visibleComments.map((comment) => comments.remove(null, comment)),
-        ...onUi.map((comment) => visualComments.remove(comment.id)),
-      ]);
+      await Promise.all(
+        visibleComments.map((comment) => comments.remove(null, comment))
+      );
       toast.success(`Assigned ${count} comment${plural}`);
       void navigate({ to: "/modes/agent-session/$chatId", params: { chatId } });
     } catch (error) {
@@ -642,9 +612,9 @@ export function CodeWorkspace() {
    * comment is deliberate, and the line revealed outright so following the same
    * comment twice scrolls both times.
    *
-   * It stays in the mode it was left in, unlike the analysis pane's jump — a
-   * comment belongs to the changes on screen, so pulling the window out to the
-   * browser would leave the review the comment came from.
+   * It stays in the mode it was left in — a comment belongs to the changes on
+   * screen, so pulling the window out to the browser would leave the review
+   * the comment came from.
    */
   const openComment = (id: string) => {
     const comment = visibleComments.find((c) => c.id === id);
@@ -660,19 +630,12 @@ export function CodeWorkspace() {
   };
 
   /**
-   * Take one comment off the review from the bar's list. The list mixes the two
-   * kinds, so the id decides which store answers for it: a note on the diff goes
-   * back through the comments store (GitHub's own, when that is where it lives),
-   * a note on the running app through the visual-comment store.
+   * Take one comment off the review from the bar's list, through the comments
+   * store (GitHub's own, when that is where it lives).
    */
   const deleteListedComment = async (id: string) => {
     const onDiff = visibleComments.find((c) => c.id === id);
-    if (onDiff !== undefined) {
-      await deleteComment(onDiff);
-      return;
-    }
-    if ((uiComments.data ?? []).some((c) => c.id === id))
-      await visualComments.remove(id);
+    if (onDiff !== undefined) await deleteComment(onDiff);
   };
 
   // Inside the macOS shell the bar is the window's own, floated natively over
@@ -1100,18 +1063,17 @@ export function CodeWorkspace() {
       return <ImageView path={viewing} theme={prefs.resolvedTheme} />;
     }
     if (viewing !== null) {
-      // A markdown file is the one filetype with more than one honest reading,
-      // so it gets the view switch and the document editor wrapped around the
-      // same code view every other file gets on its own.
-      const Viewer = isMarkdownPath(viewing) ? MarkdownFileView : CodeView;
       return (
-        <Viewer
+        <CodeView
           path={viewing}
           theme={prefs.resolvedTheme}
-          caretKey={caretRequest?.path === viewing ? caretRequest.key : null}
+          caretKey={
+            caretRequest !== null && caretRequest.path === viewing
+              ? caretRequest.key
+              : null
+          }
           onSaved={git.refresh}
           onDirtyChange={onDirtyChange}
-          actionsSlot={fileActionsSlot}
           onOpenLocation={openLocation}
           reveal={reveal}
           comments={fileComments}
@@ -1124,18 +1086,19 @@ export function CodeWorkspace() {
         />
       );
     }
+    const conflicted = search.path;
     if (
       mode === "commit" &&
-      search.path != null &&
-      conflictedPaths.includes(search.path)
+      conflicted != null &&
+      conflictedPaths.includes(conflicted)
     ) {
       return (
         <ConflictView
-          path={search.path}
+          path={conflicted}
           theme={prefs.resolvedTheme}
-          onUseSide={(side) => void resolveConflictSide(search.path!, side)}
+          onUseSide={(side) => void resolveConflictSide(conflicted, side)}
           onResolve={(merged) =>
-            void resolveConflictContent(search.path!, merged)
+            void resolveConflictContent(conflicted, merged)
           }
           onEdit={openFile}
           onClose={() => setSearch({ path: undefined })}
@@ -1558,12 +1521,6 @@ export function CodeWorkspace() {
             // Over a diff the trail is the only thing naming the open file, now
             // that no strip does, so it is also what puts it down again.
             onClose={!tabbed && viewing !== null ? closeFile : undefined}
-            actions={
-              <div
-                ref={setFileActionsSlot}
-                className="flex items-center gap-1"
-              />
-            }
           />
         )}
       </main>

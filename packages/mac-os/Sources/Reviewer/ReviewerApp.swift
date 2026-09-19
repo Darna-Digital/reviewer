@@ -69,7 +69,7 @@ struct ReviewerApp: App {
 /// the key before the page sees it, so each of those items hands its chord
 /// back to the strip (`WindowTabAction`) rather than acting on tabs of its
 /// own. Nothing here claims a chord the page alone answers: ⌘S is the SPA's
-/// save in edit mode.
+/// save of an edited `.env` file.
 struct ReviewerCommands: Commands {
     let model: AppModel
 

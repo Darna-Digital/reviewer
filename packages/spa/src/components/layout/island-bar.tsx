@@ -3,7 +3,7 @@
  * drawn on the native toolbar, and the open-file band.
  *
  * The strip is the same `useWindowTabStrip` the window bar draws in the browser
- * and in Electron — the store, the priming, the switch — so a tab is changed in
+ * tab — the store, the priming, the switch — so a tab is changed in
  * the document, primed ahead of the click, exactly as it is there. What the
  * shell has of it is a picture, posted whenever it changes, which the toolbar
  * draws natively where the window bar would draw it; a tab pressed there comes

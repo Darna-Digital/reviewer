@@ -33,9 +33,7 @@ struct ShellReview: Decodable, Equatable, Sendable {
 struct ShellReviewComment: Decodable, Identifiable, Hashable, Sendable {
     let id: String
     let file: String
-    /// Nil for a note on the running UI, which sits on no line — and so has
-    /// nowhere in the code to jump to.
-    let line: Int?
+    let line: Int
     let body: String
 
     /// The leaf alone, the way the tab strip names a file: the folders above

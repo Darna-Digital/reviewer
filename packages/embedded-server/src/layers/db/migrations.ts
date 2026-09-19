@@ -247,6 +247,15 @@ DROP TABLE IF EXISTS collab_todo;
 DROP TABLE IF EXISTS collab_project;
 `;
 
+/**
+ * Plans and visual comments, taken back out the same way: the browser pane and
+ * the analysis pane are gone from the app, and these were their stores.
+ */
+const dropPlansAndVisualComments = `
+DROP TABLE IF EXISTS plan;
+DROP TABLE IF EXISTS visual_comment;
+`;
+
 export const MIGRATIONS: ReadonlyArray<Migration> = [
   { id: "0001_initial", up: (db) => db.exec(initial) },
   { id: "0002_branch_target", up: (db) => db.exec(branchTargets) },
@@ -254,4 +263,8 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { id: "0004_chat_seen_at", up: (db) => db.exec(chatSeenAt) },
   { id: "0005_cloud_connection", up: (db) => db.exec(cloudConnection) },
   { id: "0006_drop_tasks_collab", up: (db) => db.exec(dropTasksAndCollab) },
+  {
+    id: "0007_drop_plans_visual_comments",
+    up: (db) => db.exec(dropPlansAndVisualComments),
+  },
 ];

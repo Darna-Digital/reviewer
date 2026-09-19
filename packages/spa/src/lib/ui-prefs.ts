@@ -10,15 +10,7 @@ import type {
   ChatProviderKind,
 } from "@reviewer/core/chats";
 import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignment.functions";
-import {
-  CHAT_MODES,
-  type ChatMode,
-} from "@/interactions/chats/functions/chat-mode.functions";
-import type { MarkdownView } from "@/interactions/markdown/interfaces/markdown.interfaces";
-import { asMarkdownView } from "@/interactions/markdown/functions/markdown-view.functions";
 import { isPreviewWindow } from "@/lib/preview-window";
-import { asEditMode } from "@/interactions/edit-mode/functions/edit-mode.functions";
-import type { EditMode } from "@/interactions/edit-mode/interfaces/edit-mode.interfaces";
 
 export type ThemePref = "light" | "dark" | "system";
 export type Theme = "light" | "dark";
@@ -36,7 +28,7 @@ export type BottomTab =
  * choice again on every session — and a review handed to a new chat always went
  * to Claude, whoever you had actually been working with. So the choices are
  * kept: the next session, started from the composer or handed a review, opens
- * on the agent, model and mode the last one used.
+ * on the agent and model the last one used.
  */
 export interface LastSession {
   /**
@@ -48,8 +40,6 @@ export interface LastSession {
   model?: string;
   effort?: ChatEffort;
   access?: ChatAccess;
-  /** Always answered — a composer is in a mode whether or not you picked it. */
-  mode: ChatMode;
 }
 
 export interface UiPrefs {
@@ -66,16 +56,6 @@ export interface UiPrefs {
   translucency: boolean;
   /** Whether the shell's left sidebar (the file tree) shows. */
   sidebarVisible: boolean;
-  /**
-   * How an open file answers the keyboard — typing, modal editing, or
-   * commenting rather than editing at all.
-   */
-  editMode: EditMode;
-  /**
-   * Whether saving a file runs the project's own formatter over it first. Inert
-   * in a project that configures none.
-   */
-  formatOnSave: boolean;
   bottomVisible: boolean;
   /** Which bottom-dock tab is selected. */
   bottomTab: BottomTab;
@@ -83,18 +63,10 @@ export interface UiPrefs {
   sidebarWidth: number;
   /** Drag-resizable left sidebar width for the workspace pages (threads/docs). */
   workspaceSidebarWidth: number;
-  /** Drag-resizable width of the inbox's message list, in px. */
+  /** Drag-resizable width of the sessions page's list, in px. */
   inboxListWidth: number;
   /** Drag-resizable source pane width in the SVG split view, in px. */
   svgSourceWidth: number;
-  /**
-   * Which of the three readings a markdown file opens on: its source, its
-   * document, or both. One preference for every `.md` file rather than one per
-   * file — it is a way of working, not a property of a document.
-   */
-  markdownView: MarkdownView;
-  /** Drag-resizable source pane width in the split markdown view, in px. */
-  markdownSourceWidth: number;
   /** Drag-resizable bottom panel height, in px. */
   bottomHeight: number;
   /** Drag-resizable width of the Find window's results list, in px. */
@@ -129,24 +101,9 @@ export interface UiPrefs {
   chatModelFavorites: string[];
   /** Drag-resizable height of the chat composer's prompt box, in px. */
   composerHeight: number;
-  /** Whether the browser pane splits the canvas. Native shell only. */
-  browserPaneOpen: boolean;
-  /** Drag-resizable browser pane width, in px. */
-  browserPaneWidth: number;
-  /**
-   * The page the browser pane last showed, per repository path. Keyed rather
-   * than single so switching repos doesn't carry the last app's URL over.
-   */
-  browserPaneUrls: Record<string, string>;
-  /** Whether the analysis pane splits the canvas. Native shell only. */
-  plansPaneOpen: boolean;
-  /** Drag-resizable analysis pane width, in px. */
-  plansPaneWidth: number;
-  /** Drag-resizable height of the notes list under the analysis graph, in px. */
-  plansNotesHeight: number;
   /** Drag-resizable height of the launchpad panel, in px. */
   launchpadHeight: number;
-  /** The agent, model and mode the last session was composed with. */
+  /** The agent and model the last session was composed with. */
   lastSession: LastSession;
 }
 
@@ -176,16 +133,12 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   connectors: true,
   translucency: true,
   sidebarVisible: true,
-  editMode: "normal",
-  formatOnSave: true,
   bottomVisible: true,
   bottomTab: "history",
   sidebarWidth: 288,
   workspaceSidebarWidth: 256,
   inboxListWidth: 320,
   svgSourceWidth: 420,
-  markdownView: "source",
-  markdownSourceWidth: 480,
   bottomHeight: 256,
   findResultsWidth: 380,
   commitFilesHeight: 180,
@@ -197,21 +150,14 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   commitAgent: "claude",
   chatModelFavorites: [],
   composerHeight: 92,
-  browserPaneOpen: false,
-  browserPaneWidth: 480,
-  browserPaneUrls: {},
-  plansPaneOpen: false,
-  plansPaneWidth: 560,
-  plansNotesHeight: 220,
   launchpadHeight: 380,
-  lastSession: { mode: "build" },
+  lastSession: {},
 };
 
 /**
  * Storage holds whatever the last version of the app wrote, so a session read
- * back out of it is filled in from the defaults and checked: an agent that is
- * no longer assignable, or a mode that no longer exists, is not one the
- * composer could open on.
+ * back out of it is checked: an agent that is no longer assignable is not one
+ * the composer could open on.
  */
 const readLastSession = (stored: LastSession | undefined): LastSession => {
   const merged = { ...defaults.lastSession, ...stored };
@@ -221,34 +167,8 @@ const readLastSession = (stored: LastSession | undefined): LastSession => {
       merged.provider !== undefined && isChatProviderKind(merged.provider)
         ? merged.provider
         : undefined,
-    mode: CHAT_MODES.includes(merged.mode) ? merged.mode : "build",
   };
 };
-
-/** The panes that split the canvas beside the page: analysis and browser. */
-export type SidePane = "analysis" | "browser";
-
-export const SIDE_PANE_MIN: Readonly<Record<SidePane, number>> = {
-  analysis: 380,
-  browser: 320,
-};
-
-/**
- * A pane opens at half the window at most.
- *
- * Widths are remembered in pixels, so a pane pulled out on a large display
- * reopened at that same width on a laptop — half the pane hanging off nothing
- * and the page beside it squeezed to a sliver. Dragging one wider than half is
- * still allowed; it is the width a pane *opens* at that is fitted to whatever
- * window it is opening in.
- */
-export const fitSidePane = (pane: SidePane, width: number): number =>
-  typeof window === "undefined"
-    ? width
-    : Math.max(
-        SIDE_PANE_MIN[pane],
-        Math.min(width, Math.round(window.innerWidth / 2))
-      );
 
 /**
  * The commit details panel used to open at 320px — too narrow to read a diff
@@ -258,31 +178,22 @@ export const fitSidePane = (pane: SidePane, width: number): number =>
 const LEGACY_COMMIT_DETAILS_WIDTH = 320;
 
 /** Storage holds whatever the last version of the app wrote, whatever that was. */
-type StoredPrefs = Partial<typeof defaults> & { readonly vimMode?: unknown };
+type StoredPrefs = Partial<typeof defaults>;
 
 function load(): UiPrefs {
   let prefs = { ...defaults };
   if (typeof window !== "undefined") {
-    // Held as it was read as well as merged in: the edit mode is worked out
-    // from the whole stored profile, since a profile old enough states it as a
-    // `vimMode` boolean instead.
-    let storedPrefs: StoredPrefs = {};
     try {
       const raw = window.localStorage.getItem(STORE_KEY);
       if (raw !== null) {
-        storedPrefs = JSON.parse(raw) as StoredPrefs;
-        prefs = { ...prefs, ...storedPrefs };
+        prefs = { ...prefs, ...(JSON.parse(raw) as StoredPrefs) };
       }
     } catch {
       // ignore malformed storage
     }
-    prefs.editMode = asEditMode(storedPrefs);
     if (prefs.commitDetailsWidth === LEGACY_COMMIT_DETAILS_WIDTH)
       prefs.commitDetailsWidth = defaults.commitDetailsWidth;
     if (!BOTTOM_TABS.includes(prefs.bottomTab)) prefs.bottomTab = "history";
-    prefs.markdownView = asMarkdownView(prefs.markdownView);
-    prefs.plansPaneWidth = fitSidePane("analysis", prefs.plansPaneWidth);
-    prefs.browserPaneWidth = fitSidePane("browser", prefs.browserPaneWidth);
     prefs.lastSession = readLastSession(prefs.lastSession);
     const stored = window.localStorage.getItem(THEME_KEY);
     if (stored === "light" || stored === "dark" || stored === "system")
@@ -300,7 +211,7 @@ function emit() {
 
 function persist() {
   // A preview shares the window's storage: what a page does while being looked
-  // at — marking the inbox read, sizing a pane — is not the window's doing.
+  // at — sizing a pane — is not the window's doing.
   if (typeof window === "undefined" || isPreviewWindow) return;
   try {
     const {
@@ -309,16 +220,12 @@ function persist() {
       connectors,
       translucency,
       sidebarVisible,
-      editMode,
-      formatOnSave,
       bottomVisible,
       bottomTab,
       sidebarWidth,
       workspaceSidebarWidth,
       inboxListWidth,
       svgSourceWidth,
-      markdownView,
-      markdownSourceWidth,
       bottomHeight,
       findResultsWidth,
       commitFilesHeight,
@@ -330,12 +237,6 @@ function persist() {
       commitAgent,
       chatModelFavorites,
       composerHeight,
-      browserPaneOpen,
-      browserPaneWidth,
-      browserPaneUrls,
-      plansPaneOpen,
-      plansPaneWidth,
-      plansNotesHeight,
       launchpadHeight,
       lastSession,
     } = state;
@@ -347,16 +248,12 @@ function persist() {
         connectors,
         translucency,
         sidebarVisible,
-        editMode,
-        formatOnSave,
         bottomVisible,
         bottomTab,
         sidebarWidth,
         workspaceSidebarWidth,
         inboxListWidth,
         svgSourceWidth,
-        markdownView,
-        markdownSourceWidth,
         bottomHeight,
         findResultsWidth,
         commitFilesHeight,
@@ -368,12 +265,6 @@ function persist() {
         commitAgent,
         chatModelFavorites,
         composerHeight,
-        browserPaneOpen,
-        browserPaneWidth,
-        browserPaneUrls,
-        plansPaneOpen,
-        plansPaneWidth,
-        plansNotesHeight,
         launchpadHeight,
         lastSession,
       })
@@ -445,21 +336,6 @@ export function openBottomTab(tab: BottomTab) {
 /** Expand or collapse the bottom dock; its tab strip stays put either way. */
 export function toggleBottomVisible() {
   setUiPrefs({ bottomVisible: !state.bottomVisible });
-}
-
-/** Show or hide a side pane, at a width this window has the room for. */
-export function toggleSidePane(pane: SidePane) {
-  setUiPrefs(
-    pane === "browser"
-      ? {
-          browserPaneOpen: !state.browserPaneOpen,
-          browserPaneWidth: fitSidePane(pane, state.browserPaneWidth),
-        }
-      : {
-          plansPaneOpen: !state.plansPaneOpen,
-          plansPaneWidth: fitSidePane(pane, state.plansPaneWidth),
-        }
-  );
 }
 
 const THEME_ORDER: ThemePref[] = ["light", "dark", "system"];

@@ -91,7 +91,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <TooltipProvider delay={300}>{children ?? <Outlet />}</TooltipProvider>
         <Toaster />
         <Alerts />
-        {/* Devtools only in the browser, not inside the Electron shell — and
+        {/* Devtools only in the browser, not inside the native shell — and
             never in a preview frame, which would boot a second set of panels
             for a picture of a page. In a release build `Devtools` is null and
             the panels were never bundled at all. */}

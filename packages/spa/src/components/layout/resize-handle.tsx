@@ -104,8 +104,8 @@ export function ResizeHandle({
       setDragging(true);
 
       // A shield over the whole window for the length of the drag. Without it a
-      // pointer crossing anything that swallows input — the browser pane's
-      // <webview>, which is a separate process, or an embedded terminal — takes
+      // pointer crossing anything that swallows input — an embedded terminal —
+      // takes
       // the rest of the gesture with it: no more `pointermove`, and crucially no
       // `pointerup`, so the drag never ends and the cursor stays stuck. The
       // shield keeps every event in this document, where the listeners below

@@ -13,7 +13,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { CloudSetting } from "@/interactions/cloud/components/cloud-setting";
-import { FormatOnSaveSetting } from "@/interactions/formatting/components/format-on-save-setting";
 import { LanguagesSetting } from "@/interactions/language/components/languages-setting";
 import { SettingRow } from "@/interactions/settings/components/setting-row";
 import { isDesktop } from "@/lib/desktop";
@@ -23,10 +22,6 @@ import {
   type DiffStyle,
   type ThemePref,
 } from "@/lib/ui-prefs";
-import {
-  EDIT_MODE_OPTIONS,
-  editModeOption,
-} from "@/interactions/edit-mode/components/edit-mode-options";
 import { cn } from "@/lib/utils";
 
 type SettingsIcon = ComponentType<{ className?: string }>;
@@ -165,24 +160,6 @@ export function SettingsPage() {
                     </label>
                   </SettingRow>
                 )}
-                <SettingRow
-                  title="Edit mode"
-                  detail={editModeOption(prefs.editMode).detail}
-                >
-                  <div className="flex flex-wrap gap-0.5 rounded-md border p-0.5">
-                    {EDIT_MODE_OPTIONS.map((option) => (
-                      <SegmentedOption
-                        key={option.value}
-                        value={option.value}
-                        label={option.label}
-                        icon={option.icon}
-                        selected={prefs.editMode === option.value}
-                        onSelect={(editMode) => setUiPrefs({ editMode })}
-                      />
-                    ))}
-                  </div>
-                </SettingRow>
-                <FormatOnSaveSetting />
                 <SettingRow title="Git dock">
                   <label className="flex items-center gap-2">
                     <IconGitFork

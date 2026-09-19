@@ -3,8 +3,8 @@
  * that names it and says which chord does the same.
  *
  * Shared by the two bars that carry the tab strip — the window bar of the
- * browser and the Electron window, and the bar the macOS shell's code island
- * draws along its own top edge — so the buttons either side of the strip read
+ * browser tab, and the bar the macOS shell's code island draws along its own
+ * top edge — so the buttons either side of the strip read
  * the same wherever the strip is.
  */
 import { Button } from "@/components/ui/button";

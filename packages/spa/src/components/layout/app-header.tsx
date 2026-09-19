@@ -4,8 +4,8 @@
  * There used to be two: the code shell's `TopBar`, taking twenty-odd props
  * drilled down from the shell that owned them, and the workspace shell's own
  * `<header>` rendering nearly the same controls from its own queries. Between
- * them they covered the same states — a project, a session, the collaboration
- * prototype — and neither could be used by the other.
+ * them they covered the same states — a project, a session — and neither could
+ * be used by the other.
  *
  * This one reads what it shows: the route says which state it is in, and the
  * queries and preferences say what to put in it. Nothing above it has to hold
@@ -18,9 +18,6 @@ import { HeaderDiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { DockRestore } from "@/components/layout/dock-restore";
 import { ComparePicker } from "@/interactions/comparison/components/compare-picker";
 import { useLocalComparison } from "@/interactions/comparison/adapters/comparison.hook.adapter";
-import { CollaborationSearch } from "@/interactions/collaboration/components/collaboration-search";
-import { NewTaskButton } from "@/interactions/collaboration/components/task-create-dialog";
-import { WorkspacePicker } from "@/interactions/collaboration/components/workspace-picker";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { activeRepo } from "@reviewer/core/workspace";
@@ -133,18 +130,6 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   const followRepo = (repoPath: string) =>
     workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
 
-  // The collaboration prototype drops the git chrome entirely — its own sidebar
-  // carries what the branch switcher would have said.
-  if (route.kind === "experimentation") {
-    return (
-      <HeaderRow>
-        <WorkspacePicker />
-        <NewTaskButton />
-        <CollaborationSearch />
-      </HeaderRow>
-    );
-  }
-
   const readingOwnChanges = reviewSourceOf(pathname)?.kind === "local";
 
   /**
@@ -202,10 +187,9 @@ export function AppHeader({ route }: { route: ShellRoute }) {
     </>
   );
 
-  /* Every page that reaches here wears the rail: the prototype is answered
-     above, and the two surfaces that go without one — the blank composer and a
-     conversation with the window to itself — wear no header either. See
-     `AppLayout`. */
+  /* Every page that reaches here wears the rail: the two surfaces that go
+     without one — the blank composer and a conversation with the window to
+     itself — wear no header either. See `AppLayout`. */
   return (
     <HeaderRow lead={lead} railed>
       {/* What the diff is read against stands over the diff, at the head of its
