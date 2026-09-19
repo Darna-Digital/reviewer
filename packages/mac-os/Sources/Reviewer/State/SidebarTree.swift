@@ -17,7 +17,6 @@ struct ShellTree: Decodable, Equatable, Sendable {
     let gitStatus: [GitStatusEntry]
     let loading: Bool
     let projectPath: String?
-    let editable: Bool
     let discardable: Bool
 
     static func decode(_ body: Any?) -> ShellTree? { Wire.decode(body) }
@@ -71,26 +70,11 @@ enum CommitAgent: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-/// A row's kind and path, as the page's file actions take them.
-struct TreeItem: Hashable, Sendable {
-    enum Kind: String, Sendable {
-        case file, directory
-    }
-
-    let kind: Kind
-    let path: String
-
-    var payload: [String: Any] { ["kind": kind.rawValue, "path": path] }
-}
-
 /// The tree's actions, in the shape the island's `ShellTreeAction` takes.
 enum TreeAction {
     case select(String)
     case history(String)
     case discard([String])
-    case delete([TreeItem])
-    case rename(from: String, to: String)
-    case create(path: String, entry: TreeItem.Kind)
     case commit(message: String, paths: [String], push: Bool)
     case draft(paths: [String], agent: CommitAgent)
     case draftSettled
@@ -100,9 +84,6 @@ enum TreeAction {
         case .select(let path): return ["kind": "select", "path": path]
         case .history(let path): return ["kind": "history", "path": path]
         case .discard(let paths): return ["kind": "discard", "paths": paths]
-        case .delete(let items): return ["kind": "delete", "items": items.map(\.payload)]
-        case .rename(let from, let to): return ["kind": "rename", "from": from, "to": to]
-        case .create(let path, let entry): return ["kind": "create", "path": path, "entry": entry.rawValue]
         case .commit(let message, let paths, let push):
             return ["kind": "commit", "message": message, "paths": paths, "push": push]
         case .draft(let paths, let agent): return ["kind": "draft", "paths": paths, "agent": agent.rawValue]

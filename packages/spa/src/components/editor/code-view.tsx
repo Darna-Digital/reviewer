@@ -505,6 +505,7 @@ export function CodeView({
         expanded={problemsOpen}
         onToggle={toggleProblems}
         onSelect={jumpToProblem}
+        path={path}
         className="absolute inset-x-0 bottom-0 z-10"
       />
       {find.bar}

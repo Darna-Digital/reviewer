@@ -277,7 +277,13 @@ private struct SessionMarkDot: View {
 
     var body: some View {
         if mark == .running {
-            Orb(size: 14, label: mark.label)
+            // At 14pt the orb's 15/28 lattice is only 7.5pt across. Its
+            // low-opacity resting dots disappear into the sidebar's vibrant
+            // material even though the same canvas reads clearly in the
+            // toolbar. Use the toolbar scale and explicit semantic ink here;
+            // it still fits the row's 20×18 accessory slot.
+            Orb(size: 18, label: mark.label)
+                .foregroundStyle(.primary)
         } else {
             Image(systemName: "circle.fill")
                 .font(.system(size: 7))

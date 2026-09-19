@@ -325,10 +325,56 @@ private final class OutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOut
 
 /// The outline with the web tree's keys and menu: Left on a file or a closed
 /// folder climbs to the folder holding it, and a right click asks for the
-/// row's menu without picking the row.
+/// row's menu without picking the row. The rows' tooltips are `PathTooltip`'s
+/// rather than the system's, so a path stays one small line: the outline
+/// watches the pointer over its rows and tells the tooltip which row's path
+/// it is on.
 private final class FileTreeOutlineView: NSOutlineView {
     var menuForNode: ((FileTreeNode) -> NSMenu?)?
     var appearanceChanged: (() -> Void)?
+    private var hoverTracking: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let hoverTracking { removeTrackingArea(hoverTracking) }
+        let tracking = NSTrackingArea(
+            rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect],
+            owner: self, userInfo: nil)
+        addTrackingArea(tracking)
+        hoverTracking = tracking
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        super.mouseMoved(with: event)
+        let row = row(at: convert(event.locationInWindow, from: nil))
+        let cell = row >= 0 ? view(atColumn: 0, row: row, makeIfNecessary: false) as? FileTreeCellView : nil
+        PathTooltip.shared.hover(cell?.tip, at: event.locationInWindow, in: window)
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        super.mouseExited(with: event)
+        PathTooltip.shared.hide()
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        PathTooltip.shared.hide()
+        super.mouseDown(with: event)
+    }
+
+    override func rightMouseDown(with event: NSEvent) {
+        PathTooltip.shared.hide()
+        super.rightMouseDown(with: event)
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        PathTooltip.shared.hide()
+        super.scrollWheel(with: event)
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window == nil { PathTooltip.shared.hide() }
+    }
 
     override func menu(for event: NSEvent) -> NSMenu? {
         let row = row(at: convert(event.locationInWindow, from: nil))
@@ -422,6 +468,8 @@ private final class FileTreeCellView: NSTableCellView {
 
     private var isDirectory = false
     private var nameColor: NSColor = .labelColor
+    /// The row's tooltip: the path, and the status when it has one.
+    private(set) var tip = ""
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -474,7 +522,7 @@ private final class FileTreeCellView: NSTableCellView {
             dotView.isHidden = !hasChanges
             dotView.layer?.backgroundColor = NSColor.secondaryLabelColor.cgColor
         }
-        toolTip = status.map { "\(node.id) — \($0.title.lowercased())" } ?? node.id
+        tip = status.map { "\(node.id) — \($0.title.lowercased())" } ?? node.id
         needsLayout = true
     }
 
@@ -519,20 +567,13 @@ private final class FileTreeCellView: NSTableCellView {
     }
 }
 
-/// What the sidebar asks before it acts, the way the web tree's inline
-/// editor and confirm dialog do: a name for a new entry, a new name, a yes
-/// to a deletion or a discard.
+/// What the sidebar asks before it acts, the way the web tree's confirm
+/// dialog does: a yes to a discard.
 enum TreePrompt: Identifiable, Equatable {
-    case create(in: String, entry: TreeItem.Kind)
-    case rename(TreeItem)
-    case delete(TreeItem)
     case discard(paths: [String], of: String)
 
     var id: String {
         switch self {
-        case .create(let folder, let entry): return "create:\(entry.rawValue):\(folder)"
-        case .rename(let item): return "rename:\(item.path)"
-        case .delete(let item): return "delete:\(item.path)"
         case .discard(_, let of): return "discard:\(of)"
         }
     }
@@ -547,8 +588,6 @@ private struct TreeRowMenu: View {
     private var tree: SidebarTree { model.sidebar }
     private var node: FileTreeNode? { tree.nodes[path] }
     private var isDirectory: Bool { node?.isDirectory ?? false }
-    private var item: TreeItem { TreeItem(kind: isDirectory ? .directory : .file, path: path) }
-    private var folder: String { isDirectory ? path : FileTree.ancestors(of: path).last ?? "" }
     private var name: String { node?.name ?? path }
     private var listing: ShellTree? { tree.listing }
 
@@ -573,19 +612,9 @@ private struct TreeRowMenu: View {
                 NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: absolute(in: project))])
             }
         }
-        if listing?.editable == true {
-            Divider()
-            Button("New File…") { prompt = .create(in: folder, entry: .file) }
-            Button("New Folder…") { prompt = .create(in: folder, entry: .directory) }
-            Button("Rename…") { prompt = .rename(item) }
-        }
         if !discardable.isEmpty {
             Divider()
             Button("Discard Changes…") { prompt = .discard(paths: discardable, of: path) }
-        }
-        if listing?.editable == true {
-            Divider()
-            Button("Delete…", role: .destructive) { prompt = .delete(item) }
         }
     }
 
@@ -599,46 +628,14 @@ private struct TreeRowMenu: View {
     }
 }
 
-/// The prompts, as alerts on the outline: a name to make, a new name, a yes.
+/// The prompt, as an alert on the outline: a yes to a discard.
 private struct TreePromptModifier: ViewModifier {
     @Binding var prompt: TreePrompt?
     @Environment(AppModel.self) private var model
-    @State private var name = ""
 
     func body(content: Content) -> some View {
         content
-            .alert(createTitle, isPresented: shown(\.isCreate), presenting: prompt) { prompt in
-                TextField("Name", text: $name)
-                Button("Create") {
-                    if case .create(let folder, let entry) = prompt {
-                        model.act(onTree: .create(path: joined(folder, name), entry: entry))
-                    }
-                }
-                .disabled(!validName)
-                Button("Cancel", role: .cancel) {}
-            } message: { _ in }
-            .alert("Rename", isPresented: shown(\.isRename), presenting: prompt) { prompt in
-                TextField("New name", text: $name)
-                Button("Rename") {
-                    if case .rename(let item) = prompt {
-                        let folder = FileTree.ancestors(of: item.path).last ?? ""
-                        model.act(onTree: .rename(from: item.path, to: joined(folder, name)))
-                    }
-                }
-                .disabled(!validName)
-                Button("Cancel", role: .cancel) {}
-            } message: { _ in }
-            .alert(deleteTitle, isPresented: shown(\.isDelete), presenting: prompt) { prompt in
-                Button("Delete", role: .destructive) {
-                    if case .delete(let item) = prompt { model.act(onTree: .delete([item])) }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: { prompt in
-                if case .delete(let item) = prompt {
-                    Text("\(item.path)\n\nDeleted files go to the project's trash, so Undo can put them back.")
-                }
-            }
-            .alert("Discard Changes?", isPresented: shown(\.isDiscard), presenting: prompt) { prompt in
+            .alert("Discard Changes?", isPresented: shown, presenting: prompt) { prompt in
                 Button("Discard", role: .destructive) {
                     if case .discard(let paths, _) = prompt { model.act(onTree: .discard(paths)) }
                 }
@@ -651,51 +648,13 @@ private struct TreePromptModifier: ViewModifier {
                             : "Revert the working-tree changes to \(paths.count) files under \(of)? This cannot be undone.")
                 }
             }
-            .onChange(of: prompt) { _, prompt in
-                if case .rename(let item)? = prompt {
-                    name = item.path.split(separator: "/").last.map(String.init) ?? item.path
-                } else {
-                    name = ""
-                }
-            }
     }
 
-    private var validName: Bool {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
-        return !trimmed.isEmpty && !trimmed.contains("/")
-    }
-
-    private func joined(_ folder: String, _ name: String) -> String {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
-        return folder.isEmpty ? trimmed : "\(folder)/\(trimmed)"
-    }
-
-    private var createTitle: String {
-        switch prompt {
-        case .create(let folder, let entry):
-            let what = entry == .directory ? "New Folder" : "New File"
-            return folder.isEmpty ? what : "\(what) in \(folder)"
-        default: return "New"
-        }
-    }
-
-    private var deleteTitle: String {
-        if case .delete(let item)? = prompt { return item.kind == .directory ? "Delete this folder?" : "Delete this file?" }
-        return "Delete?"
-    }
-
-    private func shown(_ kind: KeyPath<TreePrompt, Bool>) -> Binding<Bool> {
+    private var shown: Binding<Bool> {
         Binding(
-            get: { prompt.map { $0[keyPath: kind] } ?? false },
+            get: { prompt != nil },
             set: { if !$0 { prompt = nil } })
     }
-}
-
-extension TreePrompt {
-    var isCreate: Bool { if case .create = self { true } else { false } }
-    var isRename: Bool { if case .rename = self { true } else { false } }
-    var isDelete: Bool { if case .delete = self { true } else { false } }
-    var isDiscard: Bool { if case .discard = self { true } else { false } }
 }
 
 extension View {

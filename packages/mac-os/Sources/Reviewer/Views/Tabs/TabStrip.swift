@@ -38,9 +38,11 @@ struct TabStripItems: ToolbarContent {
 }
 
 /// A pinned tab is its icon and nothing else: a system toggle on the bar,
-/// which draws it in the toolbar's own glass and lights it while its tab
-/// is in front. A tab is left by going to another, never by pressing it
-/// again, so the toggle answers only to being switched on.
+/// which draws it in the toolbar's own glass and lights it while its way
+/// of working is in front (see `WindowTabStrip.lights`). A tab is left by
+/// going to another, never by pressing it again, so a press on the tab in
+/// front is ignored; a press on Sessions lit for a session's own tab is
+/// the way back to the list, whichever way the toggle reads it.
 private struct PinnedTab: View {
     let tab: WindowTab
     let model: AppModel
@@ -56,8 +58,11 @@ private struct PinnedTab: View {
 
     private var isInFront: Binding<Bool> {
         Binding(
-            get: { model.windowTabs.activeId == tab.id },
-            set: { if $0 { model.select(tabId: tab.id) } })
+            get: { model.windowTabs.lights(tab) },
+            set: { _ in
+                guard model.windowTabs.activeId != tab.id else { return }
+                model.select(tabId: tab.id)
+            })
     }
 }
 

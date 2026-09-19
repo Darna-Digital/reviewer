@@ -60,11 +60,6 @@ const picture = (
   activeId,
 });
 
-void fetch("http://localhost:45999", {
-  method: "POST",
-  body: JSON.stringify({ probe: "island-bar loaded" }),
-}).catch(() => {});
-
 export function IslandBar() {
   // The page that is on screen rather than the one being navigated to, as
   // `CodePage` reads it, so the toggle comes and goes with the diff it is for.
@@ -74,13 +69,6 @@ export function IslandBar() {
   const route = shellRoute(pathname);
   const stripShown = useHeaderTabsFilled();
   const toggleShown = useShowsDiffStyleToggle(route);
-  useEffect(() => {
-    void fetch("http://localhost:45999", {
-      method: "POST",
-      body: JSON.stringify({ probe: "IslandBar render", pathname }),
-    }).catch(() => {});
-  }, [pathname]);
-
   const windowTabs = useWindowTabs();
   const { strip, activeId, show, mint, close, waiting, working } =
     useWindowTabStrip();

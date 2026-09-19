@@ -24,6 +24,7 @@ struct ConversationView: View {
         } else if let chat = session.chat {
             conversation(chat)
                 .imageDropZone(draftKey: chat.id)
+                .environment(\.openURL, OpenURLAction { url in open(url, in: chat) })
         } else {
             VStack(spacing: 8) {
                 ProgressView()
@@ -72,6 +73,17 @@ struct ConversationView: View {
             .padding(.horizontal, 8)
             .padding(.bottom, 16)
         }
+    }
+
+    /// A link in a reply: a file it names opens on the browse page, at its
+    /// line; a web address goes to the system as a link would; a path the
+    /// project does not hold goes nowhere.
+    private func open(_ url: URL, in chat: Chat) -> OpenURLAction.Result {
+        guard let link = ChatFileLink.parse(url, origin: chat.origin) else {
+            return ChatFileLink.leadsOut(url) ? .systemAction : .discarded
+        }
+        model.browse(file: link.path, line: link.line)
+        return .handled
     }
 
     private func send(_ text: String, _ images: [ComposerAttachment]) async throws {

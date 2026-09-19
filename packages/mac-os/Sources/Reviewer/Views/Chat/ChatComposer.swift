@@ -253,13 +253,14 @@ private struct ComposerResizeHandle: View {
 }
 
 /// The prompt box's own drop target, in front of the box rather than behind
-/// it. AppKit offers a drag to the front-most view registered for its types,
-/// and the `NSTextView` a `TextEditor` is made of registers for files and
-/// bitmaps so it can take them as inline attachments — the pane's drop zone
-/// (see `ImageDropZone`) lies further back, so the obvious place to let a
-/// photo go is the one place the drop would otherwise be swallowed. The view
-/// takes no mouse events, as SwiftUI's own dragging view does not, so the
-/// box below still types, selects and scrolls.
+/// it. AppKit offers a drag to the view under the pointer and then up its
+/// ancestors, and the `NSTextView` a `TextEditor` is made of registers for
+/// files and bitmaps so it can take them as inline attachments — the pane's
+/// drop zone (see `ImageDropZone`) is a sibling of the box, not an ancestor,
+/// so the obvious place to let a photo go is the one place the drop would
+/// otherwise be swallowed. The view is hit only while a drag from outside
+/// the app is over it (see `PromptDropCatcherView.hitTest`), so the box
+/// below still types, selects and scrolls.
 private struct PromptDropCatcher: NSViewRepresentable {
     let draftKey: String
     @Binding var targeted: Bool
@@ -295,7 +296,20 @@ final class PromptDropCatcherView: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("PromptDropCatcherView is not made from a nib") }
 
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    /// Hit for a drag from another app and nothing else: the pointer's
+    /// button is held, but the press was never this app's to see — a click
+    /// on the box, or a drag of its own text, is answered while that press
+    /// is the current event, and passes through to the box.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        guard Self.outsideDragInProgress, bounds.contains(convert(point, from: superview)) else { return nil }
+        return self
+    }
+
+    private static var outsideDragInProgress: Bool {
+        let buttonHeld = NSEvent.pressedMouseButtons & 1 != 0
+        let pressedHere = [.leftMouseDown, .leftMouseDragged].contains(NSApp.currentEvent?.type)
+        return buttonHeld && !pressedHere
+    }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         let operation = self.operation(for: sender)

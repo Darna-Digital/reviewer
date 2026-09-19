@@ -18,6 +18,16 @@ struct WindowTabStrip: Decodable, Hashable, Sendable {
 
     var active: WindowTab? { tabs.first { $0.id == activeId } }
 
+    /// Whether a pinned tab's toggle is lit: while it is in front, and for
+    /// Sessions while a session's own tab is — the same way of working with
+    /// one conversation lifted out of the list, the list still down the
+    /// sidebar beside it, so the mode's toggle stays on rather than leaving
+    /// the pair dark.
+    func lights(_ tab: WindowTab) -> Bool {
+        guard let active else { return false }
+        return active.id == tab.id || (tab.kind == .sessions && active.kind == .session)
+    }
+
     /// The sessions in strip order, which is what ⌘1–9 count: the pinned
     /// tabs are ways of working rather than tabs among them, and ⌘G's.
     var sessions: [WindowTab] { tabs.filter { !$0.pinned } }

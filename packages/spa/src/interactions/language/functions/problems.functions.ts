@@ -55,3 +55,28 @@ export const problemsLabel = (counts: DiagnosticCounts): string => {
   ].filter((part) => part !== null);
   return parts.length === 0 ? "No problems" : parts.join(", ");
 };
+
+/**
+ * One problem as a line for the clipboard, in the shape `tsc` prints — path,
+ * one-based position, severity, origin, message — so it pastes into an issue
+ * or a chat and still says where it was. The path is optional because the bar
+ * does not always know it.
+ */
+export const problemText = (
+  diagnostic: Diagnostic,
+  path: string | null = null
+): string => {
+  const location = [path, problemPosition(diagnostic)]
+    .filter((part) => part !== null)
+    .join(":");
+  return `${location} - ${diagnostic.severity} ${problemOrigin(diagnostic)}: ${diagnostic.message}`;
+};
+
+/** Every problem, worst first, one per line — the whole bar in one paste. */
+export const problemsText = (
+  diagnostics: ReadonlyArray<Diagnostic>,
+  path: string | null = null
+): string =>
+  orderProblems(diagnostics)
+    .map((diagnostic) => problemText(diagnostic, path))
+    .join("\n");

@@ -191,6 +191,13 @@ final class AppModel {
         showOnCodeTab(Href.file(file, line: line, on: base))
     }
 
+    /// A file a reply links to: on the browse page, at the line, whatever
+    /// the Code tab was showing — the agent names files as they are in the
+    /// working tree, which is what the browse page reads.
+    func browse(file: String, line: Int?) {
+        showOnCodeTab(Href.file(file, line: line, on: Href.browsePath))
+    }
+
     // MARK: search
 
     func findFile() {

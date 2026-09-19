@@ -114,4 +114,55 @@ describe("ProblemsBar", () => {
     await userEvent.click(screen.getByRole("button", { name: /never read/ }));
     expect(onSelect).toHaveBeenCalledWith(problems[0]);
   });
+
+  it("copies the right-clicked problem with its location", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.assign(navigator, { clipboard: { writeText } });
+    render(
+      <ProblemsBar
+        diagnostics={problems}
+        expanded={true}
+        onToggle={vi.fn()}
+        onSelect={vi.fn()}
+        path="src/main.ts"
+      />
+    );
+    await userEvent.pointer({
+      keys: "[MouseRight]",
+      target: screen.getByRole("button", { name: /never read/ }),
+    });
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: "Copy problem" })
+    );
+    expect(writeText).toHaveBeenCalledWith(
+      "src/main.ts:3:1 - warning ts(6133): 'x' is declared but its value is never read."
+    );
+  });
+
+  it("copies every problem from the strip", async () => {
+    const writeText = vi.fn(() => Promise.resolve());
+    Object.assign(navigator, { clipboard: { writeText } });
+    render(
+      <ProblemsBar
+        diagnostics={problems}
+        expanded={false}
+        onToggle={vi.fn()}
+        onSelect={vi.fn()}
+      />
+    );
+    await userEvent.pointer({
+      keys: "[MouseRight]",
+      target: screen.getByRole("button", { name: /Problems:/ }),
+    });
+    expect(screen.queryByRole("menuitem", { name: "Copy problem" })).toBeNull();
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: "Copy all problems" })
+    );
+    expect(writeText).toHaveBeenCalledWith(
+      [
+        "12:5 - error ts(2322): Type 'string' is not assignable to type 'number'.",
+        "3:1 - warning ts(6133): 'x' is declared but its value is never read.",
+      ].join("\n")
+    );
+  });
 });

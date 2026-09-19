@@ -277,18 +277,6 @@ export function ChatsPage() {
     }
   };
 
-  useEffect(() => {
-    void fetch("http://localhost:45999", {
-      method: "POST",
-      body: JSON.stringify({
-        probe: "ChatsPage render",
-        rows: sessions
-          .slice(0, 6)
-          .map((c) => [c.title.slice(0, 22), c.turnState]),
-      }),
-    }).catch(() => {});
-  }, [sessions]);
-
   const shellFilters = useShellFilters(shellSearch);
   useShellSessions(
     shellDrawsSessions
