@@ -11,9 +11,8 @@
  * ⌘1–9 — which the shell's menu items claim so they answer while a native view
  * has the keyboard. The digits count the sessions alone, as here, and land
  * as `select` by id; ⌘G is the one chord the strip settles itself, since
- * which mode is next is its own rule. Nothing of the strip is drawn here, so the island's tabs are
- * never in two places at once; the launchpad that lays them out is the shell's
- * own too, over the window.
+ * which mode is next is its own rule. Nothing of the strip is drawn here, so
+ * the island's tabs are never in two places at once.
  *
  * The band is the header's open-file slot, lent to the code page the way
  * `AppHeader` lends it — the page portals its `TabStrip` in — with the
@@ -22,7 +21,7 @@
  * open over a page that is not a diff.
  */
 import { useRouterState } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   HeaderDiffStyleToggle,
   useShowsDiffStyleToggle,
@@ -46,16 +45,25 @@ import { cn } from "@/lib/utils";
 
 const picture = (
   tabs: ReadonlyArray<WindowTab>,
-  activeId: string
+  activeId: string,
+  working: (tab: WindowTab) => boolean,
+  waiting: (tab: WindowTab) => boolean
 ): ShellWindowTabStrip => ({
   tabs: tabs.map((tab) => ({
     id: tab.id,
     title: tab.title,
     kind: tab.kind,
     pinned: isPinnedTab(tab),
+    working: working(tab),
+    waiting: waiting(tab),
   })),
   activeId,
 });
+
+void fetch("http://localhost:45999", {
+  method: "POST",
+  body: JSON.stringify({ probe: "island-bar loaded" }),
+}).catch(() => {});
 
 export function IslandBar() {
   // The page that is on screen rather than the one being navigated to, as
@@ -66,15 +74,28 @@ export function IslandBar() {
   const route = shellRoute(pathname);
   const stripShown = useHeaderTabsFilled();
   const toggleShown = useShowsDiffStyleToggle(route);
-  const windowTabs = useWindowTabs();
-  const { strip, activeId, show, mint, close } = useWindowTabStrip();
-
   useEffect(() => {
-    void shell.post({
-      type: "windowTabs",
-      strip: picture(strip, activeId),
-    });
-  }, [strip, activeId]);
+    void fetch("http://localhost:45999", {
+      method: "POST",
+      body: JSON.stringify({ probe: "IslandBar render", pathname }),
+    }).catch(() => {});
+  }, [pathname]);
+
+  const windowTabs = useWindowTabs();
+  const { strip, activeId, show, mint, close, waiting, working } =
+    useWindowTabStrip();
+
+  // A tab's marks move without the strip moving — a turn starts, an unread
+  // thread is read — and the predicates behind them are fresh closures every
+  // render, so the effect keys on the picture's own shape. The object itself
+  // rides over in a ref, the key standing only for whether it changed.
+  const shown = picture(strip, activeId, working, waiting);
+  const shape = JSON.stringify(shown);
+  const latest = useRef(shown);
+  latest.current = shown;
+  useEffect(() => {
+    void shell.post({ type: "windowTabs", strip: latest.current });
+  }, [shape]);
 
   // The strip is read as each event lands rather than from the render that
   // subscribed: two presses can arrive before React has re-rendered for the

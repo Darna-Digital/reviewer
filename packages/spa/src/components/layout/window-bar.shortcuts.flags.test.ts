@@ -27,8 +27,4 @@ describe("a switched-off sessions button", () => {
   it("leaves ⌘G alone: the strip settles what there is to cross to", () => {
     expect(chord("g")).toEqual({ kind: "mode" });
   });
-
-  it("leaves the launchpad on ⌘L, which is nothing to do with sessions", () => {
-    expect(chord("l")).toEqual({ kind: "launchpad" });
-  });
 });

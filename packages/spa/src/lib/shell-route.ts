@@ -118,8 +118,8 @@ export const isBrowsingCode = (pathname: string): boolean =>
 
 /**
  * A dock surface as a page of its own: where it lives, and what it is called
- * wherever it is named — the launchpad's card, the window bar's tab, and the
- * trail along the foot of the page itself.
+ * wherever it is named — the window bar's tab, and the trail along the foot of
+ * the page itself.
  */
 export interface DockPage {
   readonly tab: BottomTab;

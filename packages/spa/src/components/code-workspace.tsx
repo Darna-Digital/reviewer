@@ -126,11 +126,7 @@ import {
   tabToRestore,
   togglePin,
 } from "@/interactions/tabs/functions/tabs.functions";
-import { useFileActions } from "@/interactions/file-actions/adapters/file-actions.hook.adapter";
-import { withoutTrailingSlash } from "@/interactions/file-actions/functions/file-actions.functions";
-import type { TreeItem } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
-import { fetchClient } from "@/lib/api/client";
 import {
   ALL_REFS,
   diffTargetKey,
@@ -563,31 +559,6 @@ export function CodeWorkspace() {
     whenMayLeaveFile(undefined, () => setSearch({ file: undefined }));
   };
 
-  /**
-   * A file the tree has just made, opened with the caret in it.
-   *
-   * Naming a new file is the start of writing it, so the keyboard has to end
-   * up in the empty buffer rather than back on the row that made it — the
-   * counter re-asks for the caret each time, since the same path can be made,
-   * deleted and made again.
-   */
-  const [caretRequest, setCaretRequest] = useState<{
-    readonly path: string;
-    readonly key: number;
-  } | null>(null);
-  const openNewFile = (path: string) => {
-    openFile(path);
-    setCaretRequest((previous) => ({ path, key: (previous?.key ?? 0) + 1 }));
-  };
-
-  const fileActions = useFileActions(openNewFile);
-  // A folder created here holds nothing for git to list, so the tree is told
-  // about it separately until it does.
-  const sidebarPaths = useMemo(
-    () => fileActions.withPendingFolders(treePaths),
-    [fileActions, treePaths]
-  );
-
   // Go-to-definition and find-usages land here: open the file (it may already
   // be the one on screen) and ask the view to reveal the line. The counter lets
   // the same line be revealed twice in a row.
@@ -909,38 +880,6 @@ export function CodeWorkspace() {
   };
 
   // --- handlers --------------------------------------------------------------
-  const deletePaths = async (items: ReadonlyArray<TreeItem>) => {
-    const only = items.length === 1 ? items[0] : null;
-    const what =
-      only === null
-        ? `${items.length} items`
-        : `this ${only.kind === "directory" ? "folder" : "file"}`;
-    const ok = await confirm({
-      title: `Delete ${what}?`,
-      subject: only?.path,
-      description:
-        "Deleted files go to the project's trash, so ⌘Z can put them back.",
-      confirmLabel: "Delete",
-      destructive: true,
-    });
-    if (!ok) return;
-    await trashPaths(items);
-  };
-  const trashPaths = async (items: ReadonlyArray<TreeItem>) => {
-    await fileActions.trash(items);
-    for (const item of items) {
-      if (search.file === withoutTrailingSlash(item.path)) closeFile();
-    }
-    git.refresh();
-  };
-  const renamePath = async (from: string, to: string) => {
-    const { error } = await fetchClient.POST("/api/file/rename", {
-      body: { from, to },
-    });
-    if (error) throw new Error("rename failed");
-    git.refresh();
-  };
-
   /**
    * Send a comment and close the composer behind it.
    *
@@ -1067,11 +1006,6 @@ export function CodeWorkspace() {
         <CodeView
           path={viewing}
           theme={prefs.resolvedTheme}
-          caretKey={
-            caretRequest !== null && caretRequest.path === viewing
-              ? caretRequest.key
-              : null
-          }
           onSaved={git.refresh}
           onDirtyChange={onDirtyChange}
           onOpenLocation={openLocation}
@@ -1157,13 +1091,11 @@ export function CodeWorkspace() {
    */
   const treeSource = {
     mode,
-    paths: sidebarPaths,
+    paths: treePaths,
     gitStatus: treeGitStatus,
     loading: mode === "review" ? diff.isPending : files.isPending,
     selectedFile: mode === "browse" ? viewing : (search.path ?? null),
     onFileSelect,
-    onRenamePath: mode === "review" ? undefined : renamePath,
-    actions: mode === "review" ? undefined : fileActions,
     onShowHistory: showFileHistory,
     // A working-tree action, offered while the working tree is what is being
     // read: against a branch, the tree's badges are the comparison's and a
@@ -1195,8 +1127,6 @@ export function CodeWorkspace() {
     <FileSidebar
       key={mode}
       {...treeSource}
-      onDeletePaths={mode === "review" ? undefined : deletePaths}
-      onError={(message) => toast.error(message)}
       footer={
         commitSource === undefined ? undefined : (
           <CommitPanel
@@ -1218,7 +1148,6 @@ export function CodeWorkspace() {
     shellDrawsTree
       ? {
           ...treeSource,
-          onTrashPaths: mode === "review" ? undefined : trashPaths,
           // The header's compare picker is the shell's to draw too — it stands
           // in the shell's sidebar, over the changed files — and it reads the
           // same answer, resolved here once for the diff and the picker both.
@@ -1318,6 +1247,10 @@ export function CodeWorkspace() {
         },
         onMove: (path, toIndex) =>
           updateTabs((state) => moveTab(state, path, toIndex)),
+        // A file's past is asked for from the tab naming it, which is the one
+        // thing that goes on naming it once the trail under the pane is the
+        // window's own — see the path bar at the foot of this file.
+        onShowHistory: showFileHistory,
       }
     : null;
 
@@ -1508,8 +1441,15 @@ export function CodeWorkspace() {
           </div>
         </div>
         {/* The trail closes the pane, and only once it says more than which
-            mode you are in. */}
-        {(crumbs.length > 1 || viewing !== null) && (
+            mode you are in.
+
+            Never inside the macOS shell: there the window says all of it
+            already — the mode is the window's own rail, the folders are its
+            native tree, and the open file is the tab above this pane — so the
+            trail was the window repeating itself along the foot of the page.
+            What only it carried, a file's history, moves to the tab's own
+            menu — see `TabStrip`. */}
+        {island === undefined && (crumbs.length > 1 || viewing !== null) && (
           <PathBar
             crumbs={crumbs}
             path={viewing}

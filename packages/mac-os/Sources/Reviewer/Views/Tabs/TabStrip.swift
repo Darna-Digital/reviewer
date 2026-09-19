@@ -65,11 +65,13 @@ private struct PinnedTab: View {
 /// always on the tab in front, and under the pointer on the rest, as the
 /// web strip shows it. The slot is the tab's whether or not the ✕ is in
 /// it, so a tab neither resizes nor leaves a hole as the control comes and
-/// goes. The ✕ is laid over the tab rather than set inside its label: a
-/// button inside a button's label never gets the click, the outer one
-/// does, so the tab's button leaves the slot empty and the ✕ stands on top
-/// of it. A shift-click closes too, so a tab can go without aiming for
-/// its ✕.
+/// goes. What the thread is doing shares that slot, so a thread going
+/// quiet neither resizes the tab nor leaves a hole, and reaching for the ✕
+/// trades one for the other. The ✕ is laid over the tab rather than set
+/// inside its label: a button inside a button's label never gets the
+/// click, the outer one does, so the tab's button leaves the slot empty
+/// and the ✕ stands on top of it. A shift-click closes too, so a tab can
+/// go without aiming for its ✕.
 private struct SessionTab: View {
     let tab: WindowTab
     let model: AppModel
@@ -82,14 +84,18 @@ private struct SessionTab: View {
 
     var body: some View {
         let isActive = model.windowTabs.activeId == tab.id
+        let showsClose = isActive || isHovering
         Button(action: pressed) {
             HStack(spacing: 6) {
                 Text(tab.title)
                     .font(.system(size: 13))
                     .lineLimit(1)
                     .truncationMode(.tail)
-                Color.clear
-                    .frame(width: Self.closeSlot, height: Self.closeSlot)
+                ZStack {
+                    Color.clear
+                    if !showsClose { TabMark(tab: tab) }
+                }
+                .frame(width: Self.closeSlot, height: Self.closeSlot)
             }
             .padding(.leading, Self.leadingInset)
             .padding(.trailing, Self.trailingInset)
@@ -97,7 +103,7 @@ private struct SessionTab: View {
         }
         .buttonStyle(BarChipStyle(isOn: isActive))
         .overlay(alignment: .trailing) {
-            if isActive || isHovering {
+            if showsClose {
                 TabCloseButton(title: tab.title) { model.closeTab(id: tab.id) }
                     .frame(width: Self.closeSlot, height: Self.closeSlot)
                     .padding(.trailing, Self.trailingInset)
@@ -113,6 +119,26 @@ private struct SessionTab: View {
             model.closeTab(id: tab.id)
         } else {
             model.select(tabId: tab.id)
+        }
+    }
+}
+
+/// What a session's thread is doing, in the slot the ✕ shares: the orb the
+/// web strip wears while its agent works, and otherwise the accent dot for
+/// a thread that has moved since it was last read. An agent still working
+/// outranks a thread waiting to be read — the orb says the tab is going to
+/// change again, which is the more useful of the two.
+private struct TabMark: View {
+    let tab: WindowTab
+
+    var body: some View {
+        if tab.working {
+            Orb(size: 18, label: "Working")
+        } else if tab.waiting {
+            Circle()
+                .fill(Color.accentColor)
+                .frame(width: 6, height: 6)
+                .accessibilityLabel("Waiting")
         }
     }
 }

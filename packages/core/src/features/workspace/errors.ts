@@ -9,13 +9,3 @@ export class InvalidRepo extends Schema.TaggedErrorClass<InvalidRepo>()(
     return `${this.path} is not a git repository: ${this.reason}`;
   }
 }
-
-export class PathExists extends Schema.TaggedErrorClass<PathExists>()(
-  "PathExists",
-  { path: Schema.String },
-  { httpApiStatus: 409 }
-) {
-  override get message(): string {
-    return `${this.path} already exists`;
-  }
-}

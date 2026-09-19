@@ -1,7 +1,7 @@
 /**
  * `requestIdleCallback` for WebKit, which has never shipped it. The macOS
- * shell's islands run in WKWebView, and the strip primes its tabs — and the
- * launchpad boots its previews — once the window is idle, so without one the
+ * shell's islands run in WKWebView, and the strip primes its tabs once the
+ * window is idle, so without one the
  * code island fell over on its first render. Falling back to a timeout gives
  * up the idleness but keeps the deferral, which is the half that matters.
  */

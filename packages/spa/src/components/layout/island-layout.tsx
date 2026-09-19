@@ -13,9 +13,7 @@
  * The window tabs are the island's to keep, for the same reason the window
  * bar's are the app's in a browser tab: switching one is a route change in a
  * document that has already primed the page. They are the toolbar's to draw
- * (see `IslandBar`), and the launchpad that lays them out is the shell's own,
- * over the window, wearing the pictures it takes of the page — so neither is
- * drawn in here.
+ * (see `IslandBar`) — so they are not drawn in here.
  *
  * The code island keeps one of the dock's surfaces too, under the page as
  * `AppLayout` has it: find usages, opened from a symbol in the page's own

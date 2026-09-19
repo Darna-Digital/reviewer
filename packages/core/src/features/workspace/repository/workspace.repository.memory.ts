@@ -1,7 +1,7 @@
 import * as Effect from "effect/Effect";
 import * as Ref from "effect/Ref";
 import { NoRepoSelected, StorageError } from "../../../shared.ts";
-import { InvalidRepo, PathExists } from "../errors.ts";
+import { InvalidRepo } from "../errors.ts";
 import { chooseRepo, repoName } from "../functions/workspace.functions.ts";
 import { mediaTypeFor } from "../schema/workspace.schema.ts";
 import type { RepoEntry, WorkspaceInfo } from "../schema/workspace.schema.ts";
@@ -39,19 +39,6 @@ const toBase64 = (text: string) => {
   return out;
 };
 
-const fromBase64 = (base64: string) => {
-  const bits = [...base64.replace(/=+$/, "")]
-    .map((character) =>
-      BASE64_ALPHABET.indexOf(character).toString(2).padStart(6, "0")
-    )
-    .join("");
-  let out = "";
-  for (let i = 0; i + 8 <= bits.length; i += 8) {
-    out += String.fromCharCode(Number.parseInt(bits.slice(i, i + 8), 2));
-  }
-  return out;
-};
-
 export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
   Effect.gen(function* () {
     const project = seed.project ?? null;
@@ -80,8 +67,6 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
       seed.recents ?? []
     );
     const filesRef = yield* Ref.make<Record<string, string>>({ ...seed.files });
-    const directoriesRef = yield* Ref.make<ReadonlyArray<string>>([]);
-    const trashSlotRef = yield* Ref.make(0);
     const requireCurrent = Ref.get(currentRef).pipe(
       Effect.flatMap((current) =>
         current === null ? Effect.fail(new NoRepoSelected()) : Effect.void
@@ -165,88 +150,16 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
         }),
       writeFile: (relPath, contents) =>
         Ref.update(filesRef, (files) => ({ ...files, [relPath]: contents })),
-      createPath: (relPath, kind) =>
-        Effect.gen(function* () {
-          yield* requireCurrent;
-          const files = yield* Ref.get(filesRef);
-          const directories = yield* Ref.get(directoriesRef);
-          const taken =
-            files[relPath] !== undefined ||
-            directories.includes(relPath) ||
-            Object.keys(files).some((path) => path.startsWith(`${relPath}/`));
-          if (taken) {
-            return yield* Effect.fail(new PathExists({ path: relPath }));
-          }
-          yield* kind === "directory"
-            ? Ref.update(directoriesRef, (dirs) => [...dirs, relPath])
-            : Ref.update(filesRef, (existing) => ({
-                ...existing,
-                [relPath]: "",
-              }));
-        }),
-      deletePath: (relPath) =>
-        Ref.update(filesRef, (files) => {
-          const next = { ...files };
-          delete next[relPath];
-          return next;
-        }),
-      renamePath: (fromRel, toRel) =>
-        Ref.update(filesRef, (files) => {
-          const next = { ...files };
-          const value = next[fromRel];
-          if (value !== undefined) {
-            delete next[fromRel];
-            next[toRel] = value;
-          }
-          return next;
-        }),
-      copyPath: (fromRel, toRel) =>
-        Effect.gen(function* () {
-          yield* requireCurrent;
-          const files = yield* Ref.get(filesRef);
-          if (files[toRel] !== undefined) {
-            return yield* Effect.fail(new PathExists({ path: toRel }));
-          }
-          const value = files[fromRel];
-          if (value === undefined) {
-            return yield* Effect.fail(
-              new StorageError({ reason: `no such file: ${fromRel}` })
-            );
-          }
-          yield* Ref.set(filesRef, { ...files, [toRel]: value });
-        }),
-      uploadFile: (relPath, base64) =>
-        Effect.gen(function* () {
-          yield* requireCurrent;
-          const files = yield* Ref.get(filesRef);
-          if (files[relPath] !== undefined) {
-            return yield* Effect.fail(new PathExists({ path: relPath }));
-          }
-          yield* Ref.set(filesRef, { ...files, [relPath]: fromBase64(base64) });
-        }),
-      trashPath: (relPath) =>
-        Effect.gen(function* () {
-          yield* requireCurrent;
-          const files = yield* Ref.get(filesRef);
-          const slot = yield* Ref.updateAndGet(
-            trashSlotRef,
-            (last) => last + 1
-          );
-          const path = `.reviewer/trash/${slot}/${relPath.split("/").at(-1) ?? relPath}`;
-          const contents = files[relPath];
-          if (contents !== undefined) {
-            const next = { ...files, [path]: contents };
-            delete next[relPath];
-            yield* Ref.set(filesRef, next);
-          }
-          return { path };
-        }),
       revealPath: (relPath) =>
         Effect.gen(function* () {
           yield* requireCurrent;
           const files = yield* Ref.get(filesRef);
-          const directories = yield* Ref.get(directoriesRef);
-          if (files[relPath] === undefined && !directories.includes(relPath)) {
+          // The double has no directory of its own: a folder is whatever the
+          // seeded files spell, so a path is there if it is a file or holds one.
+          const held =
+            files[relPath] !== undefined ||
+            Object.keys(files).some((path) => path.startsWith(`${relPath}/`));
+          if (!held) {
             return yield* Effect.fail(
               new StorageError({ reason: `no such path: ${relPath}` })
             );

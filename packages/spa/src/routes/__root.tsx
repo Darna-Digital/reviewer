@@ -10,7 +10,6 @@ import { Alerts } from "@/components/ui/alerts";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { isDesktop } from "@/lib/desktop";
-import { isPreviewWindow } from "@/lib/preview-window";
 import type { RouterContext } from "../router";
 import appCss from "../styles.css?url";
 
@@ -91,11 +90,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <TooltipProvider delay={300}>{children ?? <Outlet />}</TooltipProvider>
         <Toaster />
         <Alerts />
-        {/* Devtools only in the browser, not inside the native shell — and
-            never in a preview frame, which would boot a second set of panels
-            for a picture of a page. In a release build `Devtools` is null and
-            the panels were never bundled at all. */}
-        {Devtools !== null && !isDesktop && !isPreviewWindow && (
+        {/* Devtools only in the browser, not inside the native shell. In a
+            release build `Devtools` is null and the panels were never bundled
+            at all. */}
+        {Devtools !== null && !isDesktop && (
           <Suspense fallback={null}>
             <Devtools />
           </Suspense>

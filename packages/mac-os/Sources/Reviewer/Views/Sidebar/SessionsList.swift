@@ -1,7 +1,7 @@
 // The sessions list as a native source list, drawn from what the page
 // reports while it is on the sessions surface (see `ShellSessions`) in the
 // web list's shape: one line per session, the title and nothing else, with
-// the one mark that changes at the trailing edge — the pulse of a working
+// the one mark that changes at the trailing edge — the orb of a working
 // agent, a red dot where a turn ended badly, the accent dot for a session
 // that moved since it was last opened — and the delete control taking the
 // mark's place under the pointer. The cloud runs stand in a group of their
@@ -213,25 +213,36 @@ private struct SessionFilterMenu: View {
     }
 }
 
-/// A session's row: its title, and at the trailing edge its mark — or, with
-/// the pointer over it, the delete control in the mark's place, so the title
-/// runs to the same edge on every row. The row carries no gesture of its
-/// own: on macOS a gesture on a row's content takes the mouse-down before
-/// the list does, and the row is never selected.
+/// A session's row: the title, and a column at the trailing edge that the
+/// mark and the delete control share — the web row's, which is why a title
+/// with nothing beside it runs the whole width and is cut only once that
+/// column opens under the pointer. A row already wearing a mark has the
+/// column open, so the pointer swaps the mark for the ✕ rather than moving
+/// the title. The row carries no gesture of its own: on macOS a gesture on
+/// a row's content takes the mouse-down before the list does, and the row
+/// is never selected.
 private struct SessionRow: View {
     let session: ShellSession
     @Environment(AppModel.self) private var model
     @State private var isHovering = false
 
+    private static let column: CGFloat = 20
+    private static let gap: CGFloat = 6
+    /// The web row's 160ms: long enough to read as the column opening,
+    /// short enough that the title is never chasing the pointer.
+    private static let opening = Animation.easeOut(duration: 0.16)
+
     var body: some View {
-        HStack(spacing: 6) {
+        let deletable = session.kind == .session
+        let open = session.mark != nil || (isHovering && deletable)
+        HStack(spacing: 0) {
             Text(session.title)
                 .font(.system(size: 13))
                 .lineLimit(1)
                 .truncationMode(.tail)
-            Spacer(minLength: 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
             ZStack {
-                if isHovering && session.kind == .session {
+                if isHovering && deletable {
                     PaneBarButton(symbol: "xmark", help: "Delete session") {
                         model.act(onSessions: .delete(session.id))
                     }
@@ -239,27 +250,40 @@ private struct SessionRow: View {
                     SessionMarkDot(mark: mark)
                 }
             }
-            .frame(width: 20, height: 18)
+            .frame(width: Self.column, height: 18)
+            // Laid out at its own size inside the width that opens, and faded
+            // in with it rather than clipped to it: the ✕ is a bar button, and
+            // its lit corners are rounded a little wider than the glyph's box
+            // — a clip that tight cuts them square. Nothing shows through the
+            // opening either way, since the column is only ever empty while it
+            // is shut.
+            .frame(width: open ? Self.column : 0, height: 18)
+            .opacity(open ? 1 : 0)
+            .padding(.leading, open ? Self.gap : 0)
         }
         .frame(height: 24)
+        .animation(Self.opening, value: open)
         .contentShape(Rectangle())
         .onHover { isHovering = $0 }
         .help(session.title)
     }
 }
 
-/// The web row's three marks, in the system's ink: the accent colour pulsing
-/// while an agent works, standing still for a session that has moved, and
-/// red where a turn ended badly.
+/// The web row's three marks: the orb sweeping while an agent works, the
+/// accent dot standing still for a session that has moved, and red where a
+/// turn ended badly.
 private struct SessionMarkDot: View {
     let mark: SessionMark
 
     var body: some View {
-        Image(systemName: "circle.fill")
-            .font(.system(size: 7))
-            .foregroundStyle(mark == .error ? Color.red : Color.accentColor)
-            .symbolEffect(.pulse, isActive: mark == .running)
-            .accessibilityLabel(mark.label)
+        if mark == .running {
+            Orb(size: 14, label: mark.label)
+        } else {
+            Image(systemName: "circle.fill")
+                .font(.system(size: 7))
+                .foregroundStyle(mark == .error ? Color.red : Color.accentColor)
+                .accessibilityLabel(mark.label)
+        }
     }
 }
 

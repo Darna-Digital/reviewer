@@ -83,22 +83,6 @@ What it does today:
   every tab's page primed while the window is idle — and
   sends the toolbar a picture of itself; a tab pressed there, and each menu
   chord, goes back down to the strip to answer.
-- **Launchpad** (⌘L) — every tab as a card wearing the last picture taken
-  of it. As in the web app, it slides out from under the toolbar — across
-  the whole window, one grid on the bare frame — and pushes everything
-  under the bar down by its own height rather than covering it: the
-  sidebar's pane of glass along with the islands, moved, not resized, so
-  the web view and the terminal are composited down instead of laid out
-  again — with what it pushed dimmed under it and a collapse tab on its
-  edge. That edge is a seam: pull it down from the top of the page to draw
-  the panel out under the pointer, pull it up to shrink it, and far enough
-  to put it away. The trackpad does the same on the toolbar — two fingers
-  drawn down it pull the panel out live, and three fingers pull it the same
-  way — read off the trackpad's own touches, since the system makes no
-  event of a vertical three-finger swipe — and let go of, fling it the rest
-  of the way open or shut (`LaunchpadGestureMonitor`; three vertical
-  fingers are free for the app only while Mission Control and App Exposé
-  are on four fingers in System Settings).
 - **Page island** — the SPA's routed page, with the window's own chrome and
   file tree off: the diff, the file view, review comments, a
   pull request's diff alone — its overview, its files and the list of them
@@ -255,7 +239,7 @@ Sources/Reviewer/
   Islands/               IslandHost (web view + bridge), SpaSource, SpaSchemeHandler, IslandView
   Terminal/              TerminalSession — the shell behind the Terminal surface
   Services/              DevServices + DevProcessStream — dev commands and their output
-  Views/                 ContentView (split view), Sidebar, PullRequests (list, overview, column), Chat (conversation, composer, model picker), Tabs, BottomPane, Search, Launchpad, Welcome
+  Views/                 ContentView (split view), Sidebar, PullRequests (list, overview, column), Chat (conversation, composer, model picker), Tabs, BottomPane, Search, Welcome
 ```
 
 Not here yet: native menus for the islands' popovers, drag and drop between

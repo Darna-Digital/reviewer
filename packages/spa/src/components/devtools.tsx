@@ -2,7 +2,7 @@
  * The TanStack devtools panels, in a module of their own.
  *
  * They used to be imported straight into `__root`, guarded only by a runtime
- * check (`!isDesktop && !isPreviewWindow`). A runtime guard decides what
+ * check (`!isDesktop`). A runtime guard decides what
  * *renders*; it has no say in what gets *bundled*, so all three devtools
  * packages — router, query, and the panel host that frames them — were linked
  * into the production graph and preloaded on first paint. That is ~190 KB of

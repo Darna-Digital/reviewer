@@ -11,11 +11,7 @@ import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { homedir, platform } from "node:os";
 import { resolve as pathResolve } from "node:path";
 import { NoRepoSelected, StorageError } from "@reviewer/core/shared";
-import {
-  InvalidRepo,
-  mediaTypeFor,
-  PathExists,
-} from "@reviewer/core/workspace";
+import { InvalidRepo, mediaTypeFor } from "@reviewer/core/workspace";
 import { countRepos, isGitRoot, scanRepos } from "./repo-scan.ts";
 import { resolveWorkspace, WorkspaceContext } from "./workspace-context.ts";
 import type {
@@ -44,9 +40,6 @@ export const revealCommand = (
     args: [resolved.slice(0, resolved.lastIndexOf("/")) || "/"],
   };
 };
-
-/** Where a deleted path is kept, beside the rest of reviewer's project state. */
-const TRASH_DIR = ".reviewer/trash";
 
 // Git's own heuristic: a NUL byte in the first 8k means "not text".
 const BINARY_SNIFF_BYTES = 8000;
@@ -187,85 +180,10 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
       };
     });
 
-  const makeParentDirectory = (resolved: string) => {
-    const parent = resolved.slice(0, resolved.lastIndexOf("/"));
-    return parent.length > 0
-      ? tryFs(fs.makeDirectory(parent, { recursive: true }))
-      : Effect.void;
-  };
-
   const writeFile: WorkspaceRepo["writeFile"] = (relPath, contents) =>
     Effect.gen(function* () {
       const { resolved } = yield* resolveInProject(relPath);
       yield* tryFs(fs.writeFileString(resolved, contents));
-    });
-
-  const createPath: WorkspaceRepo["createPath"] = (relPath, kind) =>
-    Effect.gen(function* () {
-      const { resolved } = yield* resolveInProject(relPath);
-      if (yield* tryFs(fs.exists(resolved))) {
-        return yield* Effect.fail(new PathExists({ path: relPath }));
-      }
-      if (kind === "directory") {
-        return yield* tryFs(fs.makeDirectory(resolved, { recursive: true }));
-      }
-      yield* makeParentDirectory(resolved);
-      yield* tryFs(fs.writeFileString(resolved, ""));
-    });
-
-  const deletePath: WorkspaceRepo["deletePath"] = (relPath) =>
-    Effect.gen(function* () {
-      const { resolved } = yield* resolveInProject(relPath);
-      yield* tryFs(fs.remove(resolved, { recursive: true }));
-    });
-
-  const renamePath: WorkspaceRepo["renamePath"] = (fromRel, toRel) =>
-    Effect.gen(function* () {
-      const from = yield* resolveInProject(fromRel);
-      const to = yield* resolveInProject(toRel);
-      yield* makeParentDirectory(to.resolved);
-      yield* tryFs(fs.rename(from.resolved, to.resolved));
-    });
-
-  const copyPath: WorkspaceRepo["copyPath"] = (fromRel, toRel) =>
-    Effect.gen(function* () {
-      const from = yield* resolveInProject(fromRel);
-      const to = yield* resolveInProject(toRel);
-      if (yield* tryFs(fs.exists(to.resolved))) {
-        return yield* Effect.fail(new PathExists({ path: toRel }));
-      }
-      yield* makeParentDirectory(to.resolved);
-      yield* tryFs(fs.copy(from.resolved, to.resolved));
-    });
-
-  const uploadFile: WorkspaceRepo["uploadFile"] = (relPath, base64) =>
-    Effect.gen(function* () {
-      const { resolved } = yield* resolveInProject(relPath);
-      if (yield* tryFs(fs.exists(resolved))) {
-        return yield* Effect.fail(new PathExists({ path: relPath }));
-      }
-      yield* makeParentDirectory(resolved);
-      yield* tryFs(fs.writeFile(resolved, Buffer.from(base64, "base64")));
-    });
-
-  const trashPath: WorkspaceRepo["trashPath"] = (relPath) =>
-    Effect.gen(function* () {
-      const source = yield* resolveInProject(relPath);
-      const root = yield* ctx.requireProject;
-      // One numbered folder per deletion, so two files of the same name can
-      // both sit in the trash and each is restored under the name it had.
-      const held = yield* fs
-        .readDirectory(`${root}/${TRASH_DIR}`)
-        .pipe(Effect.catch(() => Effect.succeed<Array<string>>([])));
-      const slot =
-        held.reduce(
-          (highest, name) => Math.max(highest, Number(name) || 0),
-          0
-        ) + 1;
-      const path = `${TRASH_DIR}/${slot}/${source.name}`;
-      yield* makeParentDirectory(`${root}/${path}`);
-      yield* tryFs(fs.rename(source.resolved, `${root}/${path}`));
-      return { path };
     });
 
   const revealPath: WorkspaceRepo["revealPath"] = (relPath) =>
@@ -290,12 +208,6 @@ export const makeGitWorkspaceRepository = Effect.gen(function* () {
     readFile,
     readFileBytes,
     writeFile,
-    createPath,
-    deletePath,
-    renamePath,
-    copyPath,
-    uploadFile,
-    trashPath,
     revealPath,
   } satisfies WorkspaceRepo;
 });

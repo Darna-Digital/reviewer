@@ -9,11 +9,7 @@
  */
 // The history arrows are parked for now, along with the icons they wore.
 // import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
-import {
-  IconCommand,
-  IconDotsVertical,
-  IconLayoutGrid,
-} from "@tabler/icons-react";
+import { IconCommand, IconDotsVertical } from "@tabler/icons-react";
 // import { useCanGoBack } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -28,22 +24,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  BarButton,
-  BarLabel,
-  NO_DRAG,
-  Shortcut,
-} from "@/components/layout/bar-controls";
+import { BarLabel, NO_DRAG, Shortcut } from "@/components/layout/bar-controls";
 import { WindowTabStrip } from "@/interactions/window-tabs/components/window-tab-strip";
 import {
   barShortcut,
   type BarShortcut,
 } from "@/components/layout/window-bar.shortcuts";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
-import {
-  toggleTabOverview,
-  useTabOverview,
-} from "@/interactions/tab-preview/adapters/tab-overview.store";
 import {
   setProjectPickerOpen,
   useProjectPickerOpen,
@@ -70,7 +57,6 @@ import { cn } from "@/lib/utils";
 const LEAD_GUTTER = "w-22";
 
 const PROJECT_PICKER_KEYS = "⌘⇧P";
-const LAUNCHPAD_KEYS = "⌘L";
 const COMMANDS_KEYS = "⌘K";
 
 /** The chords that are the bar's to answer; the strip answers its own. */
@@ -115,12 +101,10 @@ function MenuRow({
 
 export function WindowBar() {
   // const canGoBack = useCanGoBack();
-  const overviewOpen = useTabOverview();
-
   const workspace = useWorkspace();
   const pickerOpen = useProjectPickerOpen();
-  // The bar's own chord is the project chip's. The strip's — a session, the
-  // launchpad, a tab — are answered by the strip itself.
+  // The bar's own chord is the project chip's. The strip's — a session, a tab
+  // — are answered by the strip itself.
   useEffect(() => {
     const run = (shortcut: BarShortcut) => {
       switch (shortcut.kind) {
@@ -196,17 +180,6 @@ export function WindowBar() {
           the strip that gives way first. Its inset is a gutter like the lead
           one rather than padding, so both ends of the bar read the same. */}
       <div className="flex shrink-0 items-center justify-end gap-1">
-        {/* The launchpad is where the window keeps its tabs, and it is reached
-            often enough to be worth a press rather than two — the menu beside
-            it holds the surfaces that are opened once and left. */}
-        <BarButton
-          label="Launchpad"
-          keys={LAUNCHPAD_KEYS}
-          pressed={overviewOpen}
-          onClick={toggleTabOverview}
-        >
-          <IconLayoutGrid className="size-4" />
-        </BarButton>
         {/* The window menu: each row names itself, and hovering it says which
             chord does the same. */}
         <DropdownMenu>

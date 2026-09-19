@@ -154,17 +154,13 @@ final class IslandHost: NSObject {
     }
 
     /// The bridge, and the window's colours — both before the first script
-    /// of the page runs, so nothing paints in the wrong palette first. Into
-    /// every frame, not only the top one: the launchpad photographs the app
-    /// in a frame of the page, and a picture painted in the app's own palette
-    /// would not match the page it stands for. The SPA keeps a frame from
-    /// talking back over the bridge (`lib/shell`).
+    /// of the page runs, so nothing paints in the wrong palette first.
     private func installUserScripts(in content: WKUserContentController) {
         content.removeAllUserScripts()
         content.addUserScript(
-            WKUserScript(source: bridgeScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
+            WKUserScript(source: bridgeScript, injectionTime: .atDocumentStart, forMainFrameOnly: true))
         content.addUserScript(
-            WKUserScript(source: NativePalette.applyScript(), injectionTime: .atDocumentStart, forMainFrameOnly: false))
+            WKUserScript(source: NativePalette.applyScript(), injectionTime: .atDocumentStart, forMainFrameOnly: true))
     }
 
     /// Dark to light and back: the live document is repainted, and the

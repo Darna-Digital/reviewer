@@ -28,6 +28,7 @@ struct ChatComposer: View {
 
     @Environment(AppModel.self) private var model
     @State private var sending = false
+    @State private var dropTargeted = false
     @FocusState private var focused: Bool
 
     private static let heights: ClosedRange<CGFloat> = 56...480
@@ -115,7 +116,7 @@ struct ChatComposer: View {
             .background(Color(nsColor: IslandPalette.island), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(focused ? Color.accentColor.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 1)
+                    .strokeBorder(highlighted ? Color.accentColor.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.06), radius: 4, y: 1)
         }
@@ -152,7 +153,12 @@ struct ChatComposer: View {
                     return .handled
                 }
         }
+        .overlay { PromptDropCatcher(draftKey: draftKey, targeted: $dropTargeted) }
     }
+
+    /// The box answers a drag held over it as it answers the caret, since
+    /// the pane's dashed frame steps back while the box owns the drop.
+    private var highlighted: Bool { focused || dropTargeted }
 
     /// A send while a turn is running is accepted, not blocked: the server
     /// queues the message for when the turn settles.
@@ -246,6 +252,86 @@ private struct ComposerResizeHandle: View {
     }
 }
 
+/// The prompt box's own drop target, in front of the box rather than behind
+/// it. AppKit offers a drag to the front-most view registered for its types,
+/// and the `NSTextView` a `TextEditor` is made of registers for files and
+/// bitmaps so it can take them as inline attachments — the pane's drop zone
+/// (see `ImageDropZone`) lies further back, so the obvious place to let a
+/// photo go is the one place the drop would otherwise be swallowed. The view
+/// takes no mouse events, as SwiftUI's own dragging view does not, so the
+/// box below still types, selects and scrolls.
+private struct PromptDropCatcher: NSViewRepresentable {
+    let draftKey: String
+    @Binding var targeted: Bool
+    @Environment(AppModel.self) private var model
+
+    func makeNSView(context: Context) -> PromptDropCatcherView {
+        let view = PromptDropCatcherView()
+        configure(view)
+        return view
+    }
+
+    func updateNSView(_ nsView: PromptDropCatcherView, context: Context) {
+        configure(nsView)
+    }
+
+    private func configure(_ view: PromptDropCatcherView) {
+        let chats = model.chats
+        let key = draftKey
+        view.onAttach = { chats.attach($0, to: key) }
+        view.onTarget = { targeted = $0 }
+    }
+}
+
+final class PromptDropCatcherView: NSView {
+    var onAttach: (([ComposerAttachment]) -> Void)?
+    var onTarget: ((Bool) -> Void)?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        registerForDraggedTypes([.fileURL, .png, .tiff])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("PromptDropCatcherView is not made from a nib") }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        let operation = self.operation(for: sender)
+        onTarget?(operation == .copy)
+        return operation
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        operation(for: sender)
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        onTarget?(false)
+    }
+
+    override func draggingEnded(_ sender: NSDraggingInfo) {
+        onTarget?(false)
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        let attachments = ComposerAttachment.read(pasteboard: sender.draggingPasteboard)
+        guard !attachments.isEmpty else { return false }
+        onAttach?(attachments)
+        return true
+    }
+
+    /// Answered from the types on the pasteboard alone — reading the images
+    /// themselves is the drop's work, not the hover's.
+    private func operation(for sender: NSDraggingInfo) -> NSDragOperation {
+        let pasteboard = sender.draggingPasteboard
+        let carriesFiles = pasteboard.canReadObject(forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])
+        let carriesBitmaps = pasteboard.availableType(from: [.png, .tiff]) != nil
+        return carriesFiles || carriesBitmaps ? .copy : []
+    }
+}
+
 /// The whole pane as a drop target for images, so a file can be let go
 /// anywhere in the conversation and still arrive as a chip on the box.
 private struct ImageDropZone: ViewModifier {
@@ -284,11 +370,13 @@ private struct ImageDropZone: ViewModifier {
             }
     }
 
+    /// A dropped file first, then the image the drag carries in its own
+    /// right — a drag off a web page or out of the photo library offers
+    /// bitmaps without a file behind them, and a dragged file that turns out
+    /// not to be an image still leaves the bitmaps worth trying.
     private static func read(_ provider: NSItemProvider) async -> ComposerAttachment? {
-        if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-            let item = try? await provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier)
-            guard let data = item as? Data, let url = URL(dataRepresentation: data, relativeTo: nil) else { return nil }
-            return ComposerAttachment.read(url: url)
+        if let url = await provider.fileURL, let attachment = ComposerAttachment.read(url: url) {
+            return attachment
         }
         guard let type = provider.registeredTypeIdentifiers.compactMap(UTType.init).first(where: { $0.conforms(to: .image) }) else {
             return nil
@@ -306,6 +394,19 @@ extension View {
 }
 
 private extension NSItemProvider {
+    /// A drag's file, whichever of the two shapes the promise resolves to.
+    @MainActor
+    var fileURL: URL? {
+        get async {
+            guard hasItemConformingToTypeIdentifier(UTType.fileURL.identifier),
+                let item = try? await loadItem(forTypeIdentifier: UTType.fileURL.identifier)
+            else { return nil }
+            if let url = item as? URL { return url }
+            guard let data = item as? Data else { return nil }
+            return URL(dataRepresentation: data, relativeTo: nil)
+        }
+    }
+
     @MainActor
     func loadDataRepresentation(for type: UTType) async throws -> Data {
         try await withCheckedThrowingContinuation { continuation in

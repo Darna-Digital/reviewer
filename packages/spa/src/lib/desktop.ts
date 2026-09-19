@@ -7,16 +7,8 @@
  * web content — the window bar reserves space for them. In the plain browser
  * the bridge is absent and no space is reserved.
  *
- * A preview is the app in an iframe of that same window (see `preview-window`),
- * and the shell installs the bridge in the main frame only: the frame comes up
- * with no bridge at all and would otherwise take the browser's path — no API
- * origin, so every request goes to `reviewer://app/api/…` and 404s against the
- * shell's own scheme handler, and a picture of a page that never loaded. It is
- * same-origin with the window it hangs in, so it borrows that window's bridge.
- *
  * SPA-only (no SSR), so reading `window` at module load is safe.
  */
-import { isPreviewWindow } from "@/lib/preview-window";
 import type { ShellChannel } from "@/lib/shell";
 
 interface ReviewerBridge {
@@ -39,20 +31,10 @@ type ReviewerWindow = Window & {
   reviewer?: ReviewerBridge;
 };
 
-const bridgeIn = (view: Window): ReviewerBridge | undefined => {
-  try {
-    return (view as ReviewerWindow).reviewer;
-  } catch {
-    // A frame whose parent is another origin: not a preview, and not ours.
-    return undefined;
-  }
-};
-
 const bridge =
   typeof window === "undefined"
     ? undefined
-    : (bridgeIn(window) ??
-      (isPreviewWindow ? bridgeIn(window.parent) : undefined));
+    : (window as ReviewerWindow).reviewer;
 
 export const isDesktop = bridge !== undefined;
 

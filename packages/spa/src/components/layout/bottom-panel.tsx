@@ -6,6 +6,7 @@ import {
   IconPlayerPlay,
   IconSearch,
   IconTerminal2,
+  IconX,
 } from "@tabler/icons-react";
 import { CommitHistory } from "@/components/git/commit-history";
 import { PaneHeader } from "@/components/layout/pane-header";
@@ -174,9 +175,16 @@ export function BottomPanel(props: BottomPanelProps) {
               icon={IconArrowsDiagonal}
               onClick={props.onExpand}
             />
+            {/* A drawer folds down into the strip it came from, and outside
+                the shell that strip is there under it — so the control is the
+                chevron that folds it. Inside the shell the drawer is an island
+                of its own, standing on nothing, with the surfaces it shares the
+                foot of the window with drawn natively beside it: there is
+                nothing to fold into, so it is dismissed instead, with the ✕
+                that dismisses a panel everywhere in macOS. */}
             <PanelButton
-              label="Collapse panel"
-              icon={IconChevronDown}
+              label={island === undefined ? "Collapse panel" : "Close panel"}
+              icon={island === undefined ? IconChevronDown : IconX}
               onClick={props.onCollapse}
             />
           </div>

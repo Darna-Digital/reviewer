@@ -12,9 +12,8 @@
  * the strip is currently leading with, so a mode switched off drops out of the
  * run rather than leaving a gap in it.
  *
- * The launchpad is off the bar — it is reached by the handle under it — so it is
- * off the run of digits too: it answers to ⌘L, beside ⌘T for a new session, the
- * two chords that are about the window rather than about a place in it.
+ * ⌘T mints a session: the one chord that is about the window rather than about
+ * a place in it.
  *
  * The project chip is what every tab in the strip is scoped to rather than a
  * place among them, so it takes ⇧ as its mark — ⌘⇧P, as the content search
@@ -24,7 +23,6 @@ import { isFeatureEnabled } from "@reviewer/feature-flags";
 
 export type BarShortcut =
   | { readonly kind: "new-session" }
-  | { readonly kind: "launchpad" }
   /** Raise the project chip's dropdown, to switch what the window is on. */
   | { readonly kind: "project-picker" }
   /** Cross to the next way of working the bar leads with. */
@@ -48,8 +46,8 @@ export const sessionDigit = (slot: number): number | null => {
 
 /**
  * Sessions answers only while it leads the window. Switched off it keeps its
- * tab — the launchpad goes on listing it — but no more than the launchpad does,
- * which is why it is also out of the bar.
+ * tab, so a conversation still has somewhere to be handed back to, but leads
+ * the window no more than it does, which is why it is also out of the bar.
  */
 const sessionsEnabled = (): boolean => isFeatureEnabled("sessions-button");
 
@@ -65,7 +63,6 @@ export function barShortcut(event: Chord): BarShortcut | null {
   const key = event.key.toLowerCase();
   if (event.shiftKey) return key === "p" ? { kind: "project-picker" } : null;
   if (key === "g") return { kind: "mode" };
-  if (key === "l") return { kind: "launchpad" };
   if (key === "t") return sessionsEnabled() ? { kind: "new-session" } : null;
   // Tested rather than coerced: `Number(" ")` is a digit, and Space is not a
   // chord this bar has any business answering.

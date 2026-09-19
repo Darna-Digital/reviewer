@@ -10,7 +10,6 @@ import type {
   ChatProviderKind,
 } from "@reviewer/core/chats";
 import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignment.functions";
-import { isPreviewWindow } from "@/lib/preview-window";
 
 export type ThemePref = "light" | "dark" | "system";
 export type Theme = "light" | "dark";
@@ -101,8 +100,6 @@ export interface UiPrefs {
   chatModelFavorites: string[];
   /** Drag-resizable height of the chat composer's prompt box, in px. */
   composerHeight: number;
-  /** Drag-resizable height of the launchpad panel, in px. */
-  launchpadHeight: number;
   /** The agent and model the last session was composed with. */
   lastSession: LastSession;
 }
@@ -150,7 +147,6 @@ const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   commitAgent: "claude",
   chatModelFavorites: [],
   composerHeight: 92,
-  launchpadHeight: 380,
   lastSession: {},
 };
 
@@ -210,9 +206,7 @@ function emit() {
 }
 
 function persist() {
-  // A preview shares the window's storage: what a page does while being looked
-  // at — sizing a pane — is not the window's doing.
-  if (typeof window === "undefined" || isPreviewWindow) return;
+  if (typeof window === "undefined") return;
   try {
     const {
       theme,
@@ -237,7 +231,6 @@ function persist() {
       commitAgent,
       chatModelFavorites,
       composerHeight,
-      launchpadHeight,
       lastSession,
     } = state;
     window.localStorage.setItem(
@@ -265,7 +258,6 @@ function persist() {
         commitAgent,
         chatModelFavorites,
         composerHeight,
-        launchpadHeight,
         lastSession,
       })
     );

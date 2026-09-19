@@ -133,10 +133,7 @@ private struct StepStatusMark: View {
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(.tertiary)
         case .running:
-            Image(systemName: "circle.fill")
-                .font(.system(size: 7))
-                .foregroundStyle(Color.accentColor)
-                .symbolEffect(.pulse, options: .repeating)
+            Orb(size: 14)
         }
     }
 }

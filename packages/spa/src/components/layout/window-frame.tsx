@@ -10,13 +10,6 @@ import { useEffect } from "react";
 import { restoreDock } from "@/components/layout/dock-expansion";
 import { WindowBar } from "@/components/layout/window-bar";
 import { SearchHost } from "@/interactions/search/components/search-host";
-import {
-  TabOverview,
-  TabOverviewPush,
-  TabOverviewScrim,
-} from "@/interactions/tab-preview/components/tab-overview";
-import { TabSnapshotMill } from "@/interactions/tab-preview/components/tab-snapshot-mill";
-import { isPreviewWindow } from "@/lib/preview-window";
 import { shellRoute } from "@/lib/shell-route";
 import { toggleBottomVisible } from "@/lib/ui-prefs";
 
@@ -70,43 +63,20 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [dockPageTab, navigate]);
 
-  // A preview is the page and nothing around it: the chrome belongs to the
-  // window it is being previewed in.
-  if (isPreviewWindow) {
-    return (
-      <div className="app-canvas flex h-svh w-full overflow-hidden text-foreground">
-        {children}
-      </div>
-    );
-  }
-
   return (
     <>
       <SearchHost />
       <div className="app-frame flex h-svh w-full flex-col overflow-hidden text-foreground">
         <WindowBar />
-        {/* Everything under the bar shares one box: the launchpad slides down
-            into the top of it and the page is pushed out of the bottom, so the
-            window clips both without either being given a size. */}
-        <div className="relative min-h-0 min-w-0 flex-1 overflow-hidden">
-          <TabOverview />
-          {/* Sheets on the frame rather than one canvas split by borders: every
-              gap between them is the frame's own material, so each seam reads as
-              the window showing through instead of a painted divider. The rail
-              is the exception — it paves its own seam over and joins the sheet
-              beside it, as it did when the window was one canvas. */}
-          <TabOverviewPush>
-            <div className="flex min-h-0 min-w-0 flex-1 gap-1.5 overflow-hidden">
-              {children}
-            </div>
-            <TabOverviewScrim />
-          </TabOverviewPush>
+        {/* Sheets on the frame rather than one canvas split by borders: every
+            gap between them is the frame's own material, so each seam reads as
+            the window showing through instead of a painted divider. The rail is
+            the exception — it paves its own seam over and joins the sheet
+            beside it, as it did when the window was one canvas. */}
+        <div className="flex min-h-0 min-w-0 flex-1 gap-1.5 overflow-hidden">
+          {children}
         </div>
       </div>
-      {/* Outside the frame, and running from the moment the window has settled
-          rather than from the moment the launchpad is asked for: the pictures
-          are taken in the gaps, so opening the panel is not the wait. */}
-      <TabSnapshotMill />
     </>
   );
 }

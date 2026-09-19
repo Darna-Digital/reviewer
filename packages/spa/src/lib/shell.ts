@@ -21,16 +21,12 @@
  *
  * Absent the shell, `shell` is a channel nobody is on the other end of, so an
  * island renders in a plain browser tab exactly as it does in the window — the
- * way every island is developed. A preview — the app in a frame of the island,
- * photographed for the launchpad — is cut off the same way: it borrows the
- * island's bridge to know it is one, and must not be heard as one.
+ * way every island is developed.
  */
-import type { TreeItem } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
 import type { WindowTabKind } from "@/interactions/window-tabs/interfaces/window-tabs.interfaces";
 import type { AppMode } from "@/lib/api/types";
 import type { DateFilter } from "@/lib/date-filter";
 import { islandBridge } from "@/lib/desktop";
-import { isPreviewWindow } from "@/lib/preview-window";
 import type { BottomTab, CommitAgent } from "@/lib/ui-prefs";
 import type { ChatProjectTally, ChatProviderKind } from "@reviewer/core/chats";
 import type { CommitDraft } from "@reviewer/core/git-message";
@@ -99,6 +95,10 @@ export interface ShellWindowTab {
   readonly title: string;
   readonly kind: WindowTabKind;
   readonly pinned: boolean;
+  /** Its agent is mid-turn — the tab wears the orb. */
+  readonly working: boolean;
+  /** Its thread has moved since it was last read — the tab wears the dot. */
+  readonly waiting: boolean;
 }
 
 /**
@@ -131,8 +131,6 @@ export interface ShellTree {
   readonly loading: boolean;
   /** The open project folder, for the absolute path the menu copies. */
   readonly projectPath: string | null;
-  /** Whether rows can be made, renamed and deleted — the project's own files. */
-  readonly editable: boolean;
   /** Whether a row's working-tree changes can be discarded. */
   readonly discardable: boolean;
 }
@@ -168,19 +166,12 @@ export interface ShellCommitComposer {
 /**
  * What the shell's tree can do — the tree's own props again, minus the DOM,
  * with the shell having already asked whatever the web tree asks first (a yes
- * to a deletion, a name for a new file).
+ * to a discard).
  */
 export type ShellTreeAction =
   | { readonly kind: "select"; readonly path: string }
   | { readonly kind: "history"; readonly path: string }
   | { readonly kind: "discard"; readonly paths: ReadonlyArray<string> }
-  | { readonly kind: "delete"; readonly items: ReadonlyArray<TreeItem> }
-  | { readonly kind: "rename"; readonly from: string; readonly to: string }
-  | {
-      readonly kind: "create";
-      readonly path: string;
-      readonly entry: TreeItem["kind"];
-    }
   | {
       readonly kind: "commit";
       readonly message: string;
@@ -346,6 +337,4 @@ const unhosted: ShellChannel = {
   dispatch: () => {},
 };
 
-export const shell: ShellChannel = isPreviewWindow
-  ? unhosted
-  : (islandBridge?.shell ?? unhosted);
+export const shell: ShellChannel = islandBridge?.shell ?? unhosted;

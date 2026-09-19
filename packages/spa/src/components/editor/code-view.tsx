@@ -39,7 +39,6 @@ import {
 } from "@/components/editor/use-file-editing";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
-import { commentGutterCSS } from "@/lib/comment-gutter-css";
 import { useFile } from "@/lib/queries";
 import type { ReviewComment } from "@reviewer/core/comments";
 import type { Diagnostic, FileEdits, Location } from "@reviewer/core/language";
@@ -78,13 +77,6 @@ interface CodeViewProps {
   onOpenLocation?: (path: string, lineNumber: number) => void;
   /** Scroll this one-based line into view and flash it. */
   reveal?: RevealTarget | null;
-  /**
-   * Put the caret in this file as soon as it is editable. Anything but null is
-   * a request; a new value re-asks, so the same file can be handed the caret
-   * twice. Used when a file is opened to be written rather than to be read —
-   * one just created from the tree.
-   */
-  caretKey?: number | null;
   /** Local review comments anchored to this file (optional — omit to disable). */
   comments?: ReadonlyArray<ReviewComment>;
   draft?: DraftLocation | null;
@@ -102,7 +94,6 @@ export function CodeView({
   onDirtyChange,
   onOpenLocation,
   reveal = null,
-  caretKey = null,
   comments,
   draft = null,
   onDraftOpen,
@@ -235,31 +226,6 @@ export function CodeView({
   }, [path, contents, readBuffer]);
   // The editable view renders off the pool, so there is nothing to prime.
   const highlightPrimed = useHighlightPrimed(highlightFile, false);
-
-  // A file opened to be written — one just created from the tree — takes the
-  // caret as soon as it has an editor to put it in, so the naming the user was
-  // in the middle of carries straight on into the file itself. The editor
-  // exists before the view has painted the element that holds the text, and
-  // focusing it before then does nothing, so the request stands for a few
-  // frames rather than being spent on the first one.
-  const editor = buffer.editor;
-  const editorFocused = buffer.isFocused;
-  useEffect(() => {
-    if (caretKey === null || editor === null) return;
-    let frame = 0;
-    let attempts = 0;
-    const take = () => {
-      // The caret goes to the top of the file: it is empty, or the user is
-      // about to start writing at the start of it either way. Focusing without
-      // a position leaves the element focused but the caret nowhere, and what
-      // is typed next goes nowhere with it.
-      editor.focus({ lineNumber: 1, character: 0 });
-      if (editorFocused() || (attempts += 1) > CARET_ATTEMPTS) return;
-      frame = window.requestAnimationFrame(take);
-    };
-    frame = window.requestAnimationFrame(take);
-    return () => window.cancelAnimationFrame(frame);
-  }, [caretKey, editor, editorFocused]);
 
   // The editor keeps offering to comment for as long as the selection stands,
   // which would put the offer on top of the composer it just opened. The flag
@@ -464,7 +430,7 @@ export function CodeView({
                 // Both layers paint from the same callback and into the same
                 // stylesheet, and the view keeps one of each.
                 onPostRender,
-                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}\n${commentGutterCSS}`,
+                unsafeCSS: `${selectionShadingCSS}\n${language.viewOptions.unsafeCSS}\n${find.viewOptions.unsafeCSS}\n${SELECTION_COMMENT_CSS}`,
                 ...gutterCommenting,
               }}
               edit={editing}

@@ -23,8 +23,7 @@ describe("the window bar's chords", () => {
     expect(chord("G", { shiftKey: true })).toBeNull();
   });
 
-  it("leaves the launchpad on ⌘L, off the run of places", () => {
-    expect(chord("l")).toEqual({ kind: "launchpad" });
+  it("counts the sessions from ⌘1, leaving ⌘0 out of the run", () => {
     expect(chord("0")).toBeNull();
   });
 
@@ -48,11 +47,6 @@ describe("the window bar's chords", () => {
   it("mints a session on ⌘T, and leaves ⌘⇧T to the browser", () => {
     expect(chord("t")).toEqual({ kind: "new-session" });
     expect(chord("T", { shiftKey: true })).toBeNull();
-  });
-
-  it("holds the launchpad to ⌘ alone as well", () => {
-    expect(chord("L", { shiftKey: true })).toBeNull();
-    expect(chord("l", { altKey: true })).toBeNull();
   });
 
   it("raises the project chip's dropdown on ⌘⇧P", () => {

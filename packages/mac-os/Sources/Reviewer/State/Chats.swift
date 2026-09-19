@@ -13,7 +13,6 @@
 // shell does to a session that the list should show — starting one, a
 // turn ending under it, opening it — is reported back for the list to
 // re-read (`onListChanged`).
-import AppKit
 import Foundation
 import Observation
 
@@ -75,9 +74,6 @@ final class Chats {
     private(set) var session: ChatSession?
     private(set) var catalog: ChatModelCatalog?
     private(set) var drafts: [String: ComposerDraft] = [:]
-    /// The native view standing in for the page, for the launchpad to
-    /// photograph in the web view's place.
-    @ObservationIgnored weak var pageView: NSView?
 
     var favorites: [String] {
         didSet { defaults.set(favorites, forKey: Keys.favorites) }

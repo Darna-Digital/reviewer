@@ -110,10 +110,9 @@ struct TurnErrorView: View {
     }
 }
 
-/// An agent at work: the pulsing dot beside a label. Given one, it names
-/// the work in flight; given none it cycles generic words, the honest
-/// rendering for the stretch where the model is generating and there is
-/// nothing else to report.
+/// An agent at work: the orb beside a label. Given one, it names the work in
+/// flight; given none it cycles generic words, the honest rendering for the
+/// stretch where the model is generating and there is nothing else to report.
 struct ThinkingIndicator: View {
     var label: String?
     @State private var word = 0
@@ -122,10 +121,7 @@ struct ThinkingIndicator: View {
 
     var body: some View {
         HStack(spacing: 7) {
-            Image(systemName: "circle.fill")
-                .font(.system(size: 8))
-                .foregroundStyle(Color.accentColor)
-                .symbolEffect(.pulse, options: .repeating)
+            Orb(size: 16)
             Text(label ?? Self.idleWords[word])
                 .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)

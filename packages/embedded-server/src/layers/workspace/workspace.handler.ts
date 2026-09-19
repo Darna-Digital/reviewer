@@ -31,34 +31,6 @@ export const WorkspaceHandler = HttpApiBuilder.group(
           s.writeFile(payload.path, payload.contents)
         ).pipe(Effect.as(ok))
       )
-      .handle("createPath", ({ payload }) =>
-        Effect.flatMap(WorkspaceService, (s) =>
-          s.createPath(payload.path, payload.kind)
-        ).pipe(Effect.as(ok))
-      )
-      .handle("deleteFile", ({ query }) =>
-        Effect.flatMap(WorkspaceService, (s) => s.deletePath(query.path)).pipe(
-          Effect.as(ok)
-        )
-      )
-      .handle("renameFile", ({ payload }) =>
-        Effect.flatMap(WorkspaceService, (s) =>
-          s.renamePath(payload.from, payload.to)
-        ).pipe(Effect.as(ok))
-      )
-      .handle("copyFile", ({ payload }) =>
-        Effect.flatMap(WorkspaceService, (s) =>
-          s.copyPath(payload.from, payload.to)
-        ).pipe(Effect.as(ok))
-      )
-      .handle("uploadFile", ({ payload }) =>
-        Effect.flatMap(WorkspaceService, (s) =>
-          s.uploadFile(payload.path, payload.base64)
-        ).pipe(Effect.as(ok))
-      )
-      .handle("trashFile", ({ payload }) =>
-        Effect.flatMap(WorkspaceService, (s) => s.trashPath(payload.path))
-      )
       .handle("revealFile", ({ payload }) =>
         Effect.flatMap(WorkspaceService, (s) =>
           s.revealPath(payload.path)

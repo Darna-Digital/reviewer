@@ -21,16 +21,11 @@ import { nextTabId, updateWindowTabs } from "./window-tabs.store";
 type RouterHandle = ReturnType<typeof useRouter>;
 
 export interface WindowTabActions {
-  /**
-   * Take the window to `tab`. Settles once the page is actually there, so a
-   * surface that is covering the window while it navigates knows when it is
-   * safe to get out of the way.
-   */
+  /** Take the window to `tab`. Settles once the page is actually there. */
   readonly select: (tab: WindowTab) => Promise<void>;
   /**
-   * Take the window to a place in the app rather than to a tab. The launchpad
-   * picks sections, and which tab ends up holding one is the strip's own
-   * business — see `trackLocation`.
+   * Take the window to a place in the app rather than to a tab: which tab ends
+   * up holding it is the strip's own business — see `trackLocation`.
    */
   readonly visit: (href: string) => Promise<void>;
   readonly close: (id: string) => void;

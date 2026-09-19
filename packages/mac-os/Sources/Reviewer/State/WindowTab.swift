@@ -4,8 +4,8 @@
 // tab is a route change in a page that has already primed it rather than a
 // trip over the bridge. What the shell holds is a picture of the strip,
 // reported whenever it changes, which the toolbar draws natively (see
-// `TabStripItems`), the launchpad lays out as cards, and the menu bar
-// names: the sessions ⌘1–9 reach, the modes ⌘G crosses between, and
+// `TabStripItems`) and the menu bar names: the sessions ⌘1–9 reach, the
+// modes ⌘G crosses between, and
 // whether the tab in front can be closed. See `ShellWindowTabStrip` in the
 // SPA's `lib/shell`.
 import Foundation
@@ -45,6 +45,28 @@ struct WindowTab: Decodable, Identifiable, Hashable, Sendable {
     let title: String
     let kind: WindowTabKind
     let pinned: Bool
+    /// Its agent is mid-turn, so the tab wears the orb.
+    let working: Bool
+    /// Its thread has moved since it was last read, so the tab wears the dot.
+    let waiting: Bool
+
+    /// The marks are read as absent rather than required: the shell can be
+    /// run against a build of the SPA older than itself (see `SpaSource`),
+    /// and a missing key would throw away the whole strip — tabs and all —
+    /// over two dots.
+    init(from decoder: any Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        title = try values.decode(String.self, forKey: .title)
+        kind = try values.decode(WindowTabKind.self, forKey: .kind)
+        pinned = try values.decode(Bool.self, forKey: .pinned)
+        working = try values.decodeIfPresent(Bool.self, forKey: .working) ?? false
+        waiting = try values.decodeIfPresent(Bool.self, forKey: .waiting) ?? false
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, title, kind, pinned, working, waiting
+    }
 }
 
 /// What a tab is, as the web strip sorts them — its `WindowTabKind` — with

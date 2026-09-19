@@ -3,7 +3,9 @@
 // handed to the agent, and a small JPEG thumbnail that stands for it in the
 // composer's chip and, once sent, in the message's preview — since a sent
 // message keeps only the thumbnail, it is made large enough to stay crisp
-// in the enlarged view.
+// in the enlarged view. A format the agent's CLI cannot open — a photo
+// library's HEIC, a pasted TIFF — is re-encoded on the way in (see
+// `Delivered`), since the server drops what it cannot name.
 import AppKit
 import Foundation
 import ImageIO
@@ -40,14 +42,16 @@ struct ComposerAttachment: Identifiable, Equatable {
     }
 
     static func read(bytes: Data, name: String, type: UTType) -> ComposerAttachment? {
-        guard bytes.count <= maxBytes, let full = NSImage(data: bytes) else { return nil }
-        let mimeType = type.preferredMIMEType ?? "image/png"
-        let downscaled = thumbnailData(of: bytes)
-        let thumbnail = downscaled ?? bytes
+        guard bytes.count <= maxBytes, let full = NSImage(data: bytes),
+            let delivered = Delivered(bytes: bytes, name: name, type: type)
+        else { return nil }
+        let mimeType = delivered.type.preferredMIMEType ?? "image/png"
+        let downscaled = jpeg(from: delivered.bytes, maxEdge: thumbnailMaxEdge, quality: 0.72)
+        let thumbnail = downscaled ?? delivered.bytes
         guard let preview = NSImage(data: thumbnail) else { return nil }
         return ComposerAttachment(
-            name: name, mimeType: mimeType,
-            data: bytes.base64EncodedString(),
+            name: delivered.name, mimeType: mimeType,
+            data: delivered.bytes.base64EncodedString(),
             thumbnail: "data:\(downscaled == nil ? mimeType : "image/jpeg");base64,\(thumbnail.base64EncodedString())",
             preview: preview, full: full)
     }
@@ -70,13 +74,53 @@ struct ComposerAttachment: Identifiable, Equatable {
         return []
     }
 
-    /// `bytes` downscaled to a JPEG no longer than the thumbnail edge, or
-    /// nil where the image cannot be drawn — the original then stands in.
-    private static func thumbnailData(of bytes: Data) -> Data? {
+    /// The bytes as the agent will read them. The server decodes an upload to
+    /// a temp file it names from the extension, and writes only the formats
+    /// the CLIs read (`dropped-image.ts`), so anything else — a photo
+    /// library's HEIC, a pasted TIFF — is re-encoded to JPEG here. It would
+    /// otherwise be thrown away server-side, after the composer had already
+    /// shown its chip and the message had been sent.
+    private struct Delivered {
+        let bytes: Data
+        let name: String
+        let type: UTType
+
+        init?(bytes: Data, name: String, type: UTType) {
+            if ComposerAttachment.deliveredTypes.contains(where: type.conforms(to:)) {
+                (self.bytes, self.name, self.type) = (bytes, name, type)
+                return
+            }
+            guard let edge = ComposerAttachment.pixelEdge(of: bytes),
+                let jpeg = ComposerAttachment.jpeg(from: bytes, maxEdge: edge, quality: 0.92),
+                jpeg.count <= ComposerAttachment.maxBytes
+            else { return nil }
+            self.bytes = jpeg
+            self.name = "\((name as NSString).deletingPathExtension).jpg"
+            self.type = .jpeg
+        }
+    }
+
+    private static let deliveredTypes: Set<UTType> = [.png, .jpeg, .gif, .webP, .bmp, .svg]
+
+    /// The longest edge of the image as it was encoded, so a re-encode keeps
+    /// the resolution it came at.
+    private static func pixelEdge(of bytes: Data) -> CGFloat? {
+        guard let source = CGImageSourceCreateWithData(bytes as CFData, nil),
+            let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+            let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
+            let height = properties[kCGImagePropertyPixelHeight] as? CGFloat
+        else { return nil }
+        return max(width, height)
+    }
+
+    /// `bytes` as a JPEG no longer than `maxEdge`, or nil where the image
+    /// cannot be drawn. Drawn through the thumbnail API at every size, since
+    /// that is what applies the EXIF rotation a phone's photo carries.
+    private static func jpeg(from bytes: Data, maxEdge: CGFloat, quality: Double) -> Data? {
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
-            kCGImageSourceThumbnailMaxPixelSize: thumbnailMaxEdge,
+            kCGImageSourceThumbnailMaxPixelSize: maxEdge,
         ]
         guard let source = CGImageSourceCreateWithData(bytes as CFData, nil),
             let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
@@ -85,7 +129,7 @@ struct ComposerAttachment: Identifiable, Equatable {
         guard let destination = CGImageDestinationCreateWithData(output, UTType.jpeg.identifier as CFString, 1, nil) else {
             return nil
         }
-        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: 0.72] as CFDictionary)
+        CGImageDestinationAddImage(destination, image, [kCGImageDestinationLossyCompressionQuality: quality] as CFDictionary)
         guard CGImageDestinationFinalize(destination) else { return nil }
         return output as Data
     }

@@ -6,6 +6,7 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { api, fetchClient } from "@/lib/api/client";
+import { island } from "@/lib/shell";
 import { isCloudRunActive } from "@reviewer/core/cloud";
 import { isMultiRepo } from "@reviewer/core/workspace";
 import type { DiffTarget, LogQuery } from "@/lib/api/types";
@@ -202,6 +203,30 @@ const RECENT_CHATS = 30;
  */
 const RUNNING_TURN_POLL_MS = 4_000;
 
+/**
+ * A turn that *starts* elsewhere reaches the list the same way: not at all.
+ * Nothing invalidates a list over work this document never touched, so a
+ * session set going in another window — or in the shell, by an agent in a tab
+ * whose conversation this island is not the one holding — sits there unmarked
+ * until something else happens to ask.
+ *
+ * In the shell that is the common case rather than the edge: the list is the
+ * sidebar, always on screen, and the sessions in it are as often another
+ * window's as this one's. So it is watched on a slow beat even while it holds
+ * nothing running, which is how a row that began working elsewhere comes to
+ * wear its orb; the fast beat above takes over from there. In a browser tab
+ * the list is a page the reader is looking at, and their own sends are what
+ * move it, so it is left alone as before.
+ */
+const IDLE_LIST_POLL_MS = 10_000;
+
+const listPoll = (running: boolean): number | false =>
+  running
+    ? RUNNING_TURN_POLL_MS
+    : island === undefined
+      ? false
+      : IDLE_LIST_POLL_MS;
+
 const hasRunningTurn = (
   items: ReadonlyArray<{ readonly turnState: string | null }> | undefined
 ): boolean => (items ?? []).some((chat) => chat.turnState === "running");
@@ -213,8 +238,7 @@ export const recentChatsOptions = () =>
     { params: { query: { limit: String(RECENT_CHATS) } } },
     {
       ...OWN_DATA,
-      refetchInterval: (query) =>
-        hasRunningTurn(query.state.data?.items) ? RUNNING_TURN_POLL_MS : false,
+      refetchInterval: (query) => listPoll(hasRunningTurn(query.state.data?.items)),
     }
   );
 
@@ -282,9 +306,11 @@ export const useChatPages = (filters: ChatListFilters, enabled = true) => {
     // it, a page can come back short and still have more after it.
     getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
     refetchInterval: (list) =>
-      (list.state.data?.pages ?? []).some((page) => hasRunningTurn(page?.items))
-        ? RUNNING_TURN_POLL_MS
-        : false,
+      listPoll(
+        (list.state.data?.pages ?? []).some((page) =>
+          hasRunningTurn(page?.items)
+        )
+      ),
   });
 
   const sessions = useMemo(

@@ -6,21 +6,16 @@
  * commit composer under them; a pull request's it draws beside the sidebar
  * instead, under the pull request's overview, the sidebar holding the list
  * of them — from a picture of what `FileSidebar` would be given, and sends
- * back what was done to it. The tree's data and every action
- * on it stay this page's: the listing, the diff, the file actions and the git
- * actions are all wired here, and the shell only ever asks.
+ * back what was done to it. The tree's data and every action on it stay this
+ * page's: the listing, the diff and the git actions are all wired here, and
+ * the shell only ever asks.
  *
- * The shell confirms what the web tree confirms — a deletion, a discard — and
- * prompts for what the web tree edits inline — a new name — before it sends,
+ * The shell confirms what the web tree confirms — a discard — before it sends,
  * so every action arrives ready to carry out.
  */
 import { useEffect, useMemo, useRef } from "react";
 import type { CommitDraft } from "@reviewer/core/git-message";
 import type { GitStatusEntry } from "@reviewer/core/repo";
-import type {
-  FileActionsFunctions,
-  TreeItem,
-} from "@/interactions/file-actions/interfaces/file-actions.interfaces";
 import type { AppMode } from "@/lib/api/types";
 import {
   island,
@@ -46,10 +41,6 @@ export interface ShellTreeSource {
   readonly onFileSelect: (path: string | null) => void;
   readonly onShowHistory: (path: string) => void;
   readonly onDiscardPaths?: (paths: ReadonlyArray<string>) => void;
-  /** Already confirmed by the shell; the rows go straight to the trash. */
-  readonly onTrashPaths?: (items: ReadonlyArray<TreeItem>) => Promise<void>;
-  readonly onRenamePath?: (from: string, to: string) => Promise<void>;
-  readonly actions?: FileActionsFunctions;
   readonly commit?: ShellCommitSource;
   /** What the changes are read against, while they are your own. */
   readonly comparison?: ShellComparison;
@@ -85,12 +76,6 @@ const act = (source: ShellTreeSource, action: ShellTreeAction): void => {
       return source.onShowHistory(action.path);
     case "discard":
       return source.onDiscardPaths?.(action.paths);
-    case "delete":
-      return void source.onTrashPaths?.(action.items);
-    case "rename":
-      return void source.onRenamePath?.(action.from, action.to);
-    case "create":
-      return void source.actions?.create(action.path, action.entry);
     case "commit":
       return void source.commit?.onCommit(
         action.message,
@@ -119,7 +104,6 @@ export function useShellTree(source: ShellTreeSource | null): void {
   const selected = source?.selectedFile ?? null;
   const loading = source?.loading ?? false;
   const projectPath = source?.projectPath ?? null;
-  const editable = source?.actions !== undefined;
   const discardable = source?.onDiscardPaths !== undefined;
   const changes = source?.commit?.changes ?? null;
   const draft = source?.commit?.draft ?? null;
@@ -135,11 +119,10 @@ export function useShellTree(source: ShellTreeSource | null): void {
             gitStatus,
             loading,
             projectPath,
-            editable,
             discardable,
           }
         : null,
-    [mode, paths, gitStatus, loading, projectPath, editable, discardable]
+    [mode, paths, gitStatus, loading, projectPath, discardable]
   );
   useEffect(() => {
     if (!shellDrawsTree) return;

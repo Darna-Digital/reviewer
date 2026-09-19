@@ -399,6 +399,21 @@ private final class FileTreeCellView: NSTableCellView {
     private static let iconSize: CGFloat = 16
     private static let closedFolder = folderSymbol("folder.fill")
     private static let openFolder = folderSymbol("folder")
+    private static let badgeFont = NSFont.monospacedSystemFont(ofSize: 11, weight: .semibold)
+
+    /// A label's cell keeps `badgeInset` of padding around the text it
+    /// draws, and reports an `intrinsicContentSize` without it — a field
+    /// that narrow shears the trailing stem off the letter. Every letter is
+    /// one monospaced glyph, so they all fit the same width, measured once;
+    /// the padding comes back out of the frame when it is placed, so the
+    /// letter sits where the trailing margin says it does.
+    private static let badgeInset: CGFloat = 2
+    private static let badgeWidth: CGFloat = {
+        let field = NSTextField(labelWithString: "M")
+        field.font = badgeFont
+        field.alignment = .right
+        return ceil(field.fittingSize.width)
+    }()
 
     private let iconView = NSImageView()
     private let nameField = NSTextField(labelWithString: "")
@@ -417,7 +432,7 @@ private final class FileTreeCellView: NSTableCellView {
         nameField.lineBreakMode = .byTruncatingMiddle
         nameField.maximumNumberOfLines = 1
         nameField.cell?.truncatesLastVisibleLine = true
-        badgeField.font = .monospacedSystemFont(ofSize: 11, weight: .semibold)
+        badgeField.font = Self.badgeFont
         badgeField.alignment = .right
         dotView.wantsLayer = true
         dotView.layer?.cornerRadius = 3
@@ -479,9 +494,10 @@ private final class FileTreeCellView: NSTableCellView {
         iconView.frame = NSRect(x: 0, y: (height - iconSize) / 2, width: iconSize, height: iconSize)
         var trailing = bounds.width - 4
         if !badgeField.isHidden {
-            let width = ceil(badgeField.intrinsicContentSize.width)
-            badgeField.frame = NSRect(x: trailing - width, y: (height - 16) / 2, width: width, height: 16)
-            trailing -= width + 6
+            let width = Self.badgeWidth
+            badgeField.frame = NSRect(
+                x: trailing + Self.badgeInset - width, y: (height - 16) / 2, width: width, height: 16)
+            trailing -= width - Self.badgeInset + 6
         } else if !dotView.isHidden {
             dotView.frame = NSRect(x: trailing - 8, y: (height - 6) / 2, width: 6, height: 6)
             trailing -= 14

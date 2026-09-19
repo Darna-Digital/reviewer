@@ -5,8 +5,8 @@
  * lives here rather than in whichever of them needed it first — and with them the
  * one thing a dock page cannot work out for itself: which page it was expanded
  * from. Expanding is asked for while reading something, and that something is
- * where putting the surface down again belongs; a page reached from the launchpad
- * instead was not expanded from anywhere, and falls back to browsing the project.
+ * where putting the surface down again belongs; a page reached any other way
+ * was not expanded from anywhere, and falls back to browsing the project.
  *
  * A module variable rather than state: nothing renders differently for knowing
  * it, and the dock outlives every page it is asked about.

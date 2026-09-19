@@ -51,6 +51,7 @@ import {
   useRepo,
   useWorkspace,
 } from "@/lib/queries";
+import { island } from "@/lib/shell";
 import { REVIEW_HREF } from "@/lib/shell-route";
 import { setUiPrefs, useUiPrefs, type BottomTab } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
@@ -218,10 +219,20 @@ export function GitBottomDock({
           so it gives up its start corners to it — held off a corner that is not
           there, the lit top edge broke for a radius' worth at the join and
           started again a step to the right, with a notch of frame in the gap.
-          See `app-sheet-joined-start`. */}
+          See `app-sheet-joined-start`.
+
+          Except as a drawer inside the macOS shell, where there is no rail to
+          stand against and no row of sheets to be one of: the page above runs
+          to every edge of the island, and the surfaces this one used to share
+          the foot of the window with are drawn natively elsewhere. So it lifts
+          off the island's edges as a panel of its own — see `island-drawer`. A
+          page is the whole island again, and joins its edges as before. */}
       <div
         className={cn(
-          "app-sheet app-sheet-joined-start overflow-hidden",
+          "app-sheet overflow-hidden",
+          expanded || island === undefined
+            ? "app-sheet-joined-start"
+            : "island-drawer",
           expanded ? "app-page-joined min-h-0 flex-1" : "shrink-0",
           !shown && "hidden"
         )}

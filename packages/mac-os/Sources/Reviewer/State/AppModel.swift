@@ -65,13 +65,6 @@ final class AppModel {
     /// Whether the system's sidebar column is out; the split view's own
     /// toggle and the View menu both move it.
     var sidebarShown = true
-    /// The launchpad — out or in, how far it pushes the page, the pull
-    /// moving it — and the trackpad's ways into it, heard app-wide.
-    let launchpad = Launchpad()
-    @ObservationIgnored private var launchpadGestures: LaunchpadGestureMonitor?
-    /// The last picture of each tab, taken as it was left, for the launchpad.
-    private(set) var snapshots: [String: NSImage] = [:]
-
     var bottomExpanded = true
     var bottomTab: BottomPaneTab = .terminal
     var bottomHeight: CGFloat = 280
@@ -109,13 +102,6 @@ final class AppModel {
         shiftTaps = ShiftTapMonitor { [weak self] in
             guard let self, !search.isShown else { return }
             findFile()
-        }
-        // Whichever way the launchpad is asked for — the chord, the button,
-        // two fingers on the bar, a seam pulled — the tab being left is photographed as it
-        // comes out, so its card shows the page as it was.
-        launchpad.onShow = { [weak self] in self?.snapshotActiveTab() }
-        launchpadGestures = LaunchpadGestureMonitor { [weak self] gesture in
-            self?.hear(gesture)
         }
         page.onNavigated = { [weak self] href in self?.chats.follow(href: href) }
         chats.onListChanged = { [weak self] in self?.page.send(SessionAction.refetch) }
@@ -208,14 +194,14 @@ final class AppModel {
     // MARK: search
 
     func findFile() {
-        guard hasProject, !launchpad.isShown else { return }
+        guard hasProject else { return }
         search.open(.files)
     }
 
     /// ⌘⇧F: the grep, opening on whatever the page has highlighted, so the
     /// chord over a word searches for it.
     func findInFiles() {
-        guard hasProject, !launchpad.isShown else { return }
+        guard hasProject else { return }
         Task {
             let selected = try? await page.webView.evaluateJavaScript("window.getSelection().toString()") as? String
             search.open(.text, seed: Self.seed(fromSelection: selected ?? ""))
@@ -422,13 +408,9 @@ final class AppModel {
         windowTabs.active?.pinned == false
     }
 
-    /// The strip as the island last drew it. A tab gone from it takes its
-    /// picture with it.
+    /// The strip as the island last drew it.
     private func take(_ strip: WindowTabStrip) {
         windowTabs = strip
-        let open = Set(strip.tabs.map(\.id))
-        snapshots = snapshots.filter { open.contains($0.key) }
-        launchpad.cards = strip.tabs.count
     }
 
     func newSession() {
@@ -436,7 +418,7 @@ final class AppModel {
             lastError = "open a project before starting an agent session"
             return
         }
-        leaveTab { $0.send(WindowTabAction.newSession) }
+        page.send(WindowTabAction.newSession)
     }
 
     func closeCurrentTab() {
@@ -444,7 +426,7 @@ final class AppModel {
     }
 
     func select(tabId: String) {
-        leaveTab { $0.send(WindowTabAction.select(id: tabId)) }
+        page.send(WindowTabAction.select(id: tabId))
     }
 
     func closeTab(id: String) {
@@ -452,57 +434,14 @@ final class AppModel {
     }
 
     func selectNextTab(offset: Int) {
-        leaveTab { $0.send(WindowTabAction.step(offset)) }
+        page.send(WindowTabAction.step(offset))
     }
 
     /// ⌘G: across to the other way of working — Sessions from Code, Code
     /// from Sessions or a conversation — the strip's own rule for which.
     func switchMode() {
         guard windowTabs.canSwitchMode else { return }
-        leaveTab { $0.send(WindowTabAction.mode) }
-    }
-
-    func toggleLaunchpad() {
-        guard hasProject else { return }
-        launchpad.toggle()
-    }
-
-    /// Two fingers over the bar — see `LaunchpadGestureMonitor`. Nothing to
-    /// lay out without a project, so the pull waits for one as the button
-    /// and the chord do.
-    private func hear(_ gesture: LaunchpadGesture) {
-        guard hasProject else { return }
-        switch gesture {
-        case .pullBegan: launchpad.beginPull()
-        case .pulled(let travel): launchpad.pull(travel: travel)
-        case .pullEnded: launchpad.endPull()
-        }
-    }
-
-    /// Leaving a tab takes its picture first, so the launchpad shows it as
-    /// it was; then the strip is asked to switch, and the launchpad — which
-    /// the ask may have come from — is put away.
-    private func leaveTab(_ switching: @escaping (IslandHost) -> Void) {
-        let leaving = windowTabs.activeId
-        launchpad.close()
-        Task {
-            snapshots[leaving] = await snapshotPage()
-            switching(page)
-        }
-    }
-
-    private func snapshotActiveTab() {
-        let id = windowTabs.activeId
-        Task { snapshots[id] = await snapshotPage() }
-    }
-
-    /// The page as it stands: the native sessions surface while the shell
-    /// draws one in the island's place, otherwise the web view.
-    private func snapshotPage() async -> NSImage? {
-        if chats.page != nil, let view = chats.pageView {
-            return view.snapshotRegion()
-        }
-        return try? await page.webView.takeSnapshot(configuration: nil)
+        page.send(WindowTabAction.mode)
     }
 
     // MARK: bottom pane

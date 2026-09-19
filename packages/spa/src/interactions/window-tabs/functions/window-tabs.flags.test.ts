@@ -53,7 +53,7 @@ describe("a strip saved before collaboration was taken out", () => {
 });
 
 describe("a switched-off sessions button", () => {
-  it("holds its tab in the strip, where the launchpad still lists it", () => {
+  it("holds its tab in the strip", () => {
     expect(initialWindowTabs().tabs.map((t) => t.id)).toContain(
       SESSIONS_TAB_ID
     );

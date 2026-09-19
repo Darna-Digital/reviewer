@@ -84,45 +84,6 @@ describe("WorkspaceService", () => {
       ).toBe("NoRepoSelected");
     }).pipe(Effect.provide(WorkspaceMemory({ project: null })))
   );
-  it.effect("createPath adds an empty file", () =>
-    Effect.gen(function* () {
-      const ws = yield* WorkspaceService;
-      yield* ws.createPath("src/new.ts", "file");
-      const file = yield* ws.readFile("src/new.ts");
-      expect(file.contents).toBe("");
-    }).pipe(Effect.provide(WorkspaceMemory({ project: "/repo" })))
-  );
-  it.effect("createPath refuses to clobber an existing path", () =>
-    Effect.gen(function* () {
-      const ws = yield* WorkspaceService;
-      const error = yield* Effect.flip(ws.createPath("src/x.ts", "file"));
-      expect(error._tag).toBe("PathExists");
-    }).pipe(
-      Effect.provide(
-        WorkspaceMemory({ project: "/repo", files: { "src/x.ts": "hello" } })
-      )
-    )
-  );
-  it.effect("createPath refuses a directory that already holds files", () =>
-    Effect.gen(function* () {
-      const ws = yield* WorkspaceService;
-      const error = yield* Effect.flip(ws.createPath("src", "directory"));
-      expect(error._tag).toBe("PathExists");
-    }).pipe(
-      Effect.provide(
-        WorkspaceMemory({ project: "/repo", files: { "src/x.ts": "hello" } })
-      )
-    )
-  );
-  it.effect(
-    "createPath fails with NoRepoSelected when nothing is selected",
-    () =>
-      Effect.gen(function* () {
-        const ws = yield* WorkspaceService;
-        const error = yield* Effect.flip(ws.createPath("a.ts", "file"));
-        expect(error._tag).toBe("NoRepoSelected");
-      }).pipe(Effect.provide(WorkspaceMemory({ project: null })))
-  );
   it.effect("writeFile then readFile round-trips contents", () =>
     Effect.gen(function* () {
       const ws = yield* WorkspaceService;

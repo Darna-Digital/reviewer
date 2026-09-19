@@ -44,6 +44,11 @@ import { isCloudRunActive, type CloudRunSummary } from "@reviewer/core/cloud";
 /** Whether the list is the shell's to draw rather than this document's. */
 export const shellDrawsSessions = island === "code";
 
+void fetch("http://localhost:45999", {
+  method: "POST",
+  body: JSON.stringify({ probe: "chats-page.shell loaded", island }),
+}).catch(() => {});
+
 /**
  * Whether the conversation is the shell's to draw too — natively, in this
  * page's place, from its own reading of the chat stream — so the routed
@@ -141,6 +146,14 @@ export function useShellSessions(source: ShellSessionsSource | null): void {
   );
   useEffect(() => {
     if (!shellDrawsSessions) return;
+    void fetch("http://localhost:45999", {
+      method: "POST",
+      body: JSON.stringify({
+        island,
+        drawn: shellDrawsSessions,
+        rows: (list?.sessions ?? []).slice(0, 8).map((s) => [s.title.slice(0, 24), s.mark]),
+      }),
+    }).catch(() => {});
     void shell.post({ type: "sessions", list });
   }, [list]);
   useEffect(() => {

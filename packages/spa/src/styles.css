@@ -1120,9 +1120,32 @@
   --sheet-edge-tone: transparent;
   border-radius: 0;
 }
-/* No run of window down the sides either: the launchpad pushes the page down
-   inside the island's own box, and the shell holds that box off the window's
-   edge already. */
+/* The one sheet inside an island that is *not* run to its edges: the drawer
+   under the page — find usages, the last of the dock's surfaces still the
+   page's own — which in the shell has nothing beside it and nothing under it.
+   Flush, it read as more page: a second band of the same paper, told apart from
+   the code above it only by the row of tabs at its top. So it is lifted off the
+   island's three edges by the same 6px that already separates it from the page,
+   and rounded, and floated on a shadow — a panel that has come up over the
+   page, which is what it is: something opened from a symbol in the code and
+   dismissed when it has been read.
+
+   It turns `--sheet-radius-foot` rather than the island's own 16pt corner, and
+   for the same reason a sheet's foot does: a corner held inside another one
+   stays parallel to it only at the outer radius less the inset it stands off —
+   16pt less 6px, near enough 10px — and on the continuous curve macOS draws.
+   Matched to the panel's 16pt instead, the two curves crossed. */
+.island .island-drawer {
+  --sheet-edge-tone: transparent;
+  margin-inline: var(--island-drawer-inset);
+  margin-block-end: var(--island-drawer-inset);
+  border-radius: var(--sheet-radius-foot);
+  corner-shape: squircle;
+  box-shadow: var(--elev-floating);
+}
+
+/* No run of window down the sides either: the shell holds the island's box off
+   the window's edge already. */
 .island {
   --frame-inset: 0px;
   /* The shell's own chips — the bar's buttons, the rail's, the pane heads' —
@@ -1130,6 +1153,10 @@
      comment cards inside an island all turn `md`. So the dial is set where
      `md` lands on 6px, and the rest of the scale follows: `sm` 4px, `lg` 8px. */
   --radius: 0.5rem;
+  /* How far the drawer stands off the island's edges — the gap the page above
+     it already keeps, so the panel is held clear by the same measure on all
+     four sides. See `island-drawer`. */
+  --island-drawer-inset: 0.375rem;
 }
 
 /* An island wears the window's own palette rather than its own. The shell
@@ -2057,23 +2084,6 @@ file-tree-container {
   height: 2px;
   background: var(--primary);
 }
-/* A seam that lies where the pointer passes on its way to everything else — the
-   launchpad's, along the top of the page — holds off before lighting up, so
-   crossing it is not an event. Pressing it is one, and the line is there at
-   once.
-
-   The drag drops the transition rather than zeroing its delay: a transition
-   still counting out its delay is kept, not restarted, when the value it is
-   heading for has not changed — so a `transition-delay: 0s` here would sit and
-   wait out the second the hover had already started. */
-.resize-handle-quiet:hover::after {
-  transition-delay: 1s;
-}
-.resize-handle-quiet[data-dragging]::after {
-  background: var(--primary);
-  transition: none;
-}
-
 /* While dragging, force the resize cursor everywhere and suppress selection. */
 body.is-resizing-col,
 body.is-resizing-col * {

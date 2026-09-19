@@ -5,7 +5,6 @@
 // the tab strip and the sessions list are still its — but shows nothing of
 // its own on these pages inside the shell; what stands here is opaque, on
 // the island's own material, so the two read as one panel.
-import AppKit
 import SwiftUI
 
 struct ChatPageView: View {
@@ -29,7 +28,6 @@ struct ChatPageView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: IslandPalette.island))
-        .background(PageAnchor())
     }
 }
 
@@ -114,33 +112,3 @@ private struct NewChatView: View {
     }
 }
 
-/// Where the native page stands in the window, registered for the
-/// launchpad to photograph it in the web view's place.
-private struct PageAnchor: NSViewRepresentable {
-    @Environment(AppModel.self) private var model
-
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        model.chats.pageView = view
-        return view
-    }
-
-    func updateNSView(_ nsView: NSView, context: Context) {
-        model.chats.pageView = nsView
-    }
-}
-
-extension NSView {
-    /// This view's region of the window, drawn to an image — the SwiftUI
-    /// content over it included, since the window's content view is what
-    /// is asked to draw the region.
-    func snapshotRegion() -> NSImage? {
-        guard let content = window?.contentView else { return nil }
-        let rect = convert(bounds, to: content)
-        guard !rect.isEmpty, let rep = content.bitmapImageRepForCachingDisplay(in: rect) else { return nil }
-        content.cacheDisplay(in: rect, to: rep)
-        let image = NSImage(size: rect.size)
-        image.addRepresentation(rep)
-        return image
-    }
-}

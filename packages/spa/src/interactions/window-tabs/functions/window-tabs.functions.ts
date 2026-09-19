@@ -61,11 +61,10 @@ export const isPinnedTab = (tab: WindowTab): boolean => tab.kind !== "session";
 
 /**
  * The tabs the strip shows. With its button switched off Sessions stays in the
- * strip — the launchpad goes on listing it, and a conversation still has
- * somewhere to be handed back to — but leads the window no more than the
- * launchpad does, so it is left out of the bar, leaving ⌘G nowhere to cross to.
- * It comes back for as long as the window is on it: a bar showing a page while
- * highlighting none of its tabs reads as having lost its place.
+ * strip — a conversation still has somewhere to be handed back to — but is left
+ * out of the bar, leaving ⌘G nowhere to cross to. It comes back for as long as
+ * the window is on it: a bar showing a page while highlighting none of its tabs
+ * reads as having lost its place.
  */
 export function stripTabs({
   tabs,

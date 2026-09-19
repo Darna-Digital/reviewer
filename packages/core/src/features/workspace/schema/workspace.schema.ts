@@ -89,37 +89,6 @@ export const WriteFile = Schema.Struct({
   contents: Schema.String,
 });
 export type WriteFile = typeof WriteFile.Type;
-export const RenameFile = Schema.Struct({
-  from: Schema.String,
-  to: Schema.String,
-});
-export type RenameFile = typeof RenameFile.Type;
-/** A file dropped in from outside the project — bytes, so binaries survive. */
-export const UploadFile = Schema.Struct({
-  path: Schema.String,
-  base64: Schema.String,
-});
-export type UploadFile = typeof UploadFile.Type;
-/**
- * Where a deleted path went. Deleting moves it into the project's own trash
- * rather than unlinking it, so undoing a delete is an ordinary rename back.
- */
-export const Trashed = Schema.Struct({
-  path: Schema.String,
-});
-export type Trashed = typeof Trashed.Type;
-export const CopyPath = Schema.Struct({
-  from: Schema.String,
-  to: Schema.String,
-});
-export type CopyPath = typeof CopyPath.Type;
-export const PathKind = Schema.Literals(["file", "directory"]);
-export type PathKind = typeof PathKind.Type;
-export const CreatePath = Schema.Struct({
-  path: Schema.String,
-  kind: PathKind,
-});
-export type CreatePath = typeof CreatePath.Type;
 export const BrowseQuery = Schema.Struct({
   path: Schema.optionalKey(Schema.String),
 });

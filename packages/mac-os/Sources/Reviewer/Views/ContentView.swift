@@ -3,8 +3,8 @@
 // and the project tree beside it — and on the detail column, the web app's
 // frame colour with two rounded panels standing on it: the page island
 // wearing the open-file band along its top, and the bottom pane under it.
-// The toolbar — the window tabs, the launchpad button — is the window's
-// own bare surface over the detail. The title bar is put away, so the pane
+// The toolbar — the window tabs — is the window's own bare surface over
+// the detail. The title bar is put away, so the pane
 // runs to the window's top edge with the traffic lights and the sidebar's
 // own toggle standing inside it, as Music has it — which the system only
 // does for the full-height unified toolbar (see `ReviewerApp`); ⌃⌘S and
@@ -14,12 +14,7 @@
 // names the project heads the column it fills, and goes with it.
 // The seam between the islands is the frame showing through, and resizes
 // what it parts; the seam between the sidebar and the detail is the
-// system's. The search dialog goes over all of it when it is up; the
-// launchpad slides out from under the toolbar across the whole window and
-// pushes the whole split view down — the sidebar's pane of glass along
-// with the frame and the islands on it, one surface giving way, dimmed
-// under one scrim — by exactly its own height, onto the bare frame the
-// window shows above it (see `Launchpad`, `LaunchpadLayer`). With the
+// system's. The search dialog goes over all of it when it is up. With the
 // sidebar put away, the rail moves onto the frame beside the page: the dock
 // and the bottom pane are reached from it either way. Before the server
 // answers, the page's island shows the connection instead; answered with
@@ -34,7 +29,6 @@ struct ContentView: View {
     @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
-        let launchpad = model.launchpad
         NavigationSplitView(columnVisibility: columnVisibility) {
             SidebarColumn()
                 .navigationSplitViewColumnWidth(min: 240, ideal: 320, max: 560)
@@ -48,25 +42,7 @@ struct ContentView: View {
         .navigationTitle("")
         .toolbar { ToolbarItems() }
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-        // The split view giving way to the launchpad: dimmed, and moved
-        // down by the panel's height — not resized, so the web view, the
-        // outline and the terminal are composited down rather than laid
-        // out again on every frame of the push — glass, frame and islands
-        // as one, and what goes past the window's bottom edge is simply
-        // gone. The scrim rides what it dims, so the surface the panel
-        // stands on stays bright. Behind it all the bare frame, run up
-        // under the toolbar, is what the push uncovers.
-        .overlay {
-            if launchpad.isShown {
-                LaunchpadScrim()
-                    .transition(.opacity)
-            }
-        }
-        .offset(y: launchpad.isShown ? launchpad.height : 0)
         .background(Color(nsColor: IslandPalette.frame).ignoresSafeArea())
-        .overlay(alignment: .top) {
-            LaunchpadLayer()
-        }
         .overlay {
             if model.search.isShown {
                 SearchOverlay()
@@ -118,31 +94,6 @@ private struct ServerErrorAlert: ViewModifier {
     }
 }
 
-/// The launchpad over the window: the panel along the top, bare, on the
-/// frame the pushed split view uncovers. An overlay on the split view
-/// rather than a view in either column, so it is one grid across the
-/// window's width — the sidebar's edge has no say in where its cards
-/// break — and the width the grid is fitted to is the window's. Clipped,
-/// so the panel slides out from under the toolbar rather than over it.
-/// Empty while the launchpad is in, and nothing to hit.
-private struct LaunchpadLayer: View {
-    @Environment(AppModel.self) private var model
-
-    var body: some View {
-        let launchpad = model.launchpad
-        ZStack(alignment: .top) {
-            if launchpad.isShown {
-                LaunchpadPanel()
-                    .frame(height: launchpad.height)
-                    .transition(.move(edge: .top))
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .clipped()
-        .onGeometryChange(for: CGSize.self) { $0.size } action: { launchpad.canvas = $0 }
-    }
-}
-
 /// The rail down the sidebar's leading edge, and the tree beside it. On
 /// the sessions surface the rail collapses and the list takes its column
 /// (see `AppModel.railShown`), sliding out and back at the sidebar's own
@@ -182,8 +133,7 @@ private struct SidebarToolbarItems: ToolbarContent {
 /// `PullRequestColumn`) — with the rail beside them while the sidebar is
 /// away and the page is on a surface the rail serves; on the sessions
 /// surface it collapses here as it does in the sidebar, and the islands
-/// take the gap it stood in. The seam the launchpad is pulled out by lies
-/// along their top edge, on the run of frame under the bar.
+/// take the gap it stood in.
 private struct DetailColumn: View {
     @Environment(AppModel.self) private var model
 
@@ -191,9 +141,6 @@ private struct DetailColumn: View {
 
     var body: some View {
         islands
-            .overlay(alignment: .top) {
-                LaunchpadSeam(edge: .pageHead)
-            }
             .background(Color(nsColor: IslandPalette.frame))
     }
 
@@ -269,19 +216,13 @@ private struct DetailColumn: View {
     }
 }
 
-/// The toolbar over the detail: the window tabs, and the launchpad at the
-/// bar's far end — the web app's window bar, on the window's own bar, so
-/// nothing on it is drawn a second time inside the island. The tabs' pinned
-/// pair are the system's own glass toggles (see `TabStripItems`); every
-/// other item wears the web bar's chip instead, the glass put away per
-/// item (see `BarChipStyle`). The launchpad is held at the trailing edge
-/// by a `Spacer` item ahead of it — the bar otherwise sets the detail's
-/// items in one run from its leading end and leaves the button on the
-/// tabs' heels, and a `ToolbarSpacer(.flexible)` in the same place stays
-/// at its minimum on this bar, where a bare `Spacer` becomes the toolbar's
-/// own flexible space. The sidebar's toggle is the system's, standing
-/// in the sidebar's own pane beside the traffic lights rather than
-/// here, and the project chip stands with it (see
+/// The toolbar over the detail: the window tabs — the web app's window bar,
+/// on the window's own bar, so nothing on it is drawn a second time inside
+/// the island. The tabs' pinned pair are the system's own glass toggles (see
+/// `TabStripItems`); every other item wears the web bar's chip instead, the
+/// glass put away per item (see `BarChipStyle`). The sidebar's toggle is the
+/// system's, standing in the sidebar's own pane beside the traffic lights
+/// rather than here, and the project chip stands with it (see
 /// `SidebarToolbarItems`). The branch picker is the sidebar's, over the
 /// tree it names, as the web header has it.
 private struct ToolbarItems: ToolbarContent {
@@ -291,17 +232,6 @@ private struct ToolbarItems: ToolbarContent {
         if model.hasProject {
             TabStripItems(model: model)
         }
-        ToolbarItem(placement: .primaryAction) { Spacer() }
-        ToolbarItem(placement: .primaryAction) {
-            Button { model.toggleLaunchpad() } label: {
-                Label("Launchpad", systemImage: "square.grid.2x2")
-                    .barGlyph()
-            }
-            .buttonStyle(BarChipStyle(isOn: model.launchpad.isShown))
-            .help("Show every open tab (⌘L)")
-            .disabled(!model.hasProject)
-        }
-        .sharedBackgroundVisibility(.hidden)
     }
 }
 

@@ -28,11 +28,6 @@ import {
 } from "@/components/layout/window-bar.shortcuts";
 import { Orb } from "@/components/ui/orb";
 import { useThinkingChatIds } from "@/interactions/chats/adapters/thinking-chats.hook.adapter";
-import {
-  closeTabOverview,
-  toggleTabOverview,
-  useTabOverview,
-} from "@/interactions/tab-preview/adapters/tab-overview.store";
 import { isChatUnread } from "@reviewer/core/chats";
 import { useRecentChats } from "@/lib/queries";
 import { cn } from "@/lib/utils";
@@ -64,7 +59,7 @@ const NEW_SESSION_KEYS = "⌘T";
 /** The chords that are the strip's to answer; the rest are the bar's. */
 const STRIP_SHORTCUTS: ReadonlySet<BarShortcut["kind"]> = new Set<
   BarShortcut["kind"]
->(["new-session", "launchpad", "mode", "session"]);
+>(["new-session", "mode", "session"]);
 
 /**
  * The chord that takes the window to a tab. The digits count the conversations
@@ -86,8 +81,6 @@ const tabKeys = (
 export interface WindowTabStripHandle {
   readonly strip: ReadonlyArray<WindowTab>;
   readonly activeId: string;
-  /** The tab being looked at: none while the launchpad covers the window. */
-  readonly showingId: string | null;
   readonly pinnedCount: number;
   readonly show: (tab: WindowTab) => void;
   readonly mint: () => void;
@@ -107,30 +100,12 @@ export function useWindowTabStrip(): WindowTabStripHandle {
   // The pinned tabs lead the strip, so what follows them is slot 1 onwards.
   const pinnedCount = strip.filter(isPinnedTab).length;
   const { select, close, openSession, prime } = useWindowTabActions();
-  const overviewOpen = useTabOverview();
-  // The launchpad is where the window is while it is up, so none of the tabs
-  // behind it is the one being looked at. The strip keeps its roving focus on
-  // the tab the window will return to.
-  const showingId = overviewOpen ? null : activeId;
-  /**
-   * Take the window to a tab from the strip. The launchpad is a place the
-   * window goes to rather than a page it holds open, so picking a tab from
-   * behind it answers it as much as picking one of its own cards does — and
-   * unlike a card, the strip is not what the panel is covering, so it goes
-   * straight away rather than waiting out the navigation.
-   */
+  /** Take the window to a tab from the strip. */
   const show = (tab: WindowTab) => {
-    closeTabOverview();
     void select(tab);
   };
-  /**
-   * Mint a session, from the ✛ or from its chord. The launchpad answers to this
-   * as it answers to `show`, and for the same reason: the bar is what you
-   * reached for, and a panel left standing over the session it has just started
-   * is a panel you have to dismiss before you can type into it.
-   */
+  /** Mint a session, from the ✛ or from its chord. */
   const mint = () => {
-    closeTabOverview();
     void openSession();
   };
 
@@ -208,8 +183,6 @@ export function useWindowTabStrip(): WindowTabStripHandle {
       switch (shortcut.kind) {
         case "new-session":
           return mint();
-        case "launchpad":
-          return toggleTabOverview();
         case "mode": {
           const state = windowTabsSnapshot();
           const tab = nextModeTab(stripTabs(state), state.activeId);
@@ -239,7 +212,6 @@ export function useWindowTabStrip(): WindowTabStripHandle {
   return {
     strip,
     activeId,
-    showingId,
     pinnedCount,
     show,
     mint,
@@ -254,7 +226,6 @@ export function WindowTabStrip() {
   const {
     strip,
     activeId,
-    showingId,
     pinnedCount,
     show,
     mint,
@@ -287,7 +258,7 @@ export function WindowTabStrip() {
         className={cn(TAB_STRIP, NO_DRAG)}
       >
         {strip.map((tab, at) => {
-          const active = tab.id === showingId;
+          const active = tab.id === activeId;
           const pinned = isPinnedTab(tab);
           return (
             <BarTooltip

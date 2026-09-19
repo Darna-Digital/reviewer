@@ -62,8 +62,8 @@ struct ReviewerApp: App {
 /// while any part of the window has focus — the sidebar, a terminal — and
 /// not only while the page island has the keyboard.
 ///
-/// The chords are the web app's own — ⌘T for a session, ⌘L the launchpad,
-/// ⌘B the bottom pane, ⌘G across Code and Sessions, ⌘1–9 the sessions — so
+/// The chords are the web app's own — ⌘T for a session, ⌘B the bottom
+/// pane, ⌘G across Code and Sessions, ⌘1–9 the sessions — so
 /// the window answers the hands that learned it in the browser. The tab
 /// chords are the island's strip's to answer, and a menu equivalent takes
 /// the key before the page sees it, so each of those items hands its chord
@@ -102,9 +102,6 @@ struct ReviewerCommands: Commands {
         // than a second menu of the same name beside it.
         SidebarCommands()
         CommandGroup(before: .sidebar) {
-            Button("Launchpad") { model.toggleLaunchpad() }
-                .keyboardShortcut("l", modifiers: .command)
-                .disabled(!model.hasProject)
             Button(model.bottomExpanded ? "Hide Bottom Pane" : "Show Bottom Pane") { model.toggleBottomPane() }
                 .keyboardShortcut("b", modifiers: .command)
             Divider()
