@@ -1,16 +1,16 @@
 // The opener: every git repository the machine holds, laid out as a Finder
-// window — the sidebar's glass pane down the leading edge with Recents and
-// All Repositories at its head and, under Locations, each folder the walk
-// found repositories in; the picked list's name as the window's title on
-// the toolbar, with the search at the toolbar's trailing edge; and the
-// repositories as the system's own table — name, branch, where it sits,
-// when it was last opened — sortable on any column, with a status bar
-// along the foot counting them and saying while the walk is still on. A
-// click picks a row, a double-click or Return opens it as the project,
-// and the row's menu opens it in a window of its own — a second Reviewer,
-// with a server of its own — or reaches the folder in Finder. It is the
-// window up
-// while no project is (the workspace hands over to it, see `ContentView`),
+// window — the sidebar's glass pane down the leading edge with Recents,
+// Favorites and All Repositories at its head and, under Locations, each
+// folder the walk found repositories in; the picked list's name as the
+// window's title on the toolbar, with the search at the toolbar's trailing
+// edge; and the repositories as the system's own table — name, branch,
+// where it sits, when it was last opened — sortable on any column, with a
+// status bar along the foot counting them and saying while the walk is
+// still on. A click picks a row, a double-click or Return opens it as the
+// project, and the row's menu opens it in a window of its own — a second
+// Reviewer, with a server of its own — stars it among the favourites, or
+// reaches the folder in Finder. It is the window up while no project is
+// (the workspace hands over to it, see `ContentView`),
 // and the one ⌘O, ⇧⌘1 and the project chip bring up over an open
 // workspace; a repository opened in it hands back — the workspace forward,
 // the opener away. Everything it does goes through the same calls the File
@@ -37,12 +37,14 @@ struct RepoOpenerWindow: View {
 /// Which list the table shows — the sidebar's pick.
 private enum OpenerList: Hashable {
     case recents
+    case favorites
     case all
     case location(String)
 
     var title: String {
         switch self {
         case .recents: return "Recents"
+        case .favorites: return "Favorites"
         case .all: return "All Repositories"
         case .location(let path): return URL(fileURLWithPath: path).lastPathComponent
         }
@@ -69,7 +71,13 @@ private struct RepoOpener: View {
         NavigationSplitView {
             OpenerSidebar(list: $list)
         } detail: {
-            OpenerTable(rows: rows, selected: $selected, sortOrder: $sortOrder, emptyText: emptyText)
+            Group {
+                if let empty {
+                    OpenerEmptyView(empty: empty)
+                } else {
+                    OpenerTable(rows: rows, selected: $selected, sortOrder: $sortOrder)
+                }
+            }
                 .safeAreaInset(edge: .bottom, spacing: 0) { OpenerStatusBar(shown: rows.count) }
                 .navigationTitle(list?.title ?? "Repositories")
         }
@@ -90,6 +98,7 @@ private struct RepoOpener: View {
         let listed: [RepoRow]
         switch list {
         case .recents: listed = catalog.recents
+        case .favorites: listed = catalog.favoriteRows
         case .location(let path): listed = catalog.rows(under: path)
         case .all, .none: listed = catalog.rows
         }
@@ -102,16 +111,62 @@ private struct RepoOpener: View {
         return matched.sorted(using: sortOrder)
     }
 
-    private var emptyText: String? {
+    private var empty: OpenerEmpty? {
         guard rows.isEmpty else { return nil }
-        if !query.trimmingCharacters(in: .whitespaces).isEmpty { return "No repositories match “\(query)”" }
-        if catalog.isScanning && catalog.rows.isEmpty { return "Looking for repositories…" }
-        return list == .recents ? "No Recent Repositories" : "No Repositories"
+        let needle = query.trimmingCharacters(in: .whitespaces)
+        if !needle.isEmpty { return .noMatch(needle) }
+        if catalog.isScanning && catalog.rows.isEmpty { return .scanning }
+        switch list {
+        case .recents:
+            return .none(title: "No Recent Repositories", detail: "Repositories you open will show up here.")
+        case .favorites:
+            return .none(title: "No Favorite Repositories", detail: "Right-click a repository and choose Add to Favorites.")
+        case .location(let path):
+            return .none(title: "No Repositories", detail: "\(RepoRow.fold(path, home: NSHomeDirectory())) holds no repositories any more. Scan again to look afresh.")
+        case .all, nil:
+            return .none(title: "No Repositories", detail: "None were found under your home folder. Scan again, or use Open Other… to pick one.")
+        }
     }
 }
 
-/// Recents and everything at the head, then a row per folder holding
-/// repositories, with how many at its trailing edge.
+/// Why the table has nothing to show.
+private enum OpenerEmpty {
+    case noMatch(String)
+    case scanning
+    case none(title: String, detail: String)
+}
+
+/// The system's own placeholder in the table's place — the search kind for
+/// a search that found nothing, plain for a list with nothing in it.
+private struct OpenerEmptyView: View {
+    let empty: OpenerEmpty
+
+    var body: some View {
+        Group {
+            switch empty {
+            case .noMatch(let needle):
+                ContentUnavailableView.search(text: needle)
+            case .scanning:
+                ContentUnavailableView {
+                    Label("Looking for Repositories", systemImage: "magnifyingglass")
+                } description: {
+                    Text("The walk through your folders is still on.")
+                }
+            case .none(let title, let detail):
+                ContentUnavailableView {
+                    Label(title, systemImage: "folder")
+                } description: {
+                    Text(detail)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.background)
+    }
+}
+
+/// Recents, favourites and everything at the head, then a row per folder
+/// holding repositories, with how many at its trailing edge.
 private struct OpenerSidebar: View {
     @Environment(AppModel.self) private var model
     @Binding var list: OpenerList?
@@ -120,6 +175,8 @@ private struct OpenerSidebar: View {
         List(selection: $list) {
             Label("Recents", systemImage: "clock")
                 .tag(OpenerList.recents)
+            Label("Favorites", systemImage: "star")
+                .tag(OpenerList.favorites)
             Label("All Repositories", systemImage: "square.grid.2x2")
                 .tag(OpenerList.all)
             Section("Locations") {
@@ -155,7 +212,6 @@ private struct OpenerTable: View {
     let rows: [RepoRow]
     @Binding var selected: RepoRow.ID?
     @Binding var sortOrder: [KeyPathComparator<RepoRow>]
-    let emptyText: String?
 
     var body: some View {
         Table(rows, selection: $selected, sortOrder: $sortOrder) {
@@ -196,6 +252,12 @@ private struct OpenerTable: View {
                 Button("Open") { open(path) }
                 Button("Open in New Window") { model.openProjectInNewWindow(path: path) }
                 Divider()
+                if model.catalog.isFavorite(path) {
+                    Button("Remove from Favorites") { model.catalog.toggleFavorite(path) }
+                } else {
+                    Button("Add to Favorites") { model.catalog.toggleFavorite(path) }
+                }
+                Divider()
                 Button("Show in Finder") { revealInFinder(path) }
                 Button("Copy Path") { copy(path) }
             }
@@ -206,13 +268,6 @@ private struct OpenerTable: View {
             guard let selected else { return .ignored }
             open(selected)
             return .handled
-        }
-        .overlay {
-            if let emptyText {
-                ContentUnavailableView {
-                    Label(emptyText, systemImage: model.catalog.isScanning ? "magnifyingglass" : "folder")
-                }
-            }
         }
     }
 

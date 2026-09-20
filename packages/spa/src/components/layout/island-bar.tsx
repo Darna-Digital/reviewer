@@ -22,6 +22,7 @@
  */
 import { useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
+import { HeaderDiffFileInView } from "@/components/layout/diff-file-in-view";
 import {
   HeaderDiffStyleToggle,
   useShowsDiffStyleToggle,
@@ -139,6 +140,9 @@ export function IslandBar() {
         stripShown || toggleShown ? "flex" : "hidden"
       )}
     >
+      {/* The file the diff is scrolled to leads the band, where a tab strip
+          would name the open file. */}
+      {toggleShown && <HeaderDiffFileInView route={route} />}
       <div
         ref={setHeaderTabsSlot}
         className={cn(

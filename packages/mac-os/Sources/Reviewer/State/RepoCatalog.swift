@@ -4,7 +4,9 @@
 // the walk reaches folders rather than waiting on the whole of it; a
 // rescan starts the walk over. Each entry is kept with what the table sorts
 // and shows — where it stands under the home folder, when it was last
-// opened — worked out once here rather than per row per sort.
+// opened — worked out once here rather than per row per sort. The
+// favourites are the app's own — repositories starred here, kept by path
+// in the defaults — since the index knows only what the walk found.
 import Foundation
 import Observation
 
@@ -60,20 +62,48 @@ final class RepoCatalog {
     private(set) var scannedAt: Date?
     private(set) var loadError: String?
     private(set) var hasLoaded = false
+    /// The starred repositories' paths, in the order they were starred.
+    private(set) var favorites: [String] {
+        didSet { defaults.set(favorites, forKey: Keys.favorites) }
+    }
 
     @ObservationIgnored private let client: ReviewerClient
+    @ObservationIgnored private let defaults = UserDefaults.standard
     @ObservationIgnored private var home = NSHomeDirectory()
     @ObservationIgnored private var followTask: Task<Void, Never>?
 
     /// How often the index is re-read while the walk is still filling it in.
     private static let followInterval: Duration = .seconds(1)
 
+    private enum Keys {
+        static let favorites = "repos.favorites"
+    }
+
     init(client: ReviewerClient) {
         self.client = client
+        favorites = UserDefaults.standard.stringArray(forKey: Keys.favorites) ?? []
     }
 
     var recents: [RepoRow] {
         rows.filter { $0.lastOpened != nil }.sorted { $0.lastOpenedOrder > $1.lastOpenedOrder }
+    }
+
+    /// The starred repositories the index still lists; one that has gone
+    /// stays starred in the defaults, back the moment a walk finds it again.
+    var favoriteRows: [RepoRow] {
+        rows.filter { favorites.contains($0.path) }
+    }
+
+    func isFavorite(_ path: String) -> Bool {
+        favorites.contains(path)
+    }
+
+    func toggleFavorite(_ path: String) {
+        if let at = favorites.firstIndex(of: path) {
+            favorites.remove(at: at)
+        } else {
+            favorites.append(path)
+        }
     }
 
     /// The folders holding more than one repository, most first — a folder

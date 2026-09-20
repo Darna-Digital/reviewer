@@ -14,6 +14,7 @@
  */
 import { useNavigate, useRouterState, useSearch } from "@tanstack/react-router";
 import { BranchSwitcher } from "@/components/layout/branch-switcher";
+import { HeaderDiffFileInView } from "@/components/layout/diff-file-in-view";
 import { HeaderDiffStyleToggle } from "@/components/layout/diff-style-toggle";
 import { DockRestore } from "@/components/layout/dock-restore";
 import { ComparePicker } from "@/interactions/comparison/components/compare-picker";
@@ -187,6 +188,10 @@ export function AppHeader({ route }: { route: ShellRoute }) {
           onSelect={comparing.compareAgainst}
         />
       )}
+
+      {/* The file the diff is scrolled to, at the head of the band beside what
+          it is read against. */}
+      <HeaderDiffFileInView route={route} />
 
       {/* Lent to the page beneath, which hangs its open-file strip here: the
           tabs choose what the pane holds, which is the same kind of control as

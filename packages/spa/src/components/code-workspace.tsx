@@ -193,6 +193,19 @@ export function CodeWorkspace() {
   const pathname = useRouterState({
     select: (s) => (s.resolvedLocation ?? s.location).pathname,
   });
+  /**
+   * Whether the page on screen is the one the URL names. While a navigation
+   * is in flight the two disagree for a frame: `mode` above still reads the
+   * old page, while the search below is already the new one. Anything that
+   * writes to the URL on the strength of both has to wait the frame out —
+   * leaving the browser for the diff with a file open, the strip saw
+   * "browsing, nothing open" and restored its tab into the diff's URL.
+   */
+  const pageSettled = useRouterState({
+    select: (s) =>
+      s.resolvedLocation === undefined ||
+      s.resolvedLocation.pathname === s.location.pathname,
+  });
   const params = useParams({ strict: false });
   const search = useSearch({ strict: false });
 
@@ -362,6 +375,23 @@ export function CodeWorkspace() {
 
   // Reset the comment draft when the diff target or the open file changes.
   useEffect(() => setDraft(null), [targetKey, search.file]);
+
+  // The local changes arrive with nothing chosen — coming over from browsing,
+  // or on a fresh load — so the review starts on the first file the pane is
+  // showing rather than with the tree pointing nowhere. Replaces, so Back
+  // does not stop on the unselected page. Only once the page has settled:
+  // leaving the diff, the frame that still reads as commit mode over the next
+  // page's empty search would write the selection into that page's URL.
+  const firstDiffFile = diffFiles[0]?.name ?? null;
+  useEffect(() => {
+    if (mode !== "commit" || firstDiffFile === null || !pageSettled) return;
+    if (search.path !== undefined || search.file !== undefined) return;
+    void navigate({
+      to: ".",
+      search: (prev: Search) => ({ ...prev, path: firstDiffFile }),
+      replace: true,
+    });
+  }, [mode, firstDiffFile, search.path, search.file, pageSettled, navigate]);
 
   // --- derived tree / comments (memoised: these run over the whole repo) -----
   const listing = files.data;
@@ -678,7 +708,7 @@ export function CodeWorkspace() {
   // would otherwise drop the file already on screen.
   useEffect(() => {
     // Nothing to reconcile where the strip is neither drawn nor written to.
-    if (!tabbed) return;
+    if (!tabbed || !pageSettled) return;
     if (viewing === null && canRestore) {
       const restored = tabToRestore(readTabs());
       // Replaces rather than pushes, so Back leaves the strip behind instead of
@@ -693,7 +723,7 @@ export function CodeWorkspace() {
       }
     }
     updateTabs((state) => syncActive(state, viewing));
-  }, [repoRoot, viewing, canRestore, tabbed, navigate]);
+  }, [repoRoot, viewing, canRestore, tabbed, pageSettled, navigate]);
   // A strip restored from a previous session can name files that have since
   // been deleted or renamed.
   useEffect(() => {

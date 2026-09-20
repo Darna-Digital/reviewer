@@ -9,7 +9,11 @@ import type {
   Hunk,
   LineAnnotation,
 } from "@pierre/diffs";
-import { CodeView, type CodeViewHandle } from "@pierre/diffs/react";
+import {
+  CodeView,
+  type CodeViewHandle,
+  type CodeViewProps,
+} from "@pierre/diffs/react";
 import {
   IconArrowBackUp,
   IconArrowsMaximize,
@@ -43,6 +47,10 @@ import {
   ConnectorPainter,
   connectorsCSS,
 } from "@/interactions/diff/components/diff-connectors";
+import {
+  type DiffFileInView,
+  setDiffFileInView,
+} from "@/interactions/diff/adapters/diff-file-in-view.store";
 import { setDiffNarrowed } from "@/interactions/diff/adapters/diff-layout.store";
 import {
   isNarrowedToUnified,
@@ -82,6 +90,17 @@ type Annotation = DiffLineAnnotation<AnnotationMeta>;
 type DiffItem = CodeViewDiffItem<AnnotationMeta>;
 type Viewer = CodeViewHandle<AnnotationMeta, undefined>;
 type ViewerOptions = CodeViewOptions<AnnotationMeta, undefined>;
+type ViewerScrollListener = NonNullable<
+  CodeViewProps<AnnotationMeta, undefined>["onScroll"]
+>;
+
+/**
+ * How far down the viewport the reading line sits, as a share of its height:
+ * the file whose top has crossed it is the one in view. The very top edge
+ * would hand the name over while the eye is still on the file above; a third
+ * of the way down is where the next file has plainly taken the pane.
+ */
+const READING_LINE = 1 / 3;
 
 interface DiffPaneProps {
   files: ReadonlyArray<FileDiffMetadata>;
@@ -491,9 +510,7 @@ export function DiffPane({
   // The language layer's handlers, one set per file, under the item's id —
   // see `FileLanguage`. A ref rather than state: they are read from inside
   // the viewer's callbacks, and registering one is not a reason to render.
-  const languageByItem = useRef(
-    new Map<string, DiffLanguage["viewOptions"]>()
-  );
+  const languageByItem = useRef(new Map<string, DiffLanguage["viewOptions"]>());
   const registerLanguage = useCallback(
     (itemId: string, viewOptions: DiffLanguage["viewOptions"]) => {
       languageByItem.current.set(itemId, viewOptions);
@@ -666,11 +683,17 @@ export function DiffPane({
 
   // The selected file to the top of the pane, on the viewer's own spring:
   // it resolves the item against its live layout, so the scroll stays
-  // accurate while the files around it are still being measured.
+  // accurate while the files around it are still being measured. Once, per
+  // selection: the files re-arrive on every refresh of the diff, and a
+  // selection that has already been scrolled to — the first file, chosen for
+  // the review as it opens — must not drag the pane back up each time.
+  const scrolledTo = useRef<string | null>(null);
   useEffect(() => {
     if (selectedFile === null) return;
+    if (scrolledTo.current === selectedFile) return;
     const id = itemIdByFileRef.current.get(selectedFile);
     if (id === undefined) return;
+    scrolledTo.current = selectedFile;
     viewerRef.current?.scrollTo({
       type: "item",
       id,
@@ -678,6 +701,36 @@ export function DiffPane({
       behavior: "smooth",
     });
   }, [selectedFile, files]);
+
+  // The file at the reading line, told to the header so it can name what the
+  // pane is scrolled to. Read off the viewer's own layout rather than the DOM:
+  // it has a top for every item, rendered or not, from the estimated heights it
+  // corrects as they render. Refreshed on every scroll, and again whenever the
+  // items change under a scroll position that has not moved.
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const trackFileInView = useStableCallback<ViewerScrollListener>(
+    (scrollTop, viewer) => {
+      const viewportHeight = containerRef.current?.clientHeight ?? 0;
+      const readingLine = scrollTop + viewportHeight * READING_LINE;
+      let inView: DiffFileInView | null = null;
+      for (const [index, item] of itemsRef.current.entries()) {
+        const top = viewer.getTopForItem(item.id);
+        if (top === undefined || top > readingLine) break;
+        inView = { path: item.fileDiff.name, index };
+      }
+      setDiffFileInView(inView);
+    }
+  );
+  useEffect(() => {
+    const viewer = viewerRef.current?.getInstance();
+    if (viewer === undefined) {
+      setDiffFileInView(null);
+      return;
+    }
+    trackFileInView(viewer.getScrollTop(), viewer);
+  }, [items, loading, error, trackFileInView]);
+  useEffect(() => () => setDiffFileInView(null), []);
 
   const selectedLines = useMemo<CodeViewLineSelection | null>(() => {
     if (draft === null) return null;
@@ -755,7 +808,8 @@ export function DiffPane({
         });
       },
       onLineNumberClick: (props, context) => {
-        if (context.item.type !== "diff" || !("annotationSide" in props)) return;
+        if (context.item.type !== "diff" || !("annotationSide" in props))
+          return;
         onDraftOpen({
           filePath: context.item.fileDiff.name,
           side: props.annotationSide,
@@ -774,7 +828,14 @@ export function DiffPane({
         languageByItem.current.get(context.item.id)?.onTokenClick(props, event);
       },
     }),
-    [connectorsEnabled, laidOut, loadDiffFiles, onDraftOpen, onPostRender, theme]
+    [
+      connectorsEnabled,
+      laidOut,
+      loadDiffFiles,
+      onDraftOpen,
+      onPostRender,
+      theme,
+    ]
   );
 
   const renderHeaderMetadata = useStableCallback(
@@ -961,6 +1022,7 @@ export function DiffPane({
         items={items}
         selectedLines={selectedLines}
         options={options}
+        onScroll={trackFileInView}
         renderHeaderMetadata={renderHeaderMetadata}
         renderAnnotation={renderAnnotation}
       />

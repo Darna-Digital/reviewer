@@ -24,7 +24,7 @@ export function LanguagesSetting() {
     <>
       <SettingRow
         title="Languages"
-        detail="Definitions, usages, hover and problems come from a language server. A repository adds one in .reviewer/languages.json; TypeScript and Ruby are built in."
+        detail="Definitions, usages, hover and problems come from a language server. A repository adds one in .reviewer/languages.json; TypeScript, Ruby and Swift are built in."
       >
         <IconLanguage className="size-4 text-muted-foreground" />
       </SettingRow>
