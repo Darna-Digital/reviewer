@@ -158,37 +158,20 @@ private enum FilterWidths {
     static let chipName: CGFloat = 160
 }
 
-/// The ref the log follows: every branch, or one of them — folded by
-/// folder, the way the switcher folds them — with the ref the log is on
-/// listed even when it is no branch, a detached commit or a remote ref.
+/// The ref the log follows: every branch, or one of them — the same
+/// `BranchPopover` the sidebar's pickers open, with "All branches" at its
+/// head and the ref the log is on listed even when it is no branch, a
+/// detached commit or a remote ref.
 private struct RefPicker: View {
     @Environment(AppModel.self) private var model
+    @State private var open = false
 
     private var history: CommitHistory { model.history }
     private var current: String { history.effectiveRef }
     private var label: String { current == allRefs ? "All branches" : current }
 
     var body: some View {
-        Menu {
-            Button("All branches") { history.ref = allRefs }
-            if current != allRefs, !model.branches.contains(where: { $0.name == current }) {
-                Button(current) { history.ref = current }
-            }
-            Divider()
-            ForEach(model.branches.map(BranchRef.init).groupedByFolder(), id: \.name) { folder in
-                if let name = folder.name {
-                    Menu(name) {
-                        ForEach(folder.items, id: \.ref) { branch in
-                            Button(branch.leaf) { history.ref = branch.ref }
-                        }
-                    }
-                } else {
-                    ForEach(folder.items, id: \.ref) { branch in
-                        Button(branch.display) { history.ref = branch.ref }
-                    }
-                }
-            }
-        } label: {
+        Button { open.toggle() } label: {
             HStack(spacing: 5) {
                 Image(systemName: current == allRefs ? "point.3.connected.trianglepath.dotted" : "arrow.triangle.branch")
                     .paneFieldGlyph()
@@ -196,16 +179,35 @@ private struct RefPicker: View {
                     .font(.system(size: 11))
                     .lineLimit(1)
                     .truncationMode(.middle)
+                    .clipTooltip(label, font: .systemFont(ofSize: 11))
                 Spacer(minLength: 0)
                 MenuChevron()
             }
             .paneField()
             .frame(width: FilterWidths.picker)
+            .contentShape(Rectangle())
         }
-        .menuStyle(.button)
         .buttonStyle(.plain)
-        .menuIndicator(.hidden)
         .help("Branch")
+        .popover(isPresented: $open, arrowEdge: .bottom) {
+            BranchPopover(sections: sections, placeholder: "Search branches", pick: { choice in
+                history.ref = choice.branch?.ref ?? choice.id
+            }, dismiss: { open = false })
+        }
+    }
+
+    private var sections: [BranchChoiceSection] {
+        var answers = [BranchChoice.answer(
+            id: allRefs, title: "All branches", symbol: "point.3.connected.trianglepath.dotted", checked: current == allRefs)]
+        if current != allRefs, !model.branches.contains(where: { $0.name == current }) {
+            answers.append(.answer(id: current, title: current, symbol: "arrow.triangle.branch", checked: true))
+        }
+        return [
+            BranchChoiceSection(id: "answers", title: nil, rows: answers, hiddenWhileSearching: true),
+            BranchChoiceSection(
+                id: "local", title: "Local",
+                rows: model.branches.map { .branch(BranchRef($0), checked: $0.name == current) }),
+        ]
     }
 }
 

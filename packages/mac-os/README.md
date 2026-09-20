@@ -19,7 +19,12 @@ What it does today:
   at the header's other edge, what those changes are read against: the web
   header's compare picker (uncommitted only, or the merge base with a
   branch), stood in the sidebar since that is where the shell keeps the
-  commit view's controls. The rows wear @pierre/trees' own
+  commit view's controls. Both pickers — and the history's ref, and the
+  session bar's branch — open the one popover (`BranchPopover`): a search
+  over the rows, ↑/↓ walking them under the field, Return picking the lit
+  one, Escape clearing then closing, a name too long for its row said in
+  full in a tooltip while it is cut; the switcher's rows carry the web
+  switcher's actions at the ellipsis and on a right click. The rows wear @pierre/trees' own
   file-type icons, imported at build time (`scripts/import-file-icons.mjs`).
   Picking a file sends the code island to it; a file the island opens on its
   own highlights here; the context menu is the web tree's — history, copy

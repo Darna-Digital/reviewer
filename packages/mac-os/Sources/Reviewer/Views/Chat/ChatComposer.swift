@@ -9,9 +9,11 @@
 // The composer owns only the draft — text and pending images, kept under
 // its key in `Chats` so leaving and coming back finds it as it was left;
 // the settings are the caller's. Return sends, ⇧Return breaks
-// the line; images are picked, pasted, or dropped anywhere on the pane
-// (see `imageDropZone`). The box rests at a few lines and is dragged taller
-// by its top edge — a height that is the app's, not this thread's.
+// the line — continuing a list when the caret sits in one, as Tab and ⇧Tab
+// re-nest it (see `ListEditing`); images are picked, pasted, or dropped
+// anywhere on the pane (see `imageDropZone`). The box rests at a few lines
+// and is dragged taller by its top edge — a height that is the app's, not
+// this thread's.
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
@@ -32,6 +34,7 @@ struct ChatComposer: View {
     @FocusState private var focused: Bool
 
     private static let heights: ClosedRange<CGFloat> = 56...480
+    private static let backtab = KeyEquivalent("\u{19}")
 
     private var chats: Chats { model.chats }
     private var draft: ComposerDraft { chats.draft(for: draftKey) }
@@ -141,9 +144,17 @@ struct ChatComposer: View {
                 .padding(.top, 12)
                 .focused($focused)
                 .onKeyPress(.return, phases: .down) { press in
-                    guard !press.modifiers.contains(.shift) else { return .ignored }
+                    guard !press.modifiers.contains(.shift) else {
+                        return editList(ListEditing.continueList) ? .handled : .ignored
+                    }
                     submit()
                     return .handled
+                }
+                // ⇧Tab reaches AppKit as the backtab character, not as Tab
+                // with a modifier, so both spellings are listened for.
+                .onKeyPress(keys: [.tab, Self.backtab], phases: .down) { press in
+                    let levels = press.modifiers.contains(.shift) ? -1 : 1
+                    return editList { ListEditing.shiftIndent($0, by: levels) } ? .handled : .ignored
                 }
                 .onKeyPress(KeyEquivalent("v"), phases: .down) { press in
                     guard press.modifiers == .command else { return .ignored }
@@ -192,6 +203,26 @@ struct ChatComposer: View {
         panel.prompt = "Attach"
         guard panel.runModal() == .OK else { return }
         chats.attach(panel.urls.compactMap(ComposerAttachment.read(url:)), to: draftKey)
+    }
+
+    /// A list edit on the box's own text view — the `NSTextView` under the
+    /// `TextEditor`, which is the first responder while the key is its own.
+    /// Rewriting only the span that changed, through the view's own
+    /// insertion, keeps ⌘Z undoing the list edit rather than the whole
+    /// draft, and leaves the binding to hear about it as it does any typing.
+    /// False when the caret is not in a list, so the key does what it always
+    /// did.
+    private func editList(_ edit: (ComposerSelection) -> ComposerSelection?) -> Bool {
+        guard let textView = NSApp.keyWindow?.firstResponder as? NSTextView else { return false }
+        let selected = textView.selectedRange()
+        let current = ComposerSelection(
+            text: textView.string, selectionStart: selected.location, selectionEnd: selected.location + selected.length)
+        guard let edited = edit(current) else { return false }
+        let change = ListEditing.changedRange(from: current.text, to: edited.text)
+        textView.insertText(change.replacement, replacementRange: change.range)
+        textView.setSelectedRange(NSRange(location: edited.selectionStart, length: edited.selectionEnd - edited.selectionStart))
+        textView.scrollRangeToVisible(textView.selectedRange())
+        return true
     }
 
     /// The draft delivered: cleared once the send is accepted, kept for a

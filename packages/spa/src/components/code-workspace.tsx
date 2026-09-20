@@ -797,7 +797,14 @@ export function CodeWorkspace() {
         label: "History",
         icon: IconHistory,
       });
-      const historyRef = logRef ?? repo.data?.currentBranch ?? null;
+      // The ref and the filtered file are read off the page's own history
+      // dock. An island has none — its log is the shell's, native beside it —
+      // so those two crumbs would name a filter nothing on screen is on.
+      const historyRef =
+        island === undefined
+          ? (logRef ?? repo.data?.currentBranch ?? null)
+          : null;
+      const historyPath = island === undefined ? logFilters.path : null;
       if (browse.kind === "commit") {
         if (historyRef !== null) {
           list.push({
@@ -808,12 +815,12 @@ export function CodeWorkspace() {
         }
         // The filtered file names what the diff below shows — unless a file is
         // open in the viewer, which ends the trail with a path of its own.
-        if (logFilters.path !== null && openPath === null) {
+        if (historyPath !== null && openPath === null) {
           list.push({
             id: "history-path",
-            label: pathName(logFilters.path),
+            label: pathName(historyPath),
             icon: (props: { className?: string }) => (
-              <FileTypeIcon path={logFilters.path ?? ""} {...props} />
+              <FileTypeIcon path={historyPath} {...props} />
             ),
           });
         }
@@ -1390,13 +1397,17 @@ export function CodeWorkspace() {
         {/* The trail closes the pane, and only once it says more than which
             mode you are in.
 
-            Never inside the macOS shell: there the window says all of it
-            already — the mode is the window's own rail, the folders are its
-            native tree, and the open file is the tab above this pane — so the
-            trail was the window repeating itself along the foot of the page.
-            What only it carried, a file's history, moves to the tab's own
-            menu — see `TabStrip`. */}
-        {island === undefined && (crumbs.length > 1 || viewing !== null) && (
+            Inside the macOS shell the window says most of it already — the
+            mode is the window's own rail, the folders are its native tree, and
+            the open file is the tab above this pane — so over plain browsing
+            the trail was the window repeating itself along the foot of the
+            page, and what only it carried, a file's history, moved to the
+            tab's own menu (see `TabStrip`). A commit or a range out of the
+            shell's History is the exception: nothing native names the commit
+            the pane is on, and the Browse crumb is the way back out of it. */}
+        {(island === undefined
+          ? crumbs.length > 1 || viewing !== null
+          : browse !== null) && (
           <PathBar
             crumbs={crumbs}
             path={viewing}

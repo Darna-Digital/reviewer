@@ -15,6 +15,15 @@ import WebKit
 final class IslandWebView: WKWebView {
     private var pointerIsCovered = false
 
+    /// No WebKit menu over the code: a right-click is the page's to answer
+    /// — the symbol menu over an identifier, nothing elsewhere — and the
+    /// stock "Look Up", "Search with Google" and friends only stand in its
+    /// way. Emptied rather than refused, since AppKit shows no menu with
+    /// nothing in it.
+    override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
+        menu.removeAllItems()
+    }
+
     override func mouseMoved(with event: NSEvent) {
         guard isUnderPointer(event) else {
             leave(after: event)

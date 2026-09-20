@@ -241,6 +241,12 @@ final class AppModel {
 
     // MARK: sidebar
 
+    /// ⌃⌘S — the system's own chord for it — from the View menu and the
+    /// palette: the column put away, or brought back.
+    func toggleSidebar() {
+        sidebarShown.toggle()
+    }
+
     /// The sidebar's rail: which of the code surfaces the page is on, as
     /// its address says.
     var codeSurface: CodeSurface? {

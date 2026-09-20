@@ -22,14 +22,14 @@ struct AppRail: View {
     var body: some View {
         VStack(spacing: 4) {
             ForEach(CodeSurface.allCases) { surface in
-                RailButton(symbol: surface.symbol, title: surface.title,
+                RailButton(symbol: surface.symbol, help: surface.railHelp,
                            isOn: model.codeSurface == surface) {
                     model.show(surface: surface)
                 }
             }
             Spacer(minLength: 0)
             ForEach(BottomPaneTab.allCases) { tab in
-                RailButton(symbol: tab.symbol, title: tab.title,
+                RailButton(symbol: tab.symbol, help: tab.railHelp,
                            isOn: model.bottomExpanded && model.bottomTab == tab) {
                     model.toggle(bottomTab: tab)
                 }
@@ -46,10 +46,11 @@ struct AppRail: View {
 
 /// A rail button is an icon with no word under it, so the one that is on
 /// says so three ways at once — the chip it sits in, the weight of its ink,
-/// and the weight of its stroke — as the web rail's does.
+/// and the weight of its stroke — as the web rail's does. Hovered, it
+/// names its surface and the chord that reaches it.
 private struct RailButton: View {
     let symbol: String
-    let title: String
+    let help: String
     let isOn: Bool
     let action: () -> Void
     @State private var isHovering = false
@@ -67,6 +68,6 @@ private struct RailButton: View {
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
-        .help(title)
+        .help(help)
     }
 }

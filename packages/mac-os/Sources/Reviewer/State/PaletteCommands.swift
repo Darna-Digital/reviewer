@@ -16,15 +16,16 @@ extension AppModel {
         [
             PaletteCommand(
                 id: "go-review", label: "Go to Review", group: "Navigation", symbol: CodeSurface.review.symbol,
-                keywords: "commit working tree changes diff local"
+                keywords: "commit working tree changes diff local", hint: CodeSurface.review.railShortcut.hint
             ) { [weak self] in self?.show(surface: .review) },
             PaletteCommand(
                 id: "go-reviews", label: "Go to Merge requests", group: "Navigation",
-                symbol: CodeSurface.reviews.symbol, keywords: "merge request mr review pr github pull requests"
+                symbol: CodeSurface.reviews.symbol, keywords: "merge request mr review pr github pull requests",
+                hint: CodeSurface.reviews.railShortcut.hint
             ) { [weak self] in self?.show(surface: .reviews) },
             PaletteCommand(
                 id: "go-browse", label: "Browse the Project", group: "Navigation", symbol: CodeSurface.browse.symbol,
-                keywords: "files history commits explore"
+                keywords: "files history commits explore", hint: CodeSurface.browse.railShortcut.hint
             ) { [weak self] in self?.show(surface: .browse) },
             PaletteCommand(
                 id: "go-settings", label: "Open Settings", group: "Navigation", symbol: "gearshape",
@@ -81,14 +82,14 @@ extension AppModel {
         commands += BottomPaneTab.allCases.map { tab in
             PaletteCommand(
                 id: "view-\(tab.rawValue)", label: "Open \(tab.title)", group: "View", symbol: tab.symbol,
-                keywords: Self.paneKeywords[tab] ?? ""
+                keywords: Self.paneKeywords[tab] ?? "", hint: tab.railShortcut.hint
             ) { [weak self] in self?.show(bottomTab: tab) }
         }
         commands.append(
             PaletteCommand(
                 id: "view-sidebar", label: sidebarShown ? "Hide Sidebar" : "Show Sidebar", group: "View",
                 symbol: "sidebar.leading", keywords: "tree files toggle", hint: "⌃⌘S"
-            ) { [weak self] in self?.sidebarShown.toggle() })
+            ) { [weak self] in self?.toggleSidebar() })
         return commands
     }
 

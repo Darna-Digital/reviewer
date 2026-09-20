@@ -1,102 +1,70 @@
-// The branch picker at the head of the sidebar: a flat pull-down naming
-// the branch you are on, whose menu is the web app's switcher done in
-// NSMenu — Recent, Local by folder, Remote by remote, each branch a submenu
-// of everything you can do to it — plus a search, since a menu of sixty
-// branches is a menu you read, and a field is how you find one.
+// The branch picker at the head of the sidebar — and on the session bar's
+// strip: a flat chip naming the branch you are on, opening the web app's
+// switcher as a `BranchPopover` — Recent, Local, Remote, the branch you
+// are on starred and the others carrying their distance from upstream, a
+// search over all of them, and on every row the same menu of everything
+// you can do to it. A row picked checks the branch out; the popover's
+// foot holds what needs no branch — a new one, update, push.
 import SwiftUI
 
 struct BranchPicker: View {
     @Environment(AppModel.self) private var model
-    @State private var searching = false
+    @Environment(\.controlSize) private var controlSize
+    @State private var open = false
+
+    private var name: String { model.currentBranch ?? "No branch" }
+    /// The accessory bar's type at the size the chip is cut to — named,
+    /// so the tooltip measures the name in the font the chip sets it in.
+    private var font: NSFont { .systemFont(ofSize: controlSize == .small ? 11 : 13) }
 
     var body: some View {
-        Menu {
-            Button("Search Branches…") { searching = true }
-                .keyboardShortcut("b", modifiers: [.command, .shift])
-            Divider()
-            if !model.recentBranches.isEmpty {
-                Section("Recent") {
-                    ForEach(model.recentBranches) { branch in
-                        BranchMenu(branch: BranchRef(branch), badge: badge(branch))
-                    }
-                }
+        Button { open.toggle() } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "arrow.triangle.branch")
+                Text(name)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .clipTooltip(name, font: font)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.secondary)
             }
-            Section("Local · \(model.branches.count)") {
-                ForEach(model.branches.map(BranchRef.init).groupedByFolder(), id: \.name) { folder in
-                    if let name = folder.name {
-                        Menu(name) {
-                            ForEach(folder.items, id: \.ref) { branch in
-                                BranchMenu(branch: branch, badge: badge(branch))
-                            }
-                        }
-                    } else {
-                        ForEach(folder.items, id: \.ref) { branch in
-                            BranchMenu(branch: branch, badge: badge(branch))
-                        }
-                    }
-                }
-            }
-            Section("Remote · \(model.remoteBranches.count)") {
-                ForEach(model.remoteBranches.map(BranchRef.init).groupedByFolder(), id: \.name) { folder in
-                    Menu(folder.name ?? "remote") {
-                        ForEach(folder.items, id: \.ref) { branch in
-                            BranchMenu(branch: branch, badge: nil)
-                        }
-                    }
-                }
-            }
-            Divider()
-            Button("New Branch…") { model.branchPrompt = .create(startPoint: nil) }
-            Button("Update") { model.fetch() }
-            Button("Push…") { model.push() }
-        } label: {
-            Label(model.currentBranch ?? "No branch", systemImage: "arrow.triangle.branch")
-                .labelStyle(.titleAndIcon)
-                .lineLimit(1)
-                .truncationMode(.middle)
+            .font(Font(font))
         }
-        .menuStyle(.button)
         .buttonStyle(.accessoryBar)
-        .controlSize(.regular)
         .disabled(!model.hasProject)
-        .help("Branches")
-        .popover(isPresented: $searching, arrowEdge: .bottom) {
-            BranchSearch(dismiss: { searching = false })
-        }
-    }
-
-    private func badge(_ branch: BranchInfo) -> String? {
-        var parts: [String] = []
-        if branch.ahead > 0 { parts.append("↑\(branch.ahead)") }
-        if branch.behind > 0 { parts.append("↓\(branch.behind)") }
-        return parts.isEmpty ? nil : parts.joined(separator: " ")
-    }
-
-    private func badge(_ branch: BranchRef) -> String? {
-        model.branches.first { $0.name == branch.ref }.flatMap(badge)
-    }
-}
-
-/// One branch's submenu — the same actions the web app's switcher gives it,
-/// in the same order, worded against the branch you are on.
-struct BranchMenu: View {
-    let branch: BranchRef
-    let badge: String?
-    @Environment(AppModel.self) private var model
-
-    var body: some View {
-        Menu {
-            BranchActions(branch: branch)
-        } label: {
-            if let badge {
-                Text("\(branch.display)   \(badge)")
-            } else {
-                Text(branch.display)
-            }
-            if branch.isCurrent {
-                Image(systemName: "star.fill")
+        .popover(isPresented: $open, arrowEdge: .bottom) {
+            BranchPopover(
+                sections: sections, placeholder: "Search branches", pick: checkout, dismiss: { open = false },
+                actions: { branch in BranchActions(branch: branch) }
+            ) {
+                Divider()
+                HStack(spacing: 2) {
+                    Button("New Branch…") { open = false; model.branchPrompt = .create(startPoint: nil) }
+                    Button("Update") { open = false; model.fetch() }
+                    Button("Push…") { open = false; model.push() }
+                    Spacer(minLength: 0)
+                }
+                .buttonStyle(.accessoryBar)
+                .controlSize(.small)
+                .padding(6)
             }
         }
+    }
+
+    private var sections: [BranchChoiceSection] {
+        let local = model.branches.map { BranchChoice.branch(BranchRef($0), badge: branchDistance($0)) }
+        return [
+            BranchChoiceSection(id: "recent", title: "Recent", rows: Array(local.prefix(model.recentBranches.count)),
+                                hiddenWhileSearching: true),
+            BranchChoiceSection(id: "local", title: "Local", rows: local),
+            BranchChoiceSection(id: "remote", title: "Remote", rows: model.remoteBranches.map { .branch(BranchRef($0)) }),
+        ]
+    }
+
+    private func checkout(_ choice: BranchChoice) {
+        guard let branch = choice.branch, !branch.isCurrent else { return }
+        model.checkout(branch.ref)
     }
 }
 
@@ -135,77 +103,6 @@ struct BranchActions: View {
 
     private func run(_ action: () -> Void) {
         action()
-    }
-}
-
-/// The search: a field over every branch, local and remote, each row
-/// carrying the same submenu the menu gives it; Return checks out the first
-/// match.
-private struct BranchSearch: View {
-    let dismiss: () -> Void
-    @Environment(AppModel.self) private var model
-    @State private var query = ""
-    @FocusState private var fieldFocused: Bool
-
-    private var matches: [BranchRef] {
-        let needle = query.trimmingCharacters(in: .whitespaces)
-        let all = model.branches.map(BranchRef.init) + model.remoteBranches.map(BranchRef.init)
-        guard !needle.isEmpty else { return all }
-        return all.filter { $0.display.localizedCaseInsensitiveContains(needle) }
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("Search branches", text: $query)
-                    .textFieldStyle(.plain)
-                    .focused($fieldFocused)
-                    .onSubmit {
-                        guard let first = matches.first, !first.isCurrent else { return }
-                        dismiss()
-                        model.checkout(first.ref)
-                    }
-            }
-            .padding(10)
-            Divider()
-            List {
-                ForEach(matches, id: \.ref) { branch in
-                    HStack(spacing: 8) {
-                        Image(systemName: branch.isCurrent ? "star.fill" : branch.isRemote ? "cloud" : "arrow.triangle.branch")
-                            .foregroundStyle(branch.isCurrent ? Color.orange : Color.secondary)
-                            .frame(width: 14)
-                        Text(branch.display)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                        Spacer(minLength: 4)
-                        if let local = model.branches.first(where: { $0.name == branch.ref }) {
-                            if local.ahead > 0 { Text("↑\(local.ahead)").foregroundStyle(.green) }
-                            if local.behind > 0 { Text("↓\(local.behind)").foregroundStyle(.blue) }
-                        }
-                        Menu {
-                            BranchActions(branch: branch)
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                        }
-                        .menuStyle(.borderlessButton)
-                        .menuIndicator(.hidden)
-                        .fixedSize()
-                    }
-                    .font(.system(size: 12))
-                    .contentShape(Rectangle())
-                    .onTapGesture(count: 2) {
-                        guard !branch.isCurrent else { return }
-                        dismiss()
-                        model.checkout(branch.ref)
-                    }
-                }
-            }
-            .listStyle(.plain)
-        }
-        .frame(width: 360, height: 420)
-        .onAppear { fieldFocused = true }
     }
 }
 

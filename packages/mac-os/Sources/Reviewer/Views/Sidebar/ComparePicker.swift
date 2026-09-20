@@ -6,15 +6,15 @@
 // what its changes are measured from: the branch as it is committed,
 // or the merge base with another branch, so "how does this branch differ
 // from main" can be asked before there is a pull request to ask it for you.
-// The menu is the web one's — uncommitted only, then the local branches,
-// then the remotes, the branch the work is aimed at marked — plus a search,
-// as the branch picker has.
+// The list is the web one's, as a `BranchPopover`: uncommitted only at
+// its head, then the local branches, then the remotes, the branch the
+// work is aimed at marked and the comparison that is on ticked.
 import SwiftUI
 
 struct ComparePicker: View {
     let comparison: ShellComparison
     @Environment(AppModel.self) private var model
-    @State private var searching = false
+    @State private var open = false
 
     private var candidates: ComparisonCandidates {
         ComparisonCandidates(
@@ -33,31 +33,7 @@ struct ComparePicker: View {
     }
 
     var body: some View {
-        Menu {
-            Button("Search Branches…") { searching = true }
-            Divider()
-            CandidateItem(label: "Uncommitted changes", on: comparison.against == nil) {
-                model.readChanges(against: nil)
-            }
-            if !candidates.local.isEmpty {
-                Section("Compare against a branch") {
-                    ForEach(candidates.local, id: \.ref) { candidate in
-                        CandidateItem(label: candidates.label(for: candidate), on: comparison.against == candidate.ref) {
-                            model.readChanges(against: candidate.ref)
-                        }
-                    }
-                }
-            }
-            if !candidates.remote.isEmpty {
-                Section("Compare against a remote") {
-                    ForEach(candidates.remote, id: \.ref) { candidate in
-                        CandidateItem(label: candidates.label(for: candidate), on: comparison.against == candidate.ref) {
-                            model.readChanges(against: candidate.ref)
-                        }
-                    }
-                }
-            }
-        } label: {
+        Button { open.toggle() } label: {
             HStack(spacing: 5) {
                 Image(systemName: symbol)
                     .foregroundStyle(.secondary)
@@ -72,28 +48,34 @@ struct ComparePicker: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .semibold))
+                    .foregroundStyle(.secondary)
             }
         }
-        .menuStyle(.button)
         .buttonStyle(.accessoryBar)
-        .controlSize(.regular)
         .help(labels.summary)
-        .popover(isPresented: $searching, arrowEdge: .bottom) {
-            CompareSearch(candidates: candidates, comparison: comparison, dismiss: { searching = false })
+        .popover(isPresented: $open, arrowEdge: .bottom) {
+            BranchPopover(sections: sections, placeholder: "Search branches", pick: { choice in
+                model.readChanges(against: choice.branch?.ref)
+            }, dismiss: { open = false })
         }
     }
-}
 
-/// A row of the menu, checked when it is the comparison that is on.
-private struct CandidateItem: View {
-    let label: String
-    let on: Bool
-    let select: () -> Void
+    private var sections: [BranchChoiceSection] {
+        let candidates = candidates
+        return [
+            BranchChoiceSection(
+                id: "uncommitted", title: nil,
+                rows: [.answer(id: "uncommitted", title: "Uncommitted changes", symbol: "pencil", checked: comparison.against == nil)],
+                hiddenWhileSearching: true),
+            BranchChoiceSection(id: "local", title: "Compare against a branch", rows: candidates.local.map(row)),
+            BranchChoiceSection(id: "remote", title: "Compare against a remote", rows: candidates.remote.map(row)),
+        ]
+    }
 
-    var body: some View {
-        Toggle(isOn: Binding(get: { on }, set: { if $0 { select() } })) {
-            Text(label)
-        }
+    private func row(_ candidate: BranchRef) -> BranchChoice {
+        .branch(candidate, badge: candidate.ref == comparison.aim ? "lands here" : nil, checked: candidate.ref == comparison.against)
     }
 }
 
@@ -106,17 +88,6 @@ struct ComparisonCandidates {
     let local: [BranchRef]
     let remote: [BranchRef]
     let aim: String?
-
-    func label(for candidate: BranchRef) -> String {
-        candidate.ref == aim ? "\(candidate.display)   lands here" : candidate.display
-    }
-
-    func matching(_ query: String) -> [BranchRef] {
-        let needle = query.trimmingCharacters(in: .whitespaces)
-        let all = local + remote
-        guard !needle.isEmpty else { return all }
-        return all.filter { $0.display.localizedCaseInsensitiveContains(needle) }
-    }
 }
 
 /// How a comparison reads — core's `comparisonLabels`: the two sides, the
@@ -134,76 +105,5 @@ struct ComparisonLabels {
         head = "\(here) with changes"
         headShort = against == nil ? "with changes" : head
         summary = "Comparing ‘\(base)’ against ‘\(head)’"
-    }
-}
-
-/// The search: a field over every branch that can be compared against,
-/// local and remote; a row picked reads the changes against it, and Return
-/// picks the first match.
-private struct CompareSearch: View {
-    let candidates: ComparisonCandidates
-    let comparison: ShellComparison
-    let dismiss: () -> Void
-    @Environment(AppModel.self) private var model
-    @State private var query = ""
-    @FocusState private var fieldFocused: Bool
-
-    private var matches: [BranchRef] { candidates.matching(query) }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("Search branches", text: $query)
-                    .textFieldStyle(.plain)
-                    .focused($fieldFocused)
-                    .onSubmit {
-                        guard let first = matches.first else { return }
-                        pick(first)
-                    }
-            }
-            .padding(10)
-            Divider()
-            if matches.isEmpty {
-                Text("No branch matches.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, minHeight: 80)
-            } else {
-                List {
-                    ForEach(matches, id: \.ref) { branch in
-                        HStack(spacing: 8) {
-                            Image(systemName: branch.isRemote ? "cloud" : "arrow.triangle.branch")
-                                .foregroundStyle(.secondary)
-                                .frame(width: 14)
-                            Text(branch.display)
-                                .lineLimit(1)
-                                .truncationMode(.middle)
-                            Spacer(minLength: 4)
-                            if branch.ref == candidates.aim {
-                                Text("lands here")
-                                    .foregroundStyle(.secondary)
-                            }
-                            if branch.ref == comparison.against {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .font(.system(size: 12))
-                        .contentShape(Rectangle())
-                        .onTapGesture { pick(branch) }
-                    }
-                }
-                .listStyle(.plain)
-            }
-        }
-        .frame(width: 320, height: 320)
-        .onAppear { fieldFocused = true }
-    }
-
-    private func pick(_ branch: BranchRef) {
-        dismiss()
-        model.readChanges(against: branch.ref)
     }
 }

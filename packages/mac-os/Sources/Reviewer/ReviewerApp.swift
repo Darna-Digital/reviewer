@@ -64,13 +64,14 @@ struct ReviewerApp: App {
 /// not only while the page island has the keyboard.
 ///
 /// The chords are the web app's own — ⌘T for a session, ⌘B the bottom
-/// pane, ⌘G across Code and Sessions, ⌘1–9 the sessions — so
-/// the window answers the hands that learned it in the browser. The tab
-/// chords are the island's strip's to answer, and a menu equivalent takes
-/// the key before the page sees it, so each of those items hands its chord
-/// back to the strip (`WindowTabAction`) rather than acting on tabs of its
-/// own. Nothing here claims a chord the page alone answers: ⌘S is the SPA's
-/// save of an edited `.env` file.
+/// pane, ⌘G across Code and Sessions, ⌘1–9 the sessions — so the window
+/// answers the hands that learned it in the browser; the rail's buttons,
+/// which the web app gives no chords, take ⌥⌘1–7 (see `RailShortcut`).
+/// The tab chords are the island's strip's to answer, and a menu
+/// equivalent takes the key before the page sees it, so each of those
+/// items hands its chord back to the strip (`WindowTabAction`) rather than
+/// acting on tabs of its own. Nothing here claims a chord the page alone
+/// answers: ⌘S is the SPA's save of an edited `.env` file.
 struct ReviewerCommands: Commands {
     let model: AppModel
 
@@ -101,16 +102,33 @@ struct ReviewerCommands: Commands {
                 .keyboardShortcut("f", modifiers: [.command, .shift])
                 .disabled(!model.hasProject)
         }
-        // The system's own Toggle Sidebar (⌃⌘S), which moves the split
-        // view's column, and the rest into the View menu ahead of it, rather
-        // than a second menu of the same name beside it.
-        SidebarCommands()
+        // The View menu: the sidebar on the system's own chord for it,
+        // ⌃⌘S, but moved through the model rather than by the split view,
+        // so the menu, the palette and the bar's toggle all move the one
+        // switch; then the rail, button by button in the rail's own order,
+        // each on its chord (see `RailShortcut`) and ticked while it is on
+        // — a bottom surface's item puts the pane away again as its rail
+        // button does.
         CommandGroup(before: .sidebar) {
+            Button(model.sidebarShown ? "Hide Sidebar" : "Show Sidebar") { model.toggleSidebar() }
+                .keyboardShortcut("s", modifiers: [.control, .command])
+            Divider()
+            ForEach(CodeSurface.allCases) { surface in
+                Toggle(surface.title, isOn: Binding(
+                    get: { model.codeSurface == surface },
+                    set: { if $0 { model.show(surface: surface) } }))
+                    .keyboardShortcut(surface.railShortcut)
+                    .disabled(!model.hasProject)
+            }
+            Divider()
             Button(model.bottomExpanded ? "Hide Bottom Pane" : "Show Bottom Pane") { model.toggleBottomPane() }
                 .keyboardShortcut("b", modifiers: .command)
-            Divider()
             ForEach(BottomPaneTab.allCases) { tab in
-                Button(tab.title) { model.show(bottomTab: tab) }
+                Toggle(tab.title, isOn: Binding(
+                    get: { model.bottomExpanded && model.bottomTab == tab },
+                    set: { _ in model.toggle(bottomTab: tab) }))
+                    .keyboardShortcut(tab.railShortcut)
+                    .disabled(!model.hasProject)
             }
             Divider()
             Button("Refresh Project") { Task { await model.refresh() } }
