@@ -62,7 +62,8 @@ export interface ShellSessionsSource {
   readonly filters: Omit<ShellSessionFilters, "projects">;
   readonly projects: ReadonlyArray<ChatProjectTally>;
   readonly loadMore: () => void;
-  readonly remove: (id: string) => void;
+  /** The shell has asked what it needs to: a sweep is not confirmed again. */
+  readonly remove: (ids: ReadonlyArray<string>) => void;
   /** The shell's field: held by the page, since the query is the page's. */
   readonly search: (text: string) => void;
 }
@@ -185,7 +186,7 @@ export function useShellSessions(source: ShellSessionsSource | null): void {
           return;
         }
         case "delete":
-          return current.remove(action.id);
+          return current.remove(action.ids);
         case "loadMore":
           return current.loadMore();
         case "search":

@@ -99,7 +99,7 @@ enum SessionMark: String, Decodable, Sendable {
 enum SessionAction {
     case select(String)
     case openInTab(String)
-    case delete(String)
+    case delete([String])
     case loadMore
     case search(String)
     case filter(project: String?, date: SessionDateFilter?)
@@ -111,7 +111,7 @@ enum SessionAction {
         switch self {
         case .select(let id): return ["kind": "select", "id": id]
         case .openInTab(let id): return ["kind": "openInTab", "id": id]
-        case .delete(let id): return ["kind": "delete", "id": id]
+        case .delete(let ids): return ["kind": "delete", "ids": ids]
         case .loadMore: return ["kind": "loadMore"]
         case .refetch: return ["kind": "refetch"]
         case .search(let text): return ["kind": "search", "text": text]

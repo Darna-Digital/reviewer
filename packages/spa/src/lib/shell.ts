@@ -255,7 +255,8 @@ export interface ShellSessionFilters {
 export type ShellSessionAction =
   | { readonly kind: "select"; readonly id: string }
   | { readonly kind: "openInTab"; readonly id: string }
-  | { readonly kind: "delete"; readonly id: string }
+  /** Already confirmed on the shell's side where there is more than one. */
+  | { readonly kind: "delete"; readonly ids: ReadonlyArray<string> }
   | { readonly kind: "loadMore" }
   | { readonly kind: "refetch" }
   | { readonly kind: "search"; readonly text: string }

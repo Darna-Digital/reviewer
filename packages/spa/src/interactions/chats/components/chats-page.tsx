@@ -261,6 +261,10 @@ export function ChatsPage() {
     ) {
       return;
     }
+    await removeConfirmed(ids);
+  };
+
+  const removeConfirmed = async (ids: ReadonlyArray<string>) => {
     setSelection(NO_ROWS);
     const failed = await actions.removeMany(ids);
     if (failed.length > 0) {
@@ -289,7 +293,7 @@ export function ChatsPage() {
           filters: shellFilters.filters,
           projects: shellFilters.projects,
           loadMore: () => void loadMore(),
-          remove: (id) => void remove([id]),
+          remove: (ids) => void removeConfirmed(ids),
           search: setShellSearch,
         }
       : null

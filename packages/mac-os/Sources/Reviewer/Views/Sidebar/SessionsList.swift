@@ -13,29 +13,40 @@
 // has rather than the pages loaded so far. The untruncated title stands in
 // the row's tooltip.
 //
-// Picking a row sends the page to that session; the menu lifts it into a
-// tab of its own, or deletes it; and the foot of the list coming into view
-// asks the page for its next page.
+// Picking a row sends the page to that session; a shift- or ⌘-click sweeps
+// more rows in without moving the page, and the menu or the delete key then
+// acts on the sweep, as the web list's does — one row goes without asking,
+// a sweep asks first. The menu lifts a single row into a tab of its own; and
+// the foot of the list coming into view asks the page for its next page.
 import SwiftUI
 
 struct SessionsList: View {
     @Environment(AppModel.self) private var model
-    /// The row highlighted: the page's, until a click moves it ahead of the
+    /// The rows highlighted: the page's, until a click moves it ahead of the
     /// page's answer — a list that waited for the round trip would flash the
     /// old row back under the pointer first.
-    @State private var selected: String?
+    @State private var selected: Set<String> = []
+    @State private var deletePrompt: [String]?
 
     var body: some View {
         if let list = model.sessions {
             VStack(spacing: 0) {
-                SessionsHeader(filters: list.filters, count: list.sessions.count, hasMore: list.hasMore)
+                SessionsHeader(filters: list.filters)
                 if list.isEmpty {
                     SessionsPlaceholder(loading: list.loading, searching: !list.filters.search.isEmpty)
                 } else {
                     rows(of: list)
                 }
             }
-            .onChange(of: list.activeId, initial: true) { _, active in selected = active }
+            .onChange(of: list.activeId, initial: true) { _, active in
+                selected = active.map { [$0] } ?? []
+            }
+            .alert("Delete \(deletePrompt?.count ?? 0) sessions?", isPresented: deletePromptShown, presenting: deletePrompt) { ids in
+                Button("Delete \(ids.count)", role: .destructive) { confirmDelete(ids, in: list) }
+                Button("Cancel", role: .cancel) {}
+            } message: { _ in
+                Text("Their conversations go with them. This can't be undone.")
+            }
         } else {
             // The surface is up and its first list is on its way.
             SessionsPlaceholder(loading: true, searching: false)
@@ -56,13 +67,6 @@ struct SessionsList: View {
                 ForEach(list.sessions) { session in
                     SessionRow(session: session)
                         .tag(session.id)
-                        .contextMenu {
-                            Button("Open in a Tab") { model.act(onSessions: .openInTab(session.id)) }
-                            Divider()
-                            Button("Delete Session", role: .destructive) {
-                                model.act(onSessions: .delete(session.id))
-                            }
-                        }
                         .onAppear {
                             if session.id == list.sessions.last?.id && list.hasMore {
                                 model.act(onSessions: .loadMore)
@@ -83,34 +87,64 @@ struct SessionsList: View {
         }
         .listStyle(.sidebar)
         .scrollContentBackground(.hidden)
+        .contextMenu(forSelectionType: String.self) { ids in
+            let sessions = deletable(ids, in: list)
+            if sessions.count == 1, let id = sessions.first {
+                Button("Open in a Tab") { model.act(onSessions: .openInTab(id)) }
+                Divider()
+            }
+            if !sessions.isEmpty {
+                Button(sessions.count == 1 ? "Delete Session" : "Delete \(sessions.count) Sessions", role: .destructive) {
+                    delete(sessions)
+                }
+            }
+        }
+        .onDeleteCommand { delete(deletable(selected, in: list)) }
         .onChange(of: selected) { _, picked in
-            guard let picked, picked != list.activeId else { return }
+            guard picked.count == 1, let picked = picked.first, picked != list.activeId else { return }
             model.act(onSessions: .select(picked))
         }
+    }
+
+    /// The rows the list can delete, in the list's order: cloud runs are
+    /// not the page's to remove, so a sweep over both leaves them be.
+    private func deletable(_ ids: Set<String>, in list: ShellSessions) -> [String] {
+        list.sessions.map(\.id).filter(ids.contains)
+    }
+
+    private func delete(_ ids: [String]) {
+        if ids.count > 1 {
+            deletePrompt = ids
+        } else if let id = ids.first {
+            model.act(onSessions: .delete([id]))
+        }
+    }
+
+    /// The sweep is spent once it has been deleted: what is left highlighted
+    /// is the page's row, as before the sweep began.
+    private func confirmDelete(_ ids: [String], in list: ShellSessions) {
+        selected = list.activeId.map { [$0] } ?? []
+        model.act(onSessions: .delete(ids))
+    }
+
+    private var deletePromptShown: Binding<Bool> {
+        Binding(
+            get: { deletePrompt != nil },
+            set: { if !$0 { deletePrompt = nil } })
     }
 }
 
 /// The search over every session and the filter menu beside it — the web
-/// rail's two controls, in the changed-files layout's shape — then how many
-/// sessions the list holds: of the ones loaded so far, while the server has
-/// more to give.
+/// rail's two controls, in the changed-files layout's shape.
 private struct SessionsHeader: View {
     let filters: ShellSessionFilters
-    let count: Int
-    let hasMore: Bool
     @Environment(AppModel.self) private var model
     @State private var query = ""
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                SearchField(query: $query)
-                SessionFilterMenu(filters: filters)
-            }
-            Text(count == 1 ? "1 session" : "\(count)\(hasMore ? "+" : "") sessions")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .padding(.leading, 4)
+        HStack(spacing: 6) {
+            SearchField(query: $query)
+            SessionFilterMenu(filters: filters)
         }
         .padding(.horizontal, 10)
         .padding(.top, 8)
@@ -244,7 +278,7 @@ private struct SessionRow: View {
             ZStack {
                 if isHovering && deletable {
                     PaneBarButton(symbol: "xmark", help: "Delete session") {
-                        model.act(onSessions: .delete(session.id))
+                        model.act(onSessions: .delete([session.id]))
                     }
                 } else if let mark = session.mark {
                     SessionMarkDot(mark: mark)
