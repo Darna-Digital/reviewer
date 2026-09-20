@@ -97,6 +97,15 @@ struct CommitComposer: View {
             .font(.system(size: 12))
             .scrollContentBackground(.hidden)
             .focused($composerFocused)
+            // ⌘↩ commits from the message box alone. As the Commit button's key
+            // equivalent it answered window-wide, so the same chord in a comment
+            // field in the web view committed the tree instead of posting the
+            // comment; on the editor it fires only while the message has focus.
+            .onKeyPress(.return, phases: .down) { press in
+                guard press.modifiers == .command else { return .ignored }
+                commit(push: false)
+                return .handled
+            }
             .contentMargins(.bottom, Self.controlsClearance, for: .scrollContent)
             .padding(.horizontal, 6)
             .padding(.top, 6)
@@ -165,7 +174,6 @@ struct CommitComposer: View {
                 .disabled(!canCommit)
             Button("Commit") { commit(push: false) }
                 .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.return, modifiers: .command)
                 .disabled(!canCommit)
         }
         .controlSize(.regular)
