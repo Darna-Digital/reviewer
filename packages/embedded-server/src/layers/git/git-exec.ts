@@ -149,9 +149,8 @@ const indexPermitFor = (root: string): Semaphore.Semaphore => {
 };
 
 /**
- * A GitExec running in whatever root `resolveRoot` yields. The selected repo is
- * the usual answer; a project view that reads every root it holds asks for one
- * of these per root instead, so the same query code serves both.
+ * A GitExec running in whatever root `resolveRoot` yields — the open
+ * repository in the app, a fixed folder in a test.
  */
 export const makeIn = (resolveRoot: Effect.Effect<string, NoRepoSelected>) =>
   Effect.gen(function* () {
@@ -318,7 +317,7 @@ export const makeIn = (resolveRoot: Effect.Effect<string, NoRepoSelected>) =>
     return GitExec.of({ run, runVerbose, runTolerant, lines });
   });
 
-/** A GitExec pinned to one root — how a project view reads each of its own. */
+/** A GitExec pinned to one root. */
 export const makeAt = (root: string) => makeIn(Effect.succeed(root));
 
 /** The default: git runs wherever the workspace's selected repository is. */

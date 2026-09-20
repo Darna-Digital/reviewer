@@ -36,13 +36,12 @@ import { LanguageLive } from "./layers/language/language.layer.live.ts";
 import { LocalDevHandler } from "./layers/local-dev/local-dev.handler.ts";
 import { LocalDevLive } from "./layers/local-dev/local-dev.layer.live.ts";
 import { DevRuntimeLive } from "./layers/local-dev/local-dev.runtime.ts";
-import { ProjectHandler } from "./layers/project/project.handler.ts";
-import { ProjectLive } from "./layers/project/project.layer.live.ts";
 import { BranchTargetsLive } from "./layers/branch-targets/branch-targets.layer.live.ts";
 import { RepoHandler } from "./layers/repo/repo.handler.ts";
 import { RepoLive } from "./layers/repo/repo.layer.live.ts";
 import { ThreadsHandler } from "./layers/threads/threads.handler.ts";
 import { ThreadsLive } from "./layers/threads/threads.layer.live.ts";
+import { layer as repoIndexLayer } from "./layers/workspace/repo-index.ts";
 import { WorkspaceHandler } from "./layers/workspace/workspace.handler.ts";
 import { WorkspaceLive } from "./layers/workspace/workspace.layer.live.ts";
 import { layer as databaseLayer } from "./layers/db/db.service.ts";
@@ -75,7 +74,6 @@ const ApiLive = Layer.mergeAll(
 ).pipe(
   Layer.provide(WorkspaceHandler),
   Layer.provide(RepoHandler),
-  Layer.provide(ProjectHandler),
   Layer.provide(CommentsHandler),
   Layer.provide(GitHubHandler),
   Layer.provide(GitMessageHandler),
@@ -91,7 +89,6 @@ const FeatureServices = Layer.mergeAll(
   WorkspaceLive,
   RepoLive,
   BranchTargetsLive,
-  ProjectLive,
   CommentsLive,
   GitHubLive,
   GitMessageLive,
@@ -109,14 +106,15 @@ const FeatureServices = Layer.mergeAll(
  * executor, the GitHub client and the commit-message drafts (a drafting agent
  * CLI outlives the request that started it, so its slot has to outlive it too).
  *
- * The database comes first — opening a project imports whatever its roots still
- * keep in `.reviewer/*.json`, so the file has to be there (and migrated) before
+ * The database comes first — opening a repository imports whatever it still
+ * keeps in `.reviewer/*.json`, so the file has to be there (and migrated) before
  * the workspace context seeds its initial selection.
  */
 const InfraLive = gitHubClientLayer.pipe(
   Layer.provideMerge(
     Layer.mergeAll(gitExecLayer, terminalExecLayer, commitDraftsLayer)
   ),
+  Layer.provideMerge(repoIndexLayer()),
   Layer.provideMerge(workspaceContextLayer(initial)),
   Layer.provideMerge(databaseLayer),
   Layer.provide(FetchHttpClient.layer)

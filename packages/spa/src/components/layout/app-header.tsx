@@ -19,15 +19,7 @@ import { DockRestore } from "@/components/layout/dock-restore";
 import { ComparePicker } from "@/interactions/comparison/components/compare-picker";
 import { useLocalComparison } from "@/interactions/comparison/adapters/comparison.hook.adapter";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
-import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
-import { activeRepo } from "@reviewer/core/workspace";
-import {
-  useBranches,
-  useProjectBranches,
-  useRemoteBranches,
-  useRepo,
-  useWorkspace,
-} from "@/lib/queries";
+import { useBranches, useRemoteBranches, useRepo } from "@/lib/queries";
 import { useHeaderLeadWidths } from "@/components/layout/header-lead";
 import { setHeaderTabsSlot } from "@/components/layout/header-tabs";
 import {
@@ -119,16 +111,10 @@ export function AppHeader({ route }: { route: ShellRoute }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const repo = useRepo();
-  const workspace = useWorkspace();
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
-  const projectBranchList = useProjectBranches();
-  const workspaceActions = useWorkspaceActions();
   const git = useGitActions();
   const comparing = useLocalComparison();
-  /** Make a root current before a menu action runs in it. */
-  const followRepo = (repoPath: string) =>
-    workspaceActions.followRepo(repoPath, workspace.data?.current ?? null);
 
   const readingOwnChanges = reviewSourceOf(pathname)?.kind === "local";
 
@@ -177,11 +163,6 @@ export function AppHeader({ route }: { route: ShellRoute }) {
           onDeleteBranch={(name) => void git.deleteBranch(name)}
           onFetch={() => void git.fetch()}
           onPush={() => void git.push()}
-          repos={projectBranchList.data?.repos}
-          currentRepo={activeRepo(
-            workspace.data ?? { repos: [], current: null }
-          )}
-          onFollowRepo={followRepo}
         />
       )}
     </>

@@ -10,7 +10,7 @@ import {
   WorkspaceInfo,
   BrowseQuery,
   PathQuery,
-  SelectRepo,
+  RepoIndex,
   SetWorkspace,
   WriteFile,
 } from "@reviewer/core/workspace";
@@ -30,10 +30,15 @@ export class WorkspaceApi extends HttpApiGroup.make("workspace")
     })
   )
   .add(
-    HttpApiEndpoint.post("selectRepo", "/workspace/repo", {
-      payload: SelectRepo,
-      success: WorkspaceInfo,
-      error: [InvalidRepo, StorageError],
+    HttpApiEndpoint.get("repos", "/repos", {
+      success: RepoIndex,
+      error: StorageError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("rescanRepos", "/repos/scan", {
+      success: RepoIndex,
+      error: StorageError,
     })
   )
   .add(

@@ -1,5 +1,5 @@
 // The wire shapes of the embedded server's API, mirrored from the Effect
-// schemas in `packages/core` (`workspace`, `repo`, `project`, `chats`). Only
+// schemas in `packages/core` (`workspace`, `repo`, `chats`). Only
 // the fields this shell reads are declared — `Decodable` ignores the rest —
 // and every `NullOr` schema is an optional here. Dates stay ISO strings: the
 // UI never does date arithmetic, only displays them.
@@ -7,16 +7,29 @@ import Foundation
 
 // MARK: workspace
 
-struct RepoEntry: Codable, Hashable, Sendable {
+/// A git repository the machine holds, as the repository index lists it:
+/// where it is, the branch it is on, and when it was last opened here.
+struct RepoEntry: Codable, Hashable, Identifiable, Sendable {
     let name: String
     let path: String
     let branch: String?
+    let lastOpened: String?
+
+    var id: String { path }
+}
+
+/// Every repository the index has found, and whether the walk behind it is
+/// still under way.
+struct RepoIndex: Codable, Sendable {
+    let repos: [RepoEntry]
+    let scanning: Bool
+    let scannedAt: String?
 }
 
 struct WorkspaceInfo: Codable, Sendable {
+    /// The open repository — the project — or nil while nothing is open.
     let project: String?
-    let repos: [RepoEntry]
-    let current: String?
+    let branch: String?
     let recents: [String]
     let home: String
 
@@ -52,10 +65,7 @@ struct GitStatusEntry: Codable, Hashable, Sendable {
     let status: GitFileStatus
 }
 
-/// A file listing with git status. `/api/files` names them from the selected
-/// root, `/api/project/files` from the project folder with each root's name
-/// in front — and the file endpoints resolve against the project folder, so
-/// only one of the two matches for a given project. See `AppModel.loadFiles`.
+/// A file listing with git status, named from the repository root.
 struct FilesPayload: Decodable, Sendable {
     let paths: [String]
     let gitStatus: [GitStatusEntry]
@@ -496,8 +506,6 @@ struct DevCommandView: Decodable, Identifiable, Hashable, Sendable {
     let id: String
     let name: String
     let command: String
-    let repo: String
-    let repoPath: String
     let status: Status
     let exitCode: Int?
 }
@@ -506,18 +514,11 @@ struct DevCommand: Decodable, Sendable {
     let id: String
     let name: String
     let command: String
-    let repo: String
-    let repoPath: String
 }
 
 struct NewDevCommand: Encodable, Sendable {
     let name: String
     let command: String
-    let repoPath: String
-}
-
-struct DevRepoScope: Encodable, Sendable {
-    let repoPath: String?
 }
 
 // MARK: branches
@@ -547,20 +548,6 @@ struct RemoteBranchInfo: Decodable, Identifiable, Hashable, Sendable {
     let subject: String
 
     var id: String { name }
-}
-
-/// One root's branches, as `/api/project/branches` lists them for a
-/// project of several — `RepoBranches` in core.
-struct RepoBranches: Decodable, Identifiable, Sendable {
-    let repo: RepoEntry
-    let branches: [BranchInfo]
-    let remoteBranches: [RemoteBranchInfo]
-
-    var id: String { repo.path }
-}
-
-struct ProjectBranches: Decodable, Sendable {
-    let repos: [RepoBranches]
 }
 
 struct CommandOutput: Decodable, Sendable {
@@ -661,16 +648,6 @@ struct CommitInfo: Decodable, Identifiable, Hashable, Sendable {
     let parents: [String]
 
     var id: String { sha }
-}
-
-/// One commit of a project's merged history, with the root it came from.
-struct ProjectLogEntry: Decodable, Sendable {
-    let repo: RepoEntry
-    let commit: CommitInfo
-}
-
-struct ProjectLog: Decodable, Sendable {
-    let commits: [ProjectLogEntry]
 }
 
 /// A file a commit touched — `CommitFile` in core; `oldPath` when renamed.

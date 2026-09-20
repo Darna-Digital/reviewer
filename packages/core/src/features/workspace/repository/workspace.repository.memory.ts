@@ -1,20 +1,21 @@
 import * as Effect from "effect/Effect";
 import * as Ref from "effect/Ref";
 import { NoRepoSelected, StorageError } from "../../../shared.ts";
-import { InvalidRepo } from "../errors.ts";
-import { chooseRepo, repoName } from "../functions/workspace.functions.ts";
+import { folderName } from "../functions/workspace.functions.ts";
 import { mediaTypeFor } from "../schema/workspace.schema.ts";
-import type { RepoEntry, WorkspaceInfo } from "../schema/workspace.schema.ts";
+import type {
+  RepoEntry,
+  RepoIndex,
+  WorkspaceInfo,
+} from "../schema/workspace.schema.ts";
 import type { WorkspaceRepo } from "./workspace.repository.ts";
 
 export interface MemoryWorkspaceSeed {
-  /** The open project folder. */
+  /** The open repository. */
   readonly project?: string | null;
-  /** The git roots it holds; a project with none listed holds only itself. */
+  /** The repositories the machine holds, as the index would list them. */
   readonly repos?: ReadonlyArray<string>;
-  /** The active root; defaults to the project's first. */
-  readonly current?: string | null;
-  /** Per-root branches, for the cases where the roots have drifted apart. */
+  /** Each repository's branch; `main` unless told otherwise. */
   readonly branches?: Record<string, string | null>;
   readonly recents?: ReadonlyArray<string>;
   readonly files?: Record<string, string>;
@@ -41,27 +42,17 @@ const toBase64 = (text: string) => {
 
 export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
   Effect.gen(function* () {
-    const project = seed.project ?? null;
-    /** The roots the seeded folder holds — itself, unless told otherwise. */
-    const reposUnder = (folder: string): ReadonlyArray<RepoEntry> => {
-      const held = (seed.repos ?? []).filter(
-        (path) => path === folder || path.startsWith(`${folder}/`)
-      );
-      const paths = held.length > 0 ? held : [folder];
-      return paths.map((path) => ({
-        name: repoName(folder, path),
-        path,
-        branch: seed.branches?.[path] ?? "main",
-      }));
-    };
+    const branchOf = (path: string) => seed.branches?.[path] ?? "main";
+    const indexed = (path: string): RepoEntry => ({
+      name: folderName(path),
+      path,
+      branch: branchOf(path),
+      lastOpened: null,
+    });
 
-    const projectRef = yield* Ref.make<string | null>(project);
+    const currentRef = yield* Ref.make<string | null>(seed.project ?? null);
     const reposRef = yield* Ref.make<ReadonlyArray<RepoEntry>>(
-      project === null ? [] : reposUnder(project)
-    );
-    const currentRef = yield* Ref.make<string | null>(
-      seed.current ??
-        (project === null ? null : chooseRepo(reposUnder(project), null))
+      (seed.repos ?? []).map(indexed)
     );
     const recentsRef = yield* Ref.make<ReadonlyArray<string>>(
       seed.recents ?? []
@@ -73,47 +64,48 @@ export const makeMemoryWorkspaceRepository = (seed: MemoryWorkspaceSeed = {}) =>
       )
     );
     const info: Effect.Effect<WorkspaceInfo> = Effect.gen(function* () {
+      const current = yield* Ref.get(currentRef);
       return {
-        project: yield* Ref.get(projectRef),
-        repos: yield* Ref.get(reposRef),
-        current: yield* Ref.get(currentRef),
+        project: current,
+        branch: current === null ? null : branchOf(current),
         recents: yield* Ref.get(recentsRef),
         home: "/home/test",
+      };
+    });
+    const repos: Effect.Effect<RepoIndex> = Effect.gen(function* () {
+      return {
+        repos: yield* Ref.get(reposRef),
+        scanning: false,
+        scannedAt: null,
       };
     });
     const repo: WorkspaceRepo = {
       info,
       setCurrent: (path) =>
         Effect.gen(function* () {
-          const repos = reposUnder(path);
-          yield* Ref.set(projectRef, path);
-          yield* Ref.set(reposRef, repos);
-          yield* Ref.set(currentRef, chooseRepo(repos, null));
+          const openedAt = new Date(0).toISOString();
+          yield* Ref.set(currentRef, path);
           yield* Ref.update(recentsRef, (existing) =>
-            [path, ...existing.filter((entry) => entry !== path)].slice(0, 10)
+            [path, ...existing.filter((recent) => recent !== path)].slice(0, 10)
+          );
+          yield* Ref.update(reposRef, (existing) =>
+            existing.some((listed) => listed.path === path)
+              ? existing.map((listed) =>
+                  listed.path === path
+                    ? { ...listed, lastOpened: openedAt }
+                    : listed
+                )
+              : [...existing, { ...indexed(path), lastOpened: openedAt }]
           );
           return yield* info;
         }),
-      selectRepo: (path) =>
-        Effect.gen(function* () {
-          const repos = yield* Ref.get(reposRef);
-          if (!repos.some((entry) => entry.path === path)) {
-            return yield* Effect.fail(
-              new InvalidRepo({
-                path,
-                reason: "not a repository in this project",
-              })
-            );
-          }
-          yield* Ref.set(currentRef, path);
-          return yield* info;
-        }),
+      repos,
+      rescan: repos,
       browse: (path) =>
         Effect.succeed({
           path: path ?? "/home/test",
           parent: null,
           isGitRepo: false,
-          repoCount: 0,
           entries: [],
         }),
       readFile: (relPath) =>

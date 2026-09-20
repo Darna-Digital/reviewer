@@ -24,8 +24,9 @@
  * `useShellDock`.
  *
  * The one thing it does that `AppLayout` never has to is talk to the shell:
- * go where the shell says, say where it went, and re-ask for everything when
- * the shell says something changed. See `lib/shell`.
+ * go where the shell says, say where it went, re-ask for everything when
+ * the shell says something changed, and flip the one preference the shell's
+ * palette cannot reach itself — the diff style. See `lib/shell`.
  */
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -41,9 +42,14 @@ import { GitBottomDock } from "@/components/layout/git-bottom-dock";
 import { nativeInShell } from "@/components/layout/bottom-panel";
 import { IslandBar } from "@/components/layout/island-bar";
 import { useWorkspace } from "@/lib/queries";
-import { type Island, shell } from "@/lib/shell";
+import { type Island, type ShellViewAction, shell } from "@/lib/shell";
 import { shellRoute, showsGitChrome } from "@/lib/shell-route";
-import { type BottomTab, useUiPrefs } from "@/lib/ui-prefs";
+import {
+  type BottomTab,
+  readUiPrefs,
+  setUiPrefs,
+  useUiPrefs,
+} from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
 export function IslandLayout({ island }: { island: Island }) {
@@ -87,7 +93,7 @@ function CodePage() {
     select: (s) => (s.resolvedLocation ?? s.location).pathname,
   });
   const workspace = useWorkspace();
-  const current = workspace.data?.current ?? null;
+  const current = workspace.data?.project ?? null;
   const route = shellRoute(pathname, false, false);
   const expandedTab =
     route.kind === "dock" && current !== null ? route.tab : undefined;
@@ -112,6 +118,17 @@ function CodePage() {
       {dockShown && <GitBottomDock expandedTab={expandedTab} />}
     </div>
   );
+}
+
+/** The page's own preferences, flipped at the shell's palette's asking. */
+function applyViewAction(action: ShellViewAction): void {
+  switch (action.kind) {
+    case "toggleDiffStyle":
+      setUiPrefs({
+        diffStyle: readUiPrefs().diffStyle === "split" ? "unified" : "split",
+      });
+      return;
+  }
 }
 
 /**
@@ -157,6 +174,9 @@ function useShellNavigation(island: Island): void {
             return;
           case "refresh":
             void queryClient.invalidateQueries();
+            return;
+          case "view":
+            applyViewAction(event.action);
             return;
           default:
             return;

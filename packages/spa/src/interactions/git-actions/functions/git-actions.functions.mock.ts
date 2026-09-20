@@ -7,7 +7,6 @@ export const createGitActionsDependenciesMock = (
   data: {},
   sideEffects: {
     commit: vi.fn(async () => ({ sha: "abc1234" })),
-    commitAcrossRepos: null,
     push: vi.fn(async () => ({ output: "pushed" })),
     notify: vi.fn(),
     refresh: vi.fn(),

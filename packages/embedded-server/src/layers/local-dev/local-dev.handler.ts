@@ -38,11 +38,7 @@ export const LocalDevHandler = HttpApiBuilder.group(
       )
       .handle("create", ({ payload }) =>
         Effect.flatMap(LocalDevService, (s) =>
-          s.create({
-            name: payload.name,
-            command: payload.command,
-            repoPath: payload.repoPath,
-          })
+          s.create({ name: payload.name, command: payload.command })
         )
       )
       .handle("get", ({ params }) =>
@@ -50,11 +46,7 @@ export const LocalDevHandler = HttpApiBuilder.group(
       )
       .handle("update", ({ params, payload }) =>
         Effect.flatMap(LocalDevService, (s) =>
-          s.update(params.id, {
-            name: payload.name,
-            command: payload.command,
-            repoPath: payload.repoPath,
-          })
+          s.update(params.id, { name: payload.name, command: payload.command })
         )
       )
       .handle("remove", ({ params }) =>
@@ -71,10 +63,12 @@ export const LocalDevHandler = HttpApiBuilder.group(
         Effect.gen(function* () {
           const dev = yield* LocalDevService;
           const runtime = yield* DevRuntime;
+          const ctx = yield* WorkspaceContext;
+          const repoPath = yield* ctx.requireCurrent;
           const command = yield* dev.get(params.id);
           const status = yield* runtime.start({
             commandId: command.id,
-            repoPath: command.repoPath,
+            repoPath,
             command: command.command,
           });
           return toView(command, status);
@@ -83,22 +77,18 @@ export const LocalDevHandler = HttpApiBuilder.group(
       .handle("stop", ({ params }) =>
         Effect.flatMap(DevRuntime, (r) => r.stop(params.id)).pipe(Effect.as(ok))
       )
-      .handle("startAll", ({ payload }) =>
+      .handle("startAll", () =>
         Effect.gen(function* () {
           const dev = yield* LocalDevService;
           const runtime = yield* DevRuntime;
+          const ctx = yield* WorkspaceContext;
+          const repoPath = yield* ctx.requireCurrent;
           const commands = yield* dev.list;
-          // Each command runs in the root it belongs to, so a project's backend
-          // and frontend come up together from one Run all.
-          const scoped =
-            payload.repoPath === undefined
-              ? commands
-              : commands.filter((c) => c.repoPath === payload.repoPath);
           const views: DevCommandView[] = [];
-          for (const command of scoped) {
+          for (const command of commands) {
             const status = yield* runtime.start({
               commandId: command.id,
-              repoPath: command.repoPath,
+              repoPath,
               command: command.command,
             });
             views.push(toView(command, status));
@@ -106,15 +96,11 @@ export const LocalDevHandler = HttpApiBuilder.group(
           return views;
         })
       )
-      .handle("stopAll", ({ payload }) =>
+      .handle("stopAll", () =>
         Effect.gen(function* () {
           const runtime = yield* DevRuntime;
           const ctx = yield* WorkspaceContext;
-          if (payload.repoPath !== undefined) {
-            yield* runtime.stopRepo(payload.repoPath);
-            return ok;
-          }
-          yield* runtime.stopProject(yield* ctx.requireProject);
+          yield* runtime.stopRepo(yield* ctx.requireCurrent);
           return ok;
         })
       )

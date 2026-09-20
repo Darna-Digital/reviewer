@@ -25,7 +25,7 @@ import {
   ChatTurn,
 } from "@reviewer/core/chats";
 import { ReviewComment } from "@reviewer/core/comments";
-import { DevCommandDefinition } from "@reviewer/core/local-dev";
+import { DevCommand } from "@reviewer/core/local-dev";
 import { Thread } from "@reviewer/core/threads";
 import { database, transact } from "./database.ts";
 import { documentTable } from "./documents.ts";
@@ -55,9 +55,7 @@ const LegacyChat = Schema.Struct({
 const decodeChats = Schema.decodeUnknownSync(Schema.Array(LegacyChat));
 const decodeComments = Schema.decodeUnknownSync(Schema.Array(ReviewComment));
 const decodeThreads = Schema.decodeUnknownSync(Schema.Array(Thread));
-const decodeDevCommands = Schema.decodeUnknownSync(
-  Schema.Array(DevCommandDefinition)
-);
+const decodeDevCommands = Schema.decodeUnknownSync(Schema.Array(DevCommand));
 
 /** Parse a `.reviewer` file, or null when it isn't there. */
 const readJson = (path: string): unknown | null => {
@@ -121,11 +119,11 @@ const threads = documentTable<Thread>({
   direction: "desc",
   decode: Schema.decodeUnknownSync(Thread),
 });
-const devCommands = documentTable<DevCommandDefinition>({
+const devCommands = documentTable<DevCommand>({
   table: "dev_command",
   sortColumn: "created_at",
   direction: "asc",
-  decode: Schema.decodeUnknownSync(DevCommandDefinition),
+  decode: Schema.decodeUnknownSync(DevCommand),
 });
 
 const importChats = (repoPath: string): void => {

@@ -50,17 +50,15 @@ export function useLocalDevActions() {
               params: { path: { id } },
             });
           },
-          startAll: async (repoPath) => {
+          startAll: async () => {
             const { error } = await fetchClient.POST(
               "/api/local-dev/start-all",
-              { body: repoPath === undefined ? {} : { repoPath } }
+              {}
             );
             if (error) fail(error, "failed to start commands");
           },
-          stopAll: async (repoPath) => {
-            await fetchClient.POST("/api/local-dev/stop-all", {
-              body: repoPath === undefined ? {} : { repoPath },
-            });
+          stopAll: async () => {
+            await fetchClient.POST("/api/local-dev/stop-all", {});
           },
         },
       }),
@@ -74,18 +72,13 @@ export function useLocalDevActions() {
   };
 
   return {
-    create: async (name: string, command: string, repoPath: string) => {
-      const created = await fns.create(name, command, repoPath);
+    create: async (name: string, command: string) => {
+      const created = await fns.create(name, command);
       invalidate();
       return created;
     },
-    update: async (
-      id: string,
-      name: string,
-      command: string,
-      repoPath: string
-    ) => {
-      const updated = await fns.update(id, name, command, repoPath);
+    update: async (id: string, name: string, command: string) => {
+      const updated = await fns.update(id, name, command);
       invalidate();
       return updated;
     },
@@ -101,12 +94,12 @@ export function useLocalDevActions() {
       await fns.stop(id);
       invalidate();
     },
-    startAll: async (repoPath?: string) => {
-      await fns.startAll(repoPath);
+    startAll: async () => {
+      await fns.startAll();
       invalidate();
     },
-    stopAll: async (repoPath?: string) => {
-      await fns.stopAll(repoPath);
+    stopAll: async () => {
+      await fns.stopAll();
       invalidate();
     },
   };

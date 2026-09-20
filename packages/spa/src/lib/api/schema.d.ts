@@ -20,7 +20,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/workspace/repo": {
+    "/api/repos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["workspace.repos"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/repos/scan": {
         parameters: {
             query?: never;
             header?: never;
@@ -29,7 +45,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["workspace.selectRepo"];
+        post: operations["workspace.rescanRepos"];
         delete?: never;
         options?: never;
         head?: never;
@@ -558,150 +574,6 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["repo.deleteBranch"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/changes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["project.changes"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["project.files"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/diff": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["project.diff"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/branches": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["project.branches"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/commit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["project.commit"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/discard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["project.discard"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/discard-hunk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["project.discardHunk"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/log": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["project.log"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/project/search": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["project.search"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1539,12 +1411,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         project: string | null;
-                        repos: {
-                            name: string;
-                            path: string;
-                            branch: string | null;
-                        }[];
-                        current: string | null;
+                        branch: string | null;
                         recents: string[];
                         home: string;
                     };
@@ -1584,12 +1451,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         project: string | null;
-                        repos: {
-                            name: string;
-                            path: string;
-                            branch: string | null;
-                        }[];
-                        current: string | null;
+                        branch: string | null;
                         recents: string[];
                         home: string;
                     };
@@ -1615,20 +1477,14 @@ export interface operations {
             };
         };
     };
-    "workspace.selectRepo": {
+    "workspace.repos": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    path: string;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Success */
             200: {
@@ -1637,25 +1493,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        project: string | null;
                         repos: {
                             name: string;
                             path: string;
                             branch: string | null;
+                            lastOpened: string | null;
                         }[];
-                        current: string | null;
-                        recents: string[];
-                        home: string;
+                        scanning: boolean;
+                        scannedAt: string | null;
                     };
                 };
             };
-            /** @description InvalidRepo */
-            400: {
+            /** @description StorageError */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvalidRepo"];
+                    "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "workspace.rescanRepos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        repos: {
+                            name: string;
+                            path: string;
+                            branch: string | null;
+                            lastOpened: string | null;
+                        }[];
+                        scanning: boolean;
+                        scannedAt: string | null;
+                    };
                 };
             };
             /** @description StorageError */
@@ -1690,12 +1574,10 @@ export interface operations {
                         path: string;
                         parent: string | null;
                         isGitRepo: boolean;
-                        repoCount: number;
                         entries: {
                             name: string;
                             path: string;
                             isGitRepo: boolean;
-                            repoCount: number;
                         }[];
                     };
                 };
@@ -3302,460 +3184,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GitError"] | components["schemas"]["StorageError"];
-                };
-            };
-        };
-    };
-    "project.changes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        repos: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            status: {
-                                branch: string;
-                                upstream: string | null;
-                                ahead: number;
-                                behind: number;
-                                headSha: string;
-                                changed: number;
-                                staged: number;
-                                unstaged: number;
-                                untracked: number;
-                                conflicted: number;
-                            };
-                            files: {
-                                path: string;
-                                /** @enum {string} */
-                                status: "added" | "deleted" | "ignored" | "modified" | "renamed" | "untracked";
-                            }[];
-                        }[];
-                        failed: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            reason: string;
-                        }[];
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
-    "project.files": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        paths: string[];
-                        gitStatus: {
-                            path: string;
-                            /** @enum {string} */
-                            status: "added" | "deleted" | "ignored" | "modified" | "renamed" | "untracked";
-                        }[];
-                        failed: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            reason: string;
-                        }[];
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
-    "project.diff": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": string;
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
-    "project.branches": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        repos: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            branches: {
-                                name: string;
-                                sha: string;
-                                isCurrent: boolean;
-                                upstream: string | null;
-                                ahead: number;
-                                behind: number;
-                                committedAt: string;
-                                subject: string;
-                            }[];
-                            remoteBranches: {
-                                name: string;
-                                remote: string;
-                                shortName: string;
-                                sha: string;
-                                committedAt: string;
-                                subject: string;
-                            }[];
-                        }[];
-                        failed: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            reason: string;
-                        }[];
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
-    "project.commit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    message: string;
-                    paths: string[];
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        results: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            sha: string | null;
-                            reason: string | null;
-                        }[];
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
-    "project.discard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    paths: string[];
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"];
-                };
-            };
-        };
-    };
-    "project.discardHunk": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    path: string;
-                    hunkIndex: number;
-                };
-            };
-        };
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        ok: boolean;
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-            /** @description GitError */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["GitError"];
-                };
-            };
-        };
-    };
-    "project.log": {
-        parameters: {
-            query?: {
-                ref?: string;
-                limit?: string;
-                skip?: string;
-                author?: string;
-                grep?: string;
-                regex?: string;
-                case?: string;
-                after?: string;
-                before?: string;
-                path?: string;
-                follow?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        commits: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            commit: {
-                                sha: string;
-                                shortSha: string;
-                                author: string;
-                                authoredAt: string;
-                                subject: string;
-                                refs: string[];
-                                parents: string[];
-                            };
-                        }[];
-                        failed: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            reason: string;
-                        }[];
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
-                };
-            };
-        };
-    };
-    "project.search": {
-        parameters: {
-            query: {
-                q: string;
-                case?: string;
-                word?: string;
-                regex?: string;
-                limit?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Success */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        matches: {
-                            path: string;
-                            line: number;
-                            column: number;
-                            text: string;
-                        }[];
-                        truncated: boolean;
-                        failed: {
-                            repo: {
-                                name: string;
-                                path: string;
-                                branch: string | null;
-                            };
-                            reason: string;
-                        }[];
-                    };
-                };
-            };
-            /** @description NoRepoSelected */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoRepoSelected"];
                 };
             };
         };
@@ -6216,8 +5644,6 @@ export interface operations {
                         command: string;
                         createdAt: string;
                         updatedAt: string;
-                        repo: string;
-                        repoPath: string;
                         /** @enum {string} */
                         status: "stopped" | "running" | "exited";
                         exitCode: (number) | null;
@@ -6265,7 +5691,6 @@ export interface operations {
                 "application/json": {
                     name: string;
                     command: string;
-                    repoPath: string;
                 };
             };
         };
@@ -6282,8 +5707,6 @@ export interface operations {
                         command: string;
                         createdAt: string;
                         updatedAt: string;
-                        repo: string;
-                        repoPath: string;
                     };
                 };
             };
@@ -6339,8 +5762,6 @@ export interface operations {
                         command: string;
                         createdAt: string;
                         updatedAt: string;
-                        repo: string;
-                        repoPath: string;
                     };
                 };
             };
@@ -6438,7 +5859,6 @@ export interface operations {
                 "application/json": {
                     name?: string;
                     command?: string;
-                    repoPath?: string;
                 };
             };
         };
@@ -6455,8 +5875,6 @@ export interface operations {
                         command: string;
                         createdAt: string;
                         updatedAt: string;
-                        repo: string;
-                        repoPath: string;
                     };
                 };
             };
@@ -6512,8 +5930,6 @@ export interface operations {
                         command: string;
                         createdAt: string;
                         updatedAt: string;
-                        repo: string;
-                        repoPath: string;
                         /** @enum {string} */
                         status: "stopped" | "running" | "exited";
                         exitCode: (number) | null;
@@ -6607,13 +6023,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    repoPath?: string;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Success */
             200: {
@@ -6627,8 +6037,6 @@ export interface operations {
                         command: string;
                         createdAt: string;
                         updatedAt: string;
-                        repo: string;
-                        repoPath: string;
                         /** @enum {string} */
                         status: "stopped" | "running" | "exited";
                         exitCode: (number) | null;
@@ -6671,13 +6079,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    repoPath?: string;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Success */
             200: {

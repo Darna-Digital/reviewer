@@ -3,9 +3,8 @@
 // `file://` address — read as the file it points at, so a click opens it
 // on the browse page rather than asking the system for a `src/utils/foo.ts`
 // scheme it has never heard of. The agent writes paths from where it
-// works — the session's repository — while the page opens files by their
-// path from the project, so in a multi-root project the repository's own
-// folder goes in front. A web or mail address is left for the system.
+// works — the session's repository — which is how the page opens files
+// too. A web or mail address is left for the system.
 import Foundation
 
 struct ChatFileLink: Equatable {
@@ -22,8 +21,8 @@ struct ChatFileLink: Equatable {
         return externalSchemes.contains(scheme) || url.absoluteString.hasPrefix("\(scheme)://")
     }
 
-    /// The file `url` names, from `origin`'s project — or nil for an address
-    /// the app cannot show: one that leads out, or a path outside the project.
+    /// The file `url` names, from `origin`'s repository — or nil for an
+    /// address the app cannot show: one that leads out, or a path outside it.
     static func parse(_ url: URL, origin: ChatOrigin) -> ChatFileLink? {
         if leadsOut(url) { return nil }
         if url.scheme?.lowercased() == "file" { return parse(text: url.path, origin: origin) }
@@ -40,18 +39,14 @@ struct ChatFileLink: Equatable {
         let line = (match.2 ?? match.3).flatMap { Int($0) }
         var path = String(match.1)
         if path.hasPrefix("./") { path.removeFirst(2) }
-        guard let projectPath = relativeToProject(path, origin: origin), !projectPath.isEmpty else { return nil }
-        return ChatFileLink(path: projectPath, line: line)
+        guard let repoPath = relativeToRepository(path, origin: origin), !repoPath.isEmpty else { return nil }
+        return ChatFileLink(path: repoPath, line: line)
     }
 
-    /// `path` from the project's root: an absolute path stripped of it, a
-    /// relative one put under the repository's folder inside the project.
-    private static func relativeToProject(_ path: String, origin: ChatOrigin) -> String? {
-        if path.hasPrefix("/") {
-            return strip(prefix: origin.projectPath, from: path)
-        }
-        guard let repoFolder = strip(prefix: origin.projectPath, from: origin.repoPath) else { return path }
-        return repoFolder.isEmpty ? path : "\(repoFolder)/\(path)"
+    /// `path` from the repository's root: an absolute path stripped of it,
+    /// a relative one as it is.
+    private static func relativeToRepository(_ path: String, origin: ChatOrigin) -> String? {
+        path.hasPrefix("/") ? strip(prefix: origin.repoPath, from: path) : path
     }
 
     private static func strip(prefix root: String, from path: String) -> String? {

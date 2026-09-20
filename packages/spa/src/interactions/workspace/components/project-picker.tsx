@@ -1,8 +1,7 @@
 /**
  * The project chip in the top bar: recents, and a folder browser for opening
- * something new. A project is a folder — a git repository, or a parent holding
- * several (`backend`, `frontend`) — so the browser offers both, marking each
- * folder with what it holds rather than only letting repositories through.
+ * another repository. A project is a git repository, so the browser marks the
+ * folders that are one and only those open.
  */
 import { useNavigate } from "@tanstack/react-router";
 import {
@@ -44,7 +43,7 @@ import { isDesktop, openDesktopDirectory } from "@/lib/desktop";
 import { cn } from "@/lib/utils";
 import { ProjectAvatar } from "./project-avatar";
 import { useWorkspaceActions } from "../adapters/workspace.hook.adapter";
-import { folderHint, folderName, isOpenable } from "@reviewer/core/workspace";
+import { folderName } from "@reviewer/core/workspace";
 import type { WorkspaceInfo } from "@reviewer/core/workspace";
 
 interface ProjectPickerProps {
@@ -394,63 +393,45 @@ export function ProjectPicker({
                   entries.length === 0 && (
                     <div className={emptyClass}>No folders found.</div>
                   )}
-                {entries.map((entry) => {
-                  const hint = folderHint(entry);
-                  return (
-                    <div
-                      key={entry.path}
-                      className={cn(rowClass, "pr-1 focus-within:bg-elevate")}
+                {entries.map((entry) => (
+                  <div
+                    key={entry.path}
+                    className={cn(rowClass, "pr-1 focus-within:bg-elevate")}
+                  >
+                    <button
+                      type="button"
+                      data-search-row
+                      className="flex min-w-0 flex-1 items-center gap-2 rounded-md text-left outline-hidden"
+                      onClick={() => setPath(entry.path)}
                     >
+                      {entry.isGitRepo ? (
+                        <IconGitBranch className="size-4 shrink-0 text-muted-foreground" />
+                      ) : (
+                        <IconFolder className="size-4 shrink-0 text-muted-foreground" />
+                      )}
+                      <span className="truncate">{entry.name}</span>
+                    </button>
+                    {entry.isGitRepo && (
                       <button
                         type="button"
-                        data-search-row
-                        className="flex min-w-0 flex-1 items-center gap-2 rounded-md text-left outline-hidden"
-                        onClick={() => setPath(entry.path)}
+                        className="shrink-0 rounded-md px-2 py-1 text-xs text-muted-foreground outline-hidden hover:bg-elevate-strong hover:text-foreground focus:bg-elevate-strong focus:text-foreground"
+                        onClick={() => void choose(entry.path)}
                       >
-                        {entry.isGitRepo ? (
-                          <IconGitBranch className="size-4 shrink-0 text-muted-foreground" />
-                        ) : (
-                          <IconFolder className="size-4 shrink-0 text-muted-foreground" />
-                        )}
-                        <span className="truncate">{entry.name}</span>
-                        {hint !== null && !entry.isGitRepo && (
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {hint}
-                          </span>
-                        )}
+                        Open
                       </button>
-                      {/* A folder of repositories opens as a project too — that
-                          is the multi-root case, not a wrong turn. */}
-                      {isOpenable(entry) && (
-                        <button
-                          type="button"
-                          className="shrink-0 rounded-md px-2 py-1 text-xs text-muted-foreground outline-hidden hover:bg-elevate-strong hover:text-foreground focus:bg-elevate-strong focus:text-foreground"
-                          onClick={() => void choose(entry.path)}
-                        >
-                          Open
-                        </button>
-                      )}
-                    </div>
-                  );
-                })}
+                    )}
+                  </div>
+                ))}
               </div>
             </ScrollArea>
 
-            {data !== undefined && isOpenable(data) && (
+            {data !== undefined && data.isGitRepo && (
               <div className={cn("shrink-0 border-t", listClass)}>
                 <PathRow
                   icon={
-                    data.isGitRepo ? (
-                      <IconGitBranch className="size-4 h-lh shrink-0 text-muted-foreground" />
-                    ) : (
-                      <IconFolder className="size-4 h-lh shrink-0 text-muted-foreground" />
-                    )
+                    <IconGitBranch className="size-4 h-lh shrink-0 text-muted-foreground" />
                   }
-                  label={
-                    data.isGitRepo
-                      ? "Open this repository"
-                      : `Open this folder — ${folderHint(data)}`
-                  }
+                  label="Open this repository"
                   path={displayPath(data.path, home)}
                   emphasized
                   onClick={() => void choose(data.path)}

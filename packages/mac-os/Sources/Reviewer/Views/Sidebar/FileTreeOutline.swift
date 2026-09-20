@@ -403,10 +403,6 @@ private final class FileTreeOutlineView: NSOutlineView {
     }
 }
 
-extension NSView {
-    fileprivate var isDark: Bool { effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua }
-}
-
 /// The selected row wears `TreeSelection`'s quiet fill and never counts as
 /// emphasized, so the cell's labels keep their own colours.
 private final class FileTreeRowView: NSTableRowView {

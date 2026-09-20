@@ -6,23 +6,20 @@ import type {
   BrowsePayload,
   FileBytes,
   FileContent,
+  RepoIndex,
   WorkspaceInfo,
 } from "../schema/workspace.schema.ts";
 
 export interface WorkspaceRepo {
   readonly info: Effect.Effect<WorkspaceInfo, StorageError>;
-  /** Open `path` as the project, discovering the git roots it holds. */
+  /** Open `path` — a git repository — as the project. */
   readonly setCurrent: (
     path: string
   ) => Effect.Effect<WorkspaceInfo, InvalidRepo | StorageError>;
-  /**
-   * Point the git views at one of the open project's roots. Fails with
-   * `InvalidRepo` for a path the project does not hold, so a stale selection
-   * can never take the rest of the app somewhere the project isn't.
-   */
-  readonly selectRepo: (
-    path: string
-  ) => Effect.Effect<WorkspaceInfo, InvalidRepo | StorageError>;
+  /** Every repository the machine holds, as far as the index has got. */
+  readonly repos: Effect.Effect<RepoIndex, StorageError>;
+  /** Walk the machine for repositories again; the index fills in as it goes. */
+  readonly rescan: Effect.Effect<RepoIndex, StorageError>;
   readonly browse: (
     path: string | null
   ) => Effect.Effect<BrowsePayload, StorageError>;

@@ -175,7 +175,7 @@ struct SessionContextBar: View {
     var body: some View {
         HStack(spacing: 4) {
             Button {
-                openWindow(id: ReviewerWindow.welcome)
+                openWindow(id: ReviewerWindow.opener)
             } label: {
                 HStack(spacing: 5) {
                     if let name = model.workspace?.projectName {

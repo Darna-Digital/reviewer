@@ -49,7 +49,10 @@ export type ShellEvent =
   /** The shell's own pane took the foot of the window — see `ShellDockAction`. */
   | { readonly type: "dock"; readonly action: ShellDockAction }
   /** The shell's own assign bar was acted on — see `ShellReview`. */
-  | { readonly type: "review"; readonly action: ShellReviewAction };
+  | { readonly type: "review"; readonly action: ShellReviewAction }
+  /** The shell's palette asked for a view preference the page keeps — see
+   * `ShellViewAction`. */
+  | { readonly type: "view"; readonly action: ShellViewAction };
 
 /** Island → shell. */
 export type ShellIntent =
@@ -271,6 +274,14 @@ export type ShellSessionAction =
  * away (`close`), so one surface stands at the bottom at a time.
  */
 export type ShellDockAction = { readonly kind: "close" };
+
+/**
+ * What the shell's palette asks of the page's own preferences: the one
+ * command in the web palette the shell cannot answer itself. The diff style
+ * is the page's — the diff is its to lay out, and the toggle on the island's
+ * band is the page's own — so the command crosses over and the page flips it.
+ */
+export type ShellViewAction = { readonly kind: "toggleDiffStyle" };
 
 /**
  * The review in hand, as the shell floats its assign bar over the page: the

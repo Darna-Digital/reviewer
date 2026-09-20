@@ -14,8 +14,9 @@ export const WorkspaceHandler = HttpApiBuilder.group(
       .handle("setCurrent", ({ payload }) =>
         Effect.flatMap(WorkspaceService, (s) => s.setCurrent(payload.path))
       )
-      .handle("selectRepo", ({ payload }) =>
-        Effect.flatMap(WorkspaceService, (s) => s.selectRepo(payload.path))
+      .handle("repos", () => Effect.flatMap(WorkspaceService, (s) => s.repos))
+      .handle("rescanRepos", () =>
+        Effect.flatMap(WorkspaceService, (s) => s.rescan)
       )
       .handle("browse", ({ query }) =>
         Effect.flatMap(WorkspaceService, (s) => s.browse(query.path ?? null))

@@ -2,12 +2,10 @@
 // search over every branch along the top, then the switcher's own model as
 // a list — Recent, Local folded by folder, Remote folded by remote, each
 // section and folder collapsing on its header — with the branch you are on
-// starred and the others carrying their distance from upstream. A project
-// of several roots lists each root's branches under a header of its own,
-// the current root's open. A row selects; a double-click checks out; the
-// context menu is the switcher's, and the empty space under the rows has
-// the surface's own — a new branch, update, push. The actions run in the
-// root a branch belongs to, followed first when it is not the current one.
+// starred and the others carrying their distance from upstream. A row
+// selects; a double-click checks out; the context menu is the switcher's,
+// and the empty space under the rows has the surface's own — a new branch,
+// update, push.
 import SwiftUI
 
 struct BranchesPane: View {
@@ -18,8 +16,6 @@ struct BranchesPane: View {
     @State private var closedSections: Set<String> = ["remote"]
     /// Folders opened, everything else being shut to begin with.
     @State private var openFolders: Set<String> = []
-    /// Roots opened or shut by hand; until then the current root is open.
-    @State private var openRoots: Set<String>?
 
     private var searching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
 
@@ -32,52 +28,31 @@ struct BranchesPane: View {
             }
             list
         }
-        .task(id: model.workspace?.current) { await model.loadBranches() }
+        .task(id: model.workspace?.project) { await model.loadBranches() }
     }
 
     private var rows: [BranchRow] {
-        if model.projectBranches.count > 1 {
-            return model.projectBranches.flatMap(rows(of:))
-        }
-        return sectionRows(
-            prefix: "", scope: BranchScope(repoPath: nil, head: model.currentBranch ?? "—"),
-            local: model.branches, remote: model.remoteBranches)
+        sectionRows(local: model.branches, remote: model.remoteBranches)
     }
 
-    private var currentRoots: Set<String> {
-        openRoots ?? Set([model.workspace?.current].compactMap { $0 })
-    }
-
-    private func rows(of entry: RepoBranches) -> [BranchRow] {
-        let path = entry.repo.path
-        let open = searching || currentRoots.contains(path)
-        let header = BranchRow.repo(entry, open: open)
-        guard open else { return [header] }
-        return [header] + sectionRows(
-            prefix: "\(path):", scope: BranchScope(repoPath: path, head: entry.repo.branch ?? "—"),
-            local: entry.branches, remote: entry.remoteBranches)
-    }
-
-    /// Recent, Local and Remote for one root. A search opens every section
-    /// and folder, since the match may be inside a folded one.
-    private func sectionRows(prefix: String, scope: BranchScope, local: [BranchInfo], remote: [RemoteBranchInfo])
-        -> [BranchRow]
-    {
-        let indent = scope.repoPath == nil ? 0 : 1
+    /// Recent, Local and Remote. A search opens every section and folder,
+    /// since the match may be inside a folded one.
+    private func sectionRows(local: [BranchInfo], remote: [RemoteBranchInfo]) -> [BranchRow] {
+        let indent = 0
         let locals = local.filter { matches($0.name) }
         let remotes = remote.filter { matches($0.name) }
         let recent = Array(locals.prefix(5))
         var rows: [BranchRow] = []
-        rows += section("\(prefix)recent", title: "Recent", indent: indent, count: recent.count) {
-            recent.map { .branch(BranchRef($0), name: $0.name, scope: scope, indent: indent + 1, trailing: distance(of: $0)) }
+        rows += section("recent", title: "Recent", indent: indent, count: recent.count) {
+            recent.map { .branch(BranchRef($0), name: $0.name, indent: indent + 1, trailing: distance(of: $0)) }
         }
-        rows += section("\(prefix)local", title: "Local", indent: indent, count: locals.count) {
-            foldered("\(prefix)local", indent: indent, refs: locals.map(BranchRef.init), scope: scope) { ref in
+        rows += section("local", title: "Local", indent: indent, count: locals.count) {
+            foldered("local", indent: indent, refs: locals.map(BranchRef.init)) { ref in
                 local.first { $0.name == ref.ref }.flatMap(distance(of:))
             }
         }
-        rows += section("\(prefix)remote", title: "Remote", indent: indent, count: remotes.count) {
-            foldered("\(prefix)remote", indent: indent, refs: remotes.map(BranchRef.init), scope: scope) { ref in
+        rows += section("remote", title: "Remote", indent: indent, count: remotes.count) {
+            foldered("remote", indent: indent, refs: remotes.map(BranchRef.init)) { ref in
                 remote.first { $0.name == ref.ref }?.remote
             }
         }
@@ -93,18 +68,18 @@ struct BranchesPane: View {
 
     /// A section's branches folded by folder.
     private func foldered(
-        _ section: String, indent: Int, refs: [BranchRef], scope: BranchScope, trailing: (BranchRef) -> String?
+        _ section: String, indent: Int, refs: [BranchRef], trailing: (BranchRef) -> String?
     ) -> [BranchRow] {
         refs.groupedByFolder().flatMap { folder -> [BranchRow] in
             guard let name = folder.name else {
-                return folder.items.map { .branch($0, name: $0.display, scope: scope, indent: indent + 1, trailing: trailing($0)) }
+                return folder.items.map { .branch($0, name: $0.display, indent: indent + 1, trailing: trailing($0)) }
             }
             let id = "\(section)/\(name)"
             let open = searching || openFolders.contains(id)
             let header = BranchRow.folder(id: id, name: name, open: open, indent: indent + 1)
             guard open else { return [header] }
             return [header] + folder.items.map {
-                .branch($0, name: $0.leaf, scope: scope, indent: indent + 2, trailing: trailing($0))
+                .branch($0, name: $0.leaf, indent: indent + 2, trailing: trailing($0))
             }
         }
     }
@@ -115,12 +90,6 @@ struct BranchesPane: View {
 
     private func toggleFolder(_ id: String) {
         if openFolders.contains(id) { openFolders.remove(id) } else { openFolders.insert(id) }
-    }
-
-    private func toggleRoot(_ path: String) {
-        var roots = currentRoots
-        if roots.contains(path) { roots.remove(path) } else { roots.insert(path) }
-        openRoots = roots
     }
 
     private func matches(_ name: String) -> Bool {
@@ -140,26 +109,21 @@ struct BranchesPane: View {
         return List(selection: $selected) {
             ForEach(rows) { row in
                 switch row {
-                case .repo(let entry, let open):
-                    RepoHeader(entry: entry, open: open, current: entry.repo.path == model.workspace?.current) {
-                        toggleRoot(entry.repo.path)
-                    }
-                    .headerRow()
                 case .section(let id, let title, let count, let open, let indent):
                     SectionHeader(title: title, count: count, open: open, indent: indent) { toggleSection(id) }
                         .headerRow()
                 case .folder(let id, let name, let open, let indent):
                     FolderHeader(name: name, open: open, indent: indent) { toggleFolder(id) }
                         .headerRow()
-                case .branch(let ref, let name, let scope, let indent, let trailing):
+                case .branch(let ref, let name, let indent, let trailing):
                     BranchRowView(branch: ref, name: name, trailing: trailing, indent: indent)
                         .tag(row.id)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 1, leading: PaneMetrics.barInset, bottom: 1, trailing: PaneMetrics.barInset))
-                        .contextMenu { BranchActions(branch: ref, scope: scope) }
+                        .contextMenu { BranchActions(branch: ref) }
                         .onTapGesture(count: 2) {
                             guard !ref.isCurrent else { return }
-                            model.inRepo(scope.repoPath) { model.checkout(ref.ref) }
+                            model.checkout(ref.ref)
                         }
                 }
             }
@@ -185,20 +149,18 @@ struct BranchesPane: View {
     }
 }
 
-/// One line of the surface: a root's header, a section's, a folder's, or
-/// a branch, each knowing how deep it stands.
+/// One line of the surface: a section's header, a folder's, or a branch,
+/// each knowing how deep it stands.
 private enum BranchRow: Identifiable {
-    case repo(RepoBranches, open: Bool)
     case section(id: String, title: String, count: Int, open: Bool, indent: Int)
     case folder(id: String, name: String, open: Bool, indent: Int)
-    case branch(BranchRef, name: String, scope: BranchScope, indent: Int, trailing: String?)
+    case branch(BranchRef, name: String, indent: Int, trailing: String?)
 
     var id: String {
         switch self {
-        case .repo(let entry, _): return "repo:\(entry.repo.path)"
         case .section(let id, _, _, _, _): return "section:\(id)"
         case .folder(let id, _, _, _): return "folder:\(id)"
-        case .branch(let ref, _, let scope, _, _): return "branch:\(scope.repoPath ?? ""):\(ref.ref)"
+        case .branch(let ref, _, _, _): return "branch:\(ref.ref)"
         }
     }
 }
@@ -320,31 +282,6 @@ private struct FolderHeader: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 0)
-        }
-    }
-}
-
-/// One root of a project of several: its avatar and name, and the branch it
-/// is on at the trailing edge.
-private struct RepoHeader: View {
-    let entry: RepoBranches
-    let open: Bool
-    let current: Bool
-    let toggle: () -> Void
-
-    var body: some View {
-        OutlineRow(indent: 0, open: open, toggle: toggle) {
-            RepoAvatar(name: entry.repo.name)
-            Text(entry.repo.name)
-                .font(.system(size: 12, weight: current ? .medium : .regular))
-                .lineLimit(1)
-            Spacer(minLength: 8)
-            Text(entry.repo.branch ?? "detached")
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .frame(maxWidth: 200, alignment: .trailing)
         }
     }
 }

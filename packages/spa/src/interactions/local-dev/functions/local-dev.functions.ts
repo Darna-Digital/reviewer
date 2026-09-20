@@ -6,39 +6,28 @@ import type {
 export function createLocalDevFunctions(
   d: LocalDevDependencies
 ): LocalDevFunctions {
-  /** Normalise a command definition, or null when it has nothing to run in. */
+  /** Normalise a command definition, or null when it has nothing to run. */
   const normalise = (
     name: string,
-    command: string,
-    repoPath: string
-  ): { name: string; command: string; repoPath: string } | null => {
+    command: string
+  ): { name: string; command: string } | null => {
     const cmd = command.trim();
-    if (cmd.length === 0 || repoPath.length === 0) return null;
+    if (cmd.length === 0) return null;
     const trimmedName = name.trim();
     return {
       name: trimmedName.length > 0 ? trimmedName : cmd,
       command: cmd,
-      repoPath,
     };
   };
 
-  const create: LocalDevFunctions["create"] = async (
-    name,
-    command,
-    repoPath
-  ) => {
-    const input = normalise(name, command, repoPath);
+  const create: LocalDevFunctions["create"] = async (name, command) => {
+    const input = normalise(name, command);
     if (input === null) return null;
     return d.sideEffects.create(input);
   };
 
-  const update: LocalDevFunctions["update"] = async (
-    id,
-    name,
-    command,
-    repoPath
-  ) => {
-    const input = normalise(name, command, repoPath);
+  const update: LocalDevFunctions["update"] = async (id, name, command) => {
+    const input = normalise(name, command);
     if (input === null) return null;
     return d.sideEffects.update(id, input);
   };
@@ -46,10 +35,9 @@ export function createLocalDevFunctions(
   const remove: LocalDevFunctions["remove"] = (id) => d.sideEffects.remove(id);
   const start: LocalDevFunctions["start"] = (id) => d.sideEffects.start(id);
   const stop: LocalDevFunctions["stop"] = (id) => d.sideEffects.stop(id);
-  const startAll: LocalDevFunctions["startAll"] = (repoPath) =>
-    d.sideEffects.startAll(repoPath);
-  const stopAll: LocalDevFunctions["stopAll"] = (repoPath) =>
-    d.sideEffects.stopAll(repoPath);
+  const startAll: LocalDevFunctions["startAll"] = () =>
+    d.sideEffects.startAll();
+  const stopAll: LocalDevFunctions["stopAll"] = () => d.sideEffects.stopAll();
 
   return { create, update, remove, start, stop, startAll, stopAll };
 }

@@ -98,16 +98,14 @@ What it does today:
   column. Branches is the web branches dock: a search over every branch,
   then Recent, Local folded by folder and Remote folded by remote, the
   branch you are on starred and the others carrying their distance from
-  upstream, each root of a multi-root project under a header of its own;
-  a double-click checks out, the context menu is the switcher's, and the
+  upstream; a double-click checks out, the context menu is the switcher's, and the
   empty space under the rows has the surface's own — new branch, update,
   push. History is the web history dock: the filter bar — the branch the
-  log follows, or the root it is narrowed to; the file it is narrowed to;
+  log follows; the file it is narrowed to;
   a text or hash with the regex and case toggles; an author; a date to
   start from — over the commits, each row its lane in the graph, its
   refs, its subject, its author and its date, paged in as the list nears
-  its end (`/api/log`, or `/api/project/log` merged across a multi-root
-  project). A commit picked opens on the page and stands beside the list
+  its end (`/api/log`). A commit picked opens on the page and stands beside the list
   in full — subject, body, sha, author, date, refs, and the files it
   touched as a tree wearing the @pierre/trees icons, a file picked opening
   the commit's diff on it. "Show History" — the tree's menu, the page's
@@ -119,17 +117,44 @@ What it does today:
   add, remove, start-all and stop-all in the footer, and the selected
   command's output under a bar with its command line, its state and
   play/stop/restart.
-- **Search** — the web app's palette as a Liquid Glass pane over the page:
-  ⇧⇧ or ⌘⇧O finds a file by name (the same fuzzy match, capped the same),
-  ⌘⇧F greps the working tree through the server (`/api/search`, or the
-  project-wide one for a multi-root project) with the case, whole-word and
-  regex toggles, opening on whatever the page has selected. A result opens
-  in the page island where the web palette would open it — in place on a
-  code surface, otherwise on the diff.
-- **Projects** — the chip at the head of the sidebar, the open project's
-  avatar and name, pulls down the recents the server remembers, the open
-  one ticked; ⌘O, or its last row, opens any other folder through
-  `NSOpenPanel`.
+- **Palette** — the web app's search dialog as a Liquid Glass pane over
+  the page, the same stack of lists under one box with a breadcrumb over
+  it: ⌘K opens on the commands — where to go, the git actions behind
+  their own list (fetch, pull, push, a new branch, and Switch Branch…
+  behind that), the window's own (the diff style, asked of the page; the
+  bottom pane and its surfaces; the sidebar), the opener, a new session — the ways into the two searches among them. ⇧⇧ or
+  ⌘⇧O goes straight to Files, a name search over every path (the same
+  fuzzy match, capped the same); ⌘⇧F to Text, a grep of the working tree
+  through the server (`/api/search`) with the case, whole-word and regex toggles, opening
+  on whatever the page has selected. ↑/↓, Home and End walk the list,
+  Return runs the row, Backspace on an empty box walks back up the trail,
+  Escape puts it away. The list is a native table (`PaletteList`), its
+  rows reused as they scroll, the files and the grep's headings wearing the
+  tree's own file icons. A result opens in the page island where the web
+  palette would open it — in place on a code surface, otherwise on the
+  diff. The pane, and the assign bar, stand over the page for real: the
+  island's web view (`IslandWebView`) checks each hover against the
+  window's hit test and lets go of the page while something native is in
+  front, so the diff under the glass stops answering the pointer.
+- **Opener** — a project is one git repository, and the way to another
+  is a Finder window over every repository the machine holds
+  (`RepoOpenerWindow`, over `RepoCatalog`): the sidebar's glass pane with
+  Recents and All Repositories at its head and, under Locations, each
+  folder holding more than one; the list's name as the title on the
+  toolbar, the search at its trailing edge, a rescan and the folder panel
+  beside it; and the repositories as the system's table — name, branch,
+  where it sits, when it was last opened — sortable on any column, a
+  status bar along the foot counting them and saying while the server's
+  walk is still filling the list in. A double-click or Return opens the
+  row as the project, the row's menu reaches it in Finder. It is the
+  window up while no project is, and the one ⌘O, ⇧⌘1 and the project chip
+  at the head of the sidebar bring up over an open workspace; a repository
+  opened in it hands back to the workspace. The list is the server's
+  (`/api/repos`, `POST /api/repos/scan`): a walk of the home folder —
+  skipping `Library`, dependency and build output and anything hidden, and
+  never stepping into a repository it found — kept in
+  `~/.reviewer/repos.json` and started over in the background at boot and
+  on request, each repository stamped with when it was last opened here.
 
 ## Islands
 
@@ -141,7 +166,8 @@ routes and URLs, so the shell steers an island with the hrefs the app already
 uses. The contract is small and lives in `packages/spa/src/lib/shell.ts`:
 
 - shell → island: `navigate(href)`, `refresh`, `windowTabs(action)`,
-  `tree(action)`, `sessions(action)`, `dock(close)`, `review(action)`
+  `tree(action)`, `sessions(action)`, `dock(close)`, `review(action)`,
+  `view(action)`
 - island → shell: `ready`, `navigated(href)`, `windowTabs(strip)`,
   `tree(listing)`, `treeState(selection, commit composer)`, `sessions(list)`,
   `dock(shown)`, `history(path)`, `review(comments)`
@@ -185,6 +211,8 @@ fold to a count chip at the page's trailing edge. The sessions and the
 catalog the picker lists are the shell's own reads of the server; what the
 bar does goes back to the page, whose comments and hand-off these are — the
 chat made, the prompt built, the comments resolved, the jump to a line.
+`view(action)` is the one event with no reply: the palette's Toggle Diff
+Style, a preference the page keeps since the diff is its to lay out.
 One island is hosted today: the page (`code`).
 
 Where the documents come from is `SpaSource`: a debug build takes the Vite
@@ -234,12 +262,12 @@ Sources/Reviewer/
   ReviewerApp.swift      @main, menu commands, app delegate
   Server/ServerLauncher  reachability check + spawn of the embedded server
   Api/                   Codable mirrors of the core schemas, HTTP client, chat socket
-  State/                 AppModel, WindowTab, BottomPaneTab, DockSurface, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, PullRequests, Chats, ChatSession, ChatSettings, WorkLog, ComposerAttachment, QuickSearch (+ the ⇧⇧ monitor)
+  State/                 AppModel, WindowTab, BottomPaneTab, DockSurface, ViewAction, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, PullRequests, Chats, ChatSession, ChatSettings, WorkLog, ComposerAttachment, RepoCatalog, CommandPalette + PaletteCommands (+ the ⇧⇧ monitor)
   FileIcons/             FileIcon (resolver + rasteriser) over the generated @pierre/trees sprite
-  Islands/               IslandHost (web view + bridge), SpaSource, SpaSchemeHandler, IslandView
+  Islands/               IslandHost (web view + bridge), IslandWebView, SpaSource, SpaSchemeHandler, IslandView
   Terminal/              TerminalSession — the shell behind the Terminal surface
   Services/              DevServices + DevProcessStream — dev commands and their output
-  Views/                 ContentView (split view), Sidebar, PullRequests (list, overview, column), Chat (conversation, composer, model picker), Tabs, BottomPane, Search, Welcome
+  Views/                 ContentView (split view), Sidebar, PullRequests (list, overview, column), Chat (conversation, composer, model picker), Tabs, BottomPane, Palette (panel, list), Review (assign bar), Opener
 ```
 
 Not here yet: native menus for the islands' popovers, drag and drop between

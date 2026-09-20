@@ -18,7 +18,9 @@
 // (`history`), which the shell's own History surface answers. And one
 // for the review in hand: the comments the code island holds for a
 // hand-off (`review`), which the shell floats its assign bar over the page
-// for, and what the bar was asked to do (`review`, the other way).
+// for, and what the bar was asked to do (`review`, the other way). And
+// one the shell alone sends: a view preference the page keeps — the diff
+// style — asked for from the palette (`view`).
 //
 // The web view is made once and kept for the life of the host: SwiftUI can
 // take it out of the hierarchy and put it back, and the page, its scroll and
@@ -120,6 +122,13 @@ final class IslandHost: NSObject {
         dispatch(["type": "review", "action": action.payload])
     }
 
+    /// The palette asked for one of the page's own view preferences — see
+    /// `ViewAction`.
+    func send(_ action: ViewAction) {
+        guard isReady else { return }
+        dispatch(["type": "view", "action": action.payload])
+    }
+
     private func dispatch(_ event: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: event),
             let json = String(data: data, encoding: .utf8)
@@ -141,7 +150,7 @@ final class IslandHost: NSObject {
         content.addScriptMessageHandler(self, contentWorld: .page, name: Self.messageHandlerName)
         installUserScripts(in: content)
 
-        let webView = WKWebView(frame: .zero, configuration: configuration)
+        let webView = IslandWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = self
         webView.uiDelegate = self
         webView.isInspectable = true

@@ -18,7 +18,6 @@
  */
 import {
   IconColumns2,
-  IconFolder,
   IconGitBranch,
   IconGitCompare,
   IconGitFork,
@@ -98,12 +97,6 @@ import {
 import { useCommentsActions } from "@/interactions/comments/adapters/comments.hook.adapter";
 import { useDiffFunctions } from "@/interactions/diff/adapters/diff.hook.adapter";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
-import { ProjectRepos } from "@/interactions/workspace/components/project-repos";
-import { isMultiRepo } from "@reviewer/core/workspace";
-import {
-  useRepoCommands,
-  useWorkspaceActions,
-} from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import {
   TabStrip,
   type TabStripProps,
@@ -149,8 +142,6 @@ import {
   useDiffText,
   useFiles,
   useMergeState,
-  useProjectDiff,
-  useProjectFiles,
   usePullComments,
   usePulls,
   useBranchTargets,
@@ -158,7 +149,6 @@ import {
   useWorkspace,
 } from "@/lib/queries";
 import {
-  resetHistoryFilters,
   setHistoryQuery,
   useHistoryFilters,
 } from "@/interactions/history/history-filters.store";
@@ -220,7 +210,6 @@ export function CodeWorkspace() {
 
   // --- queries ---------------------------------------------------------------
   const workspace = useWorkspace();
-  const workspaceActions = useWorkspaceActions();
   const repo = useRepo();
   const chatModels = useChatModels();
   const chats = useRecentChats();
@@ -257,7 +246,6 @@ export function CodeWorkspace() {
   // paging; what is read here is the filter it is on, which the trail and the
   // per-file diff filter both reflect. See `history-filters.store`.
   const { ref: logRef, query: logFilters } = useHistoryFilters();
-  const multiRepo = isMultiRepo({ repos: workspace.data?.repos ?? [] });
 
   const [draft, setDraft] = useState<DraftLocation | null>(null);
 
@@ -280,11 +268,6 @@ export function CodeWorkspace() {
     prefs.reviewTreeWidth,
     "width"
   );
-
-  // A project with no git root at all: there is nothing repo-scoped to show,
-  // so the centre pane says so instead of rendering an empty tree.
-  const noRepo =
-    workspace.data?.project != null && workspace.data.current === null;
 
   // --- selection / diff target ----------------------------------------------
   const selectedPull = useMemo(() => {
@@ -358,16 +341,7 @@ export function CodeWorkspace() {
   const targetKey = target === null ? "none" : diffTargetKey(target);
 
   const diff = useDiffText(target);
-  // The uncommitted diff of every root at once, its paths named from the
-  // project so they line up with the tree. Only the worktree target: a commit
-  // or a range belongs to one root, and is read from that root as before.
-  const projectDiff = useProjectDiff(multiRepo && target?.kind === "worktree");
-  const diffText =
-    multiRepo && target?.kind === "worktree"
-      ? (projectDiff.data ?? null)
-      : typeof diff.data === "string"
-        ? diff.data
-        : null;
+  const diffText = typeof diff.data === "string" ? diff.data : null;
   const parsedFiles = useMemo(
     () => diffFns.parseFiles(diffText),
     [diffText, diffFns]
@@ -390,12 +364,7 @@ export function CodeWorkspace() {
   useEffect(() => setDraft(null), [targetKey, search.file]);
 
   // --- derived tree / comments (memoised: these run over the whole repo) -----
-  // Paths are named from the project root once it holds more than one
-  // repository, so the tree nests the roots as folders without being told to
-  // and a file opens without anything being switched first. A single-root
-  // project reads the repository's own listing, where the two are the same.
-  const projectFiles = useProjectFiles(multiRepo);
-  const listing = multiRepo ? projectFiles.data : files.data;
+  const listing = files.data;
   const gitStatus = useMemo(
     () => listing?.gitStatus ?? [],
     [listing?.gitStatus]
@@ -699,38 +668,11 @@ export function CodeWorkspace() {
   useEffect(() => {
     scopeTabsTo(repoRoot);
   }, [repoRoot]);
-  /**
-   * Drop the view state that belongs to the root being left behind: the URL is
-   * repo-relative (the open file, the commit, the pull request) and so is the
-   * branch the history follows, and the root arriving has never heard of any
-   * of it. Called before the switch so nothing refetches against the old ref.
-   */
-  const leaveRepo = useCallback(() => {
-    resetHistoryFilters();
-    // Browse, not commit: moving between a project's roots is navigation, and
-    // it lands you in the arriving root's tree rather than in a review of
-    // whatever happens to be uncommitted there.
-    void navigate({ to: "/modes/code/browse", search: {} });
-  }, [navigate]);
-  // The safety net for a move this shell did not start — the command palette,
-  // say. Only a move between roots of the same project resets: the first
-  // resolve on load has nothing to leave, and opening a whole project is the
-  // picker's move to land wherever it means to.
-  const openProject = workspace.data?.project ?? null;
-  const previous = useRef({ root: repoRoot, project: openProject });
-  useEffect(() => {
-    const was = previous.current;
-    if (was.root === repoRoot) return;
-    previous.current = { root: repoRoot, project: openProject };
-    const movedWithinProject =
-      was.root !== null && repoRoot !== null && was.project === openProject;
-    if (movedWithinProject) leaveRepo();
-  }, [repoRoot, openProject, leaveRepo]);
   // Browsing has nothing else to put in the centre pane, so the strip is the
   // view: an open tab with no file on screen is a hole. A strip outlives the
   // URL that opened its files — restored from storage, or left behind by
   // navigation that dropped the file — so it names what belongs there.
-  const canRestore = mode === "browse" && target === null && !noRepo;
+  const canRestore = mode === "browse" && target === null;
   // Re-syncs when the repository resolves as well as when the file changes:
   // pointing the store at a repository swaps in that repository's strip, which
   // would otherwise drop the file already on screen.
@@ -799,15 +741,6 @@ export function CodeWorkspace() {
   );
 
   const buildCrumbs = (): ReadonlyArray<Crumb> => {
-    if (noRepo) {
-      return [
-        {
-          id: "project",
-          label: pathName(workspace.data?.project ?? ""),
-          icon: IconFolder,
-        },
-      ];
-    }
     const openPath = viewing;
     const list: Crumb[] = [];
     if (mode === "commit" || mode === "review") {
@@ -979,25 +912,9 @@ export function CodeWorkspace() {
     [prefs.diffStyle, prefs.bottomVisible]
   );
   useRegisterCommands("code-shell", shellCommands);
-  useRepoCommands(workspace.data, leaveRepo);
-
-  /** Follow another of the open project's roots, staying where we are. */
-  const chooseRepo = async (path: string) => {
-    leaveRepo();
-    await workspaceActions.openRepo(path);
-  };
 
   // --- center pane -----------------------------------------------------------
   const renderCenter = () => {
-    if (noRepo) {
-      return (
-        <ProjectRepos
-          project={workspace.data!.project!}
-          repos={workspace.data!.repos}
-          onOpen={(path) => void chooseRepo(path)}
-        />
-      );
-    }
     if (viewing !== null && isImagePath(viewing)) {
       return <ImageView path={viewing} theme={prefs.resolvedTheme} />;
     }

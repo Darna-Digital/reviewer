@@ -101,15 +101,12 @@ struct BranchMenu: View {
 }
 
 /// The same actions the web app's switcher gives a branch, in the same
-/// order, worded against the branch you are on — in the repository the
-/// git views follow, or in another of the project's roots, followed first
-/// (see `BranchScope`).
+/// order, worded against the branch you are on.
 struct BranchActions: View {
     let branch: BranchRef
-    var scope: BranchScope? = nil
     @Environment(AppModel.self) private var model
 
-    private var head: String { scope?.head ?? model.currentBranch ?? "HEAD" }
+    private var head: String { model.currentBranch ?? "HEAD" }
 
     var body: some View {
         if !branch.isCurrent {
@@ -136,8 +133,8 @@ struct BranchActions: View {
         }
     }
 
-    private func run(_ action: @escaping () -> Void) {
-        model.inRepo(scope?.repoPath, action)
+    private func run(_ action: () -> Void) {
+        action()
     }
 }
 

@@ -22,10 +22,8 @@ export interface StartCommandInput {
 export interface DevRuntimeShape {
   readonly start: (input: StartCommandInput) => Effect.Effect<DevRunStatus>;
   readonly stop: (commandId: string) => Effect.Effect<void>;
-  /** Stop everything one root runs. */
+  /** Stop everything the repository runs. */
   readonly stopRepo: (repoPath: string) => Effect.Effect<void>;
-  /** Stop everything a folder's roots run — the whole project at once. */
-  readonly stopProject: (project: string) => Effect.Effect<void>;
   readonly status: (commandId: string) => Effect.Effect<DevRunStatus | null>;
 }
 
@@ -37,7 +35,6 @@ export const fromManager = (manager: DevProcessManager): DevRuntimeShape => ({
   start: (input) => Effect.sync(() => manager.start(input)),
   stop: (commandId) => Effect.sync(() => manager.stop(commandId)),
   stopRepo: (repoPath) => Effect.sync(() => manager.stopRepo(repoPath)),
-  stopProject: (project) => Effect.sync(() => manager.stopUnder(project)),
   status: (commandId) => Effect.sync(() => manager.get(commandId)),
 });
 

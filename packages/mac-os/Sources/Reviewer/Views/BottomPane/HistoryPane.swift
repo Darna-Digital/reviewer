@@ -1,7 +1,6 @@
 // The History surface, laid out as the web app's history dock is: the
-// filter bar along the top — the branch the log follows, or the root it is
-// narrowed to in a project of several; the file it is narrowed to, when it
-// is; a text or hash, with the regex and case toggles; an author; a date
+// filter bar along the top — the branch the log follows; the file it is
+// narrowed to, when it is; a text or hash, with the regex and case toggles; an author; a date
 // to start from; and Clear once anything narrows it — then the commits
 // under it, newest first, each row its lane in the graph, its refs, its
 // subject, its author and its date, with the next page pulled in as the
@@ -109,11 +108,7 @@ private struct HistoryFilterBar: View {
 
     var body: some View {
         PaneBar {
-            if history.isMultiRoot {
-                RepoPicker()
-            } else {
-                RefPicker()
-            }
+            RefPicker()
             if let path = history.query.path {
                 PathChip(path: path) { apply { $0.path = nil; $0.follow = false } }
             }
@@ -210,45 +205,6 @@ private struct RefPicker: View {
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
         .help("Branch")
-    }
-}
-
-/// The root the merged history is narrowed to, for a project of several:
-/// all of them, under the project's own avatar, or one.
-private struct RepoPicker: View {
-    @Environment(AppModel.self) private var model
-
-    private var history: CommitHistory { model.history }
-    private var projectName: String { model.workspace?.projectName ?? "" }
-    private var chosen: RepoEntry? { history.repos.first { $0.path == history.repoFilter } }
-
-    var body: some View {
-        Menu {
-            Button {
-                history.repoFilter = nil
-            } label: {
-                Label("All repositories", systemImage: "folder")
-            }
-            Divider()
-            ForEach(history.repos, id: \.path) { repo in
-                Button(repo.name) { history.repoFilter = repo.path }
-            }
-        } label: {
-            HStack(spacing: 5) {
-                RepoAvatar(name: chosen?.name ?? projectName, size: 14)
-                Text(chosen?.name ?? "All repositories")
-                    .font(.system(size: 11))
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-                MenuChevron()
-            }
-            .paneField()
-            .frame(width: FilterWidths.picker)
-        }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .help("Repository")
     }
 }
 
@@ -424,7 +380,6 @@ private struct CommitList: View {
             List {
                 ForEach(Array(commits.enumerated()), id: \.element.sha) { index, commit in
                     CommitRow(commit: commit, graph: layout.rows[index],
-                              owner: history.owners[commit.sha],
                               selected: commit.sha == history.selectedSha) { select(commit) }
                         .id(commit.sha)
                         .listRowSeparator(.hidden)
@@ -486,15 +441,14 @@ private struct CommitList: View {
     }
 }
 
-/// A commit's row: its cell of the graph, the root it came from in a
-/// project of several, up to three of its refs as badges, its subject, and
+/// A commit's row: its cell of the graph, up to three of its refs as
+/// badges, its subject, and
 /// at the trailing edge its author and the day it was authored, each in a
 /// column of its own so the dates stand in one line down the list whatever
 /// the authors' names run to.
 private struct CommitRow: View {
     let commit: CommitInfo
     let graph: GraphRow
-    let owner: RepoEntry?
     let selected: Bool
     let open: () -> Void
 
@@ -502,10 +456,6 @@ private struct CommitRow: View {
         Button(action: open) {
             HStack(spacing: 8) {
                 GraphCell(row: graph)
-                if let owner {
-                    RepoAvatar(name: owner.name)
-                        .help(owner.name)
-                }
                 ForEach(commit.refs.prefix(3), id: \.self) { ref in
                     RefBadge(ref: ref)
                 }

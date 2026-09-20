@@ -22,8 +22,8 @@ struct RunPane: View {
         }
         .task { await model.services.load() }
         .sheet(isPresented: $adding) {
-            NewCommandSheet(repos: model.workspace?.repos ?? []) { name, command, repoPath in
-                Task { await model.services.create(name: name, command: command, repoPath: repoPath) }
+            NewCommandSheet { name, command in
+                Task { await model.services.create(name: name, command: command) }
             }
         }
     }
@@ -111,8 +111,8 @@ private struct CommandRow: View {
                 Text(command.name)
                     .font(.system(size: 13))
                     .lineLimit(1)
-                Text(command.repo)
-                    .font(.system(size: 11))
+                Text(command.command)
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -200,17 +200,14 @@ private struct CommandDetail: View {
 }
 
 private struct NewCommandSheet: View {
-    let repos: [RepoEntry]
-    let create: (String, String, String) -> Void
+    let create: (String, String) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var command = ""
-    @State private var repoPath = ""
 
     private var canAdd: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty
             && !command.trimmingCharacters(in: .whitespaces).isEmpty
-            && !repoPath.isEmpty
     }
 
     var body: some View {
@@ -229,11 +226,6 @@ private struct NewCommandSheet: View {
                 TextField("Name", text: $name, prompt: Text("Frontend"))
                 TextField("Command", text: $command, prompt: Text("pnpm dev"))
                     .font(.system(.body, design: .monospaced))
-                Picker("Repository", selection: $repoPath) {
-                    ForEach(repos, id: \.path) { repo in
-                        Text(repo.name).tag(repo.path)
-                    }
-                }
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
@@ -244,7 +236,7 @@ private struct NewCommandSheet: View {
                     .keyboardShortcut(.cancelAction)
                 Button("Add") {
                     create(name.trimmingCharacters(in: .whitespaces),
-                           command.trimmingCharacters(in: .whitespaces), repoPath)
+                           command.trimmingCharacters(in: .whitespaces))
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
@@ -254,6 +246,5 @@ private struct NewCommandSheet: View {
             .padding(.bottom, 18)
         }
         .frame(width: 440)
-        .onAppear { repoPath = repos.first?.path ?? "" }
     }
 }

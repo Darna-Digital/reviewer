@@ -1,9 +1,6 @@
-import { NodeFileSystem } from "@effect/platform-node";
 import { it } from "@effect/vitest";
 import { Effect, Layer } from "effect";
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { afterAll, afterEach, beforeEach, describe, expect } from "vitest";
+import { afterEach, beforeEach, describe, expect } from "vitest";
 import { DevCommandsRepository } from "@reviewer/core/local-dev";
 import { closeDatabase, openDatabase } from "../db/database.ts";
 import { memoryLayer } from "../workspace/workspace-context.ts";
@@ -12,71 +9,58 @@ import {
   makeSqliteDevCommandsRepository,
 } from "./local-dev.repository.sqlite.ts";
 
-/** A real project folder holding two git roots — what the store is for. */
-const project = mkdtempSync(`${tmpdir()}/reviewer-local-dev-`);
-const web = `${project}/web`;
-const api = `${project}/api`;
-for (const root of [web, api]) mkdirSync(`${root}/.git`, { recursive: true });
-afterAll(() => rmSync(project, { recursive: true, force: true }));
+const REPO = "/work/web";
 
 const Repo = Layer.effect(DevCommandsRepository)(
   makeSqliteDevCommandsRepository
-).pipe(
-  Layer.provide(Layer.mergeAll(memoryLayer(project), NodeFileSystem.layer))
-);
+).pipe(Layer.provide(memoryLayer(REPO)));
 
 beforeEach(() => openDatabase(":memory:"));
 afterEach(closeDatabase);
 
-const storedIn = (root: string): ReadonlyArray<{ id: string }> =>
-  devCommands.list(root);
-
 describe("SqliteDevCommandsRepository", () => {
-  it.effect("keeps each root's commands with the root that runs them", () =>
+  it.effect("keeps commands with the repository that runs them", () =>
     Effect.gen(function* () {
       const repo = yield* DevCommandsRepository;
-      const front = yield* repo.create({
-        name: "web",
-        command: "pnpm dev",
-        repoPath: web,
-      });
-      const back = yield* repo.create({
-        name: "api",
-        command: "pnpm serve",
-        repoPath: api,
-      });
-      expect(front.repo).toBe("web");
-      expect(back.repo).toBe("api");
-      expect(storedIn(web).map((c) => c.id)).toEqual([front.id]);
-      expect(storedIn(api).map((c) => c.id)).toEqual([back.id]);
-
+      const created = yield* repo.create({ name: "web", command: "pnpm dev" });
+      expect(devCommands.list(REPO).map((c) => c.id)).toEqual([created.id]);
       const all = yield* repo.list;
-      expect(all.map((c) => c.repo)).toEqual(["api", "web"]);
+      expect(all.map((c) => c.name)).toEqual(["web"]);
     }).pipe(Effect.provide(Repo))
   );
 
-  it.effect("moving a command re-scopes it rather than duplicating it", () =>
+  it.effect("update rewrites in place", () =>
     Effect.gen(function* () {
       const repo = yield* DevCommandsRepository;
-      const created = yield* repo.create({
-        name: "web",
-        command: "pnpm dev",
-        repoPath: web,
-      });
-      const moved = yield* repo.update(created.id, { repoPath: api });
-      expect(moved.repoPath).toBe(api);
-      expect(storedIn(web)).toHaveLength(0);
-      expect(storedIn(api).map((c) => c.id)).toEqual([created.id]);
+      const created = yield* repo.create({ name: "web", command: "pnpm dev" });
+      const updated = yield* repo.update(created.id, { command: "pnpm start" });
+      expect(updated.command).toBe("pnpm start");
+      expect(devCommands.list(REPO)).toHaveLength(1);
     }).pipe(Effect.provide(Repo))
   );
 
-  it.effect("refuses a root the project does not hold", () =>
+  it.effect("remove forgets the command", () =>
     Effect.gen(function* () {
       const repo = yield* DevCommandsRepository;
-      const failure = yield* Effect.flip(
-        repo.create({ name: "web", command: "pnpm dev", repoPath: "/nowhere" })
-      );
-      expect(failure._tag).toBe("NotFound");
+      const created = yield* repo.create({ name: "web", command: "pnpm dev" });
+      yield* repo.remove(created.id);
+      expect(yield* repo.list).toEqual([]);
+      const error = yield* Effect.flip(repo.get(created.id));
+      expect(error._tag).toBe("NotFound");
     }).pipe(Effect.provide(Repo))
+  );
+
+  it.effect("fails with NoRepoSelected when nothing is open", () =>
+    Effect.gen(function* () {
+      const repo = yield* DevCommandsRepository;
+      const error = yield* Effect.flip(repo.list);
+      expect(error._tag).toBe("NoRepoSelected");
+    }).pipe(
+      Effect.provide(
+        Layer.effect(DevCommandsRepository)(
+          makeSqliteDevCommandsRepository
+        ).pipe(Layer.provide(memoryLayer(null)))
+      )
+    )
   );
 });

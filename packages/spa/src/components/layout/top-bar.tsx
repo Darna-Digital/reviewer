@@ -7,8 +7,7 @@ import type {
   RemoteBranchInfo,
   RepoInfo,
 } from "@reviewer/core/repo";
-import type { RepoEntry, WorkspaceInfo } from "@reviewer/core/workspace";
-import type { RepoBranches } from "@reviewer/core/project";
+import type { WorkspaceInfo } from "@reviewer/core/workspace";
 import type { DiffStyle } from "@/lib/ui-prefs";
 
 interface TopBarProps {
@@ -32,11 +31,7 @@ interface TopBarProps {
   onDeleteBranch: (name: string) => void;
   onFetch: () => void;
   onPush: () => void;
-  /** Each root's branches, when the project holds several. */
-  projectBranches?: ReadonlyArray<RepoBranches>;
-  currentRepo?: RepoEntry | null;
   /** Make `repoPath` current before acting in it; false when it failed. */
-  onFollowRepo?: (repoPath: string) => Promise<boolean>;
 }
 
 export function TopBar(props: TopBarProps) {
@@ -76,9 +71,6 @@ export function TopBar(props: TopBarProps) {
           onPush={props.onPush}
           onRenameBranch={props.onRenameBranch}
           onDeleteBranch={props.onDeleteBranch}
-          repos={props.projectBranches}
-          currentRepo={props.currentRepo}
-          onFollowRepo={props.onFollowRepo}
         />
       )}
 

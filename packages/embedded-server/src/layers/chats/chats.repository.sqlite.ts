@@ -6,8 +6,8 @@
  * `list` deliberately spans every project: the sessions surface shows all of
  * them at once and narrows down in the client. Everything that acts on one
  * chat — get, update, remove — finds it by id alone, so a conversation started
- * in another root of the project (or in another project entirely) opens and
- * answers exactly like one started in the selected root.
+ * in another project opens and answers exactly like one started in the open
+ * one.
  */
 import * as Effect from "effect/Effect";
 import { DEFAULT_CHAT_TITLE } from "@reviewer/core/chats";
@@ -52,28 +52,26 @@ export const makeSqliteChatsRepository = Effect.gen(function* () {
   const get: ChatsRepo["get"] = (id) => attempt(() => requireChat(id));
 
   const create: ChatsRepo["create"] = (input: CreateChatInput) =>
-    Effect.flatMap(ctx.project, (projectPath) =>
-      withRepo((repoPath) => {
-        // A root reached before any project open (the boot seed) would have no
-        // project to be grouped under; register it as it is used so the chat is
-        // labelled from the moment it exists.
-        rememberRepo(repoPath, projectPath ?? repoPath);
-        return insertChat({
-          id: nextChatId("c"),
-          repoPath,
-          title:
-            input.title.trim().length > 0
-              ? input.title.trim()
-              : DEFAULT_CHAT_TITLE,
-          provider: input.provider,
-          model: input.model,
-          effort: input.effort,
-          access: input.access,
-          branch: input.branch,
-          createdAt: new Date().toISOString(),
-        });
-      })
-    );
+    withRepo((repoPath) => {
+      // A repository reached before any open (the boot seed) would not be
+      // registered yet; register it as it is used so the chat is labelled
+      // from the moment it exists.
+      rememberRepo(repoPath, repoPath);
+      return insertChat({
+        id: nextChatId("c"),
+        repoPath,
+        title:
+          input.title.trim().length > 0
+            ? input.title.trim()
+            : DEFAULT_CHAT_TITLE,
+        provider: input.provider,
+        model: input.model,
+        effort: input.effort,
+        access: input.access,
+        branch: input.branch,
+        createdAt: new Date().toISOString(),
+      });
+    });
 
   const update: ChatsRepo["update"] = (id, input: UpdateChatInput) =>
     attempt(() => {

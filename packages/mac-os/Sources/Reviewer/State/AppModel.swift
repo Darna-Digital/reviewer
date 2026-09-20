@@ -30,8 +30,6 @@ final class AppModel {
     var status: RepoStatus?
     var branches: [BranchInfo] = []
     var remoteBranches: [RemoteBranchInfo] = []
-    /// Every root's branches, for a project of several; empty otherwise.
-    var projectBranches: [RepoBranches] = []
     var branchPrompt: BranchPrompt?
     var lastError: String?
 
@@ -80,8 +78,11 @@ final class AppModel {
     /// The bottom pane's History: the commit log, its filters and the
     /// commit picked out of it.
     let history: CommitHistory
-    /// The search dialog — a file by name, or a grep of the working tree.
-    let search: QuickSearch
+    /// The palette — ⌘K's commands, a file by name, a grep of the working
+    /// tree, the git actions and the branches.
+    let palette: CommandPalette
+    /// The repositories the machine holds, for the opener to list.
+    let catalog: RepoCatalog
     @ObservationIgnored private var shiftTaps: ShiftTapMonitor?
 
     init(client: ReviewerClient = ReviewerClient(baseURL: ServerLauncher.shared.baseURL)) {
@@ -94,13 +95,17 @@ final class AppModel {
         chats = Chats(client: client)
         reviewHandoff = ReviewHandoff(client: client, chats: chats)
         history = CommitHistory(client: client)
-        search = QuickSearch(client: client)
-        search.onOpen = { [weak self] path, line in self?.show(file: path, line: line) }
+        palette = CommandPalette(client: client)
+        catalog = RepoCatalog(client: client)
+        palette.onOpen = { [weak self] path, line in self?.show(file: path, line: line) }
+        palette.onCheckout = { [weak self] ref in self?.checkout(ref) }
+        palette.commandSource = { [weak self] in self?.paletteCommands() ?? [] }
+        palette.branchSource = { [weak self] in self?.paletteBranches() ?? [] }
         // The web app keeps the gesture out of its inputs; here the one
-        // input it could land in is the dialog's own box, where two Shifts
+        // input it could land in is the palette's own box, where two Shifts
         // in a row are typing, not a request to switch lists.
         shiftTaps = ShiftTapMonitor { [weak self] in
-            guard let self, !search.isShown else { return }
+            guard let self, !palette.isShown else { return }
             findFile()
         }
         page.onNavigated = { [weak self] href in self?.chats.follow(href: href) }
@@ -123,10 +128,14 @@ final class AppModel {
     /// to be on is the welcome, not the workspace (see `ReviewerApp`).
     var awaitingProject: Bool { workspace != nil && !hasProject }
 
-    /// How many projects have been opened this run — the welcome window
+    /// How many projects have been opened this run — the opener window
     /// watches it, since a project opened over one already open changes
     /// nothing else it could watch.
     private(set) var projectOpens = 0
+    /// How many times the opener has been asked for — ⌘O, the palette —
+    /// which the workspace window answers by bringing it up, being the one
+    /// with a scene to open (see `ContentView`).
+    private(set) var openerRequests = 0
 
     // MARK: lifecycle
 
@@ -156,18 +165,17 @@ final class AppModel {
     }
 
     private func refreshProjectState() async {
-        search.projectChanged(scope: (workspace?.repos.count ?? 0) > 1 ? .project : .repo)
+        palette.projectChanged()
         guard hasProject else {
             status = nil
             branches = []
             remoteBranches = []
-            projectBranches = []
-            history.projectChanged(repos: [], head: nil)
+            history.projectChanged(project: nil, head: nil)
             await pullRequests.projectChanged(github: nil)
             return
         }
         status = try? await client.repoStatus()
-        history.projectChanged(repos: workspace?.repos ?? [], head: status?.branch)
+        history.projectChanged(project: workspace?.project, head: status?.branch)
         await loadBranches()
         await services.load()
         await threads.load()
@@ -198,11 +206,17 @@ final class AppModel {
         showOnCodeTab(Href.file(file, line: line, on: Href.browsePath))
     }
 
-    // MARK: search
+    // MARK: palette
+
+    /// ⌘K: the command list, or with it already up, away again.
+    func showCommands() {
+        guard hasProject else { return }
+        palette.toggleCommands()
+    }
 
     func findFile() {
         guard hasProject else { return }
-        search.open(.files)
+        palette.open(.files)
     }
 
     /// ⌘⇧F: the grep, opening on whatever the page has highlighted, so the
@@ -211,7 +225,7 @@ final class AppModel {
         guard hasProject else { return }
         Task {
             let selected = try? await page.webView.evaluateJavaScript("window.getSelection().toString()") as? String
-            search.open(.text, seed: Self.seed(fromSelection: selected ?? ""))
+            palette.open(.text, seed: Self.seed(fromSelection: selected ?? ""))
         }
     }
 
@@ -387,6 +401,22 @@ final class AppModel {
         }
     }
 
+    /// The opener: every repository the machine holds, to pick one from.
+    func showOpener() {
+        openerRequests += 1
+    }
+
+    /// `path` in a Reviewer window of its own — a second instance of the
+    /// app with a server of its own, since a server holds one project.
+    func openProjectInNewWindow(path: String) {
+        do {
+            try ServerLauncher.shared.launchInstance(project: path)
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// The folder panel, for a repository the index does not list.
     func chooseProject() {
         guard let path = askForProjectFolder() else { return }
         Task { await openProject(path: path) }
@@ -399,8 +429,8 @@ final class AppModel {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Open Project"
-        panel.message = "Choose a folder holding one or more git repositories."
+        panel.prompt = "Open Repository"
+        panel.message = "Choose a git repository."
         if let home = workspace?.home {
             panel.directoryURL = URL(fileURLWithPath: home)
         }
@@ -488,18 +518,10 @@ final class AppModel {
         show(bottomTab: .history)
     }
 
-    /// A commit picked out of the history: the page on its diff. In a project
-    /// of several roots the commit may belong to one that is not current, so
-    /// that root is followed first — every git view reads from the current
-    /// one, and a sha means nothing to the wrong one. A history narrowed to
-    /// a file opens the commit on that file.
+    /// A commit picked out of the history: the page on its diff. A history
+    /// narrowed to a file opens the commit on that file.
     func show(commit: CommitInfo) {
-        Task {
-            if let owner = history.owners[commit.sha], owner.path != workspace?.current {
-                guard await follow(repo: owner.path) else { return }
-            }
-            showOnCodeTab(Href.commit(commit.sha, path: history.query.path))
-        }
+        showOnCodeTab(Href.commit(commit.sha, path: history.query.path))
     }
 
     /// A file of the selected commit: the commit's diff, on that file.
@@ -507,19 +529,6 @@ final class AppModel {
         guard let sha = history.selectedSha else { return }
         history.selectedFile = path
         showOnCodeTab(Href.commit(sha, path: path))
-    }
-
-    /// Another of the project's roots followed, and everything re-read from
-    /// it. False when the server would not.
-    func follow(repo path: String) async -> Bool {
-        do {
-            workspace = try await client.selectRepo(path: path)
-        } catch {
-            lastError = error.localizedDescription
-            return false
-        }
-        await refresh()
-        return true
     }
 
     // MARK: review

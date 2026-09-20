@@ -1,9 +1,9 @@
 /**
  * SQLite-backed store for where each branch's work is aimed.
  *
- * Scoped to the selected repository, so a project holding several roots keeps
- * each root's aims to itself — two repositories may well both have a `main`,
- * and a row written in one must not answer for the other.
+ * Scoped to the open repository, so each keeps its aims to itself — two
+ * repositories may well both have a `main`, and a row written in one must
+ * not answer for the other.
  */
 import * as Effect from "effect/Effect";
 import { attempt } from "../db/db.service.ts";

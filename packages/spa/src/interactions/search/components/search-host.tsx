@@ -14,13 +14,7 @@ import { useMemo } from "react";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
 import { selectedCodeText } from "@/interactions/find-in-file/adapters/code-selection.store";
 import { seedFromSelection } from "@/interactions/find-in-file/functions/find-in-file.functions";
-import {
-  useBranches,
-  useFiles,
-  useMultiRepo,
-  useProjectFiles,
-  useRemoteBranches,
-} from "@/lib/queries";
+import { useBranches, useFiles, useRemoteBranches } from "@/lib/queries";
 import { useCodeCommands } from "../adapters/code-commands.hook.adapter";
 import {
   openSearch,
@@ -49,12 +43,7 @@ export function SearchHost() {
   const { open, mode, seed } = useSearchState();
   const codeCommands = useCodeCommands();
   const pageCommands = useRegisteredCommands();
-  // A multi-root project searches all of its roots, and names what it finds
-  // from the project root, so a file in `backend` is as reachable as one in
-  // `frontend` — and the path a hit carries is the one the viewer opens.
-  const multiRepo = useMultiRepo();
   const files = useFiles();
-  const projectFiles = useProjectFiles(multiRepo);
   const local = useBranches();
   const remote = useRemoteBranches();
   const git = useGitActions();
@@ -102,8 +91,7 @@ export function SearchHost() {
         onModeChange={setSearchMode}
         seed={seed}
         commands={commands}
-        files={(multiRepo ? projectFiles.data?.paths : files.data?.paths) ?? []}
-        scope={multiRepo ? "project" : "repo"}
+        files={files.data?.paths ?? []}
         branches={branches}
         onOpenFile={(file) => show({ file })}
         onOpenLocation={(file, line) => show({ file, line })}

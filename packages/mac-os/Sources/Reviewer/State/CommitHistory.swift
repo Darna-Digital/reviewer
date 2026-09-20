@@ -2,12 +2,9 @@
 // reads it — one ref's ancestry, or every ref's, narrowed by the same
 // filters — a page at a time, each fetched past the ones already held and
 // appended, so walking back through a long history neither refetches what
-// is on screen nor rebuilds those rows. A project of several roots reads
-// one merged history covering all of them, each commit saying where it came
-// from, narrowed to one root when asked; a single-root project keeps the
-// per-branch log. The selected commit's detail — its message, its files —
-// is read on selection and kept by sha, so stepping back to a commit is
-// free.
+// is on screen nor rebuilds those rows. The selected commit's detail — its
+// message, its files — is read on selection and kept by sha, so stepping
+// back to a commit is free.
 import Foundation
 import Observation
 
@@ -19,15 +16,11 @@ final class CommitHistory {
     /// The ref whose history is listed, or nil to follow HEAD.
     var ref: String? { didSet { if ref != oldValue { reload() } } }
     var query = LogQuery.empty { didSet { if query != oldValue { reload() } } }
-    /// The root the merged history is narrowed to, for a multi-root project.
-    var repoFilter: String? { didSet { if repoFilter != oldValue { reload() } } }
 
     private(set) var commits: [CommitInfo] = []
     /// The commits laid into the graph's lanes, kept with them so the rows
     /// draw from it rather than laying the whole list out again.
     private(set) var graph = CommitGraphLayout.empty
-    /// Which root each commit came from, when the history covers several.
-    private(set) var owners: [String: RepoEntry] = [:]
     private(set) var isLoading = false
     private(set) var hasMore = false
     private(set) var loadError: String?
@@ -39,9 +32,10 @@ final class CommitHistory {
     private(set) var detailError: String?
     private(set) var isLoadingDetail = false
 
-    /// The project's roots, when it holds several — the merged history's
-    /// shape and its repository filter both follow from them.
-    private(set) var repos: [RepoEntry] = []
+    /// The open repository, or nil while nothing is; a change of it starts
+    /// the history over, since a ref belongs to the repository it was read
+    /// from and the filters with it.
+    private(set) var project: String?
     /// The branch the repository is on, which is what a nil `ref` names.
     var head: String?
 
@@ -50,15 +44,10 @@ final class CommitHistory {
     /// Bumped by every reload so a page that lands late is dropped rather
     /// than appended to a different history.
     @ObservationIgnored private var generation = 0
-    /// How many commits the merged log has been read past — more than are
-    /// held once a root filter drops some, so the next page must skip by it.
-    @ObservationIgnored private var mergedRead = 0
 
     init(client: ReviewerClient) {
         self.client = client
     }
-
-    var isMultiRoot: Bool { repos.count > 1 }
 
     /// The ref the log is read for: the one chosen, else the branch you are on.
     var effectiveRef: String { ref ?? head ?? "HEAD" }
@@ -71,17 +60,14 @@ final class CommitHistory {
         selectedSha.flatMap { details[$0] }
     }
 
-    /// The project as it stands — its roots, the branch it is on. A change
-    /// of either starts the history over, since a ref belongs to the root it
-    /// was read from and the filters with it.
-    func projectChanged(repos: [RepoEntry], head: String?) {
-        let rootsChanged = repos.map(\.path) != self.repos.map(\.path)
-        self.repos = repos
+    /// The project as it stands — the repository, the branch it is on.
+    func projectChanged(project: String?, head: String?) {
+        let repositoryChanged = project != self.project
+        self.project = project
         self.head = head
-        if rootsChanged {
+        if repositoryChanged {
             ref = nil
             query = .empty
-            repoFilter = nil
             selectedSha = nil
             details = [:]
         }
@@ -99,11 +85,9 @@ final class CommitHistory {
         pageTask?.cancel()
         commits = []
         graph = .empty
-        owners = [:]
-        mergedRead = 0
         hasMore = false
         loadError = nil
-        guard !repos.isEmpty else {
+        guard project != nil else {
             isLoading = false
             return
         }
@@ -124,19 +108,10 @@ final class CommitHistory {
             do {
                 let page = try await readPage()
                 guard generation == self.generation, !Task.isCancelled else { return }
-                commits.append(contentsOf: page.commits)
+                commits.append(contentsOf: page)
                 graph = CommitGraphLayout.layout(commits)
-                owners.merge(page.owners) { _, latest in latest }
-                hasMore = page.full
+                hasMore = page.count >= Self.pageSize
                 loadError = nil
-                // A root filter can drop a whole page of the merged log,
-                // leaving the list as it was; the next page is asked for
-                // outright, since no row of it will come into view to ask.
-                if page.full && page.commits.isEmpty {
-                    isLoading = false
-                    fetchPage()
-                    return
-                }
             } catch {
                 guard generation == self.generation, !Task.isCancelled else { return }
                 loadError = error.localizedDescription
@@ -146,25 +121,9 @@ final class CommitHistory {
         }
     }
 
-    private struct Page {
-        let commits: [CommitInfo]
-        let owners: [String: RepoEntry]
-        /// A short page is the end of the history; a full one may have more.
-        let full: Bool
-    }
-
-    private func readPage() async throws -> Page {
-        if isMultiRoot {
-            let log = try await client.projectLog(query: query, skip: mergedRead, limit: Self.pageSize)
-            mergedRead += log.commits.count
-            let kept = log.commits.filter { repoFilter == nil || $0.repo.path == repoFilter }
-            return Page(
-                commits: kept.map(\.commit),
-                owners: Dictionary(kept.map { ($0.commit.sha, $0.repo) }) { _, latest in latest },
-                full: log.commits.count >= Self.pageSize)
-        }
-        let page = try await client.log(ref: effectiveRef, query: query, skip: commits.count, limit: Self.pageSize)
-        return Page(commits: page, owners: [:], full: page.count >= Self.pageSize)
+    /// A short page is the end of the history; a full one may have more.
+    private func readPage() async throws -> [CommitInfo] {
+        try await client.log(ref: effectiveRef, query: query, skip: commits.count, limit: Self.pageSize)
     }
 
     private func loadDetail() {

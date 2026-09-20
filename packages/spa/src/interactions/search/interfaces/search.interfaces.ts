@@ -80,14 +80,6 @@ export interface GrepOptions {
   readonly regex: boolean;
 }
 
-/**
- * How wide a search runs: the repository being followed, or every root the open
- * project holds. A multi-root project searches the project — a match in
- * `backend` is as findable as one in `frontend`, and comes back named from the
- * project root (`backend/src/a.ts`) so opening it needs nothing else.
- */
-export type SearchScope = "repo" | "project";
-
 export interface GrepResults {
   readonly matches: ReadonlyArray<ContentMatch>;
   /** The server had more matches than the limit allowed through. */
@@ -114,19 +106,14 @@ export interface SearchDependencies {
   sideEffects: {
     readonly grep: (
       query: string,
-      options: GrepOptions,
-      scope: SearchScope
+      options: GrepOptions
     ) => Promise<GrepResults>;
   };
 }
 
 export interface SearchFunctions {
   /** Search file contents; too-short queries resolve empty without a request. */
-  readonly grep: (
-    query: string,
-    options: GrepOptions,
-    scope: SearchScope
-  ) => Promise<GrepResults>;
+  readonly grep: (query: string, options: GrepOptions) => Promise<GrepResults>;
 }
 
 /** Keyboard event fields the shortcut rules read — a plain object in tests. */

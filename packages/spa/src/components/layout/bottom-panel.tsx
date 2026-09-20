@@ -25,7 +25,6 @@ import type { LogQuery } from "@/lib/api/types";
 import { dockPage } from "@/lib/shell-route";
 import type { BottomTab } from "@/lib/ui-prefs";
 import type { BranchInfo, CommitInfo } from "@reviewer/core/repo";
-import type { RepoEntry } from "@reviewer/core/workspace";
 import { useState, type ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
@@ -93,14 +92,6 @@ interface BottomPanelProps {
   branches: ReadonlyArray<BranchInfo>;
   currentBranch: string | null;
   commits: ReadonlyArray<CommitInfo>;
-  /** Which root each commit came from, for a project of several. */
-  commitRepos?: ReadonlyMap<string, RepoEntry>;
-  /** The project's roots and the one the history is narrowed to, if any. */
-  repos?: ReadonlyArray<RepoEntry>;
-  repoFilter?: string | null;
-  /** The project's own name, for the "all repositories" avatar. */
-  projectName?: string;
-  onRepoFilterChange?: (repoPath: string | null) => void;
   commitsLoading: boolean;
   commitsHaveMore: boolean;
   logRef: string | null;
@@ -220,11 +211,6 @@ export function BottomPanel(props: BottomPanelProps) {
             hasMore={props.commitsHaveMore}
             selectedCommitSha={props.selectedCommitSha}
             selectedFile={props.selectedCommitFile}
-            commitRepos={props.commitRepos}
-            repos={props.repos}
-            repoFilter={props.repoFilter}
-            projectName={props.projectName}
-            onRepoFilterChange={props.onRepoFilterChange}
             onLoadMore={props.onLoadMoreCommits}
             onRefChange={props.onLogRefChange}
             onQueryChange={props.onLogFiltersChange}

@@ -1,9 +1,7 @@
 /**
- * Where a drafted commit message's changes come from. The obvious answer is
- * the selected repository, which is what this module provides; a project
- * holding several roots has to read every root the chosen paths reach, and
- * wires its own collector in instead. Asking for the changes rather than
- * running git itself is what lets the service serve both.
+ * Where a drafted commit message's changes come from: the open repository.
+ * Asking for the changes rather than running git itself keeps the service
+ * testable without one.
  */
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";

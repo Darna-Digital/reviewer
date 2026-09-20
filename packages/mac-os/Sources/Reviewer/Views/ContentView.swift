@@ -14,11 +14,11 @@
 // names the project heads the column it fills, and goes with it.
 // The seam between the islands is the frame showing through, and resizes
 // what it parts; the seam between the sidebar and the detail is the
-// system's. The search dialog goes over all of it when it is up. With the
+// system's. The palette goes over all of it when it is up. With the
 // sidebar put away, the rail moves onto the frame beside the page: the dock
 // and the bottom pane are reached from it either way. Before the server
 // answers, the page's island shows the connection instead; answered with
-// no project, the window hands over to the welcome (see `WelcomeWindow`)
+// no project, the window hands over to the opener (see `RepoOpenerWindow`)
 // and puts itself away, so the island's bare sheet is only ever a frame
 // of that handover.
 import SwiftUI
@@ -44,18 +44,21 @@ struct ContentView: View {
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .background(Color(nsColor: IslandPalette.frame).ignoresSafeArea())
         .overlay {
-            if model.search.isShown {
-                SearchOverlay()
+            if model.palette.isShown {
+                PaletteOverlay()
                     .transition(.opacity)
             }
         }
-        .animation(.easeOut(duration: 0.12), value: model.search.isShown)
+        .animation(.easeOut(duration: 0.12), value: model.palette.isShown)
         .branchPrompts()
         .serverErrorAlert()
         .onChange(of: model.awaitingProject) { _, awaiting in
             guard awaiting else { return }
-            openWindow(id: ReviewerWindow.welcome)
+            openWindow(id: ReviewerWindow.opener)
             dismissWindow(id: ReviewerWindow.workspace)
+        }
+        .onChange(of: model.openerRequests) {
+            openWindow(id: ReviewerWindow.opener)
         }
     }
 
@@ -72,7 +75,7 @@ struct ContentView: View {
 
 extension View {
     /// The server's last refusal, as an alert over whichever window asked:
-    /// the workspace, or the welcome opening a project.
+    /// the workspace, or the opener opening a project.
     func serverErrorAlert() -> some View {
         modifier(ServerErrorAlert())
     }
@@ -236,9 +239,9 @@ private struct ToolbarItems: ToolbarContent {
 }
 
 /// The project the window is on, as the web bar's chip — its avatar and
-/// its name — and the way to any other: pressing it brings up the
-/// welcome window, where the recents the server remembers are listed and
-/// the folder panel is reached (see `WelcomeWindow`). Level with the
+/// its name — and the way to any other: pressing it brings up the opener,
+/// where every repository the machine holds is listed (see
+/// `RepoOpenerWindow`). Level with the
 /// toggle beside it rather than riding low as the detail's chips do: this
 /// run of the bar has the system's own control on it, and the chip keeps
 /// its line.
@@ -248,7 +251,7 @@ private struct ProjectPicker: View {
 
     var body: some View {
         Button {
-            openWindow(id: ReviewerWindow.welcome)
+            openWindow(id: ReviewerWindow.opener)
         } label: {
             HStack(spacing: 6) {
                 if let name = model.workspace?.projectName {

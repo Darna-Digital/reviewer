@@ -1,274 +1,146 @@
 import { it } from "@effect/vitest";
-import { Effect, Option } from "effect";
-import * as FileSystem from "effect/FileSystem";
-import * as PlatformError from "effect/PlatformError";
-import { describe, expect } from "vitest";
-import { countRepos, readBranch, scanRepos } from "./repo-scan.ts";
+import { Effect, Ref } from "effect";
+import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect } from "vitest";
+import { readBranch, scanRepos } from "./repo-scan.ts";
+import type { RepoEntry } from "@reviewer/core/workspace";
 
-/** A folder tree: each key is a directory, each value the names it holds. */
-type Tree = Readonly<Record<string, ReadonlyArray<string>>>;
-/** Git roots in the tree, mapped to the branch each has checked out. */
-type Roots = Readonly<Record<string, string | null>>;
+let root = "";
 
-const info = (type: "Directory" | "File"): FileSystem.File.Info => ({
-  type,
-  mtime: Option.none(),
-  atime: Option.none(),
-  birthtime: Option.none(),
-  dev: 0,
-  ino: Option.none(),
-  mode: 0,
-  nlink: Option.none(),
-  uid: Option.none(),
-  gid: Option.none(),
-  rdev: Option.none(),
-  size: FileSystem.Size(0),
-  blksize: Option.none(),
-  blocks: Option.none(),
+beforeEach(async () => {
+  root = await mkdtemp(join(tmpdir(), "reviewer-scan-"));
+});
+afterEach(async () => {
+  await rm(root, { recursive: true, force: true });
 });
 
-const missing = (path: string) =>
-  Effect.fail(
-    PlatformError.systemError({
-      _tag: "NotFound",
-      module: "FileSystem",
-      method: "stub",
-      pathOrDescriptor: path,
-    })
+/** Lay down a repository at `path` on `branch` (a raw sha when null). */
+const repo = async (path: string, branch: string | null = "main") => {
+  await mkdir(join(root, path, ".git"), { recursive: true });
+  await writeFile(
+    join(root, path, ".git", "HEAD"),
+    branch === null ? "a9c8fb5c0f2b\n" : `ref: refs/heads/${branch}\n`
   );
-
-/**
- * A stub filesystem over `tree`: every git root gets a `.git` directory whose
- * HEAD names its branch (or a raw sha when the root is detached).
- */
-const stubFs = (tree: Tree, roots: Roots = {}) => {
-  const dotGitOf = (path: string): string | null => {
-    const match = Object.keys(roots).find((root) => `${root}/.git` === path);
-    return match ?? null;
-  };
-  const headOf = (path: string): string | null => {
-    const match = Object.keys(roots).find(
-      (root) => `${root}/.git/HEAD` === path
-    );
-    return match ?? null;
-  };
-  return FileSystem.layerNoop({
-    readDirectory: (path) => {
-      const names = tree[String(path)];
-      return names === undefined
-        ? missing(String(path))
-        : Effect.succeed([...names]);
-    },
-    stat: (path) => {
-      const at = String(path);
-      if (tree[at] !== undefined) return Effect.succeed(info("Directory"));
-      if (dotGitOf(at) !== null) return Effect.succeed(info("Directory"));
-      return missing(at);
-    },
-    exists: (path) => {
-      const at = String(path);
-      return Effect.succeed(tree[at] !== undefined || dotGitOf(at) !== null);
-    },
-    readFileString: (path) => {
-      const root = headOf(String(path));
-      if (root === null) return missing(String(path));
-      const branch = roots[root];
-      return Effect.succeed(
-        branch === null || branch === undefined
-          ? "a9c8fb5c0f2b7d1e\n"
-          : `ref: refs/heads/${branch}\n`
-      );
-    },
-  });
 };
 
-const withFs = <A>(
-  tree: Tree,
-  roots: Roots,
-  use: (fs: FileSystem.FileSystem) => Effect.Effect<A>
-) =>
-  Effect.flatMap(FileSystem.FileSystem, use).pipe(
-    Effect.provide(stubFs(tree, roots))
-  );
+const folder = (path: string) => mkdir(join(root, path), { recursive: true });
+
+const scan = (start = root, depth?: number) =>
+  Effect.gen(function* () {
+    const found = yield* Ref.make<ReadonlyArray<RepoEntry>>([]);
+    yield* scanRepos(
+      start,
+      (entry) => Ref.update(found, (all) => [...all, entry]),
+      depth
+    );
+    return (yield* Ref.get(found)).map((entry) => ({
+      ...entry,
+      path: entry.path.slice(root.length + 1),
+    }));
+  });
 
 describe("scanRepos", () => {
-  it.effect("finds the repositories a parent folder holds", () =>
-    withFs(
-      {
-        "/work": ["backend", "frontend", "notes"],
-        "/work/backend": ["src"],
-        "/work/frontend": ["src"],
-        "/work/notes": [],
-      },
-      { "/work/backend": "main", "/work/frontend": "main" },
-      (fs) =>
-        Effect.map(scanRepos(fs, "/work"), (repos) => {
-          expect(repos.map((repo) => repo.name)).toEqual([
-            "backend",
-            "frontend",
-          ]);
-          expect(repos.map((repo) => repo.path)).toEqual([
-            "/work/backend",
-            "/work/frontend",
-          ]);
-        })
-    )
+  it.effect("finds the repositories under a folder, with their branches", () =>
+    Effect.gen(function* () {
+      yield* Effect.promise(async () => {
+        await repo("work/backend", "main");
+        await repo("work/frontend", "feat/x");
+        await folder("work/notes");
+      });
+      const found = yield* scan();
+      expect(
+        found.map((entry) => [entry.name, entry.path, entry.branch])
+      ).toEqual([
+        ["backend", "work/backend", "main"],
+        ["frontend", "work/frontend", "feat/x"],
+      ]);
+      expect(found.every((entry) => entry.lastOpened === null)).toBe(true);
+    })
   );
-
-  it.effect("reads the branch each repository is on", () =>
-    withFs(
-      {
-        "/work": ["backend", "frontend"],
-        "/work/backend": [],
-        "/work/frontend": [],
-      },
-      { "/work/backend": "main", "/work/frontend": "feat/checkout" },
-      (fs) =>
-        Effect.map(scanRepos(fs, "/work"), (repos) => {
-          expect(repos.map((repo) => repo.branch)).toEqual([
-            "main",
-            "feat/checkout",
-          ]);
-        })
-    )
+  it.effect("does not step into a repository it found", () =>
+    Effect.gen(function* () {
+      yield* Effect.promise(async () => {
+        await repo("app");
+        await repo("app/vendor-lib");
+      });
+      const found = yield* scan();
+      expect(found.map((entry) => entry.path)).toEqual(["app"]);
+    })
   );
-
   it.effect("reports a detached head as no branch", () =>
-    withFs(
-      { "/work": ["backend"], "/work/backend": [] },
-      { "/work/backend": null },
-      (fs) =>
-        Effect.map(scanRepos(fs, "/work"), (repos) => {
-          expect(repos[0]?.branch).toBeNull();
-        })
-    )
+    Effect.gen(function* () {
+      yield* Effect.promise(() => repo("app", null));
+      const found = yield* scan();
+      expect(found[0]?.branch).toBeNull();
+    })
   );
-
-  it.effect("names a nested repository by its project-relative path", () =>
-    withFs(
-      {
-        "/work": ["apps"],
-        "/work/apps": ["web"],
-        "/work/apps/web": [],
-      },
-      { "/work/apps/web": "main" },
-      (fs) =>
-        Effect.map(scanRepos(fs, "/work"), (repos) => {
-          expect(repos.map((repo) => repo.name)).toEqual(["apps/web"]);
-        })
-    )
+  it.effect("skips hidden, dependency, system and media folders", () =>
+    Effect.gen(function* () {
+      yield* Effect.promise(async () => {
+        await repo(".hidden/app");
+        await repo("node_modules/dep");
+        await repo("Library/Caches/app");
+        await repo("Movies/clip");
+        await repo("projects/app");
+      });
+      const found = yield* scan();
+      expect(found.map((entry) => entry.path)).toEqual(["projects/app"]);
+    })
   );
-
   it.effect("stops descending past the scan depth", () =>
-    withFs(
-      {
-        "/work": ["a"],
-        "/work/a": ["b"],
-        "/work/a/b": ["deep"],
-        "/work/a/b/deep": [],
-      },
-      { "/work/a/b/deep": "main" },
-      (fs) =>
-        Effect.map(scanRepos(fs, "/work"), (repos) => {
-          expect(repos).toEqual([]);
-        })
-    )
+    Effect.gen(function* () {
+      yield* Effect.promise(async () => {
+        await repo("a/near");
+        await repo("a/b/c/far");
+      });
+      const found = yield* scan(root, 2);
+      expect(found.map((entry) => entry.path)).toEqual(["a/near"]);
+    })
   );
-
-  it.effect("a project that is a repository holds exactly itself", () =>
-    withFs(
-      {
-        "/work": ["packages"],
-        "/work/packages": ["nested"],
-        "/work/packages/nested": [],
-      },
-      { "/work": "main", "/work/packages/nested": "main" },
-      (fs) =>
-        Effect.map(scanRepos(fs, "/work"), (repos) => {
-          expect(repos).toEqual([
-            { name: "work", path: "/work", branch: "main" },
-          ]);
-        })
-    )
+  it.effect("never follows a symbolic link", () =>
+    Effect.gen(function* () {
+      yield* Effect.promise(async () => {
+        await repo("real/app");
+        await symlink(join(root, "real"), join(root, "alias"));
+      });
+      const found = yield* scan();
+      expect(found.map((entry) => entry.path)).toEqual(["real/app"]);
+    })
   );
-
-  it.effect("skips dot-directories and dependency folders", () =>
-    withFs(
-      {
-        "/work": [".cache", "node_modules", "backend"],
-        "/work/.cache": [],
-        "/work/node_modules": [],
-        "/work/backend": [],
-      },
-      {
-        "/work/.cache": "main",
-        "/work/node_modules": "main",
-        "/work/backend": "main",
-      },
-      (fs) =>
-        Effect.map(scanRepos(fs, "/work"), (repos) => {
-          expect(repos.map((repo) => repo.name)).toEqual(["backend"]);
-        })
-    )
-  );
-
-  it.effect("is empty for a folder holding no repository", () =>
-    withFs({ "/work": ["notes"], "/work/notes": [] }, {}, (fs) =>
-      Effect.map(scanRepos(fs, "/work"), (repos) => {
-        expect(repos).toEqual([]);
-      })
-    )
+  it.effect("is empty for a folder that is not there", () =>
+    Effect.gen(function* () {
+      const found = yield* scan(join(root, "missing"));
+      expect(found).toEqual([]);
+    })
   );
 });
 
 describe("readBranch", () => {
   it.effect("follows a submodule's .git file to the real git directory", () =>
-    Effect.flatMap(FileSystem.FileSystem, (fs) =>
-      Effect.map(readBranch(fs, "/work/vendor"), (branch) => {
-        expect(branch).toBe("main");
-      })
-    ).pipe(
-      Effect.provide(
-        FileSystem.layerNoop({
-          stat: (path) =>
-            String(path) === "/work/vendor/.git"
-              ? Effect.succeed(info("File"))
-              : missing(String(path)),
-          readFileString: (path) => {
-            const at = String(path);
-            if (at === "/work/vendor/.git")
-              return Effect.succeed("gitdir: /work/.git/modules/vendor\n");
-            if (at === "/work/.git/modules/vendor/HEAD")
-              return Effect.succeed("ref: refs/heads/main\n");
-            return missing(at);
-          },
-        })
-      )
-    )
+    Effect.gen(function* () {
+      yield* Effect.promise(async () => {
+        await mkdir(join(root, "work", ".git", "modules", "vendor"), {
+          recursive: true,
+        });
+        await writeFile(
+          join(root, "work", ".git", "modules", "vendor", "HEAD"),
+          "ref: refs/heads/release\n"
+        );
+        await mkdir(join(root, "work", "vendor"), { recursive: true });
+        await writeFile(
+          join(root, "work", "vendor", ".git"),
+          "gitdir: ../.git/modules/vendor\n"
+        );
+      });
+      const branch = yield* readBranch(join(root, "work", "vendor"));
+      expect(branch).toBe("release");
+    })
   );
-});
-
-describe("countRepos", () => {
-  it.effect("counts the repositories under a folder", () =>
-    withFs(
-      {
-        "/work": ["backend", "frontend"],
-        "/work/backend": [],
-        "/work/frontend": [],
-      },
-      { "/work/backend": "main", "/work/frontend": "main" },
-      (fs) =>
-        Effect.map(countRepos(fs, "/work"), (count) => {
-          expect(count).toBe(2);
-        })
-    )
-  );
-
-  it.effect("is zero for an unreadable folder", () =>
-    withFs({}, {}, (fs) =>
-      Effect.map(countRepos(fs, "/nope"), (count) => {
-        expect(count).toBe(0);
-      })
-    )
+  it.effect("is null where there is no repository", () =>
+    Effect.gen(function* () {
+      expect(yield* readBranch(join(root, "nowhere"))).toBeNull();
+    })
   );
 });

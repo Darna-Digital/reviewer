@@ -61,15 +61,6 @@ extension Array where Element == BranchRef {
     }
 }
 
-/// Where a branch action runs, for a project of several roots: the root
-/// the branch belongs to — nil for the one the git views already follow —
-/// and the branch that root is on, which compare, merge and rebase are
-/// worded against.
-struct BranchScope: Hashable, Sendable {
-    let repoPath: String?
-    let head: String
-}
-
 /// What the picker asks before it acts: a name for a branch, a new name, or
 /// a yes to a deletion.
 enum BranchPrompt: Identifiable, Equatable {
@@ -96,10 +87,8 @@ extension AppModel {
     func loadBranches() async {
         async let local = client.branches()
         async let remote = client.remoteBranches()
-        async let project = client.projectBranches()
         branches = (try? await local) ?? []
         remoteBranches = (try? await remote) ?? []
-        projectBranches = (workspace?.repos.count ?? 0) > 1 ? (try? await project)?.repos ?? [] : []
     }
 
     // MARK: actions
@@ -117,6 +106,10 @@ extension AppModel {
 
     func fetch() {
         runGit { _ = try await self.client.fetch() }
+    }
+
+    func pull() {
+        runGit { _ = try await self.client.pull() }
     }
 
     func push() {
@@ -174,21 +167,6 @@ extension AppModel {
         components.path = Href.review
         components.queryItems = [URLQueryItem(name: "target", value: target ?? "")]
         showOnCodeTab(components.string ?? Href.review)
-    }
-
-    /// `action`, in the root at `path`: run outright when that is the root
-    /// the git views follow, otherwise once that root has been followed —
-    /// every git call reads from the current root, so a branch of another
-    /// is acted on by going there first.
-    func inRepo(_ path: String?, _ action: @escaping () -> Void) {
-        guard let path, path != workspace?.current else {
-            action()
-            return
-        }
-        Task {
-            guard await follow(repo: path) else { return }
-            action()
-        }
     }
 
     private func runGit(_ body: @escaping () async throws -> Void) {

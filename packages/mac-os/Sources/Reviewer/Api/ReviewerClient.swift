@@ -45,19 +45,20 @@ struct ReviewerClient: Sendable {
         try await send("POST", "/api/workspace", body: SetWorkspace(path: path))
     }
 
-    /// Follow another of the project's roots: every git view reads from the
-    /// current one, so a branch or a commit of another root is reached by
-    /// following that root first.
-    func selectRepo(path: String) async throws -> WorkspaceInfo {
-        try await send("POST", "/api/workspace/repo", body: SetWorkspace(path: path))
+    /// Every repository the machine holds, as far as the server's walk has
+    /// got; `scanning` says whether more may still come.
+    func repos() async throws -> RepoIndex {
+        try await get("/api/repos")
+    }
+
+    /// Walk the machine for repositories again; answers with the index as it
+    /// stands, the walk filling it in behind.
+    func rescanRepos() async throws -> RepoIndex {
+        try await send("POST", "/api/repos/scan", body: EmptyBody())
     }
 
     func files() async throws -> FilesPayload {
         try await get("/api/files")
-    }
-
-    func projectFiles() async throws -> FilesPayload {
-        try await get("/api/project/files")
     }
 
     func readFile(path: String) async throws -> FileContent {
@@ -102,13 +103,10 @@ struct ReviewerClient: Sendable {
 
     // MARK: search
 
-    /// A content search over the working tree. The repo endpoint answers for
-    /// the root being followed and names its hits from it; the project one
-    /// greps every root and names them from the project folder — the same
-    /// names the file endpoints resolve, so a hit opens with nothing added.
-    func search(_ query: String, options: GrepOptions, scope: SearchScope, limit: Int) async throws -> ContentMatches {
-        let path = scope == .project ? "/api/project/search" : "/api/search"
-        return try await get(path, query: [
+    /// A content search over the working tree, its hits named from the
+    /// repository root — the names the file endpoints resolve.
+    func search(_ query: String, options: GrepOptions, limit: Int) async throws -> ContentMatches {
+        try await get("/api/search", query: [
             "q": query,
             "case": options.caseSensitive ? "1" : "0",
             "word": options.wholeWord ? "1" : "0",
@@ -167,22 +165,12 @@ struct ReviewerClient: Sendable {
         try await get("/api/remote-branches")
     }
 
-    func projectBranches() async throws -> ProjectBranches {
-        try await get("/api/project/branches")
-    }
-
     // MARK: history
 
     /// One page of the log, `skip` commits in: `ref`'s ancestry, or every
     /// ref's for `allRefs`, narrowed by `query`.
     func log(ref: String, query: LogQuery, skip: Int, limit: Int) async throws -> [CommitInfo] {
         try await get("/api/log", query: logParameters(ref: ref, query: query, skip: skip, limit: limit))
-    }
-
-    /// One page of the project's merged history — every root's, each commit
-    /// saying which — for a project of several.
-    func projectLog(query: LogQuery, skip: Int, limit: Int) async throws -> ProjectLog {
-        try await get("/api/project/log", query: logParameters(ref: "HEAD", query: query, skip: skip, limit: limit))
     }
 
     func commitDetail(sha: String) async throws -> CommitDetail {
@@ -313,11 +301,11 @@ struct ReviewerClient: Sendable {
     }
 
     func startAllDevCommands() async throws {
-        let _: [DevCommandView] = try await send("POST", "/api/local-dev/start-all", body: DevRepoScope(repoPath: nil))
+        let _: [DevCommandView] = try await send("POST", "/api/local-dev/start-all", body: EmptyBody())
     }
 
     func stopAllDevCommands() async throws {
-        let _: Ok = try await send("POST", "/api/local-dev/stop-all", body: DevRepoScope(repoPath: nil))
+        let _: Ok = try await send("POST", "/api/local-dev/stop-all", body: EmptyBody())
     }
 
     /// The output socket of a running dev command — `ws://` on the same host.

@@ -24,32 +24,25 @@ import {
   useRouter,
   useSearch,
 } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { BranchesPanel } from "@/components/git/branches-panel";
 import { BottomPanel, nativeInShell } from "@/components/layout/bottom-panel";
 import { expandDock, keepDockDrawer } from "@/components/layout/dock-expansion";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
-import { filterCommitsByRepo } from "@reviewer/core/project";
-import { activeRepo, folderName, isMultiRepo } from "@reviewer/core/workspace";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
-import { useWorkspaceActions } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import { resetFindUsages } from "@/interactions/find-usages/adapters/find-usages.store";
 import {
   resetHistoryFilters,
   setHistoryQuery,
   setHistoryRef,
-  setHistoryRepo,
   useHistoryFilters,
 } from "@/interactions/history/history-filters.store";
 import {
   useBranches,
   usePagedLog,
-  usePagedProjectLog,
-  useProjectBranches,
   useRemoteBranches,
   useRepo,
-  useWorkspace,
 } from "@/lib/queries";
 import { island } from "@/lib/shell";
 import { REVIEW_HREF } from "@/lib/shell-route";
@@ -85,19 +78,16 @@ export function GitBottomDock({
   const repo = useRepo();
   const branches = useBranches();
   const remoteBranches = useRemoteBranches();
-  const projectBranches = useProjectBranches();
-  const workspace = useWorkspace();
-  const workspaceActions = useWorkspaceActions();
   const git = useGitActions();
 
   // Held outside the dock so a file's "Show history", asked for from the page
   // below, can reach it — see `history-filters.store`.
-  const { ref: logRef, query: logFilters, repo: logRepo } = useHistoryFilters();
+  const { ref: logRef, query: logFilters } = useHistoryFilters();
 
-  // A ref belongs to the root it was read from, so following another root
-  // starts the history over rather than listing a branch that root has never
-  // heard of — and takes the Find window's results with it, for the same
-  // reason.
+  // A ref belongs to the repository it was read from, so opening another
+  // starts the history over rather than listing a branch that repository has
+  // never heard of — and takes the Find window's results with it, for the
+  // same reason.
   const root = repo.data?.root ?? null;
   useEffect(() => {
     resetHistoryFilters();
@@ -133,36 +123,7 @@ export function GitBottomDock({
   );
 
   const ref = logRef ?? repo.data?.currentBranch ?? null;
-  const log = usePagedLog(ref, logFilters);
-
-  // A project of several roots shows one history covering all of them, each row
-  // saying where it came from; a single-root project has nothing to say, so it
-  // keeps the paged per-branch log.
-  const multiRepo = isMultiRepo({ repos: workspace.data?.repos ?? [] });
-  const projectLog = usePagedProjectLog(multiRepo, logFilters);
-  const projectHistory = useMemo(() => {
-    const entries = filterCommitsByRepo(projectLog.entries, logRepo);
-    return {
-      commits: entries.map((entry) => entry.commit),
-      repos: new Map(entries.map((entry) => [entry.commit.sha, entry.repo])),
-    };
-  }, [projectLog.entries, logRepo]);
-
-  const history = multiRepo
-    ? {
-        commits: projectHistory.commits,
-        repos: projectHistory.repos,
-        loading: projectLog.loading,
-        hasMore: projectLog.hasMore,
-        loadMore: projectLog.loadMore,
-      }
-    : {
-        commits: log.commits,
-        repos: undefined,
-        loading: log.loading,
-        hasMore: log.hasMore,
-        loadMore: log.loadMore,
-      };
+  const history = usePagedLog(ref, logFilters);
 
   /**
    * Picking something out of a surface that has the window to itself is asking
@@ -179,21 +140,7 @@ export function GitBottomDock({
     if (expanded) keepDockDrawer("branches");
   };
 
-  /**
-   * Open a commit from the history. In a project of several roots the commit
-   * may belong to one that is not current, so that root is followed first —
-   * every git view reads from the current root, and a sha means nothing to the
-   * wrong one.
-   */
-  const openCommit = async (commit: CommitInfo) => {
-    const owner = history.repos?.get(commit.sha) ?? null;
-    if (owner !== null) {
-      const followed = await workspaceActions.followRepo(
-        owner.path,
-        workspace.data?.current ?? null
-      );
-      if (!followed) return;
-    }
+  const openCommit = (commit: CommitInfo) => {
     leaving();
     void navigate({
       to: "/modes/code/browse/commit/$sha",
@@ -278,30 +225,11 @@ export function GitBottomDock({
               onPush={() => void git.push()}
               onRenameBranch={(from, to) => void git.renameBranch(from, to)}
               onDeleteBranch={(name) => void git.deleteBranch(name)}
-              repos={projectBranches.data?.repos}
-              currentRepo={activeRepo(
-                workspace.data ?? { repos: [], current: null }
-              )}
-              onFollowRepo={(repoPath) =>
-                workspaceActions.followRepo(
-                  repoPath,
-                  workspace.data?.current ?? null
-                )
-              }
             />
           }
           branches={branches.data ?? []}
           currentBranch={repo.data?.currentBranch ?? null}
           commits={history.commits}
-          commitRepos={history.repos}
-          repos={multiRepo ? (workspace.data?.repos ?? []) : undefined}
-          repoFilter={logRepo}
-          projectName={
-            workspace.data?.project == null
-              ? undefined
-              : folderName(workspace.data.project)
-          }
-          onRepoFilterChange={setHistoryRepo}
           commitsLoading={history.loading}
           commitsHaveMore={history.hasMore}
           logRef={ref}
@@ -311,7 +239,7 @@ export function GitBottomDock({
           onLoadMoreCommits={history.loadMore}
           onLogRefChange={setHistoryRef}
           onLogFiltersChange={setHistoryQuery}
-          onSelectCommit={(c) => void openCommit(c)}
+          onSelectCommit={openCommit}
           onSelectCommitFile={(p) => {
             leaving();
             void navigate({ to: "/modes/code/browse", search: { file: p } });

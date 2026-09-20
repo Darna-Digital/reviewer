@@ -28,7 +28,6 @@ import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
 import { useRegisterCommands } from "@/interactions/search/adapters/search.store";
 import { useOnSessionTab } from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { openProjectPicker } from "@/interactions/workspace/adapters/project-picker.store";
-import { useRepoCommands } from "@/interactions/workspace/adapters/workspace.hook.adapter";
 import type { Command } from "@/interactions/search/interfaces/search.interfaces";
 import { useWorkspace } from "@/lib/queries";
 import { shellRoute, showsGitChrome } from "@/lib/shell-route";
@@ -85,7 +84,7 @@ export function AppLayout() {
 
   const route = shellRoute(pathname, startingNew, soloSession);
   const gitChrome = showsGitChrome(route);
-  const current = workspace.data?.current ?? null;
+  const current = workspace.data?.project ?? null;
 
   /**
    * The blank composer is the one page the shell gets out of the way of
@@ -150,7 +149,6 @@ export function AppLayout() {
     []
   );
   useRegisterCommands("app-shell", shellCommands);
-  useRepoCommands(workspace.data);
 
   return (
     /**

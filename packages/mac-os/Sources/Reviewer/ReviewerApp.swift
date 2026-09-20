@@ -2,20 +2,21 @@
 // menu bar, the server it depends on brought up before the first view asks
 // for anything, and shut down again on quit when this process started it.
 //
-// Two windows, as Xcode has them: the workspace, and the welcome. The
-// server holds one project at a time, so each is a single `Window` rather
-// than a group. The workspace is the one that opens at launch — the server
-// usually remembers a project, and the welcome would only flash ahead of
-// it — and hands over to the welcome once the server answers with none
-// (see `ContentView`); the welcome hands back as a project is opened in
-// it (see `WelcomeWindow`), and is otherwise reached from the Window menu
-// and the project chip while the workspace stays up.
+// Two windows: the workspace, and the opener — the Finder-like list of
+// every repository the machine holds. The server holds one project at a
+// time, so each is a single `Window` rather than a group. The workspace is
+// the one that opens at launch — the server usually remembers a project,
+// and the opener would only flash ahead of it — and hands over to the
+// opener once the server answers with none (see `ContentView`); the opener
+// hands back as a repository is opened in it (see `RepoOpenerWindow`), and
+// is otherwise reached with ⌘O, from the Window menu and from the project
+// chip while the workspace stays up.
 import AppKit
 import SwiftUI
 
 enum ReviewerWindow {
     static let workspace = "workspace"
-    static let welcome = "welcome"
+    static let opener = "opener"
 }
 
 @main
@@ -27,7 +28,7 @@ struct ReviewerApp: App {
         Window("Reviewer", id: ReviewerWindow.workspace) {
             ContentView()
                 .environment(model)
-                // Re-opened from the welcome, the window finds the server
+                // Re-opened from the opener, the window finds the server
                 // already answering, and only the first opening boots it.
                 .task { if model.connection != .ready { await model.bootstrap() } }
                 .frame(minWidth: 900, minHeight: 560)
@@ -41,12 +42,12 @@ struct ReviewerApp: App {
         .defaultSize(width: 1280, height: 800)
         .commands { ReviewerCommands(model: model) }
 
-        Window("Welcome to Reviewer", id: ReviewerWindow.welcome) {
-            WelcomeWindow()
+        Window("Open Repository", id: ReviewerWindow.opener) {
+            RepoOpenerWindow()
                 .environment(model)
         }
-        .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
+        .windowToolbarStyle(.unified)
+        .defaultSize(width: 1040, height: 620)
         .defaultPosition(.center)
         // Xcode's chord for its welcome, on the Window menu item the system
         // adds for the scene.
@@ -77,7 +78,7 @@ struct ReviewerCommands: Commands {
         CommandGroup(replacing: .newItem) {
             Button("New Agent Session") { model.newSession() }
                 .keyboardShortcut("t", modifiers: .command)
-            Button("Open Project…") { model.chooseProject() }
+            Button("Open Repository…") { model.showOpener() }
                 .keyboardShortcut("o", modifiers: .command)
         }
         CommandGroup(replacing: .saveItem) {
@@ -85,11 +86,14 @@ struct ReviewerCommands: Commands {
                 .keyboardShortcut("w", modifiers: .command)
                 .disabled(!model.canCloseTab)
         }
-        // Into the Edit menu, under the pasteboard: the web app's ⌘⇧F, and
-        // the IDEs' chord for the file search — the web app's ⇧⇧ is heard
-        // too, but a double tap is no menu equivalent.
+        // Into the Edit menu, under the pasteboard: the web app's ⌘K and
+        // ⌘⇧F, and the IDEs' chord for the file search — the web app's ⇧⇧
+        // is heard too, but a double tap is no menu equivalent.
         CommandGroup(after: .pasteboard) {
             Divider()
+            Button("Commands…") { model.showCommands() }
+                .keyboardShortcut("k", modifiers: .command)
+                .disabled(!model.hasProject)
             Button("Go to File…") { model.findFile() }
                 .keyboardShortcut("o", modifiers: [.command, .shift])
                 .disabled(!model.hasProject)

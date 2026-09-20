@@ -2,15 +2,9 @@
  * Live terminal sessions over WebSocket. Each connection to `/api/threads/pty`
  * spawns a real PTY (node-pty) running the thread's program — the login shell for
  * a plain terminal, or an agent CLI (Claude Code / opencode / Codex / Cursor) in
- * its normal interactive mode — started in the open project folder. This is
+ * its normal interactive mode — started in the open repository. This is
  * the reviewer (web) equivalent of embedding a terminal like libghostty: the
  * frontend renders an xterm.js terminal and streams bytes both ways.
- *
- * The project folder, not the selected repository: a project holding several
- * repositories (`backend`, `frontend`) opens at the level you can `cd` into any
- * of them from, and a session stays put when the repository selection moves
- * underneath it. Thread bookkeeping still lives in the selected repository's
- * `.reviewer/threads.json`, which is where the threads feature keeps it.
  *
  * It is attached straight onto the Node HTTP server's `upgrade` event rather than
  * going through the Effect HttpApi, since a PTY is a long-lived bidirectional
@@ -57,10 +51,7 @@ import {
   readThreadAgentSessionId,
   readThreadInitialPrompt,
 } from "../threads/store.ts";
-import {
-  getCurrentProject,
-  getCurrentRepo,
-} from "../workspace/current-repo.ts";
+import { getCurrentRepo } from "../workspace/current-repo.ts";
 import {
   recentAgentSessions,
   writesDiscoverableSessions,
@@ -152,9 +143,8 @@ const loadNodePty = (): NodePty | null => {
   return ptyModule;
 };
 
-/** Where a session's program runs — the project folder holding every root. */
-const sessionCwd = (): string =>
-  getCurrentProject() ?? getCurrentRepo() ?? process.cwd();
+/** Where a session's program runs — the open repository. */
+const sessionCwd = (): string => getCurrentRepo() ?? process.cwd();
 
 /** Where a thread's record lives — `.reviewer/` in the selected repository. */
 const threadStore = (): string => getCurrentRepo() ?? process.cwd();

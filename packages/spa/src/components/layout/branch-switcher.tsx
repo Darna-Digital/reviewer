@@ -37,9 +37,6 @@ import {
 import { handleSearchKeyDown } from "@/components/ui/search-keydown";
 import { cn } from "@/lib/utils";
 import { useSurfaceBackground } from "@/lib/surface-context";
-import { ProjectAvatar } from "@/interactions/workspace/components/project-avatar";
-import type { RepoBranches } from "@reviewer/core/project";
-import type { RepoEntry } from "@reviewer/core/workspace";
 import type { BranchInfo, RemoteBranchInfo } from "@reviewer/core/repo";
 
 interface BranchSwitcherProps {
@@ -59,22 +56,6 @@ interface BranchSwitcherProps {
   onDeleteBranch: (name: string) => void;
   /** Which way the menu opens — "top" for a bar pinned to the bottom. */
   side?: "top" | "bottom";
-  /**
-   * Every root's branches, when the project holds more than one. Their
-   * presence moves the menu's whole body one level up: the top level lists the
-   * roots, and each root expands into exactly the menu a single-repo project
-   * gets — Recent / Local / Remote, folders, the per-branch actions. The
-   * design does not change; it just starts once per repository.
-   */
-  repos?: ReadonlyArray<RepoBranches>;
-  /** The root the git views follow — marked, and the one actions run in. */
-  currentRepo?: RepoEntry | null;
-  /**
-   * Make `repoPath` the current root before acting in it. Actions run wherever
-   * the git views point, so acting in another root goes through this first;
-   * resolves false when the switch failed and the action must not run.
-   */
-  onFollowRepo?: (repoPath: string) => Promise<boolean>;
 }
 
 /**
@@ -83,7 +64,6 @@ interface BranchSwitcherProps {
  * enough to need reading through is a list to search instead.
  */
 const MENU_HEIGHT = "max-h-[min(20rem,70vh)]";
-const REPO_MENU_HEIGHT = "max-h-[min(18rem,60vh)]";
 
 export function BranchSwitcher(props: BranchSwitcherProps) {
   const { current, branches, remoteBranches } = props;
@@ -113,25 +93,13 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
     setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }));
 
   const currentName = current ?? branches.find((b) => b.isCurrent)?.name ?? "—";
-  // The menu nests per root only once there are several; a single root keeps
-  // the flat body it has always had.
-  const multiRepo = (props.repos ?? []).length > 1;
-  const currentRepoPath = props.currentRepo?.path ?? null;
-  const actions = useBranchActionControls({
-    ...props,
-    currentRepoPath,
-  });
+  const actions = useBranchActionControls(props);
 
-  /**
-   * The Recent / Local / Remote body for one repository — exactly the menu a
-   * single-repo project shows. A multi-root project renders this once per
-   * root, inside that root's submenu; nothing about the body itself differs.
-   */
+  /** The Recent / Local / Remote body of the menu. */
   const renderSections = (
     scope: BranchActionScope & {
       readonly sectionBranches: ReadonlyArray<BranchInfo>;
       readonly sectionRemotes: ReadonlyArray<RemoteBranchInfo>;
-      readonly keyPrefix: string;
     }
   ) => {
     const recent = scope.sectionBranches
@@ -147,15 +115,14 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
     );
     const localCount = localGroups.reduce((n, g) => n + g.items.length, 0);
     const remoteCount = remoteGroups.reduce((n, g) => n + g.items.length, 0);
-    const k = scope.keyPrefix;
 
     return (
       <>
         <Section
           title="Recent"
           count={recent.length}
-          collapsed={isCollapsed(`${k}recent`)}
-          onToggle={() => toggleSection(`${k}recent`)}
+          collapsed={isCollapsed("recent")}
+          onToggle={() => toggleSection("recent")}
         >
           {recent.map((b) => (
             <LocalRow key={`r-${b.name}`} branch={b} flat scope={scope} />
@@ -165,8 +132,8 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         <Section
           title="Local"
           count={localCount}
-          collapsed={isCollapsed(`${k}local`)}
-          onToggle={() => toggleSection(`${k}local`)}
+          collapsed={isCollapsed("local")}
+          onToggle={() => toggleSection("local")}
         >
           {localGroups.map((g) => (
             <Folder
@@ -184,8 +151,8 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
         <Section
           title="Remote"
           count={remoteCount}
-          collapsed={isCollapsed(`${k}remote`)}
-          onToggle={() => toggleSection(`${k}remote`)}
+          collapsed={isCollapsed("remote")}
+          onToggle={() => toggleSection("remote")}
         >
           {remoteGroups.map((g) => (
             <Folder
@@ -346,49 +313,11 @@ export function BranchSwitcher(props: BranchSwitcherProps) {
           </MenuFilterRow>
 
           <div className="p-1">
-            {multiRepo &&
-              props.repos?.map((entry) => (
-                <DropdownMenuSub key={entry.repo.path}>
-                  <DropdownMenuSubTrigger>
-                    <ProjectAvatar name={entry.repo.name} className="size-4" />
-                    <span
-                      className={cn(
-                        "min-w-0 flex-1 truncate",
-                        entry.repo.path === currentRepoPath && "font-medium"
-                      )}
-                    >
-                      {entry.repo.name}
-                    </span>
-                    {/* Capped, or a long branch name eats the row and overflows it. */}
-                    <span className="max-w-[50%] shrink-0 truncate text-xs text-muted-foreground">
-                      {entry.repo.branch ?? "detached"}
-                    </span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent
-                    className={cn(
-                      REPO_MENU_HEIGHT,
-                      "w-72 overflow-x-hidden overflow-y-auto p-1"
-                    )}
-                  >
-                    {renderSections({
-                      repoPath: entry.repo.path,
-                      head: entry.repo.branch ?? "—",
-                      sectionBranches: entry.branches,
-                      sectionRemotes: entry.remoteBranches,
-                      keyPrefix: `${entry.repo.path}:`,
-                    })}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              ))}
-
-            {!multiRepo &&
-              renderSections({
-                repoPath: null,
-                head: currentName,
-                sectionBranches: branches,
-                sectionRemotes: remoteBranches,
-                keyPrefix: "",
-              })}
+            {renderSections({
+              head: currentName,
+              sectionBranches: branches,
+              sectionRemotes: remoteBranches,
+            })}
           </div>
         </DropdownMenuContent>
       </DropdownMenu>

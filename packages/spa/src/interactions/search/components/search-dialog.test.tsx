@@ -10,7 +10,6 @@ import type {
   GrepOptions,
   GrepResults,
   SearchMode,
-  SearchScope,
 } from "../interfaces/search.interfaces";
 
 const Icon = () => null;
@@ -94,13 +93,8 @@ const grep = vi.hoisted(() => vi.fn());
 
 vi.mock("../adapters/search.hook.adapter", () => ({
   MIN_QUERY_LENGTH: 2,
-  useGrepSearch: (
-    query: string,
-    options: GrepOptions,
-    enabled: boolean,
-    scope: SearchScope
-  ) => {
-    grep(query, options, enabled, scope);
+  useGrepSearch: (query: string, options: GrepOptions, enabled: boolean) => {
+    grep(query, options, enabled);
     return state;
   },
 }));
@@ -121,11 +115,7 @@ const onOpenLocation = vi.fn();
 const onCheckout = vi.fn();
 
 /** Renders the dialog with `mode` as live state, the way the shell holds it. */
-function Harness({
-  initialMode = "commands" as SearchMode,
-  open = true,
-  scope = "repo" as SearchScope,
-}) {
+function Harness({ initialMode = "commands" as SearchMode, open = true }) {
   const [mode, setMode] = useState<SearchMode>(initialMode);
   return (
     <SearchDialog
@@ -135,7 +125,6 @@ function Harness({
       onModeChange={setMode}
       commands={COMMANDS}
       files={FILES}
-      scope={scope}
       branches={BRANCHES}
       onOpenFile={onOpenFile}
       onOpenLocation={onOpenLocation}
@@ -144,9 +133,7 @@ function Harness({
   );
 }
 
-const setup = (
-  props: { initialMode?: SearchMode; scope?: SearchScope } = {}
-) => {
+const setup = (props: { initialMode?: SearchMode } = {}) => {
   const user = userEvent.setup();
   const view = render(<Harness {...props} />);
   return { user, view };
@@ -420,15 +407,6 @@ describe("SearchDialog — text", () => {
     await user.type(box(), "useFiles");
 
     expect(grep.mock.calls.at(-1)?.[0]).toBe("useFiles");
-    expect(grep.mock.calls.at(-1)?.[3]).toBe("repo");
-  });
-
-  it("searches every root when the open project holds more than one", async () => {
-    const { user } = setup({ initialMode: "text", scope: "project" });
-
-    await user.type(box(), "useFiles");
-
-    expect(grep.mock.calls.at(-1)?.[3]).toBe("project");
   });
 
   it("opens the file at the matched line, and closes", async () => {

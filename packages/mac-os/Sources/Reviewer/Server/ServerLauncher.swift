@@ -6,12 +6,17 @@
 //
 // The port is the server's default, so an already running server (a `pnpm
 // dev` one, or another Reviewer window's) is simply reused. Override with
-// REVIEWER_PORT for a second instance.
+// REVIEWER_PORT for a second instance — which is what "Open in New Window"
+// does: the server holds one project, so a second window is a second
+// instance of the app, on a free port of its own, booted straight onto the
+// repository it was asked for (`launchInstance`).
+import AppKit
 import Foundation
 
 enum ServerLauncherError: LocalizedError {
     case repositoryRootNotFound
     case timedOut(URL)
+    case noFreePort
 
     var errorDescription: String? {
         switch self {
@@ -19,6 +24,8 @@ enum ServerLauncherError: LocalizedError {
             return "could not find the reviewer repository (no pnpm-workspace.yaml above the executable) — start the server yourself with `pnpm --filter @reviewer/embedded-server start`"
         case .timedOut(let url):
             return "the API server did not answer at \(url.absoluteString)"
+        case .noFreePort:
+            return "could not find a free port for another window's server"
         }
     }
 }
@@ -50,6 +57,50 @@ final class ServerLauncher {
     func stop() {
         guard ownsServer, let process, process.isRunning else { return }
         process.terminate()
+    }
+
+    /// Another Reviewer, opened on `project`: the bundle launched again as a
+    /// new instance — the bare binary run again under `swift run` — with a
+    /// port nothing answers on yet, so it brings up a server of its own.
+    func launchInstance(project: String) throws {
+        guard let port = Self.freePort() else { throw ServerLauncherError.noFreePort }
+        let environment = ["REVIEWER_PORT": String(port), "REVIEWER_REPO": project]
+        if Bundle.main.bundleURL.pathExtension == "app" {
+            let configuration = NSWorkspace.OpenConfiguration()
+            configuration.createsNewApplicationInstance = true
+            configuration.environment = environment
+            NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration)
+            return
+        }
+        guard let executable = Bundle.main.executableURL else { throw ServerLauncherError.noFreePort }
+        let process = Process()
+        process.executableURL = executable
+        process.environment = ProcessInfo.processInfo.environment.merging(environment) { _, launched in launched }
+        try process.run()
+    }
+
+    /// A port the system has free right now, found by binding to none in
+    /// particular and reading back which one it gave.
+    private static func freePort() -> Int? {
+        let socket = Darwin.socket(AF_INET, SOCK_STREAM, 0)
+        guard socket >= 0 else { return nil }
+        defer { close(socket) }
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_port = 0
+        address.sin_addr.s_addr = inet_addr("127.0.0.1")
+        let size = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let bound = withUnsafePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(socket, $0, size) }
+        }
+        guard bound == 0 else { return nil }
+        var length = size
+        let read = withUnsafeMutablePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { getsockname(socket, $0, &length) }
+        }
+        guard read == 0 else { return nil }
+        return Int(UInt16(bigEndian: address.sin_port))
     }
 
     private func spawn() throws {
