@@ -49,7 +49,7 @@ final class IslandHost: NSObject {
     @ObservationIgnored private let source: SpaSource
     @ObservationIgnored private let apiBaseURL: URL
     @ObservationIgnored private var loaded = false
-    @ObservationIgnored private lazy var view: WKWebView = makeWebView()
+    @ObservationIgnored private lazy var view: IslandWebView = makeWebView()
     @ObservationIgnored private var appearanceObservation: NSKeyValueObservation?
 
     init(kind: IslandKind, href: String, source: SpaSource, apiBaseURL: URL) {
@@ -67,6 +67,13 @@ final class IslandHost: NSObject {
             view.load(URLRequest(url: source.url(for: href)))
         }
         return view
+    }
+
+    /// Whether the shell has a native page over the island — the sessions
+    /// surface in the page's place — so a drop meant for that page is not
+    /// taken by the web view underneath it (see `IslandWebView`).
+    var coveredByNativePage = false {
+        didSet { view.acceptsDrops = !coveredByNativePage }
     }
 
     /// The address is the shell's own as soon as it is asked for, not once
@@ -138,7 +145,7 @@ final class IslandHost: NSObject {
 
     // MARK: web view
 
-    private func makeWebView() -> WKWebView {
+    private func makeWebView() -> IslandWebView {
         let configuration = WKWebViewConfiguration()
         // Every island is the one origin in the one default store, so they
         // share cookies and local storage — the SPA's prefs — as one app.

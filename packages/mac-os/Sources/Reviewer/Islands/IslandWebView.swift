@@ -9,11 +9,31 @@
 // first, and while the view is not the thing under the pointer the page is
 // told the pointer left instead — once, as an exit to nowhere — so a hover
 // in progress is put out rather than frozen under the glass.
+//
+// A drag is kept off the page the same way, but ahead of time rather than
+// per event: AppKit hands a drag to the frontmost view registered for its
+// types, and the chat page the shell draws over this view is SwiftUI, with
+// no view of its own for AppKit to find — so the page would take every
+// image let go over the conversation, into a document showing nothing. The
+// host says when a native page stands over the island (see `acceptsDrops`),
+// and the types WebKit registered are put away until it steps back.
 import AppKit
 import WebKit
 
 final class IslandWebView: WKWebView {
     private var pointerIsCovered = false
+    private lazy var pageDropTypes = registeredDraggedTypes
+
+    var acceptsDrops = true {
+        didSet {
+            guard acceptsDrops != oldValue else { return }
+            if acceptsDrops {
+                registerForDraggedTypes(pageDropTypes)
+            } else {
+                unregisterDraggedTypes()
+            }
+        }
+    }
 
     /// No WebKit menu over the code: a right-click is the page's to answer
     /// — the symbol menu over an identifier, nothing elsewhere — and the

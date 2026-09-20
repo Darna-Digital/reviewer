@@ -114,7 +114,9 @@ export function CommentComposer({
         className="min-h-20 resize-none"
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
-          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+          // Shift+Enter posts, as Pierre's composer does, alongside the
+          // Cmd/Ctrl+Enter GitHub habit; a plain Enter keeps adding lines.
+          if (e.key === "Enter" && (e.shiftKey || e.metaKey || e.ctrlKey)) {
             e.preventDefault();
             void submit();
             return;

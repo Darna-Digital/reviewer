@@ -98,20 +98,6 @@ enum ListEditing {
             selectionEnd: position(in: next, line: end.line, contentOffset: contentOffset(in: original, line: end.line, column: end.column)))
     }
 
-    /// The span of `before` that `after` rewrites, and what goes in its place.
-    /// Rewriting only that span lets the edit go through the text view's own
-    /// insertion, which keeps undo working.
-    static func changedRange(from before: String, to after: String) -> (range: NSRange, replacement: String) {
-        let old = Array(before.utf16)
-        let new = Array(after.utf16)
-        var start = 0
-        while start < old.count, start < new.count, old[start] == new[start] { start += 1 }
-        var tail = 0
-        while tail < old.count - start, tail < new.count - start, old[old.count - 1 - tail] == new[new.count - 1 - tail] { tail += 1 }
-        let replacement = String(decoding: new[start..<(new.count - tail)], as: UTF16.self)
-        return (NSRange(location: start, length: old.count - tail - start), replacement)
-    }
-
     private static func parseItem(_ line: String) -> Item? {
         guard let match = line.wholeMatch(of: itemPattern) else { return nil }
         let content = String(match.4)

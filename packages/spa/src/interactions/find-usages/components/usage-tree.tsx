@@ -149,17 +149,22 @@ export function UsageTree({
       className="min-h-0 flex-1 overflow-auto py-1 outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-inset"
       onKeyDown={keys}
     >
-      {rows.map((row) => (
-        <Row
-          key={row.node.id}
-          row={row}
-          symbol={symbol}
-          selected={row.node.id === selected}
-          onSelect={onSelect}
-          onToggle={onToggle}
-          onOpen={onOpen}
-        />
-      ))}
+      {/* Long lines scroll sideways rather than being cut off. The rows sit in
+          a strip as wide as the longest of them, so a selected row's highlight
+          runs the full scrolled width instead of stopping at the viewport. */}
+      <div className="w-max min-w-full">
+        {rows.map((row) => (
+          <Row
+            key={row.node.id}
+            row={row}
+            symbol={symbol}
+            selected={row.node.id === selected}
+            onSelect={onSelect}
+            onToggle={onToggle}
+            onOpen={onOpen}
+          />
+        ))}
+      </div>
     </div>
   );
 }
@@ -232,7 +237,7 @@ function Row({
         <>
           <span
             className={cn(
-              "truncate",
+              "whitespace-nowrap",
               node.kind === "category" && "font-medium",
               node.kind === "container" && "font-mono"
             )}
@@ -266,7 +271,7 @@ function UsageLabel({
       <span className="w-8 shrink-0 text-right font-mono text-[11px] text-muted-foreground tabular-nums">
         {reference.location.range.start.line + 1}
       </span>
-      <span className="min-w-0 truncate font-mono text-foreground">
+      <span className="font-mono whitespace-pre text-foreground">
         {previewParts(reference.preview, symbol).map((part) =>
           part.match ? (
             <mark

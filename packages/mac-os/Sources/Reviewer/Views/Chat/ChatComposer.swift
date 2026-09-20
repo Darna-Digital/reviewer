@@ -31,6 +31,7 @@ struct ChatComposer: View {
     @Environment(AppModel.self) private var model
     @State private var sending = false
     @State private var dropTargeted = false
+    @State private var selection: TextSelection?
     @FocusState private var focused: Bool
 
     private static let heights: ClosedRange<CGFloat> = 56...480
@@ -136,7 +137,7 @@ struct ChatComposer: View {
                     .padding(.top, 12)
                     .allowsHitTesting(false)
             }
-            TextEditor(text: text)
+            TextEditor(text: text, selection: $selection)
                 .font(.system(size: 13))
                 .scrollContentBackground(.hidden)
                 .scrollIndicators(.never)
@@ -205,24 +206,38 @@ struct ChatComposer: View {
         chats.attach(panel.urls.compactMap(ComposerAttachment.read(url:)), to: draftKey)
     }
 
-    /// A list edit on the box's own text view — the `NSTextView` under the
-    /// `TextEditor`, which is the first responder while the key is its own.
-    /// Rewriting only the span that changed, through the view's own
-    /// insertion, keeps ⌘Z undoing the list edit rather than the whole
-    /// draft, and leaves the binding to hear about it as it does any typing.
-    /// False when the caret is not in a list, so the key does what it always
-    /// did.
+    /// A list edit on the draft, through the editor's own text and
+    /// selection bindings — the `NSTextView` under a `TextEditor` drops a
+    /// programmatic insertion on the next render, so the rewrite goes in the
+    /// way SwiftUI expects. False when the caret is not in a list, so the key
+    /// does what it always did.
     private func editList(_ edit: (ComposerSelection) -> ComposerSelection?) -> Bool {
-        guard let textView = NSApp.keyWindow?.firstResponder as? NSTextView else { return false }
-        let selected = textView.selectedRange()
-        let current = ComposerSelection(
-            text: textView.string, selectionStart: selected.location, selectionEnd: selected.location + selected.length)
-        guard let edited = edit(current) else { return false }
-        let change = ListEditing.changedRange(from: current.text, to: edited.text)
-        textView.insertText(change.replacement, replacementRange: change.range)
-        textView.setSelectedRange(NSRange(location: edited.selectionStart, length: edited.selectionEnd - edited.selectionStart))
-        textView.scrollRangeToVisible(textView.selectedRange())
+        let current = text.wrappedValue
+        let range = selectedRange(in: current)
+        guard
+            let edited = edit(
+                ComposerSelection(
+                    text: current, selectionStart: range.lowerBound.utf16Offset(in: current),
+                    selectionEnd: range.upperBound.utf16Offset(in: current)))
+        else { return false }
+        text.wrappedValue = edited.text
+        selection = TextSelection(
+            range: String.Index(utf16Offset: edited.selectionStart, in: edited.text)..<String.Index(utf16Offset: edited.selectionEnd, in: edited.text))
         return true
+    }
+
+    /// The caret or selection as a range of the draft, at the end when the
+    /// editor has not reported one; a multi-caret selection is taken as the
+    /// span from its first caret to its last.
+    private func selectedRange(in current: String) -> Range<String.Index> {
+        switch selection?.indices {
+        case .selection(let range):
+            return range
+        case .multiSelection(let ranges):
+            return ranges.ranges.first.map { $0.lowerBound..<(ranges.ranges.last?.upperBound ?? $0.upperBound) } ?? current.endIndex..<current.endIndex
+        default:
+            return current.endIndex..<current.endIndex
+        }
     }
 
     /// The draft delivered: cleared once the send is accepted, kept for a

@@ -11,15 +11,14 @@ import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import { cn } from "@/lib/utils";
 import { useShape } from "@/lib/shape-context";
 import { useTouchPrimary } from "@/hooks/use-touch-primary";
-import { island } from "@/lib/shell";
 
 /**
  * Touch devices scroll natively — their momentum and rubber-banding beat
  * anything scripted — so the custom scrollbar sits out; `ScrollBar` reads this
- * to render nothing there. So does an island of the macOS shell, for the
- * opposite reason: its web view sits beside the shell's own lists, and the
- * system's overlay scroller is the one bar the window should have (the plain
- * overflow containers keep it the same way, see `styles.css`).
+ * to render nothing there. An island of the macOS shell keeps the custom bar:
+ * the system's overlay scroller is only there while a trackpad scrolls, and
+ * the plain overflow containers beside it show the thin bar always (see
+ * `styles.css`), so the two would not match.
  */
 const NativeScrollingContext = createContext<boolean>(false);
 
@@ -107,7 +106,7 @@ const ScrollArea = forwardRef<
     },
     ref
   ) => {
-    const scrollsNatively = useTouchPrimary() || island !== undefined;
+    const scrollsNatively = useTouchPrimary();
 
     return (
       <NativeScrollingContext.Provider value={scrollsNatively}>

@@ -1845,53 +1845,80 @@ file-tree-container {
 /* Native scrollbars for leftover overflow containers + the touch-primary
    ScrollArea fallback. Matches the Fluid Functionalism thumb ramp so custom
    and native scroll affordances share one look. Fine pointers only — touch
-   keeps the platform scrollbar. So does an island of the macOS shell: there
-   the web view sits beside the shell's own lists and outline, and a bar of
-   its own would be a second kind of scrollbar in one window, so the page
-   keeps the system's overlay scrollers and `ScrollArea` scrolls natively
-   (see `scroll-area.tsx`). The island check is wrapped in `:where()` so the
-   rules keep the zero specificity `.scrollbar-none` below counts on. */
+   keeps the platform scrollbar. An island of the macOS shell keeps these too:
+   the system's overlay scroller only shows while a trackpad is scrolling, so
+   a diff or a file in the window's web view had no bar at all to say how long
+   it was or where in it the reader stood.
+
+   The standard `scrollbar-width` / `scrollbar-color` pair is for the engines
+   without the `::-webkit-scrollbar` pseudo-elements, and only for them: an
+   engine that has both lets the standard pair win, and WebKit answers it by
+   tinting its native scroller — the overlay one on macOS, gone at rest — so
+   set everywhere, the pair put away the very bar the rules below draw. */
 @media (pointer: fine) {
-  :where(:root:not(.island)) *,
-  :where(:root:not(.island)) .scroll-thin {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(var(--overlay) / 0.08) transparent;
+  @supports not selector(::-webkit-scrollbar) {
+    *,
+    .scroll-thin {
+      scrollbar-width: thin;
+      scrollbar-color: rgb(var(--overlay) / 0.08) transparent;
+    }
   }
-  :where(:root:not(.island)) *::-webkit-scrollbar,
-  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar {
+  *::-webkit-scrollbar,
+  .scroll-thin::-webkit-scrollbar {
     width: 10px;
     height: 10px;
   }
-  :where(:root:not(.island)) *::-webkit-scrollbar-corner,
-  :where(:root:not(.island)) *::-webkit-scrollbar-track,
-  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-corner,
-  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-track {
+  *::-webkit-scrollbar-corner,
+  *::-webkit-scrollbar-track,
+  .scroll-thin::-webkit-scrollbar-corner,
+  .scroll-thin::-webkit-scrollbar-track {
     background: transparent;
   }
-  :where(:root:not(.island)) *::-webkit-scrollbar-thumb,
-  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-thumb {
+  *::-webkit-scrollbar-thumb,
+  .scroll-thin::-webkit-scrollbar-thumb {
     background-color: rgb(var(--overlay) / 0.08);
     background-clip: content-box;
     border: 3px solid transparent;
     border-radius: 9999px;
   }
-  :where(:root:not(.island)) *::-webkit-scrollbar-thumb:vertical,
-  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-thumb:vertical {
+  *::-webkit-scrollbar-thumb:vertical,
+  .scroll-thin::-webkit-scrollbar-thumb:vertical {
     border-left-width: 1px;
     border-right-width: 5px;
   }
-  :where(:root:not(.island)) *::-webkit-scrollbar-thumb:horizontal,
-  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-thumb:horizontal {
+  *::-webkit-scrollbar-thumb:horizontal,
+  .scroll-thin::-webkit-scrollbar-thumb:horizontal {
     border-top-width: 1px;
     border-bottom-width: 5px;
   }
-  :where(:root:not(.island)) *::-webkit-scrollbar-thumb:hover,
-  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-thumb:hover {
+  *::-webkit-scrollbar-thumb:hover,
+  .scroll-thin::-webkit-scrollbar-thumb:hover {
     background-color: rgb(var(--overlay) / 0.12);
   }
-  :where(:root:not(.island)) *::-webkit-scrollbar-thumb:active,
-  :where(:root:not(.island)) .scroll-thin::-webkit-scrollbar-thumb:active {
+  *::-webkit-scrollbar-thumb:active,
+  .scroll-thin::-webkit-scrollbar-thumb:active {
     background-color: rgb(var(--overlay) / 0.16);
+  }
+
+  /* In an island the bar stands beside the shell's own scrollers — the
+     outline, the lists — and should read as one of them: the macOS overlay
+     thumb is 7pt wide, set 3pt in from the edge. The thin bar above is 4px
+     wide and 5px in, which next to a native one looked like a different,
+     smaller control. */
+  .island *::-webkit-scrollbar,
+  .island .scroll-thin::-webkit-scrollbar {
+    width: 11px;
+    height: 11px;
+  }
+  .island *::-webkit-scrollbar-thumb:vertical,
+  .island .scroll-thin::-webkit-scrollbar-thumb:vertical {
+    border-left-width: 1px;
+    border-right-width: 3px;
+  }
+  .island *::-webkit-scrollbar-thumb:horizontal,
+  .island .scroll-thin::-webkit-scrollbar-thumb:horizontal {
+    border-top-width: 1px;
+    border-bottom-width: 3px;
   }
 }
 

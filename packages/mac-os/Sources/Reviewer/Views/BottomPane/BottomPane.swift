@@ -25,18 +25,21 @@ struct BottomPane: View {
     }
 
     private var header: some View {
-        HStack(spacing: 2) {
-            ForEach(BottomPaneTab.allCases) { tab in
-                SurfaceTab(tab: tab, isOn: model.bottomTab == tab) {
-                    model.show(bottomTab: tab)
+        HStack(spacing: 0) {
+            HStack(spacing: 2) {
+                ForEach(BottomPaneTab.allCases) { tab in
+                    SurfaceTab(tab: tab, isOn: model.bottomTab == tab) {
+                        model.show(bottomTab: tab)
+                    }
                 }
             }
+            .padding(.leading, PaneMetrics.barInset)
             Spacer(minLength: 8)
-            PaneBarButton(symbol: "chevron.down", help: "Hide the pane (⌘B)") {
+            CornerButton(symbol: "chevron.down", help: "Hide the pane (⌘B)") {
                 model.toggleBottomPane()
             }
         }
-        .padding(.horizontal, PaneMetrics.barInset)
+        .controlSize(.small)
         .frame(height: PaneMetrics.barHeight)
         .overlay(alignment: .bottom) { Divider() }
     }
@@ -55,6 +58,47 @@ struct BottomPane: View {
         }
     }
 
+}
+
+/// The mark in the island's top trailing corner: a flat button set into the
+/// corner itself rather than inset from it, so it reads as a cap on the
+/// bar. Its outer corner is cut at the island's own radius and its inner
+/// one at a bar button's, and it stands the bar's full height, so the
+/// wash that lights under the pointer fills the corner edge to edge.
+private struct CornerButton: View {
+    let symbol: String
+    let help: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .medium))
+                .frame(width: 32, height: PaneMetrics.barHeight)
+        }
+        .buttonStyle(CornerButtonStyle())
+        .help(help)
+    }
+}
+
+private struct CornerButtonStyle: ButtonStyle {
+    @State private var isHovering = false
+
+    private static let shape = UnevenRoundedRectangle(
+        bottomLeadingRadius: 6,
+        topTrailingRadius: IslandMetrics.radius,
+        style: .continuous
+    )
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(isHovering ? .primary : .secondary)
+            .background(
+                Color.primary.opacity(configuration.isPressed ? BarChipMetrics.onTint : isHovering ? BarChipMetrics.hoverTint : 0),
+                in: Self.shape)
+            .contentShape(Self.shape)
+            .onHover { isHovering = $0 }
+    }
 }
 
 /// One surface's tab: a toggle in the accessory-bar style that lights while
