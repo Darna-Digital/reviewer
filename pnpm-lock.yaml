@@ -7,6 +7,9 @@ settings:
 overrides:
   '@effect/platform-node-shared': 4.0.0-beta.74
 
+patchedDependencies:
+  '@pierre/diffs@1.4.3': d0ba51e90dbce1f19441fd31ba724f38f5fdfe74936f3cd6500b99b20395a1e4
+
 importers:
 
   .: {}
@@ -182,7 +185,7 @@ importers:
         version: 1.8.0(@date-fns/tz@1.5.0)(@types/react@19.3.0)(date-fns@4.4.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@pierre/diffs':
         specifier: 1.4.3
-        version: 1.4.3(@shikijs/themes@4.4.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        version: 1.4.3(patch_hash=d0ba51e90dbce1f19441fd31ba724f38f5fdfe74936f3cd6500b99b20395a1e4)(@shikijs/themes@4.4.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@pierre/trees':
         specifier: 1.0.0-beta.6
         version: 1.0.0-beta.6(@pierre/theme@2.0.0)(@shikijs/themes@4.4.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(shiki@4.4.3)
@@ -6391,7 +6394,7 @@ snapshots:
 
   '@oxc-project/types@0.149.0': {}
 
-  '@pierre/diffs@1.4.3(@shikijs/themes@4.4.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@pierre/diffs@1.4.3(patch_hash=d0ba51e90dbce1f19441fd31ba724f38f5fdfe74936f3cd6500b99b20395a1e4)(@shikijs/themes@4.4.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
       '@pierre/theme': 2.0.0
       '@pierre/theming': 1.0.1(@pierre/theme@2.0.0)(@shikijs/themes@4.4.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(shiki@4.4.3)

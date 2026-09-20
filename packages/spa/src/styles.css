@@ -1222,6 +1222,66 @@
 .island.dark {
   --surface-3: var(--native-under-page);
 }
+
+/* The comment composer's Comment and Cancel stand beside the shell's own push
+   buttons — the commit composer's Commit and Commit and Push, a pane away —
+   so in an island they are drawn to the system's measure rather than the web
+   app's: the regular control, 24pt tall with 12pt at each side of a label at
+   regular weight, 6pt apart. A native button is a flat fill: no sheen, no
+   text shadow, no ring and no drop, and it does not answer to the pointer
+   passing over it, only to the press — so the faces' hover overlays go and
+   the pressed one stays. The filled one is the accent; the bordered one is
+   the system's grey — a wash of white over the paper in the dark theme, white
+   on a hairline shadow in the light. Each face is stated once below the
+   metrics, in the theme's own terms. */
+.island .composer-actions {
+  gap: 6px;
+  --push-face: white;
+  --push-edge: 0 0.5px 1px 0 rgb(0 0 0 / 0.12), 0 0 0 0.5px rgb(0 0 0 / 0.08);
+  --push-pressed: rgb(0 0 0 / 0.06);
+  --push-pressed-filled: rgb(0 0 0 / 0.12);
+}
+.island.dark .composer-actions {
+  --push-face: rgb(255 255 255 / 0.075);
+  --push-edge: 0 0 0 0 transparent;
+  --push-pressed: rgb(255 255 255 / 0.08);
+  --push-pressed-filled: rgb(255 255 255 / 0.16);
+}
+.island .composer-actions [data-slot="button"] {
+  height: 24px;
+  padding-inline: 12px;
+  font-weight: 400;
+  background-image: none;
+  text-shadow: none;
+}
+.island .composer-actions [data-slot="button"]:hover:not(:disabled) {
+  background-image: none;
+}
+.island .composer-actions [data-slot="button"][data-variant="secondary"] {
+  background-color: var(--push-face);
+  box-shadow: var(--glow, var(--glow-none)), var(--push-edge);
+}
+.island
+  .composer-actions
+  [data-slot="button"][data-variant="secondary"]:active:not(:disabled) {
+  background-image: linear-gradient(
+    0deg,
+    var(--push-pressed),
+    var(--push-pressed)
+  );
+}
+.island .composer-actions [data-slot="button"][data-variant="default"] {
+  box-shadow: var(--glow, var(--glow-none));
+}
+.island
+  .composer-actions
+  [data-slot="button"][data-variant="default"]:active:not(:disabled) {
+  background-image: linear-gradient(
+    0deg,
+    var(--push-pressed-filled),
+    var(--push-pressed-filled)
+  );
+}
 /* The rail is not a sheet of its own. Given a tone and a seam of its own it read
    as a strip of chrome floating on the frame. So it is the left edge of the
    sheet beside it, the way it was when the whole window was one canvas: the

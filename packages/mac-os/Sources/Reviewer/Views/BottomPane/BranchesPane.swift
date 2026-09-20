@@ -1,5 +1,6 @@
 // The Branches surface, laid out as the web app's branches dock is: a
-// search over every branch along the top, then the switcher's own model as
+// search over every branch along the top — the field Terminal and Run
+// carry, at the bar's leading edge — then the switcher's own model as
 // a list — Recent, Local folded by folder, Remote folded by remote, each
 // section and folder collapsing on its header — with the branch you are on
 // starred and the others carrying their distance from upstream. A row
@@ -22,8 +23,8 @@ struct BranchesPane: View {
     var body: some View {
         VStack(spacing: 0) {
             PaneBar {
-                PaneFilterField(prompt: "Search branches", text: $query, size: .small)
-                    .frame(maxWidth: 320)
+                PaneSearchField(prompt: "Search", text: $query)
+                    .frame(width: PaneMetrics.toolbarSearchWidth)
                 Spacer(minLength: 0)
             }
             list
@@ -119,7 +120,7 @@ struct BranchesPane: View {
                     BranchRowView(branch: ref, name: name, trailing: trailing, indent: indent)
                         .tag(row.id)
                         .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 1, leading: PaneMetrics.barInset, bottom: 1, trailing: PaneMetrics.barInset))
+                        .listRowInsets(EdgeInsets())
                         .contextMenu { BranchActions(branch: ref) }
                         .onTapGesture(count: 2) {
                             guard !ref.isCurrent else { return }
@@ -128,7 +129,7 @@ struct BranchesPane: View {
                 }
             }
         }
-        .listStyle(.inset)
+        .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .contextMenu {
             Button("New Branch…") { model.branchPrompt = .create(startPoint: nil) }
@@ -172,7 +173,7 @@ private extension View {
         self
             .selectionDisabled()
             .listRowSeparator(.hidden)
-            .listRowInsets(EdgeInsets(top: 1, leading: PaneMetrics.barInset, bottom: 1, trailing: PaneMetrics.barInset))
+            .listRowInsets(EdgeInsets())
     }
 }
 

@@ -250,8 +250,9 @@ private struct PathChip: View {
     }
 }
 
-/// A text or hash to look for, with the web bar's two toggles at its
-/// trailing edge — `.*` for a regular expression, `Cc` to match case.
+/// A text or hash to look for, in the search field the Terminal and Run
+/// surfaces carry, with the web bar's two toggles beside it — `.*` for a
+/// regular expression, `Cc` to match case.
 private struct GrepField: View {
     @Binding var text: String
     let regex: Bool
@@ -259,24 +260,15 @@ private struct GrepField: View {
     let commit: () -> Void
     let toggleRegex: () -> Void
     let toggleCase: () -> Void
-    @FocusState private var focused: Bool
 
     var body: some View {
         HStack(spacing: 5) {
-            Image(systemName: "magnifyingglass")
-                .paneFieldGlyph()
-            TextField("Text or hash", text: $text)
-                .textFieldStyle(.plain)
-                .font(.system(size: 11))
-                .focused($focused)
-                .onSubmit(commit)
-                .onChange(of: focused) { _, isFocused in if !isFocused { commit() } }
+            PaneSearchField(prompt: "Text or hash", text: $text, submit: commit)
             HStack(spacing: 2) {
                 FilterToggle(label: ".*", help: "Regular expression", isOn: regex, action: toggleRegex)
                 FilterToggle(label: "Cc", help: "Match case", isOn: caseSensitive, action: toggleCase)
             }
         }
-        .paneField()
     }
 }
 

@@ -24,6 +24,7 @@ import { AuthorAvatar } from "@/interactions/comments/components/author-avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { timeAgo } from "@/lib/relative-time";
+import { island } from "@/lib/shell";
 import { cn } from "@/lib/utils";
 import { isOptimisticId } from "@/interactions/comments/functions/optimistic-comments.functions";
 import type { ReviewComment } from "@reviewer/core/comments";
@@ -127,9 +128,14 @@ export function CommentComposer({
       />
       {/* Actions sit under the left edge of the field, submit first: the eye
           finishes the draft at the start of the last line, not out at the right
-          margin, so that is where the button it wants should already be. */}
+          margin, so that is where the button it wants should already be.
+
+          In the macOS shell the pair is drawn as the shell's own push buttons —
+          the commit composer's Commit and Commit and Push, a pane away — so
+          Cancel takes the bordered face there rather than the quiet one; the
+          rest of the likeness is `composer-actions` in `styles.css`. */}
       <div className="flex items-center gap-2">
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="composer-actions flex shrink-0 items-center gap-2">
           <Button
             size="sm"
             disabled={body.trim().length === 0 || busy}
@@ -137,7 +143,11 @@ export function CommentComposer({
           >
             {busy ? "Saving…" : submitLabel}
           </Button>
-          <Button variant="ghost" size="sm" onClick={onCancel}>
+          <Button
+            variant={island === undefined ? "ghost" : "secondary"}
+            size="sm"
+            onClick={onCancel}
+          >
             Cancel
           </Button>
         </div>

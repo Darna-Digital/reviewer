@@ -22,7 +22,7 @@ enum PaneMetrics {
     static let barHeight: CGFloat = 28
     static let barInset: CGFloat = 8
     static let footerHeight: CGFloat = 24
-    static let rowHeight: CGFloat = 26
+    static let rowHeight: CGFloat = 22
     /// One level of an outline, the sidebar's own `indentationPerLevel`.
     static let indentUnit: CGFloat = 16
     static let listMinWidth: CGFloat = 200
@@ -114,10 +114,14 @@ struct PaneToolbar<Content: View>: View {
 }
 
 /// The system's own search field — the rounded one with the magnifier,
-/// as a window toolbar carries it — over a table column.
+/// as a window toolbar carries it — over a table column. The text follows
+/// every keystroke; a surface that searches on demand rather than as you
+/// type passes `submit`, which fires on Return, on losing focus and on the
+/// cancel mark, since clearing should take at once.
 struct PaneSearchField: NSViewRepresentable {
     let prompt: String
     @Binding var text: String
+    var submit: (() -> Void)? = nil
 
     func makeNSView(context: Context) -> NSSearchField {
         let field = NSSearchField()
@@ -130,22 +134,30 @@ struct PaneSearchField: NSViewRepresentable {
 
     func updateNSView(_ field: NSSearchField, context: Context) {
         context.coordinator.text = $text
+        context.coordinator.submit = submit
         if field.stringValue != text { field.stringValue = text }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
+    func makeCoordinator() -> Coordinator { Coordinator(text: $text, submit: submit) }
 
     @MainActor
     final class Coordinator: NSObject, NSSearchFieldDelegate {
         var text: Binding<String>
+        var submit: (() -> Void)?
 
-        init(text: Binding<String>) {
+        init(text: Binding<String>, submit: (() -> Void)?) {
             self.text = text
+            self.submit = submit
         }
 
         func controlTextDidChange(_ notification: Notification) {
             guard let field = notification.object as? NSSearchField else { return }
             text.wrappedValue = field.stringValue
+            if field.stringValue.isEmpty { submit?() }
+        }
+
+        func controlTextDidEndEditing(_ notification: Notification) {
+            submit?()
         }
     }
 }
