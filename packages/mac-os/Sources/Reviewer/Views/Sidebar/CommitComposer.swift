@@ -169,12 +169,12 @@ struct CommitComposer: View {
 
     private var controls: some View {
         HStack(spacing: 6) {
-            Spacer()
-            Button("Commit and Push") { commit(push: true) }
-                .disabled(!canCommit)
             Button("Commit") { commit(push: false) }
                 .buttonStyle(.borderedProminent)
                 .disabled(!canCommit)
+            Button("Commit and Push") { commit(push: true) }
+                .disabled(!canCommit)
+            Spacer()
         }
         .controlSize(.regular)
         .padding(.horizontal, 10)

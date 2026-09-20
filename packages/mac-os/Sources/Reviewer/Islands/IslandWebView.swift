@@ -19,8 +19,10 @@ final class IslandWebView: WKWebView {
     /// — the symbol menu over an identifier, nothing elsewhere — and the
     /// stock "Look Up", "Search with Google" and friends only stand in its
     /// way. Emptied rather than refused, since AppKit shows no menu with
-    /// nothing in it.
+    /// nothing in it — and told to stay empty, since AppKit would otherwise
+    /// add "Services" of its own once the menu is on screen.
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
+        menu.allowsContextMenuPlugIns = false
         menu.removeAllItems()
     }
 
