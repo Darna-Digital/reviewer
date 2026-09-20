@@ -30,14 +30,14 @@ import type { Theme } from "@/lib/ui-prefs";
 import type { Location } from "@reviewer/core/language";
 
 /**
- * The band under the usage. Warmer than the selection in the tree beside it on
- * purpose: the two are showing the same result and would otherwise compete for
- * the eye, and this is the colour every editor uses for "the thing you searched
- * for is here".
+ * The band under the usage. The accent blue rather than the grey selection in
+ * the tree beside it: the two are showing the same result and would otherwise
+ * compete for the eye, and blue is what a macOS search dialog lights a match
+ * with — inside the shell it is the system accent itself.
  */
 const selectedLineCSS = (line: number): string => `
 [data-line="${line}"] {
-  background-color: color-mix(in oklab, var(--warning, #eab308) 18%, transparent);
+  background-color: color-mix(in oklab, var(--ring-accent, #00a6f4) 18%, transparent);
 }
 `;
 

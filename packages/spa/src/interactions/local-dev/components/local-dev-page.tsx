@@ -5,9 +5,12 @@
  * can be started/stopped one at a time or all at once, and the processes keep
  * running on the server while you browse other pages (they stop only when you
  * open a different repository). Definitions are CRUD-managed via a small
- * dialog, and stored with the repository they run in.
+ * dialog — name, command, and the folder inside the repository it runs from,
+ * picked from the folders the files sit in, so a monorepo's packages each get
+ * their own — and stored with the repository they run in.
  */
 import {
+  IconFolder,
   IconPencil,
   IconPlayerPlayFilled,
   IconPlayerStopFilled,
@@ -21,6 +24,16 @@ import { usePanelSize } from "@/components/layout/use-panel-size";
 import { DevTerminal } from "@/interactions/local-dev/components/dev-terminal";
 import { Button } from "@/components/ui/button";
 import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxTrigger,
+  ComboboxValue,
+} from "@/components/ui/combobox";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -31,8 +44,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLocalDevActions } from "@/interactions/local-dev/adapters/local-dev.hook.adapter";
+import { repoFolders } from "@/interactions/local-dev/functions/local-dev.functions";
 import type { DevCommandView } from "@reviewer/core/local-dev";
-import { useDevCommands } from "@/lib/queries";
+import { useDevCommands, useFiles } from "@/lib/queries";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +54,11 @@ interface Draft {
   id: string | null;
   name: string;
   command: string;
+  cwd: string;
 }
+
+const folderLabel = (cwd: string): string =>
+  cwd === "" ? "Repository root" : cwd;
 
 const statusLabel = (c: DevCommandView): string => {
   if (c.status === "running") return "running";
@@ -70,10 +88,15 @@ function StatusDot({ command }: { command: DevCommandView }) {
 
 export function LocalDevPage() {
   const commands = useDevCommands();
+  const files = useFiles();
   const actions = useLocalDevActions();
   const prefs = useUiPrefs();
 
   const items = useMemo(() => commands.data ?? [], [commands.data]);
+  const folders = useMemo(
+    () => repoFolders(files.data?.paths ?? []),
+    [files.data?.paths]
+  );
 
   // Not React state — see `usePanelSize`.
   const sidebar = usePanelSize(
@@ -135,8 +158,8 @@ export function LocalDevPage() {
       if (draft === null) return;
       const result =
         draft.id === null
-          ? await actions.create(draft.name, draft.command)
-          : await actions.update(draft.id, draft.name, draft.command);
+          ? await actions.create(draft)
+          : await actions.update(draft.id, draft);
       if (result === null) {
         toast.error("Enter a command to run");
         return;
@@ -145,10 +168,11 @@ export function LocalDevPage() {
       setDraft(null);
     }, "could not save command");
 
-  const newCommand = () => setDraft({ id: null, name: "", command: "" });
+  const newCommand = () =>
+    setDraft({ id: null, name: "", command: "", cwd: "" });
 
   const editCommand = (c: DevCommandView) =>
-    setDraft({ id: c.id, name: c.name, command: c.command });
+    setDraft({ id: c.id, name: c.name, command: c.command, cwd: c.cwd });
 
   return (
     <div className="flex h-full min-h-0">
@@ -251,6 +275,15 @@ export function LocalDevPage() {
               <span className="truncate font-mono text-xs text-muted-foreground">
                 {active.command}
               </span>
+              {active.cwd !== "" && (
+                <span
+                  className="flex min-w-0 items-center gap-1 text-xs text-muted-foreground"
+                  title={`Runs in ${active.cwd}`}
+                >
+                  <IconFolder className="size-3.5 shrink-0" />
+                  <span className="truncate">{active.cwd}</span>
+                </span>
+              )}
               <span className="ml-1 shrink-0 text-xs text-muted-foreground">
                 · {statusLabel(active)}
               </span>
@@ -320,7 +353,8 @@ export function LocalDevPage() {
               {form?.id === null ? "New dev command" : "Edit dev command"}
             </DialogTitle>
             <DialogDescription>
-              Runs from the repository's root.
+              A process the server keeps running in this repository while you
+              work.
             </DialogDescription>
           </DialogHeader>
           <div className="grid min-w-0 gap-3">
@@ -355,6 +389,35 @@ export function LocalDevPage() {
                   }
                 }}
               />
+            </label>
+            <label className="grid gap-1 text-sm">
+              <span className="text-muted-foreground">Folder</span>
+              <Combobox<string>
+                value={form?.cwd ?? ""}
+                items={folders}
+                onValueChange={(value) => {
+                  if (value !== null)
+                    setDraft((d) => (d === null ? d : { ...d, cwd: value }));
+                }}
+              >
+                <ComboboxTrigger className="w-full" aria-label="Folder">
+                  <IconFolder className="size-4 shrink-0 text-muted-foreground" />
+                  <ComboboxValue>
+                    {(value: string) => folderLabel(value)}
+                  </ComboboxValue>
+                </ComboboxTrigger>
+                <ComboboxContent>
+                  <ComboboxInput placeholder="Search folders…" />
+                  <ComboboxEmpty>No folders found.</ComboboxEmpty>
+                  <ComboboxList>
+                    {(folder: string) => (
+                      <ComboboxItem key={folder} value={folder}>
+                        {folderLabel(folder)}
+                      </ComboboxItem>
+                    )}
+                  </ComboboxList>
+                </ComboboxContent>
+              </Combobox>
             </label>
           </div>
           <DialogFooter>
@@ -421,6 +484,11 @@ function CommandList({
           <div className="min-w-0 flex-1">
             <div className="truncate font-medium">{c.name}</div>
             <div className="truncate font-mono text-xs text-muted-foreground">
+              {c.cwd !== "" && (
+                <span className="font-sans" title={`Runs in ${c.cwd}`}>
+                  {c.cwd} ·{" "}
+                </span>
+              )}
               {c.command}
             </div>
           </div>

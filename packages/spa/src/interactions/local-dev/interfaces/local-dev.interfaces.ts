@@ -1,22 +1,28 @@
 /**
  * `local-dev` feature — JetBrains-style run configurations: CRUD over named dev
  * commands plus start/stop, individually or all at once. The commands belong
- * to the open repository. The light validation (trimming, defaulting a blank
+ * to the open repository, each running from a folder inside it (the root, or
+ * a monorepo package). The light validation (trimming, defaulting a blank
  * name to the command, skipping a blank command) lives here behind injected
  * API side effects so it stays unit-testable without a server.
  */
 import type { DevCommand } from "@reviewer/core/local-dev";
 
+/** A command as the form edits it: the folder is repository-relative, and
+ * empty for the root. */
+export interface DevCommandDraft {
+  readonly name: string;
+  readonly command: string;
+  readonly cwd: string;
+}
+
 export interface LocalDevDependencies {
   data: Record<string, never>;
   sideEffects: {
-    readonly create: (input: {
-      name: string;
-      command: string;
-    }) => Promise<DevCommand>;
+    readonly create: (input: DevCommandDraft) => Promise<DevCommand>;
     readonly update: (
       id: string,
-      input: { name: string; command: string }
+      input: DevCommandDraft
     ) => Promise<DevCommand>;
     readonly remove: (id: string) => Promise<void>;
     readonly start: (id: string) => Promise<void>;
@@ -29,15 +35,11 @@ export interface LocalDevDependencies {
 export interface LocalDevFunctions {
   /** Create a command; returns null (no-op) when the command is blank. A blank
    * name defaults to the command text. */
-  readonly create: (
-    name: string,
-    command: string
-  ) => Promise<DevCommand | null>;
+  readonly create: (draft: DevCommandDraft) => Promise<DevCommand | null>;
   /** Update a command; returns null (no-op) when the command is blank. */
   readonly update: (
     id: string,
-    name: string,
-    command: string
+    draft: DevCommandDraft
   ) => Promise<DevCommand | null>;
   readonly remove: (id: string) => Promise<void>;
   readonly start: (id: string) => Promise<void>;

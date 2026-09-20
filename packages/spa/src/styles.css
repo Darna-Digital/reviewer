@@ -1988,8 +1988,9 @@ file-tree-container {
 }
 
 /* Custom drag handles for resizable panels (see ResizeHandle.tsx). The thin
-   strip straddles the panel border via a negative margin; a centred ::after
-   line lights up on hover / while dragging. */
+   strip straddles the panel border via a negative margin. Nothing lights up on
+   hover or while dragging: like an NSSplitView's divider, the cursor is the
+   only thing that says the seam can be pulled. */
 .resize-handle-col,
 .resize-handle-row {
   position: relative;
@@ -2035,34 +2036,16 @@ file-tree-container {
      under it are still reached; the handle is the one part that is not. */
   pointer-events: auto;
 }
-.resize-handle-col::after,
-.resize-handle-row::after {
+/* A handle that is also the border between the two panes it sits between, for a
+   split where neither side draws one of its own — two readings of the same file
+   would otherwise run together with nothing to say where one ends. A hairline,
+   the weight of every other border in the app. */
+.resize-handle-col.resize-handle-divider::after,
+.resize-handle-row.resize-handle-divider::after {
   content: "";
   position: absolute;
   inset: 0;
   margin: auto;
-  background: transparent;
-  transition: background 0.12s ease;
-}
-.resize-handle-col::after {
-  width: 2px;
-}
-.resize-handle-row::after {
-  height: 2px;
-}
-.resize-handle-col:hover::after,
-.resize-handle-row:hover::after,
-.resize-handle-col[data-dragging]::after,
-.resize-handle-row[data-dragging]::after {
-  background: var(--primary);
-}
-/* A handle that is also the border between the two panes it sits between, for a
-   split where neither side draws one of its own — two readings of the same file
-   would otherwise run together with nothing to say where one ends. A hairline at
-   rest, the weight of every other border in the app; the usual line under the
-   pointer, so it still reads as something to pull. */
-.resize-handle-col.resize-handle-divider::after,
-.resize-handle-row.resize-handle-divider::after {
   background: var(--border);
 }
 .resize-handle-col.resize-handle-divider::after {
@@ -2070,19 +2053,6 @@ file-tree-container {
 }
 .resize-handle-row.resize-handle-divider::after {
   height: 1px;
-}
-/* The primary line is repeated rather than inherited from the rule above: this
-   variant's resting colour is written with a class more than that rule carries,
-   so it would win the cascade on hover too and the seam would never light up. */
-.resize-handle-col.resize-handle-divider:hover::after,
-.resize-handle-col.resize-handle-divider[data-dragging]::after {
-  width: 2px;
-  background: var(--primary);
-}
-.resize-handle-row.resize-handle-divider:hover::after,
-.resize-handle-row.resize-handle-divider[data-dragging]::after {
-  height: 2px;
-  background: var(--primary);
 }
 /* While dragging, force the resize cursor everywhere and suppress selection. */
 body.is-resizing-col,

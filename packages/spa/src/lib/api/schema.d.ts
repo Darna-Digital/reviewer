@@ -5642,6 +5642,7 @@ export interface operations {
                         id: string;
                         name: string;
                         command: string;
+                        cwd: string;
                         createdAt: string;
                         updatedAt: string;
                         /** @enum {string} */
@@ -5691,6 +5692,7 @@ export interface operations {
                 "application/json": {
                     name: string;
                     command: string;
+                    cwd?: string;
                 };
             };
         };
@@ -5705,6 +5707,7 @@ export interface operations {
                         id: string;
                         name: string;
                         command: string;
+                        cwd: string;
                         createdAt: string;
                         updatedAt: string;
                     };
@@ -5760,6 +5763,7 @@ export interface operations {
                         id: string;
                         name: string;
                         command: string;
+                        cwd: string;
                         createdAt: string;
                         updatedAt: string;
                     };
@@ -5859,6 +5863,7 @@ export interface operations {
                 "application/json": {
                     name?: string;
                     command?: string;
+                    cwd?: string;
                 };
             };
         };
@@ -5873,6 +5878,7 @@ export interface operations {
                         id: string;
                         name: string;
                         command: string;
+                        cwd: string;
                         createdAt: string;
                         updatedAt: string;
                     };
@@ -5928,6 +5934,7 @@ export interface operations {
                         id: string;
                         name: string;
                         command: string;
+                        cwd: string;
                         createdAt: string;
                         updatedAt: string;
                         /** @enum {string} */
@@ -6035,6 +6042,7 @@ export interface operations {
                         id: string;
                         name: string;
                         command: string;
+                        cwd: string;
                         createdAt: string;
                         updatedAt: string;
                         /** @enum {string} */

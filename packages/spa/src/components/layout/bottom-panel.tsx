@@ -48,7 +48,7 @@ const TABS: ReadonlyArray<{
 }> = [
   { id: "branches", label: "Branches", icon: ICONS.branches },
   { id: "history", label: "History", icon: ICONS.history },
-  { id: "find", label: "Find", icon: ICONS.find },
+  { id: "find", label: "Find symbol", icon: ICONS.find },
   { id: "services", label: "Services", icon: ICONS.services },
   { id: "threads", label: "Terminal sessions", icon: ICONS.threads },
 ];
@@ -161,11 +161,16 @@ export function BottomPanel(props: BottomPanelProps) {
             ))}
           </TabsSubtle>
           <div className="ml-auto flex items-center">
-            <PanelButton
-              label="Expand to full page"
-              icon={IconArrowsDiagonal}
-              onClick={props.onExpand}
-            />
+            {/* Find is a three-column reading surface that already has the
+                width it wants in the drawer; a page of it is only the same
+                three columns with more air, so it does not offer one. */}
+            {props.tab !== "find" && (
+              <PanelButton
+                label="Expand to full page"
+                icon={IconArrowsDiagonal}
+                onClick={props.onExpand}
+              />
+            )}
             {/* A drawer folds down into the strip it came from, and outside
                 the shell that strip is there under it — so the control is the
                 chevron that folds it. Inside the shell the drawer is an island

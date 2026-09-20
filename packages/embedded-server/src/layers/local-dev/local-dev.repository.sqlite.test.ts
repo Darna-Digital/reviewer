@@ -29,6 +29,31 @@ describe("SqliteDevCommandsRepository", () => {
     }).pipe(Effect.provide(Repo))
   );
 
+  it.effect("stores the folder a command runs in, normalised", () =>
+    Effect.gen(function* () {
+      const repo = yield* DevCommandsRepository;
+      const created = yield* repo.create({
+        name: "web",
+        command: "pnpm dev",
+        cwd: "./packages/web/",
+      });
+      expect(created.cwd).toBe("packages/web");
+      const moved = yield* repo.update(created.id, { cwd: "" });
+      expect(moved.cwd).toBe("");
+    }).pipe(Effect.provide(Repo))
+  );
+
+  it.effect("reads a command stored before folders as the root's", () =>
+    Effect.gen(function* () {
+      const repo = yield* DevCommandsRepository;
+      const created = yield* repo.create({ name: "web", command: "pnpm dev" });
+      const { cwd: _cwd, ...legacy } = created;
+      devCommands.put(REPO, created.id, created.createdAt, legacy as never);
+      const read = yield* repo.get(created.id);
+      expect(read.cwd).toBe("");
+    }).pipe(Effect.provide(Repo))
+  );
+
   it.effect("update rewrites in place", () =>
     Effect.gen(function* () {
       const repo = yield* DevCommandsRepository;

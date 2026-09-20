@@ -234,7 +234,6 @@ function Row({
             className={cn(
               "truncate",
               node.kind === "category" && "font-medium",
-              node.kind === "directory" && "text-muted-foreground",
               node.kind === "container" && "font-mono"
             )}
           >
@@ -272,7 +271,7 @@ function UsageLabel({
           part.match ? (
             <mark
               key={part.at}
-              className="rounded-[2px] bg-warning/25 text-foreground"
+              className="rounded-[2px] bg-ring-accent/25 text-foreground"
             >
               {part.text}
             </mark>

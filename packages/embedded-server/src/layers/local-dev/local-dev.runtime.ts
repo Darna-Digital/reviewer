@@ -16,6 +16,8 @@ import {
 export interface StartCommandInput {
   readonly commandId: string;
   readonly repoPath: string;
+  /** The absolute folder the command runs in, inside `repoPath`. */
+  readonly cwd: string;
   readonly command: string;
 }
 

@@ -102,7 +102,7 @@ extension AppModel {
     private var projectCommands: [PaletteCommand] {
         [
             PaletteCommand(
-                id: "project-open", label: "Open Project…", group: "Project", symbol: "folder",
+                id: "project-open", label: "Open Repository…", group: "Project", symbol: "folder",
                 keywords: "open change repository folder picker switch", hint: "⌘O"
             ) { [weak self] in self?.showOpener() }
         ]

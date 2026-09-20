@@ -27,6 +27,7 @@ struct CommitComposer: View {
     // The heights a drag moves live, written back to the defaults only on
     // release: a defaults write per pointer frame is what made the drag stutter.
     @State private var filesHeight = 180.0
+    @State private var filesScrollStarts = 0
     @State private var messageHeight = 80.0
 
     private var chosen: [String] {
@@ -64,14 +65,20 @@ struct CommitComposer: View {
         .onChange(of: composer.draft, initial: true) { _, draft in takeDraft(draft) }
     }
 
+    // A row's path card is anchored to the row, so it would ride along as
+    // the list scrolls; the scroll's start is counted, and the rows close
+    // their cards on it.
     private var files: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(composer.changes, id: \.path) { change in
-                    ChangeRow(change: change, isOn: included(change.path))
+                    ChangeRow(change: change, isOn: included(change.path), scrollStarts: filesScrollStarts)
                 }
             }
             .padding(.vertical, 4)
+        }
+        .onScrollPhaseChange { before, after in
+            if before == .idle, after != .idle { filesScrollStarts += 1 }
         }
         .frame(height: filesHeight)
     }
@@ -287,6 +294,7 @@ private struct CommitAgentRow: View {
 private struct ChangeRow: View {
     let change: GitStatusEntry
     @Binding var isOn: Bool
+    let scrollStarts: Int
     @Environment(\.colorScheme) private var colorScheme
     @State private var folderWidth = 0.0
     @State private var folderFullWidth = 0.0
@@ -336,6 +344,10 @@ private struct ChangeRow: View {
                 pathShown = hovering
             }
         }
+        .onChange(of: scrollStarts) { _, _ in
+            hoverTask?.cancel()
+            pathShown = false
+        }
         .popover(isPresented: $pathShown, arrowEdge: .trailing) {
             ChangePathCard(change: change)
         }
@@ -348,30 +360,34 @@ private struct ChangeRow: View {
     }
 }
 
-/// The card a squeezed row opens under the pointer: the path in full,
-/// wrapped rather than cut, and what became of the file.
+/// The card a squeezed row opens under the pointer: the file's icon and
+/// its path in full on one line, and what became of the file.
 private struct ChangePathCard: View {
     let change: GitStatusEntry
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(change.path)
-                .font(.system(size: 12, design: .monospaced))
-                .lineSpacing(2)
-                .textSelection(.enabled)
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                FileIconView(path: change.path, tint: change.status.hex(dark: colorScheme == .dark))
+                Text(change.path)
+                    .font(.system(size: 11))
+                    .lineLimit(1)
+                    .textSelection(.enabled)
+            }
             HStack(spacing: 5) {
                 Text(change.status.badge ?? "·")
-                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
                     .foregroundStyle(change.status.color(dark: colorScheme == .dark))
                 Text(change.status.title)
-                    .font(.system(size: 11))
+                    .font(.system(size: 10))
                     .foregroundStyle(.secondary)
             }
+            .padding(.leading, 22)
         }
-        .padding(12)
-        .frame(maxWidth: 360, alignment: .leading)
-        .fixedSize(horizontal: false, vertical: true)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .fixedSize()
     }
 }
 

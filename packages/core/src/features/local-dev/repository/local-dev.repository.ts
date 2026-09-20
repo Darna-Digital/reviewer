@@ -10,10 +10,13 @@ import type { DevCommand } from "../schema/local-dev.schema.ts";
 export interface CreateDevCommandInput {
   readonly name: string;
   readonly command: string;
+  /** Repository-relative; missing or empty means the root. */
+  readonly cwd?: string;
 }
 export interface UpdateDevCommandInput {
   readonly name?: string;
   readonly command?: string;
+  readonly cwd?: string;
 }
 export type DevCommandsFailure = NoRepoSelected | NotFound | StorageError;
 

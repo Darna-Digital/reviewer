@@ -9,7 +9,6 @@
  */
 import {
   useCallback,
-  useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
@@ -87,11 +86,6 @@ export function ResizeHandle({
   label = "Resize panel",
   hint = "Drag to resize",
 }: ResizeHandleProps) {
-  // Only the handle actually being dragged should light up. The body cursor
-  // class is global (so the resize cursor shows everywhere mid-drag), but the
-  // highlight keys off this per-handle flag — otherwise every sibling row/col
-  // handle would glow at once.
-  const [dragging, setDragging] = useState(false);
   const onPointerDown = useCallback(
     (event: ReactPointerEvent) => {
       event.preventDefault();
@@ -101,7 +95,6 @@ export function ResizeHandle({
       const cursorClass =
         orientation === "col" ? "is-resizing-col" : "is-resizing-row";
       document.body.classList.add(cursorClass);
-      setDragging(true);
 
       // A shield over the whole window for the length of the drag. Without it a
       // pointer crossing anything that swallows input — an embedded terminal —
@@ -130,7 +123,6 @@ export function ResizeHandle({
       const onUp = () => {
         document.body.classList.remove(cursorClass);
         shield.remove();
-        setDragging(false);
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
         window.removeEventListener("pointercancel", onUp);
@@ -154,7 +146,6 @@ export function ResizeHandle({
       aria-orientation={orientation === "col" ? "vertical" : "horizontal"}
       aria-label={label}
       title={hint ?? undefined}
-      data-dragging={dragging || undefined}
       onPointerDown={onPointerDown}
       style={style}
       className={cn(

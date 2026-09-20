@@ -23,7 +23,7 @@ struct PaletteList: NSViewRepresentable {
     static let rowHeight: CGFloat = 28
     static let headingHeight: CGFloat = 26
     /// The air around the list, the web viewport's own `p-1.5`.
-    static let inset: CGFloat = 6
+    static let inset: CGFloat = 8
 
     /// What the list would take to show every line, for the pane to size
     /// itself by until its own limit.
@@ -270,7 +270,7 @@ private final class PaletteRowView: NSTableRowView {
     override func drawBackground(in dirtyRect: NSRect) {
         guard isActive else { return }
         NSColor.labelColor.withAlphaComponent(0.1).setFill()
-        NSBezierPath(roundedRect: bounds.insetBy(dx: PaletteList.inset, dy: 0), xRadius: 8, yRadius: 8).fill()
+        NSBezierPath(roundedRect: bounds.insetBy(dx: PaletteList.inset, dy: 0), xRadius: 10, yRadius: 10).fill()
     }
 }
 

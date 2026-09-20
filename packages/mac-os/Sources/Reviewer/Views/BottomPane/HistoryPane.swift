@@ -155,6 +155,7 @@ private struct HistoryFilterBar: View {
 private enum FilterWidths {
     static let picker: CGFloat = 176
     static let narrow: CGFloat = 120
+    static let chipName: CGFloat = 160
 }
 
 /// The ref the log follows: every branch, or one of them — folded by
@@ -219,7 +220,9 @@ private struct MenuChevron: View {
 }
 
 /// The file the log is narrowed to, wearing its own type icon, with the
-/// mark that widens the log to every file again.
+/// mark that widens the log to every file again. The chip hugs its
+/// content — sized to the bar it would centre the name in a wide box —
+/// with only the name capped, so a long one truncates in the middle.
 private struct PathChip: View {
     let path: String
     let clear: () -> Void
@@ -232,6 +235,7 @@ private struct PathChip: View {
                 .font(.system(size: 11))
                 .lineLimit(1)
                 .truncationMode(.middle)
+                .frame(maxWidth: FilterWidths.chipName)
             Button(action: clear) {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 11))
@@ -241,7 +245,7 @@ private struct PathChip: View {
             .help("Show all files")
         }
         .paneField()
-        .frame(maxWidth: 220)
+        .fixedSize(horizontal: true, vertical: false)
         .help("History of \(path)")
     }
 }

@@ -2,7 +2,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { fetchClient } from "@/lib/api/client";
 import { createLocalDevFunctions } from "../functions/local-dev.functions";
-import type { LocalDevFunctions } from "../interfaces/local-dev.interfaces";
+import type {
+  DevCommandDraft,
+  LocalDevFunctions,
+} from "../interfaces/local-dev.interfaces";
 
 const fail = (error: unknown, fallback: string): never => {
   throw new Error((error as { reason?: string })?.reason ?? fallback);
@@ -72,13 +75,13 @@ export function useLocalDevActions() {
   };
 
   return {
-    create: async (name: string, command: string) => {
-      const created = await fns.create(name, command);
+    create: async (draft: DevCommandDraft) => {
+      const created = await fns.create(draft);
       invalidate();
       return created;
     },
-    update: async (id: string, name: string, command: string) => {
-      const updated = await fns.update(id, name, command);
+    update: async (id: string, draft: DevCommandDraft) => {
+      const updated = await fns.update(id, draft);
       invalidate();
       return updated;
     },

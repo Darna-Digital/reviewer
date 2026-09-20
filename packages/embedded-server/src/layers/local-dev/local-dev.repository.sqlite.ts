@@ -4,9 +4,12 @@
  * is opened from.
  */
 import * as Effect from "effect/Effect";
-import * as Schema from "effect/Schema";
 import { NotFound } from "@reviewer/core/shared";
-import { DevCommand } from "@reviewer/core/local-dev";
+import {
+  decodeStoredDevCommand,
+  normalizeDevCwd,
+  type DevCommand,
+} from "@reviewer/core/local-dev";
 import { attempt } from "../db/db.service.ts";
 import { documentTable } from "../db/documents.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
@@ -20,7 +23,7 @@ export const devCommands = documentTable<DevCommand>({
   table: "dev_command",
   sortColumn: "created_at",
   direction: "asc",
-  decode: Schema.decodeUnknownSync(DevCommand),
+  decode: decodeStoredDevCommand,
 });
 
 // Module-scoped so ids stay unique across per-request repository instances.
@@ -60,6 +63,7 @@ export const makeSqliteDevCommandsRepository = Effect.gen(function* () {
         id: nextId(),
         name: input.name.trim(),
         command: input.command.trim(),
+        cwd: normalizeDevCwd(input.cwd ?? ""),
         createdAt: now,
         updatedAt: now,
       };
@@ -83,6 +87,8 @@ export const makeSqliteDevCommandsRepository = Effect.gen(function* () {
           input.command !== undefined && input.command.trim().length > 0
             ? input.command.trim()
             : existing.command,
+        cwd:
+          input.cwd !== undefined ? normalizeDevCwd(input.cwd) : existing.cwd,
         updatedAt: new Date().toISOString(),
       };
       devCommands.put(repoPath, id, updated.createdAt, updated);

@@ -1,7 +1,7 @@
 // The assign bar — the web `ReviewAssignBar`, floated over the page island
 // natively while the page holds review comments (see `ReviewHandoff`): a
-// capsule of Liquid Glass hung near the foot of the page, as Music hangs
-// its player over the window, so the diff stays readable through it. On
+// capsule of Liquid Glass hung near the foot of the page, as Music
+// hangs its player over the window, so the diff stays readable through it. On
 // it, the count, opening the comments as a list you can jump around the
 // review from; the target — a fresh chat with an agent, or a session
 // already running, picked from a search over both; the model chip, while
@@ -397,8 +397,9 @@ private struct PickerRow<Label: View>: View {
     }
 }
 
-/// The bar's one filled control: the accent, cut to the chips' height, so
-/// the capsule reads as one row with a single thing to press.
+/// The bar's one filled control: a capsule of glass tinted the accent,
+/// cut to the chips' height, so the capsule reads as one row with a
+/// single thing to press — the system's own prominent button on glass.
 private struct AssignButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
@@ -408,9 +409,8 @@ private struct AssignButtonStyle: ButtonStyle {
             .foregroundStyle(.white)
             .padding(.horizontal, 16)
             .frame(height: 32)
-            .background(
-                Color.accentColor.opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.5),
-                in: Capsule())
+            .glassEffect(.regular.tint(.accentColor.opacity(isEnabled ? 1 : 0.5)).interactive(), in: .capsule)
+            .opacity(configuration.isPressed ? 0.85 : 1)
             .contentShape(Capsule())
     }
 }

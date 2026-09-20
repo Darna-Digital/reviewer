@@ -8,6 +8,14 @@
 // set at the small control size throughout: 11pt text in 22pt fields, the
 // proportion of the system's own small controls, three points of air above
 // and below in the bar.
+//
+// The Terminal and Run surfaces are the exception: they are laid out as
+// the opener is (see `RepoOpener`) — a Finder window's proportions inside
+// the island — so they carry the taller toolbar at the regular control
+// size, with the system's own search field at its trailing edge and the
+// actions grouped at its leading edge, and a table of striped rows under
+// it.
+import AppKit
 import SwiftUI
 
 enum PaneMetrics {
@@ -20,6 +28,15 @@ enum PaneMetrics {
     static let listMinWidth: CGFloat = 200
     static let listIdealWidth: CGFloat = 240
     static let listMaxWidth: CGFloat = 380
+    /// The toolbar a table column wears: regular controls, 22pt tall, with
+    /// seven points of air above and below, as a window's toolbar gives them.
+    static let toolbarHeight: CGFloat = 36
+    static let toolbarSearchWidth: CGFloat = 180
+    /// A table column stands wider than a source list: it has columns of
+    /// its own to show, and the output beside it reflows to what is left.
+    static let tableMinWidth: CGFloat = 300
+    static let tableIdealWidth: CGFloat = 480
+    static let tableMaxWidth: CGFloat = 720
 }
 
 /// The two sizes a field comes in: the sidebar's, and the pane bar's a
@@ -74,6 +91,62 @@ struct PaneBar<Content: View>: View {
             .frame(height: PaneMetrics.barHeight)
             .frame(maxWidth: .infinity)
             .overlay(alignment: .bottom) { Divider() }
+    }
+}
+
+/// The bar along the top of a table column, and of the detail beside it,
+/// at a window toolbar's proportions: regular controls, the actions
+/// grouped at the leading edge, the search at the trailing one. Both
+/// columns wear it at the same height, so the rule under the one runs on
+/// into the rule under the other.
+struct PaneToolbar<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        HStack(spacing: 8) { content }
+            .controlSize(.regular)
+            .labelStyle(.iconOnly)
+            .padding(.horizontal, PaneMetrics.barInset)
+            .frame(height: PaneMetrics.toolbarHeight)
+            .frame(maxWidth: .infinity)
+            .overlay(alignment: .bottom) { Divider() }
+    }
+}
+
+/// The system's own search field — the rounded one with the magnifier,
+/// as a window toolbar carries it — over a table column.
+struct PaneSearchField: NSViewRepresentable {
+    let prompt: String
+    @Binding var text: String
+
+    func makeNSView(context: Context) -> NSSearchField {
+        let field = NSSearchField()
+        field.placeholderString = prompt
+        field.controlSize = .regular
+        field.sendsSearchStringImmediately = true
+        field.delegate = context.coordinator
+        return field
+    }
+
+    func updateNSView(_ field: NSSearchField, context: Context) {
+        context.coordinator.text = $text
+        if field.stringValue != text { field.stringValue = text }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(text: $text) }
+
+    @MainActor
+    final class Coordinator: NSObject, NSSearchFieldDelegate {
+        var text: Binding<String>
+
+        init(text: Binding<String>) {
+            self.text = text
+        }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSSearchField else { return }
+            text.wrappedValue = field.stringValue
+        }
     }
 }
 
@@ -177,6 +250,10 @@ extension DevCommandView {
     }
 
     var isRunning: Bool { status == .running }
+    var exitedBadly: Bool { status == .exited && (exitCode ?? 0) != 0 }
+    /// The folder as a row shows it: the root as a single dot, as a shell
+    /// would name it.
+    var folderLabel: String { cwd.isEmpty ? "." : cwd }
 }
 
 /// The material a terminal is set on: the island's own, so the shell reads
@@ -193,7 +270,8 @@ struct TerminalWell<Content: View>: View {
 }
 
 /// A short placeholder for a column with nothing to show, sized for the
-/// pane rather than a page.
+/// pane rather than a page, at the system's own unavailable-content
+/// contrast: the title in the primary colour, the detail in the secondary.
 struct PanePlaceholder<Actions: View>: View {
     let title: String
     let symbol: String
@@ -211,14 +289,13 @@ struct PanePlaceholder<Actions: View>: View {
         VStack(spacing: 6) {
             Image(systemName: symbol)
                 .font(.system(size: 22, weight: .light))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.secondary)
             Text(title)
                 .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.secondary)
             if let detail {
                 Text(detail)
                     .font(.system(size: 11))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 260)
             }

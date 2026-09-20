@@ -64,7 +64,10 @@ export type SpawnFn = (
 
 export interface StartInput {
   readonly commandId: string;
+  /** The repository that owns the process — what a repo switch sweeps. */
   readonly repoPath: string;
+  /** Where the command runs; the repository itself when not given. */
+  readonly cwd?: string;
   readonly command: string;
   readonly cols?: number;
   readonly rows?: number;
@@ -176,7 +179,7 @@ export const createDevProcessManager = (deps: {
       name: "xterm-color",
       cols: input.cols ?? 80,
       rows: input.rows ?? 24,
-      cwd: input.repoPath,
+      cwd: input.cwd ?? input.repoPath,
       env: cleanEnv(),
     });
     const proc: RunningProcess = {

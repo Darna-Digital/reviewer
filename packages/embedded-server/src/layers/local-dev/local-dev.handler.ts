@@ -1,5 +1,8 @@
+import { statSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 import * as Effect from "effect/Effect";
 import { HttpApiBuilder } from "effect/unstable/httpapi";
+import { NotFound } from "@reviewer/core/shared";
 import { Api } from "../../api.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 import type { DevRunStatus } from "../terminal/dev-process-manager.ts";
@@ -8,6 +11,34 @@ import type { DevCommand, DevCommandView } from "@reviewer/core/local-dev";
 import { LocalDevService } from "@reviewer/core/local-dev";
 
 const ok = { ok: true } as const;
+
+/**
+ * The absolute folder a command runs in: its `cwd` under the repository,
+ * which has to still be a folder there — a package renamed since the command
+ * was written is a NotFound rather than a process started somewhere else.
+ */
+const commandFolder = (
+  repoPath: string,
+  command: DevCommand
+): Effect.Effect<string, NotFound> => {
+  const folder = resolve(join(repoPath, command.cwd));
+  const inside = !relative(repoPath, folder).startsWith("..");
+  const isFolder = (() => {
+    try {
+      return statSync(folder).isDirectory();
+    } catch {
+      return false;
+    }
+  })();
+  if (!inside || !isFolder) {
+    return Effect.fail(
+      new NotFound({
+        reason: `folder ${command.cwd || "."} not found in repository`,
+      })
+    );
+  }
+  return Effect.succeed(folder);
+};
 
 /** Merge a stored definition with its (optional) runtime status into a view. */
 const toView = (
@@ -38,7 +69,11 @@ export const LocalDevHandler = HttpApiBuilder.group(
       )
       .handle("create", ({ payload }) =>
         Effect.flatMap(LocalDevService, (s) =>
-          s.create({ name: payload.name, command: payload.command })
+          s.create({
+            name: payload.name,
+            command: payload.command,
+            cwd: payload.cwd,
+          })
         )
       )
       .handle("get", ({ params }) =>
@@ -46,7 +81,11 @@ export const LocalDevHandler = HttpApiBuilder.group(
       )
       .handle("update", ({ params, payload }) =>
         Effect.flatMap(LocalDevService, (s) =>
-          s.update(params.id, { name: payload.name, command: payload.command })
+          s.update(params.id, {
+            name: payload.name,
+            command: payload.command,
+            cwd: payload.cwd,
+          })
         )
       )
       .handle("remove", ({ params }) =>
@@ -69,6 +108,7 @@ export const LocalDevHandler = HttpApiBuilder.group(
           const status = yield* runtime.start({
             commandId: command.id,
             repoPath,
+            cwd: yield* commandFolder(repoPath, command),
             command: command.command,
           });
           return toView(command, status);
@@ -89,6 +129,7 @@ export const LocalDevHandler = HttpApiBuilder.group(
             const status = yield* runtime.start({
               commandId: command.id,
               repoPath,
+              cwd: yield* commandFolder(repoPath, command),
               command: command.command,
             });
             views.push(toView(command, status));

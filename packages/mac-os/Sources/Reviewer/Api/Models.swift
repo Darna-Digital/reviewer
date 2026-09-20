@@ -506,6 +506,9 @@ struct DevCommandView: Decodable, Identifiable, Hashable, Sendable {
     let id: String
     let name: String
     let command: String
+    /// The folder inside the repository it runs from, relative to the root
+    /// and empty for the root itself.
+    let cwd: String
     let status: Status
     let exitCode: Int?
 }
@@ -514,11 +517,13 @@ struct DevCommand: Decodable, Sendable {
     let id: String
     let name: String
     let command: String
+    let cwd: String
 }
 
 struct NewDevCommand: Encodable, Sendable {
     let name: String
     let command: String
+    let cwd: String
 }
 
 // MARK: branches

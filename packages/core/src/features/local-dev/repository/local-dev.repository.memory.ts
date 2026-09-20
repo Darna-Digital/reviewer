@@ -1,7 +1,10 @@
 import * as Effect from "effect/Effect";
 import * as Ref from "effect/Ref";
 import { NotFound } from "../../../shared.ts";
-import type { DevCommand } from "../schema/local-dev.schema.ts";
+import {
+  normalizeDevCwd,
+  type DevCommand,
+} from "../schema/local-dev.schema.ts";
 import type {
   CreateDevCommandInput,
   DevCommandsRepo,
@@ -43,6 +46,7 @@ export const makeMemoryDevCommandsRepository = (
             id: nextId(),
             name: input.name.trim(),
             command: input.command.trim(),
+            cwd: normalizeDevCwd(input.cwd ?? ""),
             createdAt: now(),
             updatedAt: now(),
           };
@@ -62,6 +66,10 @@ export const makeMemoryDevCommandsRepository = (
               input.command !== undefined && input.command.trim().length > 0
                 ? input.command.trim()
                 : existing.command,
+            cwd:
+              input.cwd !== undefined
+                ? normalizeDevCwd(input.cwd)
+                : existing.cwd,
             updatedAt: now(),
           };
           yield* Ref.update(store, (all) =>

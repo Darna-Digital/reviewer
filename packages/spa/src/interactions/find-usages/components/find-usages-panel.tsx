@@ -26,6 +26,7 @@ import { useEffect, useMemo } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Button } from "@/components/ui/button";
+import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { LoadingCursor } from "@/components/ui/loading-cursor";
 import {
   Tooltip,
@@ -345,7 +346,7 @@ function PreviewHeader({
   return (
     <div
       className={cn(
-        "flex h-9 shrink-0 items-center gap-1.5 border-b px-2 text-[11px]",
+        "flex h-9 shrink-0 items-center gap-1.5 border-b px-2 text-xs",
         location === null && "text-muted-foreground"
       )}
     >
@@ -354,11 +355,14 @@ function PreviewHeader({
       ) : (
         <button
           type="button"
-          className="min-w-0 cursor-pointer truncate font-mono hover:underline hover:underline-offset-2"
+          className="flex min-w-0 cursor-pointer items-center gap-1.5 hover:underline hover:underline-offset-2"
           onClick={() => onOpen(location)}
           title="Open this file"
         >
-          {location.path}:{location.range.start.line + 1}
+          <FileTypeIcon path={location.path} className="size-3.5 shrink-0" />
+          <span className="truncate">
+            {location.path}:{location.range.start.line + 1}
+          </span>
         </button>
       )}
     </div>

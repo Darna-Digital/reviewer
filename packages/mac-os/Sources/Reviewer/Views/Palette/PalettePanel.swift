@@ -10,8 +10,8 @@
 // Backspace on an empty box walks back up the trail, Escape — or a click
 // beside the pane — puts it away.
 //
-// The pane is glass rather than an opaque sheet so the code stays visible
-// through it: a result is read against what it will open over. What it
+// The pane is frosted glass rather than an opaque sheet so the code stays
+// visible through it: a result is read against what it will open over. What it
 // holds is the model's (`CommandPalette`); the only state here is which
 // row the keyboard is on. The list itself is AppKit's (`PaletteList`), so
 // five hundred grep hits scroll as a table does, on reused rows.
@@ -39,6 +39,10 @@ struct PaletteOverlay: View {
 }
 
 private struct PalettePanel: View {
+    /// The system's own large radius, so the pane reads as one of the
+    /// window's glass panels rather than a sheet cut to a smaller family.
+    static let radius: CGFloat = 26
+
     @Environment(AppModel.self) private var model
     @State private var active = 0
     @FocusState private var fieldFocused: Bool
@@ -55,7 +59,7 @@ private struct PalettePanel: View {
             Divider()
             footer(rows)
         }
-        .glassEffect(.regular, in: .rect(cornerRadius: 18))
+        .glassEffect(.regular, in: .rect(cornerRadius: PalettePanel.radius))
         .shadow(color: .black.opacity(0.22), radius: 28, y: 12)
         // Every way the field could hand focus to the list is answered
         // here instead, so the caret never leaves the box.
@@ -64,9 +68,6 @@ private struct PalettePanel: View {
         .onKeyPress(.home) { active = 0; return .handled }
         .onKeyPress(.end) { active = max(0, rows.count - 1); return .handled }
         .onKeyPress(.escape) { palette.close(); return .handled }
-        // Backspace with nothing left to delete walks back up the trail;
-        // with a query in the box it is the box's.
-        .onKeyPress(.delete) { palette.query.isEmpty && palette.back() ? .handled : .ignored }
         .onExitCommand { palette.close() }
         .onChange(of: rows.count) { _, count in active = count == 0 ? 0 : min(active, count - 1) }
         .onChange(of: palette.query) { active = 0 }
@@ -76,7 +77,29 @@ private struct PalettePanel: View {
             // SwiftUI moves it to the field only once the field is on
             // screen — a turn of the run loop after this.
             Task { @MainActor in fieldFocused = true }
+            backspaceMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+                let key = event.keyCode
+                let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+                return MainActor.assumeIsolated { walksBack(key: key, modifiers: modifiers) } ? nil : event
+            }
         }
+        .onDisappear {
+            if let backspaceMonitor { NSEvent.removeMonitor(backspaceMonitor) }
+            backspaceMonitor = nil
+        }
+    }
+
+    /// Backspace with nothing left to delete walks back up the trail. The
+    /// box's own editor answers the key before SwiftUI is asked — it
+    /// forwards the arrows and Return, but a delete it takes as its own,
+    /// even with nothing to delete — so the key is heard ahead of the
+    /// window, as ⇧⇧ is, and only this one press is kept from the box.
+    @State private var backspaceMonitor: Any?
+    private static let backspaceKeyCode: UInt16 = 51
+
+    private func walksBack(key: UInt16, modifiers: NSEvent.ModifierFlags) -> Bool {
+        guard key == Self.backspaceKeyCode, modifiers.isEmpty, palette.query.isEmpty else { return false }
+        return palette.back()
     }
 
     // MARK: header

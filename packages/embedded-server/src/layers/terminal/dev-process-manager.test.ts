@@ -75,6 +75,25 @@ describe("DevProcessManager", () => {
     expect(calls[0].args).toEqual(["-l", "-i", "-c", "pnpm dev"]);
   });
 
+  it("runs the command in its own folder while the repository owns it", () => {
+    const cwds: string[] = [];
+    const spawn: SpawnFn = (_file, _args, opts) => {
+      cwds.push(opts.cwd);
+      return makeFakePty().pty;
+    };
+    const m = createDevProcessManager({ spawn });
+
+    m.start({
+      commandId: "c1",
+      repoPath: "/repo",
+      cwd: "/repo/packages/web",
+      command: "pnpm dev",
+    });
+
+    expect(cwds).toEqual(["/repo/packages/web"]);
+    expect(m.statuses("/repo").map((s) => s.commandId)).toEqual(["c1"]);
+  });
+
   it("buffers output and replays scrollback to an attaching viewer", () => {
     const fake = makeFakePty();
     const m = createDevProcessManager({ spawn: () => fake.pty });
