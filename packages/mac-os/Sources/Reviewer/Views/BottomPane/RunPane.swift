@@ -1,10 +1,10 @@
 // The Run surface, laid out as the opener is: the project's dev commands
 // as the system's own table down the left — name under its dot, the
 // command it runs, the folder it runs in (the root, or a package of a
-// monorepo), whether it is up — sortable on any column and striped
-// as Finder's rows are, under a toolbar with add and remove grouped at
-// its leading edge, start all and stop all beside them, and a search at
-// its trailing edge. With nothing to list the table gives way to a
+// monorepo), whether it is up — sortable on any column, its rows plain
+// rather than striped, under a toolbar with add and remove grouped at its
+// leading edge, start all and stop all beside them, and a search at its
+// trailing edge. With nothing to list the table gives way to a
 // placeholder, header and all. A click picks a command, a double-click or Return
 // starts or stops it, Delete removes it, and the row's menu holds the
 // same, with a restart while it runs. The selected one's output stands on
@@ -127,7 +127,7 @@ private struct CommandTable: View {
             }
             .width(min: 80, ideal: 100)
         }
-        .tableStyle(.inset(alternatesRowBackgrounds: true))
+        .tableStyle(.inset(alternatesRowBackgrounds: false))
         .scrollContentBackground(.hidden)
         .contextMenu(forSelectionType: String.self) { ids in
             if let command = ids.first.flatMap(command(for:)) { menu(for: command) }

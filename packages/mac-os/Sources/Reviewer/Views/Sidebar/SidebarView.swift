@@ -142,7 +142,7 @@ private struct FilesLayout: View {
         @Bindable var tree = model.sidebar
         VStack(spacing: 0) {
             if changes {
-                ChangesHeader(query: $tree.query, count: tree.listing?.paths.count ?? 0)
+                ChangesHeader(query: $tree.query)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
             FileTreeOutline()
@@ -173,39 +173,32 @@ private struct FilesLayout: View {
     }
 }
 
-/// The search over the changed files, with how many there are.
+/// The search over the changed files.
 struct ChangesHeader: View {
     @Binding var query: String
-    let count: Int
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 5) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.secondary)
-                TextField("Filter changed files", text: $query)
-                    .textFieldStyle(.plain)
-                    .font(.system(size: 12))
-                if !query.isEmpty {
-                    Button {
-                        query = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 7)
-            .frame(height: 24)
-            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
-            Text(count == 1 ? "1 changed file" : "\(count) changed files")
-                .font(.system(size: 11))
+        HStack(spacing: 5) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(.secondary)
-                .padding(.leading, 4)
+            TextField("Filter changed files", text: $query)
+                .textFieldStyle(.plain)
+                .font(.system(size: 12))
+            if !query.isEmpty {
+                Button {
+                    query = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+            }
         }
+        .padding(.horizontal, 7)
+        .frame(height: 24)
+        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
         .padding(.horizontal, 10)
         .padding(.top, 2)
         .padding(.bottom, 6)

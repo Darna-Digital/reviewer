@@ -86,16 +86,20 @@ struct CommitComposer: View {
     // The draft controls float over the message box's bottom trailing
     // corner, as in the web sidebar, and show only while the message is
     // being written — the box focused, the picker open, a draft running —
-    // so the box reads as a plain field until it is in hand. The editor is
-    // padded past their height, so the last line scrolls clear of them.
+    // so the box reads as a plain field until it is in hand. They hover
+    // over the text rather than under it: the clearance past their height
+    // is the editor's own content inset, as the web textarea's bottom
+    // padding is, so the message runs beneath them and its last line
+    // scrolls clear of them, instead of the box ending in an empty band
+    // the height of the controls.
     private var messageBox: some View {
         TextEditor(text: $message)
             .font(.system(size: 12))
             .scrollContentBackground(.hidden)
             .focused($composerFocused)
+            .contentMargins(.bottom, Self.controlsClearance, for: .scrollContent)
             .padding(.horizontal, 6)
             .padding(.top, 6)
-            .padding(.bottom, Self.controlsClearance)
             .frame(height: messageHeight)
             .overlay(alignment: .topLeading) {
                 if message.isEmpty {

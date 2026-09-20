@@ -542,8 +542,45 @@ export const makeGitRepoRepository = Effect.gen(function* () {
       };
     });
 
-  const worktreeDiff: RepoRepo["worktreeDiff"] = run("diff", "HEAD").pipe(
-    Effect.catchTag("GitError", () => Effect.succeed(""))
+  /**
+   * The untracked files, each as the new-file patch `git diff` would print
+   * once it was staged. `git diff` reads the working tree against the index
+   * or a commit, and a file git has never been told about is in neither, so
+   * the uncommitted changes came back without their new files: the tree
+   * listed them, but picking one fell out of the diff into the file viewer,
+   * and reading the change meant clicking each of them on its own. Diffed
+   * one at a time against `/dev/null` — git prints the same header it prints
+   * for an added file, so the pane reads them as one diff — and tolerantly,
+   * since `--no-index` exits 1 to say the two sides differ.
+   */
+  const untrackedDiff = Effect.gen(function* () {
+    const listing = yield* run(
+      "ls-files",
+      "--others",
+      "--exclude-standard",
+      "-z"
+    );
+    const untracked = listing.split("\0").filter((path) => path.length > 0);
+    const patches = yield* Effect.all(
+      untracked.map((path) =>
+        runTolerant("diff", "--no-index", "--", "/dev/null", path)
+      ),
+      { concurrency: 8 }
+    );
+    return patches.join("");
+  });
+
+  /** A working-tree diff with its untracked files appended as new files. */
+  const withUntracked = (diff: Effect.Effect<string, GitFailure>) =>
+    Effect.map(
+      Effect.all([diff, untrackedDiff], { concurrency: "unbounded" }),
+      ([tracked, untracked]) => `${tracked}${untracked}`
+    );
+
+  const worktreeDiff: RepoRepo["worktreeDiff"] = withUntracked(
+    run("diff", "HEAD").pipe(
+      Effect.catchTag("GitError", () => Effect.succeed(""))
+    )
   );
 
   const mergeBaseWith = (target: string) =>
@@ -560,7 +597,9 @@ export const makeGitRepoRepository = Effect.gen(function* () {
    * committed in, which is what a task still being worked on consists of.
    */
   const targetDiff: RepoRepo["targetDiff"] = (target) =>
-    Effect.flatMap(mergeBaseWith(target), (base) => run("diff", base));
+    withUntracked(
+      Effect.flatMap(mergeBaseWith(target), (base) => run("diff", base))
+    );
 
   const commitDiff: RepoRepo["commitDiff"] = (sha) =>
     run("show", "--format=", "--patch", sha);
@@ -734,6 +773,12 @@ export const makeGitRepoRepository = Effect.gen(function* () {
   const discardHunk: RepoRepo["discardHunk"] = (path, hunkIndex) =>
     Effect.gen(function* () {
       const patch = yield* run("diff", "HEAD", "--", path);
+      // An untracked file has no HEAD diff: its one hunk is the whole file, so
+      // discarding it is discarding the file — see `untrackedDiff`.
+      if (patch.length === 0 && hunkIndex === 0) {
+        yield* discardOne(path);
+        return;
+      }
       const { header, hunks } = splitDiffIntoHunks(patch);
       const hunk = hunks[hunkIndex];
       if (header.length === 0 || hunk === undefined) return;

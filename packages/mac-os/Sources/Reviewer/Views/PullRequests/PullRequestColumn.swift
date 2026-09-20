@@ -35,7 +35,7 @@ struct PullRequestColumn: View {
 }
 
 /// The files the pull request touches: the changed-files layout the
-/// sidebar wears on the diff — the search over them with their count, then
+/// sidebar wears on the diff — the search over them, then
 /// the outline — with nothing to commit, since the changes are somebody
 /// else's.
 private struct PullFiles: View {
@@ -44,7 +44,7 @@ private struct PullFiles: View {
     var body: some View {
         @Bindable var tree = model.sidebar
         VStack(spacing: 0) {
-            ChangesHeader(query: $tree.query, count: tree.listing?.paths.count ?? 0)
+            ChangesHeader(query: $tree.query)
                 .padding(.top, 6)
             if tree.mode == .review {
                 FileTreeOutline()

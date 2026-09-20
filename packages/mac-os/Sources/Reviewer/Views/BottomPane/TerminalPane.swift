@@ -1,7 +1,7 @@
 // The Terminal surface, laid out as the opener is: the project's shells as
 // the system's own table down the left — title and when it was last used —
-// sortable on either column and striped as Finder's rows are, newest first
-// to begin with, under a toolbar with open and close grouped at its
+// sortable on either column, its rows plain rather than striped, newest
+// first to begin with, under a toolbar with open and close grouped at its
 // leading edge and a search at its trailing edge. With nothing to list the
 // table gives way to a placeholder, header and all. A click picks a
 // session; a double-click, Return or the row's menu renames it in place,
@@ -144,7 +144,7 @@ private struct ThreadTable: View {
             }
             .width(min: 120, ideal: 160)
         }
-        .tableStyle(.inset(alternatesRowBackgrounds: true))
+        .tableStyle(.inset(alternatesRowBackgrounds: false))
         .scrollContentBackground(.hidden)
         .contextMenu(forSelectionType: String.self) { ids in
             if let thread = ids.first.flatMap(thread(for:)) {
@@ -271,9 +271,13 @@ private extension ThreadSummary {
     var displayTitle: String { title.isEmpty ? "Terminal" : title }
 }
 
+/// The terminal in a SwiftUI hierarchy, standing in a `HeldView` so a move
+/// of the sidebar does not resize it frame by frame.
 struct TerminalHost: NSViewRepresentable {
     let view: TerminalView
 
-    func makeNSView(context: Context) -> TerminalView { view }
-    func updateNSView(_ nsView: TerminalView, context: Context) {}
+    func makeNSView(context: Context) -> HeldView { HeldView(holding: view) }
+    func updateNSView(_ nsView: HeldView, context: Context) {
+        nsView.follow(context.environment.sidebarHold)
+    }
 }

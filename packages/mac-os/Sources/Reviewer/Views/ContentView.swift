@@ -29,27 +29,32 @@ struct ContentView: View {
     @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
-        NavigationSplitView(columnVisibility: columnVisibility) {
-            SidebarColumn()
-                .navigationSplitViewColumnWidth(min: 240, ideal: 320, max: 560)
-                // Declared on the column rather than the window, so the
-                // system lays it out in the sidebar's own run of the bar,
-                // beside the toggle it puts there.
-                .toolbar { SidebarToolbarItems() }
-        } detail: {
-            DetailColumn()
-        }
-        .navigationTitle("")
-        .toolbar { ToolbarItems() }
-        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-        .background(Color(nsColor: IslandPalette.frame).ignoresSafeArea())
-        .overlay {
-            if model.palette.isShown {
-                PaletteOverlay()
-                    .transition(.opacity)
+        // The window's width is read here, over the split, for the detail
+        // to know how much of it the column takes or leaves when it moves
+        // (see `DetailColumn.sidebarHold`).
+        GeometryReader { window in
+            NavigationSplitView(columnVisibility: columnVisibility) {
+                SidebarColumn()
+                    .navigationSplitViewColumnWidth(min: 240, ideal: 320, max: 560)
+                    // Declared on the column rather than the window, so the
+                    // system lays it out in the sidebar's own run of the bar,
+                    // beside the toggle it puts there.
+                    .toolbar { SidebarToolbarItems() }
+            } detail: {
+                DetailColumn(windowWidth: window.size.width)
             }
+            .navigationTitle("")
+            .toolbar { ToolbarItems() }
+            .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+            .background(Color(nsColor: IslandPalette.frame).ignoresSafeArea())
+            .overlay {
+                if model.palette.isShown {
+                    PaletteOverlay()
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeOut(duration: 0.12), value: model.palette.isShown)
         }
-        .animation(.easeOut(duration: 0.12), value: model.palette.isShown)
         .branchPrompts()
         .serverErrorAlert()
         .onChange(of: model.awaitingProject) { _, awaiting in
@@ -136,9 +141,14 @@ private struct SidebarToolbarItems: ToolbarContent {
 /// `PullRequestColumn`) — with the rail beside them while the sidebar is
 /// away and the page is on a surface the rail serves; on the sessions
 /// surface it collapses here as it does in the sidebar, and the islands
-/// take the gap it stood in.
+/// take the gap it stood in. When the sidebar moves, the web view and the
+/// terminals on the islands are told where the page's edge will end up, so
+/// they can hold still for the move instead of following it frame by
+/// frame (see `SidebarHold`).
 private struct DetailColumn: View {
     @Environment(AppModel.self) private var model
+    let windowWidth: CGFloat
+    @State private var gauge = IslandGauge()
 
     private static let bottomHeights: ClosedRange<CGFloat> = 120...800
 
@@ -155,6 +165,35 @@ private struct DetailColumn: View {
     private var leading: CGFloat {
         if railed { return 0 }
         return model.sidebarShown ? IslandMetrics.gap : IslandMetrics.margin
+    }
+
+    private var pullShown: Bool { model.connection == .ready && model.reviewingPull != nil }
+
+    /// The run of the detail's width that is not the page island's: the
+    /// rail or the margin ahead of it, the pull request's column and the
+    /// seam beside that, and the margin behind it.
+    private var aroundIsland: CGFloat {
+        let ahead = railed ? IslandMetrics.margin + AppRail.width : leading
+        let pull = pullShown ? model.pullColumnWidth + IslandMetrics.gap : 0
+        return ahead + pull + IslandMetrics.margin
+    }
+
+    /// Where the page island's edge ends up once the column has moved —
+    /// the window less the room the column takes, or all of it — against
+    /// where the island stands now.
+    private var sidebarHold: SidebarHold {
+        let column = model.sidebarShown ? gauge.sidebarWidth : 0
+        let end = windowWidth - column - aroundIsland
+        return SidebarHold(
+            sidebarShown: model.sidebarShown,
+            growth: gauge.islandWidth > 0 ? end - gauge.islandWidth : 0)
+    }
+
+    private func measure(islandWidth: CGFloat) {
+        gauge.islandWidth = islandWidth
+        if model.sidebarShown {
+            gauge.sidebarWidth = windowWidth - islandWidth - aroundIsland
+        }
     }
 
     private var islands: some View {
@@ -184,6 +223,7 @@ private struct DetailColumn: View {
                         .island()
                 }
             }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { measure(islandWidth: $0) }
             .padding(.leading, model.reviewingPull == nil ? leading : 0)
         }
         // No run of our own along the top: the bar keeps as much air under
@@ -194,6 +234,7 @@ private struct DetailColumn: View {
         .padding(.bottom, IslandMetrics.margin)
         .clipped()
         .animation(SidebarMotion.change, value: railed)
+        .environment(\.sidebarHold, sidebarHold)
     }
 
     @ViewBuilder
@@ -217,6 +258,16 @@ private struct DetailColumn: View {
             }
         }
     }
+}
+
+/// The page island's width as last laid out, and the sidebar's beside it
+/// while the column stood — read only when the column moves, so they are
+/// kept out of the view's state: a width that moved the view for every
+/// frame of a resize would be the very work the hold saves.
+@MainActor
+private final class IslandGauge {
+    var islandWidth: CGFloat = 0
+    var sidebarWidth: CGFloat = 0
 }
 
 /// The toolbar over the detail: the window tabs — the web app's window bar,

@@ -13,7 +13,7 @@
 // the opener is (see `RepoOpener`) — a Finder window's proportions inside
 // the island — so they carry the taller toolbar at the regular control
 // size, with the system's own search field at its trailing edge and the
-// actions grouped at its leading edge, and a table of striped rows under
+// actions grouped at its leading edge, and a table of plain rows under
 // it.
 import AppKit
 import SwiftUI

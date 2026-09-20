@@ -45,7 +45,12 @@ export function createDiffFunctions(d: DiffDependencies): DiffFunctions {
   const parseFiles: DiffFunctions["parseFiles"] = (diffText) => {
     if (diffText === null || diffText.trim().length === 0) return [];
     try {
-      return d.sideEffects.parsePatch(diffText);
+      // The app's own files under the repository are never a change to read,
+      // and the diff carries the untracked ones too — see `untrackedDiff` on
+      // the server — so they are dropped here, where the tree drops them.
+      return d.sideEffects
+        .parsePatch(diffText)
+        .filter((file) => !isInternalPath(file.name));
     } catch {
       return [];
     }
@@ -105,12 +110,21 @@ export function createDiffFunctions(d: DiffDependencies): DiffFunctions {
     if (!comparing) return live;
     // The badge says what the file is against what it is being read against —
     // a file added by a commit on the branch reads as added, not as unchanged.
-    // Uncommitted entries the diff cannot carry (an untracked file) keep
-    // theirs, so nothing loses its badge by comparing.
+    // An untracked file is in the diff as a new file, but it is untracked
+    // first: that is the one status the comparison does not change.
+    const untracked = new Set(
+      live
+        .filter((entry) => entry.status === "untracked")
+        .map((entry) => entry.path)
+    );
     const inDiff = new Set(fromDiff.map((entry) => entry.path));
     return [
-      ...fromDiff.filter((entry) => !isInternalPath(entry.path)),
-      ...live.filter((entry) => !inDiff.has(entry.path)),
+      ...fromDiff.filter(
+        (entry) => !isInternalPath(entry.path) && !untracked.has(entry.path)
+      ),
+      ...live.filter(
+        (entry) => !inDiff.has(entry.path) || untracked.has(entry.path)
+      ),
     ];
   };
 
