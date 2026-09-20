@@ -22,6 +22,8 @@
 	<string>1</string>
 	<key>CFBundleIconFile</key>
 	<string>Reviewer</string>
+	<key>CFBundleIconName</key>
+	<string>Reviewer</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>26.0</string>
 	<key>NSHighResolutionCapable</key>

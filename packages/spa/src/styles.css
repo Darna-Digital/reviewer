@@ -1810,16 +1810,9 @@ file-tree-container {
 }
 
 /* --- reviewer: JetBrains-style split-diff connector ribbons ----------------- */
-.diff-connectors {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 3;
-}
-.diff-connectors path {
-  stroke-width: 1;
-}
-/* Connector colours mirror the original client: green add, red delete, and a
+/* The ribbons themselves are drawn inside each file's shadow root (see
+   `connectorsCSS` in diff-connectors.ts); only their colours are declared out
+   here, where the theme is, and inherit through. Green add, red delete, and a
    blue (accent) ribbon for modifications — not yellow. */
 :root {
   --cx-add: #2da160;
@@ -1831,23 +1824,14 @@ file-tree-container {
   --cx-del: #f2645a;
   --cx-mod: var(--brand-400);
 }
-.diff-connectors .cx-add {
-  fill: var(--cx-add);
-  fill-opacity: 0.22;
-  stroke: var(--cx-add);
-  stroke-opacity: 0.7;
-}
-.diff-connectors .cx-del {
-  fill: var(--cx-del);
-  fill-opacity: 0.22;
-  stroke: var(--cx-del);
-  stroke-opacity: 0.7;
-}
-.diff-connectors .cx-mod {
-  fill: var(--cx-mod);
-  fill-opacity: 0.2;
-  stroke: var(--cx-mod);
-  stroke-opacity: 0.65;
+
+/* The diff pane is one CodeView: the files stand a pixel apart in it (see
+   `LAYOUT` in diff-pane.tsx), and the rule between them is drawn into that
+   pixel from each file's foot. Positioned, so the ribbons painted into a
+   file's shadow root can lie over its code. */
+.diff-pane diffs-container {
+  position: relative;
+  box-shadow: 0 1px 0 var(--border);
 }
 
 /* Make native UI (scrollbars, form controls, caret) follow the app theme. */

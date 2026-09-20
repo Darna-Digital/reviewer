@@ -141,11 +141,16 @@ struct ReviewerCommands: Commands {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var appearanceObservation: NSKeyValueObservation?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // A bare SwiftPM binary launches as a background process; without a
         // bundle it has to ask for a dock tile and the foreground itself.
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
+        appearanceObservation = NSApp.observe(\.effectiveAppearance, options: [.initial, .new]) { app, _ in
+            MainActor.assumeIsolated { DockIcon.follow(app.effectiveAppearance) }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {

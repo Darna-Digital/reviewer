@@ -1,19 +1,30 @@
 import type {
+  CodeViewDiffItem,
+  CodeViewItem,
+  CodeViewLineSelection,
+  CodeViewOptions,
   DiffLineAnnotation,
-  FileDiffContentsLoader,
   FileDiffLoadedFiles,
   FileDiffMetadata,
   Hunk,
-  SelectedLineRange,
+  LineAnnotation,
 } from "@pierre/diffs";
-import { FileDiff, Virtualizer } from "@pierre/diffs/react";
+import { CodeView, type CodeViewHandle } from "@pierre/diffs/react";
 import {
   IconArrowBackUp,
   IconArrowsMaximize,
   IconArrowsMinimize,
   IconHistory,
 } from "@tabler/icons-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { confirm } from "@/components/ui/alerts";
 import { Button } from "@/components/ui/button";
@@ -29,8 +40,8 @@ import {
   type DraftLocation,
 } from "@/interactions/comments/components/comment-thread";
 import {
-  DiffConnectors,
-  connectorGutterCSS,
+  ConnectorPainter,
+  connectorsCSS,
 } from "@/interactions/diff/components/diff-connectors";
 import { setDiffNarrowed } from "@/interactions/diff/adapters/diff-layout.store";
 import {
@@ -38,8 +49,12 @@ import {
   resolveDiffStyle,
 } from "@/interactions/diff/functions/diff-style.functions";
 import { DiagnosticsAnnotation } from "@/interactions/language/components/diagnostics-annotation";
-import { useDiffLanguage } from "@/interactions/language/components/use-diff-language";
+import {
+  useDiffLanguage,
+  type DiffLanguage,
+} from "@/interactions/language/components/use-diff-language";
 import type { DiagnosticsAnnotationMeta } from "@/interactions/language/components/language-layer";
+import { DIAGNOSTIC_CSS } from "@/interactions/language/functions/diagnostic-styles";
 import { fetchClient } from "@/lib/api/client";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
 import {
@@ -62,6 +77,11 @@ type AnnotationMeta =
   | { readonly kind: "draft"; readonly body?: string }
   | { readonly kind: "hunk"; readonly hunkIndex: number }
   | DiagnosticsAnnotationMeta;
+
+type Annotation = DiffLineAnnotation<AnnotationMeta>;
+type DiffItem = CodeViewDiffItem<AnnotationMeta>;
+type Viewer = CodeViewHandle<AnnotationMeta, undefined>;
+type ViewerOptions = CodeViewOptions<AnnotationMeta, undefined>;
 
 interface DiffPaneProps {
   files: ReadonlyArray<FileDiffMetadata>;
@@ -109,6 +129,20 @@ const emptyHint = (target: DiffTarget): string => {
 };
 
 const THEMES = { light: "github-light", dark: "github-dark" } as const;
+
+/**
+ * The room under the last file, so its last lines clear the floating bars
+ * that hang over the bottom of the pane (the assign bar). The files stand a
+ * pixel apart, which is where the rule between them is drawn (see
+ * `.diff-pane diffs-container` in styles.css).
+ */
+const LAYOUT = { paddingTop: 0, gap: 1, paddingBottom: 80 } as const;
+
+/**
+ * Opening every collapsed region of a file at once: the count is clamped to
+ * what each region holds, so one number serves every hunk.
+ */
+const WHOLE_REGION = 1_000_000_000;
 
 /**
  * The `/api/diff-file` params that pin both sides of `target`, so expanded
@@ -169,292 +203,104 @@ const hunkChangeAnchor = (
   return { side: "additions", lineNumber: hunk.additionStart };
 };
 
-interface FileDiffSectionProps {
-  file: FileDiffMetadata;
-  theme: Theme;
-  diffStyle: DiffStyle;
-  connectorsEnabled: boolean;
-  /** Render this file whole (all unchanged lines expanded) instead of hunks. */
-  expandUnchanged: boolean;
-  /** Takes the file's name, so the parent needs no per-file closure. */
-  onToggleExpandUnchanged: (name: string) => void;
-  loadDiffFiles: FileDiffContentsLoader;
-  annotations: ReadonlyArray<DiffLineAnnotation<AnnotationMeta>>;
-  selectedLines: SelectedLineRange | null;
-  onDraftOpen: (draft: DraftLocation) => void;
-  onDraftCancel: () => void;
-  onEditFile: (path: string) => void;
-  onShowFileHistory?: (path: string) => void;
-  onDiscardFile?: (path: string) => void;
-  onDiscardHunk?: (path: string, hunkIndex: number) => void;
-  onCommentSubmit: (location: DraftLocation, body: string) => Promise<void>;
-  onCommentDelete: (comment: ReviewComment) => Promise<void>;
-  onCommentEdit: (comment: ReviewComment, body: string) => Promise<void>;
-  onCommentReply: (comment: ReviewComment, body: string) => Promise<void>;
-  /** Give this file the language layer — only true for a worktree diff. */
-  languageEnabled: boolean;
+/** A file with no comments, draft or hunk control — one array, not one each. */
+const NO_ANNOTATIONS: ReadonlyArray<Annotation> = [];
+
+const sameAnnotations = (
+  a: ReadonlyArray<Annotation>,
+  b: ReadonlyArray<Annotation>
+): boolean => a.length === b.length && a.every((entry, i) => entry === b[i]);
+
+/**
+ * Per-file "show the whole file" choices. A file is opened by expanding every
+ * collapsed region of its rendered instance, and closed by giving it a fresh
+ * instance — the viewer keeps an item's expansions for as long as its id
+ * lives, so a collapse is a new id: the name and a generation.
+ */
+interface Expansion {
+  readonly expanded: ReadonlySet<string>;
+  readonly generation: ReadonlyMap<string, number>;
+}
+
+const NO_EXPANSION: Expansion = { expanded: new Set(), generation: new Map() };
+
+const itemIdOf = (name: string, expansion: Expansion): string => {
+  const generation = expansion.generation.get(name) ?? 0;
+  return generation === 0 ? name : `${name}@${generation}`;
+};
+
+/**
+ * What the viewer remembers of an item between renders, so the version only
+ * moves when something the item renders from has: its diff, its annotations,
+ * or whether it is shown whole. The viewer reconciles by id and version, and
+ * a version that moved for nothing is a file laid out again for nothing.
+ */
+interface ItemRecord {
+  fileDiff: FileDiffMetadata;
+  annotations: ReadonlyArray<Annotation>;
+  expanded: boolean;
+  version: number;
+}
+
+interface FileLanguageProps {
+  path: string;
+  itemId: string;
+  /** The item's element while the viewer has it rendered. */
+  element: HTMLElement | null;
+  enabled: boolean;
+  drafting: boolean;
+  register: (itemId: string, viewOptions: DiffLanguage["viewOptions"]) => void;
+  unregister: (itemId: string) => void;
+  report: (
+    path: string,
+    annotations: ReadonlyArray<DiffLineAnnotation<DiagnosticsAnnotationMeta>>
+  ) => void;
   onOpenLocation: (path: string, lineNumber: number) => void;
 }
 
 /**
- * One file's diff, memoised — the pane renders one of these per changed file,
- * and each of them highlights, lays out and virtualizes a whole file.
- *
- * Without the memo every render of the pane re-rendered every file: selecting
- * a file in the tree, opening a comment draft, or a background refetch settling
- * did the work of the entire diff again, and a review of eighty files paid for
- * eighty of them to redraw so that one could. The props are all stable by
- * construction (see `DiffPane`), so what re-renders now is the file that
- * actually changed.
+ * The language layer for one file of the diff — hover documentation,
+ * go-to-definition, diagnostics — with nothing of its own to draw but the
+ * card. `CodeView` renders every file itself and hands its callbacks one
+ * `context` at a time, so the per-file hooks live here, headless: the token
+ * handlers are registered under the item's id for the viewer's shared
+ * callbacks to route to, and the diagnostics go up as annotations for the
+ * item to carry.
  */
-const FileDiffSection = memo(function FileDiffSectionView({
-  file,
-  theme,
-  diffStyle,
-  connectorsEnabled,
-  expandUnchanged,
-  onToggleExpandUnchanged,
-  loadDiffFiles,
-  annotations,
-  selectedLines,
-  onDraftOpen,
-  onDraftCancel,
-  onEditFile,
-  onShowFileHistory,
-  onDiscardFile,
-  onDiscardHunk,
-  onCommentSubmit,
-  onCommentDelete,
-  onCommentEdit,
-  onCommentReply,
-  languageEnabled,
+const FileLanguage = memo(function FileLanguageView({
+  path,
+  itemId,
+  element,
+  enabled,
+  drafting,
+  register,
+  unregister,
+  report,
   onOpenLocation,
-}: FileDiffSectionProps) {
-  // Callback-ref state (not a ref object): DiffConnectors reads the section in a
-  // layout effect, which fires bottom-up, so a child would see a parent ref as
-  // null. The setter only fires on mount.
-  const [sectionEl, setSectionEl] = useState<HTMLElement | null>(null);
-  const recomputeConnectors = useRef<() => void>(() => {});
-
-  // A comment being written on this file. The composer is a line annotation, so
-  // the draft is already here in the list — no extra prop, and nothing for the
-  // memo to see change on files the draft is not on.
-  const drafting = annotations.some(
-    (annotation) => annotation.metadata?.kind === "draft"
-  );
-
-  // Hover documentation, go-to-definition and find-usages over the additions
-  // side, which for a worktree diff is the file as it is on disk.
+}: FileLanguageProps) {
   const language = useDiffLanguage({
-    path: file.name,
-    section: sectionEl,
-    enabled: languageEnabled,
+    path,
+    section: element,
+    enabled,
     // The composer sits under the line the comment is about, exactly where the
     // card would be drawn.
     hoverEnabled: !drafting,
     onOpenLocation,
   });
 
-  const withDiagnostics = useMemo(
-    () => [...annotations, ...language.annotations],
-    [annotations, language.annotations]
-  );
+  // Layout, not passive: the viewer can render the item — and ask for its
+  // handlers — in the same commit.
+  useLayoutEffect(() => {
+    register(itemId, language.viewOptions);
+    return () => unregister(itemId);
+  }, [itemId, language.viewOptions, register, unregister]);
 
-  return (
-    <section
-      ref={setSectionEl}
-      className="diff-file relative border-b"
-      data-file-anchor={file.name}
-    >
-      <FileDiff<AnnotationMeta>
-        fileDiff={file}
-        selectedLines={selectedLines}
-        options={{
-          theme: THEMES,
-          themeType: theme,
-          diffStyle,
-          lineDiffType: "word",
-          overflow: diffStyle === "split" ? "scroll" : "wrap",
-          stickyHeader: false,
-          // Full-file support: the loader hydrates the unchanged regions of a
-          // patch-parsed diff, which both makes the hunk separators expandable
-          // and lets expandUnchanged render the whole file.
-          loadDiffFiles,
-          expandUnchanged,
-          enableGutterUtility: true,
-          ...language.viewOptions,
-          unsafeCSS: [
-            selectionShadingCSS,
-            connectorsEnabled ? connectorGutterCSS : "",
-            language.viewOptions.unsafeCSS,
-          ].join("\n"),
-          onPostRender: (node, instance, phase) => {
-            // Both need to know the code rendered: the connectors to measure
-            // it, the language layer to know it may start asking about it.
-            if (connectorsEnabled) recomputeConnectors.current();
-            language.viewOptions.onPostRender(node, instance, phase);
-          },
-          onGutterUtilityClick: (range) =>
-            onDraftOpen({
-              filePath: file.name,
-              side: range.side ?? "additions",
-              lineNumber: range.end,
-            }),
-          onLineNumberClick: (props) =>
-            onDraftOpen({
-              filePath: file.name,
-              side: props.annotationSide,
-              lineNumber: props.lineNumber,
-            }),
-        }}
-        renderHeaderMetadata={(meta) => (
-          <div className="flex items-center gap-1">
-            {/* New/deleted files already carry their whole content in the
-             * patch, so there is nothing extra to expand. */}
-            {meta.type !== "new" && meta.type !== "deleted" && (
-              <Button
-                variant="ghost-muted"
-                size="xs"
-                className="gap-1"
-                aria-pressed={expandUnchanged}
-                title={
-                  expandUnchanged
-                    ? `Collapse ${meta.name} to its changed lines`
-                    : `Show all of ${meta.name}`
-                }
-                onClick={() => onToggleExpandUnchanged(file.name)}
-              >
-                {expandUnchanged ? (
-                  <IconArrowsMinimize className="size-3.5" />
-                ) : (
-                  <IconArrowsMaximize className="size-3.5" />
-                )}
-                {expandUnchanged ? "Changes only" : "Full file"}
-              </Button>
-            )}
-            {onDiscardFile !== undefined && (
-              // Revert this file to HEAD. Available for every change type
-              // (a deletion is restored, an addition removed).
-              <Button
-                variant="ghost-muted"
-                size="xs"
-                className="gap-1 hover:text-destructive hover:[&_svg]:text-destructive"
-                title={`Discard changes in ${meta.name}`}
-                onClick={() => {
-                  void confirm({
-                    title: "Discard all changes in this file?",
-                    subject: meta.name,
-                    description:
-                      "This reverts the file to the last commit and cannot be undone.",
-                    confirmLabel: "Discard",
-                    destructive: true,
-                  }).then((ok) => {
-                    if (ok) onDiscardFile(meta.name);
-                  });
-                }}
-              >
-                <IconArrowBackUp className="size-3.5" />
-                Discard
-              </Button>
-            )}
-            {onShowFileHistory !== undefined && (
-              <Button
-                variant="ghost-muted"
-                size="xs"
-                className="gap-1"
-                title={`Show the commit history of ${meta.name}`}
-                onClick={() => onShowFileHistory(meta.name)}
-              >
-                <IconHistory className="size-3.5" />
-                History
-              </Button>
-            )}
-            {meta.type !== "deleted" && (
-              <Button
-                variant="ghost-muted"
-                size="xs"
-                onClick={() => onEditFile(meta.name)}
-              >
-                Edit
-              </Button>
-            )}
-          </div>
-        )}
-        lineAnnotations={withDiagnostics}
-        renderAnnotation={(annotation) => {
-          const meta = annotation.metadata;
-          if (meta.kind === "diagnostics") {
-            return <DiagnosticsAnnotation diagnostics={meta.diagnostics} />;
-          }
-          if (meta.kind === "hunk") {
-            // A quiet, icon-only revert affordance in the spirit of JetBrains'
-            // gutter change markers — right-aligned, minimal vertical footprint.
-            // The icon alone is ambiguous, so a tooltip spells out the action.
-            return (
-              // em units so the control scales with the diff's own font size.
-              <div className="flex justify-end px-[0.6em] py-[0.2em]">
-                <Tooltip>
-                  <TooltipTrigger
-                    aria-label="Discard hunk"
-                    className="flex items-center justify-center rounded p-[0.3em] text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
-                    render={
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onDiscardHunk?.(file.name, meta.hunkIndex)
-                        }
-                      />
-                    }
-                  >
-                    <IconArrowBackUp className="size-[1.3em]" />
-                  </TooltipTrigger>
-                  <TooltipContent side="left">
-                    Discard this change — revert the hunk to the last commit
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            );
-          }
-          if (meta.kind === "draft") {
-            return (
-              <DraftCard
-                onCancel={onDraftCancel}
-                {...(meta.body === undefined ? {} : { initialBody: meta.body })}
-                onSubmit={(body) =>
-                  onCommentSubmit(
-                    {
-                      filePath: file.name,
-                      side: annotation.side,
-                      lineNumber: annotation.lineNumber,
-                    },
-                    body
-                  )
-                }
-              />
-            );
-          }
-          return (
-            <CommentThread
-              comments={meta.comments}
-              onDelete={onCommentDelete}
-              onEdit={onCommentEdit}
-              onReply={onCommentReply}
-            />
-          );
-        }}
-      />
-      <DiffConnectors
-        section={sectionEl}
-        recomputeRef={recomputeConnectors}
-        enabled={connectorsEnabled}
-      />
-      {language.card}
-    </section>
-  );
+  useEffect(() => {
+    report(path, language.annotations);
+  }, [language.annotations, path, report]);
+
+  return language.card;
 });
-
-/** A file with no comments, draft or hunk control — one array, not one each. */
-const NO_ANNOTATIONS: ReadonlyArray<DiffLineAnnotation<AnnotationMeta>> = [];
 
 export function DiffPane({
   files,
@@ -480,11 +326,12 @@ export function DiffPane({
   onOpenLocation: rawOnOpenLocation,
 }: DiffPaneProps) {
   // Every handler arrives from the shell as a fresh closure on each of its
-  // renders, which would hand each memoised file section a changed prop and
-  // undo the memo entirely. Pinned here, in one place, rather than asking the
-  // shell to hand-memoise a dozen callbacks — see `useStableCallback`. The
-  // optional ones keep their absence, which is what decides whether a control
-  // is rendered at all.
+  // renders. The viewer's render callbacks and options are memoised on what
+  // they read, and a changed callback would have every rendered file drawn
+  // again; pinned here, in one place, rather than asking the shell to
+  // hand-memoise a dozen callbacks — see `useStableCallback`. The optional
+  // ones keep their absence, which is what decides whether a control is
+  // rendered at all.
   const onDraftOpen = useStableCallback(rawOnDraftOpen);
   const onDraftCancel = useStableCallback(rawOnDraftCancel);
   const onEditFile = useStableCallback(rawOnEditFile);
@@ -498,6 +345,7 @@ export function DiffPane({
   const onDiscardHunk = useStableOptionalCallback(rawOnDiscardHunk);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<Viewer | null>(null);
 
   /**
    * Side-by-side needs room for two columns of code. In a three-column review
@@ -538,21 +386,55 @@ export function DiffPane({
   // stored key invalidates the set when the user navigates to another diff, so
   // stale expansions never leak across targets (no effect/reset dance needed).
   const targetKey = diffTargetKey(target);
-  const [expansion, setExpansion] = useState<{
+  const [expansionState, setExpansionState] = useState<{
     key: string;
-    files: ReadonlySet<string>;
-  }>({ key: targetKey, files: new Set() });
-  const expandedFiles =
-    expansion.key === targetKey ? expansion.files : new Set<string>();
-  const toggleExpanded = useCallback(
+    expansion: Expansion;
+  }>({ key: targetKey, expansion: NO_EXPANSION });
+  const expansion =
+    expansionState.key === targetKey ? expansionState.expansion : NO_EXPANSION;
+  const expansionRef = useRef(expansion);
+  expansionRef.current = expansion;
+
+  const collapseFile = useCallback(
     (name: string) =>
-      setExpansion((prev) => {
-        const next = new Set(prev.key === targetKey ? prev.files : []);
-        if (next.has(name)) next.delete(name);
-        else next.add(name);
-        return { key: targetKey, files: next };
+      setExpansionState((prev) => {
+        const current = prev.key === targetKey ? prev.expansion : NO_EXPANSION;
+        if (!current.expanded.has(name)) return prev;
+        const expanded = new Set(current.expanded);
+        expanded.delete(name);
+        const generation = new Map(current.generation);
+        generation.set(name, (generation.get(name) ?? 0) + 1);
+        return { key: targetKey, expansion: { expanded, generation } };
       }),
     [targetKey]
+  );
+
+  const toggleExpanded = useCallback(
+    (name: string) => {
+      if (expansionRef.current.expanded.has(name)) {
+        collapseFile(name);
+        return;
+      }
+      const id = itemIdOf(name, expansionRef.current);
+      const rendered = viewerRef.current
+        ?.getInstance()
+        ?.getRenderedItems()
+        .find((item) => item.id === id);
+      if (rendered === undefined || rendered.type !== "diff") return;
+      rendered.item.fileDiff.hunks.forEach((_, hunkIndex) => {
+        rendered.instance.expandHunk(hunkIndex, "both", WHOLE_REGION);
+      });
+      setExpansionState((prev) => {
+        const current = prev.key === targetKey ? prev.expansion : NO_EXPANSION;
+        const expanded = new Set(current.expanded);
+        expanded.add(name);
+        return {
+          key: targetKey,
+          expansion: { expanded, generation: current.generation },
+        };
+      });
+    },
+    [collapseFile, targetKey]
   );
 
   // Fetch both full sides of a file so @pierre/diffs can render the unchanged
@@ -592,106 +474,80 @@ export function DiffPane({
           },
           newFile,
         };
-      } catch (error) {
+      } catch (failure) {
         toast.error(`Couldn't load the rest of ${file.name}`, {
           description:
             target.kind === "pull"
               ? "The merge request's commits may not be fetched locally yet — try Fetch, then expand again."
               : "The server couldn't provide this file's full contents.",
         });
-        setExpansion((prev) => {
-          if (prev.key !== targetKey || !prev.files.has(file.name)) return prev;
-          const files = new Set(prev.files);
-          files.delete(file.name);
-          return { key: targetKey, files };
-        });
-        throw error;
+        collapseFile(file.name);
+        throw failure;
       }
     },
-    [target, targetKey]
+    [collapseFile, target]
   );
 
-  // Animate the selected file's diff to the top of the pane. Hard-won details:
-  //  - Native smooth scrolling (`scrollIntoView`/`scrollTo({behavior:"smooth"})`,
-  //    CSS `scroll-behavior`) is a silent no-op in this pane — the nested
-  //    overflow-hidden ancestors break it in Chromium. Only instant `scrollTop`
-  //    writes take effect, so we roll the animation ourselves with rAF.
-  //  - Each frame eases ~20% of the remaining distance and *recomputes* the
-  //    target, so the animation stays accurate while the diffs lay out
-  //    progressively (the anchor keeps moving for a moment after selection).
-  //  - We bail the instant the user takes over via real input (wheel/touch/
-  //    pointer/key) — never on scroll events, which also fire from our own
-  //    animation and from layout reflow.
-  //  - rAF is throttled in background tabs, so a timed fallback jumps straight to
-  //    the target if no frame has run.
-  useEffect(() => {
-    if (selectedFile === null) return;
-    // The scrolling element is the Virtualizer's own root div (it must own the
-    // scroll to window rendering), which is the wrapper's only child.
-    const container = containerRef.current?.firstElementChild;
-    if (!(container instanceof HTMLElement)) return;
+  // The language layer's handlers, one set per file, under the item's id —
+  // see `FileLanguage`. A ref rather than state: they are read from inside
+  // the viewer's callbacks, and registering one is not a reason to render.
+  const languageByItem = useRef(
+    new Map<string, DiffLanguage["viewOptions"]>()
+  );
+  const registerLanguage = useCallback(
+    (itemId: string, viewOptions: DiffLanguage["viewOptions"]) => {
+      languageByItem.current.set(itemId, viewOptions);
+    },
+    []
+  );
+  const unregisterLanguage = useCallback((itemId: string) => {
+    languageByItem.current.delete(itemId);
+  }, []);
 
-    let active = true;
-    let raf = 0;
-    let lastFrame = 0;
-    const startedAt = performance.now();
-    const cleanups: Array<() => void> = [];
+  // Which items the viewer has rendered, by their elements: what each file's
+  // language layer attaches to. Kept as state, since it is what the layer
+  // hooks read; changed only on a mount or an unmount, so a scroll that
+  // re-renders an item in place moves nothing here.
+  const [elements, setElements] = useState<ReadonlyMap<string, HTMLElement>>(
+    () => new Map()
+  );
+  const rememberElement = useCallback(
+    (itemId: string, element: HTMLElement | null) =>
+      setElements((prev) => {
+        if ((prev.get(itemId) ?? null) === element) return prev;
+        const next = new Map(prev);
+        if (element === null) next.delete(itemId);
+        else next.set(itemId, element);
+        return next;
+      }),
+    []
+  );
 
-    const targetTop = (): number | null => {
-      const anchor = container.querySelector(
-        `[data-file-anchor="${CSS.escape(selectedFile)}"]`
-      );
-      if (!(anchor instanceof HTMLElement)) return null;
-      const max = container.scrollHeight - container.clientHeight;
-      return Math.min(
-        anchor.getBoundingClientRect().top -
-          container.getBoundingClientRect().top +
-          container.scrollTop,
-        max
-      );
-    };
-
-    const stop = () => {
-      if (!active) return;
-      active = false;
-      cancelAnimationFrame(raf);
-      for (const cleanup of cleanups) cleanup();
-    };
-
-    const frame = (now: number) => {
-      if (!active) return;
-      lastFrame = now;
-      const top = targetTop();
-      if (top !== null) {
-        const delta = top - container.scrollTop;
-        container.scrollTop =
-          Math.abs(delta) <= 1 ? top : container.scrollTop + delta * 0.2;
-      }
-      // Keep following while the content settles; then stop.
-      if (now - startedAt < 1200) raf = requestAnimationFrame(frame);
-      else stop();
-    };
-
-    for (const type of ["wheel", "touchstart", "pointerdown", "keydown"]) {
-      container.addEventListener(type, stop, { passive: true });
-      cleanups.push(() => container.removeEventListener(type, stop));
-    }
-
-    // Background-tab fallback: if rAF hasn't run (throttled), jump to target.
-    const fallback = setTimeout(() => {
-      if (!active || performance.now() - lastFrame < 100) return;
-      const top = targetTop();
-      if (top !== null) container.scrollTop = top;
-    }, 250);
-    cleanups.push(() => clearTimeout(fallback));
-
-    raf = requestAnimationFrame(frame);
-
-    return stop;
-  }, [selectedFile, files]);
+  const [diagnosticsByFile, setDiagnosticsByFile] = useState<
+    ReadonlyMap<
+      string,
+      ReadonlyArray<DiffLineAnnotation<DiagnosticsAnnotationMeta>>
+    >
+  >(() => new Map());
+  const reportDiagnostics = useCallback(
+    (
+      path: string,
+      annotations: ReadonlyArray<DiffLineAnnotation<DiagnosticsAnnotationMeta>>
+    ) =>
+      setDiagnosticsByFile((prev) => {
+        const current = prev.get(path);
+        if (current === annotations) return prev;
+        if (current === undefined && annotations.length === 0) return prev;
+        const next = new Map(prev);
+        if (annotations.length === 0) next.delete(path);
+        else next.set(path, annotations);
+        return next;
+      }),
+    []
+  );
 
   const annotationsByFile = useMemo(() => {
-    const result = new Map<string, Array<DiffLineAnnotation<AnnotationMeta>>>();
+    const result = new Map<string, Array<Annotation>>();
     const grouped = new Map<
       string,
       {
@@ -751,8 +607,328 @@ export function DiffPane({
         result.set(file.name, arr);
       }
     }
+    for (const [path, diagnostics] of diagnosticsByFile) {
+      const arr = result.get(path) ?? [];
+      arr.push(...diagnostics);
+      result.set(path, arr);
+    }
     return result;
-  }, [comments, draft, files, onDiscardHunk]);
+  }, [comments, diagnosticsByFile, draft, files, onDiscardHunk]);
+
+  // The viewer's items: one per changed file, versioned so the viewer lays a
+  // file out again only when it has something new to lay out — see
+  // `ItemRecord`. The annotation arrays are built afresh above, but from
+  // elements that only change when their file's do, so an unchanged file's
+  // array is the same entries in the same order and its version stands.
+  const records = useRef(new Map<string, ItemRecord>());
+  const items = useMemo<ReadonlyArray<DiffItem>>(() => {
+    const seen = new Set<string>();
+    const next = files.map((file): DiffItem => {
+      const id = itemIdOf(file.name, expansion);
+      seen.add(id);
+      const annotations = annotationsByFile.get(file.name) ?? NO_ANNOTATIONS;
+      const expanded = expansion.expanded.has(file.name);
+      const previous = records.current.get(id);
+      const version =
+        previous === undefined
+          ? 0
+          : previous.fileDiff !== file ||
+              previous.expanded !== expanded ||
+              !sameAnnotations(previous.annotations, annotations)
+            ? previous.version + 1
+            : previous.version;
+      records.current.set(id, {
+        fileDiff: file,
+        annotations,
+        expanded,
+        version,
+      });
+      return {
+        id,
+        type: "diff",
+        fileDiff: file,
+        annotations: [...annotations],
+        version,
+      };
+    });
+    for (const id of records.current.keys()) {
+      if (!seen.has(id)) records.current.delete(id);
+    }
+    return next;
+  }, [annotationsByFile, expansion, files]);
+
+  const itemIdByFile = useMemo(
+    () => new Map(items.map((item) => [item.fileDiff.name, item.id])),
+    [items]
+  );
+  const itemIdByFileRef = useRef(itemIdByFile);
+  itemIdByFileRef.current = itemIdByFile;
+
+  // The selected file to the top of the pane, on the viewer's own spring:
+  // it resolves the item against its live layout, so the scroll stays
+  // accurate while the files around it are still being measured.
+  useEffect(() => {
+    if (selectedFile === null) return;
+    const id = itemIdByFileRef.current.get(selectedFile);
+    if (id === undefined) return;
+    viewerRef.current?.scrollTo({
+      type: "item",
+      id,
+      align: "start",
+      behavior: "smooth",
+    });
+  }, [selectedFile, files]);
+
+  const selectedLines = useMemo<CodeViewLineSelection | null>(() => {
+    if (draft === null) return null;
+    const id = itemIdByFile.get(draft.filePath);
+    if (id === undefined) return null;
+    return {
+      id,
+      range: {
+        start: draft.lineNumber,
+        end: draft.lineNumber,
+        side: draft.side,
+        endSide: draft.side,
+      },
+    };
+  }, [draft, itemIdByFile]);
+
+  // The ribbons between a change's two sides, painted into each rendered
+  // item as the viewer reports it rendered — and again when the pane's width
+  // moves the columns, which the viewer does not re-render for.
+  const painter = useMemo(() => new ConnectorPainter(), []);
+  const connectorsRef = useRef(connectorsEnabled);
+  connectorsRef.current = connectorsEnabled;
+  useEffect(() => () => painter.clearAll(), [painter]);
+  useEffect(() => {
+    const rendered = viewerRef.current?.getInstance()?.getRenderedItems();
+    for (const item of rendered ?? []) {
+      if (connectorsEnabled) painter.schedule(item.element);
+      else painter.clear(item.element);
+    }
+  }, [connectorsEnabled, painter, paneWidth]);
+
+  const onPostRender = useStableCallback<
+    NonNullable<ViewerOptions["onPostRender"]>
+  >((node, instance, phase, context) => {
+    const itemId = context.item.id;
+    if (phase === "unmount") {
+      painter.clear(node);
+      rememberElement(itemId, null);
+    } else {
+      if (connectorsRef.current) painter.schedule(node);
+      rememberElement(itemId, node);
+    }
+    languageByItem.current.get(itemId)?.onPostRender(node, instance, phase);
+  });
+
+  const options = useMemo<ViewerOptions>(
+    () => ({
+      theme: THEMES,
+      themeType: theme,
+      diffStyle: laidOut,
+      lineDiffType: "word",
+      overflow: laidOut === "split" ? "scroll" : "wrap",
+      stickyHeaders: false,
+      layout: LAYOUT,
+      // Full-file support: the loader hydrates the unchanged regions of a
+      // patch-parsed diff, which both makes the hunk separators expandable
+      // and lets a file be shown whole.
+      loadDiffFiles,
+      enableGutterUtility: true,
+      // Wrap every token in its own element carrying its column, which is what
+      // the language layer's token hooks resolve a symbol from.
+      useTokenTransformer: true,
+      unsafeCSS: [
+        selectionShadingCSS,
+        DIAGNOSTIC_CSS,
+        connectorsEnabled ? connectorsCSS : "",
+      ].join("\n"),
+      onPostRender,
+      onGutterUtilityClick: (range, context) => {
+        if (context.item.type !== "diff") return;
+        onDraftOpen({
+          filePath: context.item.fileDiff.name,
+          side: range.side ?? "additions",
+          lineNumber: range.end,
+        });
+      },
+      onLineNumberClick: (props, context) => {
+        if (context.item.type !== "diff" || !("annotationSide" in props)) return;
+        onDraftOpen({
+          filePath: context.item.fileDiff.name,
+          side: props.annotationSide,
+          lineNumber: props.lineNumber,
+        });
+      },
+      onTokenEnter: (props, _event, context) => {
+        if (!("side" in props)) return;
+        languageByItem.current.get(context.item.id)?.onTokenEnter(props);
+      },
+      onTokenLeave: (_props, _event, context) => {
+        languageByItem.current.get(context.item.id)?.onTokenLeave();
+      },
+      onTokenClick: (props, event, context) => {
+        if (!("side" in props)) return;
+        languageByItem.current.get(context.item.id)?.onTokenClick(props, event);
+      },
+    }),
+    [connectorsEnabled, laidOut, loadDiffFiles, onDraftOpen, onPostRender, theme]
+  );
+
+  const renderHeaderMetadata = useStableCallback(
+    (item: CodeViewItem<AnnotationMeta>) => {
+      if (item.type !== "diff") return null;
+      const meta = item.fileDiff;
+      const expanded = expansionRef.current.expanded.has(meta.name);
+      return (
+        <div className="flex items-center gap-1">
+          {/* New/deleted files already carry their whole content in the
+           * patch, so there is nothing extra to expand. */}
+          {meta.type !== "new" && meta.type !== "deleted" && (
+            <Button
+              variant="ghost-muted"
+              size="xs"
+              className="gap-1"
+              aria-pressed={expanded}
+              title={
+                expanded
+                  ? `Collapse ${meta.name} to its changed lines`
+                  : `Show all of ${meta.name}`
+              }
+              onClick={() => toggleExpanded(meta.name)}
+            >
+              {expanded ? (
+                <IconArrowsMinimize className="size-3.5" />
+              ) : (
+                <IconArrowsMaximize className="size-3.5" />
+              )}
+              {expanded ? "Changes only" : "Full file"}
+            </Button>
+          )}
+          {onDiscardFile !== undefined && (
+            // Revert this file to HEAD. Available for every change type
+            // (a deletion is restored, an addition removed).
+            <Button
+              variant="ghost-muted"
+              size="xs"
+              className="gap-1 hover:text-destructive hover:[&_svg]:text-destructive"
+              title={`Discard changes in ${meta.name}`}
+              onClick={() => {
+                void confirm({
+                  title: "Discard all changes in this file?",
+                  subject: meta.name,
+                  description:
+                    "This reverts the file to the last commit and cannot be undone.",
+                  confirmLabel: "Discard",
+                  destructive: true,
+                }).then((ok) => {
+                  if (ok) onDiscardFile(meta.name);
+                });
+              }}
+            >
+              <IconArrowBackUp className="size-3.5" />
+              Discard
+            </Button>
+          )}
+          {onShowFileHistory !== undefined && (
+            <Button
+              variant="ghost-muted"
+              size="xs"
+              className="gap-1"
+              title={`Show the commit history of ${meta.name}`}
+              onClick={() => onShowFileHistory(meta.name)}
+            >
+              <IconHistory className="size-3.5" />
+              History
+            </Button>
+          )}
+          {meta.type !== "deleted" && (
+            <Button
+              variant="ghost-muted"
+              size="xs"
+              onClick={() => onEditFile(meta.name)}
+            >
+              Edit
+            </Button>
+          )}
+        </div>
+      );
+    }
+  );
+
+  const renderAnnotation = useStableCallback(
+    (
+      annotation: LineAnnotation<AnnotationMeta> | Annotation,
+      item: CodeViewItem<AnnotationMeta>
+    ) => {
+      if (item.type !== "diff" || !("side" in annotation)) return null;
+      const meta = annotation.metadata;
+      const name = item.fileDiff.name;
+      if (meta.kind === "diagnostics") {
+        return <DiagnosticsAnnotation diagnostics={meta.diagnostics} />;
+      }
+      if (meta.kind === "hunk") {
+        // A quiet, icon-only revert affordance in the spirit of JetBrains'
+        // gutter change markers — right-aligned, minimal vertical footprint.
+        // The icon alone is ambiguous, so a tooltip spells out the action.
+        return (
+          // em units so the control scales with the diff's own font size.
+          <div className="flex justify-end px-[0.6em] py-[0.2em]">
+            <Tooltip>
+              <TooltipTrigger
+                aria-label="Discard hunk"
+                className="flex items-center justify-center rounded p-[0.3em] text-muted-foreground/60 transition-colors hover:bg-destructive/10 hover:text-destructive"
+                render={
+                  <button
+                    type="button"
+                    onClick={() => onDiscardHunk?.(name, meta.hunkIndex)}
+                  />
+                }
+              >
+                <IconArrowBackUp className="size-[1.3em]" />
+              </TooltipTrigger>
+              <TooltipContent side="left">
+                Discard this change — revert the hunk to the last commit
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        );
+      }
+      if (meta.kind === "draft") {
+        return (
+          <DraftCard
+            onCancel={onDraftCancel}
+            {...(meta.body === undefined ? {} : { initialBody: meta.body })}
+            onSubmit={(body) =>
+              onCommentSubmit(
+                {
+                  filePath: name,
+                  side: annotation.side,
+                  lineNumber: annotation.lineNumber,
+                },
+                body
+              )
+            }
+          />
+        );
+      }
+      return (
+        <CommentThread
+          comments={meta.comments}
+          onDelete={onCommentDelete}
+          onEdit={onCommentEdit}
+          onReply={onCommentReply}
+        />
+      );
+    }
+  );
+
+  // Both of these have the working tree on their new side, which is the file
+  // the language server actually has open.
+  const languageEnabled =
+    target.kind === "worktree" || target.kind === "branch";
 
   if (loading) {
     return (
@@ -774,54 +950,34 @@ export function DiffPane({
   }
 
   return (
-    // Virtualizer windows each FileDiff (only the ~viewport ±1000px slice of
-    // lines gets DOM; IntersectionObserver wakes files as they approach), so
-    // it must be the scroll container — the wrapper div only carries the ref
-    // for the scroll-to-file animation above.
+    // One CodeView for the whole diff: it owns the scroll, lays every file
+    // out from estimated line heights it corrects as they render, and keeps
+    // only the files in and around the viewport in the DOM — the wrapper div
+    // is here to be measured for the layout above.
     <div ref={containerRef} className="h-full">
-      {/* Trailing gutter, so the last file's last lines clear the floating
-          bars that hang over the bottom of the pane (the assign bar). */}
-      <Virtualizer className="diff-pane h-full overflow-auto pb-20">
-        {files.map((file) => (
-          <FileDiffSection
-            key={`${target.kind}-${file.prevName ?? ""}-${file.name}`}
-            file={file}
-            theme={theme}
-            diffStyle={laidOut}
-            connectorsEnabled={connectorsEnabled}
-            expandUnchanged={expandedFiles.has(file.name)}
-            onToggleExpandUnchanged={toggleExpanded}
-            loadDiffFiles={loadDiffFiles}
-            annotations={annotationsByFile.get(file.name) ?? NO_ANNOTATIONS}
-            selectedLines={
-              draft !== null && draft.filePath === file.name
-                ? {
-                    start: draft.lineNumber,
-                    end: draft.lineNumber,
-                    side: draft.side,
-                    endSide: draft.side,
-                  }
-                : null
-            }
-            onDraftOpen={onDraftOpen}
-            onDraftCancel={onDraftCancel}
-            onEditFile={onEditFile}
-            onShowFileHistory={onShowFileHistory}
-            onDiscardFile={onDiscardFile}
-            onDiscardHunk={onDiscardHunk}
-            onCommentSubmit={onCommentSubmit}
-            onCommentDelete={onCommentDelete}
-            onCommentEdit={onCommentEdit}
-            onCommentReply={onCommentReply}
-            // Both of these have the working tree on their new side, which is
-            // the file the language server actually has open.
-            languageEnabled={
-              target.kind === "worktree" || target.kind === "branch"
-            }
-            onOpenLocation={onOpenLocation}
-          />
-        ))}
-      </Virtualizer>
+      <CodeView<AnnotationMeta, undefined>
+        ref={viewerRef}
+        className="diff-pane h-full overflow-auto"
+        items={items}
+        selectedLines={selectedLines}
+        options={options}
+        renderHeaderMetadata={renderHeaderMetadata}
+        renderAnnotation={renderAnnotation}
+      />
+      {items.map((item) => (
+        <FileLanguage
+          key={item.id}
+          path={item.fileDiff.name}
+          itemId={item.id}
+          element={elements.get(item.id) ?? null}
+          enabled={languageEnabled}
+          drafting={draft !== null && draft.filePath === item.fileDiff.name}
+          register={registerLanguage}
+          unregister={unregisterLanguage}
+          report={reportDiagnostics}
+          onOpenLocation={onOpenLocation}
+        />
+      ))}
     </div>
   );
 }
