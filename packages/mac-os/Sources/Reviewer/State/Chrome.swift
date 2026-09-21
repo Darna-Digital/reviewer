@@ -18,6 +18,10 @@
 // label, separator, accent and selection colours, and the islands are
 // handed those. A theme is a departure from that, never a re-derivation
 // of it.
+//
+// The face the code is set in rides along here too: not a colour, but the
+// one other thing the islands are told about how the window is drawn, and
+// told the same way, by the same script, on the same notification.
 import AppKit
 import Observation
 import SwiftUI
@@ -37,6 +41,8 @@ final class ChromePalette {
     /// app's own.
     private(set) var light: ChromeTokens?
     private(set) var dark: ChromeTokens?
+    /// The face code is set in, as the islands are told it.
+    private(set) var codeFont: CodeFont = .default
 
     func tokens(for scheme: ThemeDescriptor.ColorScheme) -> ChromeTokens? {
         scheme == .dark ? dark : light
@@ -55,6 +61,11 @@ final class ChromePalette {
         case .light: names.light = name
         case .dark: names.dark = name
         }
+        NotificationCenter.default.post(name: Self.didChange, object: self)
+    }
+
+    func choose(_ font: CodeFont) {
+        codeFont = font
         NotificationCenter.default.post(name: Self.didChange, object: self)
     }
 

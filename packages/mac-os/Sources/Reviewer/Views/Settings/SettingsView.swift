@@ -1,7 +1,8 @@
 // The settings window — ⌘, and the app menu's Settings…: the system's
 // grouped form, one section for each of the three things it holds.
-// Appearance is the one the window owns — the scheme, and the theme for
-// each scheme, from the server's catalog; git is read from the server and said as it stands,
+// Appearance is the one the window owns — the scheme, the theme for
+// each scheme, from the server's catalog, and the face the code is set in,
+// from the shell's own list; git is read from the server and said as it stands,
 // since it is not the window's to edit; GitHub is the account the server
 // works as, with a sign-in when there is none — the CLI's device flow, the
 // code shown here and the page it goes on opened (see `AppSettings`).
@@ -28,10 +29,11 @@ struct SettingsView: View {
                 .pickerStyle(.segmented)
                 ThemePicker("Light theme", scheme: .light, selection: $settings.lightTheme, catalog: model.settings.themes)
                 ThemePicker("Dark theme", scheme: .dark, selection: $settings.darkTheme, catalog: model.settings.themes)
+                CodeFontPicker(selection: $settings.codeFont)
             } header: {
                 SectionHeader(
                     "Appearance",
-                    help: "One theme for each scheme: a theme is written for a light or a dark editor, and System walks between the two as the day does. The window, the code and the terminal are all drawn in it."
+                    help: "One theme for each scheme: a theme is written for a light or a dark editor, and System walks between the two as the day does. The window, the code and the terminal are all drawn in it. The code font is the face diffs and code are set in, under either theme."
                 )
             }
             Section {
@@ -152,6 +154,23 @@ private struct ThemePicker: View {
                         Text(theme.displayName).tag(theme.name)
                     }
                 }
+            }
+        }
+        .pickerStyle(.menu)
+    }
+}
+
+/// The face code is set in, by name only: the faces are the web app's
+/// bundled fonts, not the system's, so the menu cannot set each name in its
+/// own face — the diff itself is the specimen, and it changes as the menu
+/// does.
+private struct CodeFontPicker: View {
+    @Binding var selection: CodeFont
+
+    var body: some View {
+        Picker("Code font", selection: $selection) {
+            ForEach(CodeFont.allCases) { font in
+                Text(font.title).tag(font)
             }
         }
         .pickerStyle(.menu)

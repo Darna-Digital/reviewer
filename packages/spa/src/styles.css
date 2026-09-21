@@ -2,6 +2,28 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* The code faces on offer — every one declared up front, so a font is a name
+   away wherever code is set: the diff (pierre reads `--diffs-font-family`
+   through its shadow root, and @font-face is document-scoped, so a family
+   declared here reaches inside), comment code, the `font-mono` utilities. Only
+   the family in use is fetched: a browser loads a face on first use, not on
+   declaration. JetBrains Mono is the default; the rest are the usual
+   suspects, and the macOS shell offers them in its settings (`CodeFont`). */
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/jetbrains-mono/wght-italic.css";
+@import "@fontsource-variable/fira-code";
+@import "@fontsource-variable/cascadia-code";
+@import "@fontsource-variable/cascadia-code/wght-italic.css";
+@import "@fontsource-variable/geist-mono";
+@import "@fontsource-variable/source-code-pro";
+@import "@fontsource-variable/source-code-pro/wght-italic.css";
+@import "@fontsource-variable/roboto-mono";
+@import "@fontsource-variable/roboto-mono/wght-italic.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/400-italic.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+@import "@fontsource/ibm-plex-mono/700.css";
+
 @custom-variant dark (&:is(.dark *));
 /* Inside a web view of the macOS shell — see `.island` below. */
 @custom-variant island (&:is(.island *));
@@ -9,10 +31,11 @@
 @theme inline {
   --font-heading: var(--font-sans);
   /* The UI takes the platform's own face — SF Pro on a Mac — so the web app
-     and the native macOS shell set their chrome in the same type. Only pierre's
-     diff code keeps its own mono stack. */
+     and the native macOS shell set their chrome in the same type. Code takes
+     the chosen code face (`--font-code`, below). */
   --font-sans:
     -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-code);
   --color-brand-50: var(--brand-50);
   --color-brand-100: var(--brand-100);
   --color-brand-200: var(--brand-200);
@@ -117,6 +140,14 @@
    links, status marks, the on-state of a switch — never wash into
    muted/accent/sidebar highlights. */
 :root {
+  /* The one face every code surface is set in. A `:root` custom property
+     rather than a theme token so it can be chosen at runtime: the macOS shell
+     writes it inline on the document (see `NativePalette.applyScript`), which
+     wins over this default. The stack behind the chosen family is the
+     platform's own mono, for anything the web font has no glyph for. */
+  --font-code:
+    "JetBrains Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    Consolas, "Liberation Mono", monospace;
   --brand-50: oklch(0.977 0.012 240.4);
   --brand-100: oklch(0.951 0.029 240.4);
   --brand-200: oklch(0.905 0.058 240.4);
@@ -1522,9 +1553,7 @@
   margin-bottom: 0;
 }
 .markdown :where(code, pre) {
-  font-family:
-    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
-    monospace;
+  font-family: var(--font-code);
 }
 .markdown :where(ul, ol) {
   padding-left: 1.25rem;
@@ -1649,9 +1678,11 @@
 diffs-container {
   --diffs-bg: var(--background);
   /* The file header is app chrome, so it takes the app's face rather than
-     pierre's own fallback. (Only the header: the code itself stays on pierre's
-     mono stack.) */
+     pierre's own fallback; the code takes the chosen code face rather than
+     pierre's own mono stack. Both are custom properties pierre reads through
+     its shadow root (see https://diffs.com/docs, "Custom CSS Variables"). */
   --diffs-header-font-family: var(--font-sans);
+  --diffs-font-family: var(--font-code);
   /* Pierre's "modified" colour is its own blue (#009fff/#69b1ff), and the
      gutter's add-a-comment button is painted with it. Take it to `--primary` so
      that button flips near-black on light and near-white on dark like every

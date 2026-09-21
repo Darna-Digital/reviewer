@@ -1,6 +1,6 @@
 // The settings window's model — what ⌘, shows: the appearance the window
-// is drawn in and the theme it is drawn with, and who the app works as, in
-// git and on GitHub.
+// is drawn in, the theme it is drawn with and the face its code is set in,
+// and who the app works as, in git and on GitHub.
 //
 // The appearance is the app's own preference rather than the SPA's, since
 // the window around the islands is native and the system asks the app, not
@@ -17,6 +17,11 @@
 // window's palette (see `ChromePalette`), and the catalog to choose from is
 // the server's too. Until it answers, the window paints in the app's own
 // pair, which is what the names default to.
+//
+// The code font is the app's own as well, one face for both schemes — a
+// face is not written for one or the other. The catalog is the shell's
+// (`CodeFont`); the islands are told the choice the way they are told the
+// theme, as a custom property on the document.
 //
 // The identities are read, not written: git's are set with `git config`
 // and GitHub's token is found in the environment or the `gh` CLI (see the
@@ -124,6 +129,13 @@ final class AppSettings {
         }
     }
 
+    var codeFont: CodeFont {
+        didSet {
+            defaults.set(codeFont.rawValue, forKey: Keys.codeFont)
+            ChromePalette.shared.choose(codeFont)
+        }
+    }
+
     /// The catalog, once the server has been asked for it.
     private(set) var themes: SettingsRead<[ThemeDescriptor]> = .loading
 
@@ -143,6 +155,7 @@ final class AppSettings {
         static let theme = "appearance.theme"
         static let lightTheme = "appearance.lightTheme"
         static let darkTheme = "appearance.darkTheme"
+        static let codeFont = "appearance.codeFont"
     }
 
     init(client: ReviewerClient) {
@@ -150,8 +163,10 @@ final class AppSettings {
         theme = defaults.string(forKey: Keys.theme).flatMap(ThemePreference.init(rawValue:)) ?? .system
         lightTheme = defaults.string(forKey: Keys.lightTheme) ?? Self.defaultLightTheme
         darkTheme = defaults.string(forKey: Keys.darkTheme) ?? Self.defaultDarkTheme
+        codeFont = defaults.string(forKey: Keys.codeFont).flatMap(CodeFont.init(rawValue:)) ?? .default
         ChromePalette.shared.choose(lightTheme, for: .light)
         ChromePalette.shared.choose(darkTheme, for: .dark)
+        ChromePalette.shared.choose(codeFont)
         apply()
     }
 

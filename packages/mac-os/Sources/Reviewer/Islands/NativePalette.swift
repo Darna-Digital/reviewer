@@ -6,13 +6,16 @@
 // theme is on, and otherwise the window's own two tones and the system's
 // colours, resolved under the app's effective appearance so dark and light
 // read the real values rather than a guess at them — and rewritten
-// whenever that appearance or the theme changes.
+// whenever that appearance or the theme changes. The code font goes over
+// with them, as `--font-code` — the token the SPA sets every code surface
+// in, pierre's diff included (see `CodeFont`).
 import AppKit
 
 @MainActor
 enum NativePalette {
     /// Every `--chrome-*` property the SPA's `.themed` and `.island` styles
-    /// read, for the appearance the app is drawing in. Brand ink — links,
+    /// read, for the appearance the app is drawing in, and the code font
+    /// beside them. Brand ink — links,
     /// the connector ribbons' git colours — is only handed over where a
     /// theme names it; on the app's own palette it stays the app's own, as
     /// it does in any native app.
@@ -40,7 +43,7 @@ enum NativePalette {
                 ("--chrome-deleted", NSColor(hex: tokens.deleted)),
             ]
         }
-        var variables: [String: String] = [:]
+        var variables: [String: String] = ["--font-code": ChromePalette.shared.codeFont.cssFamily]
         NSApp.effectiveAppearance.performAsCurrentDrawingAppearance {
             for (name, color) in colors {
                 variables[name] = css(color)
