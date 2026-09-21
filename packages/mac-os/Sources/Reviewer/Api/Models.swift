@@ -563,6 +563,19 @@ struct CheckoutBody: Encodable, Sendable {
     let branch: String
 }
 
+struct CommitBody: Encodable, Sendable {
+    let message: String
+    let paths: [String]
+}
+
+struct CommitResult: Decodable, Sendable {
+    let sha: String
+}
+
+struct DiscardBody: Encodable, Sendable {
+    let paths: [String]
+}
+
 struct MergeBody: Encodable, Sendable {
     let branch: String
 }

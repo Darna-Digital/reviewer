@@ -55,7 +55,7 @@ describe("the window bar's chords", () => {
     expect(chord("p")).toBeNull();
   });
 
-  it("leaves ⌘B to the bottom dock, and ⌘A to the page", () => {
+  it("leaves ⌘B to the shell, and ⌘A to the page", () => {
     expect(chord("a")).toBeNull();
     expect(chord("b")).toBeNull();
     expect(chord("a", { shiftKey: true })).toBeNull();

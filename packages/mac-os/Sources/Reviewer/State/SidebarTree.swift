@@ -87,6 +87,8 @@ enum TreeAction {
     /// of the click or the Return that may follow.
     case intent(String)
     case history(String)
+    /// Carried out by the shell itself against the server, never sent to
+    /// the page — see `AppModel.act(onTree:)`.
     case discard([String])
     case commit(message: String, paths: [String], push: Bool)
     case draft(paths: [String], agent: CommitAgent)

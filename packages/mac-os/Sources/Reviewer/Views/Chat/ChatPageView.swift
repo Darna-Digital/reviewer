@@ -106,7 +106,7 @@ private struct NewChatView: View {
                 branch: model.currentBranch)
             model.show(chat: chat)
         } catch {
-            model.lastError = error.localizedDescription
+            model.notices.post(.error, error.localizedDescription)
             throw error
         }
     }

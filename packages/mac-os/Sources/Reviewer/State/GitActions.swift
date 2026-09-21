@@ -2,7 +2,9 @@
 // and the git actions the picker offers on any of them — the same set the
 // web app's switcher has, run through the server. Every action re-reads the
 // project afterwards and tells the islands to, since the diff, the tree and
-// the history all change under a checkout or a merge.
+// the history all change under a checkout or a merge — and every one is a
+// notice for its whole run (see `Notices`): the attempt while it is made,
+// then git's own word on it, or the reason it was refused.
 import Foundation
 
 /// A branch the picker can act on: local or remote, by ref and by the name
@@ -94,46 +96,58 @@ extension AppModel {
     // MARK: actions
 
     func checkout(_ branch: String) {
-        runGit { try await self.client.checkout(branch: branch) }
+        runGit("Checking out \(branch)…", done: "Checked out \(branch)") {
+            try await self.client.checkout(branch: branch)
+            return nil
+        }
     }
 
     func checkoutAndUpdate(_ branch: String) {
-        runGit {
+        runGit("Checking out \(branch)…", done: "Checked out and updated \(branch)") {
             try await self.client.checkout(branch: branch)
-            _ = try await self.client.pull()
+            return try await self.client.pull()
         }
     }
 
     func fetch() {
-        runGit { _ = try await self.client.fetch() }
+        runGit("Fetching…", done: "Fetched") { try await self.client.fetch() }
     }
 
     func pull() {
-        runGit { _ = try await self.client.pull() }
+        runGit("Pulling…", done: "Pulled") { try await self.client.pull() }
     }
 
     func push() {
-        runGit { _ = try await self.client.push() }
+        runGit("Pushing…", done: "Pushed") { try await self.client.push() }
     }
 
     func merge(_ branch: String) {
-        runGit { _ = try await self.client.merge(branch: branch) }
+        runGit("Merging \(branch)…", done: "Merged \(branch)") { try await self.client.merge(branch: branch) }
     }
 
     func rebase(onto branch: String) {
-        runGit { _ = try await self.client.rebase(onto: branch) }
+        runGit("Rebasing onto \(branch)…", done: "Rebased onto \(branch)") { try await self.client.rebase(onto: branch) }
     }
 
     func createBranch(named name: String, from startPoint: String?) {
-        runGit { try await self.client.createBranch(name: name, startPoint: startPoint) }
+        runGit("Creating \(name)…", done: "Created branch \(name)") {
+            try await self.client.createBranch(name: name, startPoint: startPoint)
+            return nil
+        }
     }
 
     func renameBranch(_ from: String, to: String) {
-        runGit { try await self.client.renameBranch(from: from, to: to) }
+        runGit("Renaming \(from)…", done: "Renamed \(from) → \(to)") {
+            try await self.client.renameBranch(from: from, to: to)
+            return nil
+        }
     }
 
     func deleteBranch(_ name: String) {
-        runGit { try await self.client.deleteBranch(name: name) }
+        runGit("Deleting \(name)…", done: "Deleted \(name)") {
+            try await self.client.deleteBranch(name: name)
+            return nil
+        }
     }
 
     /// Two branches side by side, on the Code tab.
@@ -169,13 +183,13 @@ extension AppModel {
         showOnCodeTab(components.string ?? Href.review)
     }
 
-    private func runGit(_ body: @escaping () async throws -> Void) {
+    /// The action as a notice, `pending` while it runs and then what git
+    /// said — its output where it has any, `done` where it is quiet — and
+    /// the project re-read either way, since a merge that stopped on a
+    /// conflict has changed the tree as surely as one that went through.
+    private func runGit(_ pending: String, done: String, _ body: @escaping () async throws -> String?) {
         Task {
-            do {
-                try await body()
-            } catch {
-                lastError = error.localizedDescription
-            }
+            await notices.run(pending, done: done, body)
             await refresh()
         }
     }

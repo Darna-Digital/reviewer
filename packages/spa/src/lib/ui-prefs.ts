@@ -325,11 +325,6 @@ export function openBottomTab(tab: BottomTab) {
   setUiPrefs({ bottomVisible: true, bottomTab: tab });
 }
 
-/** Expand or collapse the bottom dock; its tab strip stays put either way. */
-export function toggleBottomVisible() {
-  setUiPrefs({ bottomVisible: !state.bottomVisible });
-}
-
 const THEME_ORDER: ThemePref[] = ["light", "dark", "system"];
 export function cycleTheme() {
   const next =

@@ -11,11 +11,15 @@ struct ReviewerAPIError: LocalizedError, Sendable {
 
     var errorDescription: String? {
         // Effect's tagged errors serialise as `{"_tag": ..., "reason"?: ...}`;
-        // prefer the reason, then the tag, then whatever text came back.
+        // prefer the reason, then the tag, then whatever text came back. A
+        // git error carries git's own stderr — the rejected push's reason,
+        // the merge's conflict — which is what the notice should say.
         if let data = body.data(using: .utf8),
            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             if let reason = json["reason"] as? String { return reason }
             if let message = json["message"] as? String { return message }
+            if let stderr = (json["stderr"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !stderr.isEmpty { return stderr }
             if let tag = json["_tag"] as? String { return tag }
         }
         return body.isEmpty ? "request failed (\(status))" : body
@@ -187,6 +191,20 @@ struct ReviewerClient: Sendable {
 
     func checkout(branch: String) async throws {
         let _: Ok = try await send("POST", "/api/checkout", body: CheckoutBody(branch: branch))
+    }
+
+    /// Commit `paths` — every change when empty — under `message`; answers
+    /// the new commit's sha.
+    func commit(message: String, paths: [String]) async throws -> String {
+        let result: CommitResult = try await send("POST", "/api/commit", body: CommitBody(message: message, paths: paths))
+        return result.sha
+    }
+
+    /// Revert the working-tree changes under `paths` to HEAD — modifications
+    /// and deletions restored, new files removed. Not undoable, so the
+    /// caller asks first.
+    func discard(paths: [String]) async throws {
+        let _: Ok = try await send("POST", "/api/discard", body: DiscardBody(paths: paths))
     }
 
     func pull() async throws -> String {

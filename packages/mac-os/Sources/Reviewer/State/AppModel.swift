@@ -31,7 +31,12 @@ final class AppModel {
     var branches: [BranchInfo] = []
     var remoteBranches: [RemoteBranchInfo] = []
     var branchPrompt: BranchPrompt?
+    /// A refusal that stops a window from going on — a project that would
+    /// not open — as an alert; everything that merely failed is a notice.
     var lastError: String?
+    /// What the window has to say in passing — what a git action came to,
+    /// a request refused — stacked over the islands (see `NoticeStack`).
+    let notices = Notices()
 
     /// The window tabs as the island last reported them, for the menu bar.
     private(set) var windowTabs: WindowTabStrip = .empty
@@ -159,9 +164,8 @@ final class AppModel {
     func refresh() async {
         do {
             workspace = try await client.workspace()
-            lastError = nil
         } catch {
-            lastError = error.localizedDescription
+            notices.post(.error, error.localizedDescription)
         }
         await refreshProjectState()
         page.refresh()
@@ -295,14 +299,61 @@ final class AppModel {
     var railShown: Bool { !onSessions }
 
     /// The sidebar acted on a row of the page's tree — see `TreeAction`. A
-    /// file's history is the pane's own to show; everything else is the
-    /// page's to carry out.
+    /// file's history is the pane's own to show, and the git actions are
+    /// run here against the server, so their notices are the window's;
+    /// what is left is the page's to carry out.
     func act(onTree action: TreeAction) {
-        if case .history(let path) = action {
+        switch action {
+        case .history(let path):
             showHistory(of: path)
-            return
+        case .commit(let message, let paths, let push):
+            commit(message: message, paths: paths, andPush: push)
+        case .discard(let paths):
+            discard(paths: paths)
+        default:
+            page.send(action)
         }
-        page.send(action)
+    }
+
+    /// The composer's Commit: the chosen paths under the message, then the
+    /// push when asked for — one notice for the run, the way the web app
+    /// reports it: a commit that landed is said so even when the push after
+    /// it did not, since the work is safe and only the remote is behind.
+    func commit(message: String, paths: [String], andPush push: Bool) {
+        Task {
+            let id = notices.post(.loading, "Committing…")
+            let sha: String
+            do {
+                sha = try await client.commit(message: message, paths: paths)
+            } catch {
+                notices.settle(id, .error, error.localizedDescription)
+                return
+            }
+            if push {
+                notices.settle(id, .loading, "Committed \(sha), pushing…")
+                do {
+                    _ = try await client.push()
+                    notices.settle(id, .success, "Committed \(sha) and pushed")
+                } catch {
+                    notices.settle(id, .error, "Committed \(sha), but push failed", detail: error.localizedDescription)
+                }
+            } else {
+                notices.settle(id, .success, "Committed \(sha)")
+            }
+            await refresh()
+        }
+    }
+
+    /// The tree's Discard, already confirmed by the outline's own prompt.
+    func discard(paths: [String]) {
+        Task {
+            let named = paths.count == 1 ? "changes in \(paths[0])" : "changes in \(paths.count) files"
+            await notices.run("Discarding \(named)…", done: "Discarded \(named)") {
+                try await client.discard(paths: paths)
+                return nil
+            }
+            await refresh()
+        }
     }
 
     /// The sidebar acted on a row of the page's sessions list — see
@@ -357,10 +408,9 @@ final class AppModel {
     /// the branch changing under the diff, everything is re-read after.
     func checkout(pull: PullRequestInfo) {
         Task {
-            do {
-                _ = try await pullRequests.checkout(pull, as: pull.localBranch)
-            } catch {
-                lastError = error.localizedDescription
+            await notices.run("Checking out #\(pull.number)…", done: "Checked out \(pull.localBranch)") {
+                try await pullRequests.checkout(pull, as: pull.localBranch)
+                return nil
             }
             await refresh()
         }
@@ -370,12 +420,10 @@ final class AppModel {
     /// Once it has gone through, its page is left for the list.
     func merge(pull: PullRequestInfo, method: MergeMethod) {
         Task {
-            do {
-                _ = try await pullRequests.merge(pull, method: method)
-                leavePull()
-            } catch {
-                lastError = error.localizedDescription
+            let merged = await notices.run("Merging #\(pull.number)…", done: "Merged #\(pull.number)") {
+                try await pullRequests.merge(pull, method: method)
             }
+            if merged { leavePull() }
             await pullRequests.reload()
         }
     }
@@ -385,12 +433,10 @@ final class AppModel {
     /// does, and so does its page.
     func close(pull: PullRequestInfo) {
         Task {
-            do {
-                _ = try await pullRequests.close(pull)
-                leavePull()
-            } catch {
-                lastError = error.localizedDescription
+            let closed = await notices.run("Closing #\(pull.number)…", done: "Closed #\(pull.number)") {
+                try await pullRequests.close(pull)
             }
+            if closed { leavePull() }
             await pullRequests.reload()
         }
     }
@@ -433,7 +479,7 @@ final class AppModel {
         do {
             try ServerLauncher.shared.launchInstance(project: path)
         } catch {
-            lastError = error.localizedDescription
+            notices.post(.error, error.localizedDescription)
         }
     }
 
@@ -473,7 +519,7 @@ final class AppModel {
 
     func newSession() {
         guard hasProject else {
-            lastError = "open a project before starting an agent session"
+            notices.post(.info, "Open a project before starting an agent session")
             return
         }
         page.send(WindowTabAction.newSession)

@@ -90,7 +90,7 @@ struct ConversationView: View {
         do {
             try await session.send(text: text, images: images.map(\.upload))
         } catch {
-            model.lastError = error.localizedDescription
+            model.notices.post(.error, error.localizedDescription)
             throw error
         }
     }
@@ -104,7 +104,7 @@ struct ConversationView: View {
                 try await session.update(
                     UpdateChat(provider: settings.provider, model: settings.model, effort: settings.effort, access: settings.access))
             } catch {
-                model.lastError = error.localizedDescription
+                model.notices.post(.error, error.localizedDescription)
             }
         }
     }

@@ -47,6 +47,9 @@ struct ContentView: View {
             .toolbar { ToolbarItems() }
             .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
             .background(Color(nsColor: IslandPalette.frame).ignoresSafeArea())
+            // The notices over the islands, under the palette: a push's
+            // outcome is worth seeing, but not over a search in progress.
+            .overlay { NoticeStack() }
             .overlay {
                 if model.palette.isShown {
                     PaletteOverlay()
@@ -79,8 +82,9 @@ struct ContentView: View {
 }
 
 extension View {
-    /// The server's last refusal, as an alert over whichever window asked:
-    /// the workspace, or the opener opening a project.
+    /// A refusal that stops the window going on — a project that would not
+    /// open — as an alert over whichever window asked: the workspace, or the
+    /// opener. Anything less is a notice (see `NoticeStack`).
     func serverErrorAlert() -> some View {
         modifier(ServerErrorAlert())
     }

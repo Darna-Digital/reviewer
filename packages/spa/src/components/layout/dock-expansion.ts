@@ -1,7 +1,7 @@
 /**
  * Taking one of the dock's surfaces full-page, and putting it back down.
  *
- * The drawer's own button does both, and so do the rail and ⌘B, so the pair
+ * The drawer's own button does both, and so does the rail, so the pair
  * lives here rather than in whichever of them needed it first — and with them the
  * one thing a dock page cannot work out for itself: which page it was expanded
  * from. Expanding is asked for while reading something, and that something is

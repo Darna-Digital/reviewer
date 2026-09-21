@@ -202,7 +202,7 @@ struct CommitComposer: View {
             if let text = draft.message { message = text }
             model.act(onTree: .draftSettled)
         case .error:
-            if let error = draft.error { model.lastError = error }
+            if let error = draft.error { model.notices.post(.error, error) }
             model.act(onTree: .draftSettled)
         case .idle, .running:
             break
