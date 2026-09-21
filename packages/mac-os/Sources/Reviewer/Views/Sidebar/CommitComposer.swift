@@ -67,10 +67,13 @@ struct CommitComposer: View {
 
     // A row's path card is anchored to the row, so it would ride along as
     // the list scrolls; the scroll's start is counted, and the rows close
-    // their cards on it.
+    // their cards on it. The rows are made as they scroll in: each is a
+    // checkbox, two measured labels and a popover, and a large diff has
+    // hundreds, which built all at once — and again on every keystroke in
+    // the message — was what made the composer lag.
     private var files: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+            LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(composer.changes, id: \.path) { change in
                     ChangeRow(change: change, isOn: included(change.path), scrollStarts: filesScrollStarts)
                 }

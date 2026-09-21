@@ -194,7 +194,12 @@ private final class OutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOut
             let reload = {
                 self.applyingFolds = true
                 outline.reloadData()
+                // One batch: a fold opened on its own re-tiles every row
+                // under it, and a diff opens every folder it has, so opened
+                // one at a time a large tree cost a full pass per folder.
+                outline.beginUpdates()
                 self.expandAsFolded(self.tree.shown)
+                outline.endUpdates()
                 self.applyingFolds = false
                 // Another tree starts at its top; the same one filtered
                 // keeps its place.
@@ -300,12 +305,17 @@ private final class OutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOut
     func outlineViewItemDidCollapse(_ notification: Notification) { folded(notification, open: false) }
 
     private func folded(_ notification: Notification, open: Bool) {
-        guard let outline, let node = notification.userInfo?["NSObject"] as? FileTreeNode else { return }
+        // A fold applied on a reload is not one to record, and has no cell
+        // to repaint yet: the rows are made after, each with its fold's
+        // state. Finding the row is a scan of them all, so looked up here
+        // for every folder a reload opened it made the reload quadratic.
+        guard !applyingFolds, let outline, let node = notification.userInfo?["NSObject"] as? FileTreeNode
+        else { return }
         let row = outline.row(forItem: node)
         if row >= 0, let cell = outline.view(atColumn: 0, row: row, makeIfNecessary: false) as? FileTreeCellView {
             cell.setExpanded(open)
         }
-        guard !applyingFolds, !tree.isSearching else { return }
+        guard !tree.isSearching else { return }
         tree.setExpanded(node.id, open)
     }
 

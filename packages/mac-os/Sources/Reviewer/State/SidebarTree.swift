@@ -237,8 +237,11 @@ final class SidebarTree {
     }
 
     func take(_ state: ShellTreeState) {
-        commit = state.commit
-        comparison = state.comparison
+        // The state comes with every selection too, and an observed property
+        // written notifies whether or not it changed: the composer would
+        // redraw its whole file list on each pick.
+        if commit != state.commit { commit = state.commit }
+        if comparison != state.comparison { comparison = state.comparison }
         guard state.selected != selected else { return }
         selected = state.selected
         reveal(state.selected)
