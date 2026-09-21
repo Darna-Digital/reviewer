@@ -1,4 +1,8 @@
-import type { ChatModelCatalog, ChatProviderKind } from "@reviewer/core/chats";
+import {
+  type ChatModelCatalog,
+  type ChatProviderKind,
+  titleFromPrompt,
+} from "@reviewer/core/chats";
 import type { ReviewComment } from "@reviewer/core/comments";
 import type { ChatSettings } from "../interfaces/chats.interfaces";
 
@@ -73,9 +77,21 @@ export const buildChatAssignmentSettings = (
   access: catalog?.defaults.access ?? "fullAccess",
 });
 
-export const buildReviewAssignmentTitle = (count: number): string => {
-  const plural = count === 1 ? "" : "s";
-  return `Fix ${count} review comment${plural}`;
+/**
+ * The chat is named after what was actually asked, so the sidebar reads
+ * "Rename this to sessionId" rather than "Fix 1 review comment". With several
+ * comments the first one leads and the rest are counted.
+ */
+export const buildReviewAssignmentTitle = (
+  comments: ReadonlyArray<ReviewComment>
+): string => {
+  const [first, ...rest] = comments;
+  const lead = titleFromPrompt(first?.body ?? "");
+  if (lead.length === 0) {
+    const plural = comments.length === 1 ? "" : "s";
+    return `Fix ${comments.length} review comment${plural}`;
+  }
+  return rest.length === 0 ? lead : `${lead} (+${rest.length} more)`;
 };
 
 export const buildReviewAssignmentPrompt = (

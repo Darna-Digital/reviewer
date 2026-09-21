@@ -72,6 +72,12 @@ private struct PalettePanel: View {
         .onChange(of: rows.count) { _, count in active = count == 0 ? 0 : min(active, count - 1) }
         .onChange(of: palette.query) { active = 0 }
         .onChange(of: palette.mode) { active = 0 }
+        // Whichever row is lit — by the arrows or by the pointer — is the
+        // one Return or a click is about to open, so its file is rendered
+        // now rather than then.
+        .onChange(of: rows.indices.contains(active) ? rows[active].path : nil, initial: true) { _, path in
+            if let path { palette.onIntent?(path) }
+        }
         .onAppear {
             // The web view under the pane holds the window's focus, and
             // SwiftUI moves it to the field only once the field is on

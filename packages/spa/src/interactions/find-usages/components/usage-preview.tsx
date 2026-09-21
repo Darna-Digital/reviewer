@@ -125,7 +125,7 @@ export function UsagePreview({
             options={{
               theme: THEMES,
               themeType: theme,
-              overflow: "wrap",
+              overflow: "scroll",
               stickyHeader: false,
               // The pane's own header carries the path and the line; the view's
               // would say it a second time, in a bar that scrolls away.

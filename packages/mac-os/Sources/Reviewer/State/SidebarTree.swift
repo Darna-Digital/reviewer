@@ -82,6 +82,10 @@ enum CommitAgent: String, CaseIterable, Identifiable, Sendable {
 /// The tree's actions, in the shape the island's `ShellTreeAction` takes.
 enum TreeAction {
     case select(String)
+    /// A file is about to be opened — the pointer has reached its row, or
+    /// the palette has it lit — so the page reads and highlights it ahead
+    /// of the click or the Return that may follow.
+    case intent(String)
     case history(String)
     case discard([String])
     case commit(message: String, paths: [String], push: Bool)
@@ -91,6 +95,7 @@ enum TreeAction {
     var payload: [String: Any] {
         switch self {
         case .select(let path): return ["kind": "select", "path": path]
+        case .intent(let path): return ["kind": "intent", "path": path]
         case .history(let path): return ["kind": "history", "path": path]
         case .discard(let paths): return ["kind": "discard", "paths": paths]
         case .commit(let message, let paths, let push):

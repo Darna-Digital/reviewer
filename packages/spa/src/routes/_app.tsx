@@ -20,6 +20,11 @@ export interface AppSearch {
   file?: string;
   /** Selected file to scroll the diff to. */
   path?: string;
+  /**
+   * The file whose history a commit was opened from: the diff shows that
+   * file's side of the commit alone, the way the log it came from reads.
+   */
+  history?: string;
   /** One-based line in the open file to reveal — how a comment links to its code. */
   line?: number;
   /** Range-diff base/head (browse mode). */
@@ -36,6 +41,8 @@ export const Route = createFileRoute("/_app")({
   validateSearch: (search: Record<string, unknown>): AppSearch => ({
     file: typeof search["file"] === "string" ? search["file"] : undefined,
     path: typeof search["path"] === "string" ? search["path"] : undefined,
+    history:
+      typeof search["history"] === "string" ? search["history"] : undefined,
     line: Number.isFinite(Number(search["line"]))
       ? Number(search["line"])
       : undefined,

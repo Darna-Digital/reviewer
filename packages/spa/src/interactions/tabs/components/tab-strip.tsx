@@ -61,6 +61,8 @@ export interface TabStripProps {
   /** Paths whose buffer has unsaved changes. */
   readonly dirty: ReadonlySet<string>;
   readonly onSelect: (path: string) => void;
+  /** The pointer has reached a tab: the moment to render its file ahead. */
+  readonly onIntent?: (path: string) => void;
   /** A double click settles a preview tab, as in every IDE. */
   readonly onKeep: (path: string) => void;
   readonly onClose: (path: string) => void;
@@ -78,6 +80,7 @@ export function TabStrip({
   active,
   dirty,
   onSelect,
+  onIntent,
   onKeep,
   onClose,
   onTogglePin,
@@ -158,6 +161,7 @@ export function TabStrip({
                   event.preventDefault();
                   endDrag();
                 }}
+                onPointerEnter={() => onIntent?.(tab.path)}
                 onClick={(event) => {
                   // Shift-click closes, so a tab can go without aiming for its ✕.
                   if (event.shiftKey) {

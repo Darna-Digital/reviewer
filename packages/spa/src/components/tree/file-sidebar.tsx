@@ -11,6 +11,7 @@ import type {
   ComponentType,
   KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
+  SyntheticEvent,
 } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { confirm } from "@/components/ui/alerts";
@@ -29,6 +30,11 @@ interface FileSidebarProps {
   gitStatus: ReadonlyArray<GitStatusEntry>;
   selectedFile: string | null;
   onFileSelect: (path: string | null) => void;
+  /**
+   * A file the pointer or the focus has reached, and so may be about to open —
+   * the moment to read and highlight it ahead of the click.
+   */
+  onFileIntent?: (path: string) => void;
   /** Open the bottom dock on this path's commit history. */
   onShowHistory?: (path: string) => void;
   /**
@@ -147,6 +153,7 @@ export function FileSidebar({
   gitStatus,
   selectedFile,
   onFileSelect,
+  onFileIntent,
   onShowHistory,
   onDiscardPaths,
   projectPath,
@@ -379,6 +386,21 @@ export function FileSidebar({
             node.tagName === "TEXTAREA")
       );
 
+  // The rows live in the tree's shadow root, so an event reaches this handler
+  // retargeted to the host; the row it crossed is found on the composed path,
+  // by the attributes the tree draws it with.
+  const onRowIntent = (event: SyntheticEvent) => {
+    if (onFileIntent === undefined) return;
+    const row = event.nativeEvent
+      .composedPath()
+      .find(
+        (node): node is HTMLElement =>
+          node instanceof HTMLElement && node.dataset.itemType === "file"
+      );
+    const path = row?.dataset.itemPath;
+    if (path !== undefined) onFileIntent(path);
+  };
+
   // The tree drives the arrows and Enter itself; Space is the rest of what a
   // file tree is expected to answer to.
   const onKeyDown = (event: ReactKeyboardEvent) => {
@@ -510,6 +532,8 @@ export function FileSidebar({
           menuOpen && "relative z-20"
         )}
         onKeyDown={onKeyDown}
+        onPointerOver={onRowIntent}
+        onFocus={onRowIntent}
       >
         {loading ? (
           <div className="px-3 py-2">

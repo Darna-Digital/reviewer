@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import { restoreDock } from "@/components/layout/dock-expansion";
 import { WindowBar } from "@/components/layout/window-bar";
 import { SearchHost } from "@/interactions/search/components/search-host";
+import { island } from "@/lib/shell";
 import { shellRoute } from "@/lib/shell-route";
 import { toggleBottomVisible } from "@/lib/ui-prefs";
 
@@ -47,9 +48,14 @@ export function WindowFrame({ children }: { children: React.ReactNode }) {
   // On one of the dock's own pages there is no drawer to collapse and the page
   // *is* the dock, so the chord means the smaller of the two: put it back down
   // on the page it was expanded from.
+  //
+  // Inside an island the chord is the shell's: its View menu binds ⌘B to its
+  // own bottom pane, and the page answering it too would put the find drawer
+  // away every time the native pane was toggled.
   const route = shellRoute(pathname);
   const dockPageTab = route.kind === "dock" ? route.tab : null;
   useEffect(() => {
+    if (island !== undefined) return;
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) {
         return;

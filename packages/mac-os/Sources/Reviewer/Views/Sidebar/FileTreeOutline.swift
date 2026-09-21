@@ -77,6 +77,7 @@ private struct OutlineRepresentable: NSViewRepresentable {
         outline.target = context.coordinator
         outline.doubleAction = #selector(OutlineCoordinator.doubleClicked)
         outline.menuForNode = { [coordinator = context.coordinator] node in coordinator.menu(for: node) }
+        outline.hoveredNode = { [coordinator = context.coordinator] node in coordinator.hovered(node) }
         outline.appearanceChanged = { [coordinator = context.coordinator] in coordinator.redrawVisibleRows() }
         context.coordinator.outline = outline
 
@@ -331,6 +332,13 @@ private final class OutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOut
     func menu(for node: FileTreeNode) -> NSMenu {
         NSHostingMenu(rootView: TreeRowMenu(path: node.id, prompt: prompt).environment(model))
     }
+
+    /// The pointer has come to rest over a file: the page renders it now, so
+    /// the click lands on a file already on screen rather than a loader.
+    func hovered(_ node: FileTreeNode) {
+        guard !node.isDirectory, node.id != tree.selected else { return }
+        model.act(onTree: .intent(node.id))
+    }
 }
 
 /// The outline with the web tree's keys and menu: Left on a file or a closed
@@ -342,7 +350,10 @@ private final class OutlineCoordinator: NSObject, NSOutlineViewDataSource, NSOut
 private final class FileTreeOutlineView: NSOutlineView {
     var menuForNode: ((FileTreeNode) -> NSMenu?)?
     var appearanceChanged: (() -> Void)?
+    /// Told once per row the pointer moves onto, not once per pixel.
+    var hoveredNode: ((FileTreeNode) -> Void)?
     private var hoverTracking: NSTrackingArea?
+    private var hoveredRow = -1
 
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
@@ -359,10 +370,15 @@ private final class FileTreeOutlineView: NSOutlineView {
         let row = row(at: convert(event.locationInWindow, from: nil))
         let cell = row >= 0 ? view(atColumn: 0, row: row, makeIfNecessary: false) as? FileTreeCellView : nil
         PathTooltip.shared.hover(cell?.tip, at: event.locationInWindow, in: window)
+        if row != hoveredRow {
+            hoveredRow = row
+            if row >= 0, let node = item(atRow: row) as? FileTreeNode { hoveredNode?(node) }
+        }
     }
 
     override func mouseExited(with event: NSEvent) {
         super.mouseExited(with: event)
+        hoveredRow = -1
         PathTooltip.shared.hide()
     }
 

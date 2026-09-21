@@ -22,7 +22,7 @@ import {
   IconRefresh,
   IconSearch,
 } from "@tabler/icons-react";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Button } from "@/components/ui/button";
@@ -113,10 +113,14 @@ export function FindUsagesPanel() {
     selectUsage(next.id);
   };
 
+  // Sized on its own element: nothing outside the column is laid out by its
+  // width, so the drag's style recalc need not reach past it.
+  const resultsColumn = useRef<HTMLDivElement>(null);
   const resultsPane = usePanelSize(
     "find-results",
     prefs.findResultsWidth,
-    "width"
+    "width",
+    resultsColumn
   );
 
   return (
@@ -136,6 +140,7 @@ export function FindUsagesPanel() {
       />
 
       <div
+        ref={resultsColumn}
         className="flex min-w-0 shrink-0 flex-col border-r"
         style={resultsPane.style}
       >

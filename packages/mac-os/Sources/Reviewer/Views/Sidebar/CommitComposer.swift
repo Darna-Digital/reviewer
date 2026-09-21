@@ -19,7 +19,7 @@ struct CommitComposer: View {
     @State private var message = ""
     @State private var excluded: Set<String> = []
     @AppStorage("commit-agent") private var agent: CommitAgent = .claude
-    @FocusState private var composerFocused: Bool
+    @State private var composerFocused = false
     @State private var agentPickerOpen = false
     @State private var controlsHovered = false
     @AppStorage("commit-files-height") private var savedFilesHeight = 180.0
@@ -96,20 +96,10 @@ struct CommitComposer: View {
     // scrolls clear of them, instead of the box ending in an empty band
     // the height of the controls.
     private var messageBox: some View {
-        TextEditor(text: $message)
-            .font(.system(size: 12))
-            .scrollContentBackground(.hidden)
-            .focused($composerFocused)
-            // ⌘↩ commits from the message box alone. As the Commit button's key
-            // equivalent it answered window-wide, so the same chord in a comment
-            // field in the web view committed the tree instead of posting the
-            // comment; on the editor it fires only while the message has focus.
-            .onKeyPress(.return, phases: .down) { press in
-                guard press.modifiers == .command else { return .ignored }
-                commit(push: false)
-                return .handled
-            }
-            .contentMargins(.bottom, Self.controlsClearance, for: .scrollContent)
+        CommitMessageEditor(
+            text: $message, focused: $composerFocused, bottomClearance: Self.controlsClearance,
+            pointerYieldsToControls: controlsHovered
+        ) { commit(push: false) }
             .padding(.horizontal, 6)
             .padding(.top, 6)
             .frame(height: messageHeight)
@@ -145,6 +135,8 @@ struct CommitComposer: View {
         .opacity(draftControlsShown ? 1 : 0)
         .allowsHitTesting(draftControlsShown)
         .animation(.easeOut(duration: 0.15), value: draftControlsShown)
+        // Under the pointer, the pair also has the box give up its I-beam
+        // for the arrow — see `CommitMessageEditor`.
         .onHover { controlsHovered = $0 }
     }
 

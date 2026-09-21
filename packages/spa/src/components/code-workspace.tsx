@@ -58,6 +58,7 @@ import {
   type DraftLocation,
 } from "@/interactions/diff/components/diff-pane";
 import { CodeView } from "@/components/editor/code-view";
+import { usePrerenderFile } from "@/components/editor/prerender";
 import type { RevealTarget } from "@/interactions/language/components/use-reveal-line";
 import { ImageView, isImagePath } from "@/components/editor/image-view";
 import { ConflictBanner } from "@/components/git/conflict-banner";
@@ -256,9 +257,9 @@ export function CodeWorkspace() {
     [mergeState.data]
   );
   // The history dock lives in the layout above this page and owns its own
-  // paging; what is read here is the filter it is on, which the trail and the
-  // per-file diff filter both reflect. See `history-filters.store`.
-  const { ref: logRef, query: logFilters } = useHistoryFilters();
+  // paging; what is read here is the ref it is on, which the trail names. See
+  // `history-filters.store`.
+  const { ref: logRef } = useHistoryFilters();
 
   const [draft, setDraft] = useState<DraftLocation | null>(null);
 
@@ -364,14 +365,16 @@ export function CodeWorkspace() {
   );
 
   // Opening a commit out of a file's history shows just that file's side of it,
-  // like the log's filter reads. Commits from before a rename don't carry the
-  // path, so those fall back to the whole commit.
+  // like the log's filter reads. The file rides in the URL rather than being
+  // read off the dock's filter, since inside the macOS shell the history is
+  // native and the dock's filter never hears of it. Commits from before a
+  // rename don't carry the path, so those fall back to the whole commit.
+  const historyPath = search.history ?? null;
   const diffFiles = useMemo(() => {
-    if (logFilters.path === null || target?.kind !== "commit")
-      return parsedFiles;
-    const forPath = parsedFiles.filter((f) => f.name === logFilters.path);
+    if (historyPath === null || target?.kind !== "commit") return parsedFiles;
+    const forPath = parsedFiles.filter((f) => f.name === historyPath);
     return forPath.length > 0 ? forPath : parsedFiles;
-  }, [parsedFiles, logFilters.path, target?.kind]);
+  }, [parsedFiles, historyPath, target?.kind]);
 
   // Reset the comment draft when the diff target or the open file changes.
   useEffect(() => setDraft(null), [targetKey, search.file]);
@@ -474,7 +477,7 @@ export function CodeWorkspace() {
         target: dest,
         catalog: chatModels.data,
         place: assignPlace,
-        title: buildReviewAssignmentTitle(count),
+        title: buildReviewAssignmentTitle(visibleComments),
         prompt: buildReviewAssignmentPrompt(visibleComments),
       });
       if (chatId === null) return;
@@ -735,6 +738,21 @@ export function CodeWorkspace() {
   const selectTab = (path: string) => {
     whenMayLeaveFile(path, () => setSearch({ file: path }));
   };
+
+  // Every file in the strip, read and highlighted while the window has nothing
+  // else to do. A tab is already open as far as you are concerned — clicking it
+  // should show the file, not start rendering it — and waiting for the pointer
+  // to reach the tab is too late for a click that follows straight after.
+  const prerenderFile = usePrerenderFile();
+  const openTabs = tabs.tabs;
+  useEffect(() => {
+    if (openTabs.length === 0) return;
+    const warm = () => {
+      for (const tab of openTabs) prerenderFile(tab.path);
+    };
+    const idle = window.requestIdleCallback(warm, { timeout: 2_000 });
+    return () => window.cancelIdleCallback(idle);
+  }, [openTabs, prerenderFile]);
   const closeTabAt = (path: string) => {
     // Closing another tab leaves the edited file where it is; only closing the
     // one holding the buffer throws it away.
@@ -797,14 +815,14 @@ export function CodeWorkspace() {
         label: "History",
         icon: IconHistory,
       });
-      // The ref and the filtered file are read off the page's own history
-      // dock. An island has none — its log is the shell's, native beside it —
-      // so those two crumbs would name a filter nothing on screen is on.
+      // The ref is read off the page's own history dock. An island has none —
+      // its log is the shell's, native beside it — so that crumb would name a
+      // ref nothing on screen is on. The filtered file came in the URL, so it
+      // names what the diff shows on either surface.
       const historyRef =
         island === undefined
           ? (logRef ?? repo.data?.currentBranch ?? null)
           : null;
-      const historyPath = island === undefined ? logFilters.path : null;
       if (browse.kind === "commit") {
         if (historyRef !== null) {
           list.push({
@@ -1050,6 +1068,7 @@ export function CodeWorkspace() {
     loading: mode === "review" ? diff.isPending : files.isPending,
     selectedFile: mode === "browse" ? viewing : (search.path ?? null),
     onFileSelect,
+    onFileIntent: prerenderFile,
     onShowHistory: showFileHistory,
     // A working-tree action, offered while the working tree is what is being
     // read: against a branch, the tree's badges are the comparison's and a
@@ -1178,6 +1197,7 @@ export function CodeWorkspace() {
         active: tabs.active,
         dirty: dirtyPaths,
         onSelect: selectTab,
+        onIntent: prerenderFile,
         onKeep: (path) => updateTabs((state) => keepTab(state, path)),
         onClose: closeTabAt,
         onTogglePin: (path) => updateTabs((state) => togglePin(state, path)),

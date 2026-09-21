@@ -100,6 +100,7 @@ final class AppModel {
         palette = CommandPalette(client: client)
         catalog = RepoCatalog(client: client)
         palette.onOpen = { [weak self] path, line in self?.show(file: path, line: line) }
+        palette.onIntent = { [weak self] path in self?.page.send(TreeAction.intent(path)) }
         palette.onCheckout = { [weak self] ref in self?.checkout(ref) }
         palette.commandSource = { [weak self] in self?.paletteCommands() ?? [] }
         palette.branchSource = { [weak self] in self?.paletteBranches() ?? [] }
@@ -541,7 +542,7 @@ final class AppModel {
     /// A commit picked out of the history: the page on its diff. A history
     /// narrowed to a file opens the commit on that file.
     func show(commit: CommitInfo) {
-        showOnCodeTab(Href.commit(commit.sha, path: history.query.path))
+        showOnCodeTab(Href.commit(commit.sha, history: history.query.path))
     }
 
     /// A file of the selected commit: the commit's diff, on that file.

@@ -95,11 +95,7 @@ struct ReviewerCommands: Commands {
             Button("Commands…") { model.showCommands() }
                 .keyboardShortcut("k", modifiers: .command)
                 .disabled(!model.hasProject)
-            Button("Go to File…") { model.findFile() }
-                .keyboardShortcut("o", modifiers: [.command, .shift])
-                .disabled(!model.hasProject)
-            Button("Search in Files…") { model.findInFiles() }
-                .keyboardShortcut("f", modifiers: [.command, .shift])
+            SearchMenuItems(model: model)
                 .disabled(!model.hasProject)
         }
         // The View menu: the sidebar on the system's own chord for it,
@@ -180,5 +176,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         true
+    }
+}
+
+/// The two lists worth opening straight into, wherever the trigger lives —
+/// the Edit menu, and the rail's search (see `AppRail`) — so the offer
+/// never drifts between the two. The chords are the main menu's to answer;
+/// the rail's copy only shows them. The model comes in by hand: the menu
+/// bar stands outside the window's environment.
+struct SearchMenuItems: View {
+    let model: AppModel
+
+    var body: some View {
+        Button("Go to File…") { model.findFile() }
+            .keyboardShortcut("o", modifiers: [.command, .shift])
+        Button("Search in Files…") { model.findInFiles() }
+            .keyboardShortcut("f", modifiers: [.command, .shift])
     }
 }

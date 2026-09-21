@@ -148,6 +148,7 @@ export function GitBottomDock({
       search: (prev: Record<string, unknown>) => ({
         ...prev,
         path: logFilters.path ?? undefined,
+        history: logFilters.path ?? undefined,
         file: undefined,
       }),
     });

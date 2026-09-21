@@ -162,6 +162,14 @@ struct PaletteRow: Identifiable {
     /// Rows that lead deeper into the palette keep it open.
     var closesOnRun = true
     let run: @MainActor () -> Void
+
+    /// The file running the row opens, where it opens one.
+    var path: String? {
+        switch content {
+        case .file(let path), .match(let path, _, _): return path
+        case .command, .branch: return nil
+        }
+    }
 }
 
 @MainActor
@@ -192,6 +200,9 @@ final class CommandPalette {
 
     /// What a search row opens: a file, at a line when a text hit named one.
     @ObservationIgnored var onOpen: ((String, Int?) -> Void)?
+    /// The file the highlighted row would open. Return is a keystroke away
+    /// from it, so this is the moment to have the page read and highlight it.
+    @ObservationIgnored var onIntent: ((String) -> Void)?
     /// What a branch row does: the checkout.
     @ObservationIgnored var onCheckout: ((String) -> Void)?
     /// The shell's commands and branches, read whenever a list is shown so

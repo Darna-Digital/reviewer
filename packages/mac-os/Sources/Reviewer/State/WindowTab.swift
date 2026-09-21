@@ -146,12 +146,16 @@ enum Href {
         return Int(digits)
     }
 
-    /// One commit's diff, read on the browse page — on `path`'s own diff,
-    /// when one is named.
-    static func commit(_ sha: String, path: String?) -> String {
+    /// One commit's diff, read on the browse page — scrolled to `path`'s
+    /// own diff, when one is named. A commit picked out of one file's
+    /// history is `history`'s side of it alone, the way that log reads.
+    static func commit(_ sha: String, path: String? = nil, history: String? = nil) -> String {
         var components = URLComponents()
         components.path = "\(browsePath)/commit/\(sha)"
-        if let path { components.queryItems = [URLQueryItem(name: "path", value: path)] }
+        var items: [URLQueryItem] = []
+        if let path { items.append(URLQueryItem(name: "path", value: path)) }
+        if let history { items.append(URLQueryItem(name: "history", value: history)) }
+        if !items.isEmpty { components.queryItems = items }
         return components.string ?? "\(browsePath)/commit/\(sha)"
     }
 

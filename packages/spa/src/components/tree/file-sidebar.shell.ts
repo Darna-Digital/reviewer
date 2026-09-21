@@ -39,6 +39,8 @@ export interface ShellTreeSource {
   readonly loading: boolean;
   readonly projectPath: string | null;
   readonly onFileSelect: (path: string | null) => void;
+  /** A file the pointer has reached — read and highlighted ahead of a click. */
+  readonly onFileIntent?: (path: string) => void;
   readonly onShowHistory: (path: string) => void;
   readonly onDiscardPaths?: (paths: ReadonlyArray<string>) => void;
   readonly commit?: ShellCommitSource;
@@ -72,6 +74,8 @@ const act = (source: ShellTreeSource, action: ShellTreeAction): void => {
   switch (action.kind) {
     case "select":
       return source.onFileSelect(action.path);
+    case "intent":
+      return source.onFileIntent?.(action.path);
     case "history":
       return source.onShowHistory(action.path);
     case "discard":

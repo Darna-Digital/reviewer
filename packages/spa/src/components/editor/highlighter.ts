@@ -72,6 +72,26 @@ export function filetypeOf(path: string): string {
 export const fileCacheKey = (path: string, contents: string): string =>
   `${path}:${contentCacheKey(contents)}`;
 
+/**
+ * Past this many lines a `File` paints plain whatever the pool holds for it —
+ * the library's own `tokenizeMaxLength` — so highlighting one in a worker only
+ * heats the worker, and gating a mount on it only delays the plain paint.
+ */
+const TOKENIZE_MAX_LINES = 100_000;
+
+/** Whether the pool's highlight of this file would ever reach the screen. */
+export function isHighlightable(file: FileContents): boolean {
+  let lines = 1;
+  for (
+    let at = file.contents.indexOf("\n");
+    at !== -1;
+    at = file.contents.indexOf("\n", at + 1)
+  ) {
+    if (++lines > TOKENIZE_MAX_LINES) return false;
+  }
+  return true;
+}
+
 /** The file as the pool wants it: named, and keyed so its highlight is cached. */
 export function fileForHighlighting(
   path: string,
@@ -141,7 +161,7 @@ export function useHighlightPrimed(
 
   useEffect(() => {
     if (!enabled || file === null || pool === undefined) return;
-    if (pool.getFileResultCache(file) !== undefined) {
+    if (pool.getFileResultCache(file) !== undefined || !isHighlightable(file)) {
       setPrimed(true);
       return;
     }

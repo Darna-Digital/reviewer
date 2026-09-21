@@ -782,7 +782,7 @@ export function DiffPane({
       themeType: theme,
       diffStyle: laidOut,
       lineDiffType: "word",
-      overflow: laidOut === "split" ? "scroll" : "wrap",
+      overflow: "scroll",
       stickyHeaders: false,
       layout: LAYOUT,
       // Full-file support: the loader hydrates the unchanged regions of a

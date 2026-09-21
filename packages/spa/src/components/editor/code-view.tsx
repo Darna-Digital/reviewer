@@ -112,7 +112,9 @@ export function CodeView({
    * to the offer the editor floats over a selection.
    */
   const editing = isEditablePath(path);
-  const langReady = useLangReady(path, true);
+  // Only the editable view renders off the main-thread highlighter; a read-only
+  // file is served by the worker pool, and primed there below.
+  const langReady = useLangReady(path, editing);
   const contents = file.data?.contents;
   const scrollWrapper = useRef<HTMLDivElement>(null);
   const commentsEnabled =
@@ -224,8 +226,12 @@ export function CodeView({
     );
     return externalFile.current;
   }, [path, contents, readBuffer]);
-  // The editable view renders off the pool, so there is nothing to prime.
-  const highlightPrimed = useHighlightPrimed(highlightFile, false);
+  // A read-only file waits for its highlight to be in the pool's cache before
+  // mounting, so its first frame is coloured. A file prerendered ahead of the
+  // click — hovered in the tree, or an open tab — is already there, and never
+  // waits; see `usePrerenderFile`. The editable view renders off the pool, so
+  // there is nothing to prime for it.
+  const highlightPrimed = useHighlightPrimed(highlightFile, !editing);
 
   // The editor keeps offering to comment for as long as the selection stands,
   // which would put the offer on top of the composer it just opened. The flag
@@ -452,8 +458,10 @@ export function CodeView({
               /* The editable view snapshots the rendered code when the editor
                attaches, so a worker highlight landing afterwards would never
                reach it; `useLangReady` primes the main-thread highlighter so
-               the first paint is coloured anyway. */
-              disableWorkerPool
+               the first paint is coloured anyway. A read-only file has no such
+               snapshot, and reads the pool's cache instead — which is what
+               lets it be highlighted before it is opened. */
+              disableWorkerPool={editing}
               lineAnnotations={annotationsEnabled ? annotations : undefined}
               renderAnnotation={
                 annotationsEnabled

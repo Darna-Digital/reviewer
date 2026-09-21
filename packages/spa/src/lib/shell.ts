@@ -173,6 +173,8 @@ export interface ShellCommitComposer {
  */
 export type ShellTreeAction =
   | { readonly kind: "select"; readonly path: string }
+  /** The pointer has reached a file's row in the shell's tree. */
+  | { readonly kind: "intent"; readonly path: string }
   | { readonly kind: "history"; readonly path: string }
   | { readonly kind: "discard"; readonly paths: ReadonlyArray<string> }
   | {

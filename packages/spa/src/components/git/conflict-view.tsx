@@ -186,7 +186,7 @@ export function ConflictView({
           options={{
             theme: THEMES,
             themeType: theme,
-            overflow: "wrap",
+            overflow: "scroll",
             stickyHeader: false,
           }}
           renderMergeConflictUtility={(action) => (

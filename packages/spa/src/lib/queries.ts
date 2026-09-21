@@ -502,13 +502,21 @@ export const useFileBytes = (path: string | null) =>
     { ...GIT_DATA, ...FILE_READ, enabled: path !== null }
   );
 
-export const useFile = (path: string | null) =>
-  api.useQuery(
+/**
+ * One file's text, under the key the viewer and the prerender share — so a
+ * file read ahead of a click (see `usePrerenderFile`) is the read the viewer
+ * finds waiting when the click lands.
+ */
+export const fileQueryOptions = (path: string) =>
+  api.queryOptions(
     "get",
     "/api/file",
-    { params: { query: { path: path ?? "" } } },
-    { ...GIT_DATA, ...FILE_READ, enabled: path !== null }
+    { params: { query: { path } } },
+    { ...GIT_DATA, ...FILE_READ }
   );
+
+export const useFile = (path: string | null) =>
+  useQuery({ ...fileQueryOptions(path ?? ""), enabled: path !== null });
 
 // --- reviewer cloud ---------------------------------------------------------
 
