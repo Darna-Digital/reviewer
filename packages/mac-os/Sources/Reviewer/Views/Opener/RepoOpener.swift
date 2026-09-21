@@ -349,7 +349,7 @@ private struct OpenerStatusBar: View {
         .padding(.horizontal, 12)
         .frame(height: 24)
         .background(.bar)
-        .overlay(alignment: .top) { Divider() }
+        .overlay(alignment: .top) { ThemedDivider() }
     }
 }
 

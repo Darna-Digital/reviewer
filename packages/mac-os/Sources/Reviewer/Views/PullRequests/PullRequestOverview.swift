@@ -36,15 +36,15 @@ struct PullRequestOverview: View {
                     identity
                     actions
                     if pull.blockedReason != nil || pull.checksHeadline != nil {
-                        Divider()
+                        ThemedDivider()
                         checks
                     }
                     if !pull.assignees.isEmpty || !pull.reviewers.isEmpty || !pull.labels.isEmpty {
-                        Divider()
+                        ThemedDivider()
                         details
                     }
                     if !pull.body.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Divider()
+                        ThemedDivider()
                         MarkdownText(text: pull.body)
                             .padding(12)
                             .padding(.bottom, 12)

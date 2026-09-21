@@ -162,12 +162,12 @@ private struct CommandTable: View {
                 Task { await services.start(id: command.id) }
             }
         }
-        Divider()
+        ThemedDivider()
         Button("Copy command") { copy(command.command) }
         if !command.cwd.isEmpty {
             Button("Show folder in Finder") { reveal(command.cwd) }
         }
-        Divider()
+        ThemedDivider()
         Button("Remove", role: .destructive) {
             Task { await services.remove(id: command.id) }
         }

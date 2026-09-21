@@ -37,7 +37,12 @@ struct AppRail: View {
             }
         }
         .padding(.top, 4)
-        .padding(.bottom, 4)
+        // The foot stands off the glass's bottom edge by the same gap the
+        // rail stands off its leading edge, so the last chip sits squarely
+        // in the sidebar's corner — and, the chip being 4pt taller than a
+        // regular button held off that edge by the composer's 8pt, its
+        // centre lands level with the Commit buttons' beside it.
+        .padding(.bottom, IslandMetrics.gap)
         .frame(width: Self.width)
         .frame(maxHeight: .infinity)
         .padding(.leading, inset)

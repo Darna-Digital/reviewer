@@ -255,7 +255,7 @@ struct MarkdownText: View {
                     }
                     .fixedSize(horizontal: false, vertical: true)
                 case .rule:
-                    Divider()
+                    ThemedDivider()
                 }
             }
         }

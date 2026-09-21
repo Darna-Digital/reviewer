@@ -1,7 +1,11 @@
 // The page island and the bottom pane are islands: rounded panels of the
-// web app's sheet colour, ringed by the separator, standing a few points
+// web app's sheet colour, ringed by a hairline, standing a few points
 // apart on its frame colour (see `IslandPalette`), the way the JetBrains
-// islands layout sets its tool windows beside the editor. The sidebar is
+// islands layout sets its tool windows beside the editor. The ring is the
+// hairline rather than the separator: on the app's own palette the two are
+// the one system colour, but a theme draws its separator at the weight of a
+// control's edge, and a panel ringed in that stood out against the rules
+// inside it and the web islands beside it, whose own edges are hairlines. The sidebar is
 // not one: it is the system's own column of glass, standing full height
 // beside the frame the islands are on (see `ContentView`). The toolbar and
 // the rail are not islands either: they are the window itself, bare, which
@@ -36,7 +40,7 @@ private struct IslandPanel: ViewModifier {
             .background(Color(nsColor: IslandPalette.island))
             .clipShape(IslandMetrics.shape)
             .overlay {
-                IslandMetrics.shape.strokeBorder(Color(nsColor: IslandPalette.separator), lineWidth: 1)
+                IslandMetrics.shape.strokeBorder(Color(nsColor: IslandPalette.hairline), lineWidth: 1)
             }
     }
 }

@@ -93,7 +93,7 @@ struct ColumnResizeHandle: View {
     @State private var startWidth: Double?
 
     var body: some View {
-        Divider()
+        ThemedDivider()
             .frame(width: 7)
             .contentShape(Rectangle())
             .onHover { hovering in
@@ -169,7 +169,7 @@ struct PaneBar<Content: View>: View {
             .padding(.horizontal, PaneMetrics.barInset)
             .frame(height: PaneMetrics.barHeight)
             .frame(maxWidth: .infinity)
-            .overlay(alignment: .bottom) { Divider() }
+            .overlay(alignment: .bottom) { ThemedDivider() }
     }
 }
 
@@ -188,7 +188,7 @@ struct PaneToolbar<Content: View>: View {
             .padding(.horizontal, PaneMetrics.barInset)
             .frame(height: PaneMetrics.toolbarHeight)
             .frame(maxWidth: .infinity)
-            .overlay(alignment: .bottom) { Divider() }
+            .overlay(alignment: .bottom) { ThemedDivider() }
     }
 }
 
@@ -270,7 +270,7 @@ struct PaneFooter<Content: View>: View {
             .padding(.horizontal, 4)
             .frame(height: PaneMetrics.footerHeight)
             .frame(maxWidth: .infinity)
-            .overlay(alignment: .top) { Divider() }
+            .overlay(alignment: .top) { ThemedDivider() }
     }
 }
 

@@ -412,7 +412,7 @@ private struct ResizeHandle: View {
     @State private var startHeight: Double?
 
     var body: some View {
-        Divider()
+        ThemedDivider()
             .opacity(rule ? 1 : 0)
             .frame(height: 7)
             .contentShape(Rectangle())

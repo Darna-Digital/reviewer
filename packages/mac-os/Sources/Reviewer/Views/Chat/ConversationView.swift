@@ -45,7 +45,7 @@ struct ConversationView: View {
                     .padding(.vertical, 4)
                     .frame(maxWidth: .infinity)
                     .background(Color.orange.opacity(0.1))
-                    .overlay(alignment: .bottom) { Divider() }
+                    .overlay(alignment: .bottom) { ThemedDivider() }
             }
             if chat.messages.isEmpty {
                 Text("Send a message to start the conversation.")

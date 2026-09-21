@@ -47,7 +47,7 @@ struct BottomPane: View {
         }
         .controlSize(.small)
         .frame(height: Self.barHeight)
-        .overlay(alignment: .bottom) { Divider() }
+        .overlay(alignment: .bottom) { ThemedDivider() }
     }
 
     @ViewBuilder

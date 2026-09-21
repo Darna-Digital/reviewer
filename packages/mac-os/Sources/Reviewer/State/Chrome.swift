@@ -186,3 +186,26 @@ struct ThemeInk: ViewModifier {
 extension View {
     func themeInk() -> some View { modifier(ThemeInk()) }
 }
+
+/// A rule in the theme's hairline. SwiftUI draws a `Divider` in the
+/// tertiary level of the foreground style it stands in, which `ThemeInk`
+/// names outright — and a theme's tertiary is still type, inked to read as
+/// type, far too loud for a rule between two things on one sheet. So under
+/// a theme the divider's own line is hidden and the hairline the SPA's
+/// inner rules are drawn in is laid in its place — hidden rather than
+/// washed over, since the hairline is nearly clear and the system's line
+/// showed straight through it; on the app's own palette it is left exactly
+/// the system's. Keeps `Divider`'s own axis — across a VStack, down an
+/// HStack — so it stands in wherever one did. Not for a menu's rows: those are the
+/// system's, and take no overlay.
+struct ThemedDivider: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        if ChromePalette.shared.isThemed(colorScheme == .dark ? .dark : .light) {
+            Divider().hidden().overlay(Color(nsColor: IslandPalette.hairline))
+        } else {
+            Divider()
+        }
+    }
+}
