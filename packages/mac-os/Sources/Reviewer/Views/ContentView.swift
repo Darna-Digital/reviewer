@@ -128,6 +128,9 @@ private struct SidebarColumn: View {
         }
         .clipped()
         .animation(SidebarMotion.change, value: model.railShown)
+        // The theme's ink over the column's content, and not over the bar
+        // above it (see `ThemeInk`).
+        .themeInk()
     }
 }
 
@@ -163,6 +166,7 @@ private struct DetailColumn: View {
     var body: some View {
         islands
             .background(Color(nsColor: IslandPalette.frame))
+            .themeInk()
     }
 
     /// Whether the rail stands on the frame ahead of the islands, holding
@@ -371,7 +375,7 @@ struct ConnectionView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: 480)
-                Button("Try Again") { Task { await model.bootstrap() } }
+                Button("Try again") { Task { await model.bootstrap() } }
                     .keyboardShortcut(.defaultAction)
             default:
                 Orb(size: 20)

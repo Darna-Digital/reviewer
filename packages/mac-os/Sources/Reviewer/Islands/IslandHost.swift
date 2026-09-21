@@ -54,6 +54,7 @@ final class IslandHost: NSObject {
     @ObservationIgnored private var loaded = false
     @ObservationIgnored private lazy var view: IslandWebView = makeWebView()
     @ObservationIgnored private var appearanceObservation: NSKeyValueObservation?
+    @ObservationIgnored private var paletteObservation: (any NSObjectProtocol)?
 
     init(kind: IslandKind, href: String, source: SpaSource, apiBaseURL: URL) {
         self.kind = kind
@@ -175,17 +176,27 @@ final class IslandHost: NSObject {
             WKUserScript(source: NativePalette.applyScript(), injectionTime: .atDocumentStart, forMainFrameOnly: true))
     }
 
-    /// Dark to light and back: the live document is repainted, and the
-    /// document-start script rewritten so a reload paints right from the
-    /// start too.
+    /// Dark to light and back, and one theme to another: the live document
+    /// is repainted, and the document-start script rewritten so a reload
+    /// paints right from the start too.
     private func observeAppearance(for webView: WKWebView) {
         appearanceObservation = NSApp.observe(\.effectiveAppearance) { [weak self] _, _ in
             Task { @MainActor [weak self] in
-                guard let self else { return }
-                self.installUserScripts(in: webView.configuration.userContentController)
-                webView.evaluateJavaScript(NativePalette.applyScript()) { _, _ in }
+                self?.repaint(webView)
             }
         }
+        paletteObservation = NotificationCenter.default.addObserver(
+            forName: ChromePalette.didChange, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.repaint(webView)
+            }
+        }
+    }
+
+    private func repaint(_ webView: WKWebView) {
+        installUserScripts(in: webView.configuration.userContentController)
+        webView.evaluateJavaScript(NativePalette.applyScript()) { _, _ in }
     }
 
     private static let messageHandlerName = "reviewerShell"

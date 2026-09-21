@@ -154,6 +154,7 @@ final class AppModel {
         do {
             try await ServerLauncher.shared.ensureRunning()
             connection = .ready
+            settings.paintThemes()
             await refresh()
         } catch {
             connection = .failed(error.localizedDescription)
@@ -517,7 +518,7 @@ final class AppModel {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = false
-        panel.prompt = "Open Repository"
+        panel.prompt = "Open repository"
         panel.message = "Choose a git repository."
         if let home = workspace?.home {
             panel.directoryURL = URL(fileURLWithPath: home)

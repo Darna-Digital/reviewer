@@ -18,7 +18,7 @@ import {
   SidebarSearch,
 } from "@/components/layout/sidebar-filters";
 import { Button } from "@/components/ui/button";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
@@ -165,7 +165,7 @@ function ReviewsList() {
           </p>
         ) : loading && items.length === 0 ? (
           <div className="px-3 py-3">
-            <LoadingCursor label="Loading merge requests…" />
+            <Orb size={16} label="Loading merge requests…" />
           </div>
         ) : items.length === 0 ? (
           hasGitHub ? (

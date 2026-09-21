@@ -1,6 +1,7 @@
 // The settings window — ⌘, and the app menu's Settings…: the system's
-// grouped form, one section for each of the three things it holds. Theme
-// is the one control; git is read from the server and said as it stands,
+// grouped form, one section for each of the three things it holds.
+// Appearance is the one the window owns — the scheme, and the theme for
+// each scheme, from the server's catalog; git is read from the server and said as it stands,
 // since it is not the window's to edit; GitHub is the account the server
 // works as, with a sign-in when there is none — the CLI's device flow, the
 // code shown here and the page it goes on opened (see `AppSettings`).
@@ -18,13 +19,20 @@ struct SettingsView: View {
     var body: some View {
         @Bindable var settings = model.settings
         Form {
-            Section("Appearance") {
-                Picker("Theme", selection: $settings.theme) {
+            Section {
+                Picker("Appearance", selection: $settings.theme) {
                     ForEach(ThemePreference.allCases) { theme in
                         Label(theme.title, systemImage: theme.symbol).tag(theme)
                     }
                 }
                 .pickerStyle(.segmented)
+                ThemePicker("Light theme", scheme: .light, selection: $settings.lightTheme, catalog: model.settings.themes)
+                ThemePicker("Dark theme", scheme: .dark, selection: $settings.darkTheme, catalog: model.settings.themes)
+            } header: {
+                SectionHeader(
+                    "Appearance",
+                    help: "One theme for each scheme: a theme is written for a light or a dark editor, and System walks between the two as the day does. The window, the code and the terminal are all drawn in it."
+                )
             }
             Section {
                 GitIdentityRows(read: model.settings.identity, hasProject: model.hasProject)
@@ -54,8 +62,9 @@ struct SettingsView: View {
         // A grouped form is a list, and a list reports no ideal height: the
         // window is sized here, tall enough for every section with its
         // rows in, and scrolls should a reason or a name run long.
-        .frame(width: 480, height: 400)
+        .frame(width: 480, height: 470)
         .task { await model.settings.reload() }
+        .task { await model.settings.loadThemes() }
         .onChange(of: model.workspace?.project) { Task { await model.settings.reload() } }
     }
 }
@@ -99,6 +108,56 @@ private struct SectionHeader<Trailing: View>: View {
     }
 }
 
+/// One scheme's theme, from the catalog's themes for that scheme, grouped
+/// by where they come from — the app's own pair first, then Pierre's, then
+/// Shiki's — each with a swatch of its sheet and accent beside its name.
+/// Until the catalog is read the menu holds only the chosen name, so the
+/// row never comes up empty.
+private struct ThemePicker: View {
+    let title: String
+    let scheme: ThemeDescriptor.ColorScheme
+    @Binding var selection: String
+    let catalog: SettingsRead<[ThemeDescriptor]>
+
+    init(_ title: String, scheme: ThemeDescriptor.ColorScheme, selection: Binding<String>, catalog: SettingsRead<[ThemeDescriptor]>) {
+        self.title = title
+        self.scheme = scheme
+        _selection = selection
+        self.catalog = catalog
+    }
+
+    private static let collectionTitles = ["reviewer": "Reviewer", "pierre": "Pierre", "shiki": "Shiki"]
+
+    /// The scheme's themes by collection, in the catalog's own order.
+    private var groups: [(collection: String, themes: [ThemeDescriptor])] {
+        guard let themes = catalog.value else {
+            return [("", [ThemeDescriptor(name: selection, displayName: selection, colorScheme: scheme, collection: "")])]
+        }
+        var groups: [(collection: String, themes: [ThemeDescriptor])] = []
+        for theme in themes where theme.colorScheme == scheme {
+            if let at = groups.firstIndex(where: { $0.collection == theme.collection }) {
+                groups[at].themes.append(theme)
+            } else {
+                groups.append((theme.collection, [theme]))
+            }
+        }
+        return groups
+    }
+
+    var body: some View {
+        Picker(title, selection: $selection) {
+            ForEach(groups, id: \.collection) { group in
+                Section(Self.collectionTitles[group.collection] ?? group.collection) {
+                    ForEach(group.themes) { theme in
+                        Text(theme.displayName).tag(theme.name)
+                    }
+                }
+            }
+        }
+        .pickerStyle(.menu)
+    }
+}
+
 /// Name and email, or why there are none: no project open, git without
 /// either set, or a read that failed.
 private struct GitIdentityRows: View {
@@ -111,7 +170,7 @@ private struct GitIdentityRows: View {
         } else {
             switch read {
             case .loading:
-                SettingsNote("Reading…")
+                SettingsWait("Reading…")
             case .failed(let reason):
                 SettingsNote(reason, tone: .warning)
             case .loaded(let identity):
@@ -147,10 +206,7 @@ private struct GitHubAccountRows: View {
     var body: some View {
         switch settings.signIn {
         case .starting:
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text("Asking GitHub for a code…").foregroundStyle(.secondary)
-            }
+            SettingsWait("Asking GitHub for a code…")
         case .waiting(let code, _):
             SignInCodeRow(code: code, settings: settings)
         case .failed(let reason):
@@ -158,10 +214,7 @@ private struct GitHubAccountRows: View {
         case .idle:
             switch settings.githubAuth {
             case .loading:
-                HStack(spacing: 8) {
-                    ProgressView().controlSize(.small)
-                    Text("Checking…").foregroundStyle(.secondary)
-                }
+                SettingsWait("Checking…")
             case .failed(let reason):
                 SettingsNote(reason, tone: .warning)
             case .loaded(let auth):
@@ -232,7 +285,7 @@ private struct SignInOfferRow: View {
                 .foregroundStyle(.tertiary)
             Text("Not signed in").fontWeight(.medium)
             Spacer()
-            Button("Sign In…") { settings.signInToGitHub() }
+            Button("Sign in…") { settings.signInToGitHub() }
                 .buttonStyle(.borderedProminent)
                 .help("Sign in with gh auth login — pull requests, checks and merges need an account")
         }
@@ -257,16 +310,14 @@ private struct SignInCodeRow: View {
                     .tracking(2)
                     .textSelection(.enabled)
                 Spacer()
-                Button("Copy Code") { settings.copySignInCode() }
+                Button("Copy code") { settings.copySignInCode() }
                     .help("Copy the code again")
                 Button("Open GitHub") { settings.openSignInPage() }
                     .help("Open the page the code goes on again")
             }
             HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text("Waiting for GitHub…")
+                SettingsWait("Waiting for GitHub…")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
                     .help("The code is on your pasteboard and the page is open in your browser")
                 Spacer()
                 Button("Cancel") { settings.cancelSignIn() }
@@ -303,7 +354,7 @@ private struct SignInFailedRow: View {
             HStack {
                 Spacer()
                 Button("Dismiss") { settings.dismissSignInFailure() }
-                Button("Try Again") { settings.signInToGitHub() }
+                Button("Try again") { settings.signInToGitHub() }
                     .buttonStyle(.borderedProminent)
             }
         }
@@ -316,6 +367,22 @@ private extension GitHubAuth.Source {
         switch self {
         case .env: "Token from the environment"
         case .gh: "Via the gh CLI"
+        }
+    }
+}
+
+/// A wait, wearing the orb every wait in the app wears — never a spinner.
+private struct SettingsWait: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Orb(size: 16)
+            Text(text).foregroundStyle(.secondary)
         }
     }
 }

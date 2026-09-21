@@ -47,11 +47,7 @@ import { findUsages } from "@/interactions/find-usages/adapters/find-usages.stor
 import { SymbolCard } from "./symbol-card";
 import { useCompletions } from "./use-completions";
 import { useSymbolMenu } from "./use-symbol-menu";
-import {
-  CardSpinner,
-  HoverDocumentation,
-  TargetChoice,
-} from "./symbol-overlay";
+import { CardWait, HoverDocumentation, TargetChoice } from "./symbol-overlay";
 
 /** How long the pointer must rest on a token before documentation is fetched. */
 const HOVER_DELAY_MS = 350;
@@ -497,10 +493,10 @@ export function useLanguageLayer({
     if (card === null) return null;
     const body =
       card.kind === "busy" ? (
-        <CardSpinner label="Resolving…" />
+        <CardWait label="Resolving…" />
       ) : card.kind === "hover" ? (
         card.contents === null ? (
-          <CardSpinner label="Reading…" />
+          <CardWait label="Reading…" />
         ) : (
           <HoverDocumentation contents={card.contents} onOpen={openFromCard} />
         )

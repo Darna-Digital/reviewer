@@ -40,7 +40,7 @@ struct BranchPicker: View {
             ) {
                 Divider()
                 HStack(spacing: 2) {
-                    Button("New Branch…") { open = false; model.branchPrompt = .create(startPoint: nil) }
+                    Button("New branch…") { open = false; model.branchPrompt = .create(startPoint: nil) }
                     Button("Update") { open = false; model.fetch() }
                     Button("Push…") { open = false; model.push() }
                     Spacer(minLength: 0)
@@ -96,9 +96,9 @@ extension AppModel {
         if !branch.isCurrent {
             item("Checkout") { self.checkout(branch.ref) }
         }
-        item("New Branch from ‘\(branch.display)’…") { self.branchPrompt = .create(startPoint: branch.ref) }
+        item("New branch from ‘\(branch.display)’…") { self.branchPrompt = .create(startPoint: branch.ref) }
         if !branch.isCurrent {
-            item("Checkout and Update") { self.checkoutAndUpdate(branch.ref) }
+            item("Checkout and update") { self.checkoutAndUpdate(branch.ref) }
             divider()
             item("Compare with ‘\(head)’") { self.compare(base: branch.ref, head: head) }
             item("Review ‘\(head)’ against ‘\(branch.display)’") { self.review(head, against: branch.ref) }
@@ -157,7 +157,7 @@ private struct BranchPromptModifier: ViewModifier {
                 .disabled(name.isEmpty)
                 Button("Cancel", role: .cancel) {}
             } message: { _ in }
-            .alert("Rename Branch", isPresented: isPresented(\.isRename), presenting: model.branchPrompt) { prompt in
+            .alert("Rename branch", isPresented: isPresented(\.isRename), presenting: model.branchPrompt) { prompt in
                 TextField("New name", text: $name)
                 Button("Rename") {
                     if case .rename(let from) = prompt { model.renameBranch(from, to: name) }
@@ -165,7 +165,7 @@ private struct BranchPromptModifier: ViewModifier {
                 .disabled(name.isEmpty)
                 Button("Cancel", role: .cancel) {}
             } message: { _ in }
-            .alert("Delete Branch", isPresented: isPresented(\.isDelete), presenting: model.branchPrompt) { prompt in
+            .alert("Delete branch", isPresented: isPresented(\.isDelete), presenting: model.branchPrompt) { prompt in
                 Button("Delete", role: .destructive) {
                     if case .delete(let target) = prompt { model.deleteBranch(target) }
                 }
@@ -179,8 +179,8 @@ private struct BranchPromptModifier: ViewModifier {
     }
 
     private var createTitle: String {
-        if case .create(let start?)? = model.branchPrompt { return "New Branch from ‘\(start)’" }
-        return "New Branch"
+        if case .create(let start?)? = model.branchPrompt { return "New branch from ‘\(start)’" }
+        return "New branch"
     }
 
     private func isPresented(_ kind: KeyPath<BranchPrompt, Bool>) -> Binding<Bool> {

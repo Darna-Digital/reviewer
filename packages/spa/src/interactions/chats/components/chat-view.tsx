@@ -5,7 +5,7 @@
  */
 import { IconPlugConnectedX } from "@tabler/icons-react";
 import { toast } from "sonner";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { useChatStream } from "@/interactions/chats/adapters/chats.stream.adapter";
 import { useMarkChatSeen } from "@/interactions/chats/adapters/chat-seen.hook.adapter";
 import { useChatsActions } from "@/interactions/chats/adapters/chats.hook.adapter";
@@ -39,7 +39,7 @@ export function ChatView({ chatId }: { chatId: string }) {
   if (chat === null) {
     return (
       <div className="flex h-full items-center justify-center">
-        <LoadingCursor label="Loading thread…" />
+        <Orb size={16} label="Loading thread…" />
       </div>
     );
   }

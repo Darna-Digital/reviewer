@@ -101,16 +101,16 @@ struct PaletteSubmenu {
 
     static let all: [PaletteSubmenu] = [
         PaletteSubmenu(
-            mode: .files, label: "Go to File…", group: "Search", symbol: "doc",
+            mode: .files, label: "Go to file…", group: "Search", symbol: "doc",
             keywords: "open path jump navigate", hint: "⇧⇧"),
         PaletteSubmenu(
-            mode: .text, label: "Search in Files…", group: "Search", symbol: "magnifyingglass",
+            mode: .text, label: "Search in files…", group: "Search", symbol: "magnifyingglass",
             keywords: "grep content text find occurrences", hint: "⇧⌘F"),
         PaletteSubmenu(
-            mode: .git, label: "Git Actions…", group: "Git", symbol: "arrow.triangle.branch",
+            mode: .git, label: "Git actions…", group: "Git", symbol: "arrow.triangle.branch",
             keywords: "fetch pull push branch merge rebase", hint: nil),
         PaletteSubmenu(
-            mode: .branches, label: "Switch Branch…", group: "Git", symbol: "arrow.left.arrow.right",
+            mode: .branches, label: "Switch branch…", group: "Git", symbol: "arrow.left.arrow.right",
             keywords: "checkout switch change branch", hint: nil),
     ]
 }

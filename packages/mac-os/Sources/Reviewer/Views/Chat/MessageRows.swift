@@ -23,8 +23,8 @@ struct UserMessageRow: View, Equatable {
                 }
                 if !message.text.isEmpty {
                     Text(message.text)
-                        .font(.system(size: 13))
-                        .lineSpacing(3)
+                        .font(.system(size: ChatLayout.bodySize))
+                        .lineSpacing(ChatLayout.bodyMetrics.leading)
                         .textSelection(.enabled)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 9)
@@ -47,12 +47,12 @@ struct AssistantMessageRow: View, Equatable {
     var body: some View {
         let steps = WorkLog.steps(of: activities, turnRunning: streaming)
         let active = streaming ? WorkLog.activeStep(steps) : nil
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
             if !steps.isEmpty {
                 WorkLogView(steps: steps)
             }
             if !message.text.isEmpty {
-                MarkdownText(text: message.text, size: 13)
+                MarkdownText(text: message.text, size: ChatLayout.bodySize)
             } else if !streaming && message.streaming {
                 Label("Stopped before replying.", systemImage: "stop.fill")
                     .font(.system(size: 11))

@@ -15,7 +15,7 @@ import type {
 } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { confirm } from "@/components/ui/alerts";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { revealPath } from "@/interactions/file-actions/adapters/reveal-path.adapter";
 import { withoutTrailingSlash } from "@/interactions/file-actions/functions/file-actions.functions";
 import type { TreeItem } from "@/interactions/file-actions/interfaces/file-actions.interfaces";
@@ -537,7 +537,7 @@ export function FileSidebar({
       >
         {loading ? (
           <div className="px-3 py-2">
-            <LoadingCursor label="Loading files…" />
+            <Orb size={16} label="Loading files…" />
           </div>
         ) : (
           <FileTree

@@ -33,7 +33,7 @@ export interface Crumb {
 export interface Submenu {
   readonly mode: Exclude<SearchMode, "commands">;
   readonly parent: SearchMode;
-  /** How the row that opens it reads, e.g. "Go to File…". */
+  /** How the row that opens it reads, e.g. "Go to file…". */
   readonly label: string;
   readonly group: string;
   readonly icon: React.ComponentType<{ className?: string }>;

@@ -32,7 +32,8 @@ import {
 import { toast } from "sonner";
 import { confirm } from "@/components/ui/alerts";
 import { Button } from "@/components/ui/button";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { useCodeThemes } from "@/components/editor/highlighter";
+import { Orb } from "@/components/ui/orb";
 import {
   Tooltip,
   TooltipContent,
@@ -146,8 +147,6 @@ const emptyHint = (target: DiffTarget): string => {
       return "This merge request has no diff.";
   }
 };
-
-const THEMES = { light: "github-light", dark: "github-dark" } as const;
 
 /**
  * The room under the last file, so its last lines clear the floating bars
@@ -349,6 +348,7 @@ export function DiffPane({
   onCommentReply: rawOnCommentReply,
   onOpenLocation: rawOnOpenLocation,
 }: DiffPaneProps) {
+  const codeThemes = useCodeThemes();
   // Every handler arrives from the shell as a fresh closure on each of its
   // renders. The viewer's render callbacks and options are memoised on what
   // they read, and a changed callback would have every rendered file drawn
@@ -783,7 +783,7 @@ export function DiffPane({
 
   const options = useMemo<ViewerOptions>(
     () => ({
-      theme: THEMES,
+      theme: codeThemes,
       themeType: theme,
       diffStyle: laidOut,
       lineDiffType: "word",
@@ -840,6 +840,7 @@ export function DiffPane({
       onDraftOpen,
       onPostRender,
       theme,
+      codeThemes,
     ]
   );
 
@@ -999,7 +1000,7 @@ export function DiffPane({
   if (loading) {
     return (
       <div className="p-8">
-        <LoadingCursor label="Loading diff…" />
+        <Orb size={16} label="Loading diff…" />
       </div>
     );
   }

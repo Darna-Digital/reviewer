@@ -4,11 +4,12 @@ import {
   Scripts,
   createRootRouteWithContext,
 } from "@tanstack/react-router";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 
 import { Alerts } from "@/components/ui/alerts";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { startChromeTheme } from "@/lib/chrome-theme";
 import { isDesktop } from "@/lib/desktop";
 import type { RouterContext } from "../router";
 import appCss from "../styles.css?url";
@@ -79,14 +80,22 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             frame off the page, and takes the theme from the appearance the
             shell names rather than from the media query: inside the sidebar's
             vibrancy that query answers for a variant WebKit does not read as
-            dark. */}
+            dark.
+
+            In the browser the window's palette is the theme's (see
+            `lib/chrome-theme`), and the chrome last derived for the scheme is
+            put back here from storage — under the same theme name the prefs
+            still hold — so a reload paints in its theme from the first frame.
+            An island is left alone: the shell sets the same properties itself
+            before this script runs. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(()=>{try{const r=document.documentElement;const t=localStorage.getItem("reviewer-theme")||"system";let a=null;try{a=(window.reviewer&&window.reviewer.appearance)||null}catch(e){}const d=t==="dark"||(t!=="light"&&(a?a==="dark":matchMedia("(prefers-color-scheme: dark)").matches));r.classList.toggle("dark",d);r.dataset.theme=d?"dark":"light";let k=false;try{k="reviewer" in window||(window!==parent&&"reviewer" in parent)}catch(e){}r.classList.toggle("desktop",k);let i="";try{i=(window.reviewer&&window.reviewer.island)||""}catch(e){}r.classList.toggle("island",i!=="");if(i)r.dataset.island=i;const p=JSON.parse(localStorage.getItem("reviewer-ui")||"{}");r.classList.toggle("translucent",p.translucency!==false);}catch(e){}})()`,
+            __html: `(()=>{try{const r=document.documentElement;const t=localStorage.getItem("reviewer-theme")||"system";let a=null;try{a=(window.reviewer&&window.reviewer.appearance)||null}catch(e){}const d=t==="dark"||(t!=="light"&&(a?a==="dark":matchMedia("(prefers-color-scheme: dark)").matches));r.classList.toggle("dark",d);r.dataset.theme=d?"dark":"light";let k=false;try{k="reviewer" in window||(window!==parent&&"reviewer" in parent)}catch(e){}r.classList.toggle("desktop",k);let i="";try{i=(window.reviewer&&window.reviewer.island)||""}catch(e){}r.classList.toggle("island",i!=="");if(i)r.dataset.island=i;const p=JSON.parse(localStorage.getItem("reviewer-ui")||"{}");r.classList.toggle("translucent",p.translucency!==false);if(!i){const c=(JSON.parse(localStorage.getItem("reviewer-chrome")||"{}")[d?"dark":"light"]);const n=localStorage.getItem(d?"reviewer-theme-dark":"reviewer-theme-light")||(d?"reviewer-dark":"reviewer-light");if(c&&c.name===n){for(const[k,v]of Object.entries(c.tokens)){if(k!=="colorScheme")r.style.setProperty("--chrome-"+k.replace(/[A-Z]/g,(l)=>"-"+l.toLowerCase()),v)}r.classList.add("themed")}}}catch(e){}})()`,
           }}
         />
       </head>
       <body>
+        <ChromeTheme />
         <TooltipProvider delay={300}>{children ?? <Outlet />}</TooltipProvider>
         <Toaster />
         <Alerts />
@@ -102,4 +111,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </body>
     </html>
   );
+}
+
+/** Keeps the document's `--chrome-*` on the theme the prefs name; see `lib/chrome-theme`. */
+function ChromeTheme() {
+  useEffect(() => startChromeTheme(), []);
+  return null;
 }

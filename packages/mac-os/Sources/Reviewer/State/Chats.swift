@@ -7,7 +7,9 @@
 // composer is holding. The conversation itself is
 // a `ChatSession`, one at a time, following the address; the snapshot a
 // conversation was left at is kept so coming back to it shows it at once,
-// as the web view's query cache does.
+// as the web view's query cache does, and a conversation the pointer rests
+// on in the list is read ahead into the same cache, so the click that
+// tends to follow opens on its messages rather than on the loading orb.
 //
 // The list beside it stays the island's (see `SessionsList`), so what the
 // shell does to a session that the list should show — starting one, a
@@ -87,8 +89,12 @@ final class Chats {
 
     @ObservationIgnored private let client: ReviewerClient
     @ObservationIgnored private let defaults = UserDefaults.standard
-    /// The conversations left lately, newest last, for coming back to.
-    @ObservationIgnored private var snapshots: [(id: String, chat: Chat)] = []
+    /// The conversations left lately or read ahead, newest last: what a
+    /// `ChatSession` opens on while its first snapshot is on its way.
+    @ObservationIgnored private var recent: [(id: String, chat: Chat)] = []
+    @ObservationIgnored private var prefetches: [String: Task<Void, Never>] = [:]
+
+    private static let recentLimit = 24
 
     private enum Keys {
         static let favorites = "chats.favorites"
@@ -120,20 +126,34 @@ final class Chats {
         }
         guard session?.id != id else { return }
         putDownSession()
-        let session = ChatSession(id: id, client: client, seed: snapshots.first { $0.id == id }?.chat)
+        let session = ChatSession(id: id, client: client, seed: recent.first { $0.id == id }?.chat)
         session.onListChanged = { [weak self] in self?.onListChanged?() }
         self.session = session
     }
 
     private func putDownSession() {
         guard let session else { return }
-        if let chat = session.chat {
-            snapshots.removeAll { $0.id == session.id }
-            snapshots.append((session.id, chat))
-            if snapshots.count > 8 { snapshots.removeFirst() }
-        }
+        if let chat = session.chat { keep(chat, for: session.id) }
         session.close()
         self.session = nil
+    }
+
+    /// A row the pointer rests on, read ahead of the click that may follow.
+    /// Read again each time rather than only while unknown, since a session
+    /// left a while ago may have run since; a read already in flight, or
+    /// the conversation already open, is left alone.
+    func prefetch(_ id: String) {
+        guard session?.id != id, prefetches[id] == nil else { return }
+        prefetches[id] = Task { [weak self] in
+            if let chat = try? await self?.client.chat(id: id) { self?.keep(chat, for: id) }
+            self?.prefetches[id] = nil
+        }
+    }
+
+    private func keep(_ chat: Chat, for id: String) {
+        recent.removeAll { $0.id == id }
+        recent.append((id, chat))
+        if recent.count > Self.recentLimit { recent.removeFirst() }
     }
 
     /// The project changed, or the server did: the catalog is re-read, since
@@ -206,7 +226,7 @@ final class Chats {
         request.branch = branch
         let created = try await client.createChat(request)
         let started = try await client.sendMessage(chatId: created.id, text: text, images: images.map(\.upload))
-        snapshots.append((started.id, started))
+        keep(started, for: started.id)
         onListChanged?()
         return started
     }

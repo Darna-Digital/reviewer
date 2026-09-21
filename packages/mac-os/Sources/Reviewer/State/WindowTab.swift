@@ -200,7 +200,7 @@ enum CodeSurface: CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .browse: return "folder"
-        case .review: return "plus.forwardslash.minus"
+        case .review: return "plusminus"
         case .reviews: return "arrow.triangle.pull"
         }
     }

@@ -51,7 +51,7 @@ struct CommitComposer: View {
                 messageBox
             }
             .clipShape(Self.boxShape)
-            .overlay(Self.boxShape.strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1))
+            .overlay(Self.boxShape.strokeBorder(Color(nsColor: IslandPalette.separator), lineWidth: 1))
             .padding(.horizontal, Self.boxInset)
             controls
         }
@@ -167,7 +167,7 @@ struct CommitComposer: View {
             Button("Commit") { commit(push: false) }
                 .buttonStyle(.borderedProminent)
                 .disabled(!canCommit)
-            Button("Commit and Push") { commit(push: true) }
+            Button("Commit and push") { commit(push: true) }
                 .disabled(!canCommit)
             Spacer()
         }

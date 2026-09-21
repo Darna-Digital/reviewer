@@ -148,8 +148,8 @@ describe("SearchHost", () => {
 
     openCommands();
 
-    expect(screen.getByText("Go to Review")).toBeDefined();
-    expect(screen.getByText("Git Actions…")).toBeDefined();
+    expect(screen.getByText("Go to review")).toBeDefined();
+    expect(screen.getByText("Git actions…")).toBeDefined();
   });
 
   it("opens even while the page's own text box has focus", async () => {
@@ -158,7 +158,7 @@ describe("SearchHost", () => {
     await user.click(screen.getByLabelText("Message"));
     openCommands();
 
-    expect(screen.getByText("Go to Review")).toBeDefined();
+    expect(screen.getByText("Go to review")).toBeDefined();
   });
 
   it("offers the commands the page registered alongside its own", async () => {
@@ -182,7 +182,7 @@ describe("SearchHost", () => {
     const user = setup();
 
     openCommands();
-    await user.click(screen.getByText("Git Actions…"));
+    await user.click(screen.getByText("Git actions…"));
     await user.click(screen.getByText("Fetch"));
 
     expect(git.fetch).toHaveBeenCalledOnce();
@@ -192,8 +192,8 @@ describe("SearchHost", () => {
     const user = setup();
 
     openCommands();
-    await user.click(screen.getByText("Git Actions…"));
-    await user.click(screen.getByText("Switch Branch…"));
+    await user.click(screen.getByText("Git actions…"));
+    await user.click(screen.getByText("Switch branch…"));
     await user.type(dialog()!, "207{Enter}");
 
     expect(git.checkout).toHaveBeenCalledWith("task/BMB-207");
@@ -203,10 +203,10 @@ describe("SearchHost", () => {
     const user = setup();
 
     openCommands();
-    await user.click(screen.getByText("Git Actions…"));
+    await user.click(screen.getByText("Git actions…"));
     openCommands();
 
-    expect(screen.getByText("Go to Review")).toBeDefined();
+    expect(screen.getByText("Go to review")).toBeDefined();
     expect(screen.queryByText("Fetch")).toBeNull();
   });
 

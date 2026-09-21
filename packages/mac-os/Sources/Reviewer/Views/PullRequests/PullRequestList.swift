@@ -47,7 +47,7 @@ struct PullRequestList: View {
                     detail: "When a branch is pushed and opened for review, it shows up here with its files and comments.")
             } else if pulls.groups.isEmpty {
                 PullListPlaceholder(symbol: "line.3.horizontal.decrease", title: "Nothing matches") {
-                    Button("Clear Filters") { pulls.clearFilters() }
+                    Button("Clear filters") { pulls.clearFilters() }
                 }
             } else {
                 rows
@@ -286,12 +286,12 @@ private struct PullRowMenu: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        Button("Check Out \(pull.localBranch)") { model.checkout(pull: pull) }
+        Button("Check out \(pull.localBranch)") { model.checkout(pull: pull) }
             .disabled(model.currentBranch == pull.localBranch)
         Divider()
         if !pull.url.isEmpty {
             Button("Open on GitHub") { model.open(pull: pull) }
-            Button("Copy Link") { model.copyLink(of: pull) }
+            Button("Copy link") { model.copyLink(of: pull) }
         }
     }
 }

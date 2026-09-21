@@ -15,20 +15,20 @@ extension AppModel {
     private var navigationCommands: [PaletteCommand] {
         [
             PaletteCommand(
-                id: "go-review", label: "Go to Review", group: "Navigation", symbol: CodeSurface.review.symbol,
+                id: "go-review", label: "Go to review", group: "Navigation", symbol: CodeSurface.review.symbol,
                 keywords: "commit working tree changes diff local", hint: CodeSurface.review.railShortcut.hint
             ) { [weak self] in self?.show(surface: .review) },
             PaletteCommand(
-                id: "go-reviews", label: "Go to Merge requests", group: "Navigation",
+                id: "go-reviews", label: "Go to merge requests", group: "Navigation",
                 symbol: CodeSurface.reviews.symbol, keywords: "merge request mr review pr github pull requests",
                 hint: CodeSurface.reviews.railShortcut.hint
             ) { [weak self] in self?.show(surface: .reviews) },
             PaletteCommand(
-                id: "go-browse", label: "Browse the Project", group: "Navigation", symbol: CodeSurface.browse.symbol,
+                id: "go-browse", label: "Browse the project", group: "Navigation", symbol: CodeSurface.browse.symbol,
                 keywords: "files history commits explore", hint: CodeSurface.browse.railShortcut.hint
             ) { [weak self] in self?.show(surface: .browse) },
             PaletteCommand(
-                id: "go-settings", label: "Open Settings", group: "Navigation", symbol: "gearshape",
+                id: "go-settings", label: "Open settings", group: "Navigation", symbol: "gearshape",
                 keywords: "theme dark light system appearance preferences git github", hint: "⌘,"
             ) { [weak self] in self?.showSettings() },
         ]
@@ -55,7 +55,7 @@ extension AppModel {
                 submenu: .git
             ) { [weak self] in self?.push() },
             PaletteCommand(
-                id: "git-branch", label: "Create Branch…", group: "Git", symbol: "arrow.triangle.branch",
+                id: "git-branch", label: "Create branch…", group: "Git", symbol: "arrow.triangle.branch",
                 keywords: "new checkout", submenu: .git
             ) { [weak self] in
                 guard let self else { return }
@@ -70,11 +70,11 @@ extension AppModel {
     private var viewCommands: [PaletteCommand] {
         var commands = [
             PaletteCommand(
-                id: "view-diff-style", label: "Toggle Diff Style", group: "View", symbol: "rectangle.split.2x1",
+                id: "view-diff-style", label: "Toggle diff style", group: "View", symbol: "rectangle.split.2x1",
                 keywords: "split unified side by side inline"
             ) { [weak self] in self?.page.send(ViewAction.toggleDiffStyle) },
             PaletteCommand(
-                id: "view-bottom-pane", label: bottomExpanded ? "Hide Bottom Pane" : "Show Bottom Pane",
+                id: "view-bottom-pane", label: bottomExpanded ? "Hide bottom pane" : "Show bottom pane",
                 group: "View", symbol: "rectangle.bottomthird.inset.filled",
                 keywords: "branches history terminal run toggle panel", hint: "⌘B"
             ) { [weak self] in self?.toggleBottomPane() },
@@ -87,7 +87,7 @@ extension AppModel {
         }
         commands.append(
             PaletteCommand(
-                id: "view-sidebar", label: sidebarShown ? "Hide Sidebar" : "Show Sidebar", group: "View",
+                id: "view-sidebar", label: sidebarShown ? "Hide sidebar" : "Show sidebar", group: "View",
                 symbol: "sidebar.leading", keywords: "tree files toggle", hint: "⌃⌘S"
             ) { [weak self] in self?.toggleSidebar() })
         return commands
@@ -103,7 +103,7 @@ extension AppModel {
     private var projectCommands: [PaletteCommand] {
         [
             PaletteCommand(
-                id: "project-open", label: "Open Repository…", group: "Project", symbol: "folder",
+                id: "project-open", label: "Open repository…", group: "Project", symbol: "folder",
                 keywords: "open change repository folder picker switch", hint: "⌘O"
             ) { [weak self] in self?.showOpener() }
         ]
@@ -112,7 +112,7 @@ extension AppModel {
     private var sessionCommands: [PaletteCommand] {
         [
             PaletteCommand(
-                id: "session-new", label: "New Agent Session", group: "Sessions", symbol: "paperplane",
+                id: "session-new", label: "New agent session", group: "Sessions", symbol: "paperplane",
                 keywords: "chat agent claude codex", hint: "⌘T"
             ) { [weak self] in self?.newSession() }
         ]

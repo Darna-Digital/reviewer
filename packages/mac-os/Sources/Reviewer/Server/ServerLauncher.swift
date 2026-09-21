@@ -6,7 +6,7 @@
 //
 // The port is the server's default, so an already running server (a `pnpm
 // dev` one, or another Reviewer window's) is simply reused. Override with
-// REVIEWER_PORT for a second instance — which is what "Open in New Window"
+// REVIEWER_PORT for a second instance — which is what "Open in new window"
 // does: the server holds one project, so a second window is a second
 // instance of the app, on a free port of its own, booted straight onto the
 // repository it was asked for (`launchInstance`).

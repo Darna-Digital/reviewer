@@ -9,14 +9,15 @@
  * Mount once above all diff/file views; the pool is a singleton, and the
  * provider is SSR-safe (no workers are created without a `window`).
  */
-import { WorkerPoolContextProvider } from "@pierre/diffs/react";
+import { WorkerPoolContextProvider, useWorkerPool } from "@pierre/diffs/react";
 import DiffsRenderWorker from "@pierre/diffs/worker/worker.js?worker";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import type {
   WorkerInitializationRenderOptions,
   WorkerPoolOptions,
 } from "@pierre/diffs/worker";
-import { THEMES } from "@/components/editor/highlighter";
+import { useCodeThemes } from "@/components/editor/highlighter";
+import { codeThemesOf, readUiPrefs } from "@/lib/ui-prefs";
 
 // diffshub sizes the pool to the device: leave a core for the main thread and
 // cap at 3 — beyond that, extra workers mostly duplicate grammar/theme memory.
@@ -35,7 +36,9 @@ const poolOptions: WorkerPoolOptions = {
 // set the same way). Anything else resolves lazily on first render of that
 // file type, so this is a warm-up list, not a limit.
 const highlighterOptions: WorkerInitializationRenderOptions = {
-  theme: THEMES,
+  // The pair the app opens on; a later choice reaches the pool through
+  // `CodeThemeSync` below.
+  theme: codeThemesOf(readUiPrefs()),
   // Wrap every token in its own element carrying its column. `File` derives
   // this from its own token handlers, but a worker-rendered view cannot see
   // them — the pool owns the render options — so the language layer's token
@@ -61,7 +64,25 @@ export function DiffWorkerPoolProvider({ children }: { children: ReactNode }) {
       poolOptions={poolOptions}
       highlighterOptions={highlighterOptions}
     >
+      <CodeThemeSync />
       {children}
     </WorkerPoolContextProvider>
   );
+}
+
+/**
+ * A theme chosen in settings reaches the pool here: the pool re-resolves the
+ * pair, hands it to every worker, drops the ASTs it cached under the old one
+ * and tells each mounted view to repaint. The token transformer is said
+ * again because the pool's setter takes a whole option set, and would
+ * otherwise fall back to the library's default of off (see above).
+ */
+function CodeThemeSync() {
+  const pool = useWorkerPool();
+  const themes = useCodeThemes();
+  useEffect(() => {
+    if (pool === undefined || themes === highlighterOptions.theme) return;
+    void pool.setRenderOptions({ theme: themes, useTokenTransformer: true });
+  }, [pool, themes]);
+  return null;
 }

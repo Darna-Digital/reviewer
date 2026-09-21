@@ -18,12 +18,12 @@
 import { File, Virtualizer } from "@pierre/diffs/react";
 import { useCallback, useMemo, useRef } from "react";
 import {
-  THEMES,
+  useCodeThemes,
   fileForHighlighting,
   useHighlightPrimed,
 } from "@/components/editor/highlighter";
 import { UnsupportedFile } from "@/components/editor/unsupported-file";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { useRevealLine } from "@/interactions/language/components/use-reveal-line";
 import { useFile } from "@/lib/queries";
 import type { Theme } from "@/lib/ui-prefs";
@@ -49,6 +49,7 @@ export function UsagePreview({
   readonly location: Location | null;
   readonly theme: Theme;
 }) {
+  const codeThemes = useCodeThemes();
   const path = location?.path ?? null;
   const line = location === null ? null : location.range.start.line + 1;
   const file = useFile(path);
@@ -99,7 +100,7 @@ export function UsagePreview({
   if (file.isPending || !primed) {
     return (
       <div className="p-6">
-        <LoadingCursor label={`Loading ${path}…`} />
+        <Orb size={16} label={`Loading ${path}…`} />
       </div>
     );
   }
@@ -123,7 +124,7 @@ export function UsagePreview({
             key={path}
             file={highlightFile}
             options={{
-              theme: THEMES,
+              theme: codeThemes,
               themeType: theme,
               overflow: "scroll",
               stickyHeader: false,

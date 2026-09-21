@@ -25,7 +25,7 @@ import {
 } from "@/interactions/language/components/use-reveal-line";
 import { useFindInFile } from "@/interactions/find-in-file/adapters/find-in-file.hook.adapter";
 import {
-  THEMES,
+  useCodeThemes,
   externalFileFor,
   fileCacheKey,
   useHighlightPrimed,
@@ -37,7 +37,7 @@ import {
   useFileEditing,
   type SelectionActionContext,
 } from "@/components/editor/use-file-editing";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
 import { useFile } from "@/lib/queries";
 import type { ReviewComment } from "@reviewer/core/comments";
@@ -103,6 +103,7 @@ export function CodeView({
   onCommentEdit,
 }: CodeViewProps) {
   const file = useFile(path);
+  const codeThemes = useCodeThemes();
   /**
    * Code is read rather than written: the view is handed no edit session, so a
    * click puts no caret in the code, and the gutter is free to carry the offer
@@ -373,7 +374,7 @@ export function CodeView({
   if (file.isPending || !langReady || !highlightPrimed) {
     return (
       <div className="p-8">
-        <LoadingCursor label={`Loading ${path}…`} />
+        <Orb size={16} label={`Loading ${path}…`} />
       </div>
     );
   }
@@ -416,7 +417,7 @@ export function CodeView({
               file={highlightFile}
               selectedLines={selectedLines}
               options={{
-                theme: THEMES,
+                theme: codeThemes,
                 themeType: theme,
                 // Code is not prose: a long line runs off the side and is
                 // scrolled to, rather than being folded back under itself.

@@ -319,7 +319,7 @@ private struct SinceDateButton: View {
                 .datePickerStyle(.graphical)
                 .labelsHidden()
                 if after != nil {
-                    Button("Clear Date") { pick(nil); presented = false }
+                    Button("Clear date") { pick(nil); presented = false }
                         .controlSize(.small)
                 }
             }

@@ -18,7 +18,6 @@ import {
   Subsection,
 } from "@/components/kitchen-sink/kitchen-sink-primitives";
 import { Badge } from "@/components/ui/badge";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { Orb } from "@/components/ui/orb";
 import { ThinkingIndicator } from "@/components/ui/thinking-indicator";
 import { Button } from "@/components/ui/button";
@@ -383,7 +382,7 @@ export function ComponentsGallery() {
             </Specimen>
             <Specimen label="busy">
               <Button variant="outline" disabled>
-                <LoadingCursor label={null} />
+                <Orb size={14} />
                 Fetching
               </Button>
             </Specimen>
@@ -474,8 +473,8 @@ export function ComponentsGallery() {
         </Subsection>
 
         <Subsection
-          title="Agent orb"
-          hint="Every wait an agent is responsible for wears this: the chat's thinking line, a running work-log step, a tab whose conversation is mid-turn. A plain data fetch keeps the caret."
+          title="Orb"
+          hint="Every wait in the app wears this — an agent's turn, a file being read, a git action in flight. Nothing spins and nothing blinks: 14 inline or inside a button, 16 for a pane waiting on its data, 20 standing alone."
         >
           <SpecimenRow>
             <Specimen label="14 — inline">
@@ -491,7 +490,7 @@ export function ComponentsGallery() {
         </Subsection>
 
         <Subsection
-          title="Agent orb — motion"
+          title="Orb — motion"
           hint="Blown up so the sweep can be judged frame by frame: the crest should cross the diagonal at one steady beat and wrap without a hitch, and every orb below should hold the same phase however long the page has been open."
         >
           <SpecimenRow className="items-end">

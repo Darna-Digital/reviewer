@@ -14,7 +14,7 @@ import {
 } from "@tabler/icons-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import {
   Popover,
   PopoverContent,
@@ -367,7 +367,7 @@ export function ProjectPicker({
               <div className={listClass}>
                 {browse.isPending && (
                   <div className="px-2 py-3">
-                    <LoadingCursor label="Loading folders…" />
+                    <Orb size={16} label="Loading folders…" />
                   </div>
                 )}
                 {browse.error && (

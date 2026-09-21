@@ -426,7 +426,7 @@ private struct Chevron: View {
 private struct BarDivider: View {
     var body: some View {
         Rectangle()
-            .fill(Color(nsColor: .separatorColor))
+            .fill(Color(nsColor: IslandPalette.separator))
             .frame(width: 1, height: 18)
             .padding(.horizontal, 4)
     }

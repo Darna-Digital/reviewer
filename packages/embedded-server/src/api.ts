@@ -6,6 +6,7 @@ import { GitHubApi } from "./layers/github/github.api.ts";
 import { LanguageApi } from "./layers/language/language.api.ts";
 import { LocalDevApi } from "./layers/local-dev/local-dev.api.ts";
 import { RepoApi } from "./layers/repo/repo.api.ts";
+import { ThemesApi } from "./layers/themes/themes.api.ts";
 import { ThreadsApi } from "./layers/threads/threads.api.ts";
 import { WorkspaceApi } from "./layers/workspace/workspace.api.ts";
 
@@ -19,4 +20,5 @@ export class Api extends HttpApi.make("reviewer")
   .add(ChatsApi)
   .add(LanguageApi)
   .add(LocalDevApi)
+  .add(ThemesApi)
   .prefix("/api") {}

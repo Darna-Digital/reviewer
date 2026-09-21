@@ -139,7 +139,7 @@ export function AppLayout() {
     () => [
       {
         id: "project-switch",
-        label: "Open Project…",
+        label: "Open project…",
         group: "Project",
         icon: IconRepeat,
         keywords: "open change repository folder picker switch",

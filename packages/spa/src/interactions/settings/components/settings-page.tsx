@@ -14,6 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { LanguagesSetting } from "@/interactions/language/components/languages-setting";
 import { SettingRow } from "@/interactions/settings/components/setting-row";
+import { ThemeSelect } from "@/interactions/settings/components/theme-select";
 import { isDesktop } from "@/lib/desktop";
 import {
   setUiPrefs,
@@ -101,6 +102,26 @@ export function SettingsPage() {
                       />
                     ))}
                   </div>
+                </SettingRow>
+                {/* One theme per scheme rather than one for both: a theme is
+                    written for a light or a dark editor, and "system" walks
+                    between the two as the day does. */}
+                <SettingRow
+                  title="Light theme"
+                  detail="What the code and the window are drawn in by day"
+                >
+                  <ThemeSelect
+                    scheme="light"
+                    value={prefs.lightTheme}
+                    onChange={(lightTheme) => setUiPrefs({ lightTheme })}
+                  />
+                </SettingRow>
+                <SettingRow title="Dark theme" detail="And by night">
+                  <ThemeSelect
+                    scheme="dark"
+                    value={prefs.darkTheme}
+                    onChange={(darkTheme) => setUiPrefs({ darkTheme })}
+                  />
                 </SettingRow>
                 <SettingRow title="Diff layout">
                   <div className="flex flex-wrap gap-0.5 rounded-md border p-0.5">

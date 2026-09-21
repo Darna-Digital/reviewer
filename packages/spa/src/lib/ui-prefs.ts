@@ -10,9 +10,19 @@ import type {
   ChatProviderKind,
 } from "@reviewer/core/chats";
 import { isChatProviderKind } from "@/interactions/chats/functions/chat-assignment.functions";
+import {
+  DEFAULT_DARK_THEME,
+  DEFAULT_LIGHT_THEME,
+  themeNameOrDefault,
+} from "@reviewer/core/themes";
 
 export type ThemePref = "light" | "dark" | "system";
 export type Theme = "light" | "dark";
+/**
+ * The theme a code surface is drawn with in each scheme, in the shape
+ * `@pierre/diffs` takes it: the pair, with `themeType` picking the side.
+ */
+export type CodeThemes = { readonly light: string; readonly dark: string };
 export type DiffStyle = "split" | "unified";
 /** Agent CLIs that can draft a commit message (threads kinds minus terminal). */
 export type CommitAgent = "claude" | "opencode" | "codex" | "cursor";
@@ -46,6 +56,14 @@ export interface UiPrefs {
   theme: ThemePref;
   /** The concrete theme to render (system resolved against the OS). */
   resolvedTheme: Theme;
+  /**
+   * Which theme paints the light scheme and which the dark — names from the
+   * catalog in `@reviewer/core/themes`. One choice per scheme rather than one
+   * for both: a theme is written for one scheme, and following the system
+   * from day to night means switching between two of them.
+   */
+  lightTheme: string;
+  darkTheme: string;
   diffStyle: DiffStyle;
   connectors: boolean;
   /**
@@ -106,12 +124,28 @@ export interface UiPrefs {
 
 const STORE_KEY = "reviewer-ui";
 const THEME_KEY = "reviewer-theme";
+/**
+ * The theme names, kept beside the mode under keys of their own rather than
+ * inside the store: the macOS shell, which owns the choice there, writes them
+ * before the page's first script (see `NativePalette`), and the pre-paint
+ * script in `__root` reads them back the same way.
+ */
+const LIGHT_THEME_KEY = "reviewer-theme-light";
+const DARK_THEME_KEY = "reviewer-theme-dark";
+/** What the shell dispatches once it has rewritten the keys above. */
+export const THEMES_CHANGED_EVENT = "reviewer:themes";
 
-const systemTheme = (): Theme =>
-  typeof window !== "undefined" &&
-  window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
+/**
+ * The OS's scheme, where there is an OS to ask: a test's DOM has no
+ * `matchMedia`, and a module that loads there — every code surface imports
+ * this store for its theme pair — must not fall over asking.
+ */
+const osScheme = (): MediaQueryList | undefined =>
+  typeof window !== "undefined" && typeof window.matchMedia === "function"
+    ? window.matchMedia("(prefers-color-scheme: dark)")
+    : undefined;
+
+const systemTheme = (): Theme => (osScheme()?.matches ? "dark" : "light");
 
 const resolve = (pref: ThemePref): Theme =>
   pref === "system" ? systemTheme() : pref;
@@ -126,6 +160,8 @@ const BOTTOM_TABS: ReadonlyArray<BottomTab> = [
 
 const defaults: Omit<UiPrefs, "resolvedTheme"> = {
   theme: "system",
+  lightTheme: DEFAULT_LIGHT_THEME,
+  darkTheme: DEFAULT_DARK_THEME,
   diffStyle: "split",
   connectors: true,
   translucency: true,
@@ -194,8 +230,22 @@ function load(): UiPrefs {
     const stored = window.localStorage.getItem(THEME_KEY);
     if (stored === "light" || stored === "dark" || stored === "system")
       prefs.theme = stored;
+    Object.assign(prefs, readThemeNames());
   }
   return { ...prefs, resolvedTheme: resolve(prefs.theme) };
+}
+
+/**
+ * The stored names, each checked against the catalog and against its scheme
+ * — a name this build no longer ships, or a dark theme filed under light,
+ * falls back to the scheme's default rather than leaving code unhighlighted.
+ */
+function readThemeNames(): Pick<UiPrefs, "lightTheme" | "darkTheme"> {
+  const read = (key: string) => window.localStorage.getItem(key) ?? undefined;
+  return {
+    lightTheme: themeNameOrDefault(read(LIGHT_THEME_KEY), "light"),
+    darkTheme: themeNameOrDefault(read(DARK_THEME_KEY), "dark"),
+  };
 }
 
 let state: UiPrefs = load();
@@ -210,6 +260,8 @@ function persist() {
   try {
     const {
       theme,
+      lightTheme,
+      darkTheme,
       diffStyle,
       connectors,
       translucency,
@@ -237,6 +289,8 @@ function persist() {
       STORE_KEY,
       JSON.stringify({
         theme,
+        lightTheme,
+        darkTheme,
         diffStyle,
         connectors,
         translucency,
@@ -262,6 +316,8 @@ function persist() {
       })
     );
     window.localStorage.setItem(THEME_KEY, state.theme);
+    window.localStorage.setItem(LIGHT_THEME_KEY, state.lightTheme);
+    window.localStorage.setItem(DARK_THEME_KEY, state.darkTheme);
   } catch {
     // ignore quota errors
   }
@@ -295,6 +351,10 @@ export function setUiPrefs(patch: UiPrefsPatch) {
   if (!changed) return;
 
   state = { ...state, ...patch };
+  if (patch.lightTheme !== undefined)
+    state.lightTheme = themeNameOrDefault(patch.lightTheme, "light");
+  if (patch.darkTheme !== undefined)
+    state.darkTheme = themeNameOrDefault(patch.darkTheme, "dark");
   if (patch.theme !== undefined) {
     state.resolvedTheme = resolve(patch.theme);
     applyTheme();
@@ -320,6 +380,24 @@ export function rememberSession(patch: Partial<LastSession>) {
 /** The preferences as they stand, for stores that read them outside React. */
 export const readUiPrefs = (): UiPrefs => state;
 
+/**
+ * The pair a code surface is drawn with. One object per pair of names, so a
+ * view handed it as an option sees the same value until a name changes —
+ * `@pierre/diffs` re-highlights on new options, and would on every render.
+ */
+let codeThemesCache: CodeThemes = {
+  light: defaults.lightTheme,
+  dark: defaults.darkTheme,
+};
+export const codeThemesOf = (prefs: UiPrefs): CodeThemes => {
+  if (
+    codeThemesCache.light !== prefs.lightTheme ||
+    codeThemesCache.dark !== prefs.darkTheme
+  )
+    codeThemesCache = { light: prefs.lightTheme, dark: prefs.darkTheme };
+  return codeThemesCache;
+};
+
 /** Show the bottom dock and select a tab (History / Find / Services / …). */
 export function openBottomTab(tab: BottomTab) {
   setUiPrefs({ bottomVisible: true, bottomTab: tab });
@@ -333,28 +411,38 @@ export function cycleTheme() {
 }
 
 // Track the OS theme so "system" updates live.
+osScheme()?.addEventListener("change", () => {
+  if (state.theme === "system") {
+    // New object reference so useSyncExternalStore's Object.is check sees a
+    // change and re-renders. Components reading resolvedTheme through a React
+    // prop (e.g. pierre's FileDiff themeType) won't update otherwise — the
+    // <html> class flips via applyTheme() but the prop value would be stale.
+    state = { ...state, resolvedTheme: systemTheme() };
+    applyTheme();
+    emit();
+  }
+});
+
+// The macOS shell owns the theme names there, and says so by rewriting the
+// keys and dispatching the event: the store takes them up as a choice made on
+// its own settings page would have been (see `NativePalette.applyScript`).
 if (typeof window !== "undefined") {
-  window
-    .matchMedia("(prefers-color-scheme: dark)")
-    .addEventListener("change", () => {
-      if (state.theme === "system") {
-        // New object reference so useSyncExternalStore's Object.is check sees a
-        // change and re-renders. Components reading resolvedTheme through a React
-        // prop (e.g. pierre's FileDiff themeType) won't update otherwise — the
-        // <html> class flips via applyTheme() but the prop value would be stale.
-        state = { ...state, resolvedTheme: systemTheme() };
-        applyTheme();
-        emit();
-      }
-    });
+  window.addEventListener(THEMES_CHANGED_EVENT, () => {
+    setUiPrefs(readThemeNames());
+  });
+}
+
+/** Called on every change; for what keeps in step with the prefs outside React. */
+export function subscribeUiPrefs(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }
 
 export function useUiPrefs(): UiPrefs {
   return useSyncExternalStore(
-    (cb) => {
-      listeners.add(cb);
-      return () => listeners.delete(cb);
-    },
+    subscribeUiPrefs,
     () => state,
     () => state
   );

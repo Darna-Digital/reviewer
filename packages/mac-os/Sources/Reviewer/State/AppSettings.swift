@@ -1,13 +1,22 @@
-// The settings window's model — what ⌘, shows: the theme the window is
-// drawn in, and who the app works as, in git and on GitHub.
+// The settings window's model — what ⌘, shows: the appearance the window
+// is drawn in and the theme it is drawn with, and who the app works as, in
+// git and on GitHub.
 //
-// The theme is the app's own preference rather than the SPA's, since the
-// window around the islands is native and the system asks the app, not
+// The appearance is the app's own preference rather than the SPA's, since
+// the window around the islands is native and the system asks the app, not
 // the page, which appearance to draw it in. Setting `NSApp.appearance`
 // covers everything at once: the toolbar, the sidebar, the sheets, and the
 // web views inside, whose `prefers-color-scheme` follows the view they are
 // in — `NativePalette` then tells each island to follow that, rather than
 // a theme of its own kept in the island's storage.
+//
+// The theme is the app's own for the same reason, chosen once per scheme —
+// a theme is written for a light or a dark editor, and "system" walks
+// between the two as the day does. The names are kept here; what they
+// paint is asked of the server, which reads the theme and answers with the
+// window's palette (see `ChromePalette`), and the catalog to choose from is
+// the server's too. Until it answers, the window paints in the app's own
+// pair, which is what the names default to.
 //
 // The identities are read, not written: git's are set with `git config`
 // and GitHub's token is found in the environment or the `gh` CLI (see the
@@ -88,12 +97,35 @@ enum GitHubSignIn: Equatable {
 @MainActor
 @Observable
 final class AppSettings {
+    static let defaultLightTheme = "reviewer-light"
+    static let defaultDarkTheme = "reviewer-dark"
+
     var theme: ThemePreference {
         didSet {
             defaults.set(theme.rawValue, forKey: Keys.theme)
             apply()
         }
     }
+
+    /// The theme for each scheme, by catalog name.
+    var lightTheme: String {
+        didSet {
+            defaults.set(lightTheme, forKey: Keys.lightTheme)
+            ChromePalette.shared.choose(lightTheme, for: .light)
+            paint(lightTheme, for: .light)
+        }
+    }
+
+    var darkTheme: String {
+        didSet {
+            defaults.set(darkTheme, forKey: Keys.darkTheme)
+            ChromePalette.shared.choose(darkTheme, for: .dark)
+            paint(darkTheme, for: .dark)
+        }
+    }
+
+    /// The catalog, once the server has been asked for it.
+    private(set) var themes: SettingsRead<[ThemeDescriptor]> = .loading
 
     private(set) var identity: SettingsRead<GitIdentity> = .loading
     private(set) var githubAuth: SettingsRead<GitHubAuth> = .loading
@@ -109,11 +141,17 @@ final class AppSettings {
 
     private enum Keys {
         static let theme = "appearance.theme"
+        static let lightTheme = "appearance.lightTheme"
+        static let darkTheme = "appearance.darkTheme"
     }
 
     init(client: ReviewerClient) {
         self.client = client
         theme = defaults.string(forKey: Keys.theme).flatMap(ThemePreference.init(rawValue:)) ?? .system
+        lightTheme = defaults.string(forKey: Keys.lightTheme) ?? Self.defaultLightTheme
+        darkTheme = defaults.string(forKey: Keys.darkTheme) ?? Self.defaultDarkTheme
+        ChromePalette.shared.choose(lightTheme, for: .light)
+        ChromePalette.shared.choose(darkTheme, for: .dark)
         apply()
     }
 
@@ -122,6 +160,53 @@ final class AppSettings {
     /// it too.
     private func apply() {
         NSApplication.shared.appearance = theme.appearance
+    }
+
+    // MARK: the theme
+
+    /// The window painted in the chosen themes — once the server is up, and
+    /// again whenever it has been restarted with a different catalog.
+    func paintThemes() {
+        paint(lightTheme, for: .light)
+        paint(darkTheme, for: .dark)
+    }
+
+    /// The catalog read for the picker, if it has not been already.
+    func loadThemes() async {
+        if case .loaded = themes { return }
+        themes = await read { try await client.themes() }
+    }
+
+    /// One scheme's palette asked of the server and, if the name is still
+    /// the chosen one when it answers, painted. The app's own pair asks
+    /// nothing: on it the window is drawn as it always was (see
+    /// `ChromePalette`). A name the server does not know — a theme this
+    /// build no longer ships — is put back to the scheme's default rather
+    /// than left on a palette it cannot fetch.
+    private func paint(_ name: String, for scheme: ThemeDescriptor.ColorScheme) {
+        if name == Self.defaultLightTheme || name == Self.defaultDarkTheme {
+            ChromePalette.shared.useOwn(named: name, for: scheme)
+            return
+        }
+        Task { [weak self] in
+            guard let self else { return }
+            do {
+                let resolved = try await client.themeChrome(name: name)
+                guard chosenTheme(for: scheme) == name, resolved.chrome.colorScheme == scheme else { return }
+                ChromePalette.shared.set(resolved.chrome, named: name)
+            } catch let error as ReviewerAPIError where error.status == 404 {
+                switch scheme {
+                case .light: if lightTheme == name { lightTheme = Self.defaultLightTheme }
+                case .dark: if darkTheme == name { darkTheme = Self.defaultDarkTheme }
+                }
+            } catch {
+                // The server is not up yet; `paintThemes` asks again once it is.
+            }
+        }
+    }
+
+    private func chosenTheme(for scheme: ThemeDescriptor.ColorScheme) -> String {
+        scheme == .dark ? darkTheme : lightTheme
     }
 
     /// Both identities, read afresh — on the window opening, on Check

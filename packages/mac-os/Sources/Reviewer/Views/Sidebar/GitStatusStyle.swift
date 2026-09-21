@@ -47,15 +47,19 @@ extension GitFileStatus {
 }
 
 extension NSColor {
-    /// `#rrggbb`, the way the palettes are written.
+    /// `#rrggbb`, the way the palettes are written — or `#rrggbbaa`, the way
+    /// a theme's chrome writes a wash of one colour over another.
     convenience init(hex: String) {
+        let digits = String(hex.dropFirst())
         var value: UInt64 = 0
-        Scanner(string: String(hex.dropFirst())).scanHexInt64(&value)
+        Scanner(string: digits).scanHexInt64(&value)
+        let alpha: CGFloat = digits.count == 8 ? CGFloat(value & 0xff) / 255 : 1
+        if digits.count == 8 { value >>= 8 }
         self.init(
             srgbRed: CGFloat((value >> 16) & 0xff) / 255,
             green: CGFloat((value >> 8) & 0xff) / 255,
             blue: CGFloat(value & 0xff) / 255,
-            alpha: 1)
+            alpha: alpha)
     }
 }
 

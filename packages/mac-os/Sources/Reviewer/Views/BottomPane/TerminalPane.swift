@@ -89,9 +89,9 @@ private struct ThreadTable: View {
     @ViewBuilder
     private var placeholder: some View {
         if query.isEmpty {
-            PanePlaceholder("No Sessions", symbol: "terminal",
+            PanePlaceholder("No sessions", symbol: "terminal",
                             detail: "Open a shell in this project.") {
-                Button("New Session", action: open)
+                Button("New session", action: open)
             }
         } else {
             PanePlaceholder("No sessions match “\(query)”", symbol: "magnifyingglass")
@@ -101,9 +101,9 @@ private struct ThreadTable: View {
     private var toolbar: some View {
         PaneToolbar {
             ControlGroup {
-                Button(action: open) { Label("New Session", systemImage: "plus") }
+                Button(action: open) { Label("New session", systemImage: "plus") }
                     .help("New session")
-                Button(action: closeSelected) { Label("Close Session", systemImage: "minus") }
+                Button(action: closeSelected) { Label("Close session", systemImage: "minus") }
                     .help("Close the selected session")
                     .disabled(threads.selected == nil)
             }
@@ -135,7 +135,7 @@ private struct ThreadTable: View {
                 }
             }
             .width(min: 160, ideal: 280)
-            TableColumn("Last Used", value: \.updatedOrder) { row in
+            TableColumn("Last used", value: \.updatedOrder) { row in
                 Text(row.updated.map(OpenerDates.format) ?? "—")
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -148,7 +148,7 @@ private struct ThreadTable: View {
             if let thread = ids.first.flatMap(thread(for:)) {
                 Button("Rename") { rename.begin(thread) }
                 Divider()
-                Button("Close Session", role: .destructive) {
+                Button("Close session", role: .destructive) {
                     Task { await threads.close(id: thread.id) }
                 }
             }
@@ -223,9 +223,9 @@ private struct ThreadTerminal: View {
                 }
             }
         } else {
-            PanePlaceholder("No Session Open", symbol: "terminal",
+            PanePlaceholder("No session open", symbol: "terminal",
                             detail: "Pick a session on the left, or open a new one.") {
-                Button("New Session") { Task { await model.threads.open(branch: model.currentBranch) } }
+                Button("New session") { Task { await model.threads.open(branch: model.currentBranch) } }
             }
         }
     }

@@ -97,7 +97,7 @@ export function useBranchActionControls(props: BranchActionControlProps) {
           }
         >
           <IconPlus className="size-3.5 text-muted-foreground" />
-          <ActionLabel>New Branch from ‘{target.display}’</ActionLabel>
+          <ActionLabel>New branch from ‘{target.display}’</ActionLabel>
         </DropdownMenuItem>
         {!target.isCurrent && (
           <>

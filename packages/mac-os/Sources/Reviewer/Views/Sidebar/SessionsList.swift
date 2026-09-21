@@ -20,6 +20,11 @@
 // has rather than the pages loaded so far. The untruncated title stands in
 // the row's tooltip.
 //
+// A row the pointer rests on has its conversation read ahead (see
+// `Chats.prefetch`), so the click that tends to follow opens on the
+// messages rather than a loading orb; the pointer passing over rows on its
+// way somewhere else is too brief to count.
+//
 // Picking a row sends the page to that session; a shift- or ⌘-click sweeps
 // more rows in without moving the page, and the menu or the delete key then
 // acts on the sweep, as the web list's does — one row goes without asking,
@@ -148,10 +153,10 @@ struct SessionsList: View {
     private func menu(for id: String, in list: ShellSessions) -> some View {
         let sessions = selected.contains(id) ? deletable(selected, in: list) : [id]
         if sessions.count == 1, let id = sessions.first {
-            Button("Open in a Tab") { model.act(onSessions: .openInTab(id)) }
+            Button("Open in a tab") { model.act(onSessions: .openInTab(id)) }
             Divider()
         }
-        Button(sessions.count == 1 ? "Delete Session" : "Delete \(sessions.count) Sessions", role: .destructive) {
+        Button(sessions.count == 1 ? "Delete session" : "Delete \(sessions.count) sessions", role: .destructive) {
             delete(sessions)
         }
     }
@@ -265,9 +270,13 @@ private struct SessionRow: View {
     let pick: () -> Void
     @Environment(AppModel.self) private var model
     @State private var isHovering = false
+    @State private var prefetch: Task<Void, Never>?
 
     private static let column: CGFloat = 20
     private static let gap: CGFloat = 6
+    /// How long the pointer rests before the row's conversation is read
+    /// ahead: past a pointer crossing the row, well short of the click.
+    private static let restBeforePrefetch: Duration = .milliseconds(50)
     /// The web row's 160ms: long enough to read as the column opening,
     /// short enough that the title is never chasing the pointer.
     private static let opening = Animation.easeOut(duration: 0.16)
@@ -275,8 +284,18 @@ private struct SessionRow: View {
     var body: some View {
         Button(action: pick) { content }
             .buttonStyle(.plain)
-            .onHover { isHovering = $0 }
+            .onHover { hovering in
+                isHovering = hovering
+                prefetch?.cancel()
+                prefetch = hovering ? Task { await prefetchAfterRest() } : nil
+            }
             .help(session.title)
+    }
+
+    private func prefetchAfterRest() async {
+        try? await Task.sleep(for: Self.restBeforePrefetch)
+        guard !Task.isCancelled else { return }
+        model.chats.prefetch(session.id)
     }
 
     private var content: some View {

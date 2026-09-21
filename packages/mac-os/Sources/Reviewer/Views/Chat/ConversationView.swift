@@ -49,7 +49,7 @@ struct ConversationView: View {
             }
             if chat.messages.isEmpty {
                 Text("Send a message to start the conversation.")
-                    .font(.system(size: 13))
+                    .font(.system(size: ChatLayout.bodySize))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -110,8 +110,16 @@ struct ConversationView: View {
 }
 
 enum ChatLayout {
-    /// The web page's `max-w-3xl`: the widest a conversation's column runs.
-    static let columnWidth: CGFloat = 768
+    /// The widest a conversation's column runs. Narrower than the web
+    /// page's `max-w-3xl`, which at this size held lines of about 110
+    /// characters: a reading measure of roughly 90 is as wide as prose
+    /// stays comfortable, since the eye has to find the next line's start
+    /// unaided.
+    static let columnWidth: CGFloat = 640
+    /// The size a conversation reads at — a step over the 13pt of a
+    /// control's label, which is set to be glanced at rather than read.
+    static let bodySize: CGFloat = 14
+    static let bodyMetrics = MarkdownMetrics(size: bodySize)
 }
 
 /// The conversation: prompts as bubbles at the trailing edge, replies as
@@ -130,7 +138,7 @@ struct MessageTimeline: View {
         let lastPrompt = chat.messages.last { $0.role == .user }?.id
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: 20) {
+                LazyVStack(alignment: .leading, spacing: 28) {
                     ForEach(chat.messages) { message in
                         if message.role == .user {
                             UserMessageRow(message: message)
@@ -200,7 +208,7 @@ struct SessionContextBar: View {
         .background(.quaternary.opacity(0.35), in: UnevenRoundedRectangle(bottomLeadingRadius: 14, bottomTrailingRadius: 14, style: .continuous))
         .overlay(
             UnevenRoundedRectangle(bottomLeadingRadius: 14, bottomTrailingRadius: 14, style: .continuous)
-                .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1)
+                .strokeBorder(Color(nsColor: IslandPalette.separator), lineWidth: 1)
         )
         .padding(.top, -14)
         .padding(.horizontal, 6)

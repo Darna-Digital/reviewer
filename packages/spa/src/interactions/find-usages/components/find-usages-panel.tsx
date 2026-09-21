@@ -27,7 +27,7 @@ import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Button } from "@/components/ui/button";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import {
   Tooltip,
   TooltipContent,
@@ -153,7 +153,7 @@ export function FindUsagesPanel() {
           />
         ) : search.isPending ? (
           <div className="p-4">
-            <LoadingCursor label={`Searching for ${symbol}…`} />
+            <Orb size={16} label={`Searching for ${symbol}…`} />
           </div>
         ) : search.error ? (
           <Empty title="Could not find usages" detail={search.error.message} />

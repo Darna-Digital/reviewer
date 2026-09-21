@@ -49,7 +49,7 @@ export const buildCodeCommands = (
   return [
     {
       id: "go-review",
-      label: "Go to Review",
+      label: "Go to review",
       group: "Navigation",
       icon: IconGitCommit,
       keywords: "commit working tree changes diff local",
@@ -57,7 +57,7 @@ export const buildCodeCommands = (
     },
     {
       id: "go-reviews",
-      label: "Go to Merge requests",
+      label: "Go to merge requests",
       group: "Navigation",
       icon: IconGitPullRequest,
       keywords: "merge request mr review pr github pull requests",
@@ -65,7 +65,7 @@ export const buildCodeCommands = (
     },
     {
       id: "go-browse",
-      label: "Browse the Project",
+      label: "Browse the project",
       group: "Navigation",
       icon: IconFolder,
       keywords: "files history commits explore",
@@ -73,7 +73,7 @@ export const buildCodeCommands = (
     },
     {
       id: "go-settings",
-      label: "Open Settings",
+      label: "Open settings",
       group: "Navigation",
       icon: IconSettings,
       keywords: "theme dark light system appearance preferences",
@@ -118,7 +118,7 @@ export const buildCodeCommands = (
     {
       id: "git-branch",
       submenu: "git",
-      label: "Create Branch…",
+      label: "Create branch…",
       group: "Git",
       icon: IconGitBranch,
       keywords: "new checkout",

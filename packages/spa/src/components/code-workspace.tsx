@@ -929,7 +929,7 @@ export function CodeWorkspace() {
     () => [
       {
         id: "view-diff-style",
-        label: "Toggle Diff Style",
+        label: "Toggle diff style",
         group: "View",
         icon: IconColumns2,
         keywords: "split unified side by side inline",
@@ -941,7 +941,7 @@ export function CodeWorkspace() {
       },
       {
         id: "view-bottom-panel",
-        label: prefs.bottomVisible ? "Hide Bottom Panel" : "Show Bottom Panel",
+        label: prefs.bottomVisible ? "Hide bottom panel" : "Show bottom panel",
         group: "View",
         icon: IconLayoutBottombarExpand,
         keywords: "history services sessions terminal toggle",
@@ -949,7 +949,7 @@ export function CodeWorkspace() {
       },
       {
         id: "view-services",
-        label: "Open Services",
+        label: "Open services",
         group: "View",
         icon: IconPlayerPlay,
         keywords: "local dev commands run configurations",
@@ -957,7 +957,7 @@ export function CodeWorkspace() {
       },
       {
         id: "view-threads",
-        label: "Open Terminal Sessions",
+        label: "Open terminal sessions",
         group: "View",
         icon: IconTerminal2,
         keywords: "terminal shell session cli",

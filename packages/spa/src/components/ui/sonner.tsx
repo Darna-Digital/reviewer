@@ -7,7 +7,7 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import { buttonVariants } from "@/components/ui/button";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { cn } from "@/lib/utils";
 import { ELEVATION, useElevation } from "@/lib/surface-context";
 import { useUiPrefs } from "@/lib/ui-prefs";
@@ -44,7 +44,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
         info: <IconInfoCircle className="size-4 text-muted-foreground" />,
         warning: <IconAlertTriangle className="size-4 text-warning" />,
         error: <IconAlertOctagon className="size-4 text-destructive" />,
-        loading: <LoadingCursor label={null} />,
+        loading: <Orb size={14} />,
         close: <IconX className="size-4" />,
       }}
       toastOptions={{

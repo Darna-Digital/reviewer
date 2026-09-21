@@ -3,8 +3,8 @@
 // the detail column (see `NoticeStack`) rather than raised inside the page
 // island, whose web view would clip them and whose edge the pane stands
 // over. An action worth waiting on is one notice for its whole run: it goes
-// up as the attempt — "Pushing…", with the caret the web app blinks while
-// it waits — and settles in place into what came of it, so a push that is
+// up as the attempt — "Pushing…", wearing the orb every wait in the app
+// wears — and settles in place into what came of it, so a push that is
 // slow to answer is seen being tried rather than wondered about. A settled
 // notice stays up long enough to read and then goes; the clock holds while
 // the pointer is over the stack, as the web toaster's does, and a loading

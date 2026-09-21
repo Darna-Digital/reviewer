@@ -27,11 +27,11 @@ struct TabStripItems: ToolbarContent {
                 SessionTab(tab: tab, model: model)
             }
             Button { model.newSession() } label: {
-                Label("New Session", systemImage: "plus")
+                Label("New session", systemImage: "plus")
                     .barGlyph()
             }
             .buttonStyle(BarChipStyle())
-            .help("New Session (⌘T)")
+            .help("New session (⌘T)")
         }
         .sharedBackgroundVisibility(.hidden)
     }
@@ -181,9 +181,9 @@ private struct TabContextMenu: View {
 
     var body: some View {
         if !tab.pinned {
-            Button("Close Tab") { model.closeTab(id: tab.id) }
+            Button("Close tab") { model.closeTab(id: tab.id) }
         }
-        Button("Close Other Tabs") {
+        Button("Close other tabs") {
             for other in model.windowTabs.tabs where other.id != tab.id && !other.pinned {
                 model.closeTab(id: other.id)
             }

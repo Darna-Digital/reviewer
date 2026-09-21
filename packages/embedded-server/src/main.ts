@@ -36,6 +36,7 @@ import { DevRuntimeLive } from "./layers/local-dev/local-dev.runtime.ts";
 import { BranchTargetsLive } from "./layers/branch-targets/branch-targets.layer.live.ts";
 import { RepoHandler } from "./layers/repo/repo.handler.ts";
 import { RepoLive } from "./layers/repo/repo.layer.live.ts";
+import { ThemesHandler } from "./layers/themes/themes.handler.ts";
 import { ThreadsHandler } from "./layers/threads/threads.handler.ts";
 import { ThreadsLive } from "./layers/threads/threads.layer.live.ts";
 import { layer as repoIndexLayer } from "./layers/workspace/repo-index.ts";
@@ -78,7 +79,8 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(ThreadsHandler),
   Layer.provide(ChatsHandler),
   Layer.provide(LanguageHandler),
-  Layer.provide(LocalDevHandler)
+  Layer.provide(LocalDevHandler),
+  Layer.provide(ThemesHandler)
 );
 
 /** Stateless feature services, resolved per request. */

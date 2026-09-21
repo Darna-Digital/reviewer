@@ -120,7 +120,7 @@ struct ChatComposer: View {
             .background(Color(nsColor: IslandPalette.island), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(highlighted ? Color.accentColor.opacity(0.5) : Color(nsColor: .separatorColor), lineWidth: 1)
+                    .strokeBorder(highlighted ? Color.accentColor.opacity(0.5) : Color(nsColor: IslandPalette.separator), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.06), radius: 4, y: 1)
         }
@@ -131,14 +131,15 @@ struct ChatComposer: View {
         ZStack(alignment: .topLeading) {
             if text.wrappedValue.isEmpty {
                 Text(placeholder)
-                    .font(.system(size: 13))
+                    .font(.system(size: ChatLayout.bodySize))
                     .foregroundStyle(.tertiary)
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
                     .allowsHitTesting(false)
             }
             TextEditor(text: text, selection: $selection)
-                .font(.system(size: 13))
+                .font(.system(size: ChatLayout.bodySize))
+                .lineSpacing(ChatLayout.bodyMetrics.leading)
                 .scrollContentBackground(.hidden)
                 .scrollIndicators(.never)
                 .padding(.horizontal, 11)
@@ -265,7 +266,7 @@ struct ChatComposer: View {
 private struct ComposerDivider: View {
     var body: some View {
         Rectangle()
-            .fill(Color(nsColor: .separatorColor))
+            .fill(Color(nsColor: IslandPalette.separator))
             .frame(width: 1, height: 14)
             .padding(.horizontal, 2)
     }
@@ -359,6 +360,7 @@ final class PromptDropCatcherView: NSView {
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         let operation = self.operation(for: sender)
+        DropDiagnostics.note("catcher.entered operation=\(operation.rawValue)", sender.draggingPasteboard)
         onTarget?(operation == .copy)
         return operation
     }
@@ -377,6 +379,7 @@ final class PromptDropCatcherView: NSView {
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         let attachments = ComposerAttachment.read(pasteboard: sender.draggingPasteboard)
+        DropDiagnostics.note("catcher.perform read=\(attachments.count)", sender.draggingPasteboard)
         guard !attachments.isEmpty else { return false }
         onAttach?(attachments)
         return true
@@ -404,15 +407,18 @@ private struct ImageDropZone: ViewModifier {
             .onDrop(of: [.fileURL, .image], isTargeted: $targeted) { providers in
                 let key = draftKey
                 let chats = model.chats
+                DropDiagnostics.note("zone.drop providers=\(providers.map { $0.registeredTypeIdentifiers })", NSPasteboard(name: .drag))
                 Task {
                     var attachments: [ComposerAttachment] = []
                     for provider in providers {
                         if let attachment = await Self.read(provider) { attachments.append(attachment) }
                     }
+                    DropDiagnostics.note("zone.read=\(attachments.count)")
                     chats.attach(attachments, to: key)
                 }
                 return true
             }
+            .onChange(of: targeted) { _, now in DropDiagnostics.note("zone.targeted=\(now)", NSPasteboard(name: .drag)) }
             .overlay {
                 if targeted {
                     RoundedRectangle(cornerRadius: IslandMetrics.radius, style: .continuous)

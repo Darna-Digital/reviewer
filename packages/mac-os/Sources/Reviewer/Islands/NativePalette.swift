@@ -1,50 +1,45 @@
-// The window's own colours, handed to the islands as CSS custom properties
-// so the web app paints on the same material the native views around it
-// do. Resolved under the app's effective appearance, so dark and light read
-// the real system values rather than a guess at them, and re-read whenever
-// that appearance changes.
+// The window's palette, handed to the islands as CSS custom properties so
+// the web app paints on the same material the native views around it do —
+// the same `--chrome-*` the app sets for itself in a browser (see
+// `lib/chrome-theme` in the SPA), here written by the shell from the
+// colours it paints with (see `IslandPalette`): a theme's tokens where a
+// theme is on, and otherwise the window's own two tones and the system's
+// colours, resolved under the app's effective appearance so dark and light
+// read the real values rather than a guess at them — and rewritten
+// whenever that appearance or the theme changes.
 import AppKit
 
-/// The two tones the window is made of, the web app's own rather than the
-/// system's: the frame every island stands on — black in the dark theme,
-/// where the system's window grey read as a lighter band around darker
-/// panels — and the sheet each island is. The same values the SPA's
-/// `--frame` and `--canvas` carry, so a window of islands reads as the web
-/// app's window of sheets.
-enum IslandPalette {
-    static let frame = NSColor(name: nil) { appearance in
-        appearance.isDark ? NSColor(srgbRed: 0, green: 0, blue: 0, alpha: 1) : NSColor(srgbRed: 0.941, green: 0.941, blue: 0.953, alpha: 1)
-    }
-
-    static let island = NSColor(name: nil) { appearance in
-        appearance.isDark ? NSColor(srgbRed: 0.078, green: 0.078, blue: 0.09, alpha: 1) : .white
-    }
-}
-
-private extension NSAppearance {
-    var isDark: Bool {
-        bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-    }
-}
-
+@MainActor
 enum NativePalette {
-    /// Every `--native-*` property the SPA's `.island` styles read.
+    /// Every `--chrome-*` property the SPA's `.themed` and `.island` styles
+    /// read, for the appearance the app is drawing in. Brand ink — links,
+    /// the connector ribbons' git colours — is only handed over where a
+    /// theme names it; on the app's own palette it stays the app's own, as
+    /// it does in any native app.
     static func cssVariables() -> [String: String] {
-        let colors: [(String, NSColor)] = [
-            ("--native-frame", IslandPalette.frame),
-            ("--native-island", IslandPalette.island),
-            ("--native-window", .windowBackgroundColor),
-            ("--native-control", .controlBackgroundColor),
-            ("--native-under-page", .underPageBackgroundColor),
-            ("--native-text", .labelColor),
-            ("--native-text-secondary", .secondaryLabelColor),
-            ("--native-text-tertiary", .tertiaryLabelColor),
-            ("--native-separator", .separatorColor),
-            ("--native-grid", .gridColor),
-            ("--native-accent", .controlAccentColor),
-            ("--native-selection", .selectedContentBackgroundColor),
-            ("--native-selection-unemphasized", .unemphasizedSelectedContentBackgroundColor),
+        let scheme: ThemeDescriptor.ColorScheme = NSApp.effectiveAppearance.isDark ? .dark : .light
+        var colors: [(String, NSColor)] = [
+            ("--chrome-frame", IslandPalette.frame),
+            ("--chrome-island", IslandPalette.island),
+            ("--chrome-control", IslandPalette.control),
+            ("--chrome-popover", IslandPalette.popover),
+            ("--chrome-text", IslandPalette.text),
+            ("--chrome-text-secondary", IslandPalette.textSecondary),
+            ("--chrome-text-tertiary", IslandPalette.textTertiary),
+            ("--chrome-separator", IslandPalette.separator),
+            ("--chrome-hairline", IslandPalette.hairline),
+            ("--chrome-accent", IslandPalette.accent),
+            ("--chrome-selection", IslandPalette.selection),
+            ("--chrome-hover", IslandPalette.hover),
         ]
+        if let tokens = ChromePalette.shared.tokens(for: scheme) {
+            colors += [
+                ("--chrome-link", NSColor(hex: tokens.link)),
+                ("--chrome-added", NSColor(hex: tokens.added)),
+                ("--chrome-modified", NSColor(hex: tokens.modified)),
+                ("--chrome-deleted", NSColor(hex: tokens.deleted)),
+            ]
+        }
         var variables: [String: String] = [:]
         NSApp.effectiveAppearance.performAsCurrentDrawingAppearance {
             for (name, color) in colors {
@@ -56,29 +51,37 @@ enum NativePalette {
 
     /// "dark" or "light", by the app's effective appearance.
     static func appearanceName() -> String {
-        NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? "dark" : "light"
+        NSApp.effectiveAppearance.isDark ? "dark" : "light"
     }
 
     /// The script that applies them to the document — run before the first
-    /// paint, and again when the appearance changes, when it also flips the
-    /// theme the way the SPA's own boot script would have on a system change.
+    /// paint, and again when the appearance or the theme changes, when it
+    /// also flips the scheme the way the SPA's own boot script would have on
+    /// a system change.
     ///
-    /// The theme is the window's (see `AppSettings`), so the island is held
+    /// The scheme is the window's (see `AppSettings`), so the island is held
     /// to "system" — the web app's word for following the view it is in —
     /// whatever its own storage last said: a choice made on the SPA's
-    /// settings page would otherwise hold the page to one theme while the
-    /// chrome around it followed another.
+    /// settings page would otherwise hold the page to one scheme while the
+    /// chrome around it followed another. The theme names are the window's
+    /// too, written under the keys the SPA's prefs read them from, and the
+    /// event tells a page already running to read them again — the code in
+    /// it is highlighted by the page, and only the page can re-highlight it.
     static func applyScript() -> String {
         let pairs = cssVariables().map { "[\(json($0.key)), \(json($0.value))]" }.joined(separator: ",")
-        let dark = appearanceName() == "dark"
+        let themes = ChromePalette.shared.names
+        let dark = NSApp.effectiveAppearance.isDark
         return """
         (() => {
           const root = document.documentElement;
           for (const [name, value] of [\(pairs)]) root.style.setProperty(name, value);
           if (window.reviewer) window.reviewer.appearance = "\(appearanceName())";
           localStorage.setItem("reviewer-theme", "system");
+          localStorage.setItem("reviewer-theme-light", \(json(themes.light)));
+          localStorage.setItem("reviewer-theme-dark", \(json(themes.dark)));
           root.classList.toggle("dark", \(dark));
           root.dataset.theme = \(dark) ? "dark" : "light";
+          window.dispatchEvent(new Event("reviewer:themes"));
         })();
         """
     }
@@ -97,4 +100,10 @@ enum NativePalette {
         let array = data.flatMap { String(data: $0, encoding: .utf8) } ?? "[\"\"]"
         return String(array.dropFirst().dropLast())
     }
+}
+
+/// The theme chosen for each scheme, by name.
+struct ThemeNames: Hashable, Sendable {
+    var light: String
+    var dark: String
 }

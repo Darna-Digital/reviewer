@@ -29,7 +29,7 @@ struct AttachmentChip: View {
                 .scaledToFill()
                 .frame(width: 64, height: 64)
                 .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color(nsColor: IslandPalette.separator), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .overlay(alignment: .topTrailing) {
@@ -74,7 +74,7 @@ struct SentAttachmentPreview: View {
             .frame(width: 128, height: 128)
             .background(.quaternary.opacity(0.5))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color(nsColor: IslandPalette.separator), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .disabled(image == nil)

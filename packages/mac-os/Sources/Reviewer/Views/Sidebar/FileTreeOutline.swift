@@ -489,7 +489,7 @@ private final class FileTreeCellView: NSTableCellView {
     private let dotView = NSView()
 
     private var isDirectory = false
-    private var nameColor: NSColor = .labelColor
+    private var nameColor: NSColor = IslandPalette.text
     /// The row's tooltip: the path, and the status when it has one.
     private(set) var tip = ""
 
@@ -521,7 +521,7 @@ private final class FileTreeCellView: NSTableCellView {
         } else if let status {
             nameColor = status.nsColor(dark: dark)
         } else {
-            nameColor = .labelColor
+            nameColor = IslandPalette.text
         }
         paintName()
         if node.isDirectory {
@@ -624,19 +624,19 @@ private struct TreeRowMenu: View {
 
     var body: some View {
         if !isDirectory {
-            Button("Show History") { model.act(onTree: .history(path)) }
+            Button("Show history") { model.act(onTree: .history(path)) }
             Divider()
         }
-        Button("Copy Path") { copy(path) }
+        Button("Copy path") { copy(path) }
         if let project = listing?.projectPath {
-            Button("Copy Absolute Path") { copy(absolute(in: project)) }
+            Button("Copy absolute path") { copy(absolute(in: project)) }
             Button("Reveal in Finder") {
                 NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: absolute(in: project))])
             }
         }
         if !discardable.isEmpty {
             Divider()
-            Button("Discard Changes…") { prompt = .discard(paths: discardable, of: path) }
+            Button("Discard changes…") { prompt = .discard(paths: discardable, of: path) }
         }
     }
 
@@ -657,7 +657,7 @@ private struct TreePromptModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .alert("Discard Changes?", isPresented: shown, presenting: prompt) { prompt in
+            .alert("Discard changes?", isPresented: shown, presenting: prompt) { prompt in
                 Button("Discard", role: .destructive) {
                     if case .discard(let paths, _) = prompt { model.act(onTree: .discard(paths)) }
                 }

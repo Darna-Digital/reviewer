@@ -125,7 +125,7 @@ What it does today:
 - **Palette** — the web app's search dialog as a Liquid Glass pane over
   the page, the same stack of lists under one box with a breadcrumb over
   it: ⌘K opens on the commands — where to go, the git actions behind
-  their own list (fetch, pull, push, a new branch, and Switch Branch…
+  their own list (fetch, pull, push, a new branch, and Switch branch…
   behind that), the window's own (the diff style, asked of the page; the
   bottom pane and its surfaces; the sidebar), the opener, a new session — the ways into the two searches among them. ⇧⇧ or
   ⌘⇧O goes straight to Files, a name search over every path (the same
@@ -162,15 +162,26 @@ What it does today:
   on request, each repository stamped with when it was last opened here.
 
 - **Settings** (⌘,, and the app menu's Settings…) — the system's grouped
-  form: the theme the window is drawn in — System, Light or Dark, held on
-  `NSApp.appearance` so the chrome, the sheets and the islands' web views
+  form: the appearance the window is drawn in — System, Light or Dark, held
+  on `NSApp.appearance` so the chrome, the sheets and the islands' web views
   all follow the one switch, each island told to follow its view rather
-  than a theme of its own; who git signs commits as in the project
+  than a scheme of its own; the theme it is drawn with, one for each scheme
+  — the app's own pair, Pierre's, or any Shiki bundles (Tokyo Night,
+  Catppuccin, Dracula, Nord, Solarized…), the catalog read from
+  `/api/themes` — where a chosen theme is read by the server for the
+  window's palette (`/api/themes/{name}`, `deriveChromeTokens` in core: the
+  editor's background is the sheet, the sidebar's the frame, the rest taken
+  or derived from there) and the shell paints its frame, islands, panes,
+  type and tint from it (`ChromePalette`, `IslandPalette`) while handing
+  each island the same tokens as `--chrome-*` and the theme names for its
+  code (`NativePalette`) — on the app's own pair nothing is derived, and
+  the window stays its two tones and the system's colours exactly as
+  before; who git signs commits as in the project
   (`/api/identity`, its `user.name` and `user.email`, this project's over
   the global ones); and who the server is signed in to GitHub as
   (`/api/github/auth` — the login behind `GITHUB_TOKEN`/`GH_TOKEN` or the
   `gh` CLI's token, or that there is none), with what to run to change
-  either under each. The palette's Open Settings lands here.
+  either under each. The palette's Open settings lands here.
 
 ## Islands
 
@@ -278,9 +289,9 @@ Sources/Reviewer/
   ReviewerApp.swift      @main, menu commands, app delegate
   Server/ServerLauncher  reachability check + spawn of the embedded server
   Api/                   Codable mirrors of the core schemas, HTTP client, chat socket
-  State/                 AppModel, AppSettings, WindowTab, BottomPaneTab, DockSurface, ViewAction, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, PullRequests, Chats, ChatSession, ChatSettings, WorkLog, ComposerAttachment, RepoCatalog, CommandPalette + PaletteCommands (+ the ⇧⇧ monitor)
+  State/                 AppModel, AppSettings, Chrome (the theme's palette), WindowTab, BottomPaneTab, DockSurface, ViewAction, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, PullRequests, Chats, ChatSession, ChatSettings, WorkLog, ComposerAttachment, RepoCatalog, CommandPalette + PaletteCommands (+ the ⇧⇧ monitor)
   FileIcons/             FileIcon (resolver + rasteriser) over the generated @pierre/trees sprite
-  Islands/               IslandHost (web view + bridge), IslandWebView, SpaSource, SpaSchemeHandler, IslandView
+  Islands/               IslandHost (web view + bridge), IslandWebView, NativePalette (the palette as CSS), SpaSource, SpaSchemeHandler, IslandView
   Terminal/              TerminalSession — the shell behind the Terminal surface
   Services/              DevServices + DevProcessStream — dev commands and their output
   Views/                 ContentView (split view), Sidebar, PullRequests (list, overview, column), Chat (conversation, composer, model picker), Tabs, BottomPane, Palette (panel, list), Review (assign bar), Opener, Settings

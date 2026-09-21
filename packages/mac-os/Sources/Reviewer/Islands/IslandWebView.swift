@@ -32,6 +32,7 @@ final class IslandWebView: WKWebView {
             } else {
                 unregisterDraggedTypes()
             }
+            DropDiagnostics.note("island.acceptsDrops=\(acceptsDrops) registered=\(registeredDraggedTypes.count)")
         }
     }
 
@@ -44,6 +45,11 @@ final class IslandWebView: WKWebView {
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         menu.allowsContextMenuPlugIns = false
         menu.removeAllItems()
+    }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        DropDiagnostics.note("island.entered", sender.draggingPasteboard)
+        return super.draggingEntered(sender)
     }
 
     override func mouseMoved(with event: NSEvent) {

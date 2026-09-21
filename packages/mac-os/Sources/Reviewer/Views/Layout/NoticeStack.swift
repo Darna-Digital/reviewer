@@ -79,7 +79,7 @@ private struct NoticeCard: View {
         }
         .padding(12)
         .background(Color(nsColor: IslandPalette.island), in: Self.shape)
-        .overlay(Self.shape.strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1))
+        .overlay(Self.shape.strokeBorder(Color(nsColor: IslandPalette.separator), lineWidth: 1))
         .shadow(color: .black.opacity(0.18), radius: 16, y: 6)
         .onHover { isHovering = $0 }
         .accessibilityElement(children: .combine)

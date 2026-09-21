@@ -105,6 +105,6 @@ enum TerminalStyle {
     static func apply(to view: TerminalView) {
         view.font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
         view.nativeBackgroundColor = .clear
-        view.nativeForegroundColor = .textColor
+        view.nativeForegroundColor = IslandPalette.text
     }
 }

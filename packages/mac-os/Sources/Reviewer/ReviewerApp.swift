@@ -50,7 +50,7 @@ struct ReviewerApp: App {
                 .environment(model)
         }
 
-        Window("Open Repository", id: ReviewerWindow.opener) {
+        Window("Open repository", id: ReviewerWindow.opener) {
             RepoOpenerWindow()
                 .environment(model)
         }
@@ -85,13 +85,13 @@ struct ReviewerCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .newItem) {
-            Button("New Agent Session") { model.newSession() }
+            Button("New agent session") { model.newSession() }
                 .keyboardShortcut("t", modifiers: .command)
-            Button("Open Repository…") { model.showOpener() }
+            Button("Open repository…") { model.showOpener() }
                 .keyboardShortcut("o", modifiers: .command)
         }
         CommandGroup(replacing: .saveItem) {
-            Button("Close Tab") { model.closeCurrentTab() }
+            Button("Close tab") { model.closeCurrentTab() }
                 .keyboardShortcut("w", modifiers: .command)
                 .disabled(!model.canCloseTab)
         }
@@ -114,7 +114,7 @@ struct ReviewerCommands: Commands {
         // — a bottom surface's item puts the pane away again as its rail
         // button does.
         CommandGroup(before: .sidebar) {
-            Button(model.sidebarShown ? "Hide Sidebar" : "Show Sidebar") { model.toggleSidebar() }
+            Button(model.sidebarShown ? "Hide sidebar" : "Show sidebar") { model.toggleSidebar() }
                 .keyboardShortcut("s", modifiers: [.control, .command])
             Divider()
             ForEach(CodeSurface.allCases) { surface in
@@ -125,7 +125,7 @@ struct ReviewerCommands: Commands {
                     .disabled(!model.hasProject)
             }
             Divider()
-            Button(model.bottomExpanded ? "Hide Bottom Pane" : "Show Bottom Pane") { model.toggleBottomPane() }
+            Button(model.bottomExpanded ? "Hide bottom pane" : "Show bottom pane") { model.toggleBottomPane() }
                 .keyboardShortcut("b", modifiers: .command)
             ForEach(BottomPaneTab.allCases) { tab in
                 Toggle(tab.title, isOn: Binding(
@@ -135,9 +135,9 @@ struct ReviewerCommands: Commands {
                     .disabled(!model.hasProject)
             }
             Divider()
-            Button("Refresh Project") { Task { await model.refresh() } }
+            Button("Refresh project") { Task { await model.refresh() } }
                 .keyboardShortcut("r", modifiers: .command)
-            Button("Reload Island") { model.page.reload() }
+            Button("Reload island") { model.page.reload() }
             .keyboardShortcut("r", modifiers: [.command, .shift])
             Divider()
         }
@@ -145,13 +145,13 @@ struct ReviewerCommands: Commands {
         // and the sessions alone take the digits, as on the web strip: the
         // pinned tabs are ways of working rather than tabs among them.
         CommandMenu("Tabs") {
-            Button("Switch Between Code and Sessions") { model.switchMode() }
+            Button("Switch between code and sessions") { model.switchMode() }
                 .keyboardShortcut("g", modifiers: .command)
                 .disabled(!model.windowTabs.canSwitchMode)
             Divider()
-            Button("Next Tab") { model.selectNextTab(offset: 1) }
+            Button("Next tab") { model.selectNextTab(offset: 1) }
                 .keyboardShortcut("]", modifiers: [.command, .shift])
-            Button("Previous Tab") { model.selectNextTab(offset: -1) }
+            Button("Previous tab") { model.selectNextTab(offset: -1) }
                 .keyboardShortcut("[", modifiers: [.command, .shift])
             Divider()
             ForEach(Array(model.windowTabs.sessions.prefix(9).enumerated()), id: \.element.id) { slot, tab in
@@ -196,9 +196,9 @@ struct SearchMenuItems: View {
     let model: AppModel
 
     var body: some View {
-        Button("Go to File…") { model.findFile() }
+        Button("Go to file…") { model.findFile() }
             .keyboardShortcut("o", modifiers: [.command, .shift])
-        Button("Search in Files…") { model.findInFiles() }
+        Button("Search in files…") { model.findInFiles() }
             .keyboardShortcut("f", modifiers: [.command, .shift])
     }
 }

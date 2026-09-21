@@ -27,7 +27,7 @@ struct PullRequestOverview: View {
                 "#\(pull.number) is no longer open", symbol: "arrow.triangle.pull",
                 detail: "It has been merged or closed since the list was read."
             ) {
-                Button("Back to List") { model.leavePull() }
+                Button("Back to list") { model.leavePull() }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -416,7 +416,7 @@ extension View {
         -> some View
     {
         alert("Close #\(pull.number) without merging?", isPresented: shown) {
-            Button("Close Pull Request", role: .destructive) { close() }
+            Button("Close pull request", role: .destructive) { close() }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("\(pull.headRef) keeps its commits and stays where it is. Reopening #\(pull.number) is done on GitHub.")

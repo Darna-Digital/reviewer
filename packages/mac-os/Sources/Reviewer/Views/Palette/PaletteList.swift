@@ -269,7 +269,7 @@ private final class PaletteRowView: NSTableRowView {
 
     override func drawBackground(in dirtyRect: NSRect) {
         guard isActive else { return }
-        NSColor.labelColor.withAlphaComponent(0.1).setFill()
+        IslandPalette.text.withAlphaComponent(0.1).setFill()
         NSBezierPath(roundedRect: bounds.insetBy(dx: PaletteList.inset, dy: 0), xRadius: 10, yRadius: 10).fill()
     }
 }
@@ -287,7 +287,7 @@ private final class PaletteHeadingCell: NSTableCellView {
         super.init(frame: frameRect)
         identifier = Self.identifier
         iconView.imageScaling = .scaleProportionallyUpOrDown
-        label.textColor = .secondaryLabelColor
+        label.textColor = IslandPalette.textSecondary
         label.lineBreakMode = .byTruncatingMiddle
         label.maximumNumberOfLines = 1
         label.cell?.truncatesLastVisibleLine = true
@@ -343,12 +343,12 @@ private final class PaletteRowCell: NSTableCellView {
         identifier = Self.identifier
         iconView.imageScaling = .scaleProportionallyUpOrDown
         leadField.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
-        leadField.textColor = .secondaryLabelColor
+        leadField.textColor = IslandPalette.textSecondary
         leadField.alignment = .right
         label.maximumNumberOfLines = 1
         label.cell?.truncatesLastVisibleLine = true
         hintField.font = .systemFont(ofSize: 11)
-        hintField.textColor = .secondaryLabelColor
+        hintField.textColor = IslandPalette.textSecondary
         hintField.alignment = .right
         returnView.image = PaletteGlyph.symbol("return", size: 10)
         returnView.contentTintColor = .secondaryLabelColor
@@ -365,7 +365,7 @@ private final class PaletteRowCell: NSTableCellView {
         case .command(let text, let symbol):
             iconView.image = PaletteGlyph.symbol(symbol, size: 13)
             label.attributedStringValue = NSAttributedString(
-                string: text, attributes: [.font: Self.textFont, .foregroundColor: NSColor.labelColor])
+                string: text, attributes: [.font: Self.textFont, .foregroundColor: IslandPalette.text])
             label.lineBreakMode = .byTruncatingTail
         case .file(let path):
             iconView.image = FileIcon.image(for: path, dark: dark) ?? PaletteGlyph.document
@@ -381,7 +381,7 @@ private final class PaletteRowCell: NSTableCellView {
         case .branch(let name):
             iconView.image = PaletteGlyph.symbol("arrow.triangle.branch", size: 13)
             label.attributedStringValue = NSAttributedString(
-                string: name, attributes: [.font: Self.codeFont, .foregroundColor: NSColor.labelColor])
+                string: name, attributes: [.font: Self.codeFont, .foregroundColor: IslandPalette.text])
             label.lineBreakMode = .byTruncatingTail
         }
         hintField.stringValue = row.hint ?? ""
@@ -396,7 +396,7 @@ private final class PaletteRowCell: NSTableCellView {
         let text = NSMutableAttributedString(
             string: String(path[..<slash]), attributes: [.font: codeFont, .foregroundColor: NSColor.secondaryLabelColor])
         text.append(NSAttributedString(
-            string: String(path[slash...]), attributes: [.font: codeFont, .foregroundColor: NSColor.labelColor]))
+            string: String(path[slash...]), attributes: [.font: codeFont, .foregroundColor: IslandPalette.text]))
         return text
     }
 
@@ -405,7 +405,7 @@ private final class PaletteRowCell: NSTableCellView {
     private static func matchLabel(_ line: String, query: String, options: GrepOptions) -> NSAttributedString {
         let text = String(line.drop(while: \.isWhitespace))
         let attributed = NSMutableAttributedString(
-            string: text, attributes: [.font: codeFont, .foregroundColor: NSColor.labelColor])
+            string: text, attributes: [.font: codeFont, .foregroundColor: IslandPalette.text])
         if let range = CommandPalette.matchRange(in: text, query: query, options: options) {
             attributed.addAttribute(
                 .backgroundColor, value: NSColor.controlAccentColor.withAlphaComponent(0.3),

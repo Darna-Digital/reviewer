@@ -5,7 +5,6 @@ import { usePanelSize } from "@/components/layout/use-panel-size";
 import { agentIcon } from "@/interactions/threads/components/agent-icons";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
 import { Orb } from "@/components/ui/orb";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -341,12 +340,7 @@ export function CommitPanel({
             disabled={!canCommit}
             onClick={() => void commit(false)}
           >
-            {pending === "commit" && (
-              <LoadingCursor
-                label="Committing…"
-                className="bg-primary-foreground"
-              />
-            )}
+            {pending === "commit" && <Orb size={14} label="Committing…" />}
             Commit
           </Button>
           {allowPush && (
@@ -357,7 +351,7 @@ export function CommitPanel({
               onClick={() => void commit(true)}
             >
               {pending === "push" && (
-                <LoadingCursor label="Committing and pushing…" />
+                <Orb size={14} label="Committing and pushing…" />
               )}
               Commit & push
             </Button>

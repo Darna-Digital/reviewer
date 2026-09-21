@@ -644,6 +644,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/github/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["github.loginStatus"];
+        put?: never;
+        post: operations["github.startLogin"];
+        delete: operations["github.cancelLogin"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/github/pulls": {
         parameters: {
             query?: never;
@@ -1188,6 +1204,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/themes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["themes.list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/themes/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["themes.chrome"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1240,6 +1288,11 @@ export interface components {
             _tag: "LanguageError";
             providerId: string;
             reason: string;
+        };
+        ThemeNotFound: {
+            /** @enum {string} */
+            _tag: "ThemeNotFound";
+            name: string;
         };
     };
     responses: never;
@@ -3351,6 +3404,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         login: string | null;
+                        name: string | null;
+                        avatarUrl: string | null;
                         source: ("env" | "gh") | null;
                     };
                 };
@@ -3362,6 +3417,93 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GitProviderError"];
+                };
+            };
+        };
+    };
+    "github.loginStatus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        phase: "idle" | "waiting" | "done" | "failed";
+                        code: string | null;
+                        url: string | null;
+                        reason: string | null;
+                    };
+                };
+            };
+        };
+    };
+    "github.startLogin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        phase: "idle" | "waiting" | "done" | "failed";
+                        code: string | null;
+                        url: string | null;
+                        reason: string | null;
+                    };
+                };
+            };
+            /** @description GitProviderError */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitProviderError"];
+                };
+            };
+        };
+    };
+    "github.cancelLogin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        phase: "idle" | "waiting" | "done" | "failed";
+                        code: string | null;
+                        url: string | null;
+                        reason: string | null;
+                    };
                 };
             };
         };
@@ -6055,6 +6197,91 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StorageError"];
+                };
+            };
+        };
+    };
+    "themes.list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        name: string;
+                        displayName: string;
+                        /** @enum {string} */
+                        colorScheme: "light" | "dark";
+                        collection: string;
+                    }[];
+                };
+            };
+        };
+    };
+    "themes.chrome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        theme: {
+                            name: string;
+                            displayName: string;
+                            /** @enum {string} */
+                            colorScheme: "light" | "dark";
+                            collection: string;
+                        };
+                        chrome: {
+                            /** @enum {string} */
+                            colorScheme: "light" | "dark";
+                            frame: string;
+                            island: string;
+                            control: string;
+                            popover: string;
+                            text: string;
+                            textSecondary: string;
+                            textTertiary: string;
+                            separator: string;
+                            hairline: string;
+                            accent: string;
+                            link: string;
+                            selection: string;
+                            hover: string;
+                            added: string;
+                            modified: string;
+                            deleted: string;
+                        };
+                    };
+                };
+            };
+            /** @description ThemeNotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThemeNotFound"];
                 };
             };
         };

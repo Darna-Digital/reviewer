@@ -31,8 +31,8 @@ struct CommitMessageEditor: NSViewRepresentable {
         textView.drawsBackground = false
         textView.focusRingType = .none
         textView.font = Self.font
-        textView.textColor = .labelColor
-        textView.typingAttributes = [.font: Self.font, .foregroundColor: NSColor.labelColor]
+        textView.textColor = IslandPalette.text
+        textView.typingAttributes = [.font: Self.font, .foregroundColor: IslandPalette.text]
         textView.textContainerInset = .zero
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false

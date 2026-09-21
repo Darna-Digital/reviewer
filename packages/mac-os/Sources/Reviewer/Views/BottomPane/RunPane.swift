@@ -70,17 +70,17 @@ private struct CommandTable: View {
     private var toolbar: some View {
         PaneToolbar {
             ControlGroup {
-                Button { adding = true } label: { Label("Add Command", systemImage: "plus") }
+                Button { adding = true } label: { Label("Add command", systemImage: "plus") }
                     .help("Add a command")
-                Button(action: removeSelected) { Label("Remove Command", systemImage: "minus") }
+                Button(action: removeSelected) { Label("Remove command", systemImage: "minus") }
                     .help("Remove the selected command")
                     .disabled(services.selected == nil)
             }
             ControlGroup {
-                Button { Task { await services.startAll() } } label: { Label("Start All", systemImage: "play.fill") }
+                Button { Task { await services.startAll() } } label: { Label("Start all", systemImage: "play.fill") }
                     .help("Start all")
                     .disabled(services.commands.isEmpty)
-                Button { Task { await services.stopAll() } } label: { Label("Stop All", systemImage: "stop.fill") }
+                Button { Task { await services.stopAll() } } label: { Label("Stop all", systemImage: "stop.fill") }
                     .help("Stop all")
                     .disabled(!anyRunning)
             }
@@ -143,9 +143,9 @@ private struct CommandTable: View {
     @ViewBuilder
     private var placeholder: some View {
         if query.isEmpty {
-            PanePlaceholder("No Commands", symbol: "play.circle",
+            PanePlaceholder("No commands", symbol: "play.circle",
                             detail: "Add a dev server or a watcher to run in this project.") {
-                Button("Add Command…") { adding = true }
+                Button("Add command…") { adding = true }
             }
         } else {
             PanePlaceholder("No commands match “\(query)”", symbol: "magnifyingglass")
@@ -163,9 +163,9 @@ private struct CommandTable: View {
             }
         }
         Divider()
-        Button("Copy Command") { copy(command.command) }
+        Button("Copy command") { copy(command.command) }
         if !command.cwd.isEmpty {
-            Button("Show Folder in Finder") { reveal(command.cwd) }
+            Button("Show folder in Finder") { reveal(command.cwd) }
         }
         Divider()
         Button("Remove", role: .destructive) {
@@ -229,7 +229,7 @@ private struct CommandDetail: View {
                 }
             }
         } else {
-            PanePlaceholder("No Command Selected", symbol: "play.circle",
+            PanePlaceholder("No command selected", symbol: "play.circle",
                             detail: "Pick a command on the left to see its output.")
         }
     }
@@ -299,7 +299,7 @@ private struct NewCommandSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("New Command")
+                Text("New command")
                     .font(.headline)
                 Text("A process the server runs in this project and keeps running while you work.")
                     .font(.system(size: 11))

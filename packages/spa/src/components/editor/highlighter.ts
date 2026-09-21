@@ -2,14 +2,27 @@ import {
   getFiletypeFromFileName,
   getHighlighterOptions,
   preloadHighlighter,
+  registerCustomTheme,
   type FileContents,
 } from "@pierre/diffs";
 import { useWorkerPool } from "@pierre/diffs/react";
 import { useEffect, useState } from "react";
+import { reviewerThemes } from "@reviewer/core/themes";
 import { contentCacheKey } from "@/lib/highlight-cache-key";
+import { codeThemesOf, useUiPrefs, type CodeThemes } from "@/lib/ui-prefs";
 
-/** Shiki theme pair shared by every `@pierre/diffs` view in the app. */
-export const THEMES = { light: "github-light", dark: "github-dark" } as const;
+// The library knows Pierre's and Shiki's themes by name; the app's own pair
+// is taught to it here, once, before any view asks for either — the worker
+// pool resolves themes on this thread and hands the result to its workers,
+// so one registration covers every surface.
+for (const theme of reviewerThemes.getThemes()) {
+  registerCustomTheme(theme.name, theme.load);
+}
+
+/** The theme pair every `@pierre/diffs` view in the app is drawn with. */
+export function useCodeThemes(): CodeThemes {
+  return codeThemesOf(useUiPrefs());
+}
 
 // Languages whose Shiki grammar has finished loading into the main-thread
 // highlighter, shared across views so one load benefits the others.
@@ -27,6 +40,7 @@ const readyLangs = new Set<string>();
  */
 export function useLangReady(path: string, enabled: boolean): boolean {
   const lang = filetypeOf(path);
+  const themes = useCodeThemes();
   const [ready, setReady] = useState(() => readyLangs.has(lang));
   useEffect(() => {
     if (!enabled || readyLangs.has(lang)) {
@@ -40,12 +54,12 @@ export function useLangReady(path: string, enabled: boolean): boolean {
       if (!cancelled) setReady(true);
     };
     void preloadHighlighter(
-      getHighlighterOptions(lang, { theme: THEMES })
+      getHighlighterOptions(lang, { theme: themes })
     ).then(done, done);
     return () => {
       cancelled = true;
     };
-  }, [lang, enabled]);
+  }, [lang, enabled, themes]);
   return !enabled || ready;
 }
 

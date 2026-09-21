@@ -46,7 +46,7 @@ private enum OpenerList: Hashable {
         switch self {
         case .recents: return "Recents"
         case .favorites: return "Favorites"
-        case .all: return "All Repositories"
+        case .all: return "All repositories"
         case .location(let path): return URL(fileURLWithPath: path).lastPathComponent
         }
     }
@@ -119,13 +119,13 @@ private struct RepoOpener: View {
         if catalog.isScanning && catalog.rows.isEmpty { return .scanning }
         switch list {
         case .recents:
-            return .none(title: "No Recent Repositories", detail: "Repositories you open will show up here.")
+            return .none(title: "No recent repositories", detail: "Repositories you open will show up here.")
         case .favorites:
-            return .none(title: "No Favorite Repositories", detail: "Right-click a repository and choose Add to Favorites.")
+            return .none(title: "No favorite repositories", detail: "Right-click a repository and choose Add to favorites.")
         case .location(let path):
-            return .none(title: "No Repositories", detail: "\(RepoRow.fold(path, home: NSHomeDirectory())) holds no repositories any more. Scan again to look afresh.")
+            return .none(title: "No repositories", detail: "\(RepoRow.fold(path, home: NSHomeDirectory())) holds no repositories any more. Scan again to look afresh.")
         case .all, nil:
-            return .none(title: "No Repositories", detail: "None were found under your home folder. Scan again, or use Open Other… to pick one.")
+            return .none(title: "No repositories", detail: "None were found under your home folder. Scan again, or use Open other… to pick one.")
         }
     }
 }
@@ -149,7 +149,7 @@ private struct OpenerEmptyView: View {
                 ContentUnavailableView.search(text: needle)
             case .scanning:
                 ContentUnavailableView {
-                    Label("Looking for Repositories", systemImage: "magnifyingglass")
+                    Label("Looking for repositories", systemImage: "magnifyingglass")
                 } description: {
                     Text("The walk through your folders is still on.")
                 }
@@ -178,7 +178,7 @@ private struct OpenerSidebar: View {
                 .tag(OpenerList.recents)
             Label("Favorites", systemImage: "star")
                 .tag(OpenerList.favorites)
-            Label("All Repositories", systemImage: "square.grid.2x2")
+            Label("All repositories", systemImage: "square.grid.2x2")
                 .tag(OpenerList.all)
             Section("Locations") {
                 ForEach(model.catalog.locations) { location in
@@ -251,17 +251,17 @@ private struct OpenerTable: View {
         .contextMenu(forSelectionType: RepoRow.ID.self) { ids in
             if let path = ids.first {
                 Button("Open") { open(path) }
-                Button("Open and Run") { openAndRun(path) }
-                Button("Open in New Window") { model.openProjectInNewWindow(path: path) }
+                Button("Open and run") { openAndRun(path) }
+                Button("Open in new window") { model.openProjectInNewWindow(path: path) }
                 Divider()
                 if model.catalog.isFavorite(path) {
-                    Button("Remove from Favorites") { model.catalog.toggleFavorite(path) }
+                    Button("Remove from favorites") { model.catalog.toggleFavorite(path) }
                 } else {
-                    Button("Add to Favorites") { model.catalog.toggleFavorite(path) }
+                    Button("Add to favorites") { model.catalog.toggleFavorite(path) }
                 }
                 Divider()
                 Button("Show in Finder") { revealInFinder(path) }
-                Button("Copy Path") { copy(path) }
+                Button("Copy path") { copy(path) }
             }
         } primaryAction: { ids in
             if let path = ids.first { open(path) }
@@ -301,7 +301,7 @@ private struct OpenerToolbar: ToolbarContent {
             Button {
                 model.catalog.rescan()
             } label: {
-                Label("Scan Again", systemImage: "arrow.clockwise")
+                Label("Scan again", systemImage: "arrow.clockwise")
             }
             .disabled(model.catalog.isScanning)
             .help("Look for repositories again")
@@ -310,7 +310,7 @@ private struct OpenerToolbar: ToolbarContent {
             Button {
                 model.chooseProject()
             } label: {
-                Label("Open Other…", systemImage: "folder")
+                Label("Open other…", systemImage: "folder")
             }
             .help("Open a repository the list does not show")
         }

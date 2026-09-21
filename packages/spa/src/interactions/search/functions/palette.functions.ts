@@ -37,7 +37,7 @@ export const SUBMENUS: ReadonlyArray<Submenu> = [
   {
     mode: "files",
     parent: "commands",
-    label: "Go to File…",
+    label: "Go to file…",
     group: "Search",
     icon: IconFile,
     keywords: "open path jump navigate",
@@ -45,7 +45,7 @@ export const SUBMENUS: ReadonlyArray<Submenu> = [
   {
     mode: "text",
     parent: "commands",
-    label: "Search in Files…",
+    label: "Search in files…",
     group: "Search",
     icon: IconSearch,
     keywords: "grep content text find occurrences",
@@ -53,7 +53,7 @@ export const SUBMENUS: ReadonlyArray<Submenu> = [
   {
     mode: "git",
     parent: "commands",
-    label: "Git Actions…",
+    label: "Git actions…",
     group: "Git",
     icon: IconGitFork,
     keywords: "fetch pull push branch merge rebase",
@@ -61,7 +61,7 @@ export const SUBMENUS: ReadonlyArray<Submenu> = [
   {
     mode: "branches",
     parent: "git",
-    label: "Switch Branch…",
+    label: "Switch branch…",
     group: "Git",
     icon: IconGitBranch,
     keywords: "checkout switch change branch",

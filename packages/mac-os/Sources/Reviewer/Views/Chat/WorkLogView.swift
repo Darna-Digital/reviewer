@@ -61,7 +61,7 @@ private struct WorkStepRow: View {
                     .frame(width: 14, height: 18)
                 if !last {
                     Rectangle()
-                        .fill(Color(nsColor: .separatorColor))
+                        .fill(Color(nsColor: IslandPalette.separator))
                         .frame(width: 1)
                         .frame(maxHeight: .infinity)
                 }

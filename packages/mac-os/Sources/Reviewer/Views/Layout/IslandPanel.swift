@@ -36,7 +36,7 @@ private struct IslandPanel: ViewModifier {
             .background(Color(nsColor: IslandPalette.island))
             .clipShape(IslandMetrics.shape)
             .overlay {
-                IslandMetrics.shape.strokeBorder(Color(nsColor: .separatorColor), lineWidth: 1)
+                IslandMetrics.shape.strokeBorder(Color(nsColor: IslandPalette.separator), lineWidth: 1)
             }
     }
 }

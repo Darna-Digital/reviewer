@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { FileTypeIcon, TreeChevronIcon } from "@/components/ui/file-type-icon";
-import { LoadingCursor } from "@/components/ui/loading-cursor";
+import { Orb } from "@/components/ui/orb";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { createCommitDetailsFunctions } from "@/interactions/commit-details/functions/commit-details.functions";
 import type { DetailRow } from "@/interactions/commit-details/interfaces/commit-details.interfaces";
@@ -84,7 +84,7 @@ export function CommitDetailsPanel({
   if (detail.isPending) {
     return (
       <div className="grid h-full place-items-center p-4">
-        <LoadingCursor label="Loading commit…" />
+        <Orb size={16} label="Loading commit…" />
       </div>
     );
   }

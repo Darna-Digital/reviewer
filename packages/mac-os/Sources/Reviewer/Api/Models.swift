@@ -728,3 +728,49 @@ struct CommitDetail: Decodable, Sendable {
     let parents: [String]
     let files: [CommitFile]
 }
+
+/// One theme as the catalog lists it — `ThemeDescriptor` in core: enough to
+/// name it in a picker without loading it.
+struct ThemeDescriptor: Decodable, Hashable, Identifiable, Sendable {
+    enum ColorScheme: String, Decodable, Hashable, Sendable {
+        case light
+        case dark
+    }
+
+    let name: String
+    let displayName: String
+    let colorScheme: ColorScheme
+    /// Where the theme is from — `reviewer`, `pierre` or `shiki`.
+    let collection: String
+
+    var id: String { name }
+}
+
+/// The window's palette as one theme colours it — `ChromeTokens` in core,
+/// every value a `#rrggbb` or `#rrggbbaa` string. The server derives it
+/// from the theme (see `deriveChromeTokens`); the shell only paints with it.
+struct ChromeTokens: Decodable, Hashable, Sendable {
+    let colorScheme: ThemeDescriptor.ColorScheme
+    let frame: String
+    let island: String
+    let control: String
+    let popover: String
+    let text: String
+    let textSecondary: String
+    let textTertiary: String
+    let separator: String
+    let hairline: String
+    let accent: String
+    let link: String
+    let selection: String
+    let hover: String
+    let added: String
+    let modified: String
+    let deleted: String
+}
+
+/// A theme resolved for the shell: what it is, and what to paint with.
+struct ThemeChrome: Decodable, Sendable {
+    let theme: ThemeDescriptor
+    let chrome: ChromeTokens
+}

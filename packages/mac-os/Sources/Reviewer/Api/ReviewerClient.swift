@@ -107,6 +107,19 @@ struct ReviewerClient: Sendable {
         let _: GitHubLoginState = try await send("DELETE", "/api/github/login", body: EmptyBody())
     }
 
+    // MARK: themes
+
+    /// Every theme the app offers, in the order a picker lists them.
+    func themes() async throws -> [ThemeDescriptor] {
+        try await get("/api/themes")
+    }
+
+    /// One theme read for the window's palette; 404 for a name the catalog
+    /// does not know.
+    func themeChrome(name: String) async throws -> ThemeChrome {
+        try await get("/api/themes/\(name)")
+    }
+
     // MARK: merge requests
 
     /// Every open pull request on the repository's GitHub remote, with CI

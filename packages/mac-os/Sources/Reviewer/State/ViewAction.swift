@@ -1,5 +1,5 @@
 // What the shell asks of the page's own view preferences — the one the
-// palette's Toggle Diff Style reaches for, kept by the page since the diff
+// palette's Toggle diff style reaches for, kept by the page since the diff
 // is its to lay out — see `ShellViewAction` in the SPA's `lib/shell`.
 import Foundation
 

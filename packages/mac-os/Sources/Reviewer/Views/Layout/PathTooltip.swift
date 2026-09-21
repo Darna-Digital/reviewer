@@ -50,7 +50,7 @@ final class PathTooltip {
 
         label = NSTextField(labelWithString: "")
         label.font = Self.font
-        label.textColor = .labelColor
+        label.textColor = IslandPalette.text
         label.usesSingleLineMode = true
         label.maximumNumberOfLines = 1
         label.lineBreakMode = .byTruncatingMiddle
