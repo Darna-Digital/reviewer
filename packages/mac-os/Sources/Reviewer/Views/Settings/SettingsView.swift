@@ -1,10 +1,15 @@
 // The settings window — ⌘, and the app menu's Settings…: the system's
 // grouped form, one section for each of the three things it holds. Theme
 // is the one control; git is read from the server and said as it stands,
-// with what to run to change it underneath, since it is not the window's
-// to edit; GitHub is the account the server works as, with a sign-in when
-// there is none — the CLI's device flow, the code shown here and the page
-// it goes on opened (see `AppSettings`).
+// since it is not the window's to edit; GitHub is the account the server
+// works as, with a sign-in when there is none — the CLI's device flow, the
+// code shown here and the page it goes on opened (see `AppSettings`).
+//
+// The form says as little as it can: where a row would want a sentence
+// under it — where the identity comes from, how to change it — the
+// sentence is a tooltip on the help badge beside the section's title,
+// there for the reader who wonders and out of the way of the one who does
+// not.
 import SwiftUI
 
 struct SettingsView: View {
@@ -24,31 +29,73 @@ struct SettingsView: View {
             Section {
                 GitIdentityRows(read: model.settings.identity, hasProject: model.hasProject)
             } header: {
-                Text("Git")
-            } footer: {
-                Text("The name commits are signed with here — git's `user.name` and `user.email`, this project's over the global ones. Change them with `git config --global user.name` and `user.email`.")
+                SectionHeader(
+                    "Git",
+                    help: "Git's user.name and user.email as this project resolves them — its own config over the global one. Change them with git config."
+                )
             }
             Section {
                 GitHubAccountRows(settings: model.settings)
             } header: {
-                HStack {
-                    Text("GitHub")
-                    Spacer()
-                    Button("Check Again") { Task { await model.settings.reload() } }
-                        .controlSize(.small)
-                        .disabled(model.settings.signIn.isUnderWay)
+                SectionHeader(
+                    "GitHub",
+                    help: "The account the server's GitHub requests go out as: the token in GITHUB_TOKEN or GH_TOKEN, else the gh CLI's sign-in."
+                ) {
+                    Button { Task { await model.settings.reload() } } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Check again")
+                    .disabled(model.settings.signIn.isUnderWay)
                 }
-            } footer: {
-                Text("Requests to GitHub carry the token in `GITHUB_TOKEN` or `GH_TOKEN`, else the one the `gh` CLI is signed in with. Signing in here runs `gh auth login`.")
             }
         }
         .formStyle(.grouped)
         // A grouped form is a list, and a list reports no ideal height: the
         // window is sized here, tall enough for every section with its
         // rows in, and scrolls should a reason or a name run long.
-        .frame(width: 480, height: 470)
+        .frame(width: 480, height: 400)
         .task { await model.settings.reload() }
         .onChange(of: model.workspace?.project) { Task { await model.settings.reload() } }
+    }
+}
+
+/// A section's title with the sentence about it behind a help badge, and
+/// room at the trailing edge for the section's one action. The badge is a
+/// button, as the system's help buttons are: a click opens the sentence in
+/// a popover, since a section header is not a place the pointer lingers
+/// long enough for a tooltip to show.
+private struct SectionHeader<Trailing: View>: View {
+    let title: String
+    let help: String
+    @ViewBuilder let trailing: () -> Trailing
+
+    @State private var showingHelp = false
+
+    init(_ title: String, help: String, @ViewBuilder trailing: @escaping () -> Trailing = { EmptyView() }) {
+        self.title = title
+        self.help = help
+        self.trailing = trailing
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(title)
+            Button { showingHelp.toggle() } label: {
+                Image(systemName: "questionmark.circle")
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.plain)
+            .help(help)
+            .popover(isPresented: $showingHelp, arrowEdge: .bottom) {
+                Text(help)
+                    .font(.callout)
+                    .frame(width: 280, alignment: .leading)
+                    .padding(12)
+            }
+            Spacer()
+            trailing()
+        }
     }
 }
 
@@ -183,15 +230,11 @@ private struct SignInOfferRow: View {
             Image(systemName: "person.crop.circle.badge.questionmark")
                 .font(.system(size: 28))
                 .foregroundStyle(.tertiary)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Not signed in").fontWeight(.medium)
-                Text("Pull requests, checks and merges need an account.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-            }
+            Text("Not signed in").fontWeight(.medium)
             Spacer()
             Button("Sign In…") { settings.signInToGitHub() }
                 .buttonStyle(.borderedProminent)
+                .help("Sign in with gh auth login — pull requests, checks and merges need an account")
         }
         .padding(.vertical, 2)
     }
@@ -215,13 +258,16 @@ private struct SignInCodeRow: View {
                     .textSelection(.enabled)
                 Spacer()
                 Button("Copy Code") { settings.copySignInCode() }
+                    .help("Copy the code again")
                 Button("Open GitHub") { settings.openSignInPage() }
+                    .help("Open the page the code goes on again")
             }
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small)
-                Text("Waiting for GitHub — the code is on your pasteboard and the page is open in your browser.")
+                Text("Waiting for GitHub…")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+                    .help("The code is on your pasteboard and the page is open in your browser")
                 Spacer()
                 Button("Cancel") { settings.cancelSignIn() }
                     .controlSize(.small)
@@ -247,7 +293,7 @@ private struct SignInFailedRow: View {
                     Text("Could not sign in").fontWeight(.medium)
                     Text(reason).font(.callout).foregroundStyle(.secondary)
                     if needsCLI {
-                        Text("Install it with `brew install gh`, or from [cli.github.com](https://cli.github.com), then try again.")
+                        Text("Install it with `brew install gh` or from [cli.github.com](https://cli.github.com).")
                             .font(.callout)
                             .foregroundStyle(.secondary)
                     }

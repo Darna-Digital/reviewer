@@ -37,15 +37,7 @@ struct ComparePicker: View {
             HStack(spacing: 5) {
                 Image(systemName: symbol)
                     .foregroundStyle(.secondary)
-                Text(labels.base)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .layoutPriority(1)
-                Image(systemName: "arrow.left.arrow.right")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.secondary)
-                Text(labels.headShort)
-                    .foregroundStyle(.secondary)
+                Text(labels.chip)
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Image(systemName: "chevron.down")
@@ -90,20 +82,18 @@ struct ComparisonCandidates {
     let aim: String?
 }
 
-/// How a comparison reads — core's `comparisonLabels`: the two sides, the
-/// head without repeating a name the base has just said, and the sentence
-/// they make for a tooltip.
+/// How a comparison reads — core's `comparisonLabels`, cut down to what
+/// the chip has room for: the base alone, since the branch picker beside
+/// it already names the head, and the full sentence for the tooltip. With
+/// nothing to compare against the chip says "Uncommitted" rather than
+/// repeating the branch name the picker next to it just said.
 struct ComparisonLabels {
-    let base: String
-    let head: String
-    let headShort: String
+    let chip: String
     let summary: String
 
     init(against: String?, branch: String?) {
         let here = branch.flatMap { $0.isEmpty ? nil : $0 } ?? "this checkout"
-        base = against ?? here
-        head = "\(here) with changes"
-        headShort = against == nil ? "with changes" : head
-        summary = "Comparing ‘\(base)’ against ‘\(head)’"
+        chip = against ?? "Uncommitted"
+        summary = "Comparing ‘\(against ?? here)’ against ‘\(here) with changes’"
     }
 }

@@ -92,7 +92,7 @@ final class AppModel {
     init(client: ReviewerClient = ReviewerClient(baseURL: ServerLauncher.shared.baseURL)) {
         self.client = client
         let source = SpaSource.resolve()
-        page = IslandHost(kind: .code, href: Href.review, source: source, apiBaseURL: client.baseURL)
+        page = IslandHost(kind: .code, href: Href.browsePath, source: source, apiBaseURL: client.baseURL)
         services = DevServices(client: client)
         threads = Threads(client: client)
         pullRequests = PullRequests(client: client)
@@ -457,6 +457,8 @@ final class AppModel {
 
     // MARK: project
 
+    /// A project opens on its browse page — the tree of what it holds —
+    /// whatever the last one was showing.
     @discardableResult
     func openProject(path: String) async -> Bool {
         do {
@@ -464,6 +466,7 @@ final class AppModel {
             services.reset()
             threads.reset()
             bottomExpanded = false
+            showOnCodeTab(Href.browsePath)
             await refresh()
             projectOpens += 1
             return true
