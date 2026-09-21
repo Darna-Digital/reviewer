@@ -153,9 +153,9 @@ export interface LanguageLayerOptions {
   /**
    * Whether a line number in the DOM is this file's own line number. False in a
    * diff, where a deletion row carries the line it had in the *other* file — so
-   * everything that resolves a position by reading the rendered code, rather
-   * than from a token event, has to stay off there: the underlines under
-   * problem tokens, and the right-click menu.
+   * the underlines under problem tokens, which are painted by walking the
+   * rendered rows, stay off there. The right-click menu reads one token at a
+   * time and tells the sides apart itself.
    */
   lineNumbersMatchFile?: boolean;
   /** Unsaved buffer to analyse, or null to analyse the file on disk. */
@@ -439,11 +439,10 @@ export function useLanguageLayer({
   const symbolMenu = useSymbolMenu({
     editor,
     path,
-    // The menu finds its symbol by reading the rendered code, so it goes where
-    // the line numbers there are this file's own. It does not need a buffer:
-    // usages and definition are read-only questions, and the fixes it also
-    // carries leave themselves out when there is nothing to apply them to.
-    enabled: enabled && lineNumbersMatchFile,
+    // The menu does not need a buffer: usages and definition are read-only
+    // questions, and the fixes it also carries leave themselves out when there
+    // is nothing to apply them to.
+    enabled,
     getContainer,
     onOpen: closeCard,
     // No card and no spinner: the search is handed to the Find window, which

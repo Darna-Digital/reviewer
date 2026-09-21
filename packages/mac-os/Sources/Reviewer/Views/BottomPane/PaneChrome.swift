@@ -197,10 +197,19 @@ struct PaneToolbar<Content: View>: View {
 /// every keystroke; a surface that searches on demand rather than as you
 /// type passes `submit`, which fires on Return, on losing focus and on the
 /// cancel mark, since clearing should take at once.
+///
+/// A field at the head of a picker takes the keys the picker answers —
+/// ↑/↓ over the rows, Return, Escape — through `command`, which is handed
+/// the field editor's selector and says whether it took it; the field
+/// keeps whatever it declines. The same picker has the field focused as it
+/// comes up (`focusesOnAppear`), a turn of the run loop after the view is
+/// in a window.
 struct PaneSearchField: NSViewRepresentable {
     let prompt: String
     @Binding var text: String
     var submit: (() -> Void)? = nil
+    var focusesOnAppear = false
+    var command: ((Selector) -> Bool)? = nil
 
     func makeNSView(context: Context) -> NSSearchField {
         let field = NSSearchField()
@@ -208,25 +217,35 @@ struct PaneSearchField: NSViewRepresentable {
         field.controlSize = .regular
         field.sendsSearchStringImmediately = true
         field.delegate = context.coordinator
+        if focusesOnAppear {
+            Task { @MainActor in field.window?.makeFirstResponder(field) }
+        }
         return field
     }
 
     func updateNSView(_ field: NSSearchField, context: Context) {
         context.coordinator.text = $text
         context.coordinator.submit = submit
+        context.coordinator.command = command
         if field.stringValue != text { field.stringValue = text }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(text: $text, submit: submit) }
+    func makeCoordinator() -> Coordinator { Coordinator(text: $text, submit: submit, command: command) }
 
     @MainActor
     final class Coordinator: NSObject, NSSearchFieldDelegate {
         var text: Binding<String>
         var submit: (() -> Void)?
+        var command: ((Selector) -> Bool)?
 
-        init(text: Binding<String>, submit: (() -> Void)?) {
+        init(text: Binding<String>, submit: (() -> Void)?, command: ((Selector) -> Bool)?) {
             self.text = text
             self.submit = submit
+            self.command = command
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy selector: Selector) -> Bool {
+            command?(selector) ?? false
         }
 
         func controlTextDidChange(_ notification: Notification) {
@@ -271,34 +290,6 @@ struct PaneBarButton: View {
         }
         .buttonStyle(.accessoryBar)
         .help(help)
-    }
-}
-
-/// The filter over a list, in the shape the sidebar's own filter has: at
-/// the sidebar's size where it stands in the sidebar, at the bar's on a
-/// pane bar.
-struct PaneFilterField: View {
-    let prompt: String
-    @Binding var text: String
-    var size: PaneFieldSize = .regular
-
-    var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "magnifyingglass")
-                .paneFieldGlyph(size)
-            TextField(prompt, text: $text)
-                .textFieldStyle(.plain)
-                .font(.system(size: size.fontSize))
-            if !text.isEmpty {
-                Button { text = "" } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: size.fontSize))
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .paneField(size)
     }
 }
 

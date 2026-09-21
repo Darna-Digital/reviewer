@@ -280,6 +280,24 @@ export const makeGitRepoRepository = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem;
   const { lines, run, runTolerant, runVerbose } = git;
 
+  /**
+   * `git config --get` exits 1 for a key that is not set, which is an answer
+   * rather than a failure, so the tolerant runner reads it and the empty
+   * output becomes null.
+   */
+  const configValue = (key: string) =>
+    runTolerant("config", "--get", key).pipe(
+      Effect.map((out) => out.trim()),
+      Effect.map((value) => (value.length > 0 ? value : null))
+    );
+
+  const identity: RepoRepo["identity"] = Effect.suspend(() =>
+    Effect.all(
+      { name: configValue("user.name"), email: configValue("user.email") },
+      { concurrency: "unbounded" }
+    )
+  );
+
   const info: RepoRepo["info"] = Effect.gen(function* () {
     const [root, currentBranch, remoteUrl, user] = yield* Effect.all(
       [
@@ -1004,6 +1022,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
 
   return {
     info,
+    identity,
     files,
     status,
     branches,

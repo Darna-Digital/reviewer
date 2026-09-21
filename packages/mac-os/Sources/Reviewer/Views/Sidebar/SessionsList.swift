@@ -1,11 +1,18 @@
-// The sessions list as a native source list, drawn from what the page
+// The sessions list, drawn by hand in the sidebar from what the page
 // reports while it is on the sessions surface (see `ShellSessions`) in the
 // web list's shape: one line per session, the title and nothing else, with
 // the one mark that changes at the trailing edge — the orb of a working
 // agent, a red dot where a turn ended badly, the accent dot for a session
 // that moved since it was last opened — and the delete control taking the
-// mark's place under the pointer. The cloud runs stand in a group of their
-// own above, as they do in the web list.
+// mark's place under the pointer.
+//
+// The rows are a `LazyVStack` in a `ScrollView`, as the merge-request list's
+// are, rather than a `List`: a `List` row on macOS is an `NSTableView` cell,
+// and a `TimelineView` inside one is never ticked, so the orb sat still —
+// or not at all — in the accessory slot however it was drawn. A stack the
+// window owns outright redraws the way the tabs and the work log do, and
+// the picked row wears the tree's quiet wash like the sidebar's other
+// lists (see `TreeSelection`), so the two read as one.
 //
 // What the web rail carries stands at the head of the list instead: a
 // search field, and a filter menu for the project and how far back to look
@@ -26,7 +33,11 @@ struct SessionsList: View {
     /// page's answer — a list that waited for the round trip would flash the
     /// old row back under the pointer first.
     @State private var selected: Set<String> = []
+    /// The row the last plain click or arrow landed on: where a ⇧-click
+    /// sweeps from.
+    @State private var anchor: String?
     @State private var deletePrompt: [String]?
+    @FocusState private var focused: Bool
 
     var body: some View {
         if let list = model.sessions {
@@ -40,6 +51,7 @@ struct SessionsList: View {
             }
             .onChange(of: list.activeId, initial: true) { _, active in
                 selected = active.map { [$0] } ?? []
+                anchor = active
             }
             .alert("Delete \(deletePrompt?.count ?? 0) sessions?", isPresented: deletePromptShown, presenting: deletePrompt) { ids in
                 Button("Delete \(ids.count)", role: .destructive) { confirmDelete(ids, in: list) }
@@ -54,60 +66,97 @@ struct SessionsList: View {
     }
 
     private func rows(of list: ShellSessions) -> some View {
-        List(selection: $selected) {
-            if !list.cloudRuns.isEmpty {
-                Section("Cloud") {
-                    ForEach(list.cloudRuns) { run in
-                        SessionRow(session: run)
-                            .tag(run.id)
-                    }
-                }
-            }
-            Section {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 1) {
                 ForEach(list.sessions) { session in
-                    SessionRow(session: session)
-                        .tag(session.id)
-                        .onAppear {
-                            if session.id == list.sessions.last?.id && list.hasMore {
-                                model.act(onSessions: .loadMore)
-                            }
+                    SessionRow(session: session, selected: selected.contains(session.id)) {
+                        pick(session.id, in: list)
+                    }
+                    .contextMenu { menu(for: session.id, in: list) }
+                    .onAppear {
+                        if session.id == list.sessions.last?.id && list.hasMore {
+                            model.act(onSessions: .loadMore)
                         }
+                    }
                 }
                 if list.hasMore {
                     Text("Loading more…")
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity)
-                        .listRowSeparator(.hidden)
-                        .selectionDisabled()
-                }
-            } header: {
-                if !list.cloudRuns.isEmpty { Text("Sessions") }
-            }
-        }
-        .listStyle(.sidebar)
-        .scrollContentBackground(.hidden)
-        .contextMenu(forSelectionType: String.self) { ids in
-            let sessions = deletable(ids, in: list)
-            if sessions.count == 1, let id = sessions.first {
-                Button("Open in a Tab") { model.act(onSessions: .openInTab(id)) }
-                Divider()
-            }
-            if !sessions.isEmpty {
-                Button(sessions.count == 1 ? "Delete Session" : "Delete \(sessions.count) Sessions", role: .destructive) {
-                    delete(sessions)
+                        .padding(.vertical, 6)
                 }
             }
+            .padding(.horizontal, 10)
+            .padding(.bottom, 8)
         }
+        .focusable()
+        .focusEffectDisabled()
+        .focused($focused)
+        .onKeyPress(.upArrow) { step(-1, in: list) }
+        .onKeyPress(.downArrow) { step(1, in: list) }
         .onDeleteCommand { delete(deletable(selected, in: list)) }
-        .onChange(of: selected) { _, picked in
-            guard picked.count == 1, let picked = picked.first, picked != list.activeId else { return }
-            model.act(onSessions: .select(picked))
+    }
+
+    /// A plain click picks the row and sends the page to it; ⌘ adds the row
+    /// to the sweep or takes it back out, and ⇧ sweeps every row between
+    /// the last one picked and this one — neither moves the page. The click
+    /// takes the keyboard too, so the arrows and the delete key act on what
+    /// was just picked.
+    private func pick(_ id: String, in list: ShellSessions) {
+        focused = true
+        let flags = NSEvent.modifierFlags
+        if flags.contains(.command) {
+            if selected.contains(id) && selected.count > 1 {
+                selected.remove(id)
+            } else {
+                selected.insert(id)
+            }
+            return
+        }
+        if flags.contains(.shift), let from = anchor, let range = span(from: from, to: id, in: list) {
+            selected.formUnion(range)
+            return
+        }
+        anchor = id
+        selected = [id]
+        guard id != list.activeId else { return }
+        model.act(onSessions: .select(id))
+    }
+
+    private func span(from: String, to: String, in list: ShellSessions) -> [String]? {
+        let ids = list.sessions.map(\.id)
+        guard let a = ids.firstIndex(of: from), let b = ids.firstIndex(of: to) else { return nil }
+        return Array(ids[min(a, b)...max(a, b)])
+    }
+
+    /// The row beside the anchor, in the order shown — the first with none.
+    private func step(_ offset: Int, in list: ShellSessions) -> KeyPress.Result {
+        let ids = list.sessions.map(\.id)
+        guard !ids.isEmpty else { return .ignored }
+        let current = ids.firstIndex { $0 == anchor ?? list.activeId }
+        let next = current.map { min(max($0 + offset, 0), ids.count - 1) } ?? 0
+        anchor = ids[next]
+        selected = [ids[next]]
+        if ids[next] != list.activeId { model.act(onSessions: .select(ids[next])) }
+        return .handled
+    }
+
+    /// The menu acts on the sweep when the row is in it, and on the row
+    /// alone when it is not — a right-click off the sweep is about that row.
+    @ViewBuilder
+    private func menu(for id: String, in list: ShellSessions) -> some View {
+        let sessions = selected.contains(id) ? deletable(selected, in: list) : [id]
+        if sessions.count == 1, let id = sessions.first {
+            Button("Open in a Tab") { model.act(onSessions: .openInTab(id)) }
+            Divider()
+        }
+        Button(sessions.count == 1 ? "Delete Session" : "Delete \(sessions.count) Sessions", role: .destructive) {
+            delete(sessions)
         }
     }
 
-    /// The rows the list can delete, in the list's order: cloud runs are
-    /// not the page's to remove, so a sweep over both leaves them be.
+    /// The rows the list can delete, in the list's order.
     private func deletable(_ ids: Set<String>, in list: ShellSessions) -> [String] {
         list.sessions.map(\.id).filter(ids.contains)
     }
@@ -135,7 +184,7 @@ struct SessionsList: View {
 }
 
 /// The search over every session and the filter menu beside it — the web
-/// rail's two controls, in the changed-files layout's shape.
+/// rail's two controls, the search the pane bars' own field.
 private struct SessionsHeader: View {
     let filters: ShellSessionFilters
     @Environment(AppModel.self) private var model
@@ -143,7 +192,7 @@ private struct SessionsHeader: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            SearchField(query: $query)
+            PaneSearchField(prompt: "Search sessions", text: $query)
             SessionFilterMenu(filters: filters)
         }
         .padding(.horizontal, 10)
@@ -160,103 +209,60 @@ private struct SessionsHeader: View {
     }
 }
 
-private struct SearchField: View {
-    @Binding var query: String
-
-    var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
-            TextField("Search sessions", text: $query)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-            if !query.isEmpty {
-                Button {
-                    query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 7)
-        .frame(height: 24)
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
-    }
-}
-
-/// The web filter popover as a pull-down: the projects with a session in
-/// them, each with its count, over how far back to look, the chosen one in
-/// each ticked. The projects are left out while there is only one to name.
-/// The button carries a dot while anything is set, as the web's does: the
-/// list is never quietly narrower than it looks.
+/// The button the filter popover hangs off: the filter glyph, or the
+/// avatar of the project the list is narrowed to, so the sidebar says
+/// whose sessions these are without the popover open; and a dot while
+/// anything is set, as the web's has, since the list is never quietly
+/// narrower than it looks.
 private struct SessionFilterMenu: View {
     let filters: ShellSessionFilters
     @Environment(AppModel.self) private var model
+    @State private var open = false
 
     var body: some View {
-        Menu {
-            if filters.projects.count > 1 {
-                Section("Project") {
-                    Toggle("All projects", isOn: projectBinding(ShellSessionFilters.allProjects))
-                    ForEach(filters.projects) { project in
-                        Toggle(isOn: projectBinding(project.path)) {
-                            Text("\(project.name)  \(project.count)")
-                        }
-                        .help(project.path)
-                    }
+        Button { open.toggle() } label: {
+            ZStack {
+                if let project = filters.projects.first(where: { $0.path == filters.project }) {
+                    RepoAvatar(name: project.name)
+                } else {
+                    Image(systemName: "line.3.horizontal.decrease")
+                        .font(.system(size: 11, weight: .medium))
                 }
             }
-            Section("Updated") {
-                ForEach(SessionDateFilter.allCases) { date in
-                    Toggle(date.label, isOn: dateBinding(date))
+            // The bar style pads the glyph out to the search field's 24pt.
+            .frame(width: 16, height: 16)
+            .overlay(alignment: .topTrailing) {
+                if filters.isNarrowed {
+                    Circle()
+                        .fill(Color.accentColor)
+                        .frame(width: 5, height: 5)
+                        .offset(x: 2, y: -2)
                 }
             }
-        } label: {
-            Image(systemName: "line.3.horizontal.decrease")
-                .font(.system(size: 11, weight: .medium))
-                .frame(width: 24, height: 24)
-                .overlay(alignment: .topTrailing) {
-                    if filters.isNarrowed {
-                        Circle()
-                            .fill(Color.accentColor)
-                            .frame(width: 5, height: 5)
-                            .padding(3)
-                    }
-                }
         }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .fixedSize()
+        .buttonStyle(.accessoryBar)
         .help("Filter sessions")
-    }
-
-    private func projectBinding(_ path: String) -> Binding<Bool> {
-        Binding(
-            get: { filters.project == path },
-            set: { on in if on { model.act(onSessions: .filter(project: path, date: nil)) } })
-    }
-
-    private func dateBinding(_ date: SessionDateFilter) -> Binding<Bool> {
-        Binding(
-            get: { filters.date == date },
-            set: { on in if on { model.act(onSessions: .filter(project: nil, date: date)) } })
+        .popover(isPresented: $open, arrowEdge: .bottom) {
+            SessionFilterPopover(filters: filters, dismiss: { open = false }) { project, date in
+                model.act(onSessions: .filter(project: project, date: date))
+            }
+        }
     }
 }
 
-/// A session's row: the title, and a column at the trailing edge that the
+/// A session's row, at the web row's size — a 32pt line, the title at 14
+/// — and a column at the trailing edge that the
 /// mark and the delete control share — the web row's, which is why a title
 /// with nothing beside it runs the whole width and is cut only once that
 /// column opens under the pointer. A row already wearing a mark has the
 /// column open, so the pointer swaps the mark for the ✕ rather than moving
-/// the title. The row carries no gesture of its own: on macOS a gesture on
-/// a row's content takes the mouse-down before the list does, and the row
-/// is never selected.
+/// the title. Picked, it wears the tree's wash; under the pointer, the same
+/// faint one the tree's rows do. The ✕ is a button of its own inside the
+/// row's, so pressing it deletes the session rather than picking it.
 private struct SessionRow: View {
     let session: ShellSession
+    let selected: Bool
+    let pick: () -> Void
     @Environment(AppModel.self) private var model
     @State private var isHovering = false
 
@@ -267,16 +273,22 @@ private struct SessionRow: View {
     private static let opening = Animation.easeOut(duration: 0.16)
 
     var body: some View {
-        let deletable = session.kind == .session
-        let open = session.mark != nil || (isHovering && deletable)
-        HStack(spacing: 0) {
+        Button(action: pick) { content }
+            .buttonStyle(.plain)
+            .onHover { isHovering = $0 }
+            .help(session.title)
+    }
+
+    private var content: some View {
+        let open = session.mark != nil || isHovering
+        return HStack(spacing: 0) {
             Text(session.title)
-                .font(.system(size: 13))
+                .font(.system(size: 14))
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
             ZStack {
-                if isHovering && deletable {
+                if isHovering {
                     PaneBarButton(symbol: "xmark", help: "Delete session") {
                         model.act(onSessions: .delete([session.id]))
                     }
@@ -295,11 +307,13 @@ private struct SessionRow: View {
             .opacity(open ? 1 : 0)
             .padding(.leading, open ? Self.gap : 0)
         }
-        .frame(height: 24)
+        .padding(.horizontal, 8)
+        .frame(height: 32)
         .animation(Self.opening, value: open)
+        .background(
+            selected ? TreeSelection.color : isHovering ? Color.primary.opacity(0.05) : Color.clear,
+            in: RoundedRectangle(cornerRadius: 7))
         .contentShape(Rectangle())
-        .onHover { isHovering = $0 }
-        .help(session.title)
     }
 }
 
@@ -335,8 +349,7 @@ private struct SessionsPlaceholder: View {
         VStack {
             Spacer()
             if loading {
-                ProgressView()
-                    .controlSize(.small)
+                Orb(size: 16, label: "Loading")
             } else {
                 Text(searching ? "Nothing matches" : "No sessions")
                     .font(.system(size: 12))

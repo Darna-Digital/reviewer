@@ -33,6 +33,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { pathName } from "@/lib/display-path";
 import { useOpenInEditor } from "@/lib/open-in-editor";
 import { setUiPrefs, useUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
@@ -341,6 +342,11 @@ function ResultsHeader({
  * and the name of it — sitting right there over the code — is what a hand
  * reaches for. Opening it lands on the same line the preview is showing.
  */
+/**
+ * The previewed file, named as the header names the file a diff is scrolled
+ * to (see `HeaderDiffFileInView`): the same pill, the same hover, the folders
+ * giving way first and the name keeping its room.
+ */
 function PreviewHeader({
   location,
   onOpen,
@@ -351,26 +357,52 @@ function PreviewHeader({
   return (
     <div
       className={cn(
-        "flex h-9 shrink-0 items-center gap-1.5 border-b px-2 text-xs",
-        location === null && "text-muted-foreground"
+        "flex h-9 shrink-0 items-center border-b px-1 text-xs",
+        location === null && "px-2 text-muted-foreground"
       )}
     >
       {location === null ? (
         "Preview"
       ) : (
-        <button
-          type="button"
-          className="flex min-w-0 cursor-pointer items-center gap-1.5 hover:underline hover:underline-offset-2"
-          onClick={() => onOpen(location)}
-          title="Open this file"
-        >
-          <FileTypeIcon path={location.path} className="size-3.5 shrink-0" />
-          <span className="truncate">
-            {location.path}:{location.range.start.line + 1}
-          </span>
-        </button>
+        <PreviewFileLink location={location} onOpen={onOpen} />
       )}
     </div>
+  );
+}
+
+function PreviewFileLink({
+  location,
+  onOpen,
+}: {
+  readonly location: Location;
+  readonly onOpen: (location: Location) => void;
+}) {
+  const { path } = location;
+  const name = pathName(path);
+  const folders = path.slice(0, path.length - name.length);
+  const line = location.range.start.line + 1;
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={<button type="button" onClick={() => onOpen(location)} />}
+        className="flex h-7 min-w-0 cursor-default items-center overflow-hidden rounded-md px-1.5 outline-none select-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 island:rounded-full"
+      >
+        <FileTypeIcon path={path} className="mr-1.5 size-3.5" />
+        <span className="min-w-0 truncate text-muted-foreground">
+          {folders}
+        </span>
+        <span className="shrink-0 text-foreground">
+          {name}:{line}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent
+        side="bottom"
+        align="start"
+        className="max-w-none whitespace-nowrap"
+      >
+        {path}:{line}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 

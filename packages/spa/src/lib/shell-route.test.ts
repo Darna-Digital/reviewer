@@ -10,17 +10,6 @@ import {
 } from "./shell-route";
 
 describe("shellRoute", () => {
-  it("reads a cloud run as a session, like a local conversation", () => {
-    expect(shellRoute("/modes/agent-session/cloud/run-1")).toEqual({
-      kind: "session",
-      composing: false,
-      solo: false,
-    });
-    expect(shellRoute("/modes/agent-session/cloud/run-1", false, true)).toEqual(
-      { kind: "session", composing: false, solo: true }
-    );
-  });
-
   it("reads the two code modes off the path", () => {
     expect(shellRoute("/modes/code/review")).toEqual({
       kind: "code",

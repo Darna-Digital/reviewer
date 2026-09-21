@@ -3,10 +3,10 @@
  *
  * In the macOS window the sidebar is the window's own: while the page is on
  * the sessions surface the shell draws the list there natively — the rows
- * `ChatsPage` would put beside the conversation, and the cloud runs above them
- * — from a picture of what the page has loaded, and sends back what was done
- * to it. The fetch, the filters, the marks and every action on a session stay
- * this page's; the shell only ever asks.
+ * `ChatsPage` would put beside the conversation — from a picture of what the
+ * page has loaded, and sends back what was done to it. The fetch, the
+ * filters, the marks and every action on a session stay this page's; the
+ * shell only ever asks.
  *
  * The web list hides on a session's own tab, since a tab holds one
  * conversation. The native one does not: the sidebar is the window's, not the
@@ -39,7 +39,6 @@ import {
   type ChatProjectTally,
   type ChatSummary,
 } from "@reviewer/core/chats";
-import { isCloudRunActive, type CloudRunSummary } from "@reviewer/core/cloud";
 
 /** Whether the list is the shell's to draw rather than this document's. */
 export const shellDrawsSessions = island === "code";
@@ -55,7 +54,6 @@ export const shellDrawsConversation = island === "code";
 /** What the shell's list is drawn from, and what its rows can do. */
 export interface ShellSessionsSource {
   readonly sessions: ReadonlyArray<ChatSummary>;
-  readonly cloudRuns: ReadonlyArray<CloudRunSummary>;
   readonly activeId: string | null;
   readonly loading: boolean;
   readonly hasMore: boolean;
@@ -72,7 +70,6 @@ const sessionRow = (chat: ChatSummary): ShellSession => {
   const turn = unattendedTurnState(chat);
   return {
     id: chat.id,
-    kind: "session",
     title: chat.title,
     origin:
       chat.origin.repoName === chat.origin.projectName
@@ -90,21 +87,6 @@ const sessionRow = (chat: ChatSummary): ShellSession => {
   };
 };
 
-const cloudRow = (run: CloudRunSummary): ShellSession => ({
-  id: run.id,
-  kind: "cloud",
-  title: run.title,
-  origin: run.repoFullName,
-  updatedAt: run.updatedAt,
-  mark: isCloudRunActive(run.status)
-    ? "running"
-    : run.status === "failed"
-      ? "error"
-      : null,
-  messageCount: run.turnCount,
-  lastMessage: run.lastMessage,
-});
-
 /**
  * Keep the shell's list in step with `source`, and its actions flowing back
  * into it; null where the page is off the surface, which takes the list down.
@@ -116,7 +98,6 @@ export function useShellSessions(source: ShellSessionsSource | null): void {
   latest.current = source;
 
   const sessions = source?.sessions ?? null;
-  const cloudRuns = source?.cloudRuns ?? null;
   const activeId = source?.activeId ?? null;
   const loading = source?.loading ?? false;
   const hasMore = source?.hasMore ?? false;
@@ -126,19 +107,17 @@ export function useShellSessions(source: ShellSessionsSource | null): void {
     () =>
       shellDrawsSessions &&
       sessions !== null &&
-      cloudRuns !== null &&
       filters !== null &&
       projects !== null
         ? {
             sessions: sessions.map(sessionRow),
-            cloudRuns: cloudRuns.map(cloudRow),
             activeId,
             loading,
             hasMore,
             filters: { ...filters, projects },
           }
         : null,
-    [sessions, cloudRuns, activeId, loading, hasMore, filters, projects]
+    [sessions, activeId, loading, hasMore, filters, projects]
   );
   useEffect(() => {
     if (!shellDrawsSessions) return;
@@ -159,13 +138,6 @@ export function useShellSessions(source: ShellSessionsSource | null): void {
       if (current === null) return;
       switch (action.kind) {
         case "select": {
-          if (current.cloudRuns.some((run) => run.id === action.id)) {
-            void navigate({
-              to: "/modes/agent-session/cloud/$runId",
-              params: { runId: action.id },
-            });
-            return;
-          }
           // The list's own tab, whichever tab the page was on: a session tab
           // holds one conversation, and a row is not a request to swap it.
           updateWindowTabs((state) => selectTab(state, SESSIONS_TAB_ID));

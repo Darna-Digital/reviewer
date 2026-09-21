@@ -5,31 +5,13 @@
  * the app inset within it on its own canvas, so the content reads as a solid
  * page resting on top. Native window and browser tab draw the same frame.
  */
-import { useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { WindowBar } from "@/components/layout/window-bar";
 import { SearchHost } from "@/interactions/search/components/search-host";
 
 export function WindowFrame({ children }: { children: React.ReactNode }) {
-  // ⌘, opens Settings, as in every Mac app. It lives here rather than in either
-  // shell because both of them mount the frame, so this is the one spot that
-  // covers every page.
-  const navigate = useNavigate();
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) {
-        return;
-      }
-      if (event.key !== ",") return;
-      event.preventDefault();
-      void navigate({ to: "/settings" });
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [navigate]);
-
-  // For the same reason, the search dialog (⌘K, ⇧⇧, ⌘⇧F) is mounted here: one
-  // host for every page, whichever shell is showing it.
+  // The search dialog is mounted here rather than in either shell because both
+  // of them mount the frame: one host for every page, whichever shell is
+  // showing it.
   return (
     <>
       <SearchHost />

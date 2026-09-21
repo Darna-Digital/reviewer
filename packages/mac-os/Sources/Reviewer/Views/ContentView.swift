@@ -26,6 +26,7 @@ import SwiftUI
 struct ContentView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
     @Environment(\.dismissWindow) private var dismissWindow
 
     var body: some View {
@@ -67,6 +68,9 @@ struct ContentView: View {
         }
         .onChange(of: model.openerRequests) {
             openWindow(id: ReviewerWindow.opener)
+        }
+        .onChange(of: model.settingsRequests) {
+            openSettings()
         }
     }
 
@@ -370,7 +374,7 @@ struct ConnectionView: View {
                 Button("Try Again") { Task { await model.bootstrap() } }
                     .keyboardShortcut(.defaultAction)
             default:
-                ProgressView()
+                Orb(size: 20)
                 Text("Starting the API server…")
                     .foregroundStyle(.secondary)
             }

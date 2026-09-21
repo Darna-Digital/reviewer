@@ -41,7 +41,6 @@ export const SUBMENUS: ReadonlyArray<Submenu> = [
     group: "Search",
     icon: IconFile,
     keywords: "open path jump navigate",
-    hint: "⇧⇧",
   },
   {
     mode: "text",
@@ -50,7 +49,6 @@ export const SUBMENUS: ReadonlyArray<Submenu> = [
     group: "Search",
     icon: IconSearch,
     keywords: "grep content text find occurrences",
-    hint: "⇧⌘F",
   },
   {
     mode: "git",

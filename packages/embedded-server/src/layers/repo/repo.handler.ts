@@ -17,6 +17,7 @@ const trimmed = (value: string | undefined): string | null =>
 export const RepoHandler = HttpApiBuilder.group(Api, "repo", (handlers) =>
   handlers
     .handle("info", () => Effect.flatMap(RepoService, (s) => s.info))
+    .handle("identity", () => Effect.flatMap(RepoService, (s) => s.identity))
     .handle("files", () => Effect.flatMap(RepoService, (s) => s.files))
     .handle("status", () => Effect.flatMap(RepoService, (s) => s.status))
     .handle("branches", () => Effect.flatMap(RepoService, (s) => s.branches))

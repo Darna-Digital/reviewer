@@ -47,8 +47,8 @@ What it does today:
   the page is on it, so the list is the way between pull requests, as
   Mail's is between messages. On the sessions surface the
   same pane holds the agent sessions instead — every project's, newest
-  first, with the web list's marks on each row and the cloud runs grouped
-  above — drawn natively from what the page reports (`SessionsList`), under
+  first, with the web list's marks on each row — drawn natively from what
+  the page reports (`SessionsList`), under
   the web rail's search and filter menu (the project, how far back), both
   of them the page's own server query. Picking one sends the page island to
   that conversation on the Sessions tab; the context menu lifts it into a
@@ -73,7 +73,7 @@ What it does today:
   chat and steers the island to it. The island keeps the tab strip and the
   sessions list; on these pages it shows nothing of its own, and is told
   when the conversation moved (`sessions(refetch)`) so the rows' marks
-  follow. Cloud runs stay the island's.
+  follow.
 - **Islands** — beside the sidebar the window is laid out as rounded
   panels standing a few points apart on the web app's frame colour: the
   page island and the bottom pane, with a seam between them that resizes
@@ -160,6 +160,17 @@ What it does today:
   never stepping into a repository it found — kept in
   `~/.reviewer/repos.json` and started over in the background at boot and
   on request, each repository stamped with when it was last opened here.
+
+- **Settings** (⌘,, and the app menu's Settings…) — the system's grouped
+  form: the theme the window is drawn in — System, Light or Dark, held on
+  `NSApp.appearance` so the chrome, the sheets and the islands' web views
+  all follow the one switch, each island told to follow its view rather
+  than a theme of its own; who git signs commits as in the project
+  (`/api/identity`, its `user.name` and `user.email`, this project's over
+  the global ones); and who the server is signed in to GitHub as
+  (`/api/github/auth` — the login behind `GITHUB_TOKEN`/`GH_TOKEN` or the
+  `gh` CLI's token, or that there is none), with what to run to change
+  either under each. The palette's Open Settings lands here.
 
 ## Islands
 
@@ -267,12 +278,12 @@ Sources/Reviewer/
   ReviewerApp.swift      @main, menu commands, app delegate
   Server/ServerLauncher  reachability check + spawn of the embedded server
   Api/                   Codable mirrors of the core schemas, HTTP client, chat socket
-  State/                 AppModel, WindowTab, BottomPaneTab, DockSurface, ViewAction, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, PullRequests, Chats, ChatSession, ChatSettings, WorkLog, ComposerAttachment, RepoCatalog, CommandPalette + PaletteCommands (+ the ⇧⇧ monitor)
+  State/                 AppModel, AppSettings, WindowTab, BottomPaneTab, DockSurface, ViewAction, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, PullRequests, Chats, ChatSession, ChatSettings, WorkLog, ComposerAttachment, RepoCatalog, CommandPalette + PaletteCommands (+ the ⇧⇧ monitor)
   FileIcons/             FileIcon (resolver + rasteriser) over the generated @pierre/trees sprite
   Islands/               IslandHost (web view + bridge), IslandWebView, SpaSource, SpaSchemeHandler, IslandView
   Terminal/              TerminalSession — the shell behind the Terminal surface
   Services/              DevServices + DevProcessStream — dev commands and their output
-  Views/                 ContentView (split view), Sidebar, PullRequests (list, overview, column), Chat (conversation, composer, model picker), Tabs, BottomPane, Palette (panel, list), Review (assign bar), Opener
+  Views/                 ContentView (split view), Sidebar, PullRequests (list, overview, column), Chat (conversation, composer, model picker), Tabs, BottomPane, Palette (panel, list), Review (assign bar), Opener, Settings
 ```
 
 Not here yet: native menus for the islands' popovers, drag and drop between

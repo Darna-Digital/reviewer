@@ -5,6 +5,7 @@ import {
   GitProviderError,
   GitProvider,
 } from "@reviewer/core/ports/git-provider";
+import { GitHubLogin } from "./github-login.ts";
 
 const ok = { ok: true } as const;
 
@@ -17,6 +18,10 @@ const pullNumber = (raw: string): Effect.Effect<number, GitProviderError> =>
 
 export const GitHubHandler = HttpApiBuilder.group(Api, "github", (handlers) =>
   handlers
+    .handle("auth", () => Effect.flatMap(GitProvider, (s) => s.auth))
+    .handle("startLogin", () => Effect.flatMap(GitHubLogin, (s) => s.start))
+    .handle("loginStatus", () => Effect.flatMap(GitHubLogin, (s) => s.status))
+    .handle("cancelLogin", () => Effect.flatMap(GitHubLogin, (s) => s.cancel))
     .handle("pulls", () => Effect.flatMap(GitProvider, (s) => s.pulls))
     .handle("mergePull", ({ params, payload }) =>
       pullNumber(params.number).pipe(

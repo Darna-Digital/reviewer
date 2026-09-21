@@ -46,8 +46,7 @@ private struct SessionsLanding: View {
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             } else {
-                ProgressView()
-                    .controlSize(.small)
+                Orb(size: 16, label: "Loading")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

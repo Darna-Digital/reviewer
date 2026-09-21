@@ -1,7 +1,7 @@
 /**
- * SearchHost — mounts the search dialog and its keyboard gestures for a shell,
- * so ⌘K, ⇧⇧ and ⌘⇧F work on every code-mode page rather than only on the ones
- * that show a diff. What it offers is assembled here: the code-mode commands,
+ * SearchHost — mounts the search dialog for a shell, so it opens on every
+ * code-mode page rather than only on the ones that show a diff. What it offers
+ * is assembled here: the code-mode commands,
  * whatever the mounted pages registered, the file list of the project (every
  * root it holds) or of the one repository it is, and the branches for the
  * checkout list.
@@ -12,15 +12,11 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
-import { selectedCodeText } from "@/interactions/find-in-file/adapters/code-selection.store";
-import { seedFromSelection } from "@/interactions/find-in-file/functions/find-in-file.functions";
 import { useBranches, useFiles, useRemoteBranches } from "@/lib/queries";
 import { useCodeCommands } from "../adapters/code-commands.hook.adapter";
 import {
-  openSearch,
   setSearchMode,
   setSearchOpen,
-  toggleCommandSearch,
   useRegisteredCommands,
   useSearchState,
 } from "../adapters/search.store";
@@ -30,7 +26,6 @@ import {
 } from "../functions/navigation.functions";
 import { branchChoices } from "../functions/palette.functions";
 import { SearchDialog } from "./search-dialog";
-import { SearchShortcuts } from "./search-shortcuts";
 
 interface FileLocation {
   file: string;
@@ -74,16 +69,6 @@ export function SearchHost() {
 
   return (
     <>
-      <SearchShortcuts
-        onOpenCommands={toggleCommandSearch}
-        onOpenFiles={() => openSearch("files")}
-        // Whatever is highlighted — in the open file or on the page — is what
-        // the grep opens on, selected, so ⌘⇧F over a word searches for it and
-        // typing still replaces it.
-        onOpenText={() =>
-          openSearch("text", seedFromSelection(selectedCodeText()))
-        }
-      />
       <SearchDialog
         open={open}
         mode={mode}

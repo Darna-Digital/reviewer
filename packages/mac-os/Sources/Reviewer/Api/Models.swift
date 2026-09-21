@@ -131,6 +131,45 @@ struct GitHubRemote: Decodable, Hashable, Sendable {
     let repo: String
 }
 
+/// Who git signs commits with in the project — `user.name` and `user.email`
+/// as the repository resolves them; nil where git has nothing set.
+struct GitIdentity: Decodable, Hashable, Sendable {
+    let name: String?
+    let email: String?
+}
+
+/// Who the server's GitHub requests go out as, and where the token came
+/// from — the environment, or the `gh` CLI's login. Everything nil while
+/// there is no token, and the requests go out unauthenticated.
+struct GitHubAuth: Decodable, Hashable, Sendable {
+    enum Source: String, Decodable, Sendable {
+        case env
+        case gh
+    }
+
+    let login: String?
+    let name: String?
+    let avatarUrl: String?
+    let source: Source?
+}
+
+/// Where a GitHub sign-in stands — the `gh` CLI's device flow, run by the
+/// server: `waiting` carries the one-time code to type on GitHub's device
+/// page, `done` says the CLI has the token, `failed` says why not.
+struct GitHubLoginState: Decodable, Hashable, Sendable {
+    enum Phase: String, Decodable, Sendable {
+        case idle
+        case waiting
+        case done
+        case failed
+    }
+
+    let phase: Phase
+    let code: String?
+    let url: String?
+    let reason: String?
+}
+
 // MARK: merge requests
 
 /// How one CI check came back — `CheckState` in core's git-provider port:

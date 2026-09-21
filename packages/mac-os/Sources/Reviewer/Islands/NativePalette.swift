@@ -62,6 +62,12 @@ enum NativePalette {
     /// The script that applies them to the document — run before the first
     /// paint, and again when the appearance changes, when it also flips the
     /// theme the way the SPA's own boot script would have on a system change.
+    ///
+    /// The theme is the window's (see `AppSettings`), so the island is held
+    /// to "system" — the web app's word for following the view it is in —
+    /// whatever its own storage last said: a choice made on the SPA's
+    /// settings page would otherwise hold the page to one theme while the
+    /// chrome around it followed another.
     static func applyScript() -> String {
         let pairs = cssVariables().map { "[\(json($0.key)), \(json($0.value))]" }.joined(separator: ",")
         let dark = appearanceName() == "dark"
@@ -70,11 +76,9 @@ enum NativePalette {
           const root = document.documentElement;
           for (const [name, value] of [\(pairs)]) root.style.setProperty(name, value);
           if (window.reviewer) window.reviewer.appearance = "\(appearanceName())";
-          const theme = localStorage.getItem("reviewer-theme") || "system";
-          if (theme === "system") {
-            root.classList.toggle("dark", \(dark));
-            root.dataset.theme = \(dark) ? "dark" : "light";
-          }
+          localStorage.setItem("reviewer-theme", "system");
+          root.classList.toggle("dark", \(dark));
+          root.dataset.theme = \(dark) ? "dark" : "light";
         })();
         """
     }

@@ -9,7 +9,10 @@ import Observation
 @Observable
 final class DevServices {
     private(set) var commands: [DevCommandView] = []
-    private(set) var isLoading = false
+    /// Up until the first answer from the server. Later reloads — every
+    /// return to the surface asks again — keep what is shown while they
+    /// wait, so the table does not give way to the placeholder and back.
+    private(set) var isLoading = true
     var selectedId: String?
     var lastError: String?
 
@@ -25,7 +28,6 @@ final class DevServices {
     }
 
     func load() async {
-        isLoading = true
         defer { isLoading = false }
         do {
             commands = try await client.devCommands()
@@ -48,6 +50,7 @@ final class DevServices {
         streams = [:]
         commands = []
         selectedId = nil
+        isLoading = true
     }
 
     /// The output view for a command, attached to its process the first time

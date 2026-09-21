@@ -7,8 +7,10 @@
  * unopenable until you clicked away and back. It says what went wrong and
  * offers to ask again, which is what anyone would want to do next.
  */
-import { IconAlertTriangle } from "@tabler/icons-react";
+import { IconFileAlert } from "@tabler/icons-react";
+import { Fragment } from "react";
 import { Button } from "@/components/ui/button";
+import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { errorReason } from "@/lib/errors";
 
 interface OpenFailedProps {
@@ -23,6 +25,18 @@ interface OpenFailedProps {
 
 const fileNameOf = (path: string) => path.split("/").at(-1) ?? path;
 
+const breakableAtSlashes = (path: string) =>
+  path.split("/").map((segment, index) => (
+    <Fragment key={index}>
+      {index > 0 && (
+        <>
+          /<wbr />
+        </>
+      )}
+      {segment}
+    </Fragment>
+  ));
+
 export function OpenFailed({
   path,
   error,
@@ -31,16 +45,23 @@ export function OpenFailed({
 }: OpenFailedProps) {
   const reason = errorReason(error, "The file could not be read.");
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
-      <IconAlertTriangle
-        className="size-10 text-muted-foreground/30"
-        stroke={1.25}
-      />
-      <div className="flex flex-col gap-1">
-        <div className="text-sm font-medium">
+    <div className="flex h-full flex-col items-center justify-center gap-5 px-8 text-center">
+      <div className="flex size-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        <IconFileAlert className="size-6" stroke={1.5} />
+      </div>
+      <div className="flex max-w-md flex-col items-center gap-1.5">
+        <h2 className="font-heading text-base leading-snug font-medium tracking-tight text-balance">
           Could not open {fileNameOf(path)}
-        </div>
-        <p className="max-w-sm text-sm text-muted-foreground">{reason}</p>
+        </h2>
+        <p className="max-w-[44ch] text-sm/6 text-pretty text-muted-foreground">
+          {reason}
+        </p>
+        <span className="mt-1 inline-flex max-w-full items-start gap-1.5 text-left text-muted-foreground/60">
+          <FileTypeIcon path={path} className="mt-px size-3.5 shrink-0" />
+          <code className="font-mono text-xs wrap-anywhere">
+            {breakableAtSlashes(path)}
+          </code>
+        </span>
       </div>
       {onRetry !== undefined && (
         <Button

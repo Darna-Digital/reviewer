@@ -1,34 +1,28 @@
 // The sessions list the code island reports while the page is on the
 // sessions surface — see `ShellSessions` in the SPA's `lib/shell` — for the
 // sidebar to draw natively in the web list's place: every project's
-// sessions, newest first, under the filters the surface keeps, and above
-// them the runs handed to reviewer cloud. The list, its pages, the filters
-// it is fetched under and the marks on its rows are the page's; what goes
-// back is each thing the native list was asked to do — see `SessionAction`.
+// sessions, newest first, under the filters the surface keeps. The list,
+// its pages, the filters it is fetched under and the marks on its rows are
+// the page's; what goes back is each thing the native list was asked to do
+// — see `SessionAction`.
 import Foundation
 
 struct ShellSessions: Decodable, Equatable, Sendable {
     let sessions: [ShellSession]
-    let cloudRuns: [ShellSession]
     let activeId: String?
     let loading: Bool
     let hasMore: Bool
     let filters: ShellSessionFilters
 
-    var isEmpty: Bool { sessions.isEmpty && cloudRuns.isEmpty }
+    var isEmpty: Bool { sessions.isEmpty }
 
     static func decode(_ body: Any?) -> ShellSessions? { Wire.decode(body) }
 }
 
 struct ShellSession: Decodable, Identifiable, Hashable, Sendable {
-    enum Kind: String, Decodable, Sendable {
-        case session, cloud
-    }
-
     let id: String
-    let kind: Kind
     let title: String
-    /// Where the session runs — its project, or a cloud run's repository.
+    /// Where the session runs — its project.
     let origin: String
     let updatedAt: String
     let mark: SessionMark?

@@ -6,9 +6,10 @@
  * natively, from the picture the island sends it — the toolbar of the macOS
  * shell. Everything that makes a strip a strip is in
  * `useWindowTabStrip` rather than in either bar — following the location,
- * naming session tabs after their conversations, priming every tab's page while
- * the window is idle, and the chords that pick a tab — so the two bars differ
- * only in what draws the tabs and what stands either side of them.
+ * naming session tabs after their conversations, and priming every tab's page
+ * while the window is idle — so the two bars differ only in what draws the
+ * tabs and what stands either side of them. The chords that pick a tab are the
+ * native shell's, which sends them over as `windowTabs` actions.
  */
 import { IconPlus, IconX } from "@tabler/icons-react";
 import { TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,30 +22,19 @@ import {
   NO_DRAG,
 } from "@/components/layout/bar-controls";
 import { TAB_STRIP } from "@/components/layout/tab-chip";
-import {
-  barShortcut,
-  sessionDigit,
-  type BarShortcut,
-} from "@/components/layout/window-bar.shortcuts";
 import { Orb } from "@/components/ui/orb";
 import { useThinkingChatIds } from "@/interactions/chats/adapters/thinking-chats.hook.adapter";
 import { isChatUnread } from "@reviewer/core/chats";
 import { useRecentChats } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 import { useWindowTabActions } from "../adapters/window-tab-actions";
-import {
-  updateWindowTabs,
-  useWindowTabs,
-  windowTabsSnapshot,
-} from "../adapters/window-tabs.store";
+import { updateWindowTabs, useWindowTabs } from "../adapters/window-tabs.store";
 import {
   chatIdOf,
   isPinnedTab,
   moveTab,
-  nextModeTab,
   NEW_SESSION_HREF,
   renameTab,
-  sessionAtSlot,
   stripTabs,
   trackLocation,
 } from "../functions/window-tabs.functions";
@@ -53,35 +43,10 @@ import { WindowTabIcon } from "./window-tab-icon";
 
 const sessionsEnabled = isFeatureEnabled("sessions-button");
 
-const MODE_KEYS = "⌘G";
-const NEW_SESSION_KEYS = "⌘T";
-
-/** The chords that are the strip's to answer; the rest are the bar's. */
-const STRIP_SHORTCUTS: ReadonlySet<BarShortcut["kind"]> = new Set<
-  BarShortcut["kind"]
->(["new-session", "mode", "session"]);
-
-/**
- * The chord that takes the window to a tab. The digits count the conversations
- * alone, from ⌘1, until they run out; the places the strip leads with are ways
- * of working rather than tabs among them, and ⌘G steps between them — so it is
- * what they say, and only while there are two of them to cross between.
- */
-const tabKeys = (
-  tab: WindowTab,
-  slot: number,
-  modeCount: number
-): string | null => {
-  if (isPinnedTab(tab)) return modeCount > 1 ? MODE_KEYS : null;
-  const digit = sessionDigit(slot);
-  return digit === null ? null : `⌘${digit}`;
-};
-
 /** The strip as a bar draws it, and what pressing each of its tabs does. */
 export interface WindowTabStripHandle {
   readonly strip: ReadonlyArray<WindowTab>;
   readonly activeId: string;
-  readonly pinnedCount: number;
   readonly show: (tab: WindowTab) => void;
   readonly mint: () => void;
   readonly close: (id: string) => void;
@@ -97,8 +62,6 @@ export function useWindowTabStrip(): WindowTabStripHandle {
   const windowTabs = useWindowTabs();
   const { tabs, activeId } = windowTabs;
   const strip = useMemo(() => stripTabs(windowTabs), [windowTabs]);
-  // The pinned tabs lead the strip, so what follows them is slot 1 onwards.
-  const pinnedCount = strip.filter(isPinnedTab).length;
   const { select, close, openSession, prime } = useWindowTabActions();
   /** Take the window to a tab from the strip. */
   const show = (tab: WindowTab) => {
@@ -175,44 +138,9 @@ export function useWindowTabStrip(): WindowTabStripHandle {
     return () => window.cancelIdleCallback(idle);
   }, [tabs, prime]);
 
-  // Every chord does what pressing the control beside it does. The strip is
-  // read from the store rather than this render's copy: two presses in a row
-  // arrive before React has re-rendered for the first.
-  useEffect(() => {
-    const run = (shortcut: BarShortcut) => {
-      switch (shortcut.kind) {
-        case "new-session":
-          return mint();
-        case "mode": {
-          const state = windowTabsSnapshot();
-          const tab = nextModeTab(stripTabs(state), state.activeId);
-          return tab === null ? undefined : show(tab);
-        }
-        case "session": {
-          const tab = sessionAtSlot(
-            stripTabs(windowTabsSnapshot()),
-            shortcut.slot
-          );
-          return tab === null ? undefined : show(tab);
-        }
-        default:
-          return undefined;
-      }
-    };
-    const onKey = (event: KeyboardEvent) => {
-      const shortcut = barShortcut(event);
-      if (shortcut === null || !STRIP_SHORTCUTS.has(shortcut.kind)) return;
-      event.preventDefault();
-      run(shortcut);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
-
   return {
     strip,
     activeId,
-    pinnedCount,
     show,
     mint,
     close,
@@ -223,17 +151,8 @@ export function useWindowTabStrip(): WindowTabStripHandle {
 }
 
 export function WindowTabStrip() {
-  const {
-    strip,
-    activeId,
-    pinnedCount,
-    show,
-    mint,
-    close,
-    prime,
-    waiting,
-    working,
-  } = useWindowTabStrip();
+  const { strip, activeId, show, mint, close, prime, waiting, working } =
+    useWindowTabStrip();
   /**
    * The tab being dragged. It lives in a ref as well as state because the first
    * `dragover` can arrive in the same task as the `dragstart` that set it, and
@@ -257,14 +176,13 @@ export function WindowTabStrip() {
         // the bar with more room around it than its neighbours.
         className={cn(TAB_STRIP, NO_DRAG)}
       >
-        {strip.map((tab, at) => {
+        {strip.map((tab) => {
           const active = tab.id === activeId;
           const pinned = isPinnedTab(tab);
           return (
             <BarTooltip
               key={tab.id}
               label={tab.title}
-              keys={tabKeys(tab, at + 1 - pinnedCount, pinnedCount)}
               disabled={dragging !== null}
             >
               <TooltipTrigger
@@ -405,7 +323,7 @@ export function WindowTabStrip() {
         })}
       </div>
       {sessionsEnabled && (
-        <BarButton label="New session" keys={NEW_SESSION_KEYS} onClick={mint}>
+        <BarButton label="New session" onClick={mint}>
           <IconPlus className="size-4" />
         </BarButton>
       )}

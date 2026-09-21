@@ -24,7 +24,6 @@ import { Route as AppModesCodeHistoryRouteImport } from './routes/_app/modes.cod
 import { Route as AppModesCodeLocalDevRouteImport } from './routes/_app/modes.code.local-dev'
 import { Route as AppModesCodeReviewsRouteImport } from './routes/_app/modes.code.reviews'
 import { Route as AppModesCodeThreadsRouteImport } from './routes/_app/modes.code.threads'
-import { Route as AppModesAgentSessionCloudRunIdRouteImport } from './routes/_app/modes.agent-session.cloud.$runId'
 import { Route as AppModesCodeBrowseIndexRouteImport } from './routes/_app/modes.code.browse.index'
 import { Route as AppModesCodeBrowseRangeRouteImport } from './routes/_app/modes.code.browse.range'
 import { Route as AppModesCodeReviewIndexRouteImport } from './routes/_app/modes.code.review.index'
@@ -108,12 +107,6 @@ const AppModesCodeThreadsRoute = AppModesCodeThreadsRouteImport.update({
   path: '/modes/code/threads',
   getParentRoute: () => AppRoute,
 } as any)
-const AppModesAgentSessionCloudRunIdRoute =
-  AppModesAgentSessionCloudRunIdRouteImport.update({
-    id: '/cloud/$runId',
-    path: '/cloud/$runId',
-    getParentRoute: () => AppModesAgentSessionRoute,
-  } as any)
 const AppModesCodeBrowseIndexRoute = AppModesCodeBrowseIndexRouteImport.update({
   id: '/modes/code/browse/',
   path: '/modes/code/browse/',
@@ -162,7 +155,6 @@ export interface FileRoutesByFullPath {
   '/modes/code/threads': typeof AppModesCodeThreadsRoute
   '/modes/agent-session/': typeof AppModesAgentSessionIndexRoute
   '/modes/code/': typeof AppModesCodeIndexRoute
-  '/modes/agent-session/cloud/$runId': typeof AppModesAgentSessionCloudRunIdRoute
   '/modes/code/browse/range': typeof AppModesCodeBrowseRangeRoute
   '/modes/code/review/$pull': typeof AppModesCodeReviewPullRoute
   '/modes/code/browse/': typeof AppModesCodeBrowseIndexRoute
@@ -184,7 +176,6 @@ export interface FileRoutesByTo {
   '/modes/code/threads': typeof AppModesCodeThreadsRoute
   '/modes/agent-session': typeof AppModesAgentSessionIndexRoute
   '/modes/code': typeof AppModesCodeIndexRoute
-  '/modes/agent-session/cloud/$runId': typeof AppModesAgentSessionCloudRunIdRoute
   '/modes/code/browse/range': typeof AppModesCodeBrowseRangeRoute
   '/modes/code/review/$pull': typeof AppModesCodeReviewPullRoute
   '/modes/code/browse': typeof AppModesCodeBrowseIndexRoute
@@ -209,7 +200,6 @@ export interface FileRoutesById {
   '/_app/modes/code/threads': typeof AppModesCodeThreadsRoute
   '/_app/modes/agent-session/': typeof AppModesAgentSessionIndexRoute
   '/_app/modes/code/': typeof AppModesCodeIndexRoute
-  '/_app/modes/agent-session/cloud/$runId': typeof AppModesAgentSessionCloudRunIdRoute
   '/_app/modes/code/browse/range': typeof AppModesCodeBrowseRangeRoute
   '/_app/modes/code/review/$pull': typeof AppModesCodeReviewPullRoute
   '/_app/modes/code/browse/': typeof AppModesCodeBrowseIndexRoute
@@ -234,7 +224,6 @@ export interface FileRouteTypes {
     | '/modes/code/threads'
     | '/modes/agent-session/'
     | '/modes/code/'
-    | '/modes/agent-session/cloud/$runId'
     | '/modes/code/browse/range'
     | '/modes/code/review/$pull'
     | '/modes/code/browse/'
@@ -256,7 +245,6 @@ export interface FileRouteTypes {
     | '/modes/code/threads'
     | '/modes/agent-session'
     | '/modes/code'
-    | '/modes/agent-session/cloud/$runId'
     | '/modes/code/browse/range'
     | '/modes/code/review/$pull'
     | '/modes/code/browse'
@@ -280,7 +268,6 @@ export interface FileRouteTypes {
     | '/_app/modes/code/threads'
     | '/_app/modes/agent-session/'
     | '/_app/modes/code/'
-    | '/_app/modes/agent-session/cloud/$runId'
     | '/_app/modes/code/browse/range'
     | '/_app/modes/code/review/$pull'
     | '/_app/modes/code/browse/'
@@ -401,13 +388,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppModesCodeThreadsRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/modes/agent-session/cloud/$runId': {
-      id: '/_app/modes/agent-session/cloud/$runId'
-      path: '/cloud/$runId'
-      fullPath: '/modes/agent-session/cloud/$runId'
-      preLoaderRoute: typeof AppModesAgentSessionCloudRunIdRouteImport
-      parentRoute: typeof AppModesAgentSessionRoute
-    }
     '/_app/modes/code/browse/': {
       id: '/_app/modes/code/browse/'
       path: '/modes/code/browse'
@@ -456,13 +436,11 @@ declare module '@tanstack/react-router' {
 interface AppModesAgentSessionRouteChildren {
   AppModesAgentSessionChatIdRoute: typeof AppModesAgentSessionChatIdRoute
   AppModesAgentSessionIndexRoute: typeof AppModesAgentSessionIndexRoute
-  AppModesAgentSessionCloudRunIdRoute: typeof AppModesAgentSessionCloudRunIdRoute
 }
 
 const AppModesAgentSessionRouteChildren: AppModesAgentSessionRouteChildren = {
   AppModesAgentSessionChatIdRoute: AppModesAgentSessionChatIdRoute,
   AppModesAgentSessionIndexRoute: AppModesAgentSessionIndexRoute,
-  AppModesAgentSessionCloudRunIdRoute: AppModesAgentSessionCloudRunIdRoute,
 }
 
 const AppModesAgentSessionRouteWithChildren =

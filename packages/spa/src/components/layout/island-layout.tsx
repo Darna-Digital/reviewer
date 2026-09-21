@@ -18,10 +18,9 @@
  * The code island keeps one of the dock's surfaces too, under the page as
  * `AppLayout` has it: find usages, opened from a symbol in the page's own
  * code. Branches, history, the terminal and the run surfaces are the shell's,
- * drawn natively in its own pane — see `BottomPanel`. The shell is told when
- * the drawer is up, so its pane can leave the foot of the window to it, and
- * puts the drawer away when the pane takes the foot back — see
- * `useShellDock`.
+ * drawn natively in its own pane — see `BottomPanel`. The two stand at the
+ * foot of the window independently: the drawer is the page's own, and the
+ * shell's pane coming and going leaves it as it is.
  *
  * The one thing it does that `AppLayout` never has to is talk to the shell:
  * go where the shell says, say where it went, re-ask for everything when
@@ -29,27 +28,15 @@
  * palette cannot reach itself — the diff style. See `lib/shell`.
  */
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Outlet,
-  useNavigate,
-  useRouter,
-  useRouterState,
-} from "@tanstack/react-router";
+import { Outlet, useRouter, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { DiffWorkerPoolProvider } from "@/components/diff-worker-pool";
-import { closeDock } from "@/components/layout/dock-expansion";
 import { GitBottomDock } from "@/components/layout/git-bottom-dock";
-import { nativeInShell } from "@/components/layout/bottom-panel";
 import { IslandBar } from "@/components/layout/island-bar";
 import { useWorkspace } from "@/lib/queries";
 import { type Island, type ShellViewAction, shell } from "@/lib/shell";
 import { shellRoute, showsGitChrome } from "@/lib/shell-route";
-import {
-  type BottomTab,
-  readUiPrefs,
-  setUiPrefs,
-  useUiPrefs,
-} from "@/lib/ui-prefs";
+import { readUiPrefs, setUiPrefs } from "@/lib/ui-prefs";
 import { cn } from "@/lib/utils";
 
 export function IslandLayout({ island }: { island: Island }) {
@@ -98,12 +85,6 @@ function CodePage() {
   const expandedTab =
     route.kind === "dock" && current !== null ? route.tab : undefined;
   const dockShown = current !== null && showsGitChrome(route);
-  const prefs = useUiPrefs();
-  const drawerTab =
-    dockShown && prefs.bottomVisible && !nativeInShell(prefs.bottomTab)
-      ? prefs.bottomTab
-      : null;
-  useShellDock(expandedTab ?? drawerTab, expandedTab ?? null);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-hidden">
@@ -129,36 +110,6 @@ function applyViewAction(action: ShellViewAction): void {
       });
       return;
   }
-}
-
-/**
- * The dock, as the shell sees it: `shown` is the surface that is up — in the
- * drawer, or with the window to it — reported whenever it changes, and the
- * shell's own pane taking the foot of the window comes back as a `dock` event
- * that puts the drawer away.
- */
-function useShellDock(
-  shown: BottomTab | null,
-  expandedTab: BottomTab | null
-): void {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    void shell.post({ type: "dock", shown });
-  }, [shown]);
-
-  useEffect(
-    () =>
-      shell.subscribe((event) => {
-        if (event.type !== "dock") return;
-        switch (event.action.kind) {
-          case "close":
-            closeDock(navigate, expandedTab);
-            return;
-        }
-      }),
-    [navigate, expandedTab]
-  );
 }
 
 function useShellNavigation(island: Island): void {

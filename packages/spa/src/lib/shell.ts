@@ -27,7 +27,7 @@ import type { WindowTabKind } from "@/interactions/window-tabs/interfaces/window
 import type { AppMode } from "@/lib/api/types";
 import type { DateFilter } from "@/lib/date-filter";
 import { islandBridge } from "@/lib/desktop";
-import type { BottomTab, CommitAgent } from "@/lib/ui-prefs";
+import type { CommitAgent } from "@/lib/ui-prefs";
 import type { ChatProjectTally, ChatProviderKind } from "@reviewer/core/chats";
 import type { CommitDraft } from "@reviewer/core/git-message";
 import type { GitStatusEntry } from "@reviewer/core/repo";
@@ -46,8 +46,6 @@ export type ShellEvent =
   | { readonly type: "tree"; readonly action: ShellTreeAction }
   /** The shell's own sessions list was acted on — see `ShellSessions`. */
   | { readonly type: "sessions"; readonly action: ShellSessionAction }
-  /** The shell's own pane took the foot of the window — see `ShellDockAction`. */
-  | { readonly type: "dock"; readonly action: ShellDockAction }
   /** The shell's own assign bar was acted on — see `ShellReview`. */
   | { readonly type: "review"; readonly action: ShellReviewAction }
   /** The shell's palette asked for a view preference the page keeps — see
@@ -69,16 +67,20 @@ export type ShellIntent =
   /** The sessions list as the sessions surface holds it, for the shell to draw
    * in its sidebar; null once the page leaves the surface. */
   | { readonly type: "sessions"; readonly list: ShellSessions | null }
-  /** The find-usages drawer the page keeps under itself is up — the one dock
-   * surface still the page's, opened from a symbol in its code — or down
-   * (null), so the shell's own pane can leave the foot of the window to it. */
-  | { readonly type: "dock"; readonly shown: BottomTab | null }
   /** The page asked for one file's past — from its path bar, a file's tab —
    * and the History surface is the shell's own, so the ask crosses over. */
   | { readonly type: "history"; readonly path: string }
   /** The review comments the page is holding for a hand-off, for the shell
    * to float its assign bar over the page; null once there are none. */
-  | { readonly type: "review"; readonly review: ShellReview | null };
+  | { readonly type: "review"; readonly review: ShellReview | null }
+  /** The empty pane's ways in — the palette's lists, the settings window —
+   * which inside the shell are the shell's own, so the click crosses over. */
+  | { readonly type: "open"; readonly target: ShellOpenTarget };
+
+/** What the shell opens for the page: one of its palette's lists, or the
+ * settings window — the same four the page's empty pane lists with their
+ * chords. */
+export type ShellOpenTarget = "commands" | "files" | "text" | "settings";
 
 /**
  * The window tabs, as the shell draws them on its toolbar and names them in
@@ -194,16 +196,14 @@ export type ShellTreeAction =
 /**
  * The sessions list, as the shell draws it in its sidebar: the rows the
  * sessions surface would list beside the conversation — every project's
- * sessions, newest first, under the filters the surface keeps, and above them
- * the runs handed to reviewer cloud while the app is connected. The list
- * itself — the paged fetch, the filters, the marks read off each session —
- * stays the page's; what crosses is the rows, and what was done to them comes
- * back as a `ShellSessionAction`.
+ * sessions, newest first, under the filters the surface keeps. The list itself
+ * — the paged fetch, the filters, the marks read off each session — stays the
+ * page's; what crosses is the rows, and what was done to them comes back as a
+ * `ShellSessionAction`.
  */
 export interface ShellSessions {
   readonly sessions: ReadonlyArray<ShellSession>;
-  readonly cloudRuns: ReadonlyArray<ShellSession>;
-  /** The session — or cloud run — the page is on, if any. */
+  /** The session the page is on, if any. */
   readonly activeId: string | null;
   /** The first page still on its way. */
   readonly loading: boolean;
@@ -218,14 +218,13 @@ export type ShellSessionMark = "running" | "error" | "unread";
 
 export interface ShellSession {
   readonly id: string;
-  readonly kind: "session" | "cloud";
   readonly title: string;
-  /** Where the session runs — its project, or a cloud run's repository. */
+  /** Where the session runs — its project. */
   readonly origin: string;
   readonly updatedAt: string;
   readonly mark: ShellSessionMark | null;
   /** For the preview the shell shows over a row — what the web card shows
-   * before the tail arrives, and what a cloud run has instead of one. */
+   * before the tail arrives. */
   readonly messageCount: number;
   readonly lastMessage: string | null;
 }
@@ -267,16 +266,6 @@ export type ShellSessionAction =
       readonly project?: string;
       readonly date?: DateFilter;
     };
-
-/**
- * What the shell asks of the dock the code island still keeps: find usages,
- * the one surface that stays the page's — it is opened from a symbol in the
- * page's own code and previews the page's own files. Branches, history, the
- * terminal and the run surfaces are the shell's, drawn natively in its own
- * pane, and when that pane takes the foot of the window the drawer is put
- * away (`close`), so one surface stands at the bottom at a time.
- */
-export type ShellDockAction = { readonly kind: "close" };
 
 /**
  * What the shell's palette asks of the page's own preferences: the one

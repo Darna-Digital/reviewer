@@ -29,8 +29,8 @@ extension AppModel {
             ) { [weak self] in self?.show(surface: .browse) },
             PaletteCommand(
                 id: "go-settings", label: "Open Settings", group: "Navigation", symbol: "gearshape",
-                keywords: "theme dark light system appearance preferences"
-            ) { [weak self] in self?.showOnCodeTab(Href.settings) },
+                keywords: "theme dark light system appearance preferences git github", hint: "⌘,"
+            ) { [weak self] in self?.showSettings() },
         ]
     }
 

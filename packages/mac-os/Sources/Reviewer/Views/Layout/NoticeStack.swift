@@ -3,9 +3,8 @@
 // Each is the web toast's card — the glyph on the first line, the text
 // beside it, the close under the pointer — on the islands' own sheet, so
 // it reads as one more panel standing on the frame rather than as a system
-// alert. A loading notice wears the web app's caret: a hard blink, the
-// terminal's typing cursor, which is how the app says "working" everywhere
-// else. Newest at the foot, rising as they come and dropping as they go,
+// alert. A loading notice wears the orb, which is how the app says
+// "working" everywhere else. Newest at the foot, rising as they come and dropping as they go,
 // and the whole stack holding still under the pointer.
 import SwiftUI
 
@@ -91,7 +90,7 @@ private struct NoticeCard: View {
     private var glyph: some View {
         switch notice.kind {
         case .loading:
-            LoadingCaret()
+            Orb(size: 16, label: "Working")
         case .success:
             Image(systemName: "checkmark.circle")
                 .font(.system(size: 13, weight: .medium))
@@ -105,22 +104,5 @@ private struct NoticeCard: View {
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.secondary)
         }
-    }
-}
-
-/// The web app's `LoadingCursor`: a caret blinking hard on and off at a
-/// second a cycle, no fade — and held lit where motion is reduced.
-struct LoadingCaret: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 0.5)) { timeline in
-            let phase = Int(timeline.date.timeIntervalSinceReferenceDate * 2) % 2
-            RoundedRectangle(cornerRadius: 1)
-                .fill(.primary)
-                .frame(width: 4, height: 14)
-                .opacity(reduceMotion || phase == 0 ? 1 : 0)
-        }
-        .accessibilityLabel("Working")
     }
 }

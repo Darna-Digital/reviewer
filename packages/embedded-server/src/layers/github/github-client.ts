@@ -9,7 +9,10 @@ import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 import { HttpClient, HttpClientRequest } from "effect/unstable/http";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
-import { GitProviderError } from "@reviewer/core/ports/git-provider";
+import {
+  GitProviderError,
+  type GitHubAuthSource,
+} from "@reviewer/core/ports/git-provider";
 import { GitExec } from "../git/git-exec.ts";
 
 const API = "https://api.github.com";
@@ -19,9 +22,17 @@ export interface GitHubRepo {
   readonly repo: string;
 }
 
+/** A token and where it was found — see `GitHubAuthSource`. */
+export interface GitHubToken {
+  readonly value: string;
+  readonly source: GitHubAuthSource;
+}
+
 export interface GitHubClientShape {
   /** owner/repo for `origin`, or fail when it is not a GitHub remote. */
   readonly repo: Effect.Effect<GitHubRepo, GitProviderError>;
+  /** The token requests go out with, or null when they go unauthenticated. */
+  readonly token: Effect.Effect<GitHubToken | null>;
   readonly getJson: (path: string) => Effect.Effect<unknown, GitProviderError>;
   readonly getText: (
     path: string,
@@ -133,11 +144,15 @@ export const make = Effect.gen(function* () {
       )
     );
 
-  const resolveToken = Effect.gen(function* () {
+  const token: GitHubClientShape["token"] = Effect.gen(function* () {
     const env = process.env["GITHUB_TOKEN"] ?? process.env["GH_TOKEN"];
-    if (env !== undefined && env.length > 0) return env;
-    return yield* tokenFromGhCli;
+    if (env !== undefined && env.length > 0)
+      return { value: env, source: "env" as const };
+    const cli = yield* tokenFromGhCli;
+    return cli === null ? null : { value: cli, source: "gh" as const };
   });
+
+  const resolveToken = Effect.map(token, (found) => found?.value ?? null);
 
   const repo: GitHubClientShape["repo"] = git
     .run("remote", "get-url", "origin")
@@ -251,6 +266,7 @@ export const make = Effect.gen(function* () {
 
   return GitHubClient.of({
     repo,
+    token,
     getJson,
     getText,
     postJson,

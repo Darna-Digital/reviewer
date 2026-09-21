@@ -73,11 +73,6 @@ final class AppModel {
     var bottomExpanded = false
     var bottomTab: BottomPaneTab = .terminal
     var bottomHeight: CGFloat = 280
-    /// The find-usages drawer under the page island, as it last reported
-    /// itself: the other thing that can stand at the foot of the window,
-    /// one at a time with the pane above.
-    private(set) var dock: DockState = .down
-
     /// The SPA's routed page, with the window tabs along its top.
     let page: IslandHost
     let threads: Threads
@@ -90,6 +85,8 @@ final class AppModel {
     let palette: CommandPalette
     /// The repositories the machine holds, for the opener to list.
     let catalog: RepoCatalog
+    /// The settings window's own: the theme, and who the app works as.
+    let settings: AppSettings
     @ObservationIgnored private var shiftTaps: ShiftTapMonitor?
 
     init(client: ReviewerClient = ReviewerClient(baseURL: ServerLauncher.shared.baseURL)) {
@@ -104,6 +101,7 @@ final class AppModel {
         history = CommitHistory(client: client)
         palette = CommandPalette(client: client)
         catalog = RepoCatalog(client: client)
+        settings = AppSettings(client: client)
         palette.onOpen = { [weak self] path, line in self?.show(file: path, line: line) }
         palette.onIntent = { [weak self] path in self?.page.send(TreeAction.intent(path)) }
         palette.onCheckout = { [weak self] ref in self?.checkout(ref) }
@@ -124,9 +122,9 @@ final class AppModel {
         page.onSessionsReported = { [weak self] list in
             if let list { self?.sessions = list }
         }
-        page.onDockReported = { [weak self] state in self?.take(dock: state) }
         page.onHistoryRequested = { [weak self] path in self?.showHistory(of: path) }
         page.onReviewReported = { [weak self] review in self?.reviewHandoff.take(review) }
+        page.onOpenRequested = { [weak self] target in self?.open(target) }
         page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
     }
 
@@ -144,6 +142,10 @@ final class AppModel {
     /// which the workspace window answers by bringing it up, being the one
     /// with a scene to open (see `ContentView`).
     private(set) var openerRequests = 0
+    /// How many times the settings window has been asked for from outside
+    /// the menu bar — the palette — which the workspace window answers the
+    /// same way (see `ContentView`).
+    private(set) var settingsRequests = 0
 
     // MARK: lifecycle
 
@@ -226,6 +228,17 @@ final class AppModel {
         palette.open(.files)
     }
 
+    /// The page's empty pane lists the gestures with their chords; a click
+    /// on one does what the chord does.
+    func open(_ target: OpenTarget) {
+        switch target {
+        case .commands: showCommands()
+        case .files: findFile()
+        case .text: findInFiles()
+        case .settings: showSettings()
+        }
+    }
+
     /// ⌘⇧F: the grep, opening on whatever the page has highlighted, so the
     /// chord over a word searches for it.
     func findInFiles() {
@@ -267,8 +280,8 @@ final class AppModel {
     }
 
     /// Whether the page is anywhere inside Sessions — the composer, a
-    /// conversation, the landing, a cloud run — where the shell draws the
-    /// page natively and the sidebar holds the list.
+    /// conversation, the landing — where the shell draws the page natively
+    /// and the sidebar holds the list.
     var onSessions: Bool {
         let path = URLComponents(string: page.href)?.path ?? ""
         return path == SessionsPage.sessionsPath || path.hasPrefix("\(SessionsPage.sessionsPath)/")
@@ -473,6 +486,11 @@ final class AppModel {
         openerRequests += 1
     }
 
+    /// The settings window, as ⌘, brings it up.
+    func showSettings() {
+        settingsRequests += 1
+    }
+
     /// `path` in a Reviewer window of its own — a second instance of the
     /// app with a server of its own, since a server holds one project.
     func openProjectInNewWindow(path: String) {
@@ -550,8 +568,8 @@ final class AppModel {
 
     // MARK: bottom pane
 
-    /// ⌘B: the pane put away, or brought back on the surface it was on —
-    /// and the island's dock down with that, the foot being one thing's.
+    /// ⌘B: the pane put away, or brought back on the surface it was on.
+    /// The island's find-usages drawer is the page's own and stays as it is.
     func toggleBottomPane() {
         if bottomExpanded {
             bottomExpanded = false
@@ -563,7 +581,6 @@ final class AppModel {
     func show(bottomTab tab: BottomPaneTab) {
         bottomTab = tab
         bottomExpanded = true
-        if dock.isUp { page.send(DockAction.close) }
     }
 
     /// A rail button: the surface it names, or with that surface already
@@ -605,16 +622,6 @@ final class AppModel {
     /// comment, a comment taken off the review.
     func act(onReview action: ReviewAction) {
         page.send(action)
-    }
-
-    // MARK: dock
-
-    /// The island says whether its find-usages drawer is up. Up — opened by
-    /// the page from a symbol in its code — it takes the foot of the window
-    /// from the pane.
-    private func take(dock state: DockState) {
-        dock = state
-        if state.isUp { bottomExpanded = false }
     }
 
 }

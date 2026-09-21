@@ -22,9 +22,6 @@ import { createServer } from "node:http";
 import { Api } from "./api.ts";
 import { ChatsHandler } from "./layers/chats/chats.handler.ts";
 import { ChatsLive } from "./layers/chats/chats.layer.live.ts";
-import { handleCloudEvents } from "./layers/cloud/cloud-events-proxy.ts";
-import { CloudHandler } from "./layers/cloud/cloud.handler.ts";
-import { CloudLive } from "./layers/cloud/cloud.layer.live.ts";
 import { CommentsHandler } from "./layers/comments/comments.handler.ts";
 import { CommentsLive } from "./layers/comments/comments.layer.live.ts";
 import { GitMessageHandler } from "./layers/git-message/git-message.handler.ts";
@@ -47,6 +44,7 @@ import { WorkspaceLive } from "./layers/workspace/workspace.layer.live.ts";
 import { layer as databaseLayer } from "./layers/db/db.service.ts";
 import { layer as gitExecLayer } from "./layers/git/git-exec.ts";
 import { layer as gitHubClientLayer } from "./layers/github/github-client.ts";
+import { layer as gitHubLoginLayer } from "./layers/github/github-login.ts";
 import { attachPtyServer } from "./layers/terminal/pty-socket.ts";
 import { layer as terminalExecLayer } from "./layers/terminal/terminal-exec.ts";
 import { resetProviders } from "./layers/language/language.providers.ts";
@@ -80,8 +78,7 @@ const ApiLive = Layer.mergeAll(
   Layer.provide(ThreadsHandler),
   Layer.provide(ChatsHandler),
   Layer.provide(LanguageHandler),
-  Layer.provide(LocalDevHandler),
-  Layer.provide(CloudHandler)
+  Layer.provide(LocalDevHandler)
 );
 
 /** Stateless feature services, resolved per request. */
@@ -96,15 +93,16 @@ const FeatureServices = Layer.mergeAll(
   ChatsLive,
   LanguageLive,
   LocalDevLive,
-  DevRuntimeLive,
-  CloudLive
+  DevRuntimeLive
 );
 
 /**
  * Global singletons, built once so the selected-repo state persists across
  * requests: the database, the workspace context (mutable selection), the git
- * executor, the GitHub client and the commit-message drafts (a drafting agent
- * CLI outlives the request that started it, so its slot has to outlive it too).
+ * executor, the GitHub client, the GitHub sign-in (the CLI polls GitHub long
+ * after the request that started it) and the commit-message drafts (a
+ * drafting agent CLI outlives the request that started it, so its slot has to
+ * outlive it too).
  *
  * The database comes first — opening a repository imports whatever it still
  * keeps in `.reviewer/*.json`, so the file has to be there (and migrated) before
@@ -112,7 +110,12 @@ const FeatureServices = Layer.mergeAll(
  */
 const InfraLive = gitHubClientLayer.pipe(
   Layer.provideMerge(
-    Layer.mergeAll(gitExecLayer, terminalExecLayer, commitDraftsLayer)
+    Layer.mergeAll(
+      gitExecLayer,
+      terminalExecLayer,
+      commitDraftsLayer,
+      gitHubLoginLayer
+    )
   ),
   Layer.provideMerge(repoIndexLayer()),
   Layer.provideMerge(workspaceContextLayer(initial)),
@@ -126,41 +129,14 @@ const InfraLive = gitHubClientLayer.pipe(
  * Allow all origins — this server is local-only and never credentialed.
  */
 // Wrap node's createServer so every server instance also hosts the live-terminal
-// PTY WebSocket (attached to its `upgrade` event) alongside the Effect HttpApi,
-// and answers the cloud run stream itself (see `attachCloudEventsProxy`).
+// PTY WebSocket, attached to its `upgrade` event, alongside the Effect HttpApi.
 const createServerWithPty: typeof createServer = ((
   ...args: Parameters<typeof createServer>
 ) => {
   const server = createServer(...args);
   attachPtyServer(server);
-  attachCloudEventsProxy(server);
   return server;
 }) as typeof createServer;
-
-/**
- * The cloud run stream is a plain Node request listener beside the Effect
- * HttpApi, the way the PTY socket is an `upgrade` listener beside it. Effect
- * attaches its own `request` listener when the server starts listening, and
- * Node hands every request to every listener — so the proxy is put in front
- * of `emit` rather than added as one more listener: a request for the events
- * route is consumed here and never emitted, and everything else goes through
- * untouched.
- */
-const attachCloudEventsProxy = (server: ReturnType<typeof createServer>) => {
-  const emit = server.emit.bind(server);
-  server.emit = ((event: string | symbol, ...args: Array<unknown>) => {
-    if (
-      event === "request" &&
-      handleCloudEvents(
-        args[0] as Parameters<typeof handleCloudEvents>[0],
-        args[1] as Parameters<typeof handleCloudEvents>[1]
-      )
-    ) {
-      return true;
-    }
-    return emit(event as string, ...args);
-  }) as typeof server.emit;
-};
 
 const HttpLive = HttpRouter.serve(
   Layer.mergeAll(

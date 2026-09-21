@@ -144,6 +144,50 @@ export type MergeResult = typeof MergeResult.Type;
 export const CloseResult = Schema.Struct({ message: Schema.String });
 export type CloseResult = typeof CloseResult.Type;
 
+/**
+ * Who the provider is signed in as, and how. The token is found rather than
+ * entered — the environment's `GITHUB_TOKEN`/`GH_TOKEN`, else the `gh` CLI's
+ * own login — so a settings screen has nothing to edit here, only to say which
+ * of the two is in use, or that neither is, and what to run to change that.
+ */
+export const GitHubAuthSource = Schema.Literals(["env", "gh"]);
+export type GitHubAuthSource = typeof GitHubAuthSource.Type;
+
+export const GitHubAuth = Schema.Struct({
+  /** The login the token belongs to; null when there is no token. */
+  login: Schema.NullOr(Schema.String),
+  /** The profile's display name, where the account has one. */
+  name: Schema.NullOr(Schema.String),
+  avatarUrl: Schema.NullOr(Schema.String),
+  source: Schema.NullOr(GitHubAuthSource),
+});
+export type GitHubAuth = typeof GitHubAuth.Type;
+
+/**
+ * Where a sign-in stands. The flow is GitHub's device flow, run by the `gh`
+ * CLI so the token lands where `gh` keeps it and every later request finds
+ * it: `waiting` carries the one-time code the person types on GitHub's
+ * device page, `done` says the CLI has the token, and `failed` says why it
+ * has not — the CLI missing, the code expired, the flow cancelled.
+ */
+export const GitHubLoginPhase = Schema.Literals([
+  "idle",
+  "waiting",
+  "done",
+  "failed",
+]);
+export type GitHubLoginPhase = typeof GitHubLoginPhase.Type;
+
+export const GitHubLoginState = Schema.Struct({
+  phase: GitHubLoginPhase,
+  /** The one-time code, and the page to type it on — while `waiting`. */
+  code: Schema.NullOr(Schema.String),
+  url: Schema.NullOr(Schema.String),
+  /** Why the sign-in stopped — while `failed`. */
+  reason: Schema.NullOr(Schema.String),
+});
+export type GitHubLoginState = typeof GitHubLoginState.Type;
+
 export const PullNumberParam = Schema.Struct({ number: Schema.String });
 export const PullCommentParams = Schema.Struct({
   number: Schema.String,
@@ -182,6 +226,8 @@ export interface PrReplyInput extends PrCommentRef {
 }
 
 export interface GitProviderShape {
+  /** Who requests go out as. Never needs a repository: the login is the user's. */
+  readonly auth: Effect.Effect<GitHubAuth, GitProviderError>;
   readonly pulls: Effect.Effect<
     ReadonlyArray<PullRequestInfo>,
     GitProviderError
@@ -216,6 +262,7 @@ export class GitProvider extends Context.Service<
 >()("GitProvider") {}
 
 export interface GitProviderSeed {
+  readonly auth?: GitHubAuth;
   readonly pulls?: ReadonlyArray<PullRequestInfo>;
   readonly comments?: ReadonlyArray<ReviewComment>;
   readonly diff?: string;
@@ -226,6 +273,9 @@ export const GitProviderMemory = (
 ): Layer.Layer<GitProvider> =>
   Layer.succeed(GitProvider)(
     GitProvider.of({
+      auth: Effect.succeed(
+        seed.auth ?? { login: null, name: null, avatarUrl: null, source: null }
+      ),
       pulls: Effect.succeed(seed.pulls ?? []),
       pullDiff: () => Effect.succeed(seed.diff ?? ""),
       pullComments: () => Effect.succeed(seed.comments ?? []),

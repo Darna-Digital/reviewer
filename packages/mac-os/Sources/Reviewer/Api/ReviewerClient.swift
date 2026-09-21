@@ -81,6 +81,32 @@ struct ReviewerClient: Sendable {
         try await get("/api/repo")
     }
 
+    func gitIdentity() async throws -> GitIdentity {
+        try await get("/api/identity")
+    }
+
+    // MARK: github
+
+    /// Who the server is signed in to GitHub as. Needs no project: the
+    /// login is the user's, not the repository's.
+    func githubAuth() async throws -> GitHubAuth {
+        try await get("/api/github/auth")
+    }
+
+    /// Start a sign-in through the `gh` CLI; answers once the one-time code
+    /// is known, or with the reason the CLI could not begin.
+    func startGitHubLogin() async throws -> GitHubLoginState {
+        try await send("POST", "/api/github/login", body: EmptyBody())
+    }
+
+    func githubLoginStatus() async throws -> GitHubLoginState {
+        try await get("/api/github/login")
+    }
+
+    func cancelGitHubLogin() async throws {
+        let _: GitHubLoginState = try await send("DELETE", "/api/github/login", body: EmptyBody())
+    }
+
     // MARK: merge requests
 
     /// Every open pull request on the repository's GitHub remote, with CI

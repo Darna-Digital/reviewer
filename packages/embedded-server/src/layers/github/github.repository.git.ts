@@ -29,6 +29,27 @@ export const makeGitHubProvider = Effect.gen(function* () {
   const gh = yield* GitHubClient;
 
   /**
+   * The login behind the token, asked of GitHub rather than read off the
+   * token: a token that has expired or been revoked still resolves locally,
+   * and the settings screen should say so rather than name a login that no
+   * longer works.
+   */
+  const auth: GitProviderShape["auth"] = Effect.gen(function* () {
+    const token = yield* gh.token;
+    if (token === null)
+      return { login: null, name: null, avatarUrl: null, source: null };
+    const user = (yield* gh.getJson("/user")) as Record<string, unknown>;
+    const text = (key: string) =>
+      typeof user[key] === "string" && user[key].length > 0 ? user[key] : null;
+    return {
+      login: text("login"),
+      name: text("name"),
+      avatarUrl: text("avatar_url"),
+      source: token.source,
+    };
+  });
+
+  /**
    * The plain listing. Always available — it is the one call that works without
    * a token on a public repo — but it knows nothing about CI or conflicts.
    */
@@ -267,6 +288,7 @@ export const makeGitHubProvider = Effect.gen(function* () {
     });
 
   return {
+    auth,
     pulls,
     mergePull,
     closePull,

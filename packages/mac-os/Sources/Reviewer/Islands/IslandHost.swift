@@ -20,7 +20,10 @@
 // hand-off (`review`), which the shell floats its assign bar over the page
 // for, and what the bar was asked to do (`review`, the other way). And
 // one the shell alone sends: a view preference the page keeps — the diff
-// style — asked for from the palette (`view`).
+// style — asked for from the palette (`view`). And one the island alone
+// sends: its empty pane's ways in — the palette's lists, the settings
+// window — which are the shell's own here, so a click on one crosses over
+// (`open`).
 //
 // The web view is made once and kept for the life of the host: SwiftUI can
 // take it out of the hierarchy and put it back, and the page, its scroll and
@@ -42,9 +45,9 @@ final class IslandHost: NSObject {
     @ObservationIgnored var onTreeReported: ((ShellTree?) -> Void)?
     @ObservationIgnored var onTreeStateReported: ((ShellTreeState) -> Void)?
     @ObservationIgnored var onSessionsReported: ((ShellSessions?) -> Void)?
-    @ObservationIgnored var onDockReported: ((DockState) -> Void)?
     @ObservationIgnored var onHistoryRequested: ((String) -> Void)?
     @ObservationIgnored var onReviewReported: ((ShellReview?) -> Void)?
+    @ObservationIgnored var onOpenRequested: ((OpenTarget) -> Void)?
 
     @ObservationIgnored private let source: SpaSource
     @ObservationIgnored private let apiBaseURL: URL
@@ -113,13 +116,6 @@ final class IslandHost: NSObject {
     func send(_ action: SessionAction) {
         guard isReady else { return }
         dispatch(["type": "sessions", "action": action.payload])
-    }
-
-    /// The native pane took the foot of the window from the island's
-    /// find-usages drawer — see `DockAction`.
-    func send(_ action: DockAction) {
-        guard isReady else { return }
-        dispatch(["type": "dock", "action": action.payload])
     }
 
     /// The native assign bar acted on the island's review — see
@@ -227,6 +223,15 @@ final class IslandHost: NSObject {
     }
 }
 
+/// What the page's empty pane asks the shell to open — the SPA's
+/// `ShellOpenTarget`: one of the palette's lists, or the settings window.
+enum OpenTarget: String {
+    case commands
+    case files
+    case text
+    case settings
+}
+
 extension IslandHost: WKScriptMessageHandlerWithReply {
     func userContentController(
         _ userContentController: WKUserContentController, didReceive message: WKScriptMessage
@@ -259,14 +264,16 @@ extension IslandHost: WKScriptMessageHandlerWithReply {
         case "sessions":
             onSessionsReported?(ShellSessions.decode(body["list"]))
             return (nil, nil)
-        case "dock":
-            onDockReported?(DockState.decode(body["shown"]))
-            return (nil, nil)
         case "history":
             if let path = body["path"] as? String { onHistoryRequested?(path) }
             return (nil, nil)
         case "review":
             onReviewReported?(ShellReview.decode(body["review"]))
+            return (nil, nil)
+        case "open":
+            if let target = (body["target"] as? String).flatMap(OpenTarget.init(rawValue:)) {
+                onOpenRequested?(target)
+            }
             return (nil, nil)
         default:
             return (nil, "unknown shell message: \(type)")

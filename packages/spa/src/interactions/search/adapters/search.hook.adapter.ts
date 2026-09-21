@@ -1,17 +1,10 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { fetchClient } from "@/lib/api/client";
 import {
   EMPTY_GREP_RESULTS,
   createSearchFunctions,
 } from "../functions/search.functions";
-import {
-  NO_SHIFT_TAPS,
-  isCommandChord,
-  isGrepChord,
-  isTypingTarget,
-  nextShiftTap,
-} from "../functions/shortcuts.functions";
 import type { GrepOptions } from "../interfaces/search.interfaces";
 
 /** One or two characters match most of the repository — wait for a real word. */
@@ -70,53 +63,4 @@ export function useGrepSearch(
     staleTime: 30_000,
     retry: false,
   });
-}
-
-interface SearchShortcutHandlers {
-  /** ⌘K — the command list. */
-  readonly onOpenCommands: () => void;
-  /** Shift, tapped twice — straight to the file search. */
-  readonly onOpenFiles: () => void;
-  /** ⌘⇧F — straight to the content search. */
-  readonly onOpenText: () => void;
-}
-
-/**
- * Install the three global search gestures. Handlers are held in a ref so the
- * listener is attached once: re-subscribing on every render would drop the
- * half-finished double tap that lives in this closure.
- */
-export function useSearchShortcuts(handlers: SearchShortcutHandlers) {
-  const latest = useRef(handlers);
-  latest.current = handlers;
-
-  useEffect(() => {
-    let taps = NO_SHIFT_TAPS;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      // The chords work from anywhere, including a focused field; only the
-      // Shift gesture has to keep out of the way of typing.
-      const chorded = isCommandChord(event)
-        ? latest.current.onOpenCommands
-        : isGrepChord(event)
-          ? latest.current.onOpenText
-          : null;
-      if (chorded !== null) {
-        event.preventDefault();
-        taps = NO_SHIFT_TAPS;
-        chorded();
-        return;
-      }
-      if (isTypingTarget(event.target)) {
-        taps = NO_SHIFT_TAPS;
-        return;
-      }
-      const outcome = nextShiftTap(taps, event, Date.now());
-      taps = outcome.taps;
-      if (outcome.doubleTapped) latest.current.onOpenFiles();
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
 }

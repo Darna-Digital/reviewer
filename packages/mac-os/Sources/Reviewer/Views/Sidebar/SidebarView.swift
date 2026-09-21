@@ -213,8 +213,7 @@ struct TreePlaceholder: View {
         VStack {
             Spacer()
             if loading {
-                ProgressView()
-                    .controlSize(.small)
+                Orb(size: 16, label: "Loading")
             } else {
                 Text(empty)
                     .font(.system(size: 12))

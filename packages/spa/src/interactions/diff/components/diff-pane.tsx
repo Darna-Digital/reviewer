@@ -279,8 +279,8 @@ interface FileLanguageProps {
 
 /**
  * The language layer for one file of the diff — hover documentation,
- * go-to-definition, diagnostics — with nothing of its own to draw but the
- * card. `CodeView` renders every file itself and hands its callbacks one
+ * go-to-definition, the symbol menu, diagnostics — with nothing of its own to
+ * draw but the card and the menu. `CodeView` renders every file itself and hands its callbacks one
  * `context` at a time, so the per-file hooks live here, headless: the token
  * handlers are registered under the item's id for the viewer's shared
  * callbacks to route to, and the diagnostics go up as annotations for the
@@ -318,7 +318,12 @@ const FileLanguage = memo(function FileLanguageView({
     report(path, language.annotations);
   }, [language.annotations, path, report]);
 
-  return language.card;
+  return (
+    <>
+      {language.card}
+      {language.menu}
+    </>
+  );
 });
 
 export function DiffPane({

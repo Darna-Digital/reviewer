@@ -76,12 +76,3 @@ export function pickDockTab(
   else showDockPage(navigate, tab);
 }
 
-/**
- * The dock put away, whichever shape it is in: a page goes back to where it
- * was expanded from, and the drawer shuts. What the macOS shell asks when its
- * own pane takes the foot of the window from the find-usages drawer.
- */
-export function closeDock(navigate: Navigate, expandedTab: BottomTab | null) {
-  if (expandedTab !== null) navigate({ href: cameFrom });
-  setUiPrefs({ bottomVisible: false });
-}

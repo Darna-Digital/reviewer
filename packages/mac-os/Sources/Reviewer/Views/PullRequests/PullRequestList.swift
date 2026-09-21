@@ -39,7 +39,7 @@ struct PullRequestList: View {
                 PullListPlaceholder(symbol: "exclamationmark.triangle", title: "Could not load merge requests", detail: error)
             } else if pulls.loading {
                 Spacer()
-                ProgressView().controlSize(.small)
+                Orb(size: 16, label: "Loading")
                 Spacer()
             } else if pulls.pulls.isEmpty {
                 PullListPlaceholder(
@@ -131,7 +131,7 @@ private struct PullListHeader: View {
         let shown = pulls.groups.reduce(0) { $0 + $1.pulls.count }
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
-                PaneFilterField(prompt: "Search merge requests", text: $pulls.query)
+                PaneSearchField(prompt: "Search merge requests", text: $pulls.query)
                 PullFilterMenu()
             }
             if pulls.hasGitHub && !pulls.loading && pulls.error == nil {

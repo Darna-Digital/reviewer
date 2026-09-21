@@ -4,7 +4,8 @@
 //
 // Two windows: the workspace, and the opener — the Finder-like list of
 // every repository the machine holds. The server holds one project at a
-// time, so each is a single `Window` rather than a group. The workspace is
+// time, so each is a single `Window` rather than a group. Beside them the
+// settings scene (⌘,): the theme, and who the app works as. The workspace is
 // the one that opens at launch — the server usually remembers a project,
 // and the opener would only flash ahead of it — and hands over to the
 // opener once the server answers with none (see `ContentView`); the opener
@@ -41,6 +42,13 @@ struct ReviewerApp: App {
         .windowToolbarStyle(.unified)
         .defaultSize(width: 1280, height: 800)
         .commands { ReviewerCommands(model: model) }
+
+        // ⌘, and the app menu's Settings… are the scene's own. The window is
+        // sized by its form, so no default size here.
+        Settings {
+            SettingsView()
+                .environment(model)
+        }
 
         Window("Open Repository", id: ReviewerWindow.opener) {
             RepoOpenerWindow()

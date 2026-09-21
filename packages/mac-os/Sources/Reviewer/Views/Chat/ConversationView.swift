@@ -27,8 +27,7 @@ struct ConversationView: View {
                 .environment(\.openURL, OpenURLAction { url in open(url, in: chat) })
         } else {
             VStack(spacing: 8) {
-                ProgressView()
-                    .controlSize(.small)
+                Orb(size: 16)
                 Text("Loading thread…")
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)

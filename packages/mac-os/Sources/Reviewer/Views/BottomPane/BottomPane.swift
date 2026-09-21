@@ -4,8 +4,10 @@
 // debug area is laid out. The tabs are the system's accessory-bar toggles,
 // the flat switch Finder's and Xcode's bars wear: no bezel at rest, a tint
 // while on, so the bar reads as a strip of names rather than a run of
-// buttons. The strip stands at the pane bar's own height and inset, so
-// the surface's bar under it reads as a second line of the same
+// buttons. The bar stands at the web dock's own height — the 36pt strip
+// the Find-symbol drawer beside it wears — at the pane bar's inset, so
+// the two islands' bars line up along the foot of the window and the
+// surface's own 28pt bar under it reads as a second line of the same
 // instrument rather than a different one. The rail reaches the same
 // surfaces (see `AppRail`); the switch here is for when the pane is
 // already up. The window decides whether the pane is shown and how tall it stands, and
@@ -16,6 +18,10 @@ import SwiftUI
 
 struct BottomPane: View {
     @Environment(AppModel.self) private var model
+
+    /// The web dock's strip height, so the corner button's 28pt sits in
+    /// four points of air above and below, as the drawer's does.
+    static let barHeight: CGFloat = 36
 
     var body: some View {
         VStack(spacing: 0) {
@@ -40,7 +46,7 @@ struct BottomPane: View {
             }
         }
         .controlSize(.small)
-        .frame(height: PaneMetrics.barHeight)
+        .frame(height: Self.barHeight)
         .overlay(alignment: .bottom) { Divider() }
     }
 
@@ -69,23 +75,27 @@ enum PaneMotion {
     }
 }
 
-/// The mark in the island's top trailing corner: a flat button set into the
-/// corner itself rather than inset from it, so it reads as a cap on the
-/// bar. Its outer corner is cut at the island's own radius and its inner
-/// one at a bar button's, and it stands the bar's full height, so the
-/// wash that lights under the pointer fills the corner edge to edge.
+/// The mark at the bar's trailing edge, at the web dock's own proportions
+/// — its `PanelButton`: a 28pt ghost button in a 36pt bar, the glyph 16pt
+/// inside it, the button's 4.5pt radius, and four points of air to the
+/// island's edge — so the pane puts itself away with the same control the
+/// Find-symbol drawer beside it closes with.
 private struct CornerButton: View {
     let symbol: String
     let help: String
     let action: () -> Void
 
+    static let size: CGFloat = 28
+    static let inset: CGFloat = 4
+
     var body: some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 11, weight: .medium))
-                .frame(width: 32, height: PaneMetrics.barHeight)
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: Self.size, height: Self.size)
         }
         .buttonStyle(CornerButtonStyle())
+        .padding(.trailing, Self.inset)
         .help(help)
     }
 }
@@ -93,11 +103,7 @@ private struct CornerButton: View {
 private struct CornerButtonStyle: ButtonStyle {
     @State private var isHovering = false
 
-    private static let shape = UnevenRoundedRectangle(
-        bottomLeadingRadius: 6,
-        topTrailingRadius: IslandMetrics.radius,
-        style: .continuous
-    )
+    private static let shape = RoundedRectangle(cornerRadius: 4.5, style: .continuous)
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label

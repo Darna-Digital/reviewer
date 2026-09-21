@@ -1,6 +1,5 @@
 import { HttpApi } from "effect/unstable/httpapi";
 import { ChatsApi } from "./layers/chats/chats.api.ts";
-import { CloudApi } from "./layers/cloud/cloud.api.ts";
 import { CommentsApi } from "./layers/comments/comments.api.ts";
 import { GitMessageApi } from "./layers/git-message/git-message.api.ts";
 import { GitHubApi } from "./layers/github/github.api.ts";
@@ -20,5 +19,4 @@ export class Api extends HttpApi.make("reviewer")
   .add(ChatsApi)
   .add(LanguageApi)
   .add(LocalDevApi)
-  .add(CloudApi)
   .prefix("/api") {}

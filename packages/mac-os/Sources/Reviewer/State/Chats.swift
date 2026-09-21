@@ -17,7 +17,7 @@ import Foundation
 import Observation
 
 /// Where inside Sessions the island is, as its address says — or nil on a
-/// page the island keeps for itself: a cloud run, or anywhere else.
+/// page the island keeps for itself.
 enum SessionsPage: Equatable {
     case newSession
     case landing
@@ -37,8 +37,6 @@ enum SessionsPage: Equatable {
         case nil:
             let new = components.queryItems?.first { $0.name == "new" }?.value
             return new == "true" ? .newSession : .landing
-        case "cloud":
-            return nil
         case let id?:
             return rest.count == 1 ? .conversation(id) : nil
         }

@@ -68,15 +68,9 @@ import {
   shellDrawsSessions,
   useShellSessions,
 } from "@/interactions/chats/components/chats-page.shell";
-import { CloudRunRow } from "@/interactions/cloud/components/cloud-run-row";
 import { resolveProjectFilter } from "@/interactions/chats/functions/chat-filters.functions";
 import { openSessionTab } from "@/interactions/chats/functions/open-session-tab";
-import {
-  useChatPages,
-  useChatProjects,
-  useCloudRuns,
-  useCloudStatus,
-} from "@/lib/queries";
+import { useChatPages, useChatProjects } from "@/lib/queries";
 import {
   NO_ROWS,
   anchorRow,
@@ -112,7 +106,7 @@ function useShellFilters(search: string) {
 export function ChatsPage() {
   const actions = useChatsActions();
   const navigate = useNavigate();
-  const { chatId, runId } = useParams({ strict: false });
+  const { chatId } = useParams({ strict: false });
   const prefs = useUiPrefs();
   // Not React state: a drag would otherwise re-render this whole page, and
   // its list of sessions, on every pointer frame. See `usePanelSize`.
@@ -161,15 +155,6 @@ export function ChatsPage() {
     filters,
     listed || landing
   );
-
-  /**
-   * Runs handed to reviewer cloud, listed above the local sessions. They are
-   * the account's rather than any project's, which is why they are a group of
-   * their own — and why there is none until the app is connected.
-   */
-  const cloudStatus = useCloudStatus();
-  const cloudConnected = cloudStatus.data?.status === "connected";
-  const cloudRuns = useCloudRuns(cloudConnected && listed).data ?? [];
 
   /**
    * Landing on the surface opens the newest session the filters leave in the
@@ -286,8 +271,7 @@ export function ChatsPage() {
     shellDrawsSessions
       ? {
           sessions,
-          cloudRuns: cloudConnected ? cloudRuns : [],
-          activeId: chatId ?? runId ?? null,
+          activeId: chatId ?? null,
           loading,
           hasMore,
           filters: shellFilters.filters,
@@ -311,20 +295,6 @@ export function ChatsPage() {
             onViewportScroll={onListScroll}
             viewportRef={listViewport}
           >
-            {cloudConnected && cloudRuns.length > 0 && (
-              <div className="flex flex-col gap-px border-b border-hairline px-2 pt-2 pb-2">
-                <p className="px-2 pb-1 text-xs font-medium text-muted-foreground">
-                  Cloud
-                </p>
-                {cloudRuns.map((run) => (
-                  <CloudRunRow
-                    key={run.id}
-                    run={run}
-                    active={run.id === runId}
-                  />
-                ))}
-              </div>
-            )}
             {sessions.length === 0 && !loading ? (
               <p className="px-3 py-6 text-center text-sm text-muted-foreground">
                 No sessions yet. Send a message to start one.

@@ -79,7 +79,7 @@ private struct RepoOpener: View {
                     OpenerTable(rows: rows, selected: $selected, sortOrder: $sortOrder)
                 }
             }
-                .safeAreaInset(edge: .bottom, spacing: 0) { OpenerStatusBar(shown: rows.count) }
+                .safeAreaInset(edge: .bottom, spacing: 0) { OpenerStatusBar() }
                 .navigationTitle(list?.title ?? "Repositories")
         }
         .toolbar { OpenerToolbar() }
@@ -317,27 +317,31 @@ private struct OpenerToolbar: ToolbarContent {
     }
 }
 
-/// Finder's status bar: how many rows the list shows, and the walk's
-/// progress while it is still filling the list in.
+/// Finder's status bar, shown only while the walk is still filling the
+/// list in or when it failed; an idle list needs no footer.
 private struct OpenerStatusBar: View {
     @Environment(AppModel.self) private var model
-    let shown: Int
 
     var body: some View {
-        HStack(spacing: 8) {
-            Spacer(minLength: 0)
-            if model.catalog.isScanning {
-                ProgressView()
-                    .controlSize(.mini)
+        if model.catalog.isScanning {
+            bar {
+                Orb(size: 13)
                 Text("Looking for repositories…")
-            } else if let error = model.catalog.loadError {
+            }
+        } else if let error = model.catalog.loadError {
+            bar {
                 Image(systemName: "exclamationmark.triangle")
                 Text(error)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
-            Text(shown == 1 ? "1 repository" : "\(shown) repositories")
-                .monospacedDigit()
+        }
+    }
+
+    private func bar<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        HStack(spacing: 8) {
+            Spacer(minLength: 0)
+            content()
             Spacer(minLength: 0)
         }
         .font(.system(size: 11))

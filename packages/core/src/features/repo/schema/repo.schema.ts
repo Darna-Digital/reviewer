@@ -33,6 +33,17 @@ export const RepoInfo = Schema.Struct({
   user: Schema.String,
 });
 export type RepoInfo = typeof RepoInfo.Type;
+/**
+ * The identity git signs commits with here — `user.name` and `user.email` as
+ * the repository resolves them, its own config over the global one. Null where
+ * git has nothing set, unlike `RepoInfo.user`, which stands in with "you": a
+ * settings screen wants to say the name is missing, not sign for it.
+ */
+export const GitIdentity = Schema.Struct({
+  name: Schema.NullOr(Schema.String),
+  email: Schema.NullOr(Schema.String),
+});
+export type GitIdentity = typeof GitIdentity.Type;
 export const BranchInfo = Schema.Struct({
   name: Schema.String,
   sha: Schema.String,

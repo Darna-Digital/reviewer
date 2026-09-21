@@ -373,8 +373,7 @@ private struct CommitList: View {
         .overlay {
             if commits.isEmpty {
                 if history.isLoading {
-                    ProgressView()
-                        .controlSize(.small)
+                    Orb(size: 16, label: "Loading")
                 } else if let error = history.loadError {
                     PanePlaceholder("Could not load the history", symbol: "exclamationmark.triangle", detail: error)
                 } else {

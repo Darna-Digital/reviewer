@@ -6,7 +6,7 @@
  */
 import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
-import type { PlatformError } from "effect/PlatformError";
+import type { PlatformError, SystemErrorTag } from "effect/PlatformError";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { homedir, platform } from "node:os";
 import { resolve as pathResolve } from "node:path";
@@ -22,8 +22,27 @@ import type {
   WorkspaceRepo,
 } from "@reviewer/core/workspace";
 
+/**
+ * What each normalised system failure means to the person reading it. The
+ * platform's own message ("NotFound: FileSystem.readFile (/abs/path)") is
+ * written for a log, not for the pane the client shows it in, and the client
+ * already knows which path it asked for.
+ */
+const PLAIN_REASONS: Partial<Record<SystemErrorTag, string>> = {
+  NotFound: "It no longer exists on disk.",
+  PermissionDenied: "You don't have permission to access it.",
+  Busy: "Something else has it locked right now.",
+  TimedOut: "Reading it took too long.",
+  InvalidData: "Its contents could not be read.",
+};
+
 const toStorageError = (error: PlatformError) =>
-  new StorageError({ reason: error.message });
+  new StorageError({
+    reason:
+      (error.reason._tag !== "BadArgument" &&
+        PLAIN_REASONS[error.reason._tag]) ||
+      error.message,
+  });
 
 /** How each desktop asks its file manager to show a path and select it. */
 export const revealCommand = (

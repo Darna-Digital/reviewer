@@ -2,6 +2,8 @@ import * as Schema from "effect/Schema";
 import { ReviewComment } from "@reviewer/core/comments";
 import {
   CloseResult,
+  GitHubAuth,
+  GitHubLoginState,
   GitProviderError,
   MergePullRequest,
   MergeResult,
@@ -15,6 +17,28 @@ import { DiffText, Ok } from "@reviewer/core/shared";
 import { HttpApiEndpoint, HttpApiGroup } from "effect/unstable/httpapi";
 
 export class GitHubApi extends HttpApiGroup.make("github")
+  .add(
+    HttpApiEndpoint.get("auth", "/github/auth", {
+      success: GitHubAuth,
+      error: GitProviderError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.post("startLogin", "/github/login", {
+      success: GitHubLoginState,
+      error: GitProviderError,
+    })
+  )
+  .add(
+    HttpApiEndpoint.get("loginStatus", "/github/login", {
+      success: GitHubLoginState,
+    })
+  )
+  .add(
+    HttpApiEndpoint.make("DELETE")("cancelLogin", "/github/login", {
+      success: GitHubLoginState,
+    })
+  )
   .add(
     HttpApiEndpoint.get("pulls", "/github/pulls", {
       success: Schema.Array(PullRequestInfo),

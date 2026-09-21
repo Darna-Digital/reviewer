@@ -11,7 +11,6 @@
 // import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
 import { IconCommand, IconDotsVertical } from "@tabler/icons-react";
 // import { useCanGoBack } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -19,24 +18,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { BarLabel, NO_DRAG, Shortcut } from "@/components/layout/bar-controls";
+import { BarLabel, NO_DRAG } from "@/components/layout/bar-controls";
 import { WindowTabStrip } from "@/interactions/window-tabs/components/window-tab-strip";
-import {
-  barShortcut,
-  type BarShortcut,
-} from "@/components/layout/window-bar.shortcuts";
 import { SidebarToggle } from "@/components/layout/sidebar-toggle";
 import {
   setProjectPickerOpen,
   useProjectPickerOpen,
 } from "@/interactions/workspace/adapters/project-picker.store";
 import { ProjectPicker } from "@/interactions/workspace/components/project-picker";
-import { ROW_TOOLTIP_PLACEMENT } from "@/components/ui/truncated-text";
 import { openSearch } from "@/interactions/search/adapters/search.store";
 import { isDesktop } from "@/lib/desktop";
 import { useWorkspace } from "@/lib/queries";
@@ -56,46 +45,25 @@ import { cn } from "@/lib/utils";
  */
 const LEAD_GUTTER = "w-22";
 
-const PROJECT_PICKER_KEYS = "⌘⇧P";
-const COMMANDS_KEYS = "⌘K";
-
-/** The chords that are the bar's to answer; the strip answers its own. */
-const BAR_SHORTCUTS: ReadonlySet<BarShortcut["kind"]> = new Set<
-  BarShortcut["kind"]
->(["project-picker"]);
-
 /**
- * A row of the window menu: its name, and its chord on hover rather than set
- * along the row. The keycaps are cut for a tooltip's surface, and a menu that
- * held them would be a second place on the bar where a chord is written — so
- * the row says what it does and the tooltip says how else to do it, exactly as
- * the buttons either side of the strip do.
+ * A row of the window menu: its icon and its name. The chords are the native
+ * shell's, so no keycaps are written on the bar.
  */
 function MenuRow({
   label,
-  keys,
   onClick,
   children,
 }: {
   label: string;
-  keys: string;
   onClick: () => void;
   /** The row's icon; the label follows it. */
   children: React.ReactNode;
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger render={<DropdownMenuItem onClick={onClick} />}>
-        {children}
-        {label}
-      </TooltipTrigger>
-      {/* Flush off the row's edge, where every other row tooltip in the app
-          sits, so it never covers the rows under it. */}
-      <TooltipContent {...ROW_TOOLTIP_PLACEMENT}>
-        {label}
-        <Shortcut keys={keys} />
-      </TooltipContent>
-    </Tooltip>
+    <DropdownMenuItem onClick={onClick}>
+      {children}
+      {label}
+    </DropdownMenuItem>
   );
 }
 
@@ -103,26 +71,6 @@ export function WindowBar() {
   // const canGoBack = useCanGoBack();
   const workspace = useWorkspace();
   const pickerOpen = useProjectPickerOpen();
-  // The bar's own chord is the project chip's. The strip's — a session, a tab
-  // — are answered by the strip itself.
-  useEffect(() => {
-    const run = (shortcut: BarShortcut) => {
-      switch (shortcut.kind) {
-        case "project-picker":
-          return setProjectPickerOpen(true);
-        default:
-          return undefined;
-      }
-    };
-    const onKey = (event: KeyboardEvent) => {
-      const shortcut = barShortcut(event);
-      if (shortcut === null || !BAR_SHORTCUTS.has(shortcut.kind)) return;
-      event.preventDefault();
-      run(shortcut);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  });
 
   return (
     <header
@@ -170,7 +118,7 @@ export function WindowBar() {
             open={pickerOpen}
             onOpenChange={setProjectPickerOpen}
             onWindowBar
-            tooltip={<BarLabel label="Projects" keys={PROJECT_PICKER_KEYS} />}
+            tooltip={<BarLabel label="Projects" />}
           />
         </div>
 
@@ -180,8 +128,7 @@ export function WindowBar() {
           the strip that gives way first. Its inset is a gutter like the lead
           one rather than padding, so both ends of the bar read the same. */}
       <div className="flex shrink-0 items-center justify-end gap-1">
-        {/* The window menu: each row names itself, and hovering it says which
-            chord does the same. */}
+        {/* The window menu: each row names itself. */}
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
@@ -196,13 +143,10 @@ export function WindowBar() {
             <IconDotsVertical className="size-4" />
           </DropdownMenuTrigger>
 
-          {/* Narrower than a menu's default: these rows are short names, and
-                the chords that would have set the width are in the tooltips
-                rather than along them. */}
+          {/* Narrower than a menu's default: these rows are short names. */}
           <DropdownMenuContent align="end" className="min-w-48">
             <MenuRow
               label="Command menu"
-              keys={COMMANDS_KEYS}
               onClick={() => openSearch("commands")}
             >
               <IconCommand className="size-4 shrink-0" />

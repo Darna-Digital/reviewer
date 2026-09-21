@@ -10,7 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -61,12 +60,10 @@ export function SearchMenuItems() {
       <DropdownMenuItem onClick={() => openSearch("files")}>
         <IconFile className="size-4 shrink-0" />
         Find a file
-        <DropdownMenuShortcut>⇧⇧</DropdownMenuShortcut>
       </DropdownMenuItem>
       <DropdownMenuItem onClick={() => openSearch("text")}>
         <IconTextSize className="size-4 shrink-0" />
         Search file contents
-        <DropdownMenuShortcut>⌘⇧F</DropdownMenuShortcut>
       </DropdownMenuItem>
     </>
   );

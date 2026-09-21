@@ -5,6 +5,7 @@ import type {
   ConflictBlobs,
   ContentMatch,
   FilesPayload,
+  GitIdentity,
   MergeState,
   RepoInfo,
   RepoStatus,
@@ -14,6 +15,7 @@ import type { RepoRepo } from "./repo.repository.ts";
 
 export interface MemoryRepoSeed {
   readonly info?: RepoInfo;
+  readonly identity?: GitIdentity;
   readonly files?: FilesPayload;
   readonly status?: RepoStatus;
   readonly branches?: ReadonlyArray<BranchInfo>;
@@ -71,6 +73,7 @@ export const makeMemoryRepoRepository = (seed: MemoryRepoSeed = {}) =>
   Effect.gen(function* () {
     const repo: RepoRepo = {
       info: Effect.succeed(seed.info ?? defaultInfo),
+      identity: Effect.succeed(seed.identity ?? { name: null, email: null }),
       files: Effect.succeed(seed.files ?? { paths: [], gitStatus: [] }),
       status: Effect.succeed(seed.status ?? defaultStatus),
       branches: Effect.succeed(seed.branches ?? []),

@@ -163,7 +163,7 @@ describe("SearchDialog — commands", () => {
     expect(screen.queryByText("queries.ts")).toBeNull();
   });
 
-  it("offers the deeper lists as commands, with their shortcuts", () => {
+  it("offers the deeper lists as commands", () => {
     setup();
 
     expect(screen.getByRole("button", { name: /Go to File/ })).toBeDefined();
@@ -171,8 +171,6 @@ describe("SearchDialog — commands", () => {
       screen.getByRole("button", { name: /Search in Files/ })
     ).toBeDefined();
     expect(screen.getByRole("button", { name: /Git Actions/ })).toBeDefined();
-    expect(screen.getByText("⇧⇧")).toBeDefined();
-    expect(screen.getByText("⇧⌘F")).toBeDefined();
   });
 
   it("keeps the git actions behind their own list", () => {

@@ -126,7 +126,6 @@ enum Href {
     static let review = "/modes/code/review"
     static let reviews = "/modes/code/reviews"
     static let browsePath = "/modes/code/browse"
-    static let settings = "/settings"
     private static let pullPath = "/modes/code/review/pull/"
 
     /// One pull request's diff, read in the diff view — the web app's
