@@ -166,6 +166,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // bundle it has to ask for a dock tile and the foreground itself.
         NSApp.setActivationPolicy(.regular)
         NSApp.activate()
+        TitleBarDoubleClick.install()
         appearanceObservation = NSApp.observe(\.effectiveAppearance, options: [.initial, .new]) { app, _ in
             MainActor.assumeIsolated { DockIcon.follow(app.effectiveAppearance) }
         }
