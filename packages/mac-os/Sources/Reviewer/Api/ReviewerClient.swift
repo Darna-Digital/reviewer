@@ -5,7 +5,7 @@
 // rather than a bare status code.
 import Foundation
 
-struct ReviewerAPIError: LocalizedError, Sendable {
+struct ReviewerAPIError: LocalizedError, CommandOutputError, Sendable {
     let status: Int
     let body: String
 
@@ -14,15 +14,25 @@ struct ReviewerAPIError: LocalizedError, Sendable {
         // prefer the reason, then the tag, then whatever text came back. A
         // git error carries git's own stderr — the rejected push's reason,
         // the merge's conflict — which is what the notice should say.
-        if let data = body.data(using: .utf8),
-           let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+        if let json {
             if let reason = json["reason"] as? String { return reason }
             if let message = json["message"] as? String { return message }
-            if let stderr = (json["stderr"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
-               !stderr.isEmpty { return stderr }
+            if let stderr = commandOutput { return stderr }
             if let tag = json["_tag"] as? String { return tag }
         }
         return body.isEmpty ? "request failed (\(status))" : body
+    }
+
+    /// Git's own stderr, when the server relayed a git failure.
+    var commandOutput: String? {
+        guard let stderr = (json?["stderr"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !stderr.isEmpty else { return nil }
+        return stderr
+    }
+
+    private var json: [String: Any]? {
+        guard let data = body.data(using: .utf8) else { return nil }
+        return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
     }
 }
 

@@ -64,6 +64,15 @@ struct ReviewerApp: App {
         // launch opens: the workspace decides whether it is wanted.
         .restorationBehavior(.disabled)
         .defaultLaunchBehavior(.suppressed)
+
+        // TEMPORARY — the notice lab (see `NoticeLab`).
+        Window("Notice lab", id: NoticeLabWindow.id) {
+            NoticeLabView()
+                .environment(model)
+        }
+        .defaultSize(width: 380, height: 720)
+        .restorationBehavior(.disabled)
+        .defaultLaunchBehavior(.suppressed)
     }
 }
 
@@ -159,6 +168,20 @@ struct ReviewerCommands: Commands {
                     .keyboardShortcut(KeyEquivalent(Character(String(slot + 1))), modifiers: .command)
             }
         }
+        // TEMPORARY — see `NoticeLab`.
+        CommandMenu("Debug") {
+            NoticeLabMenuItem()
+        }
+    }
+}
+
+/// TEMPORARY — opens the notice lab; a view so it can reach `openWindow`.
+private struct NoticeLabMenuItem: View {
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button("Notice lab…") { openWindow(id: NoticeLabWindow.id) }
+            .keyboardShortcut("n", modifiers: [.command, .option])
     }
 }
 

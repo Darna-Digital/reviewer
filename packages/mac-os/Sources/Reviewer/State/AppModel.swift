@@ -340,7 +340,7 @@ final class AppModel {
             do {
                 sha = try await client.commit(message: message, paths: paths)
             } catch {
-                notices.settle(id, .error, error.localizedDescription)
+                notices.settle(id, failed: "Commit failed", with: error)
                 return
             }
             if push {
@@ -349,7 +349,7 @@ final class AppModel {
                     _ = try await client.push()
                     notices.settle(id, .success, "Committed \(sha) and pushed")
                 } catch {
-                    notices.settle(id, .error, "Committed \(sha), but push failed", detail: error.localizedDescription)
+                    notices.settle(id, failed: "Committed \(sha), but push failed", with: error)
                 }
             } else {
                 notices.settle(id, .success, "Committed \(sha)")
@@ -362,7 +362,7 @@ final class AppModel {
     func discard(paths: [String]) {
         Task {
             let named = paths.count == 1 ? "changes in \(paths[0])" : "changes in \(paths.count) files"
-            await notices.run("Discarding \(named)…", done: "Discarded \(named)") {
+            await notices.run("Discarding \(named)…", done: "Discarded \(named)", failed: "Discard failed") {
                 try await client.discard(paths: paths)
                 return nil
             }
@@ -422,8 +422,8 @@ final class AppModel {
     /// the branch changing under the diff, everything is re-read after.
     func checkout(pull: PullRequestInfo) {
         Task {
-            await notices.run("Checking out #\(pull.number)…", done: "Checked out \(pull.localBranch)") {
-                try await pullRequests.checkout(pull, as: pull.localBranch)
+            await notices.run("Checking out #\(pull.number)…", done: "Checked out \(pull.localBranch)", failed: "Checkout of #\(pull.number) failed") {
+                _ = try await pullRequests.checkout(pull, as: pull.localBranch)
                 return nil
             }
             await refresh()
@@ -434,7 +434,7 @@ final class AppModel {
     /// Once it has gone through, its page is left for the list.
     func merge(pull: PullRequestInfo, method: MergeMethod) {
         Task {
-            let merged = await notices.run("Merging #\(pull.number)…", done: "Merged #\(pull.number)") {
+            let merged = await notices.run("Merging #\(pull.number)…", done: "Merged #\(pull.number)", failed: "Merge of #\(pull.number) failed") {
                 try await pullRequests.merge(pull, method: method)
             }
             if merged { leavePull() }
@@ -447,7 +447,7 @@ final class AppModel {
     /// does, and so does its page.
     func close(pull: PullRequestInfo) {
         Task {
-            let closed = await notices.run("Closing #\(pull.number)…", done: "Closed #\(pull.number)") {
+            let closed = await notices.run("Closing #\(pull.number)…", done: "Closed #\(pull.number)", failed: "Could not close #\(pull.number)") {
                 try await pullRequests.close(pull)
             }
             if closed { leavePull() }

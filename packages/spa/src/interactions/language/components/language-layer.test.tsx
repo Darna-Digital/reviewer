@@ -9,7 +9,7 @@
  * that has to mean is that nothing is even requested: a card that is fetched
  * and then thrown away still costs a round trip per token the pointer crosses.
  */
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TokenEventBase } from "@pierre/diffs";
 import { useLanguageLayer } from "./language-layer";
@@ -122,6 +122,25 @@ describe("hover documentation", () => {
 
     // Not reached: it goes, as it should.
     await advance(200);
+    expect(cardIsOpen()).toBe(false);
+  });
+
+  it("stays while the pointer is in it, however late the token reports the leave", async () => {
+    render(<Harness hoverEnabled />);
+    await restOnToken();
+    const card = document.querySelector("[data-symbol-card]");
+    expect(card).not.toBeNull();
+
+    // React raises the card's enter from the token's `pointerout`, which lands
+    // before the view's own `pointerleave` — so the token says the pointer has
+    // gone only after the card has already been entered.
+    fireEvent.pointerEnter(card!);
+    act(() => leave());
+    await advance(1_000);
+    expect(cardIsOpen()).toBe(true);
+
+    // Reading is done: leaving the card is what closes it.
+    fireEvent.pointerLeave(card!);
     expect(cardIsOpen()).toBe(false);
   });
 

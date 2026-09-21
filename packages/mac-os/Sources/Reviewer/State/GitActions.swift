@@ -96,55 +96,55 @@ extension AppModel {
     // MARK: actions
 
     func checkout(_ branch: String) {
-        runGit("Checking out \(branch)…", done: "Checked out \(branch)") {
+        runGit("Checking out \(branch)…", done: "Checked out \(branch)", failed: "Checkout failed") {
             try await self.client.checkout(branch: branch)
             return nil
         }
     }
 
     func checkoutAndUpdate(_ branch: String) {
-        runGit("Checking out \(branch)…", done: "Checked out and updated \(branch)") {
+        runGit("Checking out \(branch)…", done: "Checked out and updated \(branch)", failed: "Checkout failed") {
             try await self.client.checkout(branch: branch)
             return try await self.client.pull()
         }
     }
 
     func fetch() {
-        runGit("Fetching…", done: "Fetched") { try await self.client.fetch() }
+        runGit("Fetching…", done: "Fetched", failed: "Fetch failed") { try await self.client.fetch() }
     }
 
     func pull() {
-        runGit("Pulling…", done: "Pulled") { try await self.client.pull() }
+        runGit("Pulling…", done: "Pulled", failed: "Pull failed") { try await self.client.pull() }
     }
 
     func push() {
-        runGit("Pushing…", done: "Pushed") { try await self.client.push() }
+        runGit("Pushing…", done: "Pushed", failed: "Push failed") { try await self.client.push() }
     }
 
     func merge(_ branch: String) {
-        runGit("Merging \(branch)…", done: "Merged \(branch)") { try await self.client.merge(branch: branch) }
+        runGit("Merging \(branch)…", done: "Merged \(branch)", failed: "Merge of \(branch) stopped") { try await self.client.merge(branch: branch) }
     }
 
     func rebase(onto branch: String) {
-        runGit("Rebasing onto \(branch)…", done: "Rebased onto \(branch)") { try await self.client.rebase(onto: branch) }
+        runGit("Rebasing onto \(branch)…", done: "Rebased onto \(branch)", failed: "Rebase onto \(branch) stopped") { try await self.client.rebase(onto: branch) }
     }
 
     func createBranch(named name: String, from startPoint: String?) {
-        runGit("Creating \(name)…", done: "Created branch \(name)") {
+        runGit("Creating \(name)…", done: "Created branch \(name)", failed: "Could not create \(name)") {
             try await self.client.createBranch(name: name, startPoint: startPoint)
             return nil
         }
     }
 
     func renameBranch(_ from: String, to: String) {
-        runGit("Renaming \(from)…", done: "Renamed \(from) → \(to)") {
+        runGit("Renaming \(from)…", done: "Renamed \(from) → \(to)", failed: "Could not rename \(from)") {
             try await self.client.renameBranch(from: from, to: to)
             return nil
         }
     }
 
     func deleteBranch(_ name: String) {
-        runGit("Deleting \(name)…", done: "Deleted \(name)") {
+        runGit("Deleting \(name)…", done: "Deleted \(name)", failed: "Could not delete \(name)") {
             try await self.client.deleteBranch(name: name)
             return nil
         }
@@ -183,13 +183,13 @@ extension AppModel {
         showOnCodeTab(components.string ?? Href.review)
     }
 
-    /// The action as a notice, `pending` while it runs and then what git
-    /// said — its output where it has any, `done` where it is quiet — and
-    /// the project re-read either way, since a merge that stopped on a
-    /// conflict has changed the tree as surely as one that went through.
-    private func runGit(_ pending: String, done: String, _ body: @escaping () async throws -> String?) {
+    /// The action as a notice, `pending` while it runs and then `done` or
+    /// `failed` over what git said — and the project re-read either way,
+    /// since a merge that stopped on a conflict has changed the tree as
+    /// surely as one that went through.
+    private func runGit(_ pending: String, done: String, failed: String, _ body: @escaping () async throws -> String?) {
         Task {
-            await notices.run(pending, done: done, body)
+            await notices.run(pending, done: done, failed: failed, report: .command, body)
             await refresh()
         }
     }

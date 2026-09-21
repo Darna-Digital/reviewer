@@ -43,7 +43,9 @@ enum NoticeMotion {
 private struct NoticeCard: View {
     let notice: Notice
     let dismiss: () -> Void
+    @Environment(AppModel.self) private var model
     @State private var isHovering = false
+    @State private var showsDetails = false
 
     private static let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
 
@@ -52,15 +54,26 @@ private struct NoticeCard: View {
             glyph
                 // Centred on the title's first line rather than the block.
                 .frame(width: 16, height: 18)
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(notice.title)
-                    .font(.system(size: 13))
-                    .lineLimit(6)
+                    .font(.system(size: 13, weight: notice.kind == .loading ? .regular : .semibold))
+                    .lineLimit(3)
                 if let detail = notice.detail {
                     Text(detail)
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
-                        .lineLimit(6)
+                        .lineLimit(4)
+                }
+                if notice.output != nil {
+                    Button("Details") { showsDetails = true }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.tint)
+                        .padding(.top, 3)
+                        .popover(isPresented: $showsDetails, arrowEdge: .leading) {
+                            NoticeDetails(notice: notice)
+                        }
+                        .onChange(of: showsDetails) { _, shown in model.notices.pin(notice.id, shown) }
                 }
             }
             .multilineTextAlignment(.leading)
@@ -82,8 +95,7 @@ private struct NoticeCard: View {
         .overlay(Self.shape.strokeBorder(Color(nsColor: IslandPalette.separator), lineWidth: 1))
         .shadow(color: .black.opacity(0.18), radius: 16, y: 6)
         .onHover { isHovering = $0 }
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(.isStaticText)
+        .accessibilityElement(children: .contain)
     }
 
     @ViewBuilder
@@ -103,6 +115,56 @@ private struct NoticeCard: View {
             Image(systemName: "info.circle")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// The command's own words behind a notice's Details: git's account in
+/// monospace, selectable and copied whole by the button in the header,
+/// since a rejection is what gets pasted into a search or a message.
+private struct NoticeDetails: View {
+    let notice: Notice
+    @State private var copied = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(notice.title)
+                    .font(.system(size: 13, weight: .semibold))
+                Spacer()
+                // Sized by the wider word, so the button holds still while
+                // it says the copy went through.
+                Button(action: copy) {
+                    ZStack {
+                        Label("Copied", systemImage: "checkmark").hidden()
+                        Label(copied ? "Copied" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
+                    }
+                }
+                .labelStyle(.titleAndIcon)
+                .controlSize(.small)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            Divider()
+            ScrollView([.vertical, .horizontal]) {
+                Text(notice.output ?? "")
+                    .font(.system(size: 11, design: .monospaced))
+                    .textSelection(.enabled)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .frame(minWidth: 420, idealWidth: 560, maxWidth: 720, minHeight: 80, idealHeight: 220, maxHeight: 400)
+    }
+
+    private func copy() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(notice.output ?? "", forType: .string)
+        copied = true
+        Task {
+            try? await Task.sleep(for: .seconds(2))
+            copied = false
         }
     }
 }

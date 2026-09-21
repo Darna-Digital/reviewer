@@ -239,6 +239,14 @@ export function useLanguageLayer({
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** Guards against a slow response for a token the pointer already left. */
   const hoverToken = useRef<TokenSpan | null>(null);
+  /**
+   * Whether the pointer is in the card. React raises the card's enter from the
+   * token's `pointerout`, which arrives *before* the `pointerleave` the view
+   * reports the token from — so by the time the token says the pointer has
+   * gone, the card has already been entered, and a close timer armed then
+   * would have nothing left to cancel it.
+   */
+  const pointerInCard = useRef(false);
 
   const clearTimers = useCallback(() => {
     if (hoverTimer.current !== null) clearTimeout(hoverTimer.current);
@@ -323,6 +331,7 @@ export function useLanguageLayer({
       const token = spanOf(props);
       if (token === null) return;
       clearTimers();
+      pointerInCard.current = false;
       const anchor = anchorFor(props.tokenElement);
       hoverTimer.current = setTimeout(() => {
         hoverToken.current = token;
@@ -358,6 +367,7 @@ export function useLanguageLayer({
   const onTokenLeave = useCallback(() => {
     if (hoverTimer.current !== null) clearTimeout(hoverTimer.current);
     hoverTimer.current = null;
+    if (pointerInCard.current) return;
     closeTimer.current = setTimeout(() => {
       hoverToken.current = null;
       setCard((current) => (current?.kind === "hover" ? null : current));
@@ -489,6 +499,15 @@ export function useLanguageLayer({
     getContainer,
   });
 
+  const enterCard = useCallback(() => {
+    pointerInCard.current = true;
+    clearTimers();
+  }, [clearTimers]);
+  const leaveCard = useCallback(() => {
+    pointerInCard.current = false;
+    if (card?.kind === "hover") closeCard();
+  }, [card?.kind, closeCard]);
+
   const cardNode = useMemo(() => {
     if (card === null) return null;
     const body =
@@ -513,13 +532,13 @@ export function useLanguageLayer({
         interactive={card.kind === "outcome"}
         // Keep a hover card open while the pointer travels into it, so its
         // contents can be read and selected.
-        onPointerEnter={clearTimers}
-        onPointerLeave={card.kind === "hover" ? closeCard : undefined}
+        onPointerEnter={enterCard}
+        onPointerLeave={leaveCard}
       >
         {body}
       </SymbolCard>
     );
-  }, [card, clearTimers, closeCard, openFromCard]);
+  }, [card, closeCard, enterCard, leaveCard, openFromCard]);
 
   return {
     diagnostics,
