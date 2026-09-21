@@ -13,10 +13,18 @@ import { GitExec } from "./git-exec.ts";
 
 export const ANONYMOUS_AUTHOR = "you";
 
-const gitUserName = Effect.gen(function* () {
-  const git = yield* GitExec;
-  return yield* git.runTolerant("config", "user.name");
-}).pipe(Effect.catch(() => Effect.succeed("")));
+/** The git identity, else `ANONYMOUS_AUTHOR`. */
+export const gitUserName: Effect.Effect<string, never, GitExec> = Effect.gen(
+  function* () {
+    const git = yield* GitExec;
+    return yield* git.runTolerant("config", "user.name");
+  }
+).pipe(
+  Effect.catch(() => Effect.succeed("")),
+  Effect.map((name) =>
+    name.trim().length > 0 ? name.trim() : ANONYMOUS_AUTHOR
+  )
+);
 
 /**
  * The name to file a note under: the one the request carried, else the git
@@ -27,6 +35,4 @@ export const authorOf = (
 ): Effect.Effect<string, never, GitExec> =>
   requested !== undefined && requested.length > 0
     ? Effect.succeed(requested)
-    : Effect.map(gitUserName, (name) =>
-        name.trim().length > 0 ? name.trim() : ANONYMOUS_AUTHOR
-      );
+    : gitUserName;

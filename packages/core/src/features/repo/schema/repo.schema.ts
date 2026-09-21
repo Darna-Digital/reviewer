@@ -25,6 +25,12 @@ export const RepoInfo = Schema.Struct({
   currentBranch: Schema.String,
   remoteUrl: Schema.NullOr(Schema.String),
   github: Schema.NullOr(GitHubRemote),
+  /**
+   * Who writes here — git's `user.name`, the name the commits carry. A note
+   * filed from the app is signed with it, so the composer shows it before the
+   * server has. "you" when git has no name set.
+   */
+  user: Schema.String,
 });
 export type RepoInfo = typeof RepoInfo.Type;
 export const BranchInfo = Schema.Struct({

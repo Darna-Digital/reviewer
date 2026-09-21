@@ -1799,6 +1799,10 @@ export interface operations {
                             owner: string;
                             repo: string;
                         } | null;
+                        /** @description Who writes here — git's `user.name`, the name the commits carry. A note
+                         *     filed from the app is signed with it, so the composer shows it before the
+                         *     server has. "you" when git has no name set. */
+                        user: string;
                     };
                 };
             };

@@ -29,6 +29,7 @@ const defaultInfo: RepoInfo = {
   currentBranch: "main",
   remoteUrl: null,
   github: null,
+  user: "you",
 };
 const defaultStatus: RepoStatus = {
   branch: "main",

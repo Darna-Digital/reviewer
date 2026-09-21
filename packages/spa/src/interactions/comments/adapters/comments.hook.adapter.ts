@@ -3,6 +3,7 @@ import { useMemo, useRef } from "react";
 import { api, fetchClient } from "@/lib/api/client";
 import type { ReviewComment } from "@reviewer/core/comments";
 import { createCommentsFunctions } from "../functions/comments.functions";
+import { useCommentAuthor } from "./comment-author.hook.adapter";
 import {
   optimisticComment,
   optimisticId,
@@ -21,6 +22,7 @@ import type {
 /** Wires the real API mutations + TanStack Query cache into the comment logic. */
 export function useCommentsActions() {
   const queryClient = useQueryClient();
+  const author = useCommentAuthor();
 
   const fns: CommentsFunctions = useMemo(
     () =>
@@ -183,8 +185,9 @@ export function useCommentsActions() {
               lineNumber: location.lineNumber,
               body,
               target: ctx.targetKey,
-              // Filled in by the server; shown for the moment before it answers.
-              author: "you",
+              // The server signs it with the same identity; this is shown for
+              // the moment before it answers.
+              author,
               createdAt,
             })
           : optimisticPullComment({

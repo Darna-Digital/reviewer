@@ -1,8 +1,9 @@
 /**
  * Round comment-author avatar. GitHub authors resolve to their real avatar via
  * `github.com/<user>.png`; everyone else (and any image that fails to load)
- * falls back to deterministic initials on a colour derived from the name —
- * reusing the same palette as the repo/project avatars.
+ * gets the monogram macOS draws for a contact with no picture — two letters of
+ * the name on a soft grey gradient — so a note by whoever is at the keyboard
+ * looks the way their own card does in Contacts.
  */
 import { useEffect, useState } from "react";
 import { repoAvatar } from "@/lib/repo-avatar";
@@ -18,7 +19,7 @@ export function AuthorAvatar({
   source: ReviewComment["source"];
   className?: string;
 }) {
-  const { initials, color } = repoAvatar(author);
+  const { initials } = repoAvatar(author);
   const githubUrl =
     source === "github" && /^[\w-]+$/.test(author)
       ? `https://github.com/${author}.png?size=48`
@@ -51,9 +52,8 @@ export function AuthorAvatar({
       title={author}
       className={cn(
         base,
-        "flex items-center justify-center text-[10px] font-semibold text-white"
+        "monogram flex items-center justify-center text-[11px] font-medium tracking-tight text-white"
       )}
-      style={{ backgroundColor: color }}
     >
       {initials}
     </span>

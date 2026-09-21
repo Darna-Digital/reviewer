@@ -7,6 +7,7 @@ import * as Effect from "effect/Effect";
 import * as FileSystem from "effect/FileSystem";
 import { GitError } from "@reviewer/core/ports/git-exec";
 import { GitExec, type GitFailure } from "../git/git-exec.ts";
+import { gitUserName } from "../git/git-identity.ts";
 import { ALL_REFS } from "@reviewer/core/repo";
 import type {
   BranchInfo,
@@ -280,7 +281,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
   const { lines, run, runTolerant, runVerbose } = git;
 
   const info: RepoRepo["info"] = Effect.gen(function* () {
-    const [root, currentBranch, remoteUrl] = yield* Effect.all(
+    const [root, currentBranch, remoteUrl, user] = yield* Effect.all(
       [
         run("rev-parse", "--show-toplevel").pipe(
           Effect.map((out) => out.trim())
@@ -292,6 +293,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
           Effect.map((out) => out.trim()),
           Effect.catchTag("GitError", () => Effect.succeed(null))
         ),
+        gitUserName.pipe(Effect.provideService(GitExec, git)),
       ],
       { concurrency: "unbounded" }
     );
@@ -302,6 +304,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
       currentBranch,
       remoteUrl,
       github: remoteUrl === null ? null : parseGitHubRemote(remoteUrl),
+      user,
     };
   });
 
