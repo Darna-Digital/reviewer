@@ -63,7 +63,9 @@ final class AppModel {
     /// Whether the system's sidebar column is out; the split view's own
     /// toggle and the View menu both move it.
     var sidebarShown = true
-    var bottomExpanded = true
+    /// The pane stays put away until asked for: a project opens on its
+    /// page alone, and the pane is a keystroke or a rail click away.
+    var bottomExpanded = false
     var bottomTab: BottomPaneTab = .terminal
     var bottomHeight: CGFloat = 280
     /// The find-usages drawer under the page island, as it last reported
@@ -395,16 +397,28 @@ final class AppModel {
 
     // MARK: project
 
-    func openProject(path: String) async {
+    @discardableResult
+    func openProject(path: String) async -> Bool {
         do {
             workspace = try await client.openProject(path: path)
             services.reset()
             threads.reset()
+            bottomExpanded = false
             await refresh()
             projectOpens += 1
+            return true
         } catch {
             lastError = error.localizedDescription
+            return false
         }
+    }
+
+    /// The opener's Open and Run: the project opened, then every one of its
+    /// dev commands started, with the Run surface up to show them coming up.
+    func openProjectAndRun(path: String) async {
+        guard await openProject(path: path) else { return }
+        await services.startAll()
+        show(bottomTab: .run)
     }
 
     /// The opener: every repository the machine holds, to pick one from.

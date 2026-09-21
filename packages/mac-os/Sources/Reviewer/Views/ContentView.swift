@@ -189,6 +189,8 @@ private struct DetailColumn: View {
             growth: gauge.islandWidth > 0 ? end - gauge.islandWidth : 0)
     }
 
+    private var paneShown: Bool { model.hasProject && model.bottomExpanded }
+
     private func measure(islandWidth: CGFloat) {
         gauge.islandWidth = islandWidth
         if model.sidebarShown {
@@ -216,13 +218,23 @@ private struct DetailColumn: View {
                     // pane under it: it is the page's review, and Music
                     // hangs its player over the content, not the window.
                     .overlay { ReviewAssignBarLayer() }
-                if model.hasProject && model.bottomExpanded {
+                if paneShown {
                     IslandSeam(between: .rows, size: $model.bottomHeight, range: Self.bottomHeights)
+                    // The pane drops out under the page and climbs back the
+                    // same way, the page's edge following it: a drawer at
+                    // the foot of the window, not a panel winking out. The
+                    // web view is not held still for this move as it is for
+                    // the sidebar's (see `SidebarHold`): only its height
+                    // changes, which reflows no line, so it can follow the
+                    // edge frame by frame — and a page that centres itself,
+                    // like the empty one, would jump at a hold's end.
                     BottomPane()
                         .frame(height: model.bottomHeight)
                         .island()
+                        .transition(.move(edge: .bottom))
                 }
             }
+            .animation(PaneMotion.change, value: paneShown)
             .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { measure(islandWidth: $0) }
             .padding(.leading, model.reviewingPull == nil ? leading : 0)
         }

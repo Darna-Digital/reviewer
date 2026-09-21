@@ -37,6 +37,85 @@ enum PaneMetrics {
     static let tableMinWidth: CGFloat = 300
     static let tableIdealWidth: CGFloat = 480
     static let tableMaxWidth: CGFloat = 720
+    static let tableDetailMinWidth: CGFloat = 240
+}
+
+/// The split the Terminal and Run surfaces share: the table column down
+/// the left at one width, the detail beside it taking the rest, parted by
+/// a handle. The width is one setting for both surfaces, so switching
+/// between them moves nothing — each HSplitView would size its own
+/// columns afresh, and the table would jump back to its ideal width on
+/// every switch. Opened fresh it stands at the ideal width; dragged, it
+/// keeps the width across surfaces and launches, clamped so the detail
+/// always has its minimum.
+struct TableSplit<Table: View, Detail: View>: View {
+    @ViewBuilder let table: Table
+    @ViewBuilder let detail: Detail
+    @AppStorage("bottom-table-width") private var savedTableWidth = 0.0
+    @State private var draggedTableWidth: Double?
+
+    var body: some View {
+        GeometryReader { proxy in
+            let range = Self.tableRange(in: proxy.size.width)
+            let width = tableWidth(range: range)
+            HStack(spacing: 0) {
+                table
+                    .frame(width: width)
+                    .frame(maxHeight: .infinity)
+                ColumnResizeHandle(width: Binding(get: { width }, set: { draggedTableWidth = $0 }),
+                                   range: range, edge: .trailing) { savedTableWidth = $0 }
+                detail
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+    }
+
+    private func tableWidth(range: ClosedRange<Double>) -> Double {
+        let wanted = draggedTableWidth ?? (savedTableWidth > 0 ? savedTableWidth : PaneMetrics.tableIdealWidth)
+        return min(max(wanted, range.lowerBound), range.upperBound)
+    }
+
+    private static func tableRange(in paneWidth: CGFloat) -> ClosedRange<Double> {
+        let widest = min(PaneMetrics.tableMaxWidth, paneWidth - PaneMetrics.tableDetailMinWidth)
+        return PaneMetrics.tableMinWidth...max(PaneMetrics.tableMinWidth, widest)
+    }
+}
+
+/// A hairline along one edge of a column, dragged to give the column more
+/// or less room: a column's trailing edge grows it rightward, a leading
+/// edge leftward. Measured in the window, as the composer's handles are,
+/// since the handle moves with the edge it drags.
+struct ColumnResizeHandle: View {
+    @Binding var width: Double
+    let range: ClosedRange<Double>
+    let edge: HorizontalEdge
+    let onRelease: (Double) -> Void
+    @State private var startWidth: Double?
+
+    var body: some View {
+        Divider()
+            .frame(width: 7)
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                if hovering { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 1, coordinateSpace: .global)
+                    .onChanged { drag in
+                        let start = startWidth ?? width
+                        startWidth = start
+                        let moved = edge == .trailing ? drag.translation.width : -drag.translation.width
+                        var transaction = Transaction()
+                        transaction.disablesAnimations = true
+                        withTransaction(transaction) {
+                            width = min(max(start + moved, range.lowerBound), range.upperBound)
+                        }
+                    }
+                    .onEnded { _ in
+                        startWidth = nil
+                        onRelease(width)
+                    })
+    }
 }
 
 /// The two sizes a field comes in: the sidebar's, and the pane bar's a

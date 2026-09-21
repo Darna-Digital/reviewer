@@ -24,7 +24,7 @@ struct BranchPicker: View {
                 Text(name)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                    .clipTooltip(name, font: font)
+                    .clipHelp(name, font: font)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(.secondary)
@@ -36,7 +36,7 @@ struct BranchPicker: View {
         .popover(isPresented: $open, arrowEdge: .bottom) {
             BranchPopover(
                 sections: sections, placeholder: "Search branches", pick: checkout, dismiss: { open = false },
-                actions: { branch in BranchActions(branch: branch) }
+                actions: model.branchActions(for:)
             ) {
                 Divider()
                 HStack(spacing: 2) {
@@ -68,41 +68,74 @@ struct BranchPicker: View {
     }
 }
 
-/// The same actions the web app's switcher gives a branch, in the same
-/// order, worded against the branch you are on.
-struct BranchActions: View {
-    let branch: BranchRef
-    @Environment(AppModel.self) private var model
-
-    private var head: String { model.currentBranch ?? "HEAD" }
-
-    var body: some View {
-        if !branch.isCurrent {
-            Button("Checkout") { run { model.checkout(branch.ref) } }
-        }
-        Button("New Branch from ‘\(branch.display)’…") { run { model.branchPrompt = .create(startPoint: branch.ref) } }
-        if !branch.isCurrent {
-            Button("Checkout and Update") { run { model.checkoutAndUpdate(branch.ref) } }
-            Divider()
-            Button("Compare with ‘\(head)’") { run { model.compare(base: branch.ref, head: head) } }
-            Button("Review ‘\(head)’ against ‘\(branch.display)’") { run { model.review(head, against: branch.ref) } }
-            Button("Merge ‘\(branch.display)’ into ‘\(head)’") { run { model.merge(branch.ref) } }
-            Button("Rebase ‘\(head)’ onto ‘\(branch.display)’") { run { model.rebase(onto: branch.ref) } }
-        }
-        Divider()
-        Button("Update") { run { model.fetch() } }
-        Button("Push…") { run { model.push() } }
-        if !branch.isRemote {
-            Divider()
-            Button("Rename…") { run { model.branchPrompt = .rename(from: branch.ref) } }
-            if !branch.isCurrent {
-                Button("Delete", role: .destructive) { run { model.branchPrompt = .delete(name: branch.ref) } }
-            }
-        }
+/// One thing that can be done to a branch, as the switcher's row menu
+/// lists it — or the rule between two runs of them.
+struct BranchAction: Identifiable {
+    enum Kind {
+        case item(title: String, destructive: Bool, run: () -> Void)
+        case divider
     }
 
-    private func run(_ action: () -> Void) {
-        action()
+    let id: Int
+    let kind: Kind
+
+    var isItem: Bool { if case .item = kind { true } else { false } }
+}
+
+extension AppModel {
+    /// The same actions the web app's switcher gives a branch, in the same
+    /// order, worded against the branch you are on.
+    func branchActions(for branch: BranchRef) -> [BranchAction] {
+        let head = currentBranch ?? "HEAD"
+        var actions: [BranchAction] = []
+        func item(_ title: String, destructive: Bool = false, _ run: @escaping () -> Void) {
+            actions.append(BranchAction(id: actions.count, kind: .item(title: title, destructive: destructive, run: run)))
+        }
+        func divider() { actions.append(BranchAction(id: actions.count, kind: .divider)) }
+
+        if !branch.isCurrent {
+            item("Checkout") { self.checkout(branch.ref) }
+        }
+        item("New Branch from ‘\(branch.display)’…") { self.branchPrompt = .create(startPoint: branch.ref) }
+        if !branch.isCurrent {
+            item("Checkout and Update") { self.checkoutAndUpdate(branch.ref) }
+            divider()
+            item("Compare with ‘\(head)’") { self.compare(base: branch.ref, head: head) }
+            item("Review ‘\(head)’ against ‘\(branch.display)’") { self.review(head, against: branch.ref) }
+            item("Merge ‘\(branch.display)’ into ‘\(head)’") { self.merge(branch.ref) }
+            item("Rebase ‘\(head)’ onto ‘\(branch.display)’") { self.rebase(onto: branch.ref) }
+        }
+        divider()
+        item("Update") { self.fetch() }
+        item("Push…") { self.push() }
+        if !branch.isRemote {
+            divider()
+            item("Rename…") { self.branchPrompt = .rename(from: branch.ref) }
+            if !branch.isCurrent {
+                item("Delete", destructive: true) { self.branchPrompt = .delete(name: branch.ref) }
+            }
+        }
+        return actions
+    }
+}
+
+/// A branch's actions as menu items — a row's context menu, the ellipsis
+/// at its trailing edge — with `ran` called after any of them, for a
+/// popover to put itself away.
+struct BranchActions: View {
+    let branch: BranchRef
+    var ran: () -> Void = {}
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        ForEach(model.branchActions(for: branch)) { action in
+            switch action.kind {
+            case .item(let title, let destructive, let run):
+                Button(title, role: destructive ? .destructive : nil) { run(); ran() }
+            case .divider:
+                Divider()
+            }
+        }
     }
 }
 

@@ -18,12 +18,10 @@ struct TerminalPane: View {
     @State private var rename = ThreadRename()
 
     var body: some View {
-        HSplitView {
+        TableSplit {
             ThreadTable()
-                .frame(minWidth: PaneMetrics.tableMinWidth, idealWidth: PaneMetrics.tableIdealWidth,
-                       maxWidth: PaneMetrics.tableMaxWidth)
+        } detail: {
             ThreadTerminal()
-                .frame(minWidth: 240, maxWidth: .infinity, maxHeight: .infinity)
         }
         .environment(rename)
         .task { await model.threads.load() }

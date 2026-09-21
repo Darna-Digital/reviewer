@@ -60,6 +60,15 @@ struct BottomPane: View {
 
 }
 
+/// The one motion the pane comes and goes with: a short settle with no
+/// bounce, the tempo the system's sidebar slides at, and none at all when
+/// the user asked for less motion.
+enum PaneMotion {
+    static var change: Animation? {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : .smooth(duration: 0.28)
+    }
+}
+
 /// The mark in the island's top trailing corner: a flat button set into the
 /// corner itself rather than inset from it, so it reads as a cap on the
 /// bar. Its outer corner is cut at the island's own radius and its inner

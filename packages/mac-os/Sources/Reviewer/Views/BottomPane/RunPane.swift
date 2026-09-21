@@ -21,12 +21,10 @@ struct RunPane: View {
     @State private var adding = false
 
     var body: some View {
-        HSplitView {
+        TableSplit {
             CommandTable(adding: $adding)
-                .frame(minWidth: PaneMetrics.tableMinWidth, idealWidth: PaneMetrics.tableIdealWidth,
-                       maxWidth: PaneMetrics.tableMaxWidth)
+        } detail: {
             CommandDetail()
-                .frame(minWidth: 240, maxWidth: .infinity, maxHeight: .infinity)
         }
         .task { await model.services.load() }
         .sheet(isPresented: $adding) {

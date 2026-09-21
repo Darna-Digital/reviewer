@@ -7,9 +7,10 @@
 // where it sits, when it was last opened — sortable on any column, with a
 // status bar along the foot counting them and saying while the walk is
 // still on. A click picks a row, a double-click or Return opens it as the
-// project, and the row's menu opens it in a window of its own — a second
-// Reviewer, with a server of its own — stars it among the favourites, or
-// reaches the folder in Finder. It is the window up while no project is
+// project, and the row's menu opens it with its dev commands started and
+// the Run surface up, opens it in a window of its own — a second Reviewer,
+// with a server of its own — stars it among the favourites, or reaches the
+// folder in Finder. It is the window up while no project is
 // (the workspace hands over to it, see `ContentView`),
 // and the one ⌘O, ⇧⌘1 and the project chip bring up over an open
 // workspace; a repository opened in it hands back — the workspace forward,
@@ -250,6 +251,7 @@ private struct OpenerTable: View {
         .contextMenu(forSelectionType: RepoRow.ID.self) { ids in
             if let path = ids.first {
                 Button("Open") { open(path) }
+                Button("Open and Run") { openAndRun(path) }
                 Button("Open in New Window") { model.openProjectInNewWindow(path: path) }
                 Divider()
                 if model.catalog.isFavorite(path) {
@@ -273,6 +275,10 @@ private struct OpenerTable: View {
 
     private func open(_ path: String) {
         Task { await model.openProject(path: path) }
+    }
+
+    private func openAndRun(_ path: String) {
+        Task { await model.openProjectAndRun(path: path) }
     }
 
     private func revealInFinder(_ path: String) {

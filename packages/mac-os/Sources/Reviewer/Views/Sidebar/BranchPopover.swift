@@ -8,7 +8,7 @@
 // answer — a checkout, a comparison, a log to follow; what else can be
 // done to a branch is the row's menu, at the ellipsis and on a right
 // click. A name too long for its row says the whole of itself in a
-// tooltip, and only then (see `ClipTooltip`).
+// tooltip, and only then (see `clipHelp`).
 import SwiftUI
 
 /// A row the popover offers: a branch, or one of the answers that needs
@@ -57,14 +57,14 @@ func branchDistance(_ branch: BranchInfo) -> String? {
     return parts.isEmpty ? nil : parts.joined(separator: " ")
 }
 
-struct BranchPopover<Actions: View, Footer: View>: View {
+struct BranchPopover<Footer: View>: View {
     let sections: [BranchChoiceSection]
     let placeholder: String
     let pick: (BranchChoice) -> Void
     let dismiss: () -> Void
     /// The row's menu — what can be done to the branch besides picking it
     /// — or nil where a pick is all a row is for.
-    let actions: ((BranchRef) -> Actions)?
+    let actions: ((BranchRef) -> [BranchAction])?
     @ViewBuilder let footer: Footer
 
     @State private var query = ""
@@ -151,7 +151,10 @@ struct BranchPopover<Actions: View, Footer: View>: View {
                         ForEach(section.rows) { choice in
                             let key = "\(section.id)/\(choice.id)"
                             let index = lines.firstIndex { $0.key == key } ?? 0
-                            ChoiceRow(choice: choice, lit: index == active, actions: actions) {
+                            ChoiceRow(
+                                choice: choice, lit: index == active,
+                                actions: actions.map { _ in { BranchActions(branch: $0, ran: dismiss) } }
+                            ) {
                                 pick(at: index, in: lines)
                             }
                             .id(key)
@@ -181,7 +184,7 @@ struct BranchPopover<Actions: View, Footer: View>: View {
     }
 }
 
-extension BranchPopover where Actions == EmptyView, Footer == EmptyView {
+extension BranchPopover where Footer == EmptyView {
     /// A picker whose rows are only for picking, with nothing under them.
     init(
         sections: [BranchChoiceSection], placeholder: String, pick: @escaping (BranchChoice) -> Void,
@@ -233,7 +236,7 @@ private struct ChoiceRow<Actions: View>: View {
             Text(choice.title)
                 .lineLimit(1)
                 .truncationMode(.middle)
-                .clipTooltip(choice.title, font: rowFont)
+                .clipHelp(choice.title, font: rowFont)
             Spacer(minLength: 4)
             if let badge = choice.badge {
                 Text(badge)

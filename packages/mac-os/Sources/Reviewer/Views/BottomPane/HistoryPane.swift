@@ -35,7 +35,7 @@ struct HistoryPane: View {
                     // history shows neither a permanent spinner nor unused column space.
                     if history.selectedSha != nil {
                         ColumnResizeHandle(width: Binding(get: { width }, set: { draggedDetailsWidth = $0 }),
-                                           range: range) { savedDetailsWidth = $0 }
+                                           range: range, edge: .leading) { savedDetailsWidth = $0 }
                         CommitDetails()
                             .frame(width: width)
                             .frame(maxHeight: .infinity)
@@ -57,41 +57,6 @@ struct HistoryPane: View {
 
     private static func detailsRange(in paneWidth: CGFloat) -> ClosedRange<Double> {
         detailsMinWidth...max(detailsMinWidth, paneWidth - listMinWidth)
-    }
-}
-
-/// A hairline down the leading edge of a column, dragged to give the
-/// column more or less room — left for more. Measured in the window, as
-/// the composer's handles are, since the handle moves with the edge it
-/// drags.
-private struct ColumnResizeHandle: View {
-    @Binding var width: Double
-    let range: ClosedRange<Double>
-    let onRelease: (Double) -> Void
-    @State private var startWidth: Double?
-
-    var body: some View {
-        Divider()
-            .frame(width: 7)
-            .contentShape(Rectangle())
-            .onHover { hovering in
-                if hovering { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
-            }
-            .gesture(
-                DragGesture(minimumDistance: 1, coordinateSpace: .global)
-                    .onChanged { drag in
-                        let start = startWidth ?? width
-                        startWidth = start
-                        var transaction = Transaction()
-                        transaction.disablesAnimations = true
-                        withTransaction(transaction) {
-                            width = min(max(start - drag.translation.width, range.lowerBound), range.upperBound)
-                        }
-                    }
-                    .onEnded { _ in
-                        startWidth = nil
-                        onRelease(width)
-                    })
     }
 }
 
@@ -179,7 +144,7 @@ private struct RefPicker: View {
                     .font(.system(size: 11))
                     .lineLimit(1)
                     .truncationMode(.middle)
-                    .clipTooltip(label, font: .systemFont(ofSize: 11))
+                    .clipHelp(label, font: .systemFont(ofSize: 11))
                 Spacer(minLength: 0)
                 MenuChevron()
             }

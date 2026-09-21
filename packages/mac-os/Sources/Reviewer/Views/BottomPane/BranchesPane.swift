@@ -45,7 +45,7 @@ struct BranchesPane: View {
         let recent = Array(locals.prefix(5))
         var rows: [BranchRow] = []
         rows += section("recent", title: "Recent", indent: indent, count: recent.count) {
-            recent.map { .branch(BranchRef($0), name: $0.name, indent: indent + 1, trailing: distance(of: $0)) }
+            recent.map { .branch(BranchRef($0), in: "recent", name: $0.name, indent: indent + 1, trailing: distance(of: $0)) }
         }
         rows += section("local", title: "Local", indent: indent, count: locals.count) {
             foldered("local", indent: indent, refs: locals.map(BranchRef.init)) { ref in
@@ -73,14 +73,16 @@ struct BranchesPane: View {
     ) -> [BranchRow] {
         refs.groupedByFolder().flatMap { folder -> [BranchRow] in
             guard let name = folder.name else {
-                return folder.items.map { .branch($0, name: $0.display, indent: indent + 1, trailing: trailing($0)) }
+                return folder.items.map {
+                    .branch($0, in: section, name: $0.display, indent: indent + 1, trailing: trailing($0))
+                }
             }
             let id = "\(section)/\(name)"
             let open = searching || openFolders.contains(id)
             let header = BranchRow.folder(id: id, name: name, open: open, indent: indent + 1)
             guard open else { return [header] }
             return [header] + folder.items.map {
-                .branch($0, name: $0.leaf, indent: indent + 2, trailing: trailing($0))
+                .branch($0, in: section, name: $0.leaf, indent: indent + 2, trailing: trailing($0))
             }
         }
     }
@@ -116,7 +118,7 @@ struct BranchesPane: View {
                 case .folder(let id, let name, let open, let indent):
                     FolderHeader(name: name, open: open, indent: indent) { toggleFolder(id) }
                         .headerRow()
-                case .branch(let ref, let name, let indent, let trailing):
+                case .branch(let ref, _, let name, let indent, let trailing):
                     BranchRowView(branch: ref, name: name, trailing: trailing, indent: indent)
                         .tag(row.id)
                         .listRowSeparator(.hidden)
@@ -151,17 +153,19 @@ struct BranchesPane: View {
 }
 
 /// One line of the surface: a section's header, a folder's, or a branch,
-/// each knowing how deep it stands.
+/// each knowing how deep it stands. A branch is keyed by the section it
+/// stands in as well as its ref, since Recent repeats Local's branches and
+/// the list's diff misplaces rows whose ids collide.
 private enum BranchRow: Identifiable {
     case section(id: String, title: String, count: Int, open: Bool, indent: Int)
     case folder(id: String, name: String, open: Bool, indent: Int)
-    case branch(BranchRef, name: String, indent: Int, trailing: String?)
+    case branch(BranchRef, in: String, name: String, indent: Int, trailing: String?)
 
     var id: String {
         switch self {
         case .section(let id, _, _, _, _): return "section:\(id)"
         case .folder(let id, _, _, _): return "folder:\(id)"
-        case .branch(let ref, _, _, _): return "branch:\(ref.ref)"
+        case .branch(let ref, let section, _, _, _): return "branch:\(section):\(ref.ref)"
         }
     }
 }
