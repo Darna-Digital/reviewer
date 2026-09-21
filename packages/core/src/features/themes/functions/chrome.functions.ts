@@ -63,17 +63,31 @@ const HAIRLINE_ALPHA = { light: 0.05, dark: 0.07 } as const;
 const HOVER_ALPHA = 0.08;
 const SELECTION_ALPHA = 0.28;
 /**
- * The least an accent may stand off the sheet and still read as a colour —
- * the accent is ink as well as fill (a lit tab's title, a link), so a focus
- * ring that only has to be seen as an edge is not enough.
+ * The least a theme's own colour may stand off the sheet to be taken as the
+ * accent at all — under this a focus ring is an edge, not a colour, and the
+ * next candidate is tried.
  */
-const MIN_ACCENT_CONTRAST = 3;
+const MIN_ACCENT_CANDIDATE_CONTRAST = 3;
+/**
+ * The least the accent stands off the sheet once chosen: it is ink as well
+ * as fill — a lit tab's title at eleven points, a link — so the theme's
+ * colour is kept for its hue and moved towards the type's pole until it
+ * reads as small type does, and a shade past that: the lit tab is the one
+ * in use, and must never be the faintest word on its row.
+ */
+const MIN_ACCENT_CONTRAST = 5.5;
 /**
  * The least the type may stand off the sheet. A theme is free to set its
  * code in a pale grey; the labels around it are not, and are inked darker
  * until they read.
  */
-const MIN_TEXT_CONTRAST = 4;
+const MIN_TEXT_CONTRAST = 4.5;
+/**
+ * The least the muted type stands off the sheet — the system's own
+ * secondary label, which a native pane's idle tabs are set in, reads at
+ * about this, and a theme's should be no fainter.
+ */
+const MIN_MUTED_CONTRAST = 6;
 /** The least two surfaces may differ and still be told apart. */
 const MIN_STEP_CONTRAST = 1.04;
 
@@ -111,19 +125,26 @@ export function deriveChromeTokens(theme: ThemeLike): ChromeTokens {
     island,
     scheme
   );
-  const textSecondary =
-    parseHex(colorUtils.deriveMutedFg(toHex(text), toHex(island))) ??
-    mix(text, island, 0.4);
+  const textSecondary = mutedFrom(text, island);
   const textTertiary = mix(textSecondary, island, 0.35);
 
-  const accent =
+  const accent = inked(
     loudOver(island, [
       read("focusBorder"),
       read("button.background"),
       read("textLink.foreground"),
       read("gitDecoration.modifiedResourceForeground"),
-    ]) ?? hex(fallback.accent);
-  const link = loudOver(island, [read("textLink.foreground")]) ?? accent;
+    ]) ?? hex(fallback.accent),
+    island,
+    scheme,
+    MIN_ACCENT_CONTRAST
+  );
+  const link = inked(
+    loudOver(island, [read("textLink.foreground")]) ?? accent,
+    island,
+    scheme,
+    MIN_ACCENT_CONTRAST
+  );
 
   const hover = rowTone(
     island,
@@ -226,17 +247,35 @@ function readableOver(
   return parseHex(legible);
 }
 
-/** The type moved towards its pole, a step at a time, until it reads. */
-function inked(text: Rgba, surface: Rgba, scheme: ColorScheme): Rgba {
+/** A colour moved towards the type's pole, a step at a time, until it reads. */
+function inked(
+  color: Rgba,
+  surface: Rgba,
+  scheme: ColorScheme,
+  floor = MIN_TEXT_CONTRAST
+): Rgba {
   const pole = scheme === "dark" ? WHITE : BLACK;
-  let candidate = text;
+  let candidate = color;
   for (
-    let step = 0.1;
-    contrast(candidate, surface) < MIN_TEXT_CONTRAST && step <= 1;
-    step += 0.1
+    let step = 0.05;
+    contrast(candidate, surface) < floor && step <= 1;
+    step += 0.05
   )
-    candidate = mix(text, pole, step);
+    candidate = mix(color, pole, step);
   return candidate;
+}
+
+/**
+ * The type faded towards the sheet as far as it can go and still read as
+ * muted type should — the faintest step that clears the floor, or the type
+ * itself where none does.
+ */
+function mutedFrom(text: Rgba, surface: Rgba): Rgba {
+  for (let weight = 0.5; weight < 1; weight += 0.05) {
+    const candidate = mix(surface, text, weight);
+    if (contrast(candidate, surface) >= MIN_MUTED_CONTRAST) return candidate;
+  }
+  return text;
 }
 
 /** The first candidate that still reads as a colour against the surface. */
@@ -246,7 +285,10 @@ function loudOver(
 ): Rgba | undefined {
   return present(candidates)
     .map((candidate) => over(candidate, surface))
-    .find((candidate) => contrast(candidate, surface) >= MIN_ACCENT_CONTRAST);
+    .find(
+      (candidate) =>
+        contrast(candidate, surface) >= MIN_ACCENT_CANDIDATE_CONTRAST
+    );
 }
 
 /**

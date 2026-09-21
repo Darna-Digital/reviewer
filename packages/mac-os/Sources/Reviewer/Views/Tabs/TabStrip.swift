@@ -52,6 +52,14 @@ private struct PinnedTab: View {
             Label(tab.title, systemImage: tab.kind.symbol)
         }
         .toggleStyle(.button)
+        // Lit in the theme's accent, as the pane's tabs and the diff's
+        // add-a-comment button are — the one colour every lit control shares;
+        // on the app's own palette that colour is the system's accent, which
+        // is what the toggle would have worn anyway. Set as a tint and no
+        // more: an ink would give the bar's glass a hover the system's items
+        // do not have, and wrapping the toggle in a view of its own loses
+        // it the bar's glass altogether.
+        .tint(Color(nsColor: IslandPalette.accent))
         .help(tab.title)
         .contextMenu { TabContextMenu(tab: tab, model: model) }
     }

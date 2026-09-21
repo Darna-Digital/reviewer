@@ -41,15 +41,15 @@ describe("deriveChromeTokens", () => {
       expect(
         contrast(rgb(chrome.text), island),
         `${name} text`
-      ).toBeGreaterThanOrEqual(4);
+      ).toBeGreaterThanOrEqual(4.5);
       expect(
         contrast(rgb(chrome.textSecondary), island),
         `${name} muted`
-      ).toBeGreaterThan(3);
+      ).toBeGreaterThanOrEqual(4.5);
       expect(
         contrast(rgb(chrome.accent), island),
         `${name} accent`
-      ).toBeGreaterThanOrEqual(3);
+      ).toBeGreaterThanOrEqual(5.5);
       // A row's fills can be told from the row.
       expect(chrome.hover, `${name} hover`).not.toBe(chrome.island);
       expect(chrome.selection, `${name} selection`).not.toBe(chrome.island);
