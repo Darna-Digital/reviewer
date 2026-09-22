@@ -288,6 +288,25 @@ export function moveTab(
 }
 
 /**
+ * Drop a session tab on the side of another — what a drag along the macOS
+ * shell's native strip comes to. The shell has the tabs under the pointer and
+ * which half of one it is over; which slot that is in the strip is this side's
+ * to work out, since a tab leaving its own place shifts every slot after it.
+ */
+export function moveTabBeside(
+  state: WindowTabsState,
+  id: string,
+  toId: string,
+  after: boolean
+): WindowTabsState {
+  const from = state.tabs.findIndex((tab) => tab.id === id);
+  const target = state.tabs.findIndex((tab) => tab.id === toId);
+  if (from < 0 || target < 0) return state;
+  const slot = after ? target + 1 : target;
+  return moveTab(state, id, from < slot ? slot - 1 : slot);
+}
+
+/**
  * The way of working after the one the window is on, wrapping round — what ⌘G
  * crosses to. The pinned tabs are those ways of working, so the crossing is a
  * step along them — Code then Sessions, in strip order — and from a

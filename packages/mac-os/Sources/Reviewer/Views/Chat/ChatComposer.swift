@@ -300,14 +300,13 @@ private struct ComposerResizeHandle: View {
 }
 
 /// The prompt box's own drop target, in front of the box rather than behind
-/// it. AppKit offers a drag to the view under the pointer and then up its
-/// ancestors, and the `NSTextView` a `TextEditor` is made of registers for
-/// files and bitmaps so it can take them as inline attachments — the pane's
-/// drop zone (see `ImageDropZone`) is a sibling of the box, not an ancestor,
-/// so the obvious place to let a photo go is the one place the drop would
-/// otherwise be swallowed. The view is hit only while a drag from outside
-/// the app is over it (see `PromptDropCatcherView.hitTest`), so the box
-/// below still types, selects and scrolls.
+/// it: the `NSTextView` a `TextEditor` is made of registers for files and
+/// bitmaps so it can take them as inline attachments, so the place a photo
+/// is likeliest to be aimed at is the one place the drop would otherwise be
+/// swallowed. It takes no mouse at all — the box below types, selects and
+/// scrolls as if it were not there — and gives up nothing for it, since a
+/// drag's destination is not the hit test's to decide (see
+/// `PromptDropCatcherView.hitTest`).
 private struct PromptDropCatcher: NSViewRepresentable {
     let draftKey: String
     @Binding var targeted: Bool
@@ -343,24 +342,21 @@ final class PromptDropCatcherView: NSView {
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("PromptDropCatcherView is not made from a nib") }
 
-    /// Hit for a drag from another app and nothing else: the pointer's
-    /// button is held, but the press was never this app's to see — a click
-    /// on the box, or a drag of its own text, is answered while that press
-    /// is the current event, and passes through to the box.
-    override func hitTest(_ point: NSPoint) -> NSView? {
-        guard Self.outsideDragInProgress, bounds.contains(convert(point, from: superview)) else { return nil }
-        return self
-    }
-
-    private static var outsideDragInProgress: Bool {
-        let buttonHeld = NSEvent.pressedMouseButtons & 1 != 0
-        let pressedHere = [.leftMouseDown, .leftMouseDragged].contains(NSApp.currentEvent?.type)
-        return buttonHeld && !pressedHere
-    }
+    /// Never the mouse's — and a drag never asks. AppKit picks a drag's
+    /// destination from the views registered for its types, not from the
+    /// hit test: a web view answering nothing here went on taking every
+    /// photo let go over the conversation. So refusing every hit costs the
+    /// drop nothing and leaves the box whole. The heuristic that stood here
+    /// before, meaning to be hit by a drag from outside the app alone,
+    /// declined the very drags it was written for — an inter-app drag
+    /// leaves `leftMouseDragged` as this app's current event, which it read
+    /// as a press of the box's own.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         let operation = self.operation(for: sender)
         DropDiagnostics.note("catcher.entered operation=\(operation.rawValue)", sender.draggingPasteboard)
+        DropDiagnostics.destinations(in: window, at: sender.draggingLocation)
         onTarget?(operation == .copy)
         return operation
     }

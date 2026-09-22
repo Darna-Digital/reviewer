@@ -52,15 +52,6 @@ enum PaletteMode: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// What Return does, for the footer.
-    var enterLabel: String {
-        switch self {
-        case .commands, .git: return "to select"
-        case .files, .text: return "to open"
-        case .branches: return "to check out"
-        }
-    }
-
     /// The list this one hangs off, or nil for the command list at the
     /// root. Declared once, so a mode's breadcrumb trail, the row that
     /// opens it and where Backspace on an empty box returns to never drift.

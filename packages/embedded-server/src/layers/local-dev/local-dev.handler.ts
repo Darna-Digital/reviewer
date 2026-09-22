@@ -40,40 +40,17 @@ const commandFolder = (
   return Effect.succeed(folder);
 };
 
-/**
- * Opening the app is all a `docker-desktop` command is: the engine comes up
- * behind it in its own time. Not `open -g`, which would spare the user the
- * focus: Docker Desktop launched hidden cannot start the Electron process
- * behind its menu-bar tray, and its backend crashes a few seconds in.
- *
- * Not `docker desktop start` either — its CLI plugin declines to launch the
- * app at all under the environment the dev shell inherits, and then blocks
- * forever waiting for an engine nothing is starting.
- */
-const DOCKER_DESKTOP_COMMAND = "open -a Docker";
-
-/**
- * What the runtime starts for a command: a shell command as written, in its
- * folder; a Docker Desktop command at the repository root, since the app is
- * not the repository's to run from anywhere in particular.
- */
+/** What the runtime starts for a command: the command line, in its folder. */
 const launch = (
   repoPath: string,
   command: DevCommand
 ): Effect.Effect<StartCommandInput, NotFound> =>
-  command.kind === "docker-desktop"
-    ? Effect.succeed({
-        commandId: command.id,
-        repoPath,
-        cwd: repoPath,
-        command: DOCKER_DESKTOP_COMMAND,
-      })
-    : Effect.map(commandFolder(repoPath, command), (cwd) => ({
-        commandId: command.id,
-        repoPath,
-        cwd,
-        command: command.command,
-      }));
+  Effect.map(commandFolder(repoPath, command), (cwd) => ({
+    commandId: command.id,
+    repoPath,
+    cwd,
+    command: command.command,
+  }));
 
 /** Merge a stored definition with its (optional) runtime status into a view. */
 const toView = (
@@ -105,7 +82,6 @@ export const LocalDevHandler = HttpApiBuilder.group(
       .handle("create", ({ payload }) =>
         Effect.flatMap(LocalDevService, (s) =>
           s.create({
-            kind: payload.kind,
             name: payload.name,
             command: payload.command,
             cwd: payload.cwd,

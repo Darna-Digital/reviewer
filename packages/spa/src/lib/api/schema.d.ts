@@ -1236,6 +1236,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/themes/{name}/highlight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["themes.highlight"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5713,8 +5729,6 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
-                        /** @enum {string} */
-                        kind: "shell" | "docker-desktop";
                         name: string;
                         command: string;
                         cwd: string;
@@ -5765,8 +5779,6 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    kind?: "shell" | "docker-desktop";
                     name: string;
                     command: string;
                     cwd?: string;
@@ -5782,8 +5794,6 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
-                        /** @enum {string} */
-                        kind: "shell" | "docker-desktop";
                         name: string;
                         command: string;
                         cwd: string;
@@ -5840,8 +5850,6 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
-                        /** @enum {string} */
-                        kind: "shell" | "docker-desktop";
                         name: string;
                         command: string;
                         cwd: string;
@@ -5957,8 +5965,6 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
-                        /** @enum {string} */
-                        kind: "shell" | "docker-desktop";
                         name: string;
                         command: string;
                         cwd: string;
@@ -6015,8 +6021,6 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
-                        /** @enum {string} */
-                        kind: "shell" | "docker-desktop";
                         name: string;
                         command: string;
                         cwd: string;
@@ -6125,8 +6129,6 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
-                        /** @enum {string} */
-                        kind: "shell" | "docker-desktop";
                         name: string;
                         command: string;
                         cwd: string;
@@ -6287,6 +6289,53 @@ export interface operations {
                             modified: string;
                             deleted: string;
                         };
+                    };
+                };
+            };
+            /** @description ThemeNotFound */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ThemeNotFound"];
+                };
+            };
+        };
+    };
+    "themes.highlight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    lang: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        lang: string;
+                        foreground?: string;
+                        lines: {
+                            text: string;
+                            color?: string;
+                            italic?: boolean;
+                            bold?: boolean;
+                        }[][];
                     };
                 };
             };

@@ -31,8 +31,6 @@ private struct HeroView: View {
     var body: some View {
         if let project {
             VStack(alignment: .leading, spacing: 0) {
-                ReviewerMark()
-                    .frame(width: 10, height: 13)
                 Spacer(minLength: 6)
                 Monogram(name: project.name, size: 40)
                 Text(project.name)
@@ -70,14 +68,9 @@ private struct GridView: View {
             EmptyListView(list: entry.list)
         } else {
             VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    ReviewerMark()
-                        .frame(width: 9, height: 12)
-                    Text(entry.list.title)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
+                Text(entry.list.title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.secondary)
                 Grid(horizontalSpacing: 8, verticalSpacing: 8) {
                     ForEach(Array(stride(from: 0, to: slots, by: 2)), id: \.self) { first in
                         GridRow {
@@ -178,8 +171,6 @@ private struct Monogram: View {
 private struct NoFeedView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            ReviewerMark()
-                .frame(width: 15, height: 20)
             Spacer(minLength: 0)
             Text("Open Reviewer")
                 .font(.system(size: 14, weight: .semibold))
@@ -198,13 +189,9 @@ private struct EmptyListView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                ReviewerMark()
-                    .frame(width: 9, height: 12)
-                Text(list.title)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.secondary)
-            }
+            Text(list.title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.secondary)
             Spacer(minLength: 0)
             switch list {
             case .recents:
@@ -237,30 +224,6 @@ struct WidgetBackdrop: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing)
         }
-    }
-}
-
-/// The app's mark — the blocky R of the dock icon — as a shape, so it
-/// takes whatever style the widget is rendered in.
-struct ReviewerMark: Shape {
-    private static let cells: [(column: Int, row: Int)] = [
-        (0, 0), (1, 0), (2, 0),
-        (0, 1), (2, 1),
-        (0, 2), (1, 2),
-        (0, 3), (2, 3),
-    ]
-
-    func path(in rect: CGRect) -> Path {
-        let cell = CGSize(width: rect.width / 3, height: rect.height / 4)
-        var path = Path()
-        for (column, row) in Self.cells {
-            path.addRect(CGRect(
-                x: rect.minX + CGFloat(column) * cell.width,
-                y: rect.minY + CGFloat(row) * cell.height,
-                width: cell.width,
-                height: cell.height))
-        }
-        return path
     }
 }
 

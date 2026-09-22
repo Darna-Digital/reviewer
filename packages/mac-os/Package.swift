@@ -44,6 +44,17 @@ let package = Package(
                 .swiftLanguageMode(.v6)
             ]
         ),
+        // The drag a person would otherwise have to do by hand: a file
+        // dragged out of its own window into whatever is under the point it
+        // is sent to, so a drop into the app can be tried from a script.
+        // See `Sources/DragProbe/main.swift`.
+        .executableTarget(
+            name: "DragProbe",
+            path: "Sources/DragProbe",
+            swiftSettings: [
+                .swiftLanguageMode(.v6)
+            ]
+        ),
         // The WidgetKit extension — the Projects widget for the desktop and
         // Notification Centre. SwiftPM builds it as one more executable;
         // `scripts/bundle.sh` wraps it as ReviewerWidget.appex inside the

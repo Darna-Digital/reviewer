@@ -36,19 +36,21 @@ struct BarChipStyle: ButtonStyle {
     var height = BarChipMetrics.height
 
     func makeBody(configuration: Configuration) -> some View {
-        BarChip(isOn: isOn, isPressed: configuration.isPressed, height: height) { configuration.label }
+        configuration.label.barChip(isOn: isOn, isPressed: configuration.isPressed, height: height)
     }
 }
 
-private struct BarChip<Label: View>: View {
+/// The chip as a modifier, for the controls that cannot be buttons: the
+/// session tabs, which answer a press and a drag both and so keep their
+/// own gestures (see `SessionTab`).
+private struct BarChip: ViewModifier {
     let isOn: Bool
     let isPressed: Bool
     let height: CGFloat
-    @ViewBuilder let label: Label
     @State private var isHovering = false
 
-    var body: some View {
-        label
+    func body(content: Content) -> some View {
+        content
             .foregroundStyle(isOn || isHovering ? .primary : .secondary)
             .frame(height: height)
             .background(fill, in: BarChipMetrics.shape)
@@ -78,4 +80,10 @@ private struct BarGlyph: ViewModifier {
 
 extension View {
     func barGlyph() -> some View { modifier(BarGlyph()) }
+
+    func barChip(isOn: Bool = false, isPressed: Bool = false, height: CGFloat = BarChipMetrics.height)
+        -> some View
+    {
+        modifier(BarChip(isOn: isOn, isPressed: isPressed, height: height))
+    }
 }

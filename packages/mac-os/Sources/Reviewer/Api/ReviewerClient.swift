@@ -130,6 +130,14 @@ struct ReviewerClient: Sendable {
         try await get("/api/themes/\(name)")
     }
 
+    /// A fenced snippet read with Shiki's grammar for `lang` and coloured by
+    /// the theme — what the shell sets its own code in, since it has neither
+    /// a grammar nor the theme's token colours of its own.
+    func highlight(code: String, lang: String, theme: String) async throws -> HighlightedCode {
+        try await send(
+            "POST", "/api/themes/\(theme)/highlight", body: HighlightRequest(code: code, lang: lang))
+    }
+
     // MARK: merge requests
 
     /// Every open pull request on the repository's GitHub remote, with CI

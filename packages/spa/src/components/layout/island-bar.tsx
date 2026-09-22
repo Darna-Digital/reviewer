@@ -6,13 +6,14 @@
  * tab — the store, the priming, the switch — so a tab is changed in
  * the document, primed ahead of the click, exactly as it is there. What the
  * shell has of it is a picture, posted whenever it changes, which the toolbar
- * draws natively where the window bar would draw it; a tab pressed there comes
- * back as a `windowTabs` event, along with the strip's chords — ⌘T, ⌘W, ⌘G,
- * ⌘1–9 — which the shell's menu items claim so they answer while a native view
- * has the keyboard. The digits count the sessions alone, as here, and land
- * as `select` by id; ⌘G is the one chord the strip settles itself, since
- * which mode is next is its own rule. Nothing of the strip is drawn here, so
- * the island's tabs are never in two places at once.
+ * draws natively where the window bar would draw it; a tab pressed there — or
+ * dragged along it, which lands as a `move` on the side of the tab it was
+ * dropped on — comes back as a `windowTabs` event, along with the strip's
+ * chords — ⌘T, ⌘W, ⌘G, ⌘1–9 — which the shell's menu items claim so they
+ * answer while a native view has the keyboard. The digits count the sessions
+ * alone, as here, and land as `select` by id; ⌘G is the one chord the strip
+ * settles itself, since which mode is next is its own rule. Nothing of the
+ * strip is drawn here, so the island's tabs are never in two places at once.
  *
  * The band is the header's open-file slot, lent to the code page the way
  * `AppHeader` lends it — the page portals its `TabStrip` in — with the
@@ -31,10 +32,14 @@ import {
   setHeaderTabsSlot,
   useHeaderTabsFilled,
 } from "@/components/layout/header-tabs";
-import { useWindowTabs } from "@/interactions/window-tabs/adapters/window-tabs.store";
+import {
+  updateWindowTabs,
+  useWindowTabs,
+} from "@/interactions/window-tabs/adapters/window-tabs.store";
 import { useWindowTabStrip } from "@/interactions/window-tabs/components/window-tab-strip";
 import {
   isPinnedTab,
+  moveTabBeside,
   nextModeTab,
   stepTab,
   tabById,
@@ -103,6 +108,13 @@ export function IslandBar() {
           case "close":
             close(event.action.id);
             return;
+          case "move": {
+            const { id, toId, after } = event.action;
+            updateWindowTabs((current) =>
+              moveTabBeside(current, id, toId, after)
+            );
+            return;
+          }
           case "newSession":
             mint();
             return;

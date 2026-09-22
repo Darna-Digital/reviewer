@@ -141,7 +141,11 @@ export function BottomPanel(props: BottomPanelProps) {
       {props.expanded ? (
         <PageTrail tab={props.tab} />
       ) : (
-        <div className="flex h-9 shrink-0 items-center border-b border-hairline px-1">
+        // No left inset: a tab's own 10px of padding then puts its glyph on
+        // the 18px centre line the surface under it uses for its first column
+        // of icons — the Find rail's — so the strip reads as the top of that
+        // column rather than as a row that happens to sit above it.
+        <div className="flex h-9 shrink-0 items-center border-b border-hairline pr-1 pl-0">
           <TabsSubtle
             idPrefix="bottom-dock"
             className="min-w-0"

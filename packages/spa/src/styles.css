@@ -1586,10 +1586,31 @@
   text-decoration: underline;
 }
 
+/* The LSP hover card. What a server answers with is usually one fenced
+   signature, so the card is read as a single padded panel rather than a block
+   floating inside a frame: the code loses its own margin, and the popover's
+   `p-2` plus this padding come to the same inset on all four sides.
+
+   `text-box` trims the first line's half-leading and the last line's descent
+   gap, which is what made the card look top- and bottom-heavy — leading is not
+   padding, but it is drawn like it. These rules sit unlayered beside the
+   `.markdown` ones they refine; a Tailwind utility could not reach them, since
+   every utility is in `@layer utilities` and loses to unlayered CSS. */
+.hover-doc pre {
+  margin: 0;
+  padding: 0.75rem;
+  text-box: trim-both cap alphabetic;
+}
+
 /* highlight.js token colours for fenced code blocks (rehype-highlight adds the
-   `hljs-*` classes but ships no theme). Palette = GitHub light/dark, swapped by
-   the app's `.dark` class so comment code matches the rest of the UI. */
-.markdown {
+   `hljs-*` classes but ships no theme). Set on the root rather than on
+   `.markdown` so the chosen theme's own token colours can take them over:
+   `lib/syntax-theme` reads them off the theme the diff is highlighted with and
+   writes them here, which is how an LSP hover card ends up in the same palette
+   as the code behind it. Until it has — the first frames of a session, a theme
+   that fails to load — the palette below stands: GitHub light/dark, swapped by
+   the app's `.dark` class. */
+:root {
   --hljs-keyword: #d73a49;
   --hljs-entity: #6f42c1;
   --hljs-constant: #005cc5;
@@ -1597,16 +1618,15 @@
   --hljs-variable: #e36209;
   --hljs-comment: #6a737d;
   --hljs-tag: #22863a;
-  --hljs-fg: inherit;
 }
-.dark .markdown {
-  --hljs-keyword: #ff7b72;
-  --hljs-entity: #d2a8ff;
-  --hljs-constant: #79c0ff;
-  --hljs-string: #a5d6ff;
-  --hljs-variable: #ffa657;
-  --hljs-comment: #8b949e;
-  --hljs-tag: #7ee787;
+.dark {
+  --hljs-keyword: #f97583;
+  --hljs-entity: #b392f0;
+  --hljs-constant: #79b8ff;
+  --hljs-string: #9ecbff;
+  --hljs-variable: #ffab70;
+  --hljs-comment: #6a737d;
+  --hljs-tag: #85e89d;
 }
 .markdown
   :where(
@@ -1798,10 +1818,27 @@ file-tree-container {
 /* The diff pane is one CodeView: the files stand a pixel apart in it (see
    `LAYOUT` in diff-pane.tsx), and the rule between them is drawn into that
    pixel from each file's foot. Positioned, so the ribbons painted into a
-   file's shadow root can lie over its code. */
+   file's shadow root can lie over its code.
+
+   Both the pane and each file in it are sealed off — layout, paint and style
+   contained. A diff is the largest thing on screen and it sits in a shell
+   that is dragged about: without this, widening the sidebar or the bottom
+   dock costs a layout of every rendered file, and a file laying itself out
+   after its lines are measured reaches the rest of the pane. The seal is
+   what keeps that work where it belongs. Scroll anchoring is off for the
+   same reason: the viewer corrects its own layout as files are measured, and
+   the browser nudging the scroll position underneath that fights it. And the
+   pane keeps its overscroll to itself rather than handing it to the window
+   behind it. */
+.diff-pane {
+  contain: layout paint style;
+  overflow-anchor: none;
+  overscroll-behavior: contain;
+}
 .diff-pane diffs-container {
   position: relative;
   box-shadow: 0 1px 0 var(--border);
+  contain: layout paint style;
 }
 
 /* Make native UI (scrollbars, form controls, caret) follow the app theme. */

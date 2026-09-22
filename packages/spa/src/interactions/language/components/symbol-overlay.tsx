@@ -84,10 +84,10 @@ export function HoverDocumentation({
   onOpen?: (location: Location) => void;
 }) {
   if (contents.trim().length === 0) {
-    return <p className="px-1 text-xs text-muted-foreground">No information</p>;
+    return <p className="text-xs text-muted-foreground">No information</p>;
   }
   return (
-    <div className="markdown min-w-0 text-xs [&_pre]:my-1 [&_pre]:text-xs">
+    <div className="markdown hover-doc min-w-0 text-xs">
       <Markdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}

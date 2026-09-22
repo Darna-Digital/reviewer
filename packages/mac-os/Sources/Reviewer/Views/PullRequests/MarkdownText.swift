@@ -73,7 +73,10 @@ enum MarkdownBlock: Identifiable {
     case heading(level: Int, text: AttributedString)
     case paragraph(AttributedString)
     case list(items: [AttributedString], ordered: Bool)
-    case code(String)
+    /// A fence and what it said it held: the language, for the grammar it
+    /// is coloured with, and whether the closing fence has been written —
+    /// a reply still streaming ends in one that has not.
+    case code(String, lang: String, closed: Bool)
     case quote(AttributedString)
     case rule
 
@@ -82,7 +85,7 @@ enum MarkdownBlock: Identifiable {
         case .heading(let level, let text): return "h\(level):\(text.characters.prefix(40))"
         case .paragraph(let text): return "p:\(text.characters.prefix(40))"
         case .list(let items, _): return "l:\(items.first.map { String($0.characters.prefix(40)) } ?? "")\(items.count)"
-        case .code(let text): return "c:\(text.prefix(40))"
+        case .code(let text, let lang, _): return "c:\(lang):\(text.prefix(40))"
         case .quote(let text): return "q:\(text.characters.prefix(40))"
         case .rule: return "rule"
         }
@@ -96,6 +99,7 @@ enum MarkdownBlock: Identifiable {
         var items: [String] = []
         var ordered = false
         var fence: [String]?
+        var fenceLang = ""
 
         func inlined(_ text: String) -> AttributedString { inline(text, code: code) }
         func flushParagraph() {
@@ -122,7 +126,7 @@ enum MarkdownBlock: Identifiable {
 
             if var open = fence {
                 if trimmed.hasPrefix("```") {
-                    blocks.append(.code(open.joined(separator: "\n")))
+                    blocks.append(.code(open.joined(separator: "\n"), lang: fenceLang, closed: true))
                     fence = nil
                 } else {
                     open.append(line)
@@ -133,6 +137,11 @@ enum MarkdownBlock: Identifiable {
             if trimmed.hasPrefix("```") {
                 flushAll()
                 fence = []
+                // The info string is the fence's own line after the ticks;
+                // only its first word names the language.
+                fenceLang = String(trimmed.dropFirst(3))
+                    .trimmingCharacters(in: .whitespaces)
+                    .split(separator: " ").first.map(String.init) ?? ""
                 continue
             }
             if trimmed.isEmpty {
@@ -181,7 +190,7 @@ enum MarkdownBlock: Identifiable {
             flushList()
             paragraph.append(trimmed)
         }
-        if let open = fence { blocks.append(.code(open.joined(separator: "\n"))) }
+        if let open = fence { blocks.append(.code(open.joined(separator: "\n"), lang: fenceLang, closed: false)) }
         flushAll()
         return blocks
     }
@@ -236,15 +245,8 @@ struct MarkdownText: View {
                             }
                         }
                     }
-                case .code(let text):
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        Text(text)
-                            .font(metrics.codeFont)
-                            .lineSpacing(metrics.codeLeading)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 8)
-                    }
-                    .background(.quaternaryWash(0.5), in: RoundedRectangle(cornerRadius: 6))
+                case .code(let text, let lang, let closed):
+                    CodeBlock(code: text, lang: lang, closed: closed, metrics: metrics)
                 case .quote(let text):
                     HStack(alignment: .top, spacing: 8) {
                         RoundedRectangle(cornerRadius: 1)

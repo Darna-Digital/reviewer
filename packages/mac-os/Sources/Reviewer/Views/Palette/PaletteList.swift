@@ -25,14 +25,6 @@ struct PaletteList: NSViewRepresentable {
     /// The air around the list, the web viewport's own `p-1.5`.
     static let inset: CGFloat = 8
 
-    /// What the list would take to show every line, for the pane to size
-    /// itself by until its own limit.
-    static func height(of rows: [PaletteRow]) -> CGFloat {
-        let lines = PaletteLine.lines(of: rows)
-        let headings = lines.count - rows.count
-        return CGFloat(rows.count) * rowHeight + CGFloat(headings) * headingHeight + 2 * inset
-    }
-
     func makeCoordinator() -> PaletteListCoordinator {
         PaletteListCoordinator()
     }
@@ -299,7 +291,7 @@ private final class PaletteHeadingCell: NSTableCellView {
 
     func show(_ group: String, asPath: Bool, dark: Bool) {
         label.stringValue = group
-        label.font = asPath ? .monospacedSystemFont(ofSize: 11, weight: .medium) : .systemFont(ofSize: 11, weight: .medium)
+        label.font = .systemFont(ofSize: 11, weight: .medium)
         iconView.image = asPath ? FileIcon.image(for: group, dark: dark) ?? PaletteGlyph.document : nil
         iconView.isHidden = !asPath
         needsLayout = true
@@ -330,7 +322,6 @@ private final class PaletteRowCell: NSTableCellView {
     private static let iconSize: CGFloat = 16
     private static let leadWidth: CGFloat = 40
     private static let textFont = NSFont.systemFont(ofSize: 13)
-    private static let codeFont = NSFont.monospacedSystemFont(ofSize: 13, weight: .regular)
 
     private let iconView = NSImageView()
     private let leadField = NSTextField(labelWithString: "")
@@ -342,7 +333,7 @@ private final class PaletteRowCell: NSTableCellView {
         super.init(frame: frameRect)
         identifier = Self.identifier
         iconView.imageScaling = .scaleProportionallyUpOrDown
-        leadField.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
+        leadField.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
         leadField.textColor = IslandPalette.textSecondary
         leadField.alignment = .right
         label.maximumNumberOfLines = 1
@@ -381,7 +372,7 @@ private final class PaletteRowCell: NSTableCellView {
         case .branch(let name):
             iconView.image = PaletteGlyph.symbol("arrow.triangle.branch", size: 13)
             label.attributedStringValue = NSAttributedString(
-                string: name, attributes: [.font: Self.codeFont, .foregroundColor: IslandPalette.text])
+                string: name, attributes: [.font: Self.textFont, .foregroundColor: IslandPalette.text])
             label.lineBreakMode = .byTruncatingTail
         }
         hintField.stringValue = row.hint ?? ""
@@ -394,9 +385,9 @@ private final class PaletteRowCell: NSTableCellView {
     private static func fileLabel(_ path: String) -> NSAttributedString {
         let slash = path.lastIndex(of: "/").map { path.index(after: $0) } ?? path.startIndex
         let text = NSMutableAttributedString(
-            string: String(path[..<slash]), attributes: [.font: codeFont, .foregroundColor: NSColor.secondaryLabelColor])
+            string: String(path[..<slash]), attributes: [.font: textFont, .foregroundColor: NSColor.secondaryLabelColor])
         text.append(NSAttributedString(
-            string: String(path[slash...]), attributes: [.font: codeFont, .foregroundColor: IslandPalette.text]))
+            string: String(path[slash...]), attributes: [.font: textFont, .foregroundColor: IslandPalette.text]))
         return text
     }
 
@@ -405,7 +396,7 @@ private final class PaletteRowCell: NSTableCellView {
     private static func matchLabel(_ line: String, query: String, options: GrepOptions) -> NSAttributedString {
         let text = String(line.drop(while: \.isWhitespace))
         let attributed = NSMutableAttributedString(
-            string: text, attributes: [.font: codeFont, .foregroundColor: IslandPalette.text])
+            string: text, attributes: [.font: textFont, .foregroundColor: IslandPalette.text])
         if let range = CommandPalette.matchRange(in: text, query: query, options: options) {
             attributed.addAttribute(
                 .backgroundColor, value: NSColor.controlAccentColor.withAlphaComponent(0.3),

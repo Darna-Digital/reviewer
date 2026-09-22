@@ -74,11 +74,24 @@ final class IslandHost: NSObject {
     }
 
     /// Whether the shell has a native page over the island — the sessions
-    /// surface in the page's place — so a drop meant for that page is not
-    /// taken by the web view underneath it (see `IslandWebView`).
+    /// surface in the page's place — so what is meant for that page, a
+    /// photo dropped on a conversation above all, is not taken by the web
+    /// view underneath it (see `IslandWebView`).
     var coveredByNativePage = false {
-        didSet { view.acceptsDrops = !coveredByNativePage }
+        didSet { view.isCovered = isCovered }
     }
+
+    /// Whether a pane of the window's own stands over the island — the
+    /// palette — so the page under it is inert while it is up: a wheel
+    /// turned over the pane's glass is not the page's to scroll, and a
+    /// hover under it not the page's to light (see `IslandWebView`).
+    var coveredByPalette = false {
+        didSet { view.isCovered = isCovered }
+    }
+
+    /// Either reason is reason enough: the page is inert while anything of
+    /// the window's own stands over it.
+    private var isCovered: Bool { coveredByNativePage || coveredByPalette }
 
     /// The address is the shell's own as soon as it is asked for, not once
     /// the island confirms it, so what follows the address natively — the

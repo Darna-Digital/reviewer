@@ -1,9 +1,12 @@
 @import "tailwindcss";
-@import "@fontsource-variable/inter";
 
 @theme {
-  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
-  --spacing-header: 3.5rem;
+  /* The macOS system face: SF Pro on Apple platforms, with Display's optical
+     sizing picked up automatically by -apple-system at large sizes. */
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", ui-sans-serif, system-ui,
+    "Helvetica Neue", sans-serif;
+  --spacing-header: 3.25rem;
 }
 
 * {
@@ -19,23 +22,25 @@ body,
 body {
   margin: 0;
   background-color: white;
+  color: var(--color-neutral-900);
+  -webkit-font-smoothing: antialiased;
 }
 
 /* drop-shadow rather than box-shadow: the screenshot carries its own rounded
    corners as transparency, and box-shadow would draw a rectangle behind them. */
-.hero-app-shadow {
-  filter: drop-shadow(0 89px 119px rgba(0, 0, 0, 0.07))
-    drop-shadow(0 37px 50px rgba(0, 0, 0, 0.05))
-    drop-shadow(0 11px 15px rgba(0, 0, 0, 0.04))
-    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.03));
+.screen-shadow {
+  filter: drop-shadow(0 40px 60px rgba(0, 0, 0, 0.08))
+    drop-shadow(0 12px 20px rgba(0, 0, 0, 0.05))
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.04));
 }
 
 @media (prefers-color-scheme: dark) {
   body {
-    background-color: var(--color-neutral-950);
+    background-color: #111113;
+    color: rgba(255, 255, 255, 0.9);
   }
 
-  .hero-app-shadow {
+  .screen-shadow {
     filter: none;
   }
 }

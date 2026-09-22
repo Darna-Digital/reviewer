@@ -6,12 +6,19 @@
 #
 #   scripts/bundle.sh [debug|release]   (default: debug)
 #   SIGN_IDENTITY="My Cert" scripts/bundle.sh   (override the signing identity)
+#   SCRATCH_PATH=.build-release APP_PATH=.build-release/Reviewer.app scripts/bundle.sh release
+#
+# The last pair is what keeps a release build off the watcher's toes: both
+# read their binaries from the same .build and both write the same
+# Reviewer.app, so a bundle assembled while `scripts/watch.sh` is running is
+# one the watcher can delete out from under codesign. Given a scratch path
+# and an app path of its own, the release build shares nothing with it.
 set -euo pipefail
 
 config="${1:-debug}"
 package_dir="$(cd "$(dirname "$0")/.." && pwd)"
 bin_dir="$("${package_dir}"/scripts/bin-dir.sh "$config")"
-app="${package_dir}/.build/Reviewer.app"
+app="${APP_PATH:-${package_dir}/.build/Reviewer.app}"
 contents="${app}/Contents"
 
 rm -rf "$app"
@@ -52,7 +59,7 @@ fi
 # PNGs under Resources/icons are turned into plain .icns files with sips as
 # a fallback, so the app still gets an icon.
 icon_bundle="${package_dir}/Resources/Reviewer.icon"
-icon_build="${package_dir}/.build/icon"
+icon_build="$(dirname "$app")/icon"
 rm -rf "$icon_build" && mkdir -p "${icon_build}/dark" "${icon_build}/Reviewer.icon"
 
 compile_icon() {

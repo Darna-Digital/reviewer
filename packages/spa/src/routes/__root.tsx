@@ -10,6 +10,8 @@ import { Alerts } from "@/components/ui/alerts";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { startChromeTheme } from "@/lib/chrome-theme";
+import { primeCodeFont } from "@/lib/code-font";
+import { startSyntaxTheme } from "@/lib/syntax-theme";
 import { isDesktop } from "@/lib/desktop";
 import type { RouterContext } from "../router";
 import appCss from "../styles.css?url";
@@ -96,6 +98,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         <ChromeTheme />
+        <CodeFont />
+        <SyntaxTheme />
         <TooltipProvider delay={300}>{children ?? <Outlet />}</TooltipProvider>
         <Toaster />
         <Alerts />
@@ -116,5 +120,21 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 /** Keeps the document's `--chrome-*` on the theme the prefs name; see `lib/chrome-theme`. */
 function ChromeTheme() {
   useEffect(() => startChromeTheme(), []);
+  return null;
+}
+
+/**
+ * Fetches the code face now rather than when the first diff is measured in
+ * it — a face that arrives late has the whole diff laid out twice (see
+ * `lib/code-font`).
+ */
+function CodeFont() {
+  useEffect(primeCodeFont, []);
+  return null;
+}
+
+/** The same for `--hljs-*`, the colours markdown's code is set in; see `lib/syntax-theme`. */
+function SyntaxTheme() {
+  useEffect(() => startSyntaxTheme(), []);
   return null;
 }

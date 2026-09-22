@@ -115,6 +115,15 @@ export interface ShellWindowTab {
 export type ShellWindowTabAction =
   | { readonly kind: "select"; readonly id: string }
   | { readonly kind: "close"; readonly id: string }
+  /** A tab dragged along the native strip and dropped on the leading or
+   * trailing half of `toId` — the shell has the geometry, the strip has the
+   * slots. */
+  | {
+      readonly kind: "move";
+      readonly id: string;
+      readonly toId: string;
+      readonly after: boolean;
+    }
   | { readonly kind: "newSession" }
   | { readonly kind: "closeActive" }
   /** The tab beside the active one, wrapping round. */

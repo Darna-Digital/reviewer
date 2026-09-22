@@ -76,3 +76,38 @@ export class ThemeNotFound extends Schema.TaggedErrorClass<ThemeNotFound>()(
     return `No theme named "${this.name}"`;
   }
 }
+
+/**
+ * A snippet handed to the highlighter: the code, and the language the fence
+ * that carried it named. A shell that draws its own code — the macOS one,
+ * whose conversations are native views rather than the web app's — has no
+ * grammar and no theme of its own, so it sends the snippet here and paints
+ * what comes back.
+ */
+export const HighlightRequest = Schema.Struct({
+  code: Schema.String,
+  /** The fence's info string, as it was written: `ts`, `Swift`, ``. */
+  lang: Schema.String,
+});
+export type HighlightRequest = typeof HighlightRequest.Type;
+
+/** One run of code that is all the same colour. */
+export const CodeToken = Schema.Struct({
+  text: Schema.String,
+  /** `#rrggbb`, left out where the token takes the code's own foreground. */
+  color: Schema.optionalKey(Schema.String),
+  italic: Schema.optionalKey(Schema.Boolean),
+  bold: Schema.optionalKey(Schema.Boolean),
+});
+export type CodeToken = typeof CodeToken.Type;
+
+/** A snippet coloured: the tokens of each line, in order. */
+export const HighlightedCode = Schema.Struct({
+  /** The grammar it was read with — `text` where the fence named none. */
+  lang: Schema.String,
+  /** What a token with no colour of its own is set in; absent where the
+   * theme names no foreground at all and the shell should use its own. */
+  foreground: Schema.optionalKey(Schema.String),
+  lines: Schema.Array(Schema.Array(CodeToken)),
+});
+export type HighlightedCode = typeof HighlightedCode.Type;

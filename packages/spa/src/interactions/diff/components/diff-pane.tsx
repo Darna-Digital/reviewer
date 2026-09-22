@@ -28,6 +28,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { toast } from "sonner";
 import { confirm } from "@/components/ui/alerts";
@@ -65,6 +66,7 @@ import {
 import type { DiagnosticsAnnotationMeta } from "@/interactions/language/components/language-layer";
 import { DIAGNOSTIC_CSS } from "@/interactions/language/functions/diagnostic-styles";
 import { fetchClient } from "@/lib/api/client";
+import { useCodeFontReady } from "@/lib/code-font";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
 import {
   useStableCallback,
@@ -258,13 +260,69 @@ interface ItemRecord {
   annotations: ReadonlyArray<Annotation>;
   expanded: boolean;
   version: number;
+  /**
+   * The item as it was last handed to the viewer. Given back unchanged while
+   * the version stands, so a render that changed one file does not present
+   * the other few hundred as strangers — the viewer compares the list by
+   * reference, and a list of all-new objects is reconciled in full.
+   */
+  item: DiffItem;
+}
+
+/**
+ * The element the viewer has each item rendered into.
+ *
+ * Held here rather than in the pane's state: the viewer mounts and unmounts
+ * items as the diff is scrolled, and a pane-wide `useState` turned each of
+ * those into a render of the pane and of the language layer of every file in
+ * the diff — a cost that grew with the number of files, paid on every scroll.
+ * A file listens for its own id instead, so a scroll wakes only the files
+ * that actually came or went.
+ */
+class ItemElements {
+  private readonly byItem = new Map<string, HTMLElement>();
+  private readonly listeners = new Map<string, Set<() => void>>();
+
+  read = (itemId: string): HTMLElement | null =>
+    this.byItem.get(itemId) ?? null;
+
+  subscribe = (itemId: string, listener: () => void): (() => void) => {
+    const forItem = this.listeners.get(itemId) ?? new Set<() => void>();
+    forItem.add(listener);
+    this.listeners.set(itemId, forItem);
+    return () => {
+      forItem.delete(listener);
+      if (forItem.size === 0) this.listeners.delete(itemId);
+    };
+  };
+
+  set(itemId: string, element: HTMLElement | null): void {
+    if (this.read(itemId) === element) return;
+    if (element === null) this.byItem.delete(itemId);
+    else this.byItem.set(itemId, element);
+    const forItem = this.listeners.get(itemId);
+    if (forItem === undefined) return;
+    for (const listener of forItem) listener();
+  }
+}
+
+function useItemElement(
+  elements: ItemElements,
+  itemId: string
+): HTMLElement | null {
+  const subscribe = useCallback(
+    (listener: () => void) => elements.subscribe(itemId, listener),
+    [elements, itemId]
+  );
+  const read = useCallback(() => elements.read(itemId), [elements, itemId]);
+  return useSyncExternalStore(subscribe, read, read);
 }
 
 interface FileLanguageProps {
   path: string;
   itemId: string;
-  /** The item's element while the viewer has it rendered. */
-  element: HTMLElement | null;
+  /** Where the item's element is published while the viewer has it rendered. */
+  elements: ItemElements;
   enabled: boolean;
   drafting: boolean;
   register: (itemId: string, viewOptions: DiffLanguage["viewOptions"]) => void;
@@ -288,7 +346,7 @@ interface FileLanguageProps {
 const FileLanguage = memo(function FileLanguageView({
   path,
   itemId,
-  element,
+  elements,
   enabled,
   drafting,
   register,
@@ -296,6 +354,7 @@ const FileLanguage = memo(function FileLanguageView({
   report,
   onOpenLocation,
 }: FileLanguageProps) {
+  const element = useItemElement(elements, itemId);
   const language = useDiffLanguage({
     path,
     section: element,
@@ -349,6 +408,10 @@ export function DiffPane({
   onOpenLocation: rawOnOpenLocation,
 }: DiffPaneProps) {
   const codeThemes = useCodeThemes();
+  // Held until the code face is in hand, so the diff is measured once rather
+  // than laid out in the fallback and again when the face swaps in — see
+  // `lib/code-font`.
+  const codeFontReady = useCodeFontReady();
   // Every handler arrives from the shell as a fresh closure on each of its
   // renders. The viewer's render callbacks and options are memoised on what
   // they read, and a changed callback would have every rendered file drawn
@@ -527,23 +590,10 @@ export function DiffPane({
   }, []);
 
   // Which items the viewer has rendered, by their elements: what each file's
-  // language layer attaches to. Kept as state, since it is what the layer
-  // hooks read; changed only on a mount or an unmount, so a scroll that
-  // re-renders an item in place moves nothing here.
-  const [elements, setElements] = useState<ReadonlyMap<string, HTMLElement>>(
-    () => new Map()
-  );
-  const rememberElement = useCallback(
-    (itemId: string, element: HTMLElement | null) =>
-      setElements((prev) => {
-        if ((prev.get(itemId) ?? null) === element) return prev;
-        const next = new Map(prev);
-        if (element === null) next.delete(itemId);
-        else next.set(itemId, element);
-        return next;
-      }),
-    []
-  );
+  // language layer attaches to. Published per id rather than held as pane
+  // state, so the scroll that mounts one file does not render the rest — see
+  // `ItemElements`.
+  const elements = useMemo(() => new ItemElements(), []);
 
   const [diagnosticsByFile, setDiagnosticsByFile] = useState<
     ReadonlyMap<
@@ -642,6 +692,12 @@ export function DiffPane({
   // `ItemRecord`. The annotation arrays are built afresh above, but from
   // elements that only change when their file's do, so an unchanged file's
   // array is the same entries in the same order and its version stands.
+  //
+  // A file whose version stands is handed back the very item it was handed
+  // last time. The viewer takes a list of all-new objects as a list that
+  // needs reconciling, so one file's diagnostics arriving — or a keystroke in
+  // a comment draft — used to cost a pass over every file in the diff and a
+  // full render of the viewer; now it costs the one file that moved.
   const records = useRef(new Map<string, ItemRecord>());
   const items = useMemo<ReadonlyArray<DiffItem>>(() => {
     const seen = new Set<string>();
@@ -651,27 +707,29 @@ export function DiffPane({
       const annotations = annotationsByFile.get(file.name) ?? NO_ANNOTATIONS;
       const expanded = expansion.expanded.has(file.name);
       const previous = records.current.get(id);
-      const version =
-        previous === undefined
-          ? 0
-          : previous.fileDiff !== file ||
-              previous.expanded !== expanded ||
-              !sameAnnotations(previous.annotations, annotations)
-            ? previous.version + 1
-            : previous.version;
-      records.current.set(id, {
-        fileDiff: file,
-        annotations,
-        expanded,
-        version,
-      });
-      return {
+      if (
+        previous !== undefined &&
+        previous.fileDiff === file &&
+        previous.expanded === expanded &&
+        sameAnnotations(previous.annotations, annotations)
+      )
+        return previous.item;
+      const version = previous === undefined ? 0 : previous.version + 1;
+      const item: DiffItem = {
         id,
         type: "diff",
         fileDiff: file,
         annotations: [...annotations],
         version,
       };
+      records.current.set(id, {
+        fileDiff: file,
+        annotations,
+        expanded,
+        version,
+        item,
+      });
+      return item;
     });
     for (const id of records.current.keys()) {
       if (!seen.has(id)) records.current.delete(id);
@@ -762,7 +820,9 @@ export function DiffPane({
   useEffect(() => {
     const rendered = viewerRef.current?.getInstance()?.getRenderedItems();
     for (const item of rendered ?? []) {
-      if (connectorsEnabled) painter.schedule(item.element);
+      // The columns have moved under files already on screen, so what was
+      // measured of them no longer describes where they sit.
+      if (connectorsEnabled) painter.schedule(item.element, "mounted");
       else painter.clear(item.element);
     }
   }, [connectorsEnabled, painter, paneWidth]);
@@ -773,10 +833,14 @@ export function DiffPane({
     const itemId = context.item.id;
     if (phase === "unmount") {
       painter.clear(node);
-      rememberElement(itemId, null);
+      elements.set(itemId, null);
     } else {
-      if (connectorsRef.current) painter.schedule(node);
-      rememberElement(itemId, node);
+      // A mount says the host may be holding a different file than it was
+      // last time — the viewer recycles its elements — so the painter is told
+      // which it is and forgets what it measured of the last one.
+      if (connectorsRef.current)
+        painter.schedule(node, phase === "mount" ? "mounted" : "redrawn");
+      elements.set(itemId, node);
     }
     languageByItem.current.get(itemId)?.onPostRender(node, instance, phase);
   });
@@ -997,7 +1061,7 @@ export function DiffPane({
   const languageEnabled =
     target.kind === "worktree" || target.kind === "branch";
 
-  if (loading) {
+  if (loading || !codeFontReady) {
     return (
       <div className="p-8">
         <Orb size={16} label="Loading diff…" />
@@ -1037,7 +1101,7 @@ export function DiffPane({
           key={item.id}
           path={item.fileDiff.name}
           itemId={item.id}
-          element={elements.get(item.id) ?? null}
+          elements={elements}
           enabled={languageEnabled}
           drafting={draft !== null && draft.filePath === item.fileDiff.name}
           register={registerLanguage}

@@ -695,6 +695,15 @@ final class AppModel {
         page.send(WindowTabAction.close(id: id))
     }
 
+    /// A tab dropped on one side of `toId`, dragged along the toolbar (see
+    /// `SessionTab`). A tab dropped where it already stands is no move, and
+    /// the strip on the other side would answer it with the same strip back;
+    /// the toolbar does not ask.
+    func moveTab(id: String, beside toId: String, after: Bool) {
+        guard id != toId else { return }
+        page.send(WindowTabAction.move(id: id, toId: toId, after: after))
+    }
+
     func selectNextTab(offset: Int) {
         page.send(WindowTabAction.step(offset))
     }

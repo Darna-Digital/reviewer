@@ -4,13 +4,12 @@
 // a package of a monorepo) — sortable on any column, its rows plain
 // rather than striped, under a toolbar with add and remove grouped at its
 // leading edge, start all and stop all beside them, and a search at its
-// trailing edge. A command is a shell command line, or Docker Desktop —
-// which the server opens and waits for, and starts ahead of the rest on
-// start all, so the ones that need its engine find it up. With nothing to
-// list the table gives way to a placeholder, header and all. A click picks
-// a command, a double-click or Return starts or stops it, Delete removes
-// it, and the row's menu holds the same, with a restart while it runs. The selected one's output stands on
-// the right under a bar of the toolbar's height naming it and its state,
+// trailing edge. A command is a shell command line the server runs in the
+// project. With nothing to list the table gives way to a placeholder,
+// header and all. A click picks a command, a double-click or Return starts
+// or stops it, Delete removes it, and the row's menu holds the same, with
+// a restart while it runs. The selected one's output stands on the right
+// under a bar of the toolbar's height naming it and its state,
 // with stop and restart while it runs. Starting, stopping and restarting
 // are the server's doing — a restart is a start, which replaces the live
 // process; the output is its process's socket drawn by SwiftTerm, so a
@@ -52,7 +51,7 @@ private struct CommandTable: View {
             ? services.commands
             : services.commands.filter {
                 $0.name.localizedCaseInsensitiveContains(needle)
-                    || $0.commandLabel.localizedCaseInsensitiveContains(needle)
+                    || $0.command.localizedCaseInsensitiveContains(needle)
                     || $0.cwd.localizedCaseInsensitiveContains(needle)
             }
         return matched.sorted(using: sortOrder)
@@ -103,12 +102,12 @@ private struct CommandTable: View {
                 }
             }
             .width(min: 120, ideal: 170)
-            TableColumn("Command", value: \.commandLabel) { command in
+            TableColumn("Command", value: \.command) { command in
                 CommandText(command: command, size: 12)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                    .help(command.commandLabel)
+                    .help(command.command)
             }
             .width(min: 120, ideal: 200)
             TableColumn("Status", value: \.statusLabel) { command in
@@ -147,7 +146,7 @@ private struct CommandTable: View {
     private var placeholder: some View {
         if query.isEmpty {
             PanePlaceholder("No commands", symbol: "play.circle",
-                            detail: "Add a dev server, a watcher, or Docker Desktop to run in this project.") {
+                            detail: "Add a dev server or a watcher to run in this project.") {
                 Button("Add command…") { adding = true }
             }
         } else {
@@ -165,12 +164,10 @@ private struct CommandTable: View {
                 Task { await services.start(id: command.id) }
             }
         }
-        if !command.isDockerDesktop {
-            ThemedDivider()
-            Button("Copy command") { copy(command.command) }
-            if !command.cwd.isEmpty {
-                Button("Show folder in Finder") { reveal(command.cwd) }
-            }
+        ThemedDivider()
+        Button("Copy command") { copy(command.command) }
+        if !command.cwd.isEmpty {
+            Button("Show folder in Finder") { reveal(command.cwd) }
         }
         ThemedDivider()
         Button("Remove", role: .destructive) {
@@ -282,53 +279,38 @@ private struct CommandDetail: View {
     }
 }
 
-/// A command as a row or the detail bar names it: the command line in
-/// monospace, or the plain words for what the server does for Docker
-/// Desktop, since those are not something one would type.
+/// A command as a row or the detail bar names it: the command line, in
+/// monospace, as it was typed.
 private struct CommandText: View {
     let command: DevCommandView
     let size: CGFloat
 
     var body: some View {
-        Text(command.commandLabel)
-            .font(.system(size: size, design: command.isDockerDesktop ? .default : .monospaced))
+        Text(command.command)
+            .font(.system(size: size, design: .monospaced))
     }
 }
 
-/// The form for a command, opening on what kind it is. A shell command
-/// takes its name, the command line, and the folder it runs from — the
-/// root unless another is typed, or chosen in the folder panel opened on
-/// the repository; a folder chosen outside the repository is refused, since
-/// the command belongs to it. Docker Desktop takes only a name, since the
-/// server knows how to start it.
+/// The form for a command: its name, the command line, and the folder it
+/// runs from — the root unless another is typed, or chosen in the folder
+/// panel opened on the repository; a folder chosen outside the repository
+/// is refused, since the command belongs to it.
 private struct NewCommandSheet: View {
     let repository: String
     let create: (NewDevCommand) -> Void
     @Environment(\.dismiss) private var dismiss
-    @State private var kind: DevCommandKind = .shell
     @State private var name = ""
     @State private var command = ""
     @State private var folder = ""
     @State private var folderProblem: String?
 
-    private static let dockerDesktopName = "Docker Desktop"
-
     private var canAdd: Bool {
-        let named = !name.trimmingCharacters(in: .whitespaces).isEmpty
-        switch kind {
-        case .shell: return named && !command.trimmingCharacters(in: .whitespaces).isEmpty
-        case .dockerDesktop: return named
-        }
+        !name.trimmingCharacters(in: .whitespaces).isEmpty
+            && !command.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    private var explanation: String {
-        switch kind {
-        case .shell:
-            return "A process the server runs in this project and keeps running while you work."
-        case .dockerDesktop:
-            return "Opens Docker Desktop and waits for its engine. Start all starts it first, and the other commands wait for it."
-        }
-    }
+    private let explanation =
+        "A process the server runs in this project and keeps running while you work." 
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -343,30 +325,22 @@ private struct NewCommandSheet: View {
             .padding(.top, 18)
             .padding(.bottom, 6)
             Form {
-                Picker("Type", selection: $kind) {
-                    Text("Command").tag(DevCommandKind.shell)
-                    Text("Docker Desktop").tag(DevCommandKind.dockerDesktop)
+                TextField("Name", text: $name, prompt: Text("Frontend"))
+                TextField("Command", text: $command, prompt: Text("pnpm dev"))
+                    .font(.system(.body, design: .monospaced))
+                LabeledContent("Folder") {
+                    HStack(spacing: 6) {
+                        TextField("Folder", text: $folder, prompt: Text("Repository root"))
+                            .labelsHidden()
+                            .font(.system(.body, design: .monospaced))
+                            .onChange(of: folder) { folderProblem = nil }
+                        Button("Choose…", action: chooseFolder)
+                    }
                 }
-                .pickerStyle(.segmented)
-                .onChange(of: kind, adoptDefaultName)
-                TextField("Name", text: $name, prompt: Text(kind == .shell ? "Frontend" : Self.dockerDesktopName))
-                if kind == .shell {
-                    TextField("Command", text: $command, prompt: Text("pnpm dev"))
-                        .font(.system(.body, design: .monospaced))
-                    LabeledContent("Folder") {
-                        HStack(spacing: 6) {
-                            TextField("Folder", text: $folder, prompt: Text("Repository root"))
-                                .labelsHidden()
-                                .font(.system(.body, design: .monospaced))
-                                .onChange(of: folder) { folderProblem = nil }
-                            Button("Choose…", action: chooseFolder)
-                        }
-                    }
-                    if let folderProblem {
-                        Text(folderProblem)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.red)
-                    }
+                if let folderProblem {
+                    Text(folderProblem)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.red)
                 }
             }
             .formStyle(.grouped)
@@ -391,29 +365,9 @@ private struct NewCommandSheet: View {
     }
 
     private var newCommand: NewDevCommand {
-        let name = name.trimmingCharacters(in: .whitespaces)
-        switch kind {
-        case .shell:
-            return .shell(name: name,
-                          command: command.trimmingCharacters(in: .whitespaces),
-                          cwd: folder.trimmingCharacters(in: .whitespaces))
-        case .dockerDesktop:
-            return .dockerDesktop(name: name)
-        }
-    }
-
-    /// Picking Docker Desktop names the command after it, unless a name was
-    /// already typed; going back clears that name again, so the field is
-    /// not left holding a name the shell command was never given.
-    private func adoptDefaultName() {
-        switch kind {
-        case .dockerDesktop where name.isEmpty:
-            name = Self.dockerDesktopName
-        case .shell where name == Self.dockerDesktopName:
-            name = ""
-        default:
-            break
-        }
+        NewDevCommand(name: name.trimmingCharacters(in: .whitespaces),
+                      command: command.trimmingCharacters(in: .whitespaces),
+                      cwd: folder.trimmingCharacters(in: .whitespaces))
     }
 
     private func chooseFolder() {

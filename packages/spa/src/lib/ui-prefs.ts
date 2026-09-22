@@ -398,6 +398,14 @@ export const codeThemesOf = (prefs: UiPrefs): CodeThemes => {
   return codeThemesCache;
 };
 
+/**
+ * The one of the pair that is actually on screen — the theme everything
+ * derived from a theme is derived from: the window's palette (see
+ * `lib/chrome-theme`) and the colours code is set in (see `lib/syntax-theme`).
+ */
+export const themeNameOf = (prefs: UiPrefs): string =>
+  prefs.resolvedTheme === "dark" ? prefs.darkTheme : prefs.lightTheme;
+
 /** Show the bottom dock and select a tab (History / Find / Services / …). */
 export function openBottomTab(tab: BottomTab) {
   setUiPrefs({ bottomVisible: true, bottomTab: tab });

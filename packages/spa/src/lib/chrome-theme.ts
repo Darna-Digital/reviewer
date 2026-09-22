@@ -27,7 +27,12 @@ import {
   type ColorScheme,
 } from "@reviewer/core/themes";
 import { island } from "@/lib/shell";
-import { readUiPrefs, subscribeUiPrefs, type UiPrefs } from "@/lib/ui-prefs";
+import {
+  readUiPrefs,
+  subscribeUiPrefs,
+  themeNameOf,
+  type UiPrefs,
+} from "@/lib/ui-prefs";
 
 export const CHROME_KEY = "reviewer-chrome";
 
@@ -42,7 +47,7 @@ export function startChromeTheme(): () => void {
   if (island !== undefined) return () => {};
   let current: string | undefined;
   const sync = (prefs: UiPrefs) => {
-    const name = themeNameFor(prefs);
+    const name = themeNameOf(prefs);
     if (name === current) return;
     current = name;
     if (reviewerThemes.hasTheme(name)) {
@@ -66,9 +71,6 @@ export function startChromeTheme(): () => void {
   sync(readUiPrefs());
   return subscribeUiPrefs(() => sync(readUiPrefs()));
 }
-
-const themeNameFor = (prefs: UiPrefs): string =>
-  prefs.resolvedTheme === "dark" ? prefs.darkTheme : prefs.lightTheme;
 
 /** Each token as `--chrome-<kebab-name>`, the way the stylesheet reads it. */
 export function chromeProperties(

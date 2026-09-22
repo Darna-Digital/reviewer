@@ -38,6 +38,7 @@ import {
   type SelectionActionContext,
 } from "@/components/editor/use-file-editing";
 import { Orb } from "@/components/ui/orb";
+import { useCodeFontReady } from "@/lib/code-font";
 import { selectionShadingCSS } from "@/lib/code-selection-css";
 import { useFile } from "@/lib/queries";
 import type { ReviewComment } from "@reviewer/core/comments";
@@ -116,6 +117,9 @@ export function CodeView({
   // Only the editable view renders off the main-thread highlighter; a read-only
   // file is served by the worker pool, and primed there below.
   const langReady = useLangReady(path, editing);
+  // Held until the code face is in hand, so the file is measured once — see
+  // `lib/code-font`.
+  const codeFontReady = useCodeFontReady();
   const contents = file.data?.contents;
   const scrollWrapper = useRef<HTMLDivElement>(null);
   const commentsEnabled =
@@ -371,7 +375,7 @@ export function CodeView({
     path
   );
 
-  if (file.isPending || !langReady || !highlightPrimed) {
+  if (file.isPending || !langReady || !highlightPrimed || !codeFontReady) {
     return (
       <div className="p-8">
         <Orb size={16} label={`Loading ${path}…`} />

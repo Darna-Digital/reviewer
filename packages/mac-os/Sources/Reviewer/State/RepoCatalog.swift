@@ -20,7 +20,6 @@ struct RepoRow: Identifiable, Hashable, Sendable {
     var id: String { entry.path }
     var name: String { entry.name }
     var path: String { entry.path }
-    var branch: String { entry.branch ?? "" }
     /// A repository never opened sorts after every one that was.
     var lastOpenedOrder: Date { lastOpened ?? .distantPast }
 

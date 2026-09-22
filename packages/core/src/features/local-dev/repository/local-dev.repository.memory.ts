@@ -44,7 +44,6 @@ export const makeMemoryDevCommandsRepository = (
         Effect.gen(function* () {
           const created: DevCommand = {
             id: nextId(),
-            kind: input.kind ?? "shell",
             name: input.name.trim(),
             command: input.command.trim(),
             cwd: normalizeDevCwd(input.cwd ?? ""),

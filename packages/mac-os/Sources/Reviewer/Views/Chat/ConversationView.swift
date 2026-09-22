@@ -116,10 +116,29 @@ enum ChatLayout {
     /// stays comfortable, since the eye has to find the next line's start
     /// unaided.
     static let columnWidth: CGFloat = 640
+    /// The least air either side of the column once the pane is too narrow
+    /// to give it its full width.
+    static let gutter: CGFloat = 16
     /// The size a conversation reads at — a step over the 13pt of a
     /// control's label, which is set to be glanced at rather than read.
     static let bodySize: CGFloat = 14
     static let bodyMetrics = MarkdownMetrics(size: bodySize)
+
+    /// Where the column starts, measured from the leading edge of the pane.
+    ///
+    /// Centring the column inside the scroll view would be the obvious way
+    /// to place it, and is wrong: a scroller drawn in the pane rather than
+    /// over it takes its width out of what the scroll view has to lay out
+    /// in, so a conversation long enough to scroll centred its column in a
+    /// slightly narrower space and stood half a scroller to the left of the
+    /// composer, which is outside the scroll view and never moved. Measured
+    /// from the pane instead, the column lands in the same place whether
+    /// there is a scroller or not — and in the same place as the composer,
+    /// whose own 8pt padding inside a `columnWidth` frame comes out here
+    /// too.
+    static func columnInset(in paneWidth: CGFloat) -> CGFloat {
+        max(gutter, (paneWidth - columnWidth) / 2)
+    }
 }
 
 /// The conversation: prompts as bubbles at the trailing edge, replies as
@@ -136,36 +155,39 @@ struct MessageTimeline: View {
         let activities = Dictionary(grouping: chat.activities, by: \.turnId)
         let turnError = chat.latestTurn?.state == .error ? chat.latestTurn?.errorMessage : nil
         let lastPrompt = chat.messages.last { $0.role == .user }?.id
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 28) {
-                    ForEach(chat.messages) { message in
-                        if message.role == .user {
-                            UserMessageRow(message: message)
+        GeometryReader { pane in
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 28) {
+                        ForEach(chat.messages) { message in
+                            if message.role == .user {
+                                UserMessageRow(message: message)
+                                    .equatable()
+                            } else {
+                                AssistantMessageRow(
+                                    message: message, activities: activities[message.turnId] ?? [],
+                                    streaming: message.streaming && running
+                                )
                                 .equatable()
-                        } else {
-                            AssistantMessageRow(
-                                message: message, activities: activities[message.turnId] ?? [],
-                                streaming: message.streaming && running
-                            )
-                            .equatable()
+                            }
                         }
+                        if let turnError {
+                            TurnErrorView(message: turnError)
+                        }
+                        Color.clear
+                            .frame(height: 1)
+                            .id(Self.footId)
                     }
-                    if let turnError {
-                        TurnErrorView(message: turnError)
-                    }
-                    Color.clear
-                        .frame(height: 1)
-                        .id(Self.footId)
+                    .frame(maxWidth: ChatLayout.columnWidth, alignment: .leading)
+                    .padding(.leading, ChatLayout.columnInset(in: pane.size.width))
+                    .padding(.trailing, ChatLayout.gutter)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 24)
                 }
-                .frame(maxWidth: ChatLayout.columnWidth)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 24)
-            }
-            .defaultScrollAnchor(.bottom)
-            .onChange(of: lastPrompt) { _, _ in
-                proxy.scrollTo(Self.footId, anchor: .bottom)
+                .defaultScrollAnchor(.bottom)
+                .onChange(of: lastPrompt) { _, _ in
+                    proxy.scrollTo(Self.footId, anchor: .bottom)
+                }
             }
         }
     }

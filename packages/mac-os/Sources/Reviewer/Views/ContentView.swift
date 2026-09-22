@@ -58,6 +58,9 @@ struct ContentView: View {
                 }
             }
             .animation(.easeOut(duration: 0.12), value: model.palette.isShown)
+            .onChange(of: model.palette.isShown, initial: true) { _, shown in
+                model.page.coveredByPalette = shown
+            }
         }
         .branchPrompts()
         .serverErrorAlert()

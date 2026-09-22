@@ -82,7 +82,7 @@ private struct HistoryFilterBar: View {
                       toggleRegex: { apply { $0.grep = blank(grep); $0.regex.toggle() } },
                       toggleCase: { apply { $0.grep = blank(grep); $0.caseSensitive.toggle() } })
                 .frame(minWidth: FilterWidths.picker, maxWidth: .infinity)
-            FilterTextField(prompt: "User", text: $author) { apply { $0.author = blank(author) } }
+            PaneSearchField(prompt: "User", text: $author, submit: { apply { $0.author = blank(author) } })
                 .frame(width: FilterWidths.narrow)
             SinceDateButton(after: history.query.after, presented: $pickingDate) { date in
                 apply { $0.after = date }
@@ -255,24 +255,6 @@ private struct FilterToggle: View {
         }
         .buttonStyle(.plain)
         .help(help)
-    }
-}
-
-/// A plain filter field on the bar, applied on Return and on losing focus.
-private struct FilterTextField: View {
-    let prompt: String
-    @Binding var text: String
-    let commit: () -> Void
-    @FocusState private var focused: Bool
-
-    var body: some View {
-        TextField(prompt, text: $text)
-            .textFieldStyle(.roundedBorder)
-            .controlSize(.regular)
-            .font(.system(size: 11))
-            .focused($focused)
-            .onSubmit(commit)
-            .onChange(of: focused) { _, isFocused in if !isFocused { commit() } }
     }
 }
 

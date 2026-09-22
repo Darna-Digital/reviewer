@@ -11,10 +11,12 @@
 // beside the pane — puts it away.
 //
 // The pane is frosted glass rather than an opaque sheet so the code stays
-// visible through it: a result is read against what it will open over. What it
-// holds is the model's (`CommandPalette`); the only state here is which
-// row the keyboard is on. The list itself is AppKit's (`PaletteList`), so
-// five hundred grep hits scroll as a table does, on reused rows.
+// visible through it: a result is read against what it will open over. It is
+// a box and a list and nothing else — no footer of keys, since the keys are
+// the ones every dialog has. What it holds is the model's
+// (`CommandPalette`); the only state here is which row the keyboard is on.
+// The list itself is AppKit's (`PaletteList`), so five hundred grep hits
+// scroll as a table does, on reused rows.
 import SwiftUI
 
 struct PaletteOverlay: View {
@@ -30,7 +32,7 @@ struct PaletteOverlay: View {
                     .onTapGesture { model.palette.close() }
                 PalettePanel()
                     .frame(width: min(680, proxy.size.width - 32))
-                    .frame(maxHeight: proxy.size.height * 0.7)
+                    .frame(height: min(PalettePanel.height, proxy.size.height * 0.7))
                     .padding(.top, proxy.size.height * 0.12)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -42,6 +44,11 @@ private struct PalettePanel: View {
     /// The system's own large radius, so the pane reads as one of the
     /// window's glass panels rather than a sheet cut to a smaller family.
     static let radius: CGFloat = 26
+    /// The pane is one size whatever is in it: a list that grew with its
+    /// rows would jump under the pointer as a grep narrowed, and the
+    /// window would flash between an empty box and five hundred hits.
+    /// The list keeps whatever the header and footer leave and scrolls.
+    static let height: CGFloat = 600
 
     @Environment(AppModel.self) private var model
     @State private var active = 0
@@ -56,8 +63,6 @@ private struct PalettePanel: View {
             header(palette: $palette)
             ThemedDivider()
             list(rows)
-            ThemedDivider()
-            footer(rows)
         }
         .glassEffect(.regular, in: .rect(cornerRadius: PalettePanel.radius))
         .shadow(color: .black.opacity(0.22), radius: 28, y: 12)
@@ -170,48 +175,19 @@ private struct PalettePanel: View {
 
     @ViewBuilder
     private func list(_ rows: [PaletteRow]) -> some View {
-        if rows.isEmpty {
-            EmptyResults(palette: palette)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 28)
-                .padding(.horizontal, 14)
-        } else {
-            PaletteList(
-                rows: rows, query: palette.query, options: palette.options, mode: palette.mode, active: $active
-            ) { index in
-                run(rowAt: index)
+        Group {
+            if rows.isEmpty {
+                EmptyResults(palette: palette)
+                    .padding(.horizontal, 14)
+            } else {
+                PaletteList(
+                    rows: rows, query: palette.query, options: palette.options, mode: palette.mode, active: $active
+                ) { index in
+                    run(rowAt: index)
+                }
             }
-            .frame(maxHeight: PaletteList.height(of: rows))
         }
-    }
-
-    // MARK: footer
-
-    private func footer(_ rows: [PaletteRow]) -> some View {
-        HStack(spacing: 4) {
-            Text(summary(rows))
-                .lineLimit(1)
-                .truncationMode(.tail)
-            Spacer(minLength: 8)
-            KeyCap("↵")
-            Text(palette.mode.enterLabel)
-            Text("·")
-            KeyCap("esc")
-            Text("to close")
-        }
-        .font(.system(size: 11))
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-    }
-
-    /// What the text search found — the other lists speak for themselves.
-    private func summary(_ rows: [PaletteRow]) -> String {
-        guard palette.mode == .text, !rows.isEmpty else { return "" }
-        let files = Set(rows.map(\.group)).count
-        var text = "\(rows.count) \(rows.count == 1 ? "match" : "matches") in \(files) \(files == 1 ? "file" : "files")"
-        if palette.matches.truncated { text += " (first results only)" }
-        return text
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: keys
@@ -251,7 +227,7 @@ private struct GrepToggle: View {
     var body: some View {
         Button { isOn.toggle() } label: {
             Text(glyph)
-                .font(.system(size: 11, design: .monospaced))
+                .font(.system(size: 11))
                 .foregroundStyle(isOn ? .primary : .secondary)
                 .frame(width: 24, height: 24)
                 .background(isOn ? Color.primary.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: 6))
@@ -286,20 +262,5 @@ private struct EmptyResults: View {
             if typed.count < CommandPalette.minimumQueryLength { return "Type to search." }
             return palette.isSearching ? "Searching…" : "No matches found."
         }
-    }
-}
-
-/// A key, drawn the way the web footer draws one.
-private struct KeyCap: View {
-    let key: String
-
-    init(_ key: String) { self.key = key }
-
-    var body: some View {
-        Text(key)
-            .font(.system(size: 10, weight: .medium))
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1)
-            .background(Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 4))
     }
 }

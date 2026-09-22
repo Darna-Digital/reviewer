@@ -22,7 +22,7 @@ import {
   IconRefresh,
   IconSearch,
 } from "@tabler/icons-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Button } from "@/components/ui/button";
@@ -97,8 +97,13 @@ export function FindUsagesPanel() {
   const previewed = fns.previewed(selected);
   const selectedLocation = previewed?.reference.location ?? null;
 
-  const open = (location: Location) =>
-    openInEditor(location.path, location.range.start.line + 1);
+  // Stable: the preview's IDE layer hangs its token handlers off this, and a
+  // fresh function each render would rebuild the view's options every time.
+  const open = useCallback(
+    (location: Location) =>
+      openInEditor(location.path, location.range.start.line + 1),
+    [openInEditor]
+  );
 
   const onOpen = (node: UsageNode) => {
     selectUsage(node.id);
@@ -190,6 +195,7 @@ export function FindUsagesPanel() {
           <UsagePreview
             location={selectedLocation}
             theme={prefs.resolvedTheme}
+            onOpenLocation={open}
           />
         </div>
       </div>
@@ -315,7 +321,10 @@ function ResultsHeader({
   readonly results: number;
 }) {
   return (
-    <div className="flex h-9 shrink-0 items-center gap-1.5 border-b px-2 text-xs">
+    // The glyph sits in the tree's chevron column and the symbol where a
+    // top-level row's label starts, so the bar reads as the first line of the
+    // list rather than as something indented past it.
+    <div className="flex h-9 shrink-0 items-center gap-1.5 border-b pr-2 pl-1 text-xs">
       <IconSearch className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="min-w-0 truncate">
         {symbol === "" ? (

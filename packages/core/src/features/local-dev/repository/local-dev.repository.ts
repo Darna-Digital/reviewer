@@ -5,14 +5,9 @@ import type {
   NotFound,
   StorageError,
 } from "../../../shared.ts";
-import type {
-  DevCommand,
-  DevCommandKind,
-} from "../schema/local-dev.schema.ts";
+import type { DevCommand } from "../schema/local-dev.schema.ts";
 
 export interface CreateDevCommandInput {
-  /** A shell command when not given. */
-  readonly kind?: DevCommandKind;
   readonly name: string;
   readonly command: string;
   /** Repository-relative; missing or empty means the root. */

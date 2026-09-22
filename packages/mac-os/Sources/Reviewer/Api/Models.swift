@@ -536,13 +536,6 @@ struct RenameThread: Encodable, Sendable {
 
 // MARK: local dev (Run)
 
-/// What a dev command is — `DevCommandKind` in core: a shell command line,
-/// or Docker Desktop, which the server starts and watches by itself.
-enum DevCommandKind: String, Codable, Hashable, Sendable {
-    case shell
-    case dockerDesktop = "docker-desktop"
-}
-
 /// A dev command and whether its process is up — `DevCommandView` in core.
 struct DevCommandView: Decodable, Identifiable, Hashable, Sendable {
     enum Status: String, Decodable, Sendable {
@@ -550,9 +543,7 @@ struct DevCommandView: Decodable, Identifiable, Hashable, Sendable {
     }
 
     let id: String
-    let kind: DevCommandKind
     let name: String
-    /// Empty for a Docker Desktop command.
     let command: String
     /// The folder inside the repository it runs from, relative to the root
     /// and empty for the root itself.
@@ -563,25 +554,15 @@ struct DevCommandView: Decodable, Identifiable, Hashable, Sendable {
 
 struct DevCommand: Decodable, Sendable {
     let id: String
-    let kind: DevCommandKind
     let name: String
     let command: String
     let cwd: String
 }
 
 struct NewDevCommand: Encodable, Sendable {
-    let kind: DevCommandKind
     let name: String
     let command: String
     let cwd: String
-
-    static func shell(name: String, command: String, cwd: String) -> NewDevCommand {
-        NewDevCommand(kind: .shell, name: name, command: command, cwd: cwd)
-    }
-
-    static func dockerDesktop(name: String) -> NewDevCommand {
-        NewDevCommand(kind: .dockerDesktop, name: name, command: "", cwd: "")
-    }
 }
 
 // MARK: branches
@@ -792,4 +773,31 @@ struct ChromeTokens: Decodable, Hashable, Sendable {
 struct ThemeChrome: Decodable, Sendable {
     let theme: ThemeDescriptor
     let chrome: ChromeTokens
+}
+
+/// A snippet sent to be coloured — `HighlightRequest` in core.
+struct HighlightRequest: Encodable, Sendable {
+    let code: String
+    /// The fence's info string, as it was written: `ts`, `Swift`, ``.
+    let lang: String
+}
+
+/// One run of code that is all the same colour — `CodeToken` in core.
+struct CodeToken: Decodable, Sendable {
+    let text: String
+    /// `#rrggbb`; nil where the token takes the code's own foreground.
+    let color: String?
+    let italic: Bool?
+    let bold: Bool?
+}
+
+/// A snippet coloured in a theme — `HighlightedCode` in core: the tokens of
+/// each line, in order, with every character of the snippet still in them.
+struct HighlightedCode: Decodable, Sendable {
+    /// The grammar it was read with — `text` where the fence named none.
+    let lang: String
+    /// What a token with no colour of its own is set in; nil where the theme
+    /// names no foreground and the shell should use its own.
+    let foreground: String?
+    let lines: [[CodeToken]]
 }

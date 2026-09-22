@@ -6,6 +6,7 @@ import {
   describeTheme,
   describeThemes,
   findTheme,
+  highlightCode,
   loadTheme,
   ThemeNotFound,
 } from "@reviewer/core/themes";
@@ -24,6 +25,17 @@ export const ThemesHandler = HttpApiBuilder.group(Api, "themes", (handlers) =>
           theme: describeTheme(entry),
           chrome: deriveChromeTokens(theme),
         };
+      })
+    )
+    .handle("highlight", ({ params, payload }) =>
+      Effect.gen(function* () {
+        const loading = loadTheme(params.name);
+        if (loading === undefined)
+          return yield* new ThemeNotFound({ name: params.name });
+        const theme = yield* Effect.promise(() => loading);
+        return yield* Effect.promise(() =>
+          highlightCode(payload.code, payload.lang, theme)
+        );
       })
     )
 );

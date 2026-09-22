@@ -397,9 +397,11 @@ private struct PickerRow<Label: View>: View {
     }
 }
 
-/// The bar's one filled control: a capsule of glass tinted the accent,
-/// cut to the chips' height, so the capsule reads as one row with a
-/// single thing to press — the system's own prominent button on glass.
+/// The bar's one filled control: a capsule of glass tinted the theme's
+/// accent — the colour every lit control in the app shares, and on the
+/// app's own palette the system's accent, which is what a prominent
+/// button would have worn anyway — cut to the chips' height, so the
+/// capsule reads as one row with a single thing to press.
 private struct AssignButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
@@ -409,7 +411,7 @@ private struct AssignButtonStyle: ButtonStyle {
             .foregroundStyle(.white)
             .padding(.horizontal, 16)
             .frame(height: 32)
-            .glassEffect(.regular.tint(.accentColor.opacity(isEnabled ? 1 : 0.5)).interactive(), in: .capsule)
+            .glassEffect(.regular.tint(Color(nsColor: IslandPalette.accent).opacity(isEnabled ? 1 : 0.5)).interactive(), in: .capsule)
             .opacity(configuration.isPressed ? 0.85 : 1)
             .contentShape(Capsule())
     }

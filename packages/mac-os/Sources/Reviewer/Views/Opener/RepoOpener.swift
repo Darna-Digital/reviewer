@@ -3,8 +3,8 @@
 // Favorites and All Repositories at its head and, under Locations, each
 // folder the walk found repositories in; the picked list's name as the
 // window's title on the toolbar, with the search at the toolbar's trailing
-// edge; and the repositories as the system's own table — name, branch,
-// where it sits, when it was last opened — sortable on any column, with a
+// edge; and the repositories as the system's own table — name, where it
+// sits, when it was last opened — sortable on any column, with a
 // status bar along the foot counting them and saying while the walk is
 // still on. A click picks a row, a double-click or Return opens it as the
 // project, and the row's menu opens it with its dev commands started and
@@ -206,8 +206,8 @@ private struct OpenerSidebar: View {
 }
 
 /// The repositories as the system lists documents: name under its avatar,
-/// the branch it is on, the folder it sits in, and when it was last opened
-/// here, the rows striped as Finder's are.
+/// the folder it sits in, and when it was last opened here, the rows
+/// striped as Finder's are.
 private struct OpenerTable: View {
     @Environment(AppModel.self) private var model
     let rows: [RepoRow]
@@ -225,13 +225,6 @@ private struct OpenerTable: View {
                 }
             }
             .width(min: 140, ideal: 200)
-            TableColumn("Branch", value: \.branch) { row in
-                Text(row.branch.isEmpty ? "—" : row.branch)
-                    .foregroundStyle(row.branch.isEmpty ? .secondary : .primary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            .width(min: 90, ideal: 150)
             TableColumn("Location", value: \.location) { row in
                 Text(row.location)
                     .foregroundStyle(.secondary)

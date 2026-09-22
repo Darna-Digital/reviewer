@@ -48,6 +48,12 @@ final class ChromePalette {
         scheme == .dark ? dark : light
     }
 
+    /// The theme chosen for a scheme, by catalog name — what a surface that
+    /// asks the server to read something in the theme names it as.
+    func themeName(for scheme: ThemeDescriptor.ColorScheme) -> String {
+        scheme == .dark ? names.dark : names.light
+    }
+
     /// Whether a theme, rather than the app's own palette, paints the scheme.
     func isThemed(_ scheme: ThemeDescriptor.ColorScheme) -> Bool {
         tokens(for: scheme) != nil

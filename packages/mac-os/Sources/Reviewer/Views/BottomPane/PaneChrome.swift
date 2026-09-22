@@ -433,17 +433,11 @@ extension DevCommandView {
 
     var isRunning: Bool { status == .running }
     var exitedBadly: Bool { status == .exited && (exitCode ?? 0) != 0 }
-    var isDockerDesktop: Bool { kind == .dockerDesktop }
-    /// What the row shows as the command: the command line, or for Docker
-    /// Desktop what the server does in its place.
-    var commandLabel: String { isDockerDesktop ? "Start Docker Desktop" : command }
     /// The folder as a row shows it: the root as a single dot, as a shell
-    /// would name it; nothing for Docker Desktop, which is not the
-    /// repository's to run.
-    var folderLabel: String { isDockerDesktop ? "" : (cwd.isEmpty ? "." : cwd) }
+    /// would name it.
+    var folderLabel: String { cwd.isEmpty ? "." : cwd }
     var folderHelp: String {
-        if isDockerDesktop { return "" }
-        return cwd.isEmpty ? "Runs at the repository root" : "Runs in \(cwd)"
+        cwd.isEmpty ? "Runs at the repository root" : "Runs in \(cwd)"
     }
 }
 

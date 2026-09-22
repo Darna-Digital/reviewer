@@ -10,30 +10,83 @@
 // told the pointer left instead — once, as an exit to nowhere — so a hover
 // in progress is put out rather than frozen under the glass.
 //
-// A drag is kept off the page the same way, but ahead of time rather than
-// per event: AppKit hands a drag to the frontmost view registered for its
-// types, and the chat page the shell draws over this view is SwiftUI, with
-// no view of its own for AppKit to find — so the page would take every
-// image let go over the conversation, into a document showing nothing. The
-// host says when a native page stands over the island (see `acceptsDrops`),
-// and the types WebKit registered are put away until it steps back.
+// Anything of the window's own standing over the page takes the mouse off
+// it altogether while it is up (see `isCovered`): the palette is glass, and
+// SwiftUI hands the window no view for the parts of it that are only drawn,
+// so a wheel turned over them would otherwise find the page behind and
+// scroll it. Hit-testing to nothing keeps the click, the wheel and the
+// cursor off the page, and a stylesheet hung on the document keeps the
+// hover off it too — the one thing no dropped event can reach, since the
+// page works out what lies under the pointer from where the pointer is.
+//
+// A drag is kept off the page by the same one thing, and only by it. Taking
+// away the types WebKit registered is not enough and is worse than nothing:
+// AppKit finds a drag's destination by hit-testing the window, and a view
+// that is under the pointer but takes none of the dragged types ends the
+// search where it stands — the drag is refused rather than handed on to the
+// drop zone drawn above it, which is SwiftUI and has no view of its own
+// this far down. An unregistered web view under a native page therefore
+// turned "the page eats every photo let go over the conversation" into
+// "nothing anywhere takes one". A covered page is out of the hit test, so
+// there is nothing under the pointer but the page drawn over it.
 import AppKit
 import WebKit
 
 final class IslandWebView: WKWebView {
     private var pointerIsCovered = false
-    private lazy var pageDropTypes = registeredDraggedTypes
 
-    var acceptsDrops = true {
+    /// Whether something of the window's own stands over the page — the
+    /// palette, or a native page in the island's place. While one does the
+    /// view answers the window's hit test with nothing, so every mouse
+    /// event and every drag at the pointer goes to what is drawn over it,
+    /// and the page is told to be untouchable besides.
+    var isCovered = false {
         didSet {
-            guard acceptsDrops != oldValue else { return }
-            if acceptsDrops {
-                registerForDraggedTypes(pageDropTypes)
-            } else {
+            guard isCovered != oldValue else { return }
+            window?.invalidateCursorRects(for: self)
+            evaluateJavaScript(Self.coverScript(covered: isCovered)) { _, _ in }
+            if isCovered {
+                pageDropTypes = registeredDraggedTypes
                 unregisterDraggedTypes()
+            } else {
+                registerForDraggedTypes(pageDropTypes)
             }
-            DropDiagnostics.note("island.acceptsDrops=\(acceptsDrops) registered=\(registeredDraggedTypes.count)")
+            DropDiagnostics.note("island.covered=\(isCovered) kept=\(pageDropTypes.count)")
         }
+    }
+
+    /// The page's own drag types while something stands over it, so they
+    /// can be given back when it steps away. Read before the unregister and
+    /// never after: read after, what comes back is the empty list the
+    /// unregister left, and the page never takes a drop again.
+    private var pageDropTypes: [NSPasteboard.PasteboardType] = []
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        isCovered ? nil : super.hitTest(point)
+    }
+
+    /// Dropping the page's events is not enough to put its hover out: what
+    /// lies under the pointer is worked out from where the pointer is, not
+    /// from the events the page was sent, so opening a file while the pane
+    /// is up lights the line under the glass as the document lays out,
+    /// with no event in it to drop. A page nothing can hit has nothing to
+    /// light, so the cover is a stylesheet rather than an event to catch —
+    /// hung on the document, outside the app's own root, and taken off
+    /// again when the pane goes away.
+    private static let coverStyleID = "reviewer-native-cover"
+
+    private static func coverScript(covered: Bool) -> String {
+        """
+        (() => {
+          const cover = document.getElementById('\(coverStyleID)');
+          if (!\(covered)) { cover?.remove(); return; }
+          if (cover) return;
+          const style = document.createElement('style');
+          style.id = '\(coverStyleID)';
+          style.textContent = '* { pointer-events: none !important; }';
+          document.documentElement.appendChild(style);
+        })();
+        """
     }
 
     /// No WebKit menu over the code: a right-click is the page's to answer
@@ -48,7 +101,9 @@ final class IslandWebView: WKWebView {
     }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-        DropDiagnostics.note("island.entered", sender.draggingPasteboard)
+        DropDiagnostics.note("island.entered covered=\(isCovered)", sender.draggingPasteboard)
+        DropDiagnostics.destinations(in: window, at: sender.draggingLocation)
+        guard !isCovered else { return [] }
         return super.draggingEntered(sender)
     }
 

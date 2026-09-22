@@ -54,13 +54,13 @@ const REPLY_INDENT = "ml-10";
  * on: the file view slots this card inside the editor's `contenteditable`,
  * which blanks both for the code it is drawing itself.
  *
- * The card starts under the gutter's add-a-comment `+`, so the note lines up
- * with the button that opened it. An annotation begins at the code column and
- * both views leave the `+` straddling that edge, so the card needs no indent of
- * its own.
+ * The card is inset from the code on every side — the same gap left and right,
+ * and the vertical one above and below — so the note reads as a thing laid over
+ * the file rather than a block welded to the code column. An annotation begins
+ * at that column, so the indent is the card's own margin.
  */
 const COMMENT_CARD =
-  "comment-card group/thread my-2 mr-3 w-full max-w-100 min-w-0 overflow-hidden rounded-2xl bg-surface-2 p-3 font-sans text-card-foreground shadow-raised";
+  "comment-card group/thread my-2 mx-3 w-full max-w-100 min-w-0 overflow-hidden rounded-2xl bg-surface-2 p-3 font-sans text-card-foreground shadow-raised";
 
 /**
  * The composer's pill. The radius is half the height of a one-line composer —
@@ -81,7 +81,7 @@ const COMPOSER_PILL =
  */
 const COMPOSER_STANDALONE = cn(
   COMPOSER_PILL,
-  "comment-card my-2 mr-3 w-full max-w-100 bg-surface-2 text-card-foreground shadow-raised"
+  "comment-card mx-3 my-2 w-full max-w-100 bg-surface-2 text-card-foreground shadow-raised"
 );
 const COMPOSER_NESTED = cn(COMPOSER_PILL, "bg-background ring-1 ring-border");
 

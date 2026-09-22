@@ -1,17 +1,39 @@
-import { Container } from "#/components/feature-section";
-import { Logo } from "#/components/logo";
+import { Container } from "#/components/container";
+import { GITHUB_URL } from "#/lib/links";
 
 export function SiteFooter() {
   return (
-    <footer className="w-full overflow-hidden bg-gradient-to-b from-neutral-100 to-white dark:from-neutral-900 dark:to-neutral-950">
-      <Container className="relative">
-        <div className="absolute top-0 left-1/2 h-px w-screen -translate-x-1/2 bg-black/8 dark:bg-white/10" />
-        <div className="flex flex-col items-start justify-between gap-6 py-10 md:flex-row md:items-center">
-          <Logo className="h-6 w-auto shrink-0" />
-          <p className="text-xs text-neutral-400 dark:text-neutral-500">
-            © 2026 Darna Digital. All rights reserved.
-          </p>
-        </div>
+    <footer className="pb-20">
+      <Container className="flex flex-col items-center gap-4 border-t border-black/[0.06] pt-10 text-center dark:border-white/[0.08]">
+        <p className="text-[15px] text-neutral-600 dark:text-neutral-400">
+          Need some help with Reviewer?{" "}
+          <a
+            className="text-neutral-900 underline decoration-neutral-300 underline-offset-4 transition-colors hover:decoration-neutral-900 dark:text-white dark:decoration-neutral-600 dark:hover:decoration-white"
+            href={GITHUB_URL}
+          >
+            Read the source
+          </a>{" "}
+          or{" "}
+          <a
+            className="text-neutral-900 underline decoration-neutral-300 underline-offset-4 transition-colors hover:decoration-neutral-900 dark:text-white dark:decoration-neutral-600 dark:hover:decoration-white"
+            href={`${GITHUB_URL}/issues`}
+          >
+            open an issue
+          </a>
+          .
+        </p>
+        <p className="max-w-md text-[13px] text-pretty text-neutral-400 dark:text-neutral-500">
+          Made by{" "}
+          <a
+            className="transition-colors hover:text-neutral-600 dark:hover:text-neutral-300"
+            href="https://darnadigital.com"
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            Darna Digital
+          </a>
+          , building tools for conversation based development. © 2026
+        </p>
       </Container>
     </footer>
   );

@@ -103,6 +103,10 @@ enum WindowTabKind: String, Decodable, Sendable {
 enum WindowTabAction {
     case select(id: String)
     case close(id: String)
+    /// A tab dragged along the strip and let go on the leading or trailing
+    /// half of another: the toolbar knows the geometry, the strip knows the
+    /// slots, so what crosses is the tab it was dropped on and which side.
+    case move(id: String, toId: String, after: Bool)
     case newSession
     case closeActive
     case step(Int)
@@ -112,6 +116,8 @@ enum WindowTabAction {
         switch self {
         case .select(let id): return ["kind": "select", "id": id]
         case .close(let id): return ["kind": "close", "id": id]
+        case .move(let id, let toId, let after):
+            return ["kind": "move", "id": id, "toId": toId, "after": after]
         case .newSession: return ["kind": "newSession"]
         case .closeActive: return ["kind": "closeActive"]
         case .step(let offset): return ["kind": "step", "offset": offset]

@@ -8,6 +8,7 @@ import {
   closeTab,
   initialWindowTabs,
   moveTab,
+  moveTabBeside,
   nextModeTab,
   onSessionTab,
   openTab,
@@ -242,6 +243,39 @@ describe("moveTab", () => {
     expect(show(moveTab(state, "a", 99))).toBe("code sessions b *c a");
     expect(moveTab(state, "b", 3)).toBe(state);
     expect(moveTab(state, "missing", 3)).toBe(state);
+  });
+});
+
+describe("moveTabBeside", () => {
+  it("drops a tab on either side of the one under the pointer", () => {
+    const state = stripOf("a", "b", "c");
+    expect(show(moveTabBeside(state, "a", "c", true))).toBe(
+      "code sessions b *c a"
+    );
+    expect(show(moveTabBeside(state, "a", "c", false))).toBe(
+      "code sessions b a *c"
+    );
+    expect(show(moveTabBeside(state, "c", "a", false))).toBe(
+      "code sessions *c a b"
+    );
+    expect(show(moveTabBeside(state, "c", "a", true))).toBe(
+      "code sessions a *c b"
+    );
+  });
+
+  it("holds a drop on a pinned tab behind them, and no-ops off the strip", () => {
+    const state = stripOf("a", "b");
+    expect(show(moveTabBeside(state, "b", SESSIONS_TAB_ID, true))).toBe(
+      "code sessions *b a"
+    );
+    expect(moveTabBeside(state, "missing", "a", true)).toBe(state);
+    expect(moveTabBeside(state, "a", "missing", true)).toBe(state);
+  });
+
+  it("stays put when the side it is dropped on is the one it is already in", () => {
+    const state = stripOf("a", "b");
+    expect(moveTabBeside(state, "a", "b", false)).toBe(state);
+    expect(moveTabBeside(state, "b", "a", true)).toBe(state);
   });
 });
 
