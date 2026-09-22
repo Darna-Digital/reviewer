@@ -9,12 +9,13 @@
 // proportion of the system's own small controls, three points of air above
 // and below in the bar.
 //
-// The Terminal and Run surfaces are the exception: they are laid out as
-// the opener is (see `RepoOpener`) — a Finder window's proportions inside
-// the island — so they carry the taller toolbar at the regular control
-// size, with the system's own search field at its trailing edge and the
-// actions grouped at its leading edge, and a table of plain rows under
-// it.
+// The Run surface is the exception: it is laid out as the opener is (see
+// `RepoOpener`) — a Finder window's proportions inside the island — so it
+// carries the taller toolbar at the regular control size, with the
+// system's own search field at its trailing edge and the actions grouped
+// at its leading edge, and a table of plain rows under it. The Terminal
+// beside it keeps none of that: a shell is opened, picked and closed from
+// a row of tabs, nothing more (see `TerminalPane`).
 import AppKit
 import SwiftUI
 
@@ -40,14 +41,13 @@ enum PaneMetrics {
     static let tableDetailMinWidth: CGFloat = 240
 }
 
-/// The split the Terminal and Run surfaces share: the table column down
-/// the left at one width, the detail beside it taking the rest, parted by
-/// a handle. The width is one setting for both surfaces, so switching
-/// between them moves nothing — each HSplitView would size its own
-/// columns afresh, and the table would jump back to its ideal width on
-/// every switch. Opened fresh it stands at the ideal width; dragged, it
-/// keeps the width across surfaces and launches, clamped so the detail
-/// always has its minimum.
+/// The split a table surface is laid out in: the table column down the
+/// left at one width, the detail beside it taking the rest, parted by a
+/// handle. The width is a setting rather than an HSplitView's own, which
+/// would size its columns afresh and jump the table back to its ideal
+/// width on every switch of surface. Opened fresh it stands at the ideal
+/// width; dragged, it keeps the width across launches, clamped so the
+/// detail always has its minimum.
 struct TableSplit<Table: View, Detail: View>: View {
     @ViewBuilder let table: Table
     @ViewBuilder let detail: Detail

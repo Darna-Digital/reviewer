@@ -36,7 +36,11 @@ public struct ProjectFeed: Codable, Equatable, Sendable {
         }
     }
 
-    /// The open project's path, or nil while nothing is open.
+    /// The open project's path, or nil while nothing is open. Nothing is
+    /// drawn from it — a widget lists projects to open, and which one this
+    /// machine happens to have open is not a mark it needs to carry — but
+    /// it is what makes the feed change as the project does, and so what
+    /// has the widget redrawn then.
     public var current: String?
     public var projects: [Project]
     public var writtenAt: Date
@@ -57,10 +61,6 @@ public struct ProjectFeed: Codable, Equatable, Sendable {
     /// The starred repositories, in the order they were starred.
     public var favorites: [Project] {
         projects.filter(\.favorite)
-    }
-
-    public var currentProject: Project? {
-        current.flatMap { path in projects.first { $0.path == path } }
     }
 
     // MARK: the file

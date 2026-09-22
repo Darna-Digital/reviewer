@@ -1,36 +1,94 @@
-// The Terminal surface, laid out as the opener is: the project's shells as
-// the system's own table down the left — title and when it was last used —
-// sortable on either column, its rows plain rather than striped, newest
-// first to begin with, under a toolbar with open and close grouped at its
-// leading edge and a search at its trailing edge. With nothing to list the
-// table gives way to a placeholder, header and all. A click picks a
-// session; a double-click, Return or the row's menu renames it in place,
-// the way Finder renames a file; Delete closes it. The selected one's live
-// terminal stands on the right under a bar of the toolbar's height naming
-// it. Every shell visited stays attached while hidden, so coming back is
-// the screen as you left it.
+// The Terminal surface, laid out as the system's own Terminal is: the
+// project's shells as a row of tabs along the top — every tab an equal
+// share of the width, its title centred, the one in front filled, its ✕ at
+// the leading edge as the system puts it — and the mark that opens one at
+// the trailing end. Nothing else: a shell is opened, picked and closed,
+// and that is the whole of it. The Run surface beside it keeps the table
+// and its toolbar, since a command is a thing to add, edit and remove; a
+// shell is not. A double-click on a tab, or its menu, renames it in place
+// the way Finder renames a file. A repository with no shell of its own
+// opens one on the way in, so the surface comes up on a prompt rather than
+// on a placeholder; the placeholder is left for the shell that could not
+// be opened, and for the last one closed by hand. Every shell visited
+// stays attached while hidden, so coming back is the screen as you left
+// it.
 import Observation
 import SwiftTerm
 import SwiftUI
+
+/// SwiftTerm brings a `Color` of its own, which this file has no use for.
+private typealias Color = SwiftUI.Color
 
 struct TerminalPane: View {
     @Environment(AppModel.self) private var model
     @State private var rename = ThreadRename()
 
+    private var threads: Threads { model.threads }
+
+    private var shells: [ThreadSummary] {
+        threads.threads.filter { $0.agent == "terminal" }
+    }
+
     var body: some View {
-        TableSplit {
-            ThreadTable()
-        } detail: {
-            ThreadTerminal()
+        VStack(spacing: 0) {
+            ShellTabBar(shells: shells, open: open, close: close(id:))
+            terminal
         }
         .environment(rename)
-        .task { await model.threads.load() }
+        .task(id: model.workspace?.project) { await openFirstSession() }
+    }
+
+    /// The shells of the project being opened, and one opened for it if it
+    /// has none. A load that failed opens nothing: the server is the one
+    /// keeping the shells, and asking it for another while it is out of
+    /// reach would leave a repository with a shell more every time the
+    /// surface is looked at.
+    private func openFirstSession() async {
+        await threads.load()
+        guard threads.lastError == nil, shells.isEmpty else { return }
+        await threads.open(branch: model.currentBranch)
+        // A load the project's own refresh already had in flight answers
+        // with the list as it was — the list without the shell just opened
+        // — and puts the surface back on the placeholder. Asking again
+        // picks it up.
+        if threads.lastError == nil, shells.isEmpty { await threads.load() }
+    }
+
+    @ViewBuilder
+    private var terminal: some View {
+        if let thread = threads.selected {
+            let stream = threads.stream(for: thread.id)
+            TerminalWell {
+                TerminalHost(view: stream.view)
+                    .id(ObjectIdentifier(stream))
+            }
+        } else {
+            PanePlaceholder("No session open", symbol: "terminal",
+                            detail: threads.lastError ?? "Open a shell in this project.") {
+                Button("New session", action: open)
+            }
+        }
+    }
+
+    private func open() {
+        Task { await threads.open(branch: model.currentBranch) }
+    }
+
+    /// Closing the tab in front leaves the neighbour in front, as the
+    /// system's tabs do, rather than jumping back to the first.
+    private func close(id: String) {
+        if threads.selectedId == id { threads.selectedId = neighbour(of: id)?.id }
+        Task { await threads.close(id: id) }
+    }
+
+    private func neighbour(of id: String) -> ThreadSummary? {
+        guard let index = shells.firstIndex(where: { $0.id == id }) else { return nil }
+        let after = shells.index(after: index)
+        return after < shells.endIndex ? shells[after] : (index > 0 ? shells[index - 1] : nil)
     }
 }
 
-/// Which session is being renamed, and the title typed so far — shared by
-/// the table, where the field is, and the detail bar, whose rename button
-/// opens it.
+/// Which session is being renamed, and the title typed so far.
 @MainActor
 @Observable
 private final class ThreadRename {
@@ -56,138 +114,158 @@ private final class ThreadRename {
     }
 }
 
-private struct ThreadTable: View {
+/// The row of shells: the tabs sharing the width between them, then the
+/// mark that opens one, on a bar of the surface's own height.
+private struct ShellTabBar: View {
+    let shells: [ThreadSummary]
+    let open: () -> Void
+    let close: (String) -> Void
     @Environment(AppModel.self) private var model
-    @State private var query = ""
-    @State private var sortOrder = [KeyPathComparator(\ThreadRow.updatedOrder, order: .reverse)]
-    @Environment(ThreadRename.self) private var rename
-
-    private var threads: Threads { model.threads }
-
-    private var rows: [ThreadRow] {
-        let needle = query.trimmingCharacters(in: .whitespaces)
-        let shells = threads.threads.filter { $0.agent == "terminal" }.map(ThreadRow.init)
-        let matched = needle.isEmpty
-            ? shells
-            : shells.filter {
-                $0.title.localizedCaseInsensitiveContains(needle)
-            }
-        return matched.sorted(using: sortOrder)
-    }
 
     var body: some View {
-        VStack(spacing: 0) {
-            toolbar
-            if rows.isEmpty && !threads.isLoading {
-                placeholder
-            } else {
-                table
+        HStack(spacing: 3) {
+            ForEach(shells) { thread in
+                ShellTab(thread: thread,
+                         isSelected: model.threads.selectedId == thread.id,
+                         select: { model.threads.selectedId = thread.id },
+                         close: { close(thread.id) })
             }
+            // The tabs take the width between them, so the mark ends up at
+            // the trailing edge on its own; with no tabs to push it there,
+            // this keeps it on that edge rather than in the middle.
+            Spacer(minLength: 0)
+            NewShellButton(action: open)
+        }
+        .padding(.horizontal, 5)
+        .frame(height: PaneMetrics.barHeight)
+        .frame(maxWidth: .infinity)
+        .overlay(alignment: .bottom) { ThemedDivider() }
+    }
+}
+
+enum ShellTabMetrics {
+    static let height: CGFloat = 22
+    /// The ✕ stands in this much room at the leading edge, and the same is
+    /// left free at the trailing one, so the title reads centred in the tab.
+    static let closeSlot: CGFloat = 20
+}
+
+/// One shell's tab: its title, centred, and a ✕ at the leading edge —
+/// always on the tab in front, under the pointer on the rest, as the
+/// system's tabs show it. The ✕ is laid over the tab rather than set in
+/// its label, since a button inside a button's label never gets the click.
+private struct ShellTab: View {
+    let thread: ThreadSummary
+    let isSelected: Bool
+    let select: () -> Void
+    let close: () -> Void
+    @Environment(AppModel.self) private var model
+    @Environment(ThreadRename.self) private var rename
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: select) {
+            title
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, ShellTabMetrics.closeSlot)
+                .frame(height: ShellTabMetrics.height)
+                .background(fill, in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture(count: 2).onEnded { rename.begin(thread) })
+        .overlay(alignment: .leading) {
+            if isSelected || isHovering {
+                ShellTabClose(title: thread.displayTitle, action: close)
+                    .frame(width: ShellTabMetrics.closeSlot, height: ShellTabMetrics.height)
+            }
+        }
+        .onHover { isHovering = $0 }
+        .help(thread.displayTitle)
+        .contextMenu {
+            Button("Rename") { rename.begin(thread) }
+            Divider()
+            Button("Close session", role: .destructive, action: close)
         }
     }
 
     @ViewBuilder
-    private var placeholder: some View {
-        if query.isEmpty {
-            PanePlaceholder("No sessions", symbol: "terminal",
-                            detail: "Open a shell in this project.") {
-                Button("New session", action: open)
+    private var title: some View {
+        if rename.id == thread.id {
+            @Bindable var rename = rename
+            RenameField(text: $rename.draft) {
+                commitRename()
+            } cancel: {
+                rename.cancel()
             }
         } else {
-            PanePlaceholder("No sessions match “\(query)”", symbol: "magnifyingglass")
+            Text(thread.displayTitle)
+                .font(.system(size: 11, weight: isSelected ? .medium : .regular))
+                .foregroundStyle(isSelected || isHovering ? .primary : .secondary)
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
     }
 
-    private var toolbar: some View {
-        PaneToolbar {
-            ControlGroup {
-                Button(action: open) { Label("New session", systemImage: "plus") }
-                    .help("New session")
-                Button(action: closeSelected) { Label("Close session", systemImage: "minus") }
-                    .help("Close the selected session")
-                    .disabled(threads.selected == nil)
-            }
-            Spacer(minLength: 8)
-            PaneSearchField(prompt: "Search", text: $query)
-                .frame(width: PaneMetrics.toolbarSearchWidth)
-        }
+    private var fill: Color {
+        if isSelected { return .primary.opacity(BarChipMetrics.onTint) }
+        if isHovering { return .primary.opacity(BarChipMetrics.hoverTint) }
+        return .clear
     }
 
-    private var table: some View {
-        Table(rows, selection: selection, sortOrder: $sortOrder) {
-            TableColumn("Name", value: \.title) { row in
-                HStack(spacing: 8) {
-                    Image(systemName: "terminal")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 16)
-                    if rename.id == row.id {
-                        @Bindable var rename = rename
-                        RenameField(text: $rename.draft) {
-                            commitRename(row.thread)
-                        } cancel: {
-                            rename.cancel()
-                        }
-                    } else {
-                        Text(row.title)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                }
-            }
-            .width(min: 160, ideal: 280)
-            TableColumn("Last used", value: \.updatedOrder) { row in
-                Text(row.updated.map(OpenerDates.format) ?? "—")
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            .width(min: 120, ideal: 160)
-        }
-        .tableStyle(.inset(alternatesRowBackgrounds: false))
-        .scrollContentBackground(.hidden)
-        .contextMenu(forSelectionType: String.self) { ids in
-            if let thread = ids.first.flatMap(thread(for:)) {
-                Button("Rename") { rename.begin(thread) }
-                Divider()
-                Button("Close session", role: .destructive) {
-                    Task { await threads.close(id: thread.id) }
-                }
-            }
-        } primaryAction: { ids in
-            if let thread = ids.first.flatMap(thread(for:)) { rename.begin(thread) }
-        }
-        .onKeyPress(.return) {
-            guard rename.id == nil, let thread = threads.selected else { return .ignored }
-            rename.begin(thread)
-            return .handled
-        }
-        .onDeleteCommand(perform: closeSelected)
-    }
-
-    private func thread(for id: String) -> ThreadSummary? {
-        threads.threads.first { $0.id == id }
-    }
-
-    private func commitRename(_ thread: ThreadSummary) {
+    private func commitRename() {
         guard let title = rename.finish(thread) else { return }
-        Task { await threads.rename(id: thread.id, to: title) }
-    }
-
-    private func open() {
-        Task { await threads.open(branch: model.currentBranch) }
-    }
-
-    private func closeSelected() {
-        guard rename.id == nil, let id = threads.selectedId else { return }
-        Task { await threads.close(id: id) }
-    }
-
-    private var selection: Binding<String?> {
-        Binding(get: { threads.selectedId }, set: { threads.selectedId = $0 })
+        Task { await model.threads.rename(id: thread.id, to: title) }
     }
 }
 
-/// The field a row's name turns into while it is being renamed: focused
-/// as soon as it appears, Return keeps the new name, Escape drops it, and
+/// The ✕ in a tab's leading slot: lit only under the pointer, so it reads
+/// as part of the tab until it is reached for.
+private struct ShellTabClose: View {
+    let title: String
+    let action: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(isHovering ? .primary : .secondary)
+                .frame(width: 15, height: 15)
+                .background(isHovering ? Color.primary.opacity(BarChipMetrics.onTint) : .clear, in: Circle())
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .help("Close \(title)")
+        .accessibilityLabel("Close \(title)")
+    }
+}
+
+/// The mark at the row's trailing end, in the round the system gives it.
+private struct NewShellButton: View {
+    let action: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "plus")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(isHovering ? .primary : .secondary)
+                .frame(width: ShellTabMetrics.height, height: ShellTabMetrics.height)
+                .background(isHovering ? Color.primary.opacity(BarChipMetrics.hoverTint) : .clear, in: Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
+        .help("New session")
+        .accessibilityLabel("New session")
+    }
+}
+
+/// The field a tab's name turns into while it is being renamed: focused as
+/// soon as it appears, Return keeps the new name, Escape drops it, and
 /// clicking away keeps it too, as Finder does.
 private struct RenameField: View {
     @Binding var text: String
@@ -198,6 +276,8 @@ private struct RenameField: View {
     var body: some View {
         TextField("Title", text: $text)
             .textFieldStyle(.plain)
+            .font(.system(size: 11))
+            .multilineTextAlignment(.center)
             .focused($focused)
             .onSubmit(commit)
             .onExitCommand(perform: cancel)
@@ -205,63 +285,6 @@ private struct RenameField: View {
                 if !isFocused { commit() }
             }
             .task { focused = true }
-    }
-}
-
-private struct ThreadTerminal: View {
-    @Environment(AppModel.self) private var model
-    @Environment(ThreadRename.self) private var rename
-
-    var body: some View {
-        if let thread = model.threads.selected {
-            VStack(spacing: 0) {
-                bar(for: thread)
-                let stream = model.threads.stream(for: thread.id)
-                TerminalWell {
-                    TerminalHost(view: stream.view)
-                        .id(ObjectIdentifier(stream))
-                }
-            }
-        } else {
-            PanePlaceholder("No session open", symbol: "terminal",
-                            detail: "Pick a session on the left, or open a new one.") {
-                Button("New session") { Task { await model.threads.open(branch: model.currentBranch) } }
-            }
-        }
-    }
-
-    private func bar(for thread: ThreadSummary) -> some View {
-        PaneToolbar {
-            Image(systemName: "terminal")
-                .foregroundStyle(.secondary)
-            Text(thread.displayTitle)
-                .fontWeight(.medium)
-                .lineLimit(1)
-            Spacer(minLength: 8)
-            Button { rename.begin(thread) } label: {
-                Label("Rename", systemImage: "pencil")
-            }
-            .help("Rename")
-            .disabled(rename.id == thread.id)
-        }
-    }
-}
-
-/// A session as the table lists it: the summary with the strings the
-/// columns show and sort on, and its last use parsed once as a date.
-private struct ThreadRow: Identifiable, Hashable {
-    let thread: ThreadSummary
-    let updated: Date?
-
-    var id: String { thread.id }
-    var title: String { thread.displayTitle }
-    /// A session never used sorts after every one that was.
-    var updatedOrder: Date { updated ?? .distantPast }
-
-    @MainActor
-    init(_ thread: ThreadSummary) {
-        self.thread = thread
-        updated = CommitDates.parse(thread.updatedAt)
     }
 }
 

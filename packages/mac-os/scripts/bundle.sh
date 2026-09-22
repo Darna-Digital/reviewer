@@ -5,6 +5,7 @@
 # is rebuilt on every call, so it is always the configuration just built.
 #
 #   scripts/bundle.sh [debug|release]   (default: debug)
+#   SIGN_IDENTITY="My Cert" scripts/bundle.sh   (override the signing identity)
 set -euo pipefail
 
 config="${1:-debug}"
@@ -112,17 +113,39 @@ mkdir -p "${appex}/Contents/MacOS"
 cp "${bin_dir}/ReviewerWidget" "${appex}/Contents/MacOS/ReviewerWidget"
 cp "${package_dir}/Resources/Widget/Info.plist" "${appex}/Contents/Info.plist"
 
-# Ad-hoc sign so the binaries run under the hardened-runtime defaults of a
-# modern macOS without a "damaged app" dialog on first launch — the
-# extension first, since the app's signature seals what it holds. Both
-# carry their entitlements: the extension runs sandboxed, and the app group
-# the two share is where the widget's project feed is written.
-codesign --force --sign - \
+# Sign so the binaries run under the hardened-runtime defaults of a modern
+# macOS without a "damaged app" dialog on first launch — the extension
+# first, since the app's signature seals what it holds. Both carry their
+# entitlements: the extension runs sandboxed, and the app group the two
+# share is where the widget's project feed is written.
+#
+# The identity decides whether the app's privacy grants outlive the build.
+# TCC keys a grant to the designated requirement, which ad-hoc is the code
+# hash itself — a new one every `swift build`, so the app that asked to
+# reach the widget container's project feed is never the app that was
+# allowed, and the dialog returns on every relaunch. Signed with the stable
+# "Reviewer Dev" certificate the requirement names the identifier and the
+# leaf instead, and the grant holds. See scripts/create-signing-identity.sh.
+dev_identity="Reviewer Dev"
+if [[ -n "${SIGN_IDENTITY:-}" ]]; then
+  sign_identity="$SIGN_IDENTITY"
+elif security find-identity -v -p codesigning 2>/dev/null | grep -q "\"${dev_identity}\""; then
+  sign_identity="$dev_identity"
+else
+  sign_identity="-"
+fi
+
+codesign --force --sign "$sign_identity" \
   --entitlements "${package_dir}/Resources/Widget/ReviewerWidget.entitlements" \
   "$appex" >/dev/null 2>&1 || true
-codesign --force --sign - \
+codesign --force --sign "$sign_identity" \
   --entitlements "${package_dir}/Resources/Reviewer.entitlements" \
   "$app" >/dev/null 2>&1 || true
+
+if [[ "$sign_identity" == "-" ]]; then
+  echo "⚠ ad-hoc signed: privacy grants will not survive rebuilds." >&2
+  echo "  Run scripts/create-signing-identity.sh once to fix that." >&2
+fi
 
 # The bundle is torn down and rebuilt on every call, which leaves the system
 # holding a registration for a path that no longer exists: Launch Services

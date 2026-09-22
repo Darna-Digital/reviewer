@@ -82,9 +82,10 @@ struct ProjectsEntry: TimelineEntry {
         feed.map(list.projects(in:)) ?? []
     }
 
-    /// The small widget's one project: the open one, else the list's first.
+    /// The small widget's one project: the list's first, which for the
+    /// recents is the one worked on last.
     var hero: ProjectFeed.Project? {
-        feed?.currentProject ?? projects.first
+        projects.first
     }
 }
 

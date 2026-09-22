@@ -186,24 +186,27 @@ What it does today:
   Centre widget, so a project is one click from open without the app up.
   Two widgets in the gallery under Reviewer, *Recent projects* and
   *Favorite projects*, each in the three sizes: small is the open project
-  — or the last one — on its own; medium two tiles and large six, each a
+  — or the last one — on its own; medium four tiles and large ten, each a
   repository with its branch on its monogram (`RepoMonogram`, the avatar
-  the opener's rows wear), the open one ringed in the accent. Every tile
-  carries the opener's two openings along its foot — Open, and Open and
-  run, which starts the project's dev commands with it — and the name
-  itself opens the project too. Each is a `reviewer://open?path=…` link
-  (`ProjectLink`, `run=1` for the second): Launch Services brings the app
-  up or forward with it, and the app does what the opener's own buttons do
-  — held for the server while the app is still launching (`ProjectLinks`,
+  the opener's rows wear). Nothing marks the project this machine has
+  open: a widget is a list of projects to open, and every tile is one. A
+  click is
+  the opener's Open and run — the project opened with its dev commands
+  started and the Run surface up — since a project reached from the
+  desktop is one about to be worked on. Each tile is a
+  `reviewer://open?path=…&run=1` link (`ProjectLink`): Launch Services
+  brings the app up or forward with it, and the app does what the opener's
+  own row does — held for the server while the app is still launching
+  (`ProjectLinks`,
   `AppModel.open(link:)`). A window holds one project, so a link naming
   another one while this window has its own opens a window beside it
   rather than taking this one away — several projects at once is what the
-  widget is for — and a window opened for Open and run starts the dev
-  commands as it comes up (`REVIEWER_RUN`, see `ServerLauncher`). An empty
-  window takes the project itself, which is the window a click launched. Those links are the whole of a widget's reach:
-  it draws into an archive the system renders, so there is no menu to
-  raise on a right click and no hover to answer, and an action it offers
-  has to stand as something to click.
+  widget is for — and that window starts the dev commands as it comes up
+  (`REVIEWER_RUN`, see `ServerLauncher`). An empty window takes the
+  project itself, which is the window a click launched; the project
+  already open stays where it is and only runs. That link is the whole of
+  a widget's reach: it draws into an archive the system renders, so there
+  is no menu to raise on a right click and no hover to answer.
   The widget runs sandboxed in a process of its own, so what it lists is a
   feed the app writes (`ProjectWidgetFeed` → `ProjectFeed` in
   `ReviewerShared`) whenever the catalog or the open project changes,
@@ -338,6 +341,32 @@ change it). If nothing answers it spawns one from the repository root with
 A server already running — `pnpm dev`, or another window's — is reused as is.
 
 Requires Xcode 16+ (Swift 6 language mode) and macOS 15.
+
+### Signing
+
+`scripts/bundle.sh` signs the app and the widget extension with the
+self-signed **Reviewer Dev** certificate when the login keychain holds one,
+and ad-hoc (`--sign -`) when it does not; `SIGN_IDENTITY` overrides both.
+Which one it used decides whether the app's privacy grants outlive the
+build. The app writes the widget's project feed into the extension's own
+sandbox container (`ProjectFeed.writeURLs`), which macOS counts as another
+app's data, so the first launch asks — "Reviewer would like to access data
+from other apps" — and TCC files the answer against the app's designated
+requirement. Ad-hoc that requirement *is* the code hash, so every
+`swift build` produces what the system reads as a different app and the
+dialog returns on every relaunch under `watch.sh`. Signed with the
+certificate it names the identifier and the leaf instead, and the grant
+holds.
+
+```bash
+scripts/create-signing-identity.sh   # once: make the certificate
+scripts/fix-permissions.sh           # re-sign, clear stale grants, relaunch
+```
+
+The first is enough on a fresh machine. The second is for the state this
+repository is already in — grants recorded against hashes that no longer
+exist — and it also resets the ones the ad-hoc builds left behind, so the
+next answer to the dialog is the last one.
 
 ## Layout
 
