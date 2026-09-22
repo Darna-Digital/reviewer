@@ -65,6 +65,15 @@ enum SidebarLayout: Equatable {
     case nothing
 }
 
+/// What the system lets the sidebar's column be. Shared with the tab row,
+/// which gives the column's widest back to the bar before the column comes
+/// out to take it (see `SessionTabRow`).
+enum SidebarWidths {
+    static let min: CGFloat = 240
+    static let ideal: CGFloat = 320
+    static let max: CGFloat = 560
+}
+
 /// The one motion the sidebar's layouts move with, as a surface goes from
 /// the project's tree to the diff's changes and back: a short ease, the
 /// system sidebar's own tempo, and none at all when the user asked for

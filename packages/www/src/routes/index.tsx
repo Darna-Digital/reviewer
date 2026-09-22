@@ -16,7 +16,7 @@ import {
   Sparkles,
   Terminal,
 } from "#/components/icons";
-import { Logo } from "#/components/logo";
+import { AppIcon } from "#/components/logo";
 import { SiteFooter } from "#/components/site-footer";
 import { SiteHeader } from "#/components/site-header";
 import { SpaSnapshot } from "#/components/spa-snapshot";
@@ -52,7 +52,7 @@ function SectionSnapshot({ label, name }: { label: string; name: string }) {
 function Hero() {
   return (
     <section className="flex flex-col items-center gap-6 pt-28 pb-16 text-center sm:pt-36">
-      <Logo className="size-[72px] w-auto" />
+      <AppIcon className="size-[84px] rounded-[22.37%] shadow-[0_14px_30px_rgba(0,0,0,0.14),0_3px_8px_rgba(0,0,0,0.10)] dark:shadow-[0_14px_30px_rgba(0,0,0,0.5)]" />
 
       <h1 className="bg-gradient-to-b from-neutral-900 to-neutral-500 bg-clip-text text-[64px] leading-none font-semibold tracking-[-0.03em] text-transparent sm:text-[88px] dark:from-white dark:to-neutral-400">
         Reviewer

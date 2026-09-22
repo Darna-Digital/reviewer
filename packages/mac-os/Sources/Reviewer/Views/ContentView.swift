@@ -36,7 +36,8 @@ struct ContentView: View {
         GeometryReader { window in
             NavigationSplitView(columnVisibility: columnVisibility) {
                 SidebarColumn()
-                    .navigationSplitViewColumnWidth(min: 240, ideal: 320, max: 560)
+                    .navigationSplitViewColumnWidth(
+                        min: SidebarWidths.min, ideal: SidebarWidths.ideal, max: SidebarWidths.max)
                     // Declared on the column rather than the window, so the
                     // system lays it out in the sidebar's own run of the bar,
                     // beside the toggle it puts there.

@@ -16,7 +16,7 @@ export function SiteHeader() {
       >
         <div className="mx-auto flex h-full max-w-[1008px] items-center gap-4 px-6">
           <a className="flex items-center gap-2" href="/">
-            <Logo className="size-5 w-auto" />
+            <Logo className="h-[18px] w-auto" />
             <span className="text-[15px] font-semibold tracking-[-0.01em]">
               Reviewer
             </span>

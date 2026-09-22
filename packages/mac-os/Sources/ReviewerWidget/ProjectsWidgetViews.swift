@@ -1,9 +1,10 @@
-// The Projects widget drawn: the hero for the small family, the tile grid
-// for the others, and the two empty states. Every tile is a `Link` to its
-// project; the small family, which the system gives one click, carries
-// its link on the widget itself. The tiles stand on the system's fill
-// colours and the monograms are the only colour of their own, marked
-// accentable so a tinted desktop tints them with everything else.
+// The Projects widget drawn: the hero for the small family, the single
+// column of tiles for the others, and the two empty states. Every tile is
+// a `Link` to its project; the small family, which the system gives one
+// click, carries its link on the widget itself. The tiles stand on the
+// system's fill colours and the monograms are the only colour of their
+// own, marked accentable so a tinted desktop tints them with everything
+// else.
 import ReviewerShared
 import SwiftUI
 import WidgetKit
@@ -18,7 +19,7 @@ struct ProjectsWidgetView: View {
         } else if family == .systemSmall {
             HeroView(project: entry.hero)
         } else {
-            GridView(entry: entry, slots: family == .systemLarge ? 10 : 4)
+            ColumnView(entry: entry, slots: family == .systemLarge ? 4 : 2)
         }
     }
 }
@@ -55,9 +56,11 @@ private struct HeroView: View {
     }
 }
 
-/// The medium and large families: the list's name over two columns of
-/// tiles, as many as the family has room for.
-private struct GridView: View {
+/// The medium and large families: the list's name over one column of
+/// tiles, as many as the family has room for. A tile is the same size
+/// whichever family it stands in — the large one lists more of them
+/// rather than drawing them bigger.
+private struct ColumnView: View {
     let entry: ProjectsEntry
     let slots: Int
 
@@ -71,26 +74,11 @@ private struct GridView: View {
                 Text(entry.list.title)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
-                Grid(horizontalSpacing: 8, verticalSpacing: 8) {
-                    ForEach(Array(stride(from: 0, to: slots, by: 2)), id: \.self) { first in
-                        GridRow {
-                            tile(at: first)
-                            tile(at: first + 1)
-                        }
-                    }
+                VStack(spacing: 8) {
+                    ForEach(projects) { ProjectTile(project: $0) }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        }
-    }
-
-    @ViewBuilder
-    private func tile(at index: Int) -> some View {
-        if index < projects.count {
-            ProjectTile(project: projects[index])
-        } else {
-            Color.clear
-                .gridCellUnsizedAxes(.vertical)
         }
     }
 }

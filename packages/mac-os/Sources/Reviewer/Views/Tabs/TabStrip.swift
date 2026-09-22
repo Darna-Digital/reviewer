@@ -18,6 +18,16 @@
 // its way under the pointer — which means one view that knows where every
 // tab stands and can move them all against each other (see
 // `SessionTabRow`), not a run of items the toolbar places one by one.
+//
+// That row scrolls sideways once the sessions outrun the bar, as the web
+// strip does, rather than leaning on what the bar would otherwise do with
+// an item too wide for it: NSToolbar does not cut an item short, it takes
+// it off the bar whole and puts it in the ›› menu — and every session tab
+// being in the one item, they all went at once, which is the state a
+// window with a few sessions open would get into. So the row measures the
+// run the bar leaves it and keeps inside it (see `BarRunWidth`), and the
+// tabs past the strip's end are scrolled to.
+import AppKit
 import SwiftUI
 
 struct TabStripItems: ToolbarContent {
@@ -100,6 +110,10 @@ private struct SessionTabRow: View {
     /// as its title up to a limit, so there is no one width to work from.
     @State private var widths: [String: CGFloat] = [:]
     @State private var drag: TabDrag?
+    /// The run of the bar the row has to stay inside, the mark that mints
+    /// a session included (see `BarRunWidth`) — nothing until the bar has
+    /// laid the row out once, which the strip reads as no limit yet.
+    @State private var run: CGFloat = 0
 
     /// The air between chips, which counts as part of the distance a tab
     /// has to travel to pass its neighbour.
@@ -114,24 +128,13 @@ private struct SessionTabRow: View {
     /// standing aside has to come to rest exactly as its slot arrives
     /// under it, and two curves would show the difference.
     private static let slide: Animation = .snappy(duration: 0.22, extraBounce: 0.1)
+    /// The room the strip's clip leaves above and below the tabs, for the
+    /// tab in hand to be lifted into.
+    private static let lift: CGFloat = 12
 
     var body: some View {
         HStack(spacing: Self.gap) {
-            ForEach(Array(order.enumerated()), id: \.element.id) { slot, tab in
-                SessionTab(tab: tab, model: model, lifted: drag?.id == tab.id) { press(tab) }
-                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { widths[tab.id] = $0 }
-                    // Standing aside is sprung; being carried is not — the
-                    // tab in hand is under the pointer, not chasing it.
-                    // The spring is inside the second offset, so it is the
-                    // only one of the two it is ever applied to.
-                    .offset(x: standsAside(at: slot))
-                    .animation(Self.slide, value: standsAside(at: slot))
-                    .offset(x: carried(tab, at: slot))
-                    // The tab in hand passes over the others rather than
-                    // under them.
-                    .zIndex(drag?.id == tab.id ? 1 : 0)
-                    .gesture(reorder(tab, at: slot))
-            }
+            strip
             Button { model.newSession() } label: {
                 Label("New session", systemImage: "plus")
                     .barGlyph()
@@ -139,8 +142,99 @@ private struct SessionTabRow: View {
             .buttonStyle(BarChipStyle())
             .help("New session (⌘T)")
         }
+        .background { BarRunWidth { run = $0 } }
+        .onChange(of: model.sidebarShown) { _, shown in if shown { giveWay() } }
         .onChange(of: model.windowTabs.tabs) { follow() }
         .onAppear { follow() }
+    }
+
+    /// The sidebar's column coming out. The row hands back the widest the
+    /// column can be, here, in the same breath as the switch is thrown —
+    /// ahead of the column itself, which slides out over the next fifth of
+    /// a second and takes the bar's room with it. A row that waited to be
+    /// pushed would be measured a frame too wide, and a frame is all it
+    /// takes: the bar would have taken it off into the ›› menu, and from
+    /// there it cannot see where the row on the bar would stand, so it
+    /// could never work out how much shorter to be (see `BarRunWidth`).
+    /// What it hands back it takes again a moment later, the column having
+    /// arrived and the run being measured afresh.
+    private func giveWay() {
+        run = max(0, run - SidebarWidths.max)
+    }
+
+    /// The tabs, as far along the bar as the bar allows. The mark that
+    /// mints a session stays out of the scroll, on the row's end, so it is
+    /// there to press however many sessions are open.
+    private var strip: some View {
+        ScrollViewReader { scroll in
+            ScrollView(.horizontal) {
+                HStack(spacing: Self.gap) {
+                    ForEach(Array(order.enumerated()), id: \.element.id) { slot, tab in
+                        tabView(tab, at: slot)
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+            // The strip's own clip is put away for a mask cut to the same
+            // width but taller: what scrolls past the ends is still taken
+            // off, and the tab in hand — a shade bigger, with a shadow
+            // under it — is not cut off at the tabs' own height.
+            .scrollClipDisabled()
+            .frame(width: width, height: BarChipMetrics.height)
+            .mask { Rectangle().padding(.vertical, -Self.lift) }
+            .onChange(of: model.windowTabs.activeId, initial: true) { reveal(with: scroll) }
+            .onChange(of: order) { reveal(with: scroll) }
+        }
+    }
+
+    private func tabView(_ tab: WindowTab, at slot: Int) -> some View {
+        SessionTab(tab: tab, model: model, lifted: drag?.id == tab.id) { press(tab) }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: {
+                widths[tab.id] = $0
+            }
+            // Standing aside is sprung; being carried is not — the tab in
+            // hand is under the pointer, not chasing it. The spring is
+            // inside the second offset, so it is the only one of the two
+            // it is ever applied to.
+            .offset(x: standsAside(at: slot))
+            .animation(Self.slide, value: standsAside(at: slot))
+            .offset(x: carried(tab, at: slot))
+            // The tab in hand passes over the others rather than under
+            // them.
+            .zIndex(drag?.id == tab.id ? 1 : 0)
+            .gesture(reorder(tab, at: slot))
+    }
+
+    /// What the tabs come to, laid end to end.
+    private var content: CGFloat {
+        guard let last = order.indices.last else { return 0 }
+        return order.reduce(0) { $0 + width(of: $1) } + CGFloat(last) * Self.gap
+    }
+
+    /// How wide the strip stands: the tabs' own width while they fit, and
+    /// what the bar leaves once they do not — the run less the mark on the
+    /// row's end and the air before it. Nothing at all until the bar has
+    /// said, which is the one frame between the row appearing and its
+    /// first layout: a window opening on a dozen sessions would lay the
+    /// row out at its full length for that frame, and the bar, seeing an
+    /// item longer than itself, would have taken it off and put it in the
+    /// ›› menu before ever giving it a width to measure against — with no
+    /// way back, since a row in the menu cannot see where the row on the
+    /// bar would stand.
+    private var width: CGFloat {
+        guard run > 0 else { return 0 }
+        return min(content, max(0, run - BarChipMetrics.height - Self.gap))
+    }
+
+    /// Keeps the tab in front in view: one reached by ⌘1–9 or ⌘⇧[, and the
+    /// freshly minted one at the row's end, are scrolled to rather than
+    /// left past the strip's edge. Never mid-drag — the row is the
+    /// pointer's then, and the order changing under it is the drag's own
+    /// doing.
+    private func reveal(with scroll: ScrollViewProxy) {
+        let id = model.windowTabs.activeId
+        guard drag == nil, order.contains(where: { $0.id == id }) else { return }
+        withAnimation(Self.slide) { scroll.scrollTo(id) }
     }
 
     /// The island's order, taken as the row's own — except mid-drag, where
@@ -263,6 +357,127 @@ private struct TabDrag {
     let id: String
     let from: Int
     var translation: CGFloat = 0
+}
+
+/// How much of the bar is the row's: from where the row begins to the
+/// window's trailing edge, less the air the bar keeps there.
+///
+/// Measured because the bar will not clip. An item wider than the run left
+/// to it is not cut short — it is taken off the bar whole and put in the
+/// ›› menu, and every session tab being in the one item, they go together
+/// — so the row has to know its run before it lays out and keep inside it,
+/// and the bar never has cause to take it anywhere.
+///
+/// Read off the window rather than the toolbar, which has no public run of
+/// items to ask what it gave each of them. What the row wants is where it
+/// begins, once the sidebar's column and the pinned pair have had their
+/// share, and a view standing in the row can say that in the window's own
+/// coordinates; the row is last on the bar, so what follows it to the
+/// window's edge is the row's.
+private struct BarRunWidth: NSViewRepresentable {
+    let measured: (CGFloat) -> Void
+
+    func makeNSView(context: Context) -> BarRunProbe { BarRunProbe(measured: measured) }
+
+    func updateNSView(_ probe: BarRunProbe, context: Context) { probe.measured = measured }
+}
+
+private final class BarRunProbe: NSView {
+    var measured: (CGFloat) -> Void
+    /// The air the bar keeps at its trailing edge, given away rather than
+    /// measured: it is the bar's own, and the ›› button stands in it while
+    /// the bar has anything to put there.
+    private static let trailing: CGFloat = 56
+    /// How long a longer run has to hold before the row is given it (see
+    /// `measure`).
+    private static let settling: TimeInterval = 0.4
+    /// What the row gives up for as long as the window's edge is in hand.
+    /// The row follows a resize a frame behind — the bar is laid out on
+    /// the new width before the row hears the window's; this is that frame
+    /// paid for in advance, and taken back once the edge is let go.
+    private static let resizing: CGFloat = 96
+    private var given: CGFloat?
+    private var growing: CGFloat?
+    private var growth: Timer?
+
+    init(measured: @escaping (CGFloat) -> Void) {
+        self.measured = measured
+        super.init(frame: .zero)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("BarRunProbe is not loaded from a nib") }
+
+    deinit { NotificationCenter.default.removeObserver(self) }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        let centre = NotificationCenter.default
+        centre.removeObserver(self)
+        guard let window else { return }
+        // The row moves without moving: as the sidebar's column comes and
+        // goes, and as the pinned pair arrive with the project, the bar
+        // slides the row along — which puts it somewhere else in the
+        // window without changing its frame in the view that holds it, so
+        // nothing on the view itself would say so. The window's own update
+        // is watched instead: it comes round after every pass of the event
+        // loop, and so after every move the bar makes, and what it costs
+        // is a coordinate and a comparison.
+        for name in [NSWindow.didUpdateNotification, NSWindow.didResizeNotification] {
+            centre.addObserver(self, selector: #selector(measure), name: name, object: window)
+        }
+        measure()
+    }
+
+    /// A shorter run is the row's at once; a longer one only once it has
+    /// held for a moment.
+    ///
+    /// Because the row gets one chance. A row too long for the bar is not
+    /// cut short, it is taken off and put in the ›› menu, and from there it
+    /// cannot see where the row on the bar would stand, so it cannot work
+    /// out how much shorter to be and can never come back — a window
+    /// opened on a dozen sessions loses the lot until it is resized. The
+    /// one moment the row is measured wrong is while the bar is still
+    /// filling: the pinned pair arrive with the project, after the row
+    /// does, and until they land the row stands where they will be and
+    /// reads the bar as longer than it will get. Every wrong answer that
+    /// costs anything is a long one, so a long one waits and a short one
+    /// does not.
+    @objc private func measure() {
+        // Only from the bar itself: taken off it into the ›› menu, the row
+        // is hosted in a window of that menu's own, where none of this
+        // would mean anything.
+        guard let window, window.toolbar != nil else { return }
+        let air = Self.trailing + (window.inLiveResize ? Self.resizing : 0)
+        let run = max(0, window.frame.width - convert(bounds, to: nil).minX - air)
+        // A run within a point of the one the row has is its own layout
+        // coming back round, not the bar moving.
+        if let given, abs(run - given) < 1 { return stopGrowing() }
+        if let given, run < given {
+            stopGrowing()
+            self.given = run
+            measured(run)
+            return
+        }
+        guard growing.map({ abs(run - $0) >= 1 }) ?? true else { return }
+        growing = run
+        growth?.invalidate()
+        growth = Timer.scheduledTimer(withTimeInterval: Self.settling, repeats: false) {
+            [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let grown = self.growing else { return }
+                self.stopGrowing()
+                self.given = grown
+                self.measured(grown)
+            }
+        }
+    }
+
+    private func stopGrowing() {
+        growth?.invalidate()
+        growth = nil
+        growing = nil
+    }
 }
 
 /// A session's tab: its title, and a slot at its tail the ✕ stands in —
