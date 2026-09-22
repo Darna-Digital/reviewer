@@ -204,33 +204,101 @@ struct PaneToolbar<Content: View>: View {
 /// keeps whatever it declines. The same picker has the field focused as it
 /// comes up (`focusesOnAppear`), a turn of the run loop after the view is
 /// in a window.
-struct PaneSearchField: NSViewRepresentable {
+///
+/// The ring the field wears while it holds the keys is AppKit's, drawn in
+/// `keyboardFocusIndicatorColor` — the system's accent, which takes no
+/// tint and left a blue ring round the one box on a pane a theme had
+/// painted throughout. So where a theme paints the scheme the system's
+/// ring is turned off and one is laid round the field's capsule in the
+/// theme's accent instead, the way the chat's own box is ringed (see
+/// `ChatComposer`); on the app's own palette the field keeps the system's
+/// ring, untouched. The ring is laid over the field rather than drawn by
+/// it: an `NSSearchField` draws itself into its layer and never through
+/// `draw(_:)`, so an override there paints nothing.
+struct PaneSearchField: View {
     let prompt: String
     @Binding var text: String
     var submit: (() -> Void)? = nil
     var focusesOnAppear = false
     var command: ((Selector) -> Bool)? = nil
 
-    func makeNSView(context: Context) -> NSSearchField {
-        let field = NSSearchField()
+    @Environment(\.colorScheme) private var colorScheme
+    @State private var editing = false
+
+    private var themed: Bool {
+        ChromePalette.shared.isThemed(colorScheme == .dark ? .dark : .light)
+    }
+
+    var body: some View {
+        SearchFieldBox(prompt: prompt, text: $text, submit: submit,
+                       focusesOnAppear: focusesOnAppear, command: command,
+                       ringsItself: themed, editing: $editing)
+            .overlay {
+                if themed && editing {
+                    Capsule().strokeBorder(Color(nsColor: IslandPalette.accent), lineWidth: 2)
+                }
+            }
+    }
+
+    /// Hand the keyboard back to the window while a search field holds it.
+    /// A surface swapped out from under a focused field keeps the keys for
+    /// as long as the crossfade takes — the field on its way out taking the
+    /// strokes, and the focus ring, that belong to the one coming in — so
+    /// the surface that swaps it says so (see `SidebarView`) rather than
+    /// waiting for the field to be taken out of the window.
+    @MainActor
+    static func releaseKeyboard(from window: NSWindow?) {
+        guard let window, let responder = window.firstResponder else { return }
+        let editing = responder as? NSSearchField
+            ?? ((responder as? NSTextView)?.delegate as? NSSearchField)
+        guard editing != nil else { return }
+        window.makeFirstResponder(nil)
+    }
+
+    @MainActor
+    static func releaseKeyboard() {
+        releaseKeyboard(from: NSApp.keyWindow ?? NSApp.mainWindow)
+    }
+}
+
+private struct SearchFieldBox: NSViewRepresentable {
+    let prompt: String
+    @Binding var text: String
+    var submit: (() -> Void)? = nil
+    var focusesOnAppear = false
+    var command: ((Selector) -> Bool)? = nil
+    var ringsItself = false
+    @Binding var editing: Bool
+
+    func makeNSView(context: Context) -> ReleasingSearchField {
+        let field = ReleasingSearchField()
         field.placeholderString = prompt
         field.controlSize = .regular
         field.sendsSearchStringImmediately = true
         field.delegate = context.coordinator
+        field.onFocus = { [holder = $editing] holds in holder.wrappedValue = holds }
         if focusesOnAppear {
             Task { @MainActor in field.window?.makeFirstResponder(field) }
         }
         return field
     }
 
-    func updateNSView(_ field: NSSearchField, context: Context) {
+    static func dismantleNSView(_ field: ReleasingSearchField, coordinator: Coordinator) {
+        MainActor.assumeIsolated { PaneSearchField.releaseKeyboard(from: field.window) }
+    }
+
+    func updateNSView(_ field: ReleasingSearchField, context: Context) {
         context.coordinator.text = $text
         context.coordinator.submit = submit
         context.coordinator.command = command
+        field.onFocus = { [holder = $editing] holds in holder.wrappedValue = holds }
+        field.focusRingType = ringsItself ? .none : .default
         if field.stringValue != text { field.stringValue = text }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(text: $text, submit: submit, command: command) }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, submit: submit, command: command)
+    }
 
     @MainActor
     final class Coordinator: NSObject, NSSearchFieldDelegate {
@@ -257,6 +325,38 @@ struct PaneSearchField: NSViewRepresentable {
         func controlTextDidEndEditing(_ notification: Notification) {
             submit?()
         }
+    }
+}
+
+/// A search field that lets the keyboard go as it leaves the window, so a
+/// field removed while focused — the sidebar's surface changing under it —
+/// never leaves the window pointing at a view that is gone; and that says
+/// when it has the keys and when they go, for the ring the field wears
+/// while it holds them (see `PaneSearchField`).
+///
+/// Taking the keys is the field becoming first responder, and it is asked
+/// here rather than of the delegate: `controlTextDidBeginEditing` is not
+/// the keys arriving but the first change made with them, so a ring on it
+/// stayed off until the first letter was typed. Letting them go is the
+/// field editor's editing ending, which is what happens when the keys move
+/// on, whether or not a letter was ever typed.
+final class ReleasingSearchField: NSSearchField {
+    var onFocus: ((Bool) -> Void)?
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow == nil { PaneSearchField.releaseKeyboard(from: window) }
+        super.viewWillMove(toWindow: newWindow)
+    }
+
+    override func becomeFirstResponder() -> Bool {
+        let taken = super.becomeFirstResponder()
+        if taken { onFocus?(true) }
+        return taken
+    }
+
+    override func textDidEndEditing(_ notification: Notification) {
+        super.textDidEndEditing(notification)
+        onFocus?(false)
     }
 }
 
@@ -398,3 +498,156 @@ struct PanePlaceholder<Actions: View>: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
+
+/// The theme over a system list's rows — the rules between them, and the
+/// wash on the one that is picked. Worn by a `Table` and by a selecting
+/// `List` alike: both are an `NSTableView` underneath, and both draw those
+/// two things in the system's colours rather than the theme's.
+///
+/// The rules go in the island's own hairline, so the pane is ruled alike
+/// throughout (see `ThemedDivider`). A SwiftUI table draws no AppKit grid
+/// — its grid mask is empty — and ignores a row separator tint: the line
+/// is the row view's own, drawn in the system's separator, a good deal
+/// darker than the hairline a theme rules the rest of the pane in. So the
+/// colour is set on the row views themselves. That is not a documented
+/// property of them, so it is asked for by selector and left alone where
+/// it is not answered — a table on an OS that has moved on keeps the
+/// system's line rather than losing one.
+///
+/// The pick goes in the theme's own colour (see `IslandPalette.pick`).
+/// The system draws that row in `selectedContentBackgroundColor` — the
+/// accent blue — and no tint reaches it: `.tint` colours a table's
+/// controls and never its selection. So under a theme the row view is
+/// told to draw no selection of its own and the wash is laid on its layer
+/// instead, under the row's content; it is a wash rather than a solid
+/// accent, quiet enough that the theme's type reads on it without having
+/// to be turned white (see `SelectionInk`). On the app's own palette
+/// nothing is taken from the row: the selection is the system's blue, as
+/// it has always been.
+///
+/// Row views are made and recycled as the table scrolls and reloads, so
+/// both are laid on again after every pass of the table's layout, after
+/// every change SwiftUI makes to it, on every scroll, and on every pass
+/// of the window's own update.
+struct ThemedRows: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView { ThemedRowProbe() }
+
+    func updateNSView(_ view: NSView, context: Context) {
+        guard let probe = view as? ThemedRowProbe else { return }
+        Task { @MainActor in probe.paint() }
+    }
+}
+
+extension View {
+    func themedRows() -> some View { background { ThemedRows() } }
+}
+
+private final class ThemedRowProbe: NSView {
+    private static let setSeparatorColor = NSSelectorFromString("setSeparatorColor:")
+    /// How far up the probe looks for the table it stands behind. The
+    /// table's own container is a step or two above; beyond that lies the
+    /// rest of the pane, and another surface's table with it.
+    private static let climbLimit = 6
+    private weak var table: NSTableView?
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        // A pane put away and opened again moves its probe out of the
+        // window and back into one, so what was watched for the last
+        // window is let go and the table taken again for this one.
+        NotificationCenter.default.removeObserver(self)
+        table = nil
+        guard let window else { return }
+        NotificationCenter.default.addObserver(self, selector: #selector(paint),
+                                               name: ChromePalette.didChange, object: nil)
+        // The list's own pick is SwiftUI's, not the table's: the table
+        // reports no selected row and posts nothing when one is picked, so
+        // there is no change to listen for. The window's update pass is
+        // the next best thing — it comes round after every event that
+        // could have moved the pick or made a row, and costs a walk of the
+        // rows on screen, which write nothing unless what they wear has
+        // changed.
+        NotificationCenter.default.addObserver(self, selector: #selector(paint),
+                                               name: NSWindow.didUpdateNotification, object: window)
+        paint()
+    }
+
+    override func layout() {
+        super.layout()
+        paint()
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    @objc func paint() {
+        guard let table = table ?? adopt() else { return }
+        let themed = ChromePalette.shared.isThemed(effectiveAppearance.isDark ? .dark : .light)
+        let hairline = IslandPalette.hairline
+        var wash = NSColor.clear.cgColor
+        effectiveAppearance.performAsCurrentDrawingAppearance { wash = IslandPalette.pick.cgColor }
+        let clear = NSColor.clear.cgColor
+        table.enumerateAvailableRowViews { row, _ in
+            if row.responds(to: Self.setSeparatorColor) {
+                _ = row.perform(Self.setSeparatorColor, with: hairline)
+            }
+            let style: NSTableView.SelectionHighlightStyle = themed ? .none : .regular
+            if row.selectionHighlightStyle != style { row.selectionHighlightStyle = style }
+            let fill = themed && row.isSelected ? wash : clear
+            guard row.wantsLayer || fill !== clear else { return }
+            row.wantsLayer = true
+            if row.layer?.backgroundColor != fill { row.layer?.backgroundColor = fill }
+        }
+    }
+
+    /// The table this probe stands behind, taken once and watched for
+    /// scrolling from then on.
+    private func adopt() -> NSTableView? {
+        guard let found = enclosingTableView() else { return nil }
+        table = found
+        if let clip = found.enclosingScrollView?.contentView {
+            clip.postsBoundsChangedNotifications = true
+            NotificationCenter.default.addObserver(self, selector: #selector(paint),
+                                                   name: NSView.boundsDidChangeNotification, object: clip)
+        }
+        return found
+    }
+
+    /// SwiftUI hangs a background's view well above the list it is the
+    /// background of, and a walk up from here reaches the window's split
+    /// view soon after — the sidebar's own outline in it, which is a table
+    /// too and would be adopted in the pane list's place. So the walk stops
+    /// at the first hosting view it passes: the pane's list is inside that
+    /// one with the probe, and every other table in the window is outside
+    /// it. Before the pane's list is built the walk finds nothing and
+    /// adopts nothing; it is asked again at the next pass of layout, by
+    /// which time the list is there.
+    private func enclosingTableView() -> NSTableView? {
+        var ancestor = superview
+        var climbs = 0
+        while let view = ancestor, climbs < Self.climbLimit {
+            if let table = Self.tableView(in: view) { return table }
+            if Self.isHostingView(view) { return nil }
+            ancestor = view.superview
+            climbs += 1
+        }
+        return nil
+    }
+
+    /// `NSHostingView` is generic, so its class is named rather than tested
+    /// for — an ancestor that stops being one keeps the walk going as far
+    /// as it ever did rather than stopping it short.
+    private static func isHostingView(_ view: NSView) -> Bool {
+        String(describing: type(of: view)).hasPrefix("NSHostingView")
+    }
+
+    private static func tableView(in view: NSView) -> NSTableView? {
+        for child in view.subviews {
+            if let table = child as? NSTableView { return table }
+            if let found = tableView(in: child) { return found }
+        }
+        return nil
+    }
+}
+
+
+

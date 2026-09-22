@@ -200,9 +200,7 @@ private struct SessionsHeader: View {
             PaneSearchField(prompt: "Search sessions", text: $query)
             SessionFilterMenu(filters: filters)
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 8)
-        .padding(.bottom, 6)
+        .sidebarSearchBand()
         // The field is the source of what is searched, but not the only
         // copy: the page holds the query, so a header made afresh — the
         // sidebar put away and brought back — starts from what it has.

@@ -70,9 +70,11 @@ final class AppModel {
     /// toggle and the View menu both move it.
     var sidebarShown = true
     /// The pane stays put away until asked for: a project opens on its
-    /// page alone, and the pane is a keystroke or a rail click away.
+    /// page alone, and the pane is a keystroke or a rail click away. It
+    /// comes up on Branches, the leftmost surface, until a surface is
+    /// picked; from then on it returns to the one it was left on.
     var bottomExpanded = false
-    var bottomTab: BottomPaneTab = .terminal
+    var bottomTab: BottomPaneTab = .branches
     var bottomHeight: CGFloat = 280
     /// The SPA's routed page, with the window tabs along its top.
     let page: IslandHost

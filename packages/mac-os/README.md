@@ -228,14 +228,28 @@ What it does today:
     refuses to register an app extension that is not sandboxed, so the
     sandbox is not optional. But the group container a sandboxed extension
     would share with the app is only granted to a signature carrying a team
-    identifier, and a local build is signed ad-hoc: the sandbox refuses it
-    the file with `deny file-read-data`. So the app writes the feed twice
-    (`ProjectFeed.writeURLs`) — the group container, which a properly
-    signed build reads, and a copy straight into the extension's own
-    sandbox container, the one place it may always read; the widget tries
-    them in that order. The container is the system's to make on the
-    extension's first run, so a widget placed before the app has ever
-    written stands on its empty state until the next write.
+    identifier, and a local build has none: the sandbox refuses it the file
+    with `deny file-read-data`. So the feed goes to
+    `~/.reviewer/projects.json` beside the server's own state, which the
+    extension is let into by a read-only
+    `temporary-exception.files.home-relative-path` entitlement, and to the
+    group container as well once there is a team identifier to make one
+    worth having (`ProjectFeed.feedURLs`, gated on
+    `ProjectFeed.teamIdentifier`); the widget tries them in that order.
+    Note that inside the sandbox `NSHomeDirectory()` is the extension's
+    container, so both sides take the home folder from the password
+    database (`ProjectFeed.homeDirectory`).
+
+    Both of the places the feed used to go are app data as macOS counts
+    it, and `~/Library/Containers` and `~/Library/Group Containers` are
+    data vaults: a look inside either goes through the sandbox daemon to
+    TCC, which raised "Reviewer would like to access data from other apps"
+    at the app on every launch — the extension's own container by hand,
+    the group container through
+    `containerURL(forSecurityApplicationGroupIdentifier:)` — and refused
+    the widget silently, since a widget may not prompt. Unsigned by a team
+    neither was any use to the widget in the first place, so nothing now
+    asks for either.
   - **Registration after every bundle** (`scripts/bundle.sh`) — the bundle
     is torn down and rebuilt on each call, which leaves Launch Services
     and the widget host holding a path that has gone; the host then says
@@ -347,26 +361,31 @@ Requires Xcode 16+ (Swift 6 language mode) and macOS 15.
 `scripts/bundle.sh` signs the app and the widget extension with the
 self-signed **Reviewer Dev** certificate when the login keychain holds one,
 and ad-hoc (`--sign -`) when it does not; `SIGN_IDENTITY` overrides both.
-Which one it used decides whether the app's privacy grants outlive the
-build. The app writes the widget's project feed into the extension's own
-sandbox container (`ProjectFeed.writeURLs`), which macOS counts as another
-app's data, so the first launch asks — "Reviewer would like to access data
-from other apps" — and TCC files the answer against the app's designated
-requirement. Ad-hoc that requirement *is* the code hash, so every
-`swift build` produces what the system reads as a different app and the
-dialog returns on every relaunch under `watch.sh`. Signed with the
-certificate it names the identifier and the leaf instead, and the grant
-holds.
+Which one it used decides whether the app's privacy grants — Automation,
+Accessibility, the folders it is let into — outlive the build. TCC files
+an answer against the app's designated requirement, and ad-hoc that
+requirement *is* the code hash: every `swift build` produces what the
+system reads as a different app, so every grant is thrown away and every
+dialog returns on the next relaunch under `watch.sh`. Signed with the
+certificate the requirement names the identifier and the leaf instead, and
+the grants hold.
 
 ```bash
 scripts/create-signing-identity.sh   # once: make the certificate
 scripts/fix-permissions.sh           # re-sign, clear stale grants, relaunch
 ```
 
-The first is enough on a fresh machine. The second is for the state this
-repository is already in — grants recorded against hashes that no longer
-exist — and it also resets the ones the ad-hoc builds left behind, so the
-next answer to the dialog is the last one.
+The first is enough on a fresh machine; the second is for a working copy
+whose grants were recorded against hashes that no longer exist.
+
+The widget's feed no longer goes through the extension's sandbox
+container, so the "access data from other apps" dialog that used to greet
+every launch is gone — see the Projects widget above for where the feed
+is written instead. A copy the old builds left behind can be thrown away:
+
+```bash
+rm -f ~/Library/Containers/com.byconvo.reviewer.macos.widget/Data/Library/Application\ Support/projects.json
+```
 
 ## Layout
 

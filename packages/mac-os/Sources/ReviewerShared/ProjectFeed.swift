@@ -1,12 +1,14 @@
 // What the app tells its widget: the repositories the machine holds, as
 // the opener lists them, with which one is open. The widget runs in a
 // process of its own, sandboxed, and can reach neither the server nor the
-// app's defaults, so the app writes this snapshot into the app group's
-// container — the one folder both are let into — whenever the catalog or
-// the open project changes, and asks WidgetKit to redraw. The widget only
-// ever reads; a machine the app has never run on has no feed, and the
-// widget says so.
+// app's defaults, so the app writes this snapshot where the extension is
+// let in — `~/.reviewer`, beside the server's own state, and the app
+// group's container too where the signature carries a team identifier —
+// whenever the catalog or the open project changes, and asks WidgetKit to
+// redraw. The widget only ever reads; a machine the app has never run on
+// has no feed, and the widget says so.
 import Foundation
+import Security
 
 public struct ProjectFeed: Codable, Equatable, Sendable {
     public struct Project: Codable, Hashable, Identifiable, Sendable {
@@ -27,9 +29,11 @@ public struct ProjectFeed: Codable, Equatable, Sendable {
         }
 
         /// The folder the repository sits in, the home folder folded to `~`.
+        /// Drawn in the widget, so the home folder is the user's rather
+        /// than `NSHomeDirectory()`, which there is the sandbox container.
         public var location: String {
             let folder = URL(fileURLWithPath: path).deletingLastPathComponent().path
-            let home = NSHomeDirectory()
+            let home = ProjectFeed.homeDirectory.path
             if folder == home { return "~" }
             guard folder.hasPrefix(home + "/") else { return folder }
             return "~" + folder.dropFirst(home.count)
@@ -69,49 +73,68 @@ public struct ProjectFeed: Codable, Equatable, Sendable {
     /// entitlements; the container under ~/Library/Group Containers.
     public static let groupIdentifier = "group.com.byconvo.reviewer"
 
-    /// The widget extension, whose own sandbox container is the other
-    /// place the feed is kept (see `writeURLs`).
-    public static let widgetIdentifier = "com.byconvo.reviewer.macos.widget"
-
     private static let fileName = "projects.json"
 
+    /// The team identifier in the signature this process runs under, and
+    /// nil where there is none — which is every local build, signed with
+    /// a self-signed certificate. Read once: a process cannot be re-signed
+    /// under its own feet.
+    private static let teamIdentifier: String? = {
+        var code: SecCode?
+        guard SecCodeCopySelf([], &code) == errSecSuccess, let code else { return nil }
+        var staticCode: SecStaticCode?
+        guard SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode else { return nil }
+        var information: CFDictionary?
+        guard SecCodeCopySigningInformation(staticCode, SecCSFlags(rawValue: kSecCSSigningInformation), &information)
+            == errSecSuccess,
+            let signing = information as? [String: Any]
+        else { return nil }
+        return signing[kSecCodeInfoTeamIdentifier as String] as? String
+    }()
+
+    /// Asked for only where the group container is any use, because asking
+    /// is itself the thing that costs: Group Containers is a data vault,
+    /// so the first look inside one goes through the sandbox daemon to
+    /// TCC, which raises "would like to access data from other apps" at
+    /// the app and refuses the widget outright — a widget may not prompt.
+    /// Without a team identifier the container is granted to neither side
+    /// anyway, so nothing is lost by leaving it alone.
     private static var groupURL: URL? {
-        FileManager.default
+        guard teamIdentifier != nil else { return nil }
+        return FileManager.default
             .containerURL(forSecurityApplicationGroupIdentifier: groupIdentifier)?
             .appending(path: fileName)
     }
 
-    /// Inside the widget's sandbox this is its own container's Application
-    /// Support; the extension may always read it, whatever the signature.
-    private static var sandboxURL: URL? {
-        FileManager.default
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)
-            .first?
-            .appending(path: fileName)
+    /// The home folder as the password database holds it. Inside the
+    /// widget's sandbox `NSHomeDirectory()` answers with the container
+    /// instead, and the folder both sides have to agree on is the user's
+    /// own.
+    private static var homeDirectory: URL {
+        guard let entry = getpwuid(getuid()) else { return URL(fileURLWithPath: NSHomeDirectory()) }
+        return URL(fileURLWithPath: String(cString: entry.pointee.pw_dir))
     }
 
-    /// Where the app writes. The group container is the proper home for a
-    /// feed shared between an app and its extension, and where a build
-    /// signed with a team identifier reads it from. Ad-hoc signed — which
-    /// a local build is — the sandbox grants the extension no group
-    /// container and refuses it that file, so the app writes a second copy
-    /// straight into the extension's own container, the one place a
-    /// sandboxed extension can always read. The container is the system's
-    /// to create, on the extension's first run, so this copy only goes
-    /// where one already stands.
-    private static var writeURLs: [URL] {
-        var urls = [groupURL].compactMap { $0 }
-        let support = URL(fileURLWithPath: NSHomeDirectory())
-            .appending(path: "Library/Containers/\(widgetIdentifier)/Data/Library/Application Support")
-        if FileManager.default.fileExists(atPath: support.path) {
-            urls.append(support.appending(path: fileName))
-        }
-        return urls
+    /// `~/.reviewer`, where the server already keeps its state, holds the
+    /// feed — the only copy of it on a build with no team identifier. The
+    /// widget is let in by the home-relative read-only exception in its
+    /// entitlements, and the app writes there with no privilege of any
+    /// kind, which is the whole point of the folder: both of the
+    /// container folders the feed used to go to are data vaults, and
+    /// every look inside one asked the user to allow "access data from
+    /// other apps".
+    private static var sharedURL: URL {
+        homeDirectory.appending(path: ".reviewer").appending(path: fileName)
     }
 
-    /// Where the widget reads, in the order it tries them.
-    private static var readURLs: [URL] {
-        [groupURL, sandboxURL].compactMap { $0 }
+    /// Where the feed is kept, in the order the widget tries them. The
+    /// group container is the proper home for something an app shares
+    /// with its extension, and where a build signed with a team
+    /// identifier reads it from; signed without one — which a local build
+    /// is — there is no group container to be had and `~/.reviewer` is
+    /// the whole of it.
+    private static var feedURLs: [URL] {
+        [groupURL, sharedURL].compactMap { $0 }
     }
 
     private static let encoder: JSONEncoder = {
@@ -128,7 +151,7 @@ public struct ProjectFeed: Codable, Equatable, Sendable {
     }()
 
     public static func read() -> ProjectFeed? {
-        for url in readURLs {
+        for url in feedURLs {
             guard let data = try? Data(contentsOf: url) else { continue }
             if let feed = try? decoder.decode(ProjectFeed.self, from: data) { return feed }
         }
@@ -139,9 +162,11 @@ public struct ProjectFeed: Codable, Equatable, Sendable {
     /// one at the others; only a write that landed nowhere is an error.
     public func write() throws {
         let data = try Self.encoder.encode(self)
+        try? FileManager.default.createDirectory(
+            at: Self.sharedURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         var landed = false
         var failure: (any Error)?
-        for url in Self.writeURLs {
+        for url in Self.feedURLs {
             do {
                 try data.write(to: url, options: .atomic)
                 landed = true
@@ -156,7 +181,7 @@ public struct ProjectFeed: Codable, Equatable, Sendable {
 
     /// What the widget gallery shows before a real feed exists.
     public static let sample: ProjectFeed = {
-        let home = NSHomeDirectory()
+        let home = homeDirectory.path
         func project(_ name: String, _ branch: String, hoursAgo: Double, favorite: Bool = false) -> Project {
             Project(
                 name: name,

@@ -206,7 +206,8 @@ private struct SectionHeader: View {
         HStack(spacing: 4) {
             Text(title)
             Text("\(count)")
-                .foregroundStyle(.tertiary)
+                .font(.system(size: 10, weight: .regular).monospacedDigit())
+                .foregroundStyle(.secondary)
         }
         .font(.system(size: 10, weight: .semibold))
         .foregroundStyle(.secondary)

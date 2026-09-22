@@ -135,12 +135,30 @@ else
   sign_identity="-"
 fi
 
-codesign --force --sign "$sign_identity" \
-  --entitlements "${package_dir}/Resources/Widget/ReviewerWidget.entitlements" \
-  "$appex" >/dev/null 2>&1 || true
-codesign --force --sign "$sign_identity" \
-  --entitlements "${package_dir}/Resources/Reviewer.entitlements" \
-  "$app" >/dev/null 2>&1 || true
+# A failure here is never quiet. Signing with a keychain identity can fail
+# where ad-hoc could not — the key's access control, a prompt nobody
+# answers — and a swallowed error leaves the binaries wearing the ad-hoc
+# signature the linker gave them, which still launches and still loses its
+# privacy grants on the next build, with nothing said. The bundle is only
+# worth having if it is signed as asked.
+sign() {
+  local target="$1" entitlements="$2"
+  if ! codesign --force --sign "$sign_identity" --entitlements "$entitlements" "$target"; then
+    echo "✗ codesign failed for ${target#"${app}/"} with identity \"${sign_identity}\"" >&2
+    exit 1
+  fi
+}
+
+sign "$appex" "${package_dir}/Resources/Widget/ReviewerWidget.entitlements"
+sign "$app" "${package_dir}/Resources/Reviewer.entitlements"
+
+# codesign reports success for a bundle it then leaves ad-hoc in some
+# failure modes, so the seal is read back rather than trusted.
+if [[ "$sign_identity" != "-" ]] && codesign -dv "$app" 2>&1 | grep -q "^Signature=adhoc"; then
+  echo "✗ ${app##*/} is ad-hoc signed though \"${sign_identity}\" was asked for." >&2
+  echo "  Keychain Access → login → My Certificates → \"${sign_identity}\" → Trust → Code Signing: Always Trust." >&2
+  exit 1
+fi
 
 if [[ "$sign_identity" == "-" ]]; then
   echo "⚠ ad-hoc signed: privacy grants will not survive rebuilds." >&2

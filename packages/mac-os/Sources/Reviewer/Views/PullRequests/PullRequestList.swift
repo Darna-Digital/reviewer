@@ -141,9 +141,7 @@ private struct PullListHeader: View {
                     .padding(.leading, 4)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 8)
-        .padding(.bottom, 6)
+        .sidebarSearchBand()
     }
 
     private func count(_ shown: Int, of total: Int, narrowed: Bool) -> String {

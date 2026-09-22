@@ -1,7 +1,7 @@
 // The Run surface, laid out as the opener is: the project's dev commands
 // as the system's own table down the left — name under its dot, the
-// command it runs, the folder it runs in (the root, or a package of a
-// monorepo), whether it is up — sortable on any column, its rows plain
+// command it runs, whether it is up, the folder it runs in (the root, or
+// a package of a monorepo) — sortable on any column, its rows plain
 // rather than striped, under a toolbar with add and remove grouped at its
 // leading edge, start all and stop all beside them, and a search at its
 // trailing edge. A command is a shell command line, or Docker Desktop —
@@ -111,6 +111,12 @@ private struct CommandTable: View {
                     .help(command.commandLabel)
             }
             .width(min: 120, ideal: 200)
+            TableColumn("Status", value: \.statusLabel) { command in
+                Text(command.statusLabel)
+                    .foregroundStyle(command.exitedBadly ? .red : .secondary)
+                    .lineLimit(1)
+            }
+            .width(min: 80, ideal: 100)
             TableColumn("Folder", value: \.cwd) { command in
                 Text(command.folderLabel)
                     .foregroundStyle(.secondary)
@@ -119,15 +125,11 @@ private struct CommandTable: View {
                     .help(command.folderHelp)
             }
             .width(min: 80, ideal: 140)
-            TableColumn("Status", value: \.statusLabel) { command in
-                Text(command.statusLabel)
-                    .foregroundStyle(command.exitedBadly ? .red : .secondary)
-                    .lineLimit(1)
-            }
-            .width(min: 80, ideal: 100)
         }
         .tableStyle(.inset(alternatesRowBackgrounds: false))
         .scrollContentBackground(.hidden)
+        .selectionInk()
+        .themedRows()
         .contextMenu(forSelectionType: String.self) { ids in
             if let command = ids.first.flatMap(command(for:)) { menu(for: command) }
         } primaryAction: { ids in

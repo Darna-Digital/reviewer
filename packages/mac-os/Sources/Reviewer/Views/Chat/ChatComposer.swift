@@ -108,7 +108,7 @@ struct ChatComposer: View {
                             .font(.system(size: 12, weight: .bold))
                             .foregroundStyle(.white)
                             .frame(width: 26, height: 26)
-                            .background(canSend ? Color.accentColor : Color.secondary.opacity(0.4), in: Circle())
+                            .background(canSend ? Color(nsColor: IslandPalette.accent) : Color.secondary.opacity(0.4), in: Circle())
                     }
                     .buttonStyle(.plain)
                     .disabled(!canSend)
@@ -120,7 +120,7 @@ struct ChatComposer: View {
             .background(Color(nsColor: IslandPalette.island), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(highlighted ? Color.accentColor.opacity(0.5) : Color(nsColor: IslandPalette.separator), lineWidth: 1)
+                    .strokeBorder(highlighted ? Color(nsColor: IslandPalette.accent).opacity(0.5) : Color(nsColor: IslandPalette.separator), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.06), radius: 4, y: 1)
         }

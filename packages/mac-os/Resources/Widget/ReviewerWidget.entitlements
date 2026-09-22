@@ -9,11 +9,22 @@
 	<true/>
 	<!-- The group container is where a properly signed build shares the
 	     project feed with the app. A signature without a team identifier —
-	     this app is signed ad-hoc — is not granted it, and the sandbox
+	     a local build has none — is not granted it, and the sandbox
 	     refuses the file; see ProjectFeed for what the app writes then. -->
 	<key>com.apple.security.application-groups</key>
 	<array>
 		<string>group.com.byconvo.reviewer</string>
+	</array>
+	<!-- The other copy of the feed, in ~/.reviewer beside the server's own
+	     state, which this exception is what lets the extension read. It is
+	     the whole of the sandbox's opening: one folder, read-only, and the
+	     app writes it as an ordinary file in the home folder — where the
+	     feed used to go instead was this extension's sandbox container,
+	     which macOS counts as another app's data and gates behind the
+	     "access data from other apps" dialog. -->
+	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
+	<array>
+		<string>/.reviewer/</string>
 	</array>
 </dict>
 </plist>

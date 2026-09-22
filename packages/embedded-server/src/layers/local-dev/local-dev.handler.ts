@@ -6,11 +6,6 @@ import { NotFound } from "@reviewer/core/shared";
 import { Api } from "../../api.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 import type { DevRunStatus } from "../terminal/dev-process-manager.ts";
-import {
-  afterDockerDesktop,
-  dockerDesktopScript,
-  quitDockerDesktop,
-} from "./docker-desktop.ts";
 import { DevRuntime, type StartCommandInput } from "./local-dev.runtime.ts";
 import type { DevCommand, DevCommandView } from "@reviewer/core/local-dev";
 import { LocalDevService } from "@reviewer/core/local-dev";
@@ -45,31 +40,39 @@ const commandFolder = (
   return Effect.succeed(folder);
 };
 
-const isDockerDesktop = (command: DevCommand) =>
-  command.kind === "docker-desktop";
+/**
+ * Opening the app is all a `docker-desktop` command is: the engine comes up
+ * behind it in its own time. Not `open -g`, which would spare the user the
+ * focus: Docker Desktop launched hidden cannot start the Electron process
+ * behind its menu-bar tray, and its backend crashes a few seconds in.
+ *
+ * Not `docker desktop start` either — its CLI plugin declines to launch the
+ * app at all under the environment the dev shell inherits, and then blocks
+ * forever waiting for an engine nothing is starting.
+ */
+const DOCKER_DESKTOP_COMMAND = "open -a Docker";
 
 /**
  * What the runtime starts for a command: a shell command as written, in its
- * folder; a Docker Desktop command as the server's own script, at the root.
- * `wrap` lets "start all" have the shell commands wait for the engine.
+ * folder; a Docker Desktop command at the repository root, since the app is
+ * not the repository's to run from anywhere in particular.
  */
 const launch = (
   repoPath: string,
-  command: DevCommand,
-  wrap: (shell: string) => string = (shell) => shell
+  command: DevCommand
 ): Effect.Effect<StartCommandInput, NotFound> =>
-  isDockerDesktop(command)
+  command.kind === "docker-desktop"
     ? Effect.succeed({
         commandId: command.id,
         repoPath,
         cwd: repoPath,
-        command: dockerDesktopScript,
+        command: DOCKER_DESKTOP_COMMAND,
       })
     : Effect.map(commandFolder(repoPath, command), (cwd) => ({
         commandId: command.id,
         repoPath,
         cwd,
-        command: wrap(command.command),
+        command: command.command,
       }));
 
 /** Merge a stored definition with its (optional) runtime status into a view. */
@@ -143,14 +146,7 @@ export const LocalDevHandler = HttpApiBuilder.group(
         })
       )
       .handle("stop", ({ params }) =>
-        Effect.gen(function* () {
-          const dev = yield* LocalDevService;
-          const runtime = yield* DevRuntime;
-          const command = yield* dev.get(params.id);
-          if (isDockerDesktop(command)) yield* quitDockerDesktop;
-          yield* runtime.stop(params.id);
-          return ok;
-        })
+        Effect.flatMap(DevRuntime, (r) => r.stop(params.id)).pipe(Effect.as(ok))
       )
       .handle("startAll", () =>
         Effect.gen(function* () {
@@ -159,15 +155,10 @@ export const LocalDevHandler = HttpApiBuilder.group(
           const ctx = yield* WorkspaceContext;
           const repoPath = yield* ctx.requireCurrent;
           const commands = yield* dev.list;
-          // Docker Desktop goes first, and once it is part of the project
-          // the shell commands wait for its engine before they run.
-          const docker = commands.filter(isDockerDesktop);
-          const shell = commands.filter((command) => !isDockerDesktop(command));
-          const wrap = docker.length > 0 ? afterDockerDesktop : undefined;
           const views: DevCommandView[] = [];
-          for (const command of [...docker, ...shell]) {
+          for (const command of commands) {
             const status = yield* runtime.start(
-              yield* launch(repoPath, command, wrap)
+              yield* launch(repoPath, command)
             );
             views.push(toView(command, status));
           }
@@ -176,16 +167,9 @@ export const LocalDevHandler = HttpApiBuilder.group(
       )
       .handle("stopAll", () =>
         Effect.gen(function* () {
-          const dev = yield* LocalDevService;
           const runtime = yield* DevRuntime;
           const ctx = yield* WorkspaceContext;
-          const repoPath = yield* ctx.requireCurrent;
-          const commands = yield* dev.list;
-          for (const command of commands.filter(isDockerDesktop)) {
-            const status = yield* runtime.status(command.id);
-            if (status?.status === "running") yield* quitDockerDesktop;
-          }
-          yield* runtime.stopRepo(repoPath);
+          yield* runtime.stopRepo(yield* ctx.requireCurrent);
           return ok;
         })
       )

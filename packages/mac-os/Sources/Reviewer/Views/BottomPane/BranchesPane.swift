@@ -134,6 +134,8 @@ struct BranchesPane: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .selectionInk()
+        .themedRows()
         .contextMenu {
             Button("New branch…") { model.branchPrompt = .create(startPoint: nil) }
             Divider()

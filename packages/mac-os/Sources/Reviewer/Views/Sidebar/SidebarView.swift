@@ -35,6 +35,11 @@ struct SidebarView: View {
             }
         }
         .animation(SidebarMotion.change, value: layout)
+        // The surface changing takes the keyboard off whichever search the
+        // column held, at once: the outgoing field is on screen for the
+        // length of the crossfade, and would otherwise keep the strokes
+        // meant for the one coming in.
+        .onChange(of: layout) { PaneSearchField.releaseKeyboard() }
     }
 }
 
@@ -173,35 +178,26 @@ private struct FilesLayout: View {
     }
 }
 
-/// The search over the changed files.
+/// The search over the changed files — the system's own field, the one
+/// the merge-requests list stands its search in (see `PullRequestList`),
+/// so the two columns search alike.
 struct ChangesHeader: View {
     @Binding var query: String
 
     var body: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(.secondary)
-            TextField("Filter changed files", text: $query)
-                .textFieldStyle(.plain)
-                .font(.system(size: 12))
-            if !query.isEmpty {
-                Button {
-                    query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(.horizontal, 7)
-        .frame(height: 24)
-        .background(.quaternaryWash(0.5), in: RoundedRectangle(cornerRadius: 6))
-        .padding(.horizontal, 10)
-        .padding(.top, 2)
-        .padding(.bottom, 6)
+        PaneSearchField(prompt: "Filter changed files", text: $query)
+            .sidebarSearchBand()
+    }
+}
+
+/// The room a sidebar search stands in, whichever surface it heads — the
+/// changes, the merge requests, the sessions — so the column's head keeps
+/// its shape as the surface under it changes.
+extension View {
+    func sidebarSearchBand() -> some View {
+        padding(.horizontal, 10)
+            .padding(.top, 8)
+            .padding(.bottom, 6)
     }
 }
 

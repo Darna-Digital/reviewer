@@ -152,10 +152,13 @@ private struct NoticeDetails: View {
                     .textSelection(.enabled)
                     .fixedSize(horizontal: true, vertical: false)
                     .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    // Short output sits under the header rather than floating
+                    // in the middle of a taller-than-needed sheet.
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
-        .frame(minWidth: 420, idealWidth: 560, maxWidth: 720, minHeight: 80, idealHeight: 220, maxHeight: 400)
+        // No ideal height: the sheet hugs the output it has, up to the cap.
+        .frame(minWidth: 420, idealWidth: 560, maxWidth: 720, maxHeight: 400)
     }
 
     private func copy() {

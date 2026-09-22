@@ -139,6 +139,35 @@ enum IslandPalette {
     static var accent: NSColor { dynamic(\.accent, own: .controlAccentColor) }
     static var link: NSColor { dynamic(\.link, own: .linkColor) }
     static var selection: NSColor { dynamic(\.selection, own: .selectedContentBackgroundColor) }
+
+    /// The wash a picked row wears in a list the system would otherwise
+    /// paint in its selection blue (see `ThemedRows`). The theme's accent
+    /// over its sheet, at the share the web's own picked row is washed in
+    /// — the theme's colour rather than the theme's `selection`, which a
+    /// theme is free to name a plain grey and many do, and the pick would
+    /// read as no colour at all. Thin enough that the type over it is
+    /// still the theme's, and never has to be turned white. On the app's
+    /// own palette it is the system's selection, as it has always been.
+    static var pick: NSColor {
+        let palette = ChromePalette.shared
+        _ = palette.light
+        _ = palette.dark
+        return NSColor(name: nil) { appearance in
+            MainActor.assumeIsolated {
+                guard let tokens = palette.tokens(for: appearance.isDark ? .dark : .light) else {
+                    return .selectedContentBackgroundColor
+                }
+                let accent = NSColor(hex: tokens.accent)
+                let sheet = NSColor(hex: tokens.island)
+                return sheet.blended(withFraction: pickShare, of: accent) ?? accent
+            }
+        }
+    }
+
+    /// How much of the pick's wash is the accent — the share the web app
+    /// mixes its own picked row at (see `deriveChromeTokens`), so the two
+    /// pick a row the same colour.
+    private static let pickShare: CGFloat = 0.28
     static var hover: NSColor { dynamic(\.hover, own: .unemphasizedSelectedContentBackgroundColor) }
 
     /// The store is read here, eagerly, as well as in the provider: the
@@ -217,6 +246,38 @@ struct SystemInk: ViewModifier {
 
 extension View {
     func systemInk() -> some View { modifier(SystemInk()) }
+}
+
+/// The system's own label over a view whose rows the system picks out
+/// itself — a `Table` or a selecting `List`, which wash the chosen row in
+/// the selection blue and turn the label colours they know white against
+/// it. A theme's ink is named outright, so on that blue the type stayed
+/// the theme's own dark grey and all but vanished; the system's label and
+/// secondary label, named back, turn with the wash. Only the type is the
+/// system's: the sheet the rows stand on, their rules and their dots are
+/// still the theme's.
+///
+/// Worn only where the system's blue is what the row is washed in — that
+/// is, on the app's own palette. Where a theme paints the scheme the row
+/// is washed in the theme's own selection tone instead, quietly enough to
+/// be read over (see `ThemedRows`), and there nothing is handed back: the
+/// theme's ink reads on that wash as it does anywhere else on the sheet,
+/// and the system's label over a theme's sheet would be the one colour on
+/// the pane that is not the theme's.
+struct SelectionInk: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        if ChromePalette.shared.isThemed(colorScheme == .dark ? .dark : .light) {
+            content
+        } else {
+            content.foregroundStyle(Color.primary, Color.secondary)
+        }
+    }
+}
+
+extension View {
+    func selectionInk() -> some View { modifier(SelectionInk()) }
 }
 
 /// The system's quaternary label at a share of its strength — the faint
