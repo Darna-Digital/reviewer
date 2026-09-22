@@ -139,7 +139,12 @@ private struct SessionTabRow: View {
     private static let fade: CGFloat = 28
 
     var body: some View {
-        HStack(spacing: Self.gap) {
+        // With no session open the strip is nothing wide, and the row's
+        // spacing after it would push the mark off the pinned pair by more
+        // than the bar's own gap — the one the pinned pair stand off the
+        // sidebar's glass by. So the empty row spaces nothing, and the mark
+        // stands where the bar puts it.
+        HStack(spacing: order.isEmpty ? 0 : Self.gap) {
             strip
             Button { model.newSession() } label: {
                 Label("New session", systemImage: "plus")
@@ -147,14 +152,6 @@ private struct SessionTabRow: View {
             }
             .buttonStyle(BarChipStyle())
             .help("New session (⌘T)")
-            // With no session open the mark stands alone beside the pinned
-            // pair's glass, where the bar leaves it a little tighter than
-            // the system's own panes stand to each other. A gap of the
-            // row's own makes up the difference, so the mark is as far off
-            // the pinned pair as the pinned pair are off the sidebar's
-            // glass. With tabs it takes none: it follows the last of them
-            // at the row's own spacing.
-            .padding(.leading, order.isEmpty ? Self.gap : 0)
         }
         .background { BarRunWidth { run = $0 } }
         // The row hands its run back before anything ahead of it on the
