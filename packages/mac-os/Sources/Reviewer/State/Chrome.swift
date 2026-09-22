@@ -198,6 +198,55 @@ extension View {
     func themeInk() -> some View { modifier(ThemeInk()) }
 }
 
+/// The system's own type and tint back over a view that stands on the
+/// system's material rather than on a theme's sheet — a sheet, which is
+/// presented from the column and inherits its ink, and drawn on the
+/// system's white whatever theme is on. There the theme's tertiary, inked
+/// to read as type, drew a grouped form's rules as solid lines, and its
+/// tint washed every plain button. The system's label alone is set, and
+/// the lower levels left to the system to thin from it as it does by
+/// default — named outright, the rules a form draws in the faintest of
+/// them came out as dark as its type.
+struct SystemInk: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .foregroundStyle(Color(nsColor: .labelColor))
+            .tint(nil)
+    }
+}
+
+extension View {
+    func systemInk() -> some View { modifier(SystemInk()) }
+}
+
+/// The system's quaternary label at a share of its strength — the faint
+/// wash a bar's field, a chip, a code span is filled with. Under `ThemeInk`
+/// SwiftUI derives the quaternary from the tertiary it names, and a theme's
+/// tertiary is type, inked to read as type: a fill in it came out a solid
+/// grey. So where a theme paints the scheme the wash is the theme's text at
+/// the tenth the system's quaternary is of its label; on the app's own
+/// palette it is left exactly the system's.
+struct QuaternaryWash: ShapeStyle {
+    var share: Double = 1
+
+    private static let systemQuaternaryAlpha = 0.1
+
+    func resolve(in environment: EnvironmentValues) -> some ShapeStyle {
+        let scheme: ThemeDescriptor.ColorScheme = environment.colorScheme == .dark ? .dark : .light
+        let ink: NSColor? = MainActor.assumeIsolated {
+            ChromePalette.shared.isThemed(scheme) ? IslandPalette.text : nil
+        }
+        if let ink {
+            return AnyShapeStyle(Color(nsColor: ink).opacity(Self.systemQuaternaryAlpha * share))
+        }
+        return AnyShapeStyle(HierarchicalShapeStyle.quaternary.opacity(share))
+    }
+}
+
+extension ShapeStyle where Self == QuaternaryWash {
+    static func quaternaryWash(_ share: Double = 1) -> QuaternaryWash { QuaternaryWash(share: share) }
+}
+
 /// A rule in the theme's hairline. SwiftUI draws a `Divider` in the
 /// tertiary level of the foreground style it stands in, which `ThemeInk`
 /// names outright — and a theme's tertiary is still type, inked to read as

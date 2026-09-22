@@ -1,4 +1,10 @@
-import type { OpenIntent, Tab, TabsState } from "../interfaces/tabs.interfaces";
+import type {
+  OpenIntent,
+  Reconcile,
+  Reconciled,
+  Tab,
+  TabsState,
+} from "../interfaces/tabs.interfaces";
 
 export const EMPTY_TABS: TabsState = { tabs: [], active: null };
 
@@ -199,4 +205,23 @@ export const pruneTabs = (
       ? state.active
       : (tabs[0]?.path ?? null);
   return { tabs, active };
+};
+
+/**
+ * The strip and the file on screen, settled against each other: which file
+ * belongs on screen, and the strip holding it.
+ *
+ * The strip follows the open file everywhere else, but a project switch is the
+ * one moment the file follows the strip instead. The URL outlives the swap, so
+ * the file it still names is the departing repository's — a path this one has
+ * nothing at. What belongs on screen is this repository's own strip, or
+ * nothing at all when it has none.
+ */
+export const reconcileTabs = (
+  state: TabsState,
+  { viewing, switched, canRestore }: Reconcile
+): Reconciled => {
+  const carried = switched ? null : viewing;
+  const open = carried === null && canRestore ? tabToRestore(state) : carried;
+  return { open, tabs: syncActive(state, open) };
 };

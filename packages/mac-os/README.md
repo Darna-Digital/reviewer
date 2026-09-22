@@ -182,6 +182,52 @@ What it does today:
   (`/api/github/auth` — the login behind `GITHUB_TOKEN`/`GH_TOKEN` or the
   `gh` CLI's token, or that there is none), with what to run to change
   either under each. The palette's Open settings lands here.
+- **Projects widget** — the opener's lists as a desktop or Notification
+  Centre widget, so a project is one click from open without the app up.
+  Two widgets in the gallery under Reviewer, *Recent projects* and
+  *Favorite projects*, each in the three sizes: small is the open project
+  — or the last one — on its own, the whole widget the click that opens
+  it; medium and large a grid of tiles, each a repository with its branch
+  on its monogram (`RepoMonogram`, the avatar the opener's rows wear), the
+  open one ringed in the accent. A tile is a `reviewer://open?path=…`
+  link (`ProjectLink`): Launch Services brings the app up or forward with
+  it, and the app opens the path as its project — held for the server
+  while the app is still launching (`ProjectLinks`, `AppModel.open(link:)`).
+  The widget runs sandboxed in a process of its own, so what it lists is a
+  feed the app writes (`ProjectWidgetFeed` → `ProjectFeed` in
+  `ReviewerShared`) whenever the catalog or the open project changes,
+  asking WidgetKit for a redraw each time; a widget with no feed to read
+  says so, and its click brings the app up, which writes one.
+  It is two static widgets rather than one with a setting because a
+  configurable widget's setting is an App Intent, whose metadata only
+  Xcode's build extracts.
+
+  Three things an extension gets from Xcode that a SwiftPM one has to be
+  given by hand, each of which leaves the widget missing from the gallery
+  on its own:
+
+  - **`-e _NSExtensionMain`** (`Package.swift`) — an extension enters at
+    NSExtensionMain, the XPC bootstrap that answers the widget host asking
+    which widgets the bundle vends. Left at Swift's own `main` the process
+    comes up with no listener and the host never hears back.
+  - **A sandbox, and a feed it can read** (`Resources/Widget`) — PlugInKit
+    refuses to register an app extension that is not sandboxed, so the
+    sandbox is not optional. But the group container a sandboxed extension
+    would share with the app is only granted to a signature carrying a team
+    identifier, and a local build is signed ad-hoc: the sandbox refuses it
+    the file with `deny file-read-data`. So the app writes the feed twice
+    (`ProjectFeed.writeURLs`) — the group container, which a properly
+    signed build reads, and a copy straight into the extension's own
+    sandbox container, the one place it may always read; the widget tries
+    them in that order. The container is the system's to make on the
+    extension's first run, so a widget placed before the app has ever
+    written stands on its empty state until the next write.
+  - **Registration after every bundle** (`scripts/bundle.sh`) — the bundle
+    is torn down and rebuilt on each call, which leaves Launch Services
+    and the widget host holding a path that has gone; the host then says
+    "Unable to find … extension directly" and the placed widgets keep
+    their last drawing. The script registers the app and the extension
+    again at the end, as an install would.
 
 ## Islands
 
@@ -289,12 +335,15 @@ Sources/Reviewer/
   ReviewerApp.swift      @main, menu commands, app delegate
   Server/ServerLauncher  reachability check + spawn of the embedded server
   Api/                   Codable mirrors of the core schemas, HTTP client, chat socket
-  State/                 AppModel, AppSettings, Chrome (the theme's palette), WindowTab, BottomPaneTab, DockSurface, ViewAction, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, PullRequests, Chats, ChatSession, ChatSettings, WorkLog, ComposerAttachment, RepoCatalog, CommandPalette + PaletteCommands (+ the ⇧⇧ monitor)
+  State/                 AppModel, AppSettings, ProjectLinks + ProjectWidgetFeed (the widget's link in, feed out), Chrome (the theme's palette), WindowTab, BottomPaneTab, DockSurface, ViewAction, CommitHistory, CommitGraph, FileTree, SidebarTree, SidebarSessions, PullRequests, Chats, ChatSession, ChatSettings, WorkLog, ComposerAttachment, RepoCatalog, CommandPalette + PaletteCommands (+ the ⇧⇧ monitor)
   FileIcons/             FileIcon (resolver + rasteriser) over the generated @pierre/trees sprite
   Islands/               IslandHost (web view + bridge), IslandWebView, NativePalette (the palette as CSS), SpaSource, SpaSchemeHandler, IslandView
   Terminal/              TerminalSession — the shell behind the Terminal surface
   Services/              DevServices + DevProcessStream — dev commands and their output
   Views/                 ContentView (split view), Sidebar, PullRequests (list, overview, column), Chat (conversation, composer, model picker), Tabs, BottomPane, Palette (panel, list), Review (assign bar), Opener, Settings
+Sources/ReviewerShared/  what the app and the widget agree on: ProjectFeed (the widget's feed), ProjectLink (reviewer://open), RepoMonogram
+Sources/ReviewerWidget/  the WidgetKit extension: the Projects widget (recents, favourites) and its views
+Resources/Widget/        the extension's Info.plist and entitlements; Resources/Reviewer.entitlements is the app's own
 ```
 
 Not here yet: native menus for the islands' popovers, drag and drop between

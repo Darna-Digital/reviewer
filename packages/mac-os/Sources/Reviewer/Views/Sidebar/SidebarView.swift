@@ -198,7 +198,7 @@ struct ChangesHeader: View {
         }
         .padding(.horizontal, 7)
         .frame(height: 24)
-        .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+        .background(.quaternaryWash(0.5), in: RoundedRectangle(cornerRadius: 6))
         .padding(.horizontal, 10)
         .padding(.top, 2)
         .padding(.bottom, 6)

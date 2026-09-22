@@ -116,8 +116,7 @@ import {
   moveTab,
   openTab,
   pruneTabs,
-  syncActive,
-  tabToRestore,
+  reconcileTabs,
   togglePin,
 } from "@/interactions/tabs/functions/tabs.functions";
 import { useGitActions } from "@/interactions/git-actions/adapters/git-actions.hook.adapter";
@@ -701,39 +700,73 @@ export function CodeWorkspace() {
   useEffect(() => {
     scopeTabsTo(repoRoot);
   }, [repoRoot]);
+  // Which repository is open is being re-asked, so the answer on hand is not
+  // to be acted on: it may still be the one being left. Until it lands, the
+  // strip in the store is the departing repository's, and restoring from it
+  // would put that repository's file on screen inside this one.
+  const repoInDoubt = repo.isFetching;
   // Browsing has nothing else to put in the centre pane, so the strip is the
   // view: an open tab with no file on screen is a hole. A strip outlives the
   // URL that opened its files — restored from storage, or left behind by
   // navigation that dropped the file — so it names what belongs there.
   const canRestore = mode === "browse" && target === null;
-  // Re-syncs when the repository resolves as well as when the file changes:
-  // pointing the store at a repository swaps in that repository's strip, which
-  // would otherwise drop the file already on screen.
+  /** The repository the strip was last settled against. */
+  const settledFor = useRef<string | null>(null);
   useEffect(() => {
     // Nothing to reconcile where the strip is neither drawn nor written to.
-    if (!tabbed || !pageSettled) return;
-    if (viewing === null && canRestore) {
-      const restored = tabToRestore(readTabs());
-      // Replaces rather than pushes, so Back leaves the strip behind instead of
-      // returning to a URL that reopens the same file.
-      if (restored !== null) {
-        void navigate({
-          to: ".",
-          search: (prev: Search) => ({ ...prev, file: restored }),
-          replace: true,
-        });
-        return;
-      }
+    if (!tabbed || !pageSettled || repoInDoubt) return;
+    const switched =
+      settledFor.current !== null && settledFor.current !== repoRoot;
+    settledFor.current = repoRoot;
+    const { open, tabs: settled } = reconcileTabs(readTabs(), {
+      viewing,
+      switched,
+      canRestore,
+    });
+    updateTabs(() => settled);
+    // Replaces rather than pushes, so Back leaves the strip behind instead of
+    // returning to a URL that reopens the same file. Done off the repository
+    // alone rather than waiting on its file list: the viewer is already asking
+    // for whatever the URL names, and a file the last repository had open is a
+    // request this one can only answer with an error.
+    if (open !== viewing) {
+      void navigate({
+        to: ".",
+        search: (prev: Search) => ({ ...prev, file: open ?? undefined }),
+        replace: true,
+      });
     }
-    updateTabs((state) => syncActive(state, viewing));
-  }, [repoRoot, viewing, canRestore, tabbed, pageSettled, navigate]);
-  // A strip restored from a previous session can name files that have since
-  // been deleted or renamed.
+  }, [
+    repoRoot,
+    repoInDoubt,
+    viewing,
+    canRestore,
+    tabbed,
+    pageSettled,
+    navigate,
+  ]);
+  /**
+   * A strip restored from a previous session can name files that have since
+   * been deleted or renamed, so it is pruned to what the repository holds —
+   * but only against the listing that names this repository.
+   *
+   * What repository is open and what it holds are two separate readings, and a
+   * project switch replaces them a moment apart, so in between one of them
+   * still answers for the project just left. Pruned against the wrong one, a
+   * strip is not merely stale: every tab in it names a file that listing has
+   * never heard of, and the whole strip goes. So the listing names the
+   * repository it lists (see `FilesPayload`), and the pruning waits for the
+   * two to agree. The file on screen is spared whatever the listing says — it
+   * is open, so it is there, and an ignored file reached from the tree is in
+   * no listing at all.
+   */
   useEffect(() => {
-    if (allPaths.length === 0) return;
-    const known = new Set(allPaths);
-    updateTabs((state) => pruneTabs(state, (path) => known.has(path)));
-  }, [allPaths]);
+    if (listing === undefined || listing.root !== repoRoot) return;
+    const known = new Set(listing.paths);
+    updateTabs((state) =>
+      pruneTabs(state, (path) => known.has(path) || path === state.active)
+    );
+  }, [listing, repoRoot]);
 
   const selectTab = (path: string) => {
     whenMayLeaveFile(path, () => setSearch({ file: path }));

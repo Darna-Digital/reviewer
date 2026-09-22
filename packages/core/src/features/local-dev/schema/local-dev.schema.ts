@@ -1,15 +1,26 @@
 import * as Schema from "effect/Schema";
 
 /**
+ * What a dev command is: a `shell` command line the server runs in the
+ * repository, or `docker-desktop` — starting the Docker Desktop app and
+ * waiting for its engine, which the server knows how to do itself, so the
+ * command line and folder are not the user's to write.
+ */
+export const DevCommandKind = Schema.Literals(["shell", "docker-desktop"]);
+export type DevCommandKind = typeof DevCommandKind.Type;
+
+/**
  * What the open repository's dev-commands store holds. The repository a
  * command runs in is the store's own scope, so it is never written down — a
  * repository that is renamed or moved keeps its commands instead of pointing
  * at a path that no longer is. `cwd` is the folder inside it the command runs
  * from, relative to the root and empty for the root itself, so a monorepo's
- * packages can each have their own commands.
+ * packages can each have their own commands. `command` and `cwd` are empty
+ * for a `docker-desktop` command.
  */
 export const DevCommand = Schema.Struct({
   id: Schema.String,
+  kind: DevCommandKind,
   name: Schema.String,
   command: Schema.String,
   cwd: Schema.String,
@@ -20,10 +31,15 @@ export type DevCommand = typeof DevCommand.Type;
 
 /**
  * A stored command as it was written, read back at today's shape: one written
- * before commands had a folder is the root's.
+ * before commands had a folder is the root's, and one written before they
+ * had a kind is a shell command.
  */
 export const decodeStoredDevCommand = (input: unknown): DevCommand =>
-  Schema.decodeUnknownSync(DevCommand)({ cwd: "", ...(input as object) });
+  Schema.decodeUnknownSync(DevCommand)({
+    cwd: "",
+    kind: "shell",
+    ...(input as object),
+  });
 export const DevCommandStatus = Schema.Literals([
   "stopped",
   "running",
@@ -37,6 +53,7 @@ export const DevCommandView = Schema.Struct({
 });
 export type DevCommandView = typeof DevCommandView.Type;
 export const NewDevCommand = Schema.Struct({
+  kind: Schema.optionalKey(DevCommandKind),
   name: Schema.String,
   command: Schema.String,
   cwd: Schema.optionalKey(Schema.String),

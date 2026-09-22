@@ -23,13 +23,54 @@ let package = Package(
         .package(url: "https://github.com/migueldeicaza/SwiftTerm.git", from: "1.20.0")
     ],
     targets: [
+        // What the app and its widget agree on: the project feed the app
+        // writes for the widget to read, the `reviewer://open` link the
+        // widget opens a project through, and the repository monogram.
+        .target(
+            name: "ReviewerShared",
+            path: "Sources/ReviewerShared",
+            swiftSettings: [
+                .swiftLanguageMode(.v6)
+            ]
+        ),
         .executableTarget(
             name: "Reviewer",
-            dependencies: [.product(name: "SwiftTerm", package: "SwiftTerm")],
+            dependencies: [
+                "ReviewerShared",
+                .product(name: "SwiftTerm", package: "SwiftTerm"),
+            ],
             path: "Sources/Reviewer",
             swiftSettings: [
                 .swiftLanguageMode(.v6)
             ]
-        )
+        ),
+        // The WidgetKit extension — the Projects widget for the desktop and
+        // Notification Centre. SwiftPM builds it as one more executable;
+        // `scripts/bundle.sh` wraps it as ReviewerWidget.appex inside the
+        // app, where the system finds it. Compiled as an application
+        // extension, as Xcode would, so the compiler keeps it to the API an
+        // extension may use.
+        .executableTarget(
+            name: "ReviewerWidget",
+            dependencies: ["ReviewerShared"],
+            path: "Sources/ReviewerWidget",
+            swiftSettings: [
+                .swiftLanguageMode(.v6),
+                .unsafeFlags(["-application-extension"]),
+            ],
+            linkerSettings: [
+                // What Xcode links an extension with: the bundle loads as
+                // an extension rather than a program, and NSExtensionMain
+                // is its entry — the XPC bootstrap that answers the widget
+                // host when it asks which widgets this bundle vends. Left
+                // at Swift's own `main`, the process comes up with no
+                // listener, the host gets no descriptors back, and the
+                // widget never reaches the gallery.
+                .unsafeFlags(["-Xlinker", "-application_extension"]),
+                .unsafeFlags(["-Xlinker", "-e", "-Xlinker", "_NSExtensionMain"]),
+                .linkedFramework("WidgetKit"),
+                .linkedFramework("SwiftUI"),
+            ]
+        ),
     ]
 )

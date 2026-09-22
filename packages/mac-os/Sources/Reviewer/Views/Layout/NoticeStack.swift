@@ -145,7 +145,7 @@ private struct NoticeDetails: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            Divider()
+            ThemedDivider()
             ScrollView([.vertical, .horizontal]) {
                 Text(notice.output ?? "")
                     .font(.system(size: 11, design: .monospaced))

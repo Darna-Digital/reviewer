@@ -74,7 +74,9 @@ export const makeMemoryRepoRepository = (seed: MemoryRepoSeed = {}) =>
     const repo: RepoRepo = {
       info: Effect.succeed(seed.info ?? defaultInfo),
       identity: Effect.succeed(seed.identity ?? { name: null, email: null }),
-      files: Effect.succeed(seed.files ?? { paths: [], gitStatus: [] }),
+      files: Effect.succeed(
+        seed.files ?? { root: defaultInfo.root, paths: [], gitStatus: [] }
+      ),
       status: Effect.succeed(seed.status ?? defaultStatus),
       branches: Effect.succeed(seed.branches ?? []),
       remoteBranches: Effect.succeed([]),

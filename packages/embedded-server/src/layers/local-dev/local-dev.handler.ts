@@ -6,7 +6,12 @@ import { NotFound } from "@reviewer/core/shared";
 import { Api } from "../../api.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
 import type { DevRunStatus } from "../terminal/dev-process-manager.ts";
-import { DevRuntime } from "./local-dev.runtime.ts";
+import {
+  afterDockerDesktop,
+  dockerDesktopScript,
+  quitDockerDesktop,
+} from "./docker-desktop.ts";
+import { DevRuntime, type StartCommandInput } from "./local-dev.runtime.ts";
 import type { DevCommand, DevCommandView } from "@reviewer/core/local-dev";
 import { LocalDevService } from "@reviewer/core/local-dev";
 
@@ -40,6 +45,33 @@ const commandFolder = (
   return Effect.succeed(folder);
 };
 
+const isDockerDesktop = (command: DevCommand) =>
+  command.kind === "docker-desktop";
+
+/**
+ * What the runtime starts for a command: a shell command as written, in its
+ * folder; a Docker Desktop command as the server's own script, at the root.
+ * `wrap` lets "start all" have the shell commands wait for the engine.
+ */
+const launch = (
+  repoPath: string,
+  command: DevCommand,
+  wrap: (shell: string) => string = (shell) => shell
+): Effect.Effect<StartCommandInput, NotFound> =>
+  isDockerDesktop(command)
+    ? Effect.succeed({
+        commandId: command.id,
+        repoPath,
+        cwd: repoPath,
+        command: dockerDesktopScript,
+      })
+    : Effect.map(commandFolder(repoPath, command), (cwd) => ({
+        commandId: command.id,
+        repoPath,
+        cwd,
+        command: wrap(command.command),
+      }));
+
 /** Merge a stored definition with its (optional) runtime status into a view. */
 const toView = (
   command: DevCommand,
@@ -70,6 +102,7 @@ export const LocalDevHandler = HttpApiBuilder.group(
       .handle("create", ({ payload }) =>
         Effect.flatMap(LocalDevService, (s) =>
           s.create({
+            kind: payload.kind,
             name: payload.name,
             command: payload.command,
             cwd: payload.cwd,
@@ -105,17 +138,19 @@ export const LocalDevHandler = HttpApiBuilder.group(
           const ctx = yield* WorkspaceContext;
           const repoPath = yield* ctx.requireCurrent;
           const command = yield* dev.get(params.id);
-          const status = yield* runtime.start({
-            commandId: command.id,
-            repoPath,
-            cwd: yield* commandFolder(repoPath, command),
-            command: command.command,
-          });
+          const status = yield* runtime.start(yield* launch(repoPath, command));
           return toView(command, status);
         })
       )
       .handle("stop", ({ params }) =>
-        Effect.flatMap(DevRuntime, (r) => r.stop(params.id)).pipe(Effect.as(ok))
+        Effect.gen(function* () {
+          const dev = yield* LocalDevService;
+          const runtime = yield* DevRuntime;
+          const command = yield* dev.get(params.id);
+          if (isDockerDesktop(command)) yield* quitDockerDesktop;
+          yield* runtime.stop(params.id);
+          return ok;
+        })
       )
       .handle("startAll", () =>
         Effect.gen(function* () {
@@ -124,14 +159,16 @@ export const LocalDevHandler = HttpApiBuilder.group(
           const ctx = yield* WorkspaceContext;
           const repoPath = yield* ctx.requireCurrent;
           const commands = yield* dev.list;
+          // Docker Desktop goes first, and once it is part of the project
+          // the shell commands wait for its engine before they run.
+          const docker = commands.filter(isDockerDesktop);
+          const shell = commands.filter((command) => !isDockerDesktop(command));
+          const wrap = docker.length > 0 ? afterDockerDesktop : undefined;
           const views: DevCommandView[] = [];
-          for (const command of commands) {
-            const status = yield* runtime.start({
-              commandId: command.id,
-              repoPath,
-              cwd: yield* commandFolder(repoPath, command),
-              command: command.command,
-            });
+          for (const command of [...docker, ...shell]) {
+            const status = yield* runtime.start(
+              yield* launch(repoPath, command, wrap)
+            );
             views.push(toView(command, status));
           }
           return views;
@@ -139,9 +176,16 @@ export const LocalDevHandler = HttpApiBuilder.group(
       )
       .handle("stopAll", () =>
         Effect.gen(function* () {
+          const dev = yield* LocalDevService;
           const runtime = yield* DevRuntime;
           const ctx = yield* WorkspaceContext;
-          yield* runtime.stopRepo(yield* ctx.requireCurrent);
+          const repoPath = yield* ctx.requireCurrent;
+          const commands = yield* dev.list;
+          for (const command of commands.filter(isDockerDesktop)) {
+            const status = yield* runtime.status(command.id);
+            if (status?.status === "running") yield* quitDockerDesktop;
+          }
+          yield* runtime.stopRepo(repoPath);
           return ok;
         })
       )

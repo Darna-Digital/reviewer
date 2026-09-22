@@ -12,6 +12,7 @@
 import AppKit
 import Foundation
 import Observation
+import ReviewerShared
 import WebKit
 
 enum ConnectionState: Equatable {
@@ -126,6 +127,8 @@ final class AppModel {
         page.onReviewReported = { [weak self] review in self?.reviewHandoff.take(review) }
         page.onOpenRequested = { [weak self] target in self?.open(target) }
         page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
+        catalog.onChanged = { [weak self] in self?.publishWidgetFeed() }
+        ProjectLinks.shared.handler = { [weak self] path in self?.open(link: path) }
     }
 
     var hasProject: Bool { workspace?.project != nil }
@@ -155,7 +158,13 @@ final class AppModel {
             try await ServerLauncher.shared.ensureRunning()
             connection = .ready
             settings.paintThemes()
-            await refresh()
+            if let path = linkedProject {
+                linkedProject = nil
+                await openProject(path: path)
+            } else {
+                await refresh()
+            }
+            catalog.load()
         } catch {
             connection = .failed(error.localizedDescription)
         }
@@ -467,14 +476,47 @@ final class AppModel {
             services.reset()
             threads.reset()
             bottomExpanded = false
+            // Everything the page holds is the project just left — its files,
+            // its branch, the strip of files it had open — so it is told to
+            // re-ask before it is sent anywhere. Arriving on the browse page
+            // still answering for the old repository is how one project's
+            // file ends up opened in another's; the refresh at the end of
+            // this comes too late for that, being several round trips away.
+            page.refresh()
             showOnCodeTab(Href.browsePath)
             await refresh()
             projectOpens += 1
+            catalog.load()
             return true
         } catch {
             lastError = error.localizedDescription
             return false
         }
+    }
+
+    /// A project named by a `reviewer://open` link — a click on the widget.
+    /// Opened at once while the server answers; held for `bootstrap` while
+    /// it is still coming up, which is the app launched by the click; and
+    /// a bare launch only brings the app forward. Then the catalog is
+    /// re-read either way, so the widget sees the project as the open one.
+    func open(link path: String?) {
+        NSApp.activate()
+        guard let path else { return }
+        guard connection == .ready else {
+            linkedProject = path
+            return
+        }
+        guard workspace?.project != path else { return }
+        Task { await openProject(path: path) }
+    }
+
+    /// The path a link asked for before the server was up (see `open(link:)`).
+    private var linkedProject: String?
+
+    /// The widget's feed: the catalog's rows and stars, and the open
+    /// project (see `ProjectWidgetFeed`).
+    private func publishWidgetFeed() {
+        ProjectWidgetFeed.publish(rows: catalog.rows, favorites: catalog.favorites, current: workspace?.project)
     }
 
     /// The opener's Open and Run: the project opened, then every one of its

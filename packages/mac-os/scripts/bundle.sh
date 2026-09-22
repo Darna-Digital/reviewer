@@ -103,8 +103,35 @@ else
   png_to_icns "${package_dir}/Resources/icons/reviewer-icon-dark.png" "${contents}/Resources/Reviewer-dark.icns"
 fi
 
-# Ad-hoc sign so the binary runs under the hardened-runtime defaults of a
-# modern macOS without a "damaged app" dialog on first launch.
-codesign --force --sign - "$app" >/dev/null 2>&1 || true
+# The widget extension rides along under Contents/PlugIns, where the system
+# looks for an app's extensions: the ReviewerWidget executable in a bundle
+# of its own, with the plist that names it a WidgetKit extension. The app
+# registers it with the extension system when it launches.
+appex="${contents}/PlugIns/ReviewerWidget.appex"
+mkdir -p "${appex}/Contents/MacOS"
+cp "${bin_dir}/ReviewerWidget" "${appex}/Contents/MacOS/ReviewerWidget"
+cp "${package_dir}/Resources/Widget/Info.plist" "${appex}/Contents/Info.plist"
+
+# Ad-hoc sign so the binaries run under the hardened-runtime defaults of a
+# modern macOS without a "damaged app" dialog on first launch — the
+# extension first, since the app's signature seals what it holds. Both
+# carry their entitlements: the extension runs sandboxed, and the app group
+# the two share is where the widget's project feed is written.
+codesign --force --sign - \
+  --entitlements "${package_dir}/Resources/Widget/ReviewerWidget.entitlements" \
+  "$appex" >/dev/null 2>&1 || true
+codesign --force --sign - \
+  --entitlements "${package_dir}/Resources/Reviewer.entitlements" \
+  "$app" >/dev/null 2>&1 || true
+
+# The bundle is torn down and rebuilt on every call, which leaves the system
+# holding a registration for a path that no longer exists: Launch Services
+# stops resolving the app (and with it the `reviewer://` scheme), and the
+# widget host loses the extension — "Unable to find ... extension directly",
+# with the placed widgets left on their last drawing. Registering both again
+# here is what an install would do, and keeps a rebuilt bundle whole.
+lsregister="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+"$lsregister" -f "$app" >/dev/null 2>&1 || true
+pluginkit -a "$appex" >/dev/null 2>&1 || true
 
 echo "$app"

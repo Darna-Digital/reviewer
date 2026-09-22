@@ -72,7 +72,7 @@ struct SentAttachmentPreview: View {
                 }
             }
             .frame(width: 128, height: 128)
-            .background(.quaternary.opacity(0.5))
+            .background(.quaternaryWash(0.5))
             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Color(nsColor: IslandPalette.separator), lineWidth: 1))
         }

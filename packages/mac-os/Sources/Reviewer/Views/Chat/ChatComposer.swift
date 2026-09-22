@@ -98,7 +98,7 @@ struct ChatComposer: View {
                             Image(systemName: "stop.fill")
                                 .font(.system(size: 10, weight: .bold))
                                 .frame(width: 26, height: 26)
-                                .background(.quaternary, in: Circle())
+                                .background(.quaternaryWash(), in: Circle())
                         }
                         .buttonStyle(.plain)
                         .help("Stop generation")

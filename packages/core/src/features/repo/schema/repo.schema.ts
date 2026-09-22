@@ -113,7 +113,19 @@ export const CommitDetail = Schema.Struct({
   files: Schema.Array(CommitFileChange),
 });
 export type CommitDetail = typeof CommitDetail.Type;
+/**
+ * Every file in the open repository, and what git makes of each.
+ *
+ * The listing names the repository it lists. A client holds this answer and
+ * the repository's identity as two separate readings, and a project switch
+ * replaces them a moment apart — so for that moment one of them is still the
+ * project just left. Anything deciding what a repository holds (a strip of
+ * open files, a tree) has to be able to tell the two apart, and `root` is how:
+ * the same `rev-parse --show-toplevel` `RepoInfo.root` carries, so the two can
+ * simply be compared.
+ */
 export const FilesPayload = Schema.Struct({
+  root: Schema.String,
   paths: Schema.Array(Schema.String),
   gitStatus: Schema.Array(GitStatusEntry),
 });

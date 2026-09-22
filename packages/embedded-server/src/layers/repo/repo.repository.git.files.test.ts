@@ -15,10 +15,13 @@ const NEW_DIR_FILES = [
  * git reports a wholly-untracked directory as a single `?? dir/` entry instead
  * of one entry per file.
  */
+const ROOT = "/repos/reviewer";
+
 const fakeGit = (): GitExecShape => {
   const notUsed = () => Effect.succeed("");
   return {
-    run: notUsed,
+    run: (...args) =>
+      Effect.succeed(args[0] === "rev-parse" ? `${ROOT}\n` : ""),
     runVerbose: notUsed,
     runTolerant: notUsed,
     lines: (...args) => {
@@ -63,5 +66,11 @@ describe("files", () => {
     const { gitStatus } = await runFiles();
 
     expect(gitStatus.filter((entry) => entry.path.endsWith("/"))).toEqual([]);
+  });
+
+  it("names the repository it lists, so a client can tell whose listing it is", async () => {
+    const { root } = await runFiles();
+
+    expect(root).toBe(ROOT);
   });
 });

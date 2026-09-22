@@ -282,7 +282,7 @@ private struct TargetPicker: View {
             }
             .padding(.horizontal, 10)
             .frame(height: 32)
-            Divider()
+            ThemedDivider()
             if agents.isEmpty && here.isEmpty && elsewhere.isEmpty {
                 Text("No matches")
                     .font(.system(size: 12))

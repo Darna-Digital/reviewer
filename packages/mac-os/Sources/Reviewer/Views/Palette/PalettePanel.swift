@@ -54,9 +54,9 @@ private struct PalettePanel: View {
         let rows = palette.rows
         VStack(spacing: 0) {
             header(palette: $palette)
-            Divider()
+            ThemedDivider()
             list(rows)
-            Divider()
+            ThemedDivider()
             footer(rows)
         }
         .glassEffect(.regular, in: .rect(cornerRadius: PalettePanel.radius))

@@ -110,7 +110,7 @@ struct PullRequestOverview: View {
                 .font(.system(size: 11, design: .monospaced))
                 .padding(.horizontal, 7)
                 .padding(.vertical, 4)
-                .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+                .background(.quaternaryWash(0.5), in: RoundedRectangle(cornerRadius: 6))
                 .textSelection(.enabled)
             }
             if pull.changedFiles > 0 || !pull.createdAt.isEmpty {

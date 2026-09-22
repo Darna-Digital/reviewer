@@ -38,7 +38,7 @@ struct BranchPicker: View {
                 sections: sections, placeholder: "Search branches", pick: checkout, dismiss: { open = false },
                 actions: model.branchActions(for:)
             ) {
-                Divider()
+                ThemedDivider()
                 HStack(spacing: 2) {
                     Button("New branch…") { open = false; model.branchPrompt = .create(startPoint: nil) }
                     Button("Update") { open = false; model.fetch() }

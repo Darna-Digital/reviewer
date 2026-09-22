@@ -8,10 +8,10 @@
  * offers to ask again, which is what anyone would want to do next.
  */
 import { IconFileAlert } from "@tabler/icons-react";
-import { Fragment } from "react";
 import { Button } from "@/components/ui/button";
 import { FileTypeIcon } from "@/components/ui/file-type-icon";
 import { errorReason } from "@/lib/errors";
+import { cn } from "@/lib/utils";
 
 interface OpenFailedProps {
   path: string;
@@ -25,17 +25,16 @@ interface OpenFailedProps {
 
 const fileNameOf = (path: string) => path.split("/").at(-1) ?? path;
 
-const breakableAtSlashes = (path: string) =>
-  path.split("/").map((segment, index) => (
-    <Fragment key={index}>
-      {index > 0 && (
-        <>
-          /<wbr />
-        </>
-      )}
-      {segment}
-    </Fragment>
-  ));
+/* The path stays on one line and scrolls sideways rather than wrapping: a deep
+   path broke into a ragged block that pulled the eye away from the sentence
+   above it, and a path is read segment by segment anyway. No scrollbar — it
+   would draw a second line under a line of text — so the edges fade to say
+   there is more, and only the edge that still has path behind it. */
+const PATH_LINE = cn(
+  "min-w-0 overflow-x-auto font-mono text-xs whitespace-nowrap",
+  "scrollbar-none",
+  "scroll-fade-when-scrollable scroll-fade-x [--scroll-fade-size:1rem]"
+);
 
 export function OpenFailed({
   path,
@@ -56,11 +55,9 @@ export function OpenFailed({
         <p className="max-w-[44ch] text-sm/6 text-pretty text-muted-foreground">
           {reason}
         </p>
-        <span className="mt-1 inline-flex max-w-full items-start gap-1.5 text-left text-muted-foreground/60">
-          <FileTypeIcon path={path} className="mt-px size-3.5 shrink-0" />
-          <code className="font-mono text-xs wrap-anywhere">
-            {breakableAtSlashes(path)}
-          </code>
+        <span className="mt-1 flex max-w-full items-center gap-1.5 text-left text-muted-foreground/60">
+          <FileTypeIcon path={path} className="size-3.5 shrink-0" />
+          <code className={PATH_LINE}>{path}</code>
         </span>
       </div>
       {onRetry !== undefined && (

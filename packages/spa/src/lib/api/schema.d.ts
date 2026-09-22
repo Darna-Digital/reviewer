@@ -1789,6 +1789,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        root: string;
                         paths: string[];
                         gitStatus: {
                             path: string;
@@ -5712,6 +5713,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        /** @enum {string} */
+                        kind: "shell" | "docker-desktop";
                         name: string;
                         command: string;
                         cwd: string;
@@ -5762,6 +5765,8 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @enum {string} */
+                    kind?: "shell" | "docker-desktop";
                     name: string;
                     command: string;
                     cwd?: string;
@@ -5777,6 +5782,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        /** @enum {string} */
+                        kind: "shell" | "docker-desktop";
                         name: string;
                         command: string;
                         cwd: string;
@@ -5833,6 +5840,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        /** @enum {string} */
+                        kind: "shell" | "docker-desktop";
                         name: string;
                         command: string;
                         cwd: string;
@@ -5948,6 +5957,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        /** @enum {string} */
+                        kind: "shell" | "docker-desktop";
                         name: string;
                         command: string;
                         cwd: string;
@@ -6004,6 +6015,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        /** @enum {string} */
+                        kind: "shell" | "docker-desktop";
                         name: string;
                         command: string;
                         cwd: string;
@@ -6112,6 +6125,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         id: string;
+                        /** @enum {string} */
+                        kind: "shell" | "docker-desktop";
                         name: string;
                         command: string;
                         cwd: string;

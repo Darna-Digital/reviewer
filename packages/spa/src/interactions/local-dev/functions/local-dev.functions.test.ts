@@ -5,6 +5,7 @@ import { createLocalDevFunctions, repoFolders } from "./local-dev.functions";
 
 const command = (over: Partial<DevCommand> = {}): DevCommand => ({
   id: "d1",
+  kind: "shell",
   name: "web",
   command: "pnpm dev",
   cwd: "",

@@ -267,12 +267,12 @@ private struct FilterTextField: View {
 
     var body: some View {
         TextField(prompt, text: $text)
-            .textFieldStyle(.plain)
+            .textFieldStyle(.roundedBorder)
+            .controlSize(.regular)
             .font(.system(size: 11))
             .focused($focused)
             .onSubmit(commit)
             .onChange(of: focused) { _, isFocused in if !isFocused { commit() } }
-            .paneField()
     }
 }
 
@@ -328,6 +328,17 @@ private struct SinceDateButton: View {
     }
 }
 
+/// A row of the list, in the same column as the bar's fields above it, on
+/// both edges: the row is the width of a field, and the graph's own half
+/// column of air at the leading edge stands the dots where the fields stand
+/// their glyphs. The inset is the row's own padding rather than
+/// `listRowInsets`, which the list adds its margins to.
+private extension View {
+    func rowInset() -> some View {
+        padding(.horizontal, PaneMetrics.barInset)
+    }
+}
+
 /// The commits: one row each, the graph's cell down the leading edge. The
 /// list paints its own pick, in `TreeSelection`'s wash, since a selecting
 /// `List` would paint the accent blue; Up and Down still walk the rows.
@@ -344,9 +355,10 @@ private struct CommitList: View {
                 ForEach(Array(commits.enumerated()), id: \.element.sha) { index, commit in
                     CommitRow(commit: commit, graph: layout.rows[index],
                               selected: commit.sha == history.selectedSha) { select(commit) }
+                        .rowInset()
                         .id(commit.sha)
                         .listRowSeparator(.hidden)
-                        .listRowInsets(EdgeInsets(top: 0, leading: PaneMetrics.barInset, bottom: 0, trailing: PaneMetrics.barInset))
+                        .listRowInsets(EdgeInsets())
                         .onAppear {
                             if commit.sha == commits.last?.sha { history.loadMore() }
                         }
@@ -356,11 +368,13 @@ private struct CommitList: View {
                         .font(.system(size: 11))
                         .foregroundStyle(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, PaneMetrics.barInset)
+                        .rowInset()
                         .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets())
                 }
             }
-            .listStyle(.inset)
+            .listStyle(.plain)
+            .contentMargins(.horizontal, 0, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .focusable()
             .focusEffectDisabled()
@@ -404,10 +418,11 @@ private struct CommitList: View {
 }
 
 /// A commit's row: its cell of the graph, up to three of its refs as
-/// badges, its subject, and
-/// at the trailing edge its author and the day it was authored, each in a
-/// column of its own so the dates stand in one line down the list whatever
-/// the authors' names run to.
+/// badges, its subject, and at the trailing edge its author and the day it
+/// was authored, each in a column of its own so the dates stand in one line
+/// down the list whatever the authors' names run to. The row takes no
+/// padding of its own — `rowInset` sets the column it stands in, and the
+/// pick is washed across the whole of it.
 private struct CommitRow: View {
     let commit: CommitInfo
     let graph: GraphRow
@@ -438,7 +453,6 @@ private struct CommitRow: View {
                     .lineLimit(1)
                     .frame(width: Self.dayWidth, alignment: .trailing)
             }
-            .padding(.horizontal, 6)
             .frame(height: CommitGraphLayout.rowHeight)
             .background(selected ? TreeSelection.color : Color.clear, in: RoundedRectangle(cornerRadius: 5))
             .contentShape(Rectangle())
@@ -460,7 +474,7 @@ struct RefBadge: View {
             .lineLimit(1)
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
-            .background(.quaternary.opacity(0.7), in: RoundedRectangle(cornerRadius: 4))
+            .background(.quaternaryWash(0.7), in: RoundedRectangle(cornerRadius: 4))
     }
 }
 

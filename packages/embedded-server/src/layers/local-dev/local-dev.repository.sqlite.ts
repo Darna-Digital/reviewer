@@ -61,6 +61,7 @@ export const makeSqliteDevCommandsRepository = Effect.gen(function* () {
       const now = new Date().toISOString();
       const created: DevCommand = {
         id: nextId(),
+        kind: input.kind ?? "shell",
         name: input.name.trim(),
         command: input.command.trim(),
         cwd: normalizeDevCwd(input.cwd ?? ""),

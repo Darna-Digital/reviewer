@@ -39,3 +39,19 @@ export type OpenIntent =
   | "preview"
   /** A double click, an edit, or anything else that says "I am staying". */
   | "permanent";
+
+/** Where the app says it is, for the strip to be settled against. */
+export interface Reconcile {
+  /** The file the URL names, or null when it names none. */
+  readonly viewing: string | null;
+  /** The repository has changed since the strip was last reconciled. */
+  readonly switched: boolean;
+  /** The page is browsing, so a strip with nothing on screen is a hole. */
+  readonly canRestore: boolean;
+}
+
+export interface Reconciled {
+  /** The file that belongs on screen — the URL is corrected to it. */
+  readonly open: string | null;
+  readonly tabs: TabsState;
+}

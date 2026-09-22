@@ -536,6 +536,13 @@ struct RenameThread: Encodable, Sendable {
 
 // MARK: local dev (Run)
 
+/// What a dev command is — `DevCommandKind` in core: a shell command line,
+/// or Docker Desktop, which the server starts and watches by itself.
+enum DevCommandKind: String, Codable, Hashable, Sendable {
+    case shell
+    case dockerDesktop = "docker-desktop"
+}
+
 /// A dev command and whether its process is up — `DevCommandView` in core.
 struct DevCommandView: Decodable, Identifiable, Hashable, Sendable {
     enum Status: String, Decodable, Sendable {
@@ -543,7 +550,9 @@ struct DevCommandView: Decodable, Identifiable, Hashable, Sendable {
     }
 
     let id: String
+    let kind: DevCommandKind
     let name: String
+    /// Empty for a Docker Desktop command.
     let command: String
     /// The folder inside the repository it runs from, relative to the root
     /// and empty for the root itself.
@@ -554,15 +563,25 @@ struct DevCommandView: Decodable, Identifiable, Hashable, Sendable {
 
 struct DevCommand: Decodable, Sendable {
     let id: String
+    let kind: DevCommandKind
     let name: String
     let command: String
     let cwd: String
 }
 
 struct NewDevCommand: Encodable, Sendable {
+    let kind: DevCommandKind
     let name: String
     let command: String
     let cwd: String
+
+    static func shell(name: String, command: String, cwd: String) -> NewDevCommand {
+        NewDevCommand(kind: .shell, name: name, command: command, cwd: cwd)
+    }
+
+    static func dockerDesktop(name: String) -> NewDevCommand {
+        NewDevCommand(kind: .dockerDesktop, name: name, command: "", cwd: "")
+    }
 }
 
 // MARK: branches

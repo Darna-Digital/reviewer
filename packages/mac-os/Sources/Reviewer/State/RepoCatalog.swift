@@ -71,6 +71,9 @@ final class RepoCatalog {
     @ObservationIgnored private let defaults = UserDefaults.standard
     @ObservationIgnored private var home = NSHomeDirectory()
     @ObservationIgnored private var followTask: Task<Void, Never>?
+    /// Called as the rows or the favourites change — what the widget's
+    /// feed is written from (see `ProjectWidgetFeed`).
+    @ObservationIgnored var onChanged: (() -> Void)?
 
     /// How often the index is re-read while the walk is still filling it in.
     private static let followInterval: Duration = .seconds(1)
@@ -104,6 +107,7 @@ final class RepoCatalog {
         } else {
             favorites.append(path)
         }
+        onChanged?()
     }
 
     /// The folders holding more than one repository, most first — a folder
@@ -163,5 +167,6 @@ final class RepoCatalog {
             isScanning = false
         }
         hasLoaded = true
+        onChanged?()
     }
 }

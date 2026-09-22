@@ -7,6 +7,7 @@
 // selects; a double-click checks out; the context menu is the switcher's,
 // and the empty space under the rows has the surface's own — a new branch,
 // update, push.
+import ReviewerShared
 import SwiftUI
 
 struct BranchesPane: View {
@@ -346,30 +347,11 @@ struct RepoAvatar: View {
     let name: String
     var size: CGFloat = 16
 
-    private static let palette = [
-        "#4c79ff", "#16a34a", "#d4861a", "#9333ea", "#dc2626", "#0891b2", "#db2777", "#65a30d",
-    ]
-
     var body: some View {
-        Text(Self.initials(of: name))
+        Text(RepoMonogram.initials(of: name))
             .font(.system(size: size / 2, weight: .semibold))
             .foregroundStyle(.white)
             .frame(width: size, height: size)
-            .background(Color(hex: Self.hue(of: name)), in: RoundedRectangle(cornerRadius: size * 3 / 16))
-    }
-
-    static func initials(of name: String) -> String {
-        let words = name.split { " -_./".contains($0) }.filter { !$0.isEmpty }
-        if words.isEmpty { return String(name.prefix(2)).uppercased() }
-        if words.count == 1 { return String(words[0].prefix(2)).uppercased() }
-        return String([words[0].first, words[1].first].compactMap { $0 }).uppercased()
-    }
-
-    static func hue(of name: String) -> String {
-        var hash: Int32 = 0
-        for scalar in name.utf16 {
-            hash = hash &* 31 &+ Int32(scalar)
-        }
-        return palette[Int(hash.magnitude) % palette.count]
+            .background(Color(hex: RepoMonogram.hue(of: name)), in: RoundedRectangle(cornerRadius: size * 3 / 16))
     }
 }

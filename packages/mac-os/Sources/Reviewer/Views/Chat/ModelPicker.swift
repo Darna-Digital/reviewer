@@ -41,7 +41,7 @@ struct ModelPicker: View {
         .popover(isPresented: $open, arrowEdge: .bottom) {
             HStack(spacing: 0) {
                 providerRail
-                Divider()
+                ThemedDivider()
                 modelList(models)
             }
             .frame(width: 400, height: 340)
@@ -87,7 +87,7 @@ struct ModelPicker: View {
             }
             .padding(.horizontal, 10)
             .frame(height: 32)
-            Divider()
+            ThemedDivider()
             if visible.isEmpty {
                 Spacer()
                 Text(emptyMessage(searching: !needle.isEmpty))

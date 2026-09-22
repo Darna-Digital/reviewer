@@ -97,7 +97,7 @@ struct BranchPopover<Footer: View>: View {
         let lines = lines
         VStack(spacing: 0) {
             field
-            Divider()
+            ThemedDivider()
             if lines.isEmpty {
                 Text("No branch matches.")
                     .font(.system(size: 12))

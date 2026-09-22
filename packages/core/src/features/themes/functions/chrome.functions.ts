@@ -88,6 +88,14 @@ const MIN_TEXT_CONTRAST = 4.5;
  * about this, and a theme's should be no fainter.
  */
 const MIN_MUTED_CONTRAST = 6;
+/**
+ * The least the tertiary type stands off the sheet — a count beside a
+ * heading, a dot between two facts: fainter than the muted type, and still
+ * type. A fixed share of the way back to the sheet landed a light theme's
+ * near the edge of legibility while a dark theme's read fine, so it is
+ * found the way the muted type is, by the floor.
+ */
+const MIN_TERTIARY_CONTRAST = 4;
 /** The least two surfaces may differ and still be told apart. */
 const MIN_STEP_CONTRAST = 1.04;
 
@@ -126,7 +134,7 @@ export function deriveChromeTokens(theme: ThemeLike): ChromeTokens {
     scheme
   );
   const textSecondary = mutedFrom(text, island);
-  const textTertiary = mix(textSecondary, island, 0.35);
+  const textTertiary = mutedFrom(textSecondary, island, MIN_TERTIARY_CONTRAST);
 
   const accent = inked(
     loudOver(island, [
@@ -270,10 +278,14 @@ function inked(
  * muted type should — the faintest step that clears the floor, or the type
  * itself where none does.
  */
-function mutedFrom(text: Rgba, surface: Rgba): Rgba {
+function mutedFrom(
+  text: Rgba,
+  surface: Rgba,
+  floor = MIN_MUTED_CONTRAST
+): Rgba {
   for (let weight = 0.5; weight < 1; weight += 0.05) {
     const candidate = mix(surface, text, weight);
-    if (contrast(candidate, surface) >= MIN_MUTED_CONTRAST) return candidate;
+    if (contrast(candidate, surface) >= floor) return candidate;
   }
   return text;
 }

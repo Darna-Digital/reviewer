@@ -55,9 +55,9 @@ struct SessionFilterPopover: View {
         VStack(spacing: 0) {
             if hasProjects {
                 field
-                Divider()
+                ThemedDivider()
                 projects(lines)
-                Divider()
+                ThemedDivider()
             }
             dates(lines)
         }

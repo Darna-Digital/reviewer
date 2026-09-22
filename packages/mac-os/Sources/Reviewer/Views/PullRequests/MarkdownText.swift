@@ -244,11 +244,11 @@ struct MarkdownText: View {
                             .padding(.horizontal, 10)
                             .padding(.vertical, 8)
                     }
-                    .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+                    .background(.quaternaryWash(0.5), in: RoundedRectangle(cornerRadius: 6))
                 case .quote(let text):
                     HStack(alignment: .top, spacing: 8) {
                         RoundedRectangle(cornerRadius: 1)
-                            .fill(.quaternary)
+                            .fill(.quaternaryWash())
                             .frame(width: 2)
                         paragraph(text, metrics: metrics)
                             .foregroundStyle(.secondary)

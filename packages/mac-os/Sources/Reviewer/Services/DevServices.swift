@@ -93,8 +93,8 @@ final class DevServices {
         await act { try await client.stopAllDevCommands() }
     }
 
-    func create(name: String, command: String, cwd: String) async {
-        await act { try await client.createDevCommand(NewDevCommand(name: name, command: command, cwd: cwd)) }
+    func create(_ command: NewDevCommand) async {
+        await act { try await client.createDevCommand(command) }
     }
 
     func remove(id: String) async {

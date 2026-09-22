@@ -199,6 +199,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// `reviewer://open` links — the widget's clicks (see `ProjectLinks`).
+    func application(_ application: NSApplication, open urls: [URL]) {
+        MainActor.assumeIsolated { ProjectLinks.shared.receive(urls) }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         MainActor.assumeIsolated {
             ServerLauncher.shared.stop()

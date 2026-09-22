@@ -28,7 +28,7 @@ struct UserMessageRow: View, Equatable {
                         .textSelection(.enabled)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 9)
-                        .background(.quaternary.opacity(0.6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .background(.quaternaryWash(0.6), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
             }
             .frame(maxWidth: 560, alignment: .trailing)

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The app group shared with the widget extension (see
+	     Widget/ReviewerWidget.entitlements): the app writes the project
+	     feed into its container. The app itself is not sandboxed. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.byconvo.reviewer</string>
+	</array>
+</dict>
+</plist>

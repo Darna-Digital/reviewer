@@ -155,7 +155,7 @@ private struct Payload: View {
                     .padding(8)
             }
             .frame(maxHeight: 320)
-            .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
+            .background(.quaternaryWash(0.5), in: RoundedRectangle(cornerRadius: 6))
         }
     }
 }

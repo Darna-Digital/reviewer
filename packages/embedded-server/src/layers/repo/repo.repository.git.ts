@@ -326,12 +326,15 @@ export const makeGitRepoRepository = Effect.gen(function* () {
     };
   });
 
-  // Four independent reads of the same tree, so they go out together: run one
+  // Five independent reads of the same tree, so they go out together: run one
   // after another they add up to the slowest thing the file list waits on, and
   // the file list is what every page in the app opens with.
   const files: RepoRepo["files"] = Effect.gen(function* () {
-    const [tracked, untracked, envFiles, statusLines] = yield* Effect.all(
+    const [root, tracked, untracked, envFiles, statusLines] = yield* Effect.all(
       [
+        run("rev-parse", "--show-toplevel").pipe(
+          Effect.map((out) => out.trim())
+        ),
         lines("ls-files"),
         lines("ls-files", "--others", "--exclude-standard"),
         lines(
@@ -353,7 +356,7 @@ export const makeGitRepoRepository = Effect.gen(function* () {
       .map(parseStatusLine)
       .filter((entry): entry is GitStatusEntry => entry !== null);
     const paths = [...new Set([...tracked, ...untracked, ...envFiles])];
-    return { paths, gitStatus };
+    return { root, paths, gitStatus };
   });
 
   const status: RepoRepo["status"] = run(
