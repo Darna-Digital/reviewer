@@ -186,13 +186,24 @@ What it does today:
   Centre widget, so a project is one click from open without the app up.
   Two widgets in the gallery under Reviewer, *Recent projects* and
   *Favorite projects*, each in the three sizes: small is the open project
-  — or the last one — on its own, the whole widget the click that opens
-  it; medium and large a grid of tiles, each a repository with its branch
-  on its monogram (`RepoMonogram`, the avatar the opener's rows wear), the
-  open one ringed in the accent. A tile is a `reviewer://open?path=…`
-  link (`ProjectLink`): Launch Services brings the app up or forward with
-  it, and the app opens the path as its project — held for the server
-  while the app is still launching (`ProjectLinks`, `AppModel.open(link:)`).
+  — or the last one — on its own; medium two tiles and large six, each a
+  repository with its branch on its monogram (`RepoMonogram`, the avatar
+  the opener's rows wear), the open one ringed in the accent. Every tile
+  carries the opener's two openings along its foot — Open, and Open and
+  run, which starts the project's dev commands with it — and the name
+  itself opens the project too. Each is a `reviewer://open?path=…` link
+  (`ProjectLink`, `run=1` for the second): Launch Services brings the app
+  up or forward with it, and the app does what the opener's own buttons do
+  — held for the server while the app is still launching (`ProjectLinks`,
+  `AppModel.open(link:)`). A window holds one project, so a link naming
+  another one while this window has its own opens a window beside it
+  rather than taking this one away — several projects at once is what the
+  widget is for — and a window opened for Open and run starts the dev
+  commands as it comes up (`REVIEWER_RUN`, see `ServerLauncher`). An empty
+  window takes the project itself, which is the window a click launched. Those links are the whole of a widget's reach:
+  it draws into an archive the system renders, so there is no menu to
+  raise on a right click and no hover to answer, and an action it offers
+  has to stand as something to click.
   The widget runs sandboxed in a process of its own, so what it lists is a
   feed the app writes (`ProjectWidgetFeed` → `ProjectFeed` in
   `ReviewerShared`) whenever the catalog or the open project changes,

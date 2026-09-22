@@ -118,8 +118,14 @@ final class AppModel {
         page.onNavigated = { [weak self] href in self?.chats.follow(href: href) }
         chats.onListChanged = { [weak self] in self?.page.send(SessionAction.refetch) }
         page.onWindowTabsReported = { [weak self] strip in self?.take(strip) }
-        page.onTreeReported = { [weak self] listing in self?.sidebar.take(listing) }
-        page.onTreeStateReported = { [weak self] state in self?.sidebar.take(state) }
+        page.onTreeReported = { [weak self] listing in
+            self?.sidebar.take(listing)
+            self?.treeReported()
+        }
+        page.onTreeStateReported = { [weak self] state in
+            self?.sidebar.take(state)
+            self?.treeReported()
+        }
         page.onSessionsReported = { [weak self] list in
             if let list { self?.sessions = list }
         }
@@ -128,7 +134,7 @@ final class AppModel {
         page.onOpenRequested = { [weak self] target in self?.open(target) }
         page.onOpenDirectory = { [weak self] in self?.askForProjectFolder() }
         catalog.onChanged = { [weak self] in self?.publishWidgetFeed() }
-        ProjectLinks.shared.handler = { [weak self] path in self?.open(link: path) }
+        ProjectLinks.shared.handler = { [weak self] request in self?.open(link: request) }
     }
 
     var hasProject: Bool { workspace?.project != nil }
@@ -158,11 +164,20 @@ final class AppModel {
             try await ServerLauncher.shared.ensureRunning()
             connection = .ready
             settings.paintThemes()
-            if let path = linkedProject {
-                linkedProject = nil
-                await openProject(path: path)
+            if let request = linkedRequest, let path = request.path {
+                linkedRequest = nil
+                if request.run {
+                    await openProjectAndRun(path: path)
+                } else {
+                    await openProject(path: path)
+                }
             } else {
                 await refresh()
+                // A window the widget's Open and run opened beside this one
+                // comes up on its project already (REVIEWER_REPO, see
+                // `ServerLauncher.launchInstance`); the running is this
+                // side's to start once the project is there.
+                if hasProject, ProcessInfo.processInfo.environment["REVIEWER_RUN"] == "1" { runProject() }
             }
             catalog.load()
         } catch {
@@ -181,6 +196,52 @@ final class AppModel {
         }
         await refreshProjectState()
         page.refresh()
+    }
+
+    /// A refresh that is over only once the page has reported the tree it
+    /// re-read — for an action whose notice should land with the sidebar
+    /// rather than seconds ahead of it (see `commit`).
+    func refreshShowingTree() async {
+        let seen = treeReports
+        await refresh()
+        await treeReport(after: seen)
+    }
+
+    /// How many times the page has reported its tree — counted rather than
+    /// merely waited on, so a report that lands while the refresh is still
+    /// running is not waited past.
+    @ObservationIgnored private var treeReports = 0
+    /// Those waiting on the page's next word about its tree, by the ticket
+    /// each was given, so a wait that times out resumes only its own.
+    @ObservationIgnored private var treeReportWaiters: [UUID: CheckedContinuation<Void, Never>] = [:]
+
+    /// How long a wait on the tree holds before giving up: a page that
+    /// reports nothing — one refreshed while it is loading, one whose tree
+    /// the refresh left untouched — must not hold a notice loading forever.
+    private static let treeReportWait: Duration = .seconds(5)
+
+    /// The page's first report of its tree, or of what moves under it,
+    /// since `seen` — the listing and the composer's changes the sidebar
+    /// draws.
+    private func treeReport(after seen: Int) async {
+        guard treeReports == seen else { return }
+        let ticket = UUID()
+        let clock = Task { [weak self] in
+            try? await Task.sleep(for: Self.treeReportWait)
+            guard !Task.isCancelled else { return }
+            self?.treeReportWaiters.removeValue(forKey: ticket)?.resume()
+        }
+        await withCheckedContinuation { continuation in
+            treeReportWaiters[ticket] = continuation
+        }
+        clock.cancel()
+    }
+
+    private func treeReported() {
+        treeReports += 1
+        let waiting = treeReportWaiters
+        treeReportWaiters.removeAll()
+        for continuation in waiting.values { continuation.resume() }
     }
 
     private func refreshProjectState() async {
@@ -342,6 +403,11 @@ final class AppModel {
     /// push when asked for — one notice for the run, the way the web app
     /// reports it: a commit that landed is said so even when the push after
     /// it did not, since the work is safe and only the remote is behind.
+    /// The notice stays the attempt until the sidebar has caught up — a
+    /// push is a push while git is working, and a commit is a commit until
+    /// the files it took are gone from the tree, which is the refresh, not
+    /// the server's answer; settled any earlier, "Committed" would stand
+    /// over a composer still holding the committed files.
     func commit(message: String, paths: [String], andPush push: Bool) {
         Task {
             let id = notices.post(.loading, "Committing…")
@@ -352,18 +418,21 @@ final class AppModel {
                 notices.settle(id, failed: "Commit failed", with: error)
                 return
             }
+            var pushFailure: Error?
             if push {
                 notices.settle(id, .loading, "Committed \(sha), pushing…")
                 do {
                     _ = try await client.push()
-                    notices.settle(id, .success, "Committed \(sha) and pushed")
                 } catch {
-                    notices.settle(id, failed: "Committed \(sha), but push failed", with: error)
+                    pushFailure = error
                 }
-            } else {
-                notices.settle(id, .success, "Committed \(sha)")
             }
-            await refresh()
+            await refreshShowingTree()
+            if let pushFailure {
+                notices.settle(id, failed: "Committed \(sha), but push failed", with: pushFailure)
+            } else {
+                notices.settle(id, .success, push ? "Committed \(sha) and pushed" : "Committed \(sha)")
+            }
         }
     }
 
@@ -495,23 +564,38 @@ final class AppModel {
     }
 
     /// A project named by a `reviewer://open` link — a click on the widget.
-    /// Opened at once while the server answers; held for `bootstrap` while
-    /// it is still coming up, which is the app launched by the click; and
-    /// a bare launch only brings the app forward. Then the catalog is
-    /// re-read either way, so the widget sees the project as the open one.
-    func open(link path: String?) {
+    /// A window holds one project, so a link that names another one while
+    /// this window has its own opens a window beside it rather than taking
+    /// this one away: several projects at once is what the widget is for.
+    /// An empty window takes the project itself — the app launched by the
+    /// click is that window, and its link is held for `bootstrap` while
+    /// the server is still coming up. The project already open here stays
+    /// where it is, and only runs if that is what the click asked for. A
+    /// bare launch brings the app forward and no more.
+    func open(link request: ProjectLink.Request) {
         NSApp.activate()
-        guard let path else { return }
+        guard let path = request.path else { return }
         guard connection == .ready else {
-            linkedProject = path
+            linkedRequest = request
             return
         }
-        guard workspace?.project != path else { return }
-        Task { await openProject(path: path) }
+        if workspace?.project == path {
+            if request.run { runProject() }
+        } else if hasProject {
+            openProjectInNewWindow(path: path, run: request.run)
+        } else {
+            Task {
+                if request.run {
+                    await openProjectAndRun(path: path)
+                } else {
+                    await openProject(path: path)
+                }
+            }
+        }
     }
 
-    /// The path a link asked for before the server was up (see `open(link:)`).
-    private var linkedProject: String?
+    /// What a link asked for before the server was up (see `open(link:)`).
+    private var linkedRequest: ProjectLink.Request?
 
     /// The widget's feed: the catalog's rows and stars, and the open
     /// project (see `ProjectWidgetFeed`).
@@ -523,8 +607,16 @@ final class AppModel {
     /// dev commands started, with the Run surface up to show them coming up.
     func openProjectAndRun(path: String) async {
         guard await openProject(path: path) else { return }
-        await services.startAll()
-        show(bottomTab: .run)
+        runProject()
+    }
+
+    /// The running half of Open and run, for the project already open:
+    /// every dev command started, with the Run surface up to show them.
+    func runProject() {
+        Task {
+            await services.startAll()
+            show(bottomTab: .run)
+        }
     }
 
     /// The opener: every repository the machine holds, to pick one from.
@@ -539,9 +631,9 @@ final class AppModel {
 
     /// `path` in a Reviewer window of its own — a second instance of the
     /// app with a server of its own, since a server holds one project.
-    func openProjectInNewWindow(path: String) {
+    func openProjectInNewWindow(path: String, run: Bool = false) {
         do {
-            try ServerLauncher.shared.launchInstance(project: path)
+            try ServerLauncher.shared.launchInstance(project: path, run: run)
         } catch {
             notices.post(.error, error.localizedDescription)
         }

@@ -13,16 +13,15 @@ import ReviewerShared
 final class ProjectLinks {
     static let shared = ProjectLinks()
 
-    /// Handed the path an open link names, or nil for a bare launch.
-    var handler: ((String?) -> Void)? {
+    /// Handed what each open link asks for: a project to open, with or
+    /// without its dev commands, or nothing for a bare launch.
+    var handler: ((ProjectLink.Request) -> Void)? {
         didSet { deliverPending() }
     }
-    private var pending: [String?] = []
+    private var pending: [ProjectLink.Request] = []
 
     func receive(_ urls: [URL]) {
-        for url in urls where ProjectLink.isOpen(url) {
-            pending.append(ProjectLink.path(in: url))
-        }
+        pending.append(contentsOf: urls.compactMap(ProjectLink.request(in:)))
         deliverPending()
     }
 

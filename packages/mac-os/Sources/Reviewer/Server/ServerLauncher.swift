@@ -62,9 +62,13 @@ final class ServerLauncher {
     /// Another Reviewer, opened on `project`: the bundle launched again as a
     /// new instance — the bare binary run again under `swift run` — with a
     /// port nothing answers on yet, so it brings up a server of its own.
-    func launchInstance(project: String) throws {
+    /// `run` is the widget's Open and run reaching a window that is not
+    /// there yet: the new instance starts the project's dev commands as it
+    /// comes up (see `AppModel.bootstrap`).
+    func launchInstance(project: String, run: Bool = false) throws {
         guard let port = Self.freePort() else { throw ServerLauncherError.noFreePort }
-        let environment = ["REVIEWER_PORT": String(port), "REVIEWER_REPO": project]
+        var environment = ["REVIEWER_PORT": String(port), "REVIEWER_REPO": project]
+        if run { environment["REVIEWER_RUN"] = "1" }
         if Bundle.main.bundleURL.pathExtension == "app" {
             let configuration = NSWorkspace.OpenConfiguration()
             configuration.createsNewApplicationInstance = true

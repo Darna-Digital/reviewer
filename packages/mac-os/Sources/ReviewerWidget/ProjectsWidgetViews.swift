@@ -18,12 +18,13 @@ struct ProjectsWidgetView: View {
         } else if family == .systemSmall {
             HeroView(project: entry.hero, current: entry.feed?.current)
         } else {
-            GridView(entry: entry, slots: family == .systemLarge ? 10 : 4)
+            GridView(entry: entry, slots: family == .systemLarge ? 6 : 2)
         }
     }
 }
 
-/// The small family: the open project, or the last one, as one big tile.
+/// The small family: the open project, or the last one, as one big tile —
+/// its monogram over its name, and the two openings along the foot.
 private struct HeroView: View {
     let project: ProjectFeed.Project?
     let current: String?
@@ -31,31 +32,24 @@ private struct HeroView: View {
     var body: some View {
         if let project {
             VStack(alignment: .leading, spacing: 0) {
-                HStack(alignment: .firstTextBaseline) {
-                    ReviewerMark()
-                        .frame(width: 10, height: 13)
-                    Spacer()
-                    Text(project.path == current ? "Open" : "Last opened")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.tertiary)
+                HStack(alignment: .top) {
+                    Monogram(name: project.name, size: 38)
+                    Spacer(minLength: 6)
+                    if project.path == current {
+                        CurrentBadge()
+                    }
                 }
-                Spacer(minLength: 6)
-                Monogram(name: project.name, size: 40)
+                Spacer(minLength: 10)
                 Text(project.name)
                     .font(.system(size: 15, weight: .semibold))
                     .lineLimit(1)
-                    .padding(.top, 10)
+                    .minimumScaleFactor(0.85)
                 BranchLine(branch: project.branch, size: 11)
                     .padding(.top, 2)
-                Text(project.location)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-                    .truncationMode(.head)
-                    .padding(.top, 1)
+                Spacer(minLength: 10)
+                ProjectActions(project: project, height: 26, font: 11)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .widgetURL(ProjectLink.open(project.path))
         } else {
             EmptyListView(list: .recents)
         }
@@ -114,33 +108,92 @@ private struct ProjectTile: View {
     let project: ProjectFeed.Project
     let isCurrent: Bool
 
-    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 11, style: .continuous) }
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 13, style: .continuous) }
 
     var body: some View {
-        Link(destination: ProjectLink.open(project.path)) {
-            HStack(spacing: 8) {
-                Monogram(name: project.name, size: 28)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(project.name)
-                        .font(.system(size: 12, weight: .semibold))
-                        .lineLimit(1)
-                    BranchLine(branch: project.branch, size: 10)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.leading, 7)
-            .padding(.trailing, 8)
-            .padding(.vertical, 7)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(shape.fill(.fill.tertiary))
-            .overlay {
-                if isCurrent {
-                    shape.strokeBorder(.tint.opacity(0.7), lineWidth: 1)
-                        .widgetAccentable()
-                } else {
-                    shape.strokeBorder(.fill.secondary, lineWidth: 0.5)
+        VStack(alignment: .leading, spacing: 9) {
+            Link(destination: ProjectLink.open(project.path)) {
+                HStack(spacing: 9) {
+                    Monogram(name: project.name, size: 26)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(project.name)
+                            .font(.system(size: 12.5, weight: .semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        BranchLine(branch: project.branch, size: 10)
+                    }
+                    Spacer(minLength: 0)
+                    if isCurrent {
+                        CurrentBadge()
+                    }
                 }
             }
+            ProjectActions(project: project, height: 22, font: 10)
+        }
+        .padding(9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(shape.fill(.fill.quaternary))
+        .overlay {
+            shape.strokeBorder(isCurrent ? AnyShapeStyle(.tint.opacity(0.55)) : AnyShapeStyle(.separator.opacity(0.6)), lineWidth: 0.7)
+                .widgetAccentable(isCurrent)
+        }
+    }
+}
+
+/// The open project's mark: a dot in the accent, where a list would put a
+/// tick. It says which tile the app is already on, so the tiles beside it
+/// read as the windows it does not have open.
+private struct CurrentBadge: View {
+    var body: some View {
+        Circle()
+            .fill(.tint)
+            .frame(width: 5, height: 5)
+            .widgetAccentable()
+    }
+}
+
+/// What the opener's row menu offers, as far as a widget can carry it: the
+/// project opened on its own, or with its dev commands started. The two
+/// stand as one segmented control along the tile's foot — a single quiet
+/// shape parted by a hairline, rather than two buttons competing with the
+/// name above them. A widget has no menu and no hover, so an action it is
+/// to offer has to stand as something to click.
+private struct ProjectActions: View {
+    let project: ProjectFeed.Project
+    let height: CGFloat
+    let font: CGFloat
+
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: height / 2.6, style: .continuous) }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            action(url: ProjectLink.open(project.path)) {
+                Text("Open")
+            }
+            Rectangle()
+                .fill(.separator.opacity(0.7))
+                .frame(width: 0.7, height: height * 0.55)
+            action(url: ProjectLink.open(project.path, run: true)) {
+                HStack(spacing: 3) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: font - 2, weight: .semibold))
+                    Text("Run")
+                }
+            }
+        }
+        .frame(height: height)
+        .background(shape.fill(.fill.tertiary))
+        .overlay(shape.strokeBorder(.separator.opacity(0.5), lineWidth: 0.7))
+    }
+
+    private func action(url: URL, @ViewBuilder label: () -> some View) -> some View {
+        Link(destination: url) {
+            label()
+                .font(.system(size: font, weight: .medium))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
         }
     }
 }
