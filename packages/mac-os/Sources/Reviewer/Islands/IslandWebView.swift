@@ -19,16 +19,18 @@
 // hover off it too — the one thing no dropped event can reach, since the
 // page works out what lies under the pointer from where the pointer is.
 //
-// A drag is kept off the page by the same one thing, and only by it. Taking
-// away the types WebKit registered is not enough and is worse than nothing:
-// AppKit finds a drag's destination by hit-testing the window, and a view
-// that is under the pointer but takes none of the dragged types ends the
-// search where it stands — the drag is refused rather than handed on to the
-// drop zone drawn above it, which is SwiftUI and has no view of its own
-// this far down. An unregistered web view under a native page therefore
-// turned "the page eats every photo let go over the conversation" into
-// "nothing anywhere takes one". A covered page is out of the hit test, so
-// there is nothing under the pointer but the page drawn over it.
+// A drag cannot be kept off the page the same way: AppKit does not ask the
+// hit test where a drag goes. It walks the window's views front to back for
+// one registered for the dragged types, and WebKit answers that walk for
+// its own view itself — with a view under the pointer that takes nothing,
+// registered types or not, which ends the walk there. SwiftUI does not keep
+// the window's subviews in the order it draws them, and the island's view
+// often lands in front of the native page drawn over it, so whether a
+// photo let go over a conversation arrived came down to the order SwiftUI
+// happened to insert the two in — and every layout change reshuffled it.
+// So a covered view is fronted by a view of our own (`CoveredDropProxy`),
+// the one sibling in its holder, which is in front of it however SwiftUI
+// orders the rest and hands the drag on to the target it was aimed at.
 import AppKit
 import WebKit
 
@@ -45,21 +47,17 @@ final class IslandWebView: WKWebView {
             guard isCovered != oldValue else { return }
             window?.invalidateCursorRects(for: self)
             evaluateJavaScript(Self.coverScript(covered: isCovered)) { _, _ in }
-            if isCovered {
-                pageDropTypes = registeredDraggedTypes
-                unregisterDraggedTypes()
-            } else {
-                registerForDraggedTypes(pageDropTypes)
-            }
-            DropDiagnostics.note("island.covered=\(isCovered) kept=\(pageDropTypes.count)")
+            coverDropProxy.isHidden = !isCovered
         }
     }
 
-    /// The page's own drag types while something stands over it, so they
-    /// can be given back when it steps away. Read before the unregister and
-    /// never after: read after, what comes back is the empty list the
-    /// unregister left, and the page never takes a drop again.
-    private var pageDropTypes: [NSPasteboard.PasteboardType] = []
+    /// Laid over the view by whatever holds it (see `IslandView`), and shown
+    /// while the view is covered.
+    let coverDropProxy: NSView = {
+        let proxy = CoveredDropProxy()
+        proxy.isHidden = true
+        return proxy
+    }()
 
     override func hitTest(_ point: NSPoint) -> NSView? {
         isCovered ? nil : super.hitTest(point)
@@ -101,8 +99,6 @@ final class IslandWebView: WKWebView {
     }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
-        DropDiagnostics.note("island.entered covered=\(isCovered)", sender.draggingPasteboard)
-        DropDiagnostics.destinations(in: window, at: sender.draggingLocation)
         guard !isCovered else { return [] }
         return super.draggingEntered(sender)
     }
@@ -147,5 +143,93 @@ final class IslandWebView: WKWebView {
                 windowNumber: window.windowNumber, context: nil, eventNumber: 0, trackingNumber: 0, userData: nil)
         else { return }
         super.mouseExited(with: away)
+    }
+}
+
+
+/// Takes every drag over a covered island and hands it to the frontmost
+/// other drop target under the pointer — the native page's, drawn over the
+/// island but behind it in the window's order. Never the mouse's: clicks,
+/// the wheel and the cursor go to the page drawn over it as if the proxy
+/// were not there.
+private final class CoveredDropProxy: NSView {
+    private var target: NSDraggingDestination?
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        autoresizingMask = [.width, .height]
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        ZZDropProbe.log.notice("\(String(describing: type(of: self)), privacy: .public) moved window=\(self.window != nil)")
+        guard window != nil else { return }
+        registerForDraggedTypes([.fileURL, .png, .tiff])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("CoveredDropProxy is made in code") }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        target = targetBeneath(sender)
+        let op = target?.draggingEntered?(sender) ?? []
+        ZZDropProbe.log.notice("PROXY entered target=\(String(describing: self.target.map { type(of: $0) }), privacy: .public) op=\(op.rawValue) carried=\(sender.draggingPasteboard.types?.count ?? -1)")
+        return op
+    }
+
+    override func draggingUpdated(_ sender: NSDraggingInfo) -> NSDragOperation {
+        let next = targetBeneath(sender)
+        guard next === target else {
+            target?.draggingExited?(sender)
+            target = next
+            return next?.draggingEntered?(sender) ?? []
+        }
+        return next?.draggingUpdated?(sender) ?? []
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        target?.draggingExited?(sender)
+        target = nil
+    }
+
+    override func prepareForDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        guard let target else { return false }
+        return target.prepareForDragOperation?(sender) ?? true
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        ZZDropProbe.log.notice("PROXY perform target=\(String(describing: self.target.map { type(of: $0) }), privacy: .public)")
+        return target?.performDragOperation?(sender) ?? false
+    }
+
+    override func concludeDragOperation(_ sender: NSDraggingInfo?) {
+        target?.concludeDragOperation?(sender)
+    }
+
+    override func draggingEnded(_ sender: NSDraggingInfo) {
+        target?.draggingEnded?(sender)
+        target = nil
+    }
+
+    /// The frontmost view under the drag, outside the island's holder,
+    /// registered for any type the drag carries. The window is walked
+    /// depth-first in subview order, so the last match is the one in front.
+    private func targetBeneath(_ sender: NSDraggingInfo) -> NSDraggingDestination? {
+        guard let root = window?.contentView?.superview else { return nil }
+        let island = superview ?? self
+        let carried = Set(sender.draggingPasteboard.types ?? [])
+        let point = sender.draggingLocation
+        var frontmost: NSView?
+        func visit(_ view: NSView) {
+            guard view !== island, !view.isHidden else { return }
+            if !carried.isDisjoint(with: view.registeredDraggedTypes), view.bounds.contains(view.convert(point, from: nil)) {
+                frontmost = view
+            }
+            view.subviews.forEach(visit)
+        }
+        visit(root)
+        return frontmost
     }
 }

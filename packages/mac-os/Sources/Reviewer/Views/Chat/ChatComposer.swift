@@ -30,7 +30,6 @@ struct ChatComposer: View {
 
     @Environment(AppModel.self) private var model
     @State private var sending = false
-    @State private var dropTargeted = false
     @State private var selection: TextSelection?
     @FocusState private var focused: Bool
 
@@ -120,7 +119,7 @@ struct ChatComposer: View {
             .background(Color(nsColor: IslandPalette.island), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(highlighted ? Color(nsColor: IslandPalette.accent).opacity(0.5) : Color(nsColor: IslandPalette.separator), lineWidth: 1)
+                    .strokeBorder(focused ? Color(nsColor: IslandPalette.accent).opacity(0.5) : Color(nsColor: IslandPalette.separator), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.06), radius: 4, y: 1)
         }
@@ -166,12 +165,7 @@ struct ChatComposer: View {
                     return .handled
                 }
         }
-        .overlay { PromptDropCatcher(draftKey: draftKey, targeted: $dropTargeted) }
     }
-
-    /// The box answers a drag held over it as it answers the caret, since
-    /// the pane's dashed frame steps back while the box owns the drop.
-    private var highlighted: Bool { focused || dropTargeted }
 
     /// A send while a turn is running is accepted, not blocked: the server
     /// queues the message for when the turn settles.
@@ -299,30 +293,61 @@ private struct ComposerResizeHandle: View {
     }
 }
 
-/// The prompt box's own drop target, in front of the box rather than behind
-/// it: the `NSTextView` a `TextEditor` is made of registers for files and
-/// bitmaps so it can take them as inline attachments, so the place a photo
-/// is likeliest to be aimed at is the one place the drop would otherwise be
-/// swallowed. It takes no mouse at all — the box below types, selects and
-/// scrolls as if it were not there — and gives up nothing for it, since a
-/// drag's destination is not the hit test's to decide (see
-/// `PromptDropCatcherView.hitTest`).
-private struct PromptDropCatcher: NSViewRepresentable {
+/// The whole pane as a drop target for images, so a file can be let go
+/// anywhere in the conversation — the prompt box included — and still
+/// arrive as a chip on the box.
+///
+/// The target is a view of our own laid over the pane, not SwiftUI's
+/// `onDrop`. AppKit hands a drag to the deepest view under the pointer that
+/// is registered for its types, and does not climb back up to that view's
+/// ancestors when the deepest one takes nothing. Where `onDrop` puts its
+/// view depends on what it modifies: over a stack it lands as a leaf in
+/// front of the content and works; over a scroll view — the new session's
+/// page — it wraps the content instead, the scroll view becomes the deepest
+/// view under the pointer, and every drop is refused. An overlay is always
+/// a leaf in front of everything the pane draws.
+private struct ImageDropZone: ViewModifier {
+    let draftKey: String
+    @State private var targeted = false
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                if targeted {
+                    RoundedRectangle(cornerRadius: IslandMetrics.radius, style: .continuous)
+                        .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
+                        .background(Color.accentColor.opacity(0.05), in: RoundedRectangle(cornerRadius: IslandMetrics.radius, style: .continuous))
+                        .overlay {
+                            Label("Drop images to attach", systemImage: "photo.badge.plus")
+                                .font(.system(size: 13, weight: .medium))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(.regularMaterial, in: Capsule())
+                        }
+                        .allowsHitTesting(false)
+                }
+            }
+            .overlay { ImageDropCatcher(draftKey: draftKey, targeted: $targeted) }
+            .task { try? await Task.sleep(for: .seconds(2)); ZZDropProbe.dump() }
+    }
+}
+
+private struct ImageDropCatcher: NSViewRepresentable {
     let draftKey: String
     @Binding var targeted: Bool
     @Environment(AppModel.self) private var model
 
-    func makeNSView(context: Context) -> PromptDropCatcherView {
-        let view = PromptDropCatcherView()
+    func makeNSView(context: Context) -> ImageDropCatcherView {
+        let view = ImageDropCatcherView()
         configure(view)
         return view
     }
 
-    func updateNSView(_ nsView: PromptDropCatcherView, context: Context) {
+    func updateNSView(_ nsView: ImageDropCatcherView, context: Context) {
         configure(nsView)
     }
 
-    private func configure(_ view: PromptDropCatcherView) {
+    private func configure(_ view: ImageDropCatcherView) {
         let chats = model.chats
         let key = draftKey
         view.onAttach = { chats.attach($0, to: key) }
@@ -330,33 +355,32 @@ private struct PromptDropCatcher: NSViewRepresentable {
     }
 }
 
-final class PromptDropCatcherView: NSView {
+final class ImageDropCatcherView: NSView {
     var onAttach: (([ComposerAttachment]) -> Void)?
     var onTarget: ((Bool) -> Void)?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        ZZDropProbe.log.notice("\(String(describing: type(of: self)), privacy: .public) moved window=\(self.window != nil)")
+        guard window != nil else { return }
         registerForDraggedTypes([.fileURL, .png, .tiff])
     }
 
     @available(*, unavailable)
-    required init?(coder: NSCoder) { fatalError("PromptDropCatcherView is not made from a nib") }
+    required init?(coder: NSCoder) { fatalError("ImageDropCatcherView is not made from a nib") }
 
-    /// Never the mouse's — and a drag never asks. AppKit picks a drag's
-    /// destination from the views registered for its types, not from the
-    /// hit test: a web view answering nothing here went on taking every
-    /// photo let go over the conversation. So refusing every hit costs the
-    /// drop nothing and leaves the box whole. The heuristic that stood here
-    /// before, meaning to be hit by a drag from outside the app alone,
-    /// declined the very drags it was written for — an inter-app drag
-    /// leaves `leftMouseDragged` as this app's current event, which it read
-    /// as a press of the box's own.
+    /// Never the mouse's: the pane below clicks, types, selects and scrolls
+    /// as if the catcher were not there. A drag's destination is found from
+    /// the views registered for its types, not from this hit test, so the
+    /// drop gives up nothing for it.
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
         let operation = self.operation(for: sender)
-        DropDiagnostics.note("catcher.entered operation=\(operation.rawValue)", sender.draggingPasteboard)
-        DropDiagnostics.destinations(in: window, at: sender.draggingLocation)
         onTarget?(operation == .copy)
         return operation
     }
@@ -375,7 +399,6 @@ final class PromptDropCatcherView: NSView {
 
     override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
         let attachments = ComposerAttachment.read(pasteboard: sender.draggingPasteboard)
-        DropDiagnostics.note("catcher.perform read=\(attachments.count)", sender.draggingPasteboard)
         guard !attachments.isEmpty else { return false }
         onAttach?(attachments)
         return true
@@ -391,94 +414,8 @@ final class PromptDropCatcherView: NSView {
     }
 }
 
-/// The whole pane as a drop target for images, so a file can be let go
-/// anywhere in the conversation and still arrive as a chip on the box.
-private struct ImageDropZone: ViewModifier {
-    let draftKey: String
-    @Environment(AppModel.self) private var model
-    @State private var targeted = false
-
-    func body(content: Content) -> some View {
-        content
-            .onDrop(of: [.fileURL, .image], isTargeted: $targeted) { providers in
-                let key = draftKey
-                let chats = model.chats
-                DropDiagnostics.note("zone.drop providers=\(providers.map { $0.registeredTypeIdentifiers })", NSPasteboard(name: .drag))
-                Task {
-                    var attachments: [ComposerAttachment] = []
-                    for provider in providers {
-                        if let attachment = await Self.read(provider) { attachments.append(attachment) }
-                    }
-                    DropDiagnostics.note("zone.read=\(attachments.count)")
-                    chats.attach(attachments, to: key)
-                }
-                return true
-            }
-            .onChange(of: targeted) { _, now in DropDiagnostics.note("zone.targeted=\(now)", NSPasteboard(name: .drag)) }
-            .overlay {
-                if targeted {
-                    RoundedRectangle(cornerRadius: IslandMetrics.radius, style: .continuous)
-                        .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [8, 6]))
-                        .background(Color.accentColor.opacity(0.05), in: RoundedRectangle(cornerRadius: IslandMetrics.radius, style: .continuous))
-                        .overlay {
-                            Label("Drop images to attach", systemImage: "photo.badge.plus")
-                                .font(.system(size: 13, weight: .medium))
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
-                                .background(.regularMaterial, in: Capsule())
-                        }
-                        .allowsHitTesting(false)
-                }
-            }
-    }
-
-    /// A dropped file first, then the image the drag carries in its own
-    /// right — a drag off a web page or out of the photo library offers
-    /// bitmaps without a file behind them, and a dragged file that turns out
-    /// not to be an image still leaves the bitmaps worth trying.
-    private static func read(_ provider: NSItemProvider) async -> ComposerAttachment? {
-        if let url = await provider.fileURL, let attachment = ComposerAttachment.read(url: url) {
-            return attachment
-        }
-        guard let type = provider.registeredTypeIdentifiers.compactMap(UTType.init).first(where: { $0.conforms(to: .image) }) else {
-            return nil
-        }
-        guard let data = try? await provider.loadDataRepresentation(for: type) else { return nil }
-        let name = "Dropped image.\(type.preferredFilenameExtension ?? "png")"
-        return ComposerAttachment.read(bytes: data, name: name, type: type)
-    }
-}
-
 extension View {
     func imageDropZone(draftKey: String) -> some View {
         modifier(ImageDropZone(draftKey: draftKey))
-    }
-}
-
-private extension NSItemProvider {
-    /// A drag's file, whichever of the two shapes the promise resolves to.
-    @MainActor
-    var fileURL: URL? {
-        get async {
-            guard hasItemConformingToTypeIdentifier(UTType.fileURL.identifier),
-                let item = try? await loadItem(forTypeIdentifier: UTType.fileURL.identifier)
-            else { return nil }
-            if let url = item as? URL { return url }
-            guard let data = item as? Data else { return nil }
-            return URL(dataRepresentation: data, relativeTo: nil)
-        }
-    }
-
-    @MainActor
-    func loadDataRepresentation(for type: UTType) async throws -> Data {
-        try await withCheckedThrowingContinuation { continuation in
-            _ = loadDataRepresentation(for: type) { data, error in
-                if let data {
-                    continuation.resume(returning: data)
-                } else {
-                    continuation.resume(throwing: error ?? CocoaError(.fileReadUnknown))
-                }
-            }
-        }
     }
 }

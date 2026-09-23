@@ -73,6 +73,8 @@ final class IslandHost: NSObject {
         return view
     }
 
+    var coverDropProxy: NSView { view.coverDropProxy }
+
     /// Whether the shell has a native page over the island — the sessions
     /// surface in the page's place — so what is meant for that page, a
     /// photo dropped on a conversation above all, is not taken by the web
