@@ -95,6 +95,7 @@ struct SessionsList: View {
             .padding(.horizontal, 10)
             .padding(.bottom, 8)
         }
+        .scrollIndicators(.hidden)
         .focusable()
         .focusEffectDisabled()
         .focused($focused)

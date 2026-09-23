@@ -42,6 +42,23 @@ if [[ -f "${spa_build}/_shell.html" ]]; then
   cp -R "$spa_build" "${contents}/Resources/spa"
 fi
 
+# The API server rides along too, as the esbuild bundle
+# (`pnpm --filter @reviewer/embedded-server build:bundle`) under
+# Contents/Resources/server, so an app installed outside the repository can
+# still bring one up — see ServerLauncher. node-pty is the one dependency the
+# bundle keeps external, being native: it is copied beside it, pnpm's links
+# followed, with the platform package holding its prebuilt binary.
+server_build="${package_dir}/../embedded-server/dist/main.cjs"
+if [[ -f "$server_build" ]]; then
+  server_dir="${contents}/Resources/server"
+  mkdir -p "${server_dir}/node_modules/@lydell"
+  cp "$server_build" "${server_dir}/main.cjs"
+  node_pty="$(cd "${package_dir}/../embedded-server/node_modules/@lydell/node-pty" && pwd -P)"
+  for pty_package in "$(dirname "$node_pty")"/node-pty "$(dirname "$node_pty")"/node-pty-darwin-*; do
+    [[ -e "$pty_package" ]] && cp -RL "$pty_package" "${server_dir}/node_modules/@lydell/"
+  done
+fi
+
 # The dock icon is the Icon Composer bundle under Resources/Reviewer.icon,
 # compiled with actool into Assets.car (light, dark, clear and tinted
 # renderings, masked to the macOS 26 squircle by the system) plus a flat

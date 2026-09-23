@@ -1,8 +1,10 @@
 // Makes sure the embedded API server is answering before the UI asks it for
 // anything. Nothing running on the port yet means the shell spawns it: through
-// pnpm from the repository root, so no bundling step is needed and the server
-// runs on whatever Node the developer's shell resolves (a login shell, so
-// version-manager shims are found).
+// pnpm from the repository root when the app runs from inside one, so the
+// server is the working tree's own source; otherwise — an app installed in
+// /Applications — the server bundled into the app (`Resources/server`, see
+// scripts/bundle.sh). Either runs on whatever Node the developer's shell
+// resolves (a login shell, so version-manager shims are found).
 //
 // The port is the server's default, so an already running server (a `pnpm
 // dev` one, or another Reviewer window's) is simply reused. Override with
@@ -14,14 +16,17 @@ import AppKit
 import Foundation
 
 enum ServerLauncherError: LocalizedError {
-    case repositoryRootNotFound
+    case serverNotFound
+    case exited(Int32)
     case timedOut(URL)
     case noFreePort
 
     var errorDescription: String? {
         switch self {
-        case .repositoryRootNotFound:
-            return "could not find the reviewer repository (no pnpm-workspace.yaml above the executable) — start the server yourself with `pnpm --filter @reviewer/embedded-server start`"
+        case .serverNotFound:
+            return "this build carries no API server and is not inside the reviewer repository — rebuild it with `pnpm build:mac`, or start the server yourself with `pnpm --filter @reviewer/embedded-server start`"
+        case .exited(let status):
+            return "the API server exited with status \(status) — is `node` on your login shell's PATH?"
         case .timedOut(let url):
             return "the API server did not answer at \(url.absoluteString)"
         case .noFreePort:
@@ -108,13 +113,17 @@ final class ServerLauncher {
     }
 
     private func spawn() throws {
-        guard let root = Self.repositoryRoot() else {
-            throw ServerLauncherError.repositoryRootNotFound
-        }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/zsh")
-        process.arguments = ["-lc", "exec pnpm --filter @reviewer/embedded-server start"]
-        process.currentDirectoryURL = root
+        if let root = Self.repositoryRoot() {
+            process.arguments = ["-lc", "exec pnpm --filter @reviewer/embedded-server start"]
+            process.currentDirectoryURL = root
+        } else if let bundled = Self.bundledServer() {
+            process.arguments = ["-lc", "exec node \"$0\"", bundled.path]
+            process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
+        } else {
+            throw ServerLauncherError.serverNotFound
+        }
         var environment = ProcessInfo.processInfo.environment
         environment["REVIEWER_PORT"] = String(port)
         process.environment = environment
@@ -142,6 +151,14 @@ final class ServerLauncher {
         return nil
     }
 
+    /// The server bundled into the app by scripts/bundle.sh, beside the
+    /// node-pty it keeps external.
+    nonisolated static func bundledServer() -> URL? {
+        guard let entry = Bundle.main.resourceURL?.appending(path: "server/main.cjs"),
+              FileManager.default.fileExists(atPath: entry.path) else { return nil }
+        return entry
+    }
+
     private func isReachable(_ url: URL) async -> Bool {
         var request = URLRequest(url: url)
         request.timeoutInterval = 1
@@ -158,6 +175,7 @@ final class ServerLauncher {
         let deadline = clock.now + timeout
         while clock.now < deadline {
             if await isReachable(url) { return }
+            if let process, !process.isRunning { throw ServerLauncherError.exited(process.terminationStatus) }
             try await Task.sleep(for: .milliseconds(300))
         }
         throw ServerLauncherError.timedOut(url)

@@ -354,6 +354,13 @@ change it). If nothing answers it spawns one from the repository root with
 `pnpm --filter @reviewer/embedded-server start`, and stops it again on quit.
 A server already running — `pnpm dev`, or another window's — is reused as is.
 
+An app installed outside the repository (copied to `/Applications`) has no
+repository to walk up to, so it runs the server bundled into it instead:
+`pnpm build:mac` builds the server with esbuild (`build:bundle`) and
+`scripts/bundle.sh` copies it, with node-pty beside it, into
+`Contents/Resources/server`, where the app starts it with the `node` from
+your login shell.
+
 Requires Xcode 16+ (Swift 6 language mode) and macOS 15.
 
 ### Signing

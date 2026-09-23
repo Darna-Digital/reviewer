@@ -9,7 +9,7 @@
     "dev:brand": "pnpm --filter @reviewer/brand dev",
     "dev:mac": "pnpm --filter @reviewer/mac-os dev",
     "dev:mac:watch": "pnpm --filter @reviewer/mac-os watch",
-    "build:mac": "pnpm --filter spa build && pnpm --filter @reviewer/mac-os bundle",
+    "build:mac": "pnpm --filter spa build && pnpm --filter @reviewer/embedded-server build:bundle && pnpm --filter @reviewer/mac-os bundle",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r --if-present lint",

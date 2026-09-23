@@ -149,12 +149,23 @@ struct MessageTimeline: View {
     let chat: Chat
 
     private static let footId = "foot"
+    /// How close to the true bottom still counts as parked there. Streamed
+    /// text grows the content a point or two between frames, which would
+    /// otherwise read as having scrolled away right as the reply arrives.
+    private static let followSlack: CGFloat = 24
+
+    /// Whether the reader is at the foot already. A prompt they just sent
+    /// always pulls them back down to it, but a reply streaming in only
+    /// follows them down while they were already there — scrolling up to
+    /// reread something earlier in the turn is never fought.
+    @State private var atFoot = true
 
     var body: some View {
         let running = chat.latestTurn?.state == .running
         let activities = Dictionary(grouping: chat.activities, by: \.turnId)
         let turnError = chat.latestTurn?.state == .error ? chat.latestTurn?.errorMessage : nil
         let lastPrompt = chat.messages.last { $0.role == .user }?.id
+        let growth = chat.messages.reduce(0) { $0 + $1.text.count } + chat.activities.count
         GeometryReader { pane in
             ScrollViewReader { proxy in
                 ScrollView {
@@ -185,7 +196,17 @@ struct MessageTimeline: View {
                     .padding(.vertical, 24)
                 }
                 .defaultScrollAnchor(.bottom)
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    geometry.contentOffset.y + geometry.containerSize.height
+                        >= geometry.contentSize.height - Self.followSlack
+                } action: { _, atBottom in
+                    atFoot = atBottom
+                }
                 .onChange(of: lastPrompt) { _, _ in
+                    proxy.scrollTo(Self.footId, anchor: .bottom)
+                }
+                .onChange(of: growth) { _, _ in
+                    guard atFoot else { return }
                     proxy.scrollTo(Self.footId, anchor: .bottom)
                 }
             }
