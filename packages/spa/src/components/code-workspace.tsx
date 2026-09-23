@@ -559,6 +559,16 @@ export function CodeWorkspace() {
   const closeFile = () => {
     whenMayLeaveFile(undefined, () => setSearch({ file: undefined }));
   };
+  /**
+   * A file picked out of a diff's header: opened on the browse page the way
+   * a click in its tree opens one, rather than laid over the diff — the
+   * header asks for the file itself, not one more look at the change.
+   */
+  const openInBrowse = (path: string) => {
+    whenMayLeaveFile(path, () =>
+      navigate({ to: "/modes/code/browse", search: { file: path } })
+    );
+  };
 
   // Go-to-definition and find-usages land here: open the file (it may already
   // be the one on screen) and ask the view to reveal the line. The counter lets
@@ -1066,7 +1076,7 @@ export function CodeWorkspace() {
         selectedFile={search.path ?? null}
         onDraftOpen={setDraft}
         onDraftCancel={() => setDraft(null)}
-        onEditFile={openFile}
+        onEditFile={openInBrowse}
         onShowFileHistory={showFileHistory}
         onDiscardFile={
           // Discarding restores a file from HEAD, and a hunk is found by its

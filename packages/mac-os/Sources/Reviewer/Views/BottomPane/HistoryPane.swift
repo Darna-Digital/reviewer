@@ -321,6 +321,18 @@ private extension View {
     }
 }
 
+/// The air above the first row and below the last, as much as the list
+/// keeps at its sides. A row rather than `contentMargins`, which the list
+/// ignores, so it scrolls with the rows.
+private struct EdgeSpacer: View {
+    var body: some View {
+        Color.clear
+            .frame(height: PaneMetrics.barInset)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets())
+    }
+}
+
 /// The commits: one row each, the graph's cell down the leading edge. The
 /// list paints its own pick, in `TreeSelection`'s wash, since a selecting
 /// `List` would paint the accent blue; Up and Down still walk the rows.
@@ -334,10 +346,10 @@ private struct CommitList: View {
         let layout = history.graph
         ScrollViewReader { scroller in
             List {
+                EdgeSpacer()
                 ForEach(Array(commits.enumerated()), id: \.element.sha) { index, commit in
                     CommitRow(commit: commit, graph: layout.rows[index],
                               selected: commit.sha == history.selectedSha) { select(commit) }
-                        .rowInset()
                         .id(commit.sha)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets())
@@ -354,8 +366,10 @@ private struct CommitList: View {
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets())
                 }
+                EdgeSpacer()
             }
             .listStyle(.plain)
+            .environment(\.defaultMinListRowHeight, 0)
             .contentMargins(.horizontal, 0, for: .scrollContent)
             .scrollContentBackground(.hidden)
             .focusable()
@@ -402,9 +416,9 @@ private struct CommitList: View {
 /// A commit's row: its cell of the graph, up to three of its refs as
 /// badges, its subject, and at the trailing edge its author and the day it
 /// was authored, each in a column of its own so the dates stand in one line
-/// down the list whatever the authors' names run to. The row takes no
-/// padding of its own — `rowInset` sets the column it stands in, and the
-/// pick is washed across the whole of it.
+/// down the list whatever the authors' names run to. `rowInset` sets the
+/// column the content stands in, and the pick is washed across the inset
+/// too, so the wash runs edge to edge with the fields above.
 private struct CommitRow: View {
     let commit: CommitInfo
     let graph: GraphRow
@@ -436,6 +450,7 @@ private struct CommitRow: View {
                     .frame(width: Self.dayWidth, alignment: .trailing)
             }
             .frame(height: CommitGraphLayout.rowHeight)
+            .rowInset()
             .background(selected ? TreeSelection.color : Color.clear, in: RoundedRectangle(cornerRadius: 5))
             .contentShape(Rectangle())
         }

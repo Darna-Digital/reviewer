@@ -52,7 +52,20 @@ final class ServerLauncher {
     /// the shell's to stop on quit.
     private(set) var ownsServer = false
 
+    /// The start in progress, shared by every caller that asks meanwhile, so
+    /// a second ask spawns no second server, and a caller that goes away —
+    /// a view's task torn down — does not take the start with it.
+    private var startup: Task<Void, Error>?
+
     func ensureRunning() async throws {
+        if let startup { return try await startup.value }
+        let startup = Task { try await start() }
+        self.startup = startup
+        defer { self.startup = nil }
+        try await startup.value
+    }
+
+    private func start() async throws {
         let probe = baseURL.appending(path: "/api/workspace")
         if await isReachable(probe) { return }
         try spawn()
@@ -159,6 +172,25 @@ final class ServerLauncher {
         return entry
     }
 
+    /// Whether anything accepts connections on the port, answering HTTP yet
+    /// or not.
+    private func isListening() -> Bool {
+        let socket = Darwin.socket(AF_INET, SOCK_STREAM, 0)
+        guard socket >= 0 else { return false }
+        defer { close(socket) }
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_port = UInt16(port).bigEndian
+        address.sin_addr.s_addr = inet_addr("127.0.0.1")
+        let connected = withUnsafePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                connect(socket, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        return connected == 0
+    }
+
     private func isReachable(_ url: URL) async -> Bool {
         var request = URLRequest(url: url)
         request.timeoutInterval = 1
@@ -175,7 +207,12 @@ final class ServerLauncher {
         let deadline = clock.now + timeout
         while clock.now < deadline {
             if await isReachable(url) { return }
-            if let process, !process.isRunning { throw ServerLauncherError.exited(process.terminationStatus) }
+            // Ours gone while something else holds the port is ours having
+            // lost it — to a `pnpm dev` server that was still coming up when
+            // the app looked — and that one is the server to wait for.
+            if let process, !process.isRunning, !isListening() {
+                throw ServerLauncherError.exited(process.terminationStatus)
+            }
             try await Task.sleep(for: .milliseconds(300))
         }
         throw ServerLauncherError.timedOut(url)

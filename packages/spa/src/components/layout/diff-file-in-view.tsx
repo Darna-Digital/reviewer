@@ -4,9 +4,10 @@
  * first when the row is short; the name at the end is what tells one file from
  * the next, so it keeps its room.
  *
- * Pressing it opens the file itself, the way the diff's own "Edit" does, and
- * as with the tree's rows and the tabs the file is prerendered under the
- * pointer, so it paints coloured on its first frame.
+ * Pressing it opens the file itself on the browse page, the way a row of the
+ * browse tree does — and the diff's own "Edit" — and as with the tree's rows
+ * and the tabs the file is prerendered under the pointer, so it paints
+ * coloured on its first frame.
  *
  * The name simply changes as the scroll carries the pane into the next file.
  * It used to slide in from the side the reader had come from, but the change
@@ -37,10 +38,7 @@ export function HeaderDiffFileInView({ route }: { route: ShellRoute }) {
   const name = pathName(path);
   const folders = path.slice(0, path.length - name.length);
   const open = () =>
-    void navigate({
-      to: ".",
-      search: (prev: object) => ({ ...prev, file: path }),
-    });
+    void navigate({ to: "/modes/code/browse", search: { file: path } });
 
   return (
     <Tooltip>
