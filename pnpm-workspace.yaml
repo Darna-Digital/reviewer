@@ -28,5 +28,12 @@ minimumReleaseAgeExclude:
 overrides:
   '@effect/platform-node-shared': 4.0.0-beta.74
 
+# `@pierre/diffs` pins the code column's height while an edit rebuilds it, so
+# WebKit does not clamp the scroller to the top on every keystroke
+# (https://bugs.webkit.org/show_bug.cgi?id=308027). As shipped the guard never
+# runs in the macOS app: `VirtualizedFile` turns it off outright, and
+# `isSafari()` misses a WKWebView, whose user agent names no Safari. Beside
+# keeping the sprite sheet across clean-ups, the patch lets a file under the simple `Virtualizer` keep the guard, and counts any
+# non-Chromium WebKit as Safari.
 patchedDependencies:
   '@pierre/diffs@1.4.3': patches/@pierre__diffs@1.4.3.patch

@@ -12,8 +12,8 @@
 // the line — continuing a list when the caret sits in one, as Tab and ⇧Tab
 // re-nest it (see `ListEditing`); images are picked, pasted, or dropped
 // anywhere on the pane (see `imageDropZone`). The box rests at a few lines
-// and is dragged taller by its top edge — a height that is the app's, not
-// this thread's.
+// and is dragged taller by its top edge, up to most of the window — a height
+// that is the app's, not this thread's.
 import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
@@ -33,7 +33,10 @@ struct ChatComposer: View {
     @State private var selection: TextSelection?
     @FocusState private var focused: Bool
 
-    private static let heights: ClosedRange<CGFloat> = 56...480
+    private static let minHeight: CGFloat = 56
+    /// The share of the window the prompt may be pulled up to — the web
+    /// composer's ceiling, so a long draft can take most of the pane.
+    private static let maxWindowShare: CGFloat = 0.6
     private static let backtab = KeyEquivalent("\u{19}")
 
     private var chats: Chats { model.chats }
@@ -52,77 +55,79 @@ struct ChatComposer: View {
     var body: some View {
         let capabilities = ChatCapability.capabilities(in: chats.catalog, provider: settings.provider, model: settings.model)
         let efforts = EffortCopy.options(capabilities.efforts)
-        VStack(spacing: 0) {
-            ComposerResizeHandle(height: Binding(get: { chats.composerHeight }, set: { chats.composerHeight = $0 }), range: Self.heights)
-            VStack(alignment: .leading, spacing: 0) {
-                if !draft.attachments.isEmpty {
-                    AttachmentGrid {
-                        ForEach(draft.attachments) { attachment in
-                            AttachmentChip(attachment: attachment) { remove(attachment) }
-                        }
+        VStack(alignment: .leading, spacing: 0) {
+            if !draft.attachments.isEmpty {
+                AttachmentGrid {
+                    ForEach(draft.attachments) { attachment in
+                        AttachmentChip(attachment: attachment) { remove(attachment) }
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.top, 12)
                 }
-                prompt
-                    .frame(height: chats.composerHeight)
-                HStack(spacing: 2) {
-                    ModelPicker(catalog: chats.catalog, model: settings.model, provider: settings.provider) { choose(model: $0) }
-                    ComposerDivider()
-                    if !efforts.isEmpty {
-                        SelectorPopover(options: efforts, value: settings.effort, help: "Reasoning effort") { effort in
-                            var next = settings
-                            next.effort = effort
-                            onSettingsChange(next)
-                        }
-                        ComposerDivider()
-                    }
-                    SelectorPopover(options: AccessCopy.options(capabilities.access), value: settings.access, help: "Access level") { access in
+                .padding(.horizontal, 12)
+                .padding(.top, 12)
+            }
+            prompt
+                .frame(height: chats.composerHeight)
+            HStack(spacing: 2) {
+                ModelPicker(catalog: chats.catalog, model: settings.model, provider: settings.provider) { choose(model: $0) }
+                ComposerDivider()
+                if !efforts.isEmpty {
+                    SelectorPopover(options: efforts, value: settings.effort, help: "Reasoning effort") { effort in
                         var next = settings
-                        next.access = access
+                        next.effort = effort
                         onSettingsChange(next)
                     }
                     ComposerDivider()
-                    Button(action: pickImages) {
-                        Image(systemName: "photo.badge.plus")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 22)
-                    }
-                    .buttonStyle(ComposerChipStyle())
-                    .help("Attach images")
-                    Spacer(minLength: 4)
-                    if running, let onStop {
-                        Button(action: onStop) {
-                            Image(systemName: "stop.fill")
-                                .font(.system(size: 10, weight: .bold))
-                                .frame(width: 26, height: 26)
-                                .background(.quaternaryWash(), in: Circle())
-                        }
-                        .buttonStyle(.plain)
-                        .help("Stop generation")
-                    }
-                    Button(action: submit) {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.white)
+                }
+                SelectorPopover(options: AccessCopy.options(capabilities.access), value: settings.access, help: "Access level") { access in
+                    var next = settings
+                    next.access = access
+                    onSettingsChange(next)
+                }
+                ComposerDivider()
+                Button(action: pickImages) {
+                    Image(systemName: "photo.badge.plus")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22)
+                }
+                .buttonStyle(ComposerChipStyle())
+                .help("Attach images")
+                Spacer(minLength: 4)
+                if running, let onStop {
+                    Button(action: onStop) {
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 10, weight: .bold))
                             .frame(width: 26, height: 26)
-                            .background(canSend ? Color(nsColor: IslandPalette.accent) : Color.secondary.opacity(0.4), in: Circle())
+                            .background(.quaternaryWash(), in: Circle())
                     }
                     .buttonStyle(.plain)
-                    .disabled(!canSend)
-                    .help("Send message (↩)")
+                    .help("Stop generation")
                 }
-                .padding(.horizontal, 8)
-                .padding(.bottom, 8)
+                Button(action: submit) {
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 26, height: 26)
+                        .background(canSend ? Color(nsColor: IslandPalette.accent) : Color.secondary.opacity(0.4), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .disabled(!canSend)
+                .help("Send message (↩)")
             }
-            .background(Color(nsColor: IslandPalette.island), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(focused ? Color(nsColor: IslandPalette.accent).opacity(0.5) : Color(nsColor: IslandPalette.separator), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.06), radius: 4, y: 1)
+            .padding(.horizontal, 8)
+            .padding(.bottom, 8)
         }
+        .background(Color(nsColor: IslandPalette.island), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(focused ? Color(nsColor: IslandPalette.accent).opacity(0.5) : Color(nsColor: IslandPalette.separator), lineWidth: 1)
+        )
+        .overlay(alignment: .top) {
+            ComposerResizeHandle(
+                height: Binding(get: { chats.composerHeight }, set: { chats.composerHeight = $0 }),
+                minHeight: Self.minHeight, maxWindowShare: Self.maxWindowShare)
+        }
+        .shadow(color: .black.opacity(0.06), radius: 4, y: 1)
         .onAppear { focused = true }
     }
 
@@ -215,10 +220,31 @@ struct ChatComposer: View {
                     text: current, selectionStart: range.lowerBound.utf16Offset(in: current),
                     selectionEnd: range.upperBound.utf16Offset(in: current)))
         else { return false }
+        let editor = NSApp.keyWindow?.firstResponder as? NSTextView
         text.wrappedValue = edited.text
         selection = TextSelection(
             range: String.Index(utf16Offset: edited.selectionStart, in: edited.text)..<String.Index(utf16Offset: edited.selectionEnd, in: edited.text))
+        if let editor {
+            reveal(NSRange(location: edited.selectionStart, length: edited.selectionEnd - edited.selectionStart), of: edited.text, in: editor)
+        }
         return true
+    }
+
+    /// The caret scrolled into view once the editor holds the edit. Typing
+    /// keeps the caret in sight on its own, but a rewrite through the binding
+    /// does not — a list item opened past the box's last visible line would
+    /// sit out of sight below it. The rewrite reaches the `NSTextView` on
+    /// SwiftUI's next render rather than now, so this waits until the view's
+    /// text is the edited text, giving up after a few turns of the run loop
+    /// if the draft moved on in the meantime.
+    private func reveal(_ range: NSRange, of expected: String, in editor: NSTextView, attempts: Int = 4) {
+        DispatchQueue.main.async {
+            guard editor.string == expected else {
+                if attempts > 1 { reveal(range, of: expected, in: editor, attempts: attempts - 1) }
+                return
+            }
+            editor.scrollRangeToVisible(range)
+        }
     }
 
     /// The caret or selection as a range of the draft, at the end when the
@@ -266,30 +292,44 @@ private struct ComposerDivider: View {
     }
 }
 
-/// The top edge of the prompt box, pulled to make the box taller: a thin
-/// strip above the sheet with the resize cursor over it.
+/// The top edge of the prompt box, pulled to make the box taller — the web
+/// composer's handle: a strip straddling the sheet's border, so the edge the
+/// eye finds is the one that moves, with the resize cursor the only sign it
+/// can be pulled. The ceiling is read from the window when the drag starts,
+/// so a box on a large screen can take more of it than one on a small one.
 private struct ComposerResizeHandle: View {
     @Binding var height: CGFloat
-    let range: ClosedRange<CGFloat>
-    @State private var startHeight: CGFloat?
+    let minHeight: CGFloat
+    let maxWindowShare: CGFloat
+    @State private var drag: (start: CGFloat, ceiling: CGFloat)?
+
+    private static let thickness: CGFloat = 8
 
     var body: some View {
         Color.clear
-            .frame(height: 8)
+            .frame(height: Self.thickness)
             .contentShape(Rectangle())
-            .onHover { hovering in
-                if hovering { NSCursor.resizeUpDown.push() } else { NSCursor.pop() }
-            }
+            .offset(y: -Self.thickness / 2)
+            .pointerStyle(.rowResize)
             .gesture(
                 DragGesture(minimumDistance: 1, coordinateSpace: .global)
-                    .onChanged { drag in
-                        let start = startHeight ?? height
-                        startHeight = start
-                        height = min(range.upperBound, max(range.lowerBound, start - drag.translation.height))
+                    .onChanged { change in
+                        let current = drag ?? (height, ceiling)
+                        drag = current
+                        var transaction = Transaction()
+                        transaction.disablesAnimations = true
+                        withTransaction(transaction) {
+                            height = min(current.ceiling, max(minHeight, current.start - change.translation.height))
+                        }
                     }
-                    .onEnded { _ in startHeight = nil }
+                    .onEnded { _ in drag = nil }
             )
             .accessibilityLabel("Resize the message box")
+    }
+
+    private var ceiling: CGFloat {
+        let window = NSApp.keyWindow?.contentLayoutRect.height ?? 800
+        return max(minHeight, window * maxWindowShare)
     }
 }
 

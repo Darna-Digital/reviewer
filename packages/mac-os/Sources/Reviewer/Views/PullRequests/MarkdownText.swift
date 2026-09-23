@@ -1,11 +1,11 @@
 // Markdown — a pull request's description, an agent's reply — drawn as a
-// column of blocks: headings, paragraphs, lists, fenced code, quotes and
-// rules, each block's own inline marks (emphasis, code, links) read by
-// Foundation's markdown parser, which knows the inline grammar and stops
-// at the block one. The block split is a small line reader of our own:
-// what descriptions and replies are made of, and no more — a table or a
-// nested list comes through as the lines it is written in rather than
-// nothing.
+// column of blocks: headings, paragraphs, lists, fenced code, quotes,
+// rules and GitHub's pipe tables, each block's own inline marks (emphasis,
+// code, links) read by Foundation's markdown parser, which knows the
+// inline grammar and stops at the block one. The block split is a small
+// line reader of our own: what descriptions and replies are made of, and
+// no more — a nested list comes through as the lines it is written in
+// rather than nothing.
 //
 // Everything about how it reads comes from one body size through
 // `MarkdownMetrics`, in the proportions the system reads long-form text
@@ -79,6 +79,9 @@ enum MarkdownBlock: Identifiable {
     case code(String, lang: String, closed: Bool)
     case quote(AttributedString)
     case rule
+    /// A pipe table: its header, its rows — each padded or cut to the
+    /// header's width, as GitHub reads them — and how each column aligns.
+    case table(header: [AttributedString], rows: [[AttributedString]], alignments: [MarkdownColumnAlignment])
 
     var id: String {
         switch self {
@@ -88,6 +91,8 @@ enum MarkdownBlock: Identifiable {
         case .code(let text, let lang, _): return "c:\(lang):\(text.prefix(40))"
         case .quote(let text): return "q:\(text.characters.prefix(40))"
         case .rule: return "rule"
+        case .table(let header, _, _):
+            return "t:\(header.map { String($0.characters.prefix(20)) }.joined(separator: "|"))"
         }
     }
 
@@ -100,6 +105,9 @@ enum MarkdownBlock: Identifiable {
         var ordered = false
         var fence: [String]?
         var fenceLang = ""
+        var tableHeader: [String]?
+        var tableAlignments: [MarkdownColumnAlignment] = []
+        var tableRows: [[String]] = []
 
         func inlined(_ text: String) -> AttributedString { inline(text, code: code) }
         func flushParagraph() {
@@ -114,10 +122,22 @@ enum MarkdownBlock: Identifiable {
             if !items.isEmpty { blocks.append(.list(items: items.map(inlined), ordered: ordered)) }
             items = []
         }
+        func flushTable() {
+            if let header = tableHeader {
+                let width = header.count
+                let rows = tableRows.map { row in
+                    (0..<width).map { inlined($0 < row.count ? row[$0] : "") }
+                }
+                blocks.append(.table(header: header.map(inlined), rows: rows, alignments: tableAlignments))
+            }
+            tableHeader = nil
+            tableRows = []
+        }
         func flushAll() {
             flushParagraph()
             flushQuote()
             flushList()
+            flushTable()
         }
 
         for rawLine in text.replacingOccurrences(of: "\r\n", with: "\n").split(separator: "\n", omittingEmptySubsequences: false) {
@@ -146,6 +166,28 @@ enum MarkdownBlock: Identifiable {
             }
             if trimmed.isEmpty {
                 flushAll()
+                continue
+            }
+            // Inside a table every line with a pipe in it is one more row;
+            // the first without one ends it and is read as whatever it is.
+            if tableHeader != nil {
+                if trimmed.contains("|") {
+                    tableRows.append(tableCells(trimmed))
+                    continue
+                }
+                flushTable()
+            }
+            // A table is only known by its second line, the dashes under
+            // the header, so the header has already been taken for the
+            // paragraph's last line by the time it is. It is taken back —
+            // as long as it has as many cells as the dashes have columns,
+            // which is what keeps a paragraph over a stray `|---|` prose.
+            if let header = paragraph.last, let alignments = columnAlignments(trimmed),
+               tableCells(header).count == alignments.count {
+                paragraph.removeLast()
+                flushAll()
+                tableHeader = tableCells(header)
+                tableAlignments = alignments
                 continue
             }
             if let heading = trimmed.wholeMatch(of: /(#{1,6})\s+(.*?)\s*#*\s*/) {
@@ -193,6 +235,47 @@ enum MarkdownBlock: Identifiable {
         if let open = fence { blocks.append(.code(open.joined(separator: "\n"), lang: fenceLang, closed: false)) }
         flushAll()
         return blocks
+    }
+
+    /// A table line's cells, the outer pipes dropped and each cell trimmed.
+    /// A pipe escaped as `\|` is the cell's own text rather than a border.
+    private static func tableCells(_ line: String) -> [String] {
+        var row = Substring(line.trimmingCharacters(in: .whitespaces))
+        if row.hasPrefix("|") { row = row.dropFirst() }
+        if row.hasSuffix("|") && !row.hasSuffix("\\|") { row = row.dropLast() }
+        var cells: [String] = []
+        var cell = ""
+        for character in row {
+            if character == "|" && cell.last == "\\" {
+                cell.removeLast()
+                cell.append(character)
+            } else if character == "|" {
+                cells.append(cell)
+                cell = ""
+            } else {
+                cell.append(character)
+            }
+        }
+        cells.append(cell)
+        return cells.map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+
+    /// The columns a table's delimiter line sets out — `:--` leading, `:-:`
+    /// centred, `--:` trailing — or nil where the line is not one. It has
+    /// to have a pipe in it, or a paragraph over a `---` rule would be a
+    /// table of one column.
+    private static func columnAlignments(_ line: String) -> [MarkdownColumnAlignment]? {
+        guard line.contains("|") else { return nil }
+        var alignments: [MarkdownColumnAlignment] = []
+        for cell in tableCells(line) {
+            guard let dashes = cell.wholeMatch(of: /(:?)\s*-+\s*(:?)/) else { return nil }
+            switch (!dashes.1.isEmpty, !dashes.2.isEmpty) {
+            case (true, true): alignments.append(.center)
+            case (false, true): alignments.append(.trailing)
+            default: alignments.append(.leading)
+            }
+        }
+        return alignments
     }
 
     /// The inline marks of one block, read as markdown; the bare text where
@@ -258,6 +341,8 @@ struct MarkdownText: View {
                     .fixedSize(horizontal: false, vertical: true)
                 case .rule:
                     ThemedDivider()
+                case .table(let header, let rows, let alignments):
+                    MarkdownTable(header: header, rows: rows, alignments: alignments, metrics: metrics)
                 }
             }
         }
@@ -274,5 +359,71 @@ struct MarkdownText: View {
             .lineSpacing(metrics.leading)
             .multilineTextAlignment(.leading)
             .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+enum MarkdownColumnAlignment {
+    case leading, center, trailing
+
+    var horizontal: HorizontalAlignment {
+        switch self {
+        case .leading: return .leading
+        case .center: return .center
+        case .trailing: return .trailing
+        }
+    }
+
+    var text: TextAlignment {
+        switch self {
+        case .leading: return .leading
+        case .center: return .center
+        case .trailing: return .trailing
+        }
+    }
+}
+
+/// A pipe table drawn as a grid in a hairline frame: the header in the
+/// body's semibold, a rule under it and between the rows. It sits at the
+/// width its cells ask for rather than the column's, so a table of two
+/// short columns stays small; one wider than the column wraps its cells
+/// rather than running off the edge.
+struct MarkdownTable: View {
+    let header: [AttributedString]
+    let rows: [[AttributedString]]
+    let alignments: [MarkdownColumnAlignment]
+    let metrics: MarkdownMetrics
+
+    private static let corner: CGFloat = 6
+
+    var body: some View {
+        Grid(alignment: .topLeading, horizontalSpacing: 0, verticalSpacing: 0) {
+            GridRow {
+                ForEach(Array(header.enumerated()), id: \.offset) { column, text in
+                    cell(text, column: column)
+                        .fontWeight(.semibold)
+                        .gridColumnAlignment(alignments[column].horizontal)
+                }
+            }
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                ThemedDivider()
+                    .gridCellUnsizedAxes(.horizontal)
+                GridRow {
+                    ForEach(Array(row.enumerated()), id: \.offset) { column, text in
+                        cell(text, column: column)
+                    }
+                }
+            }
+        }
+        .overlay(RoundedRectangle(cornerRadius: Self.corner).strokeBorder(.quaternaryWash(1.5)))
+        .clipShape(RoundedRectangle(cornerRadius: Self.corner))
+    }
+
+    private func cell(_ text: AttributedString, column: Int) -> some View {
+        Text(text)
+            .font(.system(size: metrics.size))
+            .multilineTextAlignment(alignments[column].text)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
     }
 }

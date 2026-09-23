@@ -91,6 +91,11 @@ final class AppModel {
     /// The settings window's own: the theme, and who the app works as.
     let settings: AppSettings
     @ObservationIgnored private var shiftTaps: ShiftTapMonitor?
+    @ObservationIgnored private var headWatcher: HeadWatcher?
+    /// The app's own actions that move HEAD and re-read the project once
+    /// they are through — while any is running, the watcher's word that
+    /// HEAD moved is already answered for.
+    @ObservationIgnored var headMovesInFlight = 0
 
     init(client: ReviewerClient = ReviewerClient(baseURL: ServerLauncher.shared.baseURL)) {
         self.client = client
@@ -116,6 +121,9 @@ final class AppModel {
         shiftTaps = ShiftTapMonitor { [weak self] in
             guard let self, !palette.isShown else { return }
             findFile()
+        }
+        headWatcher = HeadWatcher { [weak self] in
+            Task { await self?.followHead() }
         }
         page.onNavigated = { [weak self] href in self?.chats.follow(href: href) }
         chats.onListChanged = { [weak self] in self?.page.send(SessionAction.refetch) }
@@ -246,8 +254,19 @@ final class AppModel {
         for continuation in waiting.values { continuation.resume() }
     }
 
+    /// HEAD moved outside the app — a checkout in a terminal: the project
+    /// re-read as after one of its own, unless the move is already being
+    /// answered for, or a refresh has since read it.
+    private func followHead() async {
+        guard headMovesInFlight == 0 else { return }
+        let fresh = try? await client.repoStatus()
+        guard fresh?.branch != status?.branch || fresh?.headSha != status?.headSha else { return }
+        await refresh()
+    }
+
     private func refreshProjectState() async {
         palette.projectChanged()
+        headWatcher?.watch(project: workspace?.project)
         guard hasProject else {
             status = nil
             branches = []
@@ -502,6 +521,8 @@ final class AppModel {
     /// the branch changing under the diff, everything is re-read after.
     func checkout(pull: PullRequestInfo) {
         Task {
+            headMovesInFlight += 1
+            defer { headMovesInFlight -= 1 }
             await notices.run("Checking out #\(pull.number)…", done: "Checked out \(pull.localBranch)", failed: "Checkout of #\(pull.number) failed") {
                 _ = try await pullRequests.checkout(pull, as: pull.localBranch)
                 return nil

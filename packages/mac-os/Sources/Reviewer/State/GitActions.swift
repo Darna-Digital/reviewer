@@ -189,6 +189,8 @@ extension AppModel {
     /// surely as one that went through.
     private func runGit(_ pending: String, done: String, failed: String, _ body: @escaping () async throws -> String?) {
         Task {
+            headMovesInFlight += 1
+            defer { headMovesInFlight -= 1 }
             await notices.run(pending, done: done, failed: failed, report: .command, body)
             await refresh()
         }

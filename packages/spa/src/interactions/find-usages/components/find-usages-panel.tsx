@@ -23,6 +23,7 @@ import {
   IconSearch,
 } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { usePrerenderFile } from "@/components/editor/prerender";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { usePanelSize } from "@/components/layout/use-panel-size";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,13 @@ import { UsageTree } from "./usage-tree";
 /** Below this the results column is narrower than a path, so it stops there. */
 const MIN_RESULTS_WIDTH = 220;
 
+/**
+ * How many of the results' files are read and highlighted ahead of time. The
+ * list runs to a thousand usages across as many files; the first few dozen are
+ * the ones stepping down it reaches before the pointer can say what is next.
+ */
+const IDLE_PRERENDERED_FILES = 24;
+
 export function FindUsagesPanel() {
   const prefs = useUiPrefs();
   const { query, collapsed, selected } = useFindUsagesState();
@@ -88,6 +96,32 @@ export function FindUsagesPanel() {
     if (selected !== null || usages.length === 0) return;
     selectUsage(usages[0].id);
   }, [selected, usages]);
+
+  // The files the results sit in, read and highlighted while the window is
+  // idle — as the open tabs are — so stepping onto the next file's usage
+  // paints the preview coloured instead of behind a loader, and opening one
+  // lands on a file that is already rendered. The rows add the one under the
+  // pointer, wherever it is in the list.
+  const prerenderFile = usePrerenderFile();
+  const resultPaths = useMemo(
+    () =>
+      [
+        ...new Set(fns.usages().map((usage) => usage.reference.location.path)),
+      ].slice(0, IDLE_PRERENDERED_FILES),
+    [fns]
+  );
+  useEffect(() => {
+    if (resultPaths.length === 0) return;
+    const warm = () => {
+      for (const path of resultPaths) prerenderFile(path);
+    };
+    const idle = window.requestIdleCallback(warm, { timeout: 2_000 });
+    return () => window.cancelIdleCallback(idle);
+  }, [resultPaths, prerenderFile]);
+  const prerenderRow = (node: UsageNode) => {
+    const path = fns.previewed(node.id)?.reference.location.path;
+    if (path !== undefined) prerenderFile(path);
+  };
 
   const results = usages.length;
   const symbol = query?.symbol ?? "";
@@ -175,6 +209,7 @@ export function FindUsagesPanel() {
             onSelect={(node) => selectUsage(node.id)}
             onToggle={(id) => setUsageCollapsed(toggleCollapsed(collapsed, id))}
             onOpen={onOpen}
+            onIntent={prerenderRow}
           />
         )}
       </div>
@@ -190,7 +225,11 @@ export function FindUsagesPanel() {
       />
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <PreviewHeader location={selectedLocation} onOpen={open} />
+        <PreviewHeader
+          location={selectedLocation}
+          onOpen={open}
+          onIntent={prerenderFile}
+        />
         <div className="min-h-0 flex-1 overflow-hidden">
           <UsagePreview
             location={selectedLocation}
@@ -359,9 +398,11 @@ function ResultsHeader({
 function PreviewHeader({
   location,
   onOpen,
+  onIntent,
 }: {
   readonly location: Location | null;
   readonly onOpen: (location: Location) => void;
+  readonly onIntent: (path: string) => void;
 }) {
   return (
     <div
@@ -373,7 +414,11 @@ function PreviewHeader({
       {location === null ? (
         "Preview"
       ) : (
-        <PreviewFileLink location={location} onOpen={onOpen} />
+        <PreviewFileLink
+          location={location}
+          onOpen={onOpen}
+          onIntent={onIntent}
+        />
       )}
     </div>
   );
@@ -382,9 +427,11 @@ function PreviewHeader({
 function PreviewFileLink({
   location,
   onOpen,
+  onIntent,
 }: {
   readonly location: Location;
   readonly onOpen: (location: Location) => void;
+  readonly onIntent: (path: string) => void;
 }) {
   const { path } = location;
   const name = pathName(path);
@@ -393,7 +440,13 @@ function PreviewFileLink({
   return (
     <Tooltip>
       <TooltipTrigger
-        render={<button type="button" onClick={() => onOpen(location)} />}
+        render={
+          <button
+            type="button"
+            onClick={() => onOpen(location)}
+            onPointerEnter={() => onIntent(path)}
+          />
+        }
         className="flex h-7 min-w-0 cursor-default items-center overflow-hidden rounded-md px-1.5 outline-none select-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring/50 island:rounded-full"
       >
         <FileTypeIcon path={path} className="mr-1.5 size-3.5" />

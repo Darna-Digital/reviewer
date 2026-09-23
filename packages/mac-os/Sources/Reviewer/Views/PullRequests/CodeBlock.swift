@@ -98,7 +98,7 @@ struct CodeBlock: View {
     /// How long an unfinished snippet is left alone: long enough that a
     /// reply streaming in is read at its pauses, short enough that the
     /// colour lands while the eye is still on the block.
-    private static let settle: Duration = .milliseconds(150)
+    static let settle: Duration = .milliseconds(150)
 
     private struct Painted {
         let request: CodeHighlightRequest

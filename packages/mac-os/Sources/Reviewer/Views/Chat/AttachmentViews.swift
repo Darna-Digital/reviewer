@@ -91,11 +91,12 @@ private struct Lightbox: ViewModifier {
     func body(content: Content) -> some View {
         content.sheet(isPresented: $shown) {
             if let image {
+                let size = Self.displaySize(of: image)
                 Image(nsImage: image)
                     .resizable()
+                    .interpolation(.high)
                     .scaledToFit()
-                    .frame(
-                        maxWidth: min(image.size.width, 1200), maxHeight: min(image.size.height, 800))
+                    .frame(width: size.width, height: size.height)
                     .padding(12)
                     .overlay(alignment: .topTrailing) {
                         Button { shown = false } label: {
@@ -110,6 +111,34 @@ private struct Lightbox: ViewModifier {
                     .accessibilityLabel(name)
             }
         }
+    }
+
+    private static let windowMargin: CGFloat = 48
+
+    /// As large as the window leaves room for, but never past the image's
+    /// own pixels — a Retina screenshot's point size is half of what it holds.
+    private static func displaySize(of image: NSImage) -> CGSize {
+        let pixels = pixelSize(of: image)
+        guard pixels.width > 0, pixels.height > 0 else { return image.size }
+        let room = roomInWindow()
+        let scale = min(room.width / pixels.width, room.height / pixels.height, 1)
+        return CGSize(width: (pixels.width * scale).rounded(), height: (pixels.height * scale).rounded())
+    }
+
+    private static func pixelSize(of image: NSImage) -> CGSize {
+        let widest = image.representations.max { $0.pixelsWide < $1.pixelsWide }
+        guard let widest, widest.pixelsWide > 0, widest.pixelsHigh > 0 else { return image.size }
+        return CGSize(width: widest.pixelsWide, height: widest.pixelsHigh)
+    }
+
+    /// The sheet's parent stays the main window while the sheet itself takes key.
+    private static func roomInWindow() -> CGSize {
+        let bounds = NSApp.mainWindow?.contentLayoutRect.size
+            ?? NSScreen.main?.visibleFrame.size
+            ?? CGSize(width: 1200, height: 800)
+        return CGSize(
+            width: max(bounds.width - windowMargin * 2, 200),
+            height: max(bounds.height - windowMargin * 2, 200))
     }
 }
 

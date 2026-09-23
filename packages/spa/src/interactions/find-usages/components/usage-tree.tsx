@@ -36,6 +36,11 @@ interface UsageTreeProps {
   onToggle: (id: string) => void;
   /** Open a usage in the editor — a double-click, or Enter on the row. */
   onOpen: (node: UsageNode) => void;
+  /**
+   * The pointer is over a row: read and highlight the file selecting it would
+   * preview, so the click paints it coloured on its first frame.
+   */
+  onIntent: (node: UsageNode) => void;
 }
 
 const COUNT_LABEL = (count: number) =>
@@ -60,6 +65,7 @@ export function UsageTree({
   onSelect,
   onToggle,
   onOpen,
+  onIntent,
 }: UsageTreeProps) {
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -162,6 +168,7 @@ export function UsageTree({
             onSelect={onSelect}
             onToggle={onToggle}
             onOpen={onOpen}
+            onIntent={onIntent}
           />
         ))}
       </div>
@@ -176,6 +183,7 @@ function Row({
   onSelect,
   onToggle,
   onOpen,
+  onIntent,
 }: {
   readonly row: UsageRow;
   readonly symbol: string;
@@ -183,6 +191,7 @@ function Row({
   readonly onSelect: (node: UsageNode) => void;
   readonly onToggle: (id: string) => void;
   readonly onOpen: (node: UsageNode) => void;
+  readonly onIntent: (node: UsageNode) => void;
 }) {
   const { node, depth, expanded } = row;
   const branch = node.kind !== "usage";
@@ -209,6 +218,7 @@ function Row({
       // plain click too would mean a double-click opened a branch and shut it
       // again, leaving the reader where they started.
       onClick={() => onSelect(node)}
+      onPointerEnter={() => onIntent(node)}
       onDoubleClick={() => (branch ? onToggle(node.id) : onOpen(node))}
     >
       {branch ? (

@@ -52,7 +52,7 @@ struct AssistantMessageRow: View, Equatable {
                 WorkLogView(steps: steps)
             }
             if !message.text.isEmpty {
-                MarkdownText(text: message.text, size: ChatLayout.bodySize)
+                ReplyText(text: message.text)
             } else if !streaming && message.streaming {
                 Label("Stopped before replying.", systemImage: "stop.fill")
                     .font(.system(size: 11))
