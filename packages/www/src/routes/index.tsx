@@ -1,50 +1,51 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { NoteCard, PointCard, ShowcaseCard } from "#/components/card";
+import { NoteCard, ShowcaseCard } from "#/components/card";
 import { Container } from "#/components/container";
 import {
+  Braces,
   Branch,
   Bubble,
-  Bubbles,
-  Command,
-  Folders,
-  GitHub,
+  Contrast,
+  Apple,
   History,
   Laptop,
+  Palette,
   Play,
-  PullRequest,
   Sparkles,
+  SplitDiff,
   Terminal,
 } from "#/components/icons";
 import { AppIcon } from "#/components/logo";
+import { Screenshot } from "#/components/screenshot";
+import type { ScreenshotTone } from "#/components/screenshot";
 import { SiteFooter } from "#/components/site-footer";
 import { SiteHeader } from "#/components/site-header";
-import { SpaSnapshot } from "#/components/spa-snapshot";
-import { GITHUB_URL } from "#/lib/links";
+import { DOWNLOAD_URL } from "#/lib/links";
 
-const HERO_SNAPSHOT = {
-  src: "/spa-snapshots/hero.json",
-  width: 1600,
-  height: 1000,
-};
-
-/** Every section snapshot is framed on the app canvas, so they share a box. */
-const SECTION_FRAME = { width: 1428, height: 854 };
+/** Every screenshot is a full Retina display capture, downscaled to one size. */
+const SCREENSHOT_FRAME = { width: 1920, height: 1089 };
 
 export const Route = createFileRoute("/")({
   component: Home,
-  head: () => ({
-    links: [{ rel: "preload", as: "fetch", href: HERO_SNAPSHOT.src }],
-  }),
 });
 
-function SectionSnapshot({ label, name }: { label: string; name: string }) {
+function SectionScreenshot({
+  label,
+  src,
+  tone,
+}: {
+  label: string;
+  src?: string;
+  tone: ScreenshotTone;
+}) {
   return (
-    <SpaSnapshot
-      height={SECTION_FRAME.height}
-      label={label}
-      src={`/spa-snapshots/${name}.json`}
-      width={SECTION_FRAME.width}
+    <Screenshot
+      alt={label}
+      height={SCREENSHOT_FRAME.height}
+      src={src}
+      tone={tone}
+      width={SCREENSHOT_FRAME.width}
     />
   );
 }
@@ -59,26 +60,27 @@ function Hero() {
       </h1>
 
       <p className="max-w-2xl text-[30px] leading-[1.1] font-bold tracking-[-0.02em] text-balance sm:text-[44px]">
-        Tools for conversation based development.
+        Understand AI-generated code.
       </p>
 
       <p className="max-w-2xl text-lg leading-normal text-pretty text-neutral-600 sm:text-[21px] dark:text-neutral-400">
-        Reviewer reviews what the agent wrote, runs it on your machine, and
-        keeps the conversation on the line it belongs to.
+        In a world where we no longer write code, we spend a lot more time
+        reviewing it. Reviewer is a delightful, smooth macOS app built precisely
+        for that.
       </p>
 
       <a
-        className="mt-4 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-neutral-900 px-6 text-[15px] font-medium text-white transition-colors hover:bg-neutral-700 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-200"
-        href={GITHUB_URL}
+        className="mt-4 inline-flex h-12 items-center justify-center gap-2.5 rounded-full bg-blue-500 px-7 text-[17px] font-semibold text-white transition-colors hover:bg-blue-600"
+        href={DOWNLOAD_URL}
       >
-        <GitHub className="size-4" />
-        View on GitHub
+        <Apple className="size-5" />
+        Download for macOS
       </a>
 
       <p className="text-[13px] leading-relaxed text-neutral-400 dark:text-neutral-500">
-        Free and open source.
+        For Apple silicon Macs, on macOS 26 or later.
         <br />
-        Runs on your own machine, against your own repository.
+        Runs on your own Mac, against your own repository.
       </p>
     </section>
   );
@@ -96,109 +98,117 @@ function Home() {
 
         <Container>
           <div className="screen-shadow overflow-hidden rounded-xl ring-1 ring-black/10 dark:ring-white/10">
-            <SpaSnapshot
-              eager
-              height={HERO_SNAPSHOT.height}
-              label="Reviewer reviewing a commit, with the file tree, the split diff and the project history"
-              src={HERO_SNAPSHOT.src}
-              width={HERO_SNAPSHOT.width}
+            <Screenshot
+              alt="Reviewer showing a split diff of package.json, with the project history filtered by branch, author and date beneath it"
+              height={SCREENSHOT_FRAME.height}
+              src="/screenshots/diff-and-history.webp"
+              tone="dawn"
+              width={SCREENSHOT_FRAME.width}
             />
           </div>
         </Container>
 
-        <Container className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <PointCard icon={<Bubble className="size-7" />}>
-            Comment on any line of any file, and the next agent reads it.
-          </PointCard>
-          <PointCard icon={<Sparkles className="size-7" />}>
-            Hand the review to whichever agent you already run.
-          </PointCard>
-          <PointCard icon={<Play className="size-7" />}>
-            Start the services and keep their logs beside the diff.
-          </PointCard>
-        </Container>
-
-        <Container className="mt-6 flex flex-col gap-4">
+        <Container className="mt-10 flex flex-col gap-4">
           <ShowcaseCard
-            description="Comment on your local changes, a single commit, a range of them, or a GitHub pull request. Comments are stored with the code, so the next agent to open the repository reads exactly what you wrote, against the lines you wrote it about."
-            icon={<Bubble className="size-7" />}
-            title="Say it on the line it belongs to"
+            description="Lay the diff out side by side or top to bottom, whichever reads better for the change in front of you. Click any file to open it on its own and read it whole."
+            icon={<SplitDiff className="size-7" />}
+            title="A diff viewer that reads the way you do"
           >
-            <SectionSnapshot
-              label="A comment being written against a line of the diff, in the file it belongs to"
-              name="review"
+            <SectionScreenshot
+              label="A file opened on its own from the file tree, in its own tab"
+              src="/screenshots/file-view.webp"
+              tone="lagoon"
             />
           </ShowcaseCard>
 
           <ShowcaseCard
-            description="Claude Code, Codex, opencode, Cursor, or a plain shell. Reviewer builds the command, drops the prompt in, and streams back whatever the tool prints. Point it at your own CLI with a {prompt} token and it behaves like the built-in ones."
+            description="Chat with Claude Code, Codex and the other harnesses you already use, right beside the code they wrote."
             icon={<Sparkles className="size-7" />}
-            title="Hand it to the agent you already run"
+            title="Talk to the agent that wrote it"
           >
-            <SectionSnapshot
-              label="An agent session in Reviewer: the thread, the model picker and the branch it runs on"
-              name="agents"
+            <SectionScreenshot
+              label="An agent chat session, with the list of past sessions beside it"
+              src="/screenshots/agent-chat.webp"
+              tone="dusk"
             />
           </ShowcaseCard>
 
           <ShowcaseCard
-            description="Named run configurations start your services from inside the app and keep their logs beside the diff, so the change and what it does at runtime are read in one window."
+            description="Leave a comment on any line, then assign it to an agent to pick up and fix."
+            icon={<Bubble className="size-7" />}
+            title="Comment, then hand it off"
+          >
+            <SectionScreenshot
+              label="A comment on a line of code, being assigned to a new Claude chat"
+              src="/screenshots/comment-assign.webp"
+              tone="citrus"
+            />
+          </ShowcaseCard>
+
+          <ShowcaseCard
+            description="Set up your local services once from a macOS widget and start them with a single click. If it runs in a terminal, it runs here."
             icon={<Play className="size-7" />}
-            title="Run it and look at it"
+            title="Run your services in one click"
           >
-            <SectionSnapshot
-              label="A run configuration and its service logs, docked beneath the code"
-              name="local-dev"
+            <SectionScreenshot
+              label="The local services widget, with a service running and its logs"
+              tone="meadow"
             />
           </ShowcaseCard>
 
           <ShowcaseCard
-            description="Browse files, stage and commit, page through history, and open a pull request without leaving the review. Several repository roots can sit in one window when a project spans more than one."
+            description="Create new branches, and let Reviewer write the commit message from what actually changed."
             icon={<Branch className="size-7" />}
-            title="The whole repository, not only the diff"
+            title="Powerful git integration"
           >
-            <SectionSnapshot
-              label="The project history graph with branch refs, beside the file being browsed"
-              name="git"
+            <SectionScreenshot
+              label="Creating a branch and a generated commit message"
+              tone="ember"
+            />
+          </ShowcaseCard>
+
+          <ShowcaseCard
+            description="Filter the history by author, date or branch. Click any entry to see what changed and when, or open a single file's history to follow how it got to where it is."
+            icon={<History className="size-7" />}
+            title="Know what changed, and when"
+          >
+            <SectionScreenshot
+              label="The version control history, filtered, with one commit open"
+              tone="glacier"
+            />
+          </ShowcaseCard>
+
+          <ShowcaseCard
+            description="Language server protocol integration for TypeScript, Swift and Ruby. Hover a symbol for its signature and docs, or find every usage of it across the codebase."
+            icon={<Braces className="size-7" />}
+            title="Follow a symbol anywhere"
+          >
+            <SectionScreenshot
+              label="A language server hover card showing a component's signature and documentation"
+              src="/screenshots/lsp-hover.webp"
+              tone="orchid"
             />
           </ShowcaseCard>
         </Container>
 
         <Container className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <NoteCard icon={<Bubbles className="size-7" />} title="Threads">
-            Reply on a comment and resolve it, with the file tree marking every
-            file still carrying one.
-          </NoteCard>
-          <NoteCard icon={<History className="size-7" />} title="History">
-            Page through the project graph with its branch refs, and review any
-            commit or range of them.
+          <NoteCard icon={<Terminal className="size-7" />} title="Terminal">
+            A built-in terminal for ad hoc work, right next to the code.
           </NoteCard>
           <NoteCard
-            icon={<PullRequest className="size-7" />}
-            title="Pull requests"
+            icon={<Contrast className="size-7" />}
+            title="Light and dark"
           >
-            Open a pull request, review one from GitHub, and resolve conflicts
-            without leaving the window.
+            Follows your Mac, or pick the appearance you prefer.
           </NoteCard>
-          <NoteCard icon={<Folders className="size-7" />} title="Multi-repo">
-            Several repository roots sit in one window when a project spans more
-            than a single checkout.
+          <NoteCard icon={<Palette className="size-7" />} title="Themes">
+            Shiki and Pierre themes to make the environment your own.
           </NoteCard>
-          <NoteCard icon={<Terminal className="size-7" />} title="Terminals">
-            Terminal sessions as tabs, per branch, beside the code they were
-            opened against.
-          </NoteCard>
-          <NoteCard icon={<Command className="size-7" />} title="Keyboard">
-            A command palette on ⌘K reaches every file, branch and action in the
-            project.
-          </NoteCard>
-          <NoteCard icon={<Laptop className="size-7" />} title="Local">
-            Your repository never leaves the machine — Reviewer runs the agents
-            you have already installed.
-          </NoteCard>
-          <NoteCard icon={<GitHub className="size-7" />} title="Open source">
-            Read the source, file an issue, or build it yourself from the
-            repository.
+          <NoteCard
+            icon={<Laptop className="size-7" />}
+            title="Native to the Mac"
+          >
+            Built for Apple silicon and macOS 26, signed and notarized.
           </NoteCard>
         </Container>
 

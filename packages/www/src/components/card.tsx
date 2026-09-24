@@ -7,24 +7,6 @@ const SURFACE =
 
 const SYMBOL_TINT = "text-neutral-500 dark:text-neutral-400";
 
-/** A symbol over a single sentence — the row directly under the hero. */
-export function PointCard({
-  icon,
-  children,
-}: {
-  icon: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div className={cn(SURFACE, "flex flex-col gap-8 p-6")}>
-      <span className={SYMBOL_TINT}>{icon}</span>
-      <p className="text-[19px] leading-snug font-semibold tracking-[-0.01em] text-pretty">
-        {children}
-      </p>
-    </div>
-  );
-}
-
 /** A symbol, a headline and its supporting paragraph. */
 export function NoteCard({
   icon,
@@ -49,8 +31,9 @@ export function NoteCard({
 }
 
 /**
- * The full-width card: the claim, the paragraph behind it, and the interface
- * it is about, bleeding off the bottom edge the way an app window would.
+ * The full-width card: the claim, the paragraph behind it, and the screenshot
+ * of the interface it is about. Screenshots carry their own desktop around
+ * the window, so they are shown whole rather than cropped.
  */
 export function ShowcaseCard({
   icon,
@@ -74,8 +57,8 @@ export function ShowcaseCard({
           {description}
         </p>
       </div>
-      <div className="h-[280px] overflow-hidden px-8 sm:h-[360px] sm:px-10">
-        <div className="overflow-hidden rounded-t-xl ring-1 ring-black/10 dark:ring-white/10">
+      <div className="px-8 pb-8 sm:px-10 sm:pb-10">
+        <div className="overflow-hidden rounded-xl ring-1 ring-black/10 dark:ring-white/10">
           {children}
         </div>
       </div>

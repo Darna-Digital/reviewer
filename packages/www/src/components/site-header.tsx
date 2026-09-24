@@ -1,7 +1,7 @@
-import { GitHub } from "#/components/icons";
+import { Apple } from "#/components/icons";
 import { Logo } from "#/components/logo";
 import { useScrolled } from "#/hooks/use-scrolled";
-import { GITHUB_URL } from "#/lib/links";
+import { DOWNLOAD_URL } from "#/lib/links";
 
 export function SiteHeader() {
   const scrolled = useScrolled();
@@ -23,10 +23,10 @@ export function SiteHeader() {
           </a>
           <a
             className="ml-auto inline-flex items-center gap-1.5 text-[13px] text-neutral-500 transition-colors hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
-            href={GITHUB_URL}
+            href={DOWNLOAD_URL}
           >
-            <GitHub className="size-4" />
-            GitHub
+            <Apple className="size-4" />
+            Download
           </a>
         </div>
       </div>

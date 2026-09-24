@@ -150,6 +150,45 @@ export function Document({ className }: IconProps) {
   );
 }
 
+export function SplitDiff({ className }: IconProps) {
+  return (
+    <Symbol className={className}>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" />
+      <path d="M12 4.5v15" />
+      <path d="M6.3 9h3M6.3 12.5h2.2M14.7 9h3M14.7 12.5h3M14.7 16h2" />
+    </Symbol>
+  );
+}
+
+export function Braces({ className }: IconProps) {
+  return (
+    <Symbol className={className}>
+      <path d="M8.5 4.5c-1.7 0-2.5.8-2.5 2.4v2.4c0 1.3-.7 2.2-2 2.7 1.3.5 2 1.4 2 2.7v2.4c0 1.6.8 2.4 2.5 2.4" />
+      <path d="M15.5 4.5c1.7 0 2.5.8 2.5 2.4v2.4c0 1.3.7 2.2 2 2.7-1.3.5-2 1.4-2 2.7v2.4c0 1.6-.8 2.4-2.5 2.4" />
+    </Symbol>
+  );
+}
+
+export function Contrast({ className }: IconProps) {
+  return (
+    <Symbol className={className}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 3.5v17a8.5 8.5 0 0 0 0-17Z" fill="currentColor" />
+    </Symbol>
+  );
+}
+
+export function Palette({ className }: IconProps) {
+  return (
+    <Symbol className={className}>
+      <path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.1 0 1.8-.8 1.8-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7h2c2.2 0 4-1.8 4-4 0-4-3.8-7.2-8.5-7.2Z" />
+      <circle cx="7.6" cy="11.5" r="1" fill="currentColor" />
+      <circle cx="10.2" cy="7.6" r="1" fill="currentColor" />
+      <circle cx="14.6" cy="7.9" r="1" fill="currentColor" />
+    </Symbol>
+  );
+}
+
 export function ChevronRight({ className }: IconProps) {
   return (
     <Symbol className={className}>
@@ -158,12 +197,12 @@ export function ChevronRight({ className }: IconProps) {
   );
 }
 
-export function GitHub({ className }: IconProps) {
+export function Apple({ className }: IconProps) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
       <path
         fill="currentColor"
-        d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48l-.01-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.64 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.37.2 2.39.1 2.64.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85l-.01 2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2"
+        d="M16.37 12.62c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.78-3.32-1.8-1.41-.14-2.76.83-3.47.83-.72 0-1.82-.81-2.99-.79-1.54.02-2.96.9-3.75 2.27-1.6 2.78-.41 6.89 1.15 9.14.76 1.1 1.67 2.34 2.86 2.3 1.15-.05 1.58-.74 2.96-.74 1.38 0 1.77.74 2.98.72 1.23-.02 2.01-1.12 2.76-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.42-3.66ZM14.1 5.87c.63-.77 1.06-1.83.94-2.89-.91.04-2.01.61-2.66 1.37-.58.67-1.09 1.76-.96 2.79 1.02.08 2.05-.51 2.68-1.27Z"
       />
     </svg>
   );

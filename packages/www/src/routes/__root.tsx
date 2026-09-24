@@ -15,12 +15,12 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
-        title: "Reviewer — Tools for conversation based development",
+        title: "Reviewer — Understand AI-generated code",
       },
       {
         name: "description",
         content:
-          "Engineered for writing reliable, maintainable and testable code.",
+          "In a world where we no longer write code, we spend a lot more time reviewing it. Reviewer is a delightful, smooth macOS app built precisely for that.",
       },
     ],
     links: [
