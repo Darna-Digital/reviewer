@@ -137,6 +137,17 @@ mkdir -p "${appex}/Contents/MacOS"
 cp "${bin_dir}/ReviewerWidget" "${appex}/Contents/MacOS/ReviewerWidget"
 cp "${package_dir}/Resources/Widget/Info.plist" "${appex}/Contents/Info.plist"
 
+# Both bundles carry the release version from the root package.json, the one
+# place it is kept (see RELEASING.md); the extension's has to match the app's
+# or the system refuses to load it.
+version="$(node -p "require('${package_dir}/../../package.json').version")"
+for plist in "${contents}/Info.plist" "${appex}/Contents/Info.plist"; do
+  /usr/libexec/PlistBuddy \
+    -c "Set :CFBundleShortVersionString ${version}" \
+    -c "Set :CFBundleVersion ${version}" \
+    "$plist"
+done
+
 # Sign so the binaries run under the hardened-runtime defaults of a modern
 # macOS without a "damaged app" dialog on first launch — the extension
 # first, since the app's signature seals what it holds. Both carry their
@@ -165,16 +176,36 @@ fi
 # signature the linker gave them, which still launches and still loses its
 # privacy grants on the next build, with nothing said. The bundle is only
 # worth having if it is signed as asked.
+#
+# A Developer ID build is on its way to notarization (scripts/release.sh),
+# which only accepts code signed with the hardened runtime and a secure
+# timestamp — every Mach-O in the bundle, node-pty's prebuilt addon and its
+# spawn-helper under Resources/server included: the app's own signature only
+# seals those as data, so they need one of their own.
+distribution_flags=()
+if [[ "$sign_identity" == "Developer ID Application:"* ]]; then
+  distribution_flags=(--options runtime --timestamp)
+fi
+
 sign() {
-  local target="$1" entitlements="$2"
-  if ! codesign --force --sign "$sign_identity" --entitlements "$entitlements" "$target"; then
+  local target="$1"
+  shift
+  if ! codesign --force --sign "$sign_identity" ${distribution_flags[@]+"${distribution_flags[@]}"} "$@" "$target"; then
     echo "✗ codesign failed for ${target#"${app}/"} with identity \"${sign_identity}\"" >&2
     exit 1
   fi
 }
 
-sign "$appex" "${package_dir}/Resources/Widget/ReviewerWidget.entitlements"
-sign "$app" "${package_dir}/Resources/Reviewer.entitlements"
+if [[ ${#distribution_flags[@]} -gt 0 && -d "${contents}/Resources/server" ]]; then
+  while IFS= read -r -d '' file; do
+    if file -b "$file" | grep -q '^Mach-O'; then
+      sign "$file"
+    fi
+  done < <(find "${contents}/Resources/server" -type f -print0)
+fi
+
+sign "$appex" --entitlements "${package_dir}/Resources/Widget/ReviewerWidget.entitlements"
+sign "$app" --entitlements "${package_dir}/Resources/Reviewer.entitlements"
 
 # codesign reports success for a bundle it then leaves ad-hoc in some
 # failure modes, so the seal is read back rather than trusted.

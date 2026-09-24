@@ -3,8 +3,6 @@ packages:
 
 allowBuilds:
   better-sqlite3: false
-  electron: set this to true or false
-  electron-winstaller: set this to true or false
   esbuild: true
   lightningcss: true
   msgpackr-extract: true

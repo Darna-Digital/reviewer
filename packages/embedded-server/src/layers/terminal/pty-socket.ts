@@ -63,11 +63,10 @@ import { DEV_PTY_PATH, startDevSession } from "./dev-process-manager.ts";
 const PTY_PATH = "/api/threads/pty";
 
 // node-pty is a native module. Load it lazily and tolerate failure so the
-// server always boots even where the binary is missing or ABI-incompatible
-// (e.g. a packaged Electron build before it has been rebuilt for Electron's
-// Node ABI). Terminals then degrade to a clear error instead of crashing the
-// whole server. createRequire works both under tsx (ESM) and in the esbuild
-// CJS bundle, where node-pty is kept external.
+// server always boots even where the binary is missing or ABI-incompatible.
+// Terminals then degrade to a clear error instead of crashing the whole server.
+// createRequire works both under tsx (ESM) and in the esbuild CJS bundle, where
+// node-pty is kept external.
 type NodePty = typeof NodePtyModule;
 // In the esbuild CJS bundle a real `require` exists (and `import.meta.url` is
 // undefined); under tsx/ESM it's the reverse. Pick whichever is available.
@@ -118,28 +117,17 @@ const ensureSpawnHelperExecutable = (moduleEntry: string): void => {
 
 const loadNodePty = (): NodePty | null => {
   if (ptyModule !== undefined) return ptyModule;
-  // The desktop main process passes the exact node-pty location it resolved
-  // (only in the packaged path, where the server shares Electron's Node ABI), so
-  // resolution doesn't depend on walking up through the asar. Fall back to a
-  // bare specifier for dev / standalone, where node-pty is in node_modules.
-  const candidates = [
-    process.env["REVIEWER_NODE_PTY"],
-    "@lydell/node-pty",
-  ].filter((c): c is string => typeof c === "string" && c.length > 0);
-  for (const candidate of candidates) {
-    try {
-      ptyModule = requireFn(candidate) as NodePty;
-      try {
-        ensureSpawnHelperExecutable(requireFn.resolve(candidate));
-      } catch {
-        // resolution is best-effort; the module already loaded
-      }
-      return ptyModule;
-    } catch {
-      // try the next candidate
-    }
+  try {
+    ptyModule = requireFn("@lydell/node-pty") as NodePty;
+  } catch {
+    ptyModule = null;
+    return ptyModule;
   }
-  ptyModule = null;
+  try {
+    ensureSpawnHelperExecutable(requireFn.resolve("@lydell/node-pty"));
+  } catch {
+    // resolution is best-effort; the module already loaded
+  }
   return ptyModule;
 };
 

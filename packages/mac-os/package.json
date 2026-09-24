@@ -1,7 +1,6 @@
 {
   "name": "@reviewer/mac-os",
   "private": true,
-  "version": "0.1.0",
   "description": "reviewer mac-os — a native SwiftUI shell (sidebar, tabs, agent sessions) over the embedded server",
   "scripts": {
     "compile": "swift build -c release",
