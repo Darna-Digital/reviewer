@@ -106,10 +106,10 @@ describe("chat assignment helpers", () => {
     ];
 
     expect(buildReviewAssignmentTitle(comments)).toBe("Fix this (+1 more)");
-    expect(buildReviewAssignmentTitle([comments[0]!])).toBe("Fix this");
-    expect(
-      buildReviewAssignmentTitle([{ ...comments[0]!, body: "   " }])
-    ).toBe("Fix 1 review comment");
+    expect(buildReviewAssignmentTitle([comments[0]])).toBe("Fix this");
+    expect(buildReviewAssignmentTitle([{ ...comments[0], body: "   " }])).toBe(
+      "Fix 1 review comment"
+    );
     expect(buildReviewAssignmentPrompt(comments)).toBe(
       [
         "Address these review comments in the codebase:",

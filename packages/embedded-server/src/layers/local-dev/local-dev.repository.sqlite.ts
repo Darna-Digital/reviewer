@@ -8,16 +8,14 @@ import { NotFound } from "@reviewer/core/shared";
 import {
   decodeStoredDevCommand,
   normalizeDevCwd,
+  type CreateDevCommandInput,
   type DevCommand,
+  type DevCommandsRepo,
+  type UpdateDevCommandInput,
 } from "@reviewer/core/local-dev";
 import { attempt } from "../db/db.service.ts";
 import { documentTable } from "../db/documents.ts";
 import { WorkspaceContext } from "../workspace/workspace-context.ts";
-import type {
-  CreateDevCommandInput,
-  DevCommandsRepo,
-  UpdateDevCommandInput,
-} from "@reviewer/core/local-dev";
 
 export const devCommands = documentTable<DevCommand>({
   table: "dev_command",

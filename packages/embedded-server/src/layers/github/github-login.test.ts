@@ -14,7 +14,8 @@ describe("parseLoginOutput", () => {
   });
 
   it("sees through colour codes and falls back to the known page", () => {
-    const output = "\x1b[33m!\x1b[0m First copy your one-time code: \x1b[1mWXYZ-0123\x1b[0m\n";
+    const output =
+      "\x1b[33m!\x1b[0m First copy your one-time code: \x1b[1mWXYZ-0123\x1b[0m\n";
 
     expect(parseLoginOutput(output)).toEqual({
       code: "WXYZ-0123",

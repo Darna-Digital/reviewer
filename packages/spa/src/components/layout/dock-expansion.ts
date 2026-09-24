@@ -75,4 +75,3 @@ export function pickDockTab(
   if (expandedTab === tab) restoreDock(navigate, tab);
   else showDockPage(navigate, tab);
 }
-

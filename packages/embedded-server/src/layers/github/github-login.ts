@@ -15,6 +15,7 @@
  * of the server's rather than a per-request service.
  */
 import { spawn, type ChildProcess } from "node:child_process";
+import { stripVTControlCharacters } from "node:util";
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
@@ -32,9 +33,10 @@ export interface GitHubLoginShape {
   readonly cancel: Effect.Effect<GitHubLoginState>;
 }
 
-export class GitHubLogin extends Context.Service<GitHubLogin, GitHubLoginShape>()(
-  "GitHubLogin"
-) {}
+export class GitHubLogin extends Context.Service<
+  GitHubLogin,
+  GitHubLoginShape
+>()("GitHubLogin") {}
 
 const DEVICE_URL = "https://github.com/login/device";
 /** How long the CLI is given to come back with a code before the start is refused. */
@@ -56,7 +58,7 @@ const idle: GitHubLoginState = {
 export const parseLoginOutput = (
   output: string
 ): { code: string; url: string } | null => {
-  const plain = output.replace(/\x1b\[[0-9;]*m/g, "");
+  const plain = stripVTControlCharacters(output);
   const code = /one-time code:\s*([A-Z0-9]{4}-[A-Z0-9]{4})/i.exec(plain)?.[1];
   if (code === undefined) return null;
   const url = /(https?:\/\/\S+login\/device\S*)/.exec(plain)?.[1] ?? DEVICE_URL;
@@ -73,12 +75,15 @@ const failureReason = (
 ): string => {
   if (error?.code === "ENOENT")
     return "The GitHub CLI (gh) is not installed or not on PATH.";
-  const lines = output
-    .replace(/\x1b\[[0-9;]*m/g, "")
+  const lines = stripVTControlCharacters(output)
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !line.startsWith("!"));
-  return lines.at(-1) ?? error?.message ?? "gh auth login stopped without saying why.";
+  return (
+    lines.at(-1) ??
+    error?.message ??
+    "gh auth login stopped without saying why."
+  );
 };
 
 interface Flow {

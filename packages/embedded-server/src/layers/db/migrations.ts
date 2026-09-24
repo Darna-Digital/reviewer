@@ -273,5 +273,8 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
     id: "0007_drop_plans_visual_comments",
     up: (db) => db.exec(dropPlansAndVisualComments),
   },
-  { id: "0008_drop_cloud_connection", up: (db) => db.exec(dropCloudConnection) },
+  {
+    id: "0008_drop_cloud_connection",
+    up: (db) => db.exec(dropCloudConnection),
+  },
 ];

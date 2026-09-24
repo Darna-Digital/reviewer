@@ -51,10 +51,6 @@ import { isEditablePath } from "@/components/editor/editable-path";
 // content, i.e. the "additions" side of an eventual working-tree diff.
 const FILE_COMMENT_SIDE = "additions" as const;
 
-// How long a request for the caret keeps asking: about a second of frames,
-// which covers a file that is still painting without outliving the intent.
-const CARET_ATTEMPTS = 60;
-
 type AnnotationMeta =
   | {
       readonly kind: "comments";

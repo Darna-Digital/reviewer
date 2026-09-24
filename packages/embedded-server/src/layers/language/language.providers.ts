@@ -76,7 +76,7 @@ const readConfig = (
 
 const build = (root: string, config: LanguageConfig): RepositoryProviders => ({
   providers: [
-    ...config.servers.map(makeLspProvider),
+    ...config.servers.map((server) => makeLspProvider(server)),
     typescriptProvider,
     rubyProviderFor(root),
     swiftProviderFor(),

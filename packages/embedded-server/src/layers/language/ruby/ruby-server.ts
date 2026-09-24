@@ -188,7 +188,7 @@ export const rubyProviderFor = (
 ): LanguageProvider => {
   const { config, availability } = detectRubyServer(root, options);
   return {
-    ...makeLspProvider(config),
+    ...makeLspProvider(config, { findCommand: options?.resolve }),
     probe: () => Effect.succeed(availability),
   };
 };

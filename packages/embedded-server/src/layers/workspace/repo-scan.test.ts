@@ -35,10 +35,11 @@ const scan = (start = root, depth?: number) =>
       (entry) => Ref.update(found, (all) => [...all, entry]),
       depth
     );
-    return (yield* Ref.get(found)).map((entry) => ({
-      ...entry,
-      path: entry.path.slice(root.length + 1),
-    }));
+    // Sibling folders are scanned concurrently, so repositories arrive in
+    // whichever order their scans finish.
+    return (yield* Ref.get(found))
+      .map((entry) => ({ ...entry, path: entry.path.slice(root.length + 1) }))
+      .sort((a, b) => a.path.localeCompare(b.path));
   });
 
 describe("scanRepos", () => {

@@ -255,7 +255,11 @@ function readableOver(
   return parseHex(legible);
 }
 
-/** A colour moved towards the type's pole, a step at a time, until it reads. */
+/**
+ * A colour moved towards the type's pole, a step at a time, until it reads.
+ * Each step is measured as the hex it will be written out as: the unrounded
+ * mix can clear the floor by less than rounding to whole channels takes back.
+ */
 function inked(
   color: Rgba,
   surface: Rgba,
@@ -269,7 +273,7 @@ function inked(
     contrast(candidate, surface) < floor && step <= 1;
     step += 0.05
   )
-    candidate = mix(color, pole, step);
+    candidate = parseHex(toHex(mix(color, pole, step))) ?? pole;
   return candidate;
 }
 

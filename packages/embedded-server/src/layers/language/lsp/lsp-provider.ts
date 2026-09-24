@@ -132,7 +132,19 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const locationKey = (location: Location) =>
   `${location.path}:${location.range.start.line}:${location.range.start.character}`;
 
-export const makeLspProvider = (config: LspServerConfig): LanguageProvider => {
+export interface LspProviderOptions {
+  /**
+   * Where the server's binary is, or null when it is not installed. Defaults to
+   * a search of the developer's PATH; a provider that already searched its own
+   * way (Ruby's, through Bundler) answers from that search instead.
+   */
+  readonly findCommand?: (command: string) => string | null;
+}
+
+export const makeLspProvider = (
+  config: LspServerConfig,
+  { findCommand = findExecutable }: LspProviderOptions = {}
+): LanguageProvider => {
   const providerId = providerIdFor(config);
 
   const fail = (reason: string) => new LanguageError({ providerId, reason });
@@ -156,7 +168,7 @@ export const makeLspProvider = (config: LspServerConfig): LanguageProvider => {
    * every keystroke.
    */
   const openDocument = async (request: DocumentRequest) => {
-    if (findExecutable(config.command) === null) return null;
+    if (findCommand(config.command) === null) return null;
     const absolute = toAbsolute(request.root, request.path);
     const text = documentText(request, absolute);
     if (text === null) return null;
