@@ -70,7 +70,7 @@ function Hero() {
         Download for macOS
       </a>
 
-      <p className="text-[13px] leading-relaxed text-neutral-400 dark:text-neutral-500">
+      <p className="text-[13px] leading-relaxed text-neutral-500">
         For Apple silicon Macs, on macOS 26 or later.
       </p>
     </section>
