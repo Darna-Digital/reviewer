@@ -13,7 +13,7 @@
 	     refuses the file; see ProjectFeed for what the app writes then. -->
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.byconvo.reviewer</string>
+		<string>S89963CMRN.com.byconvo.reviewer</string>
 	</array>
 	<!-- The other copy of the feed, in ~/.reviewer beside the server's own
 	     state, which this exception is what lets the extension read. It is

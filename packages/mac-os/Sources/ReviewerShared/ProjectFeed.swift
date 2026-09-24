@@ -71,7 +71,12 @@ public struct ProjectFeed: Codable, Equatable, Sendable {
 
     /// The app group both the app and the widget carry in their
     /// entitlements; the container under ~/Library/Group Containers.
-    public static let groupIdentifier = "group.com.byconvo.reviewer"
+    /// Prefixed with the Developer ID team rather than `group.`: outside
+    /// the App Store macOS only honours a `group.` identifier a
+    /// provisioning profile authorises, and without one it asks "would
+    /// like to access data from other apps" on every launch. A
+    /// team-prefixed group is vouched for by the signature alone.
+    public static let groupIdentifier = "S89963CMRN.com.byconvo.reviewer"
 
     private static let fileName = "projects.json"
 
